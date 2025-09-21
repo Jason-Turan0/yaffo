@@ -8,16 +8,17 @@ import numpy as np
 import pillow_heif
 from PIL import Image
 from tqdm import tqdm
-import face_recognition  # Assuming you've installed this and dlib properly
+import face_recognition
 
 from organize_photos import get_photo_date
+from photo_organizer.utils.image import image_from_path
 from remove_duplicates import hash_image
 from photo_organizer.common  import PHOTO_EXTENSIONS, DB_PATH, MEDIA_DIR, TEMP_DIR, THUMBNAIL_DIR, ROOT_DIR
 
 
-if os.path.exists(DB_PATH):
-    os.remove(DB_PATH)
-    print("DB File deleted")
+# if os.path.exists(DB_PATH):
+#     os.remove(DB_PATH)
+#     print("DB File deleted")
 
 def get_photo_files(root: Path):
     return [p for p in root.rglob("*") if p.suffix.lower() in PHOTO_EXTENSIONS]
@@ -38,22 +39,17 @@ def create_tables(conn):
             id INTEGER PRIMARY KEY,
             embedding BLOB,
             full_file_path TEXT UNIQUE,
-            relative_file_path TEXT UNIQUE
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS photo_faces (
+            relative_file_path TEXT UNIQUE,
             photo_id INTEGER,
-            face_id INTEGER,
-            FOREIGN KEY(photo_id) REFERENCES photos(id),
-            FOREIGN KEY(face_id) REFERENCES faces(id),
-            UNIQUE(photo_id, face_id)
+            status TEXT,
+            FOREIGN KEY(photo_id) REFERENCES photos(id)
         )
     """)
     cursor.execute("""
            CREATE TABLE IF NOT EXISTS people (
                id INTEGER PRIMARY KEY,
-               name TEXT
+               name TEXT,
+               avg_embedding BLOB
            )
        """)
     cursor.execute("""
@@ -108,16 +104,7 @@ def load_image_file(photo_path: Path) -> np.ndarray:
         return face_recognition.load_image_file(str(photo_path))
 
 def save_face_thumbnail(image_path: Path, face_index: int, face_location):
-    if image_path.suffix.lower() in [".heic", ".heif"]:
-        heif_file = pillow_heif.read_heif(str(image_path))
-        image = Image.frombytes(
-            heif_file.mode,
-            heif_file.size,
-            heif_file.data,
-            "raw"
-        )
-    else:
-        image = Image.open(image_path)
+    image = image_from_path(image_path)
     top, right, bottom, left = face_location
     face_image = image.crop((left, top, right, bottom))
     face_image.thumbnail((150, 150))
@@ -134,7 +121,7 @@ def index_photos():
     files_to_process = [p for p in get_photo_files(MEDIA_DIR)
                         if str(p) not in existing_files]
 
-    for photo_path in tqdm(files_to_process[:50], desc="Indexing Photos", unit="file"):
+    for photo_path in tqdm(files_to_process[0:350], desc="Indexing Photos", unit="file"):
         date_taken = get_photo_date(str(photo_path))  # Your logic here to extract from metadata
 
         cursor = conn.cursor()
@@ -157,18 +144,14 @@ def index_photos():
 
         for i, (face_location, face_encoding) in enumerate(zip(face_locations, face_encodings)):
             thumb_path = save_face_thumbnail(photo_path, i, face_location)
-            cursor.execute("INSERT INTO faces (embedding, full_file_path, relative_file_path) VALUES (?, ?, ?)",
+            cursor.execute("INSERT INTO faces (embedding, full_file_path, relative_file_path, status, photo_id) VALUES (?, ?, ?, ?, ?)",
                            (
                                face_encoding.tobytes(),
                                 str(thumb_path),
-                                str(Path.relative_to(thumb_path, ROOT_DIR))
+                                str(Path.relative_to(thumb_path, ROOT_DIR)),
+                               "UNASSIGNED",
+                               photo_id
                            ))
-            face_id = cursor.lastrowid
-            # Link photo -> face
-            cursor.execute(
-                "INSERT INTO photo_faces (photo_id, face_id) VALUES (?, ?)",
-                (photo_id, face_id)
-            )
 
         conn.commit()
     conn.close()

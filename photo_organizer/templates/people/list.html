@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+  <title>People</title>
+</head>
+<body>
+  <h1>People</h1>
+  <table border="1" cellpadding="6">
+    <tr>
+      <th>Name</th>
+      <th># Faces</th>
+      <th># Photos</th>
+      <th>Actions</th>
+    </tr>
+    {% for person in people %}
+    <tr>
+      <td>{{ person.name or "Unnamed" }}</td>
+      <td>{{ person.num_faces }}</td>
+      <td>{{ person.num_photos }}</td>
+      <td>
+        <a href="{{ url_for('edit_person', person_id=person.id) }}">Edit</a> |
+        <a href="{{ url_for('person_faces', person_id=person.id) }}">View Faces</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>

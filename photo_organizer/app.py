@@ -1,5 +1,5 @@
 from flask import Flask
-from photo_organizer.db.__main__ import db
+from photo_organizer.db import db
 from photo_organizer.common import DB_PATH
 
 def create_app():

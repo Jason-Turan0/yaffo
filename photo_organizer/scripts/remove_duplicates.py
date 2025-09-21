@@ -7,6 +7,7 @@ from tqdm import tqdm
 import shutil
 
 from photo_organizer.common import PHOTO_EXTENSIONS, TRASH_DIR
+from photo_organizer.utils.image import convert_heif, image_from_path
 
 
 def collect_photo_files(src_dir: Path) -> List[Path]:
@@ -20,10 +21,12 @@ def collect_photo_files(src_dir: Path) -> List[Path]:
 
 
 def hash_image(path: Path):
-    """Return perceptual hash of an image."""
+    """Return perceptual hash of an image, supports HEIC."""
     try:
-        return imagehash.phash(Image.open(path))
-    except Exception:
+        image = image_from_path(path)
+        return imagehash.phash(image)
+    except Exception as e:
+        print(f"Failed to hash {path}: {e}")
         return None
 
 

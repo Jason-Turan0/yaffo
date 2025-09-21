@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+  <title>Faces for {{ person.name }}</title>
+</head>
+<body>
+  <h1>Faces for {{ person.name or "Unnamed" }}</h1>
+  <div style="display:flex; flex-wrap:wrap; gap:10px;">
+    {% for face in faces %}
+      {% if face.relative_file_path %}
+        <div>
+          <img src="{{ url_for('photo', filename=face.relative_file_path) }}" width="150" height="150">
+        </div>
+      {% else %}
+        <div style="width:150px; height:150px; background:#ccc;">No thumbnail</div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  <p><a href="{{ url_for('people_list') }}">Back to People</a></p>
+</body>
+</html>

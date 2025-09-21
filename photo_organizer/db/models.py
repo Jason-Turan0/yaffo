@@ -1,5 +1,5 @@
 from sqlalchemy import PrimaryKeyConstraint
-from __main__ import db
+from photo_organizer.db import db
 
 class Photo(db.Model):
     __tablename__ = "photos"
@@ -10,39 +10,34 @@ class Photo(db.Model):
     date_taken = db.Column(db.String)
     faces = db.relationship(
         "Face",
-        secondary="photo_faces",
-        back_populates="photos"
+        back_populates="photo"
     )
+
+FACE_STATUS_UNASSIGNED = "UNASSIGNED"
+FACE_STATUS_ASSIGNED = "ASSIGNED"
+FACE_STATUS_IGNORED = "IGNORED"
 
 class Face(db.Model):
     __tablename__ = "faces"
     id = db.Column(db.Integer, primary_key=True)
     embedding = db.Column(db.LargeBinary)
-    photo_id = db.Column(db.Integer, db.ForeignKey("photo.id"))
+    full_file_path = db.Column(db.String, unique=True)
+    relative_file_path = db.Column(db.String, unique=True)
+    photo_id = db.Column(db.Integer, db.ForeignKey("photos.id"))
+    status = db.Column(db.String)
     # Relationships
-    photos = db.relationship(
-        "Photo",
-        secondary="photo_faces",
-        back_populates="faces"
-    )
+    photo = db.relationship("Photo", back_populates="faces")
     people = db.relationship(
         "Person",
         secondary="people_face",
         back_populates="faces"
     )
 
-class PhotoFace(db.Model):
-    __tablename__ = "photo_faces"
-    photo_id = db.Column(db.Integer, db.ForeignKey("photos.id"), primary_key=True)
-    face_id = db.Column(db.Integer, db.ForeignKey("faces.id"), primary_key=True)
-    __table_args__ = (
-        PrimaryKeyConstraint("photo_id", "face_id"),
-    )
-
 class Person(db.Model):
     __tablename__ = "people"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
+    avg_embedding = db.Column(db.LargeBinary)
     # Relationship to faces through bridge table
     faces = db.relationship(
         "Face",
