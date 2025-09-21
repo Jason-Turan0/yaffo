@@ -1,0 +1,10 @@
+<!-- templates/index.html -->
+<!doctype html>
+<html>
+  <body>
+    <h1>Photo Library</h1>
+    {% for photo in photos %}
+      <img src="{{ url_for('photo', filename=photo.relative_file_path) }}" width="200">
+    {% endfor %}
+  </body>
+</html>
