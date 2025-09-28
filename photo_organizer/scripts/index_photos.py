@@ -1,7 +1,7 @@
 # index_photos.py
 import sqlite3
 import tempfile
-import os
+import uuid
 from pathlib import Path
 
 import numpy as np
@@ -63,11 +63,22 @@ def create_tables(conn):
                CREATE TABLE IF NOT EXISTS people_face (
                    person_id INTEGER,
                    face_id INTEGER,
+                   similarity REAL,
                    FOREIGN KEY(person_id) REFERENCES people(id),
                    FOREIGN KEY(face_id) REFERENCES faces(id),
                    UNIQUE(person_id, face_id)
                )
            """)
+    cursor.execute("""
+                CREATE TABLE IF NOT EXISTS people_embeddings (
+                    person_id INTEGER NOT NULL,
+                    year INTEGER NOT NULL,
+                    avg_embedding BLOB NOT NULL,
+                    included_face_ids TEXT,
+                    PRIMARY KEY (person_id, year),
+                    FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
+                )
+    """)
     conn.commit()
 
 def load_existing_files(conn):
@@ -119,7 +130,8 @@ def save_face_thumbnail(image_path: Path, face_index: int, face_location):
     face_image = image.crop((left, top, right, bottom))
     face_image.thumbnail((150, 150))
     stem = image_path.stem
-    thumb_path = THUMBNAIL_DIR / f"face_{stem}_{face_index}.jpg"
+    face_id = str(uuid.uuid4())[:8]
+    thumb_path = THUMBNAIL_DIR / f"face_{stem}_{face_index}_{face_id}.jpg"
     face_image.save(thumb_path, "JPEG")
     return thumb_path
 
@@ -185,8 +197,7 @@ def index_photos():
                     "INSERT INTO faces (embedding, full_file_path, relative_file_path, status, photo_id) VALUES (?, ?, ?, ?, ?)",
                     (emb.tobytes(), full_thumb, rel_thumb, FACE_STATUS_UNASSIGNED, photo_id)
                 )
-            if i % batch_size == 0:
-                print(f"Finished indexing {i} photos")
+            if i > 0 and i % batch_size == 0:
                 conn.commit()
 
     conn.close()

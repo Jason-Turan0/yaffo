@@ -7,6 +7,10 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False  # optional, avoids warnings
     app.config["SQLALCHEMY_ECHO"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "None"
+    app.config["SESSION_COOKIE_SECURE"] = False
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+
     db.init_app(app)
 
     from photo_organizer.routes.init_routes import init_routes

@@ -44,11 +44,31 @@ class Person(db.Model):
         secondary="people_face",
         back_populates="people"
     )
+    embeddings_by_year = db.relationship(
+        "PersonEmbedding",
+        back_populates="person",
+        cascade="all, delete-orphan"
+    )
+
+class PersonEmbedding(db.Model):
+    __tablename__ = "people_embeddings"
+    person_id = db.Column(db.Integer, db.ForeignKey("people.id"), primary_key=True)
+    year = db.Column(db.Integer, primary_key=True)
+    included_face_ids = db.Column(db.Text)
+    avg_embedding = db.Column(db.LargeBinary)
+    person = db.relationship(
+        "Person",
+        back_populates="embeddings_by_year"
+    )
+    __table_args__ = (
+        PrimaryKeyConstraint("person_id", "year"),
+    )
 
 class PersonFace(db.Model):
     __tablename__ = "people_face"
     person_id = db.Column(db.Integer, db.ForeignKey("people.id"), primary_key=True)
     face_id = db.Column(db.Integer, db.ForeignKey("faces.id"), primary_key=True)
+    similarity = db.Column(db.Float)
     __table_args__ = (
         PrimaryKeyConstraint("person_id", "face_id"),
     )

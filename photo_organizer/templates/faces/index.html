@@ -31,16 +31,18 @@
             <h2>{{ faceSuggestion.suggestion_name }}</h2>
           <button type="button" class="select-group">Select All</button>
           <button type="button" class="deselect-group">Deselect All</button>
-        {% if faceSuggestion.person_id is not none %}
-          <button  class="assign-group-btn" data-person-id="{{faceSuggestion.person_id}}">Assign Selected to {{faceSuggestion.suggestion_name}}</button>
-        {% endif %}
+        {% for person in faceSuggestion.people %}
+          <button  class="assign-group-btn" data-person-id="{{person.id}}">Assign Selected to {{person.name}}</button>
+        {% endfor %}
+        <button type="submit" class="ignore-btn">Ignore Selected</button>
     <div class="grid">
-
             {% for face in faceSuggestion.faces %}
-                <div class="face" data-face-id="{{ face.id }}">
-                    <img src="{{ url_for('photo', filename=face.relative_file_path) }}" width="100" height="100">
-                    <input type="checkbox" name="faces" value="{{ face.id }}" style="display:none;">
-                </div>
+
+
+                    <div class="face" data-face-id="{{ face.id }}" title="Simularity {{  '%.2f' % (face.similarity * 100) if face.similarity is not none else 'N/A'  }}%. Date Taken {{ face.photo_date.split(' ')[0] }}" >
+                        <img src="{{ url_for('photo', filename=face.relative_file_path) }}" width="100" height="100">
+                        <input type="checkbox" name="faces" value="{{ face.id }}" style="display:none;">
+                    </div>
             {% endfor %}
     </div>
         </div>
@@ -110,6 +112,8 @@ document.querySelectorAll('.assign-group-btn').forEach(btn => {
         form.submit();
     });
 });
+
+
 </script>
 
 </body>
