@@ -3,12 +3,15 @@ from typing import Optional
 
 import numpy as np
 from flask import Flask, render_template, request, redirect, url_for
+from sqlalchemy import extract
+from sqlalchemy.dialects.sqlite import insert
+
 from photo_organizer.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
-    FACE_STATUS_ASSIGNED
+    FACE_STATUS_ASSIGNED, Photo
 from sklearn.metrics.pairwise import cosine_similarity
 
-THRESHOLD = 0.90  # configurable similarity threshold
-
+THRESHOLD = 0.95  # configurable similarity threshold
+FACE_LOAD_LIMIT = 500
 
 def load_embedding(blob: bytes) -> np.ndarray:
     arr = np.frombuffer(blob, dtype=np.float64)
@@ -34,12 +37,17 @@ def update_person_embedding(person_id:  str | None):
 def init_faces_route(app: Flask):
     @app.route("/faces", methods=["GET"])
     def faces_index():
-        unassigned_faces = (
-            db.session.query(Face)
-            .filter(Face.status == FACE_STATUS_UNASSIGNED)
-            .limit(250)
-            .all()
-        )
+        query = db.session.query(Face).filter(Face.status == FACE_STATUS_UNASSIGNED)
+        year = request.args.get("year", type=int)
+        month = request.args.get("month", type=int)
+        if year:
+            # Assuming Face has a relationship to Photo, and Photo.date_taken is a datetime
+            query = query.join(Face.photo).filter(extract("year", Photo.date_taken) == year)
+        if month:
+            query = query.filter(extract("month", Photo.date_taken) == month)
+
+        unassigned_faces = query.limit(FACE_LOAD_LIMIT).all()
+
 
         people = db.session.query(Person).order_by(Person.name).all()
         # Compute suggested person for each face
@@ -85,24 +93,26 @@ def init_faces_route(app: Flask):
         face_status = request.form.get("face_status")
 
         if face_status == FACE_STATUS_IGNORED:
-            for face_id in selected_face_ids:
-                face = db.session.query(Face).filter_by(id=face_id).first()
-                face.status = face_status
+            db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
+                {Face.status: face_status}, synchronize_session=False
+            )
             db.session.commit()
 
         elif selected_face_ids and person_id and face_status == FACE_STATUS_ASSIGNED:
-            for face_id in selected_face_ids:
-                # Avoid duplicates
-                exists = db.session.query(PersonFace).filter_by(
-                    person_id=person_id, face_id=face_id
-                ).first()
-                if not exists:
-                    link = PersonFace(person_id=person_id, face_id=face_id)
-                    db.session.add(link)
-                face = db.session.query(Face).filter_by(id = face_id).first()
-                face.status = face_status
-                db.session.commit()
-                update_person_embedding(person_id)
+
+            stmt = insert(PersonFace).values([
+                {"person_id": person_id, "face_id": fid}
+                for fid in selected_face_ids
+            ])
+            stmt = stmt.on_conflict_do_nothing(
+                index_elements=["person_id", "face_id"]
+            )
+            db.session.execute(stmt)
+            db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
+                {Face.status: face_status}, synchronize_session=False
+            )
+            db.session.commit()
+            update_person_embedding(person_id)
 
 
         return redirect(url_for("faces_index"))

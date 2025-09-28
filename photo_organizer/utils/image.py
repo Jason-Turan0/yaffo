@@ -15,6 +15,12 @@ def convert_heif(file_path: Path):
 
 def image_from_path(path: Path):
     if path.suffix.lower() in [".heic", ".heif"]:
-        return convert_heif(path)
+        try:
+            image = convert_heif(path)
+        except Exception:
+            image = Image.open(path)
     else:
-        return Image.open(path)
+        image = Image.open(path)
+    if image.mode in ("RGBA", "LA", "P"):
+        image = image.convert("RGB")
+    return image

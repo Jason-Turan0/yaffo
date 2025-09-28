@@ -9,8 +9,11 @@ import pillow_heif
 from PIL import Image
 from tqdm import tqdm
 import face_recognition
+from concurrent.futures import ProcessPoolExecutor, as_completed
+
 
 from organize_photos import get_photo_date
+from photo_organizer.db.models import FACE_STATUS_UNASSIGNED
 from photo_organizer.utils.image import image_from_path
 from remove_duplicates import hash_image
 from photo_organizer.common  import PHOTO_EXTENSIONS, DB_PATH, MEDIA_DIR, TEMP_DIR, THUMBNAIL_DIR, ROOT_DIR
@@ -21,7 +24,11 @@ from photo_organizer.common  import PHOTO_EXTENSIONS, DB_PATH, MEDIA_DIR, TEMP_D
 #     print("DB File deleted")
 
 def get_photo_files(root: Path):
-    return [p for p in root.rglob("*") if p.suffix.lower() in PHOTO_EXTENSIONS]
+    return [p for p
+            in root.rglob("*")
+            if p.suffix.lower() in PHOTO_EXTENSIONS
+            and not p.name.startswith(".")
+            ]
 
 def create_tables(conn):
     cursor = conn.cursor()
@@ -75,30 +82,33 @@ def load_image_file(photo_path: Path) -> np.ndarray:
     """
     if photo_path.suffix.lower() == ".heic":
         # Convert HEIC to temporary JPEG
-        heif_file = pillow_heif.read_heif(photo_path)
-        image = Image.frombytes(
-            heif_file.mode,
-            heif_file.size,
-            heif_file.data,
-            "raw",
-            heif_file.mode,
-            heif_file.stride,
-        )
+        try:
+            heif_file = pillow_heif.read_heif(photo_path)
+            image = Image.frombytes(
+                heif_file.mode,
+                heif_file.size,
+                heif_file.data,
+                "raw",
+                heif_file.mode,
+                heif_file.stride,
+            )
 
-        temp_file = tempfile.NamedTemporaryFile(
-            suffix=".jpg", delete=False, dir=TEMP_DIR
-        )
-        temp_file_path = Path(temp_file.name)
-        image.save(temp_file_path, format="JPEG")
-        temp_file.close()  # close so face_recognition can open it
+            temp_file = tempfile.NamedTemporaryFile(
+                suffix=".jpg", delete=False, dir=TEMP_DIR
+            )
+            temp_file_path = Path(temp_file.name)
+            image.save(temp_file_path, format="JPEG")
+            temp_file.close()  # close so face_recognition can open it
 
-        # Load the converted file into numpy array
-        image_np = face_recognition.load_image_file(temp_file_path)
+            # Load the converted file into numpy array
+            image_np = face_recognition.load_image_file(temp_file_path)
 
-        # Delete the temp file after loading
-        temp_file_path.unlink()
+            # Delete the temp file after loading
+            temp_file_path.unlink()
 
-        return image_np
+            return image_np
+        except Exception:
+            return face_recognition.load_image_file(str(photo_path))
 
     else:
         return face_recognition.load_image_file(str(photo_path))
@@ -113,6 +123,35 @@ def save_face_thumbnail(image_path: Path, face_index: int, face_location):
     face_image.save(thumb_path, "JPEG")
     return thumb_path
 
+MAX_WIDTH = 800
+
+def process_photo(photo_path):
+    """Load image, detect faces, create embeddings, generate thumbnails."""
+    try:
+        date_taken = get_photo_date(str(photo_path))
+        image = load_image_file(photo_path)
+
+        face_locations = face_recognition.face_locations(image)
+        face_encodings = face_recognition.face_encodings(image, face_locations)
+
+        faces_data = []
+        for i, (loc, emb) in enumerate(zip(face_locations, face_encodings)):
+            thumb_path = save_face_thumbnail(photo_path, i, loc)
+            faces_data.append((emb, str(thumb_path), str(Path.relative_to(thumb_path, ROOT_DIR))))
+
+        return {
+            "photo_path": str(photo_path),
+            "rel_path": str(Path.relative_to(photo_path, ROOT_DIR)),
+            "date_taken": date_taken,
+            "hash": str(hash_image(photo_path)),
+            "faces": faces_data
+        }
+    except Exception as e:
+        print(f"Error processing {photo_path}: {e}")
+        return None
+max_workers = 8
+batch_size = 50
+
 def index_photos():
     conn = sqlite3.connect(DB_PATH)
     create_tables(conn)
@@ -120,40 +159,36 @@ def index_photos():
 
     files_to_process = [p for p in get_photo_files(MEDIA_DIR)
                         if str(p) not in existing_files]
+    futures = []
+    cursor = conn.cursor()
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        for photo_path in files_to_process:
+            futures.append(executor.submit(process_photo, photo_path))
 
-    for photo_path in tqdm(files_to_process[0:350], desc="Indexing Photos", unit="file"):
-        date_taken = get_photo_date(str(photo_path))  # Your logic here to extract from metadata
+        for i, future in enumerate(tqdm(as_completed(futures), total=len(futures), desc="Indexing Photos", unit="file")):
+            result = future.result()
+            if not result:
+                continue
 
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO photos (full_file_path, relative_file_path, hash, date_taken) VALUES (?, ?, ?, ?)",
-            (
-                str(photo_path),
-                str(Path.relative_to(photo_path, ROOT_DIR)),
-                str(hash_image(photo_path)),
-                date_taken
+            cursor.execute(
+                "INSERT INTO photos (full_file_path, relative_file_path, hash, date_taken) VALUES (?, ?, ?, ?)",
+                (
+                    result["photo_path"],
+                    result["rel_path"],
+                    result["hash"],
+                    result["date_taken"]
+                )
             )
-        )
-        photo_id = cursor.lastrowid
+            photo_id = cursor.lastrowid
+            for emb, full_thumb, rel_thumb in result["faces"]:
+                cursor.execute(
+                    "INSERT INTO faces (embedding, full_file_path, relative_file_path, status, photo_id) VALUES (?, ?, ?, ?, ?)",
+                    (emb.tobytes(), full_thumb, rel_thumb, FACE_STATUS_UNASSIGNED, photo_id)
+                )
+            if i % batch_size == 0:
+                print(f"Finished indexing {i} photos")
+                conn.commit()
 
-        # Face recognition
-        image = load_image_file(photo_path)
-        face_locations = face_recognition.face_locations(image)
-        face_encodings = face_recognition.face_encodings(image, face_locations)
-
-
-        for i, (face_location, face_encoding) in enumerate(zip(face_locations, face_encodings)):
-            thumb_path = save_face_thumbnail(photo_path, i, face_location)
-            cursor.execute("INSERT INTO faces (embedding, full_file_path, relative_file_path, status, photo_id) VALUES (?, ?, ?, ?, ?)",
-                           (
-                               face_encoding.tobytes(),
-                                str(thumb_path),
-                                str(Path.relative_to(thumb_path, ROOT_DIR)),
-                               "UNASSIGNED",
-                               photo_id
-                           ))
-
-        conn.commit()
     conn.close()
 
 if __name__ == "__main__":
