@@ -1,3 +1,4 @@
+import calendar
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 import numpy as np
@@ -13,6 +14,7 @@ from photo_organizer.db.models import db, Face, Person, PersonFace, FACE_STATUS_
 from sklearn.metrics.pairwise import cosine_similarity
 
 from photo_organizer.db.repositories.person_repository import update_person_embedding
+from photo_organizer.db.repositories.photos_repository import get_distinct_years, get_distinct_months
 from photo_organizer.domain.compare_utils import load_embedding, calculate_similarity
 
 DEFAULT_THRESHOLD = 0.95  # configurable similarity threshold
@@ -36,35 +38,28 @@ class FaceSuggestion:
 
 
 
-def init_faces_route(app: Flask):
+def init_faces_routes(app: Flask):
     @app.route("/faces", methods=["GET"])
     def faces_index():
         query = (
                 db.session.query(Face)
                     .join(Face.photo)
+                    .options(joinedload(Face.photo))
                     .outerjoin(Face.people)
                  )
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
-        status = request.args.get("status", type=str)
         threshold = request.args.get("threshold", type=float)
+        face_page_size = request.args.get("face-page-size", type=int)
+        filter_face_page_size = face_page_size if face_page_size else FACE_LOAD_LIMIT
         filter_threshold = threshold if threshold else DEFAULT_THRESHOLD
+
         if year:
-            # Assuming Face has a relationship to Photo, and Photo.date_taken is a datetime
             query = query.filter(extract("year", Photo.date_taken) == year)
         if month:
             query = query.filter(extract("month", Photo.date_taken) == month)
-        if status:
-            query = query.filter(Face.status == status.upper())
-        else:
-            query = query.filter(Face.status == FACE_STATUS_UNASSIGNED)
-        unassigned_faces :List[Face] = query.limit(FACE_LOAD_LIMIT).all()
-        filters = {
-            "years": [2025],
-            "months": [1,2,3,4,5,6,7,8,9,10,11,12],
-            "statuses": [FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED],
-            "threshold": filter_threshold,
-        }
+        query = query.filter(Face.status == FACE_STATUS_UNASSIGNED)
+        unassigned_faces :List[Face] = query.limit(filter_face_page_size).all()
 
 
         people = (db.session.query(Person)
@@ -82,15 +77,15 @@ def init_faces_route(app: Flask):
         for face in unassigned_faces:
             emb = load_embedding(face.embedding)
 
-            def flat_map_people(person: Person) -> List[Tuple[Person, np.ndarray]]:
-                return [(person, load_embedding(embedding_by_year.avg_embedding))
+            def flat_map_people(person: Person) -> List[Tuple[Person, int, np.ndarray]]:
+                return [(person, embedding_by_year.year, load_embedding(embedding_by_year.avg_embedding))
                         for embedding_by_year in person.embeddings_by_year]
 
             matching_people : List[Tuple[Person, float]] = (
                 _.chain(people)
                  .flat_map(flat_map_people)
-                 .map(lambda pair: (pair[0], cosine_similarity([emb], [pair[1]])[0][0]))
-                 .filter(lambda pair: pair[1] > filter_threshold)
+                 .map(lambda tuple: (tuple[0], tuple[1], cosine_similarity([emb], [tuple[2]])[0][0]))
+                 .filter(lambda tuple: tuple[2] > filter_threshold and face.photo.date_taken[:4] == str(tuple[1]))
                  .sort_by(lambda pair: pair[1], True)
                  .group_by(lambda pair: pair[0].id)
                  .values()
@@ -119,7 +114,17 @@ def init_faces_route(app: Flask):
         face_suggestions.append(default_suggestion)
         for suggestion in face_suggestions:
             suggestion.faces = _.sort_by(suggestion.faces, lambda f: f.similarity if f.similarity is not None else 0, reverse=True)
-
+        months = get_distinct_months()
+        years = get_distinct_years(db.session)
+        filters = {
+            "years":years,
+            "selected_year": year,
+            "months": months,
+            "selected_month": month,
+            "selected_threshold": filter_threshold,
+            "face_page_sizes": [50,100,250,500,1000],
+            "face_page_size": filter_face_page_size
+        }
         return render_template(
             "faces/index.html", faces=unassigned_faces, people=people, face_suggestions=face_suggestions, filters=filters
         )
@@ -158,23 +163,4 @@ def init_faces_route(app: Flask):
             )
             db.session.commit()
             update_person_embedding(person_id, db.session)
-        return redirect(request.referrer or url_for("faces_index"))
-
-    @app.route("/faces/remove", methods=["POST"])
-    def faces_remove():
-        # Get selected face IDs from form (as list of strings)
-        selected_face_ids = request.form.getlist("faces")
-        if selected_face_ids:
-            # Convert to ints
-            face_ids = [int(fid) for fid in selected_face_ids]
-
-            # Step 1: delete from bridge table (PersonFace)
-            PersonFace.query.filter(PersonFace.face_id.in_(face_ids)).delete(synchronize_session=False)
-
-            # Step 2: update statuses of the faces
-            db.session.query(Face).filter(Face.id.in_(face_ids)).update(
-                {Face.status: FACE_STATUS_UNASSIGNED},
-                synchronize_session=False
-            )
-            db.session.commit()
         return redirect(request.referrer or url_for("faces_index"))

@@ -1,28 +1,389 @@
-<!doctype html>
-<html>
-<head>
-  <title>People</title>
-</head>
-<body>
-  <h1>People</h1>
-  <table border="1" cellpadding="6">
-    <tr>
-      <th>Name</th>
-      <th># Faces</th>
-      <th># Photos</th>
-      <th>Actions</th>
-    </tr>
-    {% for person in people %}
-    <tr>
-      <td>{{ person.name or "Unnamed" }}</td>
-      <td>{{ person.num_faces }}</td>
-      <td>{{ person.num_photos }}</td>
-      <td>
-        <a href="{{ url_for('edit_person', person_id=person.id) }}">Edit</a> |
-        <a href="{{ url_for('person_faces', person_id=person.id) }}">View Faces</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </table>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}People - Photo Organizer{% endblock %}
+
+{% block extra_styles %}
+.people-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.people-header h1 {
+    font-size: 24px;
+    margin: 0;
+    color: #212529;
+}
+
+.btn-add {
+    padding: 10px 20px;
+    background: #007BFF;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-add:hover {
+    background: #0056b3;
+}
+
+.people-table {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+th {
+    text-align: left;
+    padding: 16px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+td {
+    padding: 16px;
+    border-bottom: 1px solid #f1f3f5;
+    color: #212529;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tbody tr {
+    transition: background 0.2s;
+}
+
+tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.person-name {
+    font-weight: 500;
+    font-size: 15px;
+}
+
+.person-stats {
+    display: flex;
+    gap: 20px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.stat-number {
+    font-weight: 600;
+    color: #495057;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+}
+
+.action-link {
+    color: #007BFF;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s;
+}
+
+.action-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+.action-link.delete {
+    color: #dc3545;
+}
+
+.action-link.delete:hover {
+    color: #c82333;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.empty-state h2 {
+    font-size: 20px;
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    color: #6c757d;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 {
+    margin: 0 0 20px 0;
+    font-size: 20px;
+    color: #212529;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #007BFF;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-primary {
+    background: #007BFF;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+{% endblock %}
+
+{% block content %}
+<div class="people-header">
+    <h1>People</h1>
+    <button class="btn-add" onclick="openAddModal()">+ Add Person</button>
+</div>
+
+{% if people|length > 0 %}
+<div class="people-table">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Faces</th>
+                <th>Photos</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for person in people %}
+            <tr>
+                <td>
+                    <span class="person-name">{{ person.name or "Unnamed" }}</span>
+                </td>
+                <td>
+                    <span class="stat-number">{{ person.num_faces }}</span>
+                </td>
+                <td>
+                    <span class="stat-number">{{ person.num_photos }}</span>
+                </td>
+                <td>
+                    <div class="actions">
+                        <a href="#" class="action-link" onclick="openEditModal({{ person.id }}, '{{ person.name }}'); return false;">Edit</a>
+                        <a href="{{ url_for('person_faces', person_id=person.id) }}" class="action-link">View Faces</a>
+                        <a href="#" class="action-link delete" onclick="confirmDelete({{ person.id }}, '{{ person.name }}'); return false;">Delete</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No people yet</h2>
+    <p>Add your first person to start organizing photos.</p>
+    <button class="btn-add" onclick="openAddModal()">+ Add Person</button>
+</div>
+{% endif %}
+
+<!-- Add/Edit Modal -->
+<div id="personModal" class="modal">
+    <div class="modal-content">
+        <h2 id="modalTitle">Add Person</h2>
+        <form id="personForm" method="POST" action="">
+            <div class="form-group">
+                <label for="personName">Name</label>
+                <input type="text" id="personName" name="name" required autofocus>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <h2>Delete Person</h2>
+        <p>Are you sure you want to delete <strong id="deletePersonName"></strong>?</p>
+        <p style="color: #6c757d; font-size: 14px;">This will unassign all their faces but won't delete the photos.</p>
+        <form id="deleteForm" method="POST" action="">
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const modal = document.getElementById('personModal');
+const deleteModal = document.getElementById('deleteModal');
+const personForm = document.getElementById('personForm');
+const deleteForm = document.getElementById('deleteForm');
+const modalTitle = document.getElementById('modalTitle');
+const personNameInput = document.getElementById('personName');
+
+function openAddModal() {
+    modalTitle.textContent = 'Add Person';
+    personForm.action = '{{ url_for("people_create") }}';
+    personNameInput.value = '';
+    modal.classList.add('active');
+    personNameInput.focus();
+}
+
+function openEditModal(personId, personName) {
+    modalTitle.textContent = 'Edit Person';
+    personForm.action = '{{ url_for("people_update", person_id=0) }}'.replace('0', personId);
+    personNameInput.value = personName;
+    modal.classList.add('active');
+    personNameInput.focus();
+}
+
+function closeModal() {
+    modal.classList.remove('active');
+}
+
+function confirmDelete(personId, personName) {
+    document.getElementById('deletePersonName').textContent = personName;
+    deleteForm.action = '{{ url_for("people_delete", person_id=0) }}'.replace('0', personId);
+    deleteModal.classList.add('active');
+}
+
+function closeDeleteModal() {
+    deleteModal.classList.remove('active');
+}
+
+// Close modals when clicking outside
+modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+});
+
+deleteModal.addEventListener('click', (e) => {
+    if (e.target === deleteModal) closeDeleteModal();
+});
+
+// Close modals with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeModal();
+        closeDeleteModal();
+    }
+});
+</script>
+{% endblock %}

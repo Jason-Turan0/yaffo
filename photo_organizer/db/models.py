@@ -26,6 +26,13 @@ class Face(db.Model):
     photo_id = db.Column(db.Integer, db.ForeignKey("photos.id"))
     status = db.Column(db.String)
     # Relationships
+    # One-to-one with PersonFace
+    person_face = db.relationship(
+        "PersonFace",
+        back_populates="face",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
     photo = db.relationship("Photo", back_populates="faces")
     people = db.relationship(
         "Person",
@@ -49,6 +56,8 @@ class Person(db.Model):
         back_populates="person",
         cascade="all, delete-orphan"
     )
+    person_faces = db.relationship("PersonFace", back_populates="person", cascade="all, delete-orphan")
+
 
 class PersonEmbedding(db.Model):
     __tablename__ = "people_embeddings"
@@ -66,9 +75,11 @@ class PersonEmbedding(db.Model):
 
 class PersonFace(db.Model):
     __tablename__ = "people_face"
-    person_id = db.Column(db.Integer, db.ForeignKey("people.id"), primary_key=True)
-    face_id = db.Column(db.Integer, db.ForeignKey("faces.id"), primary_key=True)
+
+    person_id = db.Column(db.Integer, db.ForeignKey("people.id"), nullable=False)
+    face_id = db.Column(db.Integer, db.ForeignKey("faces.id"),  primary_key=True, unique=True, nullable=False)
+
     similarity = db.Column(db.Float)
-    __table_args__ = (
-        PrimaryKeyConstraint("person_id", "face_id"),
-    )
+
+    face = db.relationship("Face", back_populates="person_face", uselist=False)
+    person = db.relationship("Person", back_populates="person_faces")

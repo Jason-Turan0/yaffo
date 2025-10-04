@@ -1,14 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Organize Faces</title>
-<style>
-body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+{% extends "base.html" %}
+
+{% block title %}Faces - Photo Organizer{% endblock %}
+
+{% block extra_styles %}
+.faces-layout {
     display: flex;
-    height: 100vh;
+    height: calc(100vh - 60px);
+    margin: -20px;
 }
 
 .sidebar {
@@ -151,21 +149,23 @@ body {
 .global-actions {
     margin-bottom: 20px;
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
 }
 
-.global-actions button {
-    padding: 8px 16px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    background: white;
-    cursor: pointer;
+.global-actions a {
+    color: #007BFF;
+    text-decoration: none;
     font-size: 14px;
+    cursor: pointer;
 }
 
-.global-actions button:hover {
-    background: #f8f9fa;
+.global-actions a:hover {
+    text-decoration: underline;
+}
+
+.global-actions .separator {
+    color: #dee2e6;
 }
 
 .suggestion-group {
@@ -180,6 +180,23 @@ body {
     margin: 0 0 15px 0;
     font-size: 18px;
     color: #212529;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.group-select-checkbox {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+.group-select-label {
+    font-size: 14px;
+    font-weight: normal;
+    color: #495057;
+    cursor: pointer;
+    user-select: none;
 }
 
 .group-actions {
@@ -240,9 +257,41 @@ body {
     height: 100%;
     object-fit: cover;
 }
-</style>
-</head>
-<body>
+
+.tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.tooltip.visible {
+    opacity: 1;
+}
+
+.tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.9);
+    transform: translateX(-50%) rotate(45deg);
+}
+{% endblock %}
+
+{% block content %}
+<div class="faces-layout">
 <div class="sidebar">
     <h2>Filters & Actions</h2>
 
@@ -285,10 +334,21 @@ body {
             <div class="threshold-display"><span id="threshold-value">{{ (filters.selected_threshold or 0.95) * 100 }}%</span></div>
         </div>
 
+        <div class="filter-group">
+            <label for="face-page-size">Page Size</label>
+             <select name="face-page-size" id="face-page-size">
+                {% for face_page_size in filters.face_page_sizes %}
+                <option value="{{ face_page_size }}" {% if filters.face_page_size == face_page_size %}selected{% endif %}>{{ face_page_size }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
         <button type="submit" class="sidebar-btn btn-primary">Apply Filters</button>
     </form>
 
-    <h3>Quick Actions</h3>
+    <h3>Batch Actions</h3>
+    <p style="font-size: 12px; color: #6c757d; margin: 0 0 15px 0;">Assign selected faces across all groups to any person</p>
+
     <form method="POST" action="{{ url_for('faces_assign') }}" id="sidebar-assign-form">
         <input type="hidden" name="face_status" value="ASSIGNED">
 
@@ -302,7 +362,9 @@ body {
         <div id="sidebar-face-checkboxes"></div>
     </form>
 
-    <button type="button" class="sidebar-btn btn-danger" id="sidebar-ignore-btn">Ignore Selected</button>
+    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+        <button type="button" class="sidebar-btn btn-danger" id="sidebar-ignore-btn">Ignore Selected</button>
+    </div>
 </div>
 
 <div class="main-content">
@@ -312,17 +374,20 @@ body {
         <input type="hidden" name="face_status" id="face_status" value="">
 
         <div class="global-actions">
-            <button type="button" id="select-all">Select All</button>
-            <button type="button" id="deselect-all">Deselect All</button>
+            <a href="#" id="select-all">Select all</a>
+            <span class="separator">|</span>
+            <a href="#" id="deselect-all">Clear selection</a>
         </div>
 
         {% for faceSuggestion in face_suggestions %}
         <div class="suggestion-group">
-            <h2>{{ faceSuggestion.suggestion_name }}</h2>
+            <h2>
+                <input type="checkbox" class="group-select-checkbox" data-group-index="{{ loop.index0 }}">
+                <span class="group-select-label">Select all</span>
+                <span style="margin-left: auto;">{{ faceSuggestion.suggestion_name }}</span>
+            </h2>
 
             <div class="group-actions">
-                <button type="button" class="select-group">Select All</button>
-                <button type="button" class="deselect-group">Deselect All</button>
                 {% for person in faceSuggestion.people %}
                 <button type="button" class="assign-group-btn" data-person-id="{{ person.id }}">Assign to {{ person.name }}</button>
                 {% endfor %}
@@ -330,7 +395,7 @@ body {
 
             <div class="grid">
                 {% for face in faceSuggestion.faces %}
-                <div class="face" data-face-id="{{ face.id }}" title="Similarity {{ '%.2f' % (face.similarity * 100) if face.similarity is not none else 'N/A' }}%. Date Taken {{ face.photo_date.split(' ')[0] }}">
+                <div class="face" data-face-id="{{ face.id }}" data-similarity="{{ '%.2f' % (face.similarity * 100) if face.similarity is not none else 'N/A' }}" data-date="{{ face.photo_date.split(' ')[0] }}">
                     <img src="{{ url_for('photo', filename=face.relative_file_path) }}" width="100" height="100">
                     <input type="checkbox" name="faces" value="{{ face.id }}" style="display:none;">
                 </div>
@@ -341,7 +406,16 @@ body {
     </form>
 </div>
 
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
+// Create tooltip element
+const tooltip = document.createElement('div');
+tooltip.className = 'tooltip';
+document.body.appendChild(tooltip);
+
 // Threshold slider update
 const thresholdRange = document.getElementById('threshold-range');
 const thresholdValue = document.getElementById('threshold-value');
@@ -356,37 +430,70 @@ document.querySelectorAll('.face').forEach(div => {
         const checkbox = div.querySelector('input[type="checkbox"]');
         checkbox.checked = !checkbox.checked;
     });
+
+    // Tooltip on hover
+    div.addEventListener('mouseenter', (e) => {
+        const similarity = div.dataset.similarity;
+        const date = div.dataset.date;
+        tooltip.innerHTML = `Similarity: ${similarity}%<br>Date: ${date}`;
+        tooltip.classList.add('visible');
+    });
+
+    div.addEventListener('mousemove', (e) => {
+        const rect = div.getBoundingClientRect();
+        tooltip.style.left = rect.left + rect.width / 2 + 'px';
+        tooltip.style.top = rect.top - 10 + 'px';
+        tooltip.style.transform = 'translate(-50%, -100%)';
+    });
+
+    div.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('visible');
+    });
 });
 
 // Global select/deselect
-document.getElementById('select-all').addEventListener('click', () => {
+document.getElementById('select-all').addEventListener('click', (e) => {
+    e.preventDefault();
     document.querySelectorAll('.face').forEach(div => {
         div.classList.add('selected');
         div.querySelector('input[type="checkbox"]').checked = true;
     });
+    // Update all group checkboxes
+    document.querySelectorAll('.group-select-checkbox').forEach(cb => cb.checked = true);
 });
 
-document.getElementById('deselect-all').addEventListener('click', () => {
+document.getElementById('deselect-all').addEventListener('click', (e) => {
+    e.preventDefault();
     document.querySelectorAll('.face').forEach(div => {
         div.classList.remove('selected');
         div.querySelector('input[type="checkbox"]').checked = false;
     });
+    // Update all group checkboxes
+    document.querySelectorAll('.group-select-checkbox').forEach(cb => cb.checked = false);
 });
 
-// Group-level select/deselect
-document.querySelectorAll('.suggestion-group').forEach(group => {
-    group.querySelector('.select-group').addEventListener('click', () => {
-        group.querySelectorAll('.face').forEach(f => {
-            f.classList.add('selected');
-            f.querySelector('input[type="checkbox"]').checked = true;
+// Group-level checkboxes
+document.querySelectorAll('.group-select-checkbox').forEach(checkbox => {
+    const group = checkbox.closest('.suggestion-group');
+
+    checkbox.addEventListener('change', () => {
+        const faces = group.querySelectorAll('.face');
+        faces.forEach(f => {
+            if (checkbox.checked) {
+                f.classList.add('selected');
+                f.querySelector('input[type="checkbox"]').checked = true;
+            } else {
+                f.classList.remove('selected');
+                f.querySelector('input[type="checkbox"]').checked = false;
+            }
         });
     });
 
-    group.querySelector('.deselect-group').addEventListener('click', () => {
-        group.querySelectorAll('.face').forEach(f => {
-            f.classList.remove('selected');
-            f.querySelector('input[type="checkbox"]').checked = false;
-        });
+    // Also toggle when clicking the label
+    const label = checkbox.nextElementSibling;
+    label.addEventListener('click', () => {
+        checkbox.checked = !checkbox.checked;
+        checkbox.dispatchEvent(new Event('change'));
     });
 });
 
@@ -462,5 +569,4 @@ document.getElementById('sidebar-ignore-btn').addEventListener('click', () => {
     mainForm.submit();
 });
 </script>
-</body>
-</html>
+{% endblock %}
