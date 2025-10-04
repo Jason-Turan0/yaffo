@@ -1,0 +1,20 @@
+
+{% macro render_sidebar(url, filters, render_filters_block, render_actions_block) %}
+ <div class="sidebar">
+        <h2>Filters</h2>
+     <form method="GET" action="{{ url }}" id="filter-form">
+        {% include "filters/_year.html"  %}
+        {% include "filters/_month.html" %}
+        {{ render_filters_block() }}
+        <button type="submit" class="filter-btn">Apply Filters</button>
+        <button type="button" class="clear-filters"
+                onclick="window.location.href='{{ url }}'">
+            Clear Filters
+        </button>
+     </form>
+        {% if render_actions_block %}
+     <h3>Actions</h3>
+          {{ render_actions_block() }}
+        {% endif %}
+    </div>
+ {% endmacro %}

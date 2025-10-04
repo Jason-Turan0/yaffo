@@ -1,0 +1,8 @@
+<div class="filter-group">
+    <label for="similarity-range">Min Similarity</label>
+    <input type="range" id="similarity-range" name="similarity" min="0" max="1" step="0.01"
+           value="{{ filters.selected_similarity or 0 }}">
+    <div class="similarity-display"><span
+            id="similarity-value">{{ ((filters.selected_similarity or 0) * 100)|int }}%</span>
+    </div>
+</div>

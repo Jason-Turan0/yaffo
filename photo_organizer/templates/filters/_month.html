@@ -1,0 +1,11 @@
+<div class="filter-group">
+    <label for="month-select">Month</label>
+    <select name="month" id="month-select">
+        <option value="">All Months</option>
+        {% for month in filters.months %}
+        <option value="{{ month.value }}" {% if filters.selected_month== month.value %}selected{% endif %}>
+            {{ month.name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>

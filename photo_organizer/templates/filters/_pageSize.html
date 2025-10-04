@@ -1,0 +1,10 @@
+<div class="filter-group">
+    <label for="face-page-size">Page Size</label>
+    <select name="face-page-size" id="face-page-size">
+        {% for face_page_size in filters.face_page_sizes %}
+        <option value="{{ face_page_size }}" {% if filters.face_page_size== face_page_size %}selected{%
+                endif %}>{{ face_page_size }}
+        </option>
+        {% endfor %}
+    </select>
+</div>

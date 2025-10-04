@@ -1,0 +1,10 @@
+<div class="filter-group">
+    <label for="year-select">Year</label>
+    <select name="year" id="year-select">
+        <option value="">All Years</option>
+        {% for year in filters.years %}
+        <option value="{{ year }}" {% if filters.selected_year== year %}selected{% endif %}>{{ year }}
+        </option>
+        {% endfor %}
+    </select>
+</div>

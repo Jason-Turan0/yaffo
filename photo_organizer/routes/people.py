@@ -120,7 +120,6 @@ def init_people_routes(app: Flask):
         flash(f"Deleted {name}", "success")
         return redirect(url_for("people_list"))
 
-
     @app.route("/people/<int:person_id>/faces", methods=["GET"])
     def person_faces(person_id):
         """View all faces for a specific person"""
@@ -134,25 +133,34 @@ def init_people_routes(app: Flask):
         if not person:
             flash("Person not found", "error")
             return redirect(url_for("people_list"))
-        PhotoAlias = aliased(Photo)
+
+        photo_alias = aliased(Photo)
+
         # Get all faces for this person
         query = (
             db.session.query(Face)
             .join(PersonFace)
-            .join(PhotoAlias, Face.photo)
+            .join(photo_alias, Face.photo)
             .filter(PersonFace.person_id == person_id)
-            .options(joinedload(Face.photo))
+            .options(
+                joinedload(Face.photo),  # eager load photo
+                joinedload(Face.person_face)  # eager load person_face
+            )
         )
+
         if year:
-            query = query.filter(extract("year", Photo.date_taken) == year)
+            query = query.filter(extract("year", photo_alias.date_taken) == year)
         if month:
-            query = query.filter(extract("month", Photo.date_taken) == month)
+            query = query.filter(extract("month", photo_alias.date_taken) == month)
         if selected_similarity and selected_similarity > 0:
             query = query.filter(PersonFace.similarity > selected_similarity)
-        faces = (query
-                 .order_by(PhotoAlias.date_taken)
-                 .limit(filter_face_page_size)
-                 .all())
+
+        faces = (
+            query
+            .order_by(photo_alias.date_taken)
+            .limit(filter_face_page_size)
+            .all()
+        )
 
         filters = {
             "years": get_distinct_years(db.session),
@@ -163,7 +171,12 @@ def init_people_routes(app: Flask):
             "face_page_size": filter_face_page_size,
             "selected_similarity": selected_similarity,
         }
-        face_data = [{"face": face, "similarity": face.person_face.similarity } for face in faces]
+
+        face_data = [
+            {"face": face, "similarity": face.person_face.similarity}
+            for face in faces
+        ]
+
         return render_template("people/faces.html", person=person, faces=face_data, filters=filters)
 
     @app.route("/people/<int:person_id>/faces/remove", methods=["POST"])
