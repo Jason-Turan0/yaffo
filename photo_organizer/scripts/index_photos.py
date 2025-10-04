@@ -144,10 +144,10 @@ def process_photo(photo_path):
         image = load_image_file(photo_path)
 
         face_locations = face_recognition.face_locations(image)
-        face_encodings = face_recognition.face_encodings(image, face_locations)
+        face_embeddings = face_recognition.face_encodings(image, face_locations)
 
         faces_data = []
-        for i, (loc, emb) in enumerate(zip(face_locations, face_encodings)):
+        for i, (loc, emb) in enumerate(zip(face_locations, face_embeddings)):
             thumb_path = save_face_thumbnail(photo_path, i, loc)
             faces_data.append((emb, str(thumb_path), str(Path.relative_to(thumb_path, ROOT_DIR))))
 

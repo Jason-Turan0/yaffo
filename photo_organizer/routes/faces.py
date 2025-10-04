@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-from http.client import HTTPException
 from typing import Optional, Tuple, List
-import json
 import numpy as np
 from flask import Flask, render_template, request, redirect, url_for
+from joblib.externals.loky.backend.reduction import DEFAULT_ENV
 from sqlalchemy import extract
 from sqlalchemy.dialects.sqlite import insert
 import pydash as _
@@ -13,12 +12,12 @@ from photo_organizer.db.models import db, Face, Person, PersonFace, FACE_STATUS_
     FACE_STATUS_ASSIGNED, Photo, PersonEmbedding
 from sklearn.metrics.pairwise import cosine_similarity
 
-THRESHOLD = 0.96  # configurable similarity threshold
+from photo_organizer.db.repositories.person_repository import update_person_embedding
+from photo_organizer.domain.compare_utils import load_embedding, calculate_similarity
+
+DEFAULT_THRESHOLD = 0.95  # configurable similarity threshold
 FACE_LOAD_LIMIT = 250
 
-def load_embedding(blob: bytes) -> np.ndarray:
-    arr = np.frombuffer(blob, dtype=np.float64)
-    return arr.reshape((128,))
 
 @dataclass
 class FaceViewModel:
@@ -34,59 +33,8 @@ class FaceSuggestion:
     suggestion_name: str
     faces: list[FaceViewModel]
 
-def update_person_embedding(person_id: str):
-    person = (
-        Person.query
-        .options(
-            joinedload(Person.faces).joinedload(Face.photo),  # load photo for each face
-            joinedload(Person.embeddings_by_year)  # load per-year embeddings
-        )
-        .filter(Person.id == person_id)
-        .first()
-    )
-    if person is None:
-        return
 
 
-    # --- Compute overall avg_embedding ---
-    embeddings = [load_embedding(f.embedding) for f in person.faces]
-    person.avg_embedding = np.mean(embeddings, axis=0).tobytes()
-
-    def get_year(face: Face):
-        try:
-            return int(face.photo.date_taken[:4])
-        except (ValueError, AttributeError):
-            return None
-
-    faces_by_year = _.group_by(person.faces, get_year)
-
-    # --- Compute per-year embeddings ---
-    for year, faces_in_year in faces_by_year.items():
-        embs = [load_embedding(f.embedding) for f in faces_in_year]
-        avg_year = np.mean(embs, axis=0)
-        face_ids = [face.id for face in faces_in_year]
-
-        # Fetch or create PersonEmbedding record
-        record = PersonEmbedding.query.filter_by(person_id=person.id, year=year).first()
-        if record is None:
-            record = PersonEmbedding(person_id=person.id, year=year)
-            db.session.add(record)
-
-        record.avg_embedding = avg_year.tobytes()
-        record.included_face_ids = json.dumps(face_ids)
-
-    db.session.commit()
-
-
-def calculate_similarity(person: Person, faces: list[Face]) -> dict[int, float] :
-    loaded_person_embeddings = [load_embedding(person_embedding.avg_embedding) for person_embedding in person.embeddings_by_year]
-    def calculate_similarity_for_face(face: Face) -> float:
-       face_emb = load_embedding(face.embedding)
-       return max(
-           cosine_similarity([face_emb], [person_embedding])[0][0]
-           for person_embedding in loaded_person_embeddings
-       )
-    return { face.id: calculate_similarity_for_face(face) for face in faces  }
 
 def init_faces_route(app: Flask):
     @app.route("/faces", methods=["GET"])
@@ -99,6 +47,8 @@ def init_faces_route(app: Flask):
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
         status = request.args.get("status", type=str)
+        threshold = request.args.get("threshold", type=float)
+        filter_threshold = threshold if threshold else DEFAULT_THRESHOLD
         if year:
             # Assuming Face has a relationship to Photo, and Photo.date_taken is a datetime
             query = query.filter(extract("year", Photo.date_taken) == year)
@@ -109,6 +59,12 @@ def init_faces_route(app: Flask):
         else:
             query = query.filter(Face.status == FACE_STATUS_UNASSIGNED)
         unassigned_faces :List[Face] = query.limit(FACE_LOAD_LIMIT).all()
+        filters = {
+            "years": [2025],
+            "months": [1,2,3,4,5,6,7,8,9,10,11,12],
+            "statuses": [FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED],
+            "threshold": filter_threshold,
+        }
 
 
         people = (db.session.query(Person)
@@ -134,7 +90,7 @@ def init_faces_route(app: Flask):
                 _.chain(people)
                  .flat_map(flat_map_people)
                  .map(lambda pair: (pair[0], cosine_similarity([emb], [pair[1]])[0][0]))
-                 .filter(lambda pair: pair[1] > THRESHOLD)
+                 .filter(lambda pair: pair[1] > filter_threshold)
                  .sort_by(lambda pair: pair[1], True)
                  .group_by(lambda pair: pair[0].id)
                  .values()
@@ -165,7 +121,7 @@ def init_faces_route(app: Flask):
             suggestion.faces = _.sort_by(suggestion.faces, lambda f: f.similarity if f.similarity is not None else 0, reverse=True)
 
         return render_template(
-            "faces/index.html", faces=unassigned_faces, people=people, face_suggestions=face_suggestions
+            "faces/index.html", faces=unassigned_faces, people=people, face_suggestions=face_suggestions, filters=filters
         )
 
     @app.route("/faces/assign", methods=["POST"])
@@ -201,7 +157,7 @@ def init_faces_route(app: Flask):
                 {Face.status: face_status}, synchronize_session=False
             )
             db.session.commit()
-            update_person_embedding(person_id)
+            update_person_embedding(person_id, db.session)
         return redirect(request.referrer or url_for("faces_index"))
 
     @app.route("/faces/remove", methods=["POST"])
