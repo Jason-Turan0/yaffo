@@ -4,7 +4,7 @@ from sqlalchemy import extract, distinct, func
 from sqlalchemy.orm import joinedload
 
 from photo_organizer.db import db
-from photo_organizer.db.models import Photo, Face, Person
+from photo_organizer.db.models import Photo, Face, Person, PersonFace
 from photo_organizer.db.repositories.photos_repository import get_distinct_years, get_distinct_months
 
 
@@ -12,7 +12,8 @@ def init_home_routes(app: Flask):
     @app.route("/", methods=["GET"])
     def index():
         # Get filter parameters
-        person_id = request.args.get("person", type=int)
+        person_ids = request.args.getlist("person", type=int)
+        person_match_type = request.args.get("person-match-type", default='any', type=str)
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
         page_size = request.args.get("page-size", type=int)
@@ -29,13 +30,27 @@ def init_home_routes(app: Flask):
             query = query.filter(extract("year", Photo.date_taken) == year)
         if month:
             query = query.filter(extract("month", Photo.date_taken) == month)
-        if person_id:
-            # Filter photos that have faces assigned to this person
-            query = (
-                query.join(Photo.faces)
-                .join(Face.people)
-                .filter(Person.id == person_id)
-            )
+        if person_ids and person_match_type and len(person_ids) > 0:
+            if person_match_type == 'all':
+                # AND logic: Photo must contain ALL selected people
+                for person_id in person_ids:
+                    subquery = (
+                        db.session.query(Photo.id)
+                        .join(Photo.faces)
+                        .join(Face.person_face)
+                        .filter(PersonFace.person_id == person_id)
+                    )
+                    query = query.filter(Photo.id.in_(subquery))
+            else:
+                # OR logic: Photo must contain ANY of the selected people
+                subquery = (
+                    db.session.query(Photo.id)
+                    .join(Photo.faces)
+                    .join(Face.person_face)
+                    .filter(PersonFace.person_id.in_(person_ids))
+                    .distinct()
+                )
+                query = query.filter(Photo.id.in_(subquery))
 
         photos = query.limit(filter_page_size).all()
         photo_count = db.session.query(func.count(Photo.id)).scalar()
@@ -55,7 +70,8 @@ def init_home_routes(app: Flask):
             'people': Person.query.order_by(Person.name).all(),
             'years': get_distinct_years(db.session),
             'months': get_distinct_months(),
-            'selected_person': person_id,
+            'selected_person_ids': person_ids,
+            'selected_person_match_type': person_match_type,
             'selected_year': year,
             'selected_month': month,
             "page_sizes": [50, 100, 250, 500, 1000],

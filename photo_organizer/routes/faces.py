@@ -49,20 +49,17 @@ def init_faces_routes(app: Flask):
                  )
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
-        threshold = request.args.get("threshold", type=float)
-        page_size = request.args.get("page-size", type=int)
-        filter_face_page_size = page_size if page_size else FACE_LOAD_LIMIT
-        filter_threshold = threshold if threshold else DEFAULT_THRESHOLD
+        threshold = request.args.get("threshold", default=DEFAULT_THRESHOLD, type=float)
+        page_size = request.args.get("page-size", default=FACE_LOAD_LIMIT, type=int)
+        person_id = request.args.get("person", type=int)
 
         if year:
             query = query.filter(extract("year", Photo.date_taken) == year)
         if month:
             query = query.filter(extract("month", Photo.date_taken) == month)
         query = query.filter(Face.status == FACE_STATUS_UNASSIGNED)
-        unassigned_faces :List[Face] = query.limit(filter_face_page_size).all()
+        unassigned_faces :List[Face] = query.limit(page_size).all()
         unassigned_face_count = db.session.query(Face).filter(Face.status == FACE_STATUS_UNASSIGNED).count()
-
-
 
         people = (db.session.query(Person)
                   .options(joinedload(Person.embeddings_by_year))
@@ -87,7 +84,7 @@ def init_faces_routes(app: Flask):
                 _.chain(people)
                  .flat_map(flat_map_people)
                  .map(lambda tuple: (tuple[0], tuple[1], cosine_similarity([emb], [tuple[2]])[0][0]))
-                 .filter(lambda tuple: tuple[2] > filter_threshold and face.photo.date_taken[:4] == str(tuple[1]))
+                 .filter(lambda tuple: tuple[2] > threshold and face.photo.date_taken[:4] == str(tuple[1]) and (person_id is None or tuple[0].id == person_id))
                  .sort_by(lambda pair: pair[1], True)
                  .group_by(lambda pair: pair[0].id)
                  .values()
@@ -123,9 +120,11 @@ def init_faces_routes(app: Flask):
             "selected_year": year,
             "months": months,
             "selected_month": month,
-            "selected_threshold": filter_threshold,
+            "selected_threshold": threshold,
             "page_sizes": [50,100,250,500,1000],
-            "page_size": filter_face_page_size
+            "page_size": page_size,
+            "people": people,
+            'selected_person_id': person_id,
         }
         return render_template(
             "faces/index.html", faces=unassigned_faces, people=people, face_suggestions=face_suggestions, filters=filters, unassigned_face_count=unassigned_face_count

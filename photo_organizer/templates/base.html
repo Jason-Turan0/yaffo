@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Photo Organizer{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='match-type.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='multi-select.css') }}">
     {% block extra_styles %}{% endblock %}
 </head>
 <body>
@@ -36,6 +38,7 @@
 
         {% block content %}{% endblock %}
     </div>
+    <script rel="stylesheet" src="{{ url_for('static', filename='multi-select.js') }}" ></script>
 
     <script>
         // Auto-close alerts after 5 seconds

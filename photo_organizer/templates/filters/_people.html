@@ -1,0 +1,31 @@
+{% from "filters/_matchType.html" import render_match_type  %}
+
+<div class="filter-group">
+    <label>People</label>
+    {{ render_match_type("person-match-type", filters.selected_person_match_type)}}
+
+    <div class="multi-select-wrapper"
+         data-placeholder="All People"
+         data-single-format="{name}"
+         data-multi-format="{count} people selected"
+         data-match-type-id="person-match-type"
+        >
+        <div class="multi-select-header" onclick="toggleMultiSelect(this)">
+            <span class="selected-text">All People</span>
+            <span class="arrow">▼</span>
+        </div>
+        <div class="multi-select-options">
+            {% for person in filters.people %}
+            <label class="multi-select-option">
+                <input type="checkbox"
+                       name="person"
+                       value="{{ person.id }}"
+                       data-label="{{ person.name }}"
+                       {% if person.id in filters.selected_person_ids %}checked{% endif %}
+                       onchange="updateMultiSelectText(this)">
+                <span>{{ person.name }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+</div>

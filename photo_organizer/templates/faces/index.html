@@ -9,6 +9,7 @@
 {% block content %}
 <div class="main-container-layout">
      {% macro render_filters() %}
+       {% include "filters/_person.html" %}
        <div class="filter-group">
             <label for="threshold-range">Similarity Threshold</label>
             <input type="range" id="threshold-range" name="threshold" min="0" max="1" step="0.01" value="{{ filters.selected_threshold or 0.95 }}">
@@ -37,7 +38,7 @@
     <div class="page-header">
         <h1>Unassigned Faces</h1>
         <p class="subtitle">
-            Showing {{ faces|length }} of {{unassigned_face_count}} unassigned faces{{ 's' if faces|length != 1 else '' }}
+            Showing {{ faces|length }} of {{unassigned_face_count}} unassigned face{{ 's' if faces|length != 1 else '' }}
             </p>
     </div>
     <form method="POST" action="{{ url_for('faces_assign') }}" id="main-form">

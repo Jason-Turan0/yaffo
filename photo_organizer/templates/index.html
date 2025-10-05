@@ -10,7 +10,10 @@
 {% from "_sidebar.html" import render_sidebar  %}
 
 <div class="main-container-layout">
-    {{ render_sidebar(url_for('index'), filters) }}
+    {% macro render_filters() %}
+        {% include "filters/_people.html" %}
+    {% endmacro %}
+    {{ render_sidebar(url_for('index'), filters, render_filters) }}
     <div class="main-content photo-gallery">
         <div class="page-header">
             <h1>Photo Library</h1>

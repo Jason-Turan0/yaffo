@@ -1,0 +1,12 @@
+{% macro render_match_type(id, selected_match_type) %}
+    <div class="match-type" id="{{ id }}" style="display: none;">
+        <label class="match-option">
+            <input type="radio" name="{{ id }}" value="any" {% if selected_match_type == "any" %}checked{% endif %} >
+            <span>Any of these</span>
+        </label>
+        <label class="match-option">
+            <input type="radio" name="{{ id }}" {% if selected_match_type == "all" %}checked{% endif %} value="all">
+            <span>All of these</span>
+        </label>
+    </div>
+{% endmacro %}

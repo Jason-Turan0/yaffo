@@ -11,6 +11,8 @@ def calculate_similarity(person: Person, faces: list[Face]) -> dict[int, float] 
     loaded_person_embeddings = [load_embedding(person_embedding.avg_embedding) for person_embedding in person.embeddings_by_year]
     def calculate_similarity_for_face(face: Face) -> float:
        face_emb = load_embedding(face.embedding)
+       if len(loaded_person_embeddings) ==0:
+           return 0
        return max(
            cosine_similarity([face_emb], [person_embedding])[0][0]
            for person_embedding in loaded_person_embeddings
