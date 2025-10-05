@@ -50,8 +50,8 @@ def init_faces_routes(app: Flask):
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
         threshold = request.args.get("threshold", type=float)
-        face_page_size = request.args.get("face-page-size", type=int)
-        filter_face_page_size = face_page_size if face_page_size else FACE_LOAD_LIMIT
+        page_size = request.args.get("page-size", type=int)
+        filter_face_page_size = page_size if page_size else FACE_LOAD_LIMIT
         filter_threshold = threshold if threshold else DEFAULT_THRESHOLD
 
         if year:
@@ -60,6 +60,8 @@ def init_faces_routes(app: Flask):
             query = query.filter(extract("month", Photo.date_taken) == month)
         query = query.filter(Face.status == FACE_STATUS_UNASSIGNED)
         unassigned_faces :List[Face] = query.limit(filter_face_page_size).all()
+        unassigned_face_count = db.session.query(Face).filter(Face.status == FACE_STATUS_UNASSIGNED).count()
+
 
 
         people = (db.session.query(Person)
@@ -122,11 +124,11 @@ def init_faces_routes(app: Flask):
             "months": months,
             "selected_month": month,
             "selected_threshold": filter_threshold,
-            "face_page_sizes": [50,100,250,500,1000],
-            "face_page_size": filter_face_page_size
+            "page_sizes": [50,100,250,500,1000],
+            "page_size": filter_face_page_size
         }
         return render_template(
-            "faces/index.html", faces=unassigned_faces, people=people, face_suggestions=face_suggestions, filters=filters
+            "faces/index.html", faces=unassigned_faces, people=people, face_suggestions=face_suggestions, filters=filters, unassigned_face_count=unassigned_face_count
         )
 
     @app.route("/faces/assign", methods=["POST"])

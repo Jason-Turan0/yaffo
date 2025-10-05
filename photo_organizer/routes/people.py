@@ -127,8 +127,8 @@ def init_people_routes(app: Flask):
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
         selected_similarity = request.args.get("similarity", type=float)
-        face_page_size = request.args.get("face-page-size", type=int)
-        filter_face_page_size = face_page_size if face_page_size else FACE_LOAD_LIMIT
+        page_size = request.args.get("page-size", type=int)
+        filter_face_page_size = page_size if page_size else FACE_LOAD_LIMIT
 
         if not person:
             flash("Person not found", "error")
@@ -167,8 +167,8 @@ def init_people_routes(app: Flask):
             "selected_year": year,
             "months": get_distinct_months(),
             "selected_month": month,
-            "face_page_sizes": [50, 100, 250, 500, 1000],
-            "face_page_size": filter_face_page_size,
+            "page_sizes": [50, 100, 250, 500, 1000],
+            "page_size": filter_face_page_size,
             "selected_similarity": selected_similarity,
         }
 

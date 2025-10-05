@@ -3,353 +3,20 @@
 {% block title %}Faces - Photo Organizer{% endblock %}
 
 {% block extra_styles %}
-.faces-layout {
-    display: flex;
-    height: calc(100vh - 60px);
-    margin: -20px;
-}
-
-.sidebar {
-    width: 280px;
-    background: #f8f9fa;
-    border-right: 1px solid #dee2e6;
-    padding: 20px;
-    overflow-y: auto;
-    flex-shrink: 0;
-}
-
-.sidebar h2 {
-    font-size: 18px;
-    margin: 0 0 20px 0;
-    color: #212529;
-}
-
-.sidebar h3 {
-    font-size: 14px;
-    margin: 20px 0 10px 0;
-    color: #495057;
-    font-weight: 600;
-}
-
-.filter-group {
-    margin-bottom: 20px;
-}
-
-.filter-group label {
-    display: block;
-    font-size: 13px;
-    color: #495057;
-    margin-bottom: 5px;
-    font-weight: 500;
-}
-
-.filter-group select,
-.filter-group input[type="range"] {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 14px;
-}
-
-.filter-group input[type="range"] {
-    padding: 0;
-}
-
-.threshold-display {
-    text-align: center;
-    font-size: 13px;
-    color: #495057;
-    margin-top: 5px;
-}
-
-.sidebar-btn {
-    width: 100%;
-    padding: 10px;
-    margin: 5px 0;
-    border: none;
-    border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s;
-}
-
-.btn-primary {
-    background: #007BFF;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #0056b3;
-}
-
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #545b62;
-}
-
-.btn-danger {
-    background: #dc3545;
-    color: white;
-}
-
-.btn-danger:hover {
-    background: #c82333;
-}
-
-.person-assign-list {
-    max-height: 300px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.person-assign-btn {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #007BFF;
-    border-radius: 4px;
-    background: white;
-    color: #007BFF;
-    text-align: center;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    transition: all 0.2s;
-}
-
-.person-assign-btn:hover {
-    background: #007BFF;
-    color: white;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,123,255,0.2);
-}
-
-.person-assign-btn:active {
-    transform: translateY(0);
-}
-
-.main-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-}
-
-.main-content h1 {
-    margin: 0 0 20px 0;
-    font-size: 24px;
-}
-
-.global-actions {
-    margin-bottom: 20px;
-    display: flex;
-    gap: 15px;
-    align-items: center;
-}
-
-.global-actions a {
-    color: #007BFF;
-    text-decoration: none;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.global-actions a:hover {
-    text-decoration: underline;
-}
-
-.global-actions .separator {
-    color: #dee2e6;
-}
-
-.suggestion-group {
-    margin-bottom: 30px;
-    padding: 20px;
-    background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-}
-
-.suggestion-group h2 {
-    margin: 0 0 15px 0;
-    font-size: 18px;
-    color: #212529;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.group-select-checkbox {
-    cursor: pointer;
-    width: 18px;
-    height: 18px;
-}
-
-.group-select-label {
-    font-size: 14px;
-    font-weight: normal;
-    color: #495057;
-    cursor: pointer;
-    user-select: none;
-}
-
-.group-actions {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-}
-
-.group-actions button {
-    padding: 6px 12px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    background: white;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-.group-actions button:hover {
-    background: #f8f9fa;
-}
-
-.group-actions .assign-group-btn {
-    background: #007BFF;
-    color: white;
-    border-color: #007BFF;
-}
-
-.group-actions .assign-group-btn:hover {
-    background: #0056b3;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, 100px);
-    gap: 10px;
-}
-
-.face {
-    border: 2px solid transparent;
-    cursor: pointer;
-    border-radius: 4px;
-    overflow: hidden;
-    transition: border-color 0.2s;
-}
-
-.face:hover {
-    border-color: #adb5bd;
-}
-
-.face.selected {
-    border-color: #007BFF;
-}
-
-.face img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.tooltip {
-    position: absolute;
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    pointer-events: none;
-    z-index: 1000;
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-.tooltip.visible {
-    opacity: 1;
-}
-
-.tooltip::before {
-    content: '';
-    position: absolute;
-    bottom: -4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 8px;
-    height: 8px;
-    background: rgba(0, 0, 0, 0.9);
-    transform: translateX(-50%) rotate(45deg);
-}
+    <link rel="stylesheet" href="{{ url_for('static', filename='faces/index.css') }}">
 {% endblock %}
-
+{% from "_sidebar.html" import render_sidebar  %}
 {% block content %}
-<div class="faces-layout">
-<div class="sidebar">
-    <h2>Filters & Actions</h2>
-
-    <form method="GET" action="{{ url_for('faces_index') }}" id="filter-form">
-        <h3>Filters</h3>
-
-        <div class="filter-group">
-            <label for="year-select">Year</label>
-            <select name="year" id="year-select">
-                <option value="">All Years</option>
-                {% for year in filters.years %}
-                <option value="{{ year }}" {% if filters.selected_year == year %}selected{% endif %}>{{ year }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <label for="month-select">Month</label>
-            <select name="month" id="month-select">
-                <option value="">All Months</option>
-                {% for month in filters.months %}
-                <option value="{{ month.value }}" {% if filters.selected_month == month.value %}selected{% endif %}>{{ month.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <label for="status-select">Status</label>
-            <select name="status" id="status-select">
-                <option value="">Unassigned</option>
-                {% for status in filters.statuses %}
-                <option value="{{ status.value }}" {% if filters.selected_status == status.value %}selected{% endif %}>{{ status.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="filter-group">
+<div class="main-container-layout">
+     {% macro render_filters() %}
+       <div class="filter-group">
             <label for="threshold-range">Similarity Threshold</label>
             <input type="range" id="threshold-range" name="threshold" min="0" max="1" step="0.01" value="{{ filters.selected_threshold or 0.95 }}">
             <div class="threshold-display"><span id="threshold-value">{{ (filters.selected_threshold or 0.95) * 100 }}%</span></div>
         </div>
-
-        <div class="filter-group">
-            <label for="face-page-size">Page Size</label>
-             <select name="face-page-size" id="face-page-size">
-                {% for face_page_size in filters.face_page_sizes %}
-                <option value="{{ face_page_size }}" {% if filters.face_page_size == face_page_size %}selected{% endif %}>{{ face_page_size }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <button type="submit" class="sidebar-btn btn-primary">Apply Filters</button>
-    </form>
-
-    <h3>Batch Actions</h3>
-    <p style="font-size: 12px; color: #6c757d; margin: 0 0 15px 0;">Assign selected faces across all groups to any person</p>
-
-    <form method="POST" action="{{ url_for('faces_assign') }}" id="sidebar-assign-form">
+    {% endmacro %}
+    {% macro render_actions() %}
+        <form method="POST" action="{{ url_for('faces_assign') }}" id="sidebar-assign-form">
         <input type="hidden" name="face_status" value="ASSIGNED">
 
         <div class="person-assign-list">
@@ -357,7 +24,6 @@
             <button type="button" class="person-assign-btn sidebar-assign-person" data-person-id="{{ person.id }}">{{ person.name }}</button>
             {% endfor %}
         </div>
-
         <select name="person" id="sidebar-person-select" style="display:none;"></select>
         <div id="sidebar-face-checkboxes"></div>
     </form>
@@ -365,11 +31,15 @@
     <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
         <button type="button" class="sidebar-btn btn-danger" id="sidebar-ignore-btn">Ignore Selected</button>
     </div>
-</div>
-
+    {% endmacro %}
+{{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions) }}
 <div class="main-content">
-    <h1>Unassigned Faces</h1>
-
+    <div class="page-header">
+        <h1>Unassigned Faces</h1>
+        <p class="subtitle">
+            Showing {{ faces|length }} of {{unassigned_face_count}} unassigned faces{{ 's' if faces|length != 1 else '' }}
+            </p>
+    </div>
     <form method="POST" action="{{ url_for('faces_assign') }}" id="main-form">
         <input type="hidden" name="face_status" id="face_status" value="">
 

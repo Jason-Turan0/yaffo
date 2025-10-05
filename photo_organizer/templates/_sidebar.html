@@ -5,7 +5,10 @@
      <form method="GET" action="{{ url }}" id="filter-form">
         {% include "filters/_year.html"  %}
         {% include "filters/_month.html" %}
-        {{ render_filters_block() }}
+         {% if render_filters_block %}
+            {{ render_filters_block() }}
+         {% endif %}
+        {% include "filters/_pageSize.html" %}
         <button type="submit" class="filter-btn">Apply Filters</button>
         <button type="button" class="clear-filters"
                 onclick="window.location.href='{{ url }}'">
@@ -13,7 +16,7 @@
         </button>
      </form>
         {% if render_actions_block %}
-     <h3>Actions</h3>
+        <h3>Actions</h3>
           {{ render_actions_block() }}
         {% endif %}
     </div>
