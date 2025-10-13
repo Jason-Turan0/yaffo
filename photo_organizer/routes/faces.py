@@ -103,7 +103,7 @@ def init_faces_routes(app: Flask):
                 face_suggestions.append(best_suggestion)
 
             if best_suggestion is not None:
-                best_sim = matching_people[0][1]
+                best_sim = matching_people[0][2]
                 best_suggestion.faces.append(FaceViewModel(face.id, face.relative_file_path,face.photo.date_taken, best_sim ))
             else:
                 default_suggestion.faces.append(FaceViewModel(face.id, face.relative_file_path, face.photo.date_taken, None))

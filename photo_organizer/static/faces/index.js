@@ -90,12 +90,9 @@ document.querySelectorAll('.face').forEach(div => {
         const date = div.dataset.date;
         tooltip.innerHTML = `Similarity: ${similarity}%<br>Date: ${date}`;
         tooltip.classList.add('visible');
-    });
-
-    div.addEventListener('mousemove', (e) => {
         const rect = div.getBoundingClientRect();
         tooltip.style.left = rect.left + rect.width / 2 + 'px';
-        tooltip.style.top = rect.top - 10 + 'px';
+        tooltip.style.top = rect.top + window.scrollY - 10 + 'px';
         tooltip.style.transform = 'translate(-50%, -100%)';
     });
 
