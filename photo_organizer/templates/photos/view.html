@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}{{ file_name }} - Photo Organizer{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='photos/view.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="photo-viewer">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Photo Details</h2>
+        </div>
+
+        <div class="sidebar-content">
+            <div class="detail-section">
+                <h3>File Information</h3>
+                <div class="detail-item">
+                    <label>Name:</label>
+                    <span class="detail-value">{{ file_name }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Folder:</label>
+                    <span class="detail-value">{{ absolute_folder_path if absolute_folder_path else '/' }}</span>
+                </div>
+                {% if photo.date_taken %}
+                <div class="detail-item">
+                    <label>Date Taken:</label>
+                    <span class="detail-value">{{ photo.date_taken }}</span>
+                </div>
+                {% endif %}
+                <div class="detail-actions">
+                    <button onclick="openFile('{{ absolute_file_path }}')" class="action-button">
+                        Open File
+                    </button>
+                    <button onclick="openFolder('{{ absolute_folder_path }}')" class="action-button">
+                        Open Folder
+                    </button>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3>People ({{ people|length }})</h3>
+                {% if people %}
+                <div class="people-list">
+                    {% for person in people %}
+                    <a href="{{ url_for('person_faces', person_id=person.id) }}" class="person-tag">
+                        {{ person.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="no-data">No people assigned to this photo</p>
+                {% endif %}
+            </div>
+
+            <div class="detail-section">
+                <h3>Faces ({{ photo.faces|length }})</h3>
+                {% if photo.faces %}
+                <div class="faces-grid">
+                    {% for face in photo.faces %}
+                    <div class="face-thumbnail">
+                        <img src="{{ url_for('photo', filename=face.relative_file_path) }}" alt="Face">
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="no-data">No faces detected</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="photo-container">
+        <div class="photo-wrapper">
+            <img src="{{ url_for('photo', filename=photo.relative_file_path) }}"
+                 alt="{{ file_name }}"
+                 class="photo-main">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='photos/view.js') }}"></script>
+{% endblock %}

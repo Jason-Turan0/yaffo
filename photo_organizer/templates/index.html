@@ -29,7 +29,7 @@
         {% if photos|length > 0 %}
         <div class="photo-grid">
             {% for photo in photos %}
-            <div class="photo-card" onclick="window.open('{{ url_for('photo', filename=photo.relative_file_path) }}', '_blank')">
+            <div class="photo-card" onclick="window.open('{{ url_for('photo_view', filename=photo.relative_file_path) }}', '_blank')">
                 <img src="{{ url_for('photo', filename=photo.relative_file_path) }}" alt="Photo from {{ photo.date_taken }}">
                 <div class="photo-info">
                     <div class="photo-date">{{ photo.date_taken.split(' ')[0] if photo.date_taken else 'Unknown date' }}</div>

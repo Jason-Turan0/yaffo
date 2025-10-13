@@ -22,7 +22,7 @@
 
         <div class="person-assign-list">
             {% for person in people %}
-            <button type="button" class="person-assign-btn sidebar-assign-person" data-person-id="{{ person.id }}">{{ person.name }}</button>
+            <button type="button" class="btn-primary person-assign-btn sidebar-assign-person" data-person-id="{{ person.id }}">Assign to {{ person.name }}</button>
             {% endfor %}
         </div>
         <select name="person" id="sidebar-person-select" style="display:none;"></select>
@@ -30,7 +30,7 @@
     </form>
 
     <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
-        <button type="button" class="sidebar-btn btn-danger" id="sidebar-ignore-btn">Ignore Selected</button>
+        <button type="button" class="btn sidebar-btn btn-danger" id="sidebar-ignore-btn">Ignore Selected</button>
     </div>
     {% endmacro %}
 {{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions) }}
@@ -60,7 +60,7 @@
 
             <div class="group-actions">
                 {% for person in faceSuggestion.people %}
-                <button type="button" class="assign-group-btn" data-person-id="{{ person.id }}">Assign to {{ person.name }}</button>
+                <button type="button" class="btn assign-group-btn" data-person-id="{{ person.id }}">Assign to {{ person.name }}</button>
                 {% endfor %}
             </div>
 

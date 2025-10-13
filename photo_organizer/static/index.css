@@ -51,19 +51,6 @@
 
 .filter-btn {
     width: 100%;
-    padding: 10px;
-    background: #007BFF;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.filter-btn:hover {
-    background: #0056b3;
 }
 
 .clear-filters {
