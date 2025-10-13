@@ -8,7 +8,37 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='match-type.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='multi-select.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='notification.css') }}">
     {% block extra_styles %}{% endblock %}
+    <script>
+    // Global configuration object with all Flask routes
+    window.APP_CONFIG = {
+        urls: {
+            {% for rule in url_map.iter_rules() %}
+            {% if not rule.endpoint.startswith('_') and rule.endpoint != 'static' %}
+            {% if rule.arguments|length == 0 %}
+            {{ rule.endpoint.replace('.', '_') }}: "{{ url_for(rule.endpoint) }}",
+            {% else %}
+            {{ rule.endpoint.replace('.', '_') }}: "{{ rule.rule }}",
+            {% endif %}
+            {% endif %}
+            {% endfor %}
+        },
+        // Helper function to build URLs with parameters
+        buildUrl: function(endpoint, params) {
+            let url = this.urls[endpoint];
+            if (!url) {
+                console.error(`Endpoint '${endpoint}' not found in APP_CONFIG.urls`);
+                return null;
+            }
+            // Replace <param> or <type:param> with actual values
+            for (const [key, value] of Object.entries(params)) {
+                url = url.replace(new RegExp(`<(?:\\w+:)?${key}>`, 'g'), value);
+            }
+            return url;
+        }
+    };
+    </script>
 </head>
 <body>
     <nav class="navbar">
@@ -38,7 +68,8 @@
 
         {% block content %}{% endblock %}
     </div>
-    <script rel="stylesheet" src="{{ url_for('static', filename='multi-select.js') }}" ></script>
+    <script src="{{ url_for('static', filename='notification.js') }}"></script>
+    <script src="{{ url_for('static', filename='multi-select.js') }}"></script>
 
     <script>
         // Auto-close alerts after 5 seconds

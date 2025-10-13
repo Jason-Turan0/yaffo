@@ -23,6 +23,11 @@ def create_app():
 
     db.init_app(app)
 
+    # Make url_map available in all templates
+    @app.context_processor
+    def inject_url_map():
+        return {'url_map': app.url_map}
+
     from photo_organizer.routes.init_routes import init_routes
     init_routes(app)
     return app

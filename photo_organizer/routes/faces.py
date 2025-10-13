@@ -2,7 +2,7 @@ import calendar
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 import numpy as np
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from joblib.externals.loky.backend.reduction import DEFAULT_ENV
 from sqlalchemy import extract
 from sqlalchemy.dialects.sqlite import insert
@@ -34,8 +34,6 @@ class FaceSuggestion:
     people: list[Person]
     suggestion_name: str
     faces: list[FaceViewModel]
-
-
 
 
 def init_faces_routes(app: Flask):
@@ -132,36 +130,72 @@ def init_faces_routes(app: Flask):
 
     @app.route("/faces/assign", methods=["POST"])
     def faces_assign():
-        # Get selected face IDs from form
-        selected_face_ids = request.form.getlist("faces")
-        person_id = request.form.get("person")
-        face_status = request.form.get("face_status")
+        # Check if this is an async request (JSON expected)
+        is_async = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-        if face_status == FACE_STATUS_IGNORED:
-            db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
-                {Face.status: face_status}, synchronize_session=False
-            )
-            db.session.commit()
+        # Get selected face IDs from form/JSON
+        if is_async:
+            data = request.get_json()
+            selected_face_ids = data.get("faces", [])
+            person_id = data.get("person")
+            face_status = data.get("face_status")
+        else:
+            selected_face_ids = request.form.getlist("faces")
+            person_id = request.form.get("person")
+            face_status = request.form.get("face_status")
 
-        elif selected_face_ids and person_id and face_status == FACE_STATUS_ASSIGNED:
-            person : Person | None = (Person.query.options(joinedload(Person.embeddings_by_year)).order_by(Person.name).get(int(person_id)))
-            if person is None:
-                print(f'Person {person_id} not found')
-                return redirect(request.referrer or url_for("faces_index"))
-            faces = (Face.query.filter(Face.id.in_(selected_face_ids)))
-            similarity_by_face_id = calculate_similarity(person, faces)
+        try:
+            if face_status == FACE_STATUS_IGNORED:
+                db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
+                    {Face.status: face_status}, synchronize_session=False
+                )
+                db.session.commit()
 
-            stmt = insert(PersonFace).values([
-                {"person_id": person_id, "face_id": fid, "similarity": similarity_by_face_id.get(int(fid))}
-                for fid in selected_face_ids
-            ])
-            stmt = stmt.on_conflict_do_nothing(
-                index_elements=["person_id", "face_id"]
-            )
-            db.session.execute(stmt)
-            db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
-                {Face.status: face_status}, synchronize_session=False
-            )
-            db.session.commit()
-            update_person_embedding(person_id, db.session)
+                if is_async:
+                    return jsonify({
+                        "success": True,
+                        "message": f"Successfully ignored {len(selected_face_ids)} face(s)",
+                        "face_ids": selected_face_ids
+                    })
+
+            elif selected_face_ids and person_id and face_status == FACE_STATUS_ASSIGNED:
+                person : Person | None = (Person.query.options(joinedload(Person.embeddings_by_year)).order_by(Person.name).get(int(person_id)))
+                if person is None:
+                    error_msg = f'Person {person_id} not found'
+                    print(error_msg)
+                    if is_async:
+                        return jsonify({"success": False, "message": error_msg}), 404
+                    return redirect(request.referrer or url_for("faces_index"))
+
+                faces = (Face.query.filter(Face.id.in_(selected_face_ids)))
+                similarity_by_face_id = calculate_similarity(person, faces)
+
+                stmt = insert(PersonFace).values([
+                    {"person_id": person_id, "face_id": fid, "similarity": similarity_by_face_id.get(int(fid))}
+                    for fid in selected_face_ids
+                ])
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=["person_id", "face_id"]
+                )
+                db.session.execute(stmt)
+                db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
+                    {Face.status: face_status}, synchronize_session=False
+                )
+                db.session.commit()
+                update_person_embedding(person_id, db.session)
+
+                if is_async:
+                    return jsonify({
+                        "success": True,
+                        "message": f"Successfully assigned {len(selected_face_ids)} face(s) to {person.name}",
+                        "face_ids": selected_face_ids
+                    })
+
+        except Exception as e:
+            db.session.rollback()
+            error_msg = f"Error processing faces: {str(e)}"
+            print(error_msg)
+            if is_async:
+                return jsonify({"success": False, "message": error_msg}), 500
+
         return redirect(request.referrer or url_for("faces_index"))
