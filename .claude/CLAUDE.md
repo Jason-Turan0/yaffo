@@ -113,3 +113,66 @@ APP_CONFIG.urls.faces_assign // → "/faces/assign"
 const url = APP_CONFIG.buildUrl('person_update', { person_id: 123 });
 // → "/people/123/update"
 ```
+
+## Passing Template Variables to JavaScript
+
+**Preferred Pattern: Namespaced Module with Initialization Function**
+
+Use a namespaced module pattern with an initialization function. This keeps data scoped, prevents naming collisions, and provides a clean public API.
+
+**Template (HTML):**
+```html
+{% block scripts %}
+<script src="{{ url_for('static', filename='utilities/index_photos.js') }}"></script>
+<script>
+window.PHOTO_ORGANIZER.initIndexPhotos({{ unindexed_photos | tojson }}, {{ orphaned_photos | tojson }});
+</script>
+{% endblock %}
+```
+
+**JavaScript Module:**
+```javascript
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
+    // Private functions and variables (closure scope)
+    const startSync = async () => {
+        const syncButton = document.getElementById('sync-button');
+        // ... use unindexedPhotos and orphanedPhotos directly
+    };
+
+    const pollJobStatus = async () => {
+        // ... implementation
+    };
+
+    // Initialize event listeners
+    const syncButton = document.getElementById('sync-button');
+    if (syncButton) {
+        syncButton.addEventListener('click', startSync);
+    }
+
+    // Return public API (optional)
+    return {
+        startSync,
+        pollJobStatus
+    };
+};
+```
+
+**Why this pattern:**
+- **Namespacing**: `window.PHOTO_ORGANIZER` prevents global namespace pollution
+- **Closure scope**: Data (parameters) and private functions are enclosed, not accessible globally
+- **Clean initialization**: Template data is passed directly as parameters
+- **Public API**: Optionally expose functions for testing or external use
+- **No syntax errors**: Handles complex JSON objects safely
+
+**Key Points:**
+- Always use the `window.PHOTO_ORGANIZER` namespace for all modules
+- Init functions should accept data as parameters (use closures for access)
+- Use arrow functions for cleaner syntax and lexical `this`
+- Return public methods only if needed for testing or cross-module communication
+
+**Avoid:**
+- Inline `onclick` attributes with JSON data (causes syntax errors)
+- Separate global variables like `window.pageData`
+- Data attributes for complex objects
+- Polluting the global namespace with individual functions

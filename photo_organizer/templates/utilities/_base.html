@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='utilities.css') }}">
+{% block utility_styles %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="utilities-container">
+    <nav class="utilities-sidebar">
+        <h2>Utilities</h2>
+        <ul class="utilities-nav">
+            <li>
+                <a href="{{ url_for('utilities_index_photos') }}"
+                   class="{% if request.endpoint == 'utilities_index_photos' %}active{% endif %}">
+                    Index Photos
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('utilities_auto_assign_people') }}"
+                   class="{% if request.endpoint == 'utilities_auto_assign_people' %}active{% endif %}">
+                    Auto-Assign People
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('utilities_discover_people') }}"
+                   class="{% if request.endpoint == 'utilities_discover_people' %}active{% endif %}">
+                    Discover People
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="utilities-content">
+        {% block utility_content %}{% endblock %}
+    </div>
+</div>
+{% endblock %}

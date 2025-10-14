@@ -33,8 +33,9 @@
                 return null;
             }
             // Replace <param> or <type:param> with actual values
+            // Handle both regular and HTML-encoded angle brackets
             for (const [key, value] of Object.entries(params)) {
-                url = url.replace(new RegExp(`<(?:\\w+:)?${key}>`, 'g'), value);
+                url = url.replace(new RegExp(`(?:<|&lt;)(?:\\w+:)?${key}(?:>|&gt;)`, 'g'), value);
             }
             return url;
         }

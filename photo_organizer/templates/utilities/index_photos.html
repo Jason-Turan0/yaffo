@@ -1,0 +1,127 @@
+{% extends "utilities/_base.html" %}
+
+{% block title %}Index Photos - Utilities - Photo Organizer{% endblock %}
+
+{% block utility_content %}
+<div class="utility-page">
+    <div class="page-header">
+        <h1>Index Photos</h1>
+        <p class="subtitle">
+            Compare photos on the file system with the database
+        </p>
+        {% if unindexed_photos|length > 0 or orphaned_photos|length > 0 %}
+        <button class="btn btn-primary" id="sync-button">Sync Database</button>
+        {% endif %}
+    </div>
+
+    {% if active_jobs|length > 0 %}
+    <div class="section job-progress-section">
+        <h2>Sync in Progress</h2>
+        {% for job in active_jobs %}
+        <div class="job-card" data-job-id="{{ job.id }}">
+            <div class="job-header">
+                <span class="job-status">{{ job.status.value }}</span>
+                <span class="job-time">Started: {{ job.started_at.strftime('%Y-%m-%d %H:%M:%S') if job.started_at else job.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+            </div>
+            <div class="job-message">{{ job.message or 'Initializing...' }}</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" style="width: {{ job.progress }}%"></div>
+            </div>
+            <div class="progress-text">{{ job.progress }}%</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total on Filesystem</div>
+            <div class="stat-value">{{ total_filesystem }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Indexed in Database</div>
+            <div class="stat-value">{{ total_indexed }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Not Indexed</div>
+            <div class="stat-value">{{ unindexed_photos|length }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Orphaned in DB</div>
+            <div class="stat-value">{{ orphaned_photos|length }}</div>
+        </div>
+    </div>
+
+    {% if unindexed_photos|length > 0 %}
+    <div class="section">
+        <h2>Unindexed Photos</h2>
+        <p class="section-description">
+            The following photos exist in <code>{{ media_dir }}</code> but are not in the database.
+        </p>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Filename</th>
+                        <th>Relative Path</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for photo in unindexed_photos %}
+                    <tr>
+                        <td>{{ photo.filename }}</td>
+                        <td><code>{{ photo.relative_path }}</code></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if orphaned_photos|length > 0 %}
+    <div class="section">
+        <h2>Orphaned Database Entries</h2>
+        <p class="section-description">
+            The following photos are in the database but no longer exist on the filesystem.
+        </p>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Photo ID</th>
+                        <th>Relative Path</th>
+                        <th>Full Path</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for photo in orphaned_photos %}
+                    <tr>
+                        <td>{{ photo.id }}</td>
+                        <td><code>{{ photo.relative_path }}</code></td>
+                        <td><code>{{ photo.full_path }}</code></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if unindexed_photos|length == 0 and orphaned_photos|length == 0 %}
+    <div class="empty-state">
+        <h2>Everything is in sync</h2>
+        <p>All photos on the filesystem are indexed, and all database entries have corresponding files.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='utilities/index_photos.js') }}"></script>
+<script>
+window.PHOTO_ORGANIZER.initIndexPhotos({{ unindexed_photos | tojson }}, {{ orphaned_photos | tojson }});
+</script>
+{% endblock %}
