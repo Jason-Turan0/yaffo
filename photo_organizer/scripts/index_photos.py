@@ -49,6 +49,10 @@ def create_tables(conn):
             relative_file_path TEXT UNIQUE,
             photo_id INTEGER,
             status TEXT,
+            location_top INTEGER,
+            location_right INTEGER,
+            location_bottom INTEGER,
+            location_left INTEGER,
             FOREIGN KEY(photo_id) REFERENCES photos(id)
         )
     """)
@@ -149,7 +153,8 @@ def process_photo(photo_path):
         faces_data = []
         for i, (loc, emb) in enumerate(zip(face_locations, face_embeddings)):
             thumb_path = save_face_thumbnail(photo_path, i, loc)
-            faces_data.append((emb, str(thumb_path), str(Path.relative_to(thumb_path, ROOT_DIR))))
+            top, right, bottom, left = loc
+            faces_data.append((emb, str(thumb_path), str(Path.relative_to(thumb_path, ROOT_DIR)), top, right, bottom, left))
 
         return {
             "photo_path": str(photo_path),
@@ -192,10 +197,10 @@ def index_photos():
                 )
             )
             photo_id = cursor.lastrowid
-            for emb, full_thumb, rel_thumb in result["faces"]:
+            for emb, full_thumb, rel_thumb, top, right, bottom, left in result["faces"]:
                 cursor.execute(
-                    "INSERT INTO faces (embedding, full_file_path, relative_file_path, status, photo_id) VALUES (?, ?, ?, ?, ?)",
-                    (emb.tobytes(), full_thumb, rel_thumb, FACE_STATUS_UNASSIGNED, photo_id)
+                    "INSERT INTO faces (embedding, full_file_path, relative_file_path, status, photo_id, location_top, location_right, location_bottom, location_left) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (emb.tobytes(), full_thumb, rel_thumb, FACE_STATUS_UNASSIGNED, photo_id, top, right, bottom, left)
                 )
             if i > 0 and i % batch_size == 0:
                 conn.commit()

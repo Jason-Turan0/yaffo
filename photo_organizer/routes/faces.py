@@ -82,7 +82,7 @@ def init_faces_routes(app: Flask):
                 _.chain(people)
                  .flat_map(flat_map_people)
                  .map(lambda tuple: (tuple[0], tuple[1], cosine_similarity([emb], [tuple[2]])[0][0]))
-                 .filter(lambda tuple: tuple[2] > threshold and face.photo.date_taken[:4] == str(tuple[1]) and (person_id is None or tuple[0].id == person_id))
+                 .filter(lambda tuple: tuple[2] > threshold and (person_id is None or tuple[0].id == person_id))
                  .sort_by(lambda pair: pair[1], True)
                  .group_by(lambda pair: pair[0].id)
                  .values()

@@ -25,6 +25,11 @@ class Face(db.Model):
     relative_file_path = db.Column(db.String, unique=True)
     photo_id = db.Column(db.Integer, db.ForeignKey("photos.id"))
     status = db.Column(db.String)
+    # Face bounding box coordinates (from face_recognition)
+    location_top = db.Column(db.Integer)
+    location_right = db.Column(db.Integer)
+    location_bottom = db.Column(db.Integer)
+    location_left = db.Column(db.Integer)
     # Relationships
     # One-to-one with PersonFace
     person_face = db.relationship(

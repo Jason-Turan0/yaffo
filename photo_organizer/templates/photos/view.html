@@ -60,8 +60,18 @@
                 {% if photo.faces %}
                 <div class="faces-grid">
                     {% for face in photo.faces %}
-                    <div class="face-thumbnail">
+                    <div class="face-thumbnail"
+                         data-face-id="{{ face.id }}"
+                         onmouseenter="highlightFace({{ face.id }})"
+                         onmouseleave="clearHighlights()">
                         <img src="{{ url_for('photo', filename=face.relative_file_path) }}" alt="Face">
+                        {% if face.people %}
+                        <div class="face-label">
+                            {% for person in face.people %}
+                            {{ person.name }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -74,14 +84,22 @@
 
     <div class="photo-container">
         <div class="photo-wrapper">
-            <img src="{{ url_for('photo', filename=photo.relative_file_path) }}"
-                 alt="{{ file_name }}"
-                 class="photo-main">
+            <div class="photo-image-container">
+                <img src="{{ url_for('photo', filename=photo.relative_file_path) }}"
+                     alt="{{ file_name }}"
+                     class="photo-main"
+                     id="mainPhoto">
+                <canvas id="faceCanvas" class="face-overlay"></canvas>
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script>
+    // Pass face location data to JavaScript
+    window.FACE_DATA = {{ faces_with_locations | tojson }};
+</script>
 <script src="{{ url_for('static', filename='photos/view.js') }}"></script>
 {% endblock %}

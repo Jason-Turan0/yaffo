@@ -49,6 +49,22 @@ def init_photos_routes(app: Flask):
         absolute_file_path = os.path.join(ROOT_DIR, filename)
         absolute_folder_path = os.path.join(ROOT_DIR, folder)
 
+        # Prepare face data with locations for JavaScript
+        faces_with_locations = []
+        for face in photo.faces:
+            if face.location_top is not None:
+                faces_with_locations.append({
+                    'id': face.id,
+                    'thumbnail': face.relative_file_path,
+                    'location': {
+                        'top': face.location_top,
+                        'right': face.location_right,
+                        'bottom': face.location_bottom,
+                        'left': face.location_left
+                    },
+                    'people': [{'id': p.id, 'name': p.name} for p in face.people]
+                })
+
         return render_template(
             "photos/view.html",
             photo=photo,
@@ -56,7 +72,8 @@ def init_photos_routes(app: Flask):
             folder=folder,
             file_name=file_name,
             absolute_file_path=absolute_file_path,
-            absolute_folder_path=absolute_folder_path
+            absolute_folder_path=absolute_folder_path,
+            faces_with_locations=faces_with_locations
         )
 
     @app.route("/api/open-file", methods=["POST"])
