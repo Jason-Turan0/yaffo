@@ -20,8 +20,11 @@
         {% for job in active_jobs %}
         <div class="job-card" data-job-id="{{ job.id }}">
             <div class="job-header">
-                <span class="job-status">{{ job.status.value }}</span>
-                <span class="job-time">Started: {{ job.started_at.strftime('%Y-%m-%d %H:%M:%S') if job.started_at else job.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                <div>
+                    <span class="job-status">{{ job.status.value }}</span>
+                    <span class="job-time">Started: {{ job.started_at.strftime('%Y-%m-%d %H:%M:%S') if job.started_at else job.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                </div>
+                <button class="btn btn-danger btn-sm cancel-job-btn" data-job-id="{{ job.id }}">Cancel</button>
             </div>
             <div class="job-message">{{ job.message or 'Initializing...' }}</div>
             <div class="progress-bar-container">

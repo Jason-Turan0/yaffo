@@ -1,5 +1,21 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
+    const cancelJob = async (jobId) => {
+        try {
+            const response = await fetch(APP_CONFIG.buildUrl('utilities_cancel_job', {job_id: jobId}), {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                notification.success('Cancellation requested');
+            } else {
+                notification.error('Failed to cancel job');
+            }
+        } catch (error) {
+            notification.error('Error cancelling job: ' + error.message);
+        }
+    };
+
     const startSync = async () => {
         const syncButton = document.getElementById('sync-button');
         syncButton.disabled = true;
@@ -54,7 +70,12 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
                     card.querySelector('.progress-bar').style.width = job.progress + '%';
                     card.querySelector('.progress-text').textContent = job.progress + '%';
 
-                    if (job.status === 'completed' || job.status === 'failed') {
+                    const cancelBtn = card.querySelector('.cancel-job-btn');
+                    if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
+                        if (cancelBtn) {
+                            cancelBtn.disabled = true;
+                        }
+
                         if (pollInterval) {
                             clearInterval(pollInterval);
                             pollInterval = null;
@@ -62,6 +83,9 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
 
                         if (job.status === 'completed') {
                             notification.success('Sync completed successfully');
+                            setTimeout(() => window.location.reload(), 2000);
+                        } else if (job.status === 'cancelled') {
+                            notification.warning('Sync was cancelled');
                             setTimeout(() => window.location.reload(), 2000);
                         } else {
                             notification.error('Sync failed: ' + (job.error || 'Unknown error'));
@@ -79,6 +103,14 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
         syncButton.addEventListener('click', startSync);
     }
 
+    const cancelButtons = document.querySelectorAll('.cancel-job-btn');
+    cancelButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const jobId = e.target.dataset.jobId;
+            cancelJob(jobId);
+        });
+    });
+
     if (document.querySelectorAll('.job-card').length > 0) {
         pollInterval = setInterval(pollJobStatus, 1000);
         pollJobStatus();
@@ -87,7 +119,8 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
     return {
         startSync,
         startPolling,
-        pollJobStatus
+        pollJobStatus,
+        cancelJob
     }
 }
 
