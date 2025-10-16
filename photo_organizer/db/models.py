@@ -1,5 +1,6 @@
 from sqlalchemy import PrimaryKeyConstraint
 from photo_organizer.db import db
+from datetime import datetime
 
 class Photo(db.Model):
     __tablename__ = "photos"
@@ -88,3 +89,54 @@ class PersonFace(db.Model):
 
     face = db.relationship("Face", back_populates="person_face", uselist=False)
     person = db.relationship("Person", back_populates="person_faces")
+
+
+JOB_STATUS_PENDING = "PENDING"
+JOB_STATUS_RUNNING = "RUNNING"
+JOB_STATUS_COMPLETED = "COMPLETED"
+JOB_STATUS_CANCELLED = "CANCELLED"
+JOB_STATUS_FAILED = "FAILED"
+
+
+class Job(db.Model):
+    __tablename__ = "jobs"
+
+    id = db.Column(db.String, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    status = db.Column(db.String, nullable=False, default=JOB_STATUS_PENDING)
+
+    task_count = db.Column(db.Integer, default=0)
+    completed_count = db.Column(db.Integer, default=0)
+    cancelled_count = db.Column(db.Integer, default=0)
+    error_count = db.Column(db.Integer, default=0)
+
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+
+    error = db.Column(db.Text)
+    message = db.Column(db.Text)
+    job_data = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        progress = 0
+        if self.task_count > 0:
+            progress = int((self.completed_count / self.task_count) * 100)
+
+        return {
+            'id': self.id,
+            'name': self.name,
+            'status': self.status,
+            'task_count': self.task_count,
+            'completed_count': self.completed_count,
+            'cancelled_count': self.cancelled_count,
+            'error_count': self.error_count,
+            'progress': progress,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'error': self.error,
+            'message': self.message,
+        }

@@ -66,9 +66,11 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
                     const job = await response.json();
 
                     card.querySelector('.job-status').textContent = job.status;
-                    card.querySelector('.job-message').textContent = job.message || 'Processing...';
-                    card.querySelector('.progress-bar').style.width = job.progress + '%';
-                    card.querySelector('.progress-text').textContent = job.progress + '%';
+                    const totalCount =job.completed_count + job.error_count + job.cancelled_count;
+                    const jobProgress = totalCount && job.task_count ? (totalCount/job.task_count) * 100 : 0;
+                    card.querySelector('.job-message').textContent = (job.message || 'Processing...').replace('{totalCount}', totalCount).replace('{taskCount}', job.task_count);
+                    card.querySelector('.progress-bar').style.width = jobProgress + '%';
+                    card.querySelector('.progress-text').textContent = (jobProgress + '%').toFixed(2);
 
                     const cancelBtn = card.querySelector('.cancel-job-btn');
                     if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {

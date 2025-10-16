@@ -1,14 +1,25 @@
 import os
+import logging
 
 from flask import Flask
 from photo_organizer.db import db
 from photo_organizer.common import DB_PATH
-import logging
+from photo_organizer.logging_config import get_logger
+
+logger = get_logger(__name__, 'webapp')
 
 def create_app():
     app = Flask(__name__)
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.ERROR)
+
+    # Configure werkzeug logger to use our logging system
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(logging.ERROR)
+
+    # Set Flask app logger to use our webapp logger
+    app.logger.handlers = logger.handlers
+    app.logger.setLevel(logger.level)
+
+    logger.info("Starting Photo Organizer application")
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False  # optional, avoids warnings
     app.config["SQLALCHEMY_ECHO"] = True
@@ -27,6 +38,10 @@ def create_app():
     @app.context_processor
     def inject_url_map():
         return {'url_map': app.url_map}
+
+    # Register template filters
+    from photo_organizer.template_filters import init_template_filters
+    init_template_filters(app)
 
     from photo_organizer.routes.init_routes import init_routes
     init_routes(app)

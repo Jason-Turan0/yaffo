@@ -21,8 +21,8 @@
         <div class="job-card" data-job-id="{{ job.id }}">
             <div class="job-header">
                 <div>
-                    <span class="job-status">{{ job.status.value }}</span>
-                    <span class="job-time">Started: {{ job.started_at.strftime('%Y-%m-%d %H:%M:%S') if job.started_at else job.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                    <span class="job-status">{{ job.status }}</span>
+                    <span class="job-time">Started: {{ (job.started_at or job.created_at) | format_date }}</span>
                 </div>
                 <button class="btn btn-danger btn-sm cancel-job-btn" data-job-id="{{ job.id }}">Cancel</button>
             </div>

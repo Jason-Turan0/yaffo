@@ -6,12 +6,12 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 import pillow_heif
-from PIL import Image
 import face_recognition
+from PIL import Image
 from sqlalchemy.orm import Session
 
 from photo_organizer.db.models import Photo, Face, FACE_STATUS_UNASSIGNED
-from photo_organizer.common import PHOTO_EXTENSIONS, MEDIA_DIR, TEMP_DIR, THUMBNAIL_DIR, ROOT_DIR
+from photo_organizer.common import PHOTO_EXTENSIONS, TEMP_DIR, THUMBNAIL_DIR, ROOT_DIR
 from photo_organizer.utils.image import image_from_path
 
 
@@ -79,7 +79,6 @@ def process_photo(photo_path: Path) -> Optional[dict]:
     try:
         date_taken = get_photo_date(str(photo_path))
         image = load_image_file(photo_path)
-
         face_locations = face_recognition.face_locations(image)
         face_embeddings = face_recognition.face_encodings(image, face_locations)
 
@@ -113,17 +112,32 @@ def index_photos_batch(
     session: Session,
     photo_paths: List[str],
     max_workers: int = 8,
-    progress_callback: Optional[Callable[[int, int], None]] = None
-) -> tuple[int, int]:
+    progress_callback: Optional[Callable[[int, int], None]] = None,
+    should_cancel: Optional[Callable[[], bool]] = None
+) -> tuple[bool, int, int]:
+    """
+    Index photos in batch with optional cancellation support.
+
+    Returns:
+        tuple: (completed, indexed_count, error_count)
+            - completed: True if fully completed, False if cancelled
+            - indexed_count: Number of photos successfully indexed
+            - error_count: Number of photos that failed to index
+    """
     indexed_count = 0
     error_count = 0
-    interrupted = False
+    cancelled = False
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(process_photo, Path(p)): p for p in photo_paths}
 
         for i, future in enumerate(as_completed(futures)):
-            if interrupted:
+            if should_cancel and should_cancel():
+                print(f"Cancellation requested, stopping processing...")
+                cancelled = True
+                for f in futures:
+                    if not f.done():
+                        f.cancel()
                 break
 
             try:
@@ -161,33 +175,25 @@ def index_photos_batch(
 
                 if progress_callback:
                     progress_callback(i + 1, len(futures))
-            except InterruptedError as e:
-                print(f"Job interrupted, cancelling remaining tasks...")
-                interrupted = True
-                interrupted_error = e
-                for f in futures:
-                    if not f.done():
-                        f.cancel()
-                break
             except Exception as e:
                 print(f"Error indexing photo: {e}")
                 error_count += 1
 
         session.commit()
 
-        if interrupted:
-            raise interrupted_error
-
-    return indexed_count, error_count
+    return not cancelled, indexed_count, error_count
 
 
 def delete_orphaned_photos(session: Session, photo_ids: List[int]) -> int:
-    deleted_count = 0
-    for photo_id in photo_ids:
-        photo = session.query(Photo).filter(Photo.id == photo_id).first()
-        if photo:
-            session.delete(photo)
-            deleted_count += 1
+    if not photo_ids:
+        return 0
+
+    # Delete related faces first (SQLite foreign keys may not cascade)
+    deleted_faces = session.query(Face).filter(Face.photo_id.in_(photo_ids)).delete(synchronize_session=False)
+
+    # Bulk delete photos using IN clause
+    deleted_count = session.query(Photo).filter(Photo.id.in_(photo_ids)).delete(synchronize_session=False)
 
     session.commit()
+    print(f"Deleted {deleted_count} photos and {deleted_faces} associated faces")
     return deleted_count

@@ -47,6 +47,7 @@ A Flask-based photo organization tool that uses EXIF metadata, face recognition,
 ## Code Conventions
 
 - Don't use code comments as a way of describing what you did. Only include comments for very complicated or unconventional code. Use the chat interface to explain what you did and why. Refer to the file and line if nessecary.
+- Use type hints for any code generated
 
 ### DRY Principle (Don't Repeat Yourself)
 - **CSS Styles**: Never duplicate CSS styles across templates. Use a centralized stylesheet or shared style blocks.

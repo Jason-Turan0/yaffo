@@ -13,6 +13,7 @@ setup(
         "face_recognition_models==0.3.0",
         "Flask==3.1.2",
         "Flask-SQLAlchemy==3.1.1",
+        "huey==2.5.2",
         "ImageHash==4.3.2",
         "invoke==2.2.0",
         "itsdangerous==2.2.0",

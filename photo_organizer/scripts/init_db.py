@@ -58,6 +58,24 @@ def init_db():
                     FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
                 )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS jobs (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            task_count INTEGER DEFAULT 0,
+            completed_count INTEGER DEFAULT 0,
+            cancelled_count INTEGER DEFAULT 0,
+            error_count INTEGER DEFAULT 0,
+            started_at TIMESTAMP,
+            completed_at TIMESTAMP,
+            error TEXT,
+            message TEXT,
+            job_data TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     conn.commit()
 
 
