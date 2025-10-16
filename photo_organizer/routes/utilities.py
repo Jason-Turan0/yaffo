@@ -3,7 +3,7 @@ from photo_organizer.db import db
 from photo_organizer.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_CANCELLED, \
     JOB_STATUS_COMPLETED
 from photo_organizer.common import MEDIA_DIR, PHOTO_EXTENSIONS, ROOT_DIR
-from photo_organizer.tasks.tasks import index_photo_task
+from photo_organizer.background_tasks.tasks import index_photo_task
 from pathlib import Path
 from itertools import batched
 import uuid
@@ -96,9 +96,8 @@ def init_utilities_routes(app: Flask):
         db.session.add(job)
         db.session.commit()
 
-        for batch in batched(files_to_index, 20):
+        for batch in batched(files_to_index, 10):
             index_photo_task(job_id, list(batch))
-
         delete_orphaned_photos(db.session, files_to_delete)
 
         return jsonify({'job_id': job_id}), 202

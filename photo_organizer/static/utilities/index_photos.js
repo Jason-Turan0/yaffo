@@ -70,7 +70,7 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
                     const jobProgress = totalCount && job.task_count ? (totalCount/job.task_count) * 100 : 0;
                     card.querySelector('.job-message').textContent = (job.message || 'Processing...').replace('{totalCount}', totalCount).replace('{taskCount}', job.task_count);
                     card.querySelector('.progress-bar').style.width = jobProgress + '%';
-                    card.querySelector('.progress-text').textContent = (jobProgress + '%').toFixed(2);
+                    card.querySelector('.progress-text').textContent = jobProgress.toFixed(2) + '%';
 
                     const cancelBtn = card.querySelector('.cancel-job-btn');
                     if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {

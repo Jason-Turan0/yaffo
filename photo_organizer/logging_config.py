@@ -7,7 +7,7 @@ from photo_organizer.common import ROOT_DIR
 LOG_FORMAT = '%(asctime)s - %(name)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s'
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
-HUEY_LOG_FILE = ROOT_DIR / "huey.log"
+HUEY_LOG_FILE = ROOT_DIR / "background_tasks.log"
 WEB_LOG_FILE = ROOT_DIR / "photo_organizer.log"
 
 
@@ -16,7 +16,7 @@ def setup_logger(name: str, log_file: str, level=logging.INFO):
     Set up a logger with file and console handlers.
 
     Args:
-        name: Logger name (e.g., 'huey', 'webapp', 'photo_organizer.tasks')
+        name: Logger name (e.g., 'background_tasks', 'webapp', 'photo_organizer.background_tasks')
         log_file: Path to log file
         level: Logging level (default: INFO)
 
@@ -56,7 +56,7 @@ def get_logger(module_name: str, log_type: str ='webapp', level=logging.INFO):
 
     Args:
         module_name: Name of the module (use __name__ from calling script)
-        log_type: Type of logger - 'webapp' or 'huey' (determines which file to log to)
+        log_type: Type of logger - 'webapp' or 'background_tasks' (determines which file to log to)
         level: Logging level (default: INFO)
 
     Returns:
@@ -64,10 +64,10 @@ def get_logger(module_name: str, log_type: str ='webapp', level=logging.INFO):
 
     Example:
         from photo_organizer.logging_config import get_logger
-        logger = get_logger(__name__, 'huey')
+        logger = get_logger(__name__, 'background_tasks')
         logger.info('Processing started')
     """
-    log_file = HUEY_LOG_FILE if log_type == 'huey' else WEB_LOG_FILE
+    log_file = HUEY_LOG_FILE if log_type == 'background_tasks' else WEB_LOG_FILE
     return setup_logger(module_name, log_file, level)
 
 
@@ -78,7 +78,7 @@ def get_webapp_logger():
 
 def get_huey_logger():
     """Get or create the Huey task logger."""
-    return setup_logger('huey', HUEY_LOG_FILE)
+    return setup_logger('background_tasks', HUEY_LOG_FILE)
 
 
 def set_log_level(logger, level_name):

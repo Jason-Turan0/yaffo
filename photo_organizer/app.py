@@ -5,6 +5,8 @@ from flask import Flask
 from photo_organizer.db import db
 from photo_organizer.common import DB_PATH
 from photo_organizer.logging_config import get_logger
+from photo_organizer.template_filters import init_template_filters
+from photo_organizer.routes.init_routes import init_routes
 
 logger = get_logger(__name__, 'webapp')
 
@@ -40,10 +42,8 @@ def create_app():
         return {'url_map': app.url_map}
 
     # Register template filters
-    from photo_organizer.template_filters import init_template_filters
-    init_template_filters(app)
 
-    from photo_organizer.routes.init_routes import init_routes
+    init_template_filters(app)
     init_routes(app)
     return app
 

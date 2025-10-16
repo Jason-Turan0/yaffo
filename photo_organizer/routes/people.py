@@ -53,7 +53,7 @@ def init_people_routes(app: Flask):
             return redirect(url_for("people_list"))
 
         person = Person(name=name)
-        db.session.add(person)
+        db.session.add_task(person)
         db.session.commit()
 
         flash(f"Added {name}", "success")
