@@ -20,9 +20,41 @@ SessionFactory = scoped_session(sessionmaker(bind=engine))
     Supports graceful cancellation and crash recovery.
 """
 @huey.task()
-def index_photo_task(job_id : str, file_path_batch : list[str]):
+def index_photo_task(job_id: str, file_path_batch: list[str]):
     logger = get_logger(__name__, 'background_tasks')
     logger.info(f"Starting index_photo_task for job {job_id} with {len(file_path_batch)} files")
+
+    # Step 1: Process all photos FIRST (slow part - no database lock)
+    processed_results = []
+    error_count = 0
+    cancel_count = 0
+    check_cancel_frequency = 5
+
+    for index, file_path in enumerate(file_path_batch):
+        # Periodically check for cancellation without holding database lock
+        if index % check_cancel_frequency == 0:
+            session = SessionFactory()
+            try:
+                job = session.query(Job).filter_by(id=job_id).first()
+                if job and job.status == JOB_STATUS_CANCELLED:
+                    logger.info(f"Job {job_id} cancelled at photo {index}/{len(file_path_batch)}")
+                    cancel_count = len(file_path_batch) - index
+                    break
+            finally:
+                session.close()
+                SessionFactory.remove()
+
+        logger.debug(f"Processing photo {file_path}")
+        result = process_photo(Path(file_path))
+        if result is None:
+            logger.warning(f"Failed to process photo {file_path}")
+            error_count += 1
+            continue
+
+        # Store result for later database insertion
+        processed_results.append(result)
+
+    # Step 2: Quick database transaction to insert everything at once
     session = SessionFactory()
     try:
         job = session.query(Job).filter_by(id=job_id).first()
@@ -30,25 +62,8 @@ def index_photo_task(job_id : str, file_path_batch : list[str]):
             logger.error(f"Job {job_id} not found")
             return
 
-        error_count = 0
-        processed_count = 0
-        cancel_count = 0
-        check_cancel_frequency = 2
-
-        for index, file_path in enumerate(file_path_batch):
-            if index > 0 and index % check_cancel_frequency == 0:
-                job = session.query(Job).filter_by(id=job_id).first()
-
-            if job and job.status == JOB_STATUS_CANCELLED:
-                cancel_count += 1
-                continue
-            logger.debug(f"Processing photo {file_path}")
-            result = process_photo(Path(file_path))
-            if result is None:
-                logger.warning(f"Failed to process photo {file_path}")
-                error_count += 1
-                continue
-
+        # Bulk insert all photos and faces
+        for result in processed_results:
             photo = Photo(
                 full_file_path=result["full_file_path"],
                 relative_file_path=result["relative_file_path"],
@@ -56,8 +71,9 @@ def index_photo_task(job_id : str, file_path_batch : list[str]):
                 date_taken=result["date_taken"]
             )
             session.add(photo)
-            session.flush()
+            session.flush()  # Get the photo.id for faces
 
+            # Add all faces for this photo
             for face_data in result["faces"]:
                 face = Face(
                     embedding=face_data['embedding'].tobytes(),
@@ -71,9 +87,10 @@ def index_photo_task(job_id : str, file_path_batch : list[str]):
                     location_left=face_data['location_left']
                 )
                 session.add(face)
-            processed_count += 1
 
+        processed_count = len(processed_results)
 
+        # Update job counts
         session.query(Job).filter_by(id=job_id).update({
             'completed_count': Job.completed_count + processed_count,
             'error_count': Job.error_count + error_count,
@@ -84,11 +101,11 @@ def index_photo_task(job_id : str, file_path_batch : list[str]):
 
     except Exception as e:
         logger.error(f"Error in index_photo_task for job {job_id}: {e}", exc_info=True)
+        session.rollback()
         session.query(Job).filter_by(id=job_id).update({
             'error_count': Job.error_count + len(file_path_batch)
         })
         session.commit()
     finally:
-        # Clean up session
         session.close()
         SessionFactory.remove()

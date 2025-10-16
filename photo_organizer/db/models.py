@@ -87,8 +87,8 @@ class PersonFace(db.Model):
 
     similarity = db.Column(db.Float)
 
-    face = db.relationship("Face", back_populates="person_face", uselist=False)
-    person = db.relationship("Person", back_populates="person_faces")
+    face = db.relationship("Face", back_populates="person_face", uselist=False, overlaps="people")
+    person = db.relationship("Person", back_populates="person_faces", overlaps="faces,people")
 
 
 JOB_STATUS_PENDING = "PENDING"
