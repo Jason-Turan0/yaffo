@@ -3,7 +3,7 @@ from photo_organizer.db import db
 from photo_organizer.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_CANCELLED, \
     JOB_STATUS_COMPLETED
 from photo_organizer.common import MEDIA_DIR, PHOTO_EXTENSIONS, ROOT_DIR
-from photo_organizer.tasks import index_photo_task
+from photo_organizer.tasks.tasks import index_photo_task
 from pathlib import Path
 from itertools import batched
 import uuid
