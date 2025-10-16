@@ -11,9 +11,12 @@ def init_db():
             CREATE TABLE IF NOT EXISTS photos (
                 id INTEGER PRIMARY KEY,
                 full_file_path TEXT UNIQUE,
-                relative_file_path TEXT UNIQUE,            
+                relative_file_path TEXT UNIQUE,
                 hash TEXT,
-                date_taken TEXT
+                date_taken TEXT,
+                latitude REAL,
+                longitude REAL,
+                location_name TEXT
             )
         """)
     cursor.execute("""
@@ -76,6 +79,17 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            photo_id INTEGER NOT NULL,
+            tag_name TEXT NOT NULL,
+            tag_value TEXT,
+            FOREIGN KEY(photo_id) REFERENCES photos(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_photo_id ON tags(photo_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_tag_name ON tags(tag_name)")
     conn.commit()
 
 

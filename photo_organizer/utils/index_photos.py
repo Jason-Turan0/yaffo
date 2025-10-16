@@ -1,19 +1,30 @@
+
 import tempfile
 import uuid
+import platform
+import subprocess
+import shutil
+import json
 from pathlib import Path
-from typing import List, Optional, Callable
+from typing import List, Optional, Callable, Tuple, Dict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 import pillow_heif
 import face_recognition
+import piexif
 from PIL import Image
 from sqlalchemy.orm import Session
 
-from photo_organizer.db.models import Photo, Face, FACE_STATUS_UNASSIGNED
+from photo_organizer.logging_config import get_logger
+from photo_organizer.db.models import Photo, Face, Tag, FACE_STATUS_UNASSIGNED
 from photo_organizer.common import PHOTO_EXTENSIONS, TEMP_DIR, THUMBNAIL_DIR, ROOT_DIR
 from photo_organizer.utils.image import image_from_path
 
+logger = get_logger(__name__, 'background_tasks')
+
+_IS_MAC = platform.system().lower() == "darwin"
+_HAS_EXIFTOOL = shutil.which("exiftool") is not None
 
 def get_photo_date(photo_path: str) -> Optional[str]:
     from photo_organizer.scripts.organize_photos import get_photo_date as _get_photo_date
@@ -75,6 +86,178 @@ def save_face_thumbnail(image_path: Path, face_index: int, face_location) -> Pat
     return thumb_path
 
 
+def convert_to_degrees(value: Tuple) -> float:
+    d = float(value[0][0]) / float(value[0][1])
+    m = float(value[1][0]) / float(value[1][1])
+    s = float(value[2][0]) / float(value[2][1])
+    return d + (m / 60.0) + (s / 3600.0)
+
+
+def get_exif_data_with_exiftool(photo_path: Path) -> Optional[Dict]:
+    try:
+        result = subprocess.run(
+            ["exiftool", "-json", "-G", str(photo_path)],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            return data[0] if data else None
+        return None
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, json.JSONDecodeError, Exception) as e:
+        logger.warning(f"Failed to get EXIF data with exiftool from {photo_path}: {e}")
+        return None
+
+
+def get_gps_coordinates(photo_path: Path) -> Tuple[Optional[float], Optional[float], Optional[str]]:
+    ext = photo_path.suffix.lower()
+
+    if ext in (".heic", ".heif"):
+        if _HAS_EXIFTOOL:
+            exif_data = get_exif_data_with_exiftool(photo_path)
+            if exif_data:
+                try:
+                    latitude = None
+                    longitude = None
+                    location_name = None
+
+                    gps_lat = exif_data.get("Composite:GPSLatitude") or exif_data.get("EXIF:GPSLatitude")
+                    gps_lon = exif_data.get("Composite:GPSLongitude") or exif_data.get("EXIF:GPSLongitude")
+
+                    if gps_lat and gps_lon:
+                        if isinstance(gps_lat, str):
+                            parts = gps_lat.split()
+                            if len(parts) >= 2:
+                                lat_val = float(parts[0])
+                                if parts[-1] in ['S', 'South']:
+                                    lat_val = -lat_val
+                                latitude = lat_val
+
+                        if isinstance(gps_lon, str):
+                            parts = gps_lon.split()
+                            if len(parts) >= 2:
+                                lon_val = float(parts[0])
+                                if parts[-1] in ['W', 'West']:
+                                    lon_val = -lon_val
+                                longitude = lon_val
+
+                    return latitude, longitude, location_name
+                except Exception as e:
+                    logger.warning(f"Failed to parse GPS from exiftool data for {photo_path}: {e}")
+                    return None, None, None
+        logger.warning(f"Cannot extract GPS from HEIF file {photo_path}: exiftool not available")
+        return None, None, None
+
+    try:
+        img = Image.open(photo_path)
+        exif_data = img.info.get("exif")
+        if not exif_data:
+            return None, None, None
+
+        exif_dict = piexif.load(exif_data)
+        gps_info = exif_dict.get("GPS")
+
+        if not gps_info:
+            return None, None, None
+
+        latitude = None
+        longitude = None
+        location_name = None
+
+        if piexif.GPSIFD.GPSLatitude in gps_info and piexif.GPSIFD.GPSLatitudeRef in gps_info:
+            lat = convert_to_degrees(gps_info[piexif.GPSIFD.GPSLatitude])
+            lat_ref = gps_info[piexif.GPSIFD.GPSLatitudeRef].decode()
+            if lat_ref == 'S':
+                lat = -lat
+            latitude = lat
+
+        if piexif.GPSIFD.GPSLongitude in gps_info and piexif.GPSIFD.GPSLongitudeRef in gps_info:
+            lon = convert_to_degrees(gps_info[piexif.GPSIFD.GPSLongitude])
+            lon_ref = gps_info[piexif.GPSIFD.GPSLongitudeRef].decode()
+            if lon_ref == 'W':
+                lon = -lon
+            longitude = lon
+
+        return latitude, longitude, location_name
+    except Exception as e:
+        logger.warning(f"Failed to get GPS coordinates from {photo_path}: {e}")
+        return None, None, None
+
+
+def get_exif_tags(photo_path: Path) -> List[Dict[str, str]]:
+    ext = photo_path.suffix.lower()
+
+    if ext in (".heic", ".heif"):
+        if _HAS_EXIFTOOL:
+            exif_data = get_exif_data_with_exiftool(photo_path)
+            if exif_data:
+                tags = []
+                excluded_tags = {
+                    "DateTimeOriginal", "DateTime", "DateTimeDigitized",
+                    "CreateDate", "ModifyDate", "FileModifyDate",
+                    "GPSLatitude", "GPSLongitude", "GPSLatitudeRef", "GPSLongitudeRef",
+                    "SourceFile", "ExifToolVersion", "FileName", "Directory",
+                    "FileSize", "FileType", "FileTypeExtension", "MIMEType"
+                }
+
+                for key, value in exif_data.items():
+                    tag_name = key.split(":")[-1] if ":" in key else key
+
+                    if tag_name in excluded_tags:
+                        continue
+
+                    if value and str(value).strip():
+                        tags.append({
+                            "tag_name": tag_name,
+                            "tag_value": str(value)[:500]
+                        })
+
+                return tags
+        logger.warning(f"Cannot extract tags from HEIF file {photo_path}: exiftool not available")
+        return []
+
+    try:
+        img = Image.open(photo_path)
+        exif_data = img.info.get("exif")
+        if not exif_data:
+            return []
+
+        exif_dict = piexif.load(exif_data)
+        tags = []
+
+        for ifd_name in ["0th", "Exif", "1st"]:
+            ifd = exif_dict.get(ifd_name, {})
+            for tag_id, value in ifd.items():
+                try:
+                    tag_name = piexif.TAGS[ifd_name][tag_id]["name"]
+
+                    if tag_name in ["DateTimeOriginal", "DateTime", "DateTimeDigitized"]:
+                        continue
+
+                    if isinstance(value, bytes):
+                        try:
+                            value = value.decode('utf-8', errors='ignore').strip('\x00')
+                        except:
+                            value = str(value)
+                    elif isinstance(value, (list, tuple)):
+                        value = str(value)
+                    else:
+                        value = str(value)
+
+                    if value:
+                        tags.append({
+                            "tag_name": tag_name,
+                            "tag_value": value
+                        })
+                except:
+                    continue
+
+        return tags
+    except Exception:
+        return []
+
+
 def process_photo(photo_path: Path) -> Optional[dict]:
     try:
         date_taken = get_photo_date(str(photo_path))
@@ -96,12 +279,19 @@ def process_photo(photo_path: Path) -> Optional[dict]:
                 'location_left': left
             })
 
+        latitude, longitude, location_name = get_gps_coordinates(photo_path)
+        tags = get_exif_tags(photo_path)
+
         return {
             "full_file_path": str(photo_path),
             "relative_file_path": str(photo_path.relative_to(ROOT_DIR)),
             "date_taken": date_taken,
             "hash": hash_image(photo_path),
-            "faces": faces_data
+            "faces": faces_data,
+            "latitude": latitude,
+            "longitude": longitude,
+            "location_name": location_name,
+            "tags": tags
         }
     except Exception as e:
         print(f"Error processing {photo_path}: {e}")
@@ -147,7 +337,10 @@ def index_photos_batch(
                         full_file_path=result["full_file_path"],
                         relative_file_path=result["relative_file_path"],
                         hash=result["hash"],
-                        date_taken=result["date_taken"]
+                        date_taken=result["date_taken"],
+                        latitude=result.get("latitude"),
+                        longitude=result.get("longitude"),
+                        location_name=result.get("location_name")
                     )
                     session.add(photo)
                     session.flush()
@@ -165,6 +358,14 @@ def index_photos_batch(
                             location_left=face_data['location_left']
                         )
                         session.add(face)
+
+                    for tag_data in result.get("tags", []):
+                        tag = Tag(
+                            photo_id=photo.id,
+                            tag_name=tag_data['tag_name'],
+                            tag_value=tag_data['tag_value']
+                        )
+                        session.add(tag)
 
                     indexed_count += 1
 

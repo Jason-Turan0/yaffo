@@ -28,6 +28,8 @@ setup(
         "piexif==1.1.3",
         "pillow==11.3.0",
         "pillow_heif==1.1.0",
+        "pytest==8.3.4",
+        "pytest-cov==6.0.0",
         "PyWavelets==1.9.0",
         "scikit-learn==1.7.2",
         "scipy==1.16.2",

@@ -1,7 +1,7 @@
 from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
-from photo_organizer.db.models import Job, Photo, JOB_STATUS_CANCELLED, Face, FACE_STATUS_UNASSIGNED
+from photo_organizer.db.models import Job, Photo, JOB_STATUS_CANCELLED, Face, Tag, FACE_STATUS_UNASSIGNED
 from photo_organizer.utils.index_photos import process_photo
 from photo_organizer.common import DB_PATH
 from photo_organizer.logging_config import get_logger
@@ -24,7 +24,6 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
     logger = get_logger(__name__, 'background_tasks')
     logger.info(f"Starting index_photo_task for job {job_id} with {len(file_path_batch)} files")
 
-    # Step 1: Process all photos FIRST (slow part - no database lock)
     processed_results = []
     error_count = 0
     cancel_count = 0
@@ -54,7 +53,6 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
         # Store result for later database insertion
         processed_results.append(result)
 
-    # Step 2: Quick database transaction to insert everything at once
     session = SessionFactory()
     try:
         job = session.query(Job).filter_by(id=job_id).first()
@@ -62,16 +60,19 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             logger.error(f"Job {job_id} not found")
             return
 
-        # Bulk insert all photos and faces
+        # Bulk insert all photos, faces, and tags
         for result in processed_results:
             photo = Photo(
                 full_file_path=result["full_file_path"],
                 relative_file_path=result["relative_file_path"],
                 hash=result["hash"],
-                date_taken=result["date_taken"]
+                date_taken=result["date_taken"],
+                latitude=result.get("latitude"),
+                longitude=result.get("longitude"),
+                location_name=result.get("location_name")
             )
             session.add(photo)
-            session.flush()  # Get the photo.id for faces
+            session.flush()  # Get the photo.id for faces and tags
 
             # Add all faces for this photo
             for face_data in result["faces"]:
@@ -88,9 +89,17 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                 )
                 session.add(face)
 
+            # Add all tags for this photo
+            for tag_data in result.get("tags", []):
+                tag = Tag(
+                    photo_id=photo.id,
+                    tag_name=tag_data['tag_name'],
+                    tag_value=tag_data['tag_value']
+                )
+                session.add(tag)
+
         processed_count = len(processed_results)
 
-        # Update job counts
         session.query(Job).filter_by(id=job_id).update({
             'completed_count': Job.completed_count + processed_count,
             'error_count': Job.error_count + error_count,

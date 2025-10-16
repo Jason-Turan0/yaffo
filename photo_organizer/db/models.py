@@ -9,10 +9,26 @@ class Photo(db.Model):
     relative_file_path = db.Column(db.String, unique=True)
     hash = db.Column(db.String)
     date_taken = db.Column(db.String)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    location_name = db.Column(db.String)
     faces = db.relationship(
         "Face",
         back_populates="photo"
     )
+    tags = db.relationship(
+        "Tag",
+        back_populates="photo",
+        cascade="all, delete-orphan"
+    )
+
+class Tag(db.Model):
+    __tablename__ = "tags"
+    id = db.Column(db.Integer, primary_key=True)
+    photo_id = db.Column(db.Integer, db.ForeignKey("photos.id", ondelete="CASCADE"), nullable=False)
+    tag_name = db.Column(db.String, nullable=False)
+    tag_value = db.Column(db.String)
+    photo = db.relationship("Photo", back_populates="tags")
 
 FACE_STATUS_UNASSIGNED = "UNASSIGNED"
 FACE_STATUS_ASSIGNED = "ASSIGNED"
