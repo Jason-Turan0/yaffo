@@ -152,3 +152,37 @@ def index_photos(c):
     print("Indexing photos...")
     c.run("python -m photo_organizer.scripts.index_photos", pty=True)
     print("Indexing complete")
+
+
+@task
+def kill_python(c, force=False):
+    """
+    Kill all Python processes (useful for cleaning up hung workers).
+
+    Args:
+        force: Skip confirmation prompt (default: False)
+
+    Example:
+        inv kill-python
+        inv kill-python --force
+    """
+    import sys
+
+    if not force:
+        response = input("⚠️  This will kill ALL Python processes. Continue? [y/N]: ")
+        if response.lower() != 'y':
+            print("Aborted.")
+            return
+
+    print("Killing all Python processes...")
+
+    # Get current process ID to avoid killing ourselves immediately
+    current_pid = sys.argv[0]
+
+    try:
+        # pkill is more reliable than killall on macOS
+        c.run("pkill -9 python", warn=True)
+        c.run("pkill -9 Python", warn=True)
+        print("All Python processes terminated")
+    except Exception as e:
+        print(f"Error: {e}")

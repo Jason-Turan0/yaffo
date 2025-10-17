@@ -1,0 +1,31 @@
+{% from "filters/_matchType.html" import render_match_type  %}
+
+<div class="filter-group">
+    <label>Locations</label>
+    {{ render_match_type("location-match-type", filters.selected_location_match_type)}}
+
+    <div class="multi-select-wrapper"
+         data-placeholder="All Locations"
+         data-single-format="{name}"
+         data-multi-format="{count} locations selected"
+         data-match-type-id="location-match-type"
+        >
+        <div class="multi-select-header" onclick="toggleMultiSelect(this)">
+            <span class="selected-text">All Locations</span>
+            <span class="arrow">▼</span>
+        </div>
+        <div class="multi-select-options">
+            {% for location_name in filters.location_names %}
+            <label class="multi-select-option">
+                <input type="checkbox"
+                       name="location"
+                       value="{{ location_name }}"
+                       data-label="{{ location_name }}"
+                       {% if location_name in filters.selected_location_names %}checked{% endif %}
+                       onchange="updateMultiSelectText(this)">
+                <span>{{ location_name }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+</div>
