@@ -180,15 +180,65 @@
 }
 
 .selection-panel h3 {
-    margin: 0 0 15px 0;
+    margin: 0 0 10px 0;
     font-size: 18px;
     color: #212529;
 }
 
-.clusters-list {
-    max-height: calc(100vh - 340px);
-    overflow-y: auto;
+.mass-assignment-info {
     margin-bottom: 15px;
+    padding: 10px;
+    background: #e7f3ff;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #004085;
+}
+
+.mass-assignment-info strong {
+    color: #003366;
+}
+
+.clusters-summary {
+    margin-bottom: 15px;
+    margin-top: 15px;
+}
+
+.summary-label {
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.clusters-list {
+    max-height: 200px;
+    overflow-y: auto;
+    background: #f8f9fa;
+    border-radius: 4px;
+    padding: 8px;
+}
+
+.cluster-summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    background: white;
+    border-radius: 3px;
+    margin-bottom: 4px;
+}
+
+.cluster-summary-item:last-child {
+    margin-bottom: 0;
+}
+
+.cluster-summary-item strong {
+    font-size: 13px;
+    color: #212529;
+}
+
+.cluster-summary-item .current-location {
+    font-size: 12px;
 }
 
 .cluster-item {

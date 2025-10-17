@@ -279,94 +279,95 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
             return;
         }
 
-        const selectedClusters = await Promise.all(
-            Array.from(selectedFeatures).map(async (clusterFeature, idx) => {
-                const features = clusterFeature.get('features');
-                const photoIds = features.map(f => f.get('id'));
+        const selectedClusters = Array.from(selectedFeatures).map((clusterFeature, idx) => {
+            const features = clusterFeature.get('features');
+            const photoIds = features.map(f => f.get('id'));
 
-                const locationCounts = {};
-                features.forEach(f => {
-                    const locationName = f.get('name') || 'Unknown Location';
-                    locationCounts[locationName] = (locationCounts[locationName] || 0) + 1;
-                });
+            const locationCounts = {};
+            features.forEach(f => {
+                const locationName = f.get('name') || 'Unknown Location';
+                locationCounts[locationName] = (locationCounts[locationName] || 0) + 1;
+            });
 
-                const locationBreakdown = Object.entries(locationCounts)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([name, count]) => `${count} ${name}`)
-                    .join(', ');
+            const locationBreakdown = Object.entries(locationCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([name, count]) => `${count} ${name}`)
+                .join(', ');
 
-                const centroid = calculateCentroid(features);
-                const recommendedLocation = await getRecommendedLocation(centroid.lat, centroid.lon);
+            const centroid = calculateCentroid(features);
 
-                return {
-                    index: idx,
-                    photoCount: features.length,
-                    photoIds: photoIds,
-                    locationBreakdown: locationBreakdown,
-                    locationCounts: locationCounts,
-                    recommendedLocation: recommendedLocation
-                };
-            })
-        );
+            return {
+                index: idx,
+                photoCount: features.length,
+                photoIds: photoIds,
+                locationBreakdown: locationBreakdown,
+                locationCounts: locationCounts,
+                centroid: centroid,
+                recommendedLocation: null
+            };
+        });
+
+        const allPhotoIds = selectedClusters.flatMap(c => c.photoIds);
+        const totalPhotos = allPhotoIds.length;
+
+        const allLocationCounts = {};
+        selectedClusters.forEach(cluster => {
+            Object.entries(cluster.locationCounts).forEach(([name, count]) => {
+                if (name !== 'Unknown Location') {
+                    allLocationCounts[name] = (allLocationCounts[name] || 0) + count;
+                }
+            });
+        });
+
+        const sortedLocations = Object.entries(allLocationCounts)
+            .sort((a, b) => b[1] - a[1]);
 
         panelContent.innerHTML = `
-            <h3>Selected Clusters (${selectedClusters.length})</h3>
-            <div class="clusters-list">
-                ${selectedClusters.map(cluster => {
-                    const existingLocations = Object.entries(cluster.locationCounts)
-                        .filter(([name]) => name !== 'Unknown Location')
-                        .sort((a, b) => b[1] - a[1]);
-
-                    return `
-                        <div class="cluster-item" data-cluster-index="${cluster.index}">
-                            <div class="cluster-info">
-                                <strong>${cluster.photoCount} photo${cluster.photoCount > 1 ? 's' : ''}</strong>
-                                <span class="current-location">${cluster.locationBreakdown}</span>
-                            </div>
-
-                            ${cluster.recommendedLocation ? `
-                                <div class="quick-actions">
-                                    <div class="quick-action-label">Recommended:</div>
-                                    <button class="btn-quick-assign btn-recommended"
-                                            data-cluster-index="${cluster.index}"
-                                            data-photo-ids="${cluster.photoIds.join(',')}"
-                                            data-location-name="${cluster.recommendedLocation}">
-                                        ${cluster.recommendedLocation}
-                                    </button>
-                                </div>
-                            ` : ''}
-
-                            ${existingLocations.length > 0 ? `
-                                <div class="quick-actions">
-                                    <div class="quick-action-label">Quick assign:</div>
-                                    <div class="quick-actions-buttons">
-                                        ${existingLocations.map(([name, count]) => `
-                                            <button class="btn-quick-assign"
-                                                    data-cluster-index="${cluster.index}"
-                                                    data-photo-ids="${cluster.photoIds.join(',')}"
-                                                    data-location-name="${name}">
-                                                ${name} (${count})
-                                            </button>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            ` : ''}
-
-                            <div class="cluster-assign">
-                                <input type="text"
-                                       class="location-input"
-                                       placeholder="Or enter custom location"
-                                       data-cluster-index="${cluster.index}">
-                                <button class="btn-assign"
-                                        data-cluster-index="${cluster.index}"
-                                        data-photo-ids="${cluster.photoIds.join(',')}">
-                                    Assign
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
+            <h3>Mass Assignment</h3>
+            <div class="mass-assignment-info">
+                <strong>${totalPhotos} photo${totalPhotos > 1 ? 's' : ''}</strong> in
+                <strong>${selectedClusters.length} cluster${selectedClusters.length > 1 ? 's' : ''}</strong>
             </div>
+
+            ${sortedLocations.length > 0 ? `
+                <div class="quick-actions">
+                    <div class="quick-action-label">Quick assign:</div>
+                    <div class="quick-actions-buttons">
+                        ${sortedLocations.map(([name, count]) => `
+                            <button class="btn-quick-assign"
+                                    data-photo-ids="${allPhotoIds.join(',')}"
+                                    data-location-name="${name}">
+                                ${name} (${count})
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="cluster-assign">
+                <input type="text"
+                       class="location-input"
+                       placeholder="Or enter custom location"
+                       id="mass-location-input">
+                <button class="btn-assign"
+                        data-photo-ids="${allPhotoIds.join(',')}"
+                        id="mass-assign-btn">
+                    Assign to All
+                </button>
+            </div>
+
+            <div class="clusters-summary">
+                <div class="summary-label">Selected clusters:</div>
+                <div class="clusters-list">
+                    ${selectedClusters.map(cluster => `
+                        <div class="cluster-summary-item">
+                            <strong>${cluster.photoCount} photo${cluster.photoCount > 1 ? 's' : ''}</strong>
+                            <span class="current-location">${cluster.locationBreakdown}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
             <button class="btn-clear-selection">Clear Selection</button>
         `;
 
@@ -385,7 +386,20 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
 
                 if (response.ok) {
                     window.notification.success(`Updated ${photoIds.length} photo(s) to "${locationName}"`);
-                    setTimeout(() => window.location.reload(), 1000);
+
+                    vectorSource.getFeatures().forEach(feature => {
+                        const featureId = feature.get('id');
+                        if (photoIds.includes(featureId)) {
+                            feature.set('name', locationName);
+                        }
+                    });
+
+                    clusterLayer.changed();
+
+                    selectedFeatures.clear();
+                    clusterLayer.changed();
+                    updateSelectionPanel();
+
                     return true;
                 } else {
                     window.notification.error('Failed to update locations');
@@ -406,11 +420,11 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
             });
         });
 
-        document.querySelectorAll('.btn-assign').forEach(btn => {
-            btn.addEventListener('click', async function() {
+        const massAssignBtn = document.getElementById('mass-assign-btn');
+        if (massAssignBtn) {
+            massAssignBtn.addEventListener('click', async function() {
                 const photoIds = this.dataset.photoIds.split(',').map(Number);
-                const clusterIndex = parseInt(this.dataset.clusterIndex);
-                const input = document.querySelector(`input[data-cluster-index="${clusterIndex}"]`);
+                const input = document.getElementById('mass-location-input');
                 const newLocationName = input.value.trim();
 
                 if (!newLocationName) {
@@ -423,7 +437,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                     input.value = '';
                 }
             });
-        });
+        }
 
         document.querySelector('.btn-clear-selection').addEventListener('click', () => {
             selectedFeatures.clear();
@@ -432,6 +446,41 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
         });
 
         panel.classList.add('active');
+
+        (async () => {
+            const firstCluster = selectedClusters[0];
+            if (firstCluster && firstCluster.centroid) {
+                const recommendedLocation = await getRecommendedLocation(firstCluster.centroid.lat, firstCluster.centroid.lon);
+
+                if (recommendedLocation) {
+                    const recommendedSection = document.createElement('div');
+                    recommendedSection.className = 'quick-actions';
+                    recommendedSection.innerHTML = `
+                        <div class="quick-action-label">Recommended:</div>
+                        <button class="btn-quick-assign btn-recommended"
+                                data-photo-ids="${allPhotoIds.join(',')}"
+                                data-location-name="${recommendedLocation}">
+                            ${recommendedLocation}
+                        </button>
+                    `;
+
+                    const quickActionsSection = panelContent.querySelector('.quick-actions');
+                    if (quickActionsSection) {
+                        panelContent.insertBefore(recommendedSection, quickActionsSection);
+                    } else {
+                        const clusterAssign = panelContent.querySelector('.cluster-assign');
+                        panelContent.insertBefore(recommendedSection, clusterAssign);
+                    }
+
+                    const newRecommendedBtn = recommendedSection.querySelector('.btn-quick-assign');
+                    newRecommendedBtn.addEventListener('click', async function() {
+                        const photoIds = this.dataset.photoIds.split(',').map(Number);
+                        const locationName = this.dataset.locationName;
+                        await assignLocation(photoIds, locationName);
+                    });
+                }
+            }
+        })();
     };
 
     return { map, vectorSource, selectedFeatures, updateSelectionPanel };
