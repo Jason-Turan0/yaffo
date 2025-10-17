@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 from sqlalchemy import func
 
 from photo_organizer.db import db
@@ -35,3 +35,30 @@ def init_locations_routes(app: Flask):
         ]
 
         return render_template("locations/list.html", locations=locations_data)
+
+    @app.route("/locations/bulk-update", methods=["POST"])
+    def locations_bulk_update():
+        """Bulk update location names for multiple photos"""
+        data = request.get_json()
+        photo_ids = data.get('photo_ids', [])
+        location_name = data.get('location_name', '').strip()
+
+        if not photo_ids or not location_name:
+            return jsonify({'error': 'Invalid request'}), 400
+
+        try:
+            updated_count = (
+                db.session.query(Photo)
+                .filter(Photo.id.in_(photo_ids))
+                .update({'location_name': location_name}, synchronize_session=False)
+            )
+            db.session.commit()
+
+            return jsonify({
+                'success': True,
+                'updated_count': updated_count,
+                'location_name': location_name
+            })
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 500

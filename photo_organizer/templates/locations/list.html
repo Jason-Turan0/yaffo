@@ -11,9 +11,16 @@
 <div class="locations-container">
     <div class="page-header">
         <h1>Photo Locations</h1>
+        <p class="help-text">Hold <kbd>Shift</kbd> and drag to select multiple clusters</p>
     </div>
 
-    <div id="map"></div>
+    <div class="map-layout">
+        <div id="map"></div>
+
+        <div id="selection-panel" class="selection-panel">
+            <div id="selection-panel-content"></div>
+        </div>
+    </div>
 
     <div id="popup" class="ol-popup">
         <a href="#" id="popup-closer" class="ol-popup-closer">×</a>

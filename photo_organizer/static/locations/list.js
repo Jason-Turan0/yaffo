@@ -34,18 +34,24 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
         source: vectorSource
     });
 
+    const selectedFeatures = new Set();
+
     const styleCache = {};
     const clusterLayer = new ol.layer.Vector({
         source: clusterSource,
         style: function(feature) {
             const size = feature.get('features').length;
-            let style = styleCache[size];
+            const isSelected = selectedFeatures.has(feature);
+            const cacheKey = `${size}-${isSelected}`;
+
+            let style = styleCache[cacheKey];
             if (!style) {
+                const fillColor = isSelected ? '#28a745' : '#007BFF';
                 if (size > 1) {
                     style = new ol.style.Style({
                         image: new ol.style.Circle({
                             radius: 15,
-                            fill: new ol.style.Fill({ color: '#007BFF' }),
+                            fill: new ol.style.Fill({ color: fillColor }),
                             stroke: new ol.style.Stroke({
                                 color: '#fff',
                                 width: 2
@@ -61,7 +67,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                     style = new ol.style.Style({
                         image: new ol.style.Circle({
                             radius: 7,
-                            fill: new ol.style.Fill({ color: '#007BFF' }),
+                            fill: new ol.style.Fill({ color: fillColor }),
                             stroke: new ol.style.Stroke({
                                 color: '#fff',
                                 width: 2
@@ -69,13 +75,40 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                         })
                     });
                 }
-                styleCache[size] = style;
+                styleCache[cacheKey] = style;
             }
             return style;
         }
     });
 
     map.addLayer(clusterLayer);
+
+    const dragBox = new ol.interaction.DragBox({
+        condition: ol.events.condition.shiftKeyOnly
+    });
+
+    map.addInteraction(dragBox);
+
+    dragBox.on('boxend', function() {
+        const extent = dragBox.getGeometry().getExtent();
+        const boxFeatures = [];
+
+        clusterSource.getFeatures().forEach(function(feature) {
+            if (ol.extent.intersects(extent, feature.getGeometry().getExtent())) {
+                boxFeatures.push(feature);
+            }
+        });
+
+        selectedFeatures.clear();
+        boxFeatures.forEach(f => selectedFeatures.add(f));
+        clusterLayer.changed();
+        updateSelectionPanel();
+    });
+
+    dragBox.on('boxstart', function() {
+        selectedFeatures.clear();
+        clusterLayer.changed();
+    });
 
     if (locations.length > 0) {
         const extent = vectorSource.getExtent();
@@ -201,5 +234,110 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
         map.getTarget().style.cursor = hit ? 'pointer' : '';
     });
 
-    return { map, vectorSource };
+    const updateSelectionPanel = () => {
+        const panel = document.getElementById('selection-panel');
+        const panelContent = document.getElementById('selection-panel-content');
+
+        if (selectedFeatures.size === 0) {
+            panel.classList.remove('active');
+            return;
+        }
+
+        const selectedClusters = Array.from(selectedFeatures).map((clusterFeature, idx) => {
+            const features = clusterFeature.get('features');
+            const photoIds = features.map(f => f.get('id'));
+
+            const locationCounts = {};
+            features.forEach(f => {
+                const locationName = f.get('name') || 'Unknown Location';
+                locationCounts[locationName] = (locationCounts[locationName] || 0) + 1;
+            });
+
+            const locationBreakdown = Object.entries(locationCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([name, count]) => `${count} ${name}`)
+                .join(', ');
+
+            return {
+                index: idx,
+                photoCount: features.length,
+                photoIds: photoIds,
+                locationBreakdown: locationBreakdown
+            };
+        });
+
+        panelContent.innerHTML = `
+            <h3>Selected Clusters (${selectedClusters.length})</h3>
+            <div class="clusters-list">
+                ${selectedClusters.map(cluster => `
+                    <div class="cluster-item" data-cluster-index="${cluster.index}">
+                        <div class="cluster-info">
+                            <strong>${cluster.photoCount} photo${cluster.photoCount > 1 ? 's' : ''}</strong>
+                            <span class="current-location">${cluster.locationBreakdown}</span>
+                        </div>
+                        <div class="cluster-assign">
+                            <input type="text"
+                                   class="location-input"
+                                   placeholder="New location name"
+                                   data-cluster-index="${cluster.index}">
+                            <button class="btn-assign"
+                                    data-cluster-index="${cluster.index}"
+                                    data-photo-ids="${cluster.photoIds.join(',')}">
+                                Assign
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            <button class="btn-clear-selection">Clear Selection</button>
+        `;
+
+        document.querySelectorAll('.btn-assign').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const photoIds = this.dataset.photoIds.split(',').map(Number);
+                const clusterIndex = parseInt(this.dataset.clusterIndex);
+                const input = document.querySelector(`input[data-cluster-index="${clusterIndex}"]`);
+                const newLocationName = input.value.trim();
+
+                if (!newLocationName) {
+                    window.notification.error('Please enter a location name');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/locations/bulk-update', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            photo_ids: photoIds,
+                            location_name: newLocationName
+                        })
+                    });
+
+                    if (response.ok) {
+                        window.notification.success(`Updated ${photoIds.length} photo(s)`);
+                        input.value = '';
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        window.notification.error('Failed to update locations');
+                    }
+                } catch (error) {
+                    window.notification.error('Error updating locations');
+                    console.error(error);
+                }
+            });
+        });
+
+        document.querySelector('.btn-clear-selection').addEventListener('click', () => {
+            selectedFeatures.clear();
+            clusterLayer.changed();
+            updateSelectionPanel();
+        });
+
+        panel.classList.add('active');
+    };
+
+    return { map, vectorSource, selectedFeatures, updateSelectionPanel };
 };
