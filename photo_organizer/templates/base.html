@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='multi-select.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='notification.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='searchable-select.css') }}">
     {% block extra_styles %}{% endblock %}
     <script>
     // Global configuration object with all Flask routes
@@ -72,6 +73,7 @@
     </div>
     <script src="{{ url_for('static', filename='notification.js') }}"></script>
     <script src="{{ url_for('static', filename='multi-select.js') }}"></script>
+    <script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
     <script src="{{ url_for('static', filename='filters.js') }}"></script>
 
     <script>

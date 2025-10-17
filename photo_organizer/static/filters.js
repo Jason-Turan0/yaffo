@@ -1,13 +1,28 @@
-async function loadTagValues(tagName) {
+async function loadTagValues(tagName, selectedValue = null) {
     const tagValueSelect = document.getElementById('tag-value-select');
+    const tagValueWrapper = tagValueSelect.nextElementSibling;
 
     if (!tagName) {
         tagValueSelect.innerHTML = '<option value="">-- Select a tag name first --</option>';
         tagValueSelect.disabled = true;
+
+        // Update wrapper disabled state
+        if (tagValueWrapper && tagValueWrapper.classList.contains('searchable-select-wrapper')) {
+            tagValueWrapper.classList.add('disabled');
+        }
         return;
     }
 
+    // Store the current selected value if not provided
+    if (selectedValue === null) {
+        selectedValue = tagValueSelect.value;
+    }
+
     tagValueSelect.disabled = true;
+    if (tagValueWrapper && tagValueWrapper.classList.contains('searchable-select-wrapper')) {
+        tagValueWrapper.classList.add('disabled');
+    }
+
     tagValueSelect.innerHTML = '<option value="">Loading...</option>';
 
     try {
@@ -28,10 +43,22 @@ async function loadTagValues(tagName) {
             tagValueSelect.appendChild(option);
         });
 
+        // Restore the selected value if it exists in the loaded values
+        if (selectedValue && data.values.includes(selectedValue)) {
+            tagValueSelect.value = selectedValue;
+        }
+
         tagValueSelect.disabled = false;
+        if (tagValueWrapper && tagValueWrapper.classList.contains('searchable-select-wrapper')) {
+            tagValueWrapper.classList.remove('disabled');
+        }
     } catch (error) {
         console.error('Error loading tag values:', error);
         tagValueSelect.innerHTML = '<option value="">-- Error loading values --</option>';
+        tagValueSelect.disabled = true;
+        if (tagValueWrapper && tagValueWrapper.classList.contains('searchable-select-wrapper')) {
+            tagValueWrapper.classList.add('disabled');
+        }
         window.notification.error('Failed to load tag values');
     }
 }

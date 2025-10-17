@@ -1,6 +1,6 @@
 <div class="filter-group">
     <label for="tag-name-select">Tag Name</label>
-    <select name="tag-name" id="tag-name-select" onchange="loadTagValues(this.value)">
+    <select name="tag-name" id="tag-name-select" class="searchable-select" onchange="loadTagValues(this.value)">
         <option value="">-- All --</option>
         {% for tag_name in filters.tag_names %}
         <option value="{{ tag_name }}" {% if tag_name == filters.selected_tag_name %}selected{% endif %}>
@@ -10,7 +10,7 @@
     </select>
 
     <label for="tag-value-select">Tag Value</label>
-    <select name="tag-value" id="tag-value-select" disabled>
+    <select name="tag-value" id="tag-value-select" class="searchable-select" disabled>
         <option value="">-- Select a tag name first --</option>
         {% if filters.selected_tag_value %}
         <option value="{{ filters.selected_tag_value }}" selected>{{ filters.selected_tag_value }}</option>
