@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, jsonify
 from sqlalchemy import func
 
@@ -27,7 +28,8 @@ def init_locations_routes(app: Flask):
                 'name': loc.location_name,
                 'lat': float(loc.latitude),
                 'lon': float(loc.longitude),
-                'photo_path': loc.relative_file_path
+                'photo_path': loc.relative_file_path,
+                'filename': os.path.basename(loc.relative_file_path)
             }
             for loc in locations
         ]

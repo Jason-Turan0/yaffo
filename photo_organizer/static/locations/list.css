@@ -101,3 +101,37 @@
 .popup-photo:hover {
     opacity: 0.9;
 }
+
+.popup-select-container {
+    margin-bottom: 12px;
+}
+
+.popup-select-container label {
+    display: block;
+    font-size: 13px;
+    color: #495057;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.photo-select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+}
+
+.photo-select:focus {
+    outline: none;
+    border-color: #007BFF;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.photo-location {
+    margin: 8px 0 0 0;
+    font-size: 13px;
+    color: #6c757d;
+}
