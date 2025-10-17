@@ -234,7 +234,43 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
         map.getTarget().style.cursor = hit ? 'pointer' : '';
     });
 
-    const updateSelectionPanel = () => {
+    const calculateCentroid = (features) => {
+        let totalLat = 0;
+        let totalLon = 0;
+
+        features.forEach(f => {
+            const coords = ol.proj.toLonLat(f.getGeometry().getCoordinates());
+            totalLon += coords[0];
+            totalLat += coords[1];
+        });
+
+        return {
+            lat: totalLat / features.length,
+            lon: totalLon / features.length
+        };
+    };
+
+    const getRecommendedLocation = async (lat, lon) => {
+        try {
+            const response = await fetch('/locations/reverse-geocode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ lat, lon })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data.location_name;
+            }
+        } catch (error) {
+            console.error('Error fetching recommended location:', error);
+        }
+        return null;
+    };
+
+    const updateSelectionPanel = async () => {
         const panel = document.getElementById('selection-panel');
         const panelContent = document.getElementById('selection-panel-content');
 
@@ -243,54 +279,132 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
             return;
         }
 
-        const selectedClusters = Array.from(selectedFeatures).map((clusterFeature, idx) => {
-            const features = clusterFeature.get('features');
-            const photoIds = features.map(f => f.get('id'));
+        const selectedClusters = await Promise.all(
+            Array.from(selectedFeatures).map(async (clusterFeature, idx) => {
+                const features = clusterFeature.get('features');
+                const photoIds = features.map(f => f.get('id'));
 
-            const locationCounts = {};
-            features.forEach(f => {
-                const locationName = f.get('name') || 'Unknown Location';
-                locationCounts[locationName] = (locationCounts[locationName] || 0) + 1;
-            });
+                const locationCounts = {};
+                features.forEach(f => {
+                    const locationName = f.get('name') || 'Unknown Location';
+                    locationCounts[locationName] = (locationCounts[locationName] || 0) + 1;
+                });
 
-            const locationBreakdown = Object.entries(locationCounts)
-                .sort((a, b) => b[1] - a[1])
-                .map(([name, count]) => `${count} ${name}`)
-                .join(', ');
+                const locationBreakdown = Object.entries(locationCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([name, count]) => `${count} ${name}`)
+                    .join(', ');
 
-            return {
-                index: idx,
-                photoCount: features.length,
-                photoIds: photoIds,
-                locationBreakdown: locationBreakdown
-            };
-        });
+                const centroid = calculateCentroid(features);
+                const recommendedLocation = await getRecommendedLocation(centroid.lat, centroid.lon);
+
+                return {
+                    index: idx,
+                    photoCount: features.length,
+                    photoIds: photoIds,
+                    locationBreakdown: locationBreakdown,
+                    locationCounts: locationCounts,
+                    recommendedLocation: recommendedLocation
+                };
+            })
+        );
 
         panelContent.innerHTML = `
             <h3>Selected Clusters (${selectedClusters.length})</h3>
             <div class="clusters-list">
-                ${selectedClusters.map(cluster => `
-                    <div class="cluster-item" data-cluster-index="${cluster.index}">
-                        <div class="cluster-info">
-                            <strong>${cluster.photoCount} photo${cluster.photoCount > 1 ? 's' : ''}</strong>
-                            <span class="current-location">${cluster.locationBreakdown}</span>
+                ${selectedClusters.map(cluster => {
+                    const existingLocations = Object.entries(cluster.locationCounts)
+                        .filter(([name]) => name !== 'Unknown Location')
+                        .sort((a, b) => b[1] - a[1]);
+
+                    return `
+                        <div class="cluster-item" data-cluster-index="${cluster.index}">
+                            <div class="cluster-info">
+                                <strong>${cluster.photoCount} photo${cluster.photoCount > 1 ? 's' : ''}</strong>
+                                <span class="current-location">${cluster.locationBreakdown}</span>
+                            </div>
+
+                            ${cluster.recommendedLocation ? `
+                                <div class="quick-actions">
+                                    <div class="quick-action-label">Recommended:</div>
+                                    <button class="btn-quick-assign btn-recommended"
+                                            data-cluster-index="${cluster.index}"
+                                            data-photo-ids="${cluster.photoIds.join(',')}"
+                                            data-location-name="${cluster.recommendedLocation}">
+                                        ${cluster.recommendedLocation}
+                                    </button>
+                                </div>
+                            ` : ''}
+
+                            ${existingLocations.length > 0 ? `
+                                <div class="quick-actions">
+                                    <div class="quick-action-label">Quick assign:</div>
+                                    <div class="quick-actions-buttons">
+                                        ${existingLocations.map(([name, count]) => `
+                                            <button class="btn-quick-assign"
+                                                    data-cluster-index="${cluster.index}"
+                                                    data-photo-ids="${cluster.photoIds.join(',')}"
+                                                    data-location-name="${name}">
+                                                ${name} (${count})
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <div class="cluster-assign">
+                                <input type="text"
+                                       class="location-input"
+                                       placeholder="Or enter custom location"
+                                       data-cluster-index="${cluster.index}">
+                                <button class="btn-assign"
+                                        data-cluster-index="${cluster.index}"
+                                        data-photo-ids="${cluster.photoIds.join(',')}">
+                                    Assign
+                                </button>
+                            </div>
                         </div>
-                        <div class="cluster-assign">
-                            <input type="text"
-                                   class="location-input"
-                                   placeholder="New location name"
-                                   data-cluster-index="${cluster.index}">
-                            <button class="btn-assign"
-                                    data-cluster-index="${cluster.index}"
-                                    data-photo-ids="${cluster.photoIds.join(',')}">
-                                Assign
-                            </button>
-                        </div>
-                    </div>
-                `).join('')}
+                    `;
+                }).join('')}
             </div>
             <button class="btn-clear-selection">Clear Selection</button>
         `;
+
+        const assignLocation = async (photoIds, locationName) => {
+            try {
+                const response = await fetch('/locations/bulk-update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        photo_ids: photoIds,
+                        location_name: locationName
+                    })
+                });
+
+                if (response.ok) {
+                    window.notification.success(`Updated ${photoIds.length} photo(s) to "${locationName}"`);
+                    setTimeout(() => window.location.reload(), 1000);
+                    return true;
+                } else {
+                    window.notification.error('Failed to update locations');
+                    return false;
+                }
+            } catch (error) {
+                window.notification.error('Error updating locations');
+                console.error(error);
+                return false;
+            }
+        };
+
+        document.querySelectorAll('.btn-quick-assign').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const photoIds = this.dataset.photoIds.split(',').map(Number);
+                const locationName = this.dataset.locationName;
+                await assignLocation(photoIds, locationName);
+            });
+        });
 
         document.querySelectorAll('.btn-assign').forEach(btn => {
             btn.addEventListener('click', async function() {
@@ -304,28 +418,9 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                     return;
                 }
 
-                try {
-                    const response = await fetch('/locations/bulk-update', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            photo_ids: photoIds,
-                            location_name: newLocationName
-                        })
-                    });
-
-                    if (response.ok) {
-                        window.notification.success(`Updated ${photoIds.length} photo(s)`);
-                        input.value = '';
-                        setTimeout(() => window.location.reload(), 1000);
-                    } else {
-                        window.notification.error('Failed to update locations');
-                    }
-                } catch (error) {
-                    window.notification.error('Error updating locations');
-                    console.error(error);
+                const success = await assignLocation(photoIds, newLocationName);
+                if (success) {
+                    input.value = '';
                 }
             });
         });
