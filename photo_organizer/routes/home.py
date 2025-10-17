@@ -1,4 +1,6 @@
 import calendar
+import math
+import requests
 from flask import Flask, render_template, request, jsonify
 from sqlalchemy import extract, distinct, func
 from sqlalchemy.orm import joinedload
@@ -6,6 +8,25 @@ from sqlalchemy.orm import joinedload
 from photo_organizer.db import db
 from photo_organizer.db.models import Photo, Face, Person, PersonFace, Tag
 from photo_organizer.db.repositories.photos_repository import get_distinct_years, get_distinct_months
+
+
+def calculate_bounding_box(lat: float, lon: float, distance_miles: float) -> tuple[float, float, float, float]:
+    """
+    Calculate bounding box coordinates for a given center point and distance.
+    Returns (min_lat, max_lat, min_lon, max_lon)
+    """
+    lat_degree_miles = 69.0
+    lon_degree_miles = abs(math.cos(math.radians(lat)) * 69.0)
+
+    lat_offset = distance_miles / lat_degree_miles
+    lon_offset = distance_miles / lon_degree_miles
+
+    min_lat = lat - lat_offset
+    max_lat = lat + lat_offset
+    min_lon = lon - lon_offset
+    max_lon = lon + lon_offset
+
+    return (min_lat, max_lat, min_lon, max_lon)
 
 
 def init_home_routes(app: Flask):
@@ -18,6 +39,10 @@ def init_home_routes(app: Flask):
         tag_value = request.args.get("tag-value", type=str)
         location_names = request.args.getlist("location", type=str)
         location_match_type = request.args.get("location-match-type", default='any', type=str)
+        proximity_lat = request.args.get("proximity-lat", type=float)
+        proximity_lon = request.args.get("proximity-lon", type=float)
+        proximity_distance = request.args.get("proximity-distance", type=float)
+        proximity_location = request.args.get("proximity-location", type=str)
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
         page_size = request.args.get("page-size", type=int)
@@ -85,6 +110,19 @@ def init_home_routes(app: Flask):
                 # OR logic: Photo location must match ANY of the selected locations
                 query = query.filter(Photo.location_name.in_(location_names))
 
+        if proximity_lat is not None and proximity_lon is not None and proximity_distance:
+            min_lat, max_lat, min_lon, max_lon = calculate_bounding_box(
+                proximity_lat, proximity_lon, proximity_distance
+            )
+            query = query.filter(
+                Photo.latitude.isnot(None),
+                Photo.longitude.isnot(None),
+                Photo.latitude >= min_lat,
+                Photo.latitude <= max_lat,
+                Photo.longitude >= min_lon,
+                Photo.longitude <= max_lon
+            )
+
         photos = query.limit(filter_page_size).all()
         photo_count = db.session.query(func.count(Photo.id)).scalar()
 
@@ -129,6 +167,10 @@ def init_home_routes(app: Flask):
             'selected_tag_value': tag_value,
             'selected_location_names': location_names,
             'selected_location_match_type': location_match_type,
+            'selected_proximity_lat': proximity_lat,
+            'selected_proximity_lon': proximity_lon,
+            'selected_proximity_distance': proximity_distance,
+            'selected_proximity_location': proximity_location,
             'selected_year': year,
             'selected_month': month,
             "page_sizes": [50, 100, 250, 500, 1000],
@@ -159,5 +201,65 @@ def init_home_routes(app: Flask):
         values = [val[0] for val in distinct_values if val[0]]
         return jsonify({"tag_name": tag_name, "values": values})
 
+    @app.route("/api/location-autocomplete", methods=["GET"])
+    def location_autocomplete():
+        """
+        API endpoint for location autocomplete with geocoding.
+        Combines results from:
+        1. Existing photo locations in database
+        2. OpenStreetMap Nominatim geocoding
+        Query params: q (search query)
+        """
+        query = request.args.get("q", "").strip()
+        if not query or len(query) < 2:
+            return jsonify({"results": []})
+
+        results = []
+
+        db_locations = (
+            db.session.query(Photo.location_name, Photo.latitude, Photo.longitude)
+            .filter(Photo.location_name.isnot(None))
+            .filter(Photo.location_name.ilike(f"%{query}%"))
+            .distinct()
+            .limit(5)
+            .all()
+        )
+
+        for location_name, lat, lon in db_locations:
+            if lat is not None and lon is not None:
+                results.append({
+                    "name": location_name,
+                    "lat": lat,
+                    "lon": lon,
+                    "source": "photos"
+                })
+
+        try:
+            osm_response = requests.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={
+                    "q": query,
+                    "format": "json",
+                    "limit": 5
+                },
+                headers={
+                    "User-Agent": "PhotoOrganizer/1.0"
+                },
+                timeout=3
+            )
+
+            if osm_response.status_code == 200:
+                osm_data = osm_response.json()
+                for item in osm_data:
+                    results.append({
+                        "name": item.get("display_name"),
+                        "lat": float(item.get("lat")),
+                        "lon": float(item.get("lon")),
+                        "source": "osm"
+                    })
+        except requests.RequestException:
+            pass
+
+        return jsonify({"results": results})
 
 

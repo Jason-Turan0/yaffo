@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 setup(
     name="photo_organizer",
     version="0.1.0",
-    description="A tool to organize photos by date using EXIF metadata",
+    description="An app to organize photos",
     author="Jason Turan",
     packages=find_packages(),
     install_requires=[
@@ -31,6 +31,7 @@ setup(
         "pytest==8.3.4",
         "pytest-cov==6.0.0",
         "PyWavelets==1.9.0",
+        "requests==2.32.3",
         "scikit-learn==1.7.2",
         "scipy==1.16.2",
         "setuptools==80.9.0",

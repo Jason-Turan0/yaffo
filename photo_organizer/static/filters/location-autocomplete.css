@@ -1,0 +1,124 @@
+
+.location-proximity-filter {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+.location-proximity-filter .proximity-label {
+    display: block;
+    font-size: 13px;
+    color: #495057;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.location-autocomplete-wrapper {
+    position: relative;
+    margin-bottom: 10px;
+}
+
+.location-search-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+}
+
+.location-search-input:focus {
+    outline: none;
+    border-color: #007BFF;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.location-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ced4da;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.location-suggestions.active {
+    display: block;
+}
+
+.location-suggestion-item {
+    padding: 8px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f8f9fa;
+    font-size: 13px;
+}
+
+.location-suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.location-suggestion-item:hover,
+.location-suggestion-item.highlighted {
+    background: #e7f3ff;
+}
+
+.location-suggestion-item.highlighted {
+    background: #007BFF;
+}
+
+.location-suggestion-item.highlighted .suggestion-name,
+.location-suggestion-item.highlighted .suggestion-source {
+    color: white;
+}
+
+.location-suggestion-item.loading {
+    color: #6c757d;
+    font-style: italic;
+    cursor: default;
+}
+
+.location-suggestion-item .suggestion-name {
+    color: #212529;
+    font-weight: 500;
+}
+
+.location-suggestion-item .suggestion-source {
+    color: #6c757d;
+    font-size: 11px;
+    margin-left: 5px;
+}
+
+.distance-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.distance-input-wrapper label {
+    font-size: 13px;
+    color: #495057;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.distance-input-wrapper input[type="number"] {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+}
+
+.distance-input-wrapper input[type="number"]:focus {
+    outline: none;
+    border-color: #007BFF;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
