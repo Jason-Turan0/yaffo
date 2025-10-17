@@ -51,6 +51,7 @@
                 <li><a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Home</a></li>
                 <li><a href="{{ url_for('faces_index') }}" class="nav-link {% if request.endpoint == 'faces_index' or request.endpoint == 'faces_assign' or request.endpoint == 'faces_remove' %}active{% endif %}">Faces</a></li>
                 <li><a href="{{ url_for('people_list') }}" class="nav-link {% if 'people' in request.endpoint %}active{% endif %}">People</a></li>
+                <li><a href="{{ url_for('locations_list') }}" class="nav-link {% if 'locations' in request.endpoint %}active{% endif %}">Locations</a></li>
                 <li><a href="{{ url_for('utilities_index') }}" class="nav-link {% if 'utilities' in request.endpoint %}active{% endif %}">Utilities</a></li>
             </ul>
         </div>
