@@ -46,7 +46,7 @@ A Flask-based photo organization tool that uses EXIF metadata, face recognition,
 
 ## Code Conventions
 
-- Don't use code comments as a way of describing what you did. Only include comments for very complicated or unconventional code. Use the chat interface to explain what you did and why. Refer to the file and line if nessecary.
+- Don't use code comments as a way of describing what you did. Only include comments for very complicated or unconventional code. Use the chat interface to explain what you did and why. Refer to the file and line if necessary.
 - Use type hints for any code generated
 - Target platform is windows and mac so do all path manipulations server side with os neutral Path lib. 
 

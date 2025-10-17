@@ -62,3 +62,48 @@ def init_locations_routes(app: Flask):
         except Exception as e:
             db.session.rollback()
             return jsonify({'error': str(e)}), 500
+
+    @app.route("/locations/reverse-geocode", methods=["POST"])
+    def reverse_geocode():
+        """Reverse geocode a lat/lon coordinate using OpenStreetMap Nominatim"""
+        data = request.get_json()
+        lat = data.get('lat')
+        lon = data.get('lon')
+
+        if lat is None or lon is None:
+            return jsonify({'error': 'Invalid request'}), 400
+
+        try:
+            osm_response = requests.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={
+                    "lat": lat,
+                    "lon": lon,
+                    "format": "json"
+                },
+                headers={
+                    "User-Agent": "PhotoOrganizer/1.0"
+                },
+                timeout=3
+            )
+
+            if osm_response.status_code == 200:
+                osm_data = osm_response.json()
+                address = osm_data.get('address', {})
+
+                location_parts = []
+                for key in ['city', 'town', 'village', 'county', 'state', 'country']:
+                    if key in address:
+                        location_parts.append(address[key])
+
+                location_name = ', '.join(location_parts) if location_parts else osm_data.get('display_name', '')
+
+                return jsonify({
+                    'success': True,
+                    'location_name': location_name,
+                    'display_name': osm_data.get('display_name')
+                })
+            else:
+                return jsonify({'error': 'Geocoding failed'}), 500
+        except requests.RequestException as e:
+            return jsonify({'error': str(e)}), 500
