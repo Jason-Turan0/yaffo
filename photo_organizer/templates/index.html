@@ -60,6 +60,6 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='filters/location-autocomplete.js') }}"></script>
 <script>
-window.PHOTO_ORGANIZER.initLocationAutocomplete();
+window.PHOTO_ORGANIZER.initLocationAutocomplete(window.APP_CONFIG);
 </script>
 {% endblock %}

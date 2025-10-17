@@ -1,6 +1,6 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
-window.PHOTO_ORGANIZER.initLocationAutocomplete = () => {
+window.PHOTO_ORGANIZER.initLocationAutocomplete = (appConfig) => {
     const searchInput = document.getElementById('location-search');
     const suggestionsContainer = document.getElementById('location-suggestions');
     const latInput = document.getElementById('proximity-lat');
@@ -101,7 +101,8 @@ window.PHOTO_ORGANIZER.initLocationAutocomplete = () => {
         suggestionsContainer.classList.add('active');
 
         try {
-            const response = await fetch(`/api/location-autocomplete?q=${encodeURIComponent(query)}`, {
+            const url = `${appConfig.urls.location_autocomplete}?q=${encodeURIComponent(query)}`;
+            const response = await fetch(url, {
                 signal: controller.signal
             });
 
