@@ -1,14 +1,13 @@
 
 {% macro render_sidebar(url, filters, render_filters_block, render_actions_block) %}
  <div class="sidebar">
-        <h2>Filters</h2>
+     <h2>Filters</h2>
      <form method="GET" action="{{ url }}" id="filter-form">
         {% include "filters/_year.html"  %}
         {% include "filters/_month.html" %}
          {% if render_filters_block %}
             {{ render_filters_block() }}
          {% endif %}
-        {% include "filters/_pageSize.html" %}
         <button type="submit" class="btn btn-primary filter-btn">Apply Filters</button>
         <button type="button" class="clear-filters"
                 onclick="window.location.href='{{ url }}'">

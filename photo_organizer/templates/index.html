@@ -9,6 +9,7 @@
 
 {% block content %}
 {% from "_sidebar.html" import render_sidebar  %}
+{% from "components/pagination.html" import pagination as render_pagination %}
 
 <div class="main-container-layout">
     {% macro render_filters() %}
@@ -47,6 +48,28 @@
             </div>
             {% endfor %}
         </div>
+
+        {{ render_pagination(
+            pagination.current_page,
+            pagination.total_items,
+            pagination.page_size,
+            pagination.page_sizes,
+            url_for('index'),
+            {
+                'year': filters.selected_year,
+                'month': filters.selected_month,
+                'person': filters.selected_person_ids,
+                'person-match-type': filters.selected_person_match_type,
+                'tag-name': filters.selected_tag_name,
+                'tag-value': filters.selected_tag_value,
+                'location': filters.selected_location_names,
+                'location-match-type': filters.selected_location_match_type,
+                'proximity-lat': filters.selected_proximity_lat,
+                'proximity-lon': filters.selected_proximity_lon,
+                'proximity-distance': filters.selected_proximity_distance,
+                'proximity-location': filters.selected_proximity_location
+            }
+        ) }}
         {% else %}
         <div class="empty-state">
             <h2>No photos found</h2>

@@ -128,6 +128,7 @@ def init_people_routes(app: Flask):
         month = request.args.get("month", type=int)
         min_similarity = request.args.get("min_similarity", type=float)
         max_similarity = request.args.get("max_similarity", type=float)
+        page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", type=int)
         filter_face_page_size = page_size if page_size else FACE_LOAD_LIMIT
 
@@ -137,7 +138,7 @@ def init_people_routes(app: Flask):
 
         photo_alias = aliased(Photo)
 
-        # Get all faces for this person
+        # Build base query for this person
         query = (
             db.session.query(Face)
             .join(PersonFace)
@@ -158,10 +159,16 @@ def init_people_routes(app: Flask):
         if max_similarity and max_similarity > 0:
             query = query.filter(PersonFace.similarity < max_similarity)
 
+        # Get total count for pagination
+        total_faces = query.count()
+
+        # Apply pagination
+        offset = (page - 1) * filter_face_page_size
         faces = (
             query
             .order_by(PersonFace.similarity)
             .limit(filter_face_page_size)
+            .offset(offset)
             .all()
         )
 
@@ -181,7 +188,14 @@ def init_people_routes(app: Flask):
             for face in faces
         ]
 
-        return render_template("people/faces.html", person=person, faces=face_data, filters=filters)
+        pagination = {
+            "current_page": page,
+            "total_items": total_faces,
+            "page_size": filter_face_page_size,
+            "page_sizes": [50, 100, 250, 500, 1000],
+        }
+
+        return render_template("people/faces.html", person=person, faces=face_data, filters=filters, pagination=pagination)
 
     @app.route("/people/<int:person_id>/faces/remove", methods=["POST"])
     def person_faces_remove(person_id):

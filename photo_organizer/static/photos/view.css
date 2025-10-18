@@ -229,6 +229,133 @@
     background: #adb5bd;
 }
 
+.tags-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tag-item {
+    display: flex;
+    align-items: baseline;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 3px solid #6c757d;
+    font-size: 13px;
+}
+
+.tag-name {
+    font-weight: 600;
+    color: #495057;
+}
+
+.tag-separator {
+    margin: 0 6px;
+    color: #adb5bd;
+}
+
+.tag-value {
+    color: #6c757d;
+    flex: 1;
+    word-break: break-word;
+}
+
+.location-details .detail-actions {
+    margin-top: 10px;
+}
+
+.location-details .action-button {
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.tags-list-editable {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tag-item-editable {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 3px solid #6c757d;
+    font-size: 13px;
+    gap: 10px;
+}
+
+.tag-display {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.tag-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.tag-action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 6px;
+    transition: transform 0.2s;
+    border-radius: 4px;
+}
+
+.tag-action-btn:hover {
+    transform: scale(1.2);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.tag-add-form {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #dee2e6;
+}
+
+.form-row {
+    display: flex;
+    gap: 8px;
+    flex-direction: column;
+}
+
+.tag-input {
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.tag-input:focus {
+    outline: none;
+    border-color: #007BFF;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.tag-input-inline {
+    padding: 4px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+    flex: 1;
+}
+
+.tag-input-inline:focus {
+    outline: none;
+    border-color: #007BFF;
+}
+
 @media (max-width: 768px) {
     .photo-viewer {
         flex-direction: column;

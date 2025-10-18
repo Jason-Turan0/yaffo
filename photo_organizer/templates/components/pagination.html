@@ -1,0 +1,77 @@
+{% macro pagination(current_page, total_items, page_size, page_sizes, base_url, extra_params={}) %}
+{% set total_pages = ((total_items - 1) // page_size + 1) if total_items > 0 else 1 %}
+{% set start_item = (current_page - 1) * page_size + 1 %}
+{% set end_item = [current_page * page_size, total_items] | min %}
+
+{# Build query string with extra params #}
+{% set query_params = [] %}
+{% for key, value in extra_params.items() %}
+    {% if value is not none and value != '' %}
+        {% if value is iterable and value is not string %}
+            {# Handle list values (e.g., person=[1,2,3] becomes person=1&person=2&person=3) #}
+            {% if value|length > 0 %}
+                {% for item in value %}
+                    {% set _ = query_params.append(key ~ '=' ~ item) %}
+                {% endfor %}
+            {% endif %}
+        {% else %}
+            {% set _ = query_params.append(key ~ '=' ~ value) %}
+        {% endif %}
+    {% endif %}
+{% endfor %}
+{% set extra_query = ('&' ~ query_params|join('&')) if query_params else '' %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='components/pagination.css') }}">
+
+<div class="pagination-container">
+    <div class="pagination-info">
+        <span class="results-count">
+            Showing {{ start_item }}-{{ end_item }} of {{ total_items }} results
+        </span>
+    </div>
+
+    <div class="pagination-controls">
+        <div class="page-size-selector">
+            <label for="page-size">Items per page:</label>
+            <select id="page-size" name="page-size" onchange="window.location.href = this.value">
+                {% for size in page_sizes %}
+                <option value="{{ base_url }}?page=1&page-size={{ size }}{{ extra_query }}"
+                        {% if size == page_size %}selected{% endif %}>
+                    {{ size }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="page-navigation">
+            <a href="{{ base_url }}?page=1&page-size={{ page_size }}{{ extra_query }}"
+               class="page-btn {% if current_page == 1 %}disabled{% endif %}"
+               {% if current_page == 1 %}onclick="return false;"{% endif %}>
+                &laquo; First
+            </a>
+
+            <a href="{{ base_url }}?page={{ current_page - 1 }}&page-size={{ page_size }}{{ extra_query }}"
+               class="page-btn {% if current_page == 1 %}disabled{% endif %}"
+               {% if current_page == 1 %}onclick="return false;"{% endif %}>
+                &lsaquo; Prev
+            </a>
+
+            <span class="page-info">
+                Page {{ current_page }} of {{ total_pages }}
+            </span>
+
+            <a href="{{ base_url }}?page={{ current_page + 1 }}&page-size={{ page_size }}{{ extra_query }}"
+               class="page-btn {% if current_page >= total_pages %}disabled{% endif %}"
+               {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
+                Next &rsaquo;
+            </a>
+
+            <a href="{{ base_url }}?page={{ total_pages }}&page-size={{ page_size }}{{ extra_query }}"
+               class="page-btn {% if current_page >= total_pages %}disabled{% endif %}"
+               {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
+                Last &raquo;
+            </a>
+        </div>
+    </div>
+</div>
+{% endmacro %}

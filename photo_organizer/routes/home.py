@@ -44,6 +44,7 @@ def init_home_routes(app: Flask):
         proximity_location = request.args.get("proximity-location", type=str)
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
+        page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", type=int)
         filter_page_size = page_size if page_size else 100
         # Build query with eager loading
@@ -122,8 +123,12 @@ def init_home_routes(app: Flask):
                 Photo.longitude <= max_lon
             )
 
-        photos = query.limit(filter_page_size).all()
-        photo_count = db.session.query(func.count(Photo.id)).scalar()
+        # Get total count of filtered results
+        photo_count = query.count()
+
+        # Apply pagination
+        offset = (page - 1) * filter_page_size
+        photos = query.limit(filter_page_size).offset(offset).all()
 
 
         # Get unique people from photos (for display in cards)
@@ -176,7 +181,14 @@ def init_home_routes(app: Flask):
             "page_size": filter_page_size
         }
 
-        return render_template("index.html", photos=photos, filters=filters, photo_count=photo_count)
+        pagination = {
+            "current_page": page,
+            "total_items": photo_count,
+            "page_size": filter_page_size,
+            "page_sizes": [50, 100, 250, 500, 1000],
+        }
+
+        return render_template("index.html", photos=photos, filters=filters, photo_count=photo_count, pagination=pagination)
 
     @app.route("/api/tag-values", methods=["GET"])
     def get_tag_values():

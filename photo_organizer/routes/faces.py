@@ -17,8 +17,8 @@ from photo_organizer.db.repositories.person_repository import update_person_embe
 from photo_organizer.db.repositories.photos_repository import get_distinct_years, get_distinct_months
 from photo_organizer.domain.compare_utils import load_embedding, calculate_similarity
 
-DEFAULT_THRESHOLD = 0.95  # configurable similarity threshold
-FACE_LOAD_LIMIT = 250
+DEFAULT_THRESHOLD = 0.97  # configurable similarity threshold
+DEFAULT_PAGE_SIZE = 250
 
 
 @dataclass
@@ -48,7 +48,8 @@ def init_faces_routes(app: Flask):
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
         threshold = request.args.get("threshold", default=DEFAULT_THRESHOLD, type=float)
-        page_size = request.args.get("page-size", default=FACE_LOAD_LIMIT, type=int)
+        page = request.args.get("page", default=1, type=int)
+        page_size = request.args.get("page-size", default=DEFAULT_PAGE_SIZE, type=int)
         person_id = request.args.get("person", type=int)
 
         if year:
@@ -56,8 +57,13 @@ def init_faces_routes(app: Flask):
         if month:
             query = query.filter(extract("month", Photo.date_taken) == month)
         query = query.filter(Face.status == FACE_STATUS_UNASSIGNED)
-        unassigned_faces :List[Face] = query.limit(page_size).all()
-        unassigned_face_count = db.session.query(Face).filter(Face.status == FACE_STATUS_UNASSIGNED).count()
+
+        # Get total count before pagination
+        unassigned_face_count = query.count()
+
+        # Apply pagination
+        offset = (page - 1) * page_size
+        unassigned_faces :List[Face] = query.limit(page_size).offset(offset).all()
 
         people = (db.session.query(Person)
                   .options(joinedload(Person.embeddings_by_year))
@@ -124,8 +130,16 @@ def init_faces_routes(app: Flask):
             "people": people,
             'selected_person_id': person_id,
         }
+
+        pagination = {
+            "current_page": page,
+            "total_items": unassigned_face_count,
+            "page_size": page_size,
+            "page_sizes": [50, 100, 250, 500, 1000],
+        }
+
         return render_template(
-            "faces/index.html", faces=unassigned_faces, people=people, face_suggestions=face_suggestions, filters=filters, unassigned_face_count=unassigned_face_count
+            "faces/index.html", faces=unassigned_faces, people=people, face_suggestions=face_suggestions, filters=filters, unassigned_face_count=unassigned_face_count, pagination=pagination
         )
 
     @app.route("/faces/assign", methods=["POST"])

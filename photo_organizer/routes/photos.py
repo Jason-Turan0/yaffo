@@ -1,7 +1,7 @@
 from photo_organizer.utils.image import convert_heif
 from flask import Flask, send_from_directory, send_file, render_template, request, jsonify
 from photo_organizer.common import ROOT_DIR
-from photo_organizer.db.models import db, Photo, Person
+from photo_organizer.db.models import db, Photo, Person, Tag
 from sqlalchemy.orm import joinedload
 from photo_organizer.db.models import Face
 import io
@@ -27,7 +27,10 @@ def init_photos_routes(app: Flask):
         # Query the photo from the database
         photo = (Photo.query
                  .filter(Photo.relative_file_path == filename)
-                 .options(joinedload(Photo.faces).joinedload(Face.people))
+                 .options(
+                     joinedload(Photo.faces).joinedload(Face.people),
+                     joinedload(Photo.tags)
+                 )
                  .first())
 
         if not photo:
@@ -117,3 +120,74 @@ def init_photos_routes(app: Flask):
             return jsonify({"success": True})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/photo/<int:photo_id>/tags", methods=["POST"])
+    def add_photo_tag(photo_id: int):
+        """Add a tag to a photo"""
+        photo = db.session.get(Photo, photo_id)
+        if not photo:
+            return jsonify({"error": "Photo not found"}), 404
+
+        data = request.get_json()
+        tag_name = data.get("tag_name", "").strip()
+        tag_value = data.get("tag_value", "").strip()
+
+        if not tag_name:
+            return jsonify({"error": "Tag name is required"}), 400
+
+        # Create new tag
+        tag = Tag(
+            photo_id=photo_id,
+            tag_name=tag_name,
+            tag_value=tag_value if tag_value else None
+        )
+        db.session.add(tag)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "tag": {
+                "id": tag.id,
+                "tag_name": tag.tag_name,
+                "tag_value": tag.tag_value
+            }
+        })
+
+    @app.route("/api/photo/tags/<int:tag_id>", methods=["PUT"])
+    def update_photo_tag(tag_id: int):
+        """Update a tag"""
+        tag = db.session.get(Tag, tag_id)
+        if not tag:
+            return jsonify({"error": "Tag not found"}), 404
+
+        data = request.get_json()
+        tag_name = data.get("tag_name", "").strip()
+        tag_value = data.get("tag_value", "").strip()
+
+        if not tag_name:
+            return jsonify({"error": "Tag name is required"}), 400
+
+        tag.tag_name = tag_name
+        tag.tag_value = tag_value if tag_value else None
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "tag": {
+                "id": tag.id,
+                "tag_name": tag.tag_name,
+                "tag_value": tag.tag_value
+            }
+        })
+
+    @app.route("/api/photo/tags/<int:tag_id>", methods=["DELETE"])
+    def delete_photo_tag(tag_id: int):
+        """Delete a tag"""
+        tag = db.session.get(Tag, tag_id)
+        if not tag:
+            return jsonify({"error": "Tag not found"}), 404
+
+        db.session.delete(tag)
+        db.session.commit()
+
+        return jsonify({"success": True})

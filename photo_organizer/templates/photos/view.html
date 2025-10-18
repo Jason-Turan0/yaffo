@@ -6,6 +6,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='photos/view.css') }}">
 {% endblock %}
 
+{% from "components/collapsible_panel.html" import collapsible_panel %}
+
 {% block content %}
 <div class="photo-viewer">
     <div class="sidebar">
@@ -38,6 +40,37 @@
                         Open Folder
                     </button>
                 </div>
+            </div>
+
+            <div class="detail-section">
+                <h3>Location</h3>
+                {% if photo.location_name or photo.latitude or photo.longitude %}
+                <div class="location-details">
+                    {% if photo.location_name %}
+                    <div class="detail-item">
+                        <label>Name:</label>
+                        <span class="detail-value">{{ photo.location_name }}</span>
+                    </div>
+                    {% endif %}
+                    {% if photo.latitude and photo.longitude %}
+                    <div class="detail-item">
+                        <label>Coordinates:</label>
+                        <span class="detail-value">
+                            {{ "%.6f"|format(photo.latitude) }}, {{ "%.6f"|format(photo.longitude) }}
+                        </span>
+                    </div>
+                    <div class="detail-actions">
+                        <a href="https://www.google.com/maps?q={{ photo.latitude }},{{ photo.longitude }}"
+                           target="_blank"
+                           class="action-button">
+                            View on Map
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="no-data">No location information</p>
+                {% endif %}
             </div>
 
             <div class="detail-section">
@@ -79,6 +112,45 @@
                 <p class="no-data">No faces detected</p>
                 {% endif %}
             </div>
+
+            {% call collapsible_panel('tags-panel', 'Tags (' ~ photo.tags|length ~ ')', is_open=False) %}
+                <div id="tags-container">
+                    {% if photo.tags %}
+                        <div class="tags-list-editable">
+                            {% for tag in photo.tags %}
+                            <div class="tag-item-editable" data-tag-id="{{ tag.id }}">
+                                <div class="tag-display">
+                                    <span class="tag-name">{{ tag.tag_name }}</span>
+                                    {% if tag.tag_value %}
+                                    <span class="tag-separator">:</span>
+                                    <span class="tag-value">{{ tag.tag_value }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="tag-actions">
+                                    <button type="button" class="tag-action-btn edit-tag-btn" onclick="editTag({{ tag.id }}, '{{ tag.tag_name }}', '{{ tag.tag_value if tag.tag_value else '' }}')" title="Edit">
+                                        ✏️
+                                    </button>
+                                    <button type="button" class="tag-action-btn delete-tag-btn" onclick="deleteTag({{ tag.id }})" title="Delete">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="no-data">No tags</p>
+                    {% endif %}
+                </div>
+
+                <div class="tag-add-form" id="tag-add-form">
+                    <h4 style="margin: 15px 0 10px 0; font-size: 12px; color: #6c757d; text-transform: uppercase;">Add New Tag</h4>
+                    <div class="form-row">
+                        <input type="text" id="new-tag-name" placeholder="Tag name" class="tag-input">
+                        <input type="text" id="new-tag-value" placeholder="Tag value (optional)" class="tag-input">
+                    </div>
+                    <button type="button" class="btn-primary" onclick="addTag()" style="width: 100%; margin-top: 10px;">Add Tag</button>
+                </div>
+            {% endcall %}
         </div>
     </div>
 
@@ -98,8 +170,11 @@
 
 {% block scripts %}
 <script>
-    // Pass face location data to JavaScript
+    // Pass data to JavaScript
     window.FACE_DATA = {{ faces_with_locations | tojson }};
+    window.PHOTO_ID = {{ photo.id }};
 </script>
+<script src="{{ url_for('static', filename='components/collapsible_panel.js') }}"></script>
 <script src="{{ url_for('static', filename='photos/view.js') }}"></script>
+<script src="{{ url_for('static', filename='photos/tags.js') }}"></script>
 {% endblock %}
