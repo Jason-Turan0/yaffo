@@ -33,10 +33,10 @@
                 </div>
                 {% endif %}
                 <div class="detail-actions">
-                    <button onclick="openFile('{{ absolute_file_path }}')" class="action-button">
+                    <button onclick="window.PHOTO_ORGANIZER.photoView.openFile('{{ absolute_file_path }}')" class="action-button">
                         Open File
                     </button>
-                    <button onclick="openFolder('{{ absolute_folder_path }}')" class="action-button">
+                    <button onclick="window.PHOTO_ORGANIZER.photoView.openFolder('{{ absolute_folder_path }}')" class="action-button">
                         Open Folder
                     </button>
                 </div>
@@ -95,8 +95,8 @@
                     {% for face in photo.faces %}
                     <div class="face-thumbnail"
                          data-face-id="{{ face.id }}"
-                         onmouseenter="highlightFace({{ face.id }})"
-                         onmouseleave="clearHighlights()">
+                         onmouseenter="window.PHOTO_ORGANIZER.photoView.highlightFace({{ face.id }})"
+                         onmouseleave="window.PHOTO_ORGANIZER.photoView.clearHighlights()">
                         <img src="{{ url_for('photo', filename=face.relative_file_path) }}" alt="Face">
                         {% if face.people %}
                         <div class="face-label">
@@ -127,10 +127,10 @@
                                     {% endif %}
                                 </div>
                                 <div class="tag-actions">
-                                    <button type="button" class="tag-action-btn edit-tag-btn" onclick="editTag({{ tag.id }}, '{{ tag.tag_name }}', '{{ tag.tag_value if tag.tag_value else '' }}')" title="Edit">
+                                    <button type="button" class="tag-action-btn edit-tag-btn" onclick="window.PHOTO_ORGANIZER.photoTags.editTag({{ tag.id }}, '{{ tag.tag_name }}', '{{ tag.tag_value if tag.tag_value else '' }}')" title="Edit">
                                         ✏️
                                     </button>
-                                    <button type="button" class="tag-action-btn delete-tag-btn" onclick="deleteTag({{ tag.id }})" title="Delete">
+                                    <button type="button" class="tag-action-btn delete-tag-btn" onclick="window.PHOTO_ORGANIZER.photoTags.deleteTag({{ tag.id }})" title="Delete">
                                         🗑️
                                     </button>
                                 </div>
@@ -148,7 +148,7 @@
                         <input type="text" id="new-tag-name" placeholder="Tag name" class="tag-input">
                         <input type="text" id="new-tag-value" placeholder="Tag value (optional)" class="tag-input">
                     </div>
-                    <button type="button" class="btn-primary" onclick="addTag()" style="width: 100%; margin-top: 10px;">Add Tag</button>
+                    <button type="button" class="btn-primary" onclick="window.PHOTO_ORGANIZER.photoTags.addTag()" style="width: 100%; margin-top: 10px;">Add Tag</button>
                 </div>
             {% endcall %}
         </div>
@@ -169,12 +169,21 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-    // Pass data to JavaScript
-    window.FACE_DATA = {{ faces_with_locations | tojson }};
-    window.PHOTO_ID = {{ photo.id }};
-</script>
 <script src="{{ url_for('static', filename='components/collapsible_panel.js') }}"></script>
 <script src="{{ url_for('static', filename='photos/view.js') }}"></script>
 <script src="{{ url_for('static', filename='photos/tags.js') }}"></script>
+<script>
+// Initialize photo view modules
+window.PHOTO_ORGANIZER.photoView = window.PHOTO_ORGANIZER.initPhotoView(
+    {{ faces_with_locations | tojson }},
+    '{{ absolute_file_path }}',
+    '{{ absolute_folder_path }}',
+    window.APP_CONFIG
+);
+
+window.PHOTO_ORGANIZER.photoTags = window.PHOTO_ORGANIZER.initPhotoTags(
+    {{ photo.id }},
+    window.APP_CONFIG
+);
+</script>
 {% endblock %}

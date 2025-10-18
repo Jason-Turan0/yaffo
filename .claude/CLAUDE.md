@@ -172,9 +172,56 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
 - Init functions should accept data as parameters (use closures for access)
 - Use arrow functions for cleaner syntax and lexical `this`
 - Return public methods only if needed for testing or cross-module communication
+- **Always pass `window.APP_CONFIG`** as the last parameter for access to routes and URLs
 
 **Avoid:**
 - Inline `onclick` attributes with JSON data (causes syntax errors)
 - Separate global variables like `window.pageData`
 - Data attributes for complex objects
 - Polluting the global namespace with individual functions
+- Hardcoding API URLs in JavaScript (use APP_CONFIG instead)
+
+### Passing APP_CONFIG for API URLs
+
+Always pass `window.APP_CONFIG` to initialization functions to access Flask routes and build URLs dynamically.
+
+**Template:**
+```html
+{% block scripts %}
+<script src="{{ url_for('static', filename='photos/tags.js') }}"></script>
+<script>
+window.PHOTO_ORGANIZER.photoTags = window.PHOTO_ORGANIZER.initPhotoTags(
+    {{ photo.id }},
+    window.APP_CONFIG
+);
+</script>
+{% endblock %}
+```
+
+**JavaScript Module:**
+```javascript
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.initPhotoTags = (photoId, config) => {
+    const addTag = async () => {
+        // Use config.buildUrl for parameterized routes
+        const url = config.buildUrl('add_photo_tag', { photo_id: photoId });
+
+        // Or use hardcoded API paths (acceptable for API endpoints not in routes)
+        const response = await fetch(`/api/photo/${photoId}/tags`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tag_name: tagName })
+        });
+    };
+
+    return {
+        addTag
+    };
+};
+```
+
+**Benefits:**
+- Routes are centralized and maintained in Flask
+- No hardcoded URLs scattered across JavaScript files
+- Easy to refactor routes without updating JS
+- Type-safe URL building with `buildUrl()`
