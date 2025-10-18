@@ -66,9 +66,13 @@ def init_faces_routes(app: Flask):
         offset = (page - 1) * page_size
         unassigned_faces :List[Face] = query.limit(page_size).offset(offset).all()
 
+        # Get people sorted by face count (descending) for keyboard shortcuts
+        from sqlalchemy import func
         people = (db.session.query(Person)
+                  .outerjoin(PersonFace)
+                  .group_by(Person.id)
                   .options(joinedload(Person.embeddings_by_year))
-                  .order_by(Person.name)
+                  .order_by(func.count(PersonFace.face_id).desc(), Person.name)
                   .all()
                   )
         face_suggestions = []

@@ -39,7 +39,9 @@
 
 .person-assign-btn {
     width: 100%;
-    text-align: center;
+    text-align: left;
+    display: flex;
+    align-items: center;
 }
 
 .person-assign-select {
@@ -53,6 +55,122 @@
     font-weight: 600;
     color: #495057;
     margin-bottom: 4px;
+}
+
+kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 11px;
+    line-height: 1;
+    color: #495057;
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+.btn-kbd {
+    margin-right: 6px;
+    font-size: 10px;
+    padding: 1px 5px;
+}
+
+.keyboard-shortcuts-list {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #dee2e6;
+}
+
+.shortcuts-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.shortcut-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.shortcut-item:hover {
+    background-color: #f8f9fa;
+}
+
+.shortcut-item kbd {
+    min-width: 20px;
+    text-align: center;
+}
+
+.shortcut-item span {
+    font-size: 13px;
+    color: #495057;
+}
+
+.keyboard-help {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #dee2e6;
+    text-align: center;
+}
+
+.keyboard-help small {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.keyboard-activated {
+    animation: flash-highlight 0.3s ease-out;
+}
+
+@keyframes flash-highlight {
+    0% {
+        background-color: #007bff;
+        color: white;
+        transform: scale(1.05);
+    }
+    100% {
+        background-color: transparent;
+        color: inherit;
+        transform: scale(1);
+    }
+}
+
+.help-shortcuts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.help-shortcut-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.help-shortcut-item kbd {
+    min-width: 28px;
+    text-align: center;
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+.help-shortcut-item span {
+    font-size: 14px;
+    color: #495057;
 }
 
 .main-content {

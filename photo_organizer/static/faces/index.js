@@ -204,3 +204,63 @@ if (sidebarPersonSelect) {
         history.replaceState(null, '', url.toString());
     });
 }
+
+// Keyboard shortcuts for quick assignment
+const keyboardShortcutMap = new Map();
+
+// Build keyboard shortcut map from buttons or shortcut items
+document.querySelectorAll('[data-shortcut]').forEach(element => {
+    const shortcut = element.dataset.shortcut;
+    const personId = element.dataset.personId;
+    if (shortcut && personId) {
+        keyboardShortcutMap.set(shortcut, {
+            personId: personId,
+            element: element
+        });
+    }
+});
+
+// Initialize keyboard help modal
+const keyboardHelpModal = window.PHOTO_ORGANIZER.COMPONENTS.modal.init('keyboardHelpModal');
+
+// Handle keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    // Ignore if user is typing in an input field
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        return;
+    }
+
+    // Check for number keys 1-9
+    if (e.key >= '1' && e.key <= '9') {
+        e.preventDefault();
+
+        const shortcut = keyboardShortcutMap.get(e.key);
+        if (shortcut) {
+            // Visual feedback
+            flashElement(shortcut.element);
+
+            // Assign faces
+            submitFaces(shortcut.personId, 'ASSIGNED');
+        }
+    }
+
+    // Ignore shortcut
+    if (e.key === 'i' || e.key === 'I') {
+        e.preventDefault();
+        submitFaces(null, 'IGNORED');
+    }
+
+    // Help shortcut
+    if (e.key === '?') {
+        e.preventDefault();
+        keyboardHelpModal.open();
+    }
+});
+
+// Flash element for visual feedback
+function flashElement(element) {
+    element.classList.add('keyboard-activated');
+    setTimeout(() => {
+        element.classList.remove('keyboard-activated');
+    }, 300);
+}

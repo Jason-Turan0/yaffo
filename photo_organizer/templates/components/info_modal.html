@@ -1,0 +1,13 @@
+{% macro render_info_modal(id, title, render_modal_form, action_text = "Close") %}
+    <div id="{{id}}" class="modal">
+    <div class="modal-content">
+        <h2 id="modalTitle">{{title}}</h2>
+        <form id="{{id}}Form">
+           {{ render_modal_form() }}
+            <div class="modal-actions">
+                <button type="button" class="btn btn-primary" name="cancel">{{action_text}}</button>
+            </div>
+        </form>
+    </div>
+    </div>
+{% endmacro %}

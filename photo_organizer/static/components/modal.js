@@ -9,9 +9,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.modal =
                 throw new Error(`Failed to find dom element ${modalId}`);
             }
             const cancelElement = modalElement.querySelector('[name="cancel"]');
-            if(cancelElement == null){
-                throw new Error(`Failed to find cancel button in modal element ${modalId}`);
-            }
+
             const formElement = modalElement.querySelector('form');
             if(formElement == null){
                 throw new Error(`Failed to find form element in modal element ${modalId}`);
@@ -20,9 +18,12 @@ window.PHOTO_ORGANIZER.COMPONENTS.modal =
             const close = () => {
                 modalElement.classList.remove('active');
             }
-            cancelElement.addEventListener('click', () => {
-                close();
-            })
+            if(cancelElement){
+                cancelElement.addEventListener('click', (e) => {
+                    close();
+                })
+            }
+
             const open = () => {
                 modalElement.classList.add('active');
             }
