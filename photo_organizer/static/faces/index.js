@@ -76,12 +76,31 @@ thresholdRange.addEventListener('input', (e) => {
     thresholdValue.textContent = Math.round(e.target.value * 100) + '%';
 });
 
-// Toggle selection on click
-document.querySelectorAll('.face').forEach(div => {
-    div.addEventListener('click', () => {
-        div.classList.toggle('selected');
-        const checkbox = div.querySelector('input[type="checkbox"]');
-        checkbox.checked = !checkbox.checked;
+// Toggle selection on click with shift-select support
+let lastClickedIndex = null;
+
+document.querySelectorAll('.face').forEach((div, index) => {
+    div.addEventListener('click', (e) => {
+        const allFaces = Array.from(document.querySelectorAll('.face'));
+
+        if (e.shiftKey && lastClickedIndex !== null) {
+            // Shift-click: select range
+            const startIndex = Math.min(lastClickedIndex, index);
+            const endIndex = Math.max(lastClickedIndex, index);
+
+            for (let i = startIndex; i <= endIndex; i++) {
+                const face = allFaces[i];
+                face.classList.add('selected');
+                face.querySelector('input[type="checkbox"]').checked = true;
+            }
+        } else {
+            // Normal click: toggle
+            div.classList.toggle('selected');
+            const checkbox = div.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+        }
+
+        lastClickedIndex = index;
     });
 
     // Tooltip on hover

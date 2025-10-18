@@ -25,6 +25,10 @@
     <h3 style="margin-top: 20px;">Other Shortcuts</h3>
     <div class="help-shortcuts-list">
         <div class="help-shortcut-item">
+            <kbd>Shift</kbd> + <kbd>Click</kbd>
+            <span>Select range of faces</span>
+        </div>
+        <div class="help-shortcut-item">
             <kbd>i</kbd>
             <span>Ignore selected faces</span>
         </div>
@@ -33,9 +37,12 @@
             <span>Show this help</span>
         </div>
     </div>
-
     <p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
-        💡 Tip: Select faces by clicking, then press a number key to assign!
+                💡 Tip: Select faces by clicking, then press a number key to assign!
+        💡 Tip: Click a face, then Shift+Click another to select all faces in between!
+    </p>
+    <p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
+
     </p>
 </div>
 {% endmacro %}
@@ -57,7 +64,7 @@
         <form method="POST" action="{{ url_for('faces_assign') }}" id="sidebar-assign-form">
         <input type="hidden" name="face_status" value="ASSIGNED">
 
-        {% if people|length > 8 %}
+        {% if people|length > 10 %}
         <div class="person-assign-select">
             <label for="sidebar-person-select">Assign to Person</label>
             <select name="person" id="sidebar-person-select" class="searchable-select">

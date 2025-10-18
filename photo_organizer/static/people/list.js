@@ -13,7 +13,7 @@ window.PHOTO_ORGANIZER.initPeopleList = (config) => {
 
     function openEditModal(personId, personName) {
         const personNameInput = editModal.element.querySelector('[name="name"]');
-        deleteModal.setFormAction(config.buildUrl('people_update', {person_id: personId}));
+        editModal.setFormAction(config.buildUrl('people_update', {person_id: personId}));
         personNameInput.value = personName;
         personNameInput.focus();
         editModal.open();
