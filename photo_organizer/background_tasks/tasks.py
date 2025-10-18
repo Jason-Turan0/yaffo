@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
 from photo_organizer.db.models import Job, Photo, JOB_STATUS_CANCELLED, Face, Tag, FACE_STATUS_UNASSIGNED, Person, \
     JobResult
+from photo_organizer.db.repositories.person_repository import update_person_embedding
 from photo_organizer.utils.index_photos import process_photo
 from photo_organizer.common import DB_PATH
 from photo_organizer.logging_config import get_logger
@@ -175,3 +176,7 @@ def auto_assign_faces_task(job_id: str, face_id_batch: list[int], person_id: int
     finally:
         session.close()
         SessionFactory.remove()
+
+@huey.task()
+def update_person_embedding_task(person_id: int):
+    update_person_embedding(person_id, SessionFactory())

@@ -81,21 +81,24 @@ window.PHOTO_ORGANIZER.initAutoAssignResults = (jobId, personId, personName, con
         assignButton.textContent = 'Assigning...';
 
         try {
-            const response = await fetch(config.urls.utilities_auto_assign_bulk, {
+            const response = await fetch(config.urls.faces_assign, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    job_id: jobId,
-                    person_id: personId,
-                    face_ids: faceIds
+                    faceStatus: 'ASSIGNED',
+                    person: personId,
+                    faces: faceIds
                 })
             });
-
             if (response.ok) {
                 const data = await response.json();
                 notification.success(data.message || `Assigned ${faceIds.length} faces to ${personName}`);
+                await fetch(config.buildUrl('utilities_delete_job', {job_id: jobId}), {
+                    method: 'POST'
+                });
+
                 setTimeout(() => {
                     window.location.href = config.buildUrl('person_faces', {person_id: personId});
                 }, 1500);

@@ -139,8 +139,8 @@ def init_utilities_routes(app: Flask):
         db.session.commit()
         return jsonify({'success': True, 'message': 'Job deleted'}), 200
 
-    @app.route("/utilities/auto-assign-people", methods=["GET"])
-    def utilities_auto_assign_people():
+    @app.route("/utilities/auto-assign", methods=["GET"])
+    def utilities_auto_assign():
         people = db.session.query(Person).order_by(Person.name).all()
         unassigned_count = db.session.query(Face).filter(Face.status == FACE_STATUS_UNASSIGNED).count()
 
@@ -150,7 +150,7 @@ def init_utilities_routes(app: Flask):
         ).all()
 
         return render_template(
-            "utilities/auto_assign_people.html",
+            "utilities/auto_assign.html",
             people=[{"id": person.id, "name": person.name} for person in people],
             unassigned_count=unassigned_count,
             active_jobs=[job.to_dict() for job in active_jobs]

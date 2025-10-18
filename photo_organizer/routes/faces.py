@@ -1,17 +1,17 @@
-import calendar
+import threading
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 import numpy as np
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, jsonify
+
+from photo_organizer.background_tasks.tasks import update_person_embedding_task
 from photo_organizer.logging_config import get_logger
-from joblib.externals.loky.backend.reduction import DEFAULT_ENV
 from sqlalchemy import extract
 from sqlalchemy.dialects.sqlite import insert
 import pydash as _
 from sqlalchemy.orm import joinedload
-
 from photo_organizer.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
-    FACE_STATUS_ASSIGNED, Photo, PersonEmbedding
+    FACE_STATUS_ASSIGNED, Photo
 from sklearn.metrics.pairwise import cosine_similarity
 
 from photo_organizer.db.repositories.person_repository import update_person_embedding
@@ -202,14 +202,12 @@ def init_faces_routes(app: Flask):
                     {Face.status: face_status}, synchronize_session=False
                 )
                 db.session.commit()
-                update_person_embedding(person_id, db.session)
-
+                update_person_embedding_task(person_id)
                 return jsonify({
                     "success": True,
                     "message": f"Successfully assigned {len(selected_face_ids)} face(s) to {person.name}",
                     "face_ids": selected_face_ids
                 })
-
             else:
                 return jsonify({
                     "success": False,
