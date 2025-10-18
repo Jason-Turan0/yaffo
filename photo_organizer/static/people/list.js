@@ -6,7 +6,6 @@ window.PHOTO_ORGANIZER.initPeopleList = (config) => {
 
     function openAddModal() {
         const personNameInput = addModal.element.querySelector('[name="name"]');
-        debugger;
         personNameInput.value = '';
         personNameInput.focus();
         addModal.open();
@@ -14,7 +13,7 @@ window.PHOTO_ORGANIZER.initPeopleList = (config) => {
 
     function openEditModal(personId, personName) {
         const personNameInput = editModal.element.querySelector('[name="name"]');
-        editModal.formElement.action = config.buildUrl('people_update', {person_id: personId});
+        deleteModal.setFormAction(config.buildUrl('people_update', {person_id: personId}));
         personNameInput.value = personName;
         personNameInput.focus();
         editModal.open();
@@ -22,7 +21,7 @@ window.PHOTO_ORGANIZER.initPeopleList = (config) => {
 
     function confirmDelete(personId, personName) {
         document.getElementById('deletePersonName').textContent = personName;
-        deleteModal.formElement.action = config.buildUrl("people_delete", {person_id: personId})
+        deleteModal.setFormAction(config.buildUrl("people_delete", {person_id: personId}))
         deleteModal.open();
     }
 
