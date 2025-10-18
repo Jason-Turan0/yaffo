@@ -1,4 +1,5 @@
 {% extends "utilities/_base.html" %}
+{% from "components/job_progress.html" import job_progress_card %}
 
 {% block title %}Auto-Assign People - Utilities - Photo Organizer{% endblock %}
 
@@ -15,20 +16,7 @@
     <div class="section job-progress-section">
         <h2>Processing in Progress</h2>
         {% for job in active_jobs %}
-        <div class="job-card" data-job-id="{{ job.id }}">
-            <div class="job-header">
-                <div>
-                    <span class="job-status">{{ job.status }}</span>
-                    <span class="job-time">Started: {{ (job.started_at or job.created_at) | format_date }}</span>
-                </div>
-                <button class="btn btn-danger btn-sm cancel-job-btn" data-job-id="{{ job.id }}">Cancel</button>
-            </div>
-            <div class="job-message">{{ 'Initializing...' }}</div>
-            <div class="progress-bar-container">
-                <div class="progress-bar" style="width: {{ job.progress }}%"></div>
-            </div>
-            <div class="progress-text">{{ job.progress }}%</div>
-        </div>
+        {{ job_progress_card(job) }}
         {% endfor %}
     </div>
     {% endif %}
@@ -134,62 +122,6 @@
     font-family: monospace;
     font-weight: 700;
     color: #4CAF50;
-}
-
-.job-progress-section {
-    margin-bottom: 2rem;
-}
-
-.job-card {
-    background: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-}
-
-.job-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.job-status {
-    font-weight: 600;
-    text-transform: uppercase;
-    color: #2196F3;
-    margin-right: 1rem;
-}
-
-.job-time {
-    color: #666;
-    font-size: 0.875rem;
-}
-
-.job-message {
-    margin-bottom: 0.5rem;
-    color: #444;
-}
-
-.progress-bar-container {
-    height: 20px;
-    background-color: #f0f0f0;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 0.5rem;
-}
-
-.progress-bar {
-    height: 100%;
-    background-color: #4CAF50;
-    transition: width 0.3s ease;
-}
-
-.progress-text {
-    text-align: right;
-    font-size: 0.875rem;
-    color: #666;
 }
 </style>
 {% endblock %}

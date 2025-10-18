@@ -1,6 +1,16 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) => {
-    let pollInterval = null;
+    const jobProgress = window.PHOTO_ORGANIZER.COMPONENTS.jobProgress.init(config, {
+        onComplete: (job) => {},
+        onCancel: (job) => {
+            setTimeout(() => window.location.reload(), 2000);
+        },
+        onError: (job) => {},
+        hasResults: true,
+        onShowResults: (jobId) => {
+             window.location.href = config.buildUrl('utilities_auto_assign_results', {job_id: jobId});
+        }
+    });
 
     const personSelect = document.getElementById('person-select');
     const similaritySlider = document.getElementById('similarity-slider');
@@ -16,22 +26,6 @@ window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) 
     const updateStartButtonState = () => {
         if (startButton) {
             startButton.disabled = !personSelect.value;
-        }
-    };
-
-    const cancelJob = async (jobId) => {
-        try {
-            const response = await fetch(config.buildUrl('utilities_cancel_job', {job_id: jobId}), {
-                method: 'POST'
-            });
-
-            if (response.ok) {
-                notification.success('Cancellation requested');
-            } else {
-                notification.error('Failed to cancel job');
-            }
-        } catch (error) {
-            notification.error('Error cancelling job: ' + error.message);
         }
     };
 
@@ -76,52 +70,6 @@ window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) 
         }
     };
 
-    const pollJobStatus = async () => {
-        const jobCards = document.querySelectorAll('.job-card');
-
-        for (const card of jobCards) {
-            const jobId = card.dataset.jobId;
-
-            try {
-                const response = await fetch(config.buildUrl('utilities_get_job_status', {job_id: jobId}));
-
-                if (response.ok) {
-                    const job = await response.json();
-
-                    card.querySelector('.job-status').textContent = job.status;
-                    const totalCount = job.completed_count + job.error_count + job.cancelled_count;
-                    const jobProgress = totalCount && job.task_count ? (totalCount / job.task_count) * 100 : 0;
-                    card.querySelector('.job-message').textContent = (job.message || 'Processing...').replace('{totalCount}', totalCount).replace('{taskCount}', job.task_count);
-                    card.querySelector('.progress-bar').style.width = jobProgress + '%';
-                    card.querySelector('.progress-text').textContent = jobProgress.toFixed(2) + '%';
-
-                    const cancelBtn = card.querySelector('.cancel-job-btn');
-                    if (job.status === 'COMPLETED' || job.status === 'FAILED' || job.status === 'CANCELLED') {
-                        if (cancelBtn) {
-                            cancelBtn.disabled = true;
-                        }
-
-                        if (pollInterval) {
-                            clearInterval(pollInterval);
-                            pollInterval = null;
-                        }
-
-                        if (job.status === 'COMPLETED') {
-                            notification.success('Auto-assign completed');
-                        } else if (job.status === 'CANCELLED') {
-                            notification.warning('Auto-assign was cancelled');
-                            setTimeout(() => window.location.reload(), 2000);
-                        } else {
-                            notification.error('Auto-assign failed: ' + (job.error || 'Unknown error'));
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error polling job status:', error);
-            }
-        }
-    };
-
     if (personSelect) {
         personSelect.addEventListener('change', updateStartButtonState);
     }
@@ -135,22 +83,8 @@ window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) 
         startButton.addEventListener('click', startAutoAssign);
     }
 
-    const cancelButtons = document.querySelectorAll('.cancel-job-btn');
-    cancelButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const jobId = e.target.dataset.jobId;
-            cancelJob(jobId);
-        });
-    });
-
-    if (document.querySelectorAll('.job-card').length > 0) {
-        pollInterval = setInterval(pollJobStatus, 1000);
-        pollJobStatus();
-    }
-
     return {
         startAutoAssign,
-        pollJobStatus,
-        cancelJob
+        jobProgress
     };
 };

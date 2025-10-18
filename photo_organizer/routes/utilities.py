@@ -1,7 +1,7 @@
 from flask import render_template, Flask, redirect, url_for, request, jsonify
 from photo_organizer.db import db
 from photo_organizer.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_CANCELLED, \
-    JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED, PersonFace, FACE_STATUS_ASSIGNED
+    JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED, PersonFace, FACE_STATUS_ASSIGNED, JobResult
 from photo_organizer.common import MEDIA_DIR, PHOTO_EXTENSIONS, ROOT_DIR
 from photo_organizer.background_tasks.tasks import index_photo_task, auto_assign_faces_task
 from pathlib import Path
@@ -128,6 +128,16 @@ def init_utilities_routes(app: Flask):
             return jsonify({'success': True, 'message': 'Cancellation requested'}), 200
         else:
             return jsonify({'success': False, 'message': 'Job cannot be cancelled'}), 400
+
+    @app.route("/utilities/jobs/<job_id>/delete", methods=["POST"])
+    def utilities_delete_job(job_id: str):
+        job = db.session.query(Job).filter_by(id=job_id).first()
+        if not job:
+            return "Job not found", 404
+        JobResult.query.filter(JobResult.job_id == job_id).delete()
+        db.session.delete(job)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Job deleted'}), 200
 
     @app.route("/utilities/auto-assign-people", methods=["GET"])
     def utilities_auto_assign_people():

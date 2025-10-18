@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='searchable-select.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/modal.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/overlay.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/job_progress.css') }}">
 
     {% block extra_styles %}{% endblock %}
     <script>
@@ -81,7 +82,7 @@
     <script src="{{ url_for('static', filename='components/modal.js') }}"></script>
     <script src="{{ url_for('static', filename='components/overlay.js') }}"></script>
     <script src="{{ url_for('static', filename='filters/tags.js') }}"></script>
-
+    <script src="{{ url_for('static', filename='components/job_progress.js') }}"></script>
     <script>
         // Auto-close alerts after 5 seconds
         document.addEventListener('DOMContentLoaded', function() {
