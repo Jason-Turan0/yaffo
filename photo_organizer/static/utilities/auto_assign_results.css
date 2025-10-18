@@ -1,0 +1,101 @@
+.header-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1rem;
+}
+
+.controls-bar {
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.faces-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.face-card {
+    position: relative;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.face-card:hover {
+    border-color: #4CAF50;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.face-card.selected {
+    border-color: #4CAF50;
+    background-color: #f0f9f0;
+}
+
+.face-checkbox-container {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 10;
+}
+
+.face-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.face-image {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    display: block;
+}
+
+.face-info {
+    padding: 0.5rem;
+}
+
+.similarity-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.similarity-badge[data-similarity] {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.face-meta {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+#selected-count {
+    color: #4CAF50;
+    font-weight: 700;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.empty-state h2 {
+    margin-bottom: 1rem;
+    color: #666;
+}
+
+.empty-state p {
+    margin-bottom: 1.5rem;
+    color: #999;
+}

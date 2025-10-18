@@ -1,9 +1,8 @@
 import sqlite3
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from photo_organizer.common import DB_PATH
 
+
+# @formatter:off
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -34,6 +33,7 @@ def init_db():
             FOREIGN KEY(photo_id) REFERENCES photos(id)
         )
     """)
+
     cursor.execute("""
            CREATE TABLE IF NOT EXISTS people (
                id INTEGER PRIMARY KEY,
@@ -41,6 +41,9 @@ def init_db():
                avg_embedding BLOB
            )
        """)
+
+
+
     cursor.execute("""
                CREATE TABLE IF NOT EXISTS people_face (
                    person_id INTEGER,
@@ -75,10 +78,22 @@ def init_db():
             error TEXT,
             message TEXT,
             job_data TEXT,
+            job_result TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS job_results (
+                       id INTEGER PRIMARY KEY AUTOINCREMENT,
+                       job_id TEXT NOT NULL,
+                       huey_task_id TEXT NOT NULL,
+                       result_data TEXT,                       
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                       FOREIGN KEY (job_id) REFERENCES job(id) ON DELETE CASCADE
+                   )
+                   """)
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tags (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,6 +103,7 @@ def init_db():
             FOREIGN KEY(photo_id) REFERENCES photos(id) ON DELETE CASCADE
         )
     """)
+
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_photo_id ON tags(photo_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_tag_name ON tags(tag_name)")
     conn.commit()

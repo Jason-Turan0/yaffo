@@ -1,11 +1,14 @@
 from pathlib import Path
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
-from photo_organizer.db.models import Job, Photo, JOB_STATUS_CANCELLED, Face, Tag, FACE_STATUS_UNASSIGNED
+from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
+from photo_organizer.db.models import Job, Photo, JOB_STATUS_CANCELLED, Face, Tag, FACE_STATUS_UNASSIGNED, Person, \
+    JobResult
 from photo_organizer.utils.index_photos import process_photo
 from photo_organizer.common import DB_PATH
 from photo_organizer.logging_config import get_logger
 from photo_organizer.background_tasks.config import huey
+from photo_organizer.domain.compare_utils import calculate_similarity
+import json
 
 engine = create_engine(
     f"sqlite:///{DB_PATH}",
@@ -14,6 +17,16 @@ engine = create_engine(
 )
 # Use scoped_session for thread-safe session management
 SessionFactory = scoped_session(sessionmaker(bind=engine))
+logger = get_logger(__name__, 'background_tasks')
+
+def is_job_cancelled(job_id):
+    session = SessionFactory()
+    try:
+        job = session.query(Job).filter_by(id=job_id).first()
+        return job is None or job.status == JOB_STATUS_CANCELLED
+    finally:
+        session.close()
+        SessionFactory.remove()
 
 """
     Huey task to sync photos - index new files and delete orphaned entries.
@@ -21,9 +34,7 @@ SessionFactory = scoped_session(sessionmaker(bind=engine))
 """
 @huey.task()
 def index_photo_task(job_id: str, file_path_batch: list[str]):
-    logger = get_logger(__name__, 'background_tasks')
     logger.info(f"Starting index_photo_task for job {job_id} with {len(file_path_batch)} files")
-
     processed_results = []
     error_count = 0
     cancel_count = 0
@@ -32,16 +43,10 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
     for index, file_path in enumerate(file_path_batch):
         # Periodically check for cancellation without holding database lock
         if index % check_cancel_frequency == 0:
-            session = SessionFactory()
-            try:
-                job = session.query(Job).filter_by(id=job_id).first()
-                if job and job.status == JOB_STATUS_CANCELLED:
-                    logger.info(f"Job {job_id} cancelled at photo {index}/{len(file_path_batch)}")
-                    cancel_count = len(file_path_batch) - index
-                    break
-            finally:
-                session.close()
-                SessionFactory.remove()
+            if is_job_cancelled(job_id):
+                logger.info(f"Job {job_id} cancelled at photo {index}/{len(file_path_batch)}")
+                cancel_count = len(file_path_batch) - index
+                break
 
         logger.debug(f"Processing photo {file_path}")
         result = process_photo(Path(file_path))
@@ -113,6 +118,58 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
         session.rollback()
         session.query(Job).filter_by(id=job_id).update({
             'error_count': Job.error_count + len(file_path_batch)
+        })
+        session.commit()
+    finally:
+        session.close()
+        SessionFactory.remove()
+
+
+def load_assign_faces_task_data(person_id, face_ids):
+    session = SessionFactory()
+    try:
+        person = session.query(Person).options(joinedload(Person.embeddings_by_year)).filter_by(id=person_id).first()
+        faces = session.query(Face).filter(Face.id.in_(face_ids)).all()
+        return person, faces
+    finally:
+        session.close()
+        SessionFactory.remove()
+
+@huey.task(context=True)
+def auto_assign_faces_task(job_id: str, face_id_batch: list[int], person_id: int, similarity_threshold: float, task=None):
+    logger.info(f"Starting auto_assign_faces_task for job {job_id} with {len(face_id_batch)} faces. task = {task}")
+    processed_count  = 0
+    error_count = 0
+    cancel_count = 0
+    matches = []
+    if is_job_cancelled(job_id):
+        cancel_count = len(face_id_batch)
+    else:
+        person, faces = load_assign_faces_task_data(person_id, face_id_batch)
+        similarities = calculate_similarity(person, faces)
+        matches = [
+            {'face_id': face_id, 'similarity': similarity}
+            for face_id, similarity in similarities.items()
+            if similarity >= similarity_threshold
+        ]
+        processed_count = len(face_id_batch)
+    session = SessionFactory()
+    try:
+        job_result = JobResult(job_id=job_id,huey_task_id = task.id, result_data= json.dumps({'matches': matches}))
+        session.add(job_result)
+        session.query(Job).filter_by(id=job_id).update({
+            'completed_count': Job.completed_count + processed_count,
+            'error_count': Job.error_count + error_count,
+            'cancelled_count': Job.cancelled_count + cancel_count,
+        })
+        session.commit()
+        logger.info(f"Completed job {job_id} batch: processed={len(face_id_batch)}, matches={len(matches)}")
+
+    except Exception as e:
+        logger.error(f"Error in auto_assign_faces_task for job {job_id}: {e}", exc_info=True)
+        session.rollback()
+        session.query(Job).filter_by(id=job_id).update({
+            'error_count': Job.error_count + len(face_id_batch)
         })
         session.commit()
     finally:

@@ -7,13 +7,200 @@
     <div class="page-header">
         <h1>Auto-Assign People</h1>
         <p class="subtitle">
-            Automatically assign unassigned faces to existing people based on similarity
+            Automatically find and assign unassigned faces to a person based on similarity
         </p>
     </div>
 
-    <div class="empty-state">
-        <h2>Coming Soon</h2>
-        <p>This utility will automatically assign faces to people based on similarity thresholds.</p>
+    {% if active_jobs|length > 0 %}
+    <div class="section job-progress-section">
+        <h2>Processing in Progress</h2>
+        {% for job in active_jobs %}
+        <div class="job-card" data-job-id="{{ job.id }}">
+            <div class="job-header">
+                <div>
+                    <span class="job-status">{{ job.status }}</span>
+                    <span class="job-time">Started: {{ (job.started_at or job.created_at) | format_date }}</span>
+                </div>
+                <button class="btn btn-danger btn-sm cancel-job-btn" data-job-id="{{ job.id }}">Cancel</button>
+            </div>
+            <div class="job-message">{{ 'Initializing...' }}</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" style="width: {{ job.progress }}%"></div>
+            </div>
+            <div class="progress-text">{{ job.progress }}%</div>
+        </div>
+        {% endfor %}
     </div>
+    {% endif %}
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total People</div>
+            <div class="stat-value">{{ people|length }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Unassigned Faces</div>
+            <div class="stat-value">{{ unassigned_count }}</div>
+        </div>
+    </div>
+
+    {% if unassigned_count > 0 and people|length > 0 %}
+    <div class="section">
+        <h2>Configuration</h2>
+        <p class="section-description">
+            Select a person and set the similarity threshold to find matching faces.
+        </p>
+
+        <div class="config-form">
+            <div class="form-group">
+                <label for="person-select">Person</label>
+                <select id="person-select" class="form-control">
+                    <option value="">-- Select a person --</option>
+                    {% for person in people %}
+                    <option value="{{ person.id }}">{{ person.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="similarity-slider">
+                    Similarity Threshold: <span id="similarity-value">0.95</span>
+                </label>
+                <input type="range" id="similarity-slider" class="form-control-range"
+                       min="0.80" max="0.99" step="0.01" value="0.95">
+                <div class="slider-help-text">
+                    Higher values = more strict matching (fewer false positives)
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="start-button" disabled>
+                Find Matching Faces
+            </button>
+        </div>
+    </div>
+    {% elif unassigned_count == 0 %}
+    <div class="empty-state">
+        <h2>No unassigned faces</h2>
+        <p>All faces have been assigned or ignored.</p>
+    </div>
+    {% elif people|length == 0 %}
+    <div class="empty-state">
+        <h2>No people defined</h2>
+        <p>Create people first before using auto-assign.</p>
+    </div>
+    {% endif %}
 </div>
+
+<style>
+.config-form {
+    max-width: 500px;
+    margin: 2rem 0;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-control-range {
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(to right, #f0f0f0 0%, #4CAF50 100%);
+    border-radius: 3px;
+    outline: none;
+}
+
+.slider-help-text {
+    font-size: 0.875rem;
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+#similarity-value {
+    font-family: monospace;
+    font-weight: 700;
+    color: #4CAF50;
+}
+
+.job-progress-section {
+    margin-bottom: 2rem;
+}
+
+.job-card {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.job-status {
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #2196F3;
+    margin-right: 1rem;
+}
+
+.job-time {
+    color: #666;
+    font-size: 0.875rem;
+}
+
+.job-message {
+    margin-bottom: 0.5rem;
+    color: #444;
+}
+
+.progress-bar-container {
+    height: 20px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: #4CAF50;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    text-align: right;
+    font-size: 0.875rem;
+    color: #666;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='utilities/auto_assign_people.js') }}"></script>
+<script>
+window.PHOTO_ORGANIZER.initAutoAssignPeople(
+    {{ people | tojson }},
+    {{ unassigned_count }},
+    window.APP_CONFIG
+);
+</script>
 {% endblock %}

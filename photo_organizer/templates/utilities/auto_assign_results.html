@@ -1,0 +1,83 @@
+{% extends "utilities/_base.html" %}
+
+{% block title %}Auto-Assign Results - Utilities - Photo Organizer{% endblock %}
+{% block extra_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='utilities/auto_assign_results.css') }}">
+{% endblock %}
+{% block utility_content %}
+<div class="utility-page">
+    <div class="page-header">
+        <h1>Auto-Assign Results: {{ person_name }}</h1>
+        <p class="subtitle">
+            Review and select faces to assign (Similarity threshold: {{ similarity_threshold }})
+        </p>
+        <div class="header-actions">
+            <a href="{{ url_for('utilities_auto_assign_people') }}" class="btn btn-secondary">Back to Auto-Assign</a>
+            <button class="btn btn-primary" id="assign-selected-btn" disabled>Assign Selected Faces</button>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Matches Found</div>
+            <div class="stat-value">{{ total_matches }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Selected for Assignment</div>
+            <div class="stat-value" id="selected-count">{{ total_matches }}</div>
+        </div>
+    </div>
+
+    {% if faces|length > 0 %}
+    <div class="section">
+        <div class="controls-bar">
+            <button class="btn btn-sm btn-secondary" id="select-all-btn">Select All</button>
+            <button class="btn btn-sm btn-secondary" id="deselect-all-btn">Deselect All</button>
+        </div>
+
+        <div class="faces-grid">
+            {% for face_data in faces %}
+            <div class="face-card" data-face-id="{{ face_data.face.id }}">
+                <div class="face-checkbox-container">
+                    <input type="checkbox" class="face-checkbox" value="{{ face_data.face.id }}" checked>
+                </div>
+                <img src="/photos/{{ face_data.face.relative_file_path }}"
+                     alt="Face {{ face_data.face.id }}"
+                     class="face-image"
+                     loading="lazy">
+                <div class="face-info">
+                    <div class="similarity-badge" data-similarity="{{ face_data.similarity }}">
+                        {{ (face_data.similarity * 100) | round(1) }}%
+                    </div>
+                    <div class="face-meta">
+                        {% if face_data.face.photo and face_data.face.photo.date_taken %}
+                        <small>{{ face_data.face.photo.date_taken[:10] }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>No matches found</h2>
+        <p>No faces matched the similarity threshold of {{ similarity_threshold }}.</p>
+        <a href="{{ url_for('utilities_auto_assign_people') }}" class="btn btn-primary">Try Again</a>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='utilities/auto_assign_results.js') }}"></script>
+<script>
+window.PHOTO_ORGANIZER.initAutoAssignResults(
+    {{ job_id | tojson }},
+    {{ person_id }},
+    {{ person_name | tojson }},
+    window.APP_CONFIG
+);
+</script>
+{% endblock %}

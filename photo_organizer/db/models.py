@@ -132,6 +132,7 @@ class Job(db.Model):
     error = db.Column(db.Text)
     message = db.Column(db.Text)
     job_data = db.Column(db.Text)
+    results = db.relationship("JobResult", back_populates="job")
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -156,3 +157,14 @@ class Job(db.Model):
             'error': self.error,
             'message': self.message,
         }
+
+class JobResult(db.Model):
+    __tablename__ = "job_results"
+
+    id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.String, db.ForeignKey("jobs.id"), nullable=False)
+    huey_task_id = db.Column(db.String, nullable=False, unique=True)
+    result_data = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    job = db.relationship("Job", back_populates="results")
