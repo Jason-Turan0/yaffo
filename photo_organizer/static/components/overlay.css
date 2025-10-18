@@ -1,18 +1,70 @@
 .overlay {
-  position: absolute;
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.1);
-  border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-  min-width: 200px;
-  opacity: 0;
-  transform: scale(0.95);
-  transition: opacity 0.15s ease, transform 0.15s ease;
+    position: absolute;
+    z-index: 1000;
+    min-width: 200px;
+    border-radius: 8px;
+    background: transparent; /* background moved to inner container */
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+/* The actual visible box */
+.overlay-content {
+    position: relative;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    pointer-events: auto;
+    z-index: 1;
 }
 
 .overlay.active {
-  opacity: 1;
-  transform: scale(1);
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Use pseudo-element on .overlay-content so it’s inside the shadowed box */
+.overlay-content::after {
+    content: "";
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+}
+
+/* Arrow directions */
+.overlay[data-placement="top"] .overlay-content::after {
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px 6px 0 6px;
+    border-color: white transparent transparent transparent;
+}
+
+.overlay[data-placement="bottom"] .overlay-content::after {
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 6px 6px 6px;
+    border-color: transparent transparent white transparent;
+}
+
+.overlay[data-placement="left"] .overlay-content::after {
+    top: 50%;
+    right: -6px;
+    transform: translateY(-50%);
+    border-width: 6px 0 6px 6px;
+    border-color: transparent transparent transparent white;
+}
+
+.overlay[data-placement="right"] .overlay-content::after {
+    top: 50%;
+    left: -6px;
+    transform: translateY(-50%);
+    border-width: 6px 6px 6px 0;
+    border-color: transparent white transparent transparent;
 }

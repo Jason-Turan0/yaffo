@@ -1,9 +1,5 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.initFaceReassign = (allPeople, config) => {
-    let currentOverlay = null;
-    let currentFaceId = null;
-    let searchableSelectInstance = null;
-
     const createReassignOverlay = (faceThumbnail, faceId) => {
         const overlayContent = `
             <div class="face-reassign-header">Reassign Face</div>
@@ -11,8 +7,8 @@ window.PHOTO_ORGANIZER.initFaceReassign = (allPeople, config) => {
                 <select id="reassign-person-select-${faceId}" class="searchable-select face-reassign-select">
                     <option value="">Select a person...</option>
                     ${allPeople.map(person =>
-                        `<option value="${person.id}">${person.name}</option>`
-                    ).join('')}
+            `<option value="${person.id}">${person.name}</option>`
+        ).join('')}
                 </select>
                 <div class="face-reassign-actions">
                     <button class="face-reassign-btn face-reassign-btn-cancel" data-action="cancel">
@@ -27,7 +23,7 @@ window.PHOTO_ORGANIZER.initFaceReassign = (allPeople, config) => {
         const {overlay, close} = window.PHOTO_ORGANIZER.COMPONENTS.overlay.init(
             faceThumbnail.id,
             overlayContent,
-            'right'
+            {placement: 'right'}
         )
 
         const selectElement = overlay.querySelector(`#reassign-person-select-${faceId}`);
@@ -92,40 +88,12 @@ window.PHOTO_ORGANIZER.initFaceReassign = (allPeople, config) => {
         }
     };
 
-    const handleFaceClick = (e) => {
-        const faceThumbnail = e.currentTarget;
-        const faceId = parseInt(faceThumbnail.dataset.faceId);
-        if (currentFaceId === faceId) {
-           // closeOverlay();
-            return;
-        }
+    const handleFaceClick = (e) => createReassignOverlay(e.currentTarget, parseInt(e.currentTarget.dataset.faceId))
 
-
-        currentFaceId = faceId;
-        faceThumbnail.classList.add('editing');
-        currentOverlay = createReassignOverlay(faceThumbnail, faceId);
-        currentOverlay.classList.add('active');
-
-        e.stopPropagation();
-    };
 
     document.querySelectorAll('.face-thumbnail').forEach(thumbnail => {
         thumbnail.addEventListener('click', handleFaceClick);
     });
 
-    document.addEventListener('click', (e) => {
-        if (!currentOverlay) return;
-
-        const clickedElement = e.target;
-        const isInsideOverlay = currentOverlay.contains(clickedElement);
-        const isInsideSearchableSelect = clickedElement.closest('.searchable-select-wrapper');
-
-        if (!isInsideOverlay && (!isInsideSearchableSelect || !currentOverlay.contains(isInsideSearchableSelect))) {
-           // closeOverlay();
-        }
-    });
-
-    return {
-
-    };
+    return {};
 };

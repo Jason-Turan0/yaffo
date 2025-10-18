@@ -1,16 +1,24 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {}
+window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
+
 window.PHOTO_ORGANIZER.COMPONENTS.overlay = {
-    init: (targetElementId, overlayContent, placement = 'bottom') => {
+    init: (targetElementId, overlayContent, options = {}) => {
+        const {
+            placement = 'bottom',
+            offset = 8,
+            closeOnEsc = true
+        } = options;
+
         const overlay = document.createElement('div');
         overlay.className = 'overlay';
-        overlay.innerHTML = overlayContent;
+        overlay.innerHTML = `<div class="overlay-content">${overlayContent}</div>`;
 
         const targetElement = document.getElementById(targetElementId);
-        if (targetElement == null) {
-            throw new Error(`Failed to find dom element ${targetElementId}`);
+        if (!targetElement) {
+            throw new Error(`Failed to find DOM element with id '${targetElementId}'`);
         }
 
+        // Append to body instead of the target
         document.body.appendChild(overlay);
 
         const positionOverlay = () => {
@@ -25,112 +33,108 @@ window.PHOTO_ORGANIZER.COMPONENTS.overlay = {
             let top, left;
 
             const calculatePosition = (pos) => {
-                const spacing = 8;
-                let calculatedTop, calculatedLeft;
-
+                let t, l;
                 switch (pos) {
                     case 'top':
-                        calculatedTop = targetRect.top + scrollY - overlayRect.height - spacing;
-                        calculatedLeft = targetRect.left + scrollX + (targetRect.width / 2) - (overlayRect.width / 2);
+                        t = targetRect.top + scrollY - overlayRect.height - offset;
+                        l = targetRect.left + scrollX + (targetRect.width / 2) - (overlayRect.width / 2);
                         break;
                     case 'bottom':
-                        calculatedTop = targetRect.bottom + scrollY + spacing;
-                        calculatedLeft = targetRect.left + scrollX + (targetRect.width / 2) - (overlayRect.width / 2);
+                        t = targetRect.bottom + scrollY + offset;
+                        l = targetRect.left + scrollX + (targetRect.width / 2) - (overlayRect.width / 2);
                         break;
                     case 'left':
-                        calculatedTop = targetRect.top + scrollY + (targetRect.height / 2) - (overlayRect.height / 2);
-                        calculatedLeft = targetRect.left + scrollX - overlayRect.width - spacing;
+                        t = targetRect.top + scrollY + (targetRect.height / 2) - (overlayRect.height / 2);
+                        l = targetRect.left + scrollX - overlayRect.width - offset;
                         break;
                     case 'right':
-                        calculatedTop = targetRect.top + scrollY + (targetRect.height / 2) - (overlayRect.height / 2);
-                        calculatedLeft = targetRect.right + scrollX + spacing;
+                        t = targetRect.top + scrollY + (targetRect.height / 2) - (overlayRect.height / 2);
+                        l = targetRect.right + scrollX + offset;
                         break;
                     default:
-                        calculatedTop = targetRect.bottom + scrollY + spacing;
-                        calculatedLeft = targetRect.left + scrollX + (targetRect.width / 2) - (overlayRect.width / 2);
+                        t = targetRect.bottom + scrollY + offset;
+                        l = targetRect.left + scrollX + (targetRect.width / 2) - (overlayRect.width / 2);
                 }
-
-                return { top: calculatedTop, left: calculatedLeft };
+                return { top: t, left: l };
             };
 
             const willOverflow = (pos) => {
-                const { top: calcTop, left: calcLeft } = calculatePosition(pos);
-                const bottom = calcTop + overlayRect.height;
-                const right = calcLeft + overlayRect.width;
-
+                const { top: t, left: l } = calculatePosition(pos);
+                const bottom = t + overlayRect.height;
+                const right = l + overlayRect.width;
                 return {
-                    top: calcTop < scrollY,
+                    top: t < scrollY,
                     bottom: bottom > scrollY + viewportHeight,
-                    left: calcLeft < scrollX,
+                    left: l < scrollX,
                     right: right > scrollX + viewportWidth
                 };
             };
 
             const overflow = willOverflow(placement);
+            if (placement === 'bottom' && overflow.bottom && !overflow.top) finalPlacement = 'top';
+            else if (placement === 'top' && overflow.top && !overflow.bottom) finalPlacement = 'bottom';
+            else if (placement === 'left' && overflow.left && !overflow.right) finalPlacement = 'right';
+            else if (placement === 'right' && overflow.right && !overflow.left) finalPlacement = 'left';
 
-            if (placement === 'bottom' && overflow.bottom && !overflow.top) {
-                finalPlacement = 'top';
-            } else if (placement === 'top' && overflow.top && !overflow.bottom) {
-                finalPlacement = 'bottom';
-            } else if (placement === 'left' && overflow.left && !overflow.right) {
-                finalPlacement = 'right';
-            } else if (placement === 'right' && overflow.right && !overflow.left) {
-                finalPlacement = 'left';
-            }
+            const pos = calculatePosition(finalPlacement);
+            top = pos.top;
+            left = pos.left;
 
-            const position = calculatePosition(finalPlacement);
-            top = position.top;
-            left = position.left;
+            // Constrain inside viewport
+            if (left < scrollX) left = scrollX + offset;
+            else if (left + overlayRect.width > scrollX + viewportWidth)
+                left = scrollX + viewportWidth - overlayRect.width - offset;
 
-            if (left < scrollX) {
-                left = scrollX + 8;
-            } else if (left + overlayRect.width > scrollX + viewportWidth) {
-                left = scrollX + viewportWidth - overlayRect.width - 8;
-            }
-
-            if (top < scrollY) {
-                top = scrollY + 8;
-            } else if (top + overlayRect.height > scrollY + viewportHeight) {
-                top = scrollY + viewportHeight - overlayRect.height - 8;
-            }
+            if (top < scrollY) top = scrollY + offset;
+            else if (top + overlayRect.height > scrollY + viewportHeight)
+                top = scrollY + viewportHeight - overlayRect.height - offset;
 
             overlay.style.top = `${top}px`;
             overlay.style.left = `${left}px`;
             overlay.dataset.placement = finalPlacement;
         };
 
-        overlay.classList.add('active');
-        requestAnimationFrame(() => {
-            positionOverlay();
-        });
-
-        const handleOutsideClick = (event) => {
-            if (!overlay.contains(event.target) && !targetElement.contains(event.target)) {
+        const handleOutsideClick = (e) => {
+            if (!overlay.contains(e.target) && !targetElement.contains(e.target)) {
                 close();
             }
         };
 
-        setTimeout(() => {
-            document.addEventListener('click', handleOutsideClick);
-        }, 0);
-
-        const handleResize = () => {
-            positionOverlay();
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && closeOnEsc) close();
         };
-        window.addEventListener('resize', handleResize);
-        window.addEventListener('scroll', handleResize);
+
+        const handleReposition = () => {
+            requestAnimationFrame(positionOverlay);
+        };
 
         const close = () => {
-            overlay.remove();
+            overlay.classList.remove('active');
+            overlay.classList.add('closing');
+            overlay.addEventListener('transitionend', () => {
+                overlay.remove();
+            }, { once: true });
+
             document.removeEventListener('click', handleOutsideClick);
-            window.removeEventListener('resize', handleResize);
-            window.removeEventListener('scroll', handleResize);
+            window.removeEventListener('resize', handleReposition);
+            window.removeEventListener('scroll', handleReposition);
+            if (closeOnEsc) document.removeEventListener('keydown', handleKeyDown);
         };
 
-        return {
-            overlay,
-            close,
-            reposition: positionOverlay
-        };
+        // Activate and position
+        requestAnimationFrame(() => {
+            overlay.classList.add('active');
+            positionOverlay();
+        });
+
+        // Listeners
+        setTimeout(() => {
+            document.addEventListener('click', handleOutsideClick);
+            window.addEventListener('resize', handleReposition);
+            window.addEventListener('scroll', handleReposition);
+            if (closeOnEsc) document.addEventListener('keydown', handleKeyDown);
+        }, 0);
+
+        return { overlay, close, reposition: positionOverlay };
     }
 };

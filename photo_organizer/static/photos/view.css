@@ -124,7 +124,7 @@
 
 .face-thumbnail:hover {
     border-color: #007BFF;
-    transform: scale(1.05);
+    /*transform: scale(1.05);*/
 }
 
 .face-thumbnail.highlighted {
@@ -494,10 +494,6 @@
     cursor: not-allowed;
 }
 
-.face-thumbnail.editing {
-    border-color: #007BFF;
-    border-width: 3px;
-}
 
 @media (max-width: 768px) {
     .photo-viewer {
