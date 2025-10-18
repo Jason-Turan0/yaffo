@@ -4,7 +4,6 @@ from typing import Optional, Tuple, List
 import numpy as np
 from flask import Flask, render_template, request, jsonify
 
-from photo_organizer.background_tasks.tasks import update_person_embedding_task
 from photo_organizer.logging_config import get_logger
 from sqlalchemy import extract
 from sqlalchemy.dialects.sqlite import insert
@@ -202,7 +201,7 @@ def init_faces_routes(app: Flask):
                     {Face.status: face_status}, synchronize_session=False
                 )
                 db.session.commit()
-                update_person_embedding_task(person_id)
+                update_person_embedding(person_id, db.session)
                 return jsonify({
                     "success": True,
                     "message": f"Successfully assigned {len(selected_face_ids)} face(s) to {person.name}",

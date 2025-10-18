@@ -176,7 +176,3 @@ def auto_assign_faces_task(job_id: str, face_id_batch: list[int], person_id: int
     finally:
         session.close()
         SessionFactory.remove()
-
-@huey.task()
-def update_person_embedding_task(person_id: int):
-    update_person_embedding(person_id, SessionFactory())
