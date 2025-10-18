@@ -1,5 +1,6 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.initPhotoView = (faceData, absoluteFilePath, absoluteFolderPath, config) => {
+window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
+window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (faceData, absoluteFilePath, absoluteFolderPath, config) => {
     let canvas, ctx, mainPhoto;
 
     const initializeFaceHighlighting = () => {

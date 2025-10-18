@@ -18,13 +18,12 @@ async function submitFaces(personId, faceStatus) {
         const response = await fetch(APP_CONFIG.urls.faces_assign, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 faces: faceIds,
                 person: personId,
-                face_status: faceStatus
+                faceStatus: faceStatus
             })
         });
 

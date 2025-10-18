@@ -1,5 +1,6 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.initPhotoTags = (photoId, initialTags, config) => {
+window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
+window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config) => {
     const modal = window.PHOTO_ORGANIZER.COMPONENTS.modal.init('tagsModal');
 
     let tags = [];

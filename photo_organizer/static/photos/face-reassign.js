@@ -1,5 +1,6 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.initFaceReassign = (allPeople, config) => {
+window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
+window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, config) => {
     const createReassignOverlay = (faceThumbnail, faceId) => {
         const overlayContent = `
             <div class="face-reassign-header">Reassign Face</div>
@@ -53,6 +54,7 @@ window.PHOTO_ORGANIZER.initFaceReassign = (allPeople, config) => {
 
         applyBtn.disabled = true;
         applyBtn.textContent = 'Applying...';
+        debugger
 
         try {
             const response = await fetch(config.urls.faces_assign, {
@@ -64,7 +66,7 @@ window.PHOTO_ORGANIZER.initFaceReassign = (allPeople, config) => {
                 body: JSON.stringify({
                     faces: [faceId],
                     person: personId,
-                    face_status: 'assigned'
+                    faceStatus: 'ASSIGNED'
                 })
             });
 
