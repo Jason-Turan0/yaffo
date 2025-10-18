@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='photos/view.css') }}">
 {% endblock %}
 
-{% from "components/collapsible_panel.html" import collapsible_panel %}
+{% from "components/modal.html" import render_modal %}
 
 {% block content %}
 <div class="photo-viewer">
@@ -113,44 +113,29 @@
                 {% endif %}
             </div>
 
-            {% call collapsible_panel('tags-panel', 'Tags (' ~ photo.tags|length ~ ')', is_open=False) %}
-                <div id="tags-container">
-                    {% if photo.tags %}
-                        <div class="tags-list-editable">
-                            {% for tag in photo.tags %}
-                            <div class="tag-item-editable" data-tag-id="{{ tag.id }}">
-                                <div class="tag-display">
-                                    <span class="tag-name">{{ tag.tag_name }}</span>
-                                    {% if tag.tag_value %}
-                                    <span class="tag-separator">:</span>
-                                    <span class="tag-value">{{ tag.tag_value }}</span>
-                                    {% endif %}
-                                </div>
-                                <div class="tag-actions">
-                                    <button type="button" class="tag-action-btn edit-tag-btn" onclick="window.PHOTO_ORGANIZER.photoTags.editTag({{ tag.id }}, '{{ tag.tag_name }}', '{{ tag.tag_value if tag.tag_value else '' }}')" title="Edit">
-                                        ✏️
-                                    </button>
-                                    <button type="button" class="tag-action-btn delete-tag-btn" onclick="window.PHOTO_ORGANIZER.photoTags.deleteTag({{ tag.id }})" title="Delete">
-                                        🗑️
-                                    </button>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <p class="no-data">No tags</p>
-                    {% endif %}
-                </div>
-
-                <div class="tag-add-form" id="tag-add-form">
-                    <h4 style="margin: 15px 0 10px 0; font-size: 12px; color: #6c757d; text-transform: uppercase;">Add New Tag</h4>
-                    <div class="form-row">
-                        <input type="text" id="new-tag-name" placeholder="Tag name" class="tag-input">
-                        <input type="text" id="new-tag-value" placeholder="Tag value (optional)" class="tag-input">
+            <div class="detail-section">
+                <h3>Tags ({{ photo.tags|length }})</h3>
+                {% if photo.tags %}
+                <div class="tags-list">
+                    {% for tag in photo.tags %}
+                    <div class="tag-item">
+                        <span class="tag-name">{{ tag.tag_name }}</span>
+                        {% if tag.tag_value %}
+                        <span class="tag-separator">:</span>
+                        <span class="tag-value">{{ tag.tag_value }}</span>
+                        {% endif %}
                     </div>
-                    <button type="button" class="btn-primary" onclick="window.PHOTO_ORGANIZER.photoTags.addTag()" style="width: 100%; margin-top: 10px;">Add Tag</button>
+                    {% endfor %}
                 </div>
-            {% endcall %}
+                {% else %}
+                <p class="no-data">No tags</p>
+                {% endif %}
+                <div class="detail-actions">
+                    <button onclick="window.PHOTO_ORGANIZER.photoTags.openEditModal()" class="action-button">
+                        Edit Tags
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -166,10 +151,28 @@
         </div>
     </div>
 </div>
+
+{% macro render_modal_edit_tags_form() %}
+<div id="tags-editor-container">
+    <div id="tags-editor-list"></div>
+
+    <div class="tag-add-section">
+        <h4>Add New Tag</h4>
+        <div class="form-row">
+            <input type="text" id="modal-new-tag-name" placeholder="Tag name" class="tag-input">
+            <input type="text" id="modal-new-tag-value" placeholder="Tag value (optional)" class="tag-input">
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="window.PHOTO_ORGANIZER.photoTags.addTagToList()">+ Add Tag</button>
+    </div>
+</div>
+{% endmacro %}
+
+{{ render_modal('tagsModal', "Edit Tags", "#", render_modal_edit_tags_form, "Save Changes", "btn-primary") }}
+
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='components/collapsible_panel.js') }}"></script>
+<script src="{{ url_for('static', filename='components/modal.js') }}"></script>
 <script src="{{ url_for('static', filename='photos/view.js') }}"></script>
 <script src="{{ url_for('static', filename='photos/tags.js') }}"></script>
 <script>
@@ -183,6 +186,7 @@ window.PHOTO_ORGANIZER.photoView = window.PHOTO_ORGANIZER.initPhotoView(
 
 window.PHOTO_ORGANIZER.photoTags = window.PHOTO_ORGANIZER.initPhotoTags(
     {{ photo.id }},
+    {{ tags_data | tojson }},
     window.APP_CONFIG
 );
 </script>

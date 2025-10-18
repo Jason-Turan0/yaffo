@@ -1,6 +1,6 @@
 <div class="filter-group">
     <label for="person">Person</label>
-    <select name="person" id="person">
+    <select name="person" id="person" {% if filters.people|length > 10 %}class="searchable-select"{% endif %}>
         <option value="">Any Person</option>
         {% for person in filters.people %}
         <option value="{{ person.id }}" {% if filters.selected_person_id == person.id %}selected{%

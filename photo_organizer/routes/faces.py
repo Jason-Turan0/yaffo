@@ -51,6 +51,7 @@ def init_faces_routes(app: Flask):
         page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", default=DEFAULT_PAGE_SIZE, type=int)
         person_id = request.args.get("person", type=int)
+        assign_person_id = request.args.get("assign_person", type=int)
 
         if year:
             query = query.filter(extract("year", Photo.date_taken) == year)
@@ -129,6 +130,7 @@ def init_faces_routes(app: Flask):
             "page_size": page_size,
             "people": people,
             'selected_person_id': person_id,
+            'selected_assign_person_id': assign_person_id,
         }
 
         pagination = {

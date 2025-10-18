@@ -21,17 +21,43 @@
     border-radius: 8px;
     max-width: 500px;
     width: 90%;
+    max-height: 90vh;
     box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .modal-content h2 {
     margin: 0 0 20px 0;
     font-size: 20px;
     color: #212529;
+    flex-shrink: 0;
+}
+
+.modal-content form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.modal-content form > :not(.modal-actions) {
+    flex-shrink: 0;
+}
+
+.modal-content form > div:first-child {
+    flex: 1;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .modal-actions {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
+    flex-shrink: 0;
+    margin-top: auto;
 }

@@ -4,6 +4,7 @@
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='faces/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='searchable-select.css') }}">
 {% endblock %}
 {% from "_sidebar.html" import render_sidebar  %}
 {% from "components/pagination.html" import pagination as render_pagination %}
@@ -16,17 +17,32 @@
             <input type="range" id="threshold-range" name="threshold" min="0.9" max="1" step="0.01" value="{{ filters.selected_threshold or 0.97 }}">
             <div class="threshold-display"><span id="threshold-value">{{ (filters.selected_threshold or 0.97) * 100 }}%</span></div>
         </div>
+        {% if filters.selected_assign_person_id %}
+        <input type="hidden" name="assign_person" value="{{ filters.selected_assign_person_id }}">
+        {% endif %}
     {% endmacro %}
     {% macro render_actions() %}
         <form method="POST" action="{{ url_for('faces_assign') }}" id="sidebar-assign-form">
         <input type="hidden" name="face_status" value="ASSIGNED">
 
+        {% if people|length > 8 %}
+        <div class="person-assign-select">
+            <label for="sidebar-person-select">Assign to Person</label>
+            <select name="person" id="sidebar-person-select" class="searchable-select">
+                <option value="">-- Select person --</option>
+                {% for person in people %}
+                <option value="{{ person.id }}" {% if filters.selected_assign_person_id == person.id %}selected{% endif %}>{{ person.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="btn-primary" id="sidebar-assign-selected-btn" style="width: 100%; margin-top: 10px;">Assign Selected</button>
+        </div>
+        {% else %}
         <div class="person-assign-list">
             {% for person in people %}
             <button type="button" class="btn-primary person-assign-btn sidebar-assign-person" data-person-id="{{ person.id }}">Assign to {{ person.name }}</button>
             {% endfor %}
         </div>
-        <select name="person" id="sidebar-person-select" style="display:none;"></select>
+        {% endif %}
         <div id="sidebar-face-checkboxes"></div>
     </form>
 
@@ -87,7 +103,8 @@
             'year': filters.selected_year,
             'month': filters.selected_month,
             'threshold': filters.selected_threshold,
-            'person': filters.selected_person_id
+            'person': filters.selected_person_id,
+            'assign_person': filters.selected_assign_person_id
         }
     ) }}
 </div>
@@ -96,5 +113,6 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
 <script src="{{ url_for('static', filename='faces/index.js') }}" ></script>
 {% endblock %}

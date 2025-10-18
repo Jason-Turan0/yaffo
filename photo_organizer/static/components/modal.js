@@ -8,7 +8,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.modal =
             if(modalElement == null){
                 throw new Error(`Failed to find dom element ${modalId}`);
             }
-            const cancelElement = modalElement.querySelector('.btn-secondary');
+            const cancelElement = modalElement.querySelector('[name="cancel"]');
             if(cancelElement == null){
                 throw new Error(`Failed to find cancel button in modal element ${modalId}`);
             }

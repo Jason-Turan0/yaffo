@@ -356,6 +356,88 @@
     border-color: #007BFF;
 }
 
+#tags-editor-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+}
+
+#tags-editor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 100px;
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 5px;
+}
+
+#tags-editor-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+#tags-editor-list::-webkit-scrollbar-track {
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+#tags-editor-list::-webkit-scrollbar-thumb {
+    background: #ced4da;
+    border-radius: 4px;
+}
+
+#tags-editor-list::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+}
+
+.tag-editor-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+.tag-editor-inputs {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    flex-direction: column;
+}
+
+.tag-add-section {
+    padding-top: 20px;
+    border-top: 2px solid #dee2e6;
+    flex-shrink: 0;
+}
+
+.tag-add-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.btn-icon-delete {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    transition: transform 0.2s;
+    border-radius: 4px;
+    line-height: 1;
+}
+
+.btn-icon-delete:hover {
+    transform: scale(1.2);
+    background: rgba(220, 53, 69, 0.1);
+}
+
 @media (max-width: 768px) {
     .photo-viewer {
         flex-direction: column;

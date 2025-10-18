@@ -5,7 +5,7 @@
         <form id="{{id}}Form" method="POST" action="{{ action_url }}">
            {{ render_modal_form() }}
             <div class="modal-actions">
-                <button type="button" class="btn btn-secondary">Cancel</button>
+                <button type="button" class="btn btn-secondary" name="cancel">Cancel</button>
                 <button type="submit" class="btn {{action_class}}">{{action_text}}</button>
             </div>
         </form>

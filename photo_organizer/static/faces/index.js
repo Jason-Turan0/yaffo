@@ -170,3 +170,37 @@ document.getElementById('sidebar-ignore-btn').addEventListener('click', (e) => {
     e.preventDefault();
     submitFaces(null, 'IGNORED');
 });
+
+// Sidebar assign from searchable select
+const assignSelectedBtn = document.getElementById('sidebar-assign-selected-btn');
+const sidebarPersonSelect = document.getElementById('sidebar-person-select');
+
+if (assignSelectedBtn) {
+    assignSelectedBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const personId = sidebarPersonSelect.value;
+
+        if (!personId) {
+            showNotification('Please select a person first', 'error');
+            return;
+        }
+
+        submitFaces(personId, 'ASSIGNED');
+    });
+}
+
+// Update URL when assignment person select changes (without page reload)
+if (sidebarPersonSelect) {
+    sidebarPersonSelect.addEventListener('change', (e) => {
+        const personId = e.target.value;
+        const url = new URL(window.location.href);
+
+        if (personId) {
+            url.searchParams.set('assign_person', personId);
+        } else {
+            url.searchParams.delete('assign_person');
+        }
+
+        history.replaceState(null, '', url.toString());
+    });
+}

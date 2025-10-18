@@ -42,6 +42,19 @@
     text-align: center;
 }
 
+.person-assign-select {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.person-assign-select label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 4px;
+}
+
 .main-content {
     flex: 1;
     overflow-y: auto;

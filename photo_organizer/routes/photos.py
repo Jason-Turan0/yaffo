@@ -68,6 +68,15 @@ def init_photos_routes(app: Flask):
                     'people': [{'id': p.id, 'name': p.name} for p in face.people]
                 })
 
+        tags_data = [
+            {
+                'id': tag.id,
+                'tag_name': tag.tag_name,
+                'tag_value': tag.tag_value
+            }
+            for tag in photo.tags
+        ]
+
         return render_template(
             "photos/view.html",
             photo=photo,
@@ -76,7 +85,8 @@ def init_photos_routes(app: Flask):
             file_name=file_name,
             absolute_file_path=absolute_file_path,
             absolute_folder_path=absolute_folder_path,
-            faces_with_locations=faces_with_locations
+            faces_with_locations=faces_with_locations,
+            tags_data=tags_data
         )
 
     @app.route("/api/open-file", methods=["POST"])
