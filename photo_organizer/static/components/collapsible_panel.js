@@ -1,3 +1,4 @@
+
 window.togglePanel = function(panelId) {
     const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
     if (!panel) return;

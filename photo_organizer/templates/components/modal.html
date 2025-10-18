@@ -1,0 +1,14 @@
+{% macro render_modal(id, title, action_url, render_modal_form, action_text = "Save", action_class = "btn-primary") %}
+    <div id="{{id}}" class="modal">
+    <div class="modal-content">
+        <h2 id="modalTitle">{{title}}</h2>
+        <form id="{{id}}Form" method="POST" action="{{ action_url }}">
+           {{ render_modal_form() }}
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn {{action_class}}">{{action_text}}</button>
+            </div>
+        </form>
+    </div>
+    </div>
+{% endmacro %}

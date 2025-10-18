@@ -10,7 +10,7 @@
 <div class="main-content">
     <div class="people-header">
         <h1>People</h1>
-        <button class="btn-primary btn-add" onclick="openAddModal()">+ Add Person</button>
+        <button class="btn-primary btn-add" onclick="window.PHOTO_ORGANIZER.peopleList.openAddModal()">+ Add Person</button>
     </div>
 
     {% if people|length > 0 %}
@@ -39,10 +39,10 @@
                 <td>
                     <div class="actions">
                         <a href="#" class="action-link"
-                           onclick="openEditModal({{ person.id }}, '{{ person.name }}'); return false;">Edit</a>
+                           onclick="window.PHOTO_ORGANIZER.peopleList.openEditModal({{ person.id }}, '{{ person.name }}'); return false;">Edit</a>
                         <a href="{{ url_for('person_faces', person_id=person.id) }}" class="action-link">View Faces</a>
                         <a href="#" class="action-link delete"
-                           onclick="confirmDelete({{ person.id }}, '{{ person.name }}'); return false;">Delete</a>
+                           onclick="window.PHOTO_ORGANIZER.peopleList.confirmDelete({{ person.id }}, '{{ person.name }}'); return false;">Delete</a>
                     </div>
                 </td>
             </tr>
@@ -55,97 +55,33 @@
 <div class="empty-state">
     <h2>No people yet</h2>
     <p>Add your first person to start organizing photos.</p>
-    <button class="btn-primary btn-add" onclick="openAddModal()">+ Add Person</button>
+    <button class="btn-primary btn-add" onclick="window.PHOTO_ORGANIZER.peopleList.openAddModal()">+ Add Person</button>
 </div>
 {% endif %}
 
-<!-- Add/Edit Modal -->
-<div id="personModal" class="modal">
-    <div class="modal-content">
-        <h2 id="modalTitle">Add Person</h2>
-        <form id="personForm" method="POST" action="">
-            <div class="form-group">
-                <label for="personName">Name</label>
-                <input type="text" id="personName" name="name" required autofocus>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save</button>
-            </div>
-        </form>
-    </div>
+{% from "components/modal.html" import render_modal  %}
+{% macro render_modal_add_person_form() %}
+<div class="form-group">
+    <label for="personName">Name</label>
+    <input type="text" id="personName" name="name" required autofocus>
 </div>
+{% endmacro %}
+{% macro render_modal_delete_person_form() %}
+<div class="form-group">
+    <p>Are you sure you want to delete <strong id="deletePersonName"></strong>?</p>
+    <p style="color: #6c757d; font-size: 14px;">This will unassign all their faces but won't delete the photos.</p>
+</div>
+{% endmacro %}
 
-<!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="modal">
-    <div class="modal-content">
-        <h2>Delete Person</h2>
-        <p>Are you sure you want to delete <strong id="deletePersonName"></strong>?</p>
-        <p style="color: #6c757d; font-size: 14px;">This will unassign all their faces but won't delete the photos.</p>
-        <form id="deleteForm" method="POST" action="">
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
-                <button type="submit" class="btn btn-danger">Delete</button>
-            </div>
-        </form>
-    </div>
-</div>
+{{ render_modal('addModal', "Add Person",  url_for("people_create") , render_modal_add_person_form) }}
+{{ render_modal('editModal', "Edit Person", url_for("people_create") , render_modal_add_person_form) }}
+{{ render_modal('deleteModal', "Delete Person",  url_for("people_create") , render_modal_delete_person_form, "Delete", "btn-danger") }}
+
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='people/list.js') }}"></script>
 <script>
-    const modal = document.getElementById('personModal');
-    const deleteModal = document.getElementById('deleteModal');
-    const personForm = document.getElementById('personForm');
-    const deleteForm = document.getElementById('deleteForm');
-    const modalTitle = document.getElementById('modalTitle');
-    const personNameInput = document.getElementById('personName');
-
-    function openAddModal() {
-        modalTitle.textContent = 'Add Person';
-        personForm.action = '{{ url_for("people_create") }}';
-        personNameInput.value = '';
-        modal.classList.add('active');
-        personNameInput.focus();
-    }
-
-    function openEditModal(personId, personName) {
-        modalTitle.textContent = 'Edit Person';
-        personForm.action = '{{ url_for("people_update", person_id=0) }}'.replace('0', personId);
-        personNameInput.value = personName;
-        modal.classList.add('active');
-        personNameInput.focus();
-    }
-
-    function closeModal() {
-        modal.classList.remove('active');
-    }
-
-    function confirmDelete(personId, personName) {
-        document.getElementById('deletePersonName').textContent = personName;
-        deleteForm.action = '{{ url_for("people_delete", person_id=0) }}'.replace('0', personId);
-        deleteModal.classList.add('active');
-    }
-
-    function closeDeleteModal() {
-        deleteModal.classList.remove('active');
-    }
-
-    // Close modals when clicking outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
-
-    deleteModal.addEventListener('click', (e) => {
-        if (e.target === deleteModal) closeDeleteModal();
-    });
-
-    // Close modals with Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeModal();
-            closeDeleteModal();
-        }
-    });
+    window.PHOTO_ORGANIZER.peopleList = window.PHOTO_ORGANIZER.initPeopleList(window.APP_CONFIG);
 </script>
 {% endblock %}
