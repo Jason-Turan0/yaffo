@@ -1,10 +1,9 @@
-import calendar
 import math
 import requests
 from flask import Flask, render_template, request, jsonify
 from sqlalchemy import extract, distinct, func
 from sqlalchemy.orm import joinedload
-
+import pydash as _
 from photo_organizer.db import db
 from photo_organizer.db.models import Photo, Face, Person, PersonFace, Tag
 from photo_organizer.db.repositories.photos_repository import get_distinct_years, get_distinct_months
@@ -220,15 +219,16 @@ def init_home_routes(app: Flask):
             db.session.query(Photo.location_name, Photo.latitude, Photo.longitude)
             .filter(Photo.location_name.isnot(None))
             .filter(Photo.location_name.ilike(f"%{query}%"))
-            .distinct()
             .limit(5)
             .all()
         )
 
-        for location_name, lat, lon in db_locations:
+        for photos_by_name in _.group_by(db_locations, lambda photo: photo.location_name).values():
+            lat = _.sum_by(photos_by_name, lambda photo: photo.latitude)/len(photos_by_name)
+            lon = _.sum_by(photos_by_name, lambda photo: photo.longitude)/len(photos_by_name)
             if lat is not None and lon is not None:
                 results.append({
-                    "name": location_name,
+                    "name": photos_by_name[0].location_name,
                     "lat": lat,
                     "lon": lon,
                     "source": "photos"

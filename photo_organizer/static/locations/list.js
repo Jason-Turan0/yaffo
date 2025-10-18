@@ -14,10 +14,8 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
         })
     });
 
-    const vectorSource = new ol.source.Vector();
-
-    locations.forEach(location => {
-        const feature = new ol.Feature({
+    const allFeatures = locations.map(location => {
+        return new ol.Feature({
             geometry: new ol.geom.Point(
                 ol.proj.fromLonLat([location.lon, location.lat])
             ),
@@ -26,7 +24,10 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
             photo_path: location.photo_path,
             filename: location.filename
         });
-        vectorSource.addFeature(feature);
+    });
+
+    const vectorSource = new ol.source.Vector({
+        features: allFeatures
     });
 
     const clusterSource = new ol.source.Cluster({
@@ -231,7 +232,10 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
     map.on('pointermove', function(evt) {
         const pixel = map.getEventPixel(evt.originalEvent);
         const hit = map.hasFeatureAtPixel(pixel);
-        map.getTarget().style.cursor = hit ? 'pointer' : '';
+        const targetElement = map.getTargetElement();
+        if (targetElement) {
+            targetElement.style.cursor = hit ? 'pointer' : '';
+        }
     });
 
     const calculateCentroid = (features) => {
@@ -387,14 +391,19 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                 if (response.ok) {
                     window.notification.success(`Updated ${photoIds.length} photo(s) to "${locationName}"`);
 
-                    vectorSource.getFeatures().forEach(feature => {
+                    allFeatures.forEach(feature => {
                         const featureId = feature.get('id');
                         if (photoIds.includes(featureId)) {
                             feature.set('name', locationName);
                         }
                     });
 
-                    clusterLayer.changed();
+                    const filterCheckbox = document.getElementById('filter-unnamed');
+                    if (filterCheckbox && filterCheckbox.checked) {
+                        applyFilter(true);
+                    } else {
+                        clusterLayer.changed();
+                    }
 
                     selectedFeatures.clear();
                     clusterLayer.changed();
@@ -483,5 +492,35 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
         })();
     };
 
-    return { map, vectorSource, selectedFeatures, updateSelectionPanel };
+    const applyFilter = (showOnlyUnnamed) => {
+        vectorSource.clear();
+
+        if (showOnlyUnnamed) {
+            const unnamedFeatures = allFeatures.filter(feature => !feature.get('name'));
+            vectorSource.addFeatures(unnamedFeatures);
+        } else {
+            vectorSource.addFeatures(allFeatures);
+        }
+
+        selectedFeatures.clear();
+        clusterLayer.changed();
+        updateSelectionPanel();
+
+        if (vectorSource.getFeatures().length > 0) {
+            const extent = vectorSource.getExtent();
+            map.getView().fit(extent, {
+                padding: [50, 50, 50, 50],
+                maxZoom: 16
+            });
+        }
+    };
+
+    const filterCheckbox = document.getElementById('filter-unnamed');
+    if (filterCheckbox) {
+        filterCheckbox.addEventListener('change', (e) => {
+            applyFilter(e.target.checked);
+        });
+    }
+
+    return { map, vectorSource, selectedFeatures, updateSelectionPanel, applyFilter };
 };

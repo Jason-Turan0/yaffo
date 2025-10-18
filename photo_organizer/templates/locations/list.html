@@ -10,8 +10,16 @@
 {% block content %}
 <div class="locations-container">
     <div class="page-header">
-        <h1>Photo Locations</h1>
-        <p class="help-text">Hold <kbd>Shift</kbd> and drag to select multiple clusters</p>
+        <div class="header-main">
+            <h1>Photo Locations</h1>
+            <p class="help-text">Hold <kbd>Shift</kbd> and drag to select multiple clusters</p>
+        </div>
+        <div class="filter-controls">
+            <label class="filter-toggle">
+                <input type="checkbox" id="filter-unnamed">
+                <span>Only show photos without location names</span>
+            </label>
+        </div>
     </div>
 
     <div class="map-layout">
