@@ -126,7 +126,8 @@ def init_people_routes(app: Flask):
         person = db.session.get(Person, person_id)
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
-        selected_similarity = request.args.get("similarity", type=float)
+        min_similarity = request.args.get("min_similarity", type=float)
+        max_similarity = request.args.get("max_similarity", type=float)
         page_size = request.args.get("page-size", type=int)
         filter_face_page_size = page_size if page_size else FACE_LOAD_LIMIT
 
@@ -152,12 +153,14 @@ def init_people_routes(app: Flask):
             query = query.filter(extract("year", photo_alias.date_taken) == year)
         if month:
             query = query.filter(extract("month", photo_alias.date_taken) == month)
-        if selected_similarity and selected_similarity > 0:
-            query = query.filter(PersonFace.similarity > selected_similarity)
+        if min_similarity and min_similarity > 0:
+            query = query.filter(PersonFace.similarity > min_similarity)
+        if max_similarity and max_similarity > 0:
+            query = query.filter(PersonFace.similarity < max_similarity)
 
         faces = (
             query
-            .order_by(photo_alias.date_taken)
+            .order_by(PersonFace.similarity)
             .limit(filter_face_page_size)
             .all()
         )
@@ -169,7 +172,8 @@ def init_people_routes(app: Flask):
             "selected_month": month,
             "page_sizes": [50, 100, 250, 500, 1000],
             "page_size": filter_face_page_size,
-            "selected_similarity": selected_similarity,
+            "min_similarity": min_similarity,
+            "max_similarity": max_similarity,
         }
 
         face_data = [
