@@ -77,21 +77,25 @@ thresholdRange.addEventListener('input', (e) => {
 });
 
 // Toggle selection on click with shift-select support
-let lastClickedIndex = null;
+let lastClickedFace = null;
 
-document.querySelectorAll('.face').forEach((div, index) => {
+document.querySelectorAll('.face').forEach((div) => {
     div.addEventListener('click', (e) => {
-        const allFaces = Array.from(document.querySelectorAll('.face'));
-
-        if (e.shiftKey && lastClickedIndex !== null) {
+        if (e.shiftKey && lastClickedFace !== null && document.contains(lastClickedFace)) {
             // Shift-click: select range
-            const startIndex = Math.min(lastClickedIndex, index);
-            const endIndex = Math.max(lastClickedIndex, index);
+            const allFaces = Array.from(document.querySelectorAll('.face'));
+            const lastIndex = allFaces.indexOf(lastClickedFace);
+            const currentIndex = allFaces.indexOf(div);
 
-            for (let i = startIndex; i <= endIndex; i++) {
-                const face = allFaces[i];
-                face.classList.add('selected');
-                face.querySelector('input[type="checkbox"]').checked = true;
+            if (lastIndex !== -1 && currentIndex !== -1) {
+                const startIndex = Math.min(lastIndex, currentIndex);
+                const endIndex = Math.max(lastIndex, currentIndex);
+
+                for (let i = startIndex; i <= endIndex; i++) {
+                    const face = allFaces[i];
+                    face.classList.add('selected');
+                    face.querySelector('input[type="checkbox"]').checked = true;
+                }
             }
         } else {
             // Normal click: toggle
@@ -100,7 +104,7 @@ document.querySelectorAll('.face').forEach((div, index) => {
             checkbox.checked = !checkbox.checked;
         }
 
-        lastClickedIndex = index;
+        lastClickedFace = div;
     });
 
     // Tooltip on hover

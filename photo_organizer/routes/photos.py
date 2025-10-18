@@ -77,6 +77,15 @@ def init_photos_routes(app: Flask):
             for tag in photo.tags
         ]
 
+        all_people = Person.query.order_by(Person.name).all()
+        all_people_data = [
+            {
+                'id': person.id,
+                'name': person.name
+            }
+            for person in all_people
+        ]
+
         return render_template(
             "photos/view.html",
             photo=photo,
@@ -86,7 +95,8 @@ def init_photos_routes(app: Flask):
             absolute_file_path=absolute_file_path,
             absolute_folder_path=absolute_folder_path,
             faces_with_locations=faces_with_locations,
-            tags_data=tags_data
+            tags_data=tags_data,
+            all_people=all_people_data
         )
 
     @app.route("/api/open-file", methods=["POST"])

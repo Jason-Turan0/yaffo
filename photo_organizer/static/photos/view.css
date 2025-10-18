@@ -438,6 +438,67 @@
     background: rgba(220, 53, 69, 0.1);
 }
 
+.face-reassign-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.face-reassign-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.face-reassign-select {
+    width: 100%;
+}
+
+.face-reassign-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.face-reassign-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.face-reassign-btn-apply {
+    background: #007BFF;
+    color: white;
+}
+
+.face-reassign-btn-apply:hover {
+    background: #0056b3;
+}
+
+.face-reassign-btn-cancel {
+    background: #6c757d;
+    color: white;
+}
+
+.face-reassign-btn-cancel:hover {
+    background: #545b62;
+}
+
+.face-reassign-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.face-thumbnail.editing {
+    border-color: #007BFF;
+    border-width: 3px;
+}
+
 @media (max-width: 768px) {
     .photo-viewer {
         flex-direction: column;

@@ -94,6 +94,7 @@
                 <div class="faces-grid">
                     {% for face in photo.faces %}
                     <div class="face-thumbnail"
+                         id="face-thumbnail-{{ face.id }}"
                          data-face-id="{{ face.id }}"
                          onmouseenter="window.PHOTO_ORGANIZER.photoView.highlightFace({{ face.id }})"
                          onmouseleave="window.PHOTO_ORGANIZER.photoView.clearHighlights()">
@@ -175,6 +176,7 @@
 <script src="{{ url_for('static', filename='components/modal.js') }}"></script>
 <script src="{{ url_for('static', filename='photos/view.js') }}"></script>
 <script src="{{ url_for('static', filename='photos/tags.js') }}"></script>
+<script src="{{ url_for('static', filename='photos/face-reassign.js') }}"></script>
 <script>
 // Initialize photo view modules
 window.PHOTO_ORGANIZER.photoView = window.PHOTO_ORGANIZER.initPhotoView(
@@ -187,6 +189,11 @@ window.PHOTO_ORGANIZER.photoView = window.PHOTO_ORGANIZER.initPhotoView(
 window.PHOTO_ORGANIZER.photoTags = window.PHOTO_ORGANIZER.initPhotoTags(
     {{ photo.id }},
     {{ tags_data | tojson }},
+    window.APP_CONFIG
+);
+
+window.PHOTO_ORGANIZER.faceReassign = window.PHOTO_ORGANIZER.initFaceReassign(
+    {{ all_people | tojson }},
     window.APP_CONFIG
 );
 </script>
