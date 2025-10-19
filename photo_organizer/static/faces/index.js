@@ -59,15 +59,15 @@ async function submitFaces(personId, faceStatus) {
                     }
                 });
                 const nextSuggestionGroup = document.querySelectorAll('.suggestion-group')[0];
-                if(nextSuggestionGroup) {
+                if (nextSuggestionGroup) {
                     const selectAllCheckbox = nextSuggestionGroup.querySelector('.group-select-checkbox');
-                    if(selectAllCheckbox) {
+                    if (selectAllCheckbox) {
                         selectAllCheckbox.checked = true;
                     }
                     nextSuggestionGroup.querySelectorAll('.face').forEach(face => {
                         face.classList.add('selected');
                         const input = face.querySelector('input');
-                        input.checked =true;
+                        input.checked = true;
                     })
                 }
 
@@ -191,7 +191,7 @@ document.querySelectorAll('.assign-group-btn').forEach(btn => {
     });
 });
 
-// Sidebar assign person buttons - now async
+// Sidebar assign person buttons
 document.querySelectorAll('.sidebar-assign-person').forEach(btn => {
     btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -209,6 +209,7 @@ document.getElementById('sidebar-ignore-btn').addEventListener('click', (e) => {
 // Sidebar assign from searchable select
 const assignSelectedBtn = document.getElementById('sidebar-assign-selected-btn');
 const sidebarPersonSelect = document.getElementById('sidebar-person-select');
+const createPersonBtn = document.getElementById('create-person-btn');
 
 if (assignSelectedBtn) {
     assignSelectedBtn.addEventListener('click', (e) => {
@@ -242,6 +243,43 @@ if (sidebarPersonSelect) {
 
 // Keyboard shortcuts for quick assignment
 const keyboardShortcutMap = new Map();
+
+if (createPersonBtn) {
+    createPersonBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const inputElement = document.getElementById('create-person-name');
+        const personName = inputElement.value;
+        if (!personName || !personName.trim()) {
+            notification.error('Please enter a person name');
+            return;
+        }
+        createPersonBtn.disabled = true;
+        try {
+            const createResponse = await fetch(window.APP_CONFIG.urls.api_people_create, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: personName.trim()
+                })
+            });
+            if (createResponse.ok) {
+                notification.success(`Created "${personName}"`);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                const error = await createResponse.json();
+                notification.error(`${error?.error}`);
+            }
+        } catch (err) {
+            notification.error(err.message);
+        } finally {
+            createPersonBtn.disabled = false;
+        }
+    })
+}
 
 // Build keyboard shortcut map from buttons or shortcut items
 document.querySelectorAll('[data-shortcut]').forEach(element => {
@@ -291,7 +329,7 @@ document.addEventListener('keydown', (e) => {
         keyboardHelpModal.open();
     }
 
-    if(e.key ==='Enter'){
+    if (e.key === 'Enter') {
         assignSelectedBtn.click();
     }
 });
