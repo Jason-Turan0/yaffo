@@ -10,7 +10,6 @@ class Photo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     full_file_path = db.Column(db.String, unique=True)
     relative_file_path = db.Column(db.String, unique=True)
-    hash = db.Column(db.String)
     date_taken = db.Column(db.String)
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)

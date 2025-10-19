@@ -13,6 +13,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.jobProgress = {
             onError = () => {
             },
             hasResults = false,
+            pollingInterval = null,
             onShowResults = () => {
             },
         } = options;
@@ -137,7 +138,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.jobProgress = {
 
         const startPolling = () => {
             if (document.querySelectorAll('.job-card').length > 0) {
-                pollInterval = setInterval(pollJobStatus, 1000);
+                pollInterval = setInterval(pollJobStatus, pollingInterval || 15000);
                 pollJobStatus();
             }
         };

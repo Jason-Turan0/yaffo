@@ -25,7 +25,7 @@ def start_app(c, host="127.0.0.1", port=5000, debug=True):
 
 
 @task
-def start_tasks(c, workers=8, worker_type="process"):
+def start_tasks(c, workers=4, worker_type="process"):
     """
     Start the Huey task consumer for background job processing.
 

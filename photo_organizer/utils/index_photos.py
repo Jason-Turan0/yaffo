@@ -27,11 +27,6 @@ logger = get_logger(__name__, 'background_tasks')
 _IS_MAC = platform.system().lower() == "darwin"
 _HAS_EXIFTOOL = shutil.which("exiftool") is not None
 
-def hash_image(photo_path: Path) -> str:
-    from photo_organizer.scripts.remove_duplicates import hash_image as _hash_image
-    return str(_hash_image(photo_path))
-
-
 def get_photo_files(root: Path) -> List[Path]:
     return [
         p for p in root.rglob("*")
@@ -155,27 +150,20 @@ def get_exif_tags(img: PIL_Image) -> List[Dict[str, str]]:
 
 def import_photo(photo_path: Path) -> Optional[dict]:
     date_taken = get_photo_date(str(photo_path))
-    image = image_from_path(photo_path)
-    latitude, longitude, location_name = get_gps_coordinates(image)
-    tags = get_exif_tags(image)
     return {
         "full_file_path": str(photo_path),
         "relative_file_path": str(photo_path.relative_to(ROOT_DIR)),
         "date_taken": date_taken,
-        "hash": hash_image(photo_path),
-        "latitude": latitude,
-        "longitude": longitude,
-        "location_name": location_name,
-        "tags": tags
     }
 
-def index_photo_faces(photo_path: Path) -> Optional[list[dict]]:
+def index_photo(photo_path: Path) -> Optional[dict]:
     try:
         image = image_from_path(photo_path)
         image_numpy = image_to_numpy(image)
         face_locations = face_recognition.face_locations(image_numpy)
         face_embeddings = face_recognition.face_encodings(image_numpy, face_locations)
-
+        latitude, longitude, location_name = get_gps_coordinates(image)
+        tags = get_exif_tags(image)
         faces_data = []
         for i, (loc, emb) in enumerate(zip(face_locations, face_embeddings)):
             thumb_path = save_face_thumbnail(photo_path, i, loc)
@@ -189,7 +177,13 @@ def index_photo_faces(photo_path: Path) -> Optional[list[dict]]:
                 'location_bottom': bottom,
                 'location_left': left
             })
-        return faces_data
+        return {
+            'latitude': latitude,
+            'longitude': longitude,
+            'location_name': location_name,
+            'tags': tags,
+            'faces_data': faces_data,
+        }
 
     except Exception as e:
         print(f"Error processing faces for {photo_path}: {e}")
@@ -217,7 +211,7 @@ def index_photos_batch(
     cancelled = False
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(index_photo_faces, Path(p)): p for p in photo_paths}
+        futures = {executor.submit(index_photo, Path(p)): p for p in photo_paths}
 
         for i, future in enumerate(as_completed(futures)):
             if should_cancel and should_cancel():
@@ -234,7 +228,6 @@ def index_photos_batch(
                     photo = Photo(
                         full_file_path=result["full_file_path"],
                         relative_file_path=result["relative_file_path"],
-                        hash=result["hash"],
                         date_taken=result["date_taken"],
                         latitude=result.get("latitude"),
                         longitude=result.get("longitude"),

@@ -1,14 +1,16 @@
 from pathlib import Path
+
+import numpy as np
+from sklearn.cluster import DBSCAN
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
 from photo_organizer.db.models import Job, Photo, JOB_STATUS_CANCELLED, Face, Tag, FACE_STATUS_UNASSIGNED, Person, \
-    JobResult, JOB_STATUS_RUNNING, JOB_STATUS_PENDING
-from photo_organizer.db.repositories.person_repository import update_person_embedding
-from photo_organizer.utils.index_photos import index_photo_faces, import_photo
+    JobResult, JOB_STATUS_RUNNING, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED, JOB_STATUS_COMPLETED
+from photo_organizer.utils.index_photos import index_photo, import_photo
 from photo_organizer.common import DB_PATH
 from photo_organizer.logging_config import get_logger
 from photo_organizer.background_tasks.config import huey
-from photo_organizer.domain.compare_utils import calculate_similarity
+from photo_organizer.domain.compare_utils import calculate_similarity, load_embedding
 import json
 
 engine = create_engine(
@@ -73,7 +75,6 @@ def import_photo_task(job_id: str, file_path_batch: list[str]):
             photo = Photo(
                 full_file_path=result["full_file_path"],
                 relative_file_path=result["relative_file_path"],
-                hash=result["hash"],
                 date_taken=result["date_taken"],
                 latitude=result.get("latitude"),
                 longitude=result.get("longitude"),
@@ -81,15 +82,6 @@ def import_photo_task(job_id: str, file_path_batch: list[str]):
             )
             session.add(photo)
             session.flush()
-
-            # Add all tags for this photo
-            for tag_data in result.get("tags", []):
-                tag = Tag(
-                    photo_id=photo.id,
-                    tag_name=tag_data['tag_name'],
-                    tag_value=tag_data['tag_value']
-                )
-                session.add(tag)
         processed_count = len(processed_results)
         update_job_params ={
             'completed_count': Job.completed_count + processed_count,
@@ -127,7 +119,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
 
     for index, file_path in enumerate(file_path_batch):
         # Periodically check for cancellation without holding database lock
-        if index % check_cancel_frequency == 0:
+        if index > 0 and index % check_cancel_frequency == 0:
             job_status = get_job_status(job_id)
             if job_status == JOB_STATUS_CANCELLED:
                 logger.info(f"Job {job_id} cancelled at photo {index}/{len(file_path_batch)}")
@@ -135,8 +127,8 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                 break
 
         logger.debug(f"Processing photo {file_path}")
-        faces_data = index_photo_faces(Path(file_path))
-        if faces_data is None:
+        index_results = index_photo(Path(file_path))
+        if index_results is None:
             logger.warning(f"Failed to process faces for photo {file_path}")
             error_count += 1
             continue
@@ -144,7 +136,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
         # Store result for later database insertion
         processed_results.append({
             'full_file_path': file_path,
-            'faces_data': faces_data,
+            'index_results': index_results,
         })
     session = SessionFactory()
     try:
@@ -158,13 +150,29 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
         # Bulk insert all faces
         for result in processed_results:
             full_file_path = result["full_file_path"]
-            faces_data = result["faces_data"]
+            index_results = result["index_results"]
+            faces_data = index_results["faces_data"]
+            latitude = index_results["latitude"]
+            longitude = index_results["longitude"]
+            location_name = index_results["location_name"]
+            tags = index_results["tags"]
             photo = next(photo for photo in photos_in_batch if photo.full_file_path == full_file_path)
             if photo is None:
                 logger.error(f"Failed to find photo in db for {full_file_path}")
                 error_count += 1
                 continue
-
+            photo.latitude = latitude
+            photo.longitude = longitude
+            photo.location_name = location_name
+            # Add all tags for this photo
+            for tag_data in tags:
+                tag = Tag(
+                    photo_id=photo.id,
+                    tag_name=tag_data['tag_name'],
+                    tag_value=tag_data['tag_value']
+                )
+                session.add(tag)
+            photo.status =PHOTO_STATUS_INDEXED
             # Add all faces for this photo
             for face_data in faces_data:
                 face = Face(
@@ -187,7 +195,6 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
         }
         if job_status == JOB_STATUS_PENDING:
             update_job_params['status'] = JOB_STATUS_RUNNING
-
         session.query(Job).filter_by(id=job_id).update(update_job_params)
         session.commit()
         logger.info(
@@ -198,6 +205,64 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
         session.rollback()
         session.query(Job).filter_by(id=job_id).update({
             'error_count': Job.error_count + len(file_path_batch)
+        })
+        session.commit()
+    finally:
+        session.close()
+        SessionFactory.remove()
+
+@huey.task(context=True)
+def discover_people_task(job_id: str, face_ids: list[int], distance_threshold: int, task=None):
+    logger.info(f"Starting discover_people_task for job {job_id} with {len(face_ids)} faces and distance threshold {distance_threshold}")
+
+    session = SessionFactory()
+    try:
+        job_status = get_job_status(job_id)
+        if job_status == JOB_STATUS_CANCELLED:
+            return
+
+        faces = (session.query(Face)
+                 .filter(Face.status == FACE_STATUS_UNASSIGNED)
+                 .all())
+        embeddings = []
+        face_ids = []
+
+        for face in faces:
+            embeddings.append(load_embedding(face.embedding))
+            face_ids.append(face.id)
+
+        embeddings = np.array(embeddings)
+        eps =0.35 * (distance_threshold * 0.1)
+        # Step 2: cluster with DBSCAN
+        clustering = DBSCAN(eps=eps, min_samples=1, metric="euclidean").fit(embeddings)
+        clusters = {}
+        for face_id, label in zip(face_ids, clustering.labels_):
+            if label == -1:  # skip noise faces
+                continue
+            label = f"Cluster {label}"
+            cluster = clusters[label] if label in clusters else {'label': label, 'face_ids': []}
+            clusters[label] = cluster
+            cluster["face_ids"].append(face_id)
+
+        job_result = JobResult(
+            job_id=job_id,
+            huey_task_id=task.id,
+            result_data=json.dumps({'clusters': [val for val in clusters.values()]})
+        )
+        session.add(job_result)
+        session.query(Job).filter_by(id=job_id).update({
+            'completed_count': 1,
+            'status': JOB_STATUS_COMPLETED
+        })
+        session.commit()
+        logger.info(f"Completed discover_people_task for job {job_id}")
+
+    except Exception as e:
+        logger.error(f"Error in discover_people_task for job {job_id}: {e}", exc_info=True)
+        session.rollback()
+        session.query(Job).filter_by(id=job_id).update({
+            'error_count': 1,
+            'status': JOB_STATUS_COMPLETED
         })
         session.commit()
     finally:

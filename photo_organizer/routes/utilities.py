@@ -4,14 +4,14 @@ from photo_organizer.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS
     JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED, PersonFace, FACE_STATUS_ASSIGNED, JobResult, \
     PHOTO_STATUS_INDEXED, PHOTO_STATUS_IMPORTED
 from photo_organizer.common import MEDIA_DIR, PHOTO_EXTENSIONS, ROOT_DIR
-from photo_organizer.background_tasks.tasks import index_photo_task, auto_assign_faces_task, import_photo_task
+from photo_organizer.background_tasks.tasks import index_photo_task, auto_assign_faces_task, import_photo_task, \
+    discover_people_task
 from pathlib import Path
 from itertools import batched
 import uuid
 import json
 
 from photo_organizer.utils.index_photos import delete_orphaned_photos
-from photo_organizer.db.repositories.person_repository import update_person_embedding
 from sqlalchemy.orm import joinedload
 
 
@@ -85,42 +85,50 @@ def init_utilities_routes(app: Flask):
         files_to_index = data.get('files_to_index', [])
         files_to_delete = data.get('files_to_delete', [])
 
+        db_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.relative_file_path, Photo.status).all()
+        db_photos_dict = {photo[1]: photo for photo in db_photos}
+
+        files_to_import = [file_path for file_path in files_to_index if not file_path in db_photos_dict.keys()]
+
         import_job_id = str(uuid.uuid4())
         import_job = Job(
             id=import_job_id,
             name='import_photos',
             status=JOB_STATUS_PENDING,
-            task_count=len(files_to_index),
+            task_count=len(files_to_import),
             message='Imported {totalCount}/{taskCount} photos',
             completed_count=0,
             error_count=0,
             cancelled_count=0,
             job_data=json.dumps({
-                'files_to_import': files_to_index
+                'files_to_import': files_to_import
             })
         )
+        files_needing_indexing = [file_path for file_path in files_to_index if
+                                  not file_path in db_photos_dict.keys() or
+                                  db_photos_dict[file_path][3] != PHOTO_STATUS_INDEXED]
         index_job_id = str(uuid.uuid4())
         index_job = Job(
             id=index_job_id,
             name='index_photos',
             status=JOB_STATUS_PENDING,
-            task_count=len(files_to_index),
+            task_count=len(files_needing_indexing),
             message='Indexed {totalCount}/{taskCount} photos',
             completed_count=0,
             error_count=0,
             cancelled_count=0,
             job_data=json.dumps({
-                'files_to_index': files_to_index
+                'files_to_index': files_needing_indexing
             })
         )
         db.session.add(import_job)
         db.session.add(index_job)
         db.session.commit()
 
-        for batch in batched(files_to_index, 25):
+        for batch in batched(files_to_import, 250):
             import_photo_task(import_job_id, list(batch))
-        for batch in batched(files_to_index, 10):
-            index_photo_task(import_job_id, list(batch))
+        for batch in batched(files_needing_indexing, 10):
+            index_photo_task(index_job_id, list(batch))
         delete_orphaned_photos(db.session, files_to_delete)
         return jsonify({'job_id': import_job_id}), 202
 
@@ -216,7 +224,8 @@ def init_utilities_routes(app: Flask):
         db.session.commit()
 
         for batch in batched(unassigned_face_ids, 100):
-            auto_assign_faces_task(job_id=job_id, face_id_batch = list(batch), person_id = person_id, similarity_threshold =similarity_threshold)
+            auto_assign_faces_task(job_id=job_id, face_id_batch=list(batch), person_id=person_id,
+                                   similarity_threshold=similarity_threshold)
 
         return jsonify({'job_id': job_id}), 202
 
@@ -233,7 +242,7 @@ def init_utilities_routes(app: Flask):
 
         matched_faces = []
         for result in job.results:
-            data= json.loads(result.result_data)
+            data = json.loads(result.result_data)
             matched_faces.extend(data["matches"])
 
         person_id = job_data.get('person_id')
@@ -268,4 +277,99 @@ def init_utilities_routes(app: Flask):
 
     @app.route("/utilities/discover-people", methods=["GET"])
     def utilities_discover_people():
-        return render_template("utilities/discover_people.html")
+        people_count = db.session.query(Person).count()
+        unassigned_count = db.session.query(Face).filter(Face.status == FACE_STATUS_UNASSIGNED).count()
+
+        active_jobs = db.session.query(Job).filter(
+            Job.name == 'discover_people',
+            Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED])
+        ).all()
+
+        return render_template(
+            "utilities/discover_people.html",
+            people_count=people_count,
+            unassigned_count=unassigned_count,
+            active_jobs=[job.to_dict() for job in active_jobs]
+        )
+
+    @app.route("/utilities/discover-people/start", methods=["POST"])
+    def utilities_discover_people_start():
+        data = request.get_json()
+        distance_threshold = data.get('distance_threshold', 5)
+
+        unassigned_faces = db.session.query(Face.id).filter(Face.status == FACE_STATUS_UNASSIGNED).all()
+        unassigned_face_ids = [face_id for (face_id,) in unassigned_faces]
+
+        if not unassigned_face_ids:
+            return jsonify({'error': 'No unassigned faces to process'}), 400
+
+        job_id = str(uuid.uuid4())
+        job = Job(
+            id=job_id,
+            name='discover_people',
+            status=JOB_STATUS_RUNNING,
+            task_count=1,
+            message='Clustering faces...',
+            completed_count=0,
+            error_count=0,
+            cancelled_count=0,
+            job_data=json.dumps({
+                'distance_threshold': distance_threshold,
+                'unassigned_face_ids': unassigned_face_ids
+            })
+        )
+        db.session.add(job)
+        db.session.commit()
+
+        discover_people_task(job_id=job_id, face_ids=unassigned_face_ids, distance_threshold=distance_threshold)
+        return jsonify({'job_id': job_id}), 202
+
+    @app.route("/utilities/discover-people/results/<job_id>", methods=["GET"])
+    def utilities_discover_people_results(job_id: str):
+        job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
+        if not job:
+            return "Job not found", 404
+
+        if job.status != JOB_STATUS_COMPLETED:
+            return redirect(url_for('utilities_discover_people'))
+
+        job_data = json.loads(job.job_data) if job.job_data else {}
+        distance_threshold = job_data.get('distance_threshold')
+
+        clusters_data = []
+        if job.results:
+            result_data = json.loads(job.results[0].result_data)
+            clusters_data = result_data.get('clusters', [])
+
+        all_face_ids = {face_id for cluster in clusters_data for face_id in cluster["face_ids"]}
+        faces = (
+            db.session.query(Face)
+            .filter(Face.id.in_(all_face_ids))
+            .options(joinedload(Face.photo))
+            .all()
+        )
+        faces_dict = {face.id: face for face in faces}
+        def map_face(face_id):
+            face = faces_dict[face_id]
+            return {
+                'id': face_id,
+                'relative_file_path': face.relative_file_path,
+                'photo_date_taken': face.photo.date_taken
+            }
+        clusters_with_faces = [
+            {
+                "label": cluster["label"],
+                "faces": [map_face(face_id) for face_id in cluster["face_ids"]]
+             } for cluster in clusters_data
+        ]
+        clusters_with_faces.sort(key=lambda cluster: len(cluster["faces"]), reverse=True)
+        people = db.session.query(Person).order_by(Person.name).all()
+        return render_template(
+            "utilities/discover_people_results.html",
+            job_id=job_id,
+            clusters=clusters_with_faces,
+            people=[{"id": person.id, "name": person.name} for person in people],
+            distance_threshold=distance_threshold,
+            total_clusters=len(clusters_with_faces),
+            total_faces=len(all_face_ids)
+        )

@@ -193,9 +193,6 @@ def init_faces_routes(app: Flask):
                     {"person_id": person_id, "face_id": fid, "similarity": similarity_by_face_id.get(int(fid))}
                     for fid in selected_face_ids
                 ])
-                stmt = stmt.on_conflict_do_nothing(
-                    index_elements=["person_id", "face_id"]
-                )
                 db.session.execute(stmt)
                 db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
                     {Face.status: face_status}, synchronize_session=False
