@@ -174,3 +174,35 @@ body {
     font-size: 14px;
     color: #6c757d;
 }
+
+/* Radio Button Styles */
+.radio-group {
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #495057;
+    transition: color 0.2s;
+}
+
+.radio-label:hover {
+    color: #212529;
+}
+
+.radio-label input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    cursor: pointer;
+    accent-color: #007BFF;
+}
+
+.radio-label span {
+    user-select: none;
+}

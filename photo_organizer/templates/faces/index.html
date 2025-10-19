@@ -11,13 +11,21 @@
 {% from "components/info_modal.html" import render_info_modal %}
 
 {% macro render_modal_keyboard_help() %}
-<div id="keyboard-help-content">
-    <h3 style="margin-top: 0;">Quick Assignment</h3>
+<div id="keyboard-help-content" style="overflow-y: auto; max-height: calc(90vh - 150px);">
+    <h3 style="margin-top: 0;">How This Page Works</h3>
+    <ul style="margin: 0 0 20px 20px; line-height: 1.6; color: #495057;">
+        <li>Faces are automatically grouped and selected for bulk assignment</li>
+        <li><strong>Group by People:</strong> Matches faces to specific people</li>
+        <li><strong>Group by Similarity:</strong> Clusters visually similar faces together</li>
+        <li><strong>Similarity Threshold:</strong> Adjust to create larger groups with acceptable matching quality</li>
+    </ul>
+
+    <h3 style="margin-top: 20px;">Quick Assignment</h3>
     <div class="help-shortcuts-list">
         {% for person in people[:9] %}
         <div class="help-shortcut-item">
             <kbd>{{ loop.index }}</kbd>
-            <span>Assign to {{ person.name }}</span>
+            <span>{{ person.name }}</span>
         </div>
         {% endfor %}
     </div>
@@ -29,7 +37,11 @@
             <span>Select range of faces</span>
         </div>
         <div class="help-shortcut-item">
-            <kbd>i</kbd>
+            <kbd>Enter</kbd>
+            <span>Assign to selected person</span>
+        </div>
+        <div class="help-shortcut-item">
+            <kbd>i</kbd> or <kbd>0</kbd>
             <span>Ignore selected faces</span>
         </div>
         <div class="help-shortcut-item">
@@ -37,13 +49,14 @@
             <span>Show this help</span>
         </div>
     </div>
-    <p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
-                💡 Tip: Select faces by clicking, then press a number key to assign!
-        💡 Tip: Click a face, then Shift+Click another to select all faces in between!
-    </p>
-    <p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
 
-    </p>
+    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-left: 3px solid #007BFF; border-radius: 4px;">
+        <p style="margin: 0; color: #495057; font-size: 14px; line-height: 1.5;">
+            <strong>💡 Tips:</strong><br>
+            • Click faces then press a number key for quick assignment<br>
+            • Shift+Click to select multiple faces at once
+        </p>
+    </div>
 </div>
 {% endmacro %}
 
@@ -52,9 +65,22 @@
      {% macro render_filters() %}
        {% include "filters/_person.html" %}
        <div class="filter-group">
+            <label for="group-by-people">Group by</label>
+            <div class="radio-group">
+                <label class="radio-label">
+                    <input type="radio" id="group-by-people" name="group_by" value="people" {% if not filters.selected_group_by or filters.selected_group_by == 'people' %}checked{% endif %}>
+                    <span>People</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" id="group-by-similarity" name="group_by" value="similarity" {% if filters.selected_group_by == 'similarity' %}checked{% endif %}>
+                    <span>Similarity</span>
+                </label>
+            </div>
+        </div>
+       <div class="filter-group">
             <label for="threshold-range">Similarity Threshold</label>
-            <input type="range" id="threshold-range" name="threshold" min="0.9" max="1" step="0.01" value="{{ filters.selected_threshold or 0.97 }}">
-            <div class="threshold-display"><span id="threshold-value">{{ (filters.selected_threshold or 0.97) * 100 }}%</span></div>
+            <input type="range" id="threshold-range" name="threshold" min="0" max="10" step="1" value="{{ filters.selected_threshold or 5 }}">
+            <div class="threshold-display"><span id="threshold-value">{{ (filters.selected_threshold or 5)}}</span></div>
         </div>
         {% if filters.selected_assign_person_id %}
         <input type="hidden" name="assign_person" value="{{ filters.selected_assign_person_id }}">
@@ -64,7 +90,7 @@
         <form method="POST" action="{{ url_for('faces_assign') }}" id="sidebar-assign-form">
         <input type="hidden" name="face_status" value="ASSIGNED">
 
-        {% if people|length > 10 %}
+
         <div class="person-assign-select">
             <label for="sidebar-person-select">Assign to Person</label>
             <select name="person" id="sidebar-person-select" class="searchable-select">
@@ -83,20 +109,18 @@
                 <span>{{ person.name }}</span>
             </div>
             {% endfor %}
+            <div class="shortcut-item">
+                <kbd>Enter</kbd>
+                <span>Assign to selected person</span>
+            </div>
+        <div class="shortcut-item">
+            <kbd>i</kbd> or <kbd>0</kbd>
+            <span>Ignore selected faces</span>
         </div>
-        {% else %}
-        <div class="person-assign-list">
-            {% for person in people %}
-            <button type="button" class="btn-primary person-assign-btn sidebar-assign-person" data-person-id="{{ person.id }}" data-shortcut="{% if loop.index <= 9 %}{{ loop.index }}{% endif %}">
-                {% if loop.index <= 9 %}<kbd class="btn-kbd">{{ loop.index }}</kbd>{% endif %}
-                {{ person.name }}
-            </button>
-            {% endfor %}
         </div>
-        {% endif %}
 
         <div class="keyboard-help">
-            <small>Press <kbd>?</kbd> for shortcuts</small>
+            <small>Press <kbd>?</kbd> for help</small>
         </div>
         <div id="sidebar-face-checkboxes"></div>
     </form>

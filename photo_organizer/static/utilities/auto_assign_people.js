@@ -7,6 +7,7 @@ window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) 
         },
         onError: (job) => {},
         hasResults: true,
+        pollingInterval: 5000,
         onShowResults: (jobId) => {
              window.location.href = config.buildUrl('utilities_auto_assign_results', {job_id: jobId});
         }

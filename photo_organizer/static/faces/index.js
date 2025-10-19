@@ -72,7 +72,7 @@ async function submitFaces(personId, faceStatus) {
 const thresholdRange = document.getElementById('threshold-range');
 const thresholdValue = document.getElementById('threshold-value');
 thresholdRange.addEventListener('input', (e) => {
-    thresholdValue.textContent = Math.round(e.target.value * 100) + '%';
+    thresholdValue.textContent = e.target.value;
 });
 
 // Toggle selection on click with shift-select support

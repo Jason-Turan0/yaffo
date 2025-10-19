@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, List
 import numpy as np
 from flask import Flask, render_template, request, jsonify
+from sklearn.cluster import DBSCAN
 
 from photo_organizer.logging_config import get_logger
 from sqlalchemy import extract
@@ -17,8 +18,9 @@ from photo_organizer.db.repositories.person_repository import update_person_embe
 from photo_organizer.db.repositories.photos_repository import get_distinct_years, get_distinct_months
 from photo_organizer.domain.compare_utils import load_embedding, calculate_similarity
 
-DEFAULT_THRESHOLD = 0.97  # configurable similarity threshold
+DEFAULT_THRESHOLD = 5  # configurable similarity threshold
 DEFAULT_PAGE_SIZE = 250
+DEFAULT_GROUP_BY = 'similarity'
 
 
 @dataclass
@@ -40,6 +42,93 @@ class FaceSuggestion:
 logger = get_logger(__name__, 'webapp')
 
 
+def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int) -> list[FaceSuggestion]:
+    embeddings = []
+    face_ids = []
+    face_dict = {face.id: face for face in unassigned_faces}
+    for face in unassigned_faces:
+        embeddings.append(load_embedding(face.embedding))
+        face_ids.append(face.id)
+    embeddings = np.array(embeddings)
+    eps = 0.45 - (threshold / 100)
+    clustering = DBSCAN(eps=eps, min_samples=1, metric="euclidean").fit(embeddings)
+    clusters = {}
+    for face_id, label in zip(face_ids, clustering.labels_):
+        if label == -1:  # skip noise faces
+            continue
+        label = f"Cluster {label}"
+        cluster = clusters[label] if label in clusters else {'label': label, 'face_ids': []}
+        clusters[label] = cluster
+        cluster["face_ids"].append(face_id)
+
+    suggestions = [FaceSuggestion(
+        person_ids=[],
+        people=[],
+        suggestion_name=cluster["label"],
+        faces=[
+            FaceViewModel(face_id, face_dict[face_id].relative_file_path, face_dict[face_id].photo.date_taken, None)
+            for face_id in cluster["face_ids"]
+        ],
+    ) for cluster in clusters.values()]
+    suggestions.sort(key=lambda suggestion: len(suggestion.faces), reverse=True)
+    return suggestions
+
+
+def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Person], threshold: int, person_id) -> list[
+    FaceSuggestion]:
+    face_suggestions = []
+    default_suggestion = FaceSuggestion(
+        person_ids=[],
+        people=[],
+        suggestion_name='Unknown',
+        faces=[]
+    )
+    computed_threshold = 0.9 + (threshold / 100)
+    for face in unassigned_faces:
+        emb = load_embedding(face.embedding)
+
+        def flat_map_people(person: Person) -> List[Tuple[Person, int, np.ndarray]]:
+            return [(person, embedding_by_year.year, load_embedding(embedding_by_year.avg_embedding))
+                    for embedding_by_year in person.embeddings_by_year]
+
+        matching_people: List[Tuple[Person, float]] = (
+            _.chain(people)
+            .flat_map(flat_map_people)
+            .map(lambda tuple: (tuple[0], tuple[1], cosine_similarity([emb], [tuple[2]])[0][0]))
+            .filter(lambda tuple: tuple[2] > computed_threshold and (person_id is None or tuple[0].id == person_id))
+            .sort_by(lambda pair: pair[1], True)
+            .group_by(lambda pair: pair[0].id)
+            .values()
+            .map(lambda tuples_by_person: tuples_by_person[0])
+            .value()
+        )
+        best_suggestion: FaceSuggestion | None = next(
+            (suggestion for suggestion in face_suggestions
+             if set(suggestion.person_ids) == (set([pair[0].id for pair in matching_people]))), None
+        )
+        if best_suggestion is None and len(matching_people) > 0:
+            best_suggestion = FaceSuggestion(
+                person_ids=[pair[0].id for pair in matching_people],
+                people=[pair[0] for pair in matching_people],
+                suggestion_name=" OR ".join([pair[0].name for pair in matching_people]),
+                faces=[]
+            )
+            face_suggestions.append(best_suggestion)
+
+        if best_suggestion is not None:
+            best_sim = matching_people[0][2]
+            best_suggestion.faces.append(
+                FaceViewModel(face.id, face.relative_file_path, face.photo.date_taken, best_sim))
+        else:
+            default_suggestion.faces.append(
+                FaceViewModel(face.id, face.relative_file_path, face.photo.date_taken, None))
+
+    face_suggestions.sort(key=lambda suggestion: len(suggestion.faces), reverse=True)
+
+    face_suggestions.append(default_suggestion)
+    return face_suggestions
+
+
 def init_faces_routes(app: Flask):
     @app.route("/faces", methods=["GET"])
     def faces_index():
@@ -51,11 +140,12 @@ def init_faces_routes(app: Flask):
         )
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
-        threshold = request.args.get("threshold", default=DEFAULT_THRESHOLD, type=float)
+        threshold = request.args.get("threshold", default=DEFAULT_THRESHOLD, type=int)
         page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", default=DEFAULT_PAGE_SIZE, type=int)
         person_id = request.args.get("person", type=int)
         assign_person_id = request.args.get("assign_person", type=int)
+        group_by = request.args.get("group_by", type=str, default=DEFAULT_GROUP_BY)
 
         if year:
             query = query.filter(extract("year", Photo.date_taken) == year)
@@ -79,53 +169,12 @@ def init_faces_routes(app: Flask):
                   .order_by(func.count(PersonFace.face_id).desc(), Person.name)
                   .all()
                   )
-        face_suggestions = []
-        default_suggestion = FaceSuggestion(
-            person_ids=[],
-            people=[],
-            suggestion_name='Unknown',
-            faces=[]
-        )
-        for face in unassigned_faces:
-            emb = load_embedding(face.embedding)
 
-            def flat_map_people(person: Person) -> List[Tuple[Person, int, np.ndarray]]:
-                return [(person, embedding_by_year.year, load_embedding(embedding_by_year.avg_embedding))
-                        for embedding_by_year in person.embeddings_by_year]
+        face_suggestions = (
+            make_suggestions_by_similarity(unassigned_faces, threshold)) \
+            if (group_by == 'similarity') else \
+            make_suggestions_for_people(unassigned_faces, people, threshold, person_id)
 
-            matching_people: List[Tuple[Person, float]] = (
-                _.chain(people)
-                .flat_map(flat_map_people)
-                .map(lambda tuple: (tuple[0], tuple[1], cosine_similarity([emb], [tuple[2]])[0][0]))
-                .filter(lambda tuple: tuple[2] > threshold and (person_id is None or tuple[0].id == person_id))
-                .sort_by(lambda pair: pair[1], True)
-                .group_by(lambda pair: pair[0].id)
-                .values()
-                .map(lambda tuples_by_person: tuples_by_person[0])
-                .value()
-            )
-            best_suggestion: FaceSuggestion | None = next(
-                (suggestion for suggestion in face_suggestions
-                 if set(suggestion.person_ids) == (set([pair[0].id for pair in matching_people]))), None
-            )
-            if best_suggestion is None and len(matching_people) > 0:
-                best_suggestion = FaceSuggestion(
-                    person_ids=[pair[0].id for pair in matching_people],
-                    people=[pair[0] for pair in matching_people],
-                    suggestion_name=" OR ".join([pair[0].name for pair in matching_people]),
-                    faces=[]
-                )
-                face_suggestions.append(best_suggestion)
-
-            if best_suggestion is not None:
-                best_sim = matching_people[0][2]
-                best_suggestion.faces.append(
-                    FaceViewModel(face.id, face.relative_file_path, face.photo.date_taken, best_sim))
-            else:
-                default_suggestion.faces.append(
-                    FaceViewModel(face.id, face.relative_file_path, face.photo.date_taken, None))
-
-        face_suggestions.append(default_suggestion)
         for suggestion in face_suggestions:
             suggestion.faces = _.sort_by(suggestion.faces, lambda f: f.similarity if f.similarity is not None else 0,
                                          reverse=True)
@@ -142,6 +191,7 @@ def init_faces_routes(app: Flask):
             "people": people,
             'selected_person_id': person_id,
             'selected_assign_person_id': assign_person_id,
+            "selected_group_by": group_by,
         }
 
         pagination = {
