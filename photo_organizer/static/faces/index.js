@@ -58,6 +58,19 @@ async function submitFaces(personId, faceStatus) {
                         group.remove();
                     }
                 });
+                const nextSuggestionGroup = document.querySelectorAll('.suggestion-group')[0];
+                if(nextSuggestionGroup) {
+                    const selectAllCheckbox = nextSuggestionGroup.querySelector('.group-select-checkbox');
+                    if(selectAllCheckbox) {
+                        selectAllCheckbox.checked = true;
+                    }
+                    nextSuggestionGroup.querySelectorAll('.face').forEach(face => {
+                        face.classList.add('selected');
+                        const input = face.querySelector('input');
+                        input.checked =true;
+                    })
+                }
+
             }, 350);
         } else {
             showNotification(result.message, 'error');
