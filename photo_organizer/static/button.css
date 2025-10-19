@@ -68,6 +68,15 @@
     transform: translateY(0);
 }
 
+.btn-success {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: #45a049;
+}
+
 /* Full-width button variant */
 .btn-block {
     width: 100%;

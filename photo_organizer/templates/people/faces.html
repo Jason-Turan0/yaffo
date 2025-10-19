@@ -41,14 +41,14 @@
                     {% endif %}
                 </p>
             </div>
-            <a href="{{ url_for('people_list') }}" class="back-link">← Back to People</a>
+            <a href="{{ url_for('people_list') }}" class="action-link">← Back to People</a>
         </div>
 
         {% if faces|length > 0 %}
         <div class="selection-controls">
-            <a href="#" id="select-all">Select all</a>
+            <a href="#" id="select-all" class="action-link">Select all</a>
             <span class="separator">|</span>
-            <a href="#" id="deselect-all">Clear selection</a>
+            <a href="#" id="deselect-all" class="action-link">Clear selection</a>
         </div>
 
         <div class="faces-grid">

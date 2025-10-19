@@ -319,3 +319,15 @@ kbd {
     background: rgba(0, 0, 0, 0.9);
     transform: translateX(-50%) rotate(45deg);
 }
+
+.new-person-controls,
+.existing-person-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.new-person-controls input,
+.existing-person-controls select {
+    flex: 1;
+}

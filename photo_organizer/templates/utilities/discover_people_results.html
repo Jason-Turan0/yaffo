@@ -6,147 +6,153 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='utilities/discover_people_results.css') }}">
 {% endblock %}
 {% block utility_content %}
-<div class="utility-page">
-    <div class="page-header">
-        <h1>Discover People Results</h1>
-        <p class="subtitle">
-            Review {{ total_clusters }} face clusters found with distance threshold {{ distance_threshold }}
-        </p>
-        <div class="header-actions">
-            <a href="{{ url_for('utilities_discover_people') }}" class="btn btn-secondary">Back to Discover</a>
+    <div class="utility-page">
+        <div class="page-header">
+            <h1>Discover People Results</h1>
+            <p class="subtitle">
+                Review {{ total_clusters }} face clusters found with distance threshold {{ distance_threshold }}
+            </p>
+            <div class="header-actions">
+                <a href="{{ url_for('utilities_discover_people') }}" class="btn btn-secondary">Back to Discover</a>
+            </div>
         </div>
-    </div>
 
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-label">Total Clusters</div>
-            <div class="stat-value">{{ total_clusters }}</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Clusters</div>
+                <div class="stat-value">{{ total_clusters }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Faces</div>
+                <div class="stat-value">{{ total_faces }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Processed</div>
+                <div class="stat-value" id="processed-count">0</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Total Faces</div>
-            <div class="stat-value">{{ total_faces }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Processed</div>
-            <div class="stat-value" id="processed-count">0</div>
-        </div>
-    </div>
 
-    <div class="keyboard-shortcuts-info">
-        <div class="shortcuts-header">
-            <strong>Keyboard Shortcuts:</strong>
-        </div>
-        <div class="shortcuts-list">
-            {% for person in people[:9] %}
-            <span class="shortcut-item" data-person-id="{{ person.id }}" data-shortcut="{{ person.shortcut }}">
+        <div class="keyboard-shortcuts-info">
+            <div class="shortcuts-header">
+                <strong>Keyboard Shortcuts:</strong>
+            </div>
+            <div class="shortcuts-list">
+                {% for person in people[:9] %}
+                    <span class="shortcut-item" data-person-id="{{ person.id }}" data-shortcut="{{ person.shortcut }}">
                 <kbd>{{ person.shortcut }}</kbd> {{ person.name }}
             </span>
-            {% endfor %}
-            <span class="shortcut-item">
+                {% endfor %}
+                <span class="shortcut-item">
                 <kbd>i</kbd> Ignore
             </span>
-            <span class="shortcut-item">
+                <span class="shortcut-item">
                 <kbd>d</kbd> Delete
             </span>
-        </div>
-    </div>
-
-    {% if clusters|length > 0 %}
-    <div class="section">
-        <div class="clusters-container">
-            {% for cluster in clusters %}
-            <div class="cluster-wrapper" data-cluster-label="{{ cluster.label }}" data-cluster-index="{{ loop.index0 }}">
-                {% call collapsible_panel('cluster-' ~ loop.index0, cluster.label ~ ' (' ~ cluster.faces|length ~ ' faces)', is_open=loop.index0 == 0) %}
-                    <div class="cluster-faces-grid">
-                        {% for face_data in cluster.faces %}
-                        <div class="cluster-face-card">
-                            <img src="/photos/{{ face_data.relative_file_path }}"
-                                 alt="Face {{ face_data.id }}"
-                                 class="cluster-face-image"
-                                 loading="lazy">
-                            <div class="cluster-face-meta">
-                                <small>{{ face_data.photo_date_taken[:10] }}</small>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-
-                    <div class="cluster-actions">
-                        <div class="action-section">
-                            <label class="action-label">Create New Person:</label>
-                            <div class="new-person-controls">
-                                <input type="text"
-                                       class="form-control new-person-name"
-                                       placeholder="Enter person name..."
-                                       data-cluster-label="{{ cluster.label }}">
-                                <button class="btn btn-success btn-create-person"
-                                        data-cluster-label="{{ cluster.label }}"
-                                        disabled>
-                                    Create Person
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="action-divider">OR</div>
-
-                        <div class="action-section">
-                            <label class="action-label">Assign to Existing Person:</label>
-                            <div class="existing-person-controls">
-                                <select class="form-control existing-person-select"
-                                        data-cluster-label="{{ cluster.label }}">
-                                    <option value="">-- Select a person --</option>
-                                    {% for person in people %}
-                                    <option value="{{ person.id }}" data-person-id="{{ person.id }}" {% if person.shortcut %}data-shortcut="{{ person.shortcut }}"{% endif %}>
-                                        {% if person.shortcut %}<kbd>{{ person.shortcut }}</kbd> {% endif %}{{ person.name }} ({{ person.face_count }} faces)
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                                <button class="btn btn-primary btn-assign-person"
-                                        data-cluster-label="{{ cluster.label }}"
-                                        disabled>
-                                    Assign to Person
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="action-divider">OR</div>
-
-                        <div class="action-section action-section-row">
-                            <button class="btn btn-warning btn-ignore-cluster"
-                                    data-cluster-label="{{ cluster.label }}">
-                                Ignore Cluster
-                            </button>
-                            <button class="btn btn-danger btn-delete-cluster"
-                                    data-cluster-label="{{ cluster.label }}">
-                                Delete Cluster
-                            </button>
-                        </div>
-                    </div>
-                {% endcall %}
             </div>
-            {% endfor %}
         </div>
+
+        {% if clusters|length > 0 %}
+            <div class="section">
+                <div class="clusters-container">
+                    {% for cluster in clusters %}
+                        <div class="cluster-wrapper" data-cluster-label="{{ cluster.label }}"
+                             data-cluster-index="{{ loop.index0 }}">
+                            {% call collapsible_panel('cluster-' ~ loop.index0, cluster.label ~ ' (' ~ cluster.faces|length ~ ' faces)', is_open=loop.index0 == 0) %}
+                                <div class="cluster-faces-grid">
+                                    {% for face_data in cluster.faces %}
+                                        <div class="cluster-face-card">
+                                            <img src="/photos/{{ face_data.relative_file_path }}"
+                                                 alt="Face {{ face_data.id }}"
+                                                 class="cluster-face-image"
+                                                 loading="lazy">
+                                            <div class="cluster-face-meta">
+                                                <small>{{ face_data.photo_date_taken[:10] }}</small>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="cluster-actions">
+                                    <div class="action-section">
+                                        <div class="form-group">
+                                            <label class="action-label">Create New Person:</label>
+                                            <div class="new-person-controls">
+                                                <input type="text"
+                                                       class="form-control new-person-name"
+                                                       placeholder="Enter person name..."
+                                                       data-cluster-label="{{ cluster.label }}">
+                                                <button class="btn btn-success btn-create-person"
+                                                        data-cluster-label="{{ cluster.label }}"
+                                                        disabled>
+                                                    Create Person
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="action-divider">OR</div>
+
+                                    <div class="action-section">
+                                        <label class="action-label">Assign to Existing Person:</label>
+                                        <div class="existing-person-controls">
+                                            <select class="form-control existing-person-select"
+                                                    data-cluster-label="{{ cluster.label }}">
+                                                <option value="">-- Select a person --</option>
+                                                {% for person in people %}
+                                                    <option value="{{ person.id }}" data-person-id="{{ person.id }}"
+                                                            {% if person.shortcut %}data-shortcut="{{ person.shortcut }}"{% endif %}>
+                                                        {% if person.shortcut %}
+                                                            <kbd>{{ person.shortcut }}</kbd> {% endif %}{{ person.name }}
+                                                        ({{ person.face_count }} faces)
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                            <button class="btn btn-primary btn-assign-person"
+                                                    data-cluster-label="{{ cluster.label }}"
+                                                    disabled>
+                                                Assign to Person
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="action-divider">OR</div>
+
+                                    <div class="action-section action-section-row">
+                                        <button class="btn btn-warning btn-ignore-cluster"
+                                                data-cluster-label="{{ cluster.label }}">
+                                            Ignore Cluster
+                                        </button>
+                                        <button class="btn btn-danger btn-delete-cluster"
+                                                data-cluster-label="{{ cluster.label }}">
+                                            Delete Cluster
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endcall %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h2>No clusters found</h2>
+                <p>No face clusters were discovered with the current distance threshold.</p>
+                <a href="{{ url_for('utilities_discover_people') }}" class="btn btn-primary">Try Again</a>
+            </div>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="empty-state">
-        <h2>No clusters found</h2>
-        <p>No face clusters were discovered with the current distance threshold.</p>
-        <a href="{{ url_for('utilities_discover_people') }}" class="btn btn-primary">Try Again</a>
-    </div>
-    {% endif %}
-</div>
 
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='components/collapsible_panel.js') }}"></script>
-<script src="{{ url_for('static', filename='utilities/discover_people_results.js') }}"></script>
-<script>
-window.PHOTO_ORGANIZER.initDiscoverPeopleResults(
-    {{ job_id | tojson }},
-    {{ clusters | tojson }},
-    {{ people | tojson }},
-    window.APP_CONFIG
-);
-</script>
+    <script src="{{ url_for('static', filename='components/collapsible_panel.js') }}"></script>
+    <script src="{{ url_for('static', filename='utilities/discover_people_results.js') }}"></script>
+    <script>
+        window.PHOTO_ORGANIZER.initDiscoverPeopleResults(
+            {{ job_id | tojson }},
+            {{ clusters | tojson }},
+            {{ people | tojson }},
+            window.APP_CONFIG
+        );
+    </script>
 {% endblock %}

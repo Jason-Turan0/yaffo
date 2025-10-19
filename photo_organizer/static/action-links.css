@@ -1,0 +1,24 @@
+.actions {
+    display: flex;
+    gap: 12px;
+}
+
+.action-link {
+    color: #007BFF;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s;
+}
+
+.action-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+.action-link.delete {
+    color: #dc3545;
+}
+
+.action-link.delete:hover {
+    color: #c82333;
+}

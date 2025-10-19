@@ -50,7 +50,7 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int)
         embeddings.append(load_embedding(face.embedding))
         face_ids.append(face.id)
     embeddings = np.array(embeddings)
-    eps = 0.45 - (threshold / 100)
+    eps = 0.45 - ((threshold *2) / 100)
     clustering = DBSCAN(eps=eps, min_samples=1, metric="euclidean").fit(embeddings)
     clusters = {}
     for face_id, label in zip(face_ids, clustering.labels_):
