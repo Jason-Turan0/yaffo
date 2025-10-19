@@ -35,7 +35,7 @@
             <label for="page-size">Items per page:</label>
             <select id="page-size" name="page-size" onchange="window.location.href = this.value">
                 {% for size in page_sizes %}
-                <option value="{{ base_url }}?page=1&page-size={{ size }}{{ extra_query }}"
+                <option value="{{ base_url }}?page=1&page_size={{ size }}{{ extra_query }}"
                         {% if size == page_size %}selected{% endif %}>
                     {{ size }}
                 </option>
@@ -44,13 +44,13 @@
         </div>
 
         <div class="page-navigation">
-            <a href="{{ base_url }}?page=1&page-size={{ page_size }}{{ extra_query }}"
+            <a href="{{ base_url }}?page=1&page_size={{ page_size }}{{ extra_query }}"
                class="page-btn {% if current_page == 1 %}disabled{% endif %}"
                {% if current_page == 1 %}onclick="return false;"{% endif %}>
                 &laquo; First
             </a>
 
-            <a href="{{ base_url }}?page={{ current_page - 1 }}&page-size={{ page_size }}{{ extra_query }}"
+            <a href="{{ base_url }}?page={{ current_page - 1 }}&page_size={{ page_size }}{{ extra_query }}"
                class="page-btn {% if current_page == 1 %}disabled{% endif %}"
                {% if current_page == 1 %}onclick="return false;"{% endif %}>
                 &lsaquo; Prev
@@ -60,13 +60,13 @@
                 Page {{ current_page }} of {{ total_pages }}
             </span>
 
-            <a href="{{ base_url }}?page={{ current_page + 1 }}&page-size={{ page_size }}{{ extra_query }}"
+            <a href="{{ base_url }}?page={{ current_page + 1 }}&page_size={{ page_size }}{{ extra_query }}"
                class="page-btn {% if current_page >= total_pages %}disabled{% endif %}"
                {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
                 Next &rsaquo;
             </a>
 
-            <a href="{{ base_url }}?page={{ total_pages }}&page-size={{ page_size }}{{ extra_query }}"
+            <a href="{{ base_url }}?page={{ total_pages }}&page_size={{ page_size }}{{ extra_query }}"
                class="page-btn {% if current_page >= total_pages %}disabled{% endif %}"
                {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
                 Last &raquo;

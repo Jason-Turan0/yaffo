@@ -6,173 +6,190 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='faces/index.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='searchable-select.css') }}">
 {% endblock %}
-{% from "_sidebar.html" import render_sidebar  %}
+{% from "_sidebar.html" import render_sidebar %}
 {% from "components/pagination.html" import pagination as render_pagination %}
 {% from "components/info_modal.html" import render_info_modal %}
 
 {% macro render_modal_keyboard_help() %}
-<div id="keyboard-help-content" style="overflow-y: auto; max-height: calc(90vh - 150px);">
-    <h3 style="margin-top: 0;">How This Page Works</h3>
-    <ul style="margin: 0 0 20px 20px; line-height: 1.6; color: #495057;">
-        <li>Faces are automatically grouped and selected for bulk assignment</li>
-        <li><strong>Group by People:</strong> Matches faces to specific people</li>
-        <li><strong>Group by Similarity:</strong> Clusters visually similar faces together</li>
-        <li><strong>Similarity Threshold:</strong> Adjust to create larger groups with acceptable matching quality</li>
-    </ul>
+    <div id="keyboard-help-content" style="overflow-y: auto; max-height: calc(90vh - 150px);">
+        <h3 style="margin-top: 0;">How This Page Works</h3>
+        <ul style="margin: 0 0 20px 20px; line-height: 1.6; color: #495057;">
+            <li>Faces are automatically grouped and selected for bulk assignment</li>
+            <li><strong>Group by People:</strong> Matches faces to specific people</li>
+            <li><strong>Group by Similarity:</strong> Clusters visually similar faces together</li>
+            <li><strong>Similarity Threshold:</strong> Adjust to create larger groups with acceptable matching quality
+            </li>
+        </ul>
 
-    <h3 style="margin-top: 20px;">Quick Assignment</h3>
-    <div class="help-shortcuts-list">
-        {% for person in people[:9] %}
-        <div class="help-shortcut-item">
-            <kbd>{{ loop.index }}</kbd>
-            <span>{{ person.name }}</span>
-        </div>
-        {% endfor %}
-    </div>
-
-    <h3 style="margin-top: 20px;">Other Shortcuts</h3>
-    <div class="help-shortcuts-list">
-        <div class="help-shortcut-item">
-            <kbd>Shift</kbd> + <kbd>Click</kbd>
-            <span>Select range of faces</span>
-        </div>
-        <div class="help-shortcut-item">
-            <kbd>Enter</kbd>
-            <span>Assign to selected person</span>
-        </div>
-        <div class="help-shortcut-item">
-            <kbd>i</kbd> or <kbd>0</kbd>
-            <span>Ignore selected faces</span>
-        </div>
-        <div class="help-shortcut-item">
-            <kbd>?</kbd>
-            <span>Show this help</span>
-        </div>
-    </div>
-
-    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-left: 3px solid #007BFF; border-radius: 4px;">
-        <p style="margin: 0; color: #495057; font-size: 14px; line-height: 1.5;">
-            <strong>💡 Tips:</strong><br>
-            • Click faces then press a number key for quick assignment<br>
-            • Shift+Click to select multiple faces at once
-        </p>
-    </div>
-</div>
-{% endmacro %}
-
-{% block content %}
-<div class="main-container-layout">
-     {% macro render_filters() %}
-       {% include "filters/_person.html" %}
-       <div class="filter-group">
-            <label for="group-by-people">Group by</label>
-            <div class="radio-group">
-                <label class="radio-label">
-                    <input type="radio" id="group-by-people" name="group_by" value="people" {% if not filters.selected_group_by or filters.selected_group_by == 'people' %}checked{% endif %}>
-                    <span>People</span>
-                </label>
-                <label class="radio-label">
-                    <input type="radio" id="group-by-similarity" name="group_by" value="similarity" {% if filters.selected_group_by == 'similarity' %}checked{% endif %}>
-                    <span>Similarity</span>
-                </label>
-            </div>
-        </div>
-       <div class="filter-group">
-            <label for="threshold-range">Similarity Threshold</label>
-            <input type="range" id="threshold-range" name="threshold" min="0" max="10" step="1" value="{{ filters.selected_threshold or 5 }}">
-            <div class="threshold-display"><span id="threshold-value">{{ (filters.selected_threshold or 5)}}</span></div>
-        </div>
-        {% if filters.selected_assign_person_id %}
-        <input type="hidden" name="assign_person" value="{{ filters.selected_assign_person_id }}">
-        {% endif %}
-    {% endmacro %}
-    {% macro render_actions() %}
-        <form method="POST" action="{{ url_for('faces_assign') }}" id="sidebar-assign-form">
-        <input type="hidden" name="face_status" value="ASSIGNED">
-
-
-        <div class="person-assign-select">
-            <label for="sidebar-person-select">Assign to Person</label>
-            <select name="person" id="sidebar-person-select" class="searchable-select">
-                <option value="">-- Select person --</option>
-                {% for person in people %}
-                <option value="{{ person.id }}" {% if filters.selected_assign_person_id == person.id %}selected{% endif %}>{{ person.name }}</option>
-                {% endfor %}
-            </select>
-            <button type="button" class="btn-primary" id="sidebar-assign-selected-btn" style="width: 100%; margin-top: 10px;">Assign Selected</button>
-        </div>
-        <div class="keyboard-shortcuts-list">
-            <div class="shortcuts-label">Keyboard Shortcuts:</div>
+        <h3 style="margin-top: 20px;">Quick Assignment</h3>
+        <div class="help-shortcuts-list">
             {% for person in people[:9] %}
-            <div class="shortcut-item" data-person-id="{{ person.id }}" data-shortcut="{{ loop.index }}">
-                <kbd>{{ loop.index }}</kbd>
-                <span>{{ person.name }}</span>
-            </div>
+                <div class="help-shortcut-item">
+                    <kbd>{{ loop.index }}</kbd>
+                    <span>{{ person.name }}</span>
+                </div>
             {% endfor %}
-            <div class="shortcut-item">
+        </div>
+
+        <h3 style="margin-top: 20px;">Other Shortcuts</h3>
+        <div class="help-shortcuts-list">
+            <div class="help-shortcut-item">
+                <kbd>Shift</kbd> + <kbd>Click</kbd>
+                <span>Select range of faces</span>
+            </div>
+            <div class="help-shortcut-item">
                 <kbd>Enter</kbd>
                 <span>Assign to selected person</span>
             </div>
-        <div class="shortcut-item">
-            <kbd>i</kbd> or <kbd>0</kbd>
-            <span>Ignore selected faces</span>
-        </div>
+            <div class="help-shortcut-item">
+                <kbd>i</kbd> or <kbd>0</kbd>
+                <span>Ignore selected faces</span>
+            </div>
+            <div class="help-shortcut-item">
+                <kbd>?</kbd>
+                <span>Show this help</span>
+            </div>
         </div>
 
-        <div class="keyboard-help">
-            <small>Press <kbd>?</kbd> for help</small>
-        </div>
-        <div id="sidebar-face-checkboxes"></div>
-    </form>
-
-    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
-        <button type="button" class="btn sidebar-btn btn-danger" id="sidebar-ignore-btn">Ignore Selected</button>
-    </div>
-    {% endmacro %}
-{{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions) }}
-<div class="main-content" data-unassigned-count="{{ unassigned_face_count }}">
-    <div class="page-header">
-        <h1>Unassigned Faces</h1>
-        <p class="subtitle">
-            Showing {{ faces|length }} of {{unassigned_face_count}} unassigned face{{ 's' if faces|length != 1 else '' }}
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-left: 3px solid #007BFF; border-radius: 4px;">
+            <p style="margin: 0; color: #495057; font-size: 14px; line-height: 1.5;">
+                <strong>💡 Tips:</strong><br>
+                • Click faces then press a number key for quick assignment<br>
+                • Shift+Click to select multiple faces at once
             </p>
+        </div>
     </div>
-    <form method="POST" action="{{ url_for('faces_assign') }}" id="main-form">
-        <input type="hidden" name="face_status" id="face_status" value="">
+{% endmacro %}
 
-        <div class="global-actions">
-            <a href="#" id="select-all">Select all</a>
-            <span class="separator">|</span>
-            <a href="#" id="deselect-all">Clear selection</a>
-        </div>
-
-        {% for faceSuggestion in face_suggestions %}
-        <div class="suggestion-group">
-            <h2>
-                <input type="checkbox" class="group-select-checkbox" data-group-index="{{ loop.index0 }}">
-                <span class="group-select-label">Select all</span>
-                <span style="margin-left: auto;">{{ faceSuggestion.suggestion_name }}</span>
-            </h2>
-
-            <div class="group-actions">
-                {% for person in faceSuggestion.people %}
-                <button type="button" class="btn assign-group-btn" data-person-id="{{ person.id }}">Assign to {{ person.name }}</button>
-                {% endfor %}
-            </div>
-
-            <div class="grid">
-                {% for face in faceSuggestion.faces %}
-                <div class="face" data-face-id="{{ face.id }}" data-similarity="{{ '%.2f' % (face.similarity * 100) if face.similarity is not none else 'N/A' }}" data-date="{{ face.photo_date.split(' ')[0] }}">
-                    <img src="{{ url_for('photo', filename=face.relative_file_path) }}" width="100" height="100">
-                    <input type="checkbox" name="faces" value="{{ face.id }}" style="display:none;">
+{% block content %}
+    <div class="main-container-layout">
+        {% macro render_filters() %}
+            {% include "filters/_person.html" %}
+            <div class="filter-group">
+                <label for="group-by-people">Group by</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" id="group-by-people" name="group_by" value="people"
+                               {% if not filters.selected_group_by or filters.selected_group_by == 'people' %}checked{% endif %}>
+                        <span>People</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" id="group-by-similarity" name="group_by" value="similarity"
+                               {% if filters.selected_group_by == 'similarity' %}checked{% endif %}>
+                        <span>Similarity</span>
+                    </label>
                 </div>
-                {% endfor %}
             </div>
-        </div>
-        {% endfor %}
-    </form>
+            <div class="filter-group">
+                <label for="threshold-range">Similarity Threshold</label>
+                <input type="range" id="threshold-range" name="threshold" min="0" max="10" step="1"
+                       value="{{ filters.selected_threshold or 5 }}">
+                <div class="threshold-display"><span id="threshold-value">{{ (filters.selected_threshold or 5) }}</span>
+                </div>
+            </div>
+            {% if filters.selected_assign_person_id %}
+                <input type="hidden" name="assign_person" value="{{ filters.selected_assign_person_id }}">
+            {% endif %}
+            {% if pagination.current_page %}
+                <input type="hidden" name="current_page" value="{{ pagination.current_page }}">
+            {% endif %}
+            {% if pagination.page_size %}
+                <input type="hidden" name="page_size" value="{{ pagination.page_size }}">
+            {% endif %}
+        {% endmacro %}
+        {% macro render_actions() %}
+            <form method="POST" action="{{ url_for('faces_assign') }}" id="sidebar-assign-form">
+                <input type="hidden" name="face_status" value="ASSIGNED">
 
-    {{ render_pagination(
+
+                <div class="person-assign-select">
+                    <label for="sidebar-person-select">Assign to Person</label>
+                    <select name="person" id="sidebar-person-select" class="searchable-select">
+                        <option value="">-- Select person --</option>
+                        {% for person in people %}
+                            <option value="{{ person.id }}"
+                                    {% if filters.selected_assign_person_id == person.id %}selected{% endif %}>{{ person.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn-primary" id="sidebar-assign-selected-btn"
+                            style="width: 100%; margin-top: 10px;">Assign Selected
+                    </button>
+                    <button type="button" class="btn sidebar-btn btn-danger" id="sidebar-ignore-btn">Ignore Selected
+                    </button>
+                </div>
+                <div class="keyboard-shortcuts-list">
+                    <div class="shortcuts-label">Keyboard Shortcuts:</div>
+                    {% for person in people[:9] %}
+                        <div class="shortcut-item" data-person-id="{{ person.id }}" data-shortcut="{{ loop.index }}">
+                            <kbd>{{ loop.index }}</kbd>
+                            <span>{{ person.name }}</span>
+                        </div>
+                    {% endfor %}
+                    <div class="shortcut-item">
+                        <kbd>Enter</kbd>
+                        <span>Assign to selected person</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>i</kbd> or <kbd>0</kbd>
+                        <span>Ignore selected faces</span>
+                    </div>
+                </div>
+
+                <div class="keyboard-help">
+                    <small>Press <kbd>?</kbd> for help</small>
+                </div>
+                <div id="sidebar-face-checkboxes"></div>
+            </form>
+        {% endmacro %}
+        {{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions) }}
+        <div class="main-content" data-unassigned-count="{{ unassigned_face_count }}">
+            <div class="page-header">
+                <h1>Unassigned Faces</h1>
+                <p class="subtitle">
+                    Showing {{ faces|length }} of {{ unassigned_face_count }} unassigned
+                    face{{ 's' if faces|length != 1 else '' }}
+                </p>
+            </div>
+            <form method="POST" action="{{ url_for('faces_assign') }}" id="main-form">
+                <input type="hidden" name="face_status" id="face_status" value="">
+
+                <div class="global-actions">
+                    <a href="#" id="select-all">Select all</a>
+                    <span class="separator">|</span>
+                    <a href="#" id="deselect-all">Clear selection</a>
+                </div>
+
+                {% for faceSuggestion in face_suggestions %}
+                    <div class="suggestion-group">
+                        <h2>
+                            <input type="checkbox" class="group-select-checkbox" data-group-index="{{ loop.index0 }}">
+                            <span class="group-select-label">Select all</span>
+                            <span style="margin-left: auto;">{{ faceSuggestion.suggestion_name }}</span>
+                        </h2>
+
+                        <div class="group-actions">
+                            {% for person in faceSuggestion.people %}
+                                <button type="button" class="btn assign-group-btn" data-person-id="{{ person.id }}">
+                                    Assign to {{ person.name }}</button>
+                            {% endfor %}
+                        </div>
+
+                        <div class="grid">
+                            {% for face in faceSuggestion.faces %}
+                                <div class="face" data-face-id="{{ face.id }}"
+                                     data-similarity="{{ '%.2f' % (face.similarity * 100) if face.similarity is not none else 'N/A' }}"
+                                     data-date="{{ face.photo_date.split(' ')[0] }}">
+                                    <img src="{{ url_for('photo', filename=face.relative_file_path) }}" width="100"
+                                         height="100">
+                                    <input type="checkbox" name="faces" value="{{ face.id }}" style="display:none;">
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </form>
+
+            {{ render_pagination(
         pagination.current_page,
         pagination.total_items,
         pagination.page_size,
@@ -183,16 +200,17 @@
             'month': filters.selected_month,
             'threshold': filters.selected_threshold,
             'person': filters.selected_person_id,
-            'assign_person': filters.selected_assign_person_id
+            'assign_person': filters.selected_assign_person_id,
+            'group_by' : filters.selected_group_by
         }
     ) }}
-</div>
+        </div>
 
-{{ render_info_modal('keyboardHelpModal', "Keyboard Shortcuts", render_modal_keyboard_help) }}
+        {{ render_info_modal('keyboardHelpModal', "Help", render_modal_keyboard_help) }}
 
-</div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='faces/index.js') }}" ></script>
+    <script src="{{ url_for('static', filename='faces/index.js') }}"></script>
 {% endblock %}
