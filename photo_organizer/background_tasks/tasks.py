@@ -232,7 +232,7 @@ def discover_people_task(job_id: str, face_ids: list[int], distance_threshold: i
             face_ids.append(face.id)
 
         embeddings = np.array(embeddings)
-        eps =0.35 * (distance_threshold * 0.1)
+        eps =0.45 * (distance_threshold * 0.1)
         # Step 2: cluster with DBSCAN
         clustering = DBSCAN(eps=eps, min_samples=1, metric="euclidean").fit(embeddings)
         clusters = {}

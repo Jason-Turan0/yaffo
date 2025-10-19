@@ -13,6 +13,7 @@ import json
 
 from photo_organizer.utils.index_photos import delete_orphaned_photos
 from sqlalchemy.orm import joinedload
+from sqlalchemy import func
 
 
 def _is_system_file(filename: str) -> bool:
@@ -363,13 +364,60 @@ def init_utilities_routes(app: Flask):
              } for cluster in clusters_data
         ]
         clusters_with_faces.sort(key=lambda cluster: len(cluster["faces"]), reverse=True)
-        people = db.session.query(Person).order_by(Person.name).all()
+
+        people_with_counts = (
+            db.session.query(
+                Person,
+                func.count(PersonFace.face_id).label('face_count')
+            )
+            .outerjoin(PersonFace, Person.id == PersonFace.person_id)
+            .group_by(Person.id)
+            .order_by(func.count(PersonFace.face_id).desc(), Person.name)
+            .all()
+        )
+
+        people_list = []
+        for idx, (person, face_count) in enumerate(people_with_counts):
+            people_list.append({
+                "id": person.id,
+                "name": person.name,
+                "face_count": face_count or 0,
+                "shortcut": str(idx + 1) if idx < 9 else None
+            })
+
         return render_template(
             "utilities/discover_people_results.html",
             job_id=job_id,
             clusters=clusters_with_faces,
-            people=[{"id": person.id, "name": person.name} for person in people],
+            people=people_list,
             distance_threshold=distance_threshold,
             total_clusters=len(clusters_with_faces),
             total_faces=len(all_face_ids)
         )
+
+    @app.route("/utilities/discover-people/results/<job_id>/clusters/<cluster_label>", methods=["DELETE"])
+    def utilities_delete_cluster(job_id: str, cluster_label: str):
+        job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
+        if not job:
+            return jsonify({'error': 'Job not found'}), 404
+
+        if not job.results:
+            return jsonify({'error': 'No job results found'}), 404
+
+        job_result = job.results[0]
+        result_data = json.loads(job_result.result_data)
+        clusters = result_data.get('clusters', [])
+
+        updated_clusters = [c for c in clusters if c.get('label') != cluster_label]
+
+        if len(updated_clusters) == len(clusters):
+            return jsonify({'error': 'Cluster not found'}), 404
+
+        result_data['clusters'] = updated_clusters
+        job_result.result_data = json.dumps(result_data)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'remaining_clusters': len(updated_clusters)
+        })

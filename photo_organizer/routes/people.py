@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from sqlalchemy import func, extract
 from sqlalchemy.orm import joinedload, aliased
 
@@ -58,6 +58,29 @@ def init_people_routes(app: Flask):
 
         flash(f"Added {name}", "success")
         return redirect(url_for("people_list"))
+
+    @app.route("/api/people/create", methods=["POST"])
+    def api_people_create():
+        """Create a new person via JSON API"""
+        data = request.get_json()
+        name = data.get("name", "").strip()
+
+        if not name:
+            return jsonify({"error": "Name is required"}), 400
+
+        existing = Person.query.filter(Person.name == name).first()
+        if existing:
+            return jsonify({"error": f"Person '{name}' already exists"}), 400
+
+        person = Person(name=name)
+        db.session.add(person)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "person_id": person.id,
+            "name": person.name
+        }), 201
 
     @app.route("/people/<int:person_id>/update", methods=["POST"])
     def people_update(person_id):

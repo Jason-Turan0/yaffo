@@ -1,0 +1,257 @@
+.header-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1rem;
+}
+
+#processed-count {
+    color: #4CAF50;
+    font-weight: 700;
+}
+
+.clusters-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.cluster-card {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 1.5rem;
+    background: white;
+    transition: opacity 0.3s ease;
+}
+
+.cluster-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.cluster-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #333;
+}
+
+.face-count {
+    color: #666;
+    font-weight: 400;
+    font-size: 1rem;
+}
+
+.cluster-faces-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.cluster-face-card {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    background: white;
+}
+
+.cluster-face-image {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    display: block;
+}
+
+.cluster-face-meta {
+    padding: 0.25rem;
+    font-size: 0.7rem;
+    color: #666;
+    text-align: center;
+}
+
+.cluster-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.action-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.action-section-row {
+    flex-direction: row;
+    gap: 1rem;
+}
+
+.action-label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.new-person-controls,
+.existing-person-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.new-person-controls input,
+.existing-person-controls select {
+    flex: 1;
+}
+
+.action-divider {
+    text-align: center;
+    color: #999;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.25rem 0;
+}
+
+.form-control {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: #2196F3;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: #1976D2;
+}
+
+.btn-success {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: #45a049;
+}
+
+.btn-secondary {
+    background-color: #757575;
+    color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: #616161;
+}
+
+.btn-warning {
+    background-color: #FF9800;
+    color: white;
+}
+
+.btn-warning:hover:not(:disabled) {
+    background-color: #F57C00;
+}
+
+.btn-danger {
+    background-color: #f44336;
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #d32f2f;
+}
+
+.cluster-wrapper {
+    transition: opacity 0.3s ease, height 0.3s ease;
+}
+
+.cluster-wrapper.removing {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.keyboard-shortcuts-info {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1rem;
+    margin: 1.5rem 0;
+}
+
+.shortcuts-header {
+    margin-bottom: 0.75rem;
+    color: #333;
+}
+
+.shortcuts-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.shortcut-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+}
+
+.shortcut-item.keyboard-activated {
+    background-color: #4CAF50;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+kbd {
+    background-color: #eee;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+    color: #333;
+    display: inline-block;
+    font-family: monospace;
+    font-size: 0.85em;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 4px;
+    white-space: nowrap;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.empty-state h2 {
+    margin-bottom: 1rem;
+    color: #666;
+}
+
+.empty-state p {
+    margin-bottom: 1.5rem;
+    color: #999;
+}
