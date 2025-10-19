@@ -267,7 +267,7 @@ document.addEventListener('keydown', (e) => {
     }
 
     // Ignore shortcut
-    if (e.key === 'i' || e.key === 'I') {
+    if (e.key === 'i' || e.key === 'I' || e.key === '0') {
         e.preventDefault();
         submitFaces(null, 'IGNORED');
     }
@@ -276,6 +276,10 @@ document.addEventListener('keydown', (e) => {
     if (e.key === '?') {
         e.preventDefault();
         keyboardHelpModal.open();
+    }
+
+    if(e.key ==='Enter'){
+        assignSelectedBtn.click();
     }
 });
 
