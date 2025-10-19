@@ -153,9 +153,24 @@ def get_exif_tags(img: PIL_Image) -> List[Dict[str, str]]:
         return []
 
 
-def process_photo(photo_path: Path) -> Optional[dict]:
+def import_photo(photo_path: Path) -> Optional[dict]:
+    date_taken = get_photo_date(str(photo_path))
+    image = image_from_path(photo_path)
+    latitude, longitude, location_name = get_gps_coordinates(image)
+    tags = get_exif_tags(image)
+    return {
+        "full_file_path": str(photo_path),
+        "relative_file_path": str(photo_path.relative_to(ROOT_DIR)),
+        "date_taken": date_taken,
+        "hash": hash_image(photo_path),
+        "latitude": latitude,
+        "longitude": longitude,
+        "location_name": location_name,
+        "tags": tags
+    }
+
+def index_photo_faces(photo_path: Path) -> Optional[list[dict]]:
     try:
-        date_taken = get_photo_date(str(photo_path))
         image = image_from_path(photo_path)
         image_numpy = image_to_numpy(image)
         face_locations = face_recognition.face_locations(image_numpy)
@@ -174,23 +189,10 @@ def process_photo(photo_path: Path) -> Optional[dict]:
                 'location_bottom': bottom,
                 'location_left': left
             })
+        return faces_data
 
-        latitude, longitude, location_name = get_gps_coordinates(image)
-        tags = get_exif_tags(image)
-
-        return {
-            "full_file_path": str(photo_path),
-            "relative_file_path": str(photo_path.relative_to(ROOT_DIR)),
-            "date_taken": date_taken,
-            "hash": hash_image(photo_path),
-            "faces": faces_data,
-            "latitude": latitude,
-            "longitude": longitude,
-            "location_name": location_name,
-            "tags": tags
-        }
     except Exception as e:
-        print(f"Error processing {photo_path}: {e}")
+        print(f"Error processing faces for {photo_path}: {e}")
         return None
 
 
@@ -215,7 +217,7 @@ def index_photos_batch(
     cancelled = False
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(process_photo, Path(p)): p for p in photo_paths}
+        futures = {executor.submit(index_photo_faces, Path(p)): p for p in photo_paths}
 
         for i, future in enumerate(as_completed(futures)):
             if should_cancel and should_cancel():
@@ -292,5 +294,5 @@ def delete_orphaned_photos(session: Session, photo_ids: List[int]) -> int:
     deleted_count = session.query(Photo).filter(Photo.id.in_(photo_ids)).delete(synchronize_session=False)
 
     session.commit()
-    print(f"Deleted {deleted_count} photos and {deleted_faces} associated faces")
+    logger.debug(f"Deleted {deleted_count} photos and {deleted_faces} associated faces")
     return deleted_count

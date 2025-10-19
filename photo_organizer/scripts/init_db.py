@@ -10,14 +10,19 @@ def init_db():
             CREATE TABLE IF NOT EXISTS photos (
                 id INTEGER PRIMARY KEY,
                 full_file_path TEXT UNIQUE,
-                relative_file_path TEXT UNIQUE,
+                relative_file_path TEXT,
                 hash TEXT,
                 date_taken TEXT,
+                status TEXT DEFAULT 'IMPORTED',
                 latitude REAL,
                 longitude REAL,
                 location_name TEXT
             )
         """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_photos_full_file_path ON photos(full_file_path)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_photos_date_taken ON photos(date_taken)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_photos_location_name ON photos(location_name)")
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS faces (
             id INTEGER PRIMARY KEY,
@@ -30,9 +35,11 @@ def init_db():
             location_bottom INTEGER,
             location_left INTEGER,
             location_right INTEGER,
-            FOREIGN KEY(photo_id) REFERENCES photos(id)
+            FOREIGN KEY(photo_id) REFERENCES photos(id) ON DELETE CASCADE
         )
     """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_face_photo_id ON faces(photo_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_face_status ON faces(status)")
 
     cursor.execute("""
            CREATE TABLE IF NOT EXISTS people (
@@ -47,13 +54,15 @@ def init_db():
     cursor.execute("""
                CREATE TABLE IF NOT EXISTS people_face (
                    person_id INTEGER,
-                   face_id INTEGER,
+                   face_id INTEGER UNIQUE,
                    similarity NUMERIC,
-                   FOREIGN KEY(person_id) REFERENCES people(id),
-                   FOREIGN KEY(face_id) REFERENCES faces(id),
-                   UNIQUE(person_id, face_id)
+                   FOREIGN KEY(person_id) REFERENCES people(id) ON DELETE CASCADE,
+                   FOREIGN KEY(face_id) REFERENCES faces(id) ON DELETE CASCADE
                )
            """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_people_face_face_id ON people_face(face_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_people_face_person_id ON people_face(person_id)")
+
     cursor.execute("""
                 CREATE TABLE IF NOT EXISTS people_embeddings (
                     person_id INTEGER NOT NULL,
@@ -64,6 +73,8 @@ def init_db():
                     FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
                 )
     """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_people_embedding_person_id ON people_embeddings(person_id)")
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS jobs (
             id TEXT PRIMARY KEY,
@@ -103,7 +114,6 @@ def init_db():
             FOREIGN KEY(photo_id) REFERENCES photos(id) ON DELETE CASCADE
         )
     """)
-
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_photo_id ON tags(photo_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_tag_name ON tags(tag_name)")
     conn.commit()

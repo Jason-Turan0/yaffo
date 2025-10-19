@@ -1,9 +1,10 @@
 from flask import render_template, Flask, redirect, url_for, request, jsonify
 from photo_organizer.db import db
 from photo_organizer.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_CANCELLED, \
-    JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED, PersonFace, FACE_STATUS_ASSIGNED, JobResult
+    JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED, PersonFace, FACE_STATUS_ASSIGNED, JobResult, \
+    PHOTO_STATUS_INDEXED, PHOTO_STATUS_IMPORTED
 from photo_organizer.common import MEDIA_DIR, PHOTO_EXTENSIONS, ROOT_DIR
-from photo_organizer.background_tasks.tasks import index_photo_task, auto_assign_faces_task
+from photo_organizer.background_tasks.tasks import index_photo_task, auto_assign_faces_task, import_photo_task
 from pathlib import Path
 from itertools import batched
 import uuid
@@ -29,8 +30,9 @@ def init_utilities_routes(app: Flask):
         filesystem_photos = []
         orphaned_db_entries = []
 
-        indexed_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.relative_file_path).all()
-        indexed_paths = {photo[1] for photo in indexed_photos}
+        db_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.relative_file_path, Photo.status).all()
+
+        indexed_paths = {photo[1] for photo in db_photos if photo[3] == PHOTO_STATUS_INDEXED}
 
         filesystem_paths = set()
         if MEDIA_DIR.exists():
@@ -49,8 +51,8 @@ def init_utilities_routes(app: Flask):
                             'full_path': full_path
                         })
 
-        for photo in indexed_photos:
-            photo_id, full_path, relative_path = photo
+        for photo in db_photos:
+            photo_id, full_path, relative_path, status = photo
             if not Path(full_path).exists():
                 orphaned_db_entries.append({
                     'id': photo_id,
@@ -62,13 +64,15 @@ def init_utilities_routes(app: Flask):
         orphaned_db_entries.sort(key=lambda x: x['relative_path'])
 
         active_jobs = db.session.query(Job).filter(
-            Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING])
+            Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING]),
+            Job.name.in_(['index_photos', 'import_photos']),
         ).all()
 
         return render_template(
             "utilities/index_photos.html",
             unindexed_photos=filesystem_photos,
             orphaned_photos=orphaned_db_entries,
+            total_imported=len(db_photos),
             total_indexed=len(indexed_paths),
             total_filesystem=len(filesystem_paths),
             media_dir=MEDIA_DIR,
@@ -81,11 +85,25 @@ def init_utilities_routes(app: Flask):
         files_to_index = data.get('files_to_index', [])
         files_to_delete = data.get('files_to_delete', [])
 
-        job_id = str(uuid.uuid4())
-        job = Job(
-            id=job_id,
+        import_job_id = str(uuid.uuid4())
+        import_job = Job(
+            id=import_job_id,
+            name='import_photos',
+            status=JOB_STATUS_PENDING,
+            task_count=len(files_to_index),
+            message='Imported {totalCount}/{taskCount} photos',
+            completed_count=0,
+            error_count=0,
+            cancelled_count=0,
+            job_data=json.dumps({
+                'files_to_import': files_to_index
+            })
+        )
+        index_job_id = str(uuid.uuid4())
+        index_job = Job(
+            id=index_job_id,
             name='index_photos',
-            status=JOB_STATUS_RUNNING,
+            status=JOB_STATUS_PENDING,
             task_count=len(files_to_index),
             message='Indexed {totalCount}/{taskCount} photos',
             completed_count=0,
@@ -95,14 +113,16 @@ def init_utilities_routes(app: Flask):
                 'files_to_index': files_to_index
             })
         )
-        db.session.add(job)
+        db.session.add(import_job)
+        db.session.add(index_job)
         db.session.commit()
 
+        for batch in batched(files_to_index, 25):
+            import_photo_task(import_job_id, list(batch))
         for batch in batched(files_to_index, 10):
-            index_photo_task(job_id, list(batch))
+            index_photo_task(import_job_id, list(batch))
         delete_orphaned_photos(db.session, files_to_delete)
-
-        return jsonify({'job_id': job_id}), 202
+        return jsonify({'job_id': import_job_id}), 202
 
     @app.route("/utilities/jobs/<job_id>", methods=["GET"])
     def utilities_get_job_status(job_id: str):

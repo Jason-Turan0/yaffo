@@ -2,6 +2,9 @@ from sqlalchemy import PrimaryKeyConstraint
 from photo_organizer.db import db
 from datetime import datetime
 
+PHOTO_STATUS_IMPORTED = "IMPORTED"
+PHOTO_STATUS_INDEXED = "INDEXED"
+
 class Photo(db.Model):
     __tablename__ = "photos"
     id = db.Column(db.Integer, primary_key=True)
@@ -12,6 +15,7 @@ class Photo(db.Model):
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     location_name = db.Column(db.String)
+    status = db.Column(db.String, default=PHOTO_STATUS_IMPORTED)
     faces = db.relationship(
         "Face",
         back_populates="photo"
