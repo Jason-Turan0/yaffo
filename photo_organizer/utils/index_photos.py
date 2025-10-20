@@ -35,14 +35,18 @@ def get_photo_files(root: Path) -> List[Path]:
     ]
 
 
-def save_face_thumbnail(image_path: Path, face_index: int, face_location) -> Path:
+def save_face_thumbnail(
+        image_path: Path,
+        face_index: int,
+        thumbnail_dir: Path,
+        face_location) -> Path:
     image = image_from_path(image_path)
     top, right, bottom, left = face_location
     face_image = image.crop((left, top, right, bottom))
     face_image.thumbnail((150, 150))
     stem = image_path.stem
     face_id = str(uuid.uuid4())[:8]
-    thumb_path = THUMBNAIL_DIR / f"face_{stem}_{face_index}_{face_id}.jpg"
+    thumb_path = thumbnail_dir / f"face_{stem}_{face_index}_{face_id}.jpg"
     face_image.save(thumb_path, "JPEG")
     return thumb_path
 
@@ -156,7 +160,7 @@ def import_photo(photo_path: Path) -> Optional[dict]:
         "date_taken": date_taken,
     }
 
-def index_photo(photo_path: Path) -> Optional[dict]:
+def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
     try:
         image = image_from_path(photo_path)
         image_numpy = image_to_numpy(image)
@@ -166,12 +170,14 @@ def index_photo(photo_path: Path) -> Optional[dict]:
         tags = get_exif_tags(image)
         faces_data = []
         for i, (loc, emb) in enumerate(zip(face_locations, face_embeddings)):
-            thumb_path = save_face_thumbnail(photo_path, i, loc)
+            thumb_path = save_face_thumbnail(photo_path, i, thumbnail_dir, loc)
             top, right, bottom, left = loc
             faces_data.append({
                 'embedding': emb,
                 'full_file_path': str(thumb_path),
-                'relative_file_path': str(thumb_path.relative_to(ROOT_DIR)),
+                 #'relative_file_path': str(thumb_path.relative_to(ROOT_DIR)),
+                #TODO how to make it so that this isn't needed for flask.
+                'relative_file_path': '',
                 'location_top': top,
                 'location_right': right,
                 'location_bottom': bottom,

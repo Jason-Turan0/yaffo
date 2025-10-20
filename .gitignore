@@ -56,3 +56,6 @@ instance/
 # Thumbnails / temporary files
 *.tmp
 *.temp
+
+# Test data
+photo_organizer/scripts/test_data/

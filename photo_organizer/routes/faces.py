@@ -18,8 +18,8 @@ from photo_organizer.db.repositories.person_repository import update_person_embe
 from photo_organizer.db.repositories.photos_repository import get_distinct_years, get_distinct_months
 from photo_organizer.domain.compare_utils import load_embedding, calculate_similarity
 
-DEFAULT_THRESHOLD = 5  # configurable similarity threshold
-DEFAULT_PAGE_SIZE = 250
+DEFAULT_THRESHOLD = 10  # configurable similarity threshold
+DEFAULT_PAGE_SIZE = 2000
 DEFAULT_GROUP_BY = 'similarity'
 
 
@@ -36,6 +36,7 @@ class FaceSuggestion:
     person_ids: list[int]
     people: list[Person]
     suggestion_name: str
+    photo_date: str
     faces: list[FaceViewModel]
 
 
@@ -51,7 +52,7 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int)
         face_ids.append(face.id)
     embeddings = np.array(embeddings)
     eps = 0.45 - ((threshold *2) / 100)
-    clustering = DBSCAN(eps=eps, min_samples=1, metric="euclidean").fit(embeddings)
+    clustering = DBSCAN(eps=eps, min_samples=3, metric="euclidean").fit(embeddings)
     clusters = {}
     for face_id, label in zip(face_ids, clustering.labels_):
         if label == -1:  # skip noise faces
@@ -65,6 +66,7 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int)
         person_ids=[],
         people=[],
         suggestion_name=cluster["label"],
+        photo_date= face_dict[cluster["face_ids"][0]].photo.date_taken,
         faces=[
             FaceViewModel(face_id, face_dict[face_id].relative_file_path, face_dict[face_id].photo.date_taken, None)
             for face_id in cluster["face_ids"]
@@ -81,6 +83,7 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
         person_ids=[],
         people=[],
         suggestion_name='Unknown',
+        photo_date='',
         faces=[]
     )
     computed_threshold = 0.9 + (threshold / 100)
@@ -111,6 +114,7 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
                 person_ids=[pair[0].id for pair in matching_people],
                 people=[pair[0] for pair in matching_people],
                 suggestion_name=" OR ".join([pair[0].name for pair in matching_people]),
+                photo_date= face.photo.date_taken,
                 faces=[]
             )
             face_suggestions.append(best_suggestion)

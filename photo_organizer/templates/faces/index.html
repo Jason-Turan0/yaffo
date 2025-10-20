@@ -181,6 +181,7 @@
                             <input type="checkbox"  {{ 'checked'  if outer_loop.index0 == 0 else '' }}
                                    class="group-select-checkbox" data-group-index="{{ loop.index0 }}">
                             <span class="group-select-label">Select all</span>
+                            <span>{{ faceSuggestion.photo_date | format_date ("date") }}</span>
                             <span style="margin-left: auto;">{{ faceSuggestion.suggestion_name }}</span>
                         </h2>
 

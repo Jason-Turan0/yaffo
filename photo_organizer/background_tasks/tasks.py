@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
 from photo_organizer.db.models import Job, Photo, JOB_STATUS_CANCELLED, Face, Tag, FACE_STATUS_UNASSIGNED, Person, \
     JobResult, JOB_STATUS_RUNNING, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED, JOB_STATUS_COMPLETED
 from photo_organizer.utils.index_photos import index_photo, import_photo
-from photo_organizer.common import DB_PATH
+from photo_organizer.common import DB_PATH, THUMBNAIL_DIR
 from photo_organizer.logging_config import get_logger
 from photo_organizer.background_tasks.config import huey
 from photo_organizer.domain.compare_utils import calculate_similarity, load_embedding
@@ -127,7 +127,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                 break
 
         logger.debug(f"Processing photo {file_path}")
-        index_results = index_photo(Path(file_path))
+        index_results = index_photo(Path(file_path), THUMBNAIL_DIR)
         if index_results is None:
             logger.warning(f"Failed to process faces for photo {file_path}")
             error_count += 1
@@ -205,64 +205,6 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
         session.rollback()
         session.query(Job).filter_by(id=job_id).update({
             'error_count': Job.error_count + len(file_path_batch)
-        })
-        session.commit()
-    finally:
-        session.close()
-        SessionFactory.remove()
-
-@huey.task(context=True)
-def discover_people_task(job_id: str, face_ids: list[int], distance_threshold: int, task=None):
-    logger.info(f"Starting discover_people_task for job {job_id} with {len(face_ids)} faces and distance threshold {distance_threshold}")
-
-    session = SessionFactory()
-    try:
-        job_status = get_job_status(job_id)
-        if job_status == JOB_STATUS_CANCELLED:
-            return
-
-        faces = (session.query(Face)
-                 .filter(Face.status == FACE_STATUS_UNASSIGNED)
-                 .all())
-        embeddings = []
-        face_ids = []
-
-        for face in faces:
-            embeddings.append(load_embedding(face.embedding))
-            face_ids.append(face.id)
-
-        embeddings = np.array(embeddings)
-        eps =0.45 * (distance_threshold * 0.1)
-        # Step 2: cluster with DBSCAN
-        clustering = DBSCAN(eps=eps, min_samples=1, metric="euclidean").fit(embeddings)
-        clusters = {}
-        for face_id, label in zip(face_ids, clustering.labels_):
-            if label == -1:  # skip noise faces
-                continue
-            label = f"Cluster {label}"
-            cluster = clusters[label] if label in clusters else {'label': label, 'face_ids': []}
-            clusters[label] = cluster
-            cluster["face_ids"].append(face_id)
-
-        job_result = JobResult(
-            job_id=job_id,
-            huey_task_id=task.id,
-            result_data=json.dumps({'clusters': [val for val in clusters.values()]})
-        )
-        session.add(job_result)
-        session.query(Job).filter_by(id=job_id).update({
-            'completed_count': 1,
-            'status': JOB_STATUS_COMPLETED
-        })
-        session.commit()
-        logger.info(f"Completed discover_people_task for job {job_id}")
-
-    except Exception as e:
-        logger.error(f"Error in discover_people_task for job {job_id}: {e}", exc_info=True)
-        session.rollback()
-        session.query(Job).filter_by(id=job_id).update({
-            'error_count': 1,
-            'status': JOB_STATUS_COMPLETED
         })
         session.commit()
     finally:

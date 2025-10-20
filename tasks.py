@@ -186,3 +186,41 @@ def kill_python(c, force=False):
         print("All Python processes terminated")
     except Exception as e:
         print(f"Error: {e}")
+
+
+@task
+def profile_index_photos(c, photos=10, name=None, show_history=False, history_limit=10):
+    """
+    Profile the performance of the index_photo_task background job.
+
+    This task profiles the index_photo_task function and tracks:
+    - Execution time and throughput
+    - Memory usage
+    - Face detection metrics
+    - Historical performance trends
+
+    Args:
+        photos: Number of photos to profile (default: 10)
+        name: Custom name for this profile run (default: timestamp)
+        show_history: Display performance history and exit (default: False)
+        history_limit: Number of historical runs to display (default: 10)
+
+    Example:
+        inv profile-index-photos
+        inv profile-index-photos --photos=20 --name=baseline
+        inv profile-index-photos --show-history
+        inv profile-index-photos --show-history --history-limit=20
+    """
+    cmd_parts = ["python", "-m", "photo_organizer.scripts.profile_index_photo"]
+
+    if show_history:
+        cmd_parts.append("--show-history")
+        cmd_parts.append(f"--history-limit={history_limit}")
+    else:
+        cmd_parts.append(f"--photos={photos}")
+        if name:
+            cmd_parts.append(f"--name={name}")
+
+    cmd = " ".join(cmd_parts)
+    print(f"Running: {cmd}")
+    c.run(cmd, pty=True)
