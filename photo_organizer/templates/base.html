@@ -61,6 +61,7 @@
                 <li><a href="{{ url_for('people_list') }}" class="nav-link {% if 'people' in request.endpoint %}active{% endif %}">People</a></li>
                 <li><a href="{{ url_for('locations_list') }}" class="nav-link {% if 'locations' in request.endpoint %}active{% endif %}">Locations</a></li>
                 <li><a href="{{ url_for('utilities_index') }}" class="nav-link {% if 'utilities' in request.endpoint %}active{% endif %}">Utilities</a></li>
+                <li><a href="{{ url_for('settings_index') }}" class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">Settings</a></li>
             </ul>
         </div>
     </nav>

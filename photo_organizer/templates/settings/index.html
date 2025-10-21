@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Photo Organizer{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='settings/index.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-header">
+        <h1>Settings</h1>
+        <p class="subtitle">Configure application settings</p>
+    </div>
+
+    <div class="settings-section">
+        <h2>Media Directories</h2>
+        <p class="section-description">Add directories where your photos are stored. The application will scan these directories for photos to index.</p>
+
+        <div class="media-dirs-list" id="media-dirs-list">
+            {% if media_dirs|length > 0 %}
+                {% for dir in media_dirs %}
+                <div class="media-dir-item" data-index="{{ loop.index0 }}">
+                    <span class="media-dir-path">{{ dir }}</span>
+                    <button type="button" class="btn-danger btn-sm" onclick="window.PHOTO_ORGANIZER.settings.removeMediaDir({{ loop.index0 }})">Remove</button>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="no-data">No media directories configured</p>
+            {% endif %}
+        </div>
+
+        <div class="add-media-dir-form">
+            <input type="text" id="new-media-dir" placeholder="Enter directory path (e.g., /Volumes/Photos or C:\Photos)" class="form-control">
+            <button type="button" class="btn-secondary" onclick="window.PHOTO_ORGANIZER.settings.browseFolder()">Browse...</button>
+            <button type="button" class="btn-primary" onclick="window.PHOTO_ORGANIZER.settings.addMediaDir()">Add Directory</button>
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <h2>Thumbnail Directory</h2>
+        <p class="section-description">Configure where face thumbnails are stored. Thumbnails are automatically generated cropped images of detected faces for quick loading.</p>
+
+        <div class="thumbnail-dir-info">
+            <div class="current-path-item">
+                <label>Current Thumbnail Directory:</label>
+                <code id="current-thumbnail-dir">{{ current_thumbnail_dir }}</code>
+            </div>
+
+            <div class="thumbnail-stats" id="thumbnail-stats">
+                <span class="stat-item">Files: <strong>{{ thumbnail_count }}</strong></span>
+                <span class="stat-item">Total Size: <strong>{{ thumbnail_size }}</strong></span>
+            </div>
+        </div>
+
+        <div class="change-thumbnail-dir-form">
+            <input type="text" id="new-thumbnail-dir" placeholder="Enter new thumbnail directory path" class="form-control">
+            <button type="button" class="btn-secondary" onclick="window.PHOTO_ORGANIZER.settings.browseThumbnailFolder()">Browse...</button>
+            <button type="button" class="btn-primary" onclick="window.PHOTO_ORGANIZER.settings.changeThumbnailDir()">Change Directory</button>
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <h2>System Paths</h2>
+        <p class="section-description">These paths are configured in the application and cannot be changed here.</p>
+
+        <div class="system-paths">
+            <div class="system-path-item">
+                <label>Database Path:</label>
+                <code>{{ db_path }}</code>
+                <p class="path-description">Location of the SQLite database containing all photo metadata, faces, and people information.</p>
+            </div>
+
+            <div class="system-path-item">
+                <label>Huey Database Path:</label>
+                <code>{{ huey_db_path }}</code>
+                <p class="path-description">Database used by the background task queue system for processing jobs.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='settings/index.js') }}"></script>
+<script>
+window.PHOTO_ORGANIZER.settings = window.PHOTO_ORGANIZER.initSettings(
+    {{ media_dirs | tojson }},
+    window.APP_CONFIG
+);
+</script>
+{% endblock %}

@@ -59,3 +59,4 @@ instance/
 
 # Test data
 photo_organizer/scripts/test_data/
+/photo_organizer/scripts/performance_profiles/

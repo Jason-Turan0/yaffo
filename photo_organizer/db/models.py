@@ -169,3 +169,11 @@ class JobResult(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     job = db.relationship("Job", back_populates="results")
+
+class ApplicationSettings(db.Model):
+    __tablename__ = "application_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, unique=True, nullable=False)
+    type = db.Column(db.String, nullable=False)
+    value = db.Column(db.String)

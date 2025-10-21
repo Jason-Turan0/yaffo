@@ -113,6 +113,17 @@ def init_db():
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_photo_id ON tags(photo_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_tag_name ON tags(tag_name)")
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS application_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            type TEXT NOT NULL,
+            value TEXT
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_application_settings_name ON application_settings(name)")
+
     conn.commit()
 
 
