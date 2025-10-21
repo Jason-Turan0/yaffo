@@ -141,8 +141,9 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
     };
 
     const showPhotoInPopup = (photoData, coordinate) => {
-        const photoUrl = window.APP_CONFIG.buildUrl('photo', { filename: photoData.photo_path });
-        const photoViewUrl = window.APP_CONFIG.buildUrl('photo_view', { filename: photoData.photo_path });
+        debugger
+        const photoUrl = window.APP_CONFIG.buildUrl('photo', { photo_id: photoData.id });
+        const photoViewUrl = window.APP_CONFIG.buildUrl('photo_view', { photo_id: photoData.id });
 
         popupContent.innerHTML = `
             <div class="popup-photo-container">
@@ -179,8 +180,8 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                 ).join('');
 
                 const firstPhoto = photosData[0];
-                const photoUrl = window.APP_CONFIG.buildUrl('photo', { filename: firstPhoto.photo_path });
-                const photoViewUrl = window.APP_CONFIG.buildUrl('photo_view', { filename: firstPhoto.photo_path });
+                const photoUrl = window.APP_CONFIG.buildUrl('photo', { photo_id: firstPhoto.id });
+                const photoViewUrl = window.APP_CONFIG.buildUrl('photo_view', { photo_id: firstPhoto.id });
 
                 popupContent.innerHTML = `
                     <div class="popup-select-container">
@@ -203,8 +204,8 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                     const selectedIndex = parseInt(e.target.value);
                     const selectedPhoto = photosData[selectedIndex];
 
-                    const newPhotoUrl = window.APP_CONFIG.buildUrl('photo', { filename: selectedPhoto.photo_path });
-                    const newPhotoViewUrl = window.APP_CONFIG.buildUrl('photo_view', { filename: selectedPhoto.photo_path });
+                    const newPhotoUrl = window.APP_CONFIG.buildUrl('photo', { photo_id: selectedPhoto.id });
+                    const newPhotoViewUrl = window.APP_CONFIG.buildUrl('photo_view', { photo_id: selectedPhoto.id });
 
                     document.getElementById('photo-img').src = newPhotoUrl;
                     document.getElementById('photo-img').alt = selectedPhoto.name;

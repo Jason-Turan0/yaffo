@@ -41,7 +41,7 @@
                 <div class="face-checkbox-container">
                     <input type="checkbox" class="face-checkbox" value="{{ face_data.face.id }}" checked>
                 </div>
-                <img src="/photos/{{ face_data.face.relative_file_path }}"
+                <img src="{{ url_for('face_thumbnail', face_id=face_data.face.id) }}"
                      alt="Face {{ face_data.face.id }}"
                      class="face-image"
                      loading="lazy">

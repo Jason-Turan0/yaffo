@@ -4,29 +4,49 @@ from photo_organizer.common import ROOT_DIR
 from photo_organizer.db.models import db, Photo, Person, Tag
 from sqlalchemy.orm import joinedload
 from photo_organizer.db.models import Face
+from pathlib import Path
 import io
 import os
 import subprocess
 import platform
 
 def init_photos_routes(app: Flask):
-    @app.route("/photos/<path:filename>")
-    def photo(filename: str):
-        file_path = ROOT_DIR / filename
+    @app.route("/photos/<int:photo_id>")
+    def photo(photo_id: int):
+        photo = db.session.get(Photo, photo_id)
+        if not photo:
+            return "Photo not found", 404
+
+        file_path = Path(photo.full_file_path)
+        if not file_path.exists():
+            return "File not found", 404
+
         if file_path.suffix.lower() == ".heic":
             img = convert_heif(file_path)
             buffer = io.BytesIO()
             img.save(buffer, format="JPEG")
             buffer.seek(0)
             return send_file(buffer, mimetype="image/jpeg")
-        return send_from_directory(ROOT_DIR, filename)
+        return send_file(file_path)
 
-    @app.route("/photo/view/<path:filename>")
-    def photo_view(filename: str):
+    @app.route("/faces/<int:face_id>")
+    def face_thumbnail(face_id: int):
+        face = db.session.get(Face, face_id)
+        if not face:
+            return "Face not found", 404
+
+        file_path = Path(face.full_file_path)
+        if not file_path.exists():
+            return "File not found", 404
+
+        return send_file(file_path)
+
+    @app.route("/photo/view/<int:photo_id>")
+    def photo_view(photo_id: int):
 
         # Query the photo from the database
         photo = (Photo.query
-                 .filter(Photo.relative_file_path == filename)
+                 .filter(Photo.id == photo_id)
                  .options(
                      joinedload(Photo.faces).joinedload(Face.people),
                      joinedload(Photo.tags)
@@ -44,13 +64,14 @@ def init_photos_routes(app: Flask):
 
         people = sorted(people_set, key=lambda p: p.name)
 
-        # Extract folder and filename
-        folder = os.path.dirname(filename)
-        file_name = os.path.basename(filename)
+        # Extract folder and filename from absolute path
+        file_path = Path(photo.full_file_path)
+        folder = str(file_path.parent)
+        file_name = file_path.name
 
-        # Calculate absolute paths for file and folder
-        absolute_file_path = os.path.join(ROOT_DIR, filename)
-        absolute_folder_path = os.path.join(ROOT_DIR, folder)
+        # Use absolute paths directly
+        absolute_file_path = str(file_path)
+        absolute_folder_path = folder
 
         # Prepare face data with locations for JavaScript
         faces_with_locations = []
@@ -58,7 +79,7 @@ def init_photos_routes(app: Flask):
             if face.location_top is not None:
                 faces_with_locations.append({
                     'id': face.id,
-                    'thumbnail': face.relative_file_path,
+                    'thumbnail': face.id,
                     'location': {
                         'top': face.location_top,
                         'right': face.location_right,

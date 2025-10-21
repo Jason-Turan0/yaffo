@@ -16,7 +16,7 @@ def init_locations_routes(app: Flask):
                 Photo.location_name,
                 Photo.latitude,
                 Photo.longitude,
-                Photo.relative_file_path
+                Photo.full_file_path
             )
             .filter(Photo.latitude.isnot(None))
             .filter(Photo.longitude.isnot(None))
@@ -29,8 +29,8 @@ def init_locations_routes(app: Flask):
                 'name': loc.location_name,
                 'lat': float(loc.latitude),
                 'lon': float(loc.longitude),
-                'photo_path': loc.relative_file_path,
-                'filename': os.path.basename(loc.relative_file_path)
+                'photo_path': loc.full_file_path,
+                'filename': os.path.basename(loc.full_file_path)
             }
             for loc in locations
         ]

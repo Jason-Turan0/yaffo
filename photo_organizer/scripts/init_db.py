@@ -10,7 +10,6 @@ def init_db():
             CREATE TABLE IF NOT EXISTS photos (
                 id INTEGER PRIMARY KEY,
                 full_file_path TEXT UNIQUE,
-                relative_file_path TEXT, 
                 date_taken TEXT,
                 status TEXT DEFAULT 'IMPORTED',
                 latitude REAL,
@@ -27,7 +26,6 @@ def init_db():
             id INTEGER PRIMARY KEY,
             embedding BLOB,
             full_file_path TEXT UNIQUE,
-            relative_file_path TEXT UNIQUE,
             photo_id INTEGER,
             status TEXT,
             location_top INTEGER,

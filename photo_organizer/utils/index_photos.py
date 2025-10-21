@@ -156,7 +156,7 @@ def import_photo(photo_path: Path) -> Optional[dict]:
     date_taken = get_photo_date(str(photo_path))
     return {
         "full_file_path": str(photo_path),
-        "relative_file_path": str(photo_path.relative_to(ROOT_DIR)),
+        "relative_file_path": str(photo_path),
         "date_taken": date_taken,
     }
 
@@ -217,7 +217,7 @@ def index_photos_batch(
     cancelled = False
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(index_photo, Path(p)): p for p in photo_paths}
+        futures = {executor.submit(index_photo, Path(p), THUMBNAIL_DIR): p for p in photo_paths}
 
         for i, future in enumerate(as_completed(futures)):
             if should_cancel and should_cancel():

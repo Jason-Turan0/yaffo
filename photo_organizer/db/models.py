@@ -9,7 +9,6 @@ class Photo(db.Model):
     __tablename__ = "photos"
     id = db.Column(db.Integer, primary_key=True)
     full_file_path = db.Column(db.String, unique=True)
-    relative_file_path = db.Column(db.String, unique=True)
     date_taken = db.Column(db.String)
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
@@ -42,7 +41,6 @@ class Face(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     embedding = db.Column(db.LargeBinary)
     full_file_path = db.Column(db.String, unique=True)
-    relative_file_path = db.Column(db.String, unique=True)
     photo_id = db.Column(db.Integer, db.ForeignKey("photos.id"))
     status = db.Column(db.String)
     # Face bounding box coordinates (from face_recognition)

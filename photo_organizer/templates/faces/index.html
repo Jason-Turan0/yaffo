@@ -198,7 +198,7 @@
                                          data-face-id="{{ face.id }}"
                                          data-similarity="{{ '%.2f' % (face.similarity * 100) if face.similarity is not none else 'N/A' }}"
                                          data-date="{{ face.photo_date.split(' ')[0] }}">
-                                        <img src="{{ url_for('photo', filename=face.relative_file_path) }}" width="100"
+                                        <img src="{{ url_for('face_thumbnail', face_id=face.id) }}" width="100"
                                              height="100">
                                         <input type="checkbox"
                                                name="faces" {{ 'checked'  if outer_loop.index0 == 0 else '' }}

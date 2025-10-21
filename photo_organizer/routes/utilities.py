@@ -3,7 +3,7 @@ from photo_organizer.db import db
 from photo_organizer.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_CANCELLED, \
     JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED, PersonFace, FACE_STATUS_ASSIGNED, JobResult, \
     PHOTO_STATUS_INDEXED, PHOTO_STATUS_IMPORTED
-from photo_organizer.common import MEDIA_DIR, PHOTO_EXTENSIONS, ROOT_DIR
+from photo_organizer.common import MEDIA_DIRS, PHOTO_EXTENSIONS, ROOT_DIR
 from photo_organizer.background_tasks.tasks import index_photo_task, auto_assign_faces_task, import_photo_task
 from pathlib import Path
 from itertools import batched
@@ -30,33 +30,34 @@ def init_utilities_routes(app: Flask):
         filesystem_photos = []
         orphaned_db_entries = []
 
-        db_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.relative_file_path, Photo.status).all()
+        db_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.status).all()
 
-        indexed_paths = {photo[1] for photo in db_photos if photo[3] == PHOTO_STATUS_INDEXED}
+        indexed_paths = {photo[1] for photo in db_photos if photo[2] == PHOTO_STATUS_INDEXED}
 
         filesystem_paths = set()
-        if MEDIA_DIR.exists():
-            for photo_file in MEDIA_DIR.rglob("*"):
-                if photo_file.is_file() and photo_file.suffix.lower() in PHOTO_EXTENSIONS:
-                    if _is_system_file(photo_file.name):
-                        continue
+        for media_dir in MEDIA_DIRS:
+            if media_dir.exists():
+                for photo_file in media_dir.rglob("*"):
+                    if photo_file.is_file() and photo_file.suffix.lower() in PHOTO_EXTENSIONS:
+                        if _is_system_file(photo_file.name):
+                            continue
 
-                    full_path = str(photo_file)
-                    filesystem_paths.add(full_path)
+                        full_path = str(photo_file)
+                        filesystem_paths.add(full_path)
 
-                    if full_path not in indexed_paths:
-                        filesystem_photos.append({
-                            'relative_path': str(photo_file.relative_to(ROOT_DIR)),
-                            'filename': photo_file.name,
-                            'full_path': full_path
-                        })
+                        if full_path not in indexed_paths:
+                            filesystem_photos.append({
+                                'relative_path': str(photo_file),
+                                'filename': photo_file.name,
+                                'full_path': full_path
+                            })
 
         for photo in db_photos:
-            photo_id, full_path, relative_path, status = photo
+            photo_id, full_path, status = photo
             if not Path(full_path).exists():
                 orphaned_db_entries.append({
                     'id': photo_id,
-                    'relative_path': relative_path,
+                    'relative_path': full_path,
                     'full_path': full_path
                 })
 
@@ -75,7 +76,7 @@ def init_utilities_routes(app: Flask):
             total_imported=len(db_photos),
             total_indexed=len(indexed_paths),
             total_filesystem=len(filesystem_paths),
-            media_dir=MEDIA_DIR,
+            media_dirs=[str(d) for d in MEDIA_DIRS],
             active_jobs=[job.to_dict() for job in active_jobs]
         )
 
@@ -85,7 +86,7 @@ def init_utilities_routes(app: Flask):
         files_to_index = data.get('files_to_index', [])
         files_to_delete = data.get('files_to_delete', [])
 
-        db_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.relative_file_path, Photo.status).all()
+        db_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.status).all()
         db_photos_dict = {photo[1]: photo for photo in db_photos}
 
         files_to_import = [file_path for file_path in files_to_index if not file_path in db_photos_dict.keys()]
@@ -106,7 +107,7 @@ def init_utilities_routes(app: Flask):
         )
         files_needing_indexing = [file_path for file_path in files_to_index if
                                   not file_path in db_photos_dict.keys() or
-                                  db_photos_dict[file_path][3] != PHOTO_STATUS_INDEXED]
+                                  db_photos_dict[file_path][2] != PHOTO_STATUS_INDEXED]
         index_job_id = str(uuid.uuid4())
         index_job = Job(
             id=index_job_id,

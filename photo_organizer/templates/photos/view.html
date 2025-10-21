@@ -98,7 +98,7 @@
                          data-face-id="{{ face.id }}"
                          onmouseenter="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.highlightFace({{ face.id }})"
                          onmouseleave="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.clearHighlights()">
-                        <img src="{{ url_for('photo', filename=face.relative_file_path) }}" alt="Face">
+                        <img src="{{ url_for('face_thumbnail', face_id=face.id) }}" alt="Face">
                         {% if face.people %}
                         <div class="face-label">
                             {% for person in face.people %}
@@ -143,7 +143,7 @@
     <div class="photo-container">
         <div class="photo-wrapper">
             <div class="photo-image-container">
-                <img src="{{ url_for('photo', filename=photo.relative_file_path) }}"
+                <img src="{{ url_for('photo', photo_id=photo.id) }}"
                      alt="{{ file_name }}"
                      class="photo-main"
                      id="mainPhoto">

@@ -71,7 +71,7 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int)
         suggestion_name=cluster["label"],
         photo_date= face_dict[cluster["face_ids"][0]].photo.date_taken,
         faces=[
-            FaceViewModel(face_id, face_dict[face_id].relative_file_path, face_dict[face_id].photo.date_taken, None)
+            FaceViewModel(face_id, face_dict[face_id].full_file_path, face_dict[face_id].photo.date_taken, None)
             for face_id in cluster["face_ids"]
         ],
     ) for cluster in clusters.values()]
@@ -125,10 +125,10 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
         if best_suggestion is not None:
             best_sim = matching_people[0][2]
             best_suggestion.faces.append(
-                FaceViewModel(face.id, face.relative_file_path, face.photo.date_taken, best_sim))
+                FaceViewModel(face.id, face.full_file_path, face.photo.date_taken, best_sim))
         else:
             default_suggestion.faces.append(
-                FaceViewModel(face.id, face.relative_file_path, face.photo.date_taken, None))
+                FaceViewModel(face.id, face.full_file_path, face.photo.date_taken, None))
 
     face_suggestions.sort(key=lambda suggestion: (1 if len(suggestion.person_ids) ==1 else 0, len(suggestion.faces)), reverse=True)
 

@@ -57,7 +57,7 @@
                  data-face-id="{{ face_data.face.id }}"
                  data-similarity="{{ '%.2f' % (face_data.similarity * 100) if face_data.similarity is not none else 'N/A' }}"
                  data-date="{{ face_data.face.photo.date_taken.split(' ')[0] if face_data.face.photo.date_taken else 'Unknown' }}">
-                <img src="{{ url_for('photo', filename=face_data.face.relative_file_path) }}" alt="Face">
+                <img src="{{ url_for('face_thumbnail', face_id=face_data.face.id) }}" alt="Face">
                 <div class="face-info">
                     <div class="face-date">{{ face_data.face.photo.date_taken.split(' ')[0] if
                         face_data.face.photo.date_taken else 'Unknown date' }}
