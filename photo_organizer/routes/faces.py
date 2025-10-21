@@ -47,6 +47,9 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int)
     embeddings = []
     face_ids = []
     face_dict = {face.id: face for face in unassigned_faces}
+    if len(unassigned_faces) == 0:
+        return []
+
     for face in unassigned_faces:
         embeddings.append(load_embedding(face.embedding))
         face_ids.append(face.id)
@@ -127,7 +130,7 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
             default_suggestion.faces.append(
                 FaceViewModel(face.id, face.relative_file_path, face.photo.date_taken, None))
 
-    face_suggestions.sort(key=lambda suggestion: len(suggestion.faces), reverse=True)
+    face_suggestions.sort(key=lambda suggestion: (1 if len(suggestion.person_ids) ==1 else 0, len(suggestion.faces)), reverse=True)
 
     face_suggestions.append(default_suggestion)
     return face_suggestions

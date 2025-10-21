@@ -173,41 +173,47 @@
                     <span class="separator">|</span>
                     <a href="#" id="deselect-all">Clear selection</a>
                 </div>
+                {% if face_suggestions | length > 0 %}
+                    {% for faceSuggestion in face_suggestions %}
+                        {% set outer_loop = loop %}
+                        <div class="suggestion-group">
+                            <h2>
+                                <input type="checkbox"  {{ 'checked'  if outer_loop.index0 == 0 else '' }}
+                                       class="group-select-checkbox" data-group-index="{{ loop.index0 }}">
+                                <span class="group-select-label">Select all</span>
+                                <span>{{ faceSuggestion.photo_date | format_date ("date") }}</span>
+                                <span style="margin-left: auto;">{{ faceSuggestion.suggestion_name }}</span>
+                            </h2>
 
-                {% for faceSuggestion in face_suggestions %}
-                    {% set outer_loop = loop %}
-                    <div class="suggestion-group">
-                        <h2>
-                            <input type="checkbox"  {{ 'checked'  if outer_loop.index0 == 0 else '' }}
-                                   class="group-select-checkbox" data-group-index="{{ loop.index0 }}">
-                            <span class="group-select-label">Select all</span>
-                            <span>{{ faceSuggestion.photo_date | format_date ("date") }}</span>
-                            <span style="margin-left: auto;">{{ faceSuggestion.suggestion_name }}</span>
-                        </h2>
+                            <div class="group-actions">
+                                {% for person in faceSuggestion.people %}
+                                    <button type="button" class="btn assign-group-btn" data-person-id="{{ person.id }}">
+                                        Assign to {{ person.name }}</button>
+                                {% endfor %}
+                            </div>
 
-                        <div class="group-actions">
-                            {% for person in faceSuggestion.people %}
-                                <button type="button" class="btn assign-group-btn" data-person-id="{{ person.id }}">
-                                    Assign to {{ person.name }}</button>
-                            {% endfor %}
+                            <div class="grid">
+                                {% for face in faceSuggestion.faces %}
+                                    <div class="face {{ 'selected' if outer_loop.index0 == 0  else '' }}"
+                                         data-face-id="{{ face.id }}"
+                                         data-similarity="{{ '%.2f' % (face.similarity * 100) if face.similarity is not none else 'N/A' }}"
+                                         data-date="{{ face.photo_date.split(' ')[0] }}">
+                                        <img src="{{ url_for('photo', filename=face.relative_file_path) }}" width="100"
+                                             height="100">
+                                        <input type="checkbox"
+                                               name="faces" {{ 'checked'  if outer_loop.index0 == 0 else '' }}
+                                               value="{{ face.id }}" style="display:none;">
+                                    </div>
+                                {% endfor %}
+                            </div>
                         </div>
-
-                        <div class="grid">
-                            {% for face in faceSuggestion.faces %}
-                                <div class="face {{ 'selected' if outer_loop.index0 == 0  else '' }}"
-                                     data-face-id="{{ face.id }}"
-                                     data-similarity="{{ '%.2f' % (face.similarity * 100) if face.similarity is not none else 'N/A' }}"
-                                     data-date="{{ face.photo_date.split(' ')[0] }}">
-                                    <img src="{{ url_for('photo', filename=face.relative_file_path) }}" width="100"
-                                         height="100">
-                                    <input type="checkbox"
-                                           name="faces" {{ 'checked'  if outer_loop.index0 == 0 else '' }}
-                                           value="{{ face.id }}" style="display:none;">
-                                </div>
-                            {% endfor %}
-                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <h2>All Faces Assigned!</h2>
+                        <p>Looks like there isn't anything for you to do here.</p>
                     </div>
-                {% endfor %}
+                {% endif %}
             </form>
 
             {{ render_pagination(
