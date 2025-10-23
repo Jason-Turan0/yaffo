@@ -1,8 +1,6 @@
 import logging
 import sys
-from pathlib import Path
 from photo_organizer.common import ROOT_DIR
-
 
 LOG_FORMAT = '%(asctime)s - %(name)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s'
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'

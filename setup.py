@@ -1,12 +1,13 @@
 from setuptools import setup, find_packages
 setup(
-    name="photo_organizer",
+    name="yaffo",
     version="0.1.0",
     description="An app to organize photos",
     author="Jason Turan",
     packages=find_packages(),
     install_requires=[
         "blinker==1.9.0",
+        "briefcase",
         "click==8.3.0",
         "dlib==20.0.0",
         "face-recognition==1.3.0",
@@ -28,6 +29,7 @@ setup(
         "piexif==1.1.3",
         "pillow==11.3.0",
         "pillow_heif==1.1.0",
+        "platformdirs",
         "PyWavelets==1.9.0",
         "requests==2.32.3",
         "scikit-learn==1.7.2",
