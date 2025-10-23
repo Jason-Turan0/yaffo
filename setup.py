@@ -1,9 +1,10 @@
 from setuptools import setup, find_packages
+from photo_organizer.common import app_name, version, app_author
 setup(
-    name="yaffo",
-    version="0.1.0",
+    name=app_name,
+    version=version,
     description="An app to organize photos",
-    author="Jason Turan",
+    author=app_author,
     packages=find_packages(),
     install_requires=[
         "blinker==1.9.0",
