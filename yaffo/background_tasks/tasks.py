@@ -74,7 +74,6 @@ def import_photo_task(job_id: str, file_path_batch: list[str]):
         for result in processed_results:
             photo = Photo(
                 full_file_path=result["full_file_path"],
-                relative_file_path=result["relative_file_path"],
                 date_taken=result["date_taken"],
                 latitude=result.get("latitude"),
                 longitude=result.get("longitude"),
@@ -179,7 +178,6 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                     embedding=face_data['embedding'].tobytes(),
                     full_file_path=face_data['full_file_path'],
                     status=FACE_STATUS_UNASSIGNED,
-                    relative_file_path=face_data['relative_file_path'],
                     photo_id=photo.id,
                     location_top=face_data['location_top'],
                     location_right=face_data['location_right'],

@@ -104,6 +104,43 @@ Included automatically in `base.html` via:
 - `static/notification.js` - JavaScript module
 - `static/notification.css` - Styling
 
+### Confirm Dialog
+A global confirm dialog component is available via `window.PHOTO_ORGANIZER.confirmDialog`:
+
+```javascript
+// Basic usage
+const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+    title: 'Confirm Action',
+    message: 'Are you sure you want to do this?',
+    confirmText: 'Yes, do it',
+    cancelText: 'Cancel',
+    confirmClass: 'btn-danger' // Optional: btn-primary (default), btn-danger, btn-success
+});
+
+if (confirmed) {
+    // User clicked confirm
+} else {
+    // User clicked cancel or closed dialog
+}
+
+// Example: Delete confirmation
+const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+    title: 'Delete Item',
+    message: 'This action cannot be undone.',
+    confirmText: 'Delete',
+    confirmClass: 'btn-danger'
+});
+```
+
+**Features:**
+- Promise-based API for async/await usage
+- Customizable title, message, and button text
+- Support for multi-line messages (use `\n`)
+- Dismissable via Cancel button, backdrop click, or Escape key
+- Automatically included in `base.html`
+
+**IMPORTANT:** Always use this instead of native `confirm()` or `alert()` functions.
+
 ### APP_CONFIG
 Global configuration object with all Flask routes accessible in JavaScript:
 
@@ -180,6 +217,7 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
 - Data attributes for complex objects
 - Polluting the global namespace with individual functions
 - Hardcoding API URLs in JavaScript (use APP_CONFIG instead)
+- **NEVER use `alert()` or `confirm()` in JavaScript** - use the global confirm dialog or notification system instead
 
 ### Passing APP_CONFIG for API URLs
 

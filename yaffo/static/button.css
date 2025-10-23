@@ -81,3 +81,35 @@
 .btn-block {
     width: 100%;
 }
+
+/* Disabled button state */
+.btn:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled,
+.btn-success:disabled,
+.btn-outline-primary:disabled,
+.action-button:disabled,
+button:disabled {
+    background: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.65;
+    transform: none;
+    box-shadow: none;
+    border-color: #dee2e6;
+}
+
+.btn:disabled:hover,
+.btn-primary:disabled:hover,
+.btn-secondary:disabled:hover,
+.btn-danger:disabled:hover,
+.btn-success:disabled:hover,
+.btn-outline-primary:disabled:hover,
+.action-button:disabled:hover,
+button:disabled:hover {
+    background: #e9ecef;
+    color: #6c757d;
+    transform: none;
+    box-shadow: none;
+}

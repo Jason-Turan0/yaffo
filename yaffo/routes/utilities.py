@@ -1,9 +1,9 @@
 from flask import render_template, Flask, redirect, url_for, request, jsonify
 from yaffo.db import db
 from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_CANCELLED, \
-    JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED, PersonFace, FACE_STATUS_ASSIGNED, JobResult, \
-    PHOTO_STATUS_INDEXED, PHOTO_STATUS_IMPORTED
-from yaffo.common import MEDIA_DIRS, PHOTO_EXTENSIONS, ROOT_DIR
+    JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED, JobResult, \
+    PHOTO_STATUS_INDEXED, ApplicationSettings
+from yaffo.common import PHOTO_EXTENSIONS
 from yaffo.background_tasks.tasks import index_photo_task, auto_assign_faces_task, import_photo_task
 from pathlib import Path
 from itertools import batched
@@ -12,12 +12,30 @@ import json
 
 from yaffo.utils.index_photos import delete_orphaned_photos
 from sqlalchemy.orm import joinedload
-from sqlalchemy import func
 
 
 def _is_system_file(filename: str) -> bool:
     system_files = {'.DS_Store', 'Thumbs.db', 'desktop.ini', '.Spotlight-V100', '.Trashes', '.fseventsd'}
     return filename.startswith('._') or filename in system_files
+
+
+def _get_media_dirs() -> list[Path]:
+    media_dirs_setting = db.session.query(ApplicationSettings).filter_by(name="media_dirs").first()
+
+    if media_dirs_setting and media_dirs_setting.value:
+        media_dir_paths = json.loads(media_dirs_setting.value)
+        return [Path(dir_path) for dir_path in media_dir_paths]
+    else:
+        return []
+
+
+def _get_thumbnail_dir() -> Path | None:
+    thumbnail_setting = db.session.query(ApplicationSettings).filter_by(name="thumbnail_dir").first()
+
+    if thumbnail_setting and thumbnail_setting.value:
+        return Path(thumbnail_setting.value)
+    else:
+        return None
 
 
 def init_utilities_routes(app: Flask):
@@ -29,17 +47,50 @@ def init_utilities_routes(app: Flask):
     def utilities_index_photos():
         filesystem_photos = []
         orphaned_db_entries = []
+        warnings = []
+
+        media_dirs = _get_media_dirs()
+        thumbnail_dir = _get_thumbnail_dir()
+
+        if not media_dirs or len(media_dirs) == 0:
+            warnings.append({
+                'type': 'error',
+                'message': 'No media directories configured. Please configure media directories in Settings before syncing.'
+            })
+        else:
+            missing_media_dirs = [str(d) for d in media_dirs if not d.exists()]
+            if missing_media_dirs:
+                warnings.append({
+                    'type': 'warning',
+                    'message': f'The following media directories do not exist: {", ".join(missing_media_dirs)}'
+                })
+
+        if thumbnail_dir is None:
+            warnings.append({
+                'type': 'error',
+                'message': 'No thumbnail directory configured. Please configure thumbnail directory in Settings before syncing.'
+            })
+        elif not thumbnail_dir.exists():
+            warnings.append({
+                'type': 'warning',
+                'message': f'Thumbnail directory does not exist: {thumbnail_dir}. It will be created automatically during indexing.'
+            })
+
+        can_sync = len(media_dirs) > 0 and all(d.exists() for d in media_dirs) and thumbnail_dir is not None
 
         db_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.status).all()
 
         indexed_paths = {photo[1] for photo in db_photos if photo[2] == PHOTO_STATUS_INDEXED}
 
         filesystem_paths = set()
-        for media_dir in MEDIA_DIRS:
+        for media_dir in media_dirs:
             if media_dir.exists():
                 for photo_file in media_dir.rglob("*"):
                     if photo_file.is_file() and photo_file.suffix.lower() in PHOTO_EXTENSIONS:
                         if _is_system_file(photo_file.name):
+                            continue
+
+                        if thumbnail_dir and photo_file.is_relative_to(thumbnail_dir):
                             continue
 
                         full_path = str(photo_file)
@@ -47,7 +98,6 @@ def init_utilities_routes(app: Flask):
 
                         if full_path not in indexed_paths:
                             filesystem_photos.append({
-                                'relative_path': str(photo_file),
                                 'filename': photo_file.name,
                                 'full_path': full_path
                             })
@@ -57,12 +107,11 @@ def init_utilities_routes(app: Flask):
             if not Path(full_path).exists():
                 orphaned_db_entries.append({
                     'id': photo_id,
-                    'relative_path': full_path,
                     'full_path': full_path
                 })
 
-        filesystem_photos.sort(key=lambda x: x['relative_path'])
-        orphaned_db_entries.sort(key=lambda x: x['relative_path'])
+        filesystem_photos.sort(key=lambda x: x['full_path'])
+        orphaned_db_entries.sort(key=lambda x: x['full_path'])
 
         active_jobs = db.session.query(Job).filter(
             Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING]),
@@ -76,8 +125,10 @@ def init_utilities_routes(app: Flask):
             total_imported=len(db_photos),
             total_indexed=len(indexed_paths),
             total_filesystem=len(filesystem_paths),
-            media_dirs=[str(d) for d in MEDIA_DIRS],
-            active_jobs=[job.to_dict() for job in active_jobs]
+            media_dirs=[str(d) for d in media_dirs],
+            active_jobs=[job.to_dict() for job in active_jobs],
+            warnings=warnings,
+            can_sync=can_sync
         )
 
     @app.route("/utilities/index-photos/sync", methods=["POST"])
@@ -85,6 +136,21 @@ def init_utilities_routes(app: Flask):
         data = request.get_json()
         files_to_index = data.get('files_to_index', [])
         files_to_delete = data.get('files_to_delete', [])
+
+        media_dirs = _get_media_dirs()
+        thumbnail_dir = _get_thumbnail_dir()
+
+        if not media_dirs or len(media_dirs) == 0:
+            return jsonify({'error': 'No media directories configured'}), 400
+
+        missing_dirs = [str(d) for d in media_dirs if not d.exists()]
+        if missing_dirs:
+            return jsonify({'error': f'Media directories do not exist: {", ".join(missing_dirs)}'}), 400
+
+        if thumbnail_dir is None:
+            return jsonify({'error': 'No thumbnail directory configured'}), 400
+
+        thumbnail_dir.mkdir(parents=True, exist_ok=True)
 
         db_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.status).all()
         db_photos_dict = {photo[1]: photo for photo in db_photos}

@@ -1,19 +1,18 @@
 from flask import Flask, render_template, request, jsonify
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, Face
-from yaffo.common import DB_PATH, THUMBNAIL_DIR, HUEY_DB_PATH
+from yaffo.common import DB_PATH, HUEY_DB_PATH
 import json
 import subprocess
 import platform
-import os
 import shutil
 from pathlib import Path
 
 
 def init_settings_routes(app: Flask):
-    def get_thumbnail_stats(directory: Path):
+    def get_thumbnail_stats(directory: Path| None):
         """Get count and total size of thumbnails in directory"""
-        if not directory.exists():
+        if directory is None or not directory.exists():
             return 0, 0
 
         count = 0
@@ -62,8 +61,7 @@ def init_settings_routes(app: Flask):
         if thumbnail_setting and thumbnail_setting.value:
             current_thumbnail_dir = Path(thumbnail_setting.value)
         else:
-            current_thumbnail_dir = THUMBNAIL_DIR
-
+            current_thumbnail_dir = None
         # Get thumbnail stats
         thumbnail_count, thumbnail_size = get_thumbnail_stats(current_thumbnail_dir)
 
@@ -71,7 +69,7 @@ def init_settings_routes(app: Flask):
             "settings/index.html",
             media_dirs=media_dirs,
             db_path=str(DB_PATH),
-            current_thumbnail_dir=str(current_thumbnail_dir),
+            current_thumbnail_dir=str(current_thumbnail_dir) if current_thumbnail_dir else None,
             thumbnail_count=thumbnail_count,
             thumbnail_size=format_size(thumbnail_size),
             huey_db_path=str(HUEY_DB_PATH)
@@ -85,6 +83,13 @@ def init_settings_routes(app: Flask):
 
         if not new_dir:
             return jsonify({"error": "Directory path is required"}), 400
+
+        new_dir_path = Path(new_dir)
+
+        try:
+            new_dir_path.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            return jsonify({"error": f"Failed to create directory: {str(e)}"}), 400
 
         # Get current media_dirs
         media_dirs_setting = db.session.query(ApplicationSettings).filter_by(name="media_dirs").first()
@@ -228,7 +233,7 @@ def init_settings_routes(app: Flask):
         if thumbnail_setting and thumbnail_setting.value:
             thumbnail_dir = Path(thumbnail_setting.value)
         else:
-            thumbnail_dir = THUMBNAIL_DIR
+            thumbnail_dir = None
 
         count, size = get_thumbnail_stats(thumbnail_dir)
 
@@ -257,10 +262,10 @@ def init_settings_routes(app: Flask):
         if thumbnail_setting and thumbnail_setting.value:
             current_dir = Path(thumbnail_setting.value)
         else:
-            current_dir = THUMBNAIL_DIR
+            current_dir = None
 
         # Check if new directory is the same as current
-        if new_dir_path.resolve() == current_dir.resolve():
+        if current_dir and new_dir_path.resolve() == current_dir.resolve():
             return jsonify({"error": "New directory is the same as current directory"}), 400
 
         try:
@@ -274,7 +279,7 @@ def init_settings_routes(app: Flask):
             path_mappings = {}
 
             # Move files
-            if current_dir.exists() and file_count > 0:
+            if current_dir and current_dir.exists() and file_count > 0:
                 for file_path in current_dir.rglob("*"):
                     if file_path.is_file():
                         relative_path = file_path.relative_to(current_dir)

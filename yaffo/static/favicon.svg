@@ -1,0 +1,12 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified geometric frames for favicon -->
+
+  <!-- First frame (back) - rotated -->
+  <rect x="9" y="8" width="14" height="17" rx="1"
+        fill="none" stroke="#6c757d" stroke-width="1.5"
+        transform="rotate(-20 16 16)" opacity="0.5"/>
+
+  <!-- Second frame (front) -->
+  <rect x="9" y="7" width="14" height="17" rx="1"
+        fill="none" stroke="#007BFF" stroke-width="2"/>
+</svg>

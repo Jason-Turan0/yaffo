@@ -208,3 +208,28 @@
     font-size: 14px;
     margin-bottom: 0;
 }
+
+.warnings-section {
+    margin-bottom: 20px;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.alert-link {
+    color: #007BFF;
+    font-weight: 600;
+    text-decoration: underline;
+    margin-left: 5px;
+}
+
+.alert-link:hover {
+    color: #0056b3;
+}

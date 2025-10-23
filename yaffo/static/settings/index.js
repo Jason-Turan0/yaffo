@@ -55,7 +55,14 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, config) => {
     };
 
     const removeMediaDir = async (index) => {
-        if (!confirm(`Remove directory: ${mediaDirs[index]}?`)) {
+        const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+            title: 'Remove Media Directory',
+            message: `Remove directory: ${mediaDirs[index]}?`,
+            confirmText: 'Remove',
+            confirmClass: 'btn-danger'
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -138,7 +145,14 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, config) => {
                            `New location: ${directory}\n\n` +
                            `This will move ${stats.count} files (${stats.size_formatted})`;
 
-            if (!confirm(message)) {
+            const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+                title: 'Move Thumbnail Directory',
+                message: message,
+                confirmText: 'Move',
+                confirmClass: 'btn-primary'
+            });
+
+            if (!confirmed) {
                 return;
             }
 

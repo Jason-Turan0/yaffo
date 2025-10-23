@@ -156,7 +156,6 @@ def import_photo(photo_path: Path) -> Optional[dict]:
     date_taken = get_photo_date(str(photo_path))
     return {
         "full_file_path": str(photo_path),
-        "relative_file_path": str(photo_path),
         "date_taken": date_taken,
     }
 

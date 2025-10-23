@@ -41,6 +41,7 @@
         <h2>Thumbnail Directory</h2>
         <p class="section-description">Configure where face thumbnails are stored. Thumbnails are automatically generated cropped images of detected faces for quick loading.</p>
 
+        {% if current_thumbnail_dir and current_thumbnail_dir != "None" %}
         <div class="thumbnail-dir-info">
             <div class="current-path-item">
                 <label>Current Thumbnail Directory:</label>
@@ -58,6 +59,17 @@
             <button type="button" class="btn-secondary" onclick="window.PHOTO_ORGANIZER.settings.browseThumbnailFolder()">Browse...</button>
             <button type="button" class="btn-primary" onclick="window.PHOTO_ORGANIZER.settings.changeThumbnailDir()">Change Directory</button>
         </div>
+        {% else %}
+        <div class="no-thumbnail-dir">
+            <p class="no-data">No thumbnail directory configured. Please set a directory to enable face thumbnail generation.</p>
+        </div>
+
+        <div class="change-thumbnail-dir-form">
+            <input type="text" id="new-thumbnail-dir" placeholder="Enter thumbnail directory path" class="form-control">
+            <button type="button" class="btn-secondary" onclick="window.PHOTO_ORGANIZER.settings.browseThumbnailFolder()">Browse...</button>
+            <button type="button" class="btn-primary" onclick="window.PHOTO_ORGANIZER.settings.changeThumbnailDir()">Set Directory</button>
+        </div>
+        {% endif %}
     </div>
 
     <div class="settings-section">
