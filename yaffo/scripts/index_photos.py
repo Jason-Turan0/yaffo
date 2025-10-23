@@ -3,9 +3,9 @@ from tqdm import tqdm
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 
-from photo_organizer.common import DB_PATH, MEDIA_DIRS
-from photo_organizer.utils.index_photos import get_photo_files, index_photos_batch
-from photo_organizer.db.models import Photo
+from yaffo.common import DB_PATH, MEDIA_DIRS
+from yaffo.utils.index_photos import get_photo_files, index_photos_batch
+from yaffo.db.models import Photo
 
 
 def index_photos():

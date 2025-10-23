@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional, List
 from tqdm import tqdm
 
-from photo_organizer.common import VIDEO_EXTENSIONS
+from yaffo.common import VIDEO_EXTENSIONS
 
 
 def get_video_date(path: Path) -> Optional[datetime]:

@@ -1,9 +1,9 @@
-from photo_organizer.utils.image import convert_heif
+from yaffo.utils.image import convert_heif
 from flask import Flask, send_from_directory, send_file, render_template, request, jsonify
-from photo_organizer.common import ROOT_DIR
-from photo_organizer.db.models import db, Photo, Person, Tag
+from yaffo.common import ROOT_DIR
+from yaffo.db.models import db, Photo, Person, Tag
 from sqlalchemy.orm import joinedload
-from photo_organizer.db.models import Face
+from yaffo.db.models import Face
 from pathlib import Path
 import io
 import os

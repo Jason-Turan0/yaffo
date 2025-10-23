@@ -1,5 +1,5 @@
 import sqlite3
-from photo_organizer.common import DB_PATH
+from yaffo.common import DB_PATH
 
 
 # @formatter:off

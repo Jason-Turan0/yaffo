@@ -58,5 +58,5 @@ instance/
 *.temp
 
 # Test data
-photo_organizer/scripts/test_data/
-/photo_organizer/scripts/performance_profiles/
+yaffo/scripts/test_data/
+yaffo/scripts/performance_profiles/

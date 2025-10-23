@@ -1,6 +1,6 @@
 # main.py
-from photo_organizer.background_tasks.config import huey  # import the "background_tasks" object.
-from photo_organizer.background_tasks.tasks import index_photo_task  # import any background_tasks / decorated functions
+from yaffo.background_tasks.config import huey  # import the "background_tasks" object.
+from yaffo.background_tasks.tasks import index_photo_task  # import any background_tasks / decorated functions
 
 if __name__ == '__main__':
     result = index_photo_task('', [])

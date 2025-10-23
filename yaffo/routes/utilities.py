@@ -1,16 +1,16 @@
 from flask import render_template, Flask, redirect, url_for, request, jsonify
-from photo_organizer.db import db
-from photo_organizer.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_CANCELLED, \
+from yaffo.db import db
+from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_CANCELLED, \
     JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED, PersonFace, FACE_STATUS_ASSIGNED, JobResult, \
     PHOTO_STATUS_INDEXED, PHOTO_STATUS_IMPORTED
-from photo_organizer.common import MEDIA_DIRS, PHOTO_EXTENSIONS, ROOT_DIR
-from photo_organizer.background_tasks.tasks import index_photo_task, auto_assign_faces_task, import_photo_task
+from yaffo.common import MEDIA_DIRS, PHOTO_EXTENSIONS, ROOT_DIR
+from yaffo.background_tasks.tasks import index_photo_task, auto_assign_faces_task, import_photo_task
 from pathlib import Path
 from itertools import batched
 import uuid
 import json
 
-from photo_organizer.utils.index_photos import delete_orphaned_photos
+from yaffo.utils.index_photos import delete_orphaned_photos
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func
 

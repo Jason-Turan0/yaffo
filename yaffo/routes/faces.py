@@ -5,18 +5,18 @@ import numpy as np
 from flask import Flask, render_template, request, jsonify
 from sklearn.cluster import DBSCAN
 
-from photo_organizer.logging_config import get_logger
+from yaffo.logging_config import get_logger
 from sqlalchemy import extract
 from sqlalchemy.dialects.sqlite import insert
 import pydash as _
 from sqlalchemy.orm import joinedload
-from photo_organizer.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
+from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
     FACE_STATUS_ASSIGNED, Photo
 from sklearn.metrics.pairwise import cosine_similarity
 
-from photo_organizer.db.repositories.person_repository import update_person_embedding
-from photo_organizer.db.repositories.photos_repository import get_distinct_years, get_distinct_months
-from photo_organizer.domain.compare_utils import load_embedding, calculate_similarity
+from yaffo.db.repositories.person_repository import update_person_embedding
+from yaffo.db.repositories.photos_repository import get_distinct_years, get_distinct_months
+from yaffo.domain.compare_utils import load_embedding, calculate_similarity
 
 DEFAULT_THRESHOLD = 10  # configurable similarity threshold
 DEFAULT_PAGE_SIZE = 2000

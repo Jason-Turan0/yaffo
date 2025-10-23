@@ -4,8 +4,8 @@ from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from photo_organizer.common import DB_PATH
-from photo_organizer.db.models import Photo, Face, Person
+from yaffo.common import DB_PATH
+from yaffo.db.models import Photo, Face, Person
 from PIL import Image, PngImagePlugin
 import piexif
 import shutil

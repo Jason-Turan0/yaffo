@@ -2,9 +2,9 @@ import json
 import numpy as np
 from sqlalchemy.orm import joinedload, Session
 import pydash as _
-from photo_organizer.db.models import Person, Face, PersonEmbedding
-from photo_organizer.domain.compare_utils import load_embedding
-from photo_organizer.logging_config import get_logger
+from yaffo.db.models import Person, Face, PersonEmbedding
+from yaffo.domain.compare_utils import load_embedding
+from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__)
 

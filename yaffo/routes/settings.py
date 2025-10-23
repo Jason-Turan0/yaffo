@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
-from photo_organizer.db import db
-from photo_organizer.db.models import ApplicationSettings, Face
-from photo_organizer.common import DB_PATH, THUMBNAIL_DIR, HUEY_DB_PATH
+from yaffo.db import db
+from yaffo.db.models import ApplicationSettings, Face
+from yaffo.common import DB_PATH, THUMBNAIL_DIR, HUEY_DB_PATH
 import json
 import subprocess
 import platform

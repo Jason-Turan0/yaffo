@@ -2,7 +2,7 @@ import calendar
 
 from sqlalchemy import extract
 from sqlalchemy.orm import Session
-from photo_organizer.db.models import Photo
+from yaffo.db.models import Photo
 
 def get_distinct_years(session: Session):
     return [year[0] for year in

@@ -6,8 +6,8 @@ import imagehash
 from tqdm import tqdm
 import shutil
 
-from photo_organizer.common import PHOTO_EXTENSIONS, TRASH_DIR
-from photo_organizer.utils.image import convert_heif, image_from_path
+from yaffo.common import PHOTO_EXTENSIONS, TRASH_DIR
+from yaffo.utils.image import convert_heif, image_from_path
 
 
 def collect_photo_files(src_dir: Path) -> List[Path]:

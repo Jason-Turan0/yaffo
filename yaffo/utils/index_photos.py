@@ -16,11 +16,11 @@ import face_recognition
 import piexif
 from sqlalchemy.orm import Session
 
-from photo_organizer.logging_config import get_logger
-from photo_organizer.db.models import Photo, Face, Tag, FACE_STATUS_UNASSIGNED
-from photo_organizer.common import PHOTO_EXTENSIONS, TEMP_DIR, THUMBNAIL_DIR, ROOT_DIR
-from photo_organizer.scripts.organize_photos import get_photo_date
-from photo_organizer.utils.image import image_from_path, image_to_numpy
+from yaffo.logging_config import get_logger
+from yaffo.db.models import Photo, Face, Tag, FACE_STATUS_UNASSIGNED
+from yaffo.common import PHOTO_EXTENSIONS, TEMP_DIR, THUMBNAIL_DIR, ROOT_DIR
+from yaffo.scripts.organize_photos import get_photo_date
+from yaffo.utils.image import image_from_path, image_to_numpy
 
 logger = get_logger(__name__, 'background_tasks')
 

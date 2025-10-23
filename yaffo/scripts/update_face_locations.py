@@ -12,8 +12,8 @@ from pathlib import Path
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from photo_organizer.common import DB_PATH, ROOT_DIR
-from photo_organizer.scripts.index_photos import load_image_file
+from yaffo.common import DB_PATH, ROOT_DIR
+from yaffo.scripts.index_photos import load_image_file
 import face_recognition
 
 # Configuration

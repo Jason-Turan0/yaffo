@@ -1,12 +1,12 @@
 from flask import Flask
 
-from photo_organizer.routes.faces import init_faces_routes
-from photo_organizer.routes.home import init_home_routes
-from photo_organizer.routes.locations import init_locations_routes
-from photo_organizer.routes.people import init_people_routes
-from photo_organizer.routes.photos import init_photos_routes
-from photo_organizer.routes.utilities import init_utilities_routes
-from photo_organizer.routes.settings import init_settings_routes
+from yaffo.routes.faces import init_faces_routes
+from yaffo.routes.home import init_home_routes
+from yaffo.routes.locations import init_locations_routes
+from yaffo.routes.people import init_people_routes
+from yaffo.routes.photos import init_photos_routes
+from yaffo.routes.utilities import init_utilities_routes
+from yaffo.routes.settings import init_settings_routes
 
 
 def init_routes(app: Flask):

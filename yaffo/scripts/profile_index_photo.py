@@ -11,15 +11,15 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, List, Tuple
 
-from photo_organizer.utils.index_photos import index_photo
+from yaffo.utils.index_photos import index_photo
 profile_name = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-PROFILE_DIR = Path("./photo_organizer/scripts/performance_profiles")
+PROFILE_DIR = Path("./yaffo/scripts/performance_profiles")
 RESULTS_DIR = PROFILE_DIR / "results"
 PROFILE_RUNS_DIR = RESULTS_DIR / profile_name
 THUMBNAIL_DIR = PROFILE_RUNS_DIR / "thumbnails"
 PROFILE_HISTORY_FILE = PROFILE_DIR / "profile_history.json"
-TEST_DATA_DIR = Path("./photo_organizer/scripts/test_data/samples")
+TEST_DATA_DIR = Path("./yaffo/scripts/test_data/samples")
 
 def ensure_profile_directory() -> None:
     PROFILE_DIR.mkdir(exist_ok=True)
@@ -445,7 +445,7 @@ def main():
     print("\n  Profile with snakeviz visualization:")
     print("    inv profile-index-photos --photos 20 --snakeviz")
     print("\n  Manually view a previous profile:")
-    print("    snakeviz photo_organizer/scripts/performance_profiles/TIMESTAMP.prof")
+    print("    snakeviz yaffo/scripts/performance_profiles/TIMESTAMP.prof")
     print("\nOther profiling tools:")
     print("  - py-spy: Low-overhead sampling profiler (pip install py-spy)")
     print("  - line_profiler: Line-by-line profiling (@profile decorator)")

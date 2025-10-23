@@ -8,7 +8,7 @@ from PIL import Image
 from datetime import datetime
 import piexif
 
-from photo_organizer.common import PHOTO_EXTENSIONS
+from yaffo.common import PHOTO_EXTENSIONS
 
 
 def get_date_from_filename(filename: str) -> Optional[datetime]:

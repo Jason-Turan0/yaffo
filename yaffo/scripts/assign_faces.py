@@ -4,14 +4,14 @@ import face_recognition
 from sqlalchemy import create_engine, insert
 from sqlalchemy.orm import sessionmaker, joinedload
 from tqdm import tqdm
-from photo_organizer.common import DB_PATH
-from photo_organizer.db.models import Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
+from yaffo.common import DB_PATH
+from yaffo.db.models import Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
     FACE_STATUS_ASSIGNED
-from photo_organizer.db.repositories.person_repository import update_person_embedding
-from photo_organizer.domain.compare_utils import calculate_face_similarity, load_embedding
+from yaffo.db.repositories.person_repository import update_person_embedding
+from yaffo.domain.compare_utils import calculate_face_similarity, load_embedding
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from photo_organizer.scripts.index_photos import load_image_file
+from yaffo.scripts.index_photos import load_image_file
 
 engine = create_engine(f"sqlite:///{DB_PATH}")
 session = sessionmaker(bind=engine)()

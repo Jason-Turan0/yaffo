@@ -1,5 +1,5 @@
 from sqlalchemy import PrimaryKeyConstraint
-from photo_organizer.db import db
+from yaffo.db import db
 from datetime import datetime
 
 PHOTO_STATUS_IMPORTED = "IMPORTED"

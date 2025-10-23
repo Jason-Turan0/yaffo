@@ -1,12 +1,12 @@
 import logging
 import sys
-from photo_organizer.common import ROOT_DIR
+from yaffo.common import ROOT_DIR
 
 LOG_FORMAT = '%(asctime)s - %(name)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s'
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 HUEY_LOG_FILE = ROOT_DIR / "background_tasks.log"
-WEB_LOG_FILE = ROOT_DIR / "photo_organizer.log"
+WEB_LOG_FILE = ROOT_DIR / "yaffo.log"
 
 
 def setup_logger(name: str, log_file: str, level=logging.INFO):
@@ -14,7 +14,7 @@ def setup_logger(name: str, log_file: str, level=logging.INFO):
     Set up a logger with file and console handlers.
 
     Args:
-        name: Logger name (e.g., 'background_tasks', 'webapp', 'photo_organizer.background_tasks')
+        name: Logger name (e.g., 'background_tasks', 'webapp', 'yaffo.background_tasks')
         log_file: Path to log file
         level: Logging level (default: INFO)
 
@@ -61,7 +61,7 @@ def get_logger(module_name: str, log_type: str ='webapp', level=logging.INFO):
         Configured logger instance with the module name
 
     Example:
-        from photo_organizer.logging_config import get_logger
+        from yaffo.logging_config import get_logger
         logger = get_logger(__name__, 'background_tasks')
         logger.info('Processing started')
     """

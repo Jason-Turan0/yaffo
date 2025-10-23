@@ -4,9 +4,9 @@ from flask import Flask, render_template, request, jsonify
 from sqlalchemy import extract, distinct, func
 from sqlalchemy.orm import joinedload
 import pydash as _
-from photo_organizer.db import db
-from photo_organizer.db.models import Photo, Face, Person, PersonFace, Tag
-from photo_organizer.db.repositories.photos_repository import get_distinct_years, get_distinct_months
+from yaffo.db import db
+from yaffo.db.models import Photo, Face, Person, PersonFace, Tag
+from yaffo.db.repositories.photos_repository import get_distinct_years, get_distinct_months
 
 
 def calculate_bounding_box(lat: float, lon: float, distance_miles: float) -> tuple[float, float, float, float]:

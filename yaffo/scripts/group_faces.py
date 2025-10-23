@@ -4,9 +4,9 @@ from sqlalchemy.orm import sessionmaker
 from sklearn.cluster import DBSCAN
 import pickle
 
-from photo_organizer.common import DB_PATH
-from photo_organizer.db import db
-from photo_organizer.db.models import Face, Person, PersonFace  # adjust imports to your project
+from yaffo.common import DB_PATH
+from yaffo.db import db
+from yaffo.db.models import Face, Person, PersonFace  # adjust imports to your project
 
 # --- CONFIG ---
 EPS = 0.45  # distance threshold (tune this!)

@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from photo_organizer.common import app_name, version, app_author
+from yaffo.common import app_name, version, app_author
 setup(
     name=app_name,
     version=version,
@@ -31,6 +31,7 @@ setup(
         "pillow==11.3.0",
         "pillow_heif==1.1.0",
         "platformdirs",
+        "pydash",
         "PyWavelets==1.9.0",
         "requests==2.32.3",
         "scikit-learn==1.7.2",

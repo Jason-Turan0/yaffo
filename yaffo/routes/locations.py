@@ -3,8 +3,8 @@ import requests
 from flask import Flask, render_template, jsonify, request
 from sqlalchemy import func
 
-from photo_organizer.db import db
-from photo_organizer.db.models import Photo
+from yaffo.db import db
+from yaffo.db.models import Photo
 
 def init_locations_routes(app: Flask):
     @app.route("/locations", methods=["GET"])

@@ -1,5 +1,5 @@
 import numpy as np
-from photo_organizer.db.models import Face, Person
+from yaffo.db.models import Face, Person
 from sklearn.metrics.pairwise import cosine_similarity
 
 def load_embedding(blob: bytes) -> np.ndarray:

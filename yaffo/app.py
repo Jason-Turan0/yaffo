@@ -2,11 +2,11 @@ import os
 import logging
 
 from flask import Flask
-from photo_organizer.db import db
-from photo_organizer.common import DB_PATH
-from photo_organizer.logging_config import get_logger
-from photo_organizer.template_filters import init_template_filters
-from photo_organizer.routes.init_routes import init_routes
+from yaffo.db import db
+from yaffo.common import DB_PATH
+from yaffo.logging_config import get_logger
+from yaffo.template_filters import init_template_filters
+from yaffo.routes.init_routes import init_routes
 
 logger = get_logger(__name__, 'webapp')
 

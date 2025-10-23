@@ -4,13 +4,13 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
-from photo_organizer.db.models import Job, Photo, JOB_STATUS_CANCELLED, Face, Tag, FACE_STATUS_UNASSIGNED, Person, \
+from yaffo.db.models import Job, Photo, JOB_STATUS_CANCELLED, Face, Tag, FACE_STATUS_UNASSIGNED, Person, \
     JobResult, JOB_STATUS_RUNNING, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED, JOB_STATUS_COMPLETED
-from photo_organizer.utils.index_photos import index_photo, import_photo
-from photo_organizer.common import DB_PATH, THUMBNAIL_DIR
-from photo_organizer.logging_config import get_logger
-from photo_organizer.background_tasks.config import huey
-from photo_organizer.domain.compare_utils import calculate_similarity, load_embedding
+from yaffo.utils.index_photos import index_photo, import_photo
+from yaffo.common import DB_PATH, THUMBNAIL_DIR
+from yaffo.logging_config import get_logger
+from yaffo.background_tasks.config import huey
+from yaffo.domain.compare_utils import calculate_similarity, load_embedding
 import json
 
 engine = create_engine(
