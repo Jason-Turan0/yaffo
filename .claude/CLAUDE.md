@@ -1,4 +1,4 @@
-# Photo Organizer Project Context
+# Yaffo Project Context
 
 ## Project Overview
 A Flask-based photo organization tool that uses EXIF metadata, face recognition, and duplicate detection to automatically organize and index photos.

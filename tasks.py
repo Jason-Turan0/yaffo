@@ -17,7 +17,7 @@ def start_app(c, host="127.0.0.1", port=5000, debug=True):
     """
     print(f"Starting Flask app on {host}:{port} (debug={debug})")
     env = {
-        "FLASK_APP": "photo_organizer.app:create_app",
+        "FLASK_APP": "yaffo.app:create_app",
         "FLASK_ENV": "development" if debug else "production",
         "FLASK_DEBUG": "1" if debug else "0"
     }
@@ -39,7 +39,7 @@ def start_tasks(c, workers=4, worker_type="process"):
     """
     print(f"Starting Huey consumer with {workers} {worker_type} workers")
     c.run(
-        f"huey_consumer.py photo_organizer.background_tasks.main.huey -w {workers} -k {worker_type}",
+        f"huey_consumer.py yaffo.background_tasks.main.huey -w {workers} -k {worker_type}",
         pty=True
     )
 
@@ -66,7 +66,7 @@ def test(c, verbose=False, coverage=False, path="tests"):
         cmd_parts.append("-v")
 
     if coverage:
-        cmd_parts.extend(["--cov=photo_organizer", "--cov-report=html", "--cov-report=term"])
+        cmd_parts.extend(["--cov=yaffo", "--cov-report=html", "--cov-report=term"])
 
     cmd_parts.append(path)
 
@@ -89,7 +89,7 @@ def migrate(c, migration=None):
     """
     from pathlib import Path
     import sqlite3
-    from photo_organizer.common import DB_PATH
+    from yaffo.common import DB_PATH
 
     migrations_dir = Path("migrations")
 
@@ -137,7 +137,7 @@ def init_db(c):
         inv init-db
     """
     print("Initializing database...")
-    c.run("python -m photo_organizer.scripts.init_db", pty=True)
+    c.run("python -m yaffo.scripts.init_db", pty=True)
     print("Database initialized")
 
 
@@ -150,7 +150,7 @@ def index_photos(c):
         inv index-photos
     """
     print("Indexing photos...")
-    c.run("python -m photo_organizer.scripts.index_photos", pty=True)
+    c.run("python -m yaffo.scripts.index_photos", pty=True)
     print("Indexing complete")
 
 
@@ -211,7 +211,7 @@ def profile_index_photos(c, photos=10, name=None, show_history=False, history_li
         inv profile-index-photos --show-history
         inv profile-index-photos --show-history --history-limit=20
     """
-    cmd_parts = ["python", "-m", "photo_organizer.scripts.profile_index_photo"]
+    cmd_parts = ["python", "-m", "yaffo.scripts.profile_index_photo"]
 
     if show_history:
         cmd_parts.append("--show-history")

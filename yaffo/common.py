@@ -9,8 +9,8 @@ app_name = "yaffo"
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".hevc"}
 PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic"}
 
-data_dir = site_data_dir(app_name, app_author, ensure_exists=True)
-os.makedirs(data_dir, exist_ok=True)
+#data_dir = site_data_dir(app_name, app_author, ensure_exists=True)
+data_dir = Path("/Users/jason.turan/Pictures")
 
 ROOT_DIR = Path(data_dir)
 TEMP_DIR = ROOT_DIR / "temp"
