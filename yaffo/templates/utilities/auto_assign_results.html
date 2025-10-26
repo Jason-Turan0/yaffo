@@ -9,7 +9,7 @@
     <div class="page-header">
         <h1>Auto-Assign Results: {{ person_name }}</h1>
         <p class="subtitle">
-            Review and select faces to assign (Similarity threshold: {{ similarity_threshold }})
+            Review and select faces to assign (Similarity threshold: {{ similarity_threshold * 100 }}%)
         </p>
         <div class="header-actions">
             <a href="{{ url_for('utilities_auto_assign') }}" class="btn btn-secondary">Back to Auto-Assign</a>

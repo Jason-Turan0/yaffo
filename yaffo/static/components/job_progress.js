@@ -42,7 +42,8 @@ window.PHOTO_ORGANIZER.COMPONENTS.jobProgress = {
 
                 if (response.ok) {
                     notification.success('Job deleted');
-                    const jobCard = document.querySelectorAll('.job-card').find(card => card.dataset.jobId === jobId);
+                    const jobCards = (Array.from(document.querySelectorAll('.job-card')) || [])
+                    const jobCard = jobCards.find(card => card.dataset.jobId === jobId);
                     if (jobCard) {
                         jobCard.remove();
                     }
@@ -87,7 +88,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.jobProgress = {
                         cancelBtn.dataset.status = statusUpper;
                         if (isFinishedStatus(statusUpper)) {
                             cancelBtn.textContent = 'Delete';
-                            finishedCount +=1;
+                            finishedCount += 1;
                             if (statusUpper === 'COMPLETED') {
                                 onComplete(job);
                                 if (hasResults) {
@@ -106,7 +107,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.jobProgress = {
                     console.error('Error polling job status:', error);
                 }
             }
-            if(finishedCount === jobCards.length && pollInterval) {
+            if (finishedCount === jobCards.length && pollInterval) {
                 clearInterval(pollInterval);
             }
         };

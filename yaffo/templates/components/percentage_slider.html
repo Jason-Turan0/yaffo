@@ -1,0 +1,10 @@
+{% macro percentage_slider(key_name, label, percentage) %}
+    <div class="percentage-slider">
+        <label for="{{ key_name }}-range">{{ label }}</label>
+        <input type="range" id="{{ key_name }}-range" name="{{ key_name }}" min="0" max="1" step="0.01"
+               value="{{ percentage or 0 }}">
+        <div class="percentage-slider-display"><span
+                id="{{ key_name }}-value">{{ ((percentage or 0) * 100)|int }}%</span>
+        </div>
+    </div>
+{% endmacro %}

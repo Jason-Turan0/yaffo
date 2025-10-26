@@ -19,114 +19,125 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/modal.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/overlay.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/job_progress.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/percentage_slider.css') }}">
+
 
     {% block extra_styles %}{% endblock %}
     <script>
-    // Global configuration object with all Flask routes
-    window.APP_CONFIG = {
-        urls: {
-            {% for rule in url_map.iter_rules() %}
-            {% if not rule.endpoint.startswith('_') and rule.endpoint != 'static' %}
-            {% if rule.arguments|length == 0 %}
-            {{ rule.endpoint.replace('.', '_') }}: "{{ url_for(rule.endpoint) }}",
-            {% else %}
-            {{ rule.endpoint.replace('.', '_') }}: "{{ rule.rule }}",
-            {% endif %}
-            {% endif %}
-            {% endfor %}
-        },
-        // Helper function to build URLs with parameters
-        buildUrl: function(endpoint, params) {
-            let url = this.urls[endpoint];
-            if (!url) {
-                console.error(`Endpoint '${endpoint}' not found in APP_CONFIG.urls`);
-                return null;
+        // Global configuration object with all Flask routes
+        window.APP_CONFIG = {
+            urls: {
+                {% for rule in url_map.iter_rules() %}
+                    {% if not rule.endpoint.startswith('_') and rule.endpoint != 'static' %}
+                        {% if rule.arguments|length == 0 %}
+                            {{ rule.endpoint.replace('.', '_') }}: "{{ url_for(rule.endpoint) }}",
+                        {% else %}
+                            {{ rule.endpoint.replace('.', '_') }}: "{{ rule.rule }}",
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            },
+            // Helper function to build URLs with parameters
+            buildUrl: function (endpoint, params) {
+                let url = this.urls[endpoint];
+                if (!url) {
+                    console.error(`Endpoint '${endpoint}' not found in APP_CONFIG.urls`);
+                    return null;
+                }
+                // Replace <param> or <type:param> with actual values
+                // Handle both regular and HTML-encoded angle brackets
+                for (const [key, value] of Object.entries(params)) {
+                    url = url.replace(new RegExp(`(?:<|&lt;)(?:\\w+:)?${key}(?:>|&gt;)`, 'g'), value);
+                }
+                return url;
             }
-            // Replace <param> or <type:param> with actual values
-            // Handle both regular and HTML-encoded angle brackets
-            for (const [key, value] of Object.entries(params)) {
-                url = url.replace(new RegExp(`(?:<|&lt;)(?:\\w+:)?${key}(?:>|&gt;)`, 'g'), value);
-            }
-            return url;
-        }
-    };
+        };
     </script>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="navbar-container">
-            <a href="{{ url_for('index') }}" class="navbar-brand">
-                <img src="{{ url_for('static', filename='logo.svg') }}" alt="YAFFO" style="height: 64px; vertical-align: middle; margin-right: 8px;">
-            </a>
-            <ul class="navbar-nav">
-                <li><a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Home</a></li>
-                <li><a href="{{ url_for('faces_index') }}" class="nav-link {% if request.endpoint == 'faces_index' or request.endpoint == 'faces_assign' or request.endpoint == 'faces_remove' %}active{% endif %}">Faces</a></li>
-                <li><a href="{{ url_for('people_list') }}" class="nav-link {% if 'people' in request.endpoint %}active{% endif %}">People</a></li>
-                <li><a href="{{ url_for('locations_list') }}" class="nav-link {% if 'locations' in request.endpoint %}active{% endif %}">Locations</a></li>
-                <li><a href="{{ url_for('utilities_index') }}" class="nav-link {% if 'utilities' in request.endpoint %}active{% endif %}">Utilities</a></li>
-                <li><a href="{{ url_for('settings_index') }}" class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">Settings</a></li>
-            </ul>
-        </div>
-    </nav>
-    <div class="main-container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
+<nav class="navbar">
+    <div class="navbar-container">
+        <a href="{{ url_for('index') }}" class="navbar-brand">
+            <img src="{{ url_for('static', filename='logo.svg') }}" alt="YAFFO"
+                 style="height: 64px; vertical-align: middle; margin-right: 8px;">
+        </a>
+        <ul class="navbar-nav">
+            <li><a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Home</a>
+            </li>
+            <li><a href="{{ url_for('faces_index') }}"
+                   class="nav-link {% if request.endpoint == 'faces_index' or request.endpoint == 'faces_assign' or request.endpoint == 'faces_remove' %}active{% endif %}">Faces</a>
+            </li>
+            <li><a href="{{ url_for('people_list') }}"
+                   class="nav-link {% if 'people' in request.endpoint %}active{% endif %}">People</a></li>
+            <li><a href="{{ url_for('locations_list') }}"
+                   class="nav-link {% if 'locations' in request.endpoint %}active{% endif %}">Locations</a></li>
+            <li><a href="{{ url_for('utilities_index') }}"
+                   class="nav-link {% if 'utilities' in request.endpoint %}active{% endif %}">Utilities</a></li>
+            <li><a href="{{ url_for('settings_index') }}"
+                   class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">Settings</a></li>
+        </ul>
+    </div>
+</nav>
+<div class="main-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
                     <div class="alert alert-{{ category }}">
                         <span class="alert-message">{{ message }}</span>
                         <button class="alert-close" onclick="closeAlert(this)">&times;</button>
                     </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-
-        {% block content %}{% endblock %}
-    </div>
-
-    <!-- Global Confirm Dialog -->
-    <div id="global-confirm-dialog" class="modal">
-        <div class="modal-content">
-            <h2 id="confirm-dialog-title">Confirm</h2>
-            <div class="modal-body">
-                <p id="confirm-dialog-message" style="margin: 0; white-space: pre-line;"></p>
+                {% endfor %}
             </div>
-            <div class="modal-actions">
-                <button type="button" id="confirm-dialog-cancel" class="btn btn-secondary">Cancel</button>
-                <button type="button" id="confirm-dialog-confirm" class="btn btn-primary">Confirm</button>
-            </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</div>
+
+<!-- Global Confirm Dialog -->
+<div id="global-confirm-dialog" class="modal">
+    <div class="modal-content">
+        <h2 id="confirm-dialog-title">Confirm</h2>
+        <div class="modal-body">
+            <p id="confirm-dialog-message" style="margin: 0; white-space: pre-line;"></p>
+        </div>
+        <div class="modal-actions">
+            <button type="button" id="confirm-dialog-cancel" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="confirm-dialog-confirm" class="btn btn-primary">Confirm</button>
         </div>
     </div>
+</div>
 
-    <script src="{{ url_for('static', filename='notification.js') }}"></script>
-    <script src="{{ url_for('static', filename='multi-select.js') }}"></script>
-    <script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
-    <script src="{{ url_for('static', filename='components/modal.js') }}"></script>
-    <script src="{{ url_for('static', filename='components/overlay.js') }}"></script>
-    <script src="{{ url_for('static', filename='components/confirm-dialog.js') }}"></script>
-    <script src="{{ url_for('static', filename='filters/tags.js') }}"></script>
-    <script src="{{ url_for('static', filename='components/job_progress.js') }}"></script>
-    <script>
-        // Auto-close alerts after 5 seconds
-        document.addEventListener('DOMContentLoaded', function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                setTimeout(() => {
-                    closeAlert(alert.querySelector('.alert-close'));
-                }, 5000);
-            });
-        });
-
-        function closeAlert(button) {
-            const alert = button.closest('.alert');
-            alert.classList.add('fade-out');
+<script src="{{ url_for('static', filename='notification.js') }}"></script>
+<script src="{{ url_for('static', filename='multi-select.js') }}"></script>
+<script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
+<script src="{{ url_for('static', filename='components/modal.js') }}"></script>
+<script src="{{ url_for('static', filename='components/overlay.js') }}"></script>
+<script src="{{ url_for('static', filename='components/confirm-dialog.js') }}"></script>
+<script src="{{ url_for('static', filename='filters/tags.js') }}"></script>
+<script src="{{ url_for('static', filename='components/job_progress.js') }}"></script>
+<script src="{{ url_for('static', filename='components/percentage_slider.js') }}"></script>
+<script>
+    // Auto-close alerts after 5 seconds
+    document.addEventListener('DOMContentLoaded', function () {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
             setTimeout(() => {
-                alert.remove();
-            }, 300);
-        }
-    </script>
+                closeAlert(alert.querySelector('.alert-close'));
+            }, 5000);
+        });
+    });
 
-    {% block scripts %}{% endblock %}
+    function closeAlert(button) {
+        const alert = button.closest('.alert');
+        alert.classList.add('fade-out');
+        setTimeout(() => {
+            alert.remove();
+        }, 300);
+    }
+</script>
+
+{% block scripts %}{% endblock %}
 </body>
 </html>

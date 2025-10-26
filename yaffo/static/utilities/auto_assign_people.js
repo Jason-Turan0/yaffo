@@ -14,15 +14,7 @@ window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) 
     });
 
     const personSelect = document.getElementById('person-select');
-    const similaritySlider = document.getElementById('similarity-slider');
-    const similarityValue = document.getElementById('similarity-value');
     const startButton = document.getElementById('start-button');
-
-    const updateSimilarityDisplay = () => {
-        if (similarityValue) {
-            similarityValue.textContent = parseFloat(similaritySlider.value).toFixed(2);
-        }
-    };
 
     const updateStartButtonState = () => {
         if (startButton) {
@@ -31,9 +23,10 @@ window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) 
     };
 
     const startAutoAssign = async () => {
+        debugger;
         const personId = parseInt(personSelect.value);
-        const similarityThreshold = parseFloat(similaritySlider.value);
-
+        const similarityElement = document.getElementById('similarity-range');
+        const similarityValue = parseFloat(similarityElement.value);
         if (!personId) {
             notification.error('Please select a person');
             return;
@@ -50,7 +43,7 @@ window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) 
                 },
                 body: JSON.stringify({
                     person_id: personId,
-                    similarity_threshold: similarityThreshold
+                    similarity_threshold: similarityValue
                 })
             });
 
@@ -73,11 +66,6 @@ window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) 
 
     if (personSelect) {
         personSelect.addEventListener('change', updateStartButtonState);
-    }
-
-    if (similaritySlider) {
-        similaritySlider.addEventListener('input', updateSimilarityDisplay);
-        updateSimilarityDisplay();
     }
 
     if (startButton) {

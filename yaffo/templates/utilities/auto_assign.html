@@ -1,5 +1,6 @@
 {% extends "utilities/_base.html" %}
 {% from "components/job_progress.html" import job_progress_card %}
+{% from "components/percentage_slider.html" import percentage_slider %}
 
 {% block title %}Auto-Assign People - Utilities - Photo Organizer{% endblock %}
 
@@ -51,11 +52,7 @@
             </div>
 
             <div class="form-group">
-                <label for="similarity-slider">
-                    Similarity Threshold: <span id="similarity-value">0.95</span>
-                </label>
-                <input type="range" id="similarity-slider" class="form-control-range"
-                       min="0.80" max="0.99" step="0.01" value="0.95">
+                {{ percentage_slider("similarity", "Similarity Threshold:", 0.97 )  }}
                 <div class="slider-help-text">
                     Higher values = more strict matching (fewer false positives)
                 </div>
@@ -85,44 +82,12 @@
     margin: 2rem 0;
 }
 
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-group label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #333;
-}
-
-.form-control {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-}
-
-.form-control-range {
-    width: 100%;
-    height: 6px;
-    background: linear-gradient(to right, #f0f0f0 0%, #4CAF50 100%);
-    border-radius: 3px;
-    outline: none;
-}
-
 .slider-help-text {
     font-size: 0.875rem;
     color: #666;
     margin-top: 0.5rem;
 }
 
-#similarity-value {
-    font-family: monospace;
-    font-weight: 700;
-    color: #4CAF50;
-}
 </style>
 {% endblock %}
 

@@ -1,0 +1,21 @@
+.percentage-slider input[type="range"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+}
+
+.percentage-slider input[type="range"] {
+    padding: 0;
+}
+
+.percentage-slider-display {
+    text-align: center;
+    font-size: 13px;
+    color: #495057;
+    margin-top: 5px;
+    font-family: monospace;
+    font-weight: 700;
+}
