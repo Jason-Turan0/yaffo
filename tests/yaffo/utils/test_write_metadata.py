@@ -312,27 +312,6 @@ class TestWritePngMetadata:
 
 
 class TestWriteHeicMetadata:
-    @patch('yaffo.utils.write_metadata._IS_MAC', True)
-    @patch('yaffo.utils.write_metadata.subprocess.run')
-    def test_write_heic_mac_sips(self, mock_run, temp_dir):
-        heic_path = temp_dir / "test.heic"
-        heic_path.touch()
-
-        success, error = _write_heic_metadata(
-            heic_path,
-            "2024:01:15 10:30:00",
-            None,
-            None
-        )
-
-        assert success is True
-        mock_run.assert_called_once()
-        args = mock_run.call_args[0][0]
-        assert args[0] == "sips"
-        assert "--setProperty" in args
-        assert "creationDate" in args
-        assert "2024:01:15 10:30:00" in args
-
     @patch('yaffo.utils.write_metadata._IS_MAC', False)
     @patch('yaffo.utils.write_metadata._HAS_EXIFTOOL', True)
     @patch('yaffo.utils.write_metadata._run_exiftool')

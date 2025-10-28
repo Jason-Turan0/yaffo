@@ -59,17 +59,7 @@ def _write_heic_metadata(
     location_name: Optional[str],
     people_names: Optional[list[str]]
 ) -> tuple[bool, Optional[str]]:
-    if not (_IS_MAC or _HAS_EXIFTOOL):
-        return False, "No tool available for HEIC files"
-
-    if _IS_MAC:
-        if date_str:
-            subprocess.run(
-                ["sips", "--setProperty", "creationDate", date_str, str(photo_path)],
-                check=True
-            )
-        return True, None
-    elif _HAS_EXIFTOOL:
+    if _HAS_EXIFTOOL:
         args = ["-overwrite_original"]
         if date_str:
             args.append(f"-DateTimeOriginal={date_str}")

@@ -59,7 +59,7 @@ def convert_to_degrees(value: Tuple) -> float:
 
 
 def get_exif_data_with_exiftool(photo_path: Path) -> Optional[Dict]:
-    if not _EXIFTOOL_PATH:
+    if not _HAS_EXIFTOOL:
         return None
 
     try:
