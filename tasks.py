@@ -45,28 +45,45 @@ def start_tasks(c, workers=4, worker_type="process"):
 
 
 @task
-def test(c, verbose=False, coverage=False, path="tests"):
+def test(c, verbose=False, coverage=False, path="tests", k=None, failed=False, markers=None):
     """
     Run tests using pytest.
 
     Args:
         verbose: Verbose output (default: False)
         coverage: Generate coverage report (default: False)
-        path: Path to tests directory (default: tests)
+        path: Path to tests directory or specific test file (default: tests)
+        k: Run tests matching expression (e.g., -k test_name)
+        failed: Run only previously failed tests (default: False)
+        markers: Run tests with specific markers (e.g., unit, integration, slow)
 
     Example:
         inv test
         inv test --verbose
         inv test --coverage
-        inv test --path=tests/unit
+        inv test --path=tests/yaffo/utils
+        inv test --path=tests/yaffo/utils/test_index_photos.py
+        inv test -k test_write_metadata
+        inv test --failed
+        inv test --markers=unit
+        inv test --verbose --coverage
     """
-    cmd_parts = ["pytest"]
+    cmd_parts = ["python", "-m", "pytest"]
 
     if verbose:
         cmd_parts.append("-v")
 
     if coverage:
-        cmd_parts.extend(["--cov=yaffo", "--cov-report=html", "--cov-report=term"])
+        cmd_parts.extend(["--cov=yaffo", "--cov-report=html", "--cov-report=term-missing"])
+
+    if k:
+        cmd_parts.append(f"-k {k}")
+
+    if failed:
+        cmd_parts.append("--lf")
+
+    if markers:
+        cmd_parts.append(f"-m {markers}")
 
     cmd_parts.append(path)
 

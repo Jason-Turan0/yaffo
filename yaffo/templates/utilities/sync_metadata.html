@@ -1,0 +1,169 @@
+{% extends "utilities/_base.html" %}
+{% from "components/job_progress.html" import job_progress_card %}
+
+{% block title %}Sync Metadata - Utilities - Photo Organizer{% endblock %}
+
+{% block utility_content %}
+<div class="utility-page">
+    <div class="page-header">
+        <h1>Sync Metadata to Files</h1>
+        <p class="subtitle">
+            Write location and people names from the database into image file metadata
+        </p>
+    </div>
+
+    {% if active_jobs|length > 0 %}
+    <div class="section job-progress-section">
+        <h2>Processing in Progress</h2>
+        {% for job in active_jobs %}
+        {{ job_progress_card(job) }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Photos in Database</div>
+            <div class="stat-value">{{ total_photos }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Photos with Metadata</div>
+            <div class="stat-value">{{ photos_with_metadata }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Photos Needing Sync</div>
+            <div class="stat-value">{{ photos_to_sync|length }}</div>
+        </div>
+    </div>
+
+    {% if photos_to_sync|length > 0 %}
+    <div class="section">
+        <h2>Photos to Update</h2>
+        <p class="section-description">
+            The following photos have location or people metadata in the database that differs from the file metadata.
+        </p>
+
+        <div class="photo-list">
+            <div class="photo-list-header">
+                <div class="photo-count">{{ photos_to_sync|length }} file(s) to update</div>
+                <button class="btn btn-primary" id="sync-button">
+                    Sync Metadata to Files
+                </button>
+            </div>
+
+            <div class="photo-items">
+                {% for photo in photos_to_sync[:10] %}
+                <div class="photo-item">
+                    <div class="photo-path">{{ photo.filename }}</div>
+                    <div class="metadata-changes">
+                        {% if photo.location_name %}
+                        <span class="metadata-tag location">📍 {{ photo.location_name }}</span>
+                        {% endif %}
+                        {% if photo.people_names %}
+                        <span class="metadata-tag people">👤 {{ photo.people_names|join(', ') }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% if photos_to_sync|length > 10 %}
+                <div class="photo-item more-items">
+                    And {{ photos_to_sync|length - 10 }} more...
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>All metadata is synchronized</h2>
+        <p>All photos with metadata in the database have been synced to their files.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.photo-list {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.photo-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: white;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.photo-count {
+    font-weight: 500;
+    color: #495057;
+}
+
+.photo-items {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.photo-item {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    background: white;
+}
+
+.photo-item:last-child {
+    border-bottom: none;
+}
+
+.photo-item.more-items {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.photo-path {
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    word-break: break-all;
+}
+
+.metadata-changes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.metadata-tag {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    background: #e7f3ff;
+    color: #004085;
+}
+
+.metadata-tag.location {
+    background: #d4edda;
+    color: #155724;
+}
+
+.metadata-tag.people {
+    background: #fff3cd;
+    color: #856404;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='utilities/sync_metadata.js') }}"></script>
+<script>
+window.PHOTO_ORGANIZER.initSyncMetadata(
+    {{ photos_to_sync | tojson }},
+    window.APP_CONFIG
+);
+</script>
+{% endblock %}

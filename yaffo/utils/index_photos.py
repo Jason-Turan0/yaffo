@@ -3,7 +3,6 @@ import tempfile
 import uuid
 import platform
 import subprocess
-import shutil
 import json
 from pathlib import Path
 from typing import List, Optional, Callable, Tuple, Dict
@@ -21,11 +20,12 @@ from yaffo.db.models import Photo, Face, Tag, FACE_STATUS_UNASSIGNED
 from yaffo.common import PHOTO_EXTENSIONS, TEMP_DIR, THUMBNAIL_DIR, ROOT_DIR
 from yaffo.scripts.organize_photos import get_photo_date
 from yaffo.utils.image import image_from_path, image_to_numpy
+from yaffo.utils.exiftool_path import get_exiftool_path, is_exiftool_available
 
 logger = get_logger(__name__, 'background_tasks')
 
-_IS_MAC = platform.system().lower() == "darwin"
-_HAS_EXIFTOOL = shutil.which("exiftool") is not None
+_EXIFTOOL_PATH = get_exiftool_path()
+_HAS_EXIFTOOL = is_exiftool_available()
 
 def get_photo_files(root: Path) -> List[Path]:
     return [
@@ -59,9 +59,12 @@ def convert_to_degrees(value: Tuple) -> float:
 
 
 def get_exif_data_with_exiftool(photo_path: Path) -> Optional[Dict]:
+    if not _EXIFTOOL_PATH:
+        return None
+
     try:
         result = subprocess.run(
-            ["exiftool", "-json", "-G", str(photo_path)],
+            [str(_EXIFTOOL_PATH), "-json", "-G", str(photo_path)],
             capture_output=True,
             text=True,
             timeout=10
@@ -174,9 +177,6 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
             faces_data.append({
                 'embedding': emb,
                 'full_file_path': str(thumb_path),
-                 #'relative_file_path': str(thumb_path.relative_to(ROOT_DIR)),
-                #TODO how to make it so that this isn't needed for flask.
-                'relative_file_path': '',
                 'location_top': top,
                 'location_right': right,
                 'location_bottom': bottom,

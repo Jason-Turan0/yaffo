@@ -22,6 +22,12 @@
                     Auto-Assign People
                 </a>
             </li>
+            <li>
+                <a href="{{ url_for('utilities_sync_metadata') }}"
+                   class="{% if request.endpoint == 'utilities_sync_metadata' %}active{% endif %}">
+                    Sync Metadata to Files
+                </a>
+            </li>
         </ul>
     </nav>
 

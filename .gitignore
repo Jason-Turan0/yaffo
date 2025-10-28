@@ -60,3 +60,11 @@ instance/
 # Test data
 yaffo/scripts/test_data/
 yaffo/scripts/performance_profiles/
+
+# ExifTool binaries (download separately, see EXIFTOOL_SETUP.md)
+resources/*
+
+# Briefcase build artifacts
+*.app
+*.AppImage
+*.msi
