@@ -318,8 +318,8 @@ class TestIndexPhoto:
         assert 'latitude' in result
         assert 'longitude' in result
         assert 'tags' in result
-        assert 'faces_data' in result
-        assert len(result['faces_data']) == 0
+        assert 'faces' in result
+        assert len(result['faces']) == 0
 
     @patch('yaffo.utils.index_photos.face_recognition')
     @patch('yaffo.utils.index_photos.save_face_thumbnail')
@@ -335,9 +335,9 @@ class TestIndexPhoto:
         result = index_photo(test_image_with_exif, temp_dir)
 
         assert result is not None
-        assert len(result['faces_data']) == 1
+        assert len(result['faces']) == 1
 
-        face = result['faces_data'][0]
+        face = result['faces'][0]
         assert 'embedding' in face
         assert 'location_top' in face
         assert 'location_right' in face

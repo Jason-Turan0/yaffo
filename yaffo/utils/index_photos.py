@@ -63,8 +63,9 @@ def get_exif_data_with_exiftool(photo_path: Path) -> Optional[Dict]:
         return None
 
     try:
+        # Use -n flag to get numeric GPS coordinates instead of formatted strings
         result = subprocess.run(
-            [str(_EXIFTOOL_PATH), "-json", "-G", str(photo_path)],
+            [str(_EXIFTOOL_PATH), "-json", "-G", "-n", str(photo_path)],
             capture_output=True,
             text=True,
             timeout=10
@@ -113,7 +114,93 @@ def get_gps_coordinates(img: PIL_Image) -> Tuple[Optional[float], Optional[float
         return None, None, None
 
 
+def parse_exiftool_to_tags(exif_data: Dict) -> List[Dict[str, str]]:
+    """
+    Convert exiftool JSON output to tag list format.
+    Filters out datetime tags and formats as tag_name/tag_value pairs.
+    """
+    tags = []
+
+    # Tags to exclude (datetime fields handled separately)
+    exclude_tags = {
+        "DateTimeOriginal", "DateTime", "DateTimeDigitized", "CreateDate",
+        "ModifyDate", "FileModifyDate", "FileAccessDate", "FileInodeChangeDate",
+        "SourceFile", "ExifToolVersion"
+    }
+
+    for key, value in exif_data.items():
+        # Skip excluded tags
+        if any(excluded in key for excluded in exclude_tags):
+            continue
+
+        # Convert tag name (e.g., "EXIF:Make" -> "Make")
+        tag_name = key.split(":")[-1] if ":" in key else key
+
+        # Convert value to string
+        if isinstance(value, (list, tuple)):
+            tag_value = ", ".join(str(v) for v in value)
+        else:
+            tag_value = str(value)
+
+        if tag_value:
+            tags.append({
+                "tag_name": tag_name,
+                "tag_value": tag_value
+            })
+
+    return tags
+
+
+def extract_xmp_metadata(exif_data: Dict) -> Dict[str, any]:
+    """
+    Extract XMP metadata fields from exiftool output.
+    Returns dict with location_name, person_names, rating, etc.
+    """
+    xmp_fields = {}
+
+    # Extract location
+    for key in ["XMP:Location", "IPTC:Location", "XMP-iptcCore:Location"]:
+        if key in exif_data:
+            xmp_fields['location_name'] = exif_data[key]
+            break
+
+    # Extract people/person tags
+    person_keys = ["XMP:PersonInImage", "XMP-mwg-rs:PersonInImage", "XMP-iptcExt:PersonInImage"]
+    for key in person_keys:
+        if key in exif_data:
+            value = exif_data[key]
+            # Ensure it's a list
+            if isinstance(value, str):
+                xmp_fields['person_names'] = [value]
+            elif isinstance(value, list):
+                xmp_fields['person_names'] = value
+            break
+
+    # Extract rating
+    if "XMP:Rating" in exif_data:
+        try:
+            xmp_fields['rating'] = int(exif_data["XMP:Rating"])
+        except (ValueError, TypeError):
+            pass
+
+    # Extract keywords/subjects
+    for key in ["XMP:Subject", "IPTC:Keywords", "XMP-dc:Subject"]:
+        if key in exif_data:
+            value = exif_data[key]
+            if isinstance(value, str):
+                xmp_fields['keywords'] = [value]
+            elif isinstance(value, list):
+                xmp_fields['keywords'] = value
+            break
+
+    return xmp_fields
+
+
 def get_exif_tags(img: PIL_Image) -> List[Dict[str, str]]:
+    """
+    Fallback method using PIL/piexif for basic EXIF tag extraction.
+    Used when exiftool is not available.
+    """
     try:
         exif_data = img.info.get("exif")
         if not exif_data:
@@ -164,12 +251,39 @@ def import_photo(photo_path: Path) -> Optional[dict]:
 
 def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
     try:
-        image = image_from_path(photo_path)
+        # Try exiftool first for comprehensive metadata (includes XMP)
+        exif_data = get_exif_data_with_exiftool(photo_path)
+
+        if exif_data:
+            # Parse exiftool output
+            tags = parse_exiftool_to_tags(exif_data)
+            xmp_fields = extract_xmp_metadata(exif_data)
+
+            # Extract GPS from exiftool data (exiftool returns decimal degrees)
+            latitude = exif_data.get("EXIF:GPSLatitude") or exif_data.get("Composite:GPSLatitude")
+            longitude = exif_data.get("EXIF:GPSLongitude") or exif_data.get("Composite:GPSLongitude")
+
+            # Get location name from XMP if available
+            location_name = xmp_fields.get('location_name')
+
+            logger.debug(f"Used exiftool for metadata extraction: {photo_path}")
+        else:
+            # Fallback to PIL/piexif for basic EXIF
+            logger.debug(f"Falling back to PIL for metadata extraction: {photo_path}")
+            image_tag = image_from_path(photo_path)
+            latitude, longitude, location_name = get_gps_coordinates(image_tag)
+            tags = get_exif_tags(image_tag)
+            xmp_fields = {}
+
+        # Get date taken
+        date_taken = get_photo_date(str(photo_path))
+
+        # Process face detection (requires PIL image)
+        image = image_tag if image_tag is not None else image_from_path(photo_path)
         image_numpy = image_to_numpy(image)
         face_locations = face_recognition.face_locations(image_numpy)
         face_embeddings = face_recognition.face_encodings(image_numpy, face_locations)
-        latitude, longitude, location_name = get_gps_coordinates(image)
-        tags = get_exif_tags(image)
+
         faces_data = []
         for i, (loc, emb) in enumerate(zip(face_locations, face_embeddings)):
             thumb_path = save_face_thumbnail(photo_path, i, thumbnail_dir, loc)
@@ -182,16 +296,25 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
                 'location_bottom': bottom,
                 'location_left': left
             })
-        return {
+
+        result = {
+            'full_file_path': str(photo_path),
+            'date_taken': date_taken,
             'latitude': latitude,
             'longitude': longitude,
             'location_name': location_name,
             'tags': tags,
-            'faces_data': faces_data,
+            'faces': faces_data
         }
 
+        # Add XMP fields to result if available
+        if xmp_fields:
+            result['xmp_fields'] = xmp_fields
+
+        return result
+
     except Exception as e:
-        print(f"Error processing faces for {photo_path}: {e}")
+        logger.error(f"Error processing photo {photo_path}: {e}")
         return None
 
 

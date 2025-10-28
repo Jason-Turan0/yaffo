@@ -4,7 +4,7 @@ from flask import Flask, render_template, jsonify, request
 from sqlalchemy import func
 
 from yaffo.db import db
-from yaffo.db.models import Photo
+from yaffo.db.models import Photo, PHOTO_STATUS_INDEXED
 
 def init_locations_routes(app: Flask):
     @app.route("/locations", methods=["GET"])
@@ -51,7 +51,10 @@ def init_locations_routes(app: Flask):
             updated_count = (
                 db.session.query(Photo)
                 .filter(Photo.id.in_(photo_ids))
-                .update({'location_name': location_name}, synchronize_session=False)
+                .update({
+                    'location_name': location_name,
+                    'status': PHOTO_STATUS_INDEXED
+                }, synchronize_session=False)
             )
             db.session.commit()
 

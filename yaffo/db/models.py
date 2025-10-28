@@ -4,6 +4,7 @@ from datetime import datetime
 
 PHOTO_STATUS_IMPORTED = "IMPORTED"
 PHOTO_STATUS_INDEXED = "INDEXED"
+PHOTO_STATUS_SYNCED = "SYNCED"
 
 class Photo(db.Model):
     __tablename__ = "photos"

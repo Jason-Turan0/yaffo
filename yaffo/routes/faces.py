@@ -11,7 +11,7 @@ from sqlalchemy.dialects.sqlite import insert
 import pydash as _
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
-    FACE_STATUS_ASSIGNED, Photo
+    FACE_STATUS_ASSIGNED, Photo, PHOTO_STATUS_INDEXED
 from sklearn.metrics.pairwise import cosine_similarity
 
 from yaffo.db.repositories.person_repository import update_person_embedding
@@ -252,6 +252,13 @@ def init_faces_routes(app: Flask):
                 db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
                     {Face.status: face_status}, synchronize_session=False
                 )
+
+                # Set photo status back to INDEXED when faces are assigned
+                photo_ids = [face.photo_id for face in faces]
+                db.session.query(Photo).filter(Photo.id.in_(photo_ids)).update(
+                    {Photo.status: PHOTO_STATUS_INDEXED}, synchronize_session=False
+                )
+
                 db.session.commit()
                 update_person_embedding(person_id, db.session)
                 return jsonify({

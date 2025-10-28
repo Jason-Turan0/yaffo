@@ -5,7 +5,7 @@ from sklearn.cluster import DBSCAN
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
 from yaffo.db.models import Job, Photo, JOB_STATUS_CANCELLED, Face, Tag, FACE_STATUS_UNASSIGNED, Person, \
-    JobResult, JOB_STATUS_RUNNING, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED, JOB_STATUS_COMPLETED
+    JobResult, JOB_STATUS_RUNNING, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED, JOB_STATUS_COMPLETED
 from yaffo.utils.index_photos import index_photo, import_photo
 from yaffo.common import DB_PATH, THUMBNAIL_DIR
 from yaffo.logging_config import get_logger
@@ -281,6 +281,7 @@ def sync_metadata_task(job_id: str, photo_id_batch: list[int]):
         photos = session.query(Photo).options(
             joinedload(Photo.faces).joinedload(Face.people)
         ).filter(Photo.id.in_(photo_id_batch)).all()
+        success_photo_ids = []
 
         for index, photo in enumerate(photos):
             if index > 0 and index % check_cancel_frequency == 0:
@@ -312,6 +313,7 @@ def sync_metadata_task(job_id: str, photo_id_batch: list[int]):
             )
 
             if success:
+                success_photo_ids.append(photo.id)
                 processed_count += 1
                 logger.debug(f"Successfully synced metadata for {photo_path}")
             else:
@@ -325,11 +327,17 @@ def sync_metadata_task(job_id: str, photo_id_batch: list[int]):
         }
         if job_status == JOB_STATUS_PENDING:
             update_job_params['status'] = JOB_STATUS_RUNNING
-
+        updated_count = (
+            session.query(Photo)
+            .filter(Photo.id.in_(success_photo_ids))
+            .update({
+                'status': PHOTO_STATUS_SYNCED
+            })
+        )
         session.query(Job).filter_by(id=job_id).update(update_job_params)
         session.commit()
         logger.info(
-            f"Completed job {job_id} batch: processed={processed_count}, errors={error_count}, cancelled={cancel_count}"
+            f"Completed job {job_id} batch: processed={processed_count}, errors={error_count}, cancelled={cancel_count}. Updated count={updated_count}"
         )
 
     except Exception as e:

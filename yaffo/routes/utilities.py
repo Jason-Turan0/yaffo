@@ -2,7 +2,7 @@ from flask import render_template, Flask, redirect, url_for, request, jsonify
 from yaffo.db import db
 from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_CANCELLED, \
     JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED, JobResult, \
-    PHOTO_STATUS_INDEXED, ApplicationSettings
+    PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED, ApplicationSettings
 from yaffo.common import PHOTO_EXTENSIONS
 from yaffo.background_tasks.tasks import index_photo_task, auto_assign_faces_task, import_photo_task, sync_metadata_task
 from pathlib import Path
@@ -10,7 +10,7 @@ from itertools import batched
 import uuid
 import json
 
-from yaffo.utils.index_photos import delete_orphaned_photos
+from yaffo.utils.index_photos import delete_orphaned_photos, get_exif_data_with_exiftool
 from sqlalchemy.orm import joinedload
 
 
@@ -296,79 +296,19 @@ def init_utilities_routes(app: Flask):
 
         return jsonify({'job_id': job_id}), 202
 
-    @app.route("/utilities/auto-assign-people/results/<job_id>", methods=["GET"])
-    def utilities_auto_assign_results(job_id: str):
-        job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
-        if not job:
-            return "Job not found", 404
-
-        if job.status != JOB_STATUS_COMPLETED:
-            return redirect(url_for('utilities_auto_assign_people'))
-
-        job_data = json.loads(job.job_data) if job.job_data else {}
-
-        matched_faces = []
-        for result in job.results:
-            data = json.loads(result.result_data)
-            matched_faces.extend(data["matches"])
-
-        person_id = job_data.get('person_id')
-        person_name = job_data.get('person_name')
-        similarity_threshold = job_data.get('similarity_threshold')
-        face_ids = [match['face_id'] for match in matched_faces]
-        faces = (
-            db.session.query(Face)
-            .filter(Face.id.in_(face_ids))
-            .options(joinedload(Face.photo))
-            .all()
-        ) if len(face_ids) > 0 else []
-        face_dict = {face.id: face for face in faces}
-        faces_with_similarity = [
-            {
-                'face': face_dict[match['face_id']],
-                'similarity': match['similarity']
-            }
-            for match in matched_faces
-            if match['face_id'] in face_dict
-        ]
-        faces_with_similarity.sort(key=lambda face: face['similarity'])
-        return render_template(
-            "utilities/auto_assign_results.html",
-            job_id=job_id,
-            person_id=person_id,
-            person_name=person_name,
-            similarity_threshold=similarity_threshold,
-            faces=faces_with_similarity,
-            total_matches=len(matched_faces)
-        )
-
-    @app.route("/utilities/discover-people", methods=["GET"])
-    def utilities_discover_people():
-        people_count = db.session.query(Person).count()
-        unassigned_count = db.session.query(Face).filter(Face.status == FACE_STATUS_UNASSIGNED).count()
-
-        active_jobs = db.session.query(Job).filter(
-            Job.name == 'discover_people',
-            Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED])
-        ).all()
-
-        return render_template(
-            "utilities/discover_people.html",
-            people_count=people_count,
-            unassigned_count=unassigned_count,
-            active_jobs=[job.to_dict() for job in active_jobs]
-        )
-
     @app.route("/utilities/sync-metadata", methods=["GET"])
     def utilities_sync_metadata():
+        # Only sync photos that are INDEXED (not already SYNCED)
         photos_with_metadata = db.session.query(Photo).filter(
+            Photo.status == PHOTO_STATUS_INDEXED or Photo.status == PHOTO_STATUS_SYNCED
+        ).filter(
             (Photo.location_name.isnot(None)) | (Photo.faces.any())
         ).all()
 
         photos_to_sync = []
         for photo in photos_with_metadata:
             photo_path = Path(photo.full_file_path)
-            if not photo_path.exists():
+            if not photo_path.exists() or photo.status == PHOTO_STATUS_SYNCED:
                 continue
 
             people_names = set()
@@ -387,6 +327,7 @@ def init_utilities_routes(app: Flask):
                 })
 
         total_photos = db.session.query(Photo).count()
+        synced_photos = db.session.query(Photo).filter(Photo.status == PHOTO_STATUS_SYNCED).count()
 
         active_jobs = db.session.query(Job).filter(
             Job.name == 'sync_metadata',
