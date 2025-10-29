@@ -3,23 +3,6 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, config) => {
     let mediaDirs = [...initialMediaDirs];
 
-    const browseFolder = async () => {
-        try {
-            const response = await fetch(config.urls.select_folder);
-            const data = await response.json();
-
-            if (data.success && data.path) {
-                const input = document.getElementById('new-media-dir');
-                input.value = data.path;
-            } else if (data.error) {
-                window.notification.error(data.error);
-            }
-        } catch (error) {
-            console.error('Error opening folder dialog:', error);
-            window.notification.error('Failed to open folder dialog');
-        }
-    };
-
     const addMediaDir = async () => {
         const input = document.getElementById('new-media-dir');
         const directory = input.value.trim();
@@ -103,23 +86,6 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, config) => {
         `).join('');
     };
 
-    const browseThumbnailFolder = async () => {
-        try {
-            const response = await fetch(config.urls.select_folder);
-            const data = await response.json();
-
-            if (data.success && data.path) {
-                const input = document.getElementById('new-thumbnail-dir');
-                input.value = data.path;
-            } else if (data.error) {
-                window.notification.error(data.error);
-            }
-        } catch (error) {
-            console.error('Error opening folder dialog:', error);
-            window.notification.error('Failed to open folder dialog');
-        }
-    };
-
     const changeThumbnailDir = async () => {
         const input = document.getElementById('new-thumbnail-dir');
         const directory = input.value.trim();
@@ -186,10 +152,8 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, config) => {
     };
 
     return {
-        browseFolder,
         addMediaDir,
         removeMediaDir,
-        browseThumbnailFolder,
         changeThumbnailDir
     };
 };

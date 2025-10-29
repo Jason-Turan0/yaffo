@@ -1,0 +1,16 @@
+{% macro file_browser(input_id, placeholder="Enter directory path", show_label=True, label_text="Directory") %}
+<div class="file-browser-group">
+    {% if show_label %}
+    <label for="{{ input_id }}">{{ label_text }}</label>
+    {% endif %}
+    <div class="file-browser-input-group">
+        <input type="text"
+               id="{{ input_id }}"
+               placeholder="{{ placeholder }}"
+               class="form-control file-browser-input">
+        <button type="button" class="btn-secondary file-browser-btn">
+            Browse...
+        </button>
+    </div>
+</div>
+{% endmacro %}

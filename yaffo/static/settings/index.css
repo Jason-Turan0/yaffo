@@ -45,14 +45,12 @@
     display: flex;
     gap: 10px;
     margin-top: 15px;
+    align-items: flex-start;
 }
 
-.add-media-dir-form input {
+.add-media-dir-form .file-browser-group {
+    margin-bottom: 0;
     flex: 1;
-}
-
-.add-media-dir-form .btn-secondary {
-    min-width: 100px;
 }
 
 .system-paths {
@@ -151,12 +149,10 @@
     display: flex;
     gap: 10px;
     margin-top: 15px;
+    align-items: flex-start;
 }
 
-.change-thumbnail-dir-form input {
+.change-thumbnail-dir-form .file-browser-group {
+    margin-bottom: 0;
     flex: 1;
-}
-
-.change-thumbnail-dir-form .btn-secondary {
-    min-width: 100px;
 }

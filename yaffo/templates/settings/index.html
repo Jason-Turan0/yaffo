@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/file_browser.html" import file_browser %}
 
 {% block title %}Settings - Photo Organizer{% endblock %}
 
@@ -31,8 +32,11 @@
         </div>
 
         <div class="add-media-dir-form">
-            <input type="text" id="new-media-dir" placeholder="Enter directory path (e.g., /Volumes/Photos or C:\Photos)" class="form-control">
-            <button type="button" class="btn-secondary" onclick="window.PHOTO_ORGANIZER.settings.browseFolder()">Browse...</button>
+            {{ file_browser(
+                'new-media-dir',
+                placeholder='Enter directory path (e.g., /Volumes/Photos or C:\\Photos)',
+                show_label=False
+            ) }}
             <button type="button" class="btn-primary" onclick="window.PHOTO_ORGANIZER.settings.addMediaDir()">Add Directory</button>
         </div>
     </div>
@@ -55,8 +59,11 @@
         </div>
 
         <div class="change-thumbnail-dir-form">
-            <input type="text" id="new-thumbnail-dir" placeholder="Enter new thumbnail directory path" class="form-control">
-            <button type="button" class="btn-secondary" onclick="window.PHOTO_ORGANIZER.settings.browseThumbnailFolder()">Browse...</button>
+            {{ file_browser(
+                'new-thumbnail-dir',
+                placeholder='Enter new thumbnail directory path',
+                show_label=False
+            ) }}
             <button type="button" class="btn-primary" onclick="window.PHOTO_ORGANIZER.settings.changeThumbnailDir()">Change Directory</button>
         </div>
         {% else %}
@@ -65,8 +72,11 @@
         </div>
 
         <div class="change-thumbnail-dir-form">
-            <input type="text" id="new-thumbnail-dir" placeholder="Enter thumbnail directory path" class="form-control">
-            <button type="button" class="btn-secondary" onclick="window.PHOTO_ORGANIZER.settings.browseThumbnailFolder()">Browse...</button>
+            {{ file_browser(
+                'new-thumbnail-dir',
+                placeholder='Enter thumbnail directory path',
+                show_label=False
+            ) }}
             <button type="button" class="btn-primary" onclick="window.PHOTO_ORGANIZER.settings.changeThumbnailDir()">Set Directory</button>
         </div>
         {% endif %}

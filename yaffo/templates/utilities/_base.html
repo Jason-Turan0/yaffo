@@ -17,6 +17,12 @@
                 </a>
             </li>
             <li>
+                <a href="{{ url_for('utilities_organize_photos') }}"
+                   class="{% if request.endpoint == 'utilities_organize_photos' %}active{% endif %}">
+                    Organize Photos
+                </a>
+            </li>
+            <li>
                 <a href="{{ url_for('utilities_auto_assign') }}"
                    class="{% if request.endpoint == 'utilities_auto_assign' %}active{% endif %}">
                     Auto-Assign People

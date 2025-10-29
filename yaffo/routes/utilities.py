@@ -80,7 +80,7 @@ def init_utilities_routes(app: Flask):
 
         db_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.status).all()
 
-        indexed_paths = {photo[1] for photo in db_photos if photo[2] == PHOTO_STATUS_INDEXED}
+        indexed_paths = {photo[1] for photo in db_photos if photo[2] == PHOTO_STATUS_INDEXED or photo[2] == PHOTO_STATUS_SYNCED}
 
         filesystem_paths = set()
         for media_dir in media_dirs:
@@ -371,3 +371,15 @@ def init_utilities_routes(app: Flask):
             sync_metadata_task(job_id=job_id, photo_id_batch=list(batch))
 
         return jsonify({'job_id': job_id}), 202
+
+    @app.route("/utilities/organize-photos", methods=["GET"])
+    def utilities_organize_photos():
+        active_jobs = db.session.query(Job).filter(
+            Job.name == 'organize_photos',
+            Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING])
+        ).all()
+
+        return render_template(
+            "utilities/organize_photos.html",
+            active_jobs=[job.to_dict() for job in active_jobs]
+        )

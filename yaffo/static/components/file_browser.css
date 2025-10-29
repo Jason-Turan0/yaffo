@@ -1,0 +1,16 @@
+.file-browser-group {
+    margin-bottom: 1rem;
+}
+
+.file-browser-input-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.file-browser-input {
+    flex: 1;
+}
+
+.file-browser-btn {
+    flex-shrink: 0;
+}

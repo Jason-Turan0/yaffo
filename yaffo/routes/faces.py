@@ -158,7 +158,7 @@ def init_faces_routes(app: Flask):
             query = query.filter(extract("year", Photo.date_taken) == year)
         if month:
             query = query.filter(extract("month", Photo.date_taken) == month)
-        query = query.filter(Face.status == FACE_STATUS_UNASSIGNED)
+        query = query.filter(Face.status == FACE_STATUS_UNASSIGNED).order_by(Photo.date_taken)
 
         # Get total count before pagination
         unassigned_face_count = query.count()
@@ -173,7 +173,7 @@ def init_faces_routes(app: Flask):
                   .outerjoin(PersonFace)
                   .group_by(Person.id)
                   .options(joinedload(Person.embeddings_by_year))
-                  .order_by(func.count(PersonFace.face_id).desc(), Person.name)
+                  .order_by(Person.name)
                   .all()
                   )
 
