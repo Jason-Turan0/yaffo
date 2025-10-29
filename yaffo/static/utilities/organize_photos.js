@@ -13,9 +13,10 @@ window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
     });
 
     const sourceDirectory = document.getElementById('source-directory');
-    const moveFilesCheckbox = document.getElementById('move-files-checkbox');
+    const changeDirectoryCheckbox = document.getElementById('change-directory-checkbox');
     const destinationDirectoryGroup = document.getElementById('destination-directory-group');
     const destinationDirectory = document.getElementById('destination-directory');
+    const keepOriginalCheckbox = document.getElementById('keep-original-checkbox');
     const organizationPattern = document.getElementById('organization-pattern');
     const previewButton = document.getElementById('preview-button');
     const startButton = document.getElementById('start-button');
@@ -23,7 +24,7 @@ window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
     const previewContent = document.getElementById('preview-content');
 
     const toggleDestinationDirectory = () => {
-        if (moveFilesCheckbox.checked) {
+        if (changeDirectoryCheckbox.checked) {
             destinationDirectoryGroup.style.display = 'block';
         } else {
             destinationDirectoryGroup.style.display = 'none';
@@ -34,15 +35,16 @@ window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
     const generatePreview = async () => {
         const source = sourceDirectory.value.trim();
         const pattern = organizationPattern.value;
-        const moveFiles = moveFilesCheckbox.checked;
+        const changeDirectory = changeDirectoryCheckbox.checked;
         const destination = destinationDirectory.value.trim();
+        const keepOriginal = keepOriginalCheckbox.checked;
 
         if (!source) {
             notification.error('Please select a source directory');
             return;
         }
 
-        if (moveFiles && !destination) {
+        if (changeDirectory && !destination) {
             notification.error('Please select a destination directory');
             return;
         }
@@ -51,17 +53,27 @@ window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
         previewButton.textContent = 'Generating Preview...';
 
         try {
-            // TODO: Call backend API to generate preview
-            // For now, show placeholder
-            const modeText = moveFiles ? 'move to destination' : 'organize in place';
-            previewContent.innerHTML = `
-                <div>Source: ${source}</div>
-                <div>Pattern: ${pattern}</div>
-                <div>Mode: ${modeText}</div>
-                ${moveFiles ? `<div>Destination: ${destination}</div>` : ''}
-                <div>This will be populated with actual folder structure preview</div>
-            `;
-            previewSection.style.display = 'block';
+            const response = await fetch(config.urls.utilities_organize_photos_preview, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    source_directory: source,
+                    destination_directory: changeDirectory ? destination : null,
+                    pattern: pattern,
+                    keep_original: keepOriginal
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                displayPreview(data);
+                previewSection.style.display = 'block';
+            } else {
+                const error = await response.json();
+                notification.error(error.error || 'Failed to generate preview');
+            }
         } catch (error) {
             notification.error('Error generating preview: ' + error.message);
         } finally {
@@ -70,32 +82,75 @@ window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
         }
     };
 
+    const displayPreview = (data) => {
+        const { total_files, files_to_move, files_staying, file_list } = data;
+        const operationType = data.operation === 'copy' ? 'copy' : 'move';
+        const operationLabel = data.operation === 'copy' ? 'Files to Copy' : 'Files to Move';
+
+        // Show and populate stats section
+        const previewStatsSection = document.getElementById('preview-stats-section');
+        previewStatsSection.style.display = 'block';
+
+        document.getElementById('stat-total-files').textContent = total_files;
+        document.getElementById('stat-files-to-move').textContent = files_to_move;
+        document.getElementById('stat-files-staying').textContent = files_staying;
+        document.getElementById('stat-operation-label').textContent = operationLabel;
+
+        // Update file count text
+        const fileCountText = document.getElementById('file-count-text');
+        if (files_to_move > 0) {
+            fileCountText.textContent = `${files_to_move} file(s) to ${operationType}`;
+        } else {
+            fileCountText.textContent = 'All files are already organized';
+        }
+
+        // Build file list
+        let html = '';
+        if (file_list && file_list.length > 0) {
+            file_list.forEach(file => {
+                html += `
+                    <div class="file-item">
+                        <div class="file-source">${file.source}</div>
+                        <span class="arrow">→</span>
+                        <div class="file-destination">${file.destination}</div>
+                    </div>
+                `;
+            });
+        } else {
+            html = `<div class="file-item all-organized">All files are already organized correctly!</div>`;
+        }
+
+        previewContent.innerHTML = html;
+    };
+
     const startOrganizing = async () => {
         const source = sourceDirectory.value.trim();
         const pattern = organizationPattern.value;
-        const moveFiles = moveFilesCheckbox.checked;
+        const changeDirectory = changeDirectoryCheckbox.checked;
         const destination = destinationDirectory.value.trim();
+        const keepOriginal = keepOriginalCheckbox.checked;
 
         if (!source) {
             notification.error('Please select a source directory');
             return;
         }
 
-        if (moveFiles && !destination) {
+        if (changeDirectory && !destination) {
             notification.error('Please select a destination directory');
             return;
         }
 
-        const modeText = moveFiles ? 'move' : 'organize in place';
-        const message = moveFiles
-            ? `This will move photos from:\n${source}\n\nTo:\n${destination}\n\nOrganized by: ${pattern}\n\nAre you sure?`
-            : `This will organize photos in:\n${source}\n\nPattern: ${pattern}\n\nAre you sure?`;
+        const operationType = keepOriginal ? 'copy' : 'move';
+        const targetDir = changeDirectory ? destination : source;
+        const message = changeDirectory
+            ? `This will ${operationType} photos from:\n${source}\n\nTo:\n${targetDir}\n\nOrganized by: ${pattern}\n\nAre you sure?`
+            : `This will ${operationType} photos in:\n${source}\n\nPattern: ${pattern}\n\nAre you sure?`;
 
         const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
             title: 'Start Organizing Photos',
             message: message,
             confirmText: 'Start Organizing',
-            confirmClass: moveFiles ? 'btn-danger' : 'btn-primary'
+            confirmClass: (changeDirectory && !keepOriginal) ? 'btn-danger' : 'btn-primary'
         });
 
         if (!confirmed) {
@@ -115,9 +170,9 @@ window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
             //     },
             //     body: JSON.stringify({
             //         source_directory: source,
-            //         destination_directory: moveFiles ? destination : null,
+            //         destination_directory: changeDirectory ? destination : null,
             //         pattern: pattern,
-            //         move_files: moveFiles
+            //         keep_original: keepOriginal
             //     })
             // });
             //
@@ -137,8 +192,8 @@ window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
         }
     };
 
-    if (moveFilesCheckbox) {
-        moveFilesCheckbox.addEventListener('change', toggleDestinationDirectory);
+    if (changeDirectoryCheckbox) {
+        changeDirectoryCheckbox.addEventListener('change', toggleDestinationDirectory);
     }
 
     if (previewButton) {

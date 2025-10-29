@@ -383,3 +383,101 @@ def init_utilities_routes(app: Flask):
             "utilities/organize_photos.html",
             active_jobs=[job.to_dict() for job in active_jobs]
         )
+
+    @app.route("/utilities/organize-photos/preview", methods=["POST"])
+    def utilities_organize_photos_preview():
+        from yaffo.scripts.organize_photos import get_photo_date
+        from calendar import month_name
+
+        data = request.get_json()
+        source_directory = data.get('source_directory')
+        destination_directory = data.get('destination_directory')
+        pattern = data.get('pattern')
+        keep_original = data.get('keep_original', False)
+
+        if not source_directory:
+            return jsonify({'error': 'Source directory is required'}), 400
+
+        source_path = Path(source_directory)
+        if not source_path.exists():
+            return jsonify({'error': 'Source directory does not exist'}), 400
+
+        if not source_path.is_dir():
+            return jsonify({'error': 'Source path is not a directory'}), 400
+
+        # Determine the target directory (where files will be organized)
+        if destination_directory:
+            target_path = Path(destination_directory)
+            if not target_path.exists():
+                return jsonify({'error': 'Destination directory does not exist'}), 400
+            if not target_path.is_dir():
+                return jsonify({'error': 'Destination path is not a directory'}), 400
+        else:
+            # Organize in place
+            target_path = source_path
+
+        # Get thumbnail directory to exclude it
+        thumbnail_dir = _get_thumbnail_dir()
+
+        # Get all photo files recursively
+        photo_files = []
+        for p in source_path.rglob("*"):
+            if not (p.suffix.lower() in PHOTO_EXTENSIONS and not p.name.startswith(".") and p.is_file()):
+                continue
+
+            # Skip files in thumbnail directory
+            if thumbnail_dir and p.is_relative_to(thumbnail_dir):
+                continue
+
+            # Skip system files
+            if _is_system_file(p.name):
+                continue
+
+            photo_files.append(p)
+
+        total_files = len(photo_files)
+        files_to_move = 0
+        files_staying = 0
+        file_list = []
+
+        for photo_file in photo_files:
+            # Get the date for this photo
+            date_taken = get_photo_date(str(photo_file))
+
+            if date_taken:
+                # Determine destination folder based on pattern
+                if pattern == 'year_month':
+                    # e.g., "2024/January"
+                    dest_folder = target_path / str(date_taken.year) / month_name[date_taken.month]
+                elif pattern == 'year_month_day':
+                    # e.g., "2024/January/15"
+                    dest_folder = target_path / str(date_taken.year) / month_name[date_taken.month] / f"{date_taken.day:02d}"
+                elif pattern == 'year':
+                    # e.g., "2024"
+                    dest_folder = target_path / str(date_taken.year)
+                else:
+                    dest_folder = target_path / "unknown"
+            else:
+                dest_folder = target_path / "unknown"
+
+            dest_file = dest_folder / photo_file.name
+
+            # Check if file needs to be moved
+            if photo_file.resolve() != dest_file.resolve():
+                files_to_move += 1
+                file_list.append({
+                    'source': str(photo_file.relative_to(source_path)),
+                    'destination': str(dest_file.relative_to(target_path))
+                })
+            else:
+                files_staying += 1
+
+        operation = 'copy' if keep_original else 'move'
+
+        return jsonify({
+            'total_files': total_files,
+            'files_to_move': files_to_move,
+            'files_staying': files_staying,
+            'file_list': file_list,
+            'operation': operation
+        })
