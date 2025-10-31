@@ -4,7 +4,7 @@ from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, 
     JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED, JobResult, \
     PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED, ApplicationSettings
 from yaffo.common import PHOTO_EXTENSIONS
-from yaffo.background_tasks.tasks import index_photo_task, auto_assign_faces_task, import_photo_task, sync_metadata_task
+from yaffo.background_tasks.tasks import index_photo_task, auto_assign_faces_task, import_photo_task, sync_metadata_task, organize_photos_task
 from pathlib import Path
 from itertools import batched
 import uuid
@@ -296,6 +296,52 @@ def init_utilities_routes(app: Flask):
 
         return jsonify({'job_id': job_id}), 202
 
+    @app.route("/utilities/auto-assign-people/results/<job_id>", methods=["GET"])
+    def utilities_auto_assign_results(job_id: str):
+        job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
+        if not job:
+            return "Job not found", 404
+
+        if job.status != JOB_STATUS_COMPLETED:
+            return redirect(url_for('utilities_auto_assign_people'))
+
+        job_data = json.loads(job.job_data) if job.job_data else {}
+
+        matched_faces = []
+        for result in job.results:
+            data = json.loads(result.result_data)
+            matched_faces.extend(data["matches"])
+
+        person_id = job_data.get('person_id')
+        person_name = job_data.get('person_name')
+        similarity_threshold = job_data.get('similarity_threshold')
+        face_ids = [match['face_id'] for match in matched_faces]
+        faces = (
+            db.session.query(Face)
+            .filter(Face.id.in_(face_ids))
+            .options(joinedload(Face.photo))
+            .all()
+        ) if len(face_ids) > 0 else []
+        face_dict = {face.id: face for face in faces}
+        faces_with_similarity = [
+            {
+                'face': face_dict[match['face_id']],
+                'similarity': match['similarity']
+            }
+            for match in matched_faces
+            if match['face_id'] in face_dict
+        ]
+        faces_with_similarity.sort(key=lambda face: face['similarity'])
+        return render_template(
+            "utilities/auto_assign_results.html",
+            job_id=job_id,
+            person_id=person_id,
+            person_name=person_name,
+            similarity_threshold=similarity_threshold,
+            faces=faces_with_similarity,
+            total_matches=len(matched_faces)
+        )
+
     @app.route("/utilities/sync-metadata", methods=["GET"])
     def utilities_sync_metadata():
         # Only sync photos that are INDEXED (not already SYNCED)
@@ -481,3 +527,104 @@ def init_utilities_routes(app: Flask):
             'file_list': file_list,
             'operation': operation
         })
+
+    @app.route("/utilities/organize-photos/start", methods=["POST"])
+    def utilities_organize_photos_start():
+        from yaffo.scripts.organize_photos import get_photo_date
+        from calendar import month_name
+
+        data = request.get_json()
+        source_directory = data.get('source_directory')
+        destination_directory = data.get('destination_directory')
+        pattern = data.get('pattern')
+        keep_original = data.get('keep_original', False)
+
+        if not source_directory:
+            return jsonify({'error': 'Source directory is required'}), 400
+
+        source_path = Path(source_directory)
+        if not source_path.exists():
+            return jsonify({'error': 'Source directory does not exist'}), 400
+
+        if not source_path.is_dir():
+            return jsonify({'error': 'Source path is not a directory'}), 400
+
+        if destination_directory:
+            target_path = Path(destination_directory)
+            if not target_path.exists():
+                return jsonify({'error': 'Destination directory does not exist'}), 400
+            if not target_path.is_dir():
+                return jsonify({'error': 'Destination path is not a directory'}), 400
+        else:
+            target_path = source_path
+
+        thumbnail_dir = _get_thumbnail_dir()
+
+        photo_files = []
+        for p in source_path.rglob("*"):
+            if not (p.suffix.lower() in PHOTO_EXTENSIONS and not p.name.startswith(".") and p.is_file()):
+                continue
+
+            if thumbnail_dir and p.is_relative_to(thumbnail_dir):
+                continue
+
+            if _is_system_file(p.name):
+                continue
+
+            photo_files.append(p)
+
+        file_operations = []
+        operation_type = 'copy' if keep_original else 'move'
+
+        for photo_file in photo_files:
+            date_taken = get_photo_date(str(photo_file))
+
+            if date_taken:
+                if pattern == 'year_month':
+                    dest_folder = target_path / str(date_taken.year) / month_name[date_taken.month]
+                elif pattern == 'year_month_day':
+                    dest_folder = target_path / str(date_taken.year) / month_name[date_taken.month] / f"{date_taken.day:02d}"
+                elif pattern == 'year':
+                    dest_folder = target_path / str(date_taken.year)
+                else:
+                    dest_folder = target_path / "unknown"
+            else:
+                dest_folder = target_path / "unknown"
+
+            dest_file = dest_folder / photo_file.name
+
+            if photo_file.resolve() != dest_file.resolve():
+                file_operations.append({
+                    'source': str(photo_file),
+                    'destination': str(dest_file),
+                    'type': operation_type
+                })
+
+        if not file_operations:
+            return jsonify({'error': 'No files to organize'}), 400
+
+        job_id = str(uuid.uuid4())
+        job = Job(
+            id=job_id,
+            name='organize_photos',
+            status=JOB_STATUS_PENDING,
+            task_count=len(file_operations),
+            message=f'{"Copied" if keep_original else "Moved"} {{totalCount}}/{{taskCount}} photos',
+            completed_count=0,
+            error_count=0,
+            cancelled_count=0,
+            job_data=json.dumps({
+                'source_directory': source_directory,
+                'destination_directory': destination_directory,
+                'pattern': pattern,
+                'keep_original': keep_original,
+                'operation_type': operation_type
+            })
+        )
+        db.session.add(job)
+        db.session.commit()
+
+        for batch in batched(file_operations, 100):
+            organize_photos_task(job_id=job_id, file_operations=list(batch))
+
+        return jsonify({'job_id': job_id}), 202

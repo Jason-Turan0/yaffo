@@ -9,7 +9,7 @@ window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
         },
         onError: (job) => {},
         hasResults: false,
-        pollingInterval: 5000
+        pollingInterval: 1000
     });
 
     const sourceDirectory = document.getElementById('source-directory');
@@ -161,30 +161,30 @@ window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
         startButton.textContent = 'Starting...';
 
         try {
-            // TODO: Call backend API to start organizing
-            notification.info('Photo organization job will be started here');
-            // const response = await fetch(config.urls.utilities_organize_photos_start, {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //     },
-            //     body: JSON.stringify({
-            //         source_directory: source,
-            //         destination_directory: changeDirectory ? destination : null,
-            //         pattern: pattern,
-            //         keep_original: keepOriginal
-            //     })
-            // });
-            //
-            // if (response.ok) {
-            //     notification.success('Photo organization job started');
-            //     window.location.reload();
-            // } else {
-            //     const error = await response.json();
-            //     notification.error(error.error || 'Failed to start organization job');
-            //     startButton.disabled = false;
-            //     startButton.textContent = 'Start Organizing';
-            // }
+            const response = await fetch(config.urls.utilities_organize_photos_start, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    source_directory: source,
+                    destination_directory: changeDirectory ? destination : null,
+                    pattern: pattern,
+                    keep_original: keepOriginal
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                notification.success('Photo organization job started');
+                jobProgress.startPolling(data.job_id);
+                window.location.reload();
+            } else {
+                const error = await response.json();
+                notification.error(error.error || 'Failed to start organization job');
+                startButton.disabled = false;
+                startButton.textContent = 'Start Organizing';
+            }
         } catch (error) {
             notification.error('Error starting organization: ' + error.message);
             startButton.disabled = false;
