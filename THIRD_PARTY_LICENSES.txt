@@ -1,0 +1,58 @@
+Third-Party Software Licenses
+===============================
+
+This application includes or may optionally include the following third-party software:
+
+---
+
+ExifTool
+--------
+Copyright: Phil Harvey
+License: Perl Artistic License / GPL
+Website: https://exiftool.org/
+Purpose: Reading and writing metadata in image files
+
+ExifTool is licensed under the Perl Artistic License and GPL, which permits
+redistribution. Full license text available at:
+- Perl Artistic License: https://dev.perl.org/licenses/artistic.html
+- GPL: https://www.gnu.org/licenses/gpl-3.0.en.html
+
+ExifTool is bundled with this application for metadata operations including:
+- Reading EXIF data from photos (GPS, date/time, camera info)
+- Writing person tags and location data to photo metadata
+- Supporting multiple image formats (JPEG, HEIC, PNG)
+
+---
+
+Additional Python Libraries
+---------------------------
+
+This application uses various Python libraries, each with their own licenses.
+For a complete list of dependencies and their licenses, see:
+- setup.py or pyproject.toml for the list of dependencies
+- Each package's license can be found on PyPI
+
+Major dependencies include:
+- Flask (BSD-3-Clause)
+- face_recognition (MIT)
+- dlib (Boost Software License)
+- Pillow (HPND License)
+- SQLAlchemy (MIT)
+- NumPy (BSD)
+- scikit-learn (BSD)
+
+Run `pip-licenses` to generate a complete license report.
+
+---
+
+License Compliance Notes
+------------------------
+
+All bundled third-party software is used in accordance with their respective
+licenses. This application is distributed with proper attribution and license
+notices as required by each license.
+
+For the complete license of this application itself, see the LICENSE file
+in the root directory.
+
+Last Updated: 2025

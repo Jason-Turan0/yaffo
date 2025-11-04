@@ -2,6 +2,7 @@ from flask import Flask
 
 from yaffo.routes.faces import init_faces_routes
 from yaffo.routes.home import init_home_routes
+from yaffo.routes.jobs import init_jobs_routes
 from yaffo.routes.locations import init_locations_routes
 from yaffo.routes.people import init_people_routes
 from yaffo.routes.photos import init_photos_routes
@@ -15,5 +16,6 @@ def init_routes(app: Flask):
     init_people_routes(app)
     init_locations_routes(app)
     init_faces_routes(app)
+    init_jobs_routes(app)
     init_utilities_routes(app)
     init_settings_routes(app)

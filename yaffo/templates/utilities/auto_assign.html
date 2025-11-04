@@ -1,5 +1,6 @@
 {% extends "utilities/_base.html" %}
 {% from "components/job_progress.html" import job_progress_card %}
+{% from "components/job_status.html" import job_status_card %}
 {% from "components/percentage_slider.html" import percentage_slider %}
 
 {% block title %}Auto-Assign People - Utilities - Photo Organizer{% endblock %}
@@ -17,7 +18,7 @@
     <div class="section job-progress-section">
         <h2>Processing in Progress</h2>
         {% for job in active_jobs %}
-        {{ job_progress_card(job) }}
+        {{ job_status_card(job, show_cancel=true, has_results=true) }}
         {% endfor %}
     </div>
     {% endif %}

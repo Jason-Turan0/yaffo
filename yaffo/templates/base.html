@@ -24,6 +24,15 @@
 
 
     {% block extra_styles %}{% endblock %}
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script>
+        // Listen for htmx notification events
+        document.addEventListener('showNotification', function(event) {
+            if (window.notification) {
+                window.notification.show(event.detail.message, event.detail.type);
+            }
+        });
+    </script>
     <script>
         // Global configuration object with all Flask routes
         window.APP_CONFIG = {
