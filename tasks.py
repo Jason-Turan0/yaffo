@@ -1,10 +1,12 @@
 from invoke import task
+import platform
+import subprocess
 
 
 @task
 def start_app(c, host="127.0.0.1", port=5000, debug=True):
     """
-    Start the Flask web application.
+    Start the Flask web application and open Chrome in incognito mode.
 
     Args:
         host: Host to bind to (default: 127.0.0.1)
@@ -16,6 +18,20 @@ def start_app(c, host="127.0.0.1", port=5000, debug=True):
         inv start-app --host=0.0.0.0 --port=8000
     """
     print(f"Starting Flask app on {host}:{port} (debug={debug})")
+
+    url = f"http://{host}:{port}"
+    system = platform.system()
+
+    if system == "Darwin":
+        chrome_cmd = f'sleep 2 && open -na "Google Chrome" --args --incognito {url}'
+    elif system == "Windows":
+        chrome_cmd = f'timeout /t 2 /nobreak && start chrome --incognito {url}'
+    else:
+        chrome_cmd = f'sleep 2 && google-chrome --incognito {url}'
+
+    subprocess.Popen(chrome_cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    print(f"Chrome will open in incognito mode at {url}")
+
     env = {
         "FLASK_APP": "yaffo.app:create_app",
         "FLASK_ENV": "development" if debug else "production",
