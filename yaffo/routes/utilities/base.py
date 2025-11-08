@@ -70,6 +70,6 @@ def init_base_utilities_routes(app: Flask):
         ).count()
 
         if remaining_jobs == 0:
-            return '<div id="job-progress-section" hx-swap-oob="delete"></div>'
+            return '<div id="job-progress-section" hx-swap-oob="delete"></div>', 200
 
         return '', 200
