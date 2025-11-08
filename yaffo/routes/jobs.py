@@ -16,10 +16,6 @@ def init_jobs_routes(app: Flask):
         total_count = job.completed_count + job.error_count + job.cancelled_count
         progress = (total_count / job.task_count * 100) if job.task_count > 0 else 0
 
-        if total_count == job.task_count and job.status != JOB_STATUS_COMPLETED:
-            job.status = JOB_STATUS_COMPLETED
-            db.session.commit()
-
         # Determine if job is finished (stop polling)
         is_finished = job.status in [JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, JOB_STATUS_CANCELLED]
 

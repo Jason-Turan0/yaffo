@@ -48,7 +48,8 @@ A Flask-based photo organization tool that uses EXIF metadata, face recognition,
 
 - Don't use code comments as a way of describing what you did. Only include comments for very complicated or unconventional code. Use the chat interface to explain what you did and why. Refer to the file and line if necessary.
 - Use type hints for any code generated
-- Target platform is windows and mac so do all path manipulations server side with os neutral Path lib. 
+- Target platform is windows and mac so do all path manipulations server side with os neutral Path lib.
+- **Import Style**: Always place imports at the top of the file. Never use local imports inside functions or methods. 
 
 ### DRY Principle (Don't Repeat Yourself)
 - **CSS Styles**: Never duplicate CSS styles across templates. Use a centralized stylesheet or shared style blocks.

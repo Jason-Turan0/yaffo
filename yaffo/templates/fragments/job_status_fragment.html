@@ -24,8 +24,7 @@
                     hx-post="{{ url_for('job_delete' if is_finished else 'job_cancel', job_id=job.id) }}"
                     hx-vals='{"has_results": {{ has_results|tojson }}}'
                     hx-target="#job-{{ job.id }}"
-                    hx-swap="{{ 'delete' if is_finished else 'outerHTML' }}"
-                    {% if not is_finished %}hx-confirm="Cancel this job?"{% endif %}>
+                    hx-swap="{{ 'delete' if is_finished else 'outerHTML' }}">
                 {{ 'Delete' if is_finished else 'Cancel' }}
             </button>
             {% endif %}

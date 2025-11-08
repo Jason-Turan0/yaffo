@@ -1,6 +1,8 @@
 from pathlib import Path
 import shutil
 from calendar import month_name
+import time
+import json
 
 import numpy as np
 from sklearn.cluster import DBSCAN
@@ -13,7 +15,6 @@ from yaffo.common import DB_PATH, THUMBNAIL_DIR, PHOTO_EXTENSIONS
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import huey
 from yaffo.domain.compare_utils import calculate_similarity, load_embedding
-import json
 
 engine = create_engine(
     f"sqlite:///{DB_PATH}",
@@ -24,6 +25,7 @@ engine = create_engine(
 SessionFactory = scoped_session(sessionmaker(bind=engine))
 logger = get_logger(__name__, 'background_tasks')
 
+
 def get_job_status(job_id):
     session = SessionFactory()
     try:
@@ -33,10 +35,13 @@ def get_job_status(job_id):
         session.close()
         SessionFactory.remove()
 
+
 """
     Huey task to import photos - create photos and tags in database.
     Supports graceful cancellation and crash recovery.
 """
+
+
 @huey.task()
 def import_photo_task(job_id: str, file_path_batch: list[str]):
     logger.info(f"Starting import_photo_task for job {job_id} with {len(file_path_batch)} files")
@@ -84,7 +89,7 @@ def import_photo_task(job_id: str, file_path_batch: list[str]):
             session.add(photo)
             session.flush()
         processed_count = len(processed_results)
-        update_job_params ={
+        update_job_params = {
             'completed_count': Job.completed_count + processed_count,
             'cancelled_count': Job.cancelled_count + cancel_count,
             'error_count': Job.error_count + error_count,
@@ -94,7 +99,8 @@ def import_photo_task(job_id: str, file_path_batch: list[str]):
 
         session.query(Job).filter_by(id=job_id).update(update_job_params)
         session.commit()
-        logger.info(f"Completed job {job_id} batch: processed={processed_count}, errors={error_count}, cancelled={cancel_count}")
+        logger.info(
+            f"Completed job {job_id} batch: processed={processed_count}, errors={error_count}, cancelled={cancel_count}")
 
     except Exception as e:
         logger.error(f"Error in import_photo_task for job {job_id}: {e}", exc_info=True)
@@ -106,6 +112,7 @@ def import_photo_task(job_id: str, file_path_batch: list[str]):
     finally:
         session.close()
         SessionFactory.remove()
+
 
 @huey.task()
 def index_photo_task(job_id: str, file_path_batch: list[str]):
@@ -173,7 +180,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                     tag_value=tag_data['tag_value']
                 )
                 session.add(tag)
-            photo.status =PHOTO_STATUS_INDEXED
+            photo.status = PHOTO_STATUS_INDEXED
             # Add all faces for this photo
             for face_data in faces_data:
                 face = Face(
@@ -187,7 +194,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                     location_left=face_data['location_left']
                 )
                 session.add(face)
-            processed_count  += 1
+            processed_count += 1
         update_job_params = {
             'cancelled_count': Job.cancelled_count + cancel_count,
             'completed_count': Job.completed_count + processed_count,
@@ -211,6 +218,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
         session.close()
         SessionFactory.remove()
 
+
 def load_assign_faces_task_data(person_id, face_ids):
     session = SessionFactory()
     try:
@@ -221,8 +229,10 @@ def load_assign_faces_task_data(person_id, face_ids):
         session.close()
         SessionFactory.remove()
 
+
 @huey.task(context=True)
-def auto_assign_faces_task(job_id: str, face_id_batch: list[int], person_id: int, similarity_threshold: float, task=None):
+def auto_assign_faces_task(job_id: str, face_id_batch: list[int], person_id: int, similarity_threshold: float,
+                           task=None):
     logger.info(f"Starting auto_assign_faces_task for job {job_id} with {len(face_id_batch)} faces. task = {task}")
     error_count = 0
     job_status = get_job_status(job_id)
@@ -239,7 +249,7 @@ def auto_assign_faces_task(job_id: str, face_id_batch: list[int], person_id: int
     processed_count = len(face_id_batch)
     session = SessionFactory()
     try:
-        job_result = JobResult(job_id=job_id,huey_task_id = task.id, result_data= json.dumps({'matches': matches}))
+        job_result = JobResult(job_id=job_id, huey_task_id=task.id, result_data=json.dumps({'matches': matches}))
         session.add(job_result)
         update_job_params = {
             'error_count': Job.error_count + error_count,
@@ -482,3 +492,97 @@ def organize_photos_task(job_id: str, file_operations: list[dict[str, str]]):
     finally:
         session.close()
         SessionFactory.remove()
+
+
+@huey.task()
+def complete_job_task(job_id: str, max_wait_seconds: int = 30):
+    """
+    Final task for a job that marks it as complete.
+
+    Polls for completion every 1 second up to max_wait_seconds.
+    After timeout, always marks job as complete regardless of state.
+
+    Args:
+        job_id: The job ID to complete
+        max_wait_seconds: Maximum seconds to wait before forcing completion (default: 30)
+    """
+    logger.info(f"Starting complete_job_task for job {job_id} (max wait: {max_wait_seconds}s)")
+
+    elapsed = 0
+
+    while elapsed < max_wait_seconds:
+        session = SessionFactory()
+        try:
+            job = session.query(Job).filter_by(id=job_id).first()
+            if not job:
+                logger.error(f"Job {job_id} not found in complete_job_task")
+                return
+            if job.status == JOB_STATUS_CANCELLED:
+                return
+            total_finished = job.completed_count + job.error_count + job.cancelled_count
+
+            if total_finished >= job.task_count:
+                job.status = JOB_STATUS_COMPLETED
+                session.commit()
+                logger.info(
+                    f"Job {job_id} completed after {elapsed}s: "
+                    f"{job.completed_count} completed, {job.error_count} errors, "
+                    f"{job.cancelled_count} cancelled"
+                )
+                return
+        except Exception as e:
+            logger.error(f"Error checking job {job_id} completion: {e}", exc_info=True)
+            session.rollback()
+        finally:
+            session.close()
+            SessionFactory.remove()
+
+        time.sleep(1)
+        elapsed += 1
+
+    session = SessionFactory()
+    try:
+        job = session.query(Job).filter_by(id=job_id).first()
+        if job and job.status != JOB_STATUS_COMPLETED:
+            total_finished = job.completed_count + job.error_count + job.cancelled_count
+            job.status = JOB_STATUS_COMPLETED
+            session.commit()
+            logger.warning(
+                f"Job {job_id} force-completed after {max_wait_seconds}s timeout. "
+                f"Status: {total_finished}/{job.task_count} tasks finished"
+            )
+    except Exception as e:
+        logger.error(f"Error force-completing job {job_id}: {e}", exc_info=True)
+        session.rollback()
+    finally:
+        session.close()
+        SessionFactory.remove()
+
+
+"""
+   Helper to schedule a job completion task.
+
+   This should be called after enqueuing all other tasks for a job.
+   The completion task will wait for all tasks to finish, then mark the job complete.
+
+   Args:
+       job_id: The job ID to schedule completion for
+       delay_seconds: Delay before starting completion check (default: 2)
+       max_wait_seconds: Maximum time to wait for completion (default: 30)
+
+   Returns:
+       The Huey Result object for the completion task
+
+   Example:
+       # After creating all job tasks
+       for batch in batched(items, 100):
+           my_task(job_id, batch)
+
+       # Schedule completion
+       schedule_job_completion(job_id)
+   """
+def schedule_job_completion(job_id: str, delay_seconds: int = 2, max_wait_seconds: int = 30):
+    return complete_job_task.schedule(
+        args=(job_id, max_wait_seconds),
+        delay=delay_seconds
+    )

@@ -1,7 +1,7 @@
 from flask import render_template, Flask, redirect, url_for, request, jsonify
 from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED, Person, Face, FACE_STATUS_UNASSIGNED
-from yaffo.background_tasks.tasks import auto_assign_faces_task
+from yaffo.background_tasks.tasks import auto_assign_faces_task, schedule_job_completion
 from itertools import batched
 import uuid
 import json
@@ -69,6 +69,8 @@ def init_auto_assign_routes(app: Flask):
         for batch in batched(unassigned_face_ids, 100):
             auto_assign_faces_task(job_id=job_id, face_id_batch=list(batch), person_id=person_id,
                                    similarity_threshold=similarity_threshold)
+
+        schedule_job_completion(job_id)
 
         return jsonify({'job_id': job_id}), 202
 
