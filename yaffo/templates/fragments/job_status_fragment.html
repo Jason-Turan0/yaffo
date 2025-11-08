@@ -21,7 +21,7 @@
 
             {% if show_cancel %}
             <button class="btn btn-danger btn-sm"
-                    hx-post="{{ url_for('utilities_delete_job' if is_finished else 'utilities_cancel_job', job_id=job.id) }}"
+                    hx-post="{{ url_for('job_delete' if is_finished else 'job_cancel', job_id=job.id) }}"
                     hx-vals='{"has_results": {{ has_results|tojson }}, "job_name": "{{ job.name }}"}'
                     hx-target="#job-{{ job.id }}"
                     hx-swap="outerHTML">
