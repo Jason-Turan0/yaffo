@@ -2,7 +2,7 @@ from flask import render_template, Flask, request, jsonify
 from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING
 from yaffo.common import PHOTO_EXTENSIONS
-from yaffo.background_tasks.tasks import organize_photos_task
+from yaffo.background_tasks.tasks import organize_photos_task, schedule_job_completion
 from pathlib import Path
 from itertools import batched
 import uuid
@@ -208,5 +208,5 @@ def init_organize_photos_routes(app: Flask):
 
         for batch in batched(file_operations, 100):
             organize_photos_task(job_id=job_id, file_operations=list(batch))
-
+        schedule_job_completion(job_id)
         return jsonify({'job_id': job_id}), 202

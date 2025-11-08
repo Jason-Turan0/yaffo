@@ -265,7 +265,7 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
 
             # Get location name from XMP if available
             location_name = xmp_fields.get('location_name')
-
+            image_tag = None
             logger.debug(f"Used exiftool for metadata extraction: {photo_path}")
         else:
             # Fallback to PIL/piexif for basic EXIF
@@ -304,7 +304,7 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
             'longitude': longitude,
             'location_name': location_name,
             'tags': tags,
-            'faces': faces_data
+            'faces_data': faces_data
         }
 
         # Add XMP fields to result if available

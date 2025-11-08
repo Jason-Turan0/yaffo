@@ -1,7 +1,7 @@
 from flask import render_template, Flask, request, jsonify
 from yaffo.db import db
 from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED
-from yaffo.background_tasks.tasks import sync_metadata_task
+from yaffo.background_tasks.tasks import sync_metadata_task, schedule_job_completion
 from pathlib import Path
 from itertools import batched
 import uuid
@@ -81,5 +81,5 @@ def init_sync_metadata_routes(app: Flask):
 
         for batch in batched(photo_ids, 50):
             sync_metadata_task(job_id=job_id, photo_id_batch=list(batch))
-
+        schedule_job_completion(job_id)
         return jsonify({'job_id': job_id}), 202

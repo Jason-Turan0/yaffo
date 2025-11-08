@@ -3,6 +3,8 @@ from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, JOB_STATUS_CANCELLED, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JobResult
 import json
 
+from yaffo.utils.request_helpers import parse_boolean_from_form
+
 
 def init_jobs_routes(app: Flask):
     @app.route("/jobs/section", methods=["GET"])
@@ -38,6 +40,7 @@ def init_jobs_routes(app: Flask):
             db.session.commit()
 
         return jsonify(job.to_dict())
+
     @app.route("/jobs/<job_id>/fragment", methods=["GET"])
     def job_fragment(job_id: str):
         """Returns HTML fragment for a single job card - used by htmx polling"""
@@ -102,7 +105,7 @@ def init_jobs_routes(app: Flask):
         job = db.session.query(Job).filter_by(id=job_id).first()
         if not job:
             return "", 404
-
+        has_results = parse_boolean_from_form(request, "has_results", False)
         job_name = job.name
 
         JobResult.query.filter(JobResult.job_id == job_id).delete()
@@ -111,7 +114,7 @@ def init_jobs_routes(app: Flask):
 
         remaining_jobs = db.session.query(Job).filter(
             Job.name == job_name,
-            Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED])
+            Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED] if has_results else [JOB_STATUS_PENDING, JOB_STATUS_RUNNING])
         ).count()
         # Return empty to remove element from DOM with notification trigger
         if remaining_jobs == 0:

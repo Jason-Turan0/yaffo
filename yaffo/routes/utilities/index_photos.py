@@ -2,7 +2,7 @@ from flask import render_template, Flask, request, jsonify
 from yaffo.db import db
 from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED
 from yaffo.common import PHOTO_EXTENSIONS
-from yaffo.background_tasks.tasks import index_photo_task, import_photo_task
+from yaffo.background_tasks.tasks import index_photo_task, import_photo_task, schedule_job_completion
 from pathlib import Path
 from itertools import batched
 import uuid
@@ -164,7 +164,9 @@ def init_index_photos_routes(app: Flask):
 
         for batch in batched(files_to_import, 250):
             import_photo_task(import_job_id, list(batch))
+        schedule_job_completion(import_job_id)
         for batch in batched(files_needing_indexing, 10):
             index_photo_task(index_job_id, list(batch))
         delete_orphaned_photos(db.session, files_to_delete)
+        schedule_job_completion(index_job_id)
         return jsonify({'job_id': import_job_id}), 202

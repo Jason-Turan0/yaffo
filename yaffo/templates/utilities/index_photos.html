@@ -1,5 +1,6 @@
 {% extends "utilities/_base.html" %}
 {% from "components/job_progress.html" import job_progress_card %}
+{% from "components/job_section.html" import job_section %}
 
 {% block title %}Index Photos - Utilities - Photo Organizer{% endblock %}
 
@@ -28,14 +29,7 @@
     </div>
     {% endif %}
 
-    {% if active_jobs|length > 0 %}
-    <div class="section job-progress-section">
-        <h2>Sync in Progress</h2>
-        {% for job in active_jobs %}
-        {{ job_progress_card(job) }}
-        {% endfor %}
-    </div>
-    {% endif %}
+    {{ job_section(active_jobs, show_cancel=true, has_results=false) }}
 
     <div class="stats-grid">
         <div class="stat-card">
