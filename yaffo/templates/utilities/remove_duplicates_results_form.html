@@ -34,7 +34,7 @@
                 hx-swap="none"
                 hx-include="[name='selected_files'], [name='action_type']"
                 {{ 'disabled' if selected_count == 0 else '' }}>
-            Remove Selected Duplicates ({{ selected_count }})
+            Remove Selected Duplicates
         </button>
     </div>
 
@@ -45,12 +45,7 @@
                 <h3>Group {{ group.id + 1 }}</h3>
                 <div class="photo-grid">
                     {% for path in group.paths %}
-                        <div class="photo-card">
-                            <input type="hidden" name="group_id" value="{{ group.id }}">
-                            <input type="hidden" name="path" value="{{ path.path }}">
-                            <input type="hidden" name="selected" value="{{ 'true' if path.selected else 'false' }}">
-                            <img src="{{ url_for('photo_by_path', photoPath=path.path) }}">
-                        </div>
+                        {% include "utilities/remove_duplicates_photo_card.html" with context %}
                     {% endfor %}
                 </div>
             </div>

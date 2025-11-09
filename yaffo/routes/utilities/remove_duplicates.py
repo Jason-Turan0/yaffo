@@ -119,34 +119,66 @@ def init_remove_duplicates_routes(app: Flask):
 
         return jsonify({'job_id': job_id}), 202
 
+    def create_duplicate_job_state(job_id: str):
+        job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
+        if not job:
+            return "Job not found", 404
+
+        duplicate_groups = []
+        selected_files = 0
+        current_path_id = 0
+        for result in job.results:
+            groups = json.loads(result.result_data)
+            for group in groups:
+                view_group = {
+                    'id': group['id'],
+                    'paths': []
+                }
+                for index, path in enumerate(group['paths']):
+                    current_path_id += 1
+                    view_group['paths'].append({
+                        'pathId': current_path_id,
+                        'path': path,
+                        'selected': index != 0
+                    })
+                    selected_files += 1 if index != 0 else 0
+                duplicate_groups.append(view_group)
+
+        total_groups = len(duplicate_groups)
+        total_duplicate_files = sum(len(group['paths']) for group in duplicate_groups)
+
     @app.route("/utilities/remove-duplicates/results/<job_id>", methods=["GET"])
     def utilities_remove_duplicates_results(job_id: str):
         job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
         if not job:
             return "Job not found", 404
 
-        if job.status != JOB_STATUS_COMPLETED:
-            return redirect(url_for('utilities_remove_duplicates'))
-
         duplicate_groups = []
         selected_files = 0
+        current_path_id = 0
         for result in job.results:
             groups = json.loads(result.result_data)
-            view_groups = [{
-                'id': group['id'],
-                'paths': [{'path': path, 'selected': index != 0} for index, path in enumerate(group['paths'])]
-            } for group in groups]
-            duplicate_groups.extend(view_groups)
-            selected_files += len([path for group in view_groups for path in group['paths'] if path['selected']])
+            for group in groups:
+                view_group = {
+                    'id': group['id'],
+                    'paths': []
+                }
+                for index, path in enumerate(group['paths']):
+                    current_path_id += 1
+                    view_group['paths'].append({
+                        'pathId': current_path_id,
+                        'path': path,
+                        'selected': index != 0
+                    })
+                    selected_files += 1 if index != 0 else 0
+                duplicate_groups.append(view_group)
 
         total_groups = len(duplicate_groups)
         total_duplicate_files = sum(len(group['paths']) for group in duplicate_groups)
 
         return render_template(
             "utilities/remove_duplicates_results.html",
-            duplicate_groups=duplicate_groups[0:10],
-            duplicate_groups_json=json.dumps(duplicate_groups),
-            job_id=job.id,
+            duplicate_groups=duplicate_groups[:10],
             total_files_processed=job.task_count,
             total_groups=total_groups,
             total_duplicate_files=total_duplicate_files,
@@ -173,6 +205,7 @@ def init_remove_duplicates_routes(app: Flask):
 
         group_ids = request.form.getlist('group_id')
         paths = request.form.getlist('path')
+        pathIds = request.form.getlist('pathId', type=int)
         selected_flags = request.form.getlist('selected')
 
         photo_states = {}
@@ -216,6 +249,32 @@ def init_remove_duplicates_routes(app: Flask):
                 "page_size": page_size,
                 "page_sizes": [5, 10, 20, 50],
             }
+        )
+
+    @app.route("/utilities/remove-duplicates/toggle-photo", methods=["POST"])
+    def utilities_remove_duplicates_toggle_photo():
+        target_group_id = request.form.get('target_group_id', type=int)
+        target_path_id = request.form.get('target_path_id', type=int)
+
+        group_ids = request.form.getlist('group_id')
+        paths = request.form.getlist('path')
+        pathIds = request.form.getlist('pathId', type=int)
+        selected_flags = request.form.getlist('selected')
+        update_index = pathIds.index(target_path_id)
+        if update_index == -1:
+            raise Exception('Target path id not found')
+
+        path_obj = {
+            'path': paths[update_index],
+            'selected': not selected_flags[update_index],
+            'pathId': pathIds[update_index],
+        }
+        group_obj = {'id': target_group_id}
+
+        return render_template(
+            "utilities/remove_duplicates_photo_card.html",
+            path=path_obj,
+            group=group_obj,
         )
 
     @app.route("/utilities/remove-duplicates/execute/<job_id>", methods=["POST"])

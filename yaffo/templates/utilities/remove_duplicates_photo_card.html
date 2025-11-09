@@ -1,0 +1,11 @@
+<div class="photo-card {% if path.selected %}selected{% endif %}"
+     id="photo-{{ path.pathId }}"
+     hx-post="{{ url_for('utilities_remove_duplicates_toggle_photo') }}"
+     hx-vals='{"target_group_id": {{ group.id }}, "target_path_id": "{{ path.pathId }}"}'
+     hx-target="#photo-{{ path.pathId }}"
+     hx-swap="outerHTML"
+     hx-include="closest form">
+    <input type="hidden" name="pathId" value="{{ path.pathId }}">
+    <input type="hidden" name="selected" value="{{ 'true' if path.selected else 'false' }}">
+    <img src="{{ url_for('photo_by_path', photoPath=path.path) }}" alt="Duplicate photo">
+</div>
