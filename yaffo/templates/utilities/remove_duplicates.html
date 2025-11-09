@@ -1,0 +1,17 @@
+{% extends "utilities/_base.html" %}
+{% from "components/job_section.html" import job_section %}
+{% block title %}Remove Duplicates - Utilities - Photo Organizer{% endblock %}
+
+{% block utility_content %}
+    <div class="utility-page">
+        <div class="page-header">
+            <h1>Remove Duplicates</h1>
+            <p class="subtitle">
+                Find and remove duplicate photos
+            </p>
+        </div>
+
+        {{ job_section(active_jobs, show_cancel=true, has_results=false) }}
+        {% include "utilities/remove_duplicates_form.html" %}
+    </div>
+{% endblock %}

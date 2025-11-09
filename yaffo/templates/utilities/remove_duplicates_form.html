@@ -56,6 +56,16 @@
                         <p>No directory selected</p>
                     {% endif %}
                 </div>
+                <button
+                        type="button"
+                        class="btn btn-secondary"
+                        id="rescan-directories"
+                        hx-post="{{ url_for('utilities_remove_duplicates_form') }}"
+                        hx-vals='{"action": "rescan"}'
+                        hx-target="#remove-duplicates-form"
+                >
+                    Rescan Directories
+                </button>
 
                 <button
                         type="button"
