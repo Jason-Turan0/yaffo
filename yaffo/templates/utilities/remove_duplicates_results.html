@@ -1,0 +1,27 @@
+{% extends "utilities/_base.html" %}
+
+{% block title %}Duplicate Results - Utilities - Photo Organizer{% endblock %}
+
+{% block utility_content %}
+<div class="utility-page">
+    <div class="page-header">
+        <h1>Duplicate Photos Found</h1>
+        <p class="subtitle">
+            Review and manage duplicate photos
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Job Details</h2>
+        <p>Job ID: {{ job.id }}</p>
+        <p>Status: {{ job.status }}</p>
+        <p>Total Photos Processed: {{ job.completed_count }}</p>
+        <p>Errors: {{ job.error_count }}</p>
+    </div>
+
+    <div class="section">
+        <h2>Duplicate Groups</h2>
+        <p>Stub: Duplicate results will be displayed here</p>
+    </div>
+</div>
+{% endblock %}

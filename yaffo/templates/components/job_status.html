@@ -1,4 +1,4 @@
-{% macro job_status_card(job, show_cancel=true, has_results=false) %}
+{% macro job_status_card(job, show_cancel=true, has_results=false, results_route=none) %}
 {% set total_count = job.completed_count + job.error_count + job.cancelled_count %}
 {% set progress = (total_count / job.task_count * 100) if job.task_count > 0 else 0 %}
 {% set is_finished = job.status in ['COMPLETED', 'FAILED', 'CANCELLED'] %}

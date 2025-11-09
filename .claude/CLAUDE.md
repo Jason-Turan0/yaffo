@@ -154,6 +154,88 @@ const url = APP_CONFIG.buildUrl('person_update', { person_id: 123 });
 // → "/people/123/update"
 ```
 
+## HTMX Form Patterns (PREFERRED)
+
+**CRITICAL: Use HTMX for all interactive forms. Avoid inline JavaScript and CSS.**
+
+### Default Pattern: Server-Side Rendered Form Fragments
+
+See `yaffo/templates/utilities/remove_duplicates_form.html` as the reference implementation.
+
+**Template Fragment Pattern:**
+```html
+<div id="my-form">
+    <form>
+        {% for item in items %}
+        <input type="text" name="item" value="{{ item }}">
+
+        <!-- Action buttons with hx-vals to specify action -->
+        <button type="button"
+                hx-post="{{ url_for('my_form_route') }}"
+                hx-vals='{"action": "remove", "index": {{ loop.index0 }}}'
+                hx-target="#my-form"
+                class="btn-danger">
+            Delete
+        </button>
+        {% endfor %}
+
+        <!-- Add button -->
+        <button type="button"
+                hx-post="{{ url_for('my_form_route') }}"
+                hx-vals='{"action": "create"}'
+                hx-target="#my-form"
+                class="btn-secondary">
+            Add Item
+        </button>
+    </form>
+</div>
+```
+
+**Flask Route Pattern:**
+```python
+@app.route("/my-form", methods=["POST"])
+def my_form_route():
+    # Collect items from form (multiple inputs with same name)
+    items = request.form.getlist('item')
+    items = [i.strip() for i in items if i.strip()]
+
+    # Check action from hx-vals
+    action = request.form.get('action')
+
+    if action == 'create':
+        items.append('')
+    elif action == 'remove':
+        index = int(request.form.get('index', -1))
+        if 0 <= index < len(items):
+            items.pop(index)
+    elif action == 'browse':
+        # Handle browse action
+        pass
+
+    # Re-render the form fragment with updated data
+    return render_template(
+        'my_form_fragment.html',
+        items=items
+    )
+```
+
+**Key Principles:**
+1. ✅ **No inline JavaScript** - Use HTMX attributes only
+2. ✅ **No inline CSS** - Only class names, styles in CSS files
+3. ✅ **Form fragments** - Extract forms into separate template files for re-rendering
+4. ✅ **Single endpoint** - One route handles all actions via `hx-vals='{"action": "..."}'`
+5. ✅ **Multiple inputs same name** - Use `request.form.getlist('name')` on backend
+6. ✅ **Server-side state** - All form state managed server-side, returned as template variables
+7. ✅ **HTMX targets** - Use `hx-target` to specify which element to replace
+8. ✅ **Complete re-renders** - Return entire form fragment, not partial updates
+
+**What to Avoid:**
+- ❌ Inline JavaScript in templates (`<script>` tags inside form fragments)
+- ❌ Inline CSS or style attributes
+- ❌ Client-side state management
+- ❌ Complex JavaScript initialization functions for forms
+- ❌ Multiple routes for similar actions (use action parameter instead)
+
 ## Passing Template Variables to JavaScript
 
 **Preferred Pattern: Namespaced Module with Initialization Function**

@@ -78,8 +78,13 @@
                     + Add Another Directory
                 </button>
 
-                <button class="btn btn-primary"
-                        id="find-duplicates-button" {{ 'disabled' if directories | length == 0 }}>
+                <button type="button"
+                        class="btn btn-primary"
+                        id="find-duplicates-button"
+                        hx-post="{{ url_for('utilities_remove_duplicates_start') }}"
+                        hx-swap="none"
+                        hx-on::after-request="if(event.detail.successful) window.location.reload()"
+                        {{ 'disabled' if directories | length == 0 }}>
                     Find Duplicates
                 </button>
             </div>

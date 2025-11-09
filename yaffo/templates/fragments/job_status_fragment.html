@@ -11,25 +11,22 @@
             <span class="job-status">{{ job.status }}</span>
             <span class="job-time">Started: {{ (job.started_at or job.created_at) | format_date }}</span>
         </div>
-        <div>
-            {% if progress >= 100 and has_results %}
-                <a href="{{ url_for('utilities_auto_assign_results', job_id=job.id) }}"
+        <div class="job-actions">
+            {% if progress >= 100 and has_results and results_route %}
+                <a href="{{ url_for(results_route, job_id=job.id) }}"
                    class="btn btn-primary btn-sm">
                     Show Results
                 </a>
             {% endif %}
 
             {% if show_cancel %}
-                <form>
-                    <input type="hidden" name="has_results" value="{{ has_results}}" />
-                    <button class="btn btn-danger btn-sm"
-                            hx-post="{{ url_for('job_delete' if is_finished else 'job_cancel', job_id=job.id) }}"
-                            hx-vals='{"has_results": {{ has_results|tojson }}, "job_name": "{{ job.name }}"}'
-                            hx-target="#job-{{ job.id }}"
-                            hx-swap="outerHTML">
-                        {{ 'Delete' if is_finished else 'Cancel' }}
-                    </button>
-                </form>
+                <button class="btn btn-danger btn-sm"
+                        hx-post="{{ url_for('job_delete' if is_finished else 'job_cancel', job_id=job.id) }}"
+                        hx-vals='{"has_results": {{ has_results|tojson }}, "job_name": "{{ job.name }}"}'
+                        hx-target="#job-{{ job.id }}"
+                        hx-swap="outerHTML">
+                    {{ 'Delete' if is_finished else 'Cancel' }}
+                </button>
             {% endif %}
         </div>
     </div>
