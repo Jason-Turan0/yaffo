@@ -34,6 +34,12 @@
                     Sync Metadata to Files
                 </a>
             </li>
+            <li>
+                <a href="{{ url_for('utilities_remove_duplicates') }}"
+                   class="{% if request.endpoint == 'utilities_remove_duplicates' %}active{% endif %}">
+                    Remove Duplicates
+                </a>
+            </li>
         </ul>
     </nav>
 

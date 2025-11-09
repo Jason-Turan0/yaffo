@@ -8,6 +8,8 @@ import platform
 import shutil
 from pathlib import Path
 
+from yaffo.utils.file_system import show_file_dialog
+
 
 def init_settings_routes(app: Flask):
     def get_thumbnail_stats(directory: Path| None):
@@ -149,80 +151,8 @@ def init_settings_routes(app: Flask):
 
     @app.route("/api/settings/select-folder", methods=["GET"])
     def select_folder():
-        """Open a native folder selection dialog using OS-specific commands"""
-        try:
-            system = platform.system()
-            folder_path = None
-
-            if system == "Darwin":  # macOS
-                # Use AppleScript to show folder picker
-                script = '''
-                tell application "System Events"
-                    activate
-                    set folderPath to choose folder with prompt "Select Media Directory"
-                    return POSIX path of folderPath
-                end tell
-                '''
-                result = subprocess.run(
-                    ['osascript', '-e', script],
-                    capture_output=True,
-                    text=True,
-                    timeout=300  # 5 minute timeout for user to select
-                )
-                if result.returncode == 0:
-                    folder_path = result.stdout.strip()
-                    # Remove trailing slash if present
-                    if folder_path.endswith('/'):
-                        folder_path = folder_path[:-1]
-
-            elif system == "Windows":
-                # Use PowerShell for Windows
-                script = '''
-                Add-Type -AssemblyName System.Windows.Forms
-                $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-                $dialog.Description = "Select Media Directory"
-                $result = $dialog.ShowDialog()
-                if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
-                    Write-Output $dialog.SelectedPath
-                }
-                '''
-                result = subprocess.run(
-                    ['powershell', '-Command', script],
-                    capture_output=True,
-                    text=True,
-                    timeout=300
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    folder_path = result.stdout.strip()
-
-            else:  # Linux
-                # For Linux, we'll return an error suggesting manual entry
-                return jsonify({
-                    "success": False,
-                    "error": "Folder browser not available on Linux. Please enter path manually."
-                }), 400
-
-            if folder_path:
-                return jsonify({
-                    "success": True,
-                    "path": folder_path
-                })
-            else:
-                return jsonify({
-                    "success": False,
-                    "message": "No folder selected"
-                })
-
-        except subprocess.TimeoutExpired:
-            return jsonify({
-                "success": False,
-                "error": "Folder selection timed out"
-            }), 500
-        except Exception as e:
-            return jsonify({
-                "success": False,
-                "error": str(e)
-            }), 500
+        result = show_file_dialog()
+        return jsonify(result), result.status_code
 
     @app.route("/api/settings/thumbnail-stats", methods=["GET"])
     def get_thumbnail_stats_api():

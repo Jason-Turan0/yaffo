@@ -1,0 +1,78 @@
+<div id="remove-duplicates-form">
+    <form>
+        <input name="total_photos" value="{{ total_photos }}" type="hidden"/>
+        <input name="total_directories" value="{{ directories | length }}" type="hidden"/>
+        <div class="scan-stats">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Photos</div>
+                    <div class="stat-value">{{ total_photos }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Directories</div>
+                    <div class="stat-value">{{ directories | length }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="section">
+            <h2>Configuration</h2>
+            <p class="section-description">
+                Select one or more directories to scan for duplicate photos.
+            </p>
+            <div class="config-form">
+                <div id="directories-container">
+                    {% for directory in directories %}
+                        <div class="directory-row" id="directory-row-0">
+                            <div class="file-browser-group">
+                                <label for="directory">Directory</label>
+                                <div class="file-browser-input-group">
+                                    <input type="text"
+                                           id="directory"
+                                           name="directory"
+                                           placeholder="Select directory to scan for duplicates"
+                                           class="form-control file-browser-input"
+                                           value="{{ directory }}">
+                                    <button type="button"
+                                            hx-post="{{ url_for('utilities_remove_duplicates_form') }}"
+                                            hx-vals='{"action": "browse", "index": {{ loop.index0 }}}'
+                                            hx-target="#remove-duplicates-form"
+                                            class="btn-secondary">
+                                        Browse
+                                    </button>
+                                    <button
+                                            type="button"
+                                            class="btn-danger"
+                                            hx-post="{{ url_for('utilities_remove_duplicates_form') }}"
+                                            hx-vals='{"action": "remove", "index": {{ loop.index0 }}}'
+                                            hx-target="#remove-duplicates-form"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    {% if directories| length ==0 %}
+                        <p>No directory selected</p>
+                    {% endif %}
+                </div>
+
+                <button
+                        type="button"
+                        class="btn btn-secondary"
+                        id="add-directory-button"
+                        hx-post="{{ url_for('utilities_remove_duplicates_form') }}"
+                        hx-vals='{"action": "create"}'
+                        hx-target="#remove-duplicates-form"
+                >
+                    + Add Another Directory
+                </button>
+
+                <button class="btn btn-primary"
+                        id="find-duplicates-button" {{ 'disabled' if directories | length == 0 }}>
+                    Find Duplicates
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
