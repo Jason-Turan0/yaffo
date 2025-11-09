@@ -36,6 +36,7 @@ setup(
         "requests==2.32.3",
         "scikit-learn==1.7.2",
         "scipy==1.16.2",
+        "send2trash==1.8.3",
         "setuptools==80.9.0",
         "SQLAlchemy==2.0.43",
         "threadpoolctl==3.6.0",

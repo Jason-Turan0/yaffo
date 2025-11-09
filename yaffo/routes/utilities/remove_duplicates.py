@@ -1,11 +1,14 @@
-from flask import render_template, Flask, request, jsonify
+from flask import render_template, Flask, request, jsonify, redirect, url_for
 from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED
 from yaffo.common import PHOTO_EXTENSIONS
 from yaffo.background_tasks.tasks import find_duplicates_task
 from pathlib import Path
+from sqlalchemy.orm import joinedload
 import uuid
 import json
+import send2trash
+import os
 
 from yaffo.routes.utilities.common import is_system_file, get_thumbnail_dir
 from yaffo.utils.file_system import show_file_dialog
@@ -35,6 +38,7 @@ def collect_photo_paths(directory_paths: list[str]) -> list[str]:
 
 def count_photos_in_directory(directory_paths: list[str]) -> int:
     return len(collect_photo_paths(directory_paths))
+
 
 def init_remove_duplicates_routes(app: Flask):
     @app.route("/utilities/remove-duplicates", methods=["GET"])
@@ -117,16 +121,108 @@ def init_remove_duplicates_routes(app: Flask):
 
     @app.route("/utilities/remove-duplicates/results/<job_id>", methods=["GET"])
     def utilities_remove_duplicates_results(job_id: str):
-        job = db.session.query(Job).filter_by(id=job_id).first()
+        job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
         if not job:
             return "Job not found", 404
 
         if job.status != JOB_STATUS_COMPLETED:
-            return "Job not completed yet", 400
+            return redirect(url_for('utilities_remove_duplicates'))
+
+        duplicate_groups = []
+        selected_files = 0
+        for result in job.results:
+            groups = json.loads(result.result_data)
+            view_groups = [{
+                'id': group['id'],
+                'paths': [{'path': path, 'selected': index != 0} for index, path in enumerate(group['paths'])]
+            } for group in groups]
+            duplicate_groups.extend(view_groups)
+            selected_files += len([path for group in view_groups for path in group['paths'] if path['selected']])
+
+        total_groups = len(duplicate_groups)
+        total_duplicate_files = sum(len(group['paths']) for group in duplicate_groups)
 
         return render_template(
             "utilities/remove_duplicates_results.html",
-            job=job.to_dict()
+            duplicate_groups=duplicate_groups[0:10],
+            all_duplicate_groups=duplicate_groups,
+            job_id=job.id,
+            total_files_processed=job.task_count,
+            total_groups=total_groups,
+            total_duplicate_files=total_duplicate_files,
+            selected_files=selected_files,
+            selected_count=selected_files,
+            pagination={
+                "current_page": 1,
+                "total_items": len(duplicate_groups),
+                "page_size": 10,
+                "page_sizes": [5, 10, 20, 50],
+            }
         )
 
+    @app.route("/utilities/remove-duplicates/results-form", methods=["POST"])
+    def utilities_remove_duplicates_results_form():
+        is_initial_load = request.method == 'GET'
 
+        selected_files = [] if is_initial_load else request.form.getlist('selected_files')
+
+        page = request.form.get('page', request.args.get('page', 1), type=int)
+        page_size = request.form.get('page_size', request.args.get('page_size', 10), type=int)
+
+        # total_groups = len(duplicate_groups)
+        # start_idx = (page - 1) * page_size
+        # end_idx = start_idx + page_size
+        # paged_groups = duplicate_groups[start_idx:end_idx]
+        #
+        # total_duplicate_files = sum(len(group['paths']) for group in duplicate_groups)
+        selected_count = len(selected_files)
+        return render_template(
+            "utilities/remove_duplicates_results_form.html",
+            # duplicate_groups=paged_groups,
+            # all_duplicate_groups=duplicate_groups,
+            # total_groups=total_groups,
+            # total_duplicate_files=total_duplicate_files,
+            # selected_files=selected_files,
+            # selected_count=selected_count,
+            # page=page,
+            # page_size=page_size,
+            # page_sizes=[5, 10, 20, 50]
+        )
+
+    @app.route("/utilities/remove-duplicates/execute/<job_id>", methods=["POST"])
+    def utilities_remove_duplicates_execute(job_id: str):
+        selected_files = request.form.getlist('selected_files')
+        action_type = request.form.get('action_type', 'trash')
+
+        if not selected_files:
+            return jsonify({'error': 'No files selected'}), 400
+
+        success_count = 0
+        error_count = 0
+        errors = []
+
+        for file_path in selected_files:
+            try:
+                file_path_obj = Path(file_path)
+                if not file_path_obj.exists():
+                    errors.append(f"File not found: {file_path}")
+                    error_count += 1
+                    continue
+
+                if action_type == 'trash':
+                    send2trash.send2trash(str(file_path_obj))
+                else:
+                    os.remove(str(file_path_obj))
+
+                success_count += 1
+            except Exception as e:
+                errors.append(f"Error removing {file_path}: {str(e)}")
+                error_count += 1
+
+        if success_count > 0:
+            message = f"Successfully removed {success_count} file(s)"
+            if error_count > 0:
+                message += f" ({error_count} errors)"
+            return jsonify({'success': True, 'message': message, 'errors': errors}), 200
+        else:
+            return jsonify({'error': 'Failed to remove files', 'errors': errors}), 500

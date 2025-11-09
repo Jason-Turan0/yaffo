@@ -29,6 +29,20 @@ def init_photos_routes(app: Flask):
             return send_file(buffer, mimetype="image/jpeg")
         return send_file(file_path)
 
+    @app.route("/photo-by-path")
+    def photo_by_path():
+        file_path = Path(request.args.get("photoPath", type=str))
+        if not file_path.exists():
+            return "File not found", 404
+
+        if file_path.suffix.lower() == ".heic":
+            img = convert_heif(file_path)
+            buffer = io.BytesIO()
+            img.save(buffer, format="JPEG")
+            buffer.seek(0)
+            return send_file(buffer, mimetype="image/jpeg")
+        return send_file(file_path)
+
     @app.route("/faces/<int:face_id>")
     def face_thumbnail(face_id: int):
         face = db.session.get(Face, face_id)

@@ -2,6 +2,11 @@
 
 {% block title %}Duplicate Results - Utilities - Photo Organizer{% endblock %}
 
+{% block utility_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='utilities/remove_duplicate_results.css') }}">
+{% endblock %}
+
+
 {% block utility_content %}
 <div class="utility-page">
     <div class="page-header">
@@ -10,18 +15,13 @@
             Review and manage duplicate photos
         </p>
     </div>
-
-    <div class="section">
-        <h2>Job Details</h2>
-        <p>Job ID: {{ job.id }}</p>
-        <p>Status: {{ job.status }}</p>
-        <p>Total Photos Processed: {{ job.completed_count }}</p>
-        <p>Errors: {{ job.error_count }}</p>
+    {% if total_groups > 0 %}
+    {% include "utilities/remove_duplicates_results_form.html" %}
+    {% else %}
+    <div class="empty-state">
+        <h2>No Duplicates Found</h2>
+        <p>All photos in the scanned directories appear to be unique.</p>
     </div>
-
-    <div class="section">
-        <h2>Duplicate Groups</h2>
-        <p>Stub: Duplicate results will be displayed here</p>
-    </div>
+    {% endif %}
 </div>
 {% endblock %}
