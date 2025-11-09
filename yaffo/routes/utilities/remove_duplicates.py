@@ -145,12 +145,11 @@ def init_remove_duplicates_routes(app: Flask):
         return render_template(
             "utilities/remove_duplicates_results.html",
             duplicate_groups=duplicate_groups[0:10],
-            all_duplicate_groups=duplicate_groups,
+            duplicate_groups_json=json.dumps(duplicate_groups),
             job_id=job.id,
             total_files_processed=job.task_count,
             total_groups=total_groups,
             total_duplicate_files=total_duplicate_files,
-            selected_files=selected_files,
             selected_count=selected_files,
             pagination={
                 "current_page": 1,
@@ -160,33 +159,63 @@ def init_remove_duplicates_routes(app: Flask):
             }
         )
 
-    @app.route("/utilities/remove-duplicates/results-form", methods=["POST"])
-    def utilities_remove_duplicates_results_form():
-        is_initial_load = request.method == 'GET'
+    @app.route("/utilities/remove-duplicates/results-form/<job_id>", methods=["POST"])
+    def utilities_remove_duplicates_results_form(job_id: str):
+        job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
+        if not job:
+            return "Job not found", 404
 
-        selected_files = [] if is_initial_load else request.form.getlist('selected_files')
+        if job.status != JOB_STATUS_COMPLETED:
+            return "Job not completed", 400
 
-        page = request.form.get('page', request.args.get('page', 1), type=int)
-        page_size = request.form.get('page_size', request.args.get('page_size', 10), type=int)
+        page = request.form.get('page', 1, type=int)
+        page_size = request.form.get('page_size', 10, type=int)
 
-        # total_groups = len(duplicate_groups)
-        # start_idx = (page - 1) * page_size
-        # end_idx = start_idx + page_size
-        # paged_groups = duplicate_groups[start_idx:end_idx]
-        #
-        # total_duplicate_files = sum(len(group['paths']) for group in duplicate_groups)
-        selected_count = len(selected_files)
+        group_ids = request.form.getlist('group_id')
+        paths = request.form.getlist('path')
+        selected_flags = request.form.getlist('selected')
+
+        photo_states = {}
+        for i in range(len(paths)):
+            if i < len(paths):
+                photo_states[paths[i]] = {
+                    'group_id': int(group_ids[i]) if i < len(group_ids) else 0,
+                    'selected': selected_flags[i] == 'true' if i < len(selected_flags) else False
+                }
+
+        duplicate_groups = []
+        for result in job.results:
+            groups = json.loads(result.result_data)
+            view_groups = [{
+                'id': group['id'],
+                'paths': [{
+                    'path': path,
+                    'selected': photo_states.get(path, {}).get('selected', False)
+                } for path in group['paths']]
+            } for group in groups]
+            duplicate_groups.extend(view_groups)
+
+        total_groups = len(duplicate_groups)
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paged_groups = duplicate_groups[start_idx:end_idx]
+
+        selected_count = sum(1 for group in duplicate_groups for path in group['paths'] if path.get('selected', False))
+
         return render_template(
             "utilities/remove_duplicates_results_form.html",
-            # duplicate_groups=paged_groups,
-            # all_duplicate_groups=duplicate_groups,
-            # total_groups=total_groups,
-            # total_duplicate_files=total_duplicate_files,
-            # selected_files=selected_files,
-            # selected_count=selected_count,
-            # page=page,
-            # page_size=page_size,
-            # page_sizes=[5, 10, 20, 50]
+            duplicate_groups=paged_groups,
+            all_duplicate_groups=duplicate_groups,
+            job_id=job_id,
+            total_files_processed=job.task_count,
+            total_groups=total_groups,
+            selected_count=selected_count,
+            pagination={
+                "current_page": page,
+                "total_items": total_groups,
+                "page_size": page_size,
+                "page_sizes": [5, 10, 20, 50],
+            }
         )
 
     @app.route("/utilities/remove-duplicates/execute/<job_id>", methods=["POST"])
