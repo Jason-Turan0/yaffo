@@ -24,7 +24,7 @@ def init_auto_assign_routes(app: Flask):
             "utilities/auto_assign.html",
             people=[{"id": person.id, "name": person.name} for person in people],
             unassigned_count=unassigned_count,
-            active_jobs=[job.to_dict() for job in active_jobs]
+            active_jobs=[job.to_dict_with_view_props(has_results=True, results_route='utilities_auto_assign_results') for job in active_jobs]
         )
 
     @app.route("/utilities/auto-assign-people/start", methods=["POST"])

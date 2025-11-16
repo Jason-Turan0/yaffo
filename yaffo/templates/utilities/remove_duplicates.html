@@ -11,7 +11,7 @@
             </p>
         </div>
 
-        {{ job_section(active_jobs, show_cancel=true, has_results=true, results_route='utilities_remove_duplicates_results') }}
+        {{ job_section(active_jobs, show_cancel=true) }}
         {% include "utilities/remove_duplicates_form.html" %}
     </div>
 {% endblock %}

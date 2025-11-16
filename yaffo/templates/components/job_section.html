@@ -1,10 +1,10 @@
 {% from "components/job_status.html" import job_status_card %}
-{% macro job_section(active_jobs, show_cancel=true, has_results=false, results_route=none) %}
+{% macro job_section(active_jobs, show_cancel=true) %}
 {% if active_jobs|length > 0 %}
 <div class="section job-progress-section" id="job-progress-section">
     <h2>Processing in Progress</h2>
     {% for job in active_jobs %}
-    {{ job_status_card(job, show_cancel=show_cancel, has_results=has_results, results_route=results_route) }}
+    {{ job_status_card(job, show_cancel=show_cancel) }}
     {% endfor %}
 </div>
 {% endif %}

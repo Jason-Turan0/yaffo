@@ -160,6 +160,13 @@ class Job(db.Model):
             'message': self.message,
         }
 
+    def to_dict_with_view_props(self, has_results: bool = False, results_route: str | None = None):
+        """Convert job to dict with view-specific properties"""
+        job_dict = self.to_dict()
+        job_dict['has_results'] = has_results
+        job_dict['results_route'] = results_route
+        return job_dict
+
 class JobResult(db.Model):
     __tablename__ = "job_results"
 

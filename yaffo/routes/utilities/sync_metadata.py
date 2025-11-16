@@ -51,7 +51,7 @@ def init_sync_metadata_routes(app: Flask):
             total_photos=total_photos,
             photos_with_metadata=len(photos_with_metadata),
             photos_to_sync=photos_to_sync,
-            active_jobs=[job.to_dict() for job in active_jobs]
+            active_jobs=[job.to_dict_with_view_props() for job in active_jobs]
         )
 
     @app.route("/utilities/sync-metadata/start", methods=["POST"])

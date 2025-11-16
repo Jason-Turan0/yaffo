@@ -96,7 +96,7 @@ def init_index_photos_routes(app: Flask):
             total_indexed=len(indexed_paths),
             total_filesystem=len(filesystem_paths),
             media_dirs=[str(d) for d in media_dirs],
-            active_jobs=[job.to_dict() for job in active_jobs],
+            active_jobs=[job.to_dict_with_view_props() for job in active_jobs],
             warnings=warnings,
             can_sync=can_sync
         )

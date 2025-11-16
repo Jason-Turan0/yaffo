@@ -7,6 +7,7 @@ from yaffo.common import PHOTO_EXTENSIONS
 from yaffo.background_tasks.tasks import find_duplicates_task, remove_duplicates_task, schedule_job_completion
 from pathlib import Path
 from sqlalchemy.orm import joinedload
+from sqlalchemy import or_, and_
 import uuid
 import json
 import send2trash
@@ -113,7 +114,7 @@ def create_duplicate_job_view_model(job_id: str, page: int, page_size: int):
         processed_photo_count=job.task_count,
         duplicate_group_count=len(duplicate_groups),
         duplicate_photo_count=total_duplicate_files,
-        duplicates_selected_count= len(selected_photos),
+        duplicates_selected_count=len(selected_photos),
         selected_photos=selected_photos,
         group_page=duplicate_groups[(page * page_size): ((page + 1) * page_size)],
         pagination=Pagination(
@@ -129,13 +130,30 @@ def init_remove_duplicates_routes(app: Flask):
     @app.route("/utilities/remove-duplicates", methods=["GET"])
     def utilities_remove_duplicates():
         active_jobs = db.session.query(Job).filter(
-            Job.name.in_(['find_duplicates', 'remove_duplicates']),
-            Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED])
+            or_(
+                and_(
+                    Job.name == 'find_duplicates',
+                    Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED])
+                ),
+                and_(
+                    Job.name == 'remove_duplicates',
+                    Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING])
+                )
+            )
         ).all()
+
+        # Add view-specific properties to each job
+        jobs_data = [
+            job.to_dict_with_view_props(
+                has_results=(job.name == 'find_duplicates'),
+                results_route='utilities_remove_duplicates_results' if job.name == 'find_duplicates' else None
+            )
+            for job in active_jobs
+        ]
 
         return render_template(
             "utilities/remove_duplicates.html",
-            active_jobs=[job.to_dict() for job in active_jobs],
+            active_jobs=jobs_data,
             directories=[],
             total_photos=0
         )

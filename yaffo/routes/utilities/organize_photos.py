@@ -21,7 +21,7 @@ def init_organize_photos_routes(app: Flask):
 
         return render_template(
             "utilities/organize_photos.html",
-            active_jobs=[job.to_dict() for job in active_jobs]
+            active_jobs=[job.to_dict_with_view_props() for job in active_jobs]
         )
 
     @app.route("/utilities/organize-photos/preview", methods=["POST"])
