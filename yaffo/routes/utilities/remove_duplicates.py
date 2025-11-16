@@ -223,20 +223,36 @@ def init_remove_duplicates_routes(app: Flask):
 
     @app.route("/utilities/remove-duplicates/toggle-photo", methods=["POST"])
     def utilities_remove_duplicates_toggle_photo():
+        job_id = request.form.get('job_id')
         target_path_id = request.form.get('target_path_id', type=int)
         target_path = request.form.get('target_path')
-        selected_photos: set[int] = {path_id for path_id in request.form.getlist('selected_photo', type=int)}
+        selected_photos: set[int] = set(request.form.getlist('selected_photo', type=int))
         selected_photos ^= {target_path_id}
-        return render_template(
+
+        # Build view model for rendering
+        view_model = type('ViewModel', (), {
+            'selected_photos': selected_photos,
+            'duplicates_selected_count': len(selected_photos),
+            'processed_photo_count': request.form.get('processed_photo_count', type=int, default=0),
+            'duplicate_group_count': request.form.get('duplicate_group_count', type=int, default=0),
+            'duplicate_photo_count': request.form.get('duplicate_photo_count', type=int, default=0),
+        })()
+
+        # Render photo card (main response)
+        photo_card = render_template(
             "utilities/remove_duplicates_photo_card.html",
-            path={
-                "path": target_path,
-                "path_id": target_path_id,
-            },
-            view_model= {
-                "selected_photos": selected_photos,
-            }
+            path={"path": target_path, "path_id": target_path_id},
+            view_model=view_model,
         )
+
+        # Render header (OOB update)
+        header = render_template(
+            "utilities/remove_duplicates_results_form_header.html",
+            view_model=view_model,
+            job_id=job_id,
+            hx_swap_oob=True
+        )
+        return photo_card + header
 
     @app.route("/utilities/remove-duplicates/execute/<job_id>", methods=["POST"])
     def utilities_remove_duplicates_execute(job_id: str):

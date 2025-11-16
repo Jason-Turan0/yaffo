@@ -1,10 +1,12 @@
 {% from "components/htmx_pagination.html" import htmx_pagination %}
 
 
-<form id="duplicates-form" hx-post="{{ url_for('utilities_remove_duplicates_results_form', job_id=job_id) }}"
+<form id="duplicates-form" hx-post="{{ url_for('utilities_remove_duplicates_results_form', job_id=view_model.job_id) }}"
       hx-target="#duplicates-form"
       hx-swap="outerHTML">
+    <input type="hidden" name="job_id" value="{{ view_model.job_id }}">
     {% include "utilities/remove_duplicates_results_form_header.html" %}
+
     <div class="section">
         <h2>Duplicate Groups</h2>
         {% for group in view_model.group_page %}

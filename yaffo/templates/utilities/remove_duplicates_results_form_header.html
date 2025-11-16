@@ -1,4 +1,11 @@
-<div class="stats-grid">
+<div id="duplicates-header" {% if hx_swap_oob %}hx-swap-oob="true"{% endif %}>
+    {% for selected_path_id in view_model.selected_photos %}
+        <input type="hidden" name="selected_photo" value="{{ selected_path_id }}"/>
+    {% endfor %}
+    <input type="hidden" name="processed_photo_count" value="{{ view_model.processed_photo_count }}">
+    <input type="hidden" name="duplicate_group_count" value="{{ view_model.duplicate_group_count }}">
+    <input type="hidden" name="duplicate_photo_count" value="{{ view_model.duplicate_photo_count }}">
+    <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-label">Total Photos Processed</div>
             <div class="stat-value">{{ view_model.processed_photo_count }}</div>
@@ -12,7 +19,6 @@
             <div class="stat-value">{{ view_model.duplicates_selected_count }}</div>
         </div>
     </div>
-
     <div class="section">
         <div class="form-group">
             <label for="action-type">Action:</label>
@@ -32,3 +38,4 @@
             Remove Selected Duplicates
         </button>
     </div>
+</div>

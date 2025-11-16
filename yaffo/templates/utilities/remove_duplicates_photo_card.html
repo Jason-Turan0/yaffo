@@ -6,7 +6,4 @@
      hx-swap="outerHTML"
      hx-include="closest form">
     <img src="{{ url_for('photo_by_path', photoPath=path.path) }}" alt="Duplicate photo">
-    {% if path.path_id in view_model.selected_photos %}
-        <input type="hidden" name="selected_photo" value="{{ path.path_id }}"/>
-    {% endif %}
 </div>
