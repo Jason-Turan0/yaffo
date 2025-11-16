@@ -1,48 +1,15 @@
 {% from "components/htmx_pagination.html" import htmx_pagination %}
 
+
 <form id="duplicates-form" hx-post="{{ url_for('utilities_remove_duplicates_results_form', job_id=job_id) }}"
       hx-target="#duplicates-form"
       hx-swap="outerHTML">
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-label">Total Photos Processed</div>
-            <div class="stat-value">{{ total_files_processed }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Duplicate Groups Found</div>
-            <div class="stat-value">{{ total_groups }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Duplicates Selected</div>
-            <div class="stat-value">{{ selected_count }}</div>
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="form-group">
-            <label for="action-type">Action:</label>
-            <select id="action-type" name="action_type" class="form-control">
-                <option value="trash">Move to Trash</option>
-                <option value="moveFolder">Move to Folder</option>
-                <option value="delete">Permanently Delete</option>
-            </select>
-        </div>
-
-        <button type="button"
-                class="btn btn-danger"
-                hx-post="{{ url_for('utilities_remove_duplicates_execute', job_id=job_id) }}"
-                hx-swap="none"
-                hx-include="[name='selected_files'], [name='action_type']"
-                {{ 'disabled' if selected_count == 0 else '' }}>
-            Remove Selected Duplicates
-        </button>
-    </div>
-
+    {% include "utilities/remove_duplicates_results_form_header.html" %}
     <div class="section">
         <h2>Duplicate Groups</h2>
-        {% for group in duplicate_groups %}
+        {% for group in view_model.group_page %}
             <div class="duplicate-group">
-                <h3>Group {{ group.id + 1 }}</h3>
+                <h3>Group {{ group.group_id + 1 }}</h3>
                 <div class="photo-grid">
                     {% for path in group.paths %}
                         {% include "utilities/remove_duplicates_photo_card.html" with context %}
@@ -51,8 +18,8 @@
             </div>
         {% endfor %}
         {{ htmx_pagination(
-            pagination=pagination,
-            hx_endpoint=url_for('utilities_remove_duplicates_results_form', job_id=job_id),
+            pagination=view_model.pagination,
+            hx_endpoint=url_for('utilities_remove_duplicates_results_form', job_id=view_model.job_id),
             hx_target="#duplicates-form"
         ) }}
     </div>

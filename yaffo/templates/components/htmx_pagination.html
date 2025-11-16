@@ -1,90 +1,90 @@
 {% macro htmx_pagination(pagination, hx_endpoint, hx_target, method="POST", hx_swap="outerHTML") %}
-{% set current_page = pagination.current_page %}
-{% set total_items = pagination.total_items %}
-{% set page_size = pagination.page_size %}
-{% set page_sizes = pagination.page_sizes %}
-{% set total_pages = ((total_items - 1) // page_size + 1) if total_items > 0 else 1 %}
-{% set start_item = (current_page - 1) * page_size + 1 %}
-{% set end_item = [current_page * page_size, total_items] | min %}
-{% set is_post = method.upper() == 'POST' %}
+    {% set current_page = pagination.current_page %}
+    {% set total_items = pagination.total_items %}
+    {% set page_size = pagination.page_size %}
+    {% set page_sizes = pagination.page_sizes %}
+    {% set total_pages = ((total_items) // page_size + 1) if total_items > 0 else 1 %}
+    {% set start_item = (current_page) * page_size + 1 %}
+    {% set end_item = [(current_page + 1) * page_size, total_items] | min %}
+    {% set is_post = method.upper() == 'POST' %}
 
-<link rel="stylesheet" href="{{ url_for('static', filename='components/pagination.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/pagination.css') }}">
 
-<div class="pagination-container">
-    <div class="pagination-info">
+    <div class="pagination-container">
+        <div class="pagination-info">
         <span class="results-count">
             Showing {{ start_item }}-{{ end_item }} of {{ total_items }} results
         </span>
-    </div>
-
-    <div class="pagination-controls">
-        <div class="page-size-selector">
-            <label for="page-size-{{ hx_target|replace('#', '')|replace('.', '') }}">Items per page:</label>
-            <select id="page-size-{{ hx_target|replace('#', '')|replace('.', '') }}"
-                    name="page-size"
-                    {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
-                    hx-target="{{ hx_target }}"
-                    hx-swap="{{ hx_swap }}"
-                    hx-include="closest form"
-                    hx-vals='js:{"page": 1, "page_size": event.target.value}'>
-                {% for size in page_sizes %}
-                <option value="{{ size }}"
-                        {% if size == page_size %}selected{% endif %}>
-                    {{ size }}
-                </option>
-                {% endfor %}
-            </select>
         </div>
 
-        <div class="page-navigation">
-            <button type="button"
-                    {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
-                    hx-target="{{ hx_target }}"
-                    hx-swap="{{ hx_swap }}"
-                    hx-include="closest form"
-                    hx-vals='{"page": 1, "page_size": {{ page_size }}}'
-                    class="page-btn {% if current_page == 1 %}disabled{% endif %}"
-                    {% if current_page == 1 %}disabled{% endif %}>
-                &laquo; First
-            </button>
+        <div class="pagination-controls">
+            <div class="page-size-selector">
+                <label for="page-size-{{ hx_target|replace('#', '')|replace('.', '') }}">Items per page:</label>
+                <select id="page-size-{{ hx_target|replace('#', '')|replace('.', '') }}"
+                        name="page-size"
+                        {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
+                        hx-target="{{ hx_target }}"
+                        hx-swap="{{ hx_swap }}"
+                        hx-include="closest form"
+                        hx-vals='js:{"page": 0, "page_size": event.target.value}'>
+                    {% for size in page_sizes %}
+                        <option value="{{ size }}"
+                                {% if size == page_size %}selected{% endif %}>
+                            {{ size }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <button type="button"
-                    {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
-                    hx-target="{{ hx_target }}"
-                    hx-swap="{{ hx_swap }}"
-                    hx-include="closest form"
-                    hx-vals='{"page": {{ current_page - 1 }}, "page_size": {{ page_size }}}'
-                    class="page-btn {% if current_page == 1 %}disabled{% endif %}"
-                    {% if current_page == 1 %}disabled{% endif %}>
-                &lsaquo; Prev
-            </button>
+            <div class="page-navigation">
+                <button type="button"
+                        {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
+                        hx-target="{{ hx_target }}"
+                        hx-swap="{{ hx_swap }}"
+                        hx-include="closest form"
+                        hx-vals='{"page": 0, "page_size": {{ page_size }}}'
+                        class="page-btn {% if current_page == 0 %}disabled{% endif %}"
+                        {% if current_page == 0 %}disabled{% endif %}>
+                    &laquo; First
+                </button>
 
-            <span class="page-info">
-                Page {{ current_page }} of {{ total_pages }}
+                <button type="button"
+                        {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
+                        hx-target="{{ hx_target }}"
+                        hx-swap="{{ hx_swap }}"
+                        hx-include="closest form"
+                        hx-vals='{"page": {{ current_page - 1 }}, "page_size": {{ page_size }}}'
+                        class="page-btn {% if current_page == 0 %}disabled{% endif %}"
+                        {% if current_page == 0 %}disabled{% endif %}>
+                    &lsaquo; Prev
+                </button>
+
+                <span class="page-info">
+                Page {{ current_page + 1 }} of {{ total_pages }}
             </span>
 
-            <button type="button"
-                    {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
-                    hx-target="{{ hx_target }}"
-                    hx-swap="{{ hx_swap }}"
-                    hx-include="closest form"
-                    hx-vals='{"page": {{ current_page + 1 }}, "page_size": {{ page_size }}}'
-                    class="page-btn {% if current_page >= total_pages %}disabled{% endif %}"
-                    {% if current_page >= total_pages %}disabled{% endif %}>
-                Next &rsaquo;
-            </button>
+                <button type="button"
+                        {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
+                        hx-target="{{ hx_target }}"
+                        hx-swap="{{ hx_swap }}"
+                        hx-include="closest form"
+                        hx-vals='{"page": {{ current_page + 1 }}, "page_size": {{ page_size }}}'
+                        class="page-btn {% if current_page >= total_pages-1 %}disabled{% endif %}"
+                        {% if current_page >= total_pages - 1 %}disabled{% endif %}>
+                    Next &rsaquo;
+                </button>
 
-            <button type="button"
-                    {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
-                    hx-target="{{ hx_target }}"
-                    hx-swap="{{ hx_swap }}"
-                    hx-include="closest form"
-                    hx-vals='{"page": {{ total_pages }}, "page_size": {{ page_size }}}'
-                    class="page-btn {% if current_page >= total_pages %}disabled{% endif %}"
-                    {% if current_page >= total_pages %}disabled{% endif %}>
-                Last &raquo;
-            </button>
+                <button type="button"
+                        {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
+                        hx-target="{{ hx_target }}"
+                        hx-swap="{{ hx_swap }}"
+                        hx-include="closest form"
+                        hx-vals='{"page": {{ total_pages - 1 }}, "page_size": {{ page_size }}}'
+                        class="page-btn {% if current_page >= total_pages - 1 %}disabled{% endif %}"
+                        {% if current_page >= total_pages - 1 %}disabled{% endif %}>
+                    Last &raquo;
+                </button>
+            </div>
         </div>
     </div>
-</div>
 {% endmacro %}

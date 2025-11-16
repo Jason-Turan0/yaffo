@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from flask import render_template, Flask, request, jsonify, redirect, url_for
 from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED
@@ -38,6 +40,86 @@ def collect_photo_paths(directory_paths: list[str]) -> list[str]:
 
 def count_photos_in_directory(directory_paths: list[str]) -> int:
     return len(collect_photo_paths(directory_paths))
+
+
+@dataclass
+class Pagination:
+    current_page: int
+    total_items: int
+    page_size: int
+    page_sizes: list[int]
+
+
+@dataclass
+class PathViewModel:
+    path: str
+    path_id: int
+
+
+@dataclass
+class DuplicateGroupViewModel:
+    group_id: str
+    paths: list[PathViewModel]
+
+
+@dataclass
+class DuplicateJobViewModel:
+    job_id: str
+    processed_photo_count: int
+    duplicate_group_count: int
+    duplicate_photo_count: int
+    duplicates_selected_count: int
+    selected_photos: dict[int, bool]
+    group_page: list[DuplicateGroupViewModel]
+    pagination: Pagination
+
+
+def create_duplicate_job_view_model(job_id: str, page: int, page_size: int):
+    job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
+    if not job:
+        return "Job not found", 404
+
+    duplicate_groups: list[DuplicateGroupViewModel] = []
+    current_path_id = 0
+    for result in job.results:
+        groups = json.loads(result.result_data)
+        for group in groups:
+            paths: list[PathViewModel] = []
+            view_group = DuplicateGroupViewModel(
+                group_id=group['id'],
+                paths=paths
+            )
+            for index, path in enumerate(group['paths']):
+                current_path_id += 1
+                paths.append(PathViewModel(
+                    path=path,
+                    path_id=current_path_id,
+
+                ))
+            duplicate_groups.append(view_group)
+
+    selected_photos = {
+        photo.path_id: True if photo_index != 0 else False for grp in duplicate_groups for photo_index, photo in
+        enumerate(grp.paths)
+    }
+
+    total_groups = len(duplicate_groups)
+    total_duplicate_files = sum(len(group.paths) for group in duplicate_groups)
+    return DuplicateJobViewModel(
+        job_id=job_id,
+        processed_photo_count=job.task_count,
+        duplicate_group_count=len(duplicate_groups),
+        duplicate_photo_count=total_duplicate_files,
+        duplicates_selected_count= sum(value is True for value in selected_photos.values()),
+        selected_photos=selected_photos,
+        group_page=duplicate_groups[(page * page_size): ((page + 1) * page_size)],
+        pagination=Pagination(
+            current_page=page,
+            total_items=total_groups,
+            page_size=page_size,
+            page_sizes=[5, 10, 25, 50, 100],
+        )
+    )
 
 
 def init_remove_duplicates_routes(app: Flask):
@@ -119,136 +201,22 @@ def init_remove_duplicates_routes(app: Flask):
 
         return jsonify({'job_id': job_id}), 202
 
-    def create_duplicate_job_state(job_id: str):
-        job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
-        if not job:
-            return "Job not found", 404
-
-        duplicate_groups = []
-        selected_files = 0
-        current_path_id = 0
-        for result in job.results:
-            groups = json.loads(result.result_data)
-            for group in groups:
-                view_group = {
-                    'id': group['id'],
-                    'paths': []
-                }
-                for index, path in enumerate(group['paths']):
-                    current_path_id += 1
-                    view_group['paths'].append({
-                        'pathId': current_path_id,
-                        'path': path,
-                        'selected': index != 0
-                    })
-                    selected_files += 1 if index != 0 else 0
-                duplicate_groups.append(view_group)
-
-        total_groups = len(duplicate_groups)
-        total_duplicate_files = sum(len(group['paths']) for group in duplicate_groups)
-
     @app.route("/utilities/remove-duplicates/results/<job_id>", methods=["GET"])
     def utilities_remove_duplicates_results(job_id: str):
-        job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
-        if not job:
-            return "Job not found", 404
-
-        duplicate_groups = []
-        selected_files = 0
-        current_path_id = 0
-        for result in job.results:
-            groups = json.loads(result.result_data)
-            for group in groups:
-                view_group = {
-                    'id': group['id'],
-                    'paths': []
-                }
-                for index, path in enumerate(group['paths']):
-                    current_path_id += 1
-                    view_group['paths'].append({
-                        'pathId': current_path_id,
-                        'path': path,
-                        'selected': index != 0
-                    })
-                    selected_files += 1 if index != 0 else 0
-                duplicate_groups.append(view_group)
-
-        total_groups = len(duplicate_groups)
-        total_duplicate_files = sum(len(group['paths']) for group in duplicate_groups)
-
+        view_model = create_duplicate_job_view_model(job_id=job_id, page=0, page_size=10)
         return render_template(
             "utilities/remove_duplicates_results.html",
-            duplicate_groups=duplicate_groups[:10],
-            total_files_processed=job.task_count,
-            total_groups=total_groups,
-            total_duplicate_files=total_duplicate_files,
-            selected_count=selected_files,
-            pagination={
-                "current_page": 1,
-                "total_items": len(duplicate_groups),
-                "page_size": 10,
-                "page_sizes": [5, 10, 20, 50],
-            }
+            view_model=view_model,
         )
 
     @app.route("/utilities/remove-duplicates/results-form/<job_id>", methods=["POST"])
     def utilities_remove_duplicates_results_form(job_id: str):
-        job = db.session.query(Job).options(joinedload(Job.results)).filter_by(id=job_id).first()
-        if not job:
-            return "Job not found", 404
-
-        if job.status != JOB_STATUS_COMPLETED:
-            return "Job not completed", 400
-
-        page = request.form.get('page', 1, type=int)
+        page = request.form.get('page', 0, type=int)
         page_size = request.form.get('page_size', 10, type=int)
-
-        group_ids = request.form.getlist('group_id')
-        paths = request.form.getlist('path')
-        pathIds = request.form.getlist('pathId', type=int)
-        selected_flags = request.form.getlist('selected')
-
-        photo_states = {}
-        for i in range(len(paths)):
-            if i < len(paths):
-                photo_states[paths[i]] = {
-                    'group_id': int(group_ids[i]) if i < len(group_ids) else 0,
-                    'selected': selected_flags[i] == 'true' if i < len(selected_flags) else False
-                }
-
-        duplicate_groups = []
-        for result in job.results:
-            groups = json.loads(result.result_data)
-            view_groups = [{
-                'id': group['id'],
-                'paths': [{
-                    'path': path,
-                    'selected': photo_states.get(path, {}).get('selected', False)
-                } for path in group['paths']]
-            } for group in groups]
-            duplicate_groups.extend(view_groups)
-
-        total_groups = len(duplicate_groups)
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        paged_groups = duplicate_groups[start_idx:end_idx]
-
-        selected_count = sum(1 for group in duplicate_groups for path in group['paths'] if path.get('selected', False))
-
+        view_model = create_duplicate_job_view_model(job_id=job_id, page=page, page_size=page_size)
         return render_template(
             "utilities/remove_duplicates_results_form.html",
-            duplicate_groups=paged_groups,
-            all_duplicate_groups=duplicate_groups,
-            job_id=job_id,
-            total_files_processed=job.task_count,
-            total_groups=total_groups,
-            selected_count=selected_count,
-            pagination={
-                "current_page": page,
-                "total_items": total_groups,
-                "page_size": page_size,
-                "page_sizes": [5, 10, 20, 50],
-            }
+            view_model=view_model,
         )
 
     @app.route("/utilities/remove-duplicates/toggle-photo", methods=["POST"])

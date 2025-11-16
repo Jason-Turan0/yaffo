@@ -15,7 +15,7 @@
             Review and manage duplicate photos
         </p>
     </div>
-    {% if total_groups > 0 %}
+    {% if view_model.duplicate_group_count > 0 %}
     {% include "utilities/remove_duplicates_results_form.html" %}
     {% else %}
     <div class="empty-state">

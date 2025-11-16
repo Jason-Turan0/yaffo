@@ -1,0 +1,34 @@
+<div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Photos Processed</div>
+            <div class="stat-value">{{ view_model.processed_photo_count }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Duplicate Groups Found</div>
+            <div class="stat-value">{{ view_model.duplicate_group_count }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Duplicates Selected</div>
+            <div class="stat-value">{{ view_model.duplicates_selected_count }}</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="form-group">
+            <label for="action-type">Action:</label>
+            <select id="action-type" name="action_type" class="form-control">
+                <option value="trash">Move to Trash</option>
+                <option value="moveFolder">Move to Folder</option>
+                <option value="delete">Permanently Delete</option>
+            </select>
+        </div>
+
+        <button type="button"
+                class="btn btn-danger"
+                hx-post="{{ url_for('utilities_remove_duplicates_execute', job_id=job_id) }}"
+                hx-swap="none"
+                hx-include="[name='selected_files'], [name='action_type']"
+                {{ 'disabled' if view_model.duplicates_selected_count == 0 else '' }}>
+            Remove Selected Duplicates
+        </button>
+    </div>
