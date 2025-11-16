@@ -165,6 +165,7 @@ def init_index_photos_routes(app: Flask):
         for batch in batched(files_to_import, 250):
             import_photo_task(import_job_id, list(batch))
         schedule_job_completion(import_job_id)
+
         for batch in batched(files_needing_indexing, 10):
             index_photo_task(index_job_id, list(batch))
         delete_orphaned_photos(db.session, files_to_delete)

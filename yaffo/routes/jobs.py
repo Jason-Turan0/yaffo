@@ -57,6 +57,7 @@ def init_jobs_routes(app: Flask):
 
         # Get has_results from query parameter (defaults to False)
         has_results = request.args.get('has_results', '0') == '1'
+        results_route = request.args.get('results_route')
 
         return render_template(
             "fragments/job_status_fragment.html",
@@ -65,6 +66,7 @@ def init_jobs_routes(app: Flask):
             total_count=total_count,
             is_finished=is_finished,
             has_results=has_results,
+            results_route=results_route,
             show_cancel=True
         )
 

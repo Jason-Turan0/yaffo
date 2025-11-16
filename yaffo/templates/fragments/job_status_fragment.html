@@ -1,7 +1,7 @@
 <div class="job-card"
      id="job-{{ job.id }}"
         {% if not is_finished %}
-     hx-get="{{ url_for('job_fragment', job_id=job.id, has_results=has_results|int) }}"
+     hx-get="{{ url_for('job_fragment', job_id=job.id, has_results=has_results|int, results_route=results_route) }}"
      hx-trigger="every 5s"
      hx-swap="outerHTML"
         {% endif %}>
