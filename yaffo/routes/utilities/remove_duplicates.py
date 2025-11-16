@@ -4,7 +4,7 @@ from flask import render_template, Flask, request, jsonify, redirect, url_for
 from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED
 from yaffo.common import PHOTO_EXTENSIONS
-from yaffo.background_tasks.tasks import find_duplicates_task
+from yaffo.background_tasks.tasks import find_duplicates_task, remove_duplicates_task, schedule_job_completion
 from pathlib import Path
 from sqlalchemy.orm import joinedload
 import uuid
@@ -129,7 +129,7 @@ def init_remove_duplicates_routes(app: Flask):
     @app.route("/utilities/remove-duplicates", methods=["GET"])
     def utilities_remove_duplicates():
         active_jobs = db.session.query(Job).filter(
-            Job.name == 'remove_duplicates',
+            Job.name.in_(['find_duplicates', 'remove_duplicates']),
             Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED])
         ).all()
 
@@ -185,7 +185,7 @@ def init_remove_duplicates_routes(app: Flask):
         job_id = str(uuid.uuid4())
         job = Job(
             id=job_id,
-            name='remove_duplicates',
+            name='find_duplicates',
             status=JOB_STATUS_PENDING,
             task_count=len(file_paths),
             message='Processed {totalCount}/{taskCount} photos',
@@ -339,69 +339,49 @@ def init_remove_duplicates_routes(app: Flask):
             })
             return response
 
-        success_count = 0
-        error_count = 0
-        errors = []
+        # Create background job for removing duplicates
+        action_names = {
+            'trash': 'Moving to trash',
+            'delete': 'Permanently deleting',
+            'moveFolder': f'Moving to {destination_folder}'
+        }
 
-        for file_path in selected_files:
-            try:
-                file_path_obj = Path(file_path)
-                if not file_path_obj.exists():
-                    errors.append(f"File not found: {file_path}")
-                    error_count += 1
-                    continue
-
-                if action_type == 'trash':
-                    send2trash.send2trash(str(file_path_obj))
-                elif action_type == 'delete':
-                    os.remove(str(file_path_obj))
-                elif action_type == 'moveFolder':
-                    dest_dir = Path(destination_folder)
-                    dest_dir.mkdir(parents=True, exist_ok=True)
-                    dest_path = dest_dir / file_path_obj.name
-                    # Handle duplicate names in destination
-                    if dest_path.exists():
-                        base = dest_path.stem
-                        ext = dest_path.suffix
-                        counter = 1
-                        while dest_path.exists():
-                            dest_path = dest_dir / f"{base}_{counter}{ext}"
-                            counter += 1
-                    shutil.move(str(file_path_obj), str(dest_path))
-
-                success_count += 1
-            except Exception as e:
-                errors.append(f"Error processing {file_path}: {str(e)}")
-                error_count += 1
-
-        # Build success message
-        if success_count > 0:
-            if action_type == 'trash':
-                message = f"Successfully moved {success_count} file(s) to trash"
-            elif action_type == 'delete':
-                message = f"Successfully deleted {success_count} file(s)"
-            elif action_type == 'moveFolder':
-                message = f"Successfully moved {success_count} file(s) to {destination_folder}"
-
-            if error_count > 0:
-                message += f" ({error_count} error(s))"
-
-            # Delete the job after successful execution
-            job = db.session.query(Job).filter_by(id=job_id).first()
-            if job:
-                db.session.delete(job)
-                db.session.commit()
-
-            response = jsonify({'success': True, 'message': message, 'processed': success_count, 'errors': errors})
-            response.headers['HX-Trigger'] = json.dumps({
-                'showNotification': {'message': message, 'type': 'success'}
+        execution_job_id = str(uuid.uuid4())
+        execution_job = Job(
+            id=execution_job_id,
+            name='remove_duplicates',
+            status=JOB_STATUS_PENDING,
+            task_count=len(selected_files),
+            message=f'{action_names.get(action_type, "Processing")} {{totalCount}}/{{taskCount}} files',
+            completed_count=0,
+            error_count=0,
+            cancelled_count=0,
+            job_data=json.dumps({
+                'action_type': action_type,
+                'destination_folder': destination_folder,
+                'source_job_id': job_id
             })
-            response.headers['HX-Redirect'] = url_for('utilities_remove_duplicates')
-            return response
-        else:
-            response = jsonify({'error': 'Failed to process files', 'errors': errors})
-            response.status_code = 500
-            response.headers['HX-Trigger'] = json.dumps({
-                'showNotification': {'message': f'Failed to process files: {errors[0] if errors else "Unknown error"}', 'type': 'error'}
-            })
-            return response
+        )
+        db.session.add(execution_job)
+
+        # Delete the find_duplicates job
+        find_job = db.session.query(Job).filter_by(id=job_id).first()
+        if find_job:
+            db.session.delete(find_job)
+
+        db.session.commit()
+
+        # Start background task
+        remove_duplicates_task(
+            job_id=execution_job_id,
+            file_paths=selected_files,
+            action_type=action_type,
+            destination_folder=destination_folder
+        )
+
+        response = jsonify({'success': True, 'job_id': execution_job_id})
+        response.headers['HX-Trigger'] = json.dumps({
+            'showNotification': {'message': f'Started removing {len(selected_files)} duplicate(s)', 'type': 'success'}
+        })
+        response.headers['HX-Redirect'] = url_for('utilities_remove_duplicates')
+        return response

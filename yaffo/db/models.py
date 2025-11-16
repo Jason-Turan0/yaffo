@@ -134,7 +134,7 @@ class Job(db.Model):
     error = db.Column(db.Text)
     message = db.Column(db.Text)
     job_data = db.Column(db.Text)
-    results = db.relationship("JobResult", back_populates="job")
+    results = db.relationship("JobResult", back_populates="job", cascade="all, delete-orphan")
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
