@@ -1,20 +1,5 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.initSyncMetadata = (photosToSync, config) => {
-    const jobProgress = window.PHOTO_ORGANIZER.COMPONENTS.jobProgress.init(config, {
-        onComplete: (job) => {
-            notification.success('Metadata sync completed successfully');
-            setTimeout(() => window.location.reload(), 2000);
-        },
-        onCancel: (job) => {
-            setTimeout(() => window.location.reload(), 2000);
-        },
-        onError: (job) => {
-            notification.error('Metadata sync failed');
-        },
-        hasResults: false,
-        pollingInterval: 3000
-    });
-
     const syncButton = document.getElementById('sync-button');
 
     const startSync = async () => {
@@ -72,6 +57,5 @@ window.PHOTO_ORGANIZER.initSyncMetadata = (photosToSync, config) => {
 
     return {
         startSync,
-        jobProgress
     };
 };

@@ -152,7 +152,11 @@ def init_settings_routes(app: Flask):
     @app.route("/api/settings/select-folder", methods=["GET"])
     def select_folder():
         result = show_file_dialog()
-        return jsonify(result), result.status_code
+        return jsonify({
+            'success': result.success,
+            'path': result.selected_path,
+            'error': result.error
+        }), result.status_code
 
     @app.route("/api/settings/thumbnail-stats", methods=["GET"])
     def get_thumbnail_stats_api():

@@ -1,15 +1,5 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
-    const jobProgress = window.PHOTO_ORGANIZER.COMPONENTS.jobProgress.init(window.APP_CONFIG, {
-        onComplete: (job) => {
-            setTimeout(() => window.location.reload(), 2000);
-        },
-        onCancel: (job) => {
-            setTimeout(() => window.location.reload(), 2000);
-        },
-        onError: (job) => {}
-    });
-
     const startSync = async () => {
         const syncButton = document.getElementById('sync-button');
         syncButton.disabled = true;
@@ -50,7 +40,6 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (unindexedPhotos, orphanedPhotos) => {
 
     return {
         startSync,
-        jobProgress
     };
 };
 

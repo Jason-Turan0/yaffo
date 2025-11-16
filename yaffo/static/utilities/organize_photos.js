@@ -1,16 +1,5 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
-    const jobProgress = window.PHOTO_ORGANIZER.COMPONENTS.jobProgress.init(config, {
-        onComplete: (job) => {
-            notification.success('Photo organization completed');
-        },
-        onCancel: (job) => {
-            setTimeout(() => window.location.reload(), 2000);
-        },
-        onError: (job) => {},
-        hasResults: false,
-        pollingInterval: 1000
-    });
 
     const sourceDirectory = document.getElementById('source-directory');
     const changeDirectoryCheckbox = document.getElementById('change-directory-checkbox');
@@ -177,7 +166,6 @@ window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
             if (response.ok) {
                 const data = await response.json();
                 notification.success('Photo organization job started');
-                jobProgress.startPolling(data.job_id);
                 window.location.reload();
             } else {
                 const error = await response.json();
@@ -207,6 +195,5 @@ window.PHOTO_ORGANIZER.initOrganizePhotos = (config) => {
     return {
         generatePreview,
         startOrganizing,
-        jobProgress
     };
 };

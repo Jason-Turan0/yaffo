@@ -1,18 +1,5 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) => {
-    const jobProgress = window.PHOTO_ORGANIZER.COMPONENTS.jobProgress.init(config, {
-        onComplete: (job) => {},
-        onCancel: (job) => {
-            setTimeout(() => window.location.reload(), 2000);
-        },
-        onError: (job) => {},
-        hasResults: true,
-        pollingInterval: 5000,
-        onShowResults: (jobId) => {
-             window.location.href = config.buildUrl('utilities_auto_assign_results', {job_id: jobId});
-        }
-    });
-
     const personSelect = document.getElementById('person-select');
     const startButton = document.getElementById('start-button');
 
@@ -23,7 +10,6 @@ window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) 
     };
 
     const startAutoAssign = async () => {
-        debugger;
         const personId = parseInt(personSelect.value);
         const similarityElement = document.getElementById('similarity-range');
         const similarityValue = parseFloat(similarityElement.value);
@@ -73,7 +59,6 @@ window.PHOTO_ORGANIZER.initAutoAssignPeople = (people, unassignedCount, config) 
     }
 
     return {
-        startAutoAssign,
-        jobProgress
+        startAutoAssign
     };
 };
