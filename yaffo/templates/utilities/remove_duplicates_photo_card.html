@@ -1,9 +1,12 @@
-<div class="photo-card {% if view_model.selected_photos[path.path_id] == True %}selected{% endif %}"
-     id="photo-{{ path.pathId }}"
+<div class="photo-card {% if path.path_id in view_model.selected_photos %}selected{% endif %}"
+     id="photo-{{ path.path_id }}"
      hx-post="{{ url_for('utilities_remove_duplicates_toggle_photo') }}"
-     hx-vals='{"target_group_id": {{ group.id }}, "target_path_id": "{{ path.pathId }}"}'
-     hx-target="#photo-{{ path.pathId }}"
+     hx-vals='{"target_path_id": "{{ path.path_id }}", "target_path": "{{ path.path }}"}'
+     hx-target="#photo-{{ path.path_id }}"
      hx-swap="outerHTML"
      hx-include="closest form">
     <img src="{{ url_for('photo_by_path', photoPath=path.path) }}" alt="Duplicate photo">
+    {% if path.path_id in view_model.selected_photos %}
+        <input type="hidden" name="selected_photo" value="{{ path.path_id }}"/>
+    {% endif %}
 </div>

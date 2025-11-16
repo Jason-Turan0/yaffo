@@ -69,7 +69,7 @@ class DuplicateJobViewModel:
     duplicate_group_count: int
     duplicate_photo_count: int
     duplicates_selected_count: int
-    selected_photos: dict[int, bool]
+    selected_photos: set[int]
     group_page: list[DuplicateGroupViewModel]
     pagination: Pagination
 
@@ -98,10 +98,12 @@ def create_duplicate_job_view_model(job_id: str, page: int, page_size: int):
                 ))
             duplicate_groups.append(view_group)
 
-    selected_photos = {
-        photo.path_id: True if photo_index != 0 else False for grp in duplicate_groups for photo_index, photo in
-        enumerate(grp.paths)
-    }
+    selected_photos = set(
+        photo.path_id
+        for grp in duplicate_groups
+        for photo_index, photo in enumerate(grp.paths)
+        if photo_index != 0
+    )
 
     total_groups = len(duplicate_groups)
     total_duplicate_files = sum(len(group.paths) for group in duplicate_groups)
@@ -110,7 +112,7 @@ def create_duplicate_job_view_model(job_id: str, page: int, page_size: int):
         processed_photo_count=job.task_count,
         duplicate_group_count=len(duplicate_groups),
         duplicate_photo_count=total_duplicate_files,
-        duplicates_selected_count= sum(value is True for value in selected_photos.values()),
+        duplicates_selected_count= len(selected_photos),
         selected_photos=selected_photos,
         group_page=duplicate_groups[(page * page_size): ((page + 1) * page_size)],
         pagination=Pagination(
@@ -221,28 +223,19 @@ def init_remove_duplicates_routes(app: Flask):
 
     @app.route("/utilities/remove-duplicates/toggle-photo", methods=["POST"])
     def utilities_remove_duplicates_toggle_photo():
-        target_group_id = request.form.get('target_group_id', type=int)
         target_path_id = request.form.get('target_path_id', type=int)
-
-        group_ids = request.form.getlist('group_id')
-        paths = request.form.getlist('path')
-        pathIds = request.form.getlist('pathId', type=int)
-        selected_flags = request.form.getlist('selected')
-        update_index = pathIds.index(target_path_id)
-        if update_index == -1:
-            raise Exception('Target path id not found')
-
-        path_obj = {
-            'path': paths[update_index],
-            'selected': not selected_flags[update_index],
-            'pathId': pathIds[update_index],
-        }
-        group_obj = {'id': target_group_id}
-
+        target_path = request.form.get('target_path')
+        selected_photos: set[int] = {path_id for path_id in request.form.getlist('selected_photo', type=int)}
+        selected_photos ^= {target_path_id}
         return render_template(
             "utilities/remove_duplicates_photo_card.html",
-            path=path_obj,
-            group=group_obj,
+            path={
+                "path": target_path,
+                "path_id": target_path_id,
+            },
+            view_model= {
+                "selected_photos": selected_photos,
+            }
         )
 
     @app.route("/utilities/remove-duplicates/execute/<job_id>", methods=["POST"])
