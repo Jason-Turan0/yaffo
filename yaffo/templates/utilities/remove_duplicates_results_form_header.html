@@ -22,18 +22,48 @@
     <div class="section">
         <div class="form-group">
             <label for="action-type">Action:</label>
-            <select id="action-type" name="action_type" class="form-control">
-                <option value="trash">Move to Trash</option>
-                <option value="moveFolder">Move to Folder</option>
-                <option value="delete">Permanently Delete</option>
+            <select id="action-type"
+                    name="action_type"
+                    class="form-control"
+                    hx-post="{{ url_for('utilities_remove_duplicates_action_change', job_id=job_id) }}"
+                    hx-trigger="change"
+                    hx-target="#duplicates-header"
+                    hx-swap="outerHTML"
+                    hx-include="closest form">
+                <option value="trash" {% if action_type == 'trash' %}selected{% endif %}>Move to Trash</option>
+                <option value="moveFolder" {% if action_type == 'moveFolder' %}selected{% endif %}>Move to Folder</option>
+                <option value="delete" {% if action_type == 'delete' %}selected{% endif %}>Permanently Delete</option>
             </select>
         </div>
+
+        {% if action_type == 'moveFolder' %}
+        <div class="form-group">
+            <label for="destination-folder">Destination Folder:</label>
+            <div class="file-browser-input-group">
+                <input type="text"
+                       id="destination-folder"
+                       name="destination_folder"
+                       placeholder="Select destination folder"
+                       class="form-control file-browser-input"
+                       value="{{ destination_folder or '' }}">
+                <button type="button"
+                        hx-post="{{ url_for('utilities_remove_duplicates_action_change', job_id=job_id) }}"
+                        hx-vals='{"action": "browse"}'
+                        hx-target="#duplicates-header"
+                        hx-swap="outerHTML"
+                        hx-include="closest form"
+                        class="btn-secondary">
+                    Browse
+                </button>
+            </div>
+        </div>
+        {% endif %}
 
         <button type="button"
                 class="btn btn-danger"
                 hx-post="{{ url_for('utilities_remove_duplicates_execute', job_id=job_id) }}"
                 hx-swap="none"
-                hx-include="[name='selected_files'], [name='action_type']"
+                hx-include="[name='selected_photo'], [name='action_type'], [name='destination_folder']"
                 {{ 'disabled' if view_model.duplicates_selected_count == 0 else '' }}>
             Remove Selected Duplicates
         </button>

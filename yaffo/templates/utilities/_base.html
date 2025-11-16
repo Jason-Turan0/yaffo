@@ -36,7 +36,7 @@
             </li>
             <li>
                 <a href="{{ url_for('utilities_remove_duplicates') }}"
-                   class="{% if request.endpoint == 'utilities_remove_duplicates' %}active{% endif %}">
+                   class="{% if request.endpoint in ['utilities_remove_duplicates', 'utilities_remove_duplicates_results'] %}active{% endif %}">
                     Remove Duplicates
                 </a>
             </li>
