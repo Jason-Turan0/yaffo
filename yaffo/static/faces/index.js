@@ -90,11 +90,15 @@ thresholdRange.addEventListener('input', (e) => {
 
 // Toggle selection on click with shift-select support
 let lastClickedFace = null;
-
 document.querySelectorAll('.face').forEach((div) => {
     div.addEventListener('click', (e) => {
-        if (e.shiftKey && lastClickedFace !== null && document.contains(lastClickedFace)) {
-            // Shift-click: select range
+        if (e.shiftKey) {
+            // Shift-click: toggle range based on target item's current state
+            if(lastClickedFace == null){
+                lastClickedFace = div;
+                return;
+            }
+
             const allFaces = Array.from(document.querySelectorAll('.face'));
             const lastIndex = allFaces.indexOf(lastClickedFace);
             const currentIndex = allFaces.indexOf(div);
@@ -102,28 +106,36 @@ document.querySelectorAll('.face').forEach((div) => {
             if (lastIndex !== -1 && currentIndex !== -1) {
                 const startIndex = Math.min(lastIndex, currentIndex);
                 const endIndex = Math.max(lastIndex, currentIndex);
+                // Toggle to opposite of clicked item's current state
+                const shouldSelect = !div.classList.contains('selected');
 
                 for (let i = startIndex; i <= endIndex; i++) {
                     const face = allFaces[i];
-                    face.classList.add('selected');
-                    face.querySelector('input[type="checkbox"]').checked = true;
+                    const checkbox = face.querySelector('input[type="checkbox"]');
+                    if (shouldSelect) {
+                        face.classList.add('selected');
+                        checkbox.checked = true;
+                    } else {
+                        face.classList.remove('selected');
+                        checkbox.checked = false;
+                    }
                 }
             }
+            lastClickedFace = null;
         } else {
-            // Normal click: toggle
-            div.classList.toggle('selected');
+            // Normal click: toggle selected face
+            const isSelected = div.classList.toggle('selected');
             const checkbox = div.querySelector('input[type="checkbox"]');
-            checkbox.checked = !checkbox.checked;
+            checkbox.checked = isSelected;
         }
-
-        lastClickedFace = div;
     });
 
     // Tooltip on hover
     div.addEventListener('mouseenter', (e) => {
         const similarity = div.dataset.similarity;
-        const date = div.dataset.date;
-        tooltip.innerHTML = `Similarity: ${similarity}%<br>Date: ${date}`;
+        const date = PHOTO_ORGANIZER.utils.date.format(div.dataset.date);
+        const hasSimilarity = !isNaN(Number(similarity));
+        tooltip.innerHTML = hasSimilarity ? `Similarity: ${similarity}%<br>Date: ${date}`: `Date: ${date}`;
         tooltip.classList.add('visible');
         const rect = div.getBoundingClientRect();
         tooltip.style.left = rect.left + rect.width / 2 + 'px';

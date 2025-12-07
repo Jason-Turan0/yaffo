@@ -31,7 +31,7 @@ document.querySelectorAll('.face-card').forEach(card => {
     // Tooltip on hover
     card.addEventListener('mouseenter', (e) => {
         const similarity = card.dataset.similarity;
-        const date = card.dataset.date;
+        const date = PHOTO_ORGANIZER.utils.date.format(card.dataset.date);
         tooltip.innerHTML = `Date: ${date}<br>Similarity: ${similarity}%`;
         tooltip.classList.add('visible');
     });

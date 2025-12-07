@@ -34,9 +34,9 @@
         <div class="photo-grid">
             {% for photo in photos %}
             <div class="photo-card" onclick="window.open('{{ url_for('photo_view', photo_id=photo.id) }}', '_blank')">
-                <img src="{{ url_for('photo', photo_id=photo.id) }}" alt="Photo from {{ photo.date_taken }}">
+                <img src="{{ url_for('photo', photo_id=photo.id) }}" alt="Photo from {{ photo.date_taken | format_date ("date")}}">
                 <div class="photo-info">
-                    <div class="photo-date">{{ photo.date_taken.split(' ')[0] if photo.date_taken else 'Unknown date' }}</div>
+                    <div class="photo-date">{{ photo.date_taken | format_date ("date")  if photo.date_taken else 'Unknown date' }}</div>
                     {% if photo.people|length > 0 %}
                     <div class="photo-people">
                         {% for person in photo.people %}

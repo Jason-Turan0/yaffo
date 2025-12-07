@@ -4,9 +4,9 @@ from typing import Union, Optional
 
 
 class DateFormat(Enum):
-    DATE = "%Y-%m-%d"
-    DATETIME = "%Y-%m-%d %H:%M:%S"
-    TIME = "%H:%M:%S"
+    DATE = "%b %d, %Y"
+    DATETIME = "%b %d, %Y, %I:%M %p"
+    TIME = "%I:%M %p"
 
 
 def format_date(

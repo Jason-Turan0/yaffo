@@ -29,7 +29,7 @@
                 {% if photo.date_taken %}
                 <div class="detail-item">
                     <label>Date Taken:</label>
-                    <span class="detail-value">{{ photo.date_taken }}</span>
+                    <span class="detail-value">{{ photo.date_taken | format_date ("datetime") }}</span>
                 </div>
                 {% endif %}
                 <div class="detail-actions">
