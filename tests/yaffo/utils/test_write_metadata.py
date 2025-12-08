@@ -170,8 +170,8 @@ class TestWriteJpegMetadata:
         assert "-DateTimeOriginal=2024:01:15 10:30:00" in args
         assert "-CreateDate=2024:01:15 10:30:00" in args
         assert "-XMP:Location=New York" in args
-        assert "-XMP:PersonInImage+=Alice" in args
-        assert "-XMP:PersonInImage+=Bob" in args
+        assert "-XMP:PersonInImage=Alice" in args
+        assert "-XMP:PersonInImage=Bob" in args
 
     @patch('yaffo.utils.write_metadata._HAS_EXIFTOOL', False)
     def test_write_jpeg_with_piexif(self, temp_jpeg):
@@ -333,7 +333,7 @@ class TestWriteHeicMetadata:
         assert "-overwrite_original" in args
         assert "-DateTimeOriginal=2024:01:15 10:30:00" in args
         assert "-XMP:Location=Test Location" in args
-        assert "-XMP:PersonInImage+=Alice" in args
+        assert "-XMP:PersonInImage=Alice" in args
 
     @patch('yaffo.utils.write_metadata._IS_MAC', False)
     @patch('yaffo.utils.write_metadata._HAS_EXIFTOOL', False)
@@ -377,6 +377,91 @@ class TestRunExiftool:
 
         with pytest.raises(Exception, match="Command failed"):
             _run_exiftool(["-version"])
+
+
+class TestPersonInImageMerging:
+    """Tests for merging PersonInImage metadata without duplicates."""
+
+    def test_write_jpeg_merges_people_case_insensitive(self, test_image_path, temp_dir):
+        """
+        Bug reproduction test: Writing people_names should merge with existing
+        PersonInImage values case-insensitively, not create duplicates.
+        """
+        exiftool_path = get_exiftool_path()
+        test_copy = temp_dir / "test_merge.jpg"
+        shutil.copy(test_image_path, test_copy)
+
+        # First write: add "Alice" and "Bob"
+        success, error = write_photo_metadata(
+            test_copy,
+            people_names=["Alice", "Bob"]
+        )
+        assert success is True
+
+        # Second write: add "alice" (lowercase) and "Charlie"
+        # Expected: Should result in ["Alice", "Bob", "Charlie"], not ["Alice", "Bob", "alice", "Charlie"]
+        success, error = write_photo_metadata(
+            test_copy,
+            people_names=["alice", "Charlie"]
+        )
+        assert success is True
+
+        # Read back the metadata
+        result = subprocess.run(
+            [str(exiftool_path), "-json", "-XMP:PersonInImage", str(test_copy)],
+            capture_output=True,
+            text=True
+        )
+        metadata = json.loads(result.stdout)[0]
+        person_in_image = metadata.get("PersonInImage", [])
+
+        # Normalize to list
+        if isinstance(person_in_image, str):
+            person_in_image = [person_in_image]
+
+        # Should have exactly 3 unique people (case-insensitive)
+        assert len(person_in_image) == 3
+        # Check names are present (case-insensitive)
+        lower_names = [p.lower() for p in person_in_image]
+        assert "alice" in lower_names
+        assert "bob" in lower_names
+        assert "charlie" in lower_names
+
+    def test_write_jpeg_no_duplicates_on_repeated_sync(self, test_image_path, temp_dir):
+        """
+        Bug reproduction test: Syncing the same metadata multiple times
+        should not create duplicate PersonInImage entries.
+        """
+        exiftool_path = get_exiftool_path()
+        test_copy = temp_dir / "test_no_dupes.jpg"
+        shutil.copy(test_image_path, test_copy)
+
+        # Write the same people multiple times
+        for _ in range(3):
+            success, error = write_photo_metadata(
+                test_copy,
+                people_names=["Alice", "Bob"]
+            )
+            assert success is True
+
+        # Read back the metadata
+        result = subprocess.run(
+            [str(exiftool_path), "-json", "-XMP:PersonInImage", str(test_copy)],
+            capture_output=True,
+            text=True
+        )
+        metadata = json.loads(result.stdout)[0]
+        person_in_image = metadata.get("PersonInImage", [])
+
+        # Normalize to list
+        if isinstance(person_in_image, str):
+            person_in_image = [person_in_image]
+
+        # Should have exactly 2 people, not 6 (2 * 3 syncs)
+        assert len(person_in_image) == 2
+        lower_names = [p.lower() for p in person_in_image]
+        assert "alice" in lower_names
+        assert "bob" in lower_names
 
 
 class TestIntegrationWithRealImage:

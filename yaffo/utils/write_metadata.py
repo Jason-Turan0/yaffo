@@ -1,3 +1,4 @@
+import json
 import platform
 import subprocess
 from pathlib import Path
@@ -9,7 +10,44 @@ from yaffo.utils.exiftool_path import get_exiftool_path, is_exiftool_available
 
 _IS_MAC = platform.system().lower() == "darwin"
 _EXIFTOOL_PATH = get_exiftool_path()
-_HAS_EXIFTOOL = _EXIFTOOL_PATH is not None
+_HAS_EXIFTOOL = is_exiftool_available()
+
+
+def _get_existing_person_in_image(photo_path: Path) -> list[str]:
+    """Read existing PersonInImage values from the photo using exiftool."""
+    if not _EXIFTOOL_PATH:
+        return []
+
+    try:
+        cmd = [str(_EXIFTOOL_PATH), "-json", "-XMP:PersonInImage", str(photo_path)]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            return []
+
+        data = json.loads(result.stdout)
+        if not data:
+            return []
+
+        person_in_image = data[0].get("PersonInImage", [])
+        if isinstance(person_in_image, str):
+            return [person_in_image]
+        elif isinstance(person_in_image, list):
+            return person_in_image
+        return []
+    except (json.JSONDecodeError, subprocess.SubprocessError, Exception):
+        return []
+
+
+def _merge_people_names(existing: list[str], new_names: list[str]) -> list[str]:
+    """Merge people names case-insensitively, preserving original casing."""
+    existing_lower = {name.lower(): name for name in existing}
+
+    for name in new_names:
+        name_lower = name.lower()
+        if name_lower not in existing_lower:
+            existing_lower[name_lower] = name
+
+    return sorted(existing_lower.values(), key=str.lower)
 
 
 def _run_exiftool(args: list[str]) -> subprocess.CompletedProcess:
@@ -66,8 +104,11 @@ def _write_heic_metadata(
         if location_name:
             args.append(f"-XMP:Location={location_name}")
         if people_names:
-            for person_name in sorted(people_names):
-                args.append(f"-XMP:PersonInImage+={person_name}")
+            existing_people = _get_existing_person_in_image(photo_path)
+            merged_people = _merge_people_names(existing_people, people_names)
+            if merged_people and len(merged_people) > 0:
+                for person in merged_people:
+                    args.append(f"-XMP:PersonInImage={person}")
         args.append(str(photo_path))
         _run_exiftool(args)
         return True, None
@@ -89,8 +130,11 @@ def _write_jpeg_metadata(
         if location_name:
             args.append(f"-XMP:Location={location_name}")
         if people_names:
-            for person_name in sorted(people_names):
-                args.append(f"-XMP:PersonInImage+={person_name}")
+            existing_people = _get_existing_person_in_image(photo_path)
+            merged_people = _merge_people_names(existing_people, people_names)
+            if merged_people and len(merged_people) > 0:
+                for person in merged_people:
+                    args.append(f"-XMP:PersonInImage={person}")
         args.append(str(photo_path))
         _run_exiftool(args)
         return True, None
