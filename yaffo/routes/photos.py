@@ -5,10 +5,34 @@ from yaffo.db.models import db, Photo, Person, Tag
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import Face
 from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont
 import io
 import os
 import subprocess
 import platform
+
+
+def generate_placeholder_image(width: int = 400, height: int = 300, text: str = "Image Not Found") -> io.BytesIO:
+    """Generate a placeholder image with text."""
+    img = Image.new('RGB', (width, height), color=(200, 200, 200))
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 20)
+    except (OSError, IOError):
+        font = ImageFont.load_default()
+
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    x = (width - text_width) // 2
+    y = (height - text_height) // 2
+    draw.text((x, y), text, fill=(100, 100, 100), font=font)
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG")
+    buffer.seek(0)
+    return buffer
 
 def init_photos_routes(app: Flask):
     @app.route("/photos/<int:photo_id>")
@@ -28,6 +52,11 @@ def init_photos_routes(app: Flask):
             buffer.seek(0)
             return send_file(buffer, mimetype="image/jpeg")
         return send_file(file_path)
+
+    @app.route("/placeholder")
+    def placeholder():
+        text = request.args.get("text", "Failed to load")
+        return send_file(generate_placeholder_image(text=text), mimetype="image/jpeg")
 
     @app.route("/photo-by-path")
     def photo_by_path():

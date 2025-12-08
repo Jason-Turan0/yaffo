@@ -12,7 +12,7 @@ logger = get_logger(__name__, 'background_tasks')
 @huey.task()
 def import_photo_task(job_id: str, file_path_batch: list[str]):
     """
-    Huey task to import photos - create photos and tags in database.
+    Huey task to import photos - create photos in database.
     Supports graceful cancellation and crash recovery.
     """
     logger.info(f"Starting import_photo_task for job {job_id} with {len(file_path_batch)} files")

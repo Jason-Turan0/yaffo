@@ -42,6 +42,7 @@
                     <input type="checkbox" class="face-checkbox" value="{{ face_data.face.id }}" checked>
                 </div>
                 <img src="{{ url_for('face_thumbnail', face_id=face_data.face.id) }}"
+                     data-fallback="{{ url_for('placeholder') }}"
                      alt="Face {{ face_data.face.id }}"
                      class="face-image"
                      loading="lazy">

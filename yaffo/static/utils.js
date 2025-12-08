@@ -1,6 +1,25 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.utils = window.PHOTO_ORGANIZER.utils || {};
 
+window.PHOTO_ORGANIZER.utils.initImageFallbacks = () => {
+    document.querySelectorAll('img[data-fallback]').forEach((img) => {
+        const applyFallback = () => {
+            const fallback = img.dataset.fallback;
+            if (fallback && img.src !== fallback) {
+                img.src = fallback;
+            }
+        };
+
+        // Check if image already failed (complete but no dimensions = error)
+        if (img.complete && img.naturalWidth === 0) {
+            applyFallback();
+        } else {
+            // Attach handler for future errors
+            img.addEventListener('error', applyFallback, { once: true });
+        }
+    });
+};
+
 window.PHOTO_ORGANIZER.utils.date = {
     /**
      * Format an ISO date string based on the user's browser locale settings

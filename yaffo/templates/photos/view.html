@@ -9,192 +9,199 @@
 {% from "components/modal.html" import render_modal %}
 
 {% block content %}
-<div class="photo-viewer">
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h2>Photo Details</h2>
-        </div>
-
-        <div class="sidebar-content">
-            <div class="detail-section">
-                <h3>File Information</h3>
-                <div class="detail-item">
-                    <label>Name:</label>
-                    <span class="detail-value">{{ file_name }}</span>
-                </div>
-                <div class="detail-item">
-                    <label>Folder:</label>
-                    <span class="detail-value">{{ absolute_folder_path if absolute_folder_path else '/' }}</span>
-                </div>
-                {% if photo.date_taken %}
-                <div class="detail-item">
-                    <label>Date Taken:</label>
-                    <span class="detail-value">{{ photo.date_taken | format_date ("datetime") }}</span>
-                </div>
-                {% endif %}
-                <div class="detail-actions">
-                    <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFile('{{ absolute_file_path }}')" class="action-button">
-                        Open File
-                    </button>
-                    <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFolder('{{ absolute_folder_path }}')" class="action-button">
-                        Open Folder
-                    </button>
-                </div>
+    <div class="photo-viewer">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Photo Details</h2>
             </div>
 
-            <div class="detail-section">
-                <h3>Location</h3>
-                {% if photo.location_name or photo.latitude or photo.longitude %}
-                <div class="location-details">
-                    {% if photo.location_name %}
+            <div class="sidebar-content">
+                <div class="detail-section">
+                    <h3>File Information</h3>
                     <div class="detail-item">
                         <label>Name:</label>
-                        <span class="detail-value">{{ photo.location_name }}</span>
+                        <span class="detail-value">{{ file_name }}</span>
                     </div>
-                    {% endif %}
-                    {% if photo.latitude and photo.longitude %}
                     <div class="detail-item">
-                        <label>Coordinates:</label>
-                        <span class="detail-value">
+                        <label>Folder:</label>
+                        <span class="detail-value">{{ absolute_folder_path if absolute_folder_path else '/' }}</span>
+                    </div>
+                    {% if photo.date_taken %}
+                        <div class="detail-item">
+                            <label>Date Taken:</label>
+                            <span class="detail-value">{{ photo.date_taken | format_date ("datetime") }}</span>
+                        </div>
+                    {% endif %}
+                    <div class="detail-actions">
+                        <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFile('{{ absolute_file_path }}')"
+                                class="action-button">
+                            Open File
+                        </button>
+                        <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFolder('{{ absolute_folder_path }}')"
+                                class="action-button">
+                            Open Folder
+                        </button>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Location</h3>
+                    {% if photo.location_name or photo.latitude or photo.longitude %}
+                        <div class="location-details">
+                            {% if photo.location_name %}
+                                <div class="detail-item">
+                                    <label>Name:</label>
+                                    <span class="detail-value">{{ photo.location_name }}</span>
+                                </div>
+                            {% endif %}
+                            {% if photo.latitude and photo.longitude %}
+                                <div class="detail-item">
+                                    <label>Coordinates:</label>
+                                    <span class="detail-value">
                             {{ "%.6f"|format(photo.latitude) }}, {{ "%.6f"|format(photo.longitude) }}
                         </span>
-                    </div>
-                    <div class="detail-actions">
-                        <a href="https://www.google.com/maps?q={{ photo.latitude }},{{ photo.longitude }}"
-                           target="_blank"
-                           class="action-button">
-                            View on Map
-                        </a>
-                    </div>
+                                </div>
+                                <div class="detail-actions">
+                                    <a href="https://www.google.com/maps?q={{ photo.latitude }},{{ photo.longitude }}"
+                                       target="_blank"
+                                       class="action-button">
+                                        View on Map
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <p class="no-data">No location information</p>
                     {% endif %}
                 </div>
-                {% else %}
-                <p class="no-data">No location information</p>
-                {% endif %}
-            </div>
 
-            <div class="detail-section">
-                <h3>People ({{ people|length }})</h3>
-                {% if people %}
-                <div class="people-list">
-                    {% for person in people %}
-                    <a href="{{ url_for('person_faces', person_id=person.id) }}" class="person-tag">
-                        {{ person.name }}
-                    </a>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="no-data">No people assigned to this photo</p>
-                {% endif %}
-            </div>
-
-            <div class="detail-section">
-                <h3>Faces ({{ photo.faces|length }})</h3>
-                {% if photo.faces %}
-                <div class="faces-grid">
-                    {% for face in photo.faces %}
-                    <div class="face-thumbnail"
-                         id="face-thumbnail-{{ face.id }}"
-                         data-face-id="{{ face.id }}"
-                         onmouseenter="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.highlightFace({{ face.id }})"
-                         onmouseleave="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.clearHighlights()">
-                        <img src="{{ url_for('face_thumbnail', face_id=face.id) }}" alt="Face">
-                        {% if face.people %}
-                        <div class="face-label">
-                            {% for person in face.people %}
-                            {{ person.name }}{% if not loop.last %}, {% endif %}
+                <div class="detail-section">
+                    <h3>People ({{ people|length }})</h3>
+                    {% if people %}
+                        <div class="people-list">
+                            {% for person in people %}
+                                <a href="{{ url_for('person_faces', person_id=person.id) }}" class="person-tag">
+                                    {{ person.name }}
+                                </a>
                             {% endfor %}
                         </div>
-                        {% endif %}
+                    {% else %}
+                        <p class="no-data">No people assigned to this photo</p>
+                    {% endif %}
+                </div>
+
+                <div class="detail-section">
+                    <h3>Faces ({{ photo.faces|length }})</h3>
+                    {% if photo.faces %}
+                        <div class="faces-grid">
+                            {% for face in photo.faces %}
+                                <div class="face-thumbnail"
+                                     id="face-thumbnail-{{ face.id }}"
+                                     data-face-id="{{ face.id }}"
+                                     onmouseenter="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.highlightFace({{ face.id }})"
+                                     onmouseleave="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.clearHighlights()">
+                                    <img src="{{ url_for('face_thumbnail', face_id=face.id) }}"
+                                         data-fallback="{{ url_for('placeholder') }}" alt="Face">
+                                    {% if face.people %}
+                                        <div class="face-label">
+                                            {% for person in face.people %}
+                                                {{ person.name }}{% if not loop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="no-data">No faces detected</p>
+                    {% endif %}
+                </div>
+
+                <div class="detail-section">
+                    <h3>Tags ({{ photo.tags|length }})</h3>
+                    {% if photo.tags %}
+                        <div class="tags-list">
+                            {% for tag in photo.tags %}
+                                <div class="tag-item">
+                                    <span class="tag-name">{{ tag.tag_name }}</span>
+                                    {% if tag.tag_value %}
+                                        <span class="tag-separator">:</span>
+                                        <span class="tag-value">{{ tag.tag_value }}</span>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="no-data">No tags</p>
+                    {% endif %}
+                    <div class="detail-actions">
+                        <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.openEditModal()"
+                                class="action-button">
+                            Edit Tags
+                        </button>
                     </div>
-                    {% endfor %}
                 </div>
-                {% else %}
-                <p class="no-data">No faces detected</p>
-                {% endif %}
             </div>
+        </div>
 
-            <div class="detail-section">
-                <h3>Tags ({{ photo.tags|length }})</h3>
-                {% if photo.tags %}
-                <div class="tags-list">
-                    {% for tag in photo.tags %}
-                    <div class="tag-item">
-                        <span class="tag-name">{{ tag.tag_name }}</span>
-                        {% if tag.tag_value %}
-                        <span class="tag-separator">:</span>
-                        <span class="tag-value">{{ tag.tag_value }}</span>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="no-data">No tags</p>
-                {% endif %}
-                <div class="detail-actions">
-                    <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.openEditModal()" class="action-button">
-                        Edit Tags
-                    </button>
+        <div class="photo-container">
+            <div class="photo-wrapper">
+                <div class="photo-image-container">
+                    <img src="{{ url_for('photo', photo_id=photo.id) }}"
+                         data-fallback="{{ url_for('placeholder') }}"
+                         alt="{{ file_name }}"
+                         class="photo-main"
+                         id="mainPhoto">
+                    <canvas id="faceCanvas" class="face-overlay"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="photo-container">
-        <div class="photo-wrapper">
-            <div class="photo-image-container">
-                <img src="{{ url_for('photo', photo_id=photo.id) }}"
-                     alt="{{ file_name }}"
-                     class="photo-main"
-                     id="mainPhoto">
-                <canvas id="faceCanvas" class="face-overlay"></canvas>
+    {% macro render_modal_edit_tags_form() %}
+        <div id="tags-editor-container">
+            <div id="tags-editor-list"></div>
+
+            <div class="tag-add-section">
+                <h4>Add New Tag</h4>
+                <div class="form-row">
+                    <input type="text" id="modal-new-tag-name" placeholder="Tag name" class="tag-input">
+                    <input type="text" id="modal-new-tag-value" placeholder="Tag value (optional)" class="tag-input">
+                </div>
+                <button type="button" class="btn btn-secondary"
+                        onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.addTagToList()">+ Add Tag
+                </button>
             </div>
         </div>
-    </div>
-</div>
+    {% endmacro %}
 
-{% macro render_modal_edit_tags_form() %}
-<div id="tags-editor-container">
-    <div id="tags-editor-list"></div>
-
-    <div class="tag-add-section">
-        <h4>Add New Tag</h4>
-        <div class="form-row">
-            <input type="text" id="modal-new-tag-name" placeholder="Tag name" class="tag-input">
-            <input type="text" id="modal-new-tag-value" placeholder="Tag value (optional)" class="tag-input">
-        </div>
-        <button type="button" class="btn btn-secondary" onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.addTagToList()">+ Add Tag</button>
-    </div>
-</div>
-{% endmacro %}
-
-{{ render_modal('tagsModal', "Edit Tags", "#", render_modal_edit_tags_form, "Save Changes", "btn-primary") }}
+    {{ render_modal('tagsModal', "Edit Tags", "#", render_modal_edit_tags_form, "Save Changes", "btn-primary") }}
 
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='components/modal.js') }}"></script>
-<script src="{{ url_for('static', filename='photos/view.js') }}"></script>
-<script src="{{ url_for('static', filename='photos/tags.js') }}"></script>
-<script src="{{ url_for('static', filename='photos/face-reassign.js') }}"></script>
-<script>
-// Initialize photo view modules
-window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView = window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView(
-    {{ faces_with_locations | tojson }},
-    '{{ absolute_file_path }}',
-    '{{ absolute_folder_path }}',
-    window.APP_CONFIG
-);
+    <script src="{{ url_for('static', filename='components/modal.js') }}"></script>
+    <script src="{{ url_for('static', filename='photos/view.js') }}"></script>
+    <script src="{{ url_for('static', filename='photos/tags.js') }}"></script>
+    <script src="{{ url_for('static', filename='photos/face-reassign.js') }}"></script>
+    <script>
+        // Initialize photo view modules
+        window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView = window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView(
+            {{ faces_with_locations | tojson }},
+            '{{ absolute_file_path }}',
+            '{{ absolute_folder_path }}',
+            window.APP_CONFIG
+        );
 
-window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags = window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags(
-    {{ photo.id }},
-    {{ tags_data | tojson }},
-    window.APP_CONFIG
-);
+        window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags = window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags(
+            {{ photo.id }},
+            {{ tags_data | tojson }},
+            window.APP_CONFIG
+        );
 
-window.PHOTO_ORGANIZER.VIEW_PHOTO.faceReassign = window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign(
-    {{ all_people | tojson }},
-    window.APP_CONFIG
-);
-</script>
+        window.PHOTO_ORGANIZER.VIEW_PHOTO.faceReassign = window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign(
+            {{ all_people | tojson }},
+            window.APP_CONFIG
+        );
+    </script>
 {% endblock %}

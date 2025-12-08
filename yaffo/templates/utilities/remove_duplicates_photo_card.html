@@ -5,5 +5,5 @@
      hx-target="#photo-{{ path.path_id }}"
      hx-swap="outerHTML"
      hx-include="closest form">
-    <img src="{{ url_for('photo_by_path', photoPath=path.path) }}" alt="Duplicate photo">
+    <img src="{{ url_for('photo_by_path', photoPath=path.path) }}" data-fallback="{{ url_for('placeholder') }}" alt="Duplicate photo">
 </div>

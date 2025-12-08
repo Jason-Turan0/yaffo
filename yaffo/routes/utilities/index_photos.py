@@ -8,7 +8,7 @@ from itertools import batched
 import uuid
 import json
 
-from yaffo.utils.index_photos import delete_orphaned_photos
+from yaffo.utils.index_photos import delete_orphaned_photos, delete_orphaned_thumbnails
 from yaffo.routes.utilities.common import is_system_file, get_media_dirs, get_thumbnail_dir
 
 
@@ -162,12 +162,15 @@ def init_index_photos_routes(app: Flask):
         db.session.add(index_job)
         db.session.commit()
 
+        delete_orphaned_photos(db.session, files_to_delete)
+        delete_orphaned_thumbnails(db.session, thumbnail_dir)
+
         for batch in batched(files_to_import, 250):
             import_photo_task(import_job_id, list(batch))
         schedule_job_completion(import_job_id)
 
         for batch in batched(files_needing_indexing, 10):
             index_photo_task(index_job_id, list(batch))
-        delete_orphaned_photos(db.session, files_to_delete)
+
         schedule_job_completion(index_job_id)
         return jsonify({'job_id': import_job_id}), 202

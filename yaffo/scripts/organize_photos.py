@@ -35,11 +35,15 @@ def get_date_from_filename(filename: str) -> Optional[datetime]:
 def get_photo_date(path: str) -> Optional[datetime]:
     """
     Extract photo date in this order:
-    1. EXIF 'DateTimeOriginal'
-    2. Filename pattern YYYYMMDD
+    1. Filename pattern YYYYMMDD
+    2. EXIF 'DateTimeOriginal'
     3. File modified date
     """
-    # --- 1. Try EXIF metadata ---
+    date_from_filename = get_date_from_filename(path)
+    if date_from_filename is not None:
+        return date_from_filename
+
+    # --- 2. Try EXIF metadata ---
     try:
         img = Image.open(path)
         exif_data = img.info.get("exif")
@@ -50,11 +54,6 @@ def get_photo_date(path: str) -> Optional[datetime]:
                 return datetime.strptime(date_str.decode(), "%Y:%m:%d %H:%M:%S")
     except Exception:
         pass
-
-    # --- 2. Try filename ---
-    date_from_filename = get_date_from_filename(path)
-    if date_from_filename is not None:
-        return date_from_filename
 
     # --- 3. Fallback: file modified date ---
     try:

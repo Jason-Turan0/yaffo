@@ -130,14 +130,17 @@
 <script src="{{ url_for('static', filename='components/file_browser.js') }}"></script>
 <script src="{{ url_for('static', filename='utils.js') }}"></script>
 <script>
-    // Auto-close alerts after 5 seconds
     document.addEventListener('DOMContentLoaded', function () {
+        // Auto-close alerts after 5 seconds
         const alerts = document.querySelectorAll('.alert');
         alerts.forEach(alert => {
             setTimeout(() => {
                 closeAlert(alert.querySelector('.alert-close'));
             }, 5000);
         });
+
+        // Initialize image fallbacks for any img with data-fallback attribute
+        window.PHOTO_ORGANIZER.utils.initImageFallbacks();
     });
 
     function closeAlert(button) {

@@ -417,3 +417,64 @@ def delete_orphaned_photos(session: Session, photo_ids: List[int]) -> int:
     session.commit()
     logger.debug(f"Deleted {deleted_count} photos and {deleted_faces} associated faces")
     return deleted_count
+
+
+def get_orphaned_thumbnails(session: Session, thumbnail_dir: Path) -> List[Path]:
+    """
+    Find thumbnail files on disk that are not referenced by any Face record.
+
+    Args:
+        session: SQLAlchemy session
+        thumbnail_dir: Path to the thumbnail directory
+
+    Returns:
+        List of Path objects for orphaned thumbnail files
+    """
+    if not thumbnail_dir or not thumbnail_dir.exists():
+        return []
+
+    db_thumbnail_paths = {face.full_file_path for face in session.query(Face.full_file_path).all()}
+
+    filesystem_thumbnails = [
+        f for f in thumbnail_dir.iterdir()
+        if f.is_file() and f.suffix.lower() in PHOTO_EXTENSIONS
+    ]
+
+    orphaned = [
+        thumb for thumb in filesystem_thumbnails
+        if str(thumb) not in db_thumbnail_paths
+    ]
+
+    return orphaned
+
+
+def delete_orphaned_thumbnails(session: Session, thumbnail_dir: Path) -> Tuple[int, int]:
+    """
+    Delete thumbnail files that are not referenced by any Face record.
+
+    Args:
+        session: SQLAlchemy session
+        thumbnail_dir: Path to the thumbnail directory
+
+    Returns:
+        Tuple of (deleted_count, error_count)
+    """
+    orphaned_thumbnails = get_orphaned_thumbnails(session, thumbnail_dir)
+
+    if not orphaned_thumbnails:
+        return 0, 0
+
+    deleted_count = 0
+    error_count = 0
+
+    for thumb_path in orphaned_thumbnails:
+        try:
+            thumb_path.unlink()
+            deleted_count += 1
+            logger.debug(f"Deleted orphaned thumbnail: {thumb_path}")
+        except Exception as e:
+            error_count += 1
+            logger.warning(f"Failed to delete orphaned thumbnail {thumb_path}: {e}")
+
+    logger.info(f"Cleaned up {deleted_count} orphaned thumbnails ({error_count} errors)")
+    return deleted_count, error_count
