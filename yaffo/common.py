@@ -9,8 +9,12 @@ app_name = "yaffo"
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".hevc"}
 PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic"}
 
-#data_dir = site_data_dir(app_name, app_author, ensure_exists=True)
-data_dir = Path("/Users/jason.turan/Pictures")
+# Allow override via environment variable for testing
+if os.environ.get("YAFFO_DATA_DIR"):
+    data_dir = Path(os.environ["YAFFO_DATA_DIR"])
+else:
+    #data_dir = site_data_dir(app_name, app_author, ensure_exists=True)
+    data_dir = Path("/Users/jason.turan/Pictures")
 
 ROOT_DIR = Path(data_dir)
 TEMP_DIR = ROOT_DIR / "temp"

@@ -68,3 +68,4 @@ resources/*
 *.app
 *.AppImage
 *.msi
+node_modules

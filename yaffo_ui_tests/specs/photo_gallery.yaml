@@ -1,0 +1,25 @@
+feature: photo_gallery
+description: User can browse photos in the gallery and all images load correctly
+
+tags:
+  - smoke
+  - core
+
+preconditions:
+  - Application is running
+  - Database contains sample photos
+
+scenarios:
+  - name: gallery_loads_with_valid_images
+    goal: Gallery displays photos and all image sources are valid (no broken links)
+    priority: high
+    steps:
+      - Navigate to the home page
+      - Wait for the gallery grid to be visible
+      - Collect all image elements in the gallery
+      - Verify each image source returns HTTP 200
+    verify:
+      - Gallery grid container is visible
+      - At least one photo is displayed
+      - All photo image sources return HTTP 200 (no broken links)
+      - No images are using the fallback placeholder

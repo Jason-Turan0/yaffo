@@ -1,0 +1,41 @@
+{
+  "name": "yaffo-ui-tests",
+  "version": "0.1.0",
+  "description": "AI-augmented UI testing framework for Yaffo using Playwright + MCP",
+  "type": "module",
+  "scripts": {
+    "generate": "tsx lib/cli/generate.ts",
+    "generate:all": "tsx lib/cli/generate-all.ts",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:isolated": "./scripts/run-tests.sh",
+    "test:isolated:headed": "./scripts/run-tests.sh --headed",
+    "test:heal": "tsx lib/cli/run-with-healing.ts",
+    "analyze": "tsx lib/cli/analyze.ts",
+    "regenerate": "tsx lib/cli/regenerate.ts",
+    "validate": "tsx lib/cli/validate-specs.ts",
+    "lint": "eslint lib/ generated/",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@playwright/test": "^1.49.0",
+    "yaml": "^2.6.1",
+    "zod": "^3.24.1",
+    "dotenv": "^16.4.7",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.2",
+    "eslint": "^9.17.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.2",
+    "@typescript-eslint/parser": "^8.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
