@@ -97,280 +97,6 @@
   },
   "suites": [
     {
-      "title": "photo_gallery.spec.ts",
-      "file": "photo_gallery.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Photo Gallery",
-          "file": "photo_gallery.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
-            {
-              "title": "gallery_loads_with_valid_images",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 1270,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "Successfully verified 16 images in the gallery\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-12-26T19:15:45.128Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "52b995bbe9343074f73f-60bc6690eb9cd0f3278e",
-              "file": "photo_gallery.spec.ts",
-              "line": 4,
-              "column": 3
-            },
-            {
-              "title": "gallery_grid_layout_and_structure",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 889,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"photo_view\"\u001b[39m\nReceived string:    \u001b[31m\"window.open('/photo/view/5', '_blank')\"\u001b[39m",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"photo_view\"\u001b[39m\nReceived string:    \u001b[31m\"window.open('/photo/view/5', '_blank')\"\u001b[39m\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts:105:27",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts",
-                          "column": 27,
-                          "line": 105
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 103 |\u001b[39m       \u001b[36mconst\u001b[39m onclickAttr \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m firstPhotoCard\u001b[33m.\u001b[39mgetAttribute(\u001b[32m'onclick'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 104 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoBeTruthy()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 105 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoContain(\u001b[32m'photo_view'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 106 |\u001b[39m     } \u001b[36melse\u001b[39m {\n \u001b[90m 107 |\u001b[39m       \u001b[90m// Verify empty state is shown when no photos\u001b[39m\n \u001b[90m 108 |\u001b[39m       \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.empty-state'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\u001b[0m"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts",
-                            "column": 27,
-                            "line": 105
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"photo_view\"\u001b[39m\nReceived string:    \u001b[31m\"window.open('/photo/view/5', '_blank')\"\u001b[39m\n\n\u001b[0m \u001b[90m 103 |\u001b[39m       \u001b[36mconst\u001b[39m onclickAttr \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m firstPhotoCard\u001b[33m.\u001b[39mgetAttribute(\u001b[32m'onclick'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 104 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoBeTruthy()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 105 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoContain(\u001b[32m'photo_view'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 106 |\u001b[39m     } \u001b[36melse\u001b[39m {\n \u001b[90m 107 |\u001b[39m       \u001b[90m// Verify empty state is shown when no photos\u001b[39m\n \u001b[90m 108 |\u001b[39m       \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.empty-state'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts:105:27\u001b[22m"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-12-26T19:15:46.719Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-Photo-Galler-ea36f-y-grid-layout-and-structure-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-Photo-Galler-ea36f-y-grid-layout-and-structure-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-Photo-Galler-ea36f-y-grid-layout-and-structure-chromium/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts",
-                        "column": 27,
-                        "line": 105
-                      }
-                    },
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 974,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"photo_view\"\u001b[39m\nReceived string:    \u001b[31m\"window.open('/photo/view/5', '_blank')\"\u001b[39m",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"photo_view\"\u001b[39m\nReceived string:    \u001b[31m\"window.open('/photo/view/5', '_blank')\"\u001b[39m\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts:105:27",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts",
-                          "column": 27,
-                          "line": 105
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 103 |\u001b[39m       \u001b[36mconst\u001b[39m onclickAttr \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m firstPhotoCard\u001b[33m.\u001b[39mgetAttribute(\u001b[32m'onclick'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 104 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoBeTruthy()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 105 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoContain(\u001b[32m'photo_view'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 106 |\u001b[39m     } \u001b[36melse\u001b[39m {\n \u001b[90m 107 |\u001b[39m       \u001b[90m// Verify empty state is shown when no photos\u001b[39m\n \u001b[90m 108 |\u001b[39m       \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.empty-state'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\u001b[0m"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts",
-                            "column": 27,
-                            "line": 105
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"photo_view\"\u001b[39m\nReceived string:    \u001b[31m\"window.open('/photo/view/5', '_blank')\"\u001b[39m\n\n\u001b[0m \u001b[90m 103 |\u001b[39m       \u001b[36mconst\u001b[39m onclickAttr \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m firstPhotoCard\u001b[33m.\u001b[39mgetAttribute(\u001b[32m'onclick'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 104 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoBeTruthy()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 105 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoContain(\u001b[32m'photo_view'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 106 |\u001b[39m     } \u001b[36melse\u001b[39m {\n \u001b[90m 107 |\u001b[39m       \u001b[90m// Verify empty state is shown when no photos\u001b[39m\n \u001b[90m 108 |\u001b[39m       \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.empty-state'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts:105:27\u001b[22m"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2025-12-26T19:15:47.841Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-Photo-Galler-ea36f-y-grid-layout-and-structure-chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-Photo-Galler-ea36f-y-grid-layout-and-structure-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-Photo-Galler-ea36f-y-grid-layout-and-structure-chromium-retry1/error-context.md"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-Photo-Galler-ea36f-y-grid-layout-and-structure-chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts",
-                        "column": 27,
-                        "line": 105
-                      }
-                    },
-                    {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 934,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"photo_view\"\u001b[39m\nReceived string:    \u001b[31m\"window.open('/photo/view/5', '_blank')\"\u001b[39m",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"photo_view\"\u001b[39m\nReceived string:    \u001b[31m\"window.open('/photo/view/5', '_blank')\"\u001b[39m\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts:105:27",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts",
-                          "column": 27,
-                          "line": 105
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 103 |\u001b[39m       \u001b[36mconst\u001b[39m onclickAttr \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m firstPhotoCard\u001b[33m.\u001b[39mgetAttribute(\u001b[32m'onclick'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 104 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoBeTruthy()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 105 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoContain(\u001b[32m'photo_view'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 106 |\u001b[39m     } \u001b[36melse\u001b[39m {\n \u001b[90m 107 |\u001b[39m       \u001b[90m// Verify empty state is shown when no photos\u001b[39m\n \u001b[90m 108 |\u001b[39m       \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.empty-state'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\u001b[0m"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts",
-                            "column": 27,
-                            "line": 105
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"photo_view\"\u001b[39m\nReceived string:    \u001b[31m\"window.open('/photo/view/5', '_blank')\"\u001b[39m\n\n\u001b[0m \u001b[90m 103 |\u001b[39m       \u001b[36mconst\u001b[39m onclickAttr \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m firstPhotoCard\u001b[33m.\u001b[39mgetAttribute(\u001b[32m'onclick'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 104 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoBeTruthy()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 105 |\u001b[39m       expect(onclickAttr)\u001b[33m.\u001b[39mtoContain(\u001b[32m'photo_view'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 106 |\u001b[39m     } \u001b[36melse\u001b[39m {\n \u001b[90m 107 |\u001b[39m       \u001b[90m// Verify empty state is shown when no photos\u001b[39m\n \u001b[90m 108 |\u001b[39m       \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.empty-state'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts:105:27\u001b[22m"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2025-12-26T19:15:49.243Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-Photo-Galler-ea36f-y-grid-layout-and-structure-chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-Photo-Galler-ea36f-y-grid-layout-and-structure-chromium-retry2/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-Photo-Galler-ea36f-y-grid-layout-and-structure-chromium-retry2/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery.spec.ts",
-                        "column": 27,
-                        "line": 105
-                      }
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "52b995bbe9343074f73f-405a5674e3a73a55b989",
-              "file": "photo_gallery.spec.ts",
-              "line": 78,
-              "column": 3
-            },
-            {
-              "title": "gallery_page_header_information",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 888,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-12-26T19:15:50.508Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "52b995bbe9343074f73f-a83f6a795a37a6079f01",
-              "file": "photo_gallery.spec.ts",
-              "line": 112,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
       "title": "photo-gallery.spec.ts",
       "file": "photo-gallery.spec.ts",
       "column": 0,
@@ -396,15 +122,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 395,
+                      "duration": 650,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-12-26T19:15:51.485Z",
+                      "startTime": "2025-12-26T19:53:36.778Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -430,15 +156,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1675,
+                      "duration": 1643,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-12-26T19:15:51.887Z",
+                      "startTime": "2025-12-26T19:53:37.718Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -458,11 +184,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-12-26T19:15:44.823Z",
-    "duration": 8764.869999999999,
-    "expected": 4,
+    "startTime": "2025-12-26T19:53:36.552Z",
+    "duration": 2835.8109999999997,
+    "expected": 2,
     "skipped": 0,
-    "unexpected": 1,
+    "unexpected": 0,
     "flaky": 0
   }
 }

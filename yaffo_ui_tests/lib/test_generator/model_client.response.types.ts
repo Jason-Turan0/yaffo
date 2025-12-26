@@ -6,7 +6,7 @@ export interface GeneratedTestFile {
   code: string;
 
   //A description of the test file
-  description: string;
+  description?: string;
 }
 
 export interface GeneratedTestResponse {
@@ -20,5 +20,5 @@ export interface GeneratedTestResponse {
   explanation?: string;
 
   //Confidence rating of the generated test scaled from 0 to 1
-  confidence: number;
+  confidence?: number;
 }

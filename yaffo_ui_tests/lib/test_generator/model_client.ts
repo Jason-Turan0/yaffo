@@ -5,7 +5,7 @@ import {ApiLogEntry, ToolCall} from "@lib/test_generator/model_client.types";
 import {GenerationResult, GeneratorOptions} from "@lib/test_generator/index.types";
 import {Spec} from "@lib/test_generator/spec_parser.types";
 import {createFilesystemClient, FilesystemMcpClient} from "@lib/test_generator/mcp_filesystem_client";
-import {SYSTEM_PROMPT, buildUserPrompt} from "@lib/test_generator/context_generator";
+import {SYSTEM_PROMPT, buildUserPrompt, TEST_GENERATOR_OUTPUT_FORMAT} from "@lib/test_generator/context_generator";
 
 import {
     Message,
@@ -14,7 +14,7 @@ import {
     ToolResultBlockParam
 } from "@anthropic-ai/sdk/resources/messages/messages";
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
-import {parseJsonResponse} from "@lib/test_generator/json_parser";
+import {parseJsonResponse, ParseResult} from "@lib/test_generator/json_parser";
 import {typeCheckFile, formatTypeErrorsForModel} from "@lib/test_generator/typescript_validator";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
@@ -231,14 +231,15 @@ export const generateTestFromSpec = async (
     }
 
     // Parse and validate loop
-    const maxCompileRetries = 3;
-    let compileRetryCount = 0;
+    const maxRetries = 3;
+    let retryCount = 0;
     let currentJson = generatedJson;
     let lastResponse: GeneratedTestResponse | null = null;
 
-    while (compileRetryCount <= maxCompileRetries) {
+    while (retryCount <= maxRetries) {
         // Parse the JSON response
-        const parsedResponse = parseJsonResponse(currentJson);
+        const {response: parsedResponse, schemaErrors} = parseJsonResponse(currentJson);
+
         if (!parsedResponse) {
             const rawPath = join(PLAYWRIGHT_TEST_DIR, `${spec.feature}.txt`);
             writeFileSync(rawPath, currentJson);
@@ -249,30 +250,83 @@ export const generateTestFromSpec = async (
             };
         }
 
+        // Handle schema validation errors
+        if (schemaErrors.length > 0) {
+            console.log(`\n⚠️  Schema validation errors:`);
+            schemaErrors.forEach(err => console.log(`   - ${err}`));
+
+            retryCount++;
+            if (retryCount > maxRetries) {
+                console.log(`\n⚠️  Max retries (${maxRetries}) exceeded. Schema errors remain.`);
+                lastResponse = parsedResponse;
+                break;
+            }
+
+            console.log(`\n🔄 Schema fix attempt ${retryCount}/${maxRetries}...`);
+
+            const schemaFixRequest = `The JSON response has schema validation errors:
+
+${schemaErrors.map(e => `- ${e}`).join("\n")}
+
+Expected Schema:
+\`\`\`typescript
+${TEST_GENERATOR_OUTPUT_FORMAT}
+\`\`\`typescript
+Please fix the schema errors and provide the corrected JSON.`;
+
+            messages.push({role: "assistant", content: currentJson});
+            messages.push({role: "user", content: schemaFixRequest});
+
+            iterationCount++;
+            const fixResponse = await callModelApi(
+                anthropic,
+                {model, max_tokens: 8192, system: SYSTEM_PROMPT, messages},
+                iterationCount,
+                runLogDir
+            );
+
+            if (!fixResponse) {
+                console.log(`   ❌ Failed to get fix response from model`);
+                break;
+            }
+
+            const fixTextContent = extractTextContent(fixResponse);
+            if (fixTextContent) {
+                currentJson = fixTextContent;
+                continue;
+            } else {
+                console.log(`   ❌ No text content in fix response`);
+                break;
+            }
+        }
+
         lastResponse = parsedResponse;
         const writtenPaths = writeGeneratedFiles(spec, parsedResponse, PLAYWRIGHT_TEST_DIR);
 
         if (parsedResponse.explanation) {
-            console.log(`📝 Explanation: ${parsedResponse.explanation}. Confidence: ${parsedResponse.confidence * 100}%`);
+            const confidenceStr = parsedResponse.confidence != null
+                ? `. Confidence: ${parsedResponse.confidence * 100}%`
+                : "";
+            console.log(`📝 Explanation: ${parsedResponse.explanation}${confidenceStr}`);
         }
 
         // Type check the generated files
         console.log(`\n🔍 Type checking generated files...`);
-        const allErrors: string[] = [];
+        const typeErrors: string[] = [];
 
         for (const filePath of writtenPaths) {
-            if (filePath.endsWith('.ts')) {
+            if (filePath.endsWith(".ts")) {
                 const typeResult = typeCheckFile(filePath);
                 if (!typeResult.success) {
                     console.log(`   ❌ Type errors in ${basename(filePath)}: ${typeResult.errorCount} error(s)`);
-                    allErrors.push(formatTypeErrorsForModel(filePath, typeResult));
+                    typeErrors.push(formatTypeErrorsForModel(filePath, typeResult));
                 } else {
                     console.log(`   ✅ ${basename(filePath)} compiles successfully`);
                 }
             }
         }
 
-        if (allErrors.length === 0) {
+        if (typeErrors.length === 0) {
             console.log(`\n✅ All files compile successfully!`);
             return {
                 success: true,
@@ -280,22 +334,21 @@ export const generateTestFromSpec = async (
             };
         }
 
-        // If we have errors and haven't exceeded retries, ask Claude to fix
-        compileRetryCount++;
-        if (compileRetryCount > maxCompileRetries) {
-            console.log(`\n⚠️  Max compile retries (${maxCompileRetries}) exceeded. Returning with type errors.`);
+        // If we have type errors and haven't exceeded retries, ask Claude to fix
+        retryCount++;
+        if (retryCount > maxRetries) {
+            console.log(`\n⚠️  Max retries (${maxRetries}) exceeded. Returning with type errors.`);
             return {
                 success: true,
                 logPath: runLogDir
             };
         }
 
-        console.log(`\n🔄 Compile fix attempt ${compileRetryCount}/${maxCompileRetries}...`);
+        console.log(`\n🔄 Type error fix attempt ${retryCount}/${maxRetries}...`);
 
-        // Build the fix request message
-        const fixRequest = `The generated TypeScript code has compilation errors:
+        const typeFixRequest = `The generated TypeScript code has compilation errors:
 
-${allErrors.join("\n\n")}
+${typeErrors.join("\n\n")}
 
 Here is the current code that needs to be fixed:
 \`\`\`typescript
@@ -304,20 +357,13 @@ ${parsedResponse.files[0]?.code || ""}
 
 Please fix these errors and provide the corrected code in the same JSON format as before.`;
 
-        // Add the assistant's previous response and the fix request
         messages.push({role: "assistant", content: currentJson});
-        messages.push({role: "user", content: fixRequest});
+        messages.push({role: "user", content: typeFixRequest});
 
-        // Call the model for a fix
         iterationCount++;
         const fixResponse = await callModelApi(
             anthropic,
-            {
-                model,
-                max_tokens: 8192,
-                system: SYSTEM_PROMPT,
-                messages,
-            },
+            {model, max_tokens: 8192, system: SYSTEM_PROMPT, messages},
             iterationCount,
             runLogDir
         );

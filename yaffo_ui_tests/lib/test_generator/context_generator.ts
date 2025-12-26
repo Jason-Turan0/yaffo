@@ -99,7 +99,7 @@ The following source files have been pre-loaded as relevant context for this tes
 ${sections.join('\n\n')}`;
 };
 
-const OUTPUT_FORMAT = fs.readFileSync(join(process.cwd(), 'lib', 'test_generator', 'model_client.response.types.ts'), 'utf8');
+export const TEST_GENERATOR_OUTPUT_FORMAT = fs.readFileSync(join(process.cwd(), 'lib', 'test_generator', 'model_client.response.types.ts'), 'utf8');
 
 export const SYSTEM_PROMPT = `You are an expert Playwright test generator with READ-ONLY access to filesystem tools. Your job is to:
 1. Explore the codebase to discover actual HTML elements, selectors, and routes if needed
@@ -134,7 +134,7 @@ IMPORTANT URL Handling:
 When you are ready to generate the tests, respond with a JSON object in this exact format.:
 
 \`\`\`typescript
-${OUTPUT_FORMAT}
+${TEST_GENERATOR_OUTPUT_FORMAT}
 \`\`\`
 
 IMPORTANT:

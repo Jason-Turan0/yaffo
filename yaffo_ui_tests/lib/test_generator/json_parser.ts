@@ -1,52 +1,57 @@
+import {z} from "zod";
 import {GeneratedTestResponse} from "./model_client.response.types";
 
-export const parseJsonResponse = (text: string): GeneratedTestResponse | null => {
-    let jsonText = text.trim();
+const GeneratedTestFileSchema = z.object({
+    filename: z.string(),
+    code: z.string(),
+    description: z.string().optional(),
+}).strict();
 
-    // Remove markdown code blocks if present
-    jsonText = jsonText
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "")
-        .trim();
+const GeneratedTestResponseSchema = z.object({
+    files: z.array(GeneratedTestFileSchema).min(1),
+    testContext: z.string().optional(),
+    explanation: z.string().optional(),
+    confidence: z.number().min(0).max(1).optional(),
+}).strict();
 
-    // Try direct parse first
-    try {
-        return JSON.parse(jsonText) as GeneratedTestResponse;
-    } catch {
-        // If direct parse fails, try to extract JSON object from text
-        // (handles case where model adds explanation before/after JSON)
-    }
+export interface ParseResult {
+    response: GeneratedTestResponse | null;
+    schemaErrors: string[];
+}
 
-    // Find the JSON object using regex to handle both compact and pretty-printed JSON
-    // Looks for { followed by optional whitespace and " to avoid matching things like {photo_id}
+const formatZodErrors = (error: z.ZodError): string[] => {
+    return error.errors.map(err => {
+        const path = err.path.join(".");
+        if (err.code === "unrecognized_keys") {
+            const keys = (err as z.ZodUnrecognizedKeysIssue).keys;
+            return `${path ? path + ": " : ""}Unexpected field(s) [${keys.join(", ")}] - these may belong at a different level in the schema`;
+        }
+        return `${path ? path + ": " : ""}${err.message}`;
+    });
+};
+
+const extractJsonFromText = (text: string): string | null => {
     const jsonStartRegex = /\{\s*"files":|^\{\s*"/gm;
-    let firstBrace = -1;
-
-    const match = jsonStartRegex.exec(jsonText);
-    if (match) {
-        firstBrace = match.index;
-    }
-
-    if (firstBrace === -1) {
-        console.error("No JSON object found in response");
+    const match = jsonStartRegex.exec(text);
+    if (!match) {
         return null;
     }
 
-    // Find the matching closing brace by counting brace depth
+    const firstBrace = match.index;
     let depth = 0;
     let lastBrace = -1;
     let inString = false;
     let escapeNext = false;
 
-    for (let i = firstBrace; i < jsonText.length; i++) {
-        const char = jsonText[i];
+    for (let i = firstBrace; i < text.length; i++) {
+        const char = text[i];
 
         if (escapeNext) {
             escapeNext = false;
             continue;
         }
 
-        if (char === '\\') {
+        if (char === "\\") {
             escapeNext = true;
             continue;
         }
@@ -57,9 +62,9 @@ export const parseJsonResponse = (text: string): GeneratedTestResponse | null =>
         }
 
         if (!inString) {
-            if (char === '{') {
+            if (char === "{") {
                 depth++;
-            } else if (char === '}') {
+            } else if (char === "}") {
                 depth--;
                 if (depth === 0) {
                     lastBrace = i;
@@ -70,18 +75,44 @@ export const parseJsonResponse = (text: string): GeneratedTestResponse | null =>
     }
 
     if (lastBrace === -1) {
-        console.error("No matching closing brace found in JSON");
         return null;
     }
 
-    const extractedJson = jsonText.slice(firstBrace, lastBrace + 1);
-    console.log(`📋 Extracted JSON from position ${firstBrace} to ${lastBrace} (${extractedJson.length} chars)`);
+    console.log(`📋 Extracted JSON from position ${firstBrace} to ${lastBrace} (${lastBrace - firstBrace + 1} chars)`);
+    return text.slice(firstBrace, lastBrace + 1);
+};
 
+export const parseJsonResponse = (text: string): ParseResult => {
+    let jsonText = text.trim();
+
+    jsonText = jsonText
+        .replace(/```json\n?/g, "")
+        .replace(/```\n?/g, "")
+        .trim();
+
+    let parsed: unknown;
     try {
-        return JSON.parse(extractedJson) as GeneratedTestResponse;
-    } catch (e) {
-        console.error("Failed to parse extracted JSON:", e);
-        console.error("Extracted text (first 500 chars):", extractedJson.slice(0, 500));
-        return null;
+        parsed = JSON.parse(jsonText);
+    } catch {
+        const extracted = extractJsonFromText(jsonText);
+        if (!extracted) {
+            console.error("No JSON object found in response");
+            return {response: null, schemaErrors: ["No valid JSON found in response"]};
+        }
+        try {
+            parsed = JSON.parse(extracted);
+        } catch (e) {
+            console.error("Failed to parse extracted JSON:", e);
+            return {response: null, schemaErrors: ["Failed to parse JSON: " + String(e)]};
+        }
     }
+
+    const result = GeneratedTestResponseSchema.safeParse(parsed);
+    if (!result.success) {
+        const schemaErrors = formatZodErrors(result.error);
+        console.error("Schema validation errors:", schemaErrors);
+        return {response: parsed as GeneratedTestResponse, schemaErrors};
+    }
+
+    return {response: result.data as GeneratedTestResponse, schemaErrors: []};
 };
