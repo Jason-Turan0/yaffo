@@ -110,11 +110,11 @@ yaffo_ui_tests/
 │   └── ...
 │
 ├── lib/                      # Framework library code
-│   ├── generator.ts          # Spec → Playwright code generation
+│   ├── index.ts          # Spec → Playwright code generation
 │   ├── analyzer.ts           # Failure analysis with AI
 │   ├── healer.ts             # Self-healing logic
-│   ├── mcp-client.ts         # Playwright MCP integration
-│   └── types.ts              # TypeScript type definitions
+│   ├── mcp_filesystem_client.ts         # Playwright MCP integration
+│   └── index.types.ts              # TypeScript type definitions
 │
 ├── fixtures/                 # Test data and fixtures
 │   ├── images/               # Test images for upload
@@ -364,7 +364,7 @@ When a test fails:
 This framework uses [Playwright MCP](https://github.com/microsoft/playwright-mcp) for AI-browser interaction:
 
 ```typescript
-// lib/mcp-client.ts
+// lib/mcp_filesystem_client.ts
 import { MCPClient } from '@anthropic-ai/mcp';
 
 // MCP provides structured DOM access without screenshots

@@ -69,3 +69,12 @@ resources/*
 *.AppImage
 *.msi
 node_modules
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+
+# Playwright
+yaffo_ui_tests/reports/
+yaffo_ui_tests/.playwright/

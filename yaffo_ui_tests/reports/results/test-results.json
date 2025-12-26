@@ -2,7 +2,7 @@
   "config": {
     "configFile": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/playwright.config.ts",
     "rootDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated",
-    "forbidOnly": false,
+    "forbidOnly": true,
     "fullyParallel": true,
     "globalSetup": null,
     "globalTeardown": null,
@@ -41,7 +41,7 @@
       {
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
-        "retries": 0,
+        "retries": 2,
         "metadata": {
           "actualWorkers": 1
         },
@@ -57,7 +57,7 @@
       {
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
-        "retries": 0,
+        "retries": 2,
         "metadata": {
           "actualWorkers": 1
         },
@@ -73,7 +73,7 @@
       {
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
-        "retries": 0,
+        "retries": 2,
         "metadata": {
           "actualWorkers": 1
         },
@@ -92,13 +92,8 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.57.0",
-    "workers": 5,
-    "webServer": {
-      "command": "cd .. && source venv/bin/activate && python -m flask run --host=127.0.0.1",
-      "url": "http://127.0.0.1:5000",
-      "reuseExistingServer": true,
-      "timeout": 120000
-    }
+    "workers": 1,
+    "webServer": null
   },
   "suites": [
     {
@@ -111,11 +106,11 @@
         {
           "title": "Photo Gallery",
           "file": "photo_gallery.spec.ts",
-          "line": 11,
+          "line": 8,
           "column": 6,
           "specs": [
             {
-              "title": "gallery_loads_with_valid_images",
+              "title": "gallery loads with valid images",
               "ok": true,
               "tags": [],
               "tests": [
@@ -130,19 +125,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 501,
+                      "duration": 566,
                       "errors": [],
-                      "stdout": [
-                        {
-                          "text": "Found 4 images in gallery\n"
-                        },
-                        {
-                          "text": "All 4 images verified successfully\n"
-                        }
-                      ],
+                      "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-12-25T18:50:59.274Z",
+                      "startTime": "2025-12-25T19:30:36.342Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -150,7 +138,7 @@
                   "status": "expected"
                 }
               ],
-              "id": "52b995bbe9343074f73f-60bc6690eb9cd0f3278e",
+              "id": "52b995bbe9343074f73f-553a24a19fee88785134",
               "file": "photo_gallery.spec.ts",
               "line": 14,
               "column": 3
@@ -162,8 +150,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-12-25T18:50:59.047Z",
-    "duration": 1009.1209999999999,
+    "startTime": "2025-12-25T19:30:36.121Z",
+    "duration": 1106.039,
     "expected": 1,
     "skipped": 0,
     "unexpected": 0,

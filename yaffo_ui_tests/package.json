@@ -20,20 +20,22 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "@modelcontextprotocol/server-filesystem": "^2025.12.18",
     "@playwright/test": "^1.49.0",
-    "yaml": "^2.6.1",
-    "zod": "^3.24.1",
-    "dotenv": "^16.4.7",
     "chalk": "^5.3.0",
-    "commander": "^12.1.0"
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.7",
+    "yaml": "^2.6.1",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "typescript": "^5.7.2",
-    "tsx": "^4.19.2",
-    "eslint": "^9.17.0",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
-    "@typescript-eslint/parser": "^8.18.2"
+    "@typescript-eslint/parser": "^8.18.2",
+    "eslint": "^9.17.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   },
   "engines": {
     "node": ">=18.0.0"
