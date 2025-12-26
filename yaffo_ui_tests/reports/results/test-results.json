@@ -10,9 +10,7 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {
-      "actualWorkers": 1
-    },
+    "metadata": {},
     "preserveOutput": "always",
     "reporter": [
       [
@@ -42,9 +40,7 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "chromium",
         "name": "chromium",
         "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated",
@@ -58,9 +54,7 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "firefox",
         "name": "firefox",
         "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated",
@@ -74,9 +68,7 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "webkit",
         "name": "webkit",
         "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated",
@@ -95,64 +87,17 @@
     "workers": 1,
     "webServer": null
   },
-  "suites": [
+  "suites": [],
+  "errors": [
     {
-      "title": "photo_gallery.spec.ts",
-      "file": "photo_gallery.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Photo Gallery",
-          "file": "photo_gallery.spec.ts",
-          "line": 8,
-          "column": 6,
-          "specs": [
-            {
-              "title": "gallery loads with valid images",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 566,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-12-25T19:30:36.342Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "52b995bbe9343074f73f-553a24a19fee88785134",
-              "file": "photo_gallery.spec.ts",
-              "line": 14,
-              "column": 3
-            }
-          ]
-        }
-      ]
+      "message": "Error: No tests found",
+      "stack": "Error: No tests found"
     }
   ],
-  "errors": [],
   "stats": {
-    "startTime": "2025-12-25T19:30:36.121Z",
-    "duration": 1106.039,
-    "expected": 1,
+    "startTime": "2025-12-26T04:08:47.948Z",
+    "duration": 2.597000000000037,
+    "expected": 0,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

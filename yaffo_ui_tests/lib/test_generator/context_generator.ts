@@ -34,7 +34,7 @@ IMPORTANT URL Handling:
 
 ## OUTPUT FORMAT
 
-When you are ready to generate the tests, respond with a JSON object in this exact format:
+When you are ready to generate the tests, respond with a JSON object in this exact format.:
 
 \`\`\`typescript
 ${OUTPUT_FORMAT}
@@ -43,6 +43,7 @@ ${OUTPUT_FORMAT}
 IMPORTANT:
 - The "code" field must contain the complete, valid TypeScript test file
 - Do NOT wrap the JSON in markdown code blocks when responding
+- Do NOT include an explanation before the JSON. Output the json in a single line format. 
 `;
 
 export const buildUserPrompt = (spec: Spec, specPath: string, baseUrl: string, allowedDirs: string[]): string => {

@@ -11,8 +11,7 @@ import {generateTestFromSpec} from "@lib/test_generator/model_client";
 import {generateTimestampString} from "@lib/test_generator/utils";
 
 export async function generateTest(
-    specPath: string,
-    outputDir: string
+    specPath: string
 ) {
     try {
         const runId = generateTimestampString();
@@ -21,20 +20,15 @@ export async function generateTest(
         if (!fs.existsSync(logPath)) {
             fs.mkdirSync(logPath, {recursive: true});
         }
-        const generationResult = await generateTestFromSpec(
+        await generateTestFromSpec(
             {
                 specPath,
-                outputDir,
                 baseUrl: "http://127.0.0.1:5000",
                 model: "claude-sonnet-4-20250514",
             },
             spec,
             logPath
         );
-        console.log(`✓ Generated: ${generationResult.outputPath}`);
-        if (generationResult.logPath) {
-            console.log(`📄 API log: ${generationResult.logPath}`);
-        }
         process.exit(0);
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);
@@ -56,12 +50,9 @@ async function main() {
     }
 
     const specPath = filteredArgs[0];
-    const outputDir = filteredArgs[1] || join(process.cwd(), "generated");
 
     console.log(`Generating test from: ${specPath}`);
-    console.log(`Output directory: ${outputDir}`);
-
-    await generateTest(specPath, outputDir);
+    await generateTest(specPath);
 }
 
 main().finally(() => {

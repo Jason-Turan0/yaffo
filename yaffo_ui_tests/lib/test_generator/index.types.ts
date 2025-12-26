@@ -1,7 +1,6 @@
 
 export interface GeneratorOptions {
     specPath: string;
-    outputDir: string;
     baseUrl?: string;
     model?: string;
     yaffoRoot?: string;
@@ -10,7 +9,6 @@ export interface GeneratorOptions {
 
 export interface GenerationResult {
     success: boolean;
-    outputPath?: string;
     logPath?: string;
     error?: string;
 }

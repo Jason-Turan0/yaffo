@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import {join, resolve} from "path";
+import {join, resolve, basename} from "path";
 import {writeFileSync} from "fs";
 import {ApiLogEntry, ToolCall} from "@lib/test_generator/model_client.types";
 import {GenerationResult, GeneratorOptions} from "@lib/test_generator/index.types";
@@ -14,8 +14,10 @@ import {
     ToolResultBlockParam
 } from "@anthropic-ai/sdk/resources/messages/messages";
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
+import {parseJsonResponse} from "@lib/test_generator/json_parser";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
+const PLAYWRIGHT_TEST_DIR = resolve(join(process.cwd(), "generated_tests"));
 
 const writeApiLog = (
     runLogDir: string,
@@ -48,12 +50,10 @@ const callModelApi = async (
     const timestamp = new Date();
     try {
         response = await anthropic.messages.create(param);
-        //TODO log request and response to filesystem
         return response;
     } catch (e) {
-        //log error;
         return undefined;
-    }finally {
+    } finally {
         const durationMs = Date.now() - timestamp.getDate();
         writeApiLog(runLogDir, callIndex, {
             timestamp: timestamp.toISOString(),
@@ -75,34 +75,18 @@ const extractTextContent = (response: Message): string => {
     return textContent;
 };
 
-const parseJsonResponse = (text: string): GeneratedTestResponse | null => {
-    let jsonText = text.trim();
-
-    // Remove markdown code blocks if present
-    jsonText = jsonText
-        .replace(/^```json\n?/m, "")
-        .replace(/^```\n?/m, "")
-        .replace(/\n?```$/m, "")
-        .trim();
-
-    try {
-        return JSON.parse(jsonText) as GeneratedTestResponse;
-    } catch (e) {
-        console.error("Failed to parse JSON response:", e);
-        return null;
-    }
-};
-
-const writeGeneratedFiles = (response: GeneratedTestResponse, outputDir: string): string[] => {
+const writeGeneratedFiles = (
+    spec: Spec,
+    response: GeneratedTestResponse,
+    outputDir: string): string[] => {
     const writtenPaths: string[] = [];
-
     for (const file of response.files) {
-        const outputPath = join(outputDir, file.filename);
+        const outputPath = join(outputDir, basename(file.filename));
         writeFileSync(outputPath, file.code);
         console.log(`   📄 Written: ${outputPath}`);
         writtenPaths.push(outputPath);
     }
-
+    writeFileSync(join(outputDir, `${spec.feature}.json`), JSON.stringify(response, null, 2));
     return writtenPaths;
 };
 
@@ -158,15 +142,13 @@ export const generateTestFromSpec = async (
 ): Promise<GenerationResult> => {
     const {
         specPath,
-        outputDir,
         baseUrl = "http://127.0.0.1:5000",
         model = "claude-sonnet-4-20250514",
-        yaffoRoot = YAFFO_ROOT,
         tempDir,
     } = options;
     let mcpClient: FilesystemMcpClient | null = null;
 
-    mcpClient = await createFilesystemClient(yaffoRoot, tempDir);
+    mcpClient = await createFilesystemClient(YAFFO_ROOT, PLAYWRIGHT_TEST_DIR, tempDir);
     const tools = mcpClient.getToolsForClaude();
     const allowedDirs = mcpClient.getAllowedDirectories();
 
@@ -227,25 +209,23 @@ export const generateTestFromSpec = async (
     const parsedResponse = parseJsonResponse(generatedJson);
     if (!parsedResponse) {
         // Save the raw response for debugging
-        const rawPath = join(outputDir, "raw_response.txt");
+        const rawPath = join(PLAYWRIGHT_TEST_DIR, `${spec.feature}.txt`);
         writeFileSync(rawPath, generatedJson);
         return {
             success: false,
             error: `Failed to parse JSON response. Raw response saved to ${rawPath}`,
             logPath: runLogDir
         };
+    }else{
+        writeGeneratedFiles(spec, parsedResponse, PLAYWRIGHT_TEST_DIR);
     }
 
-    // Write the generated files
-    const writtenPaths = writeGeneratedFiles(parsedResponse, outputDir);
-
-    if (parsedResponse.notes) {
-        console.log(`📝 Notes: ${parsedResponse.notes}`);
+    if (parsedResponse && parsedResponse.explanation) {
+        console.log(`📝 Explanation: ${parsedResponse.explanation}. Confidence: ${parsedResponse.confidence * 100}%`);
     }
 
     return {
         success: true,
-        outputPath: writtenPaths[0],
         logPath: runLogDir
     };
 };

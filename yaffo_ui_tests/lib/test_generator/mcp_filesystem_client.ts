@@ -136,9 +136,10 @@ export class FilesystemMcpClient {
 
 export async function createFilesystemClient(
     yaffoRoot: string,
+    playwrightTestDir: string,
     tempDir?: string
 ): Promise<FilesystemMcpClient> {
-    const allowedDirs = [yaffoRoot];
+    const allowedDirs = [yaffoRoot, playwrightTestDir];
     if (tempDir) {
         allowedDirs.push(tempDir);
     }
