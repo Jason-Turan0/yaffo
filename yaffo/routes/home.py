@@ -1,7 +1,7 @@
 import math
 import requests
 from flask import Flask, render_template, request, jsonify
-from sqlalchemy import extract, distinct, func
+from sqlalchemy import distinct, func
 from sqlalchemy.orm import joinedload
 import pydash as _
 from yaffo.db import db
@@ -56,9 +56,9 @@ def init_home_routes(app: Flask):
 
         # Apply filters
         if year:
-            query = query.filter(extract("year", Photo.date_taken) == year)
+            query = query.filter(Photo.year == year)
         if month:
-            query = query.filter(extract("month", Photo.date_taken) == month)
+            query = query.filter(Photo.month == month)
         if person_ids and person_match_type and len(person_ids) > 0:
             if person_match_type == 'all':
                 # AND logic: Photo must contain ALL selected people

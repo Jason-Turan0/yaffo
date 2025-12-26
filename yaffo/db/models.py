@@ -10,7 +10,9 @@ class Photo(db.Model):
     __tablename__ = "photos"
     id = db.Column(db.Integer, primary_key=True)
     full_file_path = db.Column(db.String, unique=True)
-    date_taken = db.Column(db.String)
+    date_taken = db.Column(db.String, nullable=True)
+    year = db.Column(db.Integer, nullable=True)
+    month = db.Column(db.Integer, nullable=True)
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     location_name = db.Column(db.String)

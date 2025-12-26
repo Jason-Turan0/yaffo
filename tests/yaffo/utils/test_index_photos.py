@@ -14,7 +14,6 @@ from yaffo.utils.index_photos import (
     get_exif_data_with_exiftool,
     get_gps_coordinates,
     get_exif_tags,
-    import_photo,
     index_photo,
     delete_orphaned_photos
 )
@@ -273,36 +272,6 @@ class TestGetExifTags:
 
         assert isinstance(tags, list)
         assert len(tags) == 0
-
-
-class TestImportPhoto:
-    @patch('yaffo.utils.index_photos.get_photo_date')
-    def test_import_photo_success(self, mock_get_date, test_image_path):
-        if not test_image_path.exists():
-            pytest.skip("test.jpg not provided yet")
-
-        mock_get_date.return_value = "2024:01:15 10:30:00"
-
-        result = import_photo(test_image_path)
-
-        assert result is not None
-        assert 'full_file_path' in result
-        assert 'date_taken' in result
-        assert result['full_file_path'] == str(test_image_path)
-        assert result['date_taken'] == "2024:01:15 10:30:00"
-
-    @patch('yaffo.utils.index_photos.get_photo_date')
-    def test_import_photo_no_date(self, mock_get_date, test_image_path):
-        if not test_image_path.exists():
-            pytest.skip("test.jpg not provided yet")
-
-        mock_get_date.return_value = None
-
-        result = import_photo(test_image_path)
-
-        assert result is not None
-        assert result['date_taken'] is None
-
 
 class TestIndexPhoto:
     @patch('yaffo.utils.index_photos.face_recognition')

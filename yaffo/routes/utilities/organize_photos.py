@@ -26,7 +26,7 @@ def init_organize_photos_routes(app: Flask):
 
     @app.route("/utilities/organize-photos/preview", methods=["POST"])
     def utilities_organize_photos_preview():
-        from yaffo.scripts.organize_photos import get_photo_date
+        from yaffo.utils.photo_dates import get_photo_date
         from calendar import month_name
 
         data = request.get_json()
@@ -75,7 +75,7 @@ def init_organize_photos_routes(app: Flask):
         file_list = []
 
         for photo_file in photo_files:
-            date_taken = get_photo_date(str(photo_file))
+            date_taken = get_photo_date(str(photo_file), exif_data)
 
             if date_taken:
                 if pattern == 'year_month':
@@ -112,7 +112,7 @@ def init_organize_photos_routes(app: Flask):
 
     @app.route("/utilities/organize-photos/start", methods=["POST"])
     def utilities_organize_photos_start():
-        from yaffo.scripts.organize_photos import get_photo_date
+        from yaffo.utils.photo_dates import get_photo_date
         from calendar import month_name
 
         data = request.get_json()
@@ -159,7 +159,7 @@ def init_organize_photos_routes(app: Flask):
         operation_type = 'copy' if keep_original else 'move'
 
         for photo_file in photo_files:
-            date_taken = get_photo_date(str(photo_file))
+            date_taken = get_photo_date(str(photo_file), None)
 
             if date_taken:
                 if pattern == 'year_month':

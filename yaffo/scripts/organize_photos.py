@@ -1,66 +1,9 @@
-import os
-import re
 import shutil
 from pathlib import Path
-from typing import Optional
-
-from PIL import Image
-from datetime import datetime
-import piexif
 
 from yaffo.common import PHOTO_EXTENSIONS
+from yaffo.utils.photo_dates import get_photo_date
 
-
-def get_date_from_filename(filename: str) -> Optional[datetime]:
-    patterns = [
-        r"(\d{4})(\d{2})(\d{2})",                # 20211205
-        r"(\d{4})[-_](\d{2})[-_](\d{2})",        # 2021-12-05 / 2021_12_05
-        r"(?:IMG|DSC|PXL|VID)[-_]?(\d{4})(\d{2})(\d{2})",  # IMG_20211205
-        r"(\d{2})[-_](\d{2})[-_](\d{4})",        # 05-12-2021
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, filename)
-        if match:
-            try:
-                groups = match.groups()
-                if len(groups[0]) == 4:  # assume YYYY first
-                    year, month, day = groups
-                else:  # assume DD-MM-YYYY
-                    day, month, year = groups
-                return datetime(int(year), int(month), int(day))
-            except Exception:
-                continue
-    return None
-
-def get_photo_date(path: str) -> Optional[datetime]:
-    """
-    Extract photo date in this order:
-    1. Filename pattern YYYYMMDD
-    2. EXIF 'DateTimeOriginal'
-    3. File modified date
-    """
-    date_from_filename = get_date_from_filename(path)
-    if date_from_filename is not None:
-        return date_from_filename
-
-    # --- 2. Try EXIF metadata ---
-    try:
-        img = Image.open(path)
-        exif_data = img.info.get("exif")
-        if exif_data:
-            exif_dict = piexif.load(exif_data)
-            date_str = exif_dict["Exif"].get(piexif.ExifIFD.DateTimeOriginal)
-            if date_str:
-                return datetime.strptime(date_str.decode(), "%Y:%m:%d %H:%M:%S")
-    except Exception:
-        pass
-
-    # --- 3. Fallback: file modified date ---
-    try:
-        ts = os.path.getmtime(path)
-        return datetime.fromtimestamp(ts)
-    except Exception:
-        return None
 
 def organize_photos(input_dir: str, output_dir: str):
     input_path = Path(input_dir)
@@ -69,7 +12,7 @@ def organize_photos(input_dir: str, output_dir: str):
 
     for file in input_path.rglob("*"):
         if file.is_file() and file.suffix.lower() in PHOTO_EXTENSIONS:
-            date_taken = get_photo_date(str(file))
+            date_taken = get_photo_date(str(file), None)
 
             if date_taken:
                 year = str(date_taken.year)

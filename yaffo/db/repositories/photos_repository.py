@@ -1,15 +1,16 @@
 import calendar
 
-from sqlalchemy import extract
 from sqlalchemy.orm import Session
 from yaffo.db.models import Photo
 
-def get_distinct_years(session: Session):
-    return [year[0] for year in
+
+def get_distinct_years(session: Session) -> list[int]:
+    return [row[0] for row in
             (session
-                .query(extract('year', Photo.date_taken))
+                .query(Photo.year)
+                .filter(Photo.year.isnot(None))
                 .distinct()
-                .order_by(extract('year', Photo.date_taken))
+                .order_by(Photo.year)
                 .all())
             ]
 

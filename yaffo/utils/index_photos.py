@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from yaffo.logging_config import get_logger
 from yaffo.db.models import Photo, Face, Tag, FACE_STATUS_UNASSIGNED
 from yaffo.common import PHOTO_EXTENSIONS, TEMP_DIR, THUMBNAIL_DIR, ROOT_DIR
-from yaffo.scripts.organize_photos import get_photo_date
+from yaffo.utils.photo_dates import PhotoDateInfo, get_photo_date_info
 from yaffo.utils.image import image_from_path, image_to_numpy
 from yaffo.utils.exiftool_path import get_exiftool_path, is_exiftool_available
 
@@ -241,14 +241,6 @@ def get_exif_tags(img: PIL_Image) -> List[Dict[str, str]]:
         logger.warning(f"Failed to extract tag value from image")
         return []
 
-
-def import_photo(photo_path: Path) -> Optional[dict]:
-    date_taken = get_photo_date(str(photo_path))
-    return {
-        "full_file_path": str(photo_path),
-        "date_taken": date_taken,
-    }
-
 def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
     try:
         # Try exiftool first for comprehensive metadata (includes XMP)
@@ -275,10 +267,8 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
             tags = get_exif_tags(image_tag)
             xmp_fields = {}
 
-        # Get date taken
-        date_taken = get_photo_date(str(photo_path))
+        date_info = get_photo_date_info(str(photo_path), exif_data)
 
-        # Process face detection (requires PIL image)
         image = image_tag if image_tag is not None else image_from_path(photo_path)
         image_numpy = image_to_numpy(image)
         face_locations = face_recognition.face_locations(image_numpy)
@@ -297,9 +287,13 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
                 'location_left': left
             })
 
+        date_taken_str = date_info.date.isoformat() if date_info.date else None
+
         result = {
             'full_file_path': str(photo_path),
-            'date_taken': date_taken,
+            'date_taken': date_taken_str,
+            'year': date_info.year,
+            'month': date_info.month,
             'latitude': latitude,
             'longitude': longitude,
             'location_name': location_name,
@@ -355,8 +349,9 @@ def index_photos_batch(
                 if result:
                     photo = Photo(
                         full_file_path=result["full_file_path"],
-                        relative_file_path=result["relative_file_path"],
                         date_taken=result["date_taken"],
+                        year=result.get("year"),
+                        month=result.get("month"),
                         latitude=result.get("latitude"),
                         longitude=result.get("longitude"),
                         location_name=result.get("location_name")

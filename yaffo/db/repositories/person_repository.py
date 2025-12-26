@@ -26,11 +26,8 @@ def update_person_embedding(person_id: int, session):
         embeddings = [load_embedding(f.embedding) for f in person.faces]
         person.avg_embedding = np.mean(embeddings, axis=0).tobytes()
 
-        def get_year(face: Face):
-            try:
-                return int(face.photo.date_taken[:4])
-            except (ValueError, AttributeError):
-                return None
+        def get_year(face: Face) -> int | None:
+            return face.photo.year if face.photo else None
 
         faces_by_year = _.group_by(person.faces, get_year)
 

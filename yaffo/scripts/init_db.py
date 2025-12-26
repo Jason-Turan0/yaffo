@@ -11,6 +11,8 @@ def init_db():
                 id INTEGER PRIMARY KEY,
                 full_file_path TEXT UNIQUE,
                 date_taken TEXT,
+                year INTEGER,
+                month INTEGER,
                 status TEXT DEFAULT 'IMPORTED',
                 latitude REAL,
                 longitude REAL,

@@ -6,7 +6,6 @@ from flask import Flask, render_template, request, jsonify
 from sklearn.cluster import DBSCAN
 
 from yaffo.logging_config import get_logger
-from sqlalchemy import extract
 from sqlalchemy.dialects.sqlite import insert
 import pydash as _
 from sqlalchemy.orm import joinedload
@@ -155,9 +154,9 @@ def init_faces_routes(app: Flask):
         group_by = request.args.get("group_by", type=str, default=DEFAULT_GROUP_BY)
 
         if year:
-            query = query.filter(extract("year", Photo.date_taken) == year)
+            query = query.filter(Photo.year == year)
         if month:
-            query = query.filter(extract("month", Photo.date_taken) == month)
+            query = query.filter(Photo.month == month)
         query = query.filter(Face.status == FACE_STATUS_UNASSIGNED).order_by(Photo.date_taken)
 
         # Get total count before pagination

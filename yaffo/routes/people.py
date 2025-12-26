@@ -1,12 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-from sqlalchemy import func, extract
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload, aliased
 
 from yaffo.db import db
 from yaffo.db.models import Person, PersonFace, Face, FACE_STATUS_UNASSIGNED, Photo
 from yaffo.db.repositories.person_repository import update_person_embedding
-from yaffo.db.repositories.photos_repository import get_distinct_months
-from yaffo.routes.home import get_distinct_years
+from yaffo.db.repositories.photos_repository import get_distinct_months, get_distinct_years
 
 DEFAULT_THRESHOLD = 0.95  # configurable similarity threshold
 FACE_LOAD_LIMIT = 250
@@ -174,9 +173,9 @@ def init_people_routes(app: Flask):
         )
 
         if year:
-            query = query.filter(extract("year", photo_alias.date_taken) == year)
+            query = query.filter(photo_alias.year == year)
         if month:
-            query = query.filter(extract("month", photo_alias.date_taken) == month)
+            query = query.filter(photo_alias.month == month)
         if min_similarity and min_similarity > 0:
             query = query.filter(PersonFace.similarity > min_similarity)
         if max_similarity and max_similarity > 0:
