@@ -12,7 +12,7 @@ import {generateTimestampString} from "@lib/test_generator/utils";
 import {runIsolatedTests} from "@lib/test_generator/isolated_runner";
 
 interface GenerateOptions {
-    runTests?: boolean;
+    runTestEnvironment?: boolean;
     port?: number;
 }
 
@@ -22,7 +22,7 @@ export async function generateTest(
     specPath: string,
     options: GenerateOptions = {}
 ) {
-    const {runTests = false, port = 5001} = options;
+    const {runTestEnvironment = false, port = 5001} = options;
 
     try {
         const runId = generateTimestampString();
@@ -31,48 +31,23 @@ export async function generateTest(
         if (!fs.existsSync(logPath)) {
             fs.mkdirSync(logPath, {recursive: true});
         }
+        const baseUrl = `http://127.0.0.1:${port}`
         const testGenerator = await testGeneratorOrchestratorFactory(
             spec,
             logPath,
+            baseUrl,
+            runTestEnvironment
         );
 
         const result = await testGenerator.generate(
             specPath,
-            "http://127.0.0.1:5000",
+            baseUrl
         );
 
         if (!result.success) {
             console.error(`\n❌ Test generation failed: ${result.error}`);
             process.exit(1);
         }
-
-        console.log(`\n✅ Test generation completed successfully`);
-
-        if (runTests) {
-            console.log(`\n${"=".repeat(60)}`);
-            console.log(`Running generated tests against isolated environment...`);
-            console.log(`${"=".repeat(60)}`);
-
-            const jsonPath = join(GENERATED_TESTS_DIR, `${spec.feature}.json`);
-            let testFiles: string[] = [];
-
-            if (fs.existsSync(jsonPath)) {
-                const generatedResponse = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
-                testFiles = generatedResponse.files.map((f: { filename: string }) =>
-                    join(GENERATED_TESTS_DIR, basename(f.filename))
-                );
-            }
-
-            const testResult = await runIsolatedTests(testFiles, port);
-
-            if (testResult.success) {
-                console.log(`\n✅ All tests passed!`);
-            } else {
-                console.log(`\n❌ Tests failed with exit code: ${testResult.exitCode}`);
-                process.exit(testResult.exitCode);
-            }
-        }
-
         process.exit(0);
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);
@@ -109,11 +84,9 @@ async function main() {
     const specPath = filteredArgs[0];
 
     console.log(`Generating test from: ${specPath}`);
-    if (runTests) {
-        console.log(`Will run tests after generation on port ${port}`);
-    }
 
-    await generateTest(specPath, {runTests, port});
+
+    await generateTest(specPath, {runTestEnvironment: runTests, port});
 }
 
 main().finally(() => {

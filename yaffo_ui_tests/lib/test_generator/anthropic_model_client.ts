@@ -5,7 +5,6 @@ import {FilesystemMcpClient} from "@lib/test_generator/mcp_filesystem_client";
 import {writeFileSync, existsSync, readFileSync, unlinkSync} from "fs";
 import {ApiLogEntry} from "@lib/test_generator/model_client.types";
 import {join} from "path";
-import {SYSTEM_PROMPT} from "@lib/test_generator/context_generator";
 
 export class AnthropicModelClient {
     private messages: MessageParam[];
@@ -49,7 +48,9 @@ export class AnthropicModelClient {
         try {
             response = await this?.anthropic?.messages?.create(params);
             return response;
-        } catch {
+        } catch (error) {
+            const errorMessage = typeof error === "string" ? error : (error as any)?.message || error?.toString() || '';
+            console.error(`Error when calling Anthropic API ${errorMessage}`);
             return undefined;
         } finally {
             const durationMs = Date.now() - timestamp.getTime();

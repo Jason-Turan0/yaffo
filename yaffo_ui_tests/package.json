@@ -15,7 +15,7 @@
     "test:heal": "tsx lib/cli/run-with-healing.ts",
     "analyze": "tsx lib/cli/analyze.ts",
     "regenerate": "tsx lib/cli/regenerate.ts",
-    "validate": "tsx lib/cli/validate-specs.ts",
+    "validate": "tsx lib/cli/validate-specs.ts", 
     "lint": "eslint lib/ generated_tests/",
     "typecheck": "tsc --noEmit"
   },

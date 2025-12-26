@@ -9,13 +9,19 @@ import {promptGeneratorFactory, PromptGenerator} from "@lib/test_generator/promp
 import {
     Message,
     MessageParam,
-    TextBlockParam,
+    TextBlockParam, Tool,
     ToolResultBlockParam
 } from "@anthropic-ai/sdk/resources/messages/messages";
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
 import {parseJsonResponse} from "@lib/test_generator/json_parser";
 import {typeCheckFile, formatTypeErrorsForModel} from "@lib/test_generator/typescript_validator";
 import {anthropicModelClientFactory, AnthropicModelClient} from "@lib/test_generator/anthropic_model_client";
+import {
+    createPlaywrightClient,
+    createStubPlaywrightClient,
+} from "@lib/test_generator/mcp_playwright_client";
+import {ToolProvider} from "@lib/test_generator/toolprovider.types";
+import {IsolatedEnvironment, runPlaywrightTests, startIsolatedEnvironment} from "@lib/test_generator/isolated_runner";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 const DEFAULT_OUTPUT_DIR = resolve(join(process.cwd(), "generated_tests"));
@@ -24,18 +30,36 @@ export class TestGeneratorOrchestrator {
     private iterationCount = 0;
     private maxIterations = 20;
     private maxRetries = 3;
+    private toolProviderMap: Map<string, { tool: Tool, toolProvider: ToolProvider }> = new Map<string, {
+        tool: Tool;
+        toolProvider: ToolProvider
+    }>()
 
     constructor(
         private spec: Spec,
         private runLogDir: string,
         private outputDir: string,
+        private baseUrl: string,
         private anthropic: AnthropicModelClient,
-        private mcpClient: FilesystemMcpClient,
         private promptGenerator: PromptGenerator,
+        private allowedDirectories: string[],
+        private isolatedEnvironment: IsolatedEnvironment | null,
+        private toolProviders: ToolProvider[],
     ) {
         this.spec = spec;
         this.runLogDir = runLogDir;
         this.outputDir = outputDir ?? DEFAULT_OUTPUT_DIR;
+        const tools = toolProviders.flatMap(toolProvider => toolProvider.getToolsForClaude().map((tool) => ({
+            tool,
+            toolProvider
+        })));
+
+        for (const tool of tools) {
+            if (this.toolProviderMap.has(tool.tool.name)) {
+                throw new Error(`Duplicate tool names ${tool.tool.name}`)
+            }
+            this.toolProviderMap.set(tool.tool.name, tool);
+        }
     }
 
     generate = async (specPath: string, baseUrl: string, tempDir?: string): Promise<GenerationResult> => {
@@ -44,25 +68,25 @@ export class TestGeneratorOrchestrator {
             if (!generatedJson) {
                 return {
                     success: false,
-                    error: "No JSON response generated after tool exploration",
+                    error: "Code Generation failed.",
                     logPath: this.runLogDir
                 };
             }
             return await this.validateTestCode(generatedJson);
         } finally {
-            await this.mcpClient?.disconnect();
+            for (const toolProvider of this.toolProviders) {
+                await toolProvider.disconnect()
+            }
+            if (this.isolatedEnvironment != null) {
+                await this.isolatedEnvironment.cleanup()
+            }
         }
     };
 
 
     private generateTestCode = async (specPath: string, baseUrl: string): Promise<string | null> => {
-        if (this.mcpClient == null || this.anthropic == null) {
-            throw new Error("Orchestrator not initialized");
-        }
         this.iterationCount = 0;
-
-        const allowedDirs = this.mcpClient.getAllowedDirectories();
-        const userPrompt = this.promptGenerator.buildUserPrompt(this.spec, specPath, baseUrl, allowedDirs);
+        const userPrompt = this.promptGenerator.buildUserPrompt(this.spec, specPath, baseUrl, this.allowedDirectories);
         this.anthropic.addMessage({role: "user", content: userPrompt})
         let generatedJson: string | null = null;
 
@@ -94,9 +118,9 @@ export class TestGeneratorOrchestrator {
         return generatedJson;
     };
 
-    private validateTestCode = async (generatedJson: string): Promise<GenerationResult> => {
+    private validateTestCode = async (originalJson: string): Promise<GenerationResult> => {
         let retryCount = 0;
-        let currentJson = generatedJson;
+        let currentJson = originalJson;
         let lastResponse: GeneratedTestResponse | null = null;
 
         while (retryCount <= this.maxRetries) {
@@ -113,39 +137,45 @@ export class TestGeneratorOrchestrator {
             }
 
             if (schemaErrors.length > 0) {
-                const fixResult = await this.handleSchemaErrors(schemaErrors, currentJson, retryCount);
-                if (fixResult.shouldBreak) {
-                    lastResponse = parsedResponse;
-                    break;
-                }
-                if (fixResult.newJson) {
-                    currentJson = fixResult.newJson;
-                    retryCount++;
-                    continue;
-                }
-                break;
+                const fixResult = await this.fixCodeWithSchemaErrors(schemaErrors, currentJson);
+                if (fixResult == null) break;
+                currentJson = fixResult
+                continue;
             }
-
             lastResponse = parsedResponse;
             const writtenPaths = this.writeGeneratedFiles(parsedResponse);
-            this.logExplanation(parsedResponse);
-
             const typeErrors = this.typeCheckFiles(writtenPaths);
 
             if (typeErrors.length === 0) {
                 console.log(`\n✅ All files compile successfully!`);
-                return {success: true, logPath: this.runLogDir};
+            } else {
+                const fixResult = await this.fixCodeWithTypeErrors(typeErrors, parsedResponse, currentJson);
+                if (fixResult == null) break;
+                currentJson = fixResult;
+                continue;
             }
 
-            const fixResult = await this.handleTypeErrors(typeErrors, parsedResponse, currentJson, retryCount);
-            if (fixResult.shouldBreak) {
-                return {success: true, logPath: this.runLogDir};
-            }
-            if (fixResult.newJson) {
-                currentJson = fixResult.newJson;
-                retryCount++;
+
+            if (this.isolatedEnvironment != null) {
+                const testFailures = await this.runPlaywrightTests(writtenPaths);
+                if (testFailures.length === 0) {
+                    console.log(`\n✅ Playwright tests passed!`);
+                    return {
+                        success: true,
+                        logPath: this.runLogDir
+                    }
+                } else {
+                    const fixResult = await this.fixCodeWithTestFailures(testFailures, parsedResponse, currentJson);
+                    if (fixResult == null) break;
+                    currentJson = fixResult;
+                    continue;
+                }
             } else {
-                break;
+                console.log(`\n✅ Playwright tests disabled`);
+                return {
+                    success: true,
+                    logPath: this.runLogDir
+                }
             }
         }
 
@@ -155,19 +185,11 @@ export class TestGeneratorOrchestrator {
         };
     };
 
-    private handleSchemaErrors = async (
+    private fixCodeWithSchemaErrors = async (
         schemaErrors: string[],
-        currentJson: string,
-        retryCount: number
-    ): Promise<{ shouldBreak: boolean; newJson?: string }> => {
-        console.log(`\n⚠️  Schema validation errors:`);
+        currentJson: string
+    ): Promise<string | null> => {
         schemaErrors.forEach(err => console.log(`   - ${err}`));
-
-        if (retryCount + 1 > this.maxRetries) {
-            console.log(`\n⚠️  Max retries (${this.maxRetries}) exceeded. Schema errors remain.`);
-            return {shouldBreak: true};
-        }
-        console.log(`\n🔄 Schema fix attempt ${retryCount + 1}/${this.maxRetries}...`);
         const schemaFixPrompt = this.promptGenerator.buildSchemaFixPrompt(schemaErrors);
         this.anthropic.addMessages([
             {role: "assistant", content: currentJson},
@@ -176,17 +198,11 @@ export class TestGeneratorOrchestrator {
         return this.getFixResponse();
     };
 
-    private handleTypeErrors = async (
+    private fixCodeWithTypeErrors = async (
         typeErrors: string[],
         parsedResponse: GeneratedTestResponse,
         currentJson: string,
-        retryCount: number
-    ): Promise<{ shouldBreak: boolean; newJson?: string }> => {
-        if (retryCount + 1 > this.maxRetries) {
-            console.log(`\n⚠️  Max retries (${this.maxRetries}) exceeded. Returning with type errors.`);
-            return {shouldBreak: true};
-        }
-        console.log(`\n🔄 Type error fix attempt ${retryCount + 1}/${this.maxRetries}...`);
+    ): Promise<string | null> => {
         const currentCode = parsedResponse.files[0]?.code || "";
         const typeFixPrompt = this.promptGenerator.buildTypeErrorFixPrompt(typeErrors, currentCode);
         this.anthropic.addMessages([
@@ -196,19 +212,33 @@ export class TestGeneratorOrchestrator {
         return this.getFixResponse();
     };
 
-     private getFixResponse = async () => {
+    private fixCodeWithTestFailures = async (
+        testFailures: string[],
+        parsedResponse: GeneratedTestResponse,
+        currentJson: string,
+    ): Promise<string | null> => {
+        const currentCode = parsedResponse.files[0]?.code || "";
+        const typeFixPrompt = this.promptGenerator.buildTestFailurePrompt(testFailures, currentCode);
+        this.anthropic.addMessages([
+            {role: "assistant", content: currentJson},
+            {role: "user", content: typeFixPrompt}
+        ]);
+        return this.getFixResponse();
+    }
+
+    private getFixResponse = async () => {
         const fixResponse = await this.anthropic.callModelApi();
         if (!fixResponse) {
             console.log(`   ❌ Failed to get fix response from model`);
-            return {shouldBreak: true};
+            return null;
         }
         const fixTextContent = this.extractTextContent(fixResponse);
         if (fixTextContent) {
-            return {shouldBreak: false, newJson: fixTextContent};
+            return fixTextContent;
         }
 
         console.log(`   ❌ No text content in fix response`);
-        return {shouldBreak: true};
+        return null
     };
 
 
@@ -234,12 +264,22 @@ export class TestGeneratorOrchestrator {
             for (const call of toolCalls) {
                 console.log(`   🔧 Tool: ${call.name}(${JSON.stringify(call.input).slice(0, 100)}...)`);
                 try {
-                    const result = await this.mcpClient!.callTool(call.name, call.input);
-                    toolResults.push({
-                        type: "tool_result",
-                        tool_use_id: call.id,
-                        content: result?.content as TextBlockParam[],
-                    });
+                    const toolTuple = this.toolProviderMap.get(call.name);
+                    if (!toolTuple) {
+                        toolResults.push({
+                            type: "tool_result",
+                            tool_use_id: call.id,
+                            content: `Error: No implementation for tool ${call.name}`,
+                            is_error: true,
+                        });
+                    } else {
+                        const result = await toolTuple.toolProvider.callTool(call.name, call.input);
+                        toolResults.push({
+                            type: "tool_result",
+                            tool_use_id: call.id,
+                            content: result?.content as TextBlockParam[],
+                        });
+                    }
                 } catch (e) {
                     const errorMsg = e instanceof Error ? e.message : String(e);
                     console.log(`   ❌ Tool error: ${errorMsg}`);
@@ -343,28 +383,53 @@ export class TestGeneratorOrchestrator {
         return errors;
     };
 
-    private logExplanation = (response: GeneratedTestResponse): void => {
-        if (response.explanation) {
-            const confidenceStr = response.confidence != null
-                ? `. Confidence: ${response.confidence * 100}%`
-                : "";
-            console.log(`📝 Explanation: ${response.explanation}${confidenceStr}`);
+    private runPlaywrightTests = async (filePaths: string[]): Promise<string[]> => {
+        if (this.isolatedEnvironment == null) return [];
+
+        console.log(`\n🔍 Running playwright tests...`);
+        const errors: string[] = [];
+
+        const toRun = filePaths.filter(path => path.endsWith(".ts"));
+        const result = await runPlaywrightTests(this.baseUrl, toRun);
+
+        if (result.success) {
+            return []
         }
+        return [result.output]
     };
 
 }
 
-export const testGeneratorOrchestratorFactory = async (spec: Spec, runLogDir: string, tempDir?: string) => {
-    const fileMcpClient = await createFilesystemClient(YAFFO_ROOT, DEFAULT_OUTPUT_DIR, tempDir);
+export const testGeneratorOrchestratorFactory = async (
+    spec: Spec,
+    runLogDir: string,
+    baseUrl: string,
+    runTestEnvironment: boolean,
+    port: number,
+    tempDir?: string) => {
+    let isolatedEnvironment: IsolatedEnvironment | null = null;
+    if (runTestEnvironment) {
+        isolatedEnvironment = await startIsolatedEnvironment(port)
+    }
+
+    const allowedDirectories = [YAFFO_ROOT, DEFAULT_OUTPUT_DIR, tempDir].filter(Boolean) as string[];
+    const fileMcpClient = await createFilesystemClient(allowedDirectories);
+    const mcpPlaywrightClient = runTestEnvironment ? await createPlaywrightClient({
+        headless: true,
+        baseUrl,
+        browser: "chromium"
+    }) : await createStubPlaywrightClient();
     const promptGenerator = promptGeneratorFactory(YAFFO_ROOT);
     const anthropicModel = anthropicModelClientFactory(runLogDir, promptGenerator.getSystemPrompt(), fileMcpClient.getToolsForClaude());
-
     return new TestGeneratorOrchestrator(
         spec,
         runLogDir,
         DEFAULT_OUTPUT_DIR,
+        baseUrl,
         anthropicModel,
-        fileMcpClient,
-        promptGenerator
+        promptGenerator,
+        allowedDirectories,
+        isolatedEnvironment,
+        [fileMcpClient, mcpPlaywrightClient]
     )
 }

@@ -107,6 +107,22 @@ export class PromptGenerator {
         ].join("\n");
     }
 
+    buildTestFailurePrompt(playwrightFailures: string[], currentCode: string): string {
+        return [
+            "The generated playwright test had failures:",
+            "",
+            ...playwrightFailures,
+            "",
+            "Here is the current code that needs to be fixed:",
+            "",
+            "```typescript",
+            currentCode,
+            "```",
+            "",
+            "Please fix these failures and provide the corrected code in the same JSON format as before.",
+        ].join("\n");
+    }
+
     buildUserPrompt(spec: Spec, specPath: string, baseUrl: string, allowedDirs: string[]): string {
         const timestamp = new Date().toISOString();
         const loadedContext = spec.context ? this.loadContextFiles(spec.context) : [];

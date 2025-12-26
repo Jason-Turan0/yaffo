@@ -1,8 +1,8 @@
 /**
- * MCP Client - Manages connection to filesystem MCP server
+ * MCP Client - Manages connection to Playwright MCP server
  *
- * Provides Claude with tools to read source code, templates, and routes
- * for generating accurate Playwright tests.
+ * Provides Claude with tools to automate browser interactions
+ * for running and validating generated tests.
  */
 
 import {Client} from "@modelcontextprotocol/sdk/client/index.js";
@@ -10,8 +10,10 @@ import {StdioClientTransport} from "@modelcontextprotocol/sdk/client/stdio.js";
 import type {Tool} from "@anthropic-ai/sdk/resources/messages.js";
 import {ToolProvider} from "@lib/test_generator/toolprovider.types";
 
-export interface McpClientOptions {
-    allowedDirectories: string[];
+export interface PlaywrightMcpClientOptions {
+    headless?: boolean;
+    browser?: "chromium" | "firefox" | "webkit";
+    baseUrl?: string;
 }
 
 export interface McpTool {
@@ -20,17 +22,13 @@ export interface McpTool {
     inputSchema: Record<string, unknown>;
 }
 
-type CallToolReturn = ReturnType<Client['callTool']>;
+type CallToolReturn = ReturnType<Client["callTool"]>;
 
+const MAX_TOOL_RESULT_CHARS = 30000;
 
-const MAX_TOOL_RESULT_CHARS = 20000;
-
-const WRITE_TOOLS = [
-    "write_file",
-    "edit_file",
-    "create_directory",
-    "move_file",
-    "delete_file",
+const EXCLUDED_TOOLS = [
+    "browser_install",
+    "browser_pdf_save",
 ];
 
 export const truncateToolResult = (result: string): string => {
@@ -42,29 +40,40 @@ export const truncateToolResult = (result: string): string => {
     return truncated + truncatedMsg;
 };
 
-export class FilesystemMcpClient {
+
+export class PlaywrightMcpClient implements ToolProvider {
     private client: Client | null = null;
     private transport: StdioClientTransport | null = null;
     private tools: McpTool[] = [];
-    private readonly allowedDirectories: string[];
+    private readonly options: PlaywrightMcpClientOptions;
 
-    constructor(options: McpClientOptions) {
-        this.allowedDirectories = options.allowedDirectories;
+    constructor(options: PlaywrightMcpClientOptions = {}) {
+        this.options = {
+            headless: true,
+            browser: "chromium",
+            ...options,
+        };
     }
 
     async connect(): Promise<void> {
+        const args = ["@playwright/mcp@latest"];
+
+        if (this.options.headless) {
+            args.push("--headless");
+        }
+
+        if (this.options.browser) {
+            args.push(`--browser=${this.options.browser}`);
+        }
+
         this.transport = new StdioClientTransport({
             command: "npx",
-            args: [
-                "-y",
-                "@modelcontextprotocol/server-filesystem",
-                ...this.allowedDirectories,
-            ],
+            args,
         });
 
         this.client = new Client(
             {
-                name: "yaffo-test-generator",
+                name: "yaffo-playwright-runner",
                 version: "1.0.0",
             },
             {
@@ -81,7 +90,7 @@ export class FilesystemMcpClient {
             inputSchema: t.inputSchema as Record<string, unknown>,
         }));
 
-        console.log(`🔌 MCP connected. Available tools: ${this.tools.map((t) => t.name).join(", ")}`);
+        console.log(`🎭 Playwright MCP connected. Available tools: ${this.tools.length}`);
     }
 
     async disconnect(): Promise<void> {
@@ -89,13 +98,13 @@ export class FilesystemMcpClient {
             await this.client.close();
             this.client = null;
             this.transport = null;
-            console.log("🔌 MCP disconnected");
+            console.log("🎭 Playwright MCP disconnected");
         }
     }
 
     getToolsForClaude(): Tool[] {
         return this.tools
-            .filter((tool) => !WRITE_TOOLS.includes(tool.name))
+            .filter((tool) => !EXCLUDED_TOOLS.includes(tool.name))
             .map((tool) => ({
                 name: tool.name,
                 description: tool.description,
@@ -109,7 +118,7 @@ export class FilesystemMcpClient {
 
     async callTool(name: string, args: Record<string, unknown>): Promise<CallToolReturn> {
         if (!this.client) {
-            throw new Error("MCP client not connected");
+            throw new Error("Playwright MCP client not connected");
         }
 
         const result = await this.client.callTool({name, arguments: args});
@@ -119,26 +128,62 @@ export class FilesystemMcpClient {
             console.warn(`   ⚠️  Result truncated: ${contentText.length} → ${MAX_TOOL_RESULT_CHARS} chars`);
             const content = result?.content as any;
             if (content == null) {
-                throw new Error('No content');
+                throw new Error("No content");
             }
             content._meta = {
                 ...(content?._meta || {}),
                 truncated: true,
-            }
+            };
             content.text = truncateToolResult(contentText);
         }
         return result;
     }
 
-    getAllowedDirectories(): string[] {
-        return this.allowedDirectories;
+    async navigate(url: string): Promise<CallToolReturn> {
+        return this.callTool("browser_navigate", {url});
+    }
+
+    async snapshot(): Promise<CallToolReturn> {
+        return this.callTool("browser_snapshot", {});
+    }
+
+    async click(element: string): Promise<CallToolReturn> {
+        return this.callTool("browser_click", {element});
+    }
+
+    async type(element: string, text: string): Promise<CallToolReturn> {
+        return this.callTool("browser_type", {element, text});
+    }
+
+    async takeScreenshot(options?: {fullPage?: boolean}): Promise<CallToolReturn> {
+        return this.callTool("browser_take_screenshot", options || {});
+    }
+
+    async close(): Promise<CallToolReturn> {
+        return this.callTool("browser_close", {});
+    }
+
+    getOptions(): PlaywrightMcpClientOptions {
+        return {...this.options};
     }
 }
 
-export async function createFilesystemClient(
-    allowedDirectories: string[],
+export async function createPlaywrightClient(
+    options: PlaywrightMcpClientOptions = {}
 ): Promise<ToolProvider> {
-    const client = new FilesystemMcpClient({allowedDirectories});
+    const client = new PlaywrightMcpClient(options);
     await client.connect();
     return client;
+}
+
+export async function createStubPlaywrightClient(options: PlaywrightMcpClientOptions = {}):Promise<ToolProvider> {
+    return {
+        getToolsForClaude(): [] {
+            return []
+        },
+
+        callTool(name: string, args: Record<string, unknown>): Promise<CallToolReturn> {
+            throw new Error("Playwright MCP client not connected");
+        }
+    }
 }

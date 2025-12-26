@@ -8,7 +8,7 @@ export interface IsolatedEnvironment {
     port: number;
     baseUrl: string;
     flaskProcess: ChildProcess | null;
-    cleanup: () => void;
+    cleanup: () => Promise<void>;
 }
 
 export interface TestRunResult {
@@ -121,7 +121,7 @@ export const startIsolatedEnvironment = async (port = 5001): Promise<IsolatedEnv
 
     console.log(`   ✅ Flask is ready at ${baseUrl}`);
 
-    const cleanup = () => {
+    const cleanup = async () => {
         console.log(`\n🧹 Cleaning up isolated environment...`);
         if (flaskProcess && !flaskProcess.killed) {
             flaskProcess.kill();
