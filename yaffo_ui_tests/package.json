@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "generate": "tsx lib/test_generator/index.ts",
+    "generate:test": "tsx lib/test_generator/index.ts --run-tests",
     "test": "playwright test",
     "test:unit": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
-    "test:isolated": "./scripts/run-tests.sh",
+    "test:isolated": "tsx lib/test_generator/isolated_runner.ts",
     "test:isolated:headed": "./scripts/run-tests.sh --headed",
     "test:heal": "tsx lib/cli/run-with-healing.ts",
     "analyze": "tsx lib/cli/analyze.ts",
