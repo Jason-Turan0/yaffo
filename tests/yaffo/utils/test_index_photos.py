@@ -287,8 +287,8 @@ class TestIndexPhoto:
         assert 'latitude' in result
         assert 'longitude' in result
         assert 'tags' in result
-        assert 'faces' in result
-        assert len(result['faces']) == 0
+        assert 'faces_data' in result
+        assert len(result['faces_data']) == 0
 
     @patch('yaffo.utils.index_photos.face_recognition')
     @patch('yaffo.utils.index_photos.save_face_thumbnail')
@@ -304,9 +304,9 @@ class TestIndexPhoto:
         result = index_photo(test_image_with_exif, temp_dir)
 
         assert result is not None
-        assert len(result['faces']) == 1
+        assert len(result['faces_data']) == 1
 
-        face = result['faces'][0]
+        face = result['faces_data'][0]
         assert 'embedding' in face
         assert 'location_top' in face
         assert 'location_right' in face
@@ -397,3 +397,111 @@ class TestGetExifDataWithExiftool:
         result = get_exif_data_with_exiftool(test_path)
 
         assert result is None
+
+
+class TestDSCN0010RealFile:
+    """Tests using the real test file DSCN0010.jpg with known EXIF data.
+
+    File: tests/yaffo/utils/test_data/jpg/gps/DSCN0010.jpg
+    Camera: Nikon COOLPIX P6000
+    DateTimeOriginal: 2008:10:22 16:28:39
+    GPS: 43°28'2.814"N, 11°53'6.456"E (Tuscany, Italy)
+    MaxApertureValue: 2.9 (stored as 29/10)
+    """
+
+    @pytest.fixture
+    def dscn0010_path(self) -> Path:
+        return Path(__file__).parent / "test_data" / "jpg" / "gps" / "DSCN0010.jpg"
+
+    def test_extracts_gps_coordinates(self, dscn0010_path: Path):
+        """Should extract correct GPS coordinates from DSCN0010.jpg.
+
+        Expected coordinates: 43°28'2.814"N, 11°53'6.456"E
+        Decimal: ~43.467448, ~11.885127
+        """
+        img = Image.open(dscn0010_path)
+        latitude, longitude, location_name = get_gps_coordinates(img)
+
+        assert latitude is not None
+        assert longitude is not None
+        assert abs(latitude - 43.467448) < 0.0001
+        assert abs(longitude - 11.885127) < 0.0001
+
+    def test_gps_latitude_is_north(self, dscn0010_path: Path):
+        """GPS latitude should be positive (Northern hemisphere)."""
+        img = Image.open(dscn0010_path)
+        latitude, longitude, _ = get_gps_coordinates(img)
+
+        assert latitude > 0
+
+    def test_gps_longitude_is_east(self, dscn0010_path: Path):
+        """GPS longitude should be positive (Eastern hemisphere)."""
+        img = Image.open(dscn0010_path)
+        latitude, longitude, _ = get_gps_coordinates(img)
+
+        assert longitude > 0
+
+    def test_extracts_max_aperture_value_tag(self, dscn0010_path: Path):
+        """Should extract MaxApertureValue tag (2.9) from EXIF tags."""
+        img = Image.open(dscn0010_path)
+        tags = get_exif_tags(img)
+
+        tag_names = [t['tag_name'] for t in tags]
+        assert 'MaxApertureValue' in tag_names
+
+        max_aperture_tag = next(t for t in tags if t['tag_name'] == 'MaxApertureValue')
+        assert max_aperture_tag['tag_value'] == '2.9'
+
+    def test_extracts_camera_make_model(self, dscn0010_path: Path):
+        """Should extract camera Make and Model from EXIF tags."""
+        img = Image.open(dscn0010_path)
+        tags = get_exif_tags(img)
+
+        tag_dict = {t['tag_name']: t['tag_value'] for t in tags}
+
+        assert 'Make' in tag_dict
+        assert 'Model' in tag_dict
+        assert tag_dict['Make'] == 'NIKON'
+        assert tag_dict['Model'] == 'COOLPIX P6000'
+
+    def test_extracts_focal_length(self, dscn0010_path: Path):
+        """Should extract FocalLength from EXIF tags."""
+        img = Image.open(dscn0010_path)
+        tags = get_exif_tags(img)
+
+        tag_dict = {t['tag_name']: t['tag_value'] for t in tags}
+
+        assert 'FocalLength' in tag_dict
+        assert float(tag_dict['FocalLength']) == 24.0
+
+    def test_extracts_iso(self, dscn0010_path: Path):
+        """Should extract ISOSpeedRatings from EXIF tags."""
+        img = Image.open(dscn0010_path)
+        tags = get_exif_tags(img)
+
+        tag_dict = {t['tag_name']: t['tag_value'] for t in tags}
+
+        assert 'ISOSpeedRatings' in tag_dict
+        assert tag_dict['ISOSpeedRatings'] == '64'
+
+    @patch('yaffo.utils.index_photos.face_recognition')
+    def test_index_photo_extracts_all_metadata(self, mock_fr, dscn0010_path: Path, temp_dir):
+        """index_photo should extract date, GPS, and tags from DSCN0010.jpg."""
+        mock_fr.face_locations.return_value = []
+        mock_fr.face_encodings.return_value = []
+
+        result = index_photo(dscn0010_path, temp_dir)
+
+        assert result is not None
+        assert result['latitude'] is not None
+        assert result['longitude'] is not None
+        assert abs(result['latitude'] - 43.467448) < 0.0001
+        assert abs(result['longitude'] - 11.885127) < 0.0001
+
+        assert result['date_taken'] is not None
+        assert '2008-10-22' in result['date_taken']
+
+        assert result['tags'] is not None
+        tag_names = [t['tag_name'] for t in result['tags']]
+        assert 'MaxApertureValue' in tag_names
+        assert 'Make' in tag_names

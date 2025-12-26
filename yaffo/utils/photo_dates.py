@@ -158,14 +158,9 @@ def get_date_from_metadata(path: str, metadata: Optional[dict]):
 def get_photo_date_info(path: str, data: Optional[dict]) -> PhotoDateInfo:
     """
     Extract photo date info in this order:
-    1. Filename patterns (full date, month+year, or year only)
-    2. EXIF 'DateTimeOriginal'
-    3. File modified date (only for full date)
+    1. EXIF 'DateTimeOriginal' (most reliable source)
+    2. Filename patterns (full date, month+year, or year only)
     """
-    date_info = get_date_from_filename(path)
-    if date_info.date is not None or date_info.year is not None:
-        return date_info
-
     date_from_metadata = get_date_from_metadata(path, data)
     if date_from_metadata is not None:
         return PhotoDateInfo(
@@ -174,16 +169,11 @@ def get_photo_date_info(path: str, data: Optional[dict]) -> PhotoDateInfo:
             month=date_from_metadata.month
         )
 
-    try:
-        ts = os.path.getmtime(path)
-        file_date = datetime.fromtimestamp(ts)
-        return PhotoDateInfo(
-            date=file_date,
-            year=file_date.year,
-            month=file_date.month
-        )
-    except Exception:
-        return PhotoDateInfo()
+    date_info = get_date_from_filename(path)
+    if date_info.date is not None or date_info.year is not None:
+        return date_info
+
+    return PhotoDateInfo()
 
 
 def get_photo_date(path: str, data: Optional[dict]) -> Optional[datetime]:

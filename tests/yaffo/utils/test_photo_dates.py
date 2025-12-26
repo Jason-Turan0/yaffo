@@ -1,7 +1,18 @@
+import io
+import tempfile
 from datetime import datetime
-import pytest
+from pathlib import Path
 
-from yaffo.utils.photo_dates import PhotoDateInfo, get_date_from_filename
+import piexif
+import pytest
+from PIL import Image
+
+from yaffo.utils.photo_dates import (
+    PhotoDateInfo,
+    get_date_from_filename,
+    get_date_from_metadata,
+    get_photo_date_info,
+)
 
 
 class TestGetDateFromFilename:
@@ -350,3 +361,230 @@ class TestGetDateFromFilename:
             assert result.date is None
             assert result.year is None
             assert result.month is None
+
+
+def _create_image_with_exif(date_str: str) -> bytes:
+    """Create a JPEG image with EXIF DateTimeOriginal metadata."""
+    img = Image.new("RGB", (100, 100), color="red")
+
+    exif_dict = {
+        "0th": {},
+        "Exif": {piexif.ExifIFD.DateTimeOriginal: date_str.encode()},
+        "GPS": {},
+        "1st": {},
+        "thumbnail": None,
+    }
+    exif_bytes = piexif.dump(exif_dict)
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG", exif=exif_bytes)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+class TestGetPhotoDateInfo:
+    """Tests for get_photo_date_info with metadata priority."""
+
+    class TestMetadataFromPassedInDict:
+        """Tests when metadata is passed in as a dictionary parameter."""
+
+        def test_metadata_takes_priority_over_filename(self):
+            """Metadata date should be used even when filename has a date."""
+            metadata = {"DateTimeOriginal": "2019:06:15 10:30:00"}
+            result = get_photo_date_info("/path/to/IMG_20211205.jpg", metadata)
+
+            assert result.date == datetime(2019, 6, 15, 10, 30, 0)
+            assert result.year == 2019
+            assert result.month == 6
+
+        def test_metadata_with_different_date_than_filename(self):
+            """Metadata should override completely different filename date."""
+            metadata = {"DateTimeOriginal": "2015:01:01 00:00:00"}
+            result = get_photo_date_info("/path/to/photo_20211205.jpg", metadata)
+
+            assert result.date == datetime(2015, 1, 1, 0, 0, 0)
+            assert result.year == 2015
+            assert result.month == 1
+
+        def test_empty_metadata_falls_back_to_filename(self):
+            """Empty metadata dict should fall back to filename parsing."""
+            result = get_photo_date_info("/path/to/IMG_20211205.jpg", {})
+
+            assert result.date == datetime(2021, 12, 5)
+            assert result.year == 2021
+            assert result.month == 12
+
+        def test_metadata_without_date_falls_back_to_filename(self):
+            """Metadata without DateTimeOriginal should fall back to filename."""
+            metadata = {"Make": "Canon", "Model": "EOS 5D"}
+            result = get_photo_date_info("/path/to/IMG_20211205.jpg", metadata)
+
+            assert result.date == datetime(2021, 12, 5)
+            assert result.year == 2021
+            assert result.month == 12
+
+        def test_none_metadata_falls_back_to_filename(self):
+            """None metadata should fall back to filename parsing."""
+            result = get_photo_date_info("/path/to/IMG_20211205.jpg", None)
+
+            assert result.date == datetime(2021, 12, 5)
+            assert result.year == 2021
+            assert result.month == 12
+
+        def test_metadata_with_no_filename_date(self):
+            """Metadata should work when filename has no date pattern."""
+            metadata = {"DateTimeOriginal": "2020:08:20 14:45:30"}
+            result = get_photo_date_info("/path/to/random_photo.jpg", metadata)
+
+            assert result.date == datetime(2020, 8, 20, 14, 45, 30)
+            assert result.year == 2020
+            assert result.month == 8
+
+    class TestMetadataFromFile:
+        """Tests when metadata is loaded from actual image file."""
+
+        def test_exif_loaded_from_file_takes_priority(self):
+            """EXIF DateTimeOriginal from file should take priority over filename."""
+            exif_date = "2018:03:25 09:15:00"
+            image_bytes = _create_image_with_exif(exif_date)
+
+            with tempfile.NamedTemporaryFile(
+                suffix="_IMG_20211205.jpg", delete=False
+            ) as f:
+                f.write(image_bytes)
+                temp_path = f.name
+
+            try:
+                result = get_photo_date_info(temp_path, None)
+
+                assert result.date == datetime(2018, 3, 25, 9, 15, 0)
+                assert result.year == 2018
+                assert result.month == 3
+            finally:
+                Path(temp_path).unlink()
+
+        def test_file_without_exif_uses_filename(self):
+            """Image without EXIF should fall back to filename date."""
+            img = Image.new("RGB", (100, 100), color="blue")
+
+            with tempfile.NamedTemporaryFile(
+                suffix="_IMG_20211205.jpg", delete=False
+            ) as f:
+                img.save(f, format="JPEG")
+                temp_path = f.name
+
+            try:
+                result = get_photo_date_info(temp_path, None)
+
+                assert result.date == datetime(2021, 12, 5)
+                assert result.year == 2021
+                assert result.month == 12
+            finally:
+                Path(temp_path).unlink()
+
+        def test_passed_metadata_overrides_file_exif(self):
+            """Passed-in metadata should be checked before reading file EXIF."""
+            file_exif_date = "2018:03:25 09:15:00"
+            image_bytes = _create_image_with_exif(file_exif_date)
+
+            with tempfile.NamedTemporaryFile(
+                suffix="_IMG_20211205.jpg", delete=False
+            ) as f:
+                f.write(image_bytes)
+                temp_path = f.name
+
+            try:
+                passed_metadata = {"DateTimeOriginal": "2022:11:11 11:11:11"}
+                result = get_photo_date_info(temp_path, passed_metadata)
+
+                assert result.date == datetime(2022, 11, 11, 11, 11, 11)
+                assert result.year == 2022
+                assert result.month == 11
+            finally:
+                Path(temp_path).unlink()
+
+    class TestNoDateAvailable:
+        """Tests when no date can be extracted."""
+
+        def test_no_metadata_no_filename_date(self):
+            """Should return empty PhotoDateInfo when no date source available."""
+            result = get_photo_date_info("/path/to/random_photo.jpg", None)
+
+            assert result.date is None
+            assert result.year is None
+            assert result.month is None
+
+        def test_invalid_metadata_format_falls_back(self):
+            """Invalid metadata date format should fall back to filename."""
+            metadata = {"DateTimeOriginal": "not-a-valid-date"}
+            result = get_photo_date_info("/path/to/IMG_20211205.jpg", metadata)
+
+            assert result.date == datetime(2021, 12, 5)
+            assert result.year == 2021
+            assert result.month == 12
+
+
+class TestGetDateFromMetadata:
+    """Tests for get_date_from_metadata function."""
+
+    def test_parses_standard_exif_format(self):
+        """Should parse standard EXIF date format YYYY:MM:DD HH:MM:SS."""
+        metadata = {"DateTimeOriginal": "2021:12:05 14:30:00"}
+        result = get_date_from_metadata("/any/path.jpg", metadata)
+
+        assert result == datetime(2021, 12, 5, 14, 30, 0)
+
+    def test_returns_none_for_missing_key(self):
+        """Should return None when DateTimeOriginal key is missing."""
+        metadata = {"OtherKey": "value"}
+        result = get_date_from_metadata("/any/path.jpg", metadata)
+
+        assert result is None
+
+    def test_returns_none_for_none_metadata(self):
+        """Should return None when metadata is None (and file doesn't exist)."""
+        result = get_date_from_metadata("/nonexistent/path.jpg", None)
+
+        assert result is None
+
+    def test_returns_none_for_invalid_format(self):
+        """Should return None for invalid date format."""
+        metadata = {"DateTimeOriginal": "invalid-date-format"}
+        result = get_date_from_metadata("/any/path.jpg", metadata)
+
+        assert result is None
+
+
+class TestDSCN0010RealFile:
+    """Tests using the real test file DSCN0010.jpg with known EXIF data.
+
+    File: tests/yaffo/utils/test_data/jpg/gps/DSCN0010.jpg
+    Camera: Nikon COOLPIX P6000
+    DateTimeOriginal: 2008:10:22 16:28:39
+    GPS: 43°28'2.814"N, 11°53'6.456"E (Tuscany, Italy)
+    """
+
+    @pytest.fixture
+    def dscn0010_path(self) -> Path:
+        return Path(__file__).parent / "test_data" / "jpg" / "gps" / "DSCN0010.jpg"
+
+    def test_extracts_date_from_exif(self, dscn0010_path: Path):
+        """Should extract DateTimeOriginal from DSCN0010.jpg EXIF data."""
+        result = get_photo_date_info(str(dscn0010_path), None)
+
+        assert result.date == datetime(2008, 10, 22, 16, 28, 39)
+        assert result.year == 2008
+        assert result.month == 10
+
+    def test_exif_date_takes_priority_over_filename(self, dscn0010_path: Path):
+        """EXIF date should be used regardless of filename pattern."""
+        result = get_photo_date_info(str(dscn0010_path), None)
+
+        assert result.date == datetime(2008, 10, 22, 16, 28, 39)
+        assert result.year == 2008
+
+    def test_get_date_from_metadata_with_file(self, dscn0010_path: Path):
+        """Should load and parse EXIF date directly from file."""
+        result = get_date_from_metadata(str(dscn0010_path), None)
+
+        assert result == datetime(2008, 10, 22, 16, 28, 39)

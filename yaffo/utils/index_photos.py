@@ -223,6 +223,13 @@ def get_exif_tags(img: PIL_Image) -> List[Dict[str, str]]:
                             value = value.decode('utf-8', errors='ignore').strip('\x00')
                         except:
                             value = str(value)
+                    elif isinstance(value, tuple) and len(value) == 2:
+                        numerator, denominator = value
+                        if isinstance(numerator, int) and isinstance(denominator, int) and denominator != 0:
+                            computed = numerator / denominator
+                            value = str(int(computed)) if computed == int(computed) else str(computed)
+                        else:
+                            value = str(value)
                     elif isinstance(value, (list, tuple)):
                         value = str(value)
                     else:

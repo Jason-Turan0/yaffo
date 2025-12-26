@@ -69,6 +69,9 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             photo.latitude = latitude
             photo.longitude = longitude
             photo.location_name = location_name
+            photo.date_taken = index_results["date_taken"]
+            photo.year = index_results["year"]
+            photo.month = index_results["month"]
 
             for tag_data in tags:
                 tag = Tag(
