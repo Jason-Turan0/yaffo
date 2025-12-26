@@ -7,7 +7,7 @@ import "dotenv/config";
 import {join, basename, resolve} from "path";
 import {parseSpecFile} from "@lib/test_generator/spec_parser";
 import * as fs from "node:fs";
-import {testGeneratorOrchestratorFactory} from "@lib/test_generator/testGeneratorOrchestrator";
+import {testGeneratorOrchestratorFactory} from "@lib/test_generator/test_generator_orchestrator";
 import {generateTimestampString} from "@lib/test_generator/utils";
 import {runIsolatedTests} from "@lib/test_generator/isolated_runner";
 

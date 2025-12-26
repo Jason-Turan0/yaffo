@@ -1,11 +1,10 @@
-import Anthropic from "@anthropic-ai/sdk";
 import {join, resolve, basename} from "path";
 import {writeFileSync, existsSync, readFileSync, unlinkSync} from "fs";
-import {ApiLogEntry, ToolCall} from "@lib/test_generator/model_client.types";
-import {GenerationResult, GeneratorOptions} from "@lib/test_generator/index.types";
+import {ToolCall} from "@lib/test_generator/model_client.types";
+import {GenerationResult} from "@lib/test_generator/index.types";
 import {Spec} from "@lib/test_generator/spec_parser.types";
 import {createFilesystemClient, FilesystemMcpClient} from "@lib/test_generator/mcp_filesystem_client";
-import {SYSTEM_PROMPT, buildUserPrompt, TEST_GENERATOR_OUTPUT_FORMAT} from "@lib/test_generator/context_generator";
+import {promptGeneratorFactory, PromptGenerator} from "@lib/test_generator/prompt_generator";
 
 import {
     Message,
@@ -22,7 +21,6 @@ const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 const DEFAULT_OUTPUT_DIR = resolve(join(process.cwd(), "generated_tests"));
 
 export class TestGeneratorOrchestrator {
-
     private iterationCount = 0;
     private maxIterations = 20;
     private maxRetries = 3;
@@ -33,6 +31,7 @@ export class TestGeneratorOrchestrator {
         private outputDir: string,
         private anthropic: AnthropicModelClient,
         private mcpClient: FilesystemMcpClient,
+        private promptGenerator: PromptGenerator,
     ) {
         this.spec = spec;
         this.runLogDir = runLogDir;
@@ -41,8 +40,7 @@ export class TestGeneratorOrchestrator {
 
     generate = async (specPath: string, baseUrl: string, tempDir?: string): Promise<GenerationResult> => {
         try {
-            const generatedJson = await this.runToolExplorationLoop(specPath, baseUrl);
-
+            const generatedJson = await this.generateTestCode(specPath, baseUrl);
             if (!generatedJson) {
                 return {
                     success: false,
@@ -50,23 +48,21 @@ export class TestGeneratorOrchestrator {
                     logPath: this.runLogDir
                 };
             }
-
-            return await this.parseAndValidateLoop(generatedJson);
+            return await this.validateTestCode(generatedJson);
         } finally {
             await this.mcpClient?.disconnect();
         }
     };
 
 
-    private runToolExplorationLoop = async (specPath: string, baseUrl: string): Promise<string | null> => {
+    private generateTestCode = async (specPath: string, baseUrl: string): Promise<string | null> => {
         if (this.mcpClient == null || this.anthropic == null) {
             throw new Error("Orchestrator not initialized");
         }
         this.iterationCount = 0;
 
-        const tools = this.mcpClient.getToolsForClaude();
         const allowedDirs = this.mcpClient.getAllowedDirectories();
-        const userPrompt = buildUserPrompt(this.spec, specPath, baseUrl, allowedDirs);
+        const userPrompt = this.promptGenerator.buildUserPrompt(this.spec, specPath, baseUrl, allowedDirs);
         this.anthropic.addMessage({role: "user", content: userPrompt})
         let generatedJson: string | null = null;
 
@@ -98,7 +94,7 @@ export class TestGeneratorOrchestrator {
         return generatedJson;
     };
 
-    private parseAndValidateLoop = async (generatedJson: string): Promise<GenerationResult> => {
+    private validateTestCode = async (generatedJson: string): Promise<GenerationResult> => {
         let retryCount = 0;
         let currentJson = generatedJson;
         let lastResponse: GeneratedTestResponse | null = null;
@@ -171,36 +167,13 @@ export class TestGeneratorOrchestrator {
             console.log(`\n⚠️  Max retries (${this.maxRetries}) exceeded. Schema errors remain.`);
             return {shouldBreak: true};
         }
-
         console.log(`\n🔄 Schema fix attempt ${retryCount + 1}/${this.maxRetries}...`);
-
-        const schemaFixRequest = `The JSON response has schema validation errors:
-
-${schemaErrors.map(e => `- ${e}`).join("\n")}
-
-Expected Schema:
-\`\`\`typescript
-${TEST_GENERATOR_OUTPUT_FORMAT}
-\`\`\`
-Please fix the schema errors and provide the corrected JSON.`;
-
-        this.anthropic?.addMessages([
+        const schemaFixPrompt = this.promptGenerator.buildSchemaFixPrompt(schemaErrors);
+        this.anthropic.addMessages([
             {role: "assistant", content: currentJson},
-            {role: "user", content: schemaFixRequest}
+            {role: "user", content: schemaFixPrompt}
         ]);
-        const fixResponse = await this.anthropic?.callModelApi();
-        if (!fixResponse) {
-            console.log(`   ❌ Failed to get fix response from model`);
-            return {shouldBreak: true};
-        }
-
-        const fixTextContent = this.extractTextContent(fixResponse);
-        if (fixTextContent) {
-            return {shouldBreak: false, newJson: fixTextContent};
-        }
-
-        console.log(`   ❌ No text content in fix response`);
-        return {shouldBreak: true};
+        return this.getFixResponse();
     };
 
     private handleTypeErrors = async (
@@ -213,32 +186,22 @@ Please fix the schema errors and provide the corrected JSON.`;
             console.log(`\n⚠️  Max retries (${this.maxRetries}) exceeded. Returning with type errors.`);
             return {shouldBreak: true};
         }
-
         console.log(`\n🔄 Type error fix attempt ${retryCount + 1}/${this.maxRetries}...`);
+        const currentCode = parsedResponse.files[0]?.code || "";
+        const typeFixPrompt = this.promptGenerator.buildTypeErrorFixPrompt(typeErrors, currentCode);
+        this.anthropic.addMessages([
+            {role: "assistant", content: currentJson},
+            {role: "user", content: typeFixPrompt}
+        ]);
+        return this.getFixResponse();
+    };
 
-        const typeFixRequest = `The generated TypeScript code has compilation errors:
-
-${typeErrors.join("\n\n")}
-
-Here is the current code that needs to be fixed:
-\`\`\`typescript
-${parsedResponse.files[0]?.code || ""}
-\`\`\`
-
-Please fix these errors and provide the corrected code in the same JSON format as before.`;
-
-        this.anthropic?.addMessages(
-            [{role: "assistant", content: currentJson},
-            {role: "user", content: typeFixRequest}]
-        )
-
-        const fixResponse = await this.anthropic.callModelApi( );
-
+     private getFixResponse = async () => {
+        const fixResponse = await this.anthropic.callModelApi();
         if (!fixResponse) {
             console.log(`   ❌ Failed to get fix response from model`);
             return {shouldBreak: true};
         }
-
         const fixTextContent = this.extractTextContent(fixResponse);
         if (fixTextContent) {
             return {shouldBreak: false, newJson: fixTextContent};
@@ -247,7 +210,6 @@ Please fix these errors and provide the corrected code in the same JSON format a
         console.log(`   ❌ No text content in fix response`);
         return {shouldBreak: true};
     };
-
 
 
     private determineNextAction = async (response: Message): Promise<{
@@ -389,16 +351,20 @@ Please fix these errors and provide the corrected code in the same JSON format a
             console.log(`📝 Explanation: ${response.explanation}${confidenceStr}`);
         }
     };
+
 }
 
-export const testGeneratorOrchestratorFactory = async(spec:Spec, runLogDir: string, tempDir?: string) => {
+export const testGeneratorOrchestratorFactory = async (spec: Spec, runLogDir: string, tempDir?: string) => {
     const fileMcpClient = await createFilesystemClient(YAFFO_ROOT, DEFAULT_OUTPUT_DIR, tempDir);
-    const anthropicModel = anthropicModelClientFactory(runLogDir, SYSTEM_PROMPT, fileMcpClient.getToolsForClaude());
+    const promptGenerator = promptGeneratorFactory(YAFFO_ROOT);
+    const anthropicModel = anthropicModelClientFactory(runLogDir, promptGenerator.getSystemPrompt(), fileMcpClient.getToolsForClaude());
+
     return new TestGeneratorOrchestrator(
         spec,
         runLogDir,
         DEFAULT_OUTPUT_DIR,
         anthropicModel,
-        fileMcpClient
+        fileMcpClient,
+        promptGenerator
     )
 }
