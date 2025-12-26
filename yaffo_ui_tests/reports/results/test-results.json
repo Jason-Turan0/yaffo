@@ -1,7 +1,7 @@
 {
   "config": {
     "configFile": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/playwright.config.ts",
-    "rootDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated",
+    "rootDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests",
     "forbidOnly": true,
     "fullyParallel": true,
     "globalSetup": null,
@@ -10,7 +10,9 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {},
+    "metadata": {
+      "actualWorkers": 1
+    },
     "preserveOutput": "always",
     "reporter": [
       [
@@ -40,10 +42,12 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {},
+        "metadata": {
+          "actualWorkers": 1
+        },
         "id": "chromium",
         "name": "chromium",
-        "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated",
+        "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -54,10 +58,12 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {},
+        "metadata": {
+          "actualWorkers": 1
+        },
         "id": "firefox",
         "name": "firefox",
-        "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated",
+        "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -68,10 +74,12 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {},
+        "metadata": {
+          "actualWorkers": 1
+        },
         "id": "webkit",
         "name": "webkit",
-        "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated",
+        "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -87,17 +95,144 @@
     "workers": 1,
     "webServer": null
   },
-  "suites": [],
-  "errors": [
+  "suites": [
     {
-      "message": "Error: No tests found",
-      "stack": "Error: No tests found"
+      "title": "photo_gallery.spec.ts",
+      "file": "photo_gallery.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Photo Gallery",
+          "file": "photo_gallery.spec.ts",
+          "line": 14,
+          "column": 6,
+          "specs": [
+            {
+              "title": "gallery loads with valid images",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 575,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Successfully verified 4 images in the gallery\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-12-26T04:56:23.202Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "52b995bbe9343074f73f-553a24a19fee88785134",
+              "file": "photo_gallery.spec.ts",
+              "line": 15,
+              "column": 3
+            },
+            {
+              "title": "gallery handles image loading errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1878,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Tested image fallback mechanism\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-12-26T04:56:24.101Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "52b995bbe9343074f73f-6e8bbc623489e1d58f3a",
+              "file": "photo_gallery.spec.ts",
+              "line": 94,
+              "column": 3
+            },
+            {
+              "title": "gallery maintains responsive layout",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 293,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Verified responsive layout across different viewport sizes\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-12-26T04:56:25.985Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "52b995bbe9343074f73f-a51bff824928ef9088a1",
+              "file": "photo_gallery.spec.ts",
+              "line": 142,
+              "column": 3
+            }
+          ]
+        }
+      ]
     }
   ],
+  "errors": [],
   "stats": {
-    "startTime": "2025-12-26T04:08:47.948Z",
-    "duration": 2.597000000000037,
-    "expected": 0,
+    "startTime": "2025-12-26T04:56:22.966Z",
+    "duration": 3334.753,
+    "expected": 3,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

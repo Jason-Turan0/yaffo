@@ -15,6 +15,7 @@ import {
 } from "@anthropic-ai/sdk/resources/messages/messages";
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
 import {parseJsonResponse} from "@lib/test_generator/json_parser";
+import {typeCheckFile, formatTypeErrorsForModel} from "@lib/test_generator/typescript_validator";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 const PLAYWRIGHT_TEST_DIR = resolve(join(process.cwd(), "generated_tests"));
@@ -205,27 +206,114 @@ export const generateTestFromSpec = async (
         };
     }
 
-    // Parse the JSON response
-    const parsedResponse = parseJsonResponse(generatedJson);
-    if (!parsedResponse) {
-        // Save the raw response for debugging
-        const rawPath = join(PLAYWRIGHT_TEST_DIR, `${spec.feature}.txt`);
-        writeFileSync(rawPath, generatedJson);
-        return {
-            success: false,
-            error: `Failed to parse JSON response. Raw response saved to ${rawPath}`,
-            logPath: runLogDir
-        };
-    }else{
-        writeGeneratedFiles(spec, parsedResponse, PLAYWRIGHT_TEST_DIR);
-    }
+    // Parse and validate loop
+    const maxCompileRetries = 3;
+    let compileRetryCount = 0;
+    let currentJson = generatedJson;
+    let lastResponse: GeneratedTestResponse | null = null;
 
-    if (parsedResponse && parsedResponse.explanation) {
-        console.log(`📝 Explanation: ${parsedResponse.explanation}. Confidence: ${parsedResponse.confidence * 100}%`);
+    while (compileRetryCount <= maxCompileRetries) {
+        // Parse the JSON response
+        const parsedResponse = parseJsonResponse(currentJson);
+        if (!parsedResponse) {
+            const rawPath = join(PLAYWRIGHT_TEST_DIR, `${spec.feature}.txt`);
+            writeFileSync(rawPath, currentJson);
+            return {
+                success: false,
+                error: `Failed to parse JSON response. Raw response saved to ${rawPath}`,
+                logPath: runLogDir
+            };
+        }
+
+        lastResponse = parsedResponse;
+        const writtenPaths = writeGeneratedFiles(spec, parsedResponse, PLAYWRIGHT_TEST_DIR);
+
+        if (parsedResponse.explanation) {
+            console.log(`📝 Explanation: ${parsedResponse.explanation}. Confidence: ${parsedResponse.confidence * 100}%`);
+        }
+
+        // Type check the generated files
+        console.log(`\n🔍 Type checking generated files...`);
+        const allErrors: string[] = [];
+
+        for (const filePath of writtenPaths) {
+            if (filePath.endsWith('.ts')) {
+                const typeResult = typeCheckFile(filePath);
+                if (!typeResult.success) {
+                    console.log(`   ❌ Type errors in ${basename(filePath)}: ${typeResult.errorCount} error(s)`);
+                    allErrors.push(formatTypeErrorsForModel(filePath, typeResult));
+                } else {
+                    console.log(`   ✅ ${basename(filePath)} compiles successfully`);
+                }
+            }
+        }
+
+        if (allErrors.length === 0) {
+            console.log(`\n✅ All files compile successfully!`);
+            return {
+                success: true,
+                logPath: runLogDir
+            };
+        }
+
+        // If we have errors and haven't exceeded retries, ask Claude to fix
+        compileRetryCount++;
+        if (compileRetryCount > maxCompileRetries) {
+            console.log(`\n⚠️  Max compile retries (${maxCompileRetries}) exceeded. Returning with type errors.`);
+            return {
+                success: true,
+                logPath: runLogDir
+            };
+        }
+
+        console.log(`\n🔄 Compile fix attempt ${compileRetryCount}/${maxCompileRetries}...`);
+
+        // Build the fix request message
+        const fixRequest = `The generated TypeScript code has compilation errors:
+
+${allErrors.join("\n\n")}
+
+Here is the current code that needs to be fixed:
+\`\`\`typescript
+${parsedResponse.files[0]?.code || ""}
+\`\`\`
+
+Please fix these errors and provide the corrected code in the same JSON format as before.`;
+
+        // Add the assistant's previous response and the fix request
+        messages.push({role: "assistant", content: currentJson});
+        messages.push({role: "user", content: fixRequest});
+
+        // Call the model for a fix
+        iterationCount++;
+        const fixResponse = await callModelApi(
+            anthropic,
+            {
+                model,
+                max_tokens: 8192,
+                system: SYSTEM_PROMPT,
+                messages,
+            },
+            iterationCount,
+            runLogDir
+        );
+
+        if (!fixResponse) {
+            console.log(`   ❌ Failed to get fix response from model`);
+            break;
+        }
+
+        const fixTextContent = extractTextContent(fixResponse);
+        if (fixTextContent) {
+            currentJson = fixTextContent;
+        } else {
+            console.log(`   ❌ No text content in fix response`);
+            break;
+        }
     }
 
     return {
-        success: true,
+        success: lastResponse !== null,
         logPath: runLogDir
     };
 };
