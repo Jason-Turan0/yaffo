@@ -4,8 +4,7 @@
   "description": "AI-augmented UI testing framework for Yaffo using Playwright + MCP",
   "type": "module",
   "scripts": {
-    "generate": "tsx lib/cli/generate.ts",
-    "generate:all": "tsx lib/cli/generate-all.ts",
+    "generate": "tsx lib/test_generator/index.ts",
     "test": "playwright test",
     "test:unit": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:ui": "playwright test --ui",

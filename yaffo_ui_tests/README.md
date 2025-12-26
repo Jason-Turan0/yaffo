@@ -53,6 +53,7 @@ AI-generated Playwright test scripts. These are created from specs using Claude 
 - Each generated file references its source spec
 - Metadata tracks generation timestamp and DOM context hash
 
+See [Generated Tests](./lib/test_generator/README.md) for more details
 ### Layer 3: Execution (Playwright)
 
 Standard Playwright test execution:

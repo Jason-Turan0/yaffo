@@ -7,6 +7,7 @@ import pydash as _
 from yaffo.db import db
 from yaffo.db.models import Photo, Face, Person, PersonFace, Tag
 from yaffo.db.repositories.photos_repository import get_distinct_years, get_distinct_months
+from yaffo.utils.context import context
 
 
 def calculate_bounding_box(lat: float, lon: float, distance_miles: float) -> tuple[float, float, float, float]:
@@ -28,6 +29,7 @@ def calculate_bounding_box(lat: float, lon: float, distance_miles: float) -> tup
     return (min_lat, max_lat, min_lon, max_lon)
 
 
+@context("yaffo-gallery")
 def init_home_routes(app: Flask):
     @app.route("/", methods=["GET"])
     def index():

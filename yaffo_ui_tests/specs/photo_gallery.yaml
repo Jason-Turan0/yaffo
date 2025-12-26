@@ -9,6 +9,14 @@ preconditions:
   - Application is running
   - Database contains sample photos
 
+context:
+  - tag: gallery-template
+    path: templates/index.html
+    description: Main gallery template with photo grid and selectors
+  - tag: gallery-routes
+    attribute: yaffo-gallery
+    description: Python routes tagged for gallery feature
+
 scenarios:
   - name: gallery_loads_with_valid_images
     goal: Gallery displays photos and all image sources are valid (no broken links)
@@ -23,3 +31,17 @@ scenarios:
       - At least one photo is displayed
       - All photo image sources return HTTP 200 (no broken links)
       - No images are using the fallback placeholder
+  - name: gallery_filter_year_works
+    goal: Should be able to find photos by filtering for year on the gallery page
+    priority: high
+    steps:
+      - Navigate to the home page
+      - Select a year from the Year filter
+      - Click Apply Filters
+      - Click Clear button
+
+    verify:
+      - Gallery grid container is visible
+      - At least one year is in the filter dropdown
+      - When the filter is applied all images are from that year
+      - When the filter is cleared all the images are shown

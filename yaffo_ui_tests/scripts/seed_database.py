@@ -13,6 +13,8 @@ import os
 import sys
 from pathlib import Path
 
+from yaffo.db.models import Tag, Face, FACE_STATUS_UNASSIGNED
+
 # Add yaffo project to path
 YAFFO_PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(YAFFO_PROJECT_ROOT))
@@ -65,12 +67,37 @@ def seed_database() -> int:
                     photo = Photo(
                         full_file_path=str(photo_path),
                         date_taken=result.get("date_taken"),
+                        year= result.get("year"),
+                        month=result.get("month"),
                         latitude=result.get("latitude"),
                         longitude=result.get("longitude"),
                         location_name=result.get("location_name"),
                         status="indexed",
                     )
                     db.session.add(photo)
+                    db.session.flush()
+                    tags = result["tags"]
+                    for tag_data in tags:
+                        tag = Tag(
+                            photo_id=photo.id,
+                            tag_name=tag_data['tag_name'],
+                            tag_value=tag_data['tag_value']
+                        )
+                        db.session.add(tag)
+                    faces_data = result["faces_data"]
+                    for face_data in faces_data:
+                        face = Face(
+                            embedding=face_data['embedding'].tobytes(),
+                            full_file_path=face_data['full_file_path'],
+                            status=FACE_STATUS_UNASSIGNED,
+                            photo_id=photo.id,
+                            location_top=face_data['location_top'],
+                            location_right=face_data['location_right'],
+                            location_bottom=face_data['location_bottom'],
+                            location_left=face_data['location_left']
+                        )
+                        db.session.add(face)
+
                     print(f"  Indexed: {photo_path.name}")
                     indexed_count += 1
             except Exception as e:

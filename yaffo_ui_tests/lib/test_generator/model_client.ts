@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {join, resolve, basename} from "path";
-import {writeFileSync} from "fs";
+import {writeFileSync, existsSync, readFileSync, unlinkSync} from "fs";
 import {ApiLogEntry, ToolCall} from "@lib/test_generator/model_client.types";
 import {GenerationResult, GeneratorOptions} from "@lib/test_generator/index.types";
 import {Spec} from "@lib/test_generator/spec_parser.types";
@@ -76,10 +76,34 @@ const extractTextContent = (response: Message): string => {
     return textContent;
 };
 
+const cleanupOldGeneratedFiles = (spec: Spec, outputDir: string): void => {
+    const jsonPath = join(outputDir, `${spec.feature}.json`);
+    if (!existsSync(jsonPath)) {
+        return;
+    }
+
+    try {
+        const existingJson = readFileSync(jsonPath, "utf-8");
+        const existingResponse = JSON.parse(existingJson) as GeneratedTestResponse;
+
+        for (const file of existingResponse.files) {
+            const filePath = join(outputDir, basename(file.filename));
+            if (existsSync(filePath)) {
+                unlinkSync(filePath);
+                console.log(`   🗑️  Deleted old file: ${filePath}`);
+            }
+        }
+    } catch (e) {
+        console.log(`   ⚠️  Could not parse existing JSON for cleanup: ${e instanceof Error ? e.message : String(e)}`);
+    }
+};
+
 const writeGeneratedFiles = (
     spec: Spec,
     response: GeneratedTestResponse,
     outputDir: string): string[] => {
+    cleanupOldGeneratedFiles(spec, outputDir);
+
     const writtenPaths: string[] = [];
     for (const file of response.files) {
         const outputPath = join(outputDir, basename(file.filename));

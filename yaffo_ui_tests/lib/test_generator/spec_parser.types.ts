@@ -12,6 +12,16 @@ export const ScenarioSchema = z.object({
 
 export const TestDataSchema = z.record(z.unknown()).optional();
 
+export const ContextItemSchema = z.object({
+  tag: z.string().min(1),
+  path: z.string().optional(),
+  attribute: z.string().optional(),
+  description: z.string().optional(),
+}).refine(
+  (data) => data.path || data.attribute,
+  { message: "Either 'path' or 'attribute' must be provided" }
+);
+
 export const SpecSchema = z.object({
   feature: z.string().min(1),
   description: z.string().min(1),
@@ -19,7 +29,9 @@ export const SpecSchema = z.object({
   preconditions: z.array(z.string()).optional(),
   scenarios: z.array(ScenarioSchema).min(1),
   data: TestDataSchema,
+  context: z.array(ContextItemSchema).optional(),
 });
 
 export type Spec = z.infer<typeof SpecSchema>;
 export type Scenario = z.infer<typeof ScenarioSchema>;
+export type ContextItem = z.infer<typeof ContextItemSchema>;

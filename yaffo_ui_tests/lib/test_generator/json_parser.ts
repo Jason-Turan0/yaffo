@@ -17,17 +17,14 @@ export const parseJsonResponse = (text: string): GeneratedTestResponse | null =>
         // (handles case where model adds explanation before/after JSON)
     }
 
-    // Find the JSON object by locating `{"` which is more reliable than just `{`
-    // This avoids matching things like `{photo_id}` in markdown backticks
-    const jsonStartPatterns = ['{"files":', '{"'];
+    // Find the JSON object using regex to handle both compact and pretty-printed JSON
+    // Looks for { followed by optional whitespace and " to avoid matching things like {photo_id}
+    const jsonStartRegex = /\{\s*"files":|^\{\s*"/gm;
     let firstBrace = -1;
 
-    for (const pattern of jsonStartPatterns) {
-        const idx = jsonText.indexOf(pattern);
-        if (idx !== -1) {
-            firstBrace = idx;
-            break;
-        }
+    const match = jsonStartRegex.exec(jsonText);
+    if (match) {
+        firstBrace = match.index;
     }
 
     if (firstBrace === -1) {
