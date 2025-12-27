@@ -405,22 +405,26 @@ export const testGeneratorOrchestratorFactory = async (
     runLogDir: string,
     baseUrl: string,
     runTestEnvironment: boolean,
-    port: number,
-    tempDir?: string) => {
+    port: number) => {
     let isolatedEnvironment: IsolatedEnvironment | null = null;
+    const allowedDirectories = [YAFFO_ROOT, DEFAULT_OUTPUT_DIR];
     if (runTestEnvironment) {
         isolatedEnvironment = await startIsolatedEnvironment(port)
+        allowedDirectories.push(isolatedEnvironment.tempDir)
     }
 
-    const allowedDirectories = [YAFFO_ROOT, DEFAULT_OUTPUT_DIR, tempDir].filter(Boolean) as string[];
     const fileMcpClient = await createFilesystemClient(allowedDirectories);
     const mcpPlaywrightClient = runTestEnvironment ? await createPlaywrightClient({
         headless: true,
         baseUrl,
         browser: "chromium"
     }) : await createStubPlaywrightClient();
-    const promptGenerator = promptGeneratorFactory(YAFFO_ROOT);
-    const anthropicModel = anthropicModelClientFactory(runLogDir, promptGenerator.getSystemPrompt(), fileMcpClient.getToolsForClaude());
+    const promptGenerator = promptGeneratorFactory(runTestEnvironment, baseUrl, YAFFO_ROOT);
+    const tools = [
+        ...mcpPlaywrightClient.getToolsForClaude(),
+        ...fileMcpClient.getToolsForClaude()
+    ]
+    const anthropicModel = anthropicModelClientFactory(runLogDir, promptGenerator.getSystemPrompt(), tools);
     return new TestGeneratorOrchestrator(
         spec,
         runLogDir,

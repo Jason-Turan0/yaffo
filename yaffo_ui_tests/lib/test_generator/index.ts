@@ -36,7 +36,8 @@ export async function generateTest(
             spec,
             logPath,
             baseUrl,
-            runTestEnvironment
+            runTestEnvironment,
+            port
         );
 
         const result = await testGenerator.generate(

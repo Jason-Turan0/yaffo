@@ -18,13 +18,20 @@ export const TEST_GENERATOR_OUTPUT_FORMAT = fs.readFileSync(
 );
 
 export class PromptGenerator {
-    private readonly yaffoRoot: string;
-
-    constructor(yaffoRoot: string = YAFFO_ROOT) {
-        this.yaffoRoot = yaffoRoot;
-    }
+    constructor(
+        private testServerIsRunning: boolean,
+        private baseUrl: string,
+        private yaffoRoot: string = YAFFO_ROOT
+    ) {}
 
     getSystemPrompt(): string {
+        const testServerPrompt = this.testServerIsRunning ? [
+            "You also access to running sandboxed instance of the website that you can use to interact with a sandbox instance of the currently running website",
+            "Use the provided tools from playwright mcp to interact with the website to help provide context for the runtime behavior of the site for generating tests",
+            `The base url of the website is ${this.baseUrl}`,
+            ""
+        ] : [];
+
         return [
             "You are an expert Playwright test generator with READ-ONLY access to filesystem tools.",
             "",
@@ -38,6 +45,7 @@ export class PromptGenerator {
             "- Routes (routes/) - available endpoints and their behavior",
             "- Static files (static/) - JavaScript and CSS",
             "",
+            ...testServerPrompt,
             "## WORKFLOW",
             "",
             "1. Use filesystem tools to explore relevant templates and routes",
@@ -293,6 +301,6 @@ export class PromptGenerator {
 }
 
 // Factory function
-export const promptGeneratorFactory = (yaffoRoot?: string): PromptGenerator => {
-    return new PromptGenerator(yaffoRoot);
+export const promptGeneratorFactory = (testServerIsRunning: boolean, baseUrl: string, yaffoRoot?: string): PromptGenerator => {
+    return new PromptGenerator(testServerIsRunning, baseUrl, yaffoRoot);
 };

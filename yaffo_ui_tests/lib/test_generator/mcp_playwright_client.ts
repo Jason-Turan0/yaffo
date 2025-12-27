@@ -184,6 +184,10 @@ export async function createStubPlaywrightClient(options: PlaywrightMcpClientOpt
 
         callTool(name: string, args: Record<string, unknown>): Promise<CallToolReturn> {
             throw new Error("Playwright MCP client not connected");
+        },
+
+        async disconnect(): Promise<void> {
+
         }
     }
 }

@@ -97,15 +97,15 @@
   },
   "suites": [
     {
-      "title": "photo-gallery.spec.ts",
-      "file": "photo-gallery.spec.ts",
+      "title": "photo_gallery_loads_with_valid_images.spec.ts",
+      "file": "photo_gallery_loads_with_valid_images.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Photo Gallery",
-          "file": "photo-gallery.spec.ts",
+          "title": "Photo Gallery - Image Loading",
+          "file": "photo_gallery_loads_with_valid_images.spec.ts",
           "line": 3,
           "column": 6,
           "specs": [
@@ -125,12 +125,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 761,
+                      "duration": 862,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-12-26T20:21:35.218Z",
+                      "startTime": "2025-12-27T00:10:49.057Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -138,11 +138,62 @@
                   "status": "expected"
                 }
               ],
-              "id": "905e4312f0b9be050d86-6c9af23d77fc18806500",
-              "file": "photo-gallery.spec.ts",
+              "id": "f5c6b1835f7e300e3405-6504ea6c63616cbe2ae8",
+              "file": "photo_gallery_loads_with_valid_images.spec.ts",
               "line": 4,
               "column": 3
             },
+            {
+              "title": "gallery handles broken images gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 629,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-12-27T00:10:50.204Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5c6b1835f7e300e3405-600b8947b406b532d575",
+              "file": "photo_gallery_loads_with_valid_images.spec.ts",
+              "line": 63,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "photo_gallery_year_filter.spec.ts",
+      "file": "photo_gallery_year_filter.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Photo Gallery - Year Filter",
+          "file": "photo_gallery_year_filter.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
             {
               "title": "gallery filter year works",
               "ok": true,
@@ -159,12 +210,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1639,
+                      "duration": 1690,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-12-26T20:21:36.263Z",
+                      "startTime": "2025-12-27T00:10:50.842Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -172,9 +223,43 @@
                   "status": "expected"
                 }
               ],
-              "id": "905e4312f0b9be050d86-a1fff0da009c0dbc9f94",
-              "file": "photo-gallery.spec.ts",
-              "line": 49,
+              "id": "b5f0f4891e7688a7cb79-896b70d7104f39c720a0",
+              "file": "photo_gallery_year_filter.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "year filter shows correct results for different years",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1628,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-12-27T00:10:52.536Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b5f0f4891e7688a7cb79-120db94c5c9644e14c09",
+              "file": "photo_gallery_year_filter.spec.ts",
+              "line": 106,
               "column": 3
             }
           ]
@@ -184,9 +269,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-12-26T20:21:34.993Z",
-    "duration": 2934.258,
-    "expected": 2,
+    "startTime": "2025-12-27T00:10:48.749Z",
+    "duration": 5439.804,
+    "expected": 4,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0
