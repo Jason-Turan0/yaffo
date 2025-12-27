@@ -417,7 +417,12 @@ export const testGeneratorOrchestratorFactory = async (
     const mcpPlaywrightClient = runTestEnvironment ? await createPlaywrightClient({
         headless: true,
         baseUrl,
-        browser: "chromium"
+        browser: "chromium",
+        artifacts:{
+            outputDir: runLogDir,
+            saveVideo: true,
+            saveSession: true
+        }
     }) : await createStubPlaywrightClient();
     const promptGenerator = promptGeneratorFactory(runTestEnvironment, baseUrl, YAFFO_ROOT);
     const tools = [

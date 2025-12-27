@@ -10,10 +10,23 @@ import {StdioClientTransport} from "@modelcontextprotocol/sdk/client/stdio.js";
 import type {Tool} from "@anthropic-ai/sdk/resources/messages.js";
 import {ToolProvider} from "@lib/test_generator/toolprovider.types";
 
+export interface ArtifactOptions {
+    /** Directory to save artifacts (videos, traces, session). Defaults to current directory */
+    outputDir?: string;
+    /** Save video of the session. Specify dimensions like "800x600" or true for default */
+    saveVideo?: string | boolean;
+    /** Save Playwright trace of the session */
+    saveTrace?: boolean;
+    /** Save Playwright MCP session data */
+    saveSession?: boolean;
+}
+
 export interface PlaywrightMcpClientOptions {
     headless?: boolean;
     browser?: "chromium" | "firefox" | "webkit";
     baseUrl?: string;
+    /** Artifact saving configuration */
+    artifacts?: ArtifactOptions;
 }
 
 export interface McpTool {
@@ -55,7 +68,7 @@ export class PlaywrightMcpClient implements ToolProvider {
         };
     }
 
-    async connect(): Promise<void> {
+    private buildArgs(): string[] {
         const args = ["@playwright/mcp@latest"];
 
         if (this.options.headless) {
@@ -65,6 +78,31 @@ export class PlaywrightMcpClient implements ToolProvider {
         if (this.options.browser) {
             args.push(`--browser=${this.options.browser}`);
         }
+
+        const artifacts = this.options.artifacts;
+        if (artifacts) {
+            if (artifacts.outputDir) {
+                args.push(`--output-dir=${artifacts.outputDir}`);
+            }
+            if (artifacts.saveVideo) {
+                const videoSize = typeof artifacts.saveVideo === "string"
+                    ? artifacts.saveVideo
+                    : "1280x720";
+                args.push(`--save-video=${videoSize}`);
+            }
+            if (artifacts.saveTrace) {
+                args.push("--save-trace");
+            }
+            if (artifacts.saveSession) {
+                args.push("--save-session");
+            }
+        }
+
+        return args;
+    }
+
+    async connect(): Promise<void> {
+        const args = this.buildArgs();
 
         this.transport = new StdioClientTransport({
             command: "npx",
