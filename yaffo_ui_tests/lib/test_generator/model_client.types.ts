@@ -14,10 +14,21 @@ export interface ConversationTurn {
 }
 
 
+export interface CacheUsage {
+  cacheCreationInputTokens: number;
+  cacheReadInputTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  sessionInputTokens: number;
+  sessionOutputTokens: number;
+}
+
 export interface ApiLogEntry {
   timestamp: string;
   request: unknown;
   response: unknown;
   durationMs?: number;
   success: boolean;
+  cacheUsage?: CacheUsage;
+
 }

@@ -6,12 +6,6 @@ import {Spec} from "@lib/test_generator/spec_parser.types";
 import {createFilesystemClient, FilesystemMcpClient} from "@lib/test_generator/mcp_filesystem_client";
 import {promptGeneratorFactory, PromptGenerator} from "@lib/test_generator/prompt_generator";
 
-import {
-    Message,
-    MessageParam,
-    TextBlockParam, Tool,
-    ToolResultBlockParam
-} from "@anthropic-ai/sdk/resources/messages/messages";
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
 import {parseJsonResponse} from "@lib/test_generator/json_parser";
 import {typeCheckFile, formatTypeErrorsForModel} from "@lib/test_generator/typescript_validator";
@@ -22,16 +16,25 @@ import {
 } from "@lib/test_generator/mcp_playwright_client";
 import {ToolProvider} from "@lib/test_generator/toolprovider.types";
 import {IsolatedEnvironment, runPlaywrightTests, startIsolatedEnvironment} from "@lib/test_generator/isolated_runner";
+import {
+    BetaMessage,
+    BetaMessageParam,
+    BetaTextBlockParam,
+    BetaTool,
+    BetaToolResultBlockParam
+} from "@anthropic-ai/sdk/resources/beta";
+import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 const DEFAULT_OUTPUT_DIR = resolve(join(process.cwd(), "generated_tests"));
+const MEMORY_DIR = resolve(join(process.cwd(), "claude_memories"));
 
 export class TestGeneratorOrchestrator {
     private iterationCount = 0;
     private maxIterations = 20;
     private maxRetries = 3;
-    private toolProviderMap: Map<string, { tool: Tool, toolProvider: ToolProvider }> = new Map<string, {
-        tool: Tool;
+    private toolProviderMap: Map<string, { tool: BetaTool, toolProvider: ToolProvider }> = new Map<string, {
+        tool: BetaTool;
         toolProvider: ToolProvider
     }>()
 
@@ -242,11 +245,11 @@ export class TestGeneratorOrchestrator {
     };
 
 
-    private determineNextAction = async (response: Message): Promise<{
+    private determineNextAction = async (response: BetaMessage): Promise<{
         success: boolean;
         continue: boolean;
         generatedJson?: string;
-        toolUsages?: MessageParam[];
+        toolUsages?: BetaMessageParam[];
     }> => {
         console.log(`   Stop reason: ${response.stop_reason}`);
 
@@ -257,10 +260,10 @@ export class TestGeneratorOrchestrator {
 
         const toolCalls = this.extractToolCalls(response);
         if (response.stop_reason === "tool_use" && toolCalls.length > 0) {
-            const toolUsages: MessageParam[] = [];
+            const toolUsages: BetaMessageParam[] = [];
             toolUsages.push({role: "assistant", content: response.content});
 
-            const toolResults: ToolResultBlockParam[] = [];
+            const toolResults: BetaToolResultBlockParam[] = [];
             for (const call of toolCalls) {
                 console.log(`   🔧 Tool: ${call.name}(${JSON.stringify(call.input).slice(0, 100)}...)`);
                 try {
@@ -277,7 +280,7 @@ export class TestGeneratorOrchestrator {
                         toolResults.push({
                             type: "tool_result",
                             tool_use_id: call.id,
-                            content: result?.content as TextBlockParam[],
+                            content: result?.content as BetaTextBlockParam[],
                         });
                     }
                 } catch (e) {
@@ -299,7 +302,7 @@ export class TestGeneratorOrchestrator {
         throw new Error(`Unknown stop reason ${response.stop_reason}`);
     };
 
-    private extractToolCalls = (response: Message): ToolCall[] => {
+    private extractToolCalls = (response: BetaMessage): ToolCall[] => {
         const toolCalls: ToolCall[] = [];
         for (const block of response.content) {
             if (block.type === "tool_use") {
@@ -313,7 +316,7 @@ export class TestGeneratorOrchestrator {
         return toolCalls;
     };
 
-    private extractTextContent = (response: Message): string => {
+    private extractTextContent = (response: BetaMessage): string => {
         let textContent = "";
         for (const block of response.content) {
             if (block.type === "text") {
@@ -405,12 +408,13 @@ export const testGeneratorOrchestratorFactory = async (
     runLogDir: string,
     baseUrl: string,
     runTestEnvironment: boolean,
-    port: number) => {
+    port: number,
+) => {
     let isolatedEnvironment: IsolatedEnvironment | null = null;
     const allowedDirectories = [YAFFO_ROOT, DEFAULT_OUTPUT_DIR];
     if (runTestEnvironment) {
-        isolatedEnvironment = await startIsolatedEnvironment(port)
-        allowedDirectories.push(isolatedEnvironment.tempDir)
+        isolatedEnvironment = await startIsolatedEnvironment(port);
+        allowedDirectories.push(isolatedEnvironment.tempDir);
     }
 
     const fileMcpClient = await createFilesystemClient(allowedDirectories);
@@ -418,18 +422,24 @@ export const testGeneratorOrchestratorFactory = async (
         headless: true,
         baseUrl,
         browser: "chromium",
-        artifacts:{
+        artifacts: {
             outputDir: runLogDir,
             saveVideo: true,
             saveSession: true
         }
     }) : await createStubPlaywrightClient();
+    const memoryTool = localFilesystemMemoryToolFactory(MEMORY_DIR);
+
+    const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];
+
     const promptGenerator = promptGeneratorFactory(runTestEnvironment, baseUrl, YAFFO_ROOT);
-    const tools = [
-        ...mcpPlaywrightClient.getToolsForClaude(),
-        ...fileMcpClient.getToolsForClaude()
-    ]
-    const anthropicModel = anthropicModelClientFactory(runLogDir, promptGenerator.getSystemPrompt(), tools);
+    const tools = toolProviders.flatMap(provider => provider.getToolsForClaude());
+    const anthropicModel = anthropicModelClientFactory(
+        runLogDir,
+        promptGenerator.getSystemPrompt(),
+        tools,
+    );
+
     return new TestGeneratorOrchestrator(
         spec,
         runLogDir,
@@ -439,6 +449,6 @@ export const testGeneratorOrchestratorFactory = async (
         promptGenerator,
         allowedDirectories,
         isolatedEnvironment,
-        [fileMcpClient, mcpPlaywrightClient]
-    )
-}
+        toolProviders
+    );
+};

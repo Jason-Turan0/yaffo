@@ -125,12 +125,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 862,
+                      "duration": 928,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-12-27T00:10:49.057Z",
+                      "startTime": "2026-01-11T18:07:39.699Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -159,12 +159,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 629,
+                      "duration": 566,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-12-27T00:10:50.204Z",
+                      "startTime": "2026-01-11T18:07:40.796Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -173,6 +173,142 @@
                 }
               ],
               "id": "f5c6b1835f7e300e3405-600b8947b406b532d575",
+              "file": "photo_gallery_loads_with_valid_images.spec.ts",
+              "line": 63,
+              "column": 3
+            },
+            {
+              "title": "gallery loads with valid images",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1689,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T18:07:44.843Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5c6b1835f7e300e3405-522818ffd8f209abd29c",
+              "file": "photo_gallery_loads_with_valid_images.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "gallery handles broken images gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 851,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T18:07:47.999Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5c6b1835f7e300e3405-ef3a678c9bf03f5ea732",
+              "file": "photo_gallery_loads_with_valid_images.spec.ts",
+              "line": 63,
+              "column": 3
+            },
+            {
+              "title": "gallery loads with valid images",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1901,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T18:07:53.292Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5c6b1835f7e300e3405-94af51d4db564cbe33ba",
+              "file": "photo_gallery_loads_with_valid_images.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "gallery handles broken images gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 686,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T18:07:57.962Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5c6b1835f7e300e3405-4d21db21558d110ab56b",
               "file": "photo_gallery_loads_with_valid_images.spec.ts",
               "line": 63,
               "column": 3
@@ -210,12 +346,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1690,
+                      "duration": 1688,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-12-27T00:10:50.842Z",
+                      "startTime": "2026-01-11T18:07:41.369Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -244,12 +380,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1628,
+                      "duration": 1560,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-12-27T00:10:52.536Z",
+                      "startTime": "2026-01-11T18:07:43.061Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -261,6 +397,142 @@
               "file": "photo_gallery_year_filter.spec.ts",
               "line": 106,
               "column": 3
+            },
+            {
+              "title": "gallery filter year works",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2052,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T18:07:48.857Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b5f0f4891e7688a7cb79-4ffef0d48b5369492098",
+              "file": "photo_gallery_year_filter.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "year filter shows correct results for different years",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1909,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T18:07:50.913Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b5f0f4891e7688a7cb79-00fa8fa1dc6fed7e7d48",
+              "file": "photo_gallery_year_filter.spec.ts",
+              "line": 106,
+              "column": 3
+            },
+            {
+              "title": "gallery filter year works",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1792,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T18:07:58.656Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b5f0f4891e7688a7cb79-daca626df62b44be2c19",
+              "file": "photo_gallery_year_filter.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "year filter shows correct results for different years",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1636,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T18:08:00.451Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b5f0f4891e7688a7cb79-dbe5312e0200b106aad2",
+              "file": "photo_gallery_year_filter.spec.ts",
+              "line": 106,
+              "column": 3
             }
           ]
         }
@@ -269,9 +541,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-12-27T00:10:48.749Z",
-    "duration": 5439.804,
-    "expected": 4,
+    "startTime": "2026-01-11T18:07:39.486Z",
+    "duration": 22623.693000000003,
+    "expected": 12,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0
