@@ -4,6 +4,14 @@ import {ApiLogEntry, CacheUsage} from "@lib/test_generator/model_client.types";
 import {join} from "path";
 import {BetaMessageParam, BetaTool} from "@anthropic-ai/sdk/resources/beta";
 
+//Most expensive to least
+export type AnthropicModelAliasOpus = 'claude-opus-4-5';
+export type AnthropicModelAliasSonnet = 'claude-sonnet-4-5';
+export type AnthropicModelAliasHaiku = 'claude-haiku-4-5';
+
+
+export type AnthropicModelAlias = AnthropicModelAliasOpus | AnthropicModelAliasSonnet | AnthropicModelAliasHaiku ;
+
 export class AnthropicModelClient {
     private messages: BetaMessageParam[];
     private sessionInputTokens: number = 0;
@@ -13,13 +21,13 @@ export class AnthropicModelClient {
 
     constructor(
         private runLogDir: string,
-        private model: string,
+        private model: AnthropicModelAlias,
         private systemPrompt: string,
         private tools: BetaTool[],
         anthropicFactory: () => Anthropic,
     ) {
         this.runLogDir = runLogDir;
-        this.model = model ?? "claude-sonnet-4-20250514";
+        this.model = model;
         this.messages = [];
         this.anthropic = anthropicFactory();
         this.apiCallCount = 0;
@@ -137,12 +145,13 @@ export class AnthropicModelClient {
 
 export const anthropicModelClientFactory = (
     runLogDir: string,
+    model: AnthropicModelAlias,
     systemPrompt: string,
     tools: BetaTool[],
 ) => {
     return new AnthropicModelClient(
         runLogDir,
-        "claude-sonnet-4-20250514",
+        model,
         systemPrompt,
         tools,
         () => new Anthropic(),

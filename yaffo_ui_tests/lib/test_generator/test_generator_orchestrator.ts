@@ -9,7 +9,11 @@ import {promptGeneratorFactory, PromptGenerator} from "@lib/test_generator/promp
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
 import {parseJsonResponse} from "@lib/test_generator/json_parser";
 import {typeCheckFile, formatTypeErrorsForModel} from "@lib/test_generator/typescript_validator";
-import {anthropicModelClientFactory, AnthropicModelClient} from "@lib/test_generator/anthropic_model_client";
+import {
+    anthropicModelClientFactory,
+    AnthropicModelClient,
+    AnthropicModelAlias
+} from "@lib/test_generator/anthropic_model_client";
 import {
     createPlaywrightClient,
     createStubPlaywrightClient,
@@ -67,7 +71,9 @@ export class TestGeneratorOrchestrator {
 
     generate = async (specPath: string, baseUrl: string, tempDir?: string): Promise<GenerationResult> => {
         try {
-            const generatedJson = await this.generateTestCode(specPath, baseUrl);
+            const userPrompt = this.promptGenerator.buildUserPrompt(this.spec, specPath, baseUrl, this.allowedDirectories);
+            this.anthropic.addMessage({role: "user", content: userPrompt})
+            const generatedJson = await this.generateTestCode();
             if (!generatedJson) {
                 return {
                     success: false,
@@ -86,13 +92,8 @@ export class TestGeneratorOrchestrator {
         }
     };
 
-
-    private generateTestCode = async (specPath: string, baseUrl: string): Promise<string | null> => {
-        this.iterationCount = 0;
-        const userPrompt = this.promptGenerator.buildUserPrompt(this.spec, specPath, baseUrl, this.allowedDirectories);
-        this.anthropic.addMessage({role: "user", content: userPrompt})
+    private generateTestCode = async () => {
         let generatedJson: string | null = null;
-
         while (this.iterationCount < this.maxIterations) {
             this.iterationCount++;
             console.log(`\n🔄 Iteration ${this.iterationCount}...`);
@@ -117,9 +118,8 @@ export class TestGeneratorOrchestrator {
                 this.anthropic.addMessages(nextAction.toolUsages);
             }
         }
-
         return generatedJson;
-    };
+    }
 
     private validateTestCode = async (originalJson: string): Promise<GenerationResult> => {
         let retryCount = 0;
@@ -140,11 +140,16 @@ export class TestGeneratorOrchestrator {
             }
 
             if (schemaErrors.length > 0) {
-                const fixResult = await this.fixCodeWithSchemaErrors(schemaErrors, currentJson);
-                if (fixResult == null) break;
-                currentJson = fixResult
-                continue;
+                this.addSchemaErrorMessage(schemaErrors, currentJson);
+                const correctedJson = await this.generateTestCode();
+                if (!correctedJson) {
+                    break;
+                } else {
+                    currentJson = correctedJson;
+                    continue;
+                }
             }
+
             lastResponse = parsedResponse;
             const writtenPaths = this.writeGeneratedFiles(parsedResponse);
             const typeErrors = this.typeCheckFiles(writtenPaths);
@@ -152,10 +157,14 @@ export class TestGeneratorOrchestrator {
             if (typeErrors.length === 0) {
                 console.log(`\n✅ All files compile successfully!`);
             } else {
-                const fixResult = await this.fixCodeWithTypeErrors(typeErrors, parsedResponse, currentJson);
-                if (fixResult == null) break;
-                currentJson = fixResult;
-                continue;
+                this.addCompileErrorMessage(typeErrors, parsedResponse, currentJson);
+                const correctedJson = await this.generateTestCode();
+                if (!correctedJson) {
+                    break;
+                } else {
+                    currentJson = correctedJson;
+                    continue;
+                }
             }
 
 
@@ -168,10 +177,13 @@ export class TestGeneratorOrchestrator {
                         logPath: this.runLogDir
                     }
                 } else {
-                    const fixResult = await this.fixCodeWithTestFailures(testFailures, parsedResponse, currentJson);
-                    if (fixResult == null) break;
-                    currentJson = fixResult;
-                    continue;
+                    this.addPlaywrightTestErrorMessage(testFailures, parsedResponse, currentJson);
+                    const correctedJson = await this.generateTestCode();
+                    if (!correctedJson) {
+                        break;
+                    } else {
+                        currentJson = correctedJson;
+                    }
                 }
             } else {
                 console.log(`\n✅ Playwright tests disabled`);
@@ -188,61 +200,43 @@ export class TestGeneratorOrchestrator {
         };
     };
 
-    private fixCodeWithSchemaErrors = async (
+    private addSchemaErrorMessage = (
         schemaErrors: string[],
         currentJson: string
-    ): Promise<string | null> => {
+    ): void => {
         schemaErrors.forEach(err => console.log(`   - ${err}`));
         const schemaFixPrompt = this.promptGenerator.buildSchemaFixPrompt(schemaErrors);
         this.anthropic.addMessages([
             {role: "assistant", content: currentJson},
             {role: "user", content: schemaFixPrompt}
         ]);
-        return this.getFixResponse();
     };
 
-    private fixCodeWithTypeErrors = async (
+    private addCompileErrorMessage = (
         typeErrors: string[],
         parsedResponse: GeneratedTestResponse,
         currentJson: string,
-    ): Promise<string | null> => {
+    ): void => {
         const currentCode = parsedResponse.files[0]?.code || "";
         const typeFixPrompt = this.promptGenerator.buildTypeErrorFixPrompt(typeErrors, currentCode);
         this.anthropic.addMessages([
             {role: "assistant", content: currentJson},
             {role: "user", content: typeFixPrompt}
         ]);
-        return this.getFixResponse();
     };
 
-    private fixCodeWithTestFailures = async (
+    private addPlaywrightTestErrorMessage = (
         testFailures: string[],
         parsedResponse: GeneratedTestResponse,
         currentJson: string,
-    ): Promise<string | null> => {
+    ): void => {
         const currentCode = parsedResponse.files[0]?.code || "";
         const typeFixPrompt = this.promptGenerator.buildTestFailurePrompt(testFailures, currentCode);
         this.anthropic.addMessages([
             {role: "assistant", content: currentJson},
             {role: "user", content: typeFixPrompt}
         ]);
-        return this.getFixResponse();
     }
-
-    private getFixResponse = async () => {
-        const fixResponse = await this.anthropic.callModelApi();
-        if (!fixResponse) {
-            console.log(`   ❌ Failed to get fix response from model`);
-            return null;
-        }
-        const fixTextContent = this.extractTextContent(fixResponse);
-        if (fixTextContent) {
-            return fixTextContent;
-        }
-
-        console.log(`   ❌ No text content in fix response`);
-        return null
-    };
 
 
     private determineNextAction = async (response: BetaMessage): Promise<{
@@ -406,6 +400,7 @@ export class TestGeneratorOrchestrator {
 export const testGeneratorOrchestratorFactory = async (
     spec: Spec,
     runLogDir: string,
+    model: AnthropicModelAlias,
     baseUrl: string,
     runTestEnvironment: boolean,
     port: number,
@@ -436,6 +431,7 @@ export const testGeneratorOrchestratorFactory = async (
     const tools = toolProviders.flatMap(provider => provider.getToolsForClaude());
     const anthropicModel = anthropicModelClientFactory(
         runLogDir,
+        model,
         promptGenerator.getSystemPrompt(),
         tools,
     );

@@ -157,7 +157,7 @@ export class PromptGenerator {
         ].join("\n")).join("\n\n");
 
         return [
-            "Generate Playwright tests from this specification.",
+            `Generate Playwright tests from this specification.`,
             "",
             "## Filesystem Access",
             "",

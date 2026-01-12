@@ -10,13 +10,12 @@ import * as fs from "node:fs";
 import {testGeneratorOrchestratorFactory} from "@lib/test_generator/test_generator_orchestrator";
 import {generateTimestampString} from "@lib/test_generator/utils";
 import {runIsolatedTests} from "@lib/test_generator/isolated_runner";
+import {AnthropicModelAliasHaiku, AnthropicModelAliasOpus} from "@lib/test_generator/anthropic_model_client";
 
 interface GenerateOptions {
     runTestEnvironment?: boolean;
     port?: number;
 }
-
-const GENERATED_TESTS_DIR = resolve(join(process.cwd(), "generated_tests"));
 
 export async function generateTest(
     specPath: string,
@@ -31,10 +30,11 @@ export async function generateTest(
         if (!fs.existsSync(logPath)) {
             fs.mkdirSync(logPath, {recursive: true});
         }
-        const baseUrl = `http://127.0.0.1:${port}`
+        const baseUrl = `http://127.0.0.1:${port}`;
         const testGenerator = await testGeneratorOrchestratorFactory(
             spec,
             logPath,
+            'claude-haiku-4-5',
             baseUrl,
             runTestEnvironment,
             port

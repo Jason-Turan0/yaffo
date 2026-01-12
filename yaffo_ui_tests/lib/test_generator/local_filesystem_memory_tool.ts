@@ -14,6 +14,8 @@ import {ToolProvider} from "@lib/test_generator/toolprovider.types";
 import {Tool} from "@anthropic-ai/sdk/resources.js";
 
 import {Client} from "@modelcontextprotocol/sdk/client/index.js";
+import {readdirSync, mkdirSync, existsSync} from "node:fs";
+
 type CallToolReturn = ReturnType<Client["callTool"]>;
 
 async function exists(path: string) {
@@ -30,18 +32,30 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
     constructor(basePath: string = './memory') {
         this.basePath = basePath;
         this.memoryRoot = path.join(this.basePath, 'memories');
+        if (!existsSync(this.memoryRoot)) {
+            mkdirSync(this.memoryRoot, {recursive: true});
+        }
     }
 
     getToolsForClaude(): Tool[] {
-        return [betaMemoryTool(this) as Tool];
+        const toolSpec = betaMemoryTool(this) as Tool;
+        return [toolSpec];
     }
 
     async callTool(name: string, args: Record<string, unknown>): Promise<CallToolReturn> {
-        const toolImpl = betaMemoryTool(this);
-        const command = toolImpl.parse(name)
-        const result = await toolImpl.run(command)
+        if (args == null || args['command'] == null) {
+            throw new Error('command is required');
+        }
+        const tool = betaMemoryTool(this);
+        const command = tool.parse(args);
+        const result = await tool.run(command);
 
-        return result as unknown as CallToolReturn;
+        return [{
+            content: {
+                type: "text",
+                text: result
+            }
+        }] as unknown as CallToolReturn;
     }
 
     disconnect(): Promise<void> {
@@ -70,9 +84,6 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
     async view(command: BetaMemoryTool20250818ViewCommand): Promise<string> {
         const fullPath = this.validatePath(command.path);
 
-        if (!(await exists(fullPath))) {
-            throw new Error(`Path not found: ${command.path}`);
-        }
 
         const stat = await fs.stat(fullPath);
 
