@@ -12,17 +12,24 @@ interface LoadedContext {
     content: string;
 }
 
+interface LoadedMemory {
+    filename: string;
+    content: string;
+}
+
 export const TEST_GENERATOR_OUTPUT_FORMAT = fs.readFileSync(
     join(process.cwd(), "lib", "test_generator", "model_client.response.types.ts"),
     "utf8"
 );
 
 export class PromptGenerator {
+
     constructor(
         private testServerIsRunning: boolean,
         private baseUrl: string,
-        private yaffoRoot: string = YAFFO_ROOT
-    ) {}
+        private yaffoRoot: string = YAFFO_ROOT,
+    ) {
+    }
 
     getSystemPrompt(): string {
         const testServerPrompt = this.testServerIsRunning ? [
@@ -298,6 +305,7 @@ export class PromptGenerator {
             ...sections,
         ].join("\n");
     }
+
 }
 
 // Factory function

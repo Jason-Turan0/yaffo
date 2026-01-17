@@ -28,10 +28,9 @@ import {
     BetaToolResultBlockParam
 } from "@anthropic-ai/sdk/resources/beta";
 import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
+import {isString} from "node:util";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
-const DEFAULT_OUTPUT_DIR = resolve(join(process.cwd(), "generated_tests"));
-const MEMORY_DIR = resolve(join(process.cwd(), "claude_memories"));
 
 export class TestGeneratorOrchestrator {
     private iterationCount = 0;
@@ -55,7 +54,7 @@ export class TestGeneratorOrchestrator {
     ) {
         this.spec = spec;
         this.runLogDir = runLogDir;
-        this.outputDir = outputDir ?? DEFAULT_OUTPUT_DIR;
+        this.outputDir = outputDir;
         const tools = toolProviders.flatMap(toolProvider => toolProvider.getToolsForClaude().map((tool) => ({
             tool,
             toolProvider
@@ -274,8 +273,9 @@ export class TestGeneratorOrchestrator {
                         toolResults.push({
                             type: "tool_result",
                             tool_use_id: call.id,
-                            content: result?.content as BetaTextBlockParam[],
+                            content: (typeof result === 'string') ? result: [result]
                         });
+                        console.log(`Tool ${call.name} Used. ID: ${call.id}`)
                     }
                 } catch (e) {
                     const errorMsg = e instanceof Error ? e.message : String(e);
@@ -400,13 +400,14 @@ export class TestGeneratorOrchestrator {
 export const testGeneratorOrchestratorFactory = async (
     spec: Spec,
     runLogDir: string,
+    outputDir: string,
     model: AnthropicModelAlias,
     baseUrl: string,
     runTestEnvironment: boolean,
     port: number,
 ) => {
     let isolatedEnvironment: IsolatedEnvironment | null = null;
-    const allowedDirectories = [YAFFO_ROOT, DEFAULT_OUTPUT_DIR];
+    const allowedDirectories = [YAFFO_ROOT, outputDir];
     if (runTestEnvironment) {
         isolatedEnvironment = await startIsolatedEnvironment(port);
         allowedDirectories.push(isolatedEnvironment.tempDir);
@@ -423,7 +424,7 @@ export const testGeneratorOrchestratorFactory = async (
             saveSession: true
         }
     }) : await createStubPlaywrightClient();
-    const memoryTool = localFilesystemMemoryToolFactory(MEMORY_DIR);
+    const memoryTool = localFilesystemMemoryToolFactory(outputDir);
 
     const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];
 
@@ -439,7 +440,7 @@ export const testGeneratorOrchestratorFactory = async (
     return new TestGeneratorOrchestrator(
         spec,
         runLogDir,
-        DEFAULT_OUTPUT_DIR,
+        outputDir,
         baseUrl,
         anthropicModel,
         promptGenerator,

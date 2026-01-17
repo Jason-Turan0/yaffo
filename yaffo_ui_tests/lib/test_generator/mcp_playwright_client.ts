@@ -8,7 +8,14 @@
 import {Client} from "@modelcontextprotocol/sdk/client/index.js";
 import {StdioClientTransport} from "@modelcontextprotocol/sdk/client/stdio.js";
 import type {Tool} from "@anthropic-ai/sdk/resources/messages.js";
-import {ToolProvider} from "@lib/test_generator/toolprovider.types";
+import {CallToolReturn, ToolProvider} from "@lib/test_generator/toolprovider.types";
+import {writeFileSync} from "fs";
+
+export interface McpClientLike {
+    close(): Promise<void>;
+    listTools(): Promise<{ tools: Array<{ name: string; description?: string; inputSchema: unknown }> }>;
+    callTool(params: { name: string; arguments?: Record<string, unknown> }): Promise<Record<string, unknown>>;
+}
 
 export interface ArtifactOptions {
     /** Directory to save artifacts (videos, traces, session). Defaults to current directory */
@@ -35,8 +42,6 @@ export interface McpTool {
     inputSchema: Record<string, unknown>;
 }
 
-type CallToolReturn = ReturnType<Client["callTool"]>;
-
 const MAX_TOOL_RESULT_CHARS = 30000;
 
 const EXCLUDED_TOOLS = [
@@ -55,87 +60,27 @@ export const truncateToolResult = (result: string): string => {
 
 
 export class PlaywrightMcpClient implements ToolProvider {
-    private client: Client | null = null;
-    private transport: StdioClientTransport | null = null;
     private tools: McpTool[] = [];
-    private readonly options: PlaywrightMcpClientOptions;
+    private connected = false;
 
-    constructor(options: PlaywrightMcpClientOptions = {}) {
-        this.options = {
-            headless: true,
-            browser: "chromium",
-            ...options,
-        };
-    }
-
-    private buildArgs(): string[] {
-        const args = ["@playwright/mcp@latest"];
-
-        if (this.options.headless) {
-            args.push("--headless");
-        }
-
-        if (this.options.browser) {
-            args.push(`--browser=${this.options.browser}`);
-        }
-
-        const artifacts = this.options.artifacts;
-        if (artifacts) {
-            if (artifacts.outputDir) {
-                args.push(`--output-dir=${artifacts.outputDir}`);
-            }
-            if (artifacts.saveVideo) {
-                const videoSize = typeof artifacts.saveVideo === "string"
-                    ? artifacts.saveVideo
-                    : "1280x720";
-                args.push(`--save-video=${videoSize}`);
-            }
-            if (artifacts.saveTrace) {
-                args.push("--save-trace");
-            }
-            if (artifacts.saveSession) {
-                args.push("--save-session");
-            }
-        }
-
-        return args;
-    }
+    constructor(private readonly client: McpClientLike) {}
 
     async connect(): Promise<void> {
-        const args = this.buildArgs();
-
-        this.transport = new StdioClientTransport({
-            command: "npx",
-            args,
-        });
-
-        this.client = new Client(
-            {
-                name: "yaffo-playwright-runner",
-                version: "1.0.0",
-            },
-            {
-                capabilities: {},
-            }
-        );
-
-        await this.client.connect(this.transport);
-
         const toolsResult = await this.client.listTools();
         this.tools = toolsResult.tools.map((t) => ({
             name: t.name,
             description: t.description || "",
             inputSchema: t.inputSchema as Record<string, unknown>,
         }));
+        this.connected = true;
 
         console.log(`🎭 Playwright MCP connected. Available tools: ${this.tools.length}`);
     }
 
     async disconnect(): Promise<void> {
-        if (this.client) {
+        if (this.connected) {
             await this.client.close();
-            this.client = null;
-            this.transport = null;
+            this.connected = false;
             console.log("🎭 Playwright MCP disconnected");
         }
     }
@@ -155,26 +100,28 @@ export class PlaywrightMcpClient implements ToolProvider {
     }
 
     async callTool(name: string, args: Record<string, unknown>): Promise<CallToolReturn> {
-        if (!this.client) {
+        if (!this.connected) {
             throw new Error("Playwright MCP client not connected");
         }
 
         const result = await this.client.callTool({name, arguments: args});
-        const contentText: string | undefined = (result?.content as any)?.text;
 
+        const contentArray = result?.content as Array<{ type: string; text?: string }> | undefined;
+        let contentText: string = contentArray
+            ?.filter(block => block.type === 'text')
+            .map(block => block.text || '')
+            .join('\n') || '';
+        let truncated = false
         if (contentText != null && contentText.length > MAX_TOOL_RESULT_CHARS) {
             console.warn(`   ⚠️  Result truncated: ${contentText.length} → ${MAX_TOOL_RESULT_CHARS} chars`);
-            const content = result?.content as any;
-            if (content == null) {
-                throw new Error("No content");
-            }
-            content._meta = {
-                ...(content?._meta || {}),
-                truncated: true,
-            };
-            content.text = truncateToolResult(contentText);
+            truncated = true;
+            contentText = truncateToolResult(contentText);
         }
-        return result;
+        return {
+            type: 'text',
+            text: contentText,
+            ...(truncated ? {_meta: {truncated: true}} : {})
+        };
     }
 
     async navigate(url: string): Promise<CallToolReturn> {
@@ -193,39 +140,85 @@ export class PlaywrightMcpClient implements ToolProvider {
         return this.callTool("browser_type", {element, text});
     }
 
-    async takeScreenshot(options?: {fullPage?: boolean}): Promise<CallToolReturn> {
+    async takeScreenshot(options?: { fullPage?: boolean }): Promise<CallToolReturn> {
         return this.callTool("browser_take_screenshot", options || {});
     }
 
     async close(): Promise<CallToolReturn> {
         return this.callTool("browser_close", {});
     }
+}
 
-    getOptions(): PlaywrightMcpClientOptions {
-        return {...this.options};
+function buildArgs(options: PlaywrightMcpClientOptions): string[] {
+    const args = ["@playwright/mcp@latest"];
+
+    if (options.headless !== false) {
+        args.push("--headless");
     }
+
+    if (options.browser) {
+        args.push(`--browser=${options.browser}`);
+    }
+
+    const artifacts = options.artifacts;
+    if (artifacts) {
+        if (artifacts.outputDir) {
+            args.push(`--output-dir=${artifacts.outputDir}`);
+        }
+        if (artifacts.saveVideo) {
+            const videoSize = typeof artifacts.saveVideo === "string"
+                ? artifacts.saveVideo
+                : "1280x720";
+            args.push(`--save-video=${videoSize}`);
+        }
+        if (artifacts.saveTrace) {
+            args.push("--save-trace");
+        }
+        if (artifacts.saveSession) {
+            args.push("--save-session");
+        }
+    }
+
+    return args;
 }
 
 export async function createPlaywrightClient(
     options: PlaywrightMcpClientOptions = {}
 ): Promise<ToolProvider> {
-    const client = new PlaywrightMcpClient(options);
+    const args = buildArgs(options);
+
+    const transport = new StdioClientTransport({
+        command: "npx",
+        args,
+    });
+
+    const mcpClient = new Client(
+        {
+            name: "yaffo-playwright-runner",
+            version: "1.0.0",
+        },
+        {
+            capabilities: {},
+        }
+    );
+
+    await mcpClient.connect(transport);
+
+    const client = new PlaywrightMcpClient(mcpClient);
     await client.connect();
     return client;
 }
 
-export async function createStubPlaywrightClient(options: PlaywrightMcpClientOptions = {}):Promise<ToolProvider> {
+export async function createStubPlaywrightClient(): Promise<ToolProvider> {
     return {
-        getToolsForClaude(): [] {
-            return []
+        getToolsForClaude() {
+            return [];
         },
 
-        callTool(name: string, args: Record<string, unknown>): Promise<CallToolReturn> {
-            throw new Error("Playwright MCP client not connected");
+        callTool(_name: string, _args: Record<string, unknown>): Promise<CallToolReturn> {
+            return Promise.reject(new Error("Playwright MCP client not connected"));
         },
 
-        async disconnect(): Promise<void> {
-
-        }
-    }
+        async disconnect(): Promise<void> {}
+    };
 }

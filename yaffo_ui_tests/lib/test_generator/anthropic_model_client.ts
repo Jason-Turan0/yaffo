@@ -10,7 +10,7 @@ export type AnthropicModelAliasSonnet = 'claude-sonnet-4-5';
 export type AnthropicModelAliasHaiku = 'claude-haiku-4-5';
 
 
-export type AnthropicModelAlias = AnthropicModelAliasOpus | AnthropicModelAliasSonnet | AnthropicModelAliasHaiku ;
+export type AnthropicModelAlias = AnthropicModelAliasOpus | AnthropicModelAliasSonnet | AnthropicModelAliasHaiku;
 
 export class AnthropicModelClient {
     private messages: BetaMessageParam[];
@@ -79,25 +79,6 @@ export class AnthropicModelClient {
         let response: Anthropic.Beta.BetaMessage | undefined;
         let cacheUsage: CacheUsage | undefined;
         const timestamp = new Date();
-        const contextManagement = {
-            // edits: [
-            //    {
-            //      type: 'clear_tool_uses_20250919' as const,
-            // The below parameters are OPTIONAL:
-            // Trigger clearing when threshold is exceeded
-            //trigger: {type: 'input_tokens', value: 30000},
-
-            // Number of tool uses to keep after clearing
-            //keep: {type: 'tool_uses', value: 3},
-
-            // Optional: Clear at least this many tokens
-            //clear_at_least: {type: 'input_tokens', value: 5000},
-
-            // Exclude these tools uses from being cleared
-            //exclude_tools: ['web_search'],
-            // },
-            //],
-        }
         const params = {
             model: this.model,
             max_tokens: 8192,
@@ -105,7 +86,7 @@ export class AnthropicModelClient {
             tools: this.buildToolsWithCache() as Anthropic.Messages.Tool[],
             betas: ['context-management-2025-06-27'],
             messages: this.messages,
-            context_management: contextManagement,
+            context_management: {},
         };
 
         try {

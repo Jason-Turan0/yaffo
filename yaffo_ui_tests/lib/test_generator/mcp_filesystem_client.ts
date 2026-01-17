@@ -8,7 +8,7 @@
 import {Client} from "@modelcontextprotocol/sdk/client/index.js";
 import {StdioClientTransport} from "@modelcontextprotocol/sdk/client/stdio.js";
 import type {Tool} from "@anthropic-ai/sdk/resources/messages.js";
-import {ToolProvider} from "@lib/test_generator/toolprovider.types";
+import {CallToolReturn, ToolProvider} from "@lib/test_generator/toolprovider.types";
 
 export interface McpClientOptions {
     allowedDirectories: string[];
@@ -19,9 +19,6 @@ export interface McpTool {
     description: string;
     inputSchema: Record<string, unknown>;
 }
-
-type CallToolReturn = ReturnType<Client['callTool']>;
-
 
 const MAX_TOOL_RESULT_CHARS = 20000;
 
@@ -113,21 +110,22 @@ export class FilesystemMcpClient {
         }
 
         const result = await this.client.callTool({name, arguments: args});
-        const contentText: string | undefined = (result?.content as any)?.text;
-
+        const contentArray = result?.content as Array<{ type: string; text?: string }> | undefined;
+        let contentText: string = contentArray
+            ?.filter(block => block.type === 'text')
+            .map(block => block.text || '')
+            .join('\n') || '';
+        let truncated = false
         if (contentText != null && contentText.length > MAX_TOOL_RESULT_CHARS) {
             console.warn(`   ⚠️  Result truncated: ${contentText.length} → ${MAX_TOOL_RESULT_CHARS} chars`);
-            const content = result?.content as any;
-            if (content == null) {
-                throw new Error('No content');
-            }
-            content._meta = {
-                ...(content?._meta || {}),
-                truncated: true,
-            }
-            content.text = truncateToolResult(contentText);
+            truncated = true;
+            contentText = truncateToolResult(contentText);
         }
-        return result;
+        return {
+            type: 'text',
+            text: contentText,
+            ...(truncated ? {_meta: {truncated: true}} : {})
+        };
     }
 
     getAllowedDirectories(): string[] {

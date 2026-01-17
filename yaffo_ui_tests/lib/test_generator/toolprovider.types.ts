@@ -1,6 +1,11 @@
-import {Client} from "@modelcontextprotocol/sdk/client/index.js";
 import {BetaTool} from "@anthropic-ai/sdk/resources/beta";
-type CallToolReturn = ReturnType<Client["callTool"]>;
+
+export type ContentBlock = {
+    type: "text",
+    text: string;
+};
+
+export type CallToolReturn = string | ContentBlock;
 
 export interface ToolProvider {
     getToolsForClaude(): BetaTool[];

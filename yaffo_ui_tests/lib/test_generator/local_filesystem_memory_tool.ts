@@ -1,6 +1,5 @@
-import * as fs from 'fs/promises';
+import * as fs from 'fs';
 import * as path from 'path';
-import Anthropic from '@anthropic-ai/sdk';
 import {betaMemoryTool, type MemoryToolHandlers} from '@anthropic-ai/sdk/helpers/beta/memory';
 import type {
     BetaMemoryTool20250818ViewCommand,
@@ -10,31 +9,21 @@ import type {
     BetaMemoryTool20250818RenameCommand,
     BetaMemoryTool20250818StrReplaceCommand,
 } from '@anthropic-ai/sdk/resources/beta';
-import {ToolProvider} from "@lib/test_generator/toolprovider.types";
+import {CallToolReturn, ToolProvider} from "@lib/test_generator/toolprovider.types";
 import {Tool} from "@anthropic-ai/sdk/resources.js";
 
-import {Client} from "@modelcontextprotocol/sdk/client/index.js";
-import {readdirSync, mkdirSync, existsSync} from "node:fs";
+import {existsSync} from "node:fs";
 
-type CallToolReturn = ReturnType<Client["callTool"]>;
-
-async function exists(path: string) {
-    return await fs
-        .access(path)
-        .then(() => true)
-        .catch(() => false);
-}
 
 class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
-    private basePath: string;
-    private memoryRoot: string;
+    private memoriesPath: string;
 
     constructor(basePath: string = './memory') {
-        this.basePath = basePath;
-        this.memoryRoot = path.join(this.basePath, 'memories');
-        if (!existsSync(this.memoryRoot)) {
-            mkdirSync(this.memoryRoot, {recursive: true});
+        const memoriesPath = path.join(basePath, 'memories');
+        if (!fs.existsSync(memoriesPath)) {
+            fs.mkdirSync(memoriesPath, {recursive: true});
         }
+        this.memoriesPath = memoriesPath;
     }
 
     getToolsForClaude(): Tool[] {
@@ -48,14 +37,11 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         }
         const tool = betaMemoryTool(this);
         const command = tool.parse(args);
-        const result = await tool.run(command);
-
-        return [{
-            content: {
-                type: "text",
-                text: result
-            }
-        }] as unknown as CallToolReturn;
+        const result = await tool.run(command) as string;
+        return {
+            type: "text",
+            text: result
+        };
     }
 
     disconnect(): Promise<void> {
@@ -70,10 +56,10 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         }
 
         const relativePath = memoryPath.slice('/memories'.length).replace(/^\//, '');
-        const fullPath = relativePath ? path.join(this.memoryRoot, relativePath) : this.memoryRoot;
+        const fullPath = relativePath ? path.join(this.memoriesPath, relativePath) : this.memoriesPath;
 
         const resolvedPath = path.resolve(fullPath);
-        const resolvedRoot = path.resolve(this.memoryRoot);
+        const resolvedRoot = path.resolve(this.memoriesPath);
         if (!resolvedPath.startsWith(resolvedRoot)) {
             throw new Error(`Path ${memoryPath} would escape /memories directory`);
         }
@@ -85,24 +71,24 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         const fullPath = this.validatePath(command.path);
 
 
-        const stat = await fs.stat(fullPath);
+        const stat = fs.statSync(fullPath);
 
         if (stat.isDirectory()) {
             const items: string[] = [];
-            const dirContents = await fs.readdir(fullPath);
+            const dirContents = fs.readdirSync(fullPath);
 
             for (const item of dirContents.sort()) {
                 if (item.startsWith('.')) {
                     continue;
                 }
                 const itemPath = path.join(fullPath, item);
-                const itemStat = await fs.stat(itemPath);
+                const itemStat = fs.statSync(itemPath);
                 items.push(itemStat.isDirectory() ? `${item}/` : item);
             }
 
             return `Directory: ${command.path}\n` + items.map((item) => `- ${item}`).join('\n');
         } else if (stat.isFile()) {
-            const content = await fs.readFile(fullPath, 'utf-8');
+            const content = fs.readFileSync(fullPath, 'utf-8');
             const lines = content.split('\n');
 
             let displayLines = lines;
@@ -129,28 +115,27 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         const fullPath = this.validatePath(command.path);
         const dir = path.dirname(fullPath);
 
-        if (!(await exists(dir))) {
-            await fs.mkdir(dir, {recursive: true});
-            throw new Error(`Path not found: ${command.path}`);
+        if (!(fs.existsSync(dir))) {
+            fs.mkdirSync(dir, {recursive: true});
         }
 
-        await fs.writeFile(fullPath, command.file_text, 'utf-8');
+        fs.writeFileSync(fullPath, command.file_text, 'utf-8');
         return `File created successfully at ${command.path}`;
     }
 
     async str_replace(command: BetaMemoryTool20250818StrReplaceCommand): Promise<string> {
         const fullPath = this.validatePath(command.path);
 
-        if (!(await exists(fullPath))) {
+        if (!(await existsSync(fullPath))) {
             throw new Error(`File not found: ${command.path}`);
         }
 
-        const stat = await fs.stat(fullPath);
+        const stat = await fs.statSync(fullPath);
         if (!stat.isFile()) {
             throw new Error(`Path is not a file: ${command.path}`);
         }
 
-        const content = await fs.readFile(fullPath, 'utf-8');
+        const content = await fs.readFileSync(fullPath, 'utf-8');
         const count = content.split(command.old_str).length - 1;
 
         if (count === 0) {
@@ -160,23 +145,23 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         }
 
         const newContent = content.replace(command.old_str, command.new_str);
-        await fs.writeFile(fullPath, newContent, 'utf-8');
+        await fs.writeFileSync(fullPath, newContent, 'utf-8');
         return `File ${command.path} has been edited`;
     }
 
     async insert(command: BetaMemoryTool20250818InsertCommand): Promise<string> {
         const fullPath = this.validatePath(command.path);
 
-        if (!(await exists(fullPath))) {
+        if (!(existsSync(fullPath))) {
             throw new Error(`File not found: ${command.path}`);
         }
 
-        const stat = await fs.stat(fullPath);
+        const stat = fs.statSync(fullPath);
         if (!stat.isFile()) {
             throw new Error(`Path is not a file: ${command.path}`);
         }
 
-        const content = await fs.readFile(fullPath, 'utf-8');
+        const content = fs.readFileSync(fullPath, 'utf-8');
         const lines = content.split('\n');
 
         if (command.insert_line < 0 || command.insert_line > lines.length) {
@@ -184,7 +169,7 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         }
 
         lines.splice(command.insert_line, 0, command.insert_text.replace(/\n$/, ''));
-        await fs.writeFile(fullPath, lines.join('\n'), 'utf-8');
+        fs.writeFileSync(fullPath, lines.join('\n'), 'utf-8');
         return `Text inserted at line ${command.insert_line} in ${command.path}`;
     }
 
@@ -195,17 +180,17 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
             throw new Error('Cannot delete the /memories directory itself');
         }
 
-        if (!(await exists(fullPath))) {
+        if (!(existsSync(fullPath))) {
             throw new Error(`Path not found: ${command.path}`);
         }
 
-        const stat = await fs.stat(fullPath);
+        const stat = fs.statSync(fullPath);
 
         if (stat.isFile()) {
-            await fs.unlink(fullPath);
+            fs.unlinkSync(fullPath);
             return `File deleted: ${command.path}`;
         } else if (stat.isDirectory()) {
-            fs.rmdir(fullPath, {recursive: true});
+            fs.rmdirSync(fullPath, {recursive: true});
             return `Directory deleted: ${command.path}`;
         } else {
             throw new Error(`Path not found: ${command.path}`);
@@ -216,20 +201,20 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         const oldFullPath = this.validatePath(command.old_path);
         const newFullPath = this.validatePath(command.new_path);
 
-        if (!(await exists(oldFullPath))) {
+        if (!(fs.existsSync(oldFullPath))) {
             throw new Error(`Source path not found: ${command.old_path}`);
         }
 
-        if (await exists(newFullPath)) {
+        if (fs.existsSync(newFullPath)) {
             throw new Error(`Destination already exists: ${command.new_path}`);
         }
 
         const newDir = path.dirname(newFullPath);
-        if (!(await exists(newDir))) {
-            await fs.mkdir(newDir, {recursive: true});
+        if (!(fs.existsSync(newDir))) {
+            fs.mkdirSync(newDir, {recursive: true});
         }
 
-        await fs.rename(oldFullPath, newFullPath);
+        fs.renameSync(oldFullPath, newFullPath);
         return `Renamed ${command.old_path} to ${command.new_path}`;
     }
 }

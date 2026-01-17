@@ -10,9 +10,7 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {
-      "actualWorkers": 1
-    },
+    "metadata": {},
     "preserveOutput": "always",
     "reporter": [
       [
@@ -42,9 +40,7 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "chromium",
         "name": "chromium",
         "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests",
@@ -58,9 +54,7 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "firefox",
         "name": "firefox",
         "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests",
@@ -74,9 +68,7 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "webkit",
         "name": "webkit",
         "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests",
@@ -95,98 +87,17 @@
     "workers": 1,
     "webServer": null
   },
-  "suites": [
+  "suites": [],
+  "errors": [
     {
-      "title": "photo_gallery.spec.ts",
-      "file": "photo_gallery.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Photo Gallery",
-          "file": "photo_gallery.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
-            {
-              "title": "gallery_loads_with_valid_images",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 757,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-11T23:57:29.399Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "52b995bbe9343074f73f-60bc6690eb9cd0f3278e",
-              "file": "photo_gallery.spec.ts",
-              "line": 11,
-              "column": 3
-            },
-            {
-              "title": "gallery_filter_year_works",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 1622,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-11T23:57:30.456Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "52b995bbe9343074f73f-24046040500e4dceeb9b",
-              "file": "photo_gallery.spec.ts",
-              "line": 58,
-              "column": 3
-            }
-          ]
-        }
-      ]
+      "message": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments.",
+      "stack": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments."
     }
   ],
-  "errors": [],
   "stats": {
-    "startTime": "2026-01-11T23:57:29.113Z",
-    "duration": 2990.013,
-    "expected": 2,
+    "startTime": "2026-01-17T20:06:37.081Z",
+    "duration": 3.8880000000000337,
+    "expected": 0,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0
