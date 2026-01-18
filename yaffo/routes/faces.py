@@ -16,6 +16,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from yaffo.db.repositories.person_repository import update_person_embedding
 from yaffo.db.repositories.photos_repository import get_distinct_years, get_distinct_months
 from yaffo.domain.compare_utils import load_embedding, calculate_similarity
+from yaffo.utils.context import context
 
 DEFAULT_THRESHOLD = 10  # configurable similarity threshold
 DEFAULT_PAGE_SIZE = 2000
@@ -134,7 +135,7 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
     face_suggestions.append(default_suggestion)
     return face_suggestions
 
-
+@context("yaffo-face_assignment")
 def init_faces_routes(app: Flask):
     @app.route("/faces", methods=["GET"])
     def faces_index():

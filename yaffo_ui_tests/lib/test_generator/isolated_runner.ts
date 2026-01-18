@@ -189,21 +189,6 @@ export const runPlaywrightTests = async (
     });
 };
 
-export const runIsolatedTests = async (
-    testFiles?: string[],
-    port = 5001
-): Promise<TestRunResult> => {
-    let environment: IsolatedEnvironment | null = null;
-
-    try {
-        environment = await startIsolatedEnvironment(port);
-        const result = await runPlaywrightTests(environment.baseUrl, testFiles);
-        return result;
-    } finally {
-        environment?.cleanup();
-    }
-};
-
 // CLI entry point
 async function main() {
     const args = process.argv.slice(2);
@@ -231,27 +216,21 @@ async function main() {
     const port = portIndex !== -1 && args[portIndex + 1]
         ? parseInt(args[portIndex + 1], 10)
         : 5001;
-
-    const testFiles = args.filter((a, i) =>
-        !a.startsWith("-") &&
-        (portIndex === -1 || (i !== portIndex && i !== portIndex + 1))
-    );
-
-    console.log(`Running isolated tests on port ${port}`);
-    if (testFiles.length > 0) {
-        console.log(`Test files: ${testFiles.join(", ")}`);
-    } else {
-        console.log(`Running all tests`);
-    }
-
-    const result = await runIsolatedTests(testFiles.length > 0 ? testFiles : undefined, port);
-
-    if (result.success) {
-        console.log(`\n✅ All tests passed!`);
+    let environment: IsolatedEnvironment | undefined;
+    const handleCleanup = async () => {
+        if (environment) {
+            await environment?.cleanup();
+        }
         process.exit(0);
-    } else {
-        console.log(`\n❌ Tests failed with exit code: ${result.exitCode}`);
-        process.exit(result.exitCode);
+    };
+    process.on('SIGINT', handleCleanup);
+    process.on('SIGTERM', handleCleanup);
+
+    try {
+        environment = await startIsolatedEnvironment(port);
+    } catch (e) {
+        console.error("failed to start environment", e);
+        process.exit(1);
     }
 }
 

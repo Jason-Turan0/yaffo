@@ -9,8 +9,6 @@ import {parseSpecFile} from "@lib/test_generator/spec_parser";
 import * as fs from "node:fs";
 import {testGeneratorOrchestratorFactory} from "@lib/test_generator/test_generator_orchestrator";
 import {generateTimestampString} from "@lib/test_generator/utils";
-import {runIsolatedTests} from "@lib/test_generator/isolated_runner";
-import {AnthropicModelAliasHaiku, AnthropicModelAliasOpus} from "@lib/test_generator/anthropic_model_client";
 
 const SPECS_DIR = resolve(join(process.cwd(), "specs"));
 const GENERATED_TESTS_DIR = resolve(join(process.cwd(), "generated_tests"));
@@ -51,7 +49,7 @@ export async function generateTest(
             spec,
             logPath,
             outputDir,
-            'claude-haiku-4-5',
+            'claude-sonnet-4-5',
             baseUrl,
             runTestEnvironment,
             port

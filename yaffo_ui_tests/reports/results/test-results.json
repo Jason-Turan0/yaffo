@@ -10,7 +10,9 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {},
+    "metadata": {
+      "actualWorkers": 1
+    },
     "preserveOutput": "always",
     "reporter": [
       [
@@ -40,7 +42,9 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {},
+        "metadata": {
+          "actualWorkers": 1
+        },
         "id": "chromium",
         "name": "chromium",
         "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests",
@@ -54,7 +58,9 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {},
+        "metadata": {
+          "actualWorkers": 1
+        },
         "id": "firefox",
         "name": "firefox",
         "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests",
@@ -68,7 +74,9 @@
         "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
         "repeatEach": 1,
         "retries": 2,
-        "metadata": {},
+        "metadata": {
+          "actualWorkers": 1
+        },
         "id": "webkit",
         "name": "webkit",
         "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests",
@@ -87,19 +95,437 @@
     "workers": 1,
     "webServer": null
   },
-  "suites": [],
-  "errors": [
+  "suites": [
     {
-      "message": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments.",
-      "stack": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments."
+      "title": "face_assignment/face_assignment_can_be_done.spec.ts",
+      "file": "face_assignment/face_assignment_can_be_done.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Face Assignment - Assign Faces to People",
+          "file": "face_assignment/face_assignment_can_be_done.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should be able to assign faces to people",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 5697,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.notification.success.visible')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.notification.success.visible')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.notification.success.visible')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.notification.success.visible')\u001b[22m\n\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_be_done.spec.ts:17:69)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_be_done.spec.ts:22:5",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_be_done.spec.ts",
+                          "column": 69,
+                          "line": 17
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 15 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'#addModal [name=\"name\"]'\u001b[39m)\u001b[33m.\u001b[39mfill(personName)\u001b[33m;\u001b[39m\n \u001b[90m 16 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'#addModal button[type=\"submit\"]'\u001b[39m)\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 17 |\u001b[39m         \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.notification.success.visible'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m5000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                     \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 18 |\u001b[39m       }\n \u001b[90m 19 |\u001b[39m     }\u001b[33m;\u001b[39m\n \u001b[90m 20 |\u001b[39m     \u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_be_done.spec.ts",
+                            "column": 69,
+                            "line": 17
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.notification.success.visible')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.notification.success.visible')\u001b[22m\n\n\n  15 |         await page.locator('#addModal [name=\"name\"]').fill(personName);\n  16 |         await page.locator('#addModal button[type=\"submit\"]').click();\n> 17 |         await expect(page.locator('.notification.success.visible')).toBeVisible({ timeout: 5000 });\n     |                                                                     ^\n  18 |       }\n  19 |     };\n  20 |     \n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_be_done.spec.ts:17:69)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_be_done.spec.ts:22:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-18T06:09:21.150Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face_assig-559ef-e-to-assign-faces-to-people-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face_assig-559ef-e-to-assign-faces-to-people-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face_assig-559ef-e-to-assign-faces-to-people-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_be_done.spec.ts",
+                        "column": 69,
+                        "line": 17
+                      }
+                    },
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2490,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-01-18T06:09:27.509Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face_assig-559ef-e-to-assign-faces-to-people-chromium-retry1/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "flaky"
+                }
+              ],
+              "id": "3145d9345df889175333-c7eeaad89e7423bd3f1a",
+              "file": "face_assignment/face_assignment_can_be_done.spec.ts",
+              "line": 4,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "face_assignment/face_assignment_can_create_new_people.spec.ts",
+      "file": "face_assignment/face_assignment_can_create_new_people.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Face Assignment - Create New People",
+          "file": "face_assignment/face_assignment_can_create_new_people.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should be able to create a new person using the quick action section",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 5586,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.notification.success.visible')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.notification.success.visible')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.notification.success.visible')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.notification.success.visible')\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_create_new_people.spec.ts:37:67",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_create_new_people.spec.ts",
+                          "column": 67,
+                          "line": 37
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 35 |\u001b[39m       \n \u001b[90m 36 |\u001b[39m       \u001b[90m// Wait for deletion to complete and success notification\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 37 |\u001b[39m       \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.notification.success.visible'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m5000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 38 |\u001b[39m       \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.notification.success.visible'\u001b[39m))\u001b[33m.\u001b[39mtoContainText(\u001b[35m/deleted/i\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 39 |\u001b[39m       \n \u001b[90m 40 |\u001b[39m       \u001b[90m// Return to face assignment screen\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_create_new_people.spec.ts",
+                            "column": 67,
+                            "line": 37
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.notification.success.visible')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.notification.success.visible')\u001b[22m\n\n\n  35 |       \n  36 |       // Wait for deletion to complete and success notification\n> 37 |       await expect(page.locator('.notification.success.visible')).toBeVisible({ timeout: 5000 });\n     |                                                                   ^\n  38 |       await expect(page.locator('.notification.success.visible')).toContainText(/deleted/i);\n  39 |       \n  40 |       // Return to face assignment screen\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_create_new_people.spec.ts:37:67"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-18T06:09:30.226Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face_assig-8bb34-ng-the-quick-action-section-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face_assig-8bb34-ng-the-quick-action-section-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face_assig-8bb34-ng-the-quick-action-section-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face_assignment_can_create_new_people.spec.ts",
+                        "column": 67,
+                        "line": 37
+                      }
+                    },
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3152,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-01-18T06:09:36.205Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face_assig-8bb34-ng-the-quick-action-section-chromium-retry1/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "flaky"
+                }
+              ],
+              "id": "ade5a97364a0ee1c06e3-7bd5dca553ea4d65ed65",
+              "file": "face_assignment/face_assignment_can_create_new_people.spec.ts",
+              "line": 4,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+      "file": "face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Face Assignment - Automatic Face Matching",
+          "file": "face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should automatically match similar faces to a person after initial assignment",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6620,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.face[data-face-id=\"1\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.face[data-face-id=\"1\"]')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.face[data-face-id=\"1\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.face[data-face-id=\"1\"]')\u001b[22m\n\n    at setupObamaWithFace (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:38:29)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:54:5",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+                          "column": 29,
+                          "line": 38
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 36 |\u001b[39m         \n \u001b[90m 37 |\u001b[39m         \u001b[36mconst\u001b[39m face1 \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.face[data-face-id=\"1\"]'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 38 |\u001b[39m         \u001b[36mawait\u001b[39m expect(face1)\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 39 |\u001b[39m         \u001b[36mawait\u001b[39m face1\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m 40 |\u001b[39m         \n \u001b[90m 41 |\u001b[39m         \u001b[36mconst\u001b[39m dropdownButton \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.searchable-select-display'\u001b[39m)\u001b[33m.\u001b[39mfirst()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+                            "column": 29,
+                            "line": 38
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.face[data-face-id=\"1\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.face[data-face-id=\"1\"]')\u001b[22m\n\n\n  36 |         \n  37 |         const face1 = page.locator('.face[data-face-id=\"1\"]');\n> 38 |         await expect(face1).toBeVisible();\n     |                             ^\n  39 |         await face1.click();\n  40 |         \n  41 |         const dropdownButton = page.locator('.searchable-select-display').first();\n    at setupObamaWithFace (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:38:29)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:54:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-18T06:09:39.506Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-faces_are_-224c5-on-after-initial-assignment-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-faces_are_-224c5-on-after-initial-assignment-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-faces_are_-224c5-on-after-initial-assignment-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+                        "column": 29,
+                        "line": 38
+                      }
+                    },
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6710,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.face[data-face-id=\"1\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.face[data-face-id=\"1\"]')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.face[data-face-id=\"1\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.face[data-face-id=\"1\"]')\u001b[22m\n\n    at setupObamaWithFace (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:38:29)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:54:5",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+                          "column": 29,
+                          "line": 38
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 36 |\u001b[39m         \n \u001b[90m 37 |\u001b[39m         \u001b[36mconst\u001b[39m face1 \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.face[data-face-id=\"1\"]'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 38 |\u001b[39m         \u001b[36mawait\u001b[39m expect(face1)\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 39 |\u001b[39m         \u001b[36mawait\u001b[39m face1\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m 40 |\u001b[39m         \n \u001b[90m 41 |\u001b[39m         \u001b[36mconst\u001b[39m dropdownButton \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.searchable-select-display'\u001b[39m)\u001b[33m.\u001b[39mfirst()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+                            "column": 29,
+                            "line": 38
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.face[data-face-id=\"1\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.face[data-face-id=\"1\"]')\u001b[22m\n\n\n  36 |         \n  37 |         const face1 = page.locator('.face[data-face-id=\"1\"]');\n> 38 |         await expect(face1).toBeVisible();\n     |                             ^\n  39 |         await face1.click();\n  40 |         \n  41 |         const dropdownButton = page.locator('.searchable-select-display').first();\n    at setupObamaWithFace (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:38:29)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:54:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-01-18T06:09:46.503Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-faces_are_-224c5-on-after-initial-assignment-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-faces_are_-224c5-on-after-initial-assignment-chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-faces_are_-224c5-on-after-initial-assignment-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-faces_are_-224c5-on-after-initial-assignment-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+                        "column": 29,
+                        "line": 38
+                      }
+                    },
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6730,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.face[data-face-id=\"1\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.face[data-face-id=\"1\"]')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.face[data-face-id=\"1\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.face[data-face-id=\"1\"]')\u001b[22m\n\n    at setupObamaWithFace (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:38:29)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:54:5",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+                          "column": 29,
+                          "line": 38
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 36 |\u001b[39m         \n \u001b[90m 37 |\u001b[39m         \u001b[36mconst\u001b[39m face1 \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.face[data-face-id=\"1\"]'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 38 |\u001b[39m         \u001b[36mawait\u001b[39m expect(face1)\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 39 |\u001b[39m         \u001b[36mawait\u001b[39m face1\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m 40 |\u001b[39m         \n \u001b[90m 41 |\u001b[39m         \u001b[36mconst\u001b[39m dropdownButton \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.searchable-select-display'\u001b[39m)\u001b[33m.\u001b[39mfirst()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+                            "column": 29,
+                            "line": 38
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.face[data-face-id=\"1\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.face[data-face-id=\"1\"]')\u001b[22m\n\n\n  36 |         \n  37 |         const face1 = page.locator('.face[data-face-id=\"1\"]');\n> 38 |         await expect(face1).toBeVisible();\n     |                             ^\n  39 |         await face1.click();\n  40 |         \n  41 |         const dropdownButton = page.locator('.searchable-select-display').first();\n    at setupObamaWithFace (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:38:29)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts:54:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2026-01-18T06:09:53.784Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-faces_are_-224c5-on-after-initial-assignment-chromium-retry2/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-faces_are_-224c5-on-after-initial-assignment-chromium-retry2/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-faces_are_-224c5-on-after-initial-assignment-chromium-retry2/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+                        "column": 29,
+                        "line": 38
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "dae1057789090d5fa1d5-30376ebf8fee5a6b454c",
+              "file": "face_assignment/faces_are_automatically_matched_to_people_based_on_similarity.spec.ts",
+              "line": 4,
+              "column": 3
+            }
+          ]
+        }
+      ]
     }
   ],
+  "errors": [],
   "stats": {
-    "startTime": "2026-01-17T20:06:37.081Z",
-    "duration": 3.8880000000000337,
+    "startTime": "2026-01-18T06:09:20.700Z",
+    "duration": 39936.886,
     "expected": 0,
     "skipped": 0,
-    "unexpected": 0,
-    "flaky": 0
+    "unexpected": 1,
+    "flaky": 2
   }
 }

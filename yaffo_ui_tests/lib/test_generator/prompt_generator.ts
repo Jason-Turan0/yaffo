@@ -1,7 +1,8 @@
 import {Spec, ContextItem} from "@lib/test_generator/spec_parser.types";
-import {join, resolve} from "path";
-import fs from "fs";
+import {basename, join, resolve} from "path";
+import fs, {existsSync, readFileSync, unlinkSync} from "fs";
 import {execSync} from "child_process";
+import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 
@@ -9,11 +10,6 @@ interface LoadedContext {
     tag: string;
     path: string;
     description?: string;
-    content: string;
-}
-
-interface LoadedMemory {
-    filename: string;
     content: string;
 }
 
@@ -27,25 +23,61 @@ export class PromptGenerator {
     constructor(
         private testServerIsRunning: boolean,
         private baseUrl: string,
-        private yaffoRoot: string = YAFFO_ROOT,
+        private yaffoRoot: string,
+        private outputDir: string,
+        private spec: Spec
     ) {
+    }
+
+    getExistingTestFilePaths(): string[] {
+        const jsonPath = join(this.outputDir, `${this.spec.feature}.json`);
+        if (!existsSync(jsonPath)) {
+            return [];
+        }
+        const foundTestFilePaths: string[] = [];
+        try {
+            const existingJson = readFileSync(jsonPath, "utf-8");
+            const existingResponse = JSON.parse(existingJson) as GeneratedTestResponse;
+
+            for (const file of existingResponse.files) {
+                const filePath = join(this.outputDir, basename(file.filename));
+                if (existsSync(filePath)) {
+                    foundTestFilePaths.push(filePath);
+                }
+            }
+        } catch (e) {
+            console.log(`   ⚠️  Could not parse existing JSON from file ${jsonPath}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+        return foundTestFilePaths;
     }
 
     getSystemPrompt(): string {
         const testServerPrompt = this.testServerIsRunning ? [
-            "You also access to running sandboxed instance of the website that you can use to interact with a sandbox instance of the currently running website",
+            "You also access to running sandboxed instance of the website that you can use to interact with a live instance of the website",
             "Use the provided tools from playwright mcp to interact with the website to help provide context for the runtime behavior of the site for generating tests",
             `The base url of the website is ${this.baseUrl}`,
             ""
         ] : [];
+        const existingTestFiles = this.getExistingTestFilePaths();
+        const createPrompts = [
+            "1. Explore the codebase to discover actual HTML elements, selectors, and routes if needed",
+            "2. Generate accurate Playwright tests based on what you find",
+            "3. Return your output as structured JSON (you cannot write files directly)",
+        ];
+        const updatePrompts = [
+            `1. Check your memory and the existing tests located at ${existingTestFiles.join(',')}`,
+            "2. Update the existing tests based on what you find",
+            "3. Return your output as structured JSON (you cannot write files directly)",
+            "Existing test files:",
+            "",
+            ...existingTestFiles,
+        ];
 
         return [
             "You are an expert Playwright test generator with READ-ONLY access to filesystem tools.",
             "",
             "Your job is to:",
-            "1. Explore the codebase to discover actual HTML elements, selectors, and routes if needed",
-            "2. Generate accurate Playwright tests based on what you find",
-            "3. Return your output as structured JSON (you cannot write files directly)",
+            ...(existingTestFiles.length > 0 ? updatePrompts : createPrompts),
             "",
             "You have access to READ-ONLY tools that let you explore:",
             "- Flask templates (templates/) - the actual HTML structure",
@@ -144,15 +176,14 @@ export class PromptGenerator {
         const contextSection = this.buildContextSection(loadedContext);
 
         const explorationNote = loadedContext.length > 0
-            ? "Pre-loaded context has been provided below. Use these files as your primary reference. " +
-              "You may still explore other files if needed for additional context."
+            ? "Pre-loaded context has been provided. Use these files as your primary reference. " +
+            "You may still explore other files if needed for additional context."
             : "Start by exploring the templates directory to find actual selectors, " +
-              "then generate the test file as JSON.";
+            "then generate the test file as JSON.";
 
         const preconditionsSection = spec.preconditions
             ? `preconditions:\n${spec.preconditions.map(p => `  - ${p}`).join("\n")}`
             : "";
-
         const scenariosYaml = spec.scenarios.map(s => [
             `  - name: ${s.name}`,
             `    goal: ${s.goal}`,
@@ -185,6 +216,7 @@ export class PromptGenerator {
             "",
             preconditionsSection,
             "",
+            ...(spec.data ? ["data:", ...spec.data, ""] : []),
             "scenarios:",
             scenariosYaml,
             "```",
@@ -197,6 +229,8 @@ export class PromptGenerator {
             `- Generated at: ${timestamp}`,
             "",
             explorationNote,
+            "",
+            ""
         ].join("\n");
     }
 
@@ -309,6 +343,6 @@ export class PromptGenerator {
 }
 
 // Factory function
-export const promptGeneratorFactory = (testServerIsRunning: boolean, baseUrl: string, yaffoRoot?: string): PromptGenerator => {
-    return new PromptGenerator(testServerIsRunning, baseUrl, yaffoRoot);
+export const promptGeneratorFactory = (testServerIsRunning: boolean, baseUrl: string, yaffoRoot: string, outputDir: string, spec: Spec): PromptGenerator => {
+    return new PromptGenerator(testServerIsRunning, baseUrl, yaffoRoot, outputDir, spec);
 };

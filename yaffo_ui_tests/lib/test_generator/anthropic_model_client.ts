@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import {writeFileSync} from "fs";
 import {ApiLogEntry, CacheUsage} from "@lib/test_generator/model_client.types";
 import {join} from "path";
-import {BetaMessageParam, BetaTool} from "@anthropic-ai/sdk/resources/beta";
+import {BetaMessageParam, BetaTextBlockParam, BetaTool} from "@anthropic-ai/sdk/resources/beta";
 
 //Most expensive to least
 export type AnthropicModelAliasOpus = 'claude-opus-4-5';
@@ -49,15 +49,23 @@ export class AnthropicModelClient {
         }];
     };
 
-    private buildToolsWithCache = (): BetaTool[] => {
-        if (this.tools.length === 0) return [];
-        return this.tools.map((tool, index) => {
-            if (index === this.tools.length - 1) {
-                return {...tool, cache_control: {type: "ephemeral" as const}};
+    private buildMessagesWithCache = (): BetaMessageParam[] => {
+        return this.messages.map((message, index) => {
+            const content = message.content as BetaTextBlockParam[];
+            const messageContent = {
+                role: message.role,
+                content: content.map(c => ({...c}))
             }
-            return tool;
-        });
-    };
+            const isLastMessage = index === this.messages.length - 1
+            if (isLastMessage) {
+                const contentToSet = messageContent.content[messageContent.content.length - 1];
+                if (contentToSet) {
+                    contentToSet.cache_control = {type: "ephemeral" as const};
+                }
+            }
+            return messageContent;
+        })
+    }
 
     private extractCacheUsage = (response: Anthropic.Beta.BetaMessage | undefined): CacheUsage | undefined => {
         if (!response?.usage) return undefined;
@@ -82,10 +90,10 @@ export class AnthropicModelClient {
         const params = {
             model: this.model,
             max_tokens: 8192,
-            system: this.buildSystemWithCache(),
-            tools: this.buildToolsWithCache() as Anthropic.Messages.Tool[],
+            tools: this.tools,
             betas: ['context-management-2025-06-27'],
-            messages: this.messages,
+            system: this.buildSystemWithCache(),
+            messages: this.buildMessagesWithCache(),
             context_management: {},
         };
 
@@ -121,6 +129,7 @@ export class AnthropicModelClient {
         const logPath = join(this.runLogDir, `${this.apiCallCount}_claude_api.json`);
         writeFileSync(logPath, JSON.stringify(entry, null, 2));
     };
+
 
 }
 

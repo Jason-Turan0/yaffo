@@ -6,10 +6,11 @@ from yaffo.db import db
 from yaffo.db.models import Person, PersonFace, Face, FACE_STATUS_UNASSIGNED, Photo
 from yaffo.db.repositories.person_repository import update_person_embedding
 from yaffo.db.repositories.photos_repository import get_distinct_months, get_distinct_years
+from yaffo.utils.context import context
 
 DEFAULT_THRESHOLD = 0.95  # configurable similarity threshold
 FACE_LOAD_LIMIT = 250
-
+@context("yaffo-face_assignment")
 def init_people_routes(app: Flask):
     @app.route("/people", methods=["GET"])
     def people_list():

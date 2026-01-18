@@ -8,7 +8,7 @@ import {promptGeneratorFactory, PromptGenerator} from "@lib/test_generator/promp
 
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
 import {parseJsonResponse} from "@lib/test_generator/json_parser";
-import {typeCheckFile, formatTypeErrorsForModel} from "@lib/test_generator/typescript_validator";
+import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/test_generator/typescript_validator";
 import {
     anthropicModelClientFactory,
     AnthropicModelClient,
@@ -23,12 +23,10 @@ import {IsolatedEnvironment, runPlaywrightTests, startIsolatedEnvironment} from 
 import {
     BetaMessage,
     BetaMessageParam,
-    BetaTextBlockParam,
     BetaTool,
     BetaToolResultBlockParam
 } from "@anthropic-ai/sdk/resources/beta";
 import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
-import {isString} from "node:util";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 
@@ -51,6 +49,7 @@ export class TestGeneratorOrchestrator {
         private allowedDirectories: string[],
         private isolatedEnvironment: IsolatedEnvironment | null,
         private toolProviders: ToolProvider[],
+        private typeScriptValidator: TypeScriptValidator = new DefaultTypeScriptValidator(),
     ) {
         this.spec = spec;
         this.runLogDir = runLogDir;
@@ -71,7 +70,11 @@ export class TestGeneratorOrchestrator {
     generate = async (specPath: string, baseUrl: string, tempDir?: string): Promise<GenerationResult> => {
         try {
             const userPrompt = this.promptGenerator.buildUserPrompt(this.spec, specPath, baseUrl, this.allowedDirectories);
-            this.anthropic.addMessage({role: "user", content: userPrompt})
+            this.anthropic.addMessage({
+                role: "user", content: [
+                    {type: "text", text: userPrompt}
+                ]
+            });
             const generatedJson = await this.generateTestCode();
             if (!generatedJson) {
                 return {
@@ -89,7 +92,8 @@ export class TestGeneratorOrchestrator {
                 await this.isolatedEnvironment.cleanup()
             }
         }
-    };
+    }
+    ;
 
     private generateTestCode = async () => {
         let generatedJson: string | null = null;
@@ -123,7 +127,6 @@ export class TestGeneratorOrchestrator {
     private validateTestCode = async (originalJson: string): Promise<GenerationResult> => {
         let retryCount = 0;
         let currentJson = originalJson;
-        let lastResponse: GeneratedTestResponse | null = null;
 
         while (retryCount <= this.maxRetries) {
             const {response: parsedResponse, schemaErrors} = parseJsonResponse(currentJson);
@@ -142,14 +145,17 @@ export class TestGeneratorOrchestrator {
                 this.addSchemaErrorMessage(schemaErrors, currentJson);
                 const correctedJson = await this.generateTestCode();
                 if (!correctedJson) {
-                    break;
+                    return {
+                        success: false,
+                        error: `Failed to json schema errors in response.`,
+                        logPath: this.runLogDir
+                    };
                 } else {
                     currentJson = correctedJson;
                     continue;
                 }
             }
 
-            lastResponse = parsedResponse;
             const writtenPaths = this.writeGeneratedFiles(parsedResponse);
             const typeErrors = this.typeCheckFiles(writtenPaths);
 
@@ -159,13 +165,16 @@ export class TestGeneratorOrchestrator {
                 this.addCompileErrorMessage(typeErrors, parsedResponse, currentJson);
                 const correctedJson = await this.generateTestCode();
                 if (!correctedJson) {
-                    break;
+                    return {
+                        success: false,
+                        error: `Failed to fix typescript compilation error.`,
+                        logPath: this.runLogDir
+                    };
                 } else {
                     currentJson = correctedJson;
                     continue;
                 }
             }
-
 
             if (this.isolatedEnvironment != null) {
                 const testFailures = await this.runPlaywrightTests(writtenPaths);
@@ -179,7 +188,11 @@ export class TestGeneratorOrchestrator {
                     this.addPlaywrightTestErrorMessage(testFailures, parsedResponse, currentJson);
                     const correctedJson = await this.generateTestCode();
                     if (!correctedJson) {
-                        break;
+                        return {
+                            success: false,
+                            error: `Failed to correct playwright test failures.`,
+                            logPath: this.runLogDir
+                        };
                     } else {
                         currentJson = correctedJson;
                     }
@@ -194,7 +207,7 @@ export class TestGeneratorOrchestrator {
         }
 
         return {
-            success: lastResponse !== null,
+            success: true,
             logPath: this.runLogDir
         };
     };
@@ -273,7 +286,7 @@ export class TestGeneratorOrchestrator {
                         toolResults.push({
                             type: "tool_result",
                             tool_use_id: call.id,
-                            content: (typeof result === 'string') ? result: [result]
+                            content: (typeof result === 'string') ? result : [result]
                         });
                         console.log(`Tool ${call.name} Used. ID: ${call.id}`)
                     }
@@ -367,10 +380,10 @@ export class TestGeneratorOrchestrator {
 
         for (const filePath of filePaths) {
             if (filePath.endsWith(".ts")) {
-                const typeResult = typeCheckFile(filePath);
+                const typeResult = this.typeScriptValidator.typeCheckFile(filePath);
                 if (!typeResult.success) {
                     console.log(`   ❌ Type errors in ${basename(filePath)}: ${typeResult.errorCount} error(s)`);
-                    errors.push(formatTypeErrorsForModel(filePath, typeResult));
+                    errors.push(this.typeScriptValidator.formatTypeErrorsForModel(filePath, typeResult));
                 } else {
                     console.log(`   ✅ ${basename(filePath)} compiles successfully`);
                 }
@@ -397,55 +410,56 @@ export class TestGeneratorOrchestrator {
 
 }
 
-export const testGeneratorOrchestratorFactory = async (
-    spec: Spec,
-    runLogDir: string,
-    outputDir: string,
-    model: AnthropicModelAlias,
-    baseUrl: string,
-    runTestEnvironment: boolean,
-    port: number,
-) => {
-    let isolatedEnvironment: IsolatedEnvironment | null = null;
-    const allowedDirectories = [YAFFO_ROOT, outputDir];
-    if (runTestEnvironment) {
-        isolatedEnvironment = await startIsolatedEnvironment(port);
-        allowedDirectories.push(isolatedEnvironment.tempDir);
-    }
-
-    const fileMcpClient = await createFilesystemClient(allowedDirectories);
-    const mcpPlaywrightClient = runTestEnvironment ? await createPlaywrightClient({
-        headless: true,
-        baseUrl,
-        browser: "chromium",
-        artifacts: {
-            outputDir: runLogDir,
-            saveVideo: true,
-            saveSession: true
+export const
+    testGeneratorOrchestratorFactory = async (
+        spec: Spec,
+        runLogDir: string,
+        outputDir: string,
+        model: AnthropicModelAlias,
+        baseUrl: string,
+        runTestEnvironment: boolean,
+        port: number,
+    ) => {
+        let isolatedEnvironment: IsolatedEnvironment | null = null;
+        const allowedDirectories = [YAFFO_ROOT, outputDir];
+        if (runTestEnvironment) {
+            isolatedEnvironment = await startIsolatedEnvironment(port);
+            allowedDirectories.push(isolatedEnvironment.tempDir);
         }
-    }) : await createStubPlaywrightClient();
-    const memoryTool = localFilesystemMemoryToolFactory(outputDir);
 
-    const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];
+        const fileMcpClient = await createFilesystemClient(allowedDirectories);
+        const mcpPlaywrightClient = runTestEnvironment ? await createPlaywrightClient({
+            headless: true,
+            baseUrl,
+            browser: "chromium",
+            artifacts: {
+                outputDir: runLogDir,
+                saveVideo: true,
+                saveSession: true
+            }
+        }) : await createStubPlaywrightClient();
+        const memoryTool = localFilesystemMemoryToolFactory(outputDir);
 
-    const promptGenerator = promptGeneratorFactory(runTestEnvironment, baseUrl, YAFFO_ROOT);
-    const tools = toolProviders.flatMap(provider => provider.getToolsForClaude());
-    const anthropicModel = anthropicModelClientFactory(
-        runLogDir,
-        model,
-        promptGenerator.getSystemPrompt(),
-        tools,
-    );
+        const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];
 
-    return new TestGeneratorOrchestrator(
-        spec,
-        runLogDir,
-        outputDir,
-        baseUrl,
-        anthropicModel,
-        promptGenerator,
-        allowedDirectories,
-        isolatedEnvironment,
-        toolProviders
-    );
-};
+        const promptGenerator = promptGeneratorFactory(runTestEnvironment, baseUrl, YAFFO_ROOT, outputDir, spec);
+        const tools = toolProviders.flatMap(provider => provider.getToolsForClaude());
+        const anthropicModel = anthropicModelClientFactory(
+            runLogDir,
+            model,
+            promptGenerator.getSystemPrompt(),
+            tools,
+        );
+
+        return new TestGeneratorOrchestrator(
+            spec,
+            runLogDir,
+            outputDir,
+            baseUrl,
+            anthropicModel,
+            promptGenerator,
+            allowedDirectories,
+            isolatedEnvironment,
+            toolProviders
+        );
+    };

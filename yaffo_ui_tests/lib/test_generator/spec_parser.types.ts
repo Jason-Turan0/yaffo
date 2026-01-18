@@ -10,7 +10,6 @@ export const ScenarioSchema = z.object({
   verify: z.array(z.string()).min(1),
 });
 
-export const TestDataSchema = z.record(z.unknown()).optional();
 
 export const ContextItemSchema = z.object({
   tag: z.string().min(1),
@@ -28,7 +27,7 @@ export const SpecSchema = z.object({
   tags: z.array(z.string()).optional(),
   preconditions: z.array(z.string()).optional(),
   scenarios: z.array(ScenarioSchema).min(1),
-  data: TestDataSchema,
+  data: z.array(z.string()).optional(),
   context: z.array(ContextItemSchema).optional(),
 });
 

@@ -1,0 +1,55 @@
+feature: face_assignment
+description: User is shown all the faces that have not been assigned to people
+tags:
+  - smoke
+  - core
+context:
+  - tag: face_assignment-template
+    path: templates/faces/index.html
+    description: Main template for face assignment
+  - tag: face_assignment
+    attribute: yaffo-face_assignment
+    description: Context for face assignment feature
+data:
+  - Faces 1,11,13,18,26,37,41 belong to person Obama
+scenarios:
+  - name: face_assignment_can_create_new_people
+    goal: Should be able to create a new person using the quick action section
+    priority: high
+    steps:
+      - Navigate to the face assignment page
+      - If there is a person named Obama in the person dropdown
+      - Then goto the people page and delete 'Obama' then return to the face assignment screen
+      - Type in the name 'Obama' into the textbox and click the 'Create Person' button
+    verify:
+      - No error messages are shown
+      - A confirmation toast message is displayed
+      - There is a person named Obama in the person dropdown
+  - name: face_assignment_can_be_done
+    goal: Should be able to assign faces to people
+    priority: high
+    steps:
+      - Create a person named 'Obama' if needed
+      - Update the filter to group by People and click the 'Apply Filter' button
+      - Click Clear selection and the select one of the photos that belong to Obama
+      - Select Obama from the 'Assign to Person' dropdown
+      - Click on face 1
+      - Click the Assign Selected button
+
+    verify:
+      - Face 1 is removed from the view
+      - Success message is displayed
+      - Face 1 is assigned to Obama on the people -> view faces screen
+  - name: faces_are_automatically_matched_to_people_based_on_similarity
+    goal: After assigning at least one face to a person similar faces to that person should be suggested automatically
+    priority: high
+    steps:
+      - Create a person named 'Obama' and assign face 1 to him if needed
+      - Update the filter to group by People
+      - Set the similarity threshold to 2
+      - Click the Apply Filters button
+    verify:
+      - There is a group for person 'Obama'
+      - All the faces in the group of one of the expected face ids for Obama
+      - All the faces are in the first group are selected
+      - None of the faces in the Unknown group are selected
