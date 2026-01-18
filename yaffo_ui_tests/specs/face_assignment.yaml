@@ -53,3 +53,14 @@ scenarios:
       - All the faces in the group of one of the expected face ids for Obama
       - All the faces are in the first group are selected
       - None of the faces in the Unknown group are selected
+  - name: similar_faces_are_grouped_together
+    goal: When grouping faces by similarity it should be able to suggest a group of faces
+    priority: high
+    steps:
+      - Update the filter to group by Similarity
+      - Set the similarity threshold to 2
+      - Click the Apply Filters button
+    verify:
+      - Some groups are displayed
+      - All groups should have at least three faces
+      - The first group is automatically selected to allow for quick assignment

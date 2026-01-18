@@ -20,6 +20,7 @@ from yaffo.utils.context import context
 
 DEFAULT_THRESHOLD = 10  # configurable similarity threshold
 DEFAULT_PAGE_SIZE = 2000
+DEFAULT_MIN_SAMPLE_SIZE = 3
 DEFAULT_GROUP_BY = 'similarity'
 
 
@@ -54,8 +55,8 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int)
         embeddings.append(load_embedding(face.embedding))
         face_ids.append(face.id)
     embeddings = np.array(embeddings)
-    eps = 0.45 - ((threshold *2) / 100)
-    clustering = DBSCAN(eps=eps, min_samples=3, metric="euclidean").fit(embeddings)
+    eps = 0.45 - ((threshold * 2) / 100)
+    clustering = DBSCAN(eps=eps, min_samples=DEFAULT_MIN_SAMPLE_SIZE, metric="euclidean").fit(embeddings)
     clusters = {}
     for face_id, label in zip(face_ids, clustering.labels_):
         if label == -1:  # skip noise faces
@@ -69,7 +70,7 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int)
         person_ids=[],
         people=[],
         suggestion_name=cluster["label"],
-        photo_date= face_dict[cluster["face_ids"][0]].photo.date_taken,
+        photo_date=face_dict[cluster["face_ids"][0]].photo.date_taken,
         faces=[
             FaceViewModel(face_id, face_dict[face_id].full_file_path, face_dict[face_id].photo.date_taken, None)
             for face_id in cluster["face_ids"]
@@ -117,7 +118,7 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
                 person_ids=[pair[0].id for pair in matching_people],
                 people=[pair[0] for pair in matching_people],
                 suggestion_name=" OR ".join([pair[0].name for pair in matching_people]),
-                photo_date= face.photo.date_taken,
+                photo_date=face.photo.date_taken,
                 faces=[]
             )
             face_suggestions.append(best_suggestion)
@@ -130,10 +131,12 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
             default_suggestion.faces.append(
                 FaceViewModel(face.id, face.full_file_path, face.photo.date_taken, None))
 
-    face_suggestions.sort(key=lambda suggestion: (1 if len(suggestion.person_ids) ==1 else 0, len(suggestion.faces)), reverse=True)
+    face_suggestions.sort(key=lambda suggestion: (1 if len(suggestion.person_ids) == 1 else 0, len(suggestion.faces)),
+                          reverse=True)
     if len(default_suggestion.faces) > 0:
         face_suggestions.append(default_suggestion)
     return face_suggestions
+
 
 @context("yaffo-face_assignment")
 def init_faces_routes(app: Flask):

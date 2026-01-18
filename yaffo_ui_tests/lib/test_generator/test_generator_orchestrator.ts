@@ -70,11 +70,7 @@ export class TestGeneratorOrchestrator {
     generate = async (specPath: string, baseUrl: string, tempDir?: string): Promise<GenerationResult> => {
         try {
             const userPrompt = this.promptGenerator.buildUserPrompt(this.spec, specPath, baseUrl, this.allowedDirectories);
-            this.anthropic.addMessage({
-                role: "user", content: [
-                    {type: "text", text: userPrompt}
-                ]
-            });
+            this.anthropic.addMessage({role: "user", content: [{type: "text", text: userPrompt}]});
             const generatedJson = await this.generateTestCode();
             if (!generatedJson) {
                 return {

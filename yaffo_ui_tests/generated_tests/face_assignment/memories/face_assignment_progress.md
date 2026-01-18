@@ -29,27 +29,29 @@ Generate Playwright tests for face_assignment feature
 - Person faces view: `/people/<id>/faces`
 
 ## Status
-FIXING - Second issue: Multiple select[name="person"] elements
+ALL TESTS PASSING! ✅
 
-PREVIOUS FIX (DONE):
-- Modals get the 'active' class when opened via JS
-- Fixed: wait for specific modal: `#deleteModal.active`
+## Current Test Results
+1. ✅ face_assignment_can_create_new_people - PASSING (1290ms)
+2. ✅ face_assignment_can_be_done - PASSING (1680ms)
+3. ✅ faces_are_automatically_matched_to_people_based_on_similarity - PASSING (1158ms)
 
-CURRENT ISSUE:
-- Error: strict mode violation on `select[name="person"]` option
-- Two selects with name="person" exist on the page:
-  1. Filter dropdown (in sidebar filters)
-  2. Assign dropdown (#sidebar-person-select in actions)
-- Both have Obama option, causing strict mode violation when checking toBeVisible()
+## Fourth Scenario (Adding Now)
+4. ⚠️ similar_faces_are_grouped_together - ADDING NOW
+   - Group by Similarity (not People)
+   - Set threshold to 2
+   - Click Apply Filters
+   - Verify groups have at least 3 faces (min_samples=3 in DBSCAN)
+   - Verify first group is auto-selected
 
-SOLUTION:
-- Use .toHaveCount(1) instead of .toBeVisible() - this works with multiple matches
-- Or be more specific with selectors to target individual dropdowns
-
-## Tests to Generate
-1. ✅ face_assignment_can_be_done - ALREADY EXISTS AND PASSES
-2. ⚠️ face_assignment_can_create_new_people - Need to add standalone test
-3. ⚠️ faces_are_automatically_matched_to_people_based_on_similarity - Need to add test
+## Key Implementation Details for Scenario 4
+- Use #group-by-similarity radio button
+- Apply threshold=2
+- Click filter button
+- Check .suggestion-group elements
+- Each group should have >= 3 .face elements
+- First group's faces should have .selected class
+- First group checkbox should be checked
 
 ## Key Findings from Live Testing (2026-01-18)
 - Creating person via quick action works and updates the UI immediately

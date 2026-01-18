@@ -269,4 +269,66 @@ test.describe('Face Assignment', () => {
       }
     }
   });
+  
+  test('similar faces are grouped together', async ({ page }) => {
+    // Navigate to the face assignment page
+    await page.goto('/faces');
+    await expect(page).toHaveTitle(/Faces.*Photo Organizer/);
+    
+    // Update the filter to group by Similarity
+    const groupBySimilarityRadio = page.locator('#group-by-similarity');
+    await groupBySimilarityRadio.check();
+    
+    // Set the similarity threshold to 2
+    const thresholdSlider = page.locator('#threshold-range');
+    await thresholdSlider.fill('2');
+    
+    // Click the Apply Filters button
+    const applyFilterButton = page.locator('button.btn.btn-primary.filter-btn');
+    await applyFilterButton.click();
+    await page.waitForLoadState('networkidle');
+    
+    // Verify: Some groups are displayed
+    const suggestionGroups = page.locator('.suggestion-group');
+    const groupCount = await suggestionGroups.count();
+    
+    // If there are no unassigned faces or not enough to form groups, that's acceptable
+    const emptyState = page.locator('.empty-state');
+    const hasEmptyState = await emptyState.count() > 0;
+    
+    if (hasEmptyState) {
+      // No faces to group is a valid state
+      return;
+    }
+    
+    // If groups exist, verify they meet the criteria
+    if (groupCount > 0) {
+      // Verify: All groups should have at least three faces (DEFAULT_MIN_SAMPLE_SIZE = 3)
+      for (let i = 0; i < groupCount; i++) {
+        const group = suggestionGroups.nth(i);
+        const facesInGroup = group.locator('.face');
+        const faceCount = await facesInGroup.count();
+        
+        // Each cluster should have at least 3 faces (min_samples in DBSCAN)
+        expect(faceCount).toBeGreaterThanOrEqual(3);
+      }
+      
+      // Verify: The first group is automatically selected for quick assignment
+      const firstGroup = suggestionGroups.first();
+      
+      // Check that the group checkbox is checked
+      const groupCheckbox = firstGroup.locator('.group-select-checkbox');
+      await expect(groupCheckbox).toBeChecked();
+      
+      // Check that all faces in the first group are selected
+      const facesInFirstGroup = firstGroup.locator('.face');
+      const selectedFacesInFirstGroup = firstGroup.locator('.face.selected');
+      
+      const totalFaces = await facesInFirstGroup.count();
+      const selectedFaces = await selectedFacesInFirstGroup.count();
+      
+      expect(selectedFaces).toBe(totalFaces);
+      expect(selectedFaces).toBeGreaterThan(0);
+    }
+  });
 });

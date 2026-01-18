@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {writeFileSync} from "fs";
-import {ApiLogEntry, CacheUsage} from "@lib/test_generator/model_client.types";
+import {ApiLogEntry, CacheUsage, CostEstimate, MODEL_PRICING} from "@lib/test_generator/model_client.types";
 import {join} from "path";
 import {BetaMessageParam, BetaTextBlockParam, BetaTool} from "@anthropic-ai/sdk/resources/beta";
 
@@ -9,13 +9,46 @@ export type AnthropicModelAliasOpus = 'claude-opus-4-5';
 export type AnthropicModelAliasSonnet = 'claude-sonnet-4-5';
 export type AnthropicModelAliasHaiku = 'claude-haiku-4-5';
 
-
 export type AnthropicModelAlias = AnthropicModelAliasOpus | AnthropicModelAliasSonnet | AnthropicModelAliasHaiku;
+
+export const estimateCost = (model: AnthropicModelAlias, usage: CacheUsage): CostEstimate => {
+    const pricing = MODEL_PRICING[model];
+    const toMillions = (tokens: number): number => tokens / 1_000_000;
+
+    const callInputCost = toMillions(usage.inputTokens) * pricing.inputPerMillion;
+    const callOutputCost = toMillions(usage.outputTokens) * pricing.outputPerMillion;
+    const callCacheWriteCost = toMillions(usage.cacheCreationInputTokens) * pricing.cacheWritePerMillion;
+    const callCacheReadCost = toMillions(usage.cacheReadInputTokens) * pricing.cacheReadPerMillion;
+
+    const sessionInputCost = toMillions(usage.sessionInputTokens) * pricing.inputPerMillion;
+    const sessionOutputCost = toMillions(usage.sessionOutputTokens) * pricing.outputPerMillion;
+    const sessionCacheWriteCost = toMillions(usage.sessionCacheCreationInputTokens) * pricing.cacheWritePerMillion;
+    const sessionCacheReadCost = toMillions(usage.sessionCacheReadInputTokens) * pricing.cacheReadPerMillion;
+
+    return {
+        call: {
+            inputCost: callInputCost,
+            outputCost: callOutputCost,
+            cacheWriteCost: callCacheWriteCost,
+            cacheReadCost: callCacheReadCost,
+            totalCost: callInputCost + callOutputCost + callCacheWriteCost + callCacheReadCost,
+        },
+        session: {
+            inputCost: sessionInputCost,
+            outputCost: sessionOutputCost,
+            cacheWriteCost: sessionCacheWriteCost,
+            cacheReadCost: sessionCacheReadCost,
+            totalCost: sessionInputCost + sessionOutputCost + sessionCacheWriteCost + sessionCacheReadCost,
+        },
+    };
+};
 
 export class AnthropicModelClient {
     private messages: BetaMessageParam[];
     private sessionInputTokens: number = 0;
     private sessionOutputTokens: number = 0;
+    private sessionCacheReadInputTokens: number = 0;
+    private sessionCacheCreationInputTokens: number = 0;
     private anthropic: Anthropic;
     private apiCallCount: number;
 
@@ -78,6 +111,8 @@ export class AnthropicModelClient {
             cacheReadInputTokens: usage.cache_read_input_tokens ?? 0,
             inputTokens: usage.input_tokens,
             outputTokens: usage.output_tokens,
+            sessionCacheCreationInputTokens: this.sessionCacheCreationInputTokens,
+            sessionCacheReadInputTokens: this.sessionCacheReadInputTokens,
             sessionInputTokens: this.sessionInputTokens,
             sessionOutputTokens: this.sessionOutputTokens,
         };
@@ -102,6 +137,8 @@ export class AnthropicModelClient {
             if (response != null) {
                 this.sessionInputTokens += response.usage.input_tokens;
                 this.sessionOutputTokens += response.usage.output_tokens;
+                this.sessionCacheCreationInputTokens += response.usage.cache_creation_input_tokens ?? 0;
+                this.sessionCacheReadInputTokens += response.usage.cache_read_input_tokens ?? 0;
             }
             cacheUsage = this.extractCacheUsage(response);
             return response;
@@ -111,6 +148,7 @@ export class AnthropicModelClient {
             return undefined;
         } finally {
             const durationMs = Date.now() - timestamp.getTime();
+            const costEstimate = cacheUsage ? estimateCost(this.model, cacheUsage) : undefined;
 
             this.writeApiLog({
                 timestamp: timestamp.toISOString(),
@@ -119,6 +157,7 @@ export class AnthropicModelClient {
                 response,
                 success: response != null,
                 cacheUsage,
+                costEstimate
             });
             this.apiCallCount += 1;
             //console.log(`API Call Count: ${this.apiCallCount}.`);
