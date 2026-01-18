@@ -121,7 +121,14 @@ export class AnthropicModelClient {
                 cacheUsage,
             });
             this.apiCallCount += 1;
-            console.log(`API Call Count: ${this.apiCallCount}. Input: ${this.sessionInputTokens} Output: ${this.sessionOutputTokens}`);
+            //console.log(`API Call Count: ${this.apiCallCount}.`);
+            if (response?.content && response.content.length > 0) {
+                for (const contentElement of response.content) {
+                    if ("text" in contentElement && contentElement.text != null && contentElement.text != '') {
+                        console.log(`   🤖 ${contentElement?.text.slice(0, 200)}`);
+                    }
+                }
+            }
         }
     };
 

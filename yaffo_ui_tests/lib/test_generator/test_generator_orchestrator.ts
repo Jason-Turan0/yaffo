@@ -32,7 +32,7 @@ const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 
 export class TestGeneratorOrchestrator {
     private iterationCount = 0;
-    private maxIterations = 40;
+    private maxIterations = 100;
     private maxRetries = 5;
     private toolProviderMap: Map<string, { tool: BetaTool, toolProvider: ToolProvider }> = new Map<string, {
         tool: BetaTool;
@@ -93,14 +93,11 @@ export class TestGeneratorOrchestrator {
             }
         }
     }
-    ;
 
     private generateTestCode = async () => {
         let generatedJson: string | null = null;
         while (this.iterationCount < this.maxIterations) {
             this.iterationCount++;
-            console.log(`\n🔄 Iteration ${this.iterationCount}...`);
-
             const response = await this.anthropic.callModelApi();
 
             if (!response) {
@@ -394,10 +391,7 @@ export class TestGeneratorOrchestrator {
 
     private runPlaywrightTests = async (filePaths: string[]): Promise<string[]> => {
         if (this.isolatedEnvironment == null) return [];
-
         console.log(`\n🔍 Running playwright tests...`);
-        const errors: string[] = [];
-
         const toRun = filePaths.filter(path => path.endsWith(".ts"));
         const result = await runPlaywrightTests(this.baseUrl, toRun);
 
@@ -446,7 +440,7 @@ export const
         const anthropicModel = anthropicModelClientFactory(
             runLogDir,
             model,
-            promptGenerator.getSystemPrompt(),
+            await promptGenerator.getSystemPrompt(),
             tools,
         );
 

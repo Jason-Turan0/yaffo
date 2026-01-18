@@ -3,6 +3,7 @@ import {basename, join, resolve} from "path";
 import fs, {existsSync, readFileSync, unlinkSync} from "fs";
 import {execSync} from "child_process";
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
+import {runPlaywrightTests} from "@lib/test_generator/isolated_runner";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 
@@ -25,7 +26,7 @@ export class PromptGenerator {
         private baseUrl: string,
         private yaffoRoot: string,
         private outputDir: string,
-        private spec: Spec
+        private spec: Spec,
     ) {
     }
 
@@ -51,7 +52,7 @@ export class PromptGenerator {
         return foundTestFilePaths;
     }
 
-    getSystemPrompt(): string {
+    async getSystemPrompt(): Promise<string> {
         const testServerPrompt = this.testServerIsRunning ? [
             "You also access to running sandboxed instance of the website that you can use to interact with a live instance of the website",
             "Use the provided tools from playwright mcp to interact with the website to help provide context for the runtime behavior of the site for generating tests",
@@ -65,14 +66,27 @@ export class PromptGenerator {
             "3. Return your output as structured JSON (you cannot write files directly)",
         ];
         const updatePrompts = [
-            `1. Check your memory and the existing tests located at ${existingTestFiles.join(',')}`,
-            "2. Update the existing tests based on what you find",
+            `1. Check your memory and the existing tests.`,
+            "2. Fix/Update the test code as needed.",
             "3. Return your output as structured JSON (you cannot write files directly)",
             "Existing test files:",
             "",
             ...existingTestFiles,
         ];
-
+        if (this.testServerIsRunning && existingTestFiles.length > 0) {
+            updatePrompts.push('Test Results:')
+            const testRunResult = await runPlaywrightTests(this.baseUrl, existingTestFiles);
+            if (testRunResult.success) {
+                updatePrompts.push('All tests passed')
+            } else {
+                updatePrompts.push(...[
+                    "The generated playwright test had failures that need to be corrected:",
+                    "",
+                    testRunResult.output,
+                    "",
+                ]);
+            }
+        }
         return [
             "You are an expert Playwright test generator with READ-ONLY access to filesystem tools.",
             "",
