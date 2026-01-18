@@ -131,8 +131,8 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
                 FaceViewModel(face.id, face.full_file_path, face.photo.date_taken, None))
 
     face_suggestions.sort(key=lambda suggestion: (1 if len(suggestion.person_ids) ==1 else 0, len(suggestion.faces)), reverse=True)
-
-    face_suggestions.append(default_suggestion)
+    if len(default_suggestion.faces) > 0:
+        face_suggestions.append(default_suggestion)
     return face_suggestions
 
 @context("yaffo-face_assignment")

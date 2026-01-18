@@ -210,7 +210,14 @@
                             </div>
                         </div>
                     {% endfor %}
-                {% else %}
+                {% endif %}
+                {% if face_suggestions | length == 0 and unassigned_face_count > 0 %}
+                    <div class="empty-state">
+                        <h2>No results found</h2>
+                        <p>Doublecheck the filters applied or decrease the similarity threshold.</p>
+                    </div>
+                {% endif %}
+                {% if unassigned_face_count == 0 %}
                     <div class="empty-state">
                         <h2>All Faces Assigned!</h2>
                         <p>Looks like there isn't anything for you to do here.</p>

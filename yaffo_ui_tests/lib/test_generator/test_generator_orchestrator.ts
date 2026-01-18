@@ -32,8 +32,8 @@ const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 
 export class TestGeneratorOrchestrator {
     private iterationCount = 0;
-    private maxIterations = 20;
-    private maxRetries = 3;
+    private maxIterations = 40;
+    private maxRetries = 5;
     private toolProviderMap: Map<string, { tool: BetaTool, toolProvider: ToolProvider }> = new Map<string, {
         tool: BetaTool;
         toolProvider: ToolProvider
@@ -220,7 +220,7 @@ export class TestGeneratorOrchestrator {
         const schemaFixPrompt = this.promptGenerator.buildSchemaFixPrompt(schemaErrors);
         this.anthropic.addMessages([
             {role: "assistant", content: currentJson},
-            {role: "user", content: schemaFixPrompt}
+            {role: "user", content: [{type: 'text', text: schemaFixPrompt}]}
         ]);
     };
 
@@ -232,8 +232,8 @@ export class TestGeneratorOrchestrator {
         const currentCode = parsedResponse.files[0]?.code || "";
         const typeFixPrompt = this.promptGenerator.buildTypeErrorFixPrompt(typeErrors, currentCode);
         this.anthropic.addMessages([
-            {role: "assistant", content: currentJson},
-            {role: "user", content: typeFixPrompt}
+            {role: "assistant", content: [{type: 'text', text: currentJson}]},
+            {role: "user", content: [{type: 'text', text: typeFixPrompt}]}
         ]);
     };
 
@@ -243,10 +243,10 @@ export class TestGeneratorOrchestrator {
         currentJson: string,
     ): void => {
         const currentCode = parsedResponse.files[0]?.code || "";
-        const typeFixPrompt = this.promptGenerator.buildTestFailurePrompt(testFailures, currentCode);
+        const playwrightFailurePrompt = this.promptGenerator.buildTestFailurePrompt(testFailures, currentCode);
         this.anthropic.addMessages([
-            {role: "assistant", content: currentJson},
-            {role: "user", content: typeFixPrompt}
+            {role: "assistant", content: [{type: 'text', text: currentJson}]},
+            {role: "user", content: [{type: 'text', text: playwrightFailurePrompt}]}
         ]);
     }
 
@@ -271,7 +271,7 @@ export class TestGeneratorOrchestrator {
 
             const toolResults: BetaToolResultBlockParam[] = [];
             for (const call of toolCalls) {
-                console.log(`   🔧 Tool: ${call.name}(${JSON.stringify(call.input).slice(0, 100)}...)`);
+                console.log(`   🔧 Tool: ${call.name} Id: ${call.id} (${JSON.stringify(call.input).slice(0, 50)}...)`);
                 try {
                     const toolTuple = this.toolProviderMap.get(call.name);
                     if (!toolTuple) {
@@ -286,9 +286,8 @@ export class TestGeneratorOrchestrator {
                         toolResults.push({
                             type: "tool_result",
                             tool_use_id: call.id,
-                            content: (typeof result === 'string') ? result : [result]
+                            content: (typeof result === 'string') ? [{type: 'text', text: result}] : [result]
                         });
-                        console.log(`Tool ${call.name} Used. ID: ${call.id}`)
                     }
                 } catch (e) {
                     const errorMsg = e instanceof Error ? e.message : String(e);

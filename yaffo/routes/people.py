@@ -121,9 +121,6 @@ def init_people_routes(app: Flask):
 
         name = person.name
 
-        # Delete all PersonFace associations
-        PersonFace.query.filter(PersonFace.person_id == person_id).delete()
-
         # Update face statuses back to unassigned
         face_ids = (
             db.session.query(PersonFace.face_id)
@@ -135,6 +132,11 @@ def init_people_routes(app: Flask):
                 {Face.status: FACE_STATUS_UNASSIGNED},
                 synchronize_session=False
             )
+
+        # Delete all PersonFace associations
+        PersonFace.query.filter(PersonFace.person_id == person_id).delete()
+
+
 
         # Delete the person
         db.session.delete(person)
