@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}YAFFO{% endblock %}</title>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='action-links.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='empty-state.css') }}">
@@ -68,8 +68,8 @@
 <nav class="navbar">
     <div class="navbar-container">
         <a href="{{ url_for('index') }}" class="navbar-brand">
-            <img src="{{ url_for('static', filename='logo.svg') }}" alt="YAFFO"
-                 style="height: 64px; vertical-align: middle; margin-right: 8px;">
+            <img src="{{ url_for('static', filename='yaffo_logo.png') }}" alt="YAFFO"
+                 style="height: 54px; vertical-align: middle; margin-right: 8px;">
         </a>
         <ul class="navbar-nav">
             <li><a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Home</a>

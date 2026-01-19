@@ -125,12 +125,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1725,
+                      "duration": 1441,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-18T08:09:18.790Z",
+                      "startTime": "2026-01-19T15:27:04.893Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -159,12 +159,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1686,
+                      "duration": 1943,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-18T08:09:20.789Z",
+                      "startTime": "2026-01-19T15:27:06.928Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -193,12 +193,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1068,
+                      "duration": 1311,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-18T08:09:22.479Z",
+                      "startTime": "2026-01-19T15:27:08.876Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -210,6 +210,533 @@
               "file": "face_assignment/face-assignment.spec.ts",
               "line": 153,
               "column": 3
+            },
+            {
+              "title": "similar faces are grouped together",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1092,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:10.192Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-6fd4dc0c7a9ecdc5f3c4",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 273,
+              "column": 3
+            },
+            {
+              "title": "should be able to create a new person using the quick action section",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2534,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:13.997Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-e39be1c2acf67952ec83",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 34,
+              "column": 3
+            },
+            {
+              "title": "should be able to assign faces to people",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2126,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:17.006Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-f2856f4830f06f267188",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 82,
+              "column": 3
+            },
+            {
+              "title": "faces are automatically matched to people based on similarity",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1362,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:19.136Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-9d6ded3314f38bf6802b",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 153,
+              "column": 3
+            },
+            {
+              "title": "similar faces are grouped together",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1081,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:20.502Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-4433da9e2b80e32e33c9",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 273,
+              "column": 3
+            },
+            {
+              "title": "should be able to create a new person using the quick action section",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2065,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:24.940Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-9e36804eaeb13a2a5d65",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 34,
+              "column": 3
+            },
+            {
+              "title": "should be able to assign faces to people",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1776,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:27.424Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-6278308c2a712104befc",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 82,
+              "column": 3
+            },
+            {
+              "title": "faces are automatically matched to people based on similarity",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1109,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:29.205Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-fa584dfee4013b53aa92",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 153,
+              "column": 3
+            },
+            {
+              "title": "similar faces are grouped together",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 949,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:30.318Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-2ae006a5e7e11de20347",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 273,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "photo_gallery/photo_gallery.spec.ts",
+      "file": "photo_gallery/photo_gallery.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Photo Gallery Feature",
+          "file": "photo_gallery/photo_gallery.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 606,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:11.291Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-12319756122df01d8746",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 11,
+              "column": 3
+            },
+            {
+              "title": "gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1819,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:11.901Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-9d78d8b97cfa643c3db9",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 80,
+              "column": 3
+            },
+            {
+              "title": "gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 703,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:21.590Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-e146d402643428d45432",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 11,
+              "column": 3
+            },
+            {
+              "title": "gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2133,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:22.298Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-3793cc6a7e9fee2bdeb0",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 80,
+              "column": 3
+            },
+            {
+              "title": "gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 626,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:31.274Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-5e18fdf8cf9c06c80096",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 11,
+              "column": 3
+            },
+            {
+              "title": "gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1755,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-19T15:27:31.904Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-7af979b648caeee252d5",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 80,
+              "column": 3
             }
           ]
         }
@@ -218,9 +745,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-01-18T08:09:18.502Z",
-    "duration": 5070.295999999999,
-    "expected": 3,
+    "startTime": "2026-01-19T15:27:04.656Z",
+    "duration": 29030.001,
+    "expected": 18,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

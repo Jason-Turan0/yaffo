@@ -189,8 +189,6 @@ npm run generate specs/my_feature.yaml
 # Generate all tests from specs
 npm run generate:all
 
-# Generate with DOM context (crawls running app)
-npm run generate specs/my_feature.yaml -- --with-context
 ```
 
 ### 3. Run Tests
@@ -301,19 +299,6 @@ data:                        # Test data
       type: image/jpeg
 ```
 
-### Step Keywords
-
-The generator recognizes these action keywords:
-
-| Keyword | Example | Generated Code |
-|---------|---------|----------------|
-| Navigate | "Navigate to home page" | `page.goto('/')` |
-| Click | "Click the upload button" | `page.click('[data-testid="upload"]')` |
-| Enter/Type | "Enter 'test' in search" | `page.fill('[name="search"]', 'test')` |
-| Select | "Select 'Option A' from dropdown" | `page.selectOption(...)` |
-| Wait | "Wait for loading to complete" | `page.waitForSelector(...)` |
-| Verify/Assert | "Verify success message shown" | `expect(page.locator(...)).toBeVisible()` |
-
 ## Self-Healing Workflow
 
 When a test fails:
@@ -401,33 +386,14 @@ npm run regenerate specs/affected_feature.yaml
 npm run test:heal -- generated/affected_feature.spec.ts
 ```
 
-### Writing Custom Fixtures
-
-```typescript
-// fixtures/auth.ts
-import { test as base } from '@playwright/test';
-
-export const test = base.extend({
-  authenticatedPage: async ({ page }, use) => {
-    await page.goto('/login');
-    await page.fill('[name="username"]', 'test_user');
-    await page.fill('[name="password"]', 'test_pass');
-    await page.click('[type="submit"]');
-    await page.waitForURL('/home');
-    await use(page);
-  },
-});
-```
-
 ## Roadmap
 
 - [x] Folder structure and architecture
 - [ ] Core library implementation (generator, analyzer, healer)
-- [ ] MCP client integration
+- [X] MCP client integration
 - [ ] CLI tooling
 - [ ] Example specs for Yaffo features
-- [ ] CI/CD integration
-- [ ] Visual regression testing
+- [ ] CI/CD integration 
 - [ ] API mocking support
 
 ## References
