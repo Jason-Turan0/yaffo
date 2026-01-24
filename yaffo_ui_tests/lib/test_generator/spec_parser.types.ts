@@ -8,6 +8,7 @@ export const ScenarioSchema = z.object({
   priority: z.enum(['high', 'medium', 'low']).optional().default('medium'),
   steps: z.array(StepSchema).min(1),
   verify: z.array(z.string()).min(1),
+  cleanup: z.array(z.string()).optional(),
 });
 
 

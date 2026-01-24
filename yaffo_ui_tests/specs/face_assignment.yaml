@@ -40,11 +40,13 @@ scenarios:
       - Face 1 is removed from the view
       - Success message is displayed
       - Face 1 is assigned to Obama on the people -> view faces screen
+    cleanup:
+      - Delete person Obama
   - name: faces_are_automatically_matched_to_people_based_on_similarity
     goal: After assigning at least one face to a person similar faces to that person should be suggested automatically
     priority: high
     steps:
-      - Create a person named 'Obama' and assign face 1 to him if needed
+      - Create a person named 'Obama' and assign face 1 to him
       - Update the filter to group by People
       - Set the similarity threshold to 2
       - Click the Apply Filters button
@@ -53,6 +55,8 @@ scenarios:
       - All the faces in the group of one of the expected face ids for Obama
       - All the faces are in the first group are selected
       - None of the faces in the Unknown group are selected
+    cleanup:
+      - Delete person Obama
   - name: similar_faces_are_grouped_together
     goal: When grouping faces by similarity it should be able to suggest a group of faces
     priority: high
@@ -64,3 +68,22 @@ scenarios:
       - Some groups are displayed
       - All groups should have at least three faces
       - The first group is automatically selected to allow for quick assignment
+  - name: keyboard_shortcuts_enable_quick_face_assignment
+    goal: Users can quickly assign faces using keyboard shortcuts without clicking buttons
+    priority: high
+    steps:
+      - Navigate to the people page and create a person named 'TestKeyboardPerson'
+      - Navigate to the face assignment page
+      - Update the filter to group by People
+      - Set the similarity threshold to 2
+      - Click the Apply Filters button
+      - Note the keyboard shortcut number displayed next to 'TestKeyboardPerson' in the sidebar
+      - Press the number key corresponding to 'TestKeyboardPerson'
+    verify:
+      - The selected faces are assigned to 'TestKeyboardPerson'
+      - A success message is displayed
+      - The next group is automatically selected for quick assignment
+      - The faces that were assigned are no longer visible in the current view
+    cleanup:
+      - Navigate to the people page
+      - Delete the person 'TestKeyboardPerson'

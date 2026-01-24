@@ -9,6 +9,7 @@ import {Client} from "@modelcontextprotocol/sdk/client/index.js";
 import {StdioClientTransport} from "@modelcontextprotocol/sdk/client/stdio.js";
 import type {Tool} from "@anthropic-ai/sdk/resources/messages.js";
 import {CallToolReturn, ToolProvider} from "@lib/test_generator/toolprovider.types";
+import {truncateToolResultIfNeeded} from "@lib/test_generator/utils";
 
 export interface McpClientOptions {
     allowedDirectories: string[];
@@ -20,7 +21,7 @@ export interface McpTool {
     inputSchema: Record<string, unknown>;
 }
 
-const MAX_TOOL_RESULT_CHARS = 20000;
+
 
 const WRITE_TOOLS = [
     "write_file",
@@ -30,14 +31,6 @@ const WRITE_TOOLS = [
     "delete_file",
 ];
 
-export const truncateToolResult = (result: string): string => {
-    if (result.length <= MAX_TOOL_RESULT_CHARS) {
-        return result;
-    }
-    const truncated = result.slice(0, MAX_TOOL_RESULT_CHARS);
-    const truncatedMsg = `\n\n[TRUNCATED: Result was ${result.length} chars, showing first ${MAX_TOOL_RESULT_CHARS}]`;
-    return truncated + truncatedMsg;
-};
 
 export class FilesystemMcpClient {
     private client: Client | null = null;
@@ -115,16 +108,9 @@ export class FilesystemMcpClient {
             ?.filter(block => block.type === 'text')
             .map(block => block.text || '')
             .join('\n') || '';
-        let truncated = false
-        if (contentText != null && contentText.length > MAX_TOOL_RESULT_CHARS) {
-            console.warn(`   ⚠️  Result truncated: ${contentText.length} → ${MAX_TOOL_RESULT_CHARS} chars`);
-            truncated = true;
-            contentText = truncateToolResult(contentText);
-        }
         return {
             type: 'text',
-            text: contentText,
-            ...(truncated ? {_meta: {truncated: true}} : {})
+            text: truncateToolResultIfNeeded(contentText),
         };
     }
 

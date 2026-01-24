@@ -29,20 +29,22 @@ Generate Playwright tests for face_assignment feature
 - Person faces view: `/people/<id>/faces`
 
 ## Status
-ALL TESTS PASSING! ✅
+4 TESTS PASSING! Need to add 5th test for keyboard shortcuts ✅
 
 ## Current Test Results
-1. ✅ face_assignment_can_create_new_people - PASSING (1290ms)
-2. ✅ face_assignment_can_be_done - PASSING (1680ms)
-3. ✅ faces_are_automatically_matched_to_people_based_on_similarity - PASSING (1158ms)
+1. ✅ face_assignment_can_create_new_people - PASSING (1110ms)
+2. ✅ face_assignment_can_be_done - PASSING (1648ms)
+3. ✅ faces_are_automatically_matched_to_people_based_on_similarity - PASSING (1078ms)
+4. ✅ similar_faces_are_grouped_together - PASSING (948ms)
 
-## Fourth Scenario (Adding Now)
-4. ⚠️ similar_faces_are_grouped_together - ADDING NOW
-   - Group by Similarity (not People)
-   - Set threshold to 2
-   - Click Apply Filters
-   - Verify groups have at least 3 faces (min_samples=3 in DBSCAN)
-   - Verify first group is auto-selected
+## Fifth Scenario (NEED TO ADD)
+5. ⚠️ keyboard_shortcuts_enable_quick_face_assignment - ADDING NOW
+   - Create person 'TestKeyboardPerson' on people page
+   - Navigate to face assignment
+   - Group by People, threshold=2
+   - Note keyboard shortcut number for TestKeyboardPerson
+   - Press that number key
+   - Verify faces assigned, success message, next group selected
 
 ## Key Implementation Details for Scenario 4
 - Use #group-by-similarity radio button

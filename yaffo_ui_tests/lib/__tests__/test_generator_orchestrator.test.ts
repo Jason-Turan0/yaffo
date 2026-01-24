@@ -195,7 +195,7 @@ describe('TestGeneratorOrchestrator', () => {
 
             expect(mockAnthropicClient.addMessage).toHaveBeenCalledWith({
                 role: 'user',
-                content: 'user prompt',
+                content: [{text: 'user prompt', type: 'text'}],
             });
 
             expect(mockAnthropicClient.callModelApi).toHaveBeenCalledTimes(2);
@@ -210,7 +210,7 @@ describe('TestGeneratorOrchestrator', () => {
                 {role: 'user', content: [{
                     type: 'tool_result',
                     tool_use_id: 'tool_use_1',
-                    content: 'file contents here',
+                    content:[{text: 'file contents here', type: 'text'}] ,
                 }]},
             ]);
 

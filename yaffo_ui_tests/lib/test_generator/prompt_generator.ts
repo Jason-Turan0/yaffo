@@ -296,19 +296,29 @@ export class PromptGenerator {
         const preconditionsSection = spec.preconditions
             ? `<preconditions>\n${spec.preconditions.map(p => `    ${p}`).join("\n")}\n</preconditions>`
             : "";
-        const scenariosSection = spec.scenarios.map(s => [
-            `    <scenario>`,
-            `        <name>${s.name}</name>`,
-            `        <goal>${s.goal}</goal>`,
-            `        <priority>${s.priority}</priority>`,
-            `        <steps>`,
-            ...s.steps.map(step => `            <step>${step}</step>`),
-            `        </steps>`,
-            `        <verify>`,
-            ...s.verify.map(v => `            <assertion>${v}</assertion>`),
-            `        </verify>`,
-            `    </scenario>`,
-        ].join("\n")).join("\n");
+        const scenariosSection = spec.scenarios.map(s => {
+            const cleanupSection = s.cleanup && s.cleanup.length > 0
+                ? [
+                    `        <cleanup>`,
+                    ...s.cleanup.map(c => `            <step>${c}</step>`),
+                    `        </cleanup>`,
+                ]
+                : [];
+            return [
+                `    <scenario>`,
+                `        <name>${s.name}</name>`,
+                `        <goal>${s.goal}</goal>`,
+                `        <priority>${s.priority}</priority>`,
+                `        <steps>`,
+                ...s.steps.map(step => `            <step>${step}</step>`),
+                `        </steps>`,
+                `        <verify>`,
+                ...s.verify.map(v => `            <assertion>${v}</assertion>`),
+                `        </verify>`,
+                ...cleanupSection,
+                `    </scenario>`,
+            ].join("\n");
+        }).join("\n");
 
         return [
             `<task>Generate Playwright tests from this specification.</task>`,

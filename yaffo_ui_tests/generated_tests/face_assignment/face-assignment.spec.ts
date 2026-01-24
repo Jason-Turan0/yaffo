@@ -331,4 +331,103 @@ test.describe('Face Assignment', () => {
       expect(selectedFaces).toBeGreaterThan(0);
     }
   });
+  
+  test('keyboard shortcuts enable quick face assignment', async ({ page }) => {
+    // Navigate to the people page and create a person named 'TestKeyboardPerson'
+    await ensurePersonExists(page, 'TestKeyboardPerson');
+    
+    // Navigate to the face assignment page
+    await page.goto('/faces');
+    await expect(page).toHaveTitle(/Faces.*Photo Organizer/);
+    
+    // Update the filter to group by People
+    const groupByPeopleRadio = page.locator('#group-by-people');
+    await groupByPeopleRadio.check();
+    
+    // Set the similarity threshold to 2
+    const thresholdSlider = page.locator('#threshold-range');
+    await thresholdSlider.fill('2');
+    
+    // Click the Apply Filters button
+    const applyFilterButton = page.locator('button.btn.btn-primary.filter-btn');
+    await applyFilterButton.click();
+    await page.waitForLoadState('networkidle');
+    
+    // Check if there are any groups/faces to assign
+    const suggestionGroups = page.locator('.suggestion-group');
+    const groupCount = await suggestionGroups.count();
+    
+    if (groupCount === 0) {
+      // No faces to assign, skip the test
+      console.log('No unassigned faces available for keyboard shortcut test');
+      return;
+    }
+    
+    // Note the keyboard shortcut number displayed next to 'TestKeyboardPerson' in the sidebar
+    const shortcutItem = page.locator('.shortcut-item:has-text("TestKeyboardPerson")');
+    
+    // Check if TestKeyboardPerson appears in the first 9 people (keyboard shortcuts only for first 9)
+    const shortcutExists = await shortcutItem.count() > 0;
+    
+    if (!shortcutExists) {
+      console.log('TestKeyboardPerson is not in the first 9 people, cannot test keyboard shortcut');
+      // Clean up
+      await deletePersonIfExists(page, 'TestKeyboardPerson');
+      return;
+    }
+    
+    const shortcutNumber = await shortcutItem.getAttribute('data-shortcut');
+    const personId = await shortcutItem.getAttribute('data-person-id');
+    
+    expect(shortcutNumber).toBeTruthy();
+    expect(personId).toBeTruthy();
+    
+    // Get the count of selected faces before pressing the shortcut
+    const selectedFacesBefore = page.locator('.face.selected');
+    const selectedCountBefore = await selectedFacesBefore.count();
+    expect(selectedCountBefore).toBeGreaterThan(0); // First group should be auto-selected
+    
+    // Get the face IDs that are currently selected
+    const selectedFaceIds: string[] = [];
+    for (let i = 0; i < selectedCountBefore; i++) {
+      const faceId = await selectedFacesBefore.nth(i).getAttribute('data-face-id');
+      if (faceId) selectedFaceIds.push(faceId);
+    }
+    
+    // Press the number key corresponding to 'TestKeyboardPerson'
+    const responsePromise = page.waitForResponse(response => 
+      response.url().includes('/api/faces/assign') && response.request().method() === 'POST'
+    );
+    await page.keyboard.press(shortcutNumber!);
+    const response = await responsePromise;
+    
+    // Verify: The selected faces are assigned to 'TestKeyboardPerson'
+    const responseData = await response.json();
+    expect(responseData.success).toBeTruthy();
+    expect(responseData.message).toContain('TestKeyboardPerson');
+    expect(responseData.face_ids).toEqual(expect.arrayContaining(selectedFaceIds.map(id => parseInt(id))));
+    
+    // Wait for page to update after assignment
+    await page.waitForLoadState('networkidle');
+    
+    // Verify: The faces that were assigned are no longer visible in the current view
+    for (const faceId of selectedFaceIds) {
+      await expect(page.locator(`.face[data-face-id="${faceId}"]`)).not.toBeVisible({ timeout: 2000 });
+    }
+    
+    // Verify: The next group is automatically selected for quick assignment (if groups remain)
+    const remainingGroups = await page.locator('.suggestion-group').count();
+    if (remainingGroups > 0) {
+      const firstGroup = page.locator('.suggestion-group').first();
+      const groupCheckbox = firstGroup.locator('.group-select-checkbox');
+      await expect(groupCheckbox).toBeChecked({ timeout: 2000 });
+      
+      const selectedFacesAfter = firstGroup.locator('.face.selected');
+      const selectedCountAfter = await selectedFacesAfter.count();
+      expect(selectedCountAfter).toBeGreaterThan(0);
+    }
+    
+    // Cleanup: Navigate to the people page and delete 'TestKeyboardPerson'
+    await deletePersonIfExists(page, 'TestKeyboardPerson');
+  });
 });

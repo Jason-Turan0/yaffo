@@ -1,17 +1,18 @@
-import { FilesystemMcpClient, truncateToolResult, createFilesystemClient } from '../test_generator/mcp_filesystem_client';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import {truncateToolResultIfNeeded} from "@lib/test_generator/utils";
+import { FilesystemMcpClient, createFilesystemClient } from '../test_generator/mcp_filesystem_client';
 
 describe('truncateToolResult', () => {
     it('should return the original string if under limit', () => {
         const shortString = 'This is a short string';
-        expect(truncateToolResult(shortString)).toBe(shortString);
+        expect(truncateToolResultIfNeeded(shortString)).toBe(shortString);
     });
 
     it('should truncate strings over 20000 chars', () => {
         const longString = 'x'.repeat(25000);
-        const result = truncateToolResult(longString);
+        const result = truncateToolResultIfNeeded(longString);
         expect(result.length).toBeLessThan(longString.length);
         expect(result).toContain('[TRUNCATED:');
         expect(result).toContain('25000 chars');

@@ -10,6 +10,7 @@ import {StdioClientTransport} from "@modelcontextprotocol/sdk/client/stdio.js";
 import type {Tool} from "@anthropic-ai/sdk/resources/messages.js";
 import {CallToolReturn, ToolProvider} from "@lib/test_generator/toolprovider.types";
 import {writeFileSync} from "fs";
+import {truncateToolResultIfNeeded} from "@lib/test_generator/utils";
 
 export interface McpClientLike {
     close(): Promise<void>;
@@ -48,15 +49,6 @@ const EXCLUDED_TOOLS = [
     "browser_install",
     "browser_pdf_save",
 ];
-
-export const truncateToolResult = (result: string): string => {
-    if (result.length <= MAX_TOOL_RESULT_CHARS) {
-        return result;
-    }
-    const truncated = result.slice(0, MAX_TOOL_RESULT_CHARS);
-    const truncatedMsg = `\n\n[TRUNCATED: Result was ${result.length} chars, showing first ${MAX_TOOL_RESULT_CHARS}]`;
-    return truncated + truncatedMsg;
-};
 
 
 export class PlaywrightMcpClient implements ToolProvider {
@@ -111,16 +103,9 @@ export class PlaywrightMcpClient implements ToolProvider {
             ?.filter(block => block.type === 'text')
             .map(block => block.text || '')
             .join('\n') || '';
-        let truncated = false
-        if (contentText != null && contentText.length > MAX_TOOL_RESULT_CHARS) {
-            console.warn(`   ⚠️  Result truncated: ${contentText.length} → ${MAX_TOOL_RESULT_CHARS} chars`);
-            truncated = true;
-            contentText = truncateToolResult(contentText);
-        }
         return {
             type: 'text',
-            text: contentText,
-            ...(truncated ? {_meta: {truncated: true}} : {})
+            text: truncateToolResultIfNeeded(contentText),
         };
     }
 

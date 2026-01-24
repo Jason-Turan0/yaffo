@@ -1,0 +1,81 @@
+feature: photo_details
+description: User can view detailed information about a photo including file info, location, people, faces, and tags
+
+tags:
+  - smoke
+  - core
+
+preconditions:
+  - Application is running
+  - Database contains sample photos with faces and tags
+
+context:
+  - tag: photo-view-template
+    path: templates/photos/view.html
+    description: Photo details view template with sidebar and main image
+data:
+  - Test Image "DSCN0010.jpg" has location data and should be used for the test
+  - ID for Test Image "DSCN0010.jpg" is 14
+scenarios:
+  - name: photo_details_displays_file_information
+    goal: Photo details page shows correct file information
+    priority: high
+    steps:
+      - Navigate to the home page
+      - Click on a photo to open the details view
+    verify:
+      - Photo details page loads successfully
+      - File name is displayed in the sidebar
+      - Folder path is displayed
+      - The main photo image loads correctly (HTTP 200)
+      - Open File and Open Folder buttons are visible
+
+  - name: photo_details_displays_people_and_faces
+    goal: Photo details page shows people and faces associated with the photo
+    priority: high
+    steps:
+      - Navigate to a photo that has faces assigned to people
+    verify:
+      - People section shows the count of people
+      - Each person name is displayed as a clickable link
+      - Faces section shows the count of faces
+      - Face thumbnails are displayed and load correctly
+      - Hovering over a face thumbnail highlights it on the main image
+
+  - name: photo_details_can_edit_tags
+    goal: User can add and edit tags on a photo
+    priority: high
+    steps:
+      - Navigate to the photo details page
+      - Click the Edit Tags button
+      - In the modal, enter a tag name 'TestTag' and value 'TestValue'
+      - Click the Add Tag button
+      - Click Save Changes
+    verify:
+      - Edit Tags modal opens
+      - New tag input fields are visible
+      - After saving, the new tag appears in the Tags section
+      - Tag displays both name and value
+    cleanup:
+      - Remove the tag 'TestTag' from the photo
+
+  - name: photo_details_location_section_works
+    goal: Location information is displayed when available
+    priority: medium
+    steps:
+      - Navigate to a photo that has location data (latitude/longitude)
+    verify:
+      - Location section displays coordinates
+      - View on Map link is present and links to Google Maps
+      - Clicking View on Map opens Google Maps in a new tab with correct coordinates
+
+  - name: photo_details_face_hover_highlights
+    goal: Hovering over face thumbnails highlights the face on the main photo
+    priority: medium
+    steps:
+      - Navigate to a photo that has detected faces
+      - Hover over a face thumbnail in the sidebar
+    verify:
+      - Face canvas overlay becomes visible
+      - The corresponding face region is highlighted on the main photo
+      - Moving mouse away clears the highlight

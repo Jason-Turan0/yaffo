@@ -1,12 +1,12 @@
 import {describe, it, expect, beforeEach} from '@jest/globals';
 import {
     PlaywrightMcpClient,
-    truncateToolResult,
     createStubPlaywrightClient,
     type McpClientLike,
 } from '../test_generator/mcp_playwright_client';
 import * as fs from 'fs';
 import * as path from 'path';
+import {truncateToolResultIfNeeded} from "@lib/test_generator/utils";
 
 const testDataPath = path.join(process.cwd(), 'lib', '__tests__', 'test_data', 'playwright_tools.json');
 const testData = JSON.parse(fs.readFileSync(testDataPath, 'utf-8'));
@@ -27,23 +27,23 @@ function createMockClient(overrides: Partial<McpClientLike> = {}): McpClientLike
     };
 }
 
-describe('truncateToolResult', () => {
+describe('truncateToolResultIfNeeded', () => {
     it('should return the original string if under limit', () => {
         const shortString = 'This is a short string';
-        expect(truncateToolResult(shortString)).toBe(shortString);
+        expect(truncateToolResultIfNeeded(shortString)).toBe(shortString);
     });
 
     it('should truncate strings over 30000 chars', () => {
         const longString = 'x'.repeat(35000);
-        const result = truncateToolResult(longString);
+        const result = truncateToolResultIfNeeded(longString);
         expect(result.length).toBeLessThan(longString.length);
         expect(result).toContain('[TRUNCATED:');
         expect(result).toContain('35000 chars');
     });
 
     it('should not truncate strings exactly at the limit', () => {
-        const exactString = 'x'.repeat(30000);
-        expect(truncateToolResult(exactString)).toBe(exactString);
+        const exactString = 'x'.repeat(15000);
+        expect(truncateToolResultIfNeeded(exactString)).toBe(exactString);
     });
 });
 
