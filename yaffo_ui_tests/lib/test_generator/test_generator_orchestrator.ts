@@ -7,7 +7,8 @@ import {createFilesystemClient, FilesystemMcpClient} from "@lib/test_generator/m
 import {promptGeneratorFactory, PromptGenerator} from "@lib/test_generator/prompt_generator";
 
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
-import {parseJsonResponse} from "@lib/test_generator/json_parser";
+import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/json_parser";
+import {zodToJsonSchema} from "zod-to-json-schema";
 import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/test_generator/typescript_validator";
 import {
     anthropicModelClientFactory,
@@ -122,7 +123,7 @@ export class TestGeneratorOrchestrator {
         let currentJson = originalJson;
 
         while (retryCount <= this.maxRetries) {
-            const {response: parsedResponse, schemaErrors} = parseJsonResponse(currentJson);
+            const {response: parsedResponse, schemaErrors} = parseJsonResponse<GeneratedTestResponse>(currentJson);
 
             if (!parsedResponse) {
                 const rawPath = join(this.outputDir, `${this.spec.feature}.txt`);
@@ -140,7 +141,7 @@ export class TestGeneratorOrchestrator {
                 if (!correctedJson) {
                     return {
                         success: false,
-                        error: `Failed to json schema errors in response.`,
+                        error: `JSON schema errors in response.`,
                         logPath: this.runLogDir
                     };
                 } else {
@@ -433,11 +434,13 @@ export const
 
         const promptGenerator = promptGeneratorFactory(runTestEnvironment, baseUrl, YAFFO_ROOT, outputDir, spec);
         const tools = toolProviders.flatMap(provider => provider.getToolsForClaude());
+        const outputSchema = zodToJsonSchema(GeneratedTestResponseSchema);
         const anthropicModel = anthropicModelClientFactory(
             runLogDir,
             model,
             await promptGenerator.getSystemPrompt(),
             tools,
+            outputSchema,
         );
 
         return new TestGeneratorOrchestrator(

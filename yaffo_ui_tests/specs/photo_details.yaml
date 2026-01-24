@@ -16,6 +16,7 @@ context:
 data:
   - Test Image "DSCN0010.jpg" has location data and should be used for the test
   - ID for Test Image "DSCN0010.jpg" is 14
+  - Photo with ID of 7 has a detected face in it
 scenarios:
   - name: photo_details_displays_file_information
     goal: Photo details page shows correct file information

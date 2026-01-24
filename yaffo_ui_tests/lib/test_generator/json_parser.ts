@@ -1,21 +1,22 @@
 import {z} from "zod";
 import {GeneratedTestResponse} from "./model_client.response.types";
+import * as util from "node:util";
 
 const GeneratedTestFileSchema = z.object({
-    filename: z.string(),
-    code: z.string(),
-    description: z.string().optional(),
+    filename: z.string().describe("The filename of the generated playwright test. Only include the file name - the system will organize the folder structure."),
+    code: z.string().describe("The content of the complete, valid TypeScript test file"),
+    description: z.string().optional().describe("A description of what the test file covers"),
 }).strict();
 
-const GeneratedTestResponseSchema = z.object({
-    files: z.array(GeneratedTestFileSchema).min(1),
-    testContext: z.string().optional(),
-    explanation: z.string().optional(),
-    confidence: z.number().min(0).max(1).optional(),
+export const GeneratedTestResponseSchema = z.object({
+    files: z.array(GeneratedTestFileSchema).min(1).describe("The list of generated test files"),
+    testContext: z.string().optional().describe("Context that would be helpful for troubleshooting failed tests"),
+    explanation: z.string().optional().describe("Any additional explanation regarding the process of writing the testing code"),
+    confidence: z.number().optional().describe("Confidence rating of the generated test, from 0 (low) to 1 (high)"),
 }).strict();
 
-export interface ParseResult {
-    response: GeneratedTestResponse | null;
+export interface ParseResult<T> {
+    response: T | null;
     schemaErrors: string[];
 }
 
@@ -82,37 +83,20 @@ const extractJsonFromText = (text: string): string | null => {
     return text.slice(firstBrace, lastBrace + 1);
 };
 
-export const parseJsonResponse = (text: string): ParseResult => {
-    let jsonText = text.trim();
-
-    jsonText = jsonText
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "")
-        .trim();
-
+export const parseJsonResponse = <T>(jsonText: string): ParseResult<T> => {
     let parsed: unknown;
     try {
         parsed = JSON.parse(jsonText);
-    } catch {
-        const extracted = extractJsonFromText(jsonText);
-        if (!extracted) {
-            console.error("No JSON object found in response");
-            return {response: null, schemaErrors: ["No valid JSON found in response"]};
-        }
-        try {
-            parsed = JSON.parse(extracted);
-        } catch (e) {
-            console.error("Failed to parse extracted JSON:", e);
-            return {response: null, schemaErrors: ["Failed to parse JSON: " + String(e)]};
-        }
+    } catch (e) {
+        return {response: null, schemaErrors: ["No valid JSON found in response", util.inspect(e)]};
     }
 
     const result = GeneratedTestResponseSchema.safeParse(parsed);
     if (!result.success) {
         const schemaErrors = formatZodErrors(result.error);
         console.error("Schema validation errors:", schemaErrors);
-        return {response: parsed as GeneratedTestResponse, schemaErrors};
+        return {response: null, schemaErrors};
     }
 
-    return {response: result.data as GeneratedTestResponse, schemaErrors: []};
+    return {response: result.data as T, schemaErrors: []};
 };

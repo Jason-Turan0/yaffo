@@ -3,6 +3,7 @@ import {writeFileSync} from "fs";
 import {ApiLogEntry, CacheUsage, CostEstimate, MODEL_PRICING} from "@lib/test_generator/model_client.types";
 import {join} from "path";
 import {BetaMessageParam, BetaTextBlockParam, BetaTool} from "@anthropic-ai/sdk/resources/beta";
+import {JsonSchema7Type} from "zod-to-json-schema";
 
 //Most expensive to least
 export type AnthropicModelAliasOpus = 'claude-opus-4-5';
@@ -51,6 +52,7 @@ export class AnthropicModelClient {
     private sessionCacheCreationInputTokens: number = 0;
     private anthropic: Anthropic;
     private apiCallCount: number;
+    private outputSchema: JsonSchema7Type;
 
     constructor(
         private runLogDir: string,
@@ -58,12 +60,14 @@ export class AnthropicModelClient {
         private systemPrompt: string,
         private tools: BetaTool[],
         anthropicFactory: () => Anthropic,
+        outputSchema: JsonSchema7Type,
     ) {
         this.runLogDir = runLogDir;
         this.model = model;
         this.messages = [];
         this.anthropic = anthropicFactory();
         this.apiCallCount = 0;
+        this.outputSchema = outputSchema;
     }
 
     public addMessage = (message: BetaMessageParam) => {
@@ -122,18 +126,24 @@ export class AnthropicModelClient {
         let response: Anthropic.Beta.BetaMessage | undefined;
         let cacheUsage: CacheUsage | undefined;
         const timestamp = new Date();
-        const params = {
+        const betas: string[] = ['context-management-2025-06-27', 'structured-outputs-2025-11-13'];
+        const params: Record<string, unknown> = {
             model: this.model,
             max_tokens: 8192,
             tools: this.tools,
-            betas: ['context-management-2025-06-27'],
+            betas,
             system: this.buildSystemWithCache(),
             messages: this.buildMessagesWithCache(),
+            output_format: {
+                type: "json_schema",
+                schema: this.outputSchema,
+            },
             context_management: {},
         };
 
         try {
-            response = await this.anthropic.beta.messages.create(params);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            response = await this.anthropic.beta.messages.create(params as any);
             if (response != null) {
                 this.sessionInputTokens += response.usage.input_tokens;
                 this.sessionOutputTokens += response.usage.output_tokens;
@@ -184,6 +194,7 @@ export const anthropicModelClientFactory = (
     model: AnthropicModelAlias,
     systemPrompt: string,
     tools: BetaTool[],
+    outputSchema: JsonSchema7Type,
 ) => {
     return new AnthropicModelClient(
         runLogDir,
@@ -191,5 +202,6 @@ export const anthropicModelClientFactory = (
         systemPrompt,
         tools,
         () => new Anthropic(),
+        outputSchema,
     );
 };

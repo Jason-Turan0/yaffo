@@ -6,7 +6,7 @@
   "scripts": {
     "generate": "tsx lib/test_generator/index.ts",
     "generate:test": "tsx lib/test_generator/index.ts --run-tests",
-    "test": "playwright test",
+    "test": "BASE_URL=http://127.0.0.1:5001 playwright test",
     "test:unit": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
@@ -14,7 +14,7 @@
     "test:heal": "tsx lib/cli/run-with-healing.ts",
     "analyze": "tsx lib/cli/analyze.ts",
     "regenerate": "tsx lib/cli/regenerate.ts",
-    "validate": "tsx lib/cli/validate-specs.ts", 
+    "validate": "tsx lib/cli/validate-specs.ts",
     "lint": "eslint lib/ generated_tests/",
     "typecheck": "tsc --noEmit"
   },
@@ -27,7 +27,8 @@
     "commander": "^12.1.0",
     "dotenv": "^16.4.7",
     "yaml": "^2.6.1",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "zod-to-json-schema": "^3.25.1"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

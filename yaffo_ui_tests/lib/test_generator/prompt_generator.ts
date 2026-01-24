@@ -4,19 +4,12 @@ import fs, {existsSync, readFileSync} from "fs";
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
 import {runPlaywrightTests, formatTestResultsAsXml} from "@lib/test_generator/isolated_runner";
 
-const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
-
 interface LoadedContext {
     tag: string;
     path: string;
     description?: string;
     content: string;
 }
-
-export const TEST_GENERATOR_OUTPUT_FORMAT = fs.readFileSync(
-    join(process.cwd(), "lib", "test_generator", "model_client.response.types.ts"),
-    "utf8"
-);
 
 export class PromptGenerator {
 
@@ -118,14 +111,6 @@ export class PromptGenerator {
             "</tool_policy>"
         ];
 
-        // 6. Final Formatting
-        const outputBlock = [
-            "<output_format>",
-            "<instructions>When you have finished evaluating and are ready to generate the test with an end_turn message respond ONLY with a JSON object. Use no explanations or markdown blocks.</instructions>",
-            `<expected_schema type="typescript">${TEST_GENERATOR_OUTPUT_FORMAT}</expected_schema>`,
-            "</output_format>"
-        ];
-
         // Flatten all blocks into a single array
         return [
             ...roleBlock,
@@ -137,100 +122,6 @@ export class PromptGenerator {
             ...contextBlocks,
             "",
             ...instructionBlocks,
-            "",
-            ...outputBlock
-        ].join("\n");
-    }
-
-
-    async getSystemPrompt2(): Promise<string> {
-        const testServerPrompt = this.testServerIsRunning ? [
-            "You also access to running sandboxed instance of the website that you can use to interact with a live instance of the website",
-            "Use the provided tools from playwright mcp to interact with the website to help provide context for the runtime behavior of the site for generating tests",
-            `The base url of the website is ${this.baseUrl}`,
-            ""
-        ] : [];
-        const existingTestFiles = this.getExistingTestFilePaths();
-        const createPrompts = [
-            "1. Explore the codebase to discover actual HTML elements, selectors, and routes if needed",
-            "2. Generate accurate Playwright tests based on what you find",
-            "3. Return your output as structured JSON (you cannot write files directly)",
-        ];
-        const updatePrompts = [
-            `1. Check your memory and the existing tests.`,
-            "2. Fix/Update the test code as needed.",
-            "3. Return your output as structured JSON (you cannot write files directly)",
-            "Existing test files:",
-            "",
-            ...existingTestFiles,
-        ];
-        if (this.testServerIsRunning && existingTestFiles.length > 0) {
-            updatePrompts.push('Test Results:')
-            const testRunResult = await runPlaywrightTests(this.baseUrl, existingTestFiles);
-            if (testRunResult.success) {
-                updatePrompts.push('All tests passed')
-            } else {
-                updatePrompts.push(...[
-                    "The generated playwright test had failures that need to be corrected:",
-                    "",
-                    testRunResult.output,
-                    "",
-                ]);
-            }
-        }
-        return [
-            "You are an expert Playwright test generator with READ-ONLY access to filesystem tools.",
-            "",
-            "Your job is to:",
-            ...(existingTestFiles.length > 0 ? updatePrompts : createPrompts),
-            "",
-            "You have access to READ-ONLY tools that let you explore:",
-            "- Flask templates (templates/) - the actual HTML structure",
-            "- Routes (routes/) - available endpoints and their behavior",
-            "- Static files (static/) - JavaScript and CSS",
-            "",
-            ...testServerPrompt,
-            "## WORKFLOW",
-            "",
-            "1. Use filesystem tools to explore relevant templates and routes",
-            "2. Look for actual element IDs, classes, data-testid attributes, and form structures",
-            "3. Generate accurate Playwright tests using the real selectors you discovered",
-            "4. Return the generated code as structured JSON",
-            "",
-            "## GUIDELINES",
-            "",
-            "1. Generate TypeScript Playwright tests using @playwright/test",
-            "2. Use ACTUAL selectors from the templates - do not guess",
-            "3. Add appropriate waits for dynamic content (waitForSelector, waitForResponse, etc.)",
-            "4. Include meaningful assertions that match the 'verify' criteria from the spec",
-            "5. Handle common edge cases (loading states, network delays)",
-            "",
-            //Source
-            //https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-4-best-practices#optimize-parallel-tool-calling
-            "## TOOL USAGE",
-            "<use_parallel_tool_calls>",
-            "If you intend to call multiple tools and there are no dependencies between the tool calls, make all of the independent tool calls in parallel. Prioritize calling tools simultaneously whenever the actions can be done in parallel rather than sequentially. For example, when reading 3 files, run 3 tool calls in parallel to read all 3 files into context at the same time. Maximize use of parallel tool calls where possible to increase speed and efficiency. However, if some tool calls depend on previous calls to inform dependent values like the parameters, do NOT call these tools in parallel and instead call them sequentially. Never use placeholders or guess missing parameters in tool calls.",
-            "</use_parallel_tool_calls>",
-            "",
-            "## URL HANDLING",
-            "",
-            "IMPORTANT:",
-            "- NEVER hardcode URLs like 'http://127.0.0.1:5000' in test code",
-            "- Use page.goto('/') for navigation - Playwright uses baseURL from config",
-            "- For HTTP requests, derive the base URL dynamically: new URL(page.url()).origin",
-            "",
-            "## OUTPUT FORMAT",
-            "",
-            "When you are ready to generate the tests, respond with a JSON object in this exact format:",
-            "",
-            "```typescript",
-            TEST_GENERATOR_OUTPUT_FORMAT,
-            "```",
-            "",
-            "IMPORTANT:",
-            "- The 'code' field must contain the complete, valid TypeScript test file",
-            "- Do NOT wrap the JSON in markdown code blocks when responding",
-            "- Do NOT include an explanation before the JSON. Output the JSON in a single line format.",
         ].join("\n");
     }
 
