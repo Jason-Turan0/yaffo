@@ -1,5 +1,5 @@
 import {join, resolve, basename} from "path";
-import {writeFileSync, existsSync, readFileSync, unlinkSync} from "fs";
+import {writeFileSync, existsSync, readFileSync, unlinkSync, mkdirSync} from "fs";
 import {ToolCall} from "@lib/test_generator/model_client.types";
 import {GenerationResult} from "@lib/test_generator/index.types";
 import {Spec} from "@lib/test_generator/spec_parser.types";
@@ -20,7 +20,7 @@ import {
     createStubPlaywrightClient,
 } from "@lib/test_generator/mcp_playwright_client";
 import {ToolProvider} from "@lib/test_generator/toolprovider.types";
-import {IsolatedEnvironment, runPlaywrightTests, startIsolatedEnvironment} from "@lib/test_generator/isolated_runner";
+import {IsolatedEnvironment, startIsolatedEnvironment, TestRunResult} from "@lib/test_generator/isolated_runner";
 import {
     BetaMessage,
     BetaMessageParam,
@@ -28,6 +28,12 @@ import {
     BetaToolResultBlockParam
 } from "@anthropic-ai/sdk/resources/beta";
 import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
+import {formatTestResultsAsXml, runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
+import {
+    autoHealTestOrchestratorFactory,
+    AutoHealTestOrchestratorFactory
+} from "@lib/test_generator/auto_heal_orchestrator";
+import {generateTimestampString} from "@lib/test_generator/utils";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 
@@ -50,7 +56,8 @@ export class TestGeneratorOrchestrator {
         private allowedDirectories: string[],
         private isolatedEnvironment: IsolatedEnvironment | null,
         private toolProviders: ToolProvider[],
-        private typeScriptValidator: TypeScriptValidator = new DefaultTypeScriptValidator(),
+        private typeScriptValidator: TypeScriptValidator,
+        private autoHealTestOrchestratorFactory: AutoHealTestOrchestratorFactory
     ) {
         this.spec = spec;
         this.runLogDir = runLogDir;
@@ -171,24 +178,32 @@ export class TestGeneratorOrchestrator {
             }
 
             if (this.isolatedEnvironment != null) {
-                const testFailures = await this.runPlaywrightTests(writtenPaths);
-                if (testFailures.length === 0) {
+                const runResult = await this.runPlaywrightTests(writtenPaths);
+                if (runResult == null || runResult.success) {
                     console.log(`\n✅ Playwright tests passed!`);
                     return {
                         success: true,
                         logPath: this.runLogDir
                     }
                 } else {
-                    this.addPlaywrightTestErrorMessage(testFailures, parsedResponse, currentJson);
-                    const correctedJson = await this.generateTestCode();
-                    if (!correctedJson) {
-                        return {
-                            success: false,
-                            error: `Failed to correct playwright test failures.`,
-                            logPath: this.runLogDir
-                        };
-                    } else {
-                        currentJson = correctedJson;
+                    const failedTestFiles = runResult.tests.filter(test => test.status == "failed" || test.status == "timedOut");
+                    for (const failedTestFile of failedTestFiles) {
+                        const absoluteTestPath = resolve(join(this.outputDir, failedTestFile.file));
+                        const runId = generateTimestampString();
+                        const testName = basename(absoluteTestPath, ".spec.ts");
+                        const logPath = resolve(join(process.cwd(), "reports", "api_logs", `heal_${testName}`, runId));
+                        if (!existsSync(logPath)) {
+                            mkdirSync(logPath, {recursive: true});
+                        }
+                        const healer = await this.autoHealTestOrchestratorFactory(
+                            absoluteTestPath,
+                            logPath,
+                            this.outputDir,
+                            this.anthropic.model,
+                            this.baseUrl,
+                            this.isolatedEnvironment.tempDir
+                        );
+                        return await healer.healTest(runResult, absoluteTestPath);
                     }
                 }
             } else {
@@ -230,20 +245,6 @@ export class TestGeneratorOrchestrator {
             {role: "user", content: [{type: 'text', text: typeFixPrompt}]}
         ]);
     };
-
-    private addPlaywrightTestErrorMessage = (
-        testFailures: string[],
-        parsedResponse: GeneratedTestResponse,
-        currentJson: string,
-    ): void => {
-        const currentCode = parsedResponse.files[0]?.code || "";
-        const playwrightFailurePrompt = this.promptGenerator.buildTestFailurePrompt(testFailures, currentCode);
-        this.anthropic.addMessages([
-            {role: "assistant", content: [{type: 'text', text: currentJson}]},
-            {role: "user", content: [{type: 'text', text: playwrightFailurePrompt}]}
-        ]);
-    }
-
 
     private determineNextAction = async (response: BetaMessage): Promise<{
         success: boolean;
@@ -386,16 +387,11 @@ export class TestGeneratorOrchestrator {
         return errors;
     };
 
-    private runPlaywrightTests = async (filePaths: string[]): Promise<string[]> => {
-        if (this.isolatedEnvironment == null) return [];
+    private runPlaywrightTests = async (filePaths: string[]): Promise<TestRunResult | null> => {
+        if (this.isolatedEnvironment == null) return null;
         console.log(`\n🔍 Running playwright tests...`);
         const toRun = filePaths.filter(path => path.endsWith(".ts"));
-        const result = await runPlaywrightTests(this.baseUrl, toRun);
-
-        if (result.success) {
-            return []
-        }
-        return [result.output]
+        return await runPlaywrightTests(this.baseUrl, toRun);
     };
 
 }
@@ -452,6 +448,8 @@ export const
             promptGenerator,
             allowedDirectories,
             isolatedEnvironment,
-            toolProviders
+            toolProviders,
+            new DefaultTypeScriptValidator(),
+            autoHealTestOrchestratorFactory
         );
     };

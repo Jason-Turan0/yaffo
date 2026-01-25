@@ -11,12 +11,13 @@
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "isolatedEnvironment:start": "tsx lib/test_generator/isolated_runner.ts ",
-    "test:heal": "tsx lib/cli/run-with-healing.ts",
+    "test:heal": "tsx lib/test_generator/heal_test.ts",
     "analyze": "tsx lib/cli/analyze.ts",
     "regenerate": "tsx lib/cli/regenerate.ts",
     "validate": "tsx lib/cli/validate-specs.ts",
     "lint": "eslint lib/ generated_tests/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "logs": "tsx scripts/browse_api_logs.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",

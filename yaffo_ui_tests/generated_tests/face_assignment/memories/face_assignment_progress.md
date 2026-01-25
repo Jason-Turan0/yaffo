@@ -29,22 +29,23 @@ Generate Playwright tests for face_assignment feature
 - Person faces view: `/people/<id>/faces`
 
 ## Status
-4 TESTS PASSING! Need to add 5th test for keyboard shortcuts ✅
+DEBUGGING 2 FAILURES - 3 tests passing, 2 tests failing
 
-## Current Test Results
-1. ✅ face_assignment_can_create_new_people - PASSING (1110ms)
-2. ✅ face_assignment_can_be_done - PASSING (1648ms)
-3. ✅ faces_are_automatically_matched_to_people_based_on_similarity - PASSING (1078ms)
-4. ✅ similar_faces_are_grouped_together - PASSING (948ms)
-
-## Fifth Scenario (NEED TO ADD)
-5. ⚠️ keyboard_shortcuts_enable_quick_face_assignment - ADDING NOW
-   - Create person 'TestKeyboardPerson' on people page
-   - Navigate to face assignment
-   - Group by People, threshold=2
-   - Note keyboard shortcut number for TestKeyboardPerson
-   - Press that number key
-   - Verify faces assigned, success message, next group selected
+## Current Test Results (2026-01-25)
+1. ❌ face_assignment_can_create_new_people - FAILING 
+   - Error: select[name="person123"] not found (typo - should be "person")
+   - Line 71: await expect(obamaOptions).toHaveCount(2);
+   - Locator: select[name="person123"] doesn't exist
+   
+2. ✅ face_assignment_can_be_done - PASSING (1658ms)
+3. ✅ faces_are_automatically_matched_to_people_based_on_similarity - PASSING (1064ms)
+4. ✅ similar_faces_are_grouped_together - PASSING (897ms)
+5. ❌ keyboard_shortcuts_enable_quick_face_assignment - FAILING
+   - Error: Type mismatch in face_ids comparison
+   - Line 408: expect(responseData.face_ids).toEqual(expect.arrayContaining(selectedFaceIds.map(id => parseInt(id))));
+   - Expected: ArrayContaining [30, 31, 32, ...] (numbers)
+   - Received: ["30", "31", "32", ...] (strings)
+   - The API returns strings, but we're converting to integers and comparing
 
 ## Key Implementation Details for Scenario 4
 - Use #group-by-similarity radio button

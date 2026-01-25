@@ -56,7 +56,7 @@ export class AnthropicModelClient {
 
     constructor(
         private runLogDir: string,
-        private model: AnthropicModelAlias,
+        public model: AnthropicModelAlias,
         private systemPrompt: string,
         private tools: BetaTool[],
         anthropicFactory: () => Anthropic,
@@ -126,12 +126,12 @@ export class AnthropicModelClient {
         let response: Anthropic.Beta.BetaMessage | undefined;
         let cacheUsage: CacheUsage | undefined;
         const timestamp = new Date();
-        const betas: string[] = ['context-management-2025-06-27', 'structured-outputs-2025-11-13'];
+
         const params: Record<string, unknown> = {
             model: this.model,
             max_tokens: 8192,
             tools: this.tools,
-            betas,
+            betas: ['context-management-2025-06-27', 'structured-outputs-2025-11-13'],
             system: this.buildSystemWithCache(),
             messages: this.buildMessagesWithCache(),
             output_format: {

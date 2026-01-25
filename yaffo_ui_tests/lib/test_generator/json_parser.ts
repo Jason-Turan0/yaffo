@@ -83,7 +83,7 @@ const extractJsonFromText = (text: string): string | null => {
     return text.slice(firstBrace, lastBrace + 1);
 };
 
-export const parseJsonResponse = <T>(jsonText: string): ParseResult<T> => {
+export const parseJsonResponse = <T = GeneratedTestResponse>(jsonText: string): ParseResult<T> => {
     let parsed: unknown;
     try {
         parsed = JSON.parse(jsonText);

@@ -2,7 +2,8 @@ import {Spec, ContextItem} from "@lib/test_generator/spec_parser.types";
 import {basename, extname, join, resolve} from "path";
 import fs, {existsSync, readFileSync} from "fs";
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
-import {runPlaywrightTests, formatTestResultsAsXml} from "@lib/test_generator/isolated_runner";
+import {formatTestResultsAsXml, runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
+import {SpecPromptGenerator} from "@lib/test_generator/spec_prompt_generator";
 
 interface LoadedContext {
     tag: string;
@@ -12,6 +13,7 @@ interface LoadedContext {
 }
 
 export class PromptGenerator {
+    private specPromptGenerator: SpecPromptGenerator;
 
     constructor(
         private testServerIsRunning: boolean,
@@ -20,6 +22,7 @@ export class PromptGenerator {
         private outputDir: string,
         private spec: Spec,
     ) {
+        this.specPromptGenerator = new SpecPromptGenerator();
     }
 
     getExistingTestFilePaths(): string[] {
@@ -156,23 +159,6 @@ export class PromptGenerator {
         ].join("\n");
     }
 
-    buildTestFailurePrompt(playwrightFailures: string[], currentCode: string): string {
-        return [
-            "<test_evaluation>",
-            "    <status>failed</status>",
-            "    <failures>",
-            ...playwrightFailures.map(f => `        <failure>${f}</failure>`),
-            "    </failures>",
-            "</test_evaluation>",
-            "",
-            "<current_code>",
-            currentCode,
-            "</current_code>",
-            "",
-            "<instructions>Fix the test failures and provide the corrected code in the <output_format>.</instructions>",
-        ].join("\n");
-    }
-
     buildUserPrompt(spec: Spec, specPath: string, baseUrl: string, allowedDirs: string[]): string {
         const timestamp = new Date().toISOString();
         const loadedContext = spec.context ? this.loadContextFiles(spec.context) : [];
@@ -184,55 +170,20 @@ export class PromptGenerator {
             : "Start by exploring the templates directory to find actual selectors, " +
             "then generate the test file as JSON.";
 
-        const preconditionsSection = spec.preconditions
-            ? `<preconditions>\n${spec.preconditions.map(p => `    ${p}`).join("\n")}\n</preconditions>`
-            : "";
-        const scenariosSection = spec.scenarios.map(s => {
-            const cleanupSection = s.cleanup && s.cleanup.length > 0
-                ? [
-                    `        <cleanup>`,
-                    ...s.cleanup.map(c => `            <step>${c}</step>`),
-                    `        </cleanup>`,
-                ]
-                : [];
-            return [
-                `    <scenario>`,
-                `        <name>${s.name}</name>`,
-                `        <goal>${s.goal}</goal>`,
-                `        <priority>${s.priority}</priority>`,
-                `        <steps>`,
-                ...s.steps.map(step => `            <step>${step}</step>`),
-                `        </steps>`,
-                `        <verify>`,
-                ...s.verify.map(v => `            <assertion>${v}</assertion>`),
-                `        </verify>`,
-                ...cleanupSection,
-                `    </scenario>`,
-            ].join("\n");
-        }).join("\n");
-
+        const specificationSection = this.specPromptGenerator.formatSpec(spec);
+        const allowDirectoriesSection = this.specPromptGenerator.generateAllowedDirectories(allowedDirs);
         return [
             `<task>Generate Playwright tests from this specification.</task>`,
             "",
-            "<filesystem_access>",
-            "    <description>You have READ-ONLY access to these directories:</description>",
-            ...allowedDirs.map(d => `    <directory>${d}</directory>`),
-            "    <note>Use absolute paths when using the file tools</note>",
-            "</filesystem_access>",
+
             "",
             "<spec_file>",
             `    <path>${specPath}</path>`,
             "</spec_file>",
             "",
-            "<specification>",
-            `    <feature>${spec.feature}</feature>`,
-            `    <description>${spec.description}</description>`,
-            preconditionsSection,
-            ...(spec.data ? ["    <data>", ...spec.data.map(d => `        ${d}`), "    </data>"] : []),
-            "    <scenarios>",
-            scenariosSection,
-            "    </scenarios>",
-            "</specification>",
+            specificationSection,
+            "",
+            ...allowDirectoriesSection,
             "",
             contextSection,
             "",

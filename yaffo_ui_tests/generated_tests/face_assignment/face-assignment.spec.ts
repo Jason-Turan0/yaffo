@@ -405,7 +405,8 @@ test.describe('Face Assignment', () => {
     const responseData = await response.json();
     expect(responseData.success).toBeTruthy();
     expect(responseData.message).toContain('TestKeyboardPerson');
-    expect(responseData.face_ids).toEqual(expect.arrayContaining(selectedFaceIds.map(id => parseInt(id))));
+    // Fix: The API returns face_ids as strings, not integers, so compare as strings
+    expect(responseData.face_ids).toEqual(expect.arrayContaining(selectedFaceIds));
     
     // Wait for page to update after assignment
     await page.waitForLoadState('networkidle');
