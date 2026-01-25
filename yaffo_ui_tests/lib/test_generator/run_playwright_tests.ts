@@ -5,6 +5,7 @@ import fs, {existsSync, readFileSync, rmSync} from "fs";
 import {TestResult, TestRunResult} from "@lib/test_generator/isolated_runner";
 
 const UI_TESTS_DIR = resolve(process.cwd());
+const GENERATED_TESTS_DIR = resolve(join(UI_TESTS_DIR, 'generated_tests'));
 
 interface PlaywrightJsonReport {
     suites: PlaywrightSuite[];
@@ -71,7 +72,7 @@ const parsePlaywrightJson = (jsonPath: string): { tests: TestResult[]; summary: 
                     const status = result?.status ?? "skipped";
 
                     const testResult: TestResult = {
-                        file: resolve(join(UI_TESTS_DIR, suite.file)),
+                        file: resolve(join(GENERATED_TESTS_DIR, suite.file)),
                         testName: `${suite.title} › ${spec.title}`,
                         status: status as TestResult["status"],
                         duration: result?.duration ?? 0,

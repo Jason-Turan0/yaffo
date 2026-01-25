@@ -28,7 +28,7 @@ import {
     BetaToolResultBlockParam
 } from "@anthropic-ai/sdk/resources/beta";
 import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
-import {formatTestResultsAsXml, runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
+import {runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
 import {
     autoHealTestOrchestratorFactory,
     AutoHealTestOrchestratorFactory
@@ -188,7 +188,7 @@ export class TestGeneratorOrchestrator {
                 } else {
                     const failedTestFiles = runResult.tests.filter(test => test.status == "failed" || test.status == "timedOut");
                     for (const failedTestFile of failedTestFiles) {
-                        const absoluteTestPath = resolve(join(this.outputDir, failedTestFile.file));
+                        const absoluteTestPath = resolve(failedTestFile.file);
                         const runId = generateTimestampString();
                         const testName = basename(absoluteTestPath, ".spec.ts");
                         const logPath = resolve(join(process.cwd(), "reports", "api_logs", `heal_${testName}`, runId));
