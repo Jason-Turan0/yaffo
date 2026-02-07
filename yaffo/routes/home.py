@@ -48,7 +48,7 @@ def init_home_routes(app: Flask):
         month = request.args.get("month", type=int)
         page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", type=int)
-        filter_page_size = page_size if page_size else 100
+        filter_page_size = page_size if page_size else 25
         # Build query with eager loading
         query = (
             db.session.query(Photo)
@@ -179,7 +179,7 @@ def init_home_routes(app: Flask):
             'selected_proximity_location': proximity_location,
             'selected_year': year,
             'selected_month': month,
-            "page_sizes": [50, 100, 250, 500, 1000],
+            "page_sizes": [10, 25, 50, 100, 250],
             "page_size": filter_page_size
         }
 
@@ -187,7 +187,7 @@ def init_home_routes(app: Flask):
             "current_page": page,
             "total_items": photo_count,
             "page_size": filter_page_size,
-            "page_sizes": [50, 100, 250, 500, 1000],
+            "page_sizes": [10, 25, 50, 100, 250],
         }
 
         return render_template("index.html", photos=photos, filters=filters, photo_count=photo_count, pagination=pagination)

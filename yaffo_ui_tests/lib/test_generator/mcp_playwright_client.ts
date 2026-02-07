@@ -7,9 +7,8 @@
 
 import {Client} from "@modelcontextprotocol/sdk/client/index.js";
 import {StdioClientTransport} from "@modelcontextprotocol/sdk/client/stdio.js";
-import type {Tool} from "@anthropic-ai/sdk/resources/messages.js";
-import {CallToolReturn, ToolProvider} from "@lib/test_generator/toolprovider.types";
-import {writeFileSync} from "fs";
+import type {JSONSchema7} from "ai";
+import {CallToolReturn, RawToolDefinition, ToolProvider} from "@lib/test_generator/toolprovider.types";
 import {truncateToolResultIfNeeded} from "@lib/test_generator/utils";
 
 export interface McpClientLike {
@@ -77,13 +76,13 @@ export class PlaywrightMcpClient implements ToolProvider {
         }
     }
 
-    getToolsForClaude(): Tool[] {
+    getTools(): RawToolDefinition[] {
         return this.tools
             .filter((tool) => !EXCLUDED_TOOLS.includes(tool.name))
             .map((tool) => ({
                 name: tool.name,
                 description: tool.description,
-                input_schema: tool.inputSchema as Tool["input_schema"],
+                inputSchema: tool.inputSchema as JSONSchema7,
             }));
     }
 
@@ -196,7 +195,7 @@ export async function createPlaywrightClient(
 
 export async function createStubPlaywrightClient(): Promise<ToolProvider> {
     return {
-        getToolsForClaude() {
+        getTools() {
             return [];
         },
 

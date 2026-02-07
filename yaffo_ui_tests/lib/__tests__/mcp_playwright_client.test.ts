@@ -68,24 +68,24 @@ describe('PlaywrightMcpClient', () => {
         });
     });
 
-    describe('getToolsForClaude', () => {
+    describe('getTools', () => {
         beforeEach(async () => {
             await client.connect();
         });
 
         it('should return tools in Claude format', () => {
-            const tools = client.getToolsForClaude();
+            const tools = client.getTools();
             expect(Array.isArray(tools)).toBe(true);
             expect(tools.length).toBeGreaterThan(0);
 
             const navigateTool = tools.find((t) => t.name === 'browser_navigate');
             expect(navigateTool).toBeDefined();
             expect(navigateTool?.description).toBe('Navigate to a URL');
-            expect(navigateTool?.input_schema).toBeDefined();
+            expect(navigateTool?.inputSchema).toBeDefined();
         });
 
         it('should filter out excluded tools', () => {
-            const tools = client.getToolsForClaude();
+            const tools = client.getTools();
             const toolNames = tools.map((t) => t.name);
 
             expect(toolNames).not.toContain('browser_install');
@@ -93,7 +93,7 @@ describe('PlaywrightMcpClient', () => {
         });
 
         it('should include non-excluded tools', () => {
-            const tools = client.getToolsForClaude();
+            const tools = client.getTools();
             const toolNames = tools.map((t) => t.name);
 
             expect(toolNames).toContain('browser_navigate');
@@ -269,7 +269,7 @@ describe('createStubPlaywrightClient', () => {
     it('should create a stub client that returns empty tools', async () => {
         const stub = await createStubPlaywrightClient();
 
-        expect(stub.getToolsForClaude()).toEqual([]);
+        expect(stub.getTools()).toEqual([]);
     });
 
     it('should throw error when calling tools on stub', async () => {

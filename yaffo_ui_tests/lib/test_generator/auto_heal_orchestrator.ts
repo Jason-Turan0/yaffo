@@ -1,27 +1,25 @@
 import {join, resolve, basename} from "path";
 import {writeFileSync, readFileSync, existsSync} from "fs";
-import {ToolCall} from "@lib/test_generator/model_client.types";
 import {createFilesystemClient} from "@lib/test_generator/mcp_filesystem_client";
 import {HealPromptGenerator, HealContext, healPromptGeneratorFactory} from "@lib/test_generator/heal_prompt_generator";
 import {parseSpecFile} from "@lib/test_generator/spec_parser";
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
 import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/json_parser";
-import {zodToJsonSchema} from "zod-to-json-schema";
 import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/test_generator/typescript_validator";
 import {
     anthropicModelClientFactory,
-    AnthropicModelClient,
     AnthropicModelAlias
 } from "@lib/test_generator/anthropic_model_client";
 import {createPlaywrightClient} from "@lib/test_generator/mcp_playwright_client";
-import {ToolProvider} from "@lib/test_generator/toolprovider.types";
-import {startIsolatedEnvironment, TestRunResult} from "@lib/test_generator/isolated_runner";
+import {RawToolDefinition, ToolProvider} from "@lib/test_generator/toolprovider.types";
+import {TestRunResult} from "@lib/test_generator/isolated_runner";
 import {
-    BetaMessage,
-    BetaMessageParam,
-    BetaTool,
-    BetaToolResultBlockParam
-} from "@anthropic-ai/sdk/resources/beta";
+    ModelClient,
+    ModelResponse,
+    ToolCallResult,
+    toTextPart,
+    toToolResultPart
+} from "@lib/test_generator/model_client.interface";
 import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
 import {runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
 
@@ -39,7 +37,7 @@ export class AutoHealTestOrchestrator {
     private iterationCount = 0;
     private maxIterations = 50;
     private maxRetries = 3;
-    private toolProviderMap: Map<string, { tool: BetaTool; toolProvider: ToolProvider }> = new Map();
+    private toolProviderMap: Map<string, { tool: RawToolDefinition; toolProvider: ToolProvider }> = new Map();
     private featureName: string = "";
 
     constructor(
@@ -47,14 +45,14 @@ export class AutoHealTestOrchestrator {
         private runLogDir: string,
         private outputDir: string,
         private baseUrl: string,
-        private anthropic: AnthropicModelClient,
+        private modelClient: ModelClient,
         private promptGenerator: HealPromptGenerator,
         private allowedDirectories: string[],
         private toolProviders: ToolProvider[],
         private typeScriptValidator: TypeScriptValidator = new DefaultTypeScriptValidator(),
     ) {
         const tools = toolProviders.flatMap(toolProvider =>
-            toolProvider.getToolsForClaude().map((tool) => ({tool, toolProvider}))
+            toolProvider.getTools().map((tool) => ({tool, toolProvider}))
         );
 
         for (const tool of tools) {
@@ -70,7 +68,7 @@ export class AutoHealTestOrchestrator {
             const testCode = readFileSync(this.absoluteTestFilePath, "utf-8");
             const spec = parseSpecFile(specPath);
             this.featureName = spec.feature;
-            const initialTestResponse = this.loadJsonFile()
+            const initialTestResponse = this.loadJsonFile();
 
             const healContext: HealContext = {
                 absoluteTestFilePath: this.absoluteTestFilePath,
@@ -84,7 +82,7 @@ export class AutoHealTestOrchestrator {
             };
 
             const userPrompt = this.promptGenerator.buildHealPrompt(healContext, this.allowedDirectories);
-            this.anthropic.addMessage({role: "user", content: [{type: "text", text: userPrompt}]});
+            this.modelClient.addUserMessage([toTextPart(userPrompt)]);
 
             const generatedJson = await this.generateHealedCode();
             if (!generatedJson) {
@@ -109,7 +107,7 @@ export class AutoHealTestOrchestrator {
         let generatedJson: string | null = null;
         while (this.iterationCount < this.maxIterations) {
             this.iterationCount++;
-            const response = await this.anthropic.callModelApi();
+            const response = await this.modelClient.callModelApi();
 
             if (!response) {
                 break;
@@ -123,10 +121,6 @@ export class AutoHealTestOrchestrator {
 
             if (!nextAction.continue) {
                 break;
-            }
-
-            if (nextAction.toolUsages?.length) {
-                this.anthropic.addMessages(nextAction.toolUsages);
             }
         }
         return generatedJson;
@@ -237,10 +231,7 @@ export class AutoHealTestOrchestrator {
             "",
             "<instructions>Fix the schema errors and provide the corrected JSON.</instructions>",
         ].join("\n");
-        this.anthropic.addMessages([
-            {role: "assistant", content: currentJson},
-            {role: "user", content: [{type: "text", text: schemaFixPrompt}]}
-        ]);
+        this.modelClient.addUserMessage([toTextPart(schemaFixPrompt)]);
     };
 
     private addCompileErrorMessage = (
@@ -250,10 +241,8 @@ export class AutoHealTestOrchestrator {
     ): void => {
         const currentCode = parsedResponse.files[0]?.code || "";
         const typeFixPrompt = this.promptGenerator.buildTypeErrorFixPrompt(typeErrors, currentCode);
-        this.anthropic.addMessages([
-            {role: "assistant", content: [{type: "text", text: currentJson}]},
-            {role: "user", content: [{type: "text", text: typeFixPrompt}]}
-        ]);
+
+        this.modelClient.addUserMessage([toTextPart(typeFixPrompt)]);
     };
 
     private addPlaywrightTestErrorMessage = (
@@ -263,48 +252,42 @@ export class AutoHealTestOrchestrator {
     ): void => {
         const currentCode = parsedResponse.files[0]?.code || "";
         const playwrightFailurePrompt = this.promptGenerator.buildTestFailurePrompt(testFailures, currentCode);
-        this.anthropic.addMessages([
-            {role: "assistant", content: [{type: "text", text: currentJson}]},
-            {role: "user", content: [{type: "text", text: playwrightFailurePrompt}]}
-        ]);
+        this.modelClient.addUserMessage([toTextPart(playwrightFailurePrompt)]);
     };
 
-    private determineNextAction = async (response: BetaMessage): Promise<{
+    private determineNextAction = async (response: ModelResponse): Promise<{
         success: boolean;
         continue: boolean;
         generatedJson?: string;
-        toolUsages?: BetaMessageParam[];
     }> => {
-        console.log(`   Stop reason: ${response.stop_reason}`);
+        console.log(`   Stop reason: ${response.finishReason}`);
 
-        if (response.stop_reason === "end_turn") {
-            const textContent = this.extractTextContent(response);
-            return {success: true, continue: false, generatedJson: textContent};
+        if (response.finishReason === "stop" || response.finishReason === "length") {
+            return {success: true, continue: false, generatedJson: response.text};
         }
 
-        const toolCalls = this.extractToolCalls(response);
-        if (response.stop_reason === "tool_use" && toolCalls.length > 0) {
-            const toolUsages: BetaMessageParam[] = [];
-            toolUsages.push({role: "assistant", content: response.content});
-
-            const toolResults: BetaToolResultBlockParam[] = [];
-            for (const call of toolCalls) {
-                console.log(`   🔧 Tool: ${call.name} Id: ${call.id} (${JSON.stringify(call.input).slice(0, 50)}...)`);
+        if (response.finishReason === "tool-calls" && response.toolCalls.length > 0) {
+            const toolResults: ToolCallResult[] = [];
+            for (const call of response.toolCalls) {
+                console.log(`   🔧 Tool: ${call.toolName} Id: ${call.toolCallId} (${JSON.stringify(call.input).slice(0, 50)}...)`);
                 try {
-                    const toolTuple = this.toolProviderMap.get(call.name);
+                    const toolTuple = this.toolProviderMap.get(call.toolName);
                     if (!toolTuple) {
                         toolResults.push({
                             type: "tool_result",
-                            tool_use_id: call.id,
-                            content: `Error: No implementation for tool ${call.name}`,
-                            is_error: true,
+                            toolName: call.toolName,
+                            toolCallId: call.toolCallId,
+                            result: `Error: No implementation for tool ${call.toolName}`,
+                            isError: true,
                         });
                     } else {
-                        const result = await toolTuple.toolProvider.callTool(call.name, call.input);
+                        const result = await toolTuple.toolProvider.callTool(call.toolName, call.input);
+                        const resultText = typeof result === "string" ? result : result.text;
                         toolResults.push({
                             type: "tool_result",
-                            tool_use_id: call.id,
-                            content: (typeof result === "string") ? [{type: "text", text: result}] : [result]
+                            toolName: call.toolName,
+                            toolCallId: call.toolCallId,
+                            result: resultText,
                         });
                     }
                 } catch (e) {
@@ -312,42 +295,19 @@ export class AutoHealTestOrchestrator {
                     console.log(`   ❌ Tool error: ${errorMsg}`);
                     toolResults.push({
                         type: "tool_result",
-                        tool_use_id: call.id,
-                        content: `Error: ${errorMsg}`,
-                        is_error: true,
+                        toolCallId: call.toolCallId,
+                        toolName: call.toolName,
+                        result: `Error: ${errorMsg}`,
+                        isError: true,
                     });
                 }
             }
 
-            toolUsages.push({role: "user", content: toolResults});
-            return {success: true, continue: true, toolUsages};
+            this.modelClient.addToolResultMessage(toolResults.map(toToolResultPart));
+            return {success: true, continue: true};
         }
 
-        throw new Error(`Unknown stop reason ${response.stop_reason}`);
-    };
-
-    private extractToolCalls = (response: BetaMessage): ToolCall[] => {
-        const toolCalls: ToolCall[] = [];
-        for (const block of response.content) {
-            if (block.type === "tool_use") {
-                toolCalls.push({
-                    id: block.id,
-                    name: block.name,
-                    input: block.input as Record<string, unknown>,
-                });
-            }
-        }
-        return toolCalls;
-    };
-
-    private extractTextContent = (response: BetaMessage): string => {
-        let textContent = "";
-        for (const block of response.content) {
-            if (block.type === "text") {
-                textContent += block.text;
-            }
-        }
-        return textContent;
+        throw new Error(`Unknown stop reason ${response.finishReason}`);
     };
 
     private writeHealedFile = (response: GeneratedTestResponse): string => {
@@ -371,7 +331,7 @@ export class AutoHealTestOrchestrator {
         }
         const existingJson = readFileSync(jsonPath, "utf-8");
         return JSON.parse(existingJson) as GeneratedTestResponse;
-    }
+    };
 
     private updateJsonFile = (healedCode: string): void => {
         const jsonPath = join(this.outputDir, `${this.featureName}.json`);
@@ -451,14 +411,13 @@ export const autoHealTestOrchestratorFactory = async (
     const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];
 
     const promptGenerator = healPromptGeneratorFactory(baseUrl);
-    const tools = toolProviders.flatMap(provider => provider.getToolsForClaude());
-    const outputSchema = zodToJsonSchema(GeneratedTestResponseSchema);
-    const anthropicModel = anthropicModelClientFactory(
+    const rawTools = toolProviders.flatMap(provider => provider.getTools());
+    const modelClient = anthropicModelClientFactory(
         runLogDir,
         model,
         await promptGenerator.buildSystemPrompt(),
-        tools,
-        outputSchema,
+        rawTools,
+        GeneratedTestResponseSchema,
     );
 
     return new AutoHealTestOrchestrator(
@@ -466,7 +425,7 @@ export const autoHealTestOrchestratorFactory = async (
         runLogDir,
         outputDir,
         baseUrl,
-        anthropicModel,
+        modelClient,
         promptGenerator,
         allowedDirectories,
         toolProviders

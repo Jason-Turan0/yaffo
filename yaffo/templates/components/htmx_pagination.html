@@ -26,7 +26,7 @@
                         hx-target="{{ hx_target }}"
                         hx-swap="{{ hx_swap }}"
                         hx-include="closest form"
-                        hx-vals='js:{"page": 0, "page_size": event.target.value}'>
+                        hx-vals='js:{"page": 0, "page-size": event.target.value}'>
                     {% for size in page_sizes %}
                         <option value="{{ size }}"
                                 {% if size == page_size %}selected{% endif %}>

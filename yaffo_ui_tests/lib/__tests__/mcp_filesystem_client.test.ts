@@ -70,20 +70,20 @@ describe('FilesystemMcpClient', () => {
         });
     });
 
-    describe('getToolsForClaude', () => {
+    describe('getTools', () => {
         it('should return tools in Claude format', () => {
-            const tools = client.getToolsForClaude();
+            const tools = client.getTools();
             expect(Array.isArray(tools)).toBe(true);
             expect(tools.length).toBeGreaterThan(0);
 
             const readFileTool = tools.find(t => t.name === 'read_file');
             expect(readFileTool).toBeDefined();
             expect(readFileTool?.description).toBeDefined();
-            expect(readFileTool?.input_schema).toBeDefined();
+            expect(readFileTool?.inputSchema).toBeDefined();
         });
 
         it('should filter out write tools', () => {
-            const tools = client.getToolsForClaude();
+            const tools = client.getTools();
             const toolNames = tools.map(t => t.name);
 
             expect(toolNames).not.toContain('write_file');
@@ -175,7 +175,7 @@ describe('createFilesystemClient', () => {
 
     it('should create a connected ToolProvider', () => {
         expect(toolProvider).toBeDefined();
-        expect(toolProvider.getToolsForClaude).toBeDefined();
+        expect(toolProvider.getTools).toBeDefined();
         expect(toolProvider.callTool).toBeDefined();
         expect(toolProvider.disconnect).toBeDefined();
     });

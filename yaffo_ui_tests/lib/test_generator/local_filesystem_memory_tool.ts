@@ -1,21 +1,98 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import {betaMemoryTool, type MemoryToolHandlers} from '@anthropic-ai/sdk/helpers/beta/memory';
-import type {
-    BetaMemoryTool20250818ViewCommand,
-    BetaMemoryTool20250818CreateCommand,
-    BetaMemoryTool20250818DeleteCommand,
-    BetaMemoryTool20250818InsertCommand,
-    BetaMemoryTool20250818RenameCommand,
-    BetaMemoryTool20250818StrReplaceCommand,
-} from '@anthropic-ai/sdk/resources/beta';
-import {CallToolReturn, ToolProvider} from "@lib/test_generator/toolprovider.types";
-import {Tool} from "@anthropic-ai/sdk/resources.js";
+import type {JSONSchema7} from "ai";
+import {CallToolReturn, RawToolDefinition, ToolProvider} from "@lib/test_generator/toolprovider.types";
 
-import {existsSync} from "node:fs";
+interface ViewCommand {
+    command: "view";
+    path: string;
+    view_range?: [number, number];
+}
+
+interface CreateCommand {
+    command: "create";
+    path: string;
+    file_text: string;
+}
+
+interface StrReplaceCommand {
+    command: "str_replace";
+    path: string;
+    old_str: string;
+    new_str: string;
+}
+
+interface InsertCommand {
+    command: "insert";
+    path: string;
+    insert_line: number;
+    insert_text: string;
+}
+
+interface DeleteCommand {
+    command: "delete";
+    path: string;
+}
+
+interface RenameCommand {
+    command: "rename";
+    old_path: string;
+    new_path: string;
+}
+
+type MemoryCommand = ViewCommand | CreateCommand | StrReplaceCommand | InsertCommand | DeleteCommand | RenameCommand;
+
+const MEMORY_TOOL_SCHEMA: JSONSchema7 = {
+    type: "object",
+    properties: {
+        command: {
+            type: "string",
+            enum: ["view", "create", "str_replace", "insert", "delete", "rename"],
+            description: "The memory operation to perform"
+        },
+        path: {
+            type: "string",
+            description: "The path within /memories to operate on. Must start with /memories"
+        },
+        file_text: {
+            type: "string",
+            description: "Content for the file (create command)"
+        },
+        old_str: {
+            type: "string",
+            description: "String to replace (str_replace command)"
+        },
+        new_str: {
+            type: "string",
+            description: "Replacement string (str_replace command)"
+        },
+        insert_line: {
+            type: "number",
+            description: "Line number to insert at (insert command)"
+        },
+        insert_text: {
+            type: "string",
+            description: "Text to insert (insert command)"
+        },
+        view_range: {
+            type: "array",
+            items: {type: "number"},
+            description: "Optional [start, end] line range for view command"
+        },
+        old_path: {
+            type: "string",
+            description: "Source path (rename command)"
+        },
+        new_path: {
+            type: "string",
+            description: "Destination path (rename command)"
+        }
+    },
+    required: ["command"]
+};
 
 
-class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
+class LocalFilesystemMemoryTool implements ToolProvider {
     private memoriesPath: string;
 
     constructor(basePath: string = './memory') {
@@ -26,28 +103,47 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         this.memoriesPath = memoriesPath;
     }
 
-    getToolsForClaude(): Tool[] {
-        const toolSpec = betaMemoryTool(this) as Tool;
-        return [toolSpec];
+    getTools(): RawToolDefinition[] {
+        return [{
+            name: "memory",
+            description: "A tool for managing persistent memory files. Supports viewing, creating, editing, and deleting files within the /memories directory.",
+            inputSchema: MEMORY_TOOL_SCHEMA,
+        }];
     }
 
-    async callTool(name: string, args: Record<string, unknown>): Promise<CallToolReturn> {
+    async callTool(_: string, args: Record<string, unknown>): Promise<CallToolReturn> {
         if (args == null || args['command'] == null) {
             throw new Error('command is required');
         }
-        const tool = betaMemoryTool(this);
-        const command = tool.parse(args);
-        const result = await tool.run(command) as string;
+        const command = args as unknown as MemoryCommand;
+        const result = await this.runCommand(command);
         return {
             type: "text",
             text: result
         };
     }
 
+    private async runCommand(command: MemoryCommand): Promise<string> {
+        switch (command.command) {
+            case "view":
+                return this.view(command);
+            case "create":
+                return this.create(command);
+            case "str_replace":
+                return this.str_replace(command);
+            case "insert":
+                return this.insert(command);
+            case "delete":
+                return this.delete(command);
+            case "rename":
+                return this.rename(command);
+            default:
+                throw new Error(`Unknown command: ${(command as MemoryCommand).command}`);
+        }
+    }
+
     disconnect(): Promise<void> {
-        return new Promise(resolve => {
-            resolve()
-        })
+        return Promise.resolve();
     }
 
     private validatePath(memoryPath: string): string {
@@ -67,7 +163,7 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         return resolvedPath;
     }
 
-    async view(command: BetaMemoryTool20250818ViewCommand): Promise<string> {
+    private async view(command: ViewCommand): Promise<string> {
         const fullPath = this.validatePath(command.path);
 
 
@@ -111,7 +207,7 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         }
     }
 
-    async create(command: BetaMemoryTool20250818CreateCommand): Promise<string> {
+    private async create(command: CreateCommand): Promise<string> {
         const fullPath = this.validatePath(command.path);
         const dir = path.dirname(fullPath);
 
@@ -123,19 +219,19 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         return `File created successfully at ${command.path}`;
     }
 
-    async str_replace(command: BetaMemoryTool20250818StrReplaceCommand): Promise<string> {
+    private async str_replace(command: StrReplaceCommand): Promise<string> {
         const fullPath = this.validatePath(command.path);
 
-        if (!(await existsSync(fullPath))) {
+        if (!fs.existsSync(fullPath)) {
             throw new Error(`File not found: ${command.path}`);
         }
 
-        const stat = await fs.statSync(fullPath);
+        const stat = fs.statSync(fullPath);
         if (!stat.isFile()) {
             throw new Error(`Path is not a file: ${command.path}`);
         }
 
-        const content = await fs.readFileSync(fullPath, 'utf-8');
+        const content = fs.readFileSync(fullPath, 'utf-8');
         const count = content.split(command.old_str).length - 1;
 
         if (count === 0) {
@@ -145,14 +241,14 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         }
 
         const newContent = content.replace(command.old_str, command.new_str);
-        await fs.writeFileSync(fullPath, newContent, 'utf-8');
+        fs.writeFileSync(fullPath, newContent, 'utf-8');
         return `File ${command.path} has been edited`;
     }
 
-    async insert(command: BetaMemoryTool20250818InsertCommand): Promise<string> {
+    private async insert(command: InsertCommand): Promise<string> {
         const fullPath = this.validatePath(command.path);
 
-        if (!(existsSync(fullPath))) {
+        if (!(fs.existsSync(fullPath))) {
             throw new Error(`File not found: ${command.path}`);
         }
 
@@ -173,14 +269,14 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         return `Text inserted at line ${command.insert_line} in ${command.path}`;
     }
 
-    async delete(command: BetaMemoryTool20250818DeleteCommand): Promise<string> {
+    private async delete(command: DeleteCommand): Promise<string> {
         const fullPath = this.validatePath(command.path);
 
         if (command.path === '/memories') {
             throw new Error('Cannot delete the /memories directory itself');
         }
 
-        if (!(existsSync(fullPath))) {
+        if (!(fs.existsSync(fullPath))) {
             throw new Error(`Path not found: ${command.path}`);
         }
 
@@ -197,7 +293,7 @@ class LocalFilesystemMemoryTool implements MemoryToolHandlers, ToolProvider {
         }
     }
 
-    async rename(command: BetaMemoryTool20250818RenameCommand): Promise<string> {
+    private async rename(command: RenameCommand): Promise<string> {
         const oldFullPath = this.validatePath(command.old_path);
         const newFullPath = this.validatePath(command.new_path);
 

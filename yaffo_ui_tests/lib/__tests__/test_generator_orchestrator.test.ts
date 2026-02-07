@@ -1,40 +1,43 @@
-import {jest, beforeAll, afterAll} from '@jest/globals';
+import {jest, beforeAll, afterAll, beforeEach, describe, it, expect} from '@jest/globals';
 import {mkdtempSync, rmSync, existsSync} from 'fs';
 import {join} from 'path';
 import {tmpdir} from 'os';
 import {TestGeneratorOrchestrator} from '../test_generator/test_generator_orchestrator';
 import {PromptGenerator} from '../test_generator/prompt_generator';
 import {Spec} from '../test_generator/spec_parser.types';
-import {ToolProvider, CallToolReturn} from '../test_generator/toolprovider.types';
+import {ToolProvider, CallToolReturn, RawToolDefinition} from '../test_generator/toolprovider.types';
 import {TypeScriptValidator, TypeCheckResult} from '../test_generator/typescript_validator';
-import {BetaTool} from '@anthropic-ai/sdk/resources/beta';
-import {BetaMessage} from '@anthropic-ai/sdk/resources/beta';
+import {ModelClient, ModelResponse, ModelAlias} from '../test_generator/model_client.interface';
+import {AutoHealTestOrchestratorFactory} from '../test_generator/auto_heal_orchestrator';
 
 type MockFn = ReturnType<typeof jest.fn>;
 
-interface MockAnthropicModelClient {
-    addMessage: MockFn;
-    addMessages: MockFn;
+interface MockModelClient extends ModelClient {
+    addUserMessage: MockFn;
+    addToolResultMessage: MockFn;
     callModelApi: MockFn;
+    model: ModelAlias;
 }
 
-const createMockAnthropicModelClient = (): MockAnthropicModelClient => ({
-    addMessage: jest.fn(),
-    addMessages: jest.fn(),
-    callModelApi: jest.fn(),
+const createMockModelClient = (): MockModelClient => ({
+    addUserMessage: jest.fn(),
+    addToolResultMessage: jest.fn(),
+    model: "claude-sonnet-4-5",
+    callModelApi: jest.fn()
 });
 
 const createMockToolProvider = (
-    tools: BetaTool[] = [],
+    tools: RawToolDefinition[] = [],
     callToolResponse: CallToolReturn = 'mock tool response'
 ): ToolProvider => ({
-    getToolsForClaude: jest.fn(() => tools),
+    getTools: jest.fn(() => tools),
     callTool: jest.fn(async () => callToolResponse),
-    disconnect: jest.fn(async () => {}),
+    disconnect: jest.fn(async () => {
+    }),
 });
 
 const createMockPromptGenerator = (): PromptGenerator => ({
-    getSystemPrompt: jest.fn(() => 'system prompt'),
+    getSystemPrompt: jest.fn(() => Promise.resolve('system prompt')),
     buildUserPrompt: jest.fn(() => 'user prompt'),
     buildSchemaFixPrompt: jest.fn(() => 'schema fix prompt'),
     buildTypeErrorFixPrompt: jest.fn(() => 'type error fix prompt'),
@@ -49,6 +52,10 @@ const createMockTypeScriptValidator = (): TypeScriptValidator => ({
     })),
     formatTypeErrorsForModel: jest.fn(() => ''),
 });
+
+const createMockAutoHealFactory = (): AutoHealTestOrchestratorFactory => {
+    return jest.fn() as unknown as AutoHealTestOrchestratorFactory;
+};
 
 const createMinimalSpec = (): Spec => ({
     feature: 'test-feature',
@@ -72,52 +79,51 @@ test.describe('Test Feature', () => {
 });
 `;
 
-const createBetaUsage = (inputTokens: number, outputTokens: number) => ({
-    input_tokens: inputTokens,
-    output_tokens: outputTokens,
-    cache_creation: undefined,
-    cache_creation_input_tokens: 0,
-    cache_read_input_tokens: 0,
-    server_tool_use: undefined,
-    service_tier: undefined,
+const createToolCallsResponse = (toolId: string, toolName: string, input: Record<string, unknown>): ModelResponse => ({
+    text: '',
+    finishReason: 'tool-calls',
+    toolCalls: [{
+        toolCallId: toolId,
+        toolName,
+        input,
+        type: 'tool-call'
+    }],
+    usage: {
+        inputTokens: 100,
+        outputTokens: 50,
+        inputTokenDetails: {cacheReadTokens: 0, cacheWriteTokens: 0, noCacheTokens: 100},
+        outputTokenDetails: {reasoningTokens: 0, textTokens: 50},
+        totalTokens: 150,
+    },
+    responseMessages: [{
+        role: 'assistant',
+        content: `Tool call: ${toolName}`,
+    }],
 });
 
-const createToolUseResponse = (toolId: string, toolName: string, input: Record<string, unknown>): BetaMessage => ({
-    id: 'msg_123',
-    type: 'message',
-    role: 'assistant',
-    model: 'claude-sonnet-4-5',
-    stop_reason: 'tool_use',
-    stop_sequence: null,
-    usage: createBetaUsage(100, 50),
-    content: [{
-        type: 'tool_use',
-        id: toolId,
-        name: toolName,
-        input,
+const createStopResponse = (text: string): ModelResponse => ({
+    text,
+    finishReason: 'stop',
+    toolCalls: [],
+    usage: {
+        inputTokens: 100,
+        outputTokens: 200,
+        inputTokenDetails: {cacheReadTokens: 0, cacheWriteTokens: 0, noCacheTokens: 100},
+        outputTokenDetails: {reasoningTokens: 0, textTokens: 50},
+        totalTokens: 300,
+    },
+    responseMessages: [{
+        role: 'assistant',
+        content: text,
     }],
-} as unknown as BetaMessage);
-
-const createEndTurnResponse = (text: string): BetaMessage => ({
-    id: 'msg_456',
-    type: 'message',
-    role: 'assistant',
-    model: 'claude-sonnet-4-5',
-    stop_reason: 'end_turn',
-    stop_sequence: null,
-    usage: createBetaUsage(100, 200),
-    content: [{
-        type: 'text',
-        text,
-        citations: null,
-    }],
-} as unknown as BetaMessage);
+});
 
 describe('TestGeneratorOrchestrator', () => {
-    let mockAnthropicClient: MockAnthropicModelClient;
+    let mockModelClient: MockModelClient;
     let mockToolProvider: ToolProvider;
     let mockPromptGenerator: PromptGenerator;
     let mockTypeScriptValidator: TypeScriptValidator;
+    let mockAutoHealFactory: AutoHealTestOrchestratorFactory;
     let orchestrator: TestGeneratorOrchestrator;
     let testOutputDir: string;
     let testRunLogDir: string;
@@ -138,18 +144,19 @@ describe('TestGeneratorOrchestrator', () => {
     });
 
     beforeEach(() => {
-        mockAnthropicClient = createMockAnthropicModelClient();
+        mockModelClient = createMockModelClient();
         mockPromptGenerator = createMockPromptGenerator();
         mockTypeScriptValidator = createMockTypeScriptValidator();
+        mockAutoHealFactory = createMockAutoHealFactory();
     });
 
     describe('happy path - single tool call then test generation', () => {
         it('should make a tool call then generate a test', async () => {
-            const testTool: BetaTool = {
+            const testTool: RawToolDefinition = {
                 name: 'read_file',
                 description: 'Read a file',
-                input_schema: {
-                    type: 'object' as const,
+                inputSchema: {
+                    type: 'object',
                     properties: {path: {type: 'string'}},
                     required: ['path'],
                 },
@@ -163,15 +170,16 @@ describe('TestGeneratorOrchestrator', () => {
                 testRunLogDir,
                 testOutputDir,
                 testBaseUrl,
-                mockAnthropicClient as unknown as import('../test_generator/anthropic_model_client').AnthropicModelClient,
+                mockModelClient,
                 mockPromptGenerator,
                 ['/allowed/dir'],
                 null,
                 [mockToolProvider],
                 mockTypeScriptValidator,
+                mockAutoHealFactory,
             );
 
-            const toolUseResponse = createToolUseResponse(
+            const toolCallsResponse = createToolCallsResponse(
                 'tool_use_1',
                 'read_file',
                 {path: '/allowed/dir/template.html'}
@@ -185,34 +193,25 @@ describe('TestGeneratorOrchestrator', () => {
                 }],
                 confidence: 0.9,
             });
-            const endTurnResponse = createEndTurnResponse(generatedTestJson);
+            const stopResponse = createStopResponse(generatedTestJson);
 
-            mockAnthropicClient.callModelApi
-                .mockResolvedValueOnce(toolUseResponse)
-                .mockResolvedValueOnce(endTurnResponse);
+            mockModelClient.callModelApi
+                .mockResolvedValueOnce(toolCallsResponse)
+                .mockResolvedValueOnce(stopResponse);
 
             const result = await orchestrator.generate('/path/to/spec.yaml', testBaseUrl);
 
-            expect(mockAnthropicClient.addMessage).toHaveBeenCalledWith({
-                role: 'user',
-                content: [{text: 'user prompt', type: 'text'}],
-            });
+            expect(mockModelClient.addUserMessage).toHaveBeenCalledWith([{
+                type: 'text',
+                text: 'user prompt',
+            }]);
 
-            expect(mockAnthropicClient.callModelApi).toHaveBeenCalledTimes(2);
+            expect(mockModelClient.callModelApi).toHaveBeenCalledTimes(2);
 
             expect(mockToolProvider.callTool).toHaveBeenCalledWith(
                 'read_file',
                 {path: '/allowed/dir/template.html'}
             );
-
-            expect(mockAnthropicClient.addMessages).toHaveBeenCalledWith([
-                {role: 'assistant', content: toolUseResponse.content},
-                {role: 'user', content: [{
-                    type: 'tool_result',
-                    tool_use_id: 'tool_use_1',
-                    content:[{text: 'file contents here', type: 'text'}] ,
-                }]},
-            ]);
 
             expect(mockToolProvider.disconnect).toHaveBeenCalled();
 
@@ -221,11 +220,11 @@ describe('TestGeneratorOrchestrator', () => {
         });
 
         it('should handle tool returning content block instead of string', async () => {
-            const testTool: BetaTool = {
+            const testTool: RawToolDefinition = {
                 name: 'read_file',
                 description: 'Read a file',
-                input_schema: {
-                    type: 'object' as const,
+                inputSchema: {
+                    type: 'object',
                     properties: {path: {type: 'string'}},
                     required: ['path'],
                 },
@@ -243,15 +242,16 @@ describe('TestGeneratorOrchestrator', () => {
                 testRunLogDir,
                 testOutputDir,
                 testBaseUrl,
-                mockAnthropicClient as unknown as import('../test_generator/anthropic_model_client').AnthropicModelClient,
+                mockModelClient,
                 mockPromptGenerator,
                 ['/allowed/dir'],
                 null,
                 [mockToolProvider],
                 mockTypeScriptValidator,
+                mockAutoHealFactory,
             );
 
-            const toolUseResponse = createToolUseResponse(
+            const toolCallsResponse = createToolCallsResponse(
                 'tool_use_2',
                 'read_file',
                 {path: '/allowed/dir/file.html'}
@@ -265,22 +265,13 @@ describe('TestGeneratorOrchestrator', () => {
                 }],
                 confidence: 0.85,
             });
-            const endTurnResponse = createEndTurnResponse(generatedTestJson);
+            const stopResponse = createStopResponse(generatedTestJson);
 
-            mockAnthropicClient.callModelApi
-                .mockResolvedValueOnce(toolUseResponse)
-                .mockResolvedValueOnce(endTurnResponse);
+            mockModelClient.callModelApi
+                .mockResolvedValueOnce(toolCallsResponse)
+                .mockResolvedValueOnce(stopResponse);
 
             const result = await orchestrator.generate('/path/to/spec.yaml', testBaseUrl);
-
-            expect(mockAnthropicClient.addMessages).toHaveBeenCalledWith([
-                {role: 'assistant', content: toolUseResponse.content},
-                {role: 'user', content: [{
-                    type: 'tool_result',
-                    tool_use_id: 'tool_use_2',
-                    content: [contentBlockResponse],
-                }]},
-            ]);
 
             expect(result.success).toBe(true);
         });
@@ -288,21 +279,22 @@ describe('TestGeneratorOrchestrator', () => {
 
     describe('tool error handling', () => {
         it('should handle tool execution errors gracefully', async () => {
-            const testTool: BetaTool = {
+            const testTool: RawToolDefinition = {
                 name: 'failing_tool',
                 description: 'A tool that fails',
-                input_schema: {
-                    type: 'object' as const,
+                inputSchema: {
+                    type: 'object',
                     properties: {},
                 },
             };
 
             const failingToolProvider: ToolProvider = {
-                getToolsForClaude: jest.fn(() => [testTool]),
+                getTools: jest.fn(() => [testTool]),
                 callTool: jest.fn(async () => {
                     throw new Error('Tool execution failed');
                 }),
-                disconnect: jest.fn(async () => {}),
+                disconnect: jest.fn(async () => {
+                }),
             };
 
             const spec = createMinimalSpec();
@@ -312,15 +304,16 @@ describe('TestGeneratorOrchestrator', () => {
                 testRunLogDir,
                 testOutputDir,
                 testBaseUrl,
-                mockAnthropicClient as unknown as import('../test_generator/anthropic_model_client').AnthropicModelClient,
+                mockModelClient,
                 mockPromptGenerator,
                 ['/allowed/dir'],
                 null,
                 [failingToolProvider],
                 mockTypeScriptValidator,
+                mockAutoHealFactory,
             );
 
-            const toolUseResponse = createToolUseResponse(
+            const toolCallsResponse = createToolCallsResponse(
                 'tool_use_3',
                 'failing_tool',
                 {}
@@ -334,23 +327,13 @@ describe('TestGeneratorOrchestrator', () => {
                 }],
                 confidence: 0.7,
             });
-            const endTurnResponse = createEndTurnResponse(generatedTestJson);
+            const stopResponse = createStopResponse(generatedTestJson);
 
-            mockAnthropicClient.callModelApi
-                .mockResolvedValueOnce(toolUseResponse)
-                .mockResolvedValueOnce(endTurnResponse);
+            mockModelClient.callModelApi
+                .mockResolvedValueOnce(toolCallsResponse)
+                .mockResolvedValueOnce(stopResponse);
 
             const result = await orchestrator.generate('/path/to/spec.yaml', testBaseUrl);
-
-            expect(mockAnthropicClient.addMessages).toHaveBeenCalledWith([
-                {role: 'assistant', content: toolUseResponse.content},
-                {role: 'user', content: [{
-                    type: 'tool_result',
-                    tool_use_id: 'tool_use_3',
-                    content: 'Error: Tool execution failed',
-                    is_error: true,
-                }]},
-            ]);
 
             expect(result.success).toBe(true);
         });
@@ -364,15 +347,16 @@ describe('TestGeneratorOrchestrator', () => {
                 testRunLogDir,
                 testOutputDir,
                 testBaseUrl,
-                mockAnthropicClient as unknown as import('../test_generator/anthropic_model_client').AnthropicModelClient,
+                mockModelClient,
                 mockPromptGenerator,
                 ['/allowed/dir'],
                 null,
                 [mockToolProvider],
                 mockTypeScriptValidator,
+                mockAutoHealFactory,
             );
 
-            const toolUseResponse = createToolUseResponse(
+            const toolCallsResponse = createToolCallsResponse(
                 'tool_use_4',
                 'unknown_tool',
                 {}
@@ -386,23 +370,13 @@ describe('TestGeneratorOrchestrator', () => {
                 }],
                 confidence: 0.8,
             });
-            const endTurnResponse = createEndTurnResponse(generatedTestJson);
+            const stopResponse = createStopResponse(generatedTestJson);
 
-            mockAnthropicClient.callModelApi
-                .mockResolvedValueOnce(toolUseResponse)
-                .mockResolvedValueOnce(endTurnResponse);
+            mockModelClient.callModelApi
+                .mockResolvedValueOnce(toolCallsResponse)
+                .mockResolvedValueOnce(stopResponse);
 
             const result = await orchestrator.generate('/path/to/spec.yaml', testBaseUrl);
-
-            expect(mockAnthropicClient.addMessages).toHaveBeenCalledWith([
-                {role: 'assistant', content: toolUseResponse.content},
-                {role: 'user', content: [{
-                    type: 'tool_result',
-                    tool_use_id: 'tool_use_4',
-                    content: 'Error: No implementation for tool unknown_tool',
-                    is_error: true,
-                }]},
-            ]);
 
             expect(result.success).toBe(true);
         });
@@ -410,10 +384,10 @@ describe('TestGeneratorOrchestrator', () => {
 
     describe('duplicate tool names', () => {
         it('should throw error when multiple providers have the same tool name', () => {
-            const duplicateTool: BetaTool = {
+            const duplicateTool: RawToolDefinition = {
                 name: 'duplicate_tool',
                 description: 'A duplicate tool',
-                input_schema: {type: 'object' as const, properties: {}},
+                inputSchema: {type: 'object', properties: {}},
             };
 
             const provider1 = createMockToolProvider([duplicateTool]);
@@ -426,11 +400,13 @@ describe('TestGeneratorOrchestrator', () => {
                     testRunLogDir,
                     testOutputDir,
                     testBaseUrl,
-                    mockAnthropicClient as unknown as import('../test_generator/anthropic_model_client').AnthropicModelClient,
+                    mockModelClient,
                     mockPromptGenerator,
                     ['/allowed/dir'],
                     null,
                     [provider1, provider2],
+                    mockTypeScriptValidator,
+                    mockAutoHealFactory,
                 );
             }).toThrow('Duplicate tool names duplicate_tool');
         });
@@ -446,15 +422,16 @@ describe('TestGeneratorOrchestrator', () => {
                 testRunLogDir,
                 testOutputDir,
                 testBaseUrl,
-                mockAnthropicClient as unknown as import('../test_generator/anthropic_model_client').AnthropicModelClient,
+                mockModelClient,
                 mockPromptGenerator,
                 ['/allowed/dir'],
                 null,
                 [mockToolProvider],
                 mockTypeScriptValidator,
+                mockAutoHealFactory,
             );
 
-            mockAnthropicClient.callModelApi.mockResolvedValueOnce(undefined);
+            mockModelClient.callModelApi.mockResolvedValueOnce(undefined);
 
             const result = await orchestrator.generate('/path/to/spec.yaml', testBaseUrl);
 

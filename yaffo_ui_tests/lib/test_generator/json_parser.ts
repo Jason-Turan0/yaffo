@@ -31,58 +31,6 @@ const formatZodErrors = (error: z.ZodError): string[] => {
     });
 };
 
-const extractJsonFromText = (text: string): string | null => {
-    const jsonStartRegex = /\{\s*"files":|^\{\s*"/gm;
-    const match = jsonStartRegex.exec(text);
-    if (!match) {
-        return null;
-    }
-
-    const firstBrace = match.index;
-    let depth = 0;
-    let lastBrace = -1;
-    let inString = false;
-    let escapeNext = false;
-
-    for (let i = firstBrace; i < text.length; i++) {
-        const char = text[i];
-
-        if (escapeNext) {
-            escapeNext = false;
-            continue;
-        }
-
-        if (char === "\\") {
-            escapeNext = true;
-            continue;
-        }
-
-        if (char === '"') {
-            inString = !inString;
-            continue;
-        }
-
-        if (!inString) {
-            if (char === "{") {
-                depth++;
-            } else if (char === "}") {
-                depth--;
-                if (depth === 0) {
-                    lastBrace = i;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (lastBrace === -1) {
-        return null;
-    }
-
-    console.log(`📋 Extracted JSON from position ${firstBrace} to ${lastBrace} (${lastBrace - firstBrace + 1} chars)`);
-    return text.slice(firstBrace, lastBrace + 1);
-};
-
 export const parseJsonResponse = <T = GeneratedTestResponse>(jsonText: string): ParseResult<T> => {
     let parsed: unknown;
     try {

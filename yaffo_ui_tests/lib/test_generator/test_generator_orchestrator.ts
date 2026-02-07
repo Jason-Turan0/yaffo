@@ -1,32 +1,29 @@
 import {join, resolve, basename} from "path";
 import {writeFileSync, existsSync, readFileSync, unlinkSync, mkdirSync} from "fs";
-import {ToolCall} from "@lib/test_generator/model_client.types";
 import {GenerationResult} from "@lib/test_generator/index.types";
 import {Spec} from "@lib/test_generator/spec_parser.types";
-import {createFilesystemClient, FilesystemMcpClient} from "@lib/test_generator/mcp_filesystem_client";
+import {createFilesystemClient} from "@lib/test_generator/mcp_filesystem_client";
 import {promptGeneratorFactory, PromptGenerator} from "@lib/test_generator/prompt_generator";
-
 import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
 import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/json_parser";
-import {zodToJsonSchema} from "zod-to-json-schema";
 import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/test_generator/typescript_validator";
 import {
     anthropicModelClientFactory,
-    AnthropicModelClient,
     AnthropicModelAlias
 } from "@lib/test_generator/anthropic_model_client";
 import {
     createPlaywrightClient,
     createStubPlaywrightClient,
 } from "@lib/test_generator/mcp_playwright_client";
-import {ToolProvider} from "@lib/test_generator/toolprovider.types";
+import {RawToolDefinition, ToolProvider} from "@lib/test_generator/toolprovider.types";
 import {IsolatedEnvironment, startIsolatedEnvironment, TestRunResult} from "@lib/test_generator/isolated_runner";
 import {
-    BetaMessage,
-    BetaMessageParam,
-    BetaTool,
-    BetaToolResultBlockParam
-} from "@anthropic-ai/sdk/resources/beta";
+    ModelClient,
+    ModelResponse,
+    ToolCallResult,
+    toTextPart,
+    toToolResultPart
+} from "@lib/test_generator/model_client.interface";
 import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
 import {runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
 import {
@@ -41,17 +38,14 @@ export class TestGeneratorOrchestrator {
     private iterationCount = 0;
     private maxIterations = 100;
     private maxRetries = 5;
-    private toolProviderMap: Map<string, { tool: BetaTool, toolProvider: ToolProvider }> = new Map<string, {
-        tool: BetaTool;
-        toolProvider: ToolProvider
-    }>()
+    private toolProviderMap: Map<string, { tool: RawToolDefinition; toolProvider: ToolProvider }> = new Map();
 
     constructor(
         private spec: Spec,
         private runLogDir: string,
         private outputDir: string,
         private baseUrl: string,
-        private anthropic: AnthropicModelClient,
+        private modelClient: ModelClient,
         private promptGenerator: PromptGenerator,
         private allowedDirectories: string[],
         private isolatedEnvironment: IsolatedEnvironment | null,
@@ -59,26 +53,22 @@ export class TestGeneratorOrchestrator {
         private typeScriptValidator: TypeScriptValidator,
         private autoHealTestOrchestratorFactory: AutoHealTestOrchestratorFactory
     ) {
-        this.spec = spec;
-        this.runLogDir = runLogDir;
-        this.outputDir = outputDir;
-        const tools = toolProviders.flatMap(toolProvider => toolProvider.getToolsForClaude().map((tool) => ({
-            tool,
-            toolProvider
-        })));
+        const tools = toolProviders.flatMap(toolProvider =>
+            toolProvider.getTools().map((tool) => ({tool, toolProvider}))
+        );
 
         for (const tool of tools) {
             if (this.toolProviderMap.has(tool.tool.name)) {
-                throw new Error(`Duplicate tool names ${tool.tool.name}`)
+                throw new Error(`Duplicate tool names ${tool.tool.name}`);
             }
             this.toolProviderMap.set(tool.tool.name, tool);
         }
     }
 
-    generate = async (specPath: string, baseUrl: string, tempDir?: string): Promise<GenerationResult> => {
+    generate = async (specPath: string, baseUrl: string): Promise<GenerationResult> => {
         try {
             const userPrompt = this.promptGenerator.buildUserPrompt(this.spec, specPath, baseUrl, this.allowedDirectories);
-            this.anthropic.addMessage({role: "user", content: [{type: "text", text: userPrompt}]});
+            this.modelClient.addUserMessage([toTextPart(userPrompt)]);
             const generatedJson = await this.generateTestCode();
             if (!generatedJson) {
                 return {
@@ -90,19 +80,19 @@ export class TestGeneratorOrchestrator {
             return await this.validateTestCode(generatedJson);
         } finally {
             for (const toolProvider of this.toolProviders) {
-                await toolProvider.disconnect()
+                await toolProvider.disconnect();
             }
             if (this.isolatedEnvironment != null) {
-                await this.isolatedEnvironment.cleanup()
+                await this.isolatedEnvironment.cleanup();
             }
         }
-    }
+    };
 
-    private generateTestCode = async () => {
+    private generateTestCode = async (): Promise<string | null> => {
         let generatedJson: string | null = null;
         while (this.iterationCount < this.maxIterations) {
             this.iterationCount++;
-            const response = await this.anthropic.callModelApi();
+            const response = await this.modelClient.callModelApi();
 
             if (!response) {
                 break;
@@ -117,13 +107,9 @@ export class TestGeneratorOrchestrator {
             if (!nextAction.continue) {
                 break;
             }
-
-            if (nextAction.toolUsages?.length) {
-                this.anthropic.addMessages(nextAction.toolUsages);
-            }
         }
         return generatedJson;
-    }
+    };
 
     private validateTestCode = async (originalJson: string): Promise<GenerationResult> => {
         let retryCount = 0;
@@ -184,7 +170,7 @@ export class TestGeneratorOrchestrator {
                     return {
                         success: true,
                         logPath: this.runLogDir
-                    }
+                    };
                 } else {
                     const failedTestFiles = runResult.tests.filter(test => test.status == "failed" || test.status == "timedOut");
                     for (const failedTestFile of failedTestFiles) {
@@ -199,11 +185,11 @@ export class TestGeneratorOrchestrator {
                             absoluteTestPath,
                             logPath,
                             this.outputDir,
-                            this.anthropic.model,
+                            this.modelClient.model as AnthropicModelAlias,
                             this.baseUrl,
                             this.isolatedEnvironment.tempDir
                         );
-                        return await healer.healTest(runResult, absoluteTestPath);
+                        await healer.healTest(runResult, absoluteTestPath);
                     }
                 }
             } else {
@@ -211,7 +197,7 @@ export class TestGeneratorOrchestrator {
                 return {
                     success: true,
                     logPath: this.runLogDir
-                }
+                };
             }
         }
 
@@ -221,16 +207,10 @@ export class TestGeneratorOrchestrator {
         };
     };
 
-    private addSchemaErrorMessage = (
-        schemaErrors: string[],
-        currentJson: string
-    ): void => {
+    private addSchemaErrorMessage = (schemaErrors: string[], currentJson: string): void => {
         schemaErrors.forEach(err => console.log(`   - ${err}`));
         const schemaFixPrompt = this.promptGenerator.buildSchemaFixPrompt(schemaErrors);
-        this.anthropic.addMessages([
-            {role: "assistant", content: currentJson},
-            {role: "user", content: [{type: 'text', text: schemaFixPrompt}]}
-        ]);
+        this.modelClient.addUserMessage([toTextPart(schemaFixPrompt)]);
     };
 
     private addCompileErrorMessage = (
@@ -240,48 +220,43 @@ export class TestGeneratorOrchestrator {
     ): void => {
         const currentCode = parsedResponse.files[0]?.code || "";
         const typeFixPrompt = this.promptGenerator.buildTypeErrorFixPrompt(typeErrors, currentCode);
-        this.anthropic.addMessages([
-            {role: "assistant", content: [{type: 'text', text: currentJson}]},
-            {role: "user", content: [{type: 'text', text: typeFixPrompt}]}
-        ]);
+        this.modelClient.addUserMessage([toTextPart(typeFixPrompt)]);
+
     };
 
-    private determineNextAction = async (response: BetaMessage): Promise<{
+    private determineNextAction = async (response: ModelResponse): Promise<{
         success: boolean;
         continue: boolean;
         generatedJson?: string;
-        toolUsages?: BetaMessageParam[];
     }> => {
-        console.log(`   Stop reason: ${response.stop_reason}`);
+        console.log(`   Stop reason: ${response.finishReason}`);
 
-        if (response.stop_reason === "end_turn") {
-            const textContent = this.extractTextContent(response);
-            return {success: true, continue: false, generatedJson: textContent};
+        if (response.finishReason === "stop" || response.finishReason === "length") {
+            return {success: true, continue: false, generatedJson: response.text};
         }
 
-        const toolCalls = this.extractToolCalls(response);
-        if (response.stop_reason === "tool_use" && toolCalls.length > 0) {
-            const toolUsages: BetaMessageParam[] = [];
-            toolUsages.push({role: "assistant", content: response.content});
-
-            const toolResults: BetaToolResultBlockParam[] = [];
-            for (const call of toolCalls) {
-                console.log(`   🔧 Tool: ${call.name} Id: ${call.id} (${JSON.stringify(call.input).slice(0, 50)}...)`);
+        if (response.finishReason === "tool-calls" && response.toolCalls.length > 0) {
+            const toolResults: ToolCallResult[] = [];
+            for (const call of response.toolCalls) {
+                console.log(`   🔧 Tool: ${call.toolName} Id: ${call.toolCallId} (${JSON.stringify(call.input).slice(0, 50)}...)`);
                 try {
-                    const toolTuple = this.toolProviderMap.get(call.name);
+                    const toolTuple = this.toolProviderMap.get(call.toolName);
                     if (!toolTuple) {
                         toolResults.push({
                             type: "tool_result",
-                            tool_use_id: call.id,
-                            content: `Error: No implementation for tool ${call.name}`,
-                            is_error: true,
+                            toolCallId: call.toolCallId,
+                            toolName: call.toolName,
+                            result: `Error: No implementation for tool ${call.toolName}`,
+                            isError: true,
                         });
                     } else {
-                        const result = await toolTuple.toolProvider.callTool(call.name, call.input);
+                        const result = await toolTuple.toolProvider.callTool(call.toolName, call.input);
+                        const resultText = typeof result === "string" ? result : result.text;
                         toolResults.push({
                             type: "tool_result",
-                            tool_use_id: call.id,
-                            content: (typeof result === 'string') ? [{type: 'text', text: result}] : [result]
+                            toolCallId: call.toolCallId,
+                            toolName: call.toolName,
+                            result: resultText,
                         });
                     }
                 } catch (e) {
@@ -289,42 +264,18 @@ export class TestGeneratorOrchestrator {
                     console.log(`   ❌ Tool error: ${errorMsg}`);
                     toolResults.push({
                         type: "tool_result",
-                        tool_use_id: call.id,
-                        content: `Error: ${errorMsg}`,
-                        is_error: true,
+                        toolCallId: call.toolCallId,
+                        result: `Error: ${errorMsg}`,
+                        toolName: call.toolName,
+                        isError: true,
                     });
                 }
             }
-
-            toolUsages.push({role: "user", content: toolResults});
-            return {success: true, continue: true, toolUsages};
+            this.modelClient.addToolResultMessage(toolResults.map(result => toToolResultPart(result)));
+            return {success: true, continue: true};
         }
 
-        throw new Error(`Unknown stop reason ${response.stop_reason}`);
-    };
-
-    private extractToolCalls = (response: BetaMessage): ToolCall[] => {
-        const toolCalls: ToolCall[] = [];
-        for (const block of response.content) {
-            if (block.type === "tool_use") {
-                toolCalls.push({
-                    id: block.id,
-                    name: block.name,
-                    input: block.input as Record<string, unknown>,
-                });
-            }
-        }
-        return toolCalls;
-    };
-
-    private extractTextContent = (response: BetaMessage): string => {
-        let textContent = "";
-        for (const block of response.content) {
-            if (block.type === "text") {
-                textContent += block.text;
-            }
-        }
-        return textContent;
+        throw new Error(`Unknown finish reason ${response.finishReason}`);
     };
 
     private writeGeneratedFiles = (response: GeneratedTestResponse): string[] => {
@@ -393,63 +344,60 @@ export class TestGeneratorOrchestrator {
         const toRun = filePaths.filter(path => path.endsWith(".ts"));
         return await runPlaywrightTests(this.baseUrl, toRun);
     };
-
 }
 
-export const
-    testGeneratorOrchestratorFactory = async (
-        spec: Spec,
-        runLogDir: string,
-        outputDir: string,
-        model: AnthropicModelAlias,
-        baseUrl: string,
-        runTestEnvironment: boolean,
-        port: number,
-    ) => {
-        let isolatedEnvironment: IsolatedEnvironment | null = null;
-        const allowedDirectories = [YAFFO_ROOT, outputDir];
-        if (runTestEnvironment) {
-            isolatedEnvironment = await startIsolatedEnvironment(port);
-            allowedDirectories.push(isolatedEnvironment.tempDir);
+export const testGeneratorOrchestratorFactory = async (
+    spec: Spec,
+    runLogDir: string,
+    outputDir: string,
+    model: AnthropicModelAlias,
+    baseUrl: string,
+    runTestEnvironment: boolean,
+    port: number,
+) => {
+    let isolatedEnvironment: IsolatedEnvironment | null = null;
+    const allowedDirectories = [YAFFO_ROOT, outputDir];
+    if (runTestEnvironment) {
+        isolatedEnvironment = await startIsolatedEnvironment(port);
+        allowedDirectories.push(isolatedEnvironment.tempDir);
+    }
+
+    const fileMcpClient = await createFilesystemClient(allowedDirectories);
+    const mcpPlaywrightClient = runTestEnvironment ? await createPlaywrightClient({
+        headless: true,
+        baseUrl,
+        browser: "chromium",
+        artifacts: {
+            outputDir: runLogDir,
+            saveVideo: true,
+            saveSession: true
         }
+    }) : await createStubPlaywrightClient();
+    const memoryTool = localFilesystemMemoryToolFactory(outputDir);
 
-        const fileMcpClient = await createFilesystemClient(allowedDirectories);
-        const mcpPlaywrightClient = runTestEnvironment ? await createPlaywrightClient({
-            headless: true,
-            baseUrl,
-            browser: "chromium",
-            artifacts: {
-                outputDir: runLogDir,
-                saveVideo: true,
-                saveSession: true
-            }
-        }) : await createStubPlaywrightClient();
-        const memoryTool = localFilesystemMemoryToolFactory(outputDir);
+    const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];
 
-        const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];
+    const promptGenerator = promptGeneratorFactory(runTestEnvironment, baseUrl, YAFFO_ROOT, outputDir, spec);
+    const rawTools = toolProviders.flatMap(provider => provider.getTools());
+    const modelClient = anthropicModelClientFactory(
+        runLogDir,
+        model,
+        await promptGenerator.getSystemPrompt(),
+        rawTools,
+        GeneratedTestResponseSchema,
+    );
 
-        const promptGenerator = promptGeneratorFactory(runTestEnvironment, baseUrl, YAFFO_ROOT, outputDir, spec);
-        const tools = toolProviders.flatMap(provider => provider.getToolsForClaude());
-        const outputSchema = zodToJsonSchema(GeneratedTestResponseSchema);
-        const anthropicModel = anthropicModelClientFactory(
-            runLogDir,
-            model,
-            await promptGenerator.getSystemPrompt(),
-            tools,
-            outputSchema,
-        );
-
-        return new TestGeneratorOrchestrator(
-            spec,
-            runLogDir,
-            outputDir,
-            baseUrl,
-            anthropicModel,
-            promptGenerator,
-            allowedDirectories,
-            isolatedEnvironment,
-            toolProviders,
-            new DefaultTypeScriptValidator(),
-            autoHealTestOrchestratorFactory
-        );
-    };
+    return new TestGeneratorOrchestrator(
+        spec,
+        runLogDir,
+        outputDir,
+        baseUrl,
+        modelClient,
+        promptGenerator,
+        allowedDirectories,
+        isolatedEnvironment,
+        toolProviders,
+        new DefaultTypeScriptValidator(),
+        autoHealTestOrchestratorFactory
+    );
+};

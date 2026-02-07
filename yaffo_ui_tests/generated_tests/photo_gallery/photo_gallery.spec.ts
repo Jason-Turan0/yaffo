@@ -88,10 +88,10 @@ test.describe('Photo Gallery Feature', () => {
     expect(initialPhotoCount).toBeGreaterThan(0);
     
     // Step 2: Select a year from the Year filter
-    const yearSelect = page.locator('select[name="year"]');
+    const yearSelect = page.locator('select#year-select');
     
     // Verify at least one year is in the filter dropdown
-    const yearOptions = page.locator('select[name="year"] option');
+    const yearOptions = page.locator('select#year-select option');
     const optionCount = await yearOptions.count();
     expect(optionCount).toBeGreaterThan(1); // More than just "All Years"
     
@@ -170,5 +170,120 @@ test.describe('Photo Gallery Feature', () => {
     
     // Verify the URL no longer contains year parameter
     expect(page.url()).not.toContain('year=');
+  });
+
+  test('gallery_page_navigation_works - Verify that the page navigation works', async ({ page }) => {
+    // Step 1: Navigate to the home page (done in beforeEach)
+    
+    // Wait for the gallery to be fully loaded
+    await expect(page.locator('.photo-grid')).toBeVisible();
+    
+    // Step 2: Set page size to 10
+    const pageSizeSelect = page.locator('select#page-size');
+    await expect(pageSizeSelect).toBeVisible();
+    
+    // Select page size of 10
+    await pageSizeSelect.selectOption('10');
+    
+    // Wait for the page to reload with new page size
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('.photo-grid')).toBeVisible();
+    
+    // Verify when viewing the first page 10 images are shown
+    const firstPagePhotoCount = await page.locator('.photo-card').count();
+    expect(firstPagePhotoCount).toBeLessThanOrEqual(10);
+    expect(firstPagePhotoCount).toBeGreaterThan(0);
+    
+    // Verify the URL contains page-size parameter
+    expect(page.url()).toContain('page-size=10');
+    
+    // Get total items count from pagination info
+    const paginationInfo = page.locator('.pagination-info .results-count');
+    const resultsText = await paginationInfo.textContent();
+    const totalMatch = resultsText?.match(/of (\d+) results/);
+    const totalItems = totalMatch ? parseInt(totalMatch[1]) : 0;
+    
+    // Only test navigation if there are more items than page size
+    if (totalItems > 10) {
+      // Step 3: Click the next button
+      const nextButton = page.locator('a.page-btn:has-text("Next")');
+      await expect(nextButton).toBeVisible();
+      await expect(nextButton).not.toHaveClass(/disabled/);
+      await nextButton.click();
+      
+      // Wait for navigation
+      await page.waitForLoadState('networkidle');
+      await expect(page.locator('.photo-grid')).toBeVisible();
+      
+      // Verify we're on page 2
+      expect(page.url()).toContain('page=2');
+      
+      const pageInfo = page.locator('.page-info');
+      const pageInfoText = await pageInfo.textContent();
+      expect(pageInfoText).toContain('Page 2');
+      
+      // Verify photos are displayed
+      const secondPagePhotoCount = await page.locator('.photo-card').count();
+      expect(secondPagePhotoCount).toBeGreaterThan(0);
+      
+      // Step 4: Click the first button
+      const firstButton = page.locator('a.page-btn:has-text("First")');
+      await expect(firstButton).toBeVisible();
+      await expect(firstButton).not.toHaveClass(/disabled/);
+      await firstButton.click();
+      
+      // Wait for navigation
+      await page.waitForLoadState('networkidle');
+      await expect(page.locator('.photo-grid')).toBeVisible();
+      
+      // Verify we're back on page 1
+      const currentUrl = page.url();
+      const urlPageParam = currentUrl.match(/page=(\d+)/);
+      const currentPage = urlPageParam ? parseInt(urlPageParam[1]) : 1;
+      expect(currentPage).toBe(1);
+      
+      // Verify the page info shows page 1
+      const firstPageInfo = await pageInfo.textContent();
+      expect(firstPageInfo).toContain('Page 1');
+      
+      // Step 5: Click the last button
+      const lastButton = page.locator('a.page-btn:has-text("Last")');
+      await expect(lastButton).toBeVisible();
+      await expect(lastButton).not.toHaveClass(/disabled/);
+      await lastButton.click();
+      
+      // Wait for navigation
+      await page.waitForLoadState('networkidle');
+      await expect(page.locator('.photo-grid')).toBeVisible();
+      
+      // Verify we're on the last page
+      const lastPageInfo = await pageInfo.textContent();
+      const lastPageMatch = lastPageInfo?.match(/Page (\d+) of (\d+)/);
+      if (lastPageMatch) {
+        const lastPageNum = parseInt(lastPageMatch[1]);
+        const totalPages = parseInt(lastPageMatch[2]);
+        expect(lastPageNum).toBe(totalPages);
+      }
+      
+      // Verify when viewing the last page only the remainder items are shown
+      const lastPagePhotoCount = await page.locator('.photo-card').count();
+      expect(lastPagePhotoCount).toBeGreaterThan(0);
+      
+      // Calculate expected count on last page
+      const expectedLastPageCount = totalItems % 10 || 10;
+      expect(lastPagePhotoCount).toBeLessThanOrEqual(expectedLastPageCount);
+      
+      // Verify Next and Last buttons are disabled on last page
+      await expect(nextButton).toHaveClass(/disabled/);
+      await expect(lastButton).toHaveClass(/disabled/);
+    } else {
+      // If there aren't enough items for multiple pages, just verify single page behavior
+      const nextButton = page.locator('a.page-btn:has-text("Next")');
+      const lastButton = page.locator('a.page-btn:has-text("Last")');
+      
+      // Navigation buttons should be disabled when there's only one page
+      await expect(nextButton).toHaveClass(/disabled/);
+      await expect(lastButton).toHaveClass(/disabled/);
+    }
   });
 });

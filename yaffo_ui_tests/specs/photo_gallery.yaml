@@ -45,3 +45,18 @@ scenarios:
       - At least one year is in the filter dropdown
       - When the filter is applied all images are from that year
       - When the filter is cleared all the images are shown
+  - name: gallery_page_navigation_works
+    goal: Verify that the page navigation works
+    priority: high
+    steps:
+      - Navigate to the home page
+      - Set page size to 10
+      - Click the next button
+      - Click the first button
+      - Click the last button
+
+    verify:
+      - Gallery grid container is visible
+      - When viewing the first page 10 images are shown
+      - When viewing the last page only the the remainder pages are shown
+      - Page navigations buttons work correctly
