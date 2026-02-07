@@ -92,10 +92,10 @@
                 <input type="hidden" name="assign_person" value="{{ filters.selected_assign_person_id }}">
             {% endif %}
             {% if pagination.current_page %}
-                <input type="hidden" name="current_page" value="{{ pagination.current_page }}">
+                <input type="hidden" name="page" value="{{ pagination.current_page }}">
             {% endif %}
             {% if pagination.page_size %}
-                <input type="hidden" name="page_size" value="{{ pagination.page_size }}">
+                <input type="hidden" name="page-size" value="{{ pagination.page_size }}">
             {% endif %}
         {% endmacro %}
         {% macro render_actions() %}

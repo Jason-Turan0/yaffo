@@ -87,3 +87,20 @@ scenarios:
     cleanup:
       - Navigate to the people page
       - Delete the person 'TestKeyboardPerson'
+  - name: face_page_navigation_works
+    goal: Verify that the page navigation works
+    priority: high
+    steps:
+      - Navigate to the faces page
+      - Group by people to show all faces
+      - Set page size to 25
+      - Click the next button
+      - Click the first button
+      - Click the last button
+
+    verify:
+      - Gallery grid container is visible
+      - When viewing the first page 25 faces are shown
+      - When viewing the last page only the the remainder of the faces are shown
+      - Page navigations buttons work correctly
+      - Filters are maintained when selecting page controls

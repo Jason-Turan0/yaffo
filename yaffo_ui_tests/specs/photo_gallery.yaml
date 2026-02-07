@@ -58,5 +58,5 @@ scenarios:
     verify:
       - Gallery grid container is visible
       - When viewing the first page 10 images are shown
-      - When viewing the last page only the the remainder pages are shown
+      - When viewing the last page only the the remainder of the images are shown
       - Page navigations buttons work correctly

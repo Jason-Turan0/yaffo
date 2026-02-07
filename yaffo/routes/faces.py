@@ -152,7 +152,7 @@ def init_faces_routes(app: Flask):
         month = request.args.get("month", type=int)
         threshold = request.args.get("threshold", default=DEFAULT_THRESHOLD, type=int)
         page = request.args.get("page", default=1, type=int)
-        page_size = request.args.get("page_size", default=DEFAULT_PAGE_SIZE, type=int)
+        page_size = request.args.get("page-size", default=DEFAULT_PAGE_SIZE, type=int)
         person_id = request.args.get("person", type=int)
         assign_person_id = request.args.get("assign_person", type=int)
         group_by = request.args.get("group_by", type=str, default=DEFAULT_GROUP_BY)
@@ -206,7 +206,7 @@ def init_faces_routes(app: Flask):
             "current_page": page,
             "total_items": unassigned_face_count,
             "page_size": page_size,
-            "page_sizes": [50, 100, 250, 500, 1000, 2000, 5000, 10000],
+            "page_sizes": [25, 50, 100, 250, 500, 1000, 2000, 5000, 10000],
         }
 
         return render_template(

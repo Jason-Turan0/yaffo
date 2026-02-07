@@ -162,7 +162,7 @@ export class AnthropicModelClient implements ModelClient {
                 }
             })
             result = await generateText({
-                model: anthropic('claude-sonnet-4-5'),
+                model: anthropic(this.model),
                 system: {
                     role: 'system',
                     content: this.systemPrompt,
