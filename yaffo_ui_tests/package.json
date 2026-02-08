@@ -18,7 +18,8 @@
     "validate": "tsx lib/cli/validate-specs.ts",
     "lint": "eslint lib/ generated_tests/",
     "typecheck": "tsc --noEmit",
-    "logs": "tsx scripts/browse_api_logs.ts"
+    "logs": "tsx scripts/browse_api_logs.ts",
+    "docker:build:mcp-filesystem": "docker build -t yaffo-mcp-filesystem:latest docker/mcp-filesystem"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.38",
