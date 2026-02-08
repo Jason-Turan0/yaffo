@@ -20,7 +20,7 @@ import {
     toToolResultPart
 } from "@lib/model_clients/model_client.interface";
 import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
-import {runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
+import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/test_generator/run_playwright_tests";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 
@@ -49,6 +49,7 @@ export class AutoHealTestOrchestrator {
         private allowedDirectories: string[],
         private toolProviders: ToolProvider[],
         private typeScriptValidator: TypeScriptValidator = new DefaultTypeScriptValidator(),
+        private playwrightTestRunner: PlaywrightTestRunner = runPlaywrightTests,
     ) {
         const tools = toolProviders.flatMap(toolProvider =>
             toolProvider.getTools().map((tool) => ({tool, toolProvider}))
@@ -380,7 +381,7 @@ export class AutoHealTestOrchestrator {
 
     private runPlaywrightTest = async (filePath: string): Promise<TestRunResult> => {
         console.log(`\n🔍 Running healed playwright test...`);
-        return await runPlaywrightTests(this.baseUrl, [filePath]);
+        return await this.playwrightTestRunner(this.baseUrl, [filePath]);
     };
 }
 
@@ -391,11 +392,13 @@ export const autoHealTestOrchestratorFactory = async (
     model: ModelAlias,
     baseUrl: string,
     tempDir: string,
+    fileMcpClient1: ToolProvider | undefined,
+    mcpPlaywrightClient1: ToolProvider | undefined
 ): Promise<AutoHealTestOrchestrator> => {
     const allowedDirectories = [YAFFO_ROOT, outputDir, tempDir];
 
-    const fileMcpClient = await createFilesystemClient(allowedDirectories);
-    const mcpPlaywrightClient = await createPlaywrightClient({
+    const fileMcpClient = fileMcpClient1 == null ? await createFilesystemClient(allowedDirectories): fileMcpClient1;
+    const mcpPlaywrightClient = mcpPlaywrightClient1 == null ? await createPlaywrightClient({
         headless: true,
         baseUrl,
         browser: "chromium",
@@ -404,7 +407,7 @@ export const autoHealTestOrchestratorFactory = async (
             saveVideo: true,
             saveSession: true
         }
-    });
+    }): mcpPlaywrightClient1;
     const memoryTool = localFilesystemMemoryToolFactory(outputDir);
 
     const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];

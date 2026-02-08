@@ -8,7 +8,9 @@ import {Spec} from '../test_generator/spec_parser.types';
 import {ToolProvider, CallToolReturn, RawToolDefinition} from '../test_generator/toolprovider.types';
 import {TypeScriptValidator, TypeCheckResult} from '../test_generator/typescript_validator';
 import {ModelClient, ModelResponse, ModelAlias} from '../model_clients/model_client.interface';
-import {AutoHealTestOrchestratorFactory} from '../test_generator/auto_heal_orchestrator';
+import {AutoHealTestOrchestrator} from '../test_generator/auto_heal_orchestrator';
+import {IsolatedEnvironment, TestRunResult} from '../test_generator/isolated_runner';
+import {PlaywrightTestRunner} from '../test_generator/run_playwright_tests';
 
 type MockFn = ReturnType<typeof jest.fn>;
 
@@ -53,8 +55,10 @@ const createMockTypeScriptValidator = (): TypeScriptValidator => ({
     formatTypeErrorsForModel: jest.fn(() => ''),
 });
 
-const createMockAutoHealFactory = (): AutoHealTestOrchestratorFactory => {
-    return jest.fn() as unknown as AutoHealTestOrchestratorFactory;
+type AutoHealFactory = (absoluteTestFilePath: string, logPath: string) => Promise<AutoHealTestOrchestrator>;
+
+const createMockAutoHealFactory = () => {
+    return jest.fn<AutoHealFactory>();
 };
 
 const createMinimalSpec = (): Spec => ({
@@ -123,7 +127,7 @@ describe('TestGeneratorOrchestrator', () => {
     let mockToolProvider: ToolProvider;
     let mockPromptGenerator: PromptGenerator;
     let mockTypeScriptValidator: TypeScriptValidator;
-    let mockAutoHealFactory: AutoHealTestOrchestratorFactory;
+    let mockAutoHealFactory: jest.Mock<AutoHealFactory>;
     let orchestrator: TestGeneratorOrchestrator;
     let testOutputDir: string;
     let testRunLogDir: string;
@@ -438,6 +442,227 @@ describe('TestGeneratorOrchestrator', () => {
             expect(result.success).toBe(false);
             expect(result.error).toBe('Code Generation failed.');
             expect(mockToolProvider.disconnect).toHaveBeenCalled();
+        });
+    });
+
+    describe('invalid JSON retry', () => {
+        it('should retry when model returns invalid JSON then succeed with valid JSON', async () => {
+            mockToolProvider = createMockToolProvider([]);
+            const spec = createMinimalSpec();
+
+            orchestrator = new TestGeneratorOrchestrator(
+                spec,
+                testRunLogDir,
+                testOutputDir,
+                testBaseUrl,
+                mockModelClient,
+                mockPromptGenerator,
+                ['/allowed/dir'],
+                null,
+                [mockToolProvider],
+                mockTypeScriptValidator,
+                mockAutoHealFactory,
+            );
+
+            const invalidJsonResponse = createStopResponse('this is not valid json at all');
+
+            const validJson = JSON.stringify({
+                files: [{
+                    filename: 'test-feature.spec.ts',
+                    code: VALID_PLAYWRIGHT_TEST_CODE,
+                    description: 'Test file',
+                }],
+                confidence: 0.9,
+            });
+            const validJsonResponse = createStopResponse(validJson);
+
+            mockModelClient.callModelApi
+                .mockResolvedValueOnce(invalidJsonResponse)
+                .mockResolvedValueOnce(validJsonResponse);
+
+            const result = await orchestrator.generate('/path/to/spec.yaml', testBaseUrl);
+
+            expect(result.success).toBe(true);
+            expect(mockModelClient.callModelApi).toHaveBeenCalledTimes(2);
+            expect((mockPromptGenerator as unknown as Record<string, MockFn>).buildSchemaFixPrompt).toHaveBeenCalled();
+        });
+    });
+
+    describe('schema mismatch retry', () => {
+        it('should retry when model returns JSON that does not match schema', async () => {
+            mockToolProvider = createMockToolProvider([]);
+            const spec = createMinimalSpec();
+
+            orchestrator = new TestGeneratorOrchestrator(
+                spec,
+                testRunLogDir,
+                testOutputDir,
+                testBaseUrl,
+                mockModelClient,
+                mockPromptGenerator,
+                ['/allowed/dir'],
+                null,
+                [mockToolProvider],
+                mockTypeScriptValidator,
+                mockAutoHealFactory,
+            );
+
+            const schemaMismatchJson = JSON.stringify({
+                wrong_field: 'this does not match the expected schema',
+            });
+            const schemaMismatchResponse = createStopResponse(schemaMismatchJson);
+
+            const validJson = JSON.stringify({
+                files: [{
+                    filename: 'test-feature.spec.ts',
+                    code: VALID_PLAYWRIGHT_TEST_CODE,
+                    description: 'Test file',
+                }],
+                confidence: 0.85,
+            });
+            const validJsonResponse = createStopResponse(validJson);
+
+            mockModelClient.callModelApi
+                .mockResolvedValueOnce(schemaMismatchResponse)
+                .mockResolvedValueOnce(validJsonResponse);
+
+            const result = await orchestrator.generate('/path/to/spec.yaml', testBaseUrl);
+
+            expect(result.success).toBe(true);
+            expect(mockModelClient.callModelApi).toHaveBeenCalledTimes(2);
+            expect((mockPromptGenerator as unknown as Record<string, MockFn>).buildSchemaFixPrompt).toHaveBeenCalled();
+        });
+    });
+
+    describe('typescript compile error retry', () => {
+        it('should retry when typescript validation fails then succeed on second attempt', async () => {
+            mockToolProvider = createMockToolProvider([]);
+            const spec = createMinimalSpec();
+
+            const failThenPassValidator: TypeScriptValidator = {
+                typeCheckFile: jest.fn<() => TypeCheckResult>()
+                    .mockReturnValueOnce({
+                        success: false,
+                        errors: ['Cannot find name "foo" at line 5, column 10'],
+                        errorCount: 1,
+                    })
+                    .mockReturnValueOnce({
+                        success: true,
+                        errors: [],
+                        errorCount: 0,
+                    }),
+                formatTypeErrorsForModel: jest.fn(() => 'TS error: Cannot find name "foo" at line 5'),
+            };
+
+            orchestrator = new TestGeneratorOrchestrator(
+                spec,
+                testRunLogDir,
+                testOutputDir,
+                testBaseUrl,
+                mockModelClient,
+                mockPromptGenerator,
+                ['/allowed/dir'],
+                null,
+                [mockToolProvider],
+                failThenPassValidator,
+                mockAutoHealFactory,
+            );
+
+            const validJson = JSON.stringify({
+                files: [{
+                    filename: 'test-feature.spec.ts',
+                    code: VALID_PLAYWRIGHT_TEST_CODE,
+                    description: 'Test file',
+                }],
+                confidence: 0.9,
+            });
+
+            const firstResponse = createStopResponse(validJson);
+            const secondResponse = createStopResponse(validJson);
+
+            mockModelClient.callModelApi
+                .mockResolvedValueOnce(firstResponse)
+                .mockResolvedValueOnce(secondResponse);
+
+            const result = await orchestrator.generate('/path/to/spec.yaml', testBaseUrl);
+
+            expect(result.success).toBe(true);
+            expect(mockModelClient.callModelApi).toHaveBeenCalledTimes(2);
+            expect((mockPromptGenerator as unknown as Record<string, MockFn>).buildTypeErrorFixPrompt).toHaveBeenCalled();
+            expect(failThenPassValidator.typeCheckFile).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('playwright test failure triggers auto healer', () => {
+        it('should create an auto healer when playwright tests fail', async () => {
+            mockToolProvider = createMockToolProvider([]);
+            const spec = createMinimalSpec();
+
+            const mockIsolatedEnvironment: IsolatedEnvironment = {
+                tempDir: testOutputDir,
+                port: 5001,
+                baseUrl: testBaseUrl,
+                flaskProcess: null,
+                cleanup: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+            };
+
+            const failingTestResult: TestRunResult = {
+                success: false,
+                exitCode: 1,
+                output: 'Test failed',
+                summary: {total: 1, passed: 0, failed: 1, skipped: 0},
+                tests: [{
+                    file: join(testOutputDir, 'test-feature.spec.ts'),
+                    testName: 'Test Feature > should work',
+                    status: 'failed',
+                    duration: 1000,
+                    error: {message: 'Expected element to be visible'},
+                }],
+            };
+
+            const mockPlaywrightRunner = jest.fn<PlaywrightTestRunner>()
+                .mockResolvedValueOnce(failingTestResult);
+
+            const mockHealTest = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+            const mockHealer = {healTest: mockHealTest} as unknown as AutoHealTestOrchestrator;
+            const mockHealFactory = jest.fn<AutoHealFactory>().mockResolvedValue(mockHealer);
+
+            orchestrator = new TestGeneratorOrchestrator(
+                spec,
+                testRunLogDir,
+                testOutputDir,
+                testBaseUrl,
+                mockModelClient,
+                mockPromptGenerator,
+                ['/allowed/dir'],
+                mockIsolatedEnvironment,
+                [mockToolProvider],
+                mockTypeScriptValidator,
+                mockHealFactory,
+                mockPlaywrightRunner,
+            );
+
+            const validJson = JSON.stringify({
+                files: [{
+                    filename: 'test-feature.spec.ts',
+                    code: VALID_PLAYWRIGHT_TEST_CODE,
+                    description: 'Test file',
+                }],
+                confidence: 0.9,
+            });
+
+            mockModelClient.callModelApi.mockResolvedValueOnce(createStopResponse(validJson));
+
+            const result = await orchestrator.generate('/path/to/spec.yaml', testBaseUrl);
+
+            expect(result.success).toBe(true);
+            expect(mockPlaywrightRunner).toHaveBeenCalledTimes(1);
+            expect(mockHealFactory).toHaveBeenCalledWith(
+                expect.stringContaining('test-feature.spec.ts'),
+                expect.any(String),
+            );
+            expect(mockHealTest).toHaveBeenCalled();
+            expect(mockIsolatedEnvironment.cleanup).toHaveBeenCalled();
         });
     });
 });

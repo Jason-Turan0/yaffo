@@ -24,8 +24,9 @@ import {
     toToolResultPart
 } from "@lib/model_clients/model_client.interface";
 import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
-import {runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
+import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/test_generator/run_playwright_tests";
 import {
+    AutoHealTestOrchestrator,
     autoHealTestOrchestratorFactory,
     AutoHealTestOrchestratorFactory
 } from "@lib/test_generator/auto_heal_orchestrator";
@@ -50,7 +51,8 @@ export class TestGeneratorOrchestrator {
         private isolatedEnvironment: IsolatedEnvironment | null,
         private toolProviders: ToolProvider[],
         private typeScriptValidator: TypeScriptValidator,
-        private autoHealTestOrchestratorFactory: AutoHealTestOrchestratorFactory
+        private autoHealTestOrchestratorFactory: (absoluteTestFilePath: string, logPath: string) => Promise<AutoHealTestOrchestrator>,
+        private playwrightTestRunner: PlaywrightTestRunner = runPlaywrightTests,
     ) {
         const tools = toolProviders.flatMap(toolProvider =>
             toolProvider.getTools().map((tool) => ({tool, toolProvider}))
@@ -117,17 +119,8 @@ export class TestGeneratorOrchestrator {
         while (retryCount <= this.maxRetries) {
             const {response: parsedResponse, schemaErrors} = parseJsonResponse<GeneratedTestResponse>(currentJson);
 
-            if (!parsedResponse) {
-                const rawPath = join(this.outputDir, `${this.spec.feature}.txt`);
-                writeFileSync(rawPath, currentJson);
-                return {
-                    success: false,
-                    error: `Failed to parse JSON response. Raw response saved to ${rawPath}`,
-                    logPath: this.runLogDir
-                };
-            }
-
             if (schemaErrors.length > 0) {
+                retryCount++;
                 this.addSchemaErrorMessage(schemaErrors, currentJson);
                 const correctedJson = await this.generateTestCode();
                 if (!correctedJson) {
@@ -136,10 +129,19 @@ export class TestGeneratorOrchestrator {
                         error: `JSON schema errors in response.`,
                         logPath: this.runLogDir
                     };
-                } else {
-                    currentJson = correctedJson;
-                    continue;
                 }
+                currentJson = correctedJson;
+                continue;
+            }
+
+            if (!parsedResponse) {
+                const rawPath = join(this.outputDir, `${this.spec.feature}.txt`);
+                writeFileSync(rawPath, currentJson);
+                return {
+                    success: false,
+                    error: `Failed to parse JSON response. Raw response saved to ${rawPath}`,
+                    logPath: this.runLogDir
+                };
             }
 
             const writtenPaths = this.writeGeneratedFiles(parsedResponse);
@@ -180,16 +182,10 @@ export class TestGeneratorOrchestrator {
                         if (!existsSync(logPath)) {
                             mkdirSync(logPath, {recursive: true});
                         }
-                        const healer = await this.autoHealTestOrchestratorFactory(
-                            absoluteTestPath,
-                            logPath,
-                            this.outputDir,
-                            this.modelClient.model,
-                            this.baseUrl,
-                            this.isolatedEnvironment.tempDir
-                        );
+                        const healer = await this.autoHealTestOrchestratorFactory(absoluteTestPath, logPath);
                         await healer.healTest(runResult, absoluteTestPath);
                     }
+                    break;
                 }
             } else {
                 console.log(`\n✅ Playwright tests disabled`);
@@ -341,7 +337,7 @@ export class TestGeneratorOrchestrator {
         if (this.isolatedEnvironment == null) return null;
         console.log(`\n🔍 Running playwright tests...`);
         const toRun = filePaths.filter(path => path.endsWith(".ts"));
-        return await runPlaywrightTests(this.baseUrl, toRun);
+        return await this.playwrightTestRunner(this.baseUrl, toRun);
     };
 }
 
@@ -388,6 +384,21 @@ export const testGeneratorOrchestratorFactory = async (
         rawTools,
         GeneratedTestResponseSchema,
     );
+    const autoHealFactory = async (testFilePath: string, logPath: string) => {
+        if (isolatedEnvironment == null) {
+            throw new Error('Must have MCP server running for auto healing');
+        }
+        return autoHealTestOrchestratorFactory(
+            testFilePath,
+            logPath,
+            outputDir,
+            modelClient.model,
+            baseUrl,
+            isolatedEnvironment.tempDir,
+            fileMcpClient,
+            mcpPlaywrightClient
+        )
+    }
 
     return new TestGeneratorOrchestrator(
         spec,
@@ -400,6 +411,6 @@ export const testGeneratorOrchestratorFactory = async (
         isolatedEnvironment,
         toolProviders,
         new DefaultTypeScriptValidator(),
-        autoHealTestOrchestratorFactory
+        autoHealFactory
     );
 };

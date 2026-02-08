@@ -180,6 +180,8 @@ const escapeXml = (str: string): string => {
 };
 
 
+export type PlaywrightTestRunner = typeof runPlaywrightTests;
+
 export const runPlaywrightTests = async (
     baseUrl: string,
     testFiles?: string[]
