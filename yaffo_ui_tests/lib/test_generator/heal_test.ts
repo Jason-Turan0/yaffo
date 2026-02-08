@@ -9,13 +9,15 @@
  */
 import "dotenv/config";
 import {join, basename, dirname, resolve} from "path";
-import {existsSync, mkdirSync, readdirSync} from "fs";
+import {existsSync, mkdirSync} from "fs";
 import {autoHealTestOrchestratorFactory, HealResult} from "@lib/test_generator/auto_heal_orchestrator";
 import {runPlaywrightTests} from "@lib/services/run_playwright_tests";
 import {generateTimestampString} from "@lib/test_generator/utils";
 import {startIsolatedEnvironment, IsolatedEnvironment} from "@lib/services/isolated_runner";
 import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
 import {YAFFO_ROOT} from "@lib/types";
+import {recordTestResult} from "@lib/test_generator/test_result_history";
+import {parseSpecFile} from "@lib/test_generator/prompt/spec_parser";
 
 const SPECS_DIR = resolve(join(process.cwd(), "specs"));
 
@@ -62,11 +64,15 @@ export async function healTest(
         console.log(`\n🔧 Starting isolated environment for healing...`);
         isolatedEnvironment = await startIsolatedEnvironment(port);
 
+        const spec = parseSpecFile(specPath);
+        const featureName = spec.feature;
+
         console.log(`\n🧪 Running initial test to capture failures...`);
         const initialResult = await runPlaywrightTests(baseUrl, [absoluteTestPath]);
 
         if (initialResult.success) {
             console.log(`\n✅ Test already passes - no healing needed.`);
+            recordTestResult(outputDir, featureName, initialResult);
             return {
                 success: true,
                 testFilePath: absoluteTestPath,
@@ -74,6 +80,8 @@ export async function healTest(
                 iterations: 0,
             };
         }
+
+        recordTestResult(outputDir, featureName, initialResult);
 
         console.log(`\n❌ Test failed with ${initialResult.summary.failed} failure(s)`);
         console.log(`\n🩹 Starting auto-heal process...`);
@@ -131,6 +139,11 @@ async function main() {
         console.log(`\n✅ Test healed successfully after ${result.iterations} iteration(s)`);
         console.log(`   Log path: ${result.logPath}`);
         process.exit(0);
+    } else if (result.classification === "application_regression") {
+        console.error(`\n🐛 Application regression detected: ${result.error}`);
+        console.error(`   The test is correct — the application has a bug.`);
+        console.error(`   Log path: ${result.logPath}`);
+        process.exit(1);
     } else {
         console.error(`\n❌ Auto-heal failed: ${result.error}`);
         console.error(`   Iterations attempted: ${result.iterations}`);

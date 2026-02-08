@@ -8,7 +8,7 @@ import {Spec} from '../test_generator/prompt/spec_parser.types';
 import {ToolProvider, CallToolReturn, RawToolDefinition} from '../tool_providers/toolprovider.types';
 import {TypeScriptValidator, TypeCheckResult} from '../services/typescript_validator';
 import {ModelClient, ModelResponse, ModelAlias} from '../model_clients/model_client.interface';
-import {AutoHealTestOrchestrator} from '../test_generator/auto_heal_orchestrator';
+import {AutoHealTestOrchestrator, HealResult} from '../test_generator/auto_heal_orchestrator';
 import {IsolatedEnvironment, TestRunResult} from '../services/isolated_runner';
 import {PlaywrightTestRunner} from '../services/run_playwright_tests';
 
@@ -623,7 +623,14 @@ describe('TestGeneratorOrchestrator', () => {
             const mockPlaywrightRunner = jest.fn<PlaywrightTestRunner>()
                 .mockResolvedValueOnce(failingTestResult);
 
-            const mockHealTest = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+            const mockHealResult: HealResult = {
+                success: true,
+                testFilePath: join(testOutputDir, 'test-feature.spec.ts'),
+                logPath: testRunLogDir,
+                iterations: 1,
+                classification: "test_code_defect",
+            };
+            const mockHealTest = jest.fn<() => Promise<HealResult>>().mockResolvedValue(mockHealResult);
             const mockHealer = {healTest: mockHealTest} as unknown as AutoHealTestOrchestrator;
             const mockHealFactory = jest.fn<AutoHealFactory>().mockResolvedValue(mockHealer);
 

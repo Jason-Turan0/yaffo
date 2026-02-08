@@ -13,6 +13,12 @@ interface ContentBlock {
     content?: string | ContentBlock[];
 }
 
+interface RequestBody {
+    model: string;
+    messages: Message[];
+    system?: ContentBlock[];
+}
+
 interface Message {
     role: string;
     content: ContentBlock[] | string;
@@ -23,7 +29,9 @@ interface ApiLogEntry {
     durationMs: number;
     request: {
         model: string;
-        messages: Message[];
+        url?: string;
+        body?: RequestBody;
+        messages?: Message[];
         system?: ContentBlock[];
     };
     response?: {
@@ -60,8 +68,22 @@ const prompt = (question: string): Promise<string> => {
     });
 };
 
+const getMessages = (entry: ApiLogEntry): Message[] => {
+    return entry.request.body?.messages ?? entry.request.messages ?? [];
+};
+
+const getSystem = (entry: ApiLogEntry): ContentBlock[] => {
+    return entry.request.body?.system ?? entry.request.system ?? [];
+};
+
+const getModel = (entry: ApiLogEntry): string => {
+    return entry.request.body?.model ?? entry.request.model ?? 'unknown';
+};
+
 const getAllRuns = (): RunInfo[] => {
     const runs: RunInfo[] = [];
+    if (!fs.existsSync(API_LOGS_DIR)) return runs;
+
     const features = fs.readdirSync(API_LOGS_DIR).filter(f => {
         const fullPath = path.join(API_LOGS_DIR, f);
         return fs.statSync(fullPath).isDirectory() && !f.startsWith('.');
@@ -86,7 +108,6 @@ const getAllRuns = (): RunInfo[] => {
         }
     }
 
-    // Sort oldest to newest
     return runs.sort((a, b) => {
         const dateA = a.timestamp.replace('T', ' ');
         const dateB = b.timestamp.replace('T', ' ');
@@ -96,17 +117,20 @@ const getAllRuns = (): RunInfo[] => {
 
 const formatContentBlock = (block: ContentBlock, indent: string = ''): string => {
     switch (block.type) {
-        case 'text':
+        case 'text': {
             const textPreview = (block.text || '').slice(0, 100).replace(/\n/g, '\\n');
             return `${indent}[text] ${textPreview}${(block.text || '').length > 100 ? '...' : ''}`;
-        case 'tool_use':
+        }
+        case 'tool_use': {
             const inputPreview = JSON.stringify(block.input || {}).slice(0, 60);
             return `${indent}[tool_use] ${block.name}(${inputPreview}${inputPreview.length >= 60 ? '...' : ''})`;
-        case 'tool_result':
+        }
+        case 'tool_result': {
             const contentStr = typeof block.content === 'string'
                 ? block.content.slice(0, 80)
-                : JSON.stringify(block.content).slice(0, 80);
+                : JSON.stringify(block.content || '').slice(0, 80);
             return `${indent}[tool_result] id:${block.tool_use_id?.slice(0, 12)}... → ${contentStr.replace(/\n/g, '\\n')}${contentStr.length >= 80 ? '...' : ''}`;
+        }
         default:
             return `${indent}[${block.type}]`;
     }
@@ -122,30 +146,39 @@ const formatMessage = (msg: Message, index: number): string => {
     return `  [${index}] ${msg.role}:\n${blocks}`;
 };
 
+const tryPrettyPrintJson = (text: string): string => {
+    try {
+        const parsed = JSON.parse(text);
+        return JSON.stringify(parsed, null, 2);
+    } catch {
+        return text;
+    }
+};
 
-const printFullMessage = (msg: Message) => {
+const printFullMessage = (msg: Message): string => {
     const content = msg.content;
     if (typeof content === 'string') {
-        return `${msg.role}: ${content}...`;
+        return `${msg.role}: ${tryPrettyPrintJson(content)}`;
     }
 
     const blocks = content.map(b => {
         const indent = '      ';
         let outputText = '';
-        outputText += `${indent}type: ${b.type}\n`
-        try {
-            if (b.type === 'tool_use') {
-                outputText += `name=${b.name}\n`
-                outputText += JSON.stringify(b.input, null, 2);
-            } else {
-                for (const contentElement of b.content as ContentBlock[]) {
-                    outputText += contentElement.text + "\n";
+        outputText += `${indent}type: ${b.type}\n`;
+        if (b.type === 'tool_use') {
+            outputText += `${indent}name: ${b.name}\n`;
+            outputText += JSON.stringify(b.input, null, 2);
+        } else if (b.type === 'tool_result') {
+            outputText += `${indent}tool_use_id: ${b.tool_use_id}\n`;
+            if (typeof b.content === 'string') {
+                outputText += tryPrettyPrintJson(b.content);
+            } else if (Array.isArray(b.content)) {
+                for (const el of b.content) {
+                    outputText += (el.text || '') + '\n';
                 }
-
             }
-
-        } catch (e) {
-            outputText = b.text;
+        } else if (b.type === 'text') {
+            outputText += tryPrettyPrintJson(b.text || '');
         }
         return `${indent}${outputText}`;
     }).join('\n');
@@ -162,9 +195,78 @@ const listApiCalls = (runPath: string): string[] => {
         });
 };
 
+const loadLogEntry = (filePath: string): ApiLogEntry => {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+};
+
+const getResponseToolNames = (entry: ApiLogEntry): string[] => {
+    if (!entry.response?.content) return [];
+    return entry.response.content
+        .filter(b => b.type === 'tool_use' && b.name)
+        .map(b => b.name!);
+};
+
+const getResponseTextBlocks = (entry: ApiLogEntry): string[] => {
+    if (!entry.response?.content) return [];
+    return entry.response.content
+        .filter(b => b.type === 'text' && b.text)
+        .map(b => b.text!);
+};
+
+const hasJsonResponse = (entry: ApiLogEntry): boolean => {
+    for (const text of getResponseTextBlocks(entry)) {
+        try {
+            JSON.parse(text.trim());
+            return true;
+        } catch {
+            // not json
+        }
+    }
+    return false;
+};
+
+const entryContainsText = (entry: ApiLogEntry, searchText: string): boolean => {
+    const lower = searchText.toLowerCase();
+
+    for (const text of getResponseTextBlocks(entry)) {
+        if (text.toLowerCase().includes(lower)) return true;
+    }
+
+    for (const toolName of getResponseToolNames(entry)) {
+        if (toolName.toLowerCase().includes(lower)) return true;
+    }
+
+    if (entry.response?.content) {
+        for (const block of entry.response.content) {
+            if (block.type === 'tool_use' && block.input) {
+                if (JSON.stringify(block.input).toLowerCase().includes(lower)) return true;
+            }
+        }
+    }
+
+    const messages = getMessages(entry);
+    for (const msg of messages) {
+        if (typeof msg.content === 'string') {
+            if (msg.content.toLowerCase().includes(lower)) return true;
+        } else {
+            for (const block of msg.content) {
+                if (block.text?.toLowerCase().includes(lower)) return true;
+                if (block.type === 'tool_result' && typeof block.content === 'string') {
+                    if (block.content.toLowerCase().includes(lower)) return true;
+                }
+                if (block.type === 'tool_use' && block.input) {
+                    if (JSON.stringify(block.input).toLowerCase().includes(lower)) return true;
+                }
+            }
+        }
+    }
+
+    return false;
+};
+
 const summarizeApiCall = (filePath: string, index: number): string => {
-    const data: ApiLogEntry = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    const msgCount = data.request.messages?.length || 0;
+    const data = loadLogEntry(filePath);
+    const msgCount = getMessages(data).length;
     const stopReason = data.response?.stop_reason || 'N/A';
     const cost = data.costEstimate?.call?.totalCost?.toFixed(4) || 'N/A';
     const duration = (data.durationMs / 1000).toFixed(1);
@@ -175,21 +277,32 @@ const summarizeApiCall = (filePath: string, index: number): string => {
         if (firstContent?.type === 'text') {
             responsePreview = (firstContent.text || '').slice(0, 50).replace(/\n/g, '\\n');
         } else if (firstContent?.type === 'tool_use') {
-            responsePreview = `tool:${firstContent.name}`;
+            const toolNames = getResponseToolNames(data);
+            responsePreview = `tools: ${toolNames.join(', ')}`;
         }
     }
 
-    return `[${index.toString().padStart(2)}] msgs:${msgCount.toString().padStart(2)} | ${stopReason.padEnd(8)} | $${cost} | ${duration}s | ${responsePreview}`;
+    const jsonTag = hasJsonResponse(data) ? ' [JSON]' : '';
+    return `[${index.toString().padStart(2)}] msgs:${msgCount.toString().padStart(2)} | ${stopReason.padEnd(10)} | $${cost.padEnd(7)} | ${duration.padEnd(5)}s | ${responsePreview}${jsonTag}`;
 };
 
+type DetailNavigation = 'next' | 'prev' | 'back';
 
-const printApiCallDetail = async (filePath: string): Promise<void> => {
-    const data: ApiLogEntry = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+interface DetailContext {
+    filePath: string;
+    displayIndex: number;
+    totalInList: number;
+}
+
+const printApiCallDetail = async (ctx: DetailContext): Promise<DetailNavigation> => {
+    const data = loadLogEntry(ctx.filePath);
+    const messages = getMessages(data);
 
     console.log('\n' + '='.repeat(80));
+    console.log(`[${ctx.displayIndex + 1}/${ctx.totalInList}] ${path.basename(ctx.filePath)}`);
     console.log(`Timestamp: ${data.timestamp}`);
     console.log(`Duration: ${(data.durationMs / 1000).toFixed(2)}s`);
-    console.log(`Model: ${data.request.model}`);
+    console.log(`Model: ${getModel(data)}`);
     console.log(`Success: ${data.success}`);
     console.log(`Stop Reason: ${data.response?.stop_reason || 'N/A'}`);
 
@@ -201,8 +314,9 @@ const printApiCallDetail = async (filePath: string): Promise<void> => {
     }
 
     console.log('\n--- SYSTEM PROMPT ---');
-    if (data.request.system) {
-        for (const block of data.request.system) {
+    const system = getSystem(data);
+    if (system.length > 0) {
+        for (const block of system) {
             if (block.type === 'text') {
                 console.log((block.text || '').slice(0, 500) + '...');
             }
@@ -210,7 +324,6 @@ const printApiCallDetail = async (filePath: string): Promise<void> => {
     }
 
     console.log('\n--- MESSAGES ---');
-    const messages = data.request.messages || [];
     for (let i = 0; i < messages.length; i++) {
         console.log(formatMessage(messages[i], i));
     }
@@ -220,56 +333,302 @@ const printApiCallDetail = async (filePath: string): Promise<void> => {
         for (const block of data.response.content) {
             console.log(formatContentBlock(block, '  '));
             if (block.type === 'text' && block.text) {
-                console.log('\n  Full text:');
-                console.log('  ' + block.text.slice(0, 2000).replace(/\n/g, '\n  '));
-                if (block.text.length > 2000) {
-                    console.log(`  ... (${block.text.length - 2000} more chars)`);
+                const formatted = tryPrettyPrintJson(block.text);
+                const isJson = formatted !== block.text;
+                console.log(`\n  Full text${isJson ? ' (JSON pretty-printed)' : ''}:`);
+                const displayText = formatted.slice(0, 3000);
+                console.log('  ' + displayText.replace(/\n/g, '\n  '));
+                if (formatted.length > 3000) {
+                    console.log(`  ... (${formatted.length - 3000} more chars)`);
                 }
             }
         }
     }
     console.log('='.repeat(80));
 
-    while (true) {
-        const input = await prompt('\nEnter index to view message details, "b" to go back: ');
+    const hasPrev = ctx.displayIndex > 0;
+    const hasNext = ctx.displayIndex < ctx.totalInList - 1;
+    const navHints: string[] = [];
+    if (hasPrev) navHints.push('"p" prev');
+    if (hasNext) navHints.push('"n" next');
 
-        if (input.toLowerCase() === 'back' || input.toLowerCase() === 'b') {
-            return;
+    while (true) {
+        const input = await prompt(`\nMsg index, "r" response, ${navHints.join(', ')}${navHints.length > 0 ? ', ' : ''}"b" back: `);
+        const cmd = input.trim().toLowerCase();
+
+        if (cmd === 'back' || cmd === 'b') {
+            return 'back';
+        }
+
+        if ((cmd === 'n' || cmd === 'next') && hasNext) {
+            return 'next';
+        }
+
+        if ((cmd === 'p' || cmd === 'prev') && hasPrev) {
+            return 'prev';
+        }
+
+        if ((cmd === 'n' || cmd === 'next') && !hasNext) {
+            console.log('Already at the last call.');
+            continue;
+        }
+
+        if ((cmd === 'p' || cmd === 'prev') && !hasPrev) {
+            console.log('Already at the first call.');
+            continue;
+        }
+
+        if (cmd === 'r') {
+            if (data.response?.content) {
+                for (const block of data.response.content) {
+                    if (block.type === 'text' && block.text) {
+                        console.log('\n--- FULL RESPONSE ---');
+                        console.log(tryPrettyPrintJson(block.text));
+                        console.log('--- END ---');
+                    } else if (block.type === 'tool_use') {
+                        console.log(`\n--- TOOL CALL: ${block.name} ---`);
+                        console.log(JSON.stringify(block.input, null, 2));
+                        console.log('--- END ---');
+                    }
+                }
+            }
+            continue;
         }
 
         const index = parseInt(input);
-        if (!isNaN(index) && index >= 0 && index < data.request.messages.length) {
-            console.log(printFullMessage(data.request.messages[index]));
+        if (!isNaN(index) && index >= 0 && index < messages.length) {
+            console.log(printFullMessage(messages[index]));
         } else {
-            console.log('Invalid input. Enter a number or "b" to go back.');
+            console.log('Invalid input. Enter a number, "r", "n"/"p" to navigate, or "b" to go back.');
         }
     }
 };
 
-const browseRun = async (runInfo: RunInfo): Promise<void> => {
-    const files = listApiCalls(runInfo.fullPath);
+interface FilterState {
+    toolName?: string;
+    stopReason?: string;
+    jsonOnly: boolean;
+    searchText?: string;
+}
 
-    console.log(`\n📁 ${runInfo.feature}/${runInfo.timestamp} (${files.length} API calls)\n`);
+const applyFilter = (files: string[], runPath: string, filter: FilterState): { file: string; originalIndex: number }[] => {
+    const results: { file: string; originalIndex: number }[] = [];
 
     for (let i = 0; i < files.length; i++) {
-        const filePath = path.join(runInfo.fullPath, files[i]);
-        console.log(summarizeApiCall(filePath, i));
+        const filePath = path.join(runPath, files[i]);
+        const entry = loadLogEntry(filePath);
+
+        if (filter.toolName) {
+            const tools = getResponseToolNames(entry);
+            if (!tools.some(t => t.toLowerCase().includes(filter.toolName!.toLowerCase()))) {
+                continue;
+            }
+        }
+
+        if (filter.stopReason) {
+            const sr = entry.response?.stop_reason || '';
+            if (!sr.toLowerCase().includes(filter.stopReason.toLowerCase())) {
+                continue;
+            }
+        }
+
+        if (filter.jsonOnly && !hasJsonResponse(entry)) {
+            continue;
+        }
+
+        if (filter.searchText && !entryContainsText(entry, filter.searchText)) {
+            continue;
+        }
+
+        results.push({file: files[i], originalIndex: i});
     }
 
-    while (true) {
-        const input = await prompt('\nEnter index to view details, "b" to go back: ');
+    return results;
+};
 
-        if (input.toLowerCase() === 'b' || input.toLowerCase() === 'back') {
+const getRunToolSummary = (files: string[], runPath: string): Map<string, number> => {
+    const counts = new Map<string, number>();
+    for (const file of files) {
+        const entry = loadLogEntry(path.join(runPath, file));
+        for (const name of getResponseToolNames(entry)) {
+            counts.set(name, (counts.get(name) || 0) + 1);
+        }
+    }
+    return counts;
+};
+
+const getRunStopReasonSummary = (files: string[], runPath: string): Map<string, number> => {
+    const counts = new Map<string, number>();
+    for (const file of files) {
+        const entry = loadLogEntry(path.join(runPath, file));
+        const sr = entry.response?.stop_reason || 'N/A';
+        counts.set(sr, (counts.get(sr) || 0) + 1);
+    }
+    return counts;
+};
+
+const printFilterHelp = (): void => {
+    console.log('\nFilter commands:');
+    console.log('  tool <name>     Filter by tool name (partial match)');
+    console.log('  stop <reason>   Filter by stop reason (partial match)');
+    console.log('  json            Show only calls with JSON text responses');
+    console.log('  s <text>        Search for text across all messages/responses');
+    console.log('  tools           List all tool names used in this run');
+    console.log('  stops           List all stop reasons in this run');
+    console.log('  all             Clear all filters');
+    console.log('  <number>        View API call details');
+    console.log('  b               Go back to run list');
+};
+
+const browseRun = async (runInfo: RunInfo): Promise<void> => {
+    const files = listApiCalls(runInfo.fullPath);
+    const filter: FilterState = {jsonOnly: false};
+
+    const displayCalls = (filtered: { file: string; originalIndex: number }[]) => {
+        const activeFilters: string[] = [];
+        if (filter.toolName) activeFilters.push(`tool=${filter.toolName}`);
+        if (filter.stopReason) activeFilters.push(`stop=${filter.stopReason}`);
+        if (filter.jsonOnly) activeFilters.push('json-only');
+        if (filter.searchText) activeFilters.push(`search="${filter.searchText}"`);
+
+        const filterLabel = activeFilters.length > 0 ? ` [filters: ${activeFilters.join(', ')}]` : '';
+        console.log(`\n📁 ${runInfo.feature}/${runInfo.timestamp} (${filtered.length}/${files.length} calls)${filterLabel}\n`);
+
+        for (const item of filtered) {
+            const filePath = path.join(runInfo.fullPath, item.file);
+            console.log(summarizeApiCall(filePath, item.originalIndex));
+        }
+    };
+
+    let filtered = applyFilter(files, runInfo.fullPath, filter);
+    displayCalls(filtered);
+
+    while (true) {
+        const input = await prompt('\nEnter index, filter command, or "?" for help: ');
+        const trimmed = input.trim();
+
+        if (trimmed.toLowerCase() === 'b' || trimmed.toLowerCase() === 'back') {
             return;
         }
 
-        const index = parseInt(input);
-        if (!isNaN(index) && index >= 0 && index < files.length) {
-            const filePath = path.join(runInfo.fullPath, files[index]);
-            await printApiCallDetail(filePath);
-        } else {
-            console.log('Invalid input. Enter a number or "b" to go back.');
+        if (trimmed === '?') {
+            printFilterHelp();
+            continue;
         }
+
+        if (trimmed.toLowerCase() === 'all') {
+            filter.toolName = undefined;
+            filter.stopReason = undefined;
+            filter.jsonOnly = false;
+            filter.searchText = undefined;
+            filtered = applyFilter(files, runInfo.fullPath, filter);
+            displayCalls(filtered);
+            continue;
+        }
+
+        if (trimmed.toLowerCase() === 'json') {
+            filter.jsonOnly = !filter.jsonOnly;
+            console.log(filter.jsonOnly ? '  JSON filter: ON' : '  JSON filter: OFF');
+            filtered = applyFilter(files, runInfo.fullPath, filter);
+            displayCalls(filtered);
+            continue;
+        }
+
+        if (trimmed.toLowerCase().startsWith('tool ')) {
+            const toolArg = trimmed.slice(5).trim();
+            if (toolArg) {
+                filter.toolName = toolArg;
+                console.log(`  Tool filter: "${toolArg}"`);
+            } else {
+                filter.toolName = undefined;
+                console.log('  Tool filter: cleared');
+            }
+            filtered = applyFilter(files, runInfo.fullPath, filter);
+            displayCalls(filtered);
+            continue;
+        }
+
+        if (trimmed.toLowerCase() === 'tools') {
+            const summary = getRunToolSummary(files, runInfo.fullPath);
+            console.log('\nTool usage in this run:');
+            const sorted = Array.from(summary.entries()).sort((a, b) => b[1] - a[1]);
+            for (const [name, count] of sorted) {
+                console.log(`  ${name.padEnd(30)} ${count}x`);
+            }
+            continue;
+        }
+
+        if (trimmed.toLowerCase().startsWith('stop ')) {
+            const stopArg = trimmed.slice(5).trim();
+            if (stopArg) {
+                filter.stopReason = stopArg;
+                console.log(`  Stop reason filter: "${stopArg}"`);
+            } else {
+                filter.stopReason = undefined;
+                console.log('  Stop reason filter: cleared');
+            }
+            filtered = applyFilter(files, runInfo.fullPath, filter);
+            displayCalls(filtered);
+            continue;
+        }
+
+        if (trimmed.toLowerCase() === 'stops') {
+            const summary = getRunStopReasonSummary(files, runInfo.fullPath);
+            console.log('\nStop reasons in this run:');
+            for (const [reason, count] of summary.entries()) {
+                console.log(`  ${reason.padEnd(20)} ${count}x`);
+            }
+            continue;
+        }
+
+        if (trimmed.toLowerCase().startsWith('s ')) {
+            const searchArg = trimmed.slice(2).trim();
+            if (searchArg) {
+                filter.searchText = searchArg;
+                console.log(`  Search filter: "${searchArg}"`);
+            } else {
+                filter.searchText = undefined;
+                console.log('  Search filter: cleared');
+            }
+            filtered = applyFilter(files, runInfo.fullPath, filter);
+            displayCalls(filtered);
+            continue;
+        }
+
+        const index = parseInt(trimmed);
+        if (!isNaN(index)) {
+            let filteredIdx = filtered.findIndex(item => item.originalIndex === index);
+            if (filteredIdx === -1 && index >= 0 && index < files.length) {
+                filteredIdx = filtered.findIndex(item => item.originalIndex >= index);
+                if (filteredIdx === -1) filteredIdx = filtered.length - 1;
+            }
+
+            if (filteredIdx >= 0 && filteredIdx < filtered.length) {
+                let cursor = filteredIdx;
+                while (cursor >= 0 && cursor < filtered.length) {
+                    const item = filtered[cursor];
+                    const filePath = path.join(runInfo.fullPath, item.file);
+                    const nav = await printApiCallDetail({
+                        filePath,
+                        displayIndex: cursor,
+                        totalInList: filtered.length,
+                    });
+                    if (nav === 'next') {
+                        cursor++;
+                    } else if (nav === 'prev') {
+                        cursor--;
+                    } else {
+                        break;
+                    }
+                }
+                displayCalls(filtered);
+            } else {
+                console.log(`Invalid index. Range: 0-${files.length - 1}`);
+            }
+            continue;
+        }
+
+        console.log('Unknown command. Enter "?" for help.');
     }
 };
 
@@ -279,10 +638,10 @@ const main = async (): Promise<void> => {
     while (true) {
         const runs = getAllRuns();
 
-        console.log('\nAvailable runs (newest first):\n');
+        console.log('\nAvailable runs (oldest first):\n');
         for (let i = 0; i < runs.length; i++) {
             const run = runs[i];
-            console.log(`[${i.toString().padStart(2)}] ${run.feature.padEnd(20)} ${run.timestamp} (${run.fileCount} calls)`);
+            console.log(`[${i.toString().padStart(2)}] ${run.feature.padEnd(25)} ${run.timestamp} (${run.fileCount} calls)`);
         }
 
         const input = await prompt('\nEnter index, filter text, "latest", or "q" to quit: ');
@@ -295,7 +654,7 @@ const main = async (): Promise<void> => {
 
         if (input.toLowerCase() === 'latest') {
             if (runs.length > 0) {
-                await browseRun(runs[0]);
+                await browseRun(runs[runs.length - 1]);
             }
             continue;
         }
@@ -317,7 +676,7 @@ const main = async (): Promise<void> => {
             console.log(`\nFiltered runs matching "${input}":\n`);
             for (let i = 0; i < filtered.length; i++) {
                 const run = filtered[i];
-                console.log(`[${i.toString().padStart(2)}] ${run.feature.padEnd(20)} ${run.timestamp} (${run.fileCount} calls)`);
+                console.log(`[${i.toString().padStart(2)}] ${run.feature.padEnd(25)} ${run.timestamp} (${run.fileCount} calls)`);
             }
 
             const subInput = await prompt('\nEnter index: ');

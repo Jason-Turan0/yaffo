@@ -31,7 +31,7 @@ const formatZodErrors = (error: z.ZodError): string[] => {
     });
 };
 
-const extractJson = (text: string): string => {
+export const extractJson = (text: string): string => {
     const trimmed = text.trim();
     try {
         JSON.parse(trimmed);

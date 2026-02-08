@@ -28,8 +28,10 @@ import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/services/run_playwr
 import {
     AutoHealTestOrchestrator,
     autoHealTestOrchestratorFactory,
+    HealResult,
 } from "@lib/test_generator/auto_heal_orchestrator";
 import {generateTimestampString} from "@lib/test_generator/utils";
+import {recordTestResult} from "@lib/test_generator/test_result_history";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 
@@ -65,7 +67,10 @@ export class TestGeneratorOrchestrator {
         }
     }
 
+    private specPath: string = "";
+
     generate = async (specPath: string, baseUrl: string): Promise<GenerationResult> => {
+        this.specPath = specPath;
         try {
             const userPrompt = this.promptGenerator.buildUserPrompt(this.spec, specPath, baseUrl, this.allowedDirectories);
             this.modelClient.addUserMessage([toTextPart(userPrompt)]);
@@ -167,11 +172,15 @@ export class TestGeneratorOrchestrator {
                 const runResult = await this.runPlaywrightTests(writtenPaths);
                 if (runResult == null || runResult.success) {
                     console.log(`\n✅ Playwright tests passed!`);
+                    if (runResult) {
+                        recordTestResult(this.outputDir, this.spec.feature, runResult);
+                    }
                     return {
                         success: true,
                         logPath: this.runLogDir
                     };
                 } else {
+                    recordTestResult(this.outputDir, this.spec.feature, runResult);
                     const failedTestFiles = runResult.tests.filter(test => test.status == "failed" || test.status == "timedOut");
                     for (const failedTestFile of failedTestFiles) {
                         const absoluteTestPath = resolve(failedTestFile.file);
@@ -182,7 +191,11 @@ export class TestGeneratorOrchestrator {
                             mkdirSync(logPath, {recursive: true});
                         }
                         const healer = await this.autoHealTestOrchestratorFactory(absoluteTestPath, logPath);
-                        await healer.healTest(runResult, absoluteTestPath);
+                        const healResult: HealResult = await healer.healTest(runResult, this.specPath);
+                        if (healResult.classification === "application_regression") {
+                            console.error(`\n❌ Application regression detected: ${healResult.error}`);
+                            process.exit(1);
+                        }
                     }
                     break;
                 }
@@ -356,7 +369,7 @@ export const testGeneratorOrchestratorFactory = async (
         allowedDirectories.push(isolatedEnvironment.tempDir);
     }
 
-    const fileMcpClient = await createFilesystemClient(allowedDirectories);
+    const fileMcpClient = await createFilesystemClient(allowedDirectories, {useDocker: true});
     const mcpPlaywrightClient = runTestEnvironment ? await createPlaywrightClient({
         headless: true,
         baseUrl,

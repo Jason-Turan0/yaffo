@@ -3,7 +3,7 @@ import {writeFileSync, readFileSync, existsSync} from "fs";
 import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
 import {HealPromptGenerator, HealContext, healPromptGeneratorFactory} from "@lib/test_generator/prompt/heal_prompt_generator";
 import {parseSpecFile} from "@lib/test_generator/prompt/spec_parser";
-import {GeneratedTestResponse} from "@lib/model_clients/model_client.response.types";
+import {GeneratedTestResponse, FailureClassification, HealAnalysisResponse} from "@lib/model_clients/model_client.response.types";
 import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/prompt/json_parser";
 import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/services/typescript_validator";
 import {createModelClient, supportsNativeStructuredOutput} from "@lib/model_clients/model_client_factory";
@@ -21,6 +21,8 @@ import {
 } from "@lib/model_clients/model_client.interface";
 import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesystem_memory_tool";
 import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/services/run_playwright_tests";
+import {loadTestResultHistory, recordTestResult} from "@lib/test_generator/test_result_history";
+import {parseHealAnalysisResponse, HealAnalysisResponseSchema} from "@lib/test_generator/heal_analysis";
 
 export interface HealResult {
     success: boolean;
@@ -28,12 +30,14 @@ export interface HealResult {
     logPath: string;
     error?: string;
     iterations: number;
+    classification?: FailureClassification;
 }
 
 export class AutoHealTestOrchestrator {
     private iterationCount = 0;
     private maxIterations = 50;
     private maxRetries = 3;
+    private maxEnvironmentRetries = 3;
     private toolProviderMap: Map<string, { tool: RawToolDefinition; toolProvider: ToolProvider }> = new Map();
     private featureName: string = "";
 
@@ -42,6 +46,7 @@ export class AutoHealTestOrchestrator {
         private runLogDir: string,
         private outputDir: string,
         private baseUrl: string,
+        private model: ModelAlias,
         private modelClient: ModelClient,
         private promptGenerator: HealPromptGenerator,
         private allowedDirectories: string[],
@@ -67,6 +72,7 @@ export class AutoHealTestOrchestrator {
             const spec = parseSpecFile(specPath);
             this.featureName = spec.feature;
             const initialTestResponse = this.loadJsonFile();
+            const testRunHistory = loadTestResultHistory(this.outputDir, this.featureName);
 
             const healContext: HealContext = {
                 absoluteTestFilePath: this.absoluteTestFilePath,
@@ -77,28 +83,175 @@ export class AutoHealTestOrchestrator {
                 testContext: initialTestResponse?.testContext || '',
                 explanation: initialTestResponse?.explanation || '',
                 testDescription: initialTestResponse?.files?.find(f => resolve(join(this.outputDir, f.filename)) === this.absoluteTestFilePath)?.description || '',
+                testRunHistory,
             };
+
+            const analysisResult = await this.triageFailure(healContext);
+
+            if (analysisResult) {
+                console.log(`\n🔍 Triage classification: ${analysisResult.classification}`);
+                console.log(`   Reasoning: ${analysisResult.reasoning}`);
+
+                if (analysisResult.classification === "application_regression") {
+                    recordTestResult(this.outputDir, this.featureName, testFailures);
+                    return {
+                        success: false,
+                        testFilePath: this.absoluteTestFilePath,
+                        error: `Application regression detected: ${analysisResult.reasoning}`,
+                        logPath: this.runLogDir,
+                        iterations: this.iterationCount,
+                        classification: "application_regression",
+                    };
+                }
+
+                if (analysisResult.classification === "environment_instability") {
+                    console.log(`\n🔄 Environment instability detected, retrying tests...`);
+                    for (let retry = 1; retry <= this.maxEnvironmentRetries; retry++) {
+                        console.log(`   Retry ${retry}/${this.maxEnvironmentRetries}...`);
+                        const retryResult = await this.playwrightTestRunner(this.baseUrl, [this.absoluteTestFilePath]);
+                        if (retryResult.success) {
+                            console.log(`\n✅ Test passed on retry ${retry}`);
+                            recordTestResult(this.outputDir, this.featureName, retryResult);
+                            return {
+                                success: true,
+                                testFilePath: this.absoluteTestFilePath,
+                                logPath: this.runLogDir,
+                                iterations: this.iterationCount,
+                                classification: "environment_instability",
+                            };
+                        }
+                    }
+                    console.log(`\n⚠️ Retries exhausted, falling through to heal...`);
+                }
+            }
 
             const userPrompt = this.promptGenerator.buildHealPrompt(healContext, this.allowedDirectories);
             this.modelClient.addUserMessage([toTextPart(userPrompt)]);
 
             const generatedJson = await this.generateHealedCode();
             if (!generatedJson) {
+                recordTestResult(this.outputDir, this.featureName, testFailures);
                 return {
                     success: false,
                     testFilePath: this.absoluteTestFilePath,
                     error: "Heal code generation failed.",
                     logPath: this.runLogDir,
                     iterations: this.iterationCount,
+                    classification: "test_code_defect",
                 };
             }
 
-            return await this.validateHealedCode(generatedJson);
+            const result = await this.validateHealedCode(generatedJson);
+            recordTestResult(this.outputDir, this.featureName, testFailures);
+            return {...result, classification: analysisResult?.classification ?? "test_code_defect"};
         } finally {
             for (const toolProvider of this.toolProviders) {
                 await toolProvider.disconnect();
             }
         }
+    };
+
+    private triageFailure = async (context: HealContext): Promise<HealAnalysisResponse | null> => {
+        console.log(`\n🔍 Triaging test failure...`);
+        try {
+            const outputSchemaStr = supportsNativeStructuredOutput(this.model)
+                ? undefined
+                : JSON.stringify(zodToJsonSchema(HealAnalysisResponseSchema), null, 2);
+
+            const rawTools = Array.from(this.toolProviderMap.values()).map(t => t.tool);
+            const triageClient = createModelClient(
+                this.runLogDir,
+                this.model,
+                this.promptGenerator.buildAnalysisSystemPrompt(outputSchemaStr),
+                rawTools,
+                HealAnalysisResponseSchema,
+            );
+
+            const analysisPrompt = this.promptGenerator.buildAnalysisPrompt(context, this.allowedDirectories);
+            triageClient.addUserMessage([toTextPart(analysisPrompt)]);
+
+            const maxTriageIterations = 50;
+            let finalText: string | null = null;
+
+            for (let i = 0; i < maxTriageIterations; i++) {
+                const response = await triageClient.callModelApi();
+                if (!response) {
+                    console.warn("   ⚠️ Triage returned no response, defaulting to heal");
+                    return null;
+                }
+
+                console.log(`   Triage stop reason: ${response.finishReason}`);
+
+                if (response.finishReason === "stop" || response.finishReason === "length") {
+                    finalText = response.text;
+                    break;
+                }
+
+                if (response.finishReason === "tool-calls" && response.toolCalls.length > 0) {
+                    const toolResults = await this.executeToolCalls(response.toolCalls);
+                    triageClient.addToolResultMessage(toolResults.map(toToolResultPart));
+                    continue;
+                }
+
+                console.warn(`   ⚠️ Unexpected triage stop reason: ${response.finishReason}`);
+                return null;
+            }
+
+            if (!finalText) {
+                console.warn("   ⚠️ Triage did not produce a final response, defaulting to heal");
+                return null;
+            }
+
+            const {response: analysisResponse, schemaErrors} = parseHealAnalysisResponse(finalText);
+            if (schemaErrors.length > 0) {
+                console.warn(`   ⚠️ Triage response invalid: ${schemaErrors.join(", ")}`);
+                return null;
+            }
+
+            return analysisResponse;
+        } catch (e) {
+            console.warn(`   ⚠️ Triage failed: ${e instanceof Error ? e.message : String(e)}, defaulting to heal`);
+            return null;
+        }
+    };
+
+    private executeToolCalls = async (toolCalls: ModelResponse["toolCalls"]): Promise<ToolCallResult[]> => {
+        const toolResults: ToolCallResult[] = [];
+        for (const call of toolCalls) {
+            console.log(`   🔧 Tool: ${call.toolName} Id: ${call.toolCallId} (${JSON.stringify(call.input).slice(0, 50)}...)`);
+            try {
+                const toolTuple = this.toolProviderMap.get(call.toolName);
+                if (!toolTuple) {
+                    toolResults.push({
+                        type: "tool_result",
+                        toolName: call.toolName,
+                        toolCallId: call.toolCallId,
+                        result: `Error: No implementation for tool ${call.toolName}`,
+                        isError: true,
+                    });
+                } else {
+                    const result = await toolTuple.toolProvider.callTool(call.toolName, call.input);
+                    const resultText = typeof result === "string" ? result : result.text;
+                    toolResults.push({
+                        type: "tool_result",
+                        toolName: call.toolName,
+                        toolCallId: call.toolCallId,
+                        result: resultText,
+                    });
+                }
+            } catch (e) {
+                const errorMsg = e instanceof Error ? e.message : String(e);
+                console.log(`   ❌ Tool error: ${errorMsg}`);
+                toolResults.push({
+                    type: "tool_result",
+                    toolCallId: call.toolCallId,
+                    toolName: call.toolName,
+                    result: `Error: ${errorMsg}`,
+                    isError: true,
+                });
+            }
+        }
+        return toolResults;
     };
 
     private generateHealedCode = async (): Promise<string | null> => {
@@ -265,42 +418,7 @@ export class AutoHealTestOrchestrator {
         }
 
         if (response.finishReason === "tool-calls" && response.toolCalls.length > 0) {
-            const toolResults: ToolCallResult[] = [];
-            for (const call of response.toolCalls) {
-                console.log(`   🔧 Tool: ${call.toolName} Id: ${call.toolCallId} (${JSON.stringify(call.input).slice(0, 50)}...)`);
-                try {
-                    const toolTuple = this.toolProviderMap.get(call.toolName);
-                    if (!toolTuple) {
-                        toolResults.push({
-                            type: "tool_result",
-                            toolName: call.toolName,
-                            toolCallId: call.toolCallId,
-                            result: `Error: No implementation for tool ${call.toolName}`,
-                            isError: true,
-                        });
-                    } else {
-                        const result = await toolTuple.toolProvider.callTool(call.toolName, call.input);
-                        const resultText = typeof result === "string" ? result : result.text;
-                        toolResults.push({
-                            type: "tool_result",
-                            toolName: call.toolName,
-                            toolCallId: call.toolCallId,
-                            result: resultText,
-                        });
-                    }
-                } catch (e) {
-                    const errorMsg = e instanceof Error ? e.message : String(e);
-                    console.log(`   ❌ Tool error: ${errorMsg}`);
-                    toolResults.push({
-                        type: "tool_result",
-                        toolCallId: call.toolCallId,
-                        toolName: call.toolName,
-                        result: `Error: ${errorMsg}`,
-                        isError: true,
-                    });
-                }
-            }
-
+            const toolResults = await this.executeToolCalls(response.toolCalls);
             this.modelClient.addToolResultMessage(toolResults.map(toToolResultPart));
             return {success: true, continue: true};
         }
@@ -425,6 +543,7 @@ export const autoHealTestOrchestratorFactory = async (
         runLogDir,
         outputDir,
         baseUrl,
+        model,
         modelClient,
         promptGenerator,
         allowedDirectories,

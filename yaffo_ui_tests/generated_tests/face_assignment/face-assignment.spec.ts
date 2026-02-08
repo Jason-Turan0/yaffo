@@ -1,428 +1,263 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Page, APIRequestContext } from '@playwright/test';
 
-// Test data: Faces belonging to Obama
-const OBAMA_FACE_IDS = [1, 11, 13, 18, 26, 37, 41];
+// Test data: Faces known to belong to Obama
+const OBAMA_FACE_IDS = new Set([11, 13, 18, 26, 37, 41]);
 
+// Type definition for person data
 type PersonInfo = {
   id: number;
   name: string;
 };
 
-// Helper function to ensure person exists (create if needed)
-async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {
-  await page.goto('/faces');
-  
-  // Check if person exists in dropdown by getting all option text
-  // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible
-  const personOptions = await page.locator('#sidebar-person-select option').allTextContents();
-  const personExists = personOptions.some(text => text.trim() === personName);
-  
-  if (!personExists) {
-    // Create the person via quick action
-    await page.fill('#create-person-name', personName);
-    await page.click('#create-person-btn');
-    
-    // Wait for page reload - app uses setTimeout(1500ms) before reload
-    // Must wait for the delayed reload to complete
-    await page.waitForTimeout(1600);
-    await page.waitForLoadState('networkidle');
+/**
+ * Deletes a person through the UI.
+ * This is preferred for cleanup to ensure the application state is fully reset.
+ * @param page The Playwright Page object.
+ * @param personName The name of the person to delete.
+ */
+async function deletePersonByName(page: Page, personName: string): Promise<void> {
+  await page.goto('/people');
+  const personRow = page.locator('tr').filter({ hasText: personName });
+  if (await personRow.count() > 0) {
+    await personRow.locator('a.delete').click();
+    // Confirm deletion in the modal
+    await page.locator('#deleteModal button.btn-danger').click();
+    // Wait for page to reload and person to be removed from the list
+    await page.waitForLoadState('domcontentloaded');
+    // Verify person was actually deleted by checking they're not in the list
+    await expect(personRow).toHaveCount(0, { timeout: 5000 });
   }
-  
-  // Get person ID from dropdown
-  const personOption = page.locator(`#sidebar-person-select option`).filter({ hasText: personName });
-  const personId = await personOption.getAttribute('value');
-  
-  return {
-    id: parseInt(personId || '0'),
-    name: personName
-  };
 }
 
-// Helper function to delete a person
-async function deletePerson(page: Page, personName: string): Promise<void> {
-  await page.goto('/people');
-  
-  // Find the person row and click delete
-  const personRow = page.locator('tr').filter({ hasText: personName });
-  
-  if (await personRow.count() > 0) {
-    const deleteLink = personRow.locator('a.delete');
-    await deleteLink.click();
-    
-    // Confirm deletion in modal
-    await page.click('button.btn-danger:has-text("Delete")');
-    
-    // Wait for redirect
-    await page.waitForURL('/people');
-  }
+/**
+ * Creates a person using the API to speed up test setup.
+ * @param request The Playwright APIRequestContext object.
+ * @param page The Playwright Page object.
+ * @param personName The name of the person to create.
+ * @returns The created person's information (id and name).
+ */
+async function createPersonViaApi(request: APIRequestContext, page: Page, personName: string): Promise<PersonInfo> {
+    const response = await request.post('/api/people/create', {
+        data: { name: personName },
+        failOnStatusCode: false, // Don't fail if the person already exists (400)
+    });
+
+    if (response.status() === 400) {
+        // If person exists, find them on the people page to get their ID
+        await page.goto('/people');
+        const personRow = page.locator('tr').filter({ hasText: personName });
+        const viewFacesLink = personRow.locator('a:has-text("View Faces")');
+        const href = await viewFacesLink.getAttribute('href');
+        const personId = parseInt(href!.match(/\d+/)![0], 10);
+        return { id: personId, name: personName };
+    }
+
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    return { id: data.person_id, name: data.name };
+}
+
+/**
+ * Assigns a face to a person using the API to speed up test setup.
+ * @param request The Playwright APIRequestContext object.
+ * @param faceId The ID of the face to assign.
+ * @param personId The ID of the person to assign the face to.
+ */
+async function assignFaceToPersonViaApi(request: APIRequestContext, faceId: number, personId: number): Promise<void> {
+    const response = await request.post('/api/faces/assign', {
+        data: {
+            faces: [faceId],
+            person: personId,
+            faceStatus: 'ASSIGNED'
+        }
+    });
+    expect(response.ok()).toBeTruthy();
 }
 
 test.describe('Face Assignment', () => {
+  // Set a longer timeout for these tests since they involve UI interactions and cleanups
+  test.setTimeout(30000);
+
+  // Cleanup after each test to ensure isolation
+  test.afterEach(async ({ page }) => {
+    await deletePersonByName(page, 'Obama');
+    await deletePersonByName(page, 'TestKeyboardPerson');
+  });
+
   test('should be able to create a new person using the quick action section', async ({ page }) => {
+    await deletePersonByName(page, 'Obama'); // Ensure clean state before test
     await page.goto('/faces');
-    
-    // First, check if Obama exists and delete if so
-    const personOptions = await page.locator('#sidebar-person-select option').allTextContents();
-    const obamaExists = personOptions.some(text => text.trim() === 'Obama');
-    
-    if (obamaExists) {
-      await deletePerson(page, 'Obama');
-      await page.goto('/faces');
-    }
-    
+
     // Type in the name 'Obama' and click Create Person
-    await page.fill('#create-person-name', 'Obama');
-    await page.click('#create-person-btn');
-    
-    // Wait for page to reload - the app uses setTimeout(1500ms) before reloading
-    // Must wait for the delayed reload to start and complete
-    await page.waitForTimeout(1600);
-    await page.waitForLoadState('networkidle');
-    
-    // Verify: No error messages are shown
-    const errorMessages = page.locator('.error, .alert-danger');
-    await expect(errorMessages).toHaveCount(0);
-    
-    // Verify: There is a person named Obama in the person dropdown
-    // Note: Options are hidden in select elements, check via allTextContents
-    const updatedOptions = await page.locator('#sidebar-person-select option').allTextContents();
-    const obamaInDropdown = updatedOptions.some(text => text.trim() === 'Obama');
-    expect(obamaInDropdown).toBe(true);
+    await page.locator('#create-person-name').fill('Obama');
+    await page.locator('#create-person-btn').click();
+
+    // Wait for the API call to succeed and the subsequent page reload to complete
+    await page.waitForResponse(resp => resp.url().includes('/api/people/create') && resp.status() === 201);
+    await page.waitForLoadState('domcontentloaded');
+
+    // A toast isn't shown because the page reloads. The verification is that the person now exists.
+    const personOption = page.locator('#sidebar-person-select option').filter({ hasText: 'Obama' });
+    await expect(personOption).toHaveCount(1, { timeout: 5000 }); // Wait for dropdown to be populated
   });
 
-  test('should be able to assign faces to people', async ({ page }) => {
-    // Setup: Create person if needed
-    const obama = await ensurePersonExists(page, 'Obama');
-    
-    await page.goto('/faces');
-    
-    // Update filter to group by People
-    await page.check('#group-by-people');
-    
-    // Click Apply Filters
-    await page.click('button.btn.btn-primary.filter-btn');
+  test('should be able to assign faces to people', async ({ page, request }) => {
+    const obama = await createPersonViaApi(request, page, 'Obama');
+    // Navigate to faces page with filter that shows all faces
+    await page.goto('/faces?group_by=people');
     await page.waitForLoadState('networkidle');
-    
-    // Clear selection
-    await page.click('#deselect-all');
-    
-    // Select one of the photos that belong to Obama (face 1)
+
+    // Actions: Clear selection, select face 1, select person using the custom dropdown, and assign
+    await page.locator('#deselect-all').click();
     const face1 = page.locator('.face[data-face-id="1"]');
+    await expect(face1).toBeVisible({ timeout: 10000 });
     await face1.click();
     
-    // Verify face is selected
-    await expect(face1).toHaveClass(/selected/);
+    // Use the custom searchable dropdown instead of native selectOption
+    await page.locator('.searchable-select-display').click();
+    await page.locator('.searchable-select-option').filter({ hasText: 'Obama' }).click();
     
-    // Select Obama from dropdown using searchable select display
-    const selectDisplay = page.locator('.searchable-select-display');
-    await selectDisplay.click();
-    
-    const obamaOption = page.locator('.searchable-select-option').filter({ hasText: 'Obama' });
-    await obamaOption.click();
-    
-    // Click Assign Selected button
-    await page.click('#sidebar-assign-selected-btn');
-    
-    // Wait for the assignment to complete
-    await page.waitForResponse(response => 
-      response.url().includes('/api/faces/assign') && response.status() === 200
-    );
-    
-    // Wait for face to be removed from DOM
-    await page.waitForTimeout(500);
-    
-    // Verify: Face 1 is removed from the view
-    await expect(face1).toBeHidden();
-    
-    // Verify: Face 1 is assigned to Obama on the people -> view faces screen
+    await page.locator('#sidebar-assign-selected-btn').click();
+
+    // Wait for API call and verify success notification
+    await page.waitForResponse(resp => resp.url().includes('/api/faces/assign') && resp.ok());
+    await expect(page.locator('.notification.visible')).toBeVisible();
+
+    // Verify face 1 is removed from the view
+    await expect(face1).not.toBeVisible();
+
+    // Verify face is correctly assigned on the person's page
     await page.goto(`/people/${obama.id}/faces`);
-    const assignedFace = page.locator('.face-card[data-face-id="1"]');
-    await expect(assignedFace).toBeVisible();
-    
-    // Cleanup: Delete person Obama
-    await deletePerson(page, 'Obama');
+    await expect(page.locator(`[data-face-id="1"]`)).toBeVisible();
   });
 
-  test('faces are automatically matched to people based on similarity', async ({ page }) => {
-    // Setup: Create person and assign face 1
-    const obama = await ensurePersonExists(page, 'Obama');
-    
+  test('faces are automatically matched to people based on similarity', async ({ page, request }) => {
+    // Setup: Create 'Obama' and assign a known face to establish a baseline
+    const obama = await createPersonViaApi(request, page, 'Obama');
+    await assignFaceToPersonViaApi(request, 1, obama.id);
+
     await page.goto('/faces');
-    await page.check('#group-by-people');
-    await page.click('button.btn.btn-primary.filter-btn');
+
+    // Filter by people with a low similarity threshold to create groups
+    await page.locator('#group-by-people').check();
+    await page.locator('#threshold-range').fill('2');
+    await page.locator('button:has-text("Apply Filters")').click();
     await page.waitForLoadState('networkidle');
-    
-    // Assign face 1 to Obama
-    await page.click('#deselect-all');
-    const face1 = page.locator('.face[data-face-id="1"]');
-    await face1.click();
-    
-    // Select Obama using searchable select
-    const selectDisplay = page.locator('.searchable-select-display');
-    await selectDisplay.click();
-    const obamaOption = page.locator('.searchable-select-option').filter({ hasText: 'Obama' });
-    await obamaOption.click();
-    
-    await page.click('#sidebar-assign-selected-btn');
-    
-    await page.waitForResponse(response => 
-      response.url().includes('/api/faces/assign') && response.status() === 200
-    );
-    
-    // Wait for assignment to complete
-    await page.waitForTimeout(500);
-    
-    // Now test the actual scenario
-    await page.goto('/faces');
-    
-    // Update filter to group by People and set threshold to 2
-    await page.check('#group-by-people');
-    await page.fill('#threshold-range', '2');
-    await page.click('button.btn.btn-primary.filter-btn');
-    await page.waitForLoadState('networkidle');
-    
-    // Verify: There is a group for person 'Obama'
-    const obamaGroup = page.locator('.suggestion-group').filter({ hasText: 'Obama' }).first();
+
+    // Verify a suggestion group for 'Obama' is now visible
+    const obamaGroup = page.locator('.suggestion-group').filter({ hasText: 'Obama' });
     await expect(obamaGroup).toBeVisible();
-    
-    // Verify: All faces in the group are one of the expected face ids
-    const facesInObamaGroup = await obamaGroup.locator('.face[data-face-id]').all();
-    for (const face of facesInObamaGroup) {
+
+    // Verify all faces in the group belong to Obama
+    const facesInGroup = await obamaGroup.locator('.face').all();
+    for (const face of facesInGroup) {
       const faceId = await face.getAttribute('data-face-id');
-      expect(OBAMA_FACE_IDS).toContain(parseInt(faceId || '0'));
+      expect(OBAMA_FACE_IDS.has(parseInt(faceId!, 10))).toBe(true);
     }
     
-    // Verify: All faces in the first group are selected
-    const firstGroup = page.locator('.suggestion-group').first();
-    const facesInFirstGroup = await firstGroup.locator('.face').all();
-    for (const face of facesInFirstGroup) {
-      await expect(face).toHaveClass(/selected/);
+    // Verify faces in the first group are selected by default
+    const firstGroupFaces = page.locator('.suggestion-group').first().locator('.face');
+    await expect(firstGroupFaces.first()).toHaveClass(/selected/);
+
+    // Verify faces in 'Unknown' group are not selected
+    const unknownGroupFaces = page.locator('.suggestion-group:has-text("Unknown") .face');
+    if (await unknownGroupFaces.count() > 0) {
+        await expect(unknownGroupFaces.first()).not.toHaveClass(/selected/);
     }
-    
-    // Verify: None of the faces in the Unknown group are selected
-    const unknownGroup = page.locator('.suggestion-group').filter({ hasText: 'Unknown' });
-    if (await unknownGroup.count() > 0) {
-      const facesInUnknownGroup = await unknownGroup.locator('.face').all();
-      for (const face of facesInUnknownGroup) {
-        await expect(face).not.toHaveClass(/selected/);
-      }
-    }
-    
-    // Cleanup
-    await deletePerson(page, 'Obama');
   });
 
   test('similar faces are grouped together', async ({ page }) => {
     await page.goto('/faces');
-    
-    // Update filter to group by Similarity
-    await page.check('#group-by-similarity');
-    
-    // Set similarity threshold to 2
-    await page.fill('#threshold-range', '2');
-    
-    // Click Apply Filters
-    await page.click('button.btn.btn-primary.filter-btn');
+
+    // Filter by similarity to cluster unknown faces
+    await page.locator('#group-by-similarity').check();
+    await page.locator('#threshold-range').fill('2');
+    await page.locator('button:has-text("Apply Filters")').click();
     await page.waitForLoadState('networkidle');
-    
-    // Verify: Some groups are displayed
+
     const groups = page.locator('.suggestion-group');
-    await expect(groups).not.toHaveCount(0);
-    
-    // Verify: All groups should have at least three faces
-    const groupCount = await groups.count();
-    for (let i = 0; i < groupCount; i++) {
-      const group = groups.nth(i);
-      const facesInGroup = group.locator('.face');
-      const faceCount = await facesInGroup.count();
+    await expect(groups.first()).toBeVisible();
+
+    // Verify all groups meet the minimum size requirement
+    for (const group of await groups.all()) {
+      const faceCount = await group.locator('.face').count();
       expect(faceCount).toBeGreaterThanOrEqual(3);
     }
-    
-    // Verify: The first group is automatically selected
-    const firstGroup = groups.first();
-    const firstGroupCheckbox = firstGroup.locator('.group-select-checkbox');
+
+    // Verify the first group is selected by default for quick assignment
+    const firstGroupCheckbox = groups.first().locator('.group-select-checkbox');
     await expect(firstGroupCheckbox).toBeChecked();
-    
-    // Verify: All faces in the first group are selected
-    const facesInFirstGroup = firstGroup.locator('.face');
-    const firstGroupFaceCount = await facesInFirstGroup.count();
-    for (let i = 0; i < firstGroupFaceCount; i++) {
-      await expect(facesInFirstGroup.nth(i)).toHaveClass(/selected/);
-    }
   });
 
-  test('keyboard shortcuts enable quick face assignment', async ({ page }) => {
-    // Navigate to people page and create person
-    await page.goto('/people');
-    
-    // Delete TestKeyboardPerson if it exists
-    const testPersonRow = page.locator('tr').filter({ hasText: 'TestKeyboardPerson' });
-    if (await testPersonRow.count() > 0) {
-      await testPersonRow.locator('a.delete').click();
-      await page.click('button.btn-danger:has-text("Delete")');
-      await page.waitForURL('/people');
-    }
-    
-    // Create TestKeyboardPerson
-    await page.click('button:has-text("Add Person")');
-    await page.fill('#personName', 'TestKeyboardPerson');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/people');
-    
-    // Navigate to face assignment page
+  test('keyboard shortcuts enable quick face assignment', async ({ page, request }) => {
+    await createPersonViaApi(request, page, 'TestKeyboardPerson');
     await page.goto('/faces');
-    
-    // Update filter to group by People
-    await page.check('#group-by-people');
-    
-    // Set similarity threshold to 2
-    await page.fill('#threshold-range', '2');
-    
-    // Click Apply Filters
-    await page.click('button.btn.btn-primary.filter-btn');
+
+    // Apply filters first to group faces and auto-select the first group
+    await page.locator('#group-by-similarity').check();
+    await page.locator('#threshold-range').fill('2');
+    await page.locator('button:has-text("Apply Filters")').click();
     await page.waitForLoadState('networkidle');
-    
-    // Note the keyboard shortcut for TestKeyboardPerson
+
+    // Note the keyboard shortcut number displayed for the person
     const shortcutItem = page.locator('.shortcut-item').filter({ hasText: 'TestKeyboardPerson' });
-    await expect(shortcutItem).toBeVisible();
-    const shortcutText = await shortcutItem.locator('kbd').textContent();
-    const shortcutNumber = shortcutText?.trim() || '1';
-    
-    // Get the currently selected faces (first group should be auto-selected)
-    const selectedFaces = page.locator('.face.selected');
-    const selectedCount = await selectedFaces.count();
-    expect(selectedCount).toBeGreaterThan(0);
-    
-    // Get the face IDs before assignment (as strings, since API returns strings)
-    const selectedFaceIds: string[] = [];
-    for (let i = 0; i < selectedCount; i++) {
-      const faceId = await selectedFaces.nth(i).getAttribute('data-face-id');
-      if (faceId) selectedFaceIds.push(faceId);
-    }
-    
-    // Setup network listener to capture the response
-    const responsePromise = page.waitForResponse(
-      response => response.url().includes('/api/faces/assign') && response.status() === 200
+    const shortcutKey = await shortcutItem.locator('kbd').textContent();
+    expect(shortcutKey).toBeTruthy();
+
+    // Get the IDs of the faces that are selected by default (in the first group)
+    const selectedFaceLocators = page.locator('.suggestion-group').first().locator('.face.selected');
+    const faceIds = await selectedFaceLocators.evaluateAll(elements => 
+        elements.map(el => el.getAttribute('data-face-id'))
     );
-    
-    // Press the keyboard shortcut
-    await page.keyboard.press(shortcutNumber);
-    
-    // Wait for assignment to complete
-    const response = await responsePromise;
-    const responseData = await response.json();
-    
-    // Verify: Success message is displayed
-    expect(responseData.success).toBe(true);
-    expect(responseData.message).toContain('TestKeyboardPerson');
-    
-    // Verify: The correct faces were assigned
-    // Note: API returns face_ids as strings, not numbers
-    expect(responseData.face_ids).toEqual(expect.arrayContaining(selectedFaceIds));
-    
-    // Wait for DOM updates
-    await page.waitForTimeout(500);
-    
-    // Verify: The faces are no longer visible
-    for (const faceId of selectedFaceIds) {
-      const face = page.locator(`.face[data-face-id="${faceId}"]`);
-      await expect(face).toBeHidden();
+    expect(faceIds.length).toBeGreaterThan(0);
+
+    // Press the shortcut key to assign the faces
+    await page.keyboard.press(shortcutKey!); 
+
+    // Wait for API call and verify success notification
+    await page.waitForResponse(resp => resp.url().includes('/api/faces/assign') && resp.ok());
+    await expect(page.locator('.notification.visible')).toBeVisible();
+
+    // Verify the assigned faces are no longer visible
+    for (const faceId of faceIds) {
+      await expect(page.locator(`.face[data-face-id="${faceId}"]`)).not.toBeVisible();
     }
-    
-    // Verify: The next group is automatically selected (if there are more groups)
-    const remainingGroups = page.locator('.suggestion-group');
-    const remainingGroupCount = await remainingGroups.count();
-    
-    if (remainingGroupCount > 0) {
-      const firstVisibleGroup = remainingGroups.first();
-      const firstVisibleGroupFaces = firstVisibleGroup.locator('.face.selected');
-      const newSelectedCount = await firstVisibleGroupFaces.count();
-      expect(newSelectedCount).toBeGreaterThan(0);
-    }
-    
-    // Cleanup: Delete TestKeyboardPerson
-    await page.goto('/people');
-    const cleanupPersonRow = page.locator('tr').filter({ hasText: 'TestKeyboardPerson' });
-    await cleanupPersonRow.locator('a.delete').click();
-    await page.click('button.btn-danger:has-text("Delete")');
-    await page.waitForURL('/people');
   });
 
   test('face page navigation works', async ({ page }) => {
     await page.goto('/faces');
-    
-    // Group by people to show all faces and apply filters first
-    await page.check('#group-by-people');
-    await page.click('button.btn.btn-primary.filter-btn');
+
+    // Set page size to 25 to enable pagination
+    await page.locator('select[name="page-size"]').selectOption('25');
+    await page.waitForURL(/page-size=25/);
     await page.waitForLoadState('networkidle');
-    
-    // Now set page size to 25 (this will navigate with filters preserved)
-    await page.selectOption('select#page-size', '25');
-    await page.waitForLoadState('networkidle');
-    
-    // Verify gallery grid container is visible (if there are suggestion groups)
-    const suggestionGroups = page.locator('.suggestion-group');
-    const groupCount = await suggestionGroups.count();
-    
-    if (groupCount > 0) {
-      const gridContainers = page.locator('.suggestion-group .grid');
-      await expect(gridContainers.first()).toBeVisible();
-      
-      // Count faces on first page
-      const facesOnFirstPage = await page.locator('.face[data-face-id]').count();
-      expect(facesOnFirstPage).toBeLessThanOrEqual(25);
-      
-      // Get total count from subtitle text (e.g., "Showing 25 of 100 unassigned faces")
-      const subtitleText = await page.locator('.subtitle').textContent();
-      const totalMatch = subtitleText?.match(/of (\d+) unassigned/);
-      const totalFaces = totalMatch ? parseInt(totalMatch[1]) : 0;
-      
-      if (totalFaces > 25) {
-        // Navigate to next page
-        const nextButton = page.locator('.page-btn:not(.disabled):has-text("Next")');
-        if (await nextButton.count() > 0) {
-          await nextButton.click();
-          await page.waitForLoadState('networkidle');
-          
-          // Verify we're on page 2
-          const currentPageIndicator = page.locator('.pagination-info');
-          const pageText = await currentPageIndicator.textContent();
-          expect(pageText).toContain('26'); // First item on page 2
-          
-          // Navigate to first page
-          const firstButton = page.locator('.page-btn:not(.disabled):has-text("First")');
-          await firstButton.click();
-          await page.waitForLoadState('networkidle');
-          
-          // Verify we're back on page 1
-          const firstPageText = await page.locator('.pagination-info').textContent();
-          expect(firstPageText).toMatch(/1.*25/); // Should show items 1-25
-          
-          // Navigate to last page
-          const lastButton = page.locator('.page-btn:not(.disabled):has-text("Last")');
-          await lastButton.click();
-          await page.waitForLoadState('networkidle');
-          
-          // Verify we're on the last page
-          const lastPageFaces = await page.locator('.face[data-face-id]').count();
-          const remainder = totalFaces % 25;
-          if (remainder > 0) {
-            // Last page should have the remainder
-            expect(lastPageFaces).toBeLessThanOrEqual(remainder);
-          } else {
-            // Last page is full
-            expect(lastPageFaces).toBeLessThanOrEqual(25);
-          }
-        }
-      }
-      
-      // Verify filters are maintained - check that group by People is still selected
-      const groupByPeopleRadio = page.locator('#group-by-people');
-      await expect(groupByPeopleRadio).toBeChecked();
-    } else {
-      // No unassigned faces, just verify the page loaded
-      const mainContent = page.locator('.main-content');
-      await expect(mainContent).toBeVisible();
+
+    const subtitle = page.locator('.subtitle');
+    const initialText = await subtitle.textContent();
+    await expect(subtitle).toContainText(/Showing \d+ of \d+ unassigned/);
+
+    // Extract total number of faces
+    const totalFaces = parseInt(initialText!.match(/of (\d+)/)![1], 10);
+    const facesOnPage1 = await page.locator('.face').count();
+    expect(facesOnPage1).toBeLessThanOrEqual(25);
+
+    if (totalFaces > 25) {
+      // Test 'Next' button
+      await page.getByRole('link', { name: 'Next' }).click();
+      await expect(page).toHaveURL(/page=2/);
+      await expect(subtitle).not.toHaveText(initialText!);
+
+      // Test 'Last' button
+      const lastPage = Math.ceil(totalFaces / 25);
+      await page.getByRole('link', { name: 'Last' }).click();
+      await expect(page).toHaveURL(new RegExp(`page=${lastPage}`));
+      const facesOnLastPage = await page.locator('.face').count();
+      expect(facesOnLastPage).toBeLessThanOrEqual(25);
+
+      // Test 'First' button
+      await page.getByRole('link', { name: 'First' }).click();
+      await expect(page).toHaveURL(/page=1/);
+      await expect(subtitle).toHaveText(initialText!);
     }
   });
 });

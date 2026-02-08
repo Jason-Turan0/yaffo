@@ -2,6 +2,7 @@ import {TestRunResult} from "@lib/services/isolated_runner";
 import {formatTestResultsAsXml} from "@lib/services/run_playwright_tests";
 import {Spec} from "@lib/test_generator/prompt/spec_parser.types";
 import {SpecPromptGenerator} from "@lib/test_generator/prompt/spec_prompt_generator";
+import {TestRunRecord, formatHistoryForPrompt} from "@lib/test_generator/test_result_history";
 
 export interface HealContext {
     absoluteTestFilePath: string;
@@ -12,6 +13,7 @@ export interface HealContext {
     testDescription: string;
     testContext: string;
     explanation: string;
+    testRunHistory: TestRunRecord[];
 }
 
 export class HealPromptGenerator {
@@ -145,6 +147,8 @@ export class HealPromptGenerator {
             `   <test_description>${context.testDescription}</test_description>`,
             `   <explanation>${context.explanation}</explanation>`,
             "</context>",
+            "",
+            formatHistoryForPrompt(context.testRunHistory),
             ""
         ].join("\n");
     }
@@ -163,6 +167,108 @@ export class HealPromptGenerator {
             "</current_code>",
             "",
             "<instructions>Fix the TypeScript compilation errors and provide the corrected JSON.</instructions>",
+        ].join("\n");
+    }
+
+    buildAnalysisSystemPrompt(outputSchema?: string): string {
+        const blocks = [
+            "<role>",
+            "    You are a test failure triage specialist with READ-ONLY access to filesystem tools",
+            "    and a live sandboxed website via Playwright MCP tools.",
+            "    Your job is to classify WHY a Playwright test failed — not to fix it.",
+            "</role>",
+            "",
+            "<task_objective>",
+            "    Investigate the failing test using the available tools, then classify the failure",
+            "    into one of three categories:",
+            "    - test_code_defect: The test code itself is broken (wrong selectors, logic errors, missing waits).",
+            "    - application_regression: The test is correct but the application has a real bug.",
+            "    - environment_instability: Flaky infrastructure, network timeouts, or timing issues.",
+            "</task_objective>",
+            "",
+            "<environment>",
+            `    <base_url>${this.baseUrl}</base_url>`,
+            "    <capabilities>",
+            "        - READ-ONLY file system access to application source code",
+            "        - READ-ONLY file system access to generated playwright tests",
+            "        - Access to a live sandboxed website via Playwright MCP tools",
+            "        - Memory for storing and retrieving investigation notes",
+            "    </capabilities>",
+            "</environment>",
+            "",
+            "<workflow>",
+            "    1. Review the test failures, test code, and spec provided in the prompt.",
+            "    2. Use filesystem tools to inspect relevant application source code (templates, routes, models).",
+            "    3. Use Playwright tools to interact with the live site and verify whether the application behavior matches expectations.",
+            "    4. Compare what the test expects vs what the application actually does.",
+            "    5. Check the test run history for patterns (intermittent vs consistent failures).",
+            "    6. Classify the failure and return structured JSON.",
+            "</workflow>",
+            "",
+            "<guidelines>",
+            "    1. INVESTIGATE before classifying — use tools to verify your hypothesis.",
+            "    2. Look at the error messages carefully — timeout/network errors suggest environment instability.",
+            "    3. If the same tests fail repeatedly with the same error, it's likely a defect or regression, not flakiness.",
+            "    4. If the failure matches a recently-passing pattern (was passing, now failing), lean toward regression.",
+            "    5. If the test code references selectors or behavior that doesn't match the spec, it's a test code defect.",
+            "    6. Use Playwright to check if the page renders correctly — if the app is broken, classify as application_regression.",
+            "    7. Consider the test run history trends when making your decision.",
+            "</guidelines>",
+            "",
+            "<tool_policy>",
+            "    <use_parallel_tool_calls>",
+            "        Maximize speed by making independent tool calls in parallel.",
+            "    </use_parallel_tool_calls>",
+            "</tool_policy>",
+        ];
+
+        if (outputSchema) {
+            blocks.push(
+                "",
+                "<output_format>",
+                "    When you are done investigating and ready to provide your classification,",
+                "    respond with ONLY valid JSON matching this schema (no markdown, no commentary):",
+                "    <schema>",
+                `    ${outputSchema}`,
+                "    </schema>",
+                "</output_format>",
+            );
+        }
+
+        return blocks.join("\n");
+    }
+
+    buildAnalysisPrompt(context: HealContext, allowedDirs: string[]): string {
+        const failuresXml = formatTestResultsAsXml(context.testFailures);
+        const specSection = this.specPromptGenerator.formatSpec(context.spec);
+        const historySection = formatHistoryForPrompt(context.testRunHistory);
+        const allowDirectoriesSection = this.specPromptGenerator.generateAllowedDirectories(allowedDirs);
+
+        return [
+            "<task>Classify why this Playwright test failed.</task>",
+            "",
+            ...allowDirectoriesSection,
+            "",
+            specSection,
+            "",
+            "<failing_test>",
+            `    <path>${context.absoluteTestFilePath}</path>`,
+            "    <code>",
+            context.testCode,
+            "    </code>",
+            "</failing_test>",
+            "",
+            failuresXml,
+            "",
+            historySection,
+            "",
+            "<instructions>",
+            "    Investigate the failure using the available tools. Read relevant source code,",
+            "    check the live application with Playwright, and review test history.",
+            "    Then classify the failure as one of: test_code_defect, application_regression, environment_instability.",
+            "    Provide your reasoning and list the affected test names.",
+            "    Return your response as structured JSON.",
+            "</instructions>",
         ].join("\n");
     }
 

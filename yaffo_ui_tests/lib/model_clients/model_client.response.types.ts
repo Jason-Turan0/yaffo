@@ -1,3 +1,12 @@
+export type FailureClassification = "test_code_defect" | "application_regression" | "environment_instability";
+
+export interface HealAnalysisResponse {
+  classification: FailureClassification;
+  reasoning: string;
+  affectedTests: string[];
+  suggestedAction: string;
+}
+
 export interface GeneratedTestFile {
   //The filename of the generated playwright test. Only include the file name. The system will organize the folder structure of the test files
   filename: string;

@@ -40,7 +40,7 @@ export interface ToolCallResult {
 }
 
 
-export interface ModelResponse<T = unknown> {
+export interface ModelResponse {
     text: string;
     finishReason: FinishReason;
     toolCalls: TypedToolCall<ToolSet>[];

@@ -1,13 +1,36 @@
 import {existsSync, readFileSync} from "fs";
 import {parse as parseYaml} from "yaml";
-import {Spec} from "@lib/test_generator/prompt/spec_parser.types";
+import {Spec, SpecSchema} from "@lib/test_generator/prompt/spec_parser.types";
 
 export const parseSpecFile = (specPath: string): Spec => {
-    // Read and parse spec
     if (!existsSync(specPath)) {
         throw new Error(`Spec file does not exist: ${specPath}`);
     }
+
+    if (!specPath.endsWith(".yaml") && !specPath.endsWith(".yml")) {
+        throw new Error(
+            `Expected a YAML spec file but got: ${specPath}\n` +
+            `Hint: Make sure you're passing the spec path (e.g., specs/feature.yaml).`
+        );
+    }
+
     const specContent = readFileSync(specPath, "utf-8");
-    const spec = parseYaml(specContent);
-    return spec;
+
+    let parsed: unknown;
+    try {
+        parsed = parseYaml(specContent);
+    } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        throw new Error(`Failed to parse YAML in ${specPath}: ${msg}`);
+    }
+
+    const result = SpecSchema.safeParse(parsed);
+    if (!result.success) {
+        const issues = result.error.issues
+            .map(issue => `  - ${issue.path.join(".")}: ${issue.message}`)
+            .join("\n");
+        throw new Error(`Invalid spec file ${specPath}:\n${issues}`);
+    }
+
+    return result.data;
 }
