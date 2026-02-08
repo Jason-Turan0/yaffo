@@ -11,7 +11,7 @@
     "test:unit": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
-    "isolatedEnvironment:start": "tsx lib/test_generator/isolated_runner.ts ",
+    "isolatedEnvironment:start": "tsx lib/services/isolated_runner.ts ",
     "test:heal": "tsx lib/test_generator/heal_test.ts",
     "analyze": "tsx lib/cli/analyze.ts",
     "regenerate": "tsx lib/cli/regenerate.ts",

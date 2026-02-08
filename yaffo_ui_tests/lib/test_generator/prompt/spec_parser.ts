@@ -1,6 +1,6 @@
 import {existsSync, readFileSync} from "fs";
 import {parse as parseYaml} from "yaml";
-import {Spec} from "@lib/test_generator/spec_parser.types";
+import {Spec} from "@lib/test_generator/prompt/spec_parser.types";
 
 export const parseSpecFile = (specPath: string): Spec => {
     // Read and parse spec

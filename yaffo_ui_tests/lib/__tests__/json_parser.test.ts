@@ -1,4 +1,4 @@
-import {parseJsonResponse} from '../test_generator/json_parser';
+import {parseJsonResponse} from '../test_generator/prompt/json_parser';
 import {join} from "path";
 import fs from "fs";
 

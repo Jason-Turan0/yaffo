@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import {truncateToolResultIfNeeded} from "@lib/test_generator/utils";
-import { FilesystemMcpClient, createFilesystemClient } from '../test_generator/mcp_filesystem_client';
+import { FilesystemMcpClient, createFilesystemClient } from '../tool_providers/mcp_filesystem_client';
+import {truncateToolResultIfNeeded} from "@lib/tool_providers/utils";
 
 describe('truncateToolResult', () => {
     it('should return the original string if under limit', () => {

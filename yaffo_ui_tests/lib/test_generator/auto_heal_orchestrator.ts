@@ -1,16 +1,16 @@
 import {join, resolve, basename} from "path";
 import {writeFileSync, readFileSync, existsSync} from "fs";
-import {createFilesystemClient} from "@lib/test_generator/mcp_filesystem_client";
-import {HealPromptGenerator, HealContext, healPromptGeneratorFactory} from "@lib/test_generator/heal_prompt_generator";
-import {parseSpecFile} from "@lib/test_generator/spec_parser";
+import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
+import {HealPromptGenerator, HealContext, healPromptGeneratorFactory} from "@lib/test_generator/prompt/heal_prompt_generator";
+import {parseSpecFile} from "@lib/test_generator/prompt/spec_parser";
 import {GeneratedTestResponse} from "@lib/model_clients/model_client.response.types";
-import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/json_parser";
-import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/test_generator/typescript_validator";
+import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/prompt/json_parser";
+import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/services/typescript_validator";
 import {createModelClient, supportsNativeStructuredOutput} from "@lib/model_clients/model_client_factory";
 import {zodToJsonSchema} from "zod-to-json-schema";
-import {createPlaywrightClient} from "@lib/test_generator/mcp_playwright_client";
-import {RawToolDefinition, ToolProvider} from "@lib/test_generator/toolprovider.types";
-import {TestRunResult} from "@lib/test_generator/isolated_runner";
+import {createPlaywrightClient} from "@lib/tool_providers/mcp_playwright_client";
+import {RawToolDefinition, ToolProvider} from "@lib/tool_providers/toolprovider.types";
+import {TestRunResult} from "@lib/services/isolated_runner";
 import {
     ModelAlias,
     ModelClient,
@@ -19,10 +19,8 @@ import {
     toTextPart,
     toToolResultPart
 } from "@lib/model_clients/model_client.interface";
-import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
-import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/test_generator/run_playwright_tests";
-
-const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
+import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesystem_memory_tool";
+import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/services/run_playwright_tests";
 
 export interface HealResult {
     success: boolean;
@@ -391,14 +389,11 @@ export const autoHealTestOrchestratorFactory = async (
     outputDir: string,
     model: ModelAlias,
     baseUrl: string,
-    tempDir: string,
-    fileMcpClient1: ToolProvider | undefined,
-    mcpPlaywrightClient1: ToolProvider | undefined
+    allowedDirectories: string[],
+    fileMcpClient: ToolProvider,
+    mcpPlaywrightClient: ToolProvider | undefined
 ): Promise<AutoHealTestOrchestrator> => {
-    const allowedDirectories = [YAFFO_ROOT, outputDir, tempDir];
-
-    const fileMcpClient = fileMcpClient1 == null ? await createFilesystemClient(allowedDirectories): fileMcpClient1;
-    const mcpPlaywrightClient = mcpPlaywrightClient1 == null ? await createPlaywrightClient({
+    const playwrightClient = mcpPlaywrightClient == null ? await createPlaywrightClient({
         headless: true,
         baseUrl,
         browser: "chromium",
@@ -407,10 +402,10 @@ export const autoHealTestOrchestratorFactory = async (
             saveVideo: true,
             saveSession: true
         }
-    }): mcpPlaywrightClient1;
+    }): mcpPlaywrightClient;
     const memoryTool = localFilesystemMemoryToolFactory(outputDir);
 
-    const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];
+    const toolProviders: ToolProvider[] = [fileMcpClient, playwrightClient, memoryTool];
 
     const promptGenerator = healPromptGeneratorFactory(baseUrl);
     const outputSchemaStr = supportsNativeStructuredOutput(model)
@@ -420,7 +415,7 @@ export const autoHealTestOrchestratorFactory = async (
     const modelClient = createModelClient(
         runLogDir,
         model,
-        await promptGenerator.buildSystemPrompt(outputSchemaStr),
+        promptGenerator.buildSystemPrompt(outputSchemaStr),
         rawTools,
         GeneratedTestResponseSchema,
     );

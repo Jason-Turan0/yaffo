@@ -1,7 +1,7 @@
 import "dotenv/config";
 import {join, resolve, relative} from "path";
 import {Command} from "commander";
-import {parseSpecFile} from "@lib/test_generator/spec_parser";
+import {parseSpecFile} from "@lib/test_generator/prompt/spec_parser";
 import * as fs from "node:fs";
 import {testGeneratorOrchestratorFactory} from "@lib/test_generator/test_generator_orchestrator";
 import {generateTimestampString} from "@lib/test_generator/utils";

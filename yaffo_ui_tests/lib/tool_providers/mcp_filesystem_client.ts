@@ -8,8 +8,9 @@
 import {Client} from "@modelcontextprotocol/sdk/client/index.js";
 import {StdioClientTransport} from "@modelcontextprotocol/sdk/client/stdio.js";
 import type {JSONSchema7} from "ai";
-import {CallToolReturn, RawToolDefinition, ToolProvider} from "@lib/test_generator/toolprovider.types";
-import {truncateToolResultIfNeeded} from "@lib/test_generator/utils";
+import {CallToolReturn, RawToolDefinition, ToolProvider} from "@lib/tool_providers/toolprovider.types";
+
+import {truncateToolResultIfNeeded} from "@lib/tool_providers/utils";
 
 export interface McpClientOptions {
     allowedDirectories: string[];

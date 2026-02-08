@@ -3,14 +3,14 @@ import {mkdtempSync, rmSync, existsSync} from 'fs';
 import {join} from 'path';
 import {tmpdir} from 'os';
 import {TestGeneratorOrchestrator} from '../test_generator/test_generator_orchestrator';
-import {PromptGenerator} from '../test_generator/prompt_generator';
-import {Spec} from '../test_generator/spec_parser.types';
-import {ToolProvider, CallToolReturn, RawToolDefinition} from '../test_generator/toolprovider.types';
-import {TypeScriptValidator, TypeCheckResult} from '../test_generator/typescript_validator';
+import {PromptGenerator} from '../test_generator/prompt/prompt_generator';
+import {Spec} from '../test_generator/prompt/spec_parser.types';
+import {ToolProvider, CallToolReturn, RawToolDefinition} from '../tool_providers/toolprovider.types';
+import {TypeScriptValidator, TypeCheckResult} from '../services/typescript_validator';
 import {ModelClient, ModelResponse, ModelAlias} from '../model_clients/model_client.interface';
 import {AutoHealTestOrchestrator} from '../test_generator/auto_heal_orchestrator';
-import {IsolatedEnvironment, TestRunResult} from '../test_generator/isolated_runner';
-import {PlaywrightTestRunner} from '../test_generator/run_playwright_tests';
+import {IsolatedEnvironment, TestRunResult} from '../services/isolated_runner';
+import {PlaywrightTestRunner} from '../services/run_playwright_tests';
 
 type MockFn = ReturnType<typeof jest.fn>;
 

@@ -1,7 +1,7 @@
-import {TestRunResult} from "@lib/test_generator/isolated_runner";
-import {formatTestResultsAsXml} from "@lib/test_generator/run_playwright_tests";
-import {Spec} from "@lib/test_generator/spec_parser.types";
-import {SpecPromptGenerator} from "@lib/test_generator/spec_prompt_generator";
+import {TestRunResult} from "@lib/services/isolated_runner";
+import {formatTestResultsAsXml} from "@lib/services/run_playwright_tests";
+import {Spec} from "@lib/test_generator/prompt/spec_parser.types";
+import {SpecPromptGenerator} from "@lib/test_generator/prompt/spec_prompt_generator";
 
 export interface HealContext {
     absoluteTestFilePath: string;
@@ -23,7 +23,7 @@ export class HealPromptGenerator {
         this.specPromptGenerator = new SpecPromptGenerator();
     }
 
-    async buildSystemPrompt(outputSchema?: string): Promise<string> {
+    buildSystemPrompt(outputSchema?: string): string {
         const roleBlock = [
             "<role>",
             "    You are an expert Playwright test debugger with READ-ONLY access to filesystem tools.",

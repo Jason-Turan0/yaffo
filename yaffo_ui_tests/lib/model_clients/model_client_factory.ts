@@ -1,6 +1,6 @@
 import type {z} from "zod";
 import {ModelAlias, ModelClient} from "@lib/model_clients/model_client.interface";
-import {RawToolDefinition} from "@lib/test_generator/toolprovider.types";
+import {RawToolDefinition} from "@lib/tool_providers/toolprovider.types";
 import {AnthropicModelAlias, anthropicModelClientFactory} from "@lib/model_clients/anthropic_model_client";
 import {GeminiModelAlias, geminiModelClientFactory} from "@lib/model_clients/gemini_model_client";
 

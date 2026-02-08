@@ -2,7 +2,7 @@ import {join, resolve} from "path";
 import {tmpdir} from "os";
 import {spawn} from "child_process";
 import fs, {existsSync, readFileSync, rmSync} from "fs";
-import {TestResult, TestRunResult} from "@lib/test_generator/isolated_runner";
+import {TestResult, TestRunResult} from "@lib/services/isolated_runner";
 
 const UI_TESTS_DIR = resolve(process.cwd());
 const GENERATED_TESTS_DIR = resolve(join(UI_TESTS_DIR, 'generated_tests'));

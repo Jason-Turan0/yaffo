@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type {JSONSchema7} from "ai";
-import {CallToolReturn, RawToolDefinition, ToolProvider} from "@lib/test_generator/toolprovider.types";
+import {CallToolReturn, RawToolDefinition, ToolProvider} from "@lib/tool_providers/toolprovider.types";
 
 interface ViewCommand {
     command: "view";

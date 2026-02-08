@@ -1,4 +1,5 @@
-import {Spec} from "@lib/test_generator/spec_parser.types";
+import {Spec} from "@lib/test_generator/prompt/spec_parser.types";
+import {join, resolve} from "path";
 
 export type FailureClassification = 'regression' | 'flaky' | 'superficial';
 
@@ -44,3 +45,5 @@ export interface GenerationMetadata {
   model: string;
   domContextHash?: string;
 }
+
+export const YAFFO_ROOT = resolve(join(__dirname, "../../yaffo"));

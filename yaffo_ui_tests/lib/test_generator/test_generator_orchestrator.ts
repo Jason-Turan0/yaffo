@@ -1,20 +1,20 @@
 import {join, resolve, basename} from "path";
 import {writeFileSync, existsSync, readFileSync, unlinkSync, mkdirSync} from "fs";
 import {GenerationResult} from "@lib/test_generator/index.types";
-import {Spec} from "@lib/test_generator/spec_parser.types";
-import {createFilesystemClient} from "@lib/test_generator/mcp_filesystem_client";
-import {promptGeneratorFactory, PromptGenerator} from "@lib/test_generator/prompt_generator";
+import {Spec} from "@lib/test_generator/prompt/spec_parser.types";
+import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
+import {promptGeneratorFactory, PromptGenerator} from "@lib/test_generator/prompt/prompt_generator";
 import {GeneratedTestResponse} from "@lib/model_clients/model_client.response.types";
-import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/json_parser";
-import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/test_generator/typescript_validator";
+import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/prompt/json_parser";
+import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/services/typescript_validator";
 import {createModelClient, supportsNativeStructuredOutput} from "@lib/model_clients/model_client_factory";
 import {zodToJsonSchema} from "zod-to-json-schema";
 import {
     createPlaywrightClient,
     createStubPlaywrightClient,
-} from "@lib/test_generator/mcp_playwright_client";
-import {RawToolDefinition, ToolProvider} from "@lib/test_generator/toolprovider.types";
-import {IsolatedEnvironment, startIsolatedEnvironment, TestRunResult} from "@lib/test_generator/isolated_runner";
+} from "@lib/tool_providers/mcp_playwright_client";
+import {RawToolDefinition, ToolProvider} from "@lib/tool_providers/toolprovider.types";
+import {IsolatedEnvironment, startIsolatedEnvironment, TestRunResult} from "@lib/services/isolated_runner";
 import {
     ModelAlias,
     ModelClient,
@@ -23,12 +23,11 @@ import {
     toTextPart,
     toToolResultPart
 } from "@lib/model_clients/model_client.interface";
-import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
-import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/test_generator/run_playwright_tests";
+import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesystem_memory_tool";
+import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/services/run_playwright_tests";
 import {
     AutoHealTestOrchestrator,
     autoHealTestOrchestratorFactory,
-    AutoHealTestOrchestratorFactory
 } from "@lib/test_generator/auto_heal_orchestrator";
 import {generateTimestampString} from "@lib/test_generator/utils";
 
@@ -394,7 +393,7 @@ export const testGeneratorOrchestratorFactory = async (
             outputDir,
             modelClient.model,
             baseUrl,
-            isolatedEnvironment.tempDir,
+            allowedDirectories,
             fileMcpClient,
             mcpPlaywrightClient
         )

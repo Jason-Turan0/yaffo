@@ -3,10 +3,11 @@ import {
     PlaywrightMcpClient,
     createStubPlaywrightClient,
     type McpClientLike,
-} from '../test_generator/mcp_playwright_client';
+} from '../tool_providers/mcp_playwright_client';
 import * as fs from 'fs';
 import * as path from 'path';
-import {truncateToolResultIfNeeded} from "@lib/test_generator/utils";
+
+import {truncateToolResultIfNeeded} from "@lib/tool_providers/utils";
 
 const testDataPath = path.join(process.cwd(), 'lib', '__tests__', 'test_data', 'playwright_tools.json');
 const testData = JSON.parse(fs.readFileSync(testDataPath, 'utf-8'));

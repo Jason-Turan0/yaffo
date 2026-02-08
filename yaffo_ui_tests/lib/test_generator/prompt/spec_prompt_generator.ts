@@ -1,4 +1,4 @@
-import {Spec} from "@lib/test_generator/spec_parser.types";
+import {Spec} from "@lib/test_generator/prompt/spec_parser.types";
 
 export class SpecPromptGenerator {
 

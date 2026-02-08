@@ -11,9 +11,11 @@ import "dotenv/config";
 import {join, basename, dirname, resolve} from "path";
 import {existsSync, mkdirSync, readdirSync} from "fs";
 import {autoHealTestOrchestratorFactory, HealResult} from "@lib/test_generator/auto_heal_orchestrator";
-import {runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
+import {runPlaywrightTests} from "@lib/services/run_playwright_tests";
 import {generateTimestampString} from "@lib/test_generator/utils";
-import {startIsolatedEnvironment, IsolatedEnvironment} from "@lib/test_generator/isolated_runner";
+import {startIsolatedEnvironment, IsolatedEnvironment} from "@lib/services/isolated_runner";
+import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
+import {YAFFO_ROOT} from "@lib/types";
 
 const SPECS_DIR = resolve(join(process.cwd(), "specs"));
 
@@ -76,13 +78,17 @@ export async function healTest(
         console.log(`\n❌ Test failed with ${initialResult.summary.failed} failure(s)`);
         console.log(`\n🩹 Starting auto-heal process...`);
 
+
+        const allowedDirectories = [YAFFO_ROOT, outputDir, isolatedEnvironment.tempDir];
         const healer = await autoHealTestOrchestratorFactory(
             absoluteTestPath,
             logPath,
             outputDir,
             "claude-sonnet-4-5",
             baseUrl,
-            isolatedEnvironment.tempDir
+            allowedDirectories,
+            await createFilesystemClient(allowedDirectories),
+            undefined
         );
         return await healer.healTest(initialResult, specPath);
 

@@ -11,7 +11,7 @@ import {
     ModelResponse,
     ModelMessage, UserMessage, UserToolMessage, ModelAlias,
 } from "@lib/model_clients/model_client.interface";
-import {RawToolDefinition} from "@lib/test_generator/toolprovider.types";
+import {RawToolDefinition} from "@lib/tool_providers/toolprovider.types";
 import {ApiLogEntry, CacheUsage, CostEstimate, MODEL_PRICING} from "@lib/model_clients/model_client.types";
 import _ from 'lodash';
 

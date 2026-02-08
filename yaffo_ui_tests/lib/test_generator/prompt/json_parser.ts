@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {GeneratedTestResponse} from "../model_clients/model_client.response.types";
+import {GeneratedTestResponse} from "../../model_clients/model_client.response.types";
 import * as util from "node:util";
 
 const GeneratedTestFileSchema = z.object({

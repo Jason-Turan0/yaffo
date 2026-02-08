@@ -5,7 +5,7 @@ import {
     ModelClient,
     ModelResponse,
 } from "@lib/model_clients/model_client.interface";
-import {RawToolDefinition} from "@lib/test_generator/toolprovider.types";
+import {RawToolDefinition} from "@lib/tool_providers/toolprovider.types";
 import {CacheUsage} from "@lib/model_clients/model_client.types";
 import {inspect} from "node:util";
 import {BaseModelClient} from "@lib/model_clients/base_model_client";

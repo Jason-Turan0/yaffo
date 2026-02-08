@@ -1,9 +1,9 @@
-import {Spec, ContextItem} from "@lib/test_generator/spec_parser.types";
+import {Spec, ContextItem} from "@lib/test_generator/prompt/spec_parser.types";
 import {basename, extname, join, resolve} from "path";
 import fs, {existsSync, readFileSync} from "fs";
 import {GeneratedTestResponse} from "@lib/model_clients/model_client.response.types";
-import {formatTestResultsAsXml, runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
-import {SpecPromptGenerator} from "@lib/test_generator/spec_prompt_generator";
+import {formatTestResultsAsXml, runPlaywrightTests} from "@lib/services/run_playwright_tests";
+import {SpecPromptGenerator} from "@lib/test_generator/prompt/spec_prompt_generator";
 
 interface LoadedContext {
     tag: string;
