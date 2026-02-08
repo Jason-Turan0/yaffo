@@ -3,23 +3,22 @@ import {writeFileSync, readFileSync, existsSync} from "fs";
 import {createFilesystemClient} from "@lib/test_generator/mcp_filesystem_client";
 import {HealPromptGenerator, HealContext, healPromptGeneratorFactory} from "@lib/test_generator/heal_prompt_generator";
 import {parseSpecFile} from "@lib/test_generator/spec_parser";
-import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
+import {GeneratedTestResponse} from "@lib/model_clients/model_client.response.types";
 import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/json_parser";
 import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/test_generator/typescript_validator";
-import {
-    anthropicModelClientFactory,
-    AnthropicModelAlias
-} from "@lib/test_generator/anthropic_model_client";
+import {createModelClient, supportsNativeStructuredOutput} from "@lib/model_clients/model_client_factory";
+import {zodToJsonSchema} from "zod-to-json-schema";
 import {createPlaywrightClient} from "@lib/test_generator/mcp_playwright_client";
 import {RawToolDefinition, ToolProvider} from "@lib/test_generator/toolprovider.types";
 import {TestRunResult} from "@lib/test_generator/isolated_runner";
 import {
+    ModelAlias,
     ModelClient,
     ModelResponse,
     ToolCallResult,
     toTextPart,
     toToolResultPart
-} from "@lib/test_generator/model_client.interface";
+} from "@lib/model_clients/model_client.interface";
 import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
 import {runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
 
@@ -389,7 +388,7 @@ export const autoHealTestOrchestratorFactory = async (
     testFilePath: string,
     runLogDir: string,
     outputDir: string,
-    model: AnthropicModelAlias,
+    model: ModelAlias,
     baseUrl: string,
     tempDir: string,
 ): Promise<AutoHealTestOrchestrator> => {
@@ -411,11 +410,14 @@ export const autoHealTestOrchestratorFactory = async (
     const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];
 
     const promptGenerator = healPromptGeneratorFactory(baseUrl);
+    const outputSchemaStr = supportsNativeStructuredOutput(model)
+        ? undefined
+        : JSON.stringify(zodToJsonSchema(GeneratedTestResponseSchema), null, 2);
     const rawTools = toolProviders.flatMap(provider => provider.getTools());
-    const modelClient = anthropicModelClientFactory(
+    const modelClient = createModelClient(
         runLogDir,
         model,
-        await promptGenerator.buildSystemPrompt(),
+        await promptGenerator.buildSystemPrompt(outputSchemaStr),
         rawTools,
         GeneratedTestResponseSchema,
     );

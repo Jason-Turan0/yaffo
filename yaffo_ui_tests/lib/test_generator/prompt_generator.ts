@@ -1,7 +1,7 @@
 import {Spec, ContextItem} from "@lib/test_generator/spec_parser.types";
 import {basename, extname, join, resolve} from "path";
 import fs, {existsSync, readFileSync} from "fs";
-import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
+import {GeneratedTestResponse} from "@lib/model_clients/model_client.response.types";
 import {formatTestResultsAsXml, runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
 import {SpecPromptGenerator} from "@lib/test_generator/spec_prompt_generator";
 
@@ -47,7 +47,7 @@ export class PromptGenerator {
         return foundTestFilePaths;
     }
 
-    async getSystemPrompt(): Promise<string> {
+    async getSystemPrompt(outputSchema?: string): Promise<string> {
         const existingTestFiles = this.getExistingTestFilePaths();
         const isUpdateMode = existingTestFiles.length > 0;
 
@@ -114,7 +114,16 @@ export class PromptGenerator {
             "</tool_policy>"
         ];
 
-        // Flatten all blocks into a single array
+        const outputFormatBlock = outputSchema ? [
+            "<output_format>",
+            "    When you are done using tools and ready to provide your final answer,",
+            "    respond with ONLY valid JSON matching this schema (no markdown, no commentary):",
+            "    <schema>",
+            `    ${outputSchema}`,
+            "    </schema>",
+            "</output_format>"
+        ] : [];
+
         return [
             ...roleBlock,
             "",
@@ -125,6 +134,8 @@ export class PromptGenerator {
             ...contextBlocks,
             "",
             ...instructionBlocks,
+            "",
+            ...outputFormatBlock,
         ].join("\n");
     }
 

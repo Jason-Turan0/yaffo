@@ -29,4 +29,42 @@ describe('parseJsonResponse', () => {
         expect(response).toBeNull();
         expect(schemaErrors.length).toBeGreaterThan(0);
     });
+
+    it('should extract JSON from ```json fenced code blocks', () => {
+        const json = JSON.stringify({
+            files: [{filename: 'test.spec.ts', code: 'test code', description: 'desc'}],
+            confidence: 0.85
+        });
+        const fenced = '```json\n' + json + '\n```';
+
+        const {response, schemaErrors} = parseJsonResponse(fenced);
+        expect(response).not.toBeNull();
+        expect(schemaErrors).toHaveLength(0);
+        expect(response?.files[0].filename).toBe('test.spec.ts');
+    });
+
+    it('should extract JSON from ```json blocks with preceding comments', () => {
+        const json = JSON.stringify({
+            files: [{filename: 'gallery.spec.ts', code: 'gallery code'}],
+        });
+        const withComments = 'Here is the generated test:\n\n```json\n' + json + '\n```';
+
+        const {response, schemaErrors} = parseJsonResponse(withComments);
+        expect(response).not.toBeNull();
+        expect(schemaErrors).toHaveLength(0);
+        expect(response?.files[0].filename).toBe('gallery.spec.ts');
+    });
+
+    it('should extract JSON from ```json blocks with comments before and after', () => {
+        const json = JSON.stringify({
+            files: [{filename: 'nav.spec.ts', code: 'nav code', description: 'nav test'}],
+            explanation: 'test explanation',
+        });
+        const wrapped = 'Some preamble text.\n\n```json\n' + json + '\n```\n\nSome trailing text.';
+
+        const {response, schemaErrors} = parseJsonResponse(wrapped);
+        expect(response).not.toBeNull();
+        expect(schemaErrors).toHaveLength(0);
+        expect(response?.files[0].filename).toBe('nav.spec.ts');
+    });
 });

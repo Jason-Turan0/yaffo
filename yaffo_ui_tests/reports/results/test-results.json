@@ -79,7 +79,7 @@
           "specs": [
             {
               "title": "should be able to create a new person using the quick action section",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -92,154 +92,18 @@
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 271,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:62:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 16,
-                          "line": 62
-                        },
-                        "snippet": "  60 | test.describe('Face Assignment', () => {\n  61 |   test('should be able to create a new person using the quick action section', async ({ page }) => {\n> 62 |     await page.goto('/faces');\n     |                ^\n  63 |     \n  64 |     // First, check if Obama exists and delete if so\n  65 |     const personOptions = await page.locator('#sidebar-person-select option').allTextContents();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 16,
-                            "line": 62
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  60 | test.describe('Face Assignment', () => {\n  61 |   test('should be able to create a new person using the quick action section', async ({ page }) => {\n> 62 |     await page.goto('/faces');\n     |                ^\n  63 |     \n  64 |     // First, check if Obama exists and delete if so\n  65 |     const personOptions = await page.locator('#sidebar-person-select option').allTextContents();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:62:16"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 2466,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:27.616Z",
+                      "startTime": "2026-02-08T03:48:41.036Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-bbb14-ng-the-quick-action-section-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-bbb14-ng-the-quick-action-section-chromium/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 16,
-                        "line": 62
-                      }
-                    },
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 136,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:62:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 16,
-                          "line": 62
-                        },
-                        "snippet": "  60 | test.describe('Face Assignment', () => {\n  61 |   test('should be able to create a new person using the quick action section', async ({ page }) => {\n> 62 |     await page.goto('/faces');\n     |                ^\n  63 |     \n  64 |     // First, check if Obama exists and delete if so\n  65 |     const personOptions = await page.locator('#sidebar-person-select option').allTextContents();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 16,
-                            "line": 62
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  60 | test.describe('Face Assignment', () => {\n  61 |   test('should be able to create a new person using the quick action section', async ({ page }) => {\n> 62 |     await page.goto('/faces');\n     |                ^\n  63 |     \n  64 |     // First, check if Obama exists and delete if so\n  65 |     const personOptions = await page.locator('#sidebar-person-select option').allTextContents();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:62:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-02-07T16:32:29.379Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-bbb14-ng-the-quick-action-section-chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-bbb14-ng-the-quick-action-section-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-bbb14-ng-the-quick-action-section-chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 16,
-                        "line": 62
-                      }
-                    },
-                    {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 127,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:62:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 16,
-                          "line": 62
-                        },
-                        "snippet": "  60 | test.describe('Face Assignment', () => {\n  61 |   test('should be able to create a new person using the quick action section', async ({ page }) => {\n> 62 |     await page.goto('/faces');\n     |                ^\n  63 |     \n  64 |     // First, check if Obama exists and delete if so\n  65 |     const personOptions = await page.locator('#sidebar-person-select option').allTextContents();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 16,
-                            "line": 62
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  60 | test.describe('Face Assignment', () => {\n  61 |   test('should be able to create a new person using the quick action section', async ({ page }) => {\n> 62 |     await page.goto('/faces');\n     |                ^\n  63 |     \n  64 |     // First, check if Obama exists and delete if so\n  65 |     const personOptions = await page.locator('#sidebar-person-select option').allTextContents();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:62:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2026-02-07T16:32:29.832Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-bbb14-ng-the-quick-action-section-chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-bbb14-ng-the-quick-action-section-chromium-retry2/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 16,
-                        "line": 62
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "74b764fe8023e3d0b0fe-4a7f48fdd8a050ada969",
@@ -249,7 +113,7 @@
             },
             {
               "title": "should be able to assign faces to people",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -260,156 +124,20 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 137,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:95:25",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 14,
-                          "line": 13
-                        },
-                        "snippet": "  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 14,
-                            "line": 13
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:95:25"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 1833,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:30.274Z",
+                      "startTime": "2026-02-08T03:48:43.605Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-73e0c-e-to-assign-faces-to-people-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-73e0c-e-to-assign-faces-to-people-chromium/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 14,
-                        "line": 13
-                      }
-                    },
-                    {
-                      "workerIndex": 4,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 136,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:95:25",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 14,
-                          "line": 13
-                        },
-                        "snippet": "  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 14,
-                            "line": 13
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:95:25"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-02-07T16:32:30.726Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-73e0c-e-to-assign-faces-to-people-chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-73e0c-e-to-assign-faces-to-people-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-73e0c-e-to-assign-faces-to-people-chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 14,
-                        "line": 13
-                      }
-                    },
-                    {
-                      "workerIndex": 5,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 125,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:95:25",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 14,
-                          "line": 13
-                        },
-                        "snippet": "  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 14,
-                            "line": 13
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:95:25"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2026-02-07T16:32:31.183Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-73e0c-e-to-assign-faces-to-people-chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-73e0c-e-to-assign-faces-to-people-chromium-retry2/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 14,
-                        "line": 13
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "74b764fe8023e3d0b0fe-5555224401f975373e4e",
@@ -419,7 +147,7 @@
             },
             {
               "title": "faces are automatically matched to people based on similarity",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -430,156 +158,20 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 6,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 132,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:148:25",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 14,
-                          "line": 13
-                        },
-                        "snippet": "  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 14,
-                            "line": 13
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:148:25"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 4674,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:31.626Z",
+                      "startTime": "2026-02-08T03:48:45.442Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-a36ec--people-based-on-similarity-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-a36ec--people-based-on-similarity-chromium/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 14,
-                        "line": 13
-                      }
-                    },
-                    {
-                      "workerIndex": 7,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 138,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:148:25",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 14,
-                          "line": 13
-                        },
-                        "snippet": "  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 14,
-                            "line": 13
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:148:25"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-02-07T16:32:32.074Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-a36ec--people-based-on-similarity-chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-a36ec--people-based-on-similarity-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-a36ec--people-based-on-similarity-chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 14,
-                        "line": 13
-                      }
-                    },
-                    {
-                      "workerIndex": 8,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 126,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:148:25",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 14,
-                          "line": 13
-                        },
-                        "snippet": "  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 14,
-                            "line": 13
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  11 | // Helper function to ensure person exists (create if needed)\n  12 | async function ensurePersonExists(page: Page, personName: string): Promise<PersonInfo> {\n> 13 |   await page.goto('/faces');\n     |              ^\n  14 |   \n  15 |   // Check if person exists in dropdown by getting all option text\n  16 |   // Note: Options in select elements are hidden by default, cannot use waitForSelector with visible\n    at ensurePersonExists (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:13:14)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:148:25"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2026-02-07T16:32:32.534Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-a36ec--people-based-on-similarity-chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-a36ec--people-based-on-similarity-chromium-retry2/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 14,
-                        "line": 13
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "74b764fe8023e3d0b0fe-78bff7844cc04832bc36",
@@ -589,7 +181,7 @@
             },
             {
               "title": "similar faces are grouped together",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -600,156 +192,20 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 9,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 133,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:216:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 16,
-                          "line": 216
-                        },
-                        "snippet": "  214 |\n  215 |   test('similar faces are grouped together', async ({ page }) => {\n> 216 |     await page.goto('/faces');\n      |                ^\n  217 |     \n  218 |     // Update filter to group by Similarity\n  219 |     await page.check('#group-by-similarity');"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 16,
-                            "line": 216
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  214 |\n  215 |   test('similar faces are grouped together', async ({ page }) => {\n> 216 |     await page.goto('/faces');\n      |                ^\n  217 |     \n  218 |     // Update filter to group by Similarity\n  219 |     await page.check('#group-by-similarity');\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:216:16"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 971,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:32.991Z",
+                      "startTime": "2026-02-08T03:48:50.120Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-d2a55--faces-are-grouped-together-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-d2a55--faces-are-grouped-together-chromium/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 16,
-                        "line": 216
-                      }
-                    },
-                    {
-                      "workerIndex": 10,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 132,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:216:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 16,
-                          "line": 216
-                        },
-                        "snippet": "  214 |\n  215 |   test('similar faces are grouped together', async ({ page }) => {\n> 216 |     await page.goto('/faces');\n      |                ^\n  217 |     \n  218 |     // Update filter to group by Similarity\n  219 |     await page.check('#group-by-similarity');"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 16,
-                            "line": 216
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  214 |\n  215 |   test('similar faces are grouped together', async ({ page }) => {\n> 216 |     await page.goto('/faces');\n      |                ^\n  217 |     \n  218 |     // Update filter to group by Similarity\n  219 |     await page.check('#group-by-similarity');\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:216:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-02-07T16:32:33.432Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-d2a55--faces-are-grouped-together-chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-d2a55--faces-are-grouped-together-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-d2a55--faces-are-grouped-together-chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 16,
-                        "line": 216
-                      }
-                    },
-                    {
-                      "workerIndex": 11,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 135,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:216:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 16,
-                          "line": 216
-                        },
-                        "snippet": "  214 |\n  215 |   test('similar faces are grouped together', async ({ page }) => {\n> 216 |     await page.goto('/faces');\n      |                ^\n  217 |     \n  218 |     // Update filter to group by Similarity\n  219 |     await page.check('#group-by-similarity');"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 16,
-                            "line": 216
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/faces\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/faces\", waiting until \"load\"\u001b[22m\n\n\n  214 |\n  215 |   test('similar faces are grouped together', async ({ page }) => {\n> 216 |     await page.goto('/faces');\n      |                ^\n  217 |     \n  218 |     // Update filter to group by Similarity\n  219 |     await page.check('#group-by-similarity');\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:216:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2026-02-07T16:32:33.889Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-d2a55--faces-are-grouped-together-chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-d2a55--faces-are-grouped-together-chromium-retry2/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 16,
-                        "line": 216
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "74b764fe8023e3d0b0fe-6fd4dc0c7a9ecdc5f3c4",
@@ -759,7 +215,7 @@
             },
             {
               "title": "keyboard shortcuts enable quick face assignment",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -770,161 +226,59 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 12,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 129,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/people\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/people\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/people\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/people\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:256:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 16,
-                          "line": 256
-                        },
-                        "snippet": "  254 |   test('keyboard shortcuts enable quick face assignment', async ({ page }) => {\n  255 |     // Navigate to people page and create person\n> 256 |     await page.goto('/people');\n      |                ^\n  257 |     \n  258 |     // Delete TestKeyboardPerson if it exists\n  259 |     const testPersonRow = page.locator('tr').filter({ hasText: 'TestKeyboardPerson' });"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 16,
-                            "line": 256
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/people\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/people\", waiting until \"load\"\u001b[22m\n\n\n  254 |   test('keyboard shortcuts enable quick face assignment', async ({ page }) => {\n  255 |     // Navigate to people page and create person\n> 256 |     await page.goto('/people');\n      |                ^\n  257 |     \n  258 |     // Delete TestKeyboardPerson if it exists\n  259 |     const testPersonRow = page.locator('tr').filter({ hasText: 'TestKeyboardPerson' });\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:256:16"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 2267,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:34.344Z",
+                      "startTime": "2026-02-08T03:48:51.094Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-e6868-nable-quick-face-assignment-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-e6868-nable-quick-face-assignment-chromium/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 16,
-                        "line": 256
-                      }
-                    },
-                    {
-                      "workerIndex": 13,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 149,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/people\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/people\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/people\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/people\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:256:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 16,
-                          "line": 256
-                        },
-                        "snippet": "  254 |   test('keyboard shortcuts enable quick face assignment', async ({ page }) => {\n  255 |     // Navigate to people page and create person\n> 256 |     await page.goto('/people');\n      |                ^\n  257 |     \n  258 |     // Delete TestKeyboardPerson if it exists\n  259 |     const testPersonRow = page.locator('tr').filter({ hasText: 'TestKeyboardPerson' });"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 16,
-                            "line": 256
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/people\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/people\", waiting until \"load\"\u001b[22m\n\n\n  254 |   test('keyboard shortcuts enable quick face assignment', async ({ page }) => {\n  255 |     // Navigate to people page and create person\n> 256 |     await page.goto('/people');\n      |                ^\n  257 |     \n  258 |     // Delete TestKeyboardPerson if it exists\n  259 |     const testPersonRow = page.locator('tr').filter({ hasText: 'TestKeyboardPerson' });\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:256:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-02-07T16:32:34.796Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-e6868-nable-quick-face-assignment-chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-e6868-nable-quick-face-assignment-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-e6868-nable-quick-face-assignment-chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 16,
-                        "line": 256
-                      }
-                    },
-                    {
-                      "workerIndex": 14,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 123,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/people\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/people\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/people\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/people\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:256:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                          "column": 16,
-                          "line": 256
-                        },
-                        "snippet": "  254 |   test('keyboard shortcuts enable quick face assignment', async ({ page }) => {\n  255 |     // Navigate to people page and create person\n> 256 |     await page.goto('/people');\n      |                ^\n  257 |     \n  258 |     // Delete TestKeyboardPerson if it exists\n  259 |     const testPersonRow = page.locator('tr').filter({ hasText: 'TestKeyboardPerson' });"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                            "column": 16,
-                            "line": 256
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/people\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/people\", waiting until \"load\"\u001b[22m\n\n\n  254 |   test('keyboard shortcuts enable quick face assignment', async ({ page }) => {\n  255 |     // Navigate to people page and create person\n> 256 |     await page.goto('/people');\n      |                ^\n  257 |     \n  258 |     // Delete TestKeyboardPerson if it exists\n  259 |     const testPersonRow = page.locator('tr').filter({ hasText: 'TestKeyboardPerson' });\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:256:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2026-02-07T16:32:35.269Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-e6868-nable-quick-face-assignment-chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-e6868-nable-quick-face-assignment-chromium-retry2/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
-                        "column": 16,
-                        "line": 256
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "74b764fe8023e3d0b0fe-b546ac28bfdaba5f72c7",
               "file": "face_assignment/face-assignment.spec.ts",
               "line": 254,
+              "column": 3
+            },
+            {
+              "title": "face page navigation works",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1056,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-08T03:48:53.365Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-9f19be366c14c4bf7df0",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 351,
               "column": 3
             }
           ]
@@ -946,7 +300,7 @@
           "specs": [
             {
               "title": "photo_details_face_hover_highlights",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -957,156 +311,20 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 15,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 130,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/7\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/7\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/7\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/7\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_face_hover_highlights', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/7\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/7\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_face_hover_highlights', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts:8:16"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 741,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:35.712Z",
+                      "startTime": "2026-02-08T03:48:54.427Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b7d77-tails-face-hover-highlights-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b7d77-tails-face-hover-highlights-chromium/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
-                    },
-                    {
-                      "workerIndex": 16,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 133,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/7\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/7\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/7\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/7\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_face_hover_highlights', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/7\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/7\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_face_hover_highlights', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts:8:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-02-07T16:32:36.161Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b7d77-tails-face-hover-highlights-chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b7d77-tails-face-hover-highlights-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b7d77-tails-face-hover-highlights-chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
-                    },
-                    {
-                      "workerIndex": 17,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 139,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/7\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/7\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/7\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/7\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_face_hover_highlights', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/7\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/7\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_face_hover_highlights', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts:8:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2026-02-07T16:32:36.619Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b7d77-tails-face-hover-highlights-chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b7d77-tails-face-hover-highlights-chromium-retry2/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-face-hover.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "d4ce30755cb25ec20271-44856b3bef26f6caebb8",
@@ -1133,7 +351,7 @@
           "specs": [
             {
               "title": "photo_details_displays_file_information",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -1144,156 +362,20 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 18,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 131,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_displays_file_information', async ({ page, baseURL }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Verify page loads successfully\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_displays_file_information', async ({ page, baseURL }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Verify page loads successfully\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts:8:16"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 347,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:37.079Z",
+                      "startTime": "2026-02-08T03:48:55.174Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-ea9d0-s-displays-file-information-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-ea9d0-s-displays-file-information-chromium/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
-                    },
-                    {
-                      "workerIndex": 19,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 142,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_displays_file_information', async ({ page, baseURL }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Verify page loads successfully\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_displays_file_information', async ({ page, baseURL }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Verify page loads successfully\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts:8:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-02-07T16:32:37.533Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-ea9d0-s-displays-file-information-chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-ea9d0-s-displays-file-information-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-ea9d0-s-displays-file-information-chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
-                    },
-                    {
-                      "workerIndex": 20,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 140,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_displays_file_information', async ({ page, baseURL }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Verify page loads successfully\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_displays_file_information', async ({ page, baseURL }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Verify page loads successfully\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts:8:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2026-02-07T16:32:38.018Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-ea9d0-s-displays-file-information-chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-ea9d0-s-displays-file-information-chromium-retry2/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-file-info.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "099ff410d43e7e9f2ab9-6d6a20d2ba3cc07cef1a",
@@ -1320,7 +402,7 @@
           "specs": [
             {
               "title": "photo_details_location_section_works",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -1331,156 +413,20 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 21,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 127,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_location_section_works', async ({ page, context }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_location_section_works', async ({ page, context }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts:8:16"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 312,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:38.482Z",
+                      "startTime": "2026-02-08T03:48:55.528Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b3bec-ails-location-section-works-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b3bec-ails-location-section-works-chromium/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
-                    },
-                    {
-                      "workerIndex": 22,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 131,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_location_section_works', async ({ page, context }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_location_section_works', async ({ page, context }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts:8:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-02-07T16:32:38.933Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b3bec-ails-location-section-works-chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b3bec-ails-location-section-works-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b3bec-ails-location-section-works-chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
-                    },
-                    {
-                      "workerIndex": 23,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 138,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_location_section_works', async ({ page, context }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_location_section_works', async ({ page, context }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts:8:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2026-02-07T16:32:39.391Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b3bec-ails-location-section-works-chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-b3bec-ails-location-section-works-chromium-retry2/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-location.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "c5a67b5feb266ff41403-fdad3cf07884d2351aa0",
@@ -1507,7 +453,7 @@
           "specs": [
             {
               "title": "photo_details_displays_people_and_faces",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -1518,156 +464,20 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 24,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 128,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_displays_people_and_faces', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for the page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_displays_people_and_faces', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for the page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts:8:16"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 328,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:39.847Z",
+                      "startTime": "2026-02-08T03:48:55.847Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-fe909-s-displays-people-and-faces-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-fe909-s-displays-people-and-faces-chromium/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
-                    },
-                    {
-                      "workerIndex": 25,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 133,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_displays_people_and_faces', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for the page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_displays_people_and_faces', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for the page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts:8:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-02-07T16:32:40.296Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-fe909-s-displays-people-and-faces-chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-fe909-s-displays-people-and-faces-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-fe909-s-displays-people-and-faces-chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
-                    },
-                    {
-                      "workerIndex": 26,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 141,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts:8:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts",
-                          "column": 16,
-                          "line": 8
-                        },
-                        "snippet": "   6 |   test('photo_details_displays_people_and_faces', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for the page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts",
-                            "column": 16,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n   6 |   test('photo_details_displays_people_and_faces', async ({ page }) => {\n   7 |     // Navigate to the photo details page\n>  8 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n   9 |\n  10 |     // Wait for the page to load\n  11 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts:8:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2026-02-07T16:32:40.754Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-fe909-s-displays-people-and-faces-chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-fe909-s-displays-people-and-faces-chromium-retry2/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-people-faces.spec.ts",
-                        "column": 16,
-                        "line": 8
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "8ab83a3f8c669ec163c2-c3af01c2bf9dbdf429bd",
@@ -1694,6 +504,125 @@
           "specs": [
             {
               "title": "photo_details_can_edit_tags",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1053,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-08T03:48:56.185Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "677e0399e1ea35087752-cc389d568fce06204844",
+              "file": "photo_details/photo-details-tags.spec.ts",
+              "line": 21,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "photo_gallery/memories/photo_gallery.spec.ts",
+      "file": "photo_gallery/memories/photo_gallery.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Photo Gallery Feature",
+          "file": "photo_gallery/memories/photo_gallery.spec.ts",
+          "line": 14,
+          "column": 6,
+          "specs": [
+            {
+              "title": "gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 455,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-08T03:48:57.248Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "1c79058ac9a0b031337d-02b8190d2e045cbcb2a3",
+              "file": "photo_gallery/memories/photo_gallery.spec.ts",
+              "line": 19,
+              "column": 3
+            },
+            {
+              "title": "gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 603,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-08T03:48:57.706Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "1c79058ac9a0b031337d-0c83b302fc6432264edd",
+              "file": "photo_gallery/memories/photo_gallery.spec.ts",
+              "line": 32,
+              "column": 3
+            },
+            {
+              "title": "gallery_page_navigation_works - Verify that the page navigation works",
               "ok": false,
               "tags": [],
               "tests": [
@@ -1705,161 +634,152 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 27,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 128,
+                      "status": "timedOut",
+                      "duration": 5290,
                       "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts:23:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts",
-                          "column": 16,
-                          "line": 23
-                        },
-                        "snippet": "  21 |   test('photo_details_can_edit_tags', async ({ page, request }) => {\n  22 |     // Navigate to the photo details page\n> 23 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n  24 |\n  25 |     // Wait for page to load\n  26 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
+                        "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
                       },
                       "errors": [
                         {
+                          "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
+                        },
+                        {
                           "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts",
-                            "column": 16,
-                            "line": 23
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts",
+                            "column": 26,
+                            "line": 80
                           },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n  21 |   test('photo_details_can_edit_tags', async ({ page, request }) => {\n  22 |     // Navigate to the photo details page\n> 23 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n  24 |\n  25 |     // Wait for page to load\n  26 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts:23:16"
+                          "message": "Error: locator.selectOption: Test timeout of 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#page-size')\u001b[22m\n\u001b[2m    - locator resolved to <select id=\"page-size\" name=\"page-size\" onchange=\"window.location.href = this.value\">…</select>\u001b[22m\n\u001b[2m  - attempting select option action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    10 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m       - did not find some options\u001b[22m\n\u001b[2m     - retrying select option action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n\n\u001b[0m \u001b[90m 78 |\u001b[39m     \u001b[36mconst\u001b[39m photoGrid \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-grid'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 79 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 80 |\u001b[39m     \u001b[36mawait\u001b[39m pageSizeSelect\u001b[33m.\u001b[39mselectOption({ value\u001b[33m:\u001b[39m \u001b[32m'10'\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 81 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'**/page-size=10**'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 82 |\u001b[39m\n \u001b[90m 83 |\u001b[39m     \u001b[36mconst\u001b[39m firstPageCount \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m photoGrid\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mcount()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts:80:26\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:41.216Z",
+                      "startTime": "2026-02-08T03:48:58.313Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-7305b-photo-details-can-edit-tags-chromium/test-failed-1.png"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium/test-failed-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-7305b-photo-details-can-edit-tags-chromium/video.webm"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium/error-context.md"
                         }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts",
-                        "column": 16,
-                        "line": 23
-                      }
+                      ]
                     },
                     {
-                      "workerIndex": 28,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 146,
+                      "status": "timedOut",
+                      "duration": 5338,
                       "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts:23:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts",
-                          "column": 16,
-                          "line": 23
-                        },
-                        "snippet": "  21 |   test('photo_details_can_edit_tags', async ({ page, request }) => {\n  22 |     // Navigate to the photo details page\n> 23 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n  24 |\n  25 |     // Wait for page to load\n  26 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
+                        "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
                       },
                       "errors": [
                         {
+                          "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
+                        },
+                        {
                           "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts",
-                            "column": 16,
-                            "line": 23
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts",
+                            "column": 26,
+                            "line": 80
                           },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n  21 |   test('photo_details_can_edit_tags', async ({ page, request }) => {\n  22 |     // Navigate to the photo details page\n> 23 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n  24 |\n  25 |     // Wait for page to load\n  26 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts:23:16"
+                          "message": "Error: locator.selectOption: Test timeout of 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#page-size')\u001b[22m\n\u001b[2m    - locator resolved to <select id=\"page-size\" name=\"page-size\" onchange=\"window.location.href = this.value\">…</select>\u001b[22m\n\u001b[2m  - attempting select option action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    10 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m       - did not find some options\u001b[22m\n\u001b[2m     - retrying select option action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n\n\u001b[0m \u001b[90m 78 |\u001b[39m     \u001b[36mconst\u001b[39m photoGrid \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-grid'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 79 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 80 |\u001b[39m     \u001b[36mawait\u001b[39m pageSizeSelect\u001b[33m.\u001b[39mselectOption({ value\u001b[33m:\u001b[39m \u001b[32m'10'\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 81 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'**/page-size=10**'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 82 |\u001b[39m\n \u001b[90m 83 |\u001b[39m     \u001b[36mconst\u001b[39m firstPageCount \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m photoGrid\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mcount()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts:80:26\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 1,
-                      "startTime": "2026-02-07T16:32:41.667Z",
+                      "startTime": "2026-02-08T03:49:03.905Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-7305b-photo-details-can-edit-tags-chromium-retry1/test-failed-1.png"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry1/test-failed-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-7305b-photo-details-can-edit-tags-chromium-retry1/video.webm"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry1/error-context.md"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-7305b-photo-details-can-edit-tags-chromium-retry1/trace.zip"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry1/trace.zip"
                         }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts",
-                        "column": 16,
-                        "line": 23
-                      }
+                      ]
                     },
                     {
-                      "workerIndex": 29,
+                      "workerIndex": 2,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 139,
+                      "status": "timedOut",
+                      "duration": 5249,
                       "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts:23:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts",
-                          "column": 16,
-                          "line": 23
-                        },
-                        "snippet": "  21 |   test('photo_details_can_edit_tags', async ({ page, request }) => {\n  22 |     // Navigate to the photo details page\n> 23 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n  24 |\n  25 |     // Wait for page to load\n  26 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();"
+                        "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
                       },
                       "errors": [
                         {
+                          "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
+                        },
+                        {
                           "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts",
-                            "column": 16,
-                            "line": 23
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts",
+                            "column": 26,
+                            "line": 80
                           },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/photo/view/14\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/photo/view/14\", waiting until \"load\"\u001b[22m\n\n\n  21 |   test('photo_details_can_edit_tags', async ({ page, request }) => {\n  22 |     // Navigate to the photo details page\n> 23 |     await page.goto(`/photo/view/${PHOTO_ID}`);\n     |                ^\n  24 |\n  25 |     // Wait for page to load\n  26 |     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts:23:16"
+                          "message": "Error: locator.selectOption: Test timeout of 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#page-size')\u001b[22m\n\u001b[2m    - locator resolved to <select id=\"page-size\" name=\"page-size\" onchange=\"window.location.href = this.value\">…</select>\u001b[22m\n\u001b[2m  - attempting select option action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    10 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m       - did not find some options\u001b[22m\n\u001b[2m     - retrying select option action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n\n\u001b[0m \u001b[90m 78 |\u001b[39m     \u001b[36mconst\u001b[39m photoGrid \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-grid'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 79 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 80 |\u001b[39m     \u001b[36mawait\u001b[39m pageSizeSelect\u001b[33m.\u001b[39mselectOption({ value\u001b[33m:\u001b[39m \u001b[32m'10'\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 81 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'**/page-size=10**'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 82 |\u001b[39m\n \u001b[90m 83 |\u001b[39m     \u001b[36mconst\u001b[39m firstPageCount \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m photoGrid\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mcount()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts:80:26\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 2,
-                      "startTime": "2026-02-07T16:32:42.138Z",
+                      "startTime": "2026-02-08T03:49:09.837Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-7305b-photo-details-can-edit-tags-chromium-retry2/test-failed-1.png"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry2/test-failed-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_details-photo-detail-7305b-photo-details-can-edit-tags-chromium-retry2/video.webm"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry2/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry2/error-context.md"
                         }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_details/photo-details-tags.spec.ts",
-                        "column": 16,
-                        "line": 23
-                      }
+                      ]
                     }
                   ],
                   "status": "unexpected"
                 }
               ],
-              "id": "677e0399e1ea35087752-cc389d568fce06204844",
-              "file": "photo_details/photo-details-tags.spec.ts",
-              "line": 21,
+              "id": "1c79058ac9a0b031337d-725548a91e4940c16905",
+              "file": "photo_gallery/memories/photo_gallery.spec.ts",
+              "line": 73,
               "column": 3
             }
           ]
@@ -1881,7 +801,7 @@
           "specs": [
             {
               "title": "gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -1892,156 +812,20 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 30,
+                      "workerIndex": 3,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 129,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                          "column": 16,
-                          "line": 6
-                        },
-                        "snippet": "  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                            "column": 16,
-                            "line": 6
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 453,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:42.598Z",
+                      "startTime": "2026-02-08T03:49:15.408Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                        "column": 16,
-                        "line": 6
-                      }
-                    },
-                    {
-                      "workerIndex": 31,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 131,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                          "column": 16,
-                          "line": 6
-                        },
-                        "snippet": "  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                            "column": 16,
-                            "line": 6
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-02-07T16:32:43.046Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                        "column": 16,
-                        "line": 6
-                      }
-                    },
-                    {
-                      "workerIndex": 32,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 135,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                          "column": 16,
-                          "line": 6
-                        },
-                        "snippet": "  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                            "column": 16,
-                            "line": 6
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2026-02-07T16:32:43.506Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium-retry2/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                        "column": 16,
-                        "line": 6
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "471d0833fad5445aea7e-12319756122df01d8746",
@@ -2051,7 +835,7 @@
             },
             {
               "title": "gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -2062,161 +846,59 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 33,
+                      "workerIndex": 3,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 130,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                          "column": 16,
-                          "line": 6
-                        },
-                        "snippet": "  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                            "column": 16,
-                            "line": 6
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 1624,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-07T16:32:43.962Z",
+                      "startTime": "2026-02-08T03:49:15.957Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                        "column": 16,
-                        "line": 6
-                      }
-                    },
-                    {
-                      "workerIndex": 34,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 131,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                          "column": 16,
-                          "line": 6
-                        },
-                        "snippet": "  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                            "column": 16,
-                            "line": 6
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-02-07T16:32:44.412Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium-retry1/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium-retry1/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                        "column": 16,
-                        "line": 6
-                      }
-                    },
-                    {
-                      "workerIndex": 35,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 134,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                          "column": 16,
-                          "line": 6
-                        },
-                        "snippet": "  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                            "column": 16,
-                            "line": 6
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Navigate to home page before each test\n> 6 |     await page.goto('/');\n    |                ^\n  7 |     // Wait for the photo grid to be visible\n  8 |     await page.waitForSelector('.photo-grid', { timeout: 5000 });\n  9 |   });\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:6:16"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 2,
-                      "startTime": "2026-02-07T16:32:44.874Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium-retry2/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium-retry2/video.webm"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
-                        "column": 16,
-                        "line": 6
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "471d0833fad5445aea7e-9d78d8b97cfa643c3db9",
               "file": "photo_gallery/photo_gallery.spec.ts",
               "line": 80,
+              "column": 3
+            },
+            {
+              "title": "gallery_page_navigation_works - Verify that the page navigation works",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2664,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-08T03:49:17.585Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-c2aefbf64dc2ad57a7dd",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 175,
               "column": 3
             }
           ]
@@ -2226,11 +908,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-02-07T16:32:27.343Z",
-    "duration": 17774.953,
-    "expected": 0,
+    "startTime": "2026-02-08T03:48:40.786Z",
+    "duration": 39488.229,
+    "expected": 16,
     "skipped": 0,
-    "unexpected": 12,
+    "unexpected": 1,
     "flaky": 0
   }
 }

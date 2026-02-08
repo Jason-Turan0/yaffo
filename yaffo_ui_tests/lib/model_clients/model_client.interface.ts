@@ -5,7 +5,7 @@ import {
 } from "ai";
 import type {LanguageModelUsage, FinishReason} from "ai";
 import type {z} from "zod";
-import {ToolCall} from "@lib/test_generator/model_client.types";
+import {ToolCall} from "@lib/model_clients/model_client.types";
 import {AssistantModelMessage, TextPart, ToolResultPart} from "@ai-sdk/provider-utils";
 
 export type {
@@ -24,7 +24,8 @@ export type ModelAlias =
     | "gpt-4o-mini"
     | "gpt-4-turbo"
     | "gemini-2.0-flash"
-    | "gemini-1.5-pro"
+    | "gemini-2.5-flash"
+    | "gemini-2.5-pro"
     | "deepseek-chat"
     | "deepseek-reasoner";
 
@@ -45,7 +46,6 @@ export interface ModelResponse<T = unknown> {
     toolCalls: TypedToolCall<ToolSet>[];
     usage: LanguageModelUsage;
     responseMessages: ModelMessage[];
-    output?: T;
 }
 
 export interface ModelClientConfig {

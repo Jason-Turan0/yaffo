@@ -23,7 +23,7 @@ export class HealPromptGenerator {
         this.specPromptGenerator = new SpecPromptGenerator();
     }
 
-    async buildSystemPrompt(): Promise<string> {
+    async buildSystemPrompt(outputSchema?: string): Promise<string> {
         const roleBlock = [
             "<role>",
             "    You are an expert Playwright test debugger with READ-ONLY access to filesystem tools.",
@@ -78,6 +78,16 @@ export class HealPromptGenerator {
             "</tool_policy>"
         ];
 
+        const outputFormatBlock = outputSchema ? [
+            "<output_format>",
+            "    When you are done using tools and ready to provide your final answer,",
+            "    respond with ONLY valid JSON matching this schema (no markdown, no commentary):",
+            "    <schema>",
+            `    ${outputSchema}`,
+            "    </schema>",
+            "</output_format>"
+        ] : [];
+
         return [
             ...roleBlock,
             "",
@@ -90,6 +100,8 @@ export class HealPromptGenerator {
             ...guidelinesBlock,
             "",
             ...toolPolicyBlock,
+            "",
+            ...outputFormatBlock,
         ].join("\n");
     }
 

@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {GeneratedTestResponse} from "./model_client.response.types";
+import {GeneratedTestResponse} from "../model_clients/model_client.response.types";
 import * as util from "node:util";
 
 const GeneratedTestFileSchema = z.object({
@@ -31,10 +31,28 @@ const formatZodErrors = (error: z.ZodError): string[] => {
     });
 };
 
+const extractJson = (text: string): string => {
+    const trimmed = text.trim();
+    try {
+        JSON.parse(trimmed);
+        return trimmed;
+    } catch {
+        // not pure JSON — try to extract from ```json ``` fenced blocks
+    }
+
+    const match = trimmed.match(/```json\s*([\s\S]*?)```/);
+    if (match) {
+        return match[1].trim();
+    }
+
+    return trimmed;
+};
+
 export const parseJsonResponse = <T = GeneratedTestResponse>(jsonText: string): ParseResult<T> => {
+    const extracted = extractJson(jsonText);
     let parsed: unknown;
     try {
-        parsed = JSON.parse(jsonText);
+        parsed = JSON.parse(extracted);
     } catch (e) {
         return {response: null, schemaErrors: ["No valid JSON found in response", util.inspect(e)]};
     }

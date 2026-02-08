@@ -4,13 +4,11 @@ import {GenerationResult} from "@lib/test_generator/index.types";
 import {Spec} from "@lib/test_generator/spec_parser.types";
 import {createFilesystemClient} from "@lib/test_generator/mcp_filesystem_client";
 import {promptGeneratorFactory, PromptGenerator} from "@lib/test_generator/prompt_generator";
-import {GeneratedTestResponse} from "@lib/test_generator/model_client.response.types";
+import {GeneratedTestResponse} from "@lib/model_clients/model_client.response.types";
 import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/json_parser";
 import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/test_generator/typescript_validator";
-import {
-    anthropicModelClientFactory,
-    AnthropicModelAlias
-} from "@lib/test_generator/anthropic_model_client";
+import {createModelClient, supportsNativeStructuredOutput} from "@lib/model_clients/model_client_factory";
+import {zodToJsonSchema} from "zod-to-json-schema";
 import {
     createPlaywrightClient,
     createStubPlaywrightClient,
@@ -18,12 +16,13 @@ import {
 import {RawToolDefinition, ToolProvider} from "@lib/test_generator/toolprovider.types";
 import {IsolatedEnvironment, startIsolatedEnvironment, TestRunResult} from "@lib/test_generator/isolated_runner";
 import {
+    ModelAlias,
     ModelClient,
     ModelResponse,
     ToolCallResult,
     toTextPart,
     toToolResultPart
-} from "@lib/test_generator/model_client.interface";
+} from "@lib/model_clients/model_client.interface";
 import {localFilesystemMemoryToolFactory} from "@lib/test_generator/local_filesystem_memory_tool";
 import {runPlaywrightTests} from "@lib/test_generator/run_playwright_tests";
 import {
@@ -185,7 +184,7 @@ export class TestGeneratorOrchestrator {
                             absoluteTestPath,
                             logPath,
                             this.outputDir,
-                            this.modelClient.model as AnthropicModelAlias,
+                            this.modelClient.model,
                             this.baseUrl,
                             this.isolatedEnvironment.tempDir
                         );
@@ -350,7 +349,7 @@ export const testGeneratorOrchestratorFactory = async (
     spec: Spec,
     runLogDir: string,
     outputDir: string,
-    model: AnthropicModelAlias,
+    model: ModelAlias,
     baseUrl: string,
     runTestEnvironment: boolean,
     port: number,
@@ -378,11 +377,14 @@ export const testGeneratorOrchestratorFactory = async (
     const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];
 
     const promptGenerator = promptGeneratorFactory(runTestEnvironment, baseUrl, YAFFO_ROOT, outputDir, spec);
+    const outputSchemaStr = supportsNativeStructuredOutput(model)
+        ? undefined
+        : JSON.stringify(zodToJsonSchema(GeneratedTestResponseSchema), null, 2);
     const rawTools = toolProviders.flatMap(provider => provider.getTools());
-    const modelClient = anthropicModelClientFactory(
+    const modelClient = createModelClient(
         runLogDir,
         model,
-        await promptGenerator.getSystemPrompt(),
+        await promptGenerator.getSystemPrompt(outputSchemaStr),
         rawTools,
         GeneratedTestResponseSchema,
     );

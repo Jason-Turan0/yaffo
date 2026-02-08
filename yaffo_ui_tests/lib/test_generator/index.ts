@@ -1,14 +1,11 @@
-/**
- * Test Generator - Converts YAML specs to Playwright tests using Claude API
- *
- * Supports MCP integration for filesystem access to read source code context.
- */
 import "dotenv/config";
-import {join, basename, resolve, dirname, relative} from "path";
+import {join, resolve, relative} from "path";
+import {Command} from "commander";
 import {parseSpecFile} from "@lib/test_generator/spec_parser";
 import * as fs from "node:fs";
 import {testGeneratorOrchestratorFactory} from "@lib/test_generator/test_generator_orchestrator";
 import {generateTimestampString} from "@lib/test_generator/utils";
+import {ModelAlias} from "@lib/model_clients/model_client.interface";
 
 const SPECS_DIR = resolve(join(process.cwd(), "specs"));
 const GENERATED_TESTS_DIR = resolve(join(process.cwd(), "generated_tests"));
@@ -23,11 +20,12 @@ function computeOutputDir(specPath: string): string {
 interface GenerateOptions {
     runTestEnvironment?: boolean;
     port?: number;
+    model: string
 }
 
 export async function generateTest(
     specPath: string,
-    options: GenerateOptions = {}
+    options: GenerateOptions = {model: "claude-opus-4-5"}
 ) {
     const {runTestEnvironment = false, port = 5001} = options;
 
@@ -49,7 +47,7 @@ export async function generateTest(
             spec,
             logPath,
             outputDir,
-            'claude-sonnet-4-5',
+            options.model as ModelAlias,
             baseUrl,
             runTestEnvironment,
             port
@@ -72,39 +70,22 @@ export async function generateTest(
     }
 }
 
-// CLI entry point
-async function main() {
-    const args = process.argv.slice(2);
+const program = new Command()
+    .name("generate")
+    .description("Converts YAML specs to Playwright tests using AI models")
+    .argument("<spec-path>", "path to the YAML spec file")
+    .option("-r, --run-tests", "run generated tests against isolated environment", false)
+    .option("-p, --port <port>", "port for isolated Flask server", parseInt, 5001)
+    .option("-m, --model <model>", "model alias for test generation", "claude-sonnet-4-5")
+    .action(async (specPath: string, opts: { runTests: boolean; port: number; model: string }) => {
+        console.log(`Generating test from: ${specPath}`);
+        await generateTest(specPath, {
+            runTestEnvironment: opts.runTests,
+            port: opts.port,
+            model: opts.model,
+        });
+    });
 
-    const runTests = args.includes("--run-tests") || args.includes("-r");
-    const portIndex = args.findIndex(a => a === "--port" || a === "-p");
-    const port = portIndex !== -1 && args[portIndex + 1]
-        ? parseInt(args[portIndex + 1], 10)
-        : 5001;
-
-    const filteredArgs = args.filter((a, i) =>
-        !a.startsWith("--") && !a.startsWith("-") &&
-        (portIndex === -1 || i !== portIndex + 1)
-    );
-
-    if (filteredArgs.length === 0) {
-        console.error("Usage: npx tsx lib/test_generator/index.ts <spec-path> [options]");
-        console.error("");
-        console.error("Options:");
-        console.error("  -r, --run-tests    Run generated tests against isolated environment");
-        console.error("  -p, --port <port>  Port for isolated Flask server (default: 5001)");
-        console.error("");
-        process.exit(1);
-    }
-
-    const specPath = filteredArgs[0];
-
-    console.log(`Generating test from: ${specPath}`);
-
-
-    await generateTest(specPath, {runTestEnvironment: runTests, port});
-}
-
-main().finally(() => {
+program.parseAsync().finally(() => {
     console.log("Exiting");
 });

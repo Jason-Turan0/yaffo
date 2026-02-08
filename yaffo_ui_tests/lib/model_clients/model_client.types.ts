@@ -1,5 +1,4 @@
-import {AnthropicModelAlias} from "@lib/test_generator/anthropic_model_client";
-import {ModelAlias} from "@lib/test_generator/model_client.interface";
+import {ModelAlias} from "@lib/model_clients/model_client.interface";
 
 export interface ToolCall {
     id: string;
@@ -25,7 +24,7 @@ export interface CacheUsage {
     sessionOutputTokens: number;
 }
 
-interface ModelPricing {
+export interface ModelPricing {
     inputPerMillion: number;
     outputPerMillion: number;
     cacheWritePerMillion: number;
@@ -49,7 +48,7 @@ export interface CostEstimate {
     };
 }
 
-export const MODEL_PRICING: Record<AnthropicModelAlias, ModelPricing> = {
+export const MODEL_PRICING: Partial<Record<ModelAlias, ModelPricing>> = {
     "claude-opus-4-5": {
         inputPerMillion: 5.00,
         outputPerMillion: 25.00,
@@ -67,6 +66,24 @@ export const MODEL_PRICING: Record<AnthropicModelAlias, ModelPricing> = {
         outputPerMillion: 5.00,
         cacheWritePerMillion: 1.25,
         cacheReadPerMillion: 0.10,
+    },
+    "gemini-2.0-flash": {
+        inputPerMillion: 0.10,
+        outputPerMillion: 0.40,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0,
+    },
+    "gemini-2.5-flash": {
+        inputPerMillion: 0.30,
+        outputPerMillion: 2.50,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.03,
+    },
+    "gemini-2.5-pro": {
+        inputPerMillion: 1.25,
+        outputPerMillion: 10.00,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.125,
     },
 };
 

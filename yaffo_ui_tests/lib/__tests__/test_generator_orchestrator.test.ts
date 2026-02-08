@@ -7,7 +7,7 @@ import {PromptGenerator} from '../test_generator/prompt_generator';
 import {Spec} from '../test_generator/spec_parser.types';
 import {ToolProvider, CallToolReturn, RawToolDefinition} from '../test_generator/toolprovider.types';
 import {TypeScriptValidator, TypeCheckResult} from '../test_generator/typescript_validator';
-import {ModelClient, ModelResponse, ModelAlias} from '../test_generator/model_client.interface';
+import {ModelClient, ModelResponse, ModelAlias} from '../model_clients/model_client.interface';
 import {AutoHealTestOrchestratorFactory} from '../test_generator/auto_heal_orchestrator';
 
 type MockFn = ReturnType<typeof jest.fn>;
