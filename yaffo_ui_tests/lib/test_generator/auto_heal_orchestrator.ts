@@ -1,9 +1,16 @@
 import {join, resolve, basename} from "path";
 import {writeFileSync, readFileSync, existsSync} from "fs";
-import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
-import {HealPromptGenerator, HealContext, healPromptGeneratorFactory} from "@lib/test_generator/prompt/heal_prompt_generator";
+import {
+    HealPromptGenerator,
+    HealContext,
+    healPromptGeneratorFactory
+} from "@lib/test_generator/prompt/heal_prompt_generator";
 import {parseSpecFile} from "@lib/test_generator/prompt/spec_parser";
-import {GeneratedTestResponse, FailureClassification, HealAnalysisResponse} from "@lib/model_clients/model_client.response.types";
+import {
+    GeneratedTestResponse,
+    FailureClassification,
+    HealAnalysisResponse
+} from "@lib/model_clients/model_client.response.types";
 import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/prompt/json_parser";
 import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/services/typescript_validator";
 import {createModelClient, supportsNativeStructuredOutput} from "@lib/model_clients/model_client_factory";
@@ -23,6 +30,7 @@ import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesy
 import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/services/run_playwright_tests";
 import {loadTestResultHistory, recordTestResult} from "@lib/test_generator/test_result_history";
 import {parseHealAnalysisResponse, HealAnalysisResponseSchema} from "@lib/test_generator/heal_analysis";
+import * as util from "node:util";
 
 export interface HealResult {
     success: boolean;
@@ -91,42 +99,22 @@ export class AutoHealTestOrchestrator {
             if (analysisResult) {
                 console.log(`\n🔍 Triage classification: ${analysisResult.classification}`);
                 console.log(`   Reasoning: ${analysisResult.reasoning}`);
+                this.recordAnalysisResult(analysisResult);
 
-                if (analysisResult.classification === "application_regression") {
+                if (analysisResult.classification === "application_regression" || analysisResult.classification === "environment_instability") {
                     recordTestResult(this.outputDir, this.featureName, testFailures);
                     return {
                         success: false,
                         testFilePath: this.absoluteTestFilePath,
-                        error: `Application regression detected: ${analysisResult.reasoning}`,
+                        error: `Not attempting to auto fix tests: ${analysisResult.reasoning}`,
                         logPath: this.runLogDir,
                         iterations: this.iterationCount,
-                        classification: "application_regression",
+                        classification: analysisResult.classification,
                     };
-                }
-
-                if (analysisResult.classification === "environment_instability") {
-                    console.log(`\n🔄 Environment instability detected, retrying tests...`);
-                    for (let retry = 1; retry <= this.maxEnvironmentRetries; retry++) {
-                        console.log(`   Retry ${retry}/${this.maxEnvironmentRetries}...`);
-                        const retryResult = await this.playwrightTestRunner(this.baseUrl, [this.absoluteTestFilePath]);
-                        if (retryResult.success) {
-                            console.log(`\n✅ Test passed on retry ${retry}`);
-                            recordTestResult(this.outputDir, this.featureName, retryResult);
-                            return {
-                                success: true,
-                                testFilePath: this.absoluteTestFilePath,
-                                logPath: this.runLogDir,
-                                iterations: this.iterationCount,
-                                classification: "environment_instability",
-                            };
-                        }
-                    }
-                    console.log(`\n⚠️ Retries exhausted, falling through to heal...`);
                 }
             }
 
-            const userPrompt = this.promptGenerator.buildHealPrompt(healContext, this.allowedDirectories);
-            this.modelClient.addUserMessage([toTextPart(userPrompt)]);
+            this.transitionToHealPhase(analysisResult);
 
             const generatedJson = await this.generateHealedCode();
             if (!generatedJson) {
@@ -154,33 +142,26 @@ export class AutoHealTestOrchestrator {
     private triageFailure = async (context: HealContext): Promise<HealAnalysisResponse | null> => {
         console.log(`\n🔍 Triaging test failure...`);
         try {
+            this.modelClient.setOutputSchema(HealAnalysisResponseSchema);
+
             const outputSchemaStr = supportsNativeStructuredOutput(this.model)
                 ? undefined
                 : JSON.stringify(zodToJsonSchema(HealAnalysisResponseSchema), null, 2);
 
-            const rawTools = Array.from(this.toolProviderMap.values()).map(t => t.tool);
-            const triageClient = createModelClient(
-                this.runLogDir,
-                this.model,
-                this.promptGenerator.buildAnalysisSystemPrompt(outputSchemaStr),
-                rawTools,
-                HealAnalysisResponseSchema,
-            );
+            const analysisPrompt = this.promptGenerator.buildAnalysisPrompt(context, this.allowedDirectories, outputSchemaStr);
+            this.modelClient.addUserMessage([toTextPart(analysisPrompt)]);
 
-            const analysisPrompt = this.promptGenerator.buildAnalysisPrompt(context, this.allowedDirectories);
-            triageClient.addUserMessage([toTextPart(analysisPrompt)]);
-
-            const maxTriageIterations = 50;
             let finalText: string | null = null;
 
-            for (let i = 0; i < maxTriageIterations; i++) {
-                const response = await triageClient.callModelApi();
+            while (this.iterationCount < this.maxIterations) {
+                this.iterationCount++;
+                const response = await this.modelClient.callModelApi();
                 if (!response) {
                     console.warn("   ⚠️ Triage returned no response, defaulting to heal");
                     return null;
                 }
 
-                console.log(`   Triage stop reason: ${response.finishReason}`);
+                console.log(`   Triage iteration ${this.iterationCount}/${this.maxIterations} — stop reason: ${response.finishReason}`);
 
                 if (response.finishReason === "stop" || response.finishReason === "length") {
                     finalText = response.text;
@@ -189,7 +170,7 @@ export class AutoHealTestOrchestrator {
 
                 if (response.finishReason === "tool-calls" && response.toolCalls.length > 0) {
                     const toolResults = await this.executeToolCalls(response.toolCalls);
-                    triageClient.addToolResultMessage(toolResults.map(toToolResultPart));
+                    this.modelClient.addToolResultMessage(toolResults.map(toToolResultPart));
                     continue;
                 }
 
@@ -213,6 +194,19 @@ export class AutoHealTestOrchestrator {
             console.warn(`   ⚠️ Triage failed: ${e instanceof Error ? e.message : String(e)}, defaulting to heal`);
             return null;
         }
+    };
+
+    private transitionToHealPhase = (analysisResult: HealAnalysisResponse | null): void => {
+        console.log(`\n🔧 Transitioning to heal phase (iteration ${this.iterationCount}/${this.maxIterations})...`);
+        this.modelClient.setOutputSchema(GeneratedTestResponseSchema);
+
+        const outputSchemaStr = supportsNativeStructuredOutput(this.model)
+            ? undefined
+            : JSON.stringify(zodToJsonSchema(GeneratedTestResponseSchema), null, 2);
+
+        const reasoning = analysisResult?.reasoning ?? "Triage inconclusive, proceeding with heal.";
+        const transitionPrompt = this.promptGenerator.buildTransitionToHealPrompt(reasoning, outputSchemaStr);
+        this.modelClient.addUserMessage([toTextPart(transitionPrompt)]);
     };
 
     private executeToolCalls = async (toolCalls: ModelResponse["toolCalls"]): Promise<ToolCallResult[]> => {
@@ -499,6 +493,15 @@ export class AutoHealTestOrchestrator {
         console.log(`\n🔍 Running healed playwright test...`);
         return await this.playwrightTestRunner(this.baseUrl, [filePath]);
     };
+
+    private recordAnalysisResult = (analysisResult: HealAnalysisResponse) => {
+        const savePath = join(this.outputDir, `${this.featureName}.triage_analysis.json`);
+        try {
+            writeFileSync(savePath, JSON.stringify(analysisResult, null, 2));
+        } catch (e) {
+            console.error(`Failed to save analysis to ${savePath}. ${util.inspect(e)}`)
+        }
+    }
 }
 
 export const autoHealTestOrchestratorFactory = async (
@@ -520,22 +523,19 @@ export const autoHealTestOrchestratorFactory = async (
             saveVideo: true,
             saveSession: true
         }
-    }): mcpPlaywrightClient;
+    }) : mcpPlaywrightClient;
     const memoryTool = localFilesystemMemoryToolFactory(outputDir);
 
     const toolProviders: ToolProvider[] = [fileMcpClient, playwrightClient, memoryTool];
 
     const promptGenerator = healPromptGeneratorFactory(baseUrl);
-    const outputSchemaStr = supportsNativeStructuredOutput(model)
-        ? undefined
-        : JSON.stringify(zodToJsonSchema(GeneratedTestResponseSchema), null, 2);
     const rawTools = toolProviders.flatMap(provider => provider.getTools());
     const modelClient = createModelClient(
         runLogDir,
         model,
-        promptGenerator.buildSystemPrompt(outputSchemaStr),
+        promptGenerator.buildSystemPrompt(),
         rawTools,
-        GeneratedTestResponseSchema,
+        HealAnalysisResponseSchema,
     );
 
     return new AutoHealTestOrchestrator(

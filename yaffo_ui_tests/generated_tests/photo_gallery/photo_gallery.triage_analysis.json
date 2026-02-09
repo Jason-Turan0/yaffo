@@ -1,0 +1,8 @@
+{
+  "classification": "application_regression",
+  "reasoning": "The failing test 'gallery_page_navigation_works' reveals a parameter naming mismatch between the frontend and backend. The pagination component template generates URLs with 'page-size' (lowercase with dash), but the backend route handler in home.py looks for 'PAGE_SIZE' (uppercase). This causes the backend to ignore the page size parameter and default to 25, displaying all 14 photos instead of the expected 10. The test code is correct and properly verifies pagination functionality - it selects page size 10, waits for the URL to update, and expects 10 photo cards. The application is broken due to the parameter name mismatch between frontend (page-size) and backend (PAGE_SIZE).",
+  "affectedTests": [
+    "Photo Gallery Feature › gallery_page_navigation_works - Verify that the page navigation works"
+  ],
+  "suggestedAction": "Fix the application code by changing line 47 in /Users/jason.turan/projects/yaffo/yaffo/routes/home.py from 'request.args.get(\"PAGE_SIZE\", type=int)' to 'request.args.get(\"page-size\", type=int)' to match the parameter name used in the pagination template. No test code changes are needed."
+}

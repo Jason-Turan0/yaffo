@@ -93,6 +93,10 @@ export interface ModelClient {
     addToolResultMessage(content: ToolResultPart[]): void;
 
     callModelApi(): Promise<ModelResponse | undefined>;
+
+    setSystemPrompt(prompt: string): void;
+
+    setOutputSchema(schema: z.ZodType): void;
 }
 
 export type ModelClientFactory = (config: ModelClientConfig) => ModelClient;

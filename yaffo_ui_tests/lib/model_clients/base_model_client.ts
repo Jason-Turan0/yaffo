@@ -58,6 +58,14 @@ export abstract class BaseModelClient implements ModelClient {
 
     abstract callModelApi(): Promise<ModelResponse | undefined>;
 
+    setSystemPrompt(prompt: string): void {
+        this.systemPrompt = prompt;
+    }
+
+    setOutputSchema(schema: z.ZodType): void {
+        this.outputSchema = schema;
+    }
+
     protected getNextIndex = (): number => {
         if (this.userMessages.length === 0 && this.assistantMessages.length === 0) {
             return 0;

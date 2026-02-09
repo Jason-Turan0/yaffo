@@ -18,12 +18,16 @@ interface MockModelClient extends ModelClient {
     addUserMessage: MockFn;
     addToolResultMessage: MockFn;
     callModelApi: MockFn;
+    setSystemPrompt: MockFn;
+    setOutputSchema: MockFn;
     model: ModelAlias;
 }
 
 const createMockModelClient = (): MockModelClient => ({
     addUserMessage: jest.fn(),
     addToolResultMessage: jest.fn(),
+    setSystemPrompt: jest.fn(),
+    setOutputSchema: jest.fn(),
     model: "claude-sonnet-4-5",
     callModelApi: jest.fn()
 });
