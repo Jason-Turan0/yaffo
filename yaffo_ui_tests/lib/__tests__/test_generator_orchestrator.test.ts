@@ -8,7 +8,6 @@ import {Spec} from '../test_generator/prompt/spec_parser.types';
 import {ToolProvider, CallToolReturn, RawToolDefinition} from '../tool_providers/toolprovider.types';
 import {TypeScriptValidator, TypeCheckResult} from '../services/typescript_validator';
 import {ModelClient, ModelResponse, ModelAlias} from '../model_clients/model_client.interface';
-import {AutoHealTestOrchestrator, HealResult} from '../test_generator/auto_heal_orchestrator';
 import {IsolatedEnvironment, TestRunResult} from '../services/isolated_runner';
 import {PlaywrightTestRunner} from '../services/run_playwright_tests';
 
@@ -58,12 +57,6 @@ const createMockTypeScriptValidator = (): TypeScriptValidator => ({
     })),
     formatTypeErrorsForModel: jest.fn(() => ''),
 });
-
-type AutoHealFactory = (absoluteTestFilePath: string, logPath: string) => Promise<AutoHealTestOrchestrator>;
-
-const createMockAutoHealFactory = () => {
-    return jest.fn<AutoHealFactory>();
-};
 
 const createMinimalSpec = (): Spec => ({
     feature: 'test-feature',
@@ -131,7 +124,6 @@ describe('TestGeneratorOrchestrator', () => {
     let mockToolProvider: ToolProvider;
     let mockPromptGenerator: PromptGenerator;
     let mockTypeScriptValidator: TypeScriptValidator;
-    let mockAutoHealFactory: jest.Mock<AutoHealFactory>;
     let orchestrator: TestGeneratorOrchestrator;
     let testOutputDir: string;
     let testRunLogDir: string;
@@ -155,7 +147,6 @@ describe('TestGeneratorOrchestrator', () => {
         mockModelClient = createMockModelClient();
         mockPromptGenerator = createMockPromptGenerator();
         mockTypeScriptValidator = createMockTypeScriptValidator();
-        mockAutoHealFactory = createMockAutoHealFactory();
     });
 
     describe('happy path - single tool call then test generation', () => {
@@ -184,7 +175,6 @@ describe('TestGeneratorOrchestrator', () => {
                 null,
                 [mockToolProvider],
                 mockTypeScriptValidator,
-                mockAutoHealFactory,
             );
 
             const toolCallsResponse = createToolCallsResponse(
@@ -256,7 +246,6 @@ describe('TestGeneratorOrchestrator', () => {
                 null,
                 [mockToolProvider],
                 mockTypeScriptValidator,
-                mockAutoHealFactory,
             );
 
             const toolCallsResponse = createToolCallsResponse(
@@ -318,7 +307,6 @@ describe('TestGeneratorOrchestrator', () => {
                 null,
                 [failingToolProvider],
                 mockTypeScriptValidator,
-                mockAutoHealFactory,
             );
 
             const toolCallsResponse = createToolCallsResponse(
@@ -361,7 +349,6 @@ describe('TestGeneratorOrchestrator', () => {
                 null,
                 [mockToolProvider],
                 mockTypeScriptValidator,
-                mockAutoHealFactory,
             );
 
             const toolCallsResponse = createToolCallsResponse(
@@ -414,7 +401,6 @@ describe('TestGeneratorOrchestrator', () => {
                     null,
                     [provider1, provider2],
                     mockTypeScriptValidator,
-                    mockAutoHealFactory,
                 );
             }).toThrow('Duplicate tool names duplicate_tool');
         });
@@ -436,7 +422,6 @@ describe('TestGeneratorOrchestrator', () => {
                 null,
                 [mockToolProvider],
                 mockTypeScriptValidator,
-                mockAutoHealFactory,
             );
 
             mockModelClient.callModelApi.mockResolvedValueOnce(undefined);
@@ -465,7 +450,6 @@ describe('TestGeneratorOrchestrator', () => {
                 null,
                 [mockToolProvider],
                 mockTypeScriptValidator,
-                mockAutoHealFactory,
             );
 
             const invalidJsonResponse = createStopResponse('this is not valid json at all');
@@ -508,7 +492,6 @@ describe('TestGeneratorOrchestrator', () => {
                 null,
                 [mockToolProvider],
                 mockTypeScriptValidator,
-                mockAutoHealFactory,
             );
 
             const schemaMismatchJson = JSON.stringify({
@@ -569,7 +552,6 @@ describe('TestGeneratorOrchestrator', () => {
                 null,
                 [mockToolProvider],
                 failThenPassValidator,
-                mockAutoHealFactory,
             );
 
             const validJson = JSON.stringify({
@@ -597,8 +579,8 @@ describe('TestGeneratorOrchestrator', () => {
         });
     });
 
-    describe('playwright test failure triggers auto healer', () => {
-        it('should create an auto healer when playwright tests fail', async () => {
+    describe('playwright test failure retries generation', () => {
+        it('should retry test generation when playwright tests fail', async () => {
             mockToolProvider = createMockToolProvider([]);
             const spec = createMinimalSpec();
 
@@ -624,19 +606,22 @@ describe('TestGeneratorOrchestrator', () => {
                 }],
             };
 
-            const mockPlaywrightRunner = jest.fn<PlaywrightTestRunner>()
-                .mockResolvedValueOnce(failingTestResult);
-
-            const mockHealResult: HealResult = {
+            const passingTestResult: TestRunResult = {
                 success: true,
-                testFilePath: join(testOutputDir, 'test-feature.spec.ts'),
-                logPath: testRunLogDir,
-                iterations: 1,
-                classification: "test_code_defect",
+                exitCode: 0,
+                output: 'Test passed',
+                summary: {total: 1, passed: 1, failed: 0, skipped: 0},
+                tests: [{
+                    file: join(testOutputDir, 'test-feature.spec.ts'),
+                    testName: 'Test Feature > should work',
+                    status: 'passed',
+                    duration: 500,
+                }],
             };
-            const mockHealTest = jest.fn<() => Promise<HealResult>>().mockResolvedValue(mockHealResult);
-            const mockHealer = {healTest: mockHealTest} as unknown as AutoHealTestOrchestrator;
-            const mockHealFactory = jest.fn<AutoHealFactory>().mockResolvedValue(mockHealer);
+
+            const mockPlaywrightRunner = jest.fn<PlaywrightTestRunner>()
+                .mockResolvedValueOnce(failingTestResult)
+                .mockResolvedValueOnce(passingTestResult);
 
             orchestrator = new TestGeneratorOrchestrator(
                 spec,
@@ -649,7 +634,6 @@ describe('TestGeneratorOrchestrator', () => {
                 mockIsolatedEnvironment,
                 [mockToolProvider],
                 mockTypeScriptValidator,
-                mockHealFactory,
                 mockPlaywrightRunner,
             );
 
@@ -662,17 +646,15 @@ describe('TestGeneratorOrchestrator', () => {
                 confidence: 0.9,
             });
 
-            mockModelClient.callModelApi.mockResolvedValueOnce(createStopResponse(validJson));
+            mockModelClient.callModelApi
+                .mockResolvedValueOnce(createStopResponse(validJson))
+                .mockResolvedValueOnce(createStopResponse(validJson));
 
             const result = await orchestrator.generate('/path/to/spec.yaml', testBaseUrl);
 
             expect(result.success).toBe(true);
-            expect(mockPlaywrightRunner).toHaveBeenCalledTimes(1);
-            expect(mockHealFactory).toHaveBeenCalledWith(
-                expect.stringContaining('test-feature.spec.ts'),
-                expect.any(String),
-            );
-            expect(mockHealTest).toHaveBeenCalled();
+            expect(mockPlaywrightRunner).toHaveBeenCalledTimes(2);
+            expect(mockModelClient.callModelApi).toHaveBeenCalledTimes(2);
             expect(mockIsolatedEnvironment.cleanup).toHaveBeenCalled();
         });
     });

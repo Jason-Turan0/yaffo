@@ -25,13 +25,8 @@ import {
 } from "@lib/model_clients/model_client.interface";
 import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesystem_memory_tool";
 import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/services/run_playwright_tests";
-import {
-    AutoHealTestOrchestrator,
-    autoHealTestOrchestratorFactory,
-    HealResult,
-} from "@lib/test_generator/auto_heal_orchestrator";
-import {generateTimestampString} from "@lib/test_generator/utils";
 import {recordTestResult} from "@lib/test_generator/test_result_history";
+import {buildTestFailurePrompt} from "@lib/test_generator/prompt/formatters";
 
 const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
 
@@ -52,7 +47,6 @@ export class TestGeneratorOrchestrator {
         private isolatedEnvironment: IsolatedEnvironment | null,
         private toolProviders: ToolProvider[],
         private typeScriptValidator: TypeScriptValidator,
-        private autoHealTestOrchestratorFactory: (absoluteTestFilePath: string, logPath: string) => Promise<AutoHealTestOrchestrator>,
         private playwrightTestRunner: PlaywrightTestRunner = runPlaywrightTests,
     ) {
         const tools = toolProviders.flatMap(toolProvider =>
@@ -125,7 +119,7 @@ export class TestGeneratorOrchestrator {
 
             if (schemaErrors.length > 0) {
                 retryCount++;
-                this.addSchemaErrorMessage(schemaErrors, currentJson);
+                this.addSchemaErrorMessage(schemaErrors);
                 const correctedJson = await this.generateTestCode();
                 if (!correctedJson) {
                     return {
@@ -154,7 +148,7 @@ export class TestGeneratorOrchestrator {
             if (typeErrors.length === 0) {
                 console.log(`\n✅ All files compile successfully!`);
             } else {
-                this.addCompileErrorMessage(typeErrors, parsedResponse, currentJson);
+                this.addCompileErrorMessage(typeErrors, parsedResponse);
                 const correctedJson = await this.generateTestCode();
                 if (!correctedJson) {
                     return {
@@ -181,23 +175,18 @@ export class TestGeneratorOrchestrator {
                     };
                 } else {
                     recordTestResult(this.outputDir, this.spec.feature, runResult);
-                    const failedTestFiles = runResult.tests.filter(test => test.status == "failed" || test.status == "timedOut");
-                    for (const failedTestFile of failedTestFiles) {
-                        const absoluteTestPath = resolve(failedTestFile.file);
-                        const runId = generateTimestampString();
-                        const testName = basename(absoluteTestPath, ".spec.ts");
-                        const logPath = resolve(join(process.cwd(), "reports", "api_logs", `heal_${testName}`, runId));
-                        if (!existsSync(logPath)) {
-                            mkdirSync(logPath, {recursive: true});
-                        }
-                        const healer = await this.autoHealTestOrchestratorFactory(absoluteTestPath, logPath);
-                        const healResult: HealResult = await healer.healTest(runResult, this.specPath);
-                        if (healResult.classification === "application_regression") {
-                            console.error(`\n❌ Application regression detected: ${healResult.error}`);
-                            process.exit(1);
-                        }
+                    this.addPlaywrightTestErrorMessage(runResult);
+                    const correctedJson = await this.generateTestCode();
+                    if (!correctedJson) {
+                        return {
+                            success: false,
+                            error: `Failed to correct playwright test failures.`,
+                            logPath: this.runLogDir
+                        };
+                    } else {
+                        currentJson = correctedJson;
                     }
-                    break;
+                    continue;
                 }
             } else {
                 console.log(`\n✅ Playwright tests disabled`);
@@ -214,7 +203,7 @@ export class TestGeneratorOrchestrator {
         };
     };
 
-    private addSchemaErrorMessage = (schemaErrors: string[], currentJson: string): void => {
+    private addSchemaErrorMessage = (schemaErrors: string[]): void => {
         schemaErrors.forEach(err => console.log(`   - ${err}`));
         const schemaFixPrompt = this.promptGenerator.buildSchemaFixPrompt(schemaErrors);
         this.modelClient.addUserMessage([toTextPart(schemaFixPrompt)]);
@@ -223,13 +212,18 @@ export class TestGeneratorOrchestrator {
     private addCompileErrorMessage = (
         typeErrors: string[],
         parsedResponse: GeneratedTestResponse,
-        currentJson: string,
     ): void => {
         const currentCode = parsedResponse.files[0]?.code || "";
         const typeFixPrompt = this.promptGenerator.buildTypeErrorFixPrompt(typeErrors, currentCode);
         this.modelClient.addUserMessage([toTextPart(typeFixPrompt)]);
-
     };
+
+    private addPlaywrightTestErrorMessage = (
+        testFailures: TestRunResult
+    ): void => {
+        const playwrightFailurePrompt = buildTestFailurePrompt(testFailures);
+        this.modelClient.addUserMessage([toTextPart(playwrightFailurePrompt)]);
+    }
 
     private determineNextAction = async (response: ModelResponse): Promise<{
         success: boolean;
@@ -396,21 +390,6 @@ export const testGeneratorOrchestratorFactory = async (
         rawTools,
         GeneratedTestResponseSchema,
     );
-    const autoHealFactory = async (testFilePath: string, logPath: string) => {
-        if (isolatedEnvironment == null) {
-            throw new Error('Must have MCP server running for auto healing');
-        }
-        return autoHealTestOrchestratorFactory(
-            testFilePath,
-            logPath,
-            outputDir,
-            modelClient.model,
-            baseUrl,
-            allowedDirectories,
-            fileMcpClient,
-            mcpPlaywrightClient
-        )
-    }
 
     return new TestGeneratorOrchestrator(
         spec,
@@ -423,6 +402,5 @@ export const testGeneratorOrchestratorFactory = async (
         isolatedEnvironment,
         toolProviders,
         new DefaultTypeScriptValidator(),
-        autoHealFactory
     );
 };

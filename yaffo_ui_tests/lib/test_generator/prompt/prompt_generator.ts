@@ -338,6 +338,23 @@ export class PromptGenerator {
         ].join("\n");
     }
 
+    buildTestFailurePrompt(playwrightFailures: string[], currentCode: string): string {
+        return [
+            "<test_evaluation>",
+            "    <status>failed</status>",
+            "    <failures>",
+            ...playwrightFailures.map(f => `        <failure>${f}</failure>`),
+            "    </failures>",
+            "</test_evaluation>",
+            "",
+            "<current_code>",
+            currentCode,
+            "</current_code>",
+            "",
+            "<instructions>Fix the test failures and provide the corrected code in the <output_format>.</instructions>",
+        ].join("\n");
+    }
+
 }
 
 // Factory function

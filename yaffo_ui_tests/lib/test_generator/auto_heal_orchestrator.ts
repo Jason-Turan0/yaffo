@@ -31,6 +31,7 @@ import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/services/run_playwr
 import {loadTestResultHistory, recordTestResult} from "@lib/test_generator/test_result_history";
 import {parseHealAnalysisResponse, HealAnalysisResponseSchema} from "@lib/test_generator/heal_analysis";
 import * as util from "node:util";
+import {buildTestFailurePrompt} from "@lib/test_generator/prompt/formatters";
 
 export interface HealResult {
     success: boolean;
@@ -312,7 +313,7 @@ export class AutoHealTestOrchestrator {
 
             if (typeErrors.length > 0) {
                 retryCount++;
-                this.addCompileErrorMessage(typeErrors, parsedResponse, currentJson);
+                this.addCompileErrorMessage(typeErrors, parsedResponse);
                 const correctedJson = await this.generateHealedCode();
                 if (!correctedJson) {
                     return {
@@ -341,7 +342,7 @@ export class AutoHealTestOrchestrator {
             }
 
             retryCount++;
-            this.addPlaywrightTestErrorMessage(runResult, parsedResponse, currentJson);
+            this.addPlaywrightTestErrorMessage(runResult);
             const correctedJson = await this.generateHealedCode();
             if (!correctedJson) {
                 return {
@@ -382,7 +383,6 @@ export class AutoHealTestOrchestrator {
     private addCompileErrorMessage = (
         typeErrors: string[],
         parsedResponse: GeneratedTestResponse,
-        currentJson: string,
     ): void => {
         const currentCode = parsedResponse.files[0]?.code || "";
         const typeFixPrompt = this.promptGenerator.buildTypeErrorFixPrompt(typeErrors, currentCode);
@@ -392,11 +392,8 @@ export class AutoHealTestOrchestrator {
 
     private addPlaywrightTestErrorMessage = (
         testFailures: TestRunResult,
-        parsedResponse: GeneratedTestResponse,
-        currentJson: string,
     ): void => {
-        const currentCode = parsedResponse.files[0]?.code || "";
-        const playwrightFailurePrompt = this.promptGenerator.buildTestFailurePrompt(testFailures, currentCode);
+        const playwrightFailurePrompt = buildTestFailurePrompt(testFailures);
         this.modelClient.addUserMessage([toTextPart(playwrightFailurePrompt)]);
     };
 

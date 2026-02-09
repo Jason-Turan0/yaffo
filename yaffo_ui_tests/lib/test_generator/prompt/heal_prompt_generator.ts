@@ -66,52 +66,6 @@ export class HealPromptGenerator {
         ].join("\n");
     }
 
-    buildHealPrompt(context: HealContext, allowedDirs: string[]): string {
-        const timestamp = new Date().toISOString();
-        const failuresXml = formatTestResultsAsXml(context.testFailures);
-        const specSection = this.specPromptGenerator.formatSpec(context.spec);
-        const allowDirectoriesSection = this.specPromptGenerator.generateAllowedDirectories(allowedDirs);
-
-        return [
-            "<task>Fix the failing Playwright test.</task>",
-            "",
-            ...allowDirectoriesSection,
-            "",
-            "<spec_file>",
-            `    <path>${context.specPath}</path>`,
-            "</spec_file>",
-            "",
-            specSection,
-            "",
-            "<failing_test>",
-            `    <path>${context.absoluteTestFilePath}</path>`,
-            "    <code>",
-            context.testCode,
-            "    </code>",
-            "</failing_test>",
-            "",
-            failuresXml,
-            "",
-            "<configuration>",
-            `    <base_url>${this.baseUrl}</base_url>`,
-            `    <timestamp>${timestamp}</timestamp>`,
-            "</configuration>",
-            "",
-            "<instructions>",
-            "    Investigate the failures using the available tools, then provide the corrected test code.",
-            "    Return your response as structured JSON with the fixed code.",
-            "</instructions>",
-            "<context>",
-            `   <test_context>${context.testContext}</test_context>`,
-            `   <test_description>${context.testDescription}</test_description>`,
-            `   <explanation>${context.explanation}</explanation>`,
-            "</context>",
-            "",
-            formatHistoryForPrompt(context.testRunHistory),
-            ""
-        ].join("\n");
-    }
-
     buildTransitionToHealPrompt(analysisReasoning: string, outputSchema?: string): string {
         const blocks = [
             "<phase>Phase 2: Fix</phase>",
@@ -233,18 +187,6 @@ export class HealPromptGenerator {
         return blocks.join("\n");
     }
 
-    buildTestFailurePrompt(testFailures: TestRunResult, currentCode: string): string {
-        const failuresXml = formatTestResultsAsXml(testFailures);
-        return [
-            failuresXml,
-            "",
-            "<current_code>",
-            currentCode,
-            "</current_code>",
-            "",
-            "<instructions>The test is still failing. Investigate further and provide corrected code.</instructions>",
-        ].join("\n");
-    }
 }
 
 export const healPromptGeneratorFactory = (
