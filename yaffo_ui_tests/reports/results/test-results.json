@@ -65,497 +65,21 @@
   },
   "suites": [
     {
-      "title": "face_assignment/face-assignment.spec.ts",
-      "file": "face_assignment/face-assignment.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Face Assignment",
-          "file": "face_assignment/face-assignment.spec.ts",
-          "line": 60,
-          "column": 6,
-          "specs": [
-            {
-              "title": "should be able to create a new person using the quick action section",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 2466,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:48:41.036Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "74b764fe8023e3d0b0fe-4a7f48fdd8a050ada969",
-              "file": "face_assignment/face-assignment.spec.ts",
-              "line": 61,
-              "column": 3
-            },
-            {
-              "title": "should be able to assign faces to people",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 1833,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:48:43.605Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "74b764fe8023e3d0b0fe-5555224401f975373e4e",
-              "file": "face_assignment/face-assignment.spec.ts",
-              "line": 93,
-              "column": 3
-            },
-            {
-              "title": "faces are automatically matched to people based on similarity",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4674,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:48:45.442Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "74b764fe8023e3d0b0fe-78bff7844cc04832bc36",
-              "file": "face_assignment/face-assignment.spec.ts",
-              "line": 146,
-              "column": 3
-            },
-            {
-              "title": "similar faces are grouped together",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 971,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:48:50.120Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "74b764fe8023e3d0b0fe-6fd4dc0c7a9ecdc5f3c4",
-              "file": "face_assignment/face-assignment.spec.ts",
-              "line": 215,
-              "column": 3
-            },
-            {
-              "title": "keyboard shortcuts enable quick face assignment",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 2267,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:48:51.094Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "74b764fe8023e3d0b0fe-b546ac28bfdaba5f72c7",
-              "file": "face_assignment/face-assignment.spec.ts",
-              "line": 254,
-              "column": 3
-            },
-            {
-              "title": "face page navigation works",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 1056,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:48:53.365Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "74b764fe8023e3d0b0fe-9f19be366c14c4bf7df0",
-              "file": "face_assignment/face-assignment.spec.ts",
-              "line": 351,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "photo_details/photo-details-face-hover.spec.ts",
-      "file": "photo_details/photo-details-face-hover.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Photo Details - Face Hover Highlights",
-          "file": "photo_details/photo-details-face-hover.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
-            {
-              "title": "photo_details_face_hover_highlights",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 741,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:48:54.427Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "d4ce30755cb25ec20271-44856b3bef26f6caebb8",
-              "file": "photo_details/photo-details-face-hover.spec.ts",
-              "line": 6,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "photo_details/photo-details-file-info.spec.ts",
-      "file": "photo_details/photo-details-file-info.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Photo Details - File Information",
-          "file": "photo_details/photo-details-file-info.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
-            {
-              "title": "photo_details_displays_file_information",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 347,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:48:55.174Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "099ff410d43e7e9f2ab9-6d6a20d2ba3cc07cef1a",
-              "file": "photo_details/photo-details-file-info.spec.ts",
-              "line": 6,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "photo_details/photo-details-location.spec.ts",
-      "file": "photo_details/photo-details-location.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Photo Details - Location Section",
-          "file": "photo_details/photo-details-location.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
-            {
-              "title": "photo_details_location_section_works",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 312,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:48:55.528Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "c5a67b5feb266ff41403-fdad3cf07884d2351aa0",
-              "file": "photo_details/photo-details-location.spec.ts",
-              "line": 6,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "photo_details/photo-details-people-faces.spec.ts",
-      "file": "photo_details/photo-details-people-faces.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Photo Details - People and Faces",
-          "file": "photo_details/photo-details-people-faces.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
-            {
-              "title": "photo_details_displays_people_and_faces",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 328,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:48:55.847Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "8ab83a3f8c669ec163c2-c3af01c2bf9dbdf429bd",
-              "file": "photo_details/photo-details-people-faces.spec.ts",
-              "line": 6,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "photo_details/photo-details-tags.spec.ts",
-      "file": "photo_details/photo-details-tags.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Photo Details - Edit Tags",
-          "file": "photo_details/photo-details-tags.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
-            {
-              "title": "photo_details_can_edit_tags",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 1053,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:48:56.185Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "677e0399e1ea35087752-cc389d568fce06204844",
-              "file": "photo_details/photo-details-tags.spec.ts",
-              "line": 21,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "photo_gallery/memories/photo_gallery.spec.ts",
-      "file": "photo_gallery/memories/photo_gallery.spec.ts",
+      "title": "photo_gallery/photo_gallery.spec.ts",
+      "file": "photo_gallery/photo_gallery.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
           "title": "Photo Gallery Feature",
-          "file": "photo_gallery/memories/photo_gallery.spec.ts",
-          "line": 14,
+          "file": "photo_gallery/photo_gallery.spec.ts",
+          "line": 8,
           "column": 6,
           "specs": [
             {
               "title": "gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
-              "ok": true,
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -568,28 +92,164 @@
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 455,
-                      "errors": [],
+                      "status": "failed",
+                      "duration": 273,
+                      "error": {
+                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
+                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                          "column": 16,
+                          "line": 11
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                            "column": 16,
+                            "line": 11
+                          },
+                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16\u001b[22m"
+                        }
+                      ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-08T03:48:57.248Z",
+                      "startTime": "2026-02-14T15:25:30.054Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium/video.webm"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                        "column": 16,
+                        "line": 11
+                      }
+                    },
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 145,
+                      "error": {
+                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
+                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                          "column": 16,
+                          "line": 11
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                            "column": 16,
+                            "line": 11
+                          },
+                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-02-14T15:25:30.855Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                        "column": 16,
+                        "line": 11
+                      }
+                    },
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 144,
+                      "error": {
+                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
+                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                          "column": 16,
+                          "line": 11
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                            "column": 16,
+                            "line": 11
+                          },
+                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2026-02-14T15:25:31.337Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium-retry2/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-b0702--are-valid-no-broken-links--chromium-retry2/video.webm"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                        "column": 16,
+                        "line": 11
+                      }
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
-              "id": "1c79058ac9a0b031337d-02b8190d2e045cbcb2a3",
-              "file": "photo_gallery/memories/photo_gallery.spec.ts",
-              "line": 19,
+              "id": "471d0833fad5445aea7e-12319756122df01d8746",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 16,
               "column": 3
             },
             {
               "title": "gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
-              "ok": true,
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -600,25 +260,161 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 3,
                       "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 603,
-                      "errors": [],
+                      "status": "failed",
+                      "duration": 135,
+                      "error": {
+                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
+                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                          "column": 16,
+                          "line": 11
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                            "column": 16,
+                            "line": 11
+                          },
+                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16\u001b[22m"
+                        }
+                      ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-08T03:48:57.706Z",
+                      "startTime": "2026-02-14T15:25:31.816Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium/video.webm"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                        "column": 16,
+                        "line": 11
+                      }
+                    },
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 154,
+                      "error": {
+                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
+                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                          "column": 16,
+                          "line": 11
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                            "column": 16,
+                            "line": 11
+                          },
+                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-02-14T15:25:32.281Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                        "column": 16,
+                        "line": 11
+                      }
+                    },
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 139,
+                      "error": {
+                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
+                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                          "column": 16,
+                          "line": 11
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                            "column": 16,
+                            "line": 11
+                          },
+                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2026-02-14T15:25:32.773Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium-retry2/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-22192-or-year-on-the-gallery-page-chromium-retry2/video.webm"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                        "column": 16,
+                        "line": 11
+                      }
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
-              "id": "1c79058ac9a0b031337d-0c83b302fc6432264edd",
-              "file": "photo_gallery/memories/photo_gallery.spec.ts",
-              "line": 32,
+              "id": "471d0833fad5445aea7e-9d78d8b97cfa643c3db9",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 39,
               "column": 3
             },
             {
@@ -634,271 +430,161 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 6,
                       "parallelIndex": 0,
-                      "status": "timedOut",
-                      "duration": 5290,
+                      "status": "failed",
+                      "duration": 152,
                       "error": {
-                        "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m",
-                        "stack": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
+                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
+                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                          "column": 16,
+                          "line": 11
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
                       },
                       "errors": [
                         {
-                          "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
-                        },
-                        {
                           "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts",
-                            "column": 26,
-                            "line": 80
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                            "column": 16,
+                            "line": 11
                           },
-                          "message": "Error: locator.selectOption: Test timeout of 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#page-size')\u001b[22m\n\u001b[2m    - locator resolved to <select id=\"page-size\" name=\"page-size\" onchange=\"window.location.href = this.value\">…</select>\u001b[22m\n\u001b[2m  - attempting select option action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    10 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m       - did not find some options\u001b[22m\n\u001b[2m     - retrying select option action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n\n\u001b[0m \u001b[90m 78 |\u001b[39m     \u001b[36mconst\u001b[39m photoGrid \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-grid'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 79 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 80 |\u001b[39m     \u001b[36mawait\u001b[39m pageSizeSelect\u001b[33m.\u001b[39mselectOption({ value\u001b[33m:\u001b[39m \u001b[32m'10'\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 81 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'**/page-size=10**'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 82 |\u001b[39m\n \u001b[90m 83 |\u001b[39m     \u001b[36mconst\u001b[39m firstPageCount \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m photoGrid\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mcount()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts:80:26\u001b[22m"
+                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-08T03:48:58.313Z",
+                      "startTime": "2026-02-14T15:25:33.247Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium/test-failed-1.png"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-1d39c-t-the-page-navigation-works-chromium/test-failed-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium/error-context.md"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-1d39c-t-the-page-navigation-works-chromium/video.webm"
                         }
-                      ]
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                        "column": 16,
+                        "line": 11
+                      }
                     },
                     {
-                      "workerIndex": 1,
+                      "workerIndex": 7,
                       "parallelIndex": 0,
-                      "status": "timedOut",
-                      "duration": 5338,
+                      "status": "failed",
+                      "duration": 151,
                       "error": {
-                        "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m",
-                        "stack": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
+                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
+                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                          "column": 16,
+                          "line": 11
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
                       },
                       "errors": [
                         {
-                          "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
-                        },
-                        {
                           "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts",
-                            "column": 26,
-                            "line": 80
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                            "column": 16,
+                            "line": 11
                           },
-                          "message": "Error: locator.selectOption: Test timeout of 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#page-size')\u001b[22m\n\u001b[2m    - locator resolved to <select id=\"page-size\" name=\"page-size\" onchange=\"window.location.href = this.value\">…</select>\u001b[22m\n\u001b[2m  - attempting select option action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    10 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m       - did not find some options\u001b[22m\n\u001b[2m     - retrying select option action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n\n\u001b[0m \u001b[90m 78 |\u001b[39m     \u001b[36mconst\u001b[39m photoGrid \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-grid'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 79 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 80 |\u001b[39m     \u001b[36mawait\u001b[39m pageSizeSelect\u001b[33m.\u001b[39mselectOption({ value\u001b[33m:\u001b[39m \u001b[32m'10'\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 81 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'**/page-size=10**'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 82 |\u001b[39m\n \u001b[90m 83 |\u001b[39m     \u001b[36mconst\u001b[39m firstPageCount \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m photoGrid\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mcount()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts:80:26\u001b[22m"
+                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 1,
-                      "startTime": "2026-02-08T03:49:03.905Z",
+                      "startTime": "2026-02-14T15:25:33.735Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry1/test-failed-1.png"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-1d39c-t-the-page-navigation-works-chromium-retry1/test-failed-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry1/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry1/error-context.md"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-1d39c-t-the-page-navigation-works-chromium-retry1/video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry1/trace.zip"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-1d39c-t-the-page-navigation-works-chromium-retry1/trace.zip"
                         }
-                      ]
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                        "column": 16,
+                        "line": 11
+                      }
                     },
                     {
-                      "workerIndex": 2,
+                      "workerIndex": 8,
                       "parallelIndex": 0,
-                      "status": "timedOut",
-                      "duration": 5249,
+                      "status": "failed",
+                      "duration": 134,
                       "error": {
-                        "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m",
-                        "stack": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
+                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n",
+                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                          "column": 16,
+                          "line": 11
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
                       },
                       "errors": [
                         {
-                          "message": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
-                        },
-                        {
                           "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts",
-                            "column": 26,
-                            "line": 80
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                            "column": 16,
+                            "line": 11
                           },
-                          "message": "Error: locator.selectOption: Test timeout of 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#page-size')\u001b[22m\n\u001b[2m    - locator resolved to <select id=\"page-size\" name=\"page-size\" onchange=\"window.location.href = this.value\">…</select>\u001b[22m\n\u001b[2m  - attempting select option action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - did not find some options\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    10 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m       - did not find some options\u001b[22m\n\u001b[2m     - retrying select option action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n\n\u001b[0m \u001b[90m 78 |\u001b[39m     \u001b[36mconst\u001b[39m photoGrid \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-grid'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 79 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 80 |\u001b[39m     \u001b[36mawait\u001b[39m pageSizeSelect\u001b[33m.\u001b[39mselectOption({ value\u001b[33m:\u001b[39m \u001b[32m'10'\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 81 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'**/page-size=10**'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 82 |\u001b[39m\n \u001b[90m 83 |\u001b[39m     \u001b[36mconst\u001b[39m firstPageCount \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m photoGrid\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mcount()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/memories/photo_gallery.spec.ts:80:26\u001b[22m"
+                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/\", waiting until \"load\"\u001b[22m\n\n\n\u001b[0m \u001b[90m  9 |\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.gallery-grid'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.photo-card'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts:11:16\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 2,
-                      "startTime": "2026-02-08T03:49:09.837Z",
+                      "startTime": "2026-02-14T15:25:34.226Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry2/test-failed-1.png"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-1d39c-t-the-page-navigation-works-chromium-retry2/test-failed-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry2/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-memories-pho-ba320-t-the-page-navigation-works-chromium-retry2/error-context.md"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/photo_gallery-photo_galler-1d39c-t-the-page-navigation-works-chromium-retry2/video.webm"
                         }
-                      ]
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/photo_gallery/photo_gallery.spec.ts",
+                        "column": 16,
+                        "line": 11
+                      }
                     }
                   ],
                   "status": "unexpected"
                 }
               ],
-              "id": "1c79058ac9a0b031337d-725548a91e4940c16905",
-              "file": "photo_gallery/memories/photo_gallery.spec.ts",
-              "line": 73,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "photo_gallery/photo_gallery.spec.ts",
-      "file": "photo_gallery/photo_gallery.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Photo Gallery Feature",
-          "file": "photo_gallery/photo_gallery.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
-            {
-              "title": "gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 453,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:49:15.408Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "471d0833fad5445aea7e-12319756122df01d8746",
-              "file": "photo_gallery/photo_gallery.spec.ts",
-              "line": 11,
-              "column": 3
-            },
-            {
-              "title": "gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 1624,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:49:15.957Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "471d0833fad5445aea7e-9d78d8b97cfa643c3db9",
-              "file": "photo_gallery/photo_gallery.spec.ts",
-              "line": 80,
-              "column": 3
-            },
-            {
-              "title": "gallery_page_navigation_works - Verify that the page navigation works",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 5000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 2664,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-08T03:49:17.585Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
               "id": "471d0833fad5445aea7e-c2aefbf64dc2ad57a7dd",
               "file": "photo_gallery/photo_gallery.spec.ts",
-              "line": 175,
+              "line": 77,
               "column": 3
             }
           ]
@@ -908,11 +594,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-02-08T03:48:40.786Z",
-    "duration": 39488.229,
-    "expected": 16,
+    "startTime": "2026-02-14T15:25:29.733Z",
+    "duration": 4742.021,
+    "expected": 0,
     "skipped": 0,
-    "unexpected": 1,
+    "unexpected": 3,
     "flaky": 0
   }
 }

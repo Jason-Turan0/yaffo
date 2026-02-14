@@ -47,7 +47,7 @@ def init_home_routes(app: Flask):
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
         page = request.args.get("page", default=1, type=int)
-        page_size = request.args.get("PAGE_SIZE", type=int)
+        page_size = request.args.get("page-size", type=int)
         filter_page_size = page_size if page_size else 25
         # Build query with eager loading
         query = (

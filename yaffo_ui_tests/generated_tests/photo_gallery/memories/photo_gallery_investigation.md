@@ -1,73 +1,53 @@
-# Photo Gallery Test Investigation
+# Photo Gallery Investigation
 
-## Test Failure Analysis
+## Issue Summary
+All 3 tests in photo_gallery.spec.ts are timing out in the beforeEach hook at line 12:
+```
+await expect(page.locator('.gallery-grid')).toBeVisible();
+```
 
-### Failing Test
-- Test: `gallery_page_navigation_works`
-- Error: Expected `.photo-card` count to be 10, but found 14
-- Status: Timeout (5000ms exceeded)
+Error: element(s) not found for `.gallery-grid`
 
-### Root Cause Investigation
+## Key Findings
 
-#### 1. Page Size Selection Behavior
-The test attempts to select page size "10" from the dropdown, but the implementation has a critical issue:
+### 1. Selector Mismatch
+- **Test expects**: `.gallery-grid` 
+- **Application uses**: `.photo-grid`
 
-**In pagination.html:**
+### 2. Evidence from HTML Template
+From `/Users/jason.turan/projects/yaffo/yaffo/templates/index.html`:
 ```html
-<select id="page-size" name="page-size" onchange="window.location.href = this.value">
-    {% for size in page_sizes %}
-    <option value="{{ base_url }}?page=1&page-size={{ size }}{{ extra_query }}"
-            {% if size == page_size %}selected{% endif %}>
-        {{ size }}
-    </option>
-    {% endfor %}
-</select>
+<div class="photo-grid">
+    {% for photo in photos %}
+    <div class="photo-card" ...>
 ```
 
-The `<select>` has an `onchange` handler that navigates to the URL stored in the option's value attribute. When Playwright's `selectOption()` is called, it triggers this navigation automatically.
+The container class is `photo-grid`, NOT `gallery-grid`.
 
-**However, the test code does:**
-```typescript
-await pageSizeSelect.selectOption({ label: '10' });
-await page.waitForURL('**/?page=1&page-size=10**');
-```
+### 3. Browser Verification
+Live page inspection confirms:
+- `.gallery-grid` does NOT exist
+- `.photo-grid` EXISTS and contains 14 `.photo-card` elements
+- All other selectors used in tests are correct:
+  - `select#year-select` ✓
+  - `select#page-size` ✓
+  - `.photo-card` ✓
 
-The problem is that after `selectOption()` is called:
-1. The onchange handler fires and navigates the page
-2. The URL changes to include `page-size=10`
-3. BUT the page still displays 14 photos instead of 10
+### 4. Test History Pattern
+- 2026-02-14T14:22:43: ✓ All 3 tests passed
+- 2026-02-14T14:58:54: ✓ All 3 tests passed
+- 2026-02-14T15:01:35: ✗ 1 test failed (gallery_page_navigation_works)
+- 2026-02-14T15:03:09: ✗ 1 test failed (gallery_page_navigation_works)
+- 2026-02-14T15:32:15: ✗ ALL 3 tests failed (beforeEach timeout)
 
-#### 2. Backend Query Parameter Issue
-In `routes/home.py`, line 47:
-```python
-page_size = request.args.get("PAGE_SIZE", type=int)
-```
+The tests were passing earlier today, then one test started failing, and now ALL tests fail in beforeEach. This suggests the application template was recently changed from `.gallery-grid` to `.photo-grid`.
 
-**The parameter name is "PAGE_SIZE" (uppercase), but the URL uses "page-size" (lowercase with dash).**
+## Root Cause
+**APPLICATION REGRESSION**: The application's HTML template changed the CSS class from `.gallery-grid` to `.photo-grid`, breaking the test's selector in the beforeEach hook.
 
-This is a clear mismatch. The backend is looking for `PAGE_SIZE` but receives `page-size`, so it defaults to 25 photos.
-
-#### 3. Verification
-- Current URL: `http://127.0.0.1:5001/?page=1&page-size=10&person-match-type=any&location-match-type=any`
-- Photo count on page: 14 photos (all photos in database)
-- Expected: 10 photos
-
-The page displays ALL 14 photos because:
-- The backend doesn't recognize the `page-size` parameter
-- It defaults to `filter_page_size = 25`
-- Since there are only 14 total photos, all are displayed
-
-## Classification: APPLICATION_REGRESSION
-
-This is an application bug, not a test code defect:
-- The backend expects `PAGE_SIZE` (uppercase)
-- The frontend template generates `page-size` (lowercase with dash)
-- The parameter name mismatch causes pagination to fail
-- The test is correctly written and would pass if the application worked properly
-
-## Suggested Fix
-The application needs to be fixed to use consistent parameter naming. Either:
-1. Change backend to use `page-size`: `request.args.get("page-size", type=int)`
-2. OR change frontend template to use `PAGE_SIZE` in the query string
-
-The test code is correct and does not need changes.
+## Classification
+This is an **application_regression** because:
+1. Tests were previously passing (proven by test history)
+2. The test code uses a selector that was correct at the time of writing
+3. The application changed its DOM structure (class name)
+4. The failure is consistent, not intermittent (all 3 tests fail the same way)
