@@ -22,9 +22,34 @@
     line-height: 1;
 }
 
+.nav-page-li {
+    display: flex;
+    align-items: stretch;
+}
+
 .nav-page-tab {
     max-width: 180px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* When a page tab is active, its tab text hugs the edit pencil beside it. */
+.nav-page-li .nav-page-tab.active {
+    padding-right: 6px;
+}
+
+.nav-page-edit {
+    display: flex;
+    align-items: center;
+    padding: 0 12px 0 4px;
+    color: #adb5bd;
+    text-decoration: none;
+    font-size: 14px;
+    border-bottom: 3px solid transparent;
+}
+
+.nav-page-edit:hover {
+    color: #007BFF;
+    background: #f8f9fa;
 }

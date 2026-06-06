@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }} - Photo Organizer{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/gridstack/10.3.1/gridstack.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='pages/detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="main-content page-design">
+    <div class="design-layout">
+        <aside class="editor-panel">
+            <div class="editor-card">
+                <div class="form-group">
+                    <label for="page-title">Title</label>
+                    <input type="text" id="page-title" name="title" value="{{ page.title }}" placeholder="Untitled Page">
+                </div>
+                <div class="form-group">
+                    <label for="page-theme">Description</label>
+                    <textarea id="page-theme" name="theme_prompt" rows="2" class="form-control"
+                              placeholder="Describe what you want this page to show…">{{ page.theme_prompt }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label inline">
+                        <input type="checkbox" id="page-show-title" {% if page.show_title %}checked{% endif %}>
+                        Display title?
+                    </label>
+                </div>
+                <div class="editor-actions">
+                    <button type="button" id="add-widget-button" class="btn-secondary">+ Add widget</button>
+                    <button type="button" id="save-page-button" class="btn-primary">Save</button>
+                    <button type="button" class="btn-danger"
+                            onclick="window.PHOTO_ORGANIZER.pageDetail.confirmDelete()">Delete Page</button>
+                </div>
+            </div>
+
+            <div class="editor-card conversation-card">
+                {% include "pages/_conversation.html" %}
+            </div>
+        </aside>
+
+        <div class="editor-canvas">
+            {% set editable = true %}
+            {% include "pages/_grid.html" %}
+        </div>
+    </div>
+</div>
+
+<form id="delete-page-form" method="POST" action="{{ url_for('pages_delete', page_id=page.id) }}" hidden></form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/gridstack/10.3.1/gridstack-all.js') }}"></script>
+<script src="{{ url_for('static', filename='pages/grid.js') }}"></script>
+<script src="{{ url_for('static', filename='pages/detail.js') }}"></script>
+<script>
+    window.PHOTO_ORGANIZER.pageDetail = window.PHOTO_ORGANIZER.initPageDetail({{ page.title | tojson }});
+    window.PHOTO_ORGANIZER.pageGrid = window.PHOTO_ORGANIZER.initDesignGrid({{ page.id }}, window.APP_CONFIG);
+</script>
+{% endblock %}

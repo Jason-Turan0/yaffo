@@ -91,8 +91,15 @@
             <li class="nav-divider" aria-hidden="true"></li>
             {% endif %}
             {% for nav_page in nav_pages %}
-            <li><a href="{{ url_for('pages_detail', page_id=nav_page.id) }}"
-                   class="nav-link nav-page-tab {% if request.view_args and request.view_args.get('page_id') == nav_page.id %}active{% endif %}">{{ nav_page.title }}</a></li>
+            {% set is_active = request.view_args and request.view_args.get('page_id') == nav_page.id %}
+            <li class="nav-page-li">
+                <a href="{{ url_for('pages_detail', page_id=nav_page.id) }}"
+                   class="nav-link nav-page-tab {% if is_active %}active{% endif %}">{{ nav_page.title }}</a>
+                {% if is_active and request.endpoint == 'pages_detail' %}
+                <a href="{{ url_for('pages_design', page_id=nav_page.id) }}"
+                   class="nav-page-edit" title="Edit page" aria-label="Edit page">✎</a>
+                {% endif %}
+            </li>
             {% endfor %}
             <li>
                 <form method="POST" action="{{ url_for('pages_create') }}" class="nav-new-page-form">

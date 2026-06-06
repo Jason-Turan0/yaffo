@@ -1,0 +1,7 @@
+{% if page.messages %}
+{% for message in page.messages %}
+<div class="chat-message chat-message-{{ message.role }}">{{ message.content }}</div>
+{% endfor %}
+{% else %}
+<div class="chat-empty">Describe what you want and I'll add widgets — e.g. “a map of Maine” or “our beach photos from 2023”.</div>
+{% endif %}

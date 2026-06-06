@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }} - Photo Organizer{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/gridstack/10.3.1/gridstack.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='pages/detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="main-content page-presentation">
+    {% if page.show_title or page.theme_prompt %}
+    <div class="page-header">
+        <div class="header-info">
+            {% if page.show_title %}
+            <h1>{{ page.title }}</h1>
+            {% endif %}
+            {% if page.theme_prompt %}
+            <p class="subtitle">{{ page.theme_prompt }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% include "pages/_grid.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/gridstack/10.3.1/gridstack-all.js') }}"></script>
+<script src="{{ url_for('static', filename='pages/grid.js') }}"></script>
+<script>
+    window.PHOTO_ORGANIZER.pageGrid = window.PHOTO_ORGANIZER.initPresentationGrid();
+</script>
+{% endblock %}

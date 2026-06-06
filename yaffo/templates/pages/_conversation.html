@@ -1,0 +1,14 @@
+<div class="conversation">
+    <div class="conversation-header">
+        <h2>Assistant</h2>
+        <p class="conversation-subtitle">Collaborate to build your page.</p>
+    </div>
+    <div class="conversation-messages" id="conversation-messages">
+        {% include "pages/_messages.html" %}
+    </div>
+    <form class="conversation-input" id="conversation-form">
+        <textarea name="message" id="conversation-message" rows="2"
+                  placeholder="Describe what you want…"></textarea>
+        <button type="submit" class="btn-primary">Send</button>
+    </form>
+</div>

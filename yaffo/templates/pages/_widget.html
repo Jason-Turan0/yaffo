@@ -1,0 +1,18 @@
+<div class="grid-stack-item" gs-id="{{ widget.id }}"
+     gs-x="{{ widget.grid_x }}" gs-y="{{ widget.grid_y }}" gs-w="{{ widget.grid_w }}" gs-h="{{ widget.grid_h }}">
+    <div class="grid-stack-item-content widget-card">
+        <div class="widget-header">
+            <span class="widget-title">{{ widget.title }}</span>
+            {% if editable %}
+            <input type="text" class="widget-title-input" value="{{ widget.title }}" aria-label="Widget title" hidden>
+            <button type="button" class="widget-edit" aria-label="Edit title">✎</button>
+            <button type="button" class="widget-delete" data-widget-id="{{ widget.id }}" aria-label="Delete widget">×</button>
+            {% endif %}
+        </div>
+        <div class="widget-body">
+            <iframe class="widget-frame"
+                    src="{{ url_for('pages_widget_frame', page_id=page.id, widget_id=widget.id) }}"
+                    sandbox="allow-scripts" title="{{ widget.title }} preview"></iframe>
+        </div>
+    </div>
+</div>

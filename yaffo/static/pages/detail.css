@@ -1,87 +1,171 @@
-.page-meta-form {
+/* ---- Design (edit) layout: editor panel left, canvas right ---- */
+.design-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.editor-panel {
+    width: 360px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: sticky;
+    top: 90px;
+}
+
+.editor-canvas {
+    flex: 1;
+    min-width: 0;
+}
+
+.editor-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+
+.editor-card .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.editor-card textarea.form-control {
+    font-family: inherit;
+    resize: vertical;
+}
+
+.editor-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.editor-actions button {
+    padding: 8px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+/* ---- Conversation ---- */
+.conversation-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.conversation {
+    display: flex;
+    flex-direction: column;
+}
+
+.conversation-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.conversation-header h2 {
+    font-size: 15px;
+    margin: 0;
+}
+
+.conversation-subtitle {
+    font-size: 12px;
+    color: #868e96;
+    margin-top: 2px;
+}
+
+.conversation-messages {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-bottom: 24px;
+    padding: 14px 16px;
+    max-height: 320px;
+    overflow-y: auto;
 }
 
-.page-title-input {
-    font-size: 28px;
-    font-weight: 600;
+.chat-empty {
+    font-size: 13px;
+    color: #adb5bd;
+}
+
+.chat-message {
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    max-width: 90%;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.chat-message-user {
+    align-self: flex-end;
+    background: #007BFF;
+    color: white;
+}
+
+.chat-message-assistant {
+    align-self: flex-start;
+    background: #f1f3f5;
     color: #212529;
-    border: none;
-    border-bottom: 2px solid transparent;
-    padding: 4px 0;
-    background: transparent;
 }
 
-.page-title-input:hover {
-    border-bottom-color: #dee2e6;
+.conversation-input {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid #dee2e6;
 }
 
-.page-title-input:focus {
-    outline: none;
-    border-bottom-color: #007BFF;
-}
-
-.page-theme-input {
-    font-size: 15px;
-    color: #495057;
-    border: 1px solid #dee2e6;
+.conversation-input textarea {
+    flex: 1;
+    resize: none;
+    border: 1px solid #ced4da;
     border-radius: 6px;
-    padding: 8px 10px;
-    resize: vertical;
+    padding: 8px;
     font-family: inherit;
+    font-size: 14px;
 }
 
-.page-theme-input:focus {
+.conversation-input textarea:focus {
     outline: none;
     border-color: #007BFF;
 }
 
-.page-meta-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.blocks-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-}
-
-.blocks-hint {
-    font-size: 13px;
-    color: #868e96;
-}
-
+/* ---- Grid + widgets ---- */
 .grid-stack {
-    background: #f1f3f5;
-    border-radius: 8px;
     min-height: 320px;
+    /* Gridstack insets every item's content by its margin (8px) on all sides,
+       including the outer edges. Pull the grid out by that amount (incl. the
+       top) so the edge widgets line up flush with the canvas and the editor
+       panel's top. */
+    margin: -8px -8px 0;
 }
 
-.block-card {
+.widget-card {
     display: flex;
     flex-direction: column;
     background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
+    border-radius: 8px;
     overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.block-header {
+.widget-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 6px;
     padding: 6px 10px;
     background: #f8f9fa;
     border-bottom: 1px solid #dee2e6;
     cursor: move;
 }
 
-.block-title {
+.widget-title {
+    flex: 1;
+    min-width: 0;
     font-size: 13px;
     font-weight: 500;
     color: #495057;
@@ -90,7 +174,44 @@
     white-space: nowrap;
 }
 
-.block-delete {
+.widget-edit {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    color: #adb5bd;
+    padding: 0 4px;
+}
+
+.widget-edit:hover {
+    color: #007BFF;
+}
+
+.widget-title-input {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: #495057;
+    border: none;
+    background: transparent;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.widget-title-input:hover {
+    background: #eceef0;
+}
+
+.widget-title-input:focus {
+    outline: none;
+    background: white;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+    cursor: text;
+}
+
+.widget-delete {
     background: none;
     border: none;
     cursor: pointer;
@@ -100,18 +221,41 @@
     padding: 0 4px;
 }
 
-.block-delete:hover {
+.widget-delete:hover {
     color: #dc3545;
 }
 
-.block-body {
+.widget-body {
     flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    min-height: 0;
 }
 
-.block-placeholder {
-    font-size: 13px;
-    color: #adb5bd;
+.widget-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+    background: white;
+}
+
+/* While dragging/resizing, let pointer events pass through the iframes to the
+   grid instead of being swallowed by the framed document. */
+.grid-stack.is-interacting .widget-frame {
+    pointer-events: none;
+}
+
+/* Presentation mode shows only the rendered widget content, no editing chrome. */
+.page-presentation .widget-header {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .design-layout {
+        flex-direction: column;
+    }
+
+    .editor-panel {
+        width: 100%;
+        position: static;
+    }
 }
