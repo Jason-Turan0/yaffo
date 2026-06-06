@@ -4,12 +4,14 @@ from yaffo.page_builder import stub_store
 from yaffo.utils.context import context
 
 
-# Sandboxed widget frames may only run their own inline code and load images;
-# no network (connect-src 'none') so injected data can't be exfiltrated.
-_WIDGET_FRAME_CSP = (
-    "default-src 'none'; img-src data:; style-src 'unsafe-inline'; "
-    "script-src 'unsafe-inline'; connect-src 'none'"
-)
+# Sandboxed widget frames may only run their own inline code and load images
+# from this app's origin (the photo routes); no other network (connect-src
+# 'none') so injected data can't be exfiltrated.
+def _widget_frame_csp(origin: str) -> str:
+    return (
+        f"default-src 'none'; img-src {origin} data:; style-src 'unsafe-inline'; "
+        "script-src 'unsafe-inline'; connect-src 'none'"
+    )
 
 
 @context("yaffo-pages")
@@ -77,13 +79,21 @@ def init_pages_routes(app: Flask):
             abort(404)
         data = stub_store.resolve_data(widget.data_query)
         response = make_response(render_template("pages/widget_frame.html", widget=widget, data=data))
-        response.headers["Content-Security-Policy"] = _WIDGET_FRAME_CSP
+        response.headers["Content-Security-Policy"] = _widget_frame_csp(request.host_url.rstrip("/"))
         return response
 
     @app.route("/pages/<int:page_id>/widgets/<int:widget_id>/delete", methods=["POST"])
     def pages_delete_widget(page_id: int, widget_id: int):
         stub_store.remove_widget(page_id, widget_id)
         return "", 204
+
+    @app.route("/pages/<int:page_id>/widgets/<int:widget_id>/query", methods=["POST"])
+    def pages_widget_query(page_id: int, widget_id: int):
+        page = stub_store.get_page(page_id)
+        if page is None or not any(w.id == widget_id for w in page.widgets):
+            abort(404)
+        payload = request.get_json(silent=True) or {}
+        return {"data": stub_store.resolve_query(payload.get("query", {}))}
 
     @app.route("/pages/<int:page_id>/chat", methods=["POST"])
     def pages_chat(page_id: int):

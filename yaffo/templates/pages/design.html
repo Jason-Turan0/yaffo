@@ -57,5 +57,6 @@
 <script>
     window.PHOTO_ORGANIZER.pageDetail = window.PHOTO_ORGANIZER.initPageDetail({{ page.title | tojson }});
     window.PHOTO_ORGANIZER.pageGrid = window.PHOTO_ORGANIZER.initDesignGrid({{ page.id }}, window.APP_CONFIG);
+    window.PHOTO_ORGANIZER.initWidgetBroker({{ page.id }}, window.APP_CONFIG);
 </script>
 {% endblock %}

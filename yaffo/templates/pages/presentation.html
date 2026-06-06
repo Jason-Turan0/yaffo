@@ -31,5 +31,6 @@
 <script src="{{ url_for('static', filename='pages/grid.js') }}"></script>
 <script>
     window.PHOTO_ORGANIZER.pageGrid = window.PHOTO_ORGANIZER.initPresentationGrid();
+    window.PHOTO_ORGANIZER.initWidgetBroker({{ page.id }}, window.APP_CONFIG);
 </script>
 {% endblock %}

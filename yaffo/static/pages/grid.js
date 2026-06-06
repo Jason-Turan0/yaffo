@@ -8,6 +8,30 @@ const BASE_GRID_OPTS = {
     columnOpts: { breakpoints: [{ w: 768, c: 1 }] }
 };
 
+// Broker for widget iframes that run live, server-side queries. The sandboxed
+// frames can't fetch (connect-src 'none'), so they postMessage a query up to the
+// parent, which fetches and posts the rows back. Used in both modes.
+window.PHOTO_ORGANIZER.initWidgetBroker = (pageId, config) => {
+    window.addEventListener('message', async (event) => {
+        const msg = event.data || {};
+        if (msg.type !== 'yaffo:query') return;
+        const frame = [...document.querySelectorAll('.widget-frame')]
+            .find((f) => f.contentWindow === event.source);
+        if (!frame) return;
+        let data = null;
+        try {
+            const response = await fetch(
+                config.buildUrl('pages_widget_query', { page_id: pageId, widget_id: frame.dataset.widgetId }),
+                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: msg.query }) }
+            );
+            data = (await response.json()).data;
+        } catch (e) {
+            data = null;
+        }
+        frame.contentWindow.postMessage({ type: 'yaffo:result', requestId: msg.requestId, data }, '*');
+    });
+};
+
 window.PHOTO_ORGANIZER.initPresentationGrid = () => {
     return GridStack.init({ ...BASE_GRID_OPTS, staticGrid: true });
 };
