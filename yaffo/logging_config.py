@@ -9,7 +9,7 @@ HUEY_LOG_FILE = ROOT_DIR / "background_tasks.log"
 WEB_LOG_FILE = ROOT_DIR / "yaffo.log"
 
 
-def setup_logger(name: str, log_file: str, level=logging.INFO):
+def setup_logger(name: str, log_file: str, level=logging.DEBUG):
     """
     Set up a logger with file and console handlers.
 
@@ -48,7 +48,7 @@ def setup_logger(name: str, log_file: str, level=logging.INFO):
     return logger
 
 
-def get_logger(module_name: str, log_type: str ='webapp', level=logging.INFO):
+def get_logger(module_name: str, log_type: str ='webapp', level=logging.DEBUG):
     """
     Factory method to create a logger for a specific module.
 

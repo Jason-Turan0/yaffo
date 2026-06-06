@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, abort, make_response
 
-from yaffo.page_builder import stub_store
+from yaffo.page_builder import stub_store, llm_config
+from yaffo.page_builder.agent import create_agent
+from yaffo.page_builder.prompt_generator import build_user_message
 from yaffo.utils.context import context
 
 
@@ -95,6 +97,15 @@ def init_pages_routes(app: Flask):
         payload = request.get_json(silent=True) or {}
         return {"data": stub_store.resolve_query(payload.get("query", {}))}
 
+    @app.route("/pages/<int:page_id>/widgets/<int:widget_id>/state", methods=["POST"])
+    def pages_widget_state(page_id: int, widget_id: int):
+        page = stub_store.get_page(page_id)
+        if page is None or not any(w.id == widget_id for w in page.widgets):
+            abort(404)
+        payload = request.get_json(silent=True) or {}
+        stub_store.set_widget_state(page_id, widget_id, payload.get("state", {}))
+        return "", 204
+
     @app.route("/pages/<int:page_id>/chat", methods=["POST"])
     def pages_chat(page_id: int):
         page = stub_store.get_page(page_id)
@@ -102,23 +113,43 @@ def init_pages_routes(app: Flask):
             abort(404)
         payload = request.get_json(silent=True) or {}
         message = (payload.get("message") or "").strip()
-        widget = None
+        # Runtime errors collected client-side, fed back so the model can repair
+        # code that threw.
+        widget_errors = payload.get("widget_errors") or {}
+        new_widgets_html: list[str] = []
+
         if message:
             stub_store.add_message(page_id, "user", message)
-            widget = stub_store.generate_widget(page_id, message)
-            stub_store.add_message(
-                page_id,
-                "assistant",
-                f"Added the “{widget.title}” widget to your page. "
-                "Tell me what to change, or describe another widget. "
-                "(Mock response — real generation isn't wired up yet.)",
-            )
-        widget_html = (
-            render_template("pages/_widget.html", widget=widget, page=page, editable=True)
-            if widget
-            else None
-        )
+            if llm_config.get_api_key() is None:
+                stub_store.add_message(
+                    page_id,
+                    "assistant",
+                    "No API key configured. Add your Anthropic API key in Settings → AI Generation.",
+                )
+            else:
+                before_ids = {w.id for w in page.widgets}
+                user_message = build_user_message(
+                    message,
+                    page_title=page.title,
+                    page_description=page.theme_prompt,
+                    widgets=[{"id": w.id, "title": w.title, "prompt": w.prompt} for w in page.widgets],
+                    widget_errors=widget_errors,
+                )
+                # Synchronous for now — this blocks until the agent finishes.
+                # Streaming progress to the client is a later improvement.
+                try:
+                    result = create_agent(page_id).run(user_message)
+                    reply = result.text or ("Done." if result.ok else "Generation failed.")
+                except Exception as exc:  # surface failures to the user, don't 500
+                    reply = f"Generation error: {exc}"
+                stub_store.add_message(page_id, "assistant", reply)
+                new_widgets_html = [
+                    render_template("pages/_widget.html", widget=w, page=page, editable=True)
+                    for w in page.widgets
+                    if w.id not in before_ids
+                ]
+
         return {
             "messages_html": render_template("pages/_messages.html", page=page),
-            "widget_html": widget_html,
+            "new_widgets": new_widgets_html,
         }

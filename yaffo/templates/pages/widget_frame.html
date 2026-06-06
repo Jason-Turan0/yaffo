@@ -3,10 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <style>{{ widget.css | safe }}</style>
+    <style>
+        #__yaffo_error__ {
+            position: fixed;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            background: #fff5f5;
+            color: #c0392b;
+            font-family: -apple-system, sans-serif;
+            font-size: 13px;
+            text-align: center;
+        }
+        #__yaffo_error__.show { display: flex; }
+        #__yaffo_error__ .msg {
+            color: #7f8c8d;
+            font-size: 11px;
+            max-width: 90%;
+            word-break: break-word;
+        }
+    </style>
 </head>
 <body>
 {{ widget.html | safe }}
-<script>window.__DATA__ = {{ data | tojson }};</script>
-<script>{{ widget.js | safe }}</script>
+<div id="__yaffo_error__">
+    <div>⚠ This widget couldn't render</div>
+    <div class="msg" id="__yaffo_error_msg__"></div>
+</div>
+<script>
+    window.__DATA__ = {{ data | tojson }};
+    window.__STATE__ = {{ widget.state | tojson }};
+</script>
+<script>
+    // Error boundary: a widget's bug (sync, async, or rejected promise) shows a
+    // contained error state in its own iframe instead of a blank/broken frame.
+    (function () {
+        var box = document.getElementById('__yaffo_error__');
+        var msg = document.getElementById('__yaffo_error_msg__');
+        function show(text) {
+            if (msg) { msg.textContent = text || ''; }
+            if (box) { box.classList.add('show'); }
+            // Report the error up to the parent so it's logged on the widget and
+            // can be fed back to the model on the next generation.
+            try { parent.postMessage({ type: 'yaffo:error', message: text || '' }, '*'); } catch (e) {}
+        }
+        window.addEventListener('error', function (e) { show(e.message); });
+        window.addEventListener('unhandledrejection', function (e) {
+            show((e.reason && e.reason.message) || String(e.reason));
+        });
+        try {
+            {{ widget.js | safe }}
+        } catch (err) {
+            show((err && err.message) || String(err));
+        }
+    })();
+</script>
 </body>
 </html>

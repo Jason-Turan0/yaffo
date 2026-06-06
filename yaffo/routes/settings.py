@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, Face
 from yaffo.common import DB_PATH, HUEY_DB_PATH
+from yaffo.page_builder import llm_config
 import json
 import subprocess
 import platform
@@ -74,8 +75,26 @@ def init_settings_routes(app: Flask):
             current_thumbnail_dir=str(current_thumbnail_dir) if current_thumbnail_dir else None,
             thumbnail_count=thumbnail_count,
             thumbnail_size=format_size(thumbnail_size),
-            huey_db_path=str(HUEY_DB_PATH)
+            huey_db_path=str(HUEY_DB_PATH),
+            llm=llm_config.status(),
         )
+
+    @app.route("/settings/llm/model", methods=["POST"])
+    def settings_llm_model():
+        llm_config.set_model((request.form.get("model") or "").strip())
+        return render_template("settings/_llm.html", llm=llm_config.status())
+
+    @app.route("/settings/llm/api-key", methods=["POST"])
+    def settings_llm_api_key():
+        key = (request.form.get("api_key") or "").strip()
+        if key:
+            llm_config.set_api_key(key)
+        return render_template("settings/_llm.html", llm=llm_config.status())
+
+    @app.route("/settings/llm/api-key/clear", methods=["POST"])
+    def settings_llm_api_key_clear():
+        llm_config.clear_api_key()
+        return render_template("settings/_llm.html", llm=llm_config.status())
 
     @app.route("/api/settings/media-dirs", methods=["POST"])
     def add_media_dir():

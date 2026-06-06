@@ -19,6 +19,7 @@ class GenWidget:
     title: str = "Untitled widget"
     prompt: str = ""
     data_query: dict = field(default_factory=dict)
+    state: dict = field(default_factory=dict)  # widget-owned persisted state
     html: str = ""
     css: str = ""
     js: str = ""
@@ -154,6 +155,19 @@ def resolve_query(query: dict):
     server-side queries a widget runs after load (via the parent broker)."""
     resolver = _SOURCE_RESOLVERS.get(query.get("source"))
     return resolver(query) if resolver is not None else None
+
+
+def set_widget_state(page_id: int, widget_id: int, state: dict) -> None:
+    """Persist a widget's own state blob (e.g. its current filter selection).
+    Injected back into the widget as window.__STATE__ on the next render."""
+    page = _pages.get(page_id)
+    if page is None:
+        return
+    for widget in page.widgets:
+        if widget.id == widget_id:
+            widget.state = state or {}
+            page.updated_at = datetime.now()
+            return
 
 
 # ---------------------------------------------------------------------------
@@ -386,15 +400,16 @@ _GLOBAL_FILTER = {
     ),
     "html": "<div class='bar' id='root'></div>",
     "js": (
-        "const f=window.__DATA__.facets||{};const root=document.getElementById('root');"
-        "function sel(label,opts){const w=document.createElement('label');w.textContent=label+': ';"
+        "const f=window.__DATA__.facets||{};const st=window.__STATE__||{};const root=document.getElementById('root');"
+        "function sel(label,opts,val){const w=document.createElement('label');w.textContent=label+': ';"
         "const s=document.createElement('select');const a=document.createElement('option');a.value='';a.textContent='All';s.appendChild(a);"
         "opts.forEach(o=>{const e=document.createElement('option');e.value=o;e.textContent=o;s.appendChild(e);});"
-        "w.appendChild(s);root.appendChild(w);return s;}"
-        "const loc=sel('Location',f.locations||[]);const yr=sel('Year',(f.years||[]).map(String));"
-        "function publish(){parent.postMessage({type:'yaffo:publish',topic:'filter',"
-        "payload:{location:loc.value||null,year:yr.value?Number(yr.value):null}},'*');}"
-        "loc.onchange=publish;yr.onchange=publish;"
+        "s.value=val||'';w.appendChild(s);root.appendChild(w);return s;}"
+        "const loc=sel('Location',f.locations||[],st.location);const yr=sel('Year',(f.years||[]).map(String),st.year!=null?String(st.year):'');"
+        "function onChange(){const flt={location:loc.value||null,year:yr.value?Number(yr.value):null};"
+        "parent.postMessage({type:'yaffo:publish',topic:'filter',payload:flt},'*');"
+        "parent.postMessage({type:'yaffo:state',state:flt},'*');}"
+        "loc.onchange=onChange;yr.onchange=onChange;"
     ),
 }
 
@@ -410,16 +425,33 @@ _LINKED_GALLERY = {
     ),
     "html": "<div class='grid' id='root'></div>",
     "js": (
-        "const d=window.__DATA__;const grid=document.getElementById('root');let reqId=0;const pending={};"
+        "const d=window.__DATA__;const st=window.__STATE__||{};const grid=document.getElementById('root');"
+        "let reqId=0;const pending={};"
         "function draw(photos){grid.innerHTML='';(photos||[]).forEach(p=>{const i=document.createElement('img');"
         "i.src=p.url;i.onerror=()=>{i.src='/placeholder';};grid.appendChild(i);});}"
         "function serverQuery(query){return new Promise(res=>{const id=++reqId;pending[id]=res;"
         "parent.postMessage({type:'yaffo:query',requestId:id,query},'*');});}"
+        "async function applyFilter(fl){const q={source:'photos',limit:12};"
+        "if(fl.location)q.location=fl.location;if(fl.year)q.year=fl.year;draw(await serverQuery(q));}"
         "window.addEventListener('message',async e=>{const m=e.data||{};"
         "if(m.type==='yaffo:result'&&pending[m.requestId]){pending[m.requestId](m.data);delete pending[m.requestId];return;}"
-        "if(m.type==='yaffo:event'&&m.topic==='filter'){const fl=m.payload||{};const q={source:'photos',limit:12};"
-        "if(fl.location)q.location=fl.location;if(fl.year)q.year=fl.year;draw(await serverQuery(q));}});"
-        "draw(d.initial||[]);"
+        "if(m.type==='yaffo:event'&&m.topic==='filter'){const fl=m.payload||{};"
+        "parent.postMessage({type:'yaffo:state',state:{filter:fl}},'*');applyFilter(fl);}});"
+        "if(st.filter){applyFilter(st.filter);}else{draw(d.initial||[]);}"
+    ),
+}
+
+# Intentionally throws, to exercise the per-widget error boundary in the frame.
+_BROKEN = {
+    "title": "Broken widget (demo)",
+    "grid_w": 4,
+    "grid_h": 2,
+    "data_query": {},
+    "css": "body{margin:0;font-family:-apple-system,sans-serif}",
+    "html": "<div id='root'>about to fail…</div>",
+    "js": (
+        "document.getElementById('root').textContent='running…';"
+        "throw new Error('Intentional demo error: this widget always fails');"
     ),
 }
 
@@ -435,6 +467,7 @@ _WIDGET_STUBS = [
     # _PERSON_BROWSER,
     _GLOBAL_FILTER,
     _LINKED_GALLERY,
+    _BROKEN,
 ]
 current_stub_index = 0
 
@@ -488,6 +521,61 @@ def add_widget(page_id: int) -> Optional[GenWidget]:
     return _new_widget(page)
 
 
+_WIDGET_FIELDS = ("title", "prompt", "data_query", "html", "css", "js", "grid_w", "grid_h")
+
+
+def create_widget(
+    page_id: int,
+    *,
+    title: str = "Untitled widget",
+    data_query: Optional[dict] = None,
+    html: str = "",
+    css: str = "",
+    js: str = "",
+    grid_w: int = 4,
+    grid_h: int = 3,
+    prompt: str = "",
+) -> Optional[GenWidget]:
+    """Create a widget from explicit, model-supplied content (vs. the random
+    `add_widget`). Placed at the bottom of the current layout."""
+    page = _pages.get(page_id)
+    if page is None:
+        return None
+    next_y = max((w.grid_y + w.grid_h for w in page.widgets), default=0)
+    widget = GenWidget(
+        id=next(_widget_ids),
+        title=title,
+        prompt=prompt,
+        data_query=data_query or {},
+        html=html,
+        css=css,
+        js=js,
+        status="ready",
+        grid_x=0,
+        grid_y=next_y,
+        grid_w=grid_w,
+        grid_h=grid_h,
+    )
+    page.widgets.append(widget)
+    page.updated_at = datetime.now()
+    return widget
+
+
+def update_widget(page_id: int, widget_id: int, **fields) -> Optional[GenWidget]:
+    """Update only the provided (non-None) fields of an existing widget."""
+    page = _pages.get(page_id)
+    if page is None:
+        return None
+    widget = next((w for w in page.widgets if w.id == widget_id), None)
+    if widget is None:
+        return None
+    for key, value in fields.items():
+        if key in _WIDGET_FIELDS and value is not None:
+            setattr(widget, key, value)
+    page.updated_at = datetime.now()
+    return widget
+
+
 def remove_widget(page_id: int, widget_id: int) -> None:
     page = _pages.get(page_id)
     if page is None:
@@ -524,9 +612,13 @@ def add_message(page_id: int, role: str, content: str) -> Optional[GenMessage]:
     return message
 
 
-def generate_widget(page_id: int, prompt: str) -> Optional[GenWidget]:
+def generate_widget(
+    page_id: int, prompt: str, widget_errors: Optional[dict] = None
+) -> Optional[GenWidget]:
     """Mock model generation: turns a user prompt into a stub widget. Stands in
-    for a Claude call that emits a widget's data_query + html/css/js."""
+    for a Claude call that emits a widget's data_query + html/css/js. The real
+    call would also receive `widget_errors` (recent runtime errors per widget) as
+    context so it can repair code that threw."""
     page = _pages.get(page_id)
     if page is None:
         return None

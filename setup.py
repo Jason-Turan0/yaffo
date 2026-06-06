@@ -7,8 +7,10 @@ setup(
     author=app_author,
     packages=find_packages(),
     install_requires=[
+        "anthropic",
         "blinker==1.9.0",
         "briefcase",
+        "keyring",
         "click==8.3.0",
         "dlib==20.0.0",
         "face-recognition==1.3.0",

@@ -1,0 +1,46 @@
+<div class="settings-section" id="llm-section">
+    <h2>AI Generation</h2>
+    <p class="section-description">
+        Powers page-builder widget generation. The API key is stored in your OS
+        keychain — never written to the database.
+    </p>
+
+    <div class="form-group">
+        <label for="llm-model">Model</label>
+        <select id="llm-model" name="model"
+                hx-post="{{ url_for('settings_llm_model') }}"
+                hx-target="#llm-section" hx-swap="outerHTML">
+            {% for m in llm.models %}
+            <option value="{{ m.id }}" {% if m.id == llm.model %}selected{% endif %}>{{ m.label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {% if llm.source == 'environment' %}
+    <div class="api-key-status">
+        <strong>API key:</strong> ✓ configured via the <code>ANTHROPIC_API_KEY</code>
+        environment variable (takes precedence; nothing to manage here).
+    </div>
+    {% else %}
+    <div class="api-key-status">
+        <strong>API key:</strong>
+        {% if llm.configured %}✓ stored in keychain{% else %}Not set{% endif %}
+    </div>
+    <form hx-post="{{ url_for('settings_llm_api_key') }}"
+          hx-target="#llm-section" hx-swap="outerHTML" class="api-key-form">
+        <div class="form-group inline">
+            <label for="llm-api-key">{{ "Replace key" if llm.configured else "Set key" }}</label>
+            <input type="password" id="llm-api-key" name="api_key" placeholder="sk-ant-..."
+                   autocomplete="off" required>
+        </div>
+        <div class="api-key-actions">
+            <button type="submit" class="btn-primary">Save</button>
+            {% if llm.configured %}
+            <button type="button" class="btn-danger"
+                    hx-post="{{ url_for('settings_llm_api_key_clear') }}"
+                    hx-target="#llm-section" hx-swap="outerHTML">Clear</button>
+            {% endif %}
+        </div>
+    </form>
+    {% endif %}
+</div>
