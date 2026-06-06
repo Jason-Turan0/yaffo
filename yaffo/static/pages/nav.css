@@ -1,0 +1,30 @@
+.nav-divider {
+    width: 1px;
+    background: #dee2e6;
+    margin: 10px 8px;
+    align-self: stretch;
+    list-style: none;
+}
+
+.nav-new-page-form {
+    display: flex;
+    align-items: stretch;
+    margin: 0;
+}
+
+.nav-new-page {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.nav-page-tab {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

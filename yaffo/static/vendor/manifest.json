@@ -1,0 +1,22 @@
+{
+    "htmx": {
+        "version": "2.0.4",
+        "files": {
+            "htmx.min.js": "https://unpkg.com/htmx.org@{version}/dist/htmx.min.js"
+        }
+    },
+    "ol": {
+        "version": "10.3.1",
+        "files": {
+            "ol.js": "https://cdn.jsdelivr.net/npm/ol@v{version}/dist/ol.js",
+            "ol.css": "https://cdn.jsdelivr.net/npm/ol@v{version}/ol.css"
+        }
+    },
+    "gridstack": {
+        "version": "10.3.1",
+        "files": {
+            "gridstack-all.js": "https://cdn.jsdelivr.net/npm/gridstack@{version}/dist/gridstack-all.js",
+            "gridstack.min.css": "https://cdn.jsdelivr.net/npm/gridstack@{version}/dist/gridstack.min.css"
+        }
+    }
+}

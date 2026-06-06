@@ -260,7 +260,8 @@ Add `keyring` and `anthropic` to `setup.py` `install_requires`.
    handling, responsive fallback.
 4. **Data-query engine** — `validate_data_query` + `resolve_query` +
    `to_page_dict`. Reusable and testable on its own; it is the heart of the system.
-5. **Page-level "draft from one prompt"** — orchestration that plans and fans out
+5. Model API Key management
+6. **Page-level "draft from one prompt"** — orchestration that plans and fans out
    block generation.
 
 ## Open questions

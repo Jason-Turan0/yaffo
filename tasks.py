@@ -1,6 +1,13 @@
 from invoke import task
+from pathlib import Path
+from urllib.request import urlopen
+import json
 import platform
 import subprocess
+
+
+VENDOR_DIR = Path("yaffo/static/vendor")
+VENDOR_MANIFEST = VENDOR_DIR / "manifest.json"
 
 
 @task
@@ -257,3 +264,43 @@ def profile_index_photos(c, photos=10, name=None, show_history=False, history_li
     cmd = " ".join(cmd_parts)
     print(f"Running: {cmd}")
     c.run(cmd, pty=True)
+
+
+@task
+def update_vendor(c, lib=None):
+    """
+    Download vendored front-end libraries declared in
+    yaffo/static/vendor/manifest.json into vendor/<lib>/<version>/.
+
+    Bump a version in the manifest, run this task, then point the template at
+    the new vendor/<lib>/<version>/ path.
+
+    Args:
+        lib: Only update this library (default: all libraries in the manifest)
+
+    Example:
+        inv update-vendor
+        inv update-vendor --lib=gridstack
+    """
+    manifest = json.loads(VENDOR_MANIFEST.read_text())
+
+    if lib:
+        if lib not in manifest:
+            print(f"Error: '{lib}' is not in {VENDOR_MANIFEST} (have: {', '.join(manifest)})")
+            return
+        manifest = {lib: manifest[lib]}
+
+    for name, spec in manifest.items():
+        version = spec["version"]
+        target_dir = VENDOR_DIR / name / version
+        target_dir.mkdir(parents=True, exist_ok=True)
+        print(f"{name} {version}")
+        for filename, url_template in spec["files"].items():
+            url = url_template.format(version=version)
+            destination = target_dir / filename
+            print(f"  {url} -> {destination}")
+            with urlopen(url) as response:
+                destination.write_bytes(response.read())
+        print(f"  url_for path: vendor/{name}/{version}/<file>")
+
+    print("Vendor update complete")

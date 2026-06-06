@@ -1,0 +1,1 @@
+"""AI page builder: user-authored pages composed of AI-generated blocks."""

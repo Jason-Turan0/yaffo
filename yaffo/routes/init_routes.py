@@ -4,6 +4,7 @@ from yaffo.routes.faces import init_faces_routes
 from yaffo.routes.home import init_home_routes
 from yaffo.routes.jobs import init_jobs_routes
 from yaffo.routes.locations import init_locations_routes
+from yaffo.routes.pages import init_pages_routes
 from yaffo.routes.people import init_people_routes
 from yaffo.routes.photos import init_photos_routes
 from yaffo.routes.utilities import init_utilities_routes
@@ -19,3 +20,4 @@ def init_routes(app: Flask):
     init_jobs_routes(app)
     init_utilities_routes(app)
     init_settings_routes(app)
+    init_pages_routes(app)

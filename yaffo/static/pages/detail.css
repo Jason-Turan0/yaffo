@@ -1,0 +1,117 @@
+.page-meta-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.page-title-input {
+    font-size: 28px;
+    font-weight: 600;
+    color: #212529;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 4px 0;
+    background: transparent;
+}
+
+.page-title-input:hover {
+    border-bottom-color: #dee2e6;
+}
+
+.page-title-input:focus {
+    outline: none;
+    border-bottom-color: #007BFF;
+}
+
+.page-theme-input {
+    font-size: 15px;
+    color: #495057;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 8px 10px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.page-theme-input:focus {
+    outline: none;
+    border-color: #007BFF;
+}
+
+.page-meta-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.blocks-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.blocks-hint {
+    font-size: 13px;
+    color: #868e96;
+}
+
+.grid-stack {
+    background: #f1f3f5;
+    border-radius: 8px;
+    min-height: 320px;
+}
+
+.block-card {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    cursor: move;
+}
+
+.block-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #495057;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.block-delete {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    color: #adb5bd;
+    padding: 0 4px;
+}
+
+.block-delete:hover {
+    color: #dc3545;
+}
+
+.block-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.block-placeholder {
+    font-size: 13px;
+    color: #adb5bd;
+}

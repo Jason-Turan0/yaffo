@@ -21,10 +21,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/job_progress.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/percentage_slider.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/file_browser.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='pages/nav.css') }}">
 
 
     {% block extra_styles %}{% endblock %}
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="{{ url_for('static', filename='vendor/htmx/2.0.4/htmx.min.js') }}"></script>
     <script>
         // Listen for htmx notification events
         document.addEventListener('showNotification', function(event) {
@@ -85,6 +86,19 @@
                    class="nav-link {% if 'utilities' in request.endpoint %}active{% endif %}">Utilities</a></li>
             <li><a href="{{ url_for('settings_index') }}"
                    class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">Settings</a></li>
+
+            {% if nav_pages %}
+            <li class="nav-divider" aria-hidden="true"></li>
+            {% endif %}
+            {% for nav_page in nav_pages %}
+            <li><a href="{{ url_for('pages_detail', page_id=nav_page.id) }}"
+                   class="nav-link nav-page-tab {% if request.view_args and request.view_args.get('page_id') == nav_page.id %}active{% endif %}">{{ nav_page.title }}</a></li>
+            {% endfor %}
+            <li>
+                <form method="POST" action="{{ url_for('pages_create') }}" class="nav-new-page-form">
+                    <button type="submit" class="nav-link nav-new-page" title="New page" aria-label="New page">+</button>
+                </form>
+            </li>
         </ul>
     </div>
 </nav>
