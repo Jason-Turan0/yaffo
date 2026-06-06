@@ -75,6 +75,17 @@ node_modules
 .env.local
 .env.*.local
 
+# Terraform (GCP deploy)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+crash.*.log
+# keep the example tfvars and the provider lock file tracked
+!deploy/gcp/terraform.tfvars.example
+!**/.terraform.lock.hcl
+
 # Playwright
 yaffo_ui_tests/reports/
 yaffo_ui_tests/.playwright/
