@@ -371,18 +371,72 @@ _PERSON_BROWSER = {
     ),
 }
 
-_WIDGET_STUBS = [
-    _PHOTO_GRID,
-    _HERO,
-    _POLAROID,
-    _FILMSTRIP,
-    _COLLAGE,
-    _FILTERABLE_GALLERY,
-    _SEARCHABLE_GALLERY,
-    _PEOPLE_PICKER,
-    _PERSON_BROWSER,
-]
+# Pub/sub: a global filter publishes filter changes on the "filter" topic; any
+# number of linked galleries subscribe and re-query the server when it changes.
+_GLOBAL_FILTER = {
+    "title": "Global filter",
+    "grid_w": 12,
+    "grid_h": 1,
+    "data_query": {"facets": {"source": "facets"}},
+    "css": (
+        "body{margin:0;font-family:-apple-system,sans-serif}"
+        ".bar{display:flex;align-items:center;gap:12px;padding:10px}"
+        ".bar label{font-size:12px;color:#666}"
+        ".bar select{font-size:13px;padding:4px 6px;border:1px solid #ccc;border-radius:6px}"
+    ),
+    "html": "<div class='bar' id='root'></div>",
+    "js": (
+        "const f=window.__DATA__.facets||{};const root=document.getElementById('root');"
+        "function sel(label,opts){const w=document.createElement('label');w.textContent=label+': ';"
+        "const s=document.createElement('select');const a=document.createElement('option');a.value='';a.textContent='All';s.appendChild(a);"
+        "opts.forEach(o=>{const e=document.createElement('option');e.value=o;e.textContent=o;s.appendChild(e);});"
+        "w.appendChild(s);root.appendChild(w);return s;}"
+        "const loc=sel('Location',f.locations||[]);const yr=sel('Year',(f.years||[]).map(String));"
+        "function publish(){parent.postMessage({type:'yaffo:publish',topic:'filter',"
+        "payload:{location:loc.value||null,year:yr.value?Number(yr.value):null}},'*');}"
+        "loc.onchange=publish;yr.onchange=publish;"
+    ),
+}
 
+_LINKED_GALLERY = {
+    "title": "Linked gallery",
+    "grid_w": 4,
+    "grid_h": 3,
+    "data_query": {"initial": {"source": "photos", "limit": 12}},
+    "css": (
+        "body{margin:0;padding:6px}"
+        ".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:4px}"
+        ".grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;display:block}"
+    ),
+    "html": "<div class='grid' id='root'></div>",
+    "js": (
+        "const d=window.__DATA__;const grid=document.getElementById('root');let reqId=0;const pending={};"
+        "function draw(photos){grid.innerHTML='';(photos||[]).forEach(p=>{const i=document.createElement('img');"
+        "i.src=p.url;i.onerror=()=>{i.src='/placeholder';};grid.appendChild(i);});}"
+        "function serverQuery(query){return new Promise(res=>{const id=++reqId;pending[id]=res;"
+        "parent.postMessage({type:'yaffo:query',requestId:id,query},'*');});}"
+        "window.addEventListener('message',async e=>{const m=e.data||{};"
+        "if(m.type==='yaffo:result'&&pending[m.requestId]){pending[m.requestId](m.data);delete pending[m.requestId];return;}"
+        "if(m.type==='yaffo:event'&&m.topic==='filter'){const fl=m.payload||{};const q={source:'photos',limit:12};"
+        "if(fl.location)q.location=fl.location;if(fl.year)q.year=fl.year;draw(await serverQuery(q));}});"
+        "draw(d.initial||[]);"
+    ),
+}
+
+_WIDGET_STUBS = [
+    # _PHOTO_GRID,
+    # _HERO,
+    # _POLAROID,
+    # _FILMSTRIP,
+    # _COLLAGE,
+    # _FILTERABLE_GALLERY,
+    # _SEARCHABLE_GALLERY,
+    # _PEOPLE_PICKER,
+    # _PERSON_BROWSER,
+    _GLOBAL_FILTER,
+    _LINKED_GALLERY,
+]
+current_stub_index = 0
 
 # ---------------------------------------------------------------------------
 # Page / widget operations
@@ -403,9 +457,10 @@ def create_page(title: str, theme_prompt: str = "") -> GenPage:
 
 
 def _new_widget(page: GenPage, title: Optional[str] = None, prompt: str = "") -> GenWidget:
-    """Create a widget from a randomly chosen stub layout (mock generation)."""
-    #spec = random.choice(_WIDGET_STUBS)
-    spec = _PERSON_BROWSER
+    """Create a widget from the next stub layout, cycling through the catalog."""
+    global current_stub_index
+    spec = _WIDGET_STUBS[current_stub_index % len(_WIDGET_STUBS)]
+    current_stub_index += 1
     next_y = max((w.grid_y + w.grid_h for w in page.widgets), default=0)
     widget = GenWidget(
         id=next(_widget_ids),

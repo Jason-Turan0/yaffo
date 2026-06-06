@@ -8,15 +8,27 @@ const BASE_GRID_OPTS = {
     columnOpts: { breakpoints: [{ w: 768, c: 1 }] }
 };
 
-// Broker for widget iframes that run live, server-side queries. The sandboxed
-// frames can't fetch (connect-src 'none'), so they postMessage a query up to the
-// parent, which fetches and posts the rows back. Used in both modes.
+// Broker for widget iframes. Sandboxed frames can't fetch (connect-src 'none')
+// or see each other, so the parent brokers two things:
+//   - yaffo:query   -> fetch server data, reply yaffo:result to the sender
+//   - yaffo:publish -> fan out as yaffo:event to every widget (pub/sub bus)
+// Used in both modes.
 window.PHOTO_ORGANIZER.initWidgetBroker = (pageId, config) => {
+    const frames = () => [...document.querySelectorAll('.widget-frame')];
+
     window.addEventListener('message', async (event) => {
         const msg = event.data || {};
+
+        if (msg.type === 'yaffo:publish') {
+            frames().forEach((f) =>
+                f.contentWindow.postMessage(
+                    { type: 'yaffo:event', topic: msg.topic, payload: msg.payload }, '*'
+                ));
+            return;
+        }
+
         if (msg.type !== 'yaffo:query') return;
-        const frame = [...document.querySelectorAll('.widget-frame')]
-            .find((f) => f.contentWindow === event.source);
+        const frame = frames().find((f) => f.contentWindow === event.source);
         if (!frame) return;
         let data = null;
         try {
