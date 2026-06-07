@@ -261,7 +261,7 @@ def seed_pages() -> None:
         for spec in PAGES:
             if spec["title"] in existing:  # idempotent: replace a prior seed
                 page_repo.delete_page(db.session, existing[spec["title"]])
-            page = page_repo.create_page(db.session, title=spec["title"], theme_prompt=spec["theme"])
+            page = page_repo.create_page(db.session, title=spec["title"], subtitle=spec["theme"])
             page_repo.save_page_widgets(db.session, page.id, spec["widgets"])
             print(f"Seeded '{page.title}' (id={page.id}) with {len(spec['widgets'])} widgets")
         print(f"Done: {len(PAGES)} pages.")

@@ -14,7 +14,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from yaffo.db.models import Conversation, CustomPage, Widget, WIDGET_STATUS_READY
+from yaffo.db.models import Conversation, CustomPage, Widget
 
 # Client widget-entry keys that map onto Widget columns. Content keys share the
 # model's own name; layout uses short x/y/w/h aliases.
@@ -56,8 +56,8 @@ def get_widget(session: Session, page_id: int, widget_id: str) -> Optional[Widge
     return session.execute(stmt).scalars().first()
 
 
-def create_page(session: Session, title: str, theme_prompt: str = "") -> CustomPage:
-    page = CustomPage(title=title, theme_prompt=theme_prompt)
+def create_page(session: Session, title: str, subtitle: str = "") -> CustomPage:
+    page = CustomPage(title=title, subtitle=subtitle)
     session.add(page)
     session.commit()
     return page
@@ -67,7 +67,7 @@ def update_page(
     session: Session,
     page_id: int,
     title: Optional[str] = None,
-    theme_prompt: Optional[str] = None,
+    subtitle: Optional[str] = None,
     show_title: Optional[bool] = None,
 ) -> Optional[CustomPage]:
     page = get_page(session, page_id)
@@ -75,8 +75,8 @@ def update_page(
         return None
     if title is not None:
         page.title = title
-    if theme_prompt is not None:
-        page.theme_prompt = theme_prompt
+    if subtitle is not None:
+        page.subtitle = subtitle
     if show_title is not None:
         page.show_title = show_title
     page.updated_at = datetime.utcnow()
@@ -133,7 +133,6 @@ def _apply_widget_fields(widget: Widget, item: dict) -> None:
     for payload_key, attr in _LAYOUT_KEYS.items():
         if payload_key in item:
             setattr(widget, attr, int(item[payload_key]))
-    widget.status = WIDGET_STATUS_READY
 
 
 def save_page_widgets(session: Session, page_id: int, widgets: list[dict]) -> None:

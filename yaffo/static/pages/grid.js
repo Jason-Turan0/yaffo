@@ -40,15 +40,17 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
     });
 
     const savePage = async () => {
+        const body = {
+                title: document.getElementById('page-title').value,
+                subtitle: document.getElementById('page-subtitle').value,
+                show_title: document.getElementById('page-show-title').checked,
+                widgets: getWidgets()
+            };
+        debugger
         await fetch(config.buildUrl('pages_update', { page_id: pageId }), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                title: document.getElementById('page-title').value,
-                theme_prompt: document.getElementById('page-theme').value,
-                show_title: document.getElementById('page-show-title').checked,
-                widgets: getWidgets()
-            })
+            body: JSON.stringify(body)
         });
         window.location.href = config.buildUrl('pages_detail', { page_id: pageId });
     };

@@ -126,6 +126,47 @@ def init_db():
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_application_settings_name ON application_settings(name)")
 
+
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS custom_pages (
+                       id INTEGER PRIMARY KEY AUTOINCREMENT,
+                       title TEXT UNIQUE NOT NULL,
+                       subtitle TEXT UNIQUE NOT NULL,
+                       show_title INTEGER NOT NULL DEFAULT 1,
+                       value TEXT,
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                   )
+                   """)
+
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS widgets (
+                       id TEXT PRIMARY KEY,
+                       page_id INTEGER NOT NULL,
+                       title TEXT NOT NULL DEFAULT "Untitled widget",
+                       data_query TEXT,
+                       state TEXT,
+                       html TEXT,
+                       css TEXT,
+                       js TEXT,                        
+                       grid_x INTEGER NOT NULL DEFAULT 0,
+                       grid_y INTEGER NOT NULL DEFAULT 0,
+                       grid_w INTEGER NOT NULL DEFAULT 4,
+                       grid_h INTEGER NOT NULL DEFAULT 3,
+                       FOREIGN KEY(page_id) REFERENCES custom_pages(id) ON DELETE CASCADE
+                   )
+                   """)
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS conversations (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      page_id INTEGER NOT NULL,
+                      role TEXT NOT NULL,
+                      content TEXT NOT NULL,
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+                      FOREIGN KEY(page_id) REFERENCES custom_pages(id) ON DELETE CASCADE
+                       )
+                   """)
+
     conn.commit()
 
 

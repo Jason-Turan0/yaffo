@@ -9,14 +9,14 @@
 
 {% block content %}
 <div class="main-content page-presentation">
-    {% if page.show_title or page.theme_prompt %}
+    {% if page.show_title %}
     <div class="page-header">
         <div class="header-info">
             {% if page.show_title %}
             <h1>{{ page.title }}</h1>
             {% endif %}
-            {% if page.theme_prompt %}
-            <p class="subtitle">{{ page.theme_prompt }}</p>
+            {% if page.subtitle %}
+            <p class="subtitle">{{ page.subtitle }}</p>
             {% endif %}
         </div>
     </div>

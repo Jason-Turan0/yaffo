@@ -33,7 +33,7 @@ def session(tmp_path):
 @pytest.fixture
 def page(session):
     """A saved, empty page to hang widgets / messages off of."""
-    return repo.create_page(session, "My Trip", theme_prompt="maine summer")
+    return repo.create_page(session, "My Trip", subtitle="maine summer")
 
 
 def _widget_item(wid=None, **overrides):
@@ -63,7 +63,7 @@ class TestCreatePage:
         assert page.messages == []
 
     def test_is_readable_back(self, session):
-        page = repo.create_page(session, "Trip", theme_prompt="summer")
+        page = repo.create_page(session, "Trip", subtitle="summer")
         fetched = repo.get_page(session, page.id)
         assert fetched.id == page.id
         assert fetched.theme_prompt == "summer"

@@ -73,8 +73,8 @@ def init_pages_routes(app: Flask):
     @app.route("/pages", methods=["POST"])
     def pages_create():
         title = (request.form.get("title") or "").strip() or "Untitled Page"
-        theme_prompt = (request.form.get("theme_prompt") or "").strip()
-        page = page_repo.create_page(db.session, title=title, theme_prompt=theme_prompt)
+        page_subtitle = (request.form.get("page_subtitle") or "").strip()
+        page = page_repo.create_page(db.session, title=title, subtitle=page_subtitle)
         return redirect(url_for("pages_detail", page_id=page.id))
 
     @app.route("/pages/<int:page_id>", methods=["GET"])
@@ -99,9 +99,9 @@ def init_pages_routes(app: Flask):
             abort(404)
         payload = request.get_json(silent=True) or {}
         title = (payload.get("title") or "").strip() or "Untitled Page"
-        theme_prompt = (payload.get("theme_prompt") or "").strip()
+        subtitle = (payload.get("subtitle") or "").strip()
         show_title = bool(payload.get("show_title", True))
-        page_repo.update_page(db.session, page_id, title=title, theme_prompt=theme_prompt, show_title=show_title)
+        page_repo.update_page(db.session, page_id, title=title, subtitle=subtitle, show_title=show_title)
         page_repo.save_page_widgets(db.session, page_id, payload.get("widgets", []))
         return "", 204
 
@@ -219,7 +219,7 @@ def init_pages_routes(app: Flask):
             user_message = build_user_message(
                 message,
                 page_title=page.title,
-                page_description=page.theme_prompt,
+                page_subtitle=page.subtitle,
                 widgets=current_widgets,
                 widget_errors=widget_errors,
             )

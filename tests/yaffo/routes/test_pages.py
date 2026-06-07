@@ -21,7 +21,7 @@ pytestmark = pytest.mark.unit
 
 def _make_page(title="Trip", theme_prompt=""):
     """Seed a page directly through the repo; return its id."""
-    return page_repo.create_page(db.session, title=title, theme_prompt=theme_prompt).id
+    return page_repo.create_page(db.session, title=title, subtitle=theme_prompt).id
 
 
 def _save_widget(page_id, wid="w1", **over):

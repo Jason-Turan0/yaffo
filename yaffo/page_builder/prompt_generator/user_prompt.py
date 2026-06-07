@@ -20,7 +20,7 @@ def build_user_message(
     request: str,
     *,
     page_title: str = "",
-    page_description: str = "",
+    page_subtitle: str = "",
     widgets: Optional[list[dict]] = None,
     widget_errors: Optional[dict] = None,
 ) -> str:
@@ -43,8 +43,8 @@ def build_user_message(
     page_children = []
     if page_title:
         page_children.append(el("title", page_title))
-    if page_description:
-        page_children.append(el("description", page_description))
+    if page_subtitle:
+        page_children.append(el("sub-title", page_subtitle))
     if page_children:
         parts.append(block("page", page_children))
 

@@ -189,19 +189,12 @@ class ApplicationSettings(db.Model):
     value = db.Column(db.String)
 
 
-# AI page builder models.
-WIDGET_STATUS_EMPTY = "empty"
-WIDGET_STATUS_GENERATING = "generating"
-WIDGET_STATUS_READY = "ready"
-WIDGET_STATUS_ERROR = "error"
-
-
 class CustomPage(db.Model):
     __tablename__ = "custom_pages"
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False, default="Untitled Page")
-    theme_prompt = db.Column(db.Text, default="")
+    subtitle = db.Column(db.String, nullable=False, default="")
     show_title = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -235,7 +228,6 @@ class Widget(db.Model):
     html = db.Column(db.Text, default="")
     css = db.Column(db.Text, default="")
     js = db.Column(db.Text, default="")
-    status = db.Column(db.String, default=WIDGET_STATUS_EMPTY)
     grid_x = db.Column(db.Integer, default=0)
     grid_y = db.Column(db.Integer, default=0)
     grid_w = db.Column(db.Integer, default=4)
