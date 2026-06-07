@@ -9,7 +9,7 @@ and edited as a side effect of the model's tool calls (server-side), so the
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Iterator, Optional
 
 from yaffo.page_builder.model_clients import (
     AnthropicModelClient,
@@ -22,6 +22,7 @@ from yaffo.page_builder.tool_providers import (
     ContentBlock,
     DataQueryToolProvider,
     ToolProvider,
+    ToolResult,
     WidgetToolProvider,
     to_anthropic_tools,
 )
@@ -34,6 +35,26 @@ class AgentResult:
     tool_calls: int
     stop_reason: Optional[str]
     ok: bool
+
+
+@dataclass
+class AgentEvent:
+    """One step the agent took, streamed to the caller as it happens.
+
+    `type` is one of:
+      - "assistant": the model produced text this turn (`text`).
+      - "tool":      a tool finished (`name`, `tool_input`, `result`, `is_error`).
+      - "done":      the model stopped without calling tools (`stop_reason`).
+      - "error":     the run failed or hit a cap (`text` describes it).
+    """
+    type: str
+    text: str = ""
+    name: Optional[str] = None
+    tool_input: Optional[dict] = None
+    result: str = ""
+    tool_result_data: Optional[dict] = None  # tool's structured host payload (e.g. a widget)
+    is_error: bool = False
+    stop_reason: Optional[str] = None
 
 
 class PageBuilderAgent:
@@ -53,34 +74,72 @@ class PageBuilderAgent:
                     raise ValueError(f"Duplicate tool name: {tool.name}")
                 self._provider_by_tool[tool.name] = provider
 
-    def run(self, user_message: str) -> AgentResult:
+    def run_events(self, user_message: str) -> Iterator[AgentEvent]:
+        """Drive the tool-use loop, yielding an AgentEvent per step (assistant
+        text, each finished tool call, and a terminal done/error) so callers can
+        stream progress. Side effects (widget create/edit) happen as the tools
+        run, before their "tool" event is yielded — so the store is already
+        updated when the caller sees it."""
         self.client.add_user_message(user_message)
-        tool_calls = 0
-        stop_reason: Optional[str] = None
         iterations = 0
         try:
             while iterations < self.max_iterations:
                 iterations += 1
                 response = self.client.call_model_api()
                 if response is None:
-                    return AgentResult("", iterations, tool_calls, "error", ok=False)
+                    yield AgentEvent("error", text="Generation failed.", stop_reason="error")
+                    return
 
-                stop_reason = response.stop_reason
+                if response.text:
+                    yield AgentEvent("assistant", text=response.text)
+
                 if response.tool_calls:
                     results = [self._execute(call) for call in response.tool_calls]
-                    tool_calls += len(results)
+                    for call, result in zip(response.tool_calls, results):
+                        yield AgentEvent(
+                            "tool",
+                            name=call.name,
+                            tool_input=call.input,
+                            result=result.result,
+                            tool_result_data=result.data,
+                            is_error=result.is_error,
+                        )
                     self.client.add_tool_result_message(results)
                     continue
 
                 # No tool calls -> the model is done.
-                return AgentResult(response.text, iterations, tool_calls, stop_reason, ok=True)
+                yield AgentEvent("done", text=response.text, stop_reason=response.stop_reason)
+                return
 
-            return AgentResult(
-                "(stopped: reached max iterations)", iterations, tool_calls, "max_iterations", ok=False
+            yield AgentEvent(
+                "error", text="(stopped: reached max iterations)", stop_reason="max_iterations"
             )
         finally:
             for provider in self.tool_providers:
                 provider.disconnect()
+
+    def run(self, user_message: str) -> AgentResult:
+        """Synchronous wrapper over run_events: drains the stream and returns the
+        aggregate result. Kept for non-streaming callers."""
+        text = ""
+        tool_calls = 0
+        iterations = 1  # at least one model call happens before the first event
+        stop_reason: Optional[str] = None
+        ok = False
+        for event in self.run_events(user_message):
+            if event.type == "assistant":
+                text = event.text
+            elif event.type == "tool":
+                tool_calls += 1
+            elif event.type == "done":
+                text = event.text or text
+                stop_reason = event.stop_reason
+                ok = True
+            elif event.type == "error":
+                text = event.text
+                stop_reason = event.stop_reason
+                ok = False
+        return AgentResult(text, iterations, tool_calls, stop_reason, ok=ok)
 
     def _execute(self, call: ToolCall) -> ToolCallResult:
         provider = self._provider_by_tool.get(call.name)
@@ -88,8 +147,11 @@ class PageBuilderAgent:
             return ToolCallResult(call.id, call.name, f"No implementation for tool {call.name}", is_error=True)
         try:
             result = provider.call_tool(call.name, call.input)
-            text = result.text if isinstance(result, ContentBlock) else result
-            return ToolCallResult(call.id, call.name, text)
+            if isinstance(result, ToolResult):
+                return ToolCallResult(call.id, call.name, result.model_text, data=result.host_data)
+            if isinstance(result, ContentBlock):
+                return ToolCallResult(call.id, call.name, result.text)
+            return ToolCallResult(call.id, call.name, result)
         except Exception as exc:  # tool failures are fed back, not raised
             return ToolCallResult(call.id, call.name, f"Error: {exc}", is_error=True)
 

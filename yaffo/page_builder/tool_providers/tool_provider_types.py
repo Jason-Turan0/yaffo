@@ -32,7 +32,18 @@ class ContentBlock:
     type: str = "text"
 
 
-CallToolReturn = Union[str, ContentBlock]
+@dataclass
+class ToolResult:
+    """A tool outcome addressed to two audiences with deliberately different
+    schemas: `model_text` is returned to the model as the tool_result (goes to
+    Anthropic), while `host_data` is a structured payload for the application
+    (e.g. streamed to the browser). Tools that affect the UI return this so the
+    two contracts stay separate."""
+    model_text: str
+    host_data: dict
+
+
+CallToolReturn = Union[str, ContentBlock, ToolResult]
 
 
 class ToolProvider(ABC):

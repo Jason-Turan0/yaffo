@@ -7,6 +7,7 @@ process-local and resets on restart.
 from __future__ import annotations
 
 import random
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from itertools import count
@@ -15,7 +16,7 @@ from typing import Optional
 
 @dataclass
 class GenWidget:
-    id: int
+    id: str
     title: str = "Untitled widget"
     prompt: str = ""
     data_query: dict = field(default_factory=dict)
@@ -50,7 +51,12 @@ class GenPage:
 
 _pages: dict[int, GenPage] = {}
 _page_ids = count(1)
-_widget_ids = count(1)
+
+
+def new_widget_id() -> str:
+    """A fresh widget id. Widgets are identified by GUID so the client can mint
+    ids for drafts and they stay stable from creation through Save."""
+    return uuid.uuid4().hex
 
 # Reference data available in the dev library; stub data is drawn from these.
 _PHOTO_IDS = list(range(1, 16))
@@ -159,7 +165,7 @@ def resolve_query(query: dict):
     return resolver(query) if resolver is not None else None
 
 
-def set_widget_state(page_id: int, widget_id: int, state: dict) -> None:
+def set_widget_state(page_id: int, widget_id: str, state: dict) -> None:
     """Persist a widget's own state blob (e.g. its current filter selection).
     Injected back into the widget as window.__STATE__ on the next render."""
     page = _pages.get(page_id)
@@ -492,39 +498,18 @@ def create_page(title: str, theme_prompt: str = "") -> GenPage:
 
 
 def _new_widget(page: GenPage, title: Optional[str] = None, prompt: str = "") -> GenWidget:
-    """Create a widget from the next stub layout, cycling through the catalog."""
-    # global current_stub_index
-    # spec = _WIDGET_STUBS[current_stub_index % len(_WIDGET_STUBS)]
-    # current_stub_index += 1
-    #
-    # widget = GenWidget(
-    #     id=next(_widget_ids),
-    #     title=title or spec["title"],
-    #     prompt=prompt,
-    #     data_query=dict(spec["data_query"]),
-    #     html=spec["html"],
-    #     css=spec["css"],
-    #     js=spec["js"],
-    #     status="ready",
-    #     grid_x=0,
-    #     grid_y=next_y,
-    #     grid_w=spec["grid_w"],
-    #     grid_h=spec["grid_h"],
-    # )
+    """Create an empty widget at the bottom of the current layout (the manual
+    'Add widget' button; generated widgets arrive from the agent as drafts)."""
     next_y = max((w.grid_y + w.grid_h for w in page.widgets), default=0)
     widget = GenWidget(
-        id=next(_widget_ids),
-        title="New Widget",
+        id=new_widget_id(),
+        title=title or "New Widget",
         prompt=prompt,
-        data_query={},
-        html="",
-        css="",
-        js="",
         status="ready",
         grid_x=0,
         grid_y=next_y,
-        grid_w= 8,
-        grid_h= 4,
+        grid_w=8,
+        grid_h=4,
     )
     page.widgets.append(widget)
     page.updated_at = datetime.now()
@@ -538,62 +523,7 @@ def add_widget(page_id: int) -> Optional[GenWidget]:
     return _new_widget(page)
 
 
-_WIDGET_FIELDS = ("title", "prompt", "data_query", "html", "css", "js", "grid_w", "grid_h")
-
-
-def create_widget(
-    page_id: int,
-    *,
-    title: str = "Untitled widget",
-    data_query: Optional[dict] = None,
-    html: str = "",
-    css: str = "",
-    js: str = "",
-    grid_w: int = 4,
-    grid_h: int = 3,
-    prompt: str = "",
-) -> Optional[GenWidget]:
-    """Create a widget from explicit, model-supplied content (vs. the random
-    `add_widget`). Placed at the bottom of the current layout."""
-    page = _pages.get(page_id)
-    if page is None:
-        return None
-    next_y = max((w.grid_y + w.grid_h for w in page.widgets), default=0)
-    widget = GenWidget(
-        id=next(_widget_ids),
-        title=title,
-        prompt=prompt,
-        data_query=data_query or {},
-        html=html,
-        css=css,
-        js=js,
-        status="ready",
-        grid_x=0,
-        grid_y=next_y,
-        grid_w=grid_w,
-        grid_h=grid_h,
-    )
-    page.widgets.append(widget)
-    page.updated_at = datetime.now()
-    return widget
-
-
-def update_widget(page_id: int, widget_id: int, **fields) -> Optional[GenWidget]:
-    """Update only the provided (non-None) fields of an existing widget."""
-    page = _pages.get(page_id)
-    if page is None:
-        return None
-    widget = next((w for w in page.widgets if w.id == widget_id), None)
-    if widget is None:
-        return None
-    for key, value in fields.items():
-        if key in _WIDGET_FIELDS and value is not None:
-            setattr(widget, key, value)
-    page.updated_at = datetime.now()
-    return widget
-
-
-def remove_widget(page_id: int, widget_id: int) -> None:
+def remove_widget(page_id: int, widget_id: str) -> None:
     page = _pages.get(page_id)
     if page is None:
         return
@@ -601,21 +531,37 @@ def remove_widget(page_id: int, widget_id: int) -> None:
     page.updated_at = datetime.now()
 
 
-def update_layout(page_id: int, layout: list[dict]) -> None:
+def save_page_widgets(page_id: int, widgets: list[dict]) -> None:
+    """Commit the page's full widget set from the client (the Save button) — the
+    only thing that writes widget content. The client is the source of truth for
+    which widgets exist and their layout: each entry carries layout always, plus
+    content for widgets the client holds (generated/edited drafts). Content the
+    client omits falls back to the widget's currently-saved value; widgets absent
+    from the list are dropped. Generation never writes here."""
     page = _pages.get(page_id)
     if page is None:
         return
-    by_id = {w.id: w for w in page.widgets}
-    for item in layout:
-        widget = by_id.get(int(item["id"]))
-        if widget is None:
-            continue
-        widget.grid_x = int(item["x"])
-        widget.grid_y = int(item["y"])
-        widget.grid_w = int(item["w"])
-        widget.grid_h = int(item["h"])
-        if item.get("title"):
-            widget.title = item["title"]
+    existing = {w.id: w for w in page.widgets}
+    new_widgets: list[GenWidget] = []
+    for item in widgets:
+        wid = str(item.get("id") or new_widget_id())
+        base = existing.get(wid) or GenWidget(id=wid)
+        new_widgets.append(GenWidget(
+            id=wid,
+            title=item.get("title", base.title),
+            prompt=base.prompt,
+            data_query=item.get("data_query", base.data_query) or {},
+            state=item.get("state", base.state) or {},
+            html=item.get("html", base.html),
+            css=item.get("css", base.css),
+            js=item.get("js", base.js),
+            status="ready",
+            grid_x=int(item.get("x", base.grid_x)),
+            grid_y=int(item.get("y", base.grid_y)),
+            grid_w=int(item.get("w", base.grid_w)),
+            grid_h=int(item.get("h", base.grid_h)),
+        ))
+    page.widgets = new_widgets
     page.updated_at = datetime.now()
 
 

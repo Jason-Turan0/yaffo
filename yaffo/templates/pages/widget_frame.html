@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    {# Carried in the document itself so it also protects srcdoc-rendered draft
+       previews, which have no HTTP response to set the header on. #}
+    {% if csp %}<meta http-equiv="Content-Security-Policy" content="{{ csp }}">{% endif %}
     <style>{{ widget.css | safe }}</style>
     <style>
         #__yaffo_error__ {

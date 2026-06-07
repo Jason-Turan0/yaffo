@@ -4,6 +4,7 @@ from yaffo.page_builder.tool_providers.tool_provider_types import (
     ContentBlock,
     RawToolDefinition,
     ToolProvider,
+    ToolResult,
     to_anthropic_tools,
 )
 from yaffo.page_builder.tool_providers.utils import truncate_tool_result
@@ -15,6 +16,7 @@ __all__ = [
     "ContentBlock",
     "RawToolDefinition",
     "ToolProvider",
+    "ToolResult",
     "to_anthropic_tools",
     "truncate_tool_result",
     "DataQueryToolProvider",

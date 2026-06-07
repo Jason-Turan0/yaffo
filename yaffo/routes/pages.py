@@ -1,9 +1,34 @@
-from flask import Flask, render_template, request, redirect, url_for, abort, make_response
+import json
+
+from flask import (
+    Flask,
+    Response,
+    render_template,
+    request,
+    redirect,
+    stream_with_context,
+    url_for,
+    abort,
+    make_response,
+)
 
 from yaffo.page_builder import stub_store, llm_config
 from yaffo.page_builder.agent import create_agent
 from yaffo.page_builder.prompt_generator import build_user_message
 from yaffo.utils.context import context
+
+# Friendly progress text shown while a tool runs (keyed by tool name). Anything
+# not listed falls back to a generic "Working…".
+_TOOL_STATUS = {
+    "create_widget": "Creating widget…",
+    "update_widget": "Updating widget…",
+    "run_data_query": "Looking up information…",
+}
+
+
+def _ndjson(obj: dict) -> str:
+    """One newline-delimited JSON record for the chat stream."""
+    return json.dumps(obj) + "\n"
 
 
 # Sandboxed widget frames may only run their own inline code and load images
@@ -54,7 +79,7 @@ def init_pages_routes(app: Flask):
         theme_prompt = (payload.get("theme_prompt") or "").strip()
         show_title = bool(payload.get("show_title", True))
         stub_store.update_page(page_id, title=title, theme_prompt=theme_prompt, show_title=show_title)
-        stub_store.update_layout(page_id, payload.get("layout", []))
+        stub_store.save_page_widgets(page_id, payload.get("widgets", []))
         return "", 204
 
     @app.route("/pages/<int:page_id>/delete", methods=["POST"])
@@ -71,34 +96,65 @@ def init_pages_routes(app: Flask):
             "pages/_widget.html", widget=widget, page=stub_store.get_page(page_id), editable=True
         )
 
-    @app.route("/pages/<int:page_id>/widgets/<int:widget_id>/frame", methods=["GET"])
-    def pages_widget_frame(page_id: int, widget_id: int):
+    @app.route("/pages/<int:page_id>/widgets/<widget_id>/frame", methods=["GET"])
+    def pages_widget_frame(page_id: int, widget_id: str):
         page = stub_store.get_page(page_id)
         if page is None:
             abort(404)
         widget = next((w for w in page.widgets if w.id == widget_id), None)
         if widget is None:
             abort(404)
+        csp = _widget_frame_csp(request.host_url.rstrip("/"))
         data = stub_store.resolve_data(widget.data_query)
-        response = make_response(render_template("pages/widget_frame.html", widget=widget, data=data))
-        response.headers["Content-Security-Policy"] = _widget_frame_csp(request.host_url.rstrip("/"))
+        response = make_response(
+            render_template("pages/widget_frame.html", widget=widget, data=data, csp=csp)
+        )
+        response.headers["Content-Security-Policy"] = csp
         return response
 
-    @app.route("/pages/<int:page_id>/widgets/<int:widget_id>/delete", methods=["POST"])
-    def pages_delete_widget(page_id: int, widget_id: int):
+    @app.route("/pages/<int:page_id>/widgets/preview", methods=["POST"])
+    def pages_widget_preview(page_id: int):
+        """Render a grid-item shell for *unsaved* widget content posted in the body
+        — the frame's data is resolved server-side and inlined as the iframe's
+        srcdoc, so generated/edited drafts render live without writing to the store
+        (Save is the only write). The client drops this straight onto its grid."""
+        page = stub_store.get_page(page_id)
+        if page is None:
+            abort(404)
+        payload = request.get_json(silent=True) or {}
+        widget = stub_store.GenWidget(
+            id=str(payload.get("id") or stub_store.new_widget_id()),
+            title=payload.get("title") or "",
+            data_query=payload.get("data_query") or {},
+            state=payload.get("state") or {},
+            html=payload.get("html") or "",
+            css=payload.get("css") or "",
+            js=payload.get("js") or "",
+            grid_w=int(payload.get("grid_w", 4)),
+            grid_h=int(payload.get("grid_h", 3)),
+        )
+        csp = _widget_frame_csp(request.host_url.rstrip("/"))
+        data = stub_store.resolve_data(widget.data_query)
+        frame_srcdoc = render_template("pages/widget_frame.html", widget=widget, data=data, csp=csp)
+        return render_template(
+            "pages/_widget.html", widget=widget, page=page, editable=True, frame_srcdoc=frame_srcdoc
+        )
+
+    @app.route("/pages/<int:page_id>/widgets/<widget_id>/delete", methods=["POST"])
+    def pages_delete_widget(page_id: int, widget_id: str):
         stub_store.remove_widget(page_id, widget_id)
         return "", 204
 
-    @app.route("/pages/<int:page_id>/widgets/<int:widget_id>/query", methods=["POST"])
-    def pages_widget_query(page_id: int, widget_id: int):
+    @app.route("/pages/<int:page_id>/widgets/<widget_id>/query", methods=["POST"])
+    def pages_widget_query(page_id: int, widget_id: str):
         page = stub_store.get_page(page_id)
         if page is None or not any(w.id == widget_id for w in page.widgets):
             abort(404)
         payload = request.get_json(silent=True) or {}
         return {"data": stub_store.resolve_query(payload.get("query", {}))}
 
-    @app.route("/pages/<int:page_id>/widgets/<int:widget_id>/state", methods=["POST"])
-    def pages_widget_state(page_id: int, widget_id: int):
+    @app.route("/pages/<int:page_id>/widgets/<widget_id>/state", methods=["POST"])
+    def pages_widget_state(page_id: int, widget_id: str):
         page = stub_store.get_page(page_id)
         if page is None or not any(w.id == widget_id for w in page.widgets):
             abort(404)
@@ -116,41 +172,62 @@ def init_pages_routes(app: Flask):
         # Runtime errors collected client-side, fed back so the model can repair
         # code that threw.
         widget_errors = payload.get("widget_errors") or {}
-        new_widgets_html: list[str] = []
 
-        if message:
+        # Stream the agent's progress to the browser as newline-delimited JSON:
+        # one record per assistant message, tool status, and new/updated widget,
+        # so the page fills in live instead of after the whole (slow) run. Widget
+        # records carry the generated *content* (the tool's host payload) — nothing
+        # is persisted; the client holds it as a draft until Save (see grid.js).
+        def generate():
+            if not message:
+                yield _ndjson({"event": "done"})
+                return
+
             stub_store.add_message(page_id, "user", message)
-            if llm_config.get_api_key() is None:
-                stub_store.add_message(
-                    page_id,
-                    "assistant",
-                    "No API key configured. Add your Anthropic API key in Settings → AI Generation.",
-                )
-            else:
-                before_ids = {w.id for w in page.widgets}
-                user_message = build_user_message(
-                    message,
-                    page_title=page.title,
-                    page_description=page.theme_prompt,
-                    widgets=[{"id": w.id, "title": w.title, "prompt": w.prompt} for w in page.widgets],
-                    widget_errors=widget_errors,
-                )
-                # Synchronous for now — this blocks until the agent finishes.
-                # Streaming progress to the client is a later improvement.
-                try:
-                    agent = create_agent(page_id)
-                    result = agent.run(user_message)
-                    reply = result.text or ("Done." if result.ok else "Generation failed.")
-                except Exception as exc:  # surface failures to the user, don't 500
-                    reply = f"Generation error: {exc}"
-                stub_store.add_message(page_id, "assistant", reply)
-                new_widgets_html = [
-                    render_template("pages/_widget.html", widget=w, page=page, editable=True)
-                    for w in page.widgets
-                    if w.id not in before_ids
-                ]
 
-        return {
-            "messages_html": render_template("pages/_messages.html", page=page),
-            "new_widgets": new_widgets_html,
-        }
+            if llm_config.get_api_key() is None:
+                reply = "No API key configured. Add your Anthropic API key in Settings → AI Generation."
+                stub_store.add_message(page_id, "assistant", reply)
+                yield _ndjson({"event": "message", "content": reply})
+                yield _ndjson({"event": "done"})
+                return
+
+            user_message = build_user_message(
+                message,
+                page_title=page.title,
+                page_description=page.theme_prompt,
+                widgets=[{"id": w.id, "title": w.title, "prompt": w.prompt} for w in page.widgets],
+                widget_errors=widget_errors,
+            )
+
+            try:
+                agent = create_agent(page_id)
+                for event in agent.run_events(user_message):
+                    if event.type == "assistant":
+                        stub_store.add_message(page_id, "assistant", event.text)
+                        yield _ndjson({"event": "message", "content": event.text})
+                    elif event.type == "tool":
+                        yield _ndjson({
+                            "event": "status",
+                            "text": _TOOL_STATUS.get(event.name, "Working…"),
+                        })
+                        # A widget tool returns the generated content -> stream it;
+                        # the client renders it as a draft (create) or swaps it in
+                        # (update). Nothing is written to the store here.
+                        if event.tool_result_data and not event.is_error:
+                            kind = "widget_updated" if event.name == "update_widget" else "widget_new"
+                            yield _ndjson({"event": kind, "widget": event.tool_result_data})
+                    elif event.type == "error":
+                        stub_store.add_message(page_id, "assistant", event.text)
+                        yield _ndjson({"event": "message", "content": event.text})
+            except Exception as exc:  # surface failures to the user, don't 500
+                reply = f"Generation error: {exc}"
+                stub_store.add_message(page_id, "assistant", reply)
+                yield _ndjson({"event": "message", "content": reply})
+
+            yield _ndjson({"event": "done"})
+
+        response = Response(stream_with_context(generate()), mimetype="application/x-ndjson")
+        response.headers["Cache-Control"] = "no-cache"
+        response.headers["X-Accel-Buffering"] = "no"  # don't let a proxy buffer the stream
+        return response

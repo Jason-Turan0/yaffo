@@ -10,8 +10,10 @@
             {% endif %}
         </div>
         <div class="widget-body">
+            {# Drafts (unsaved) inline their server-rendered frame via srcdoc;
+               saved widgets load it by id from the frame route. #}
             <iframe class="widget-frame" data-widget-id="{{ widget.id }}"
-                    src="{{ url_for('pages_widget_frame', page_id=page.id, widget_id=widget.id) }}"
+                    {% if frame_srcdoc is defined %}srcdoc="{{ frame_srcdoc }}"{% else %}src="{{ url_for('pages_widget_frame', page_id=page.id, widget_id=widget.id) }}"{% endif %}
                     sandbox="allow-scripts" title="{{ widget.title }} preview"></iframe>
         </div>
     </div>

@@ -85,16 +85,20 @@ window.PHOTO_ORGANIZER.initPresentationGrid = () => {
 window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
     const grid = GridStack.init({ ...BASE_GRID_OPTS, handle: '.widget-header' });
 
-    const getLayout = () => grid.engine.nodes.map((node) => {
+    // Generated/edited widget content the client holds but hasn't saved, keyed by
+    // widget id. Nothing is persisted until Save sends these to the server.
+    const drafts = new Map();
+
+    // The full widget set for Save: layout for every grid item, plus content for
+    // any the client holds as a draft (untouched saved widgets send layout only,
+    // so the server keeps their stored content).
+    const getWidgets = () => grid.engine.nodes.map((node) => {
+        const id = node.id;
         const titleInput = node.el.querySelector('.widget-title-input');
-        return {
-            id: Number(node.id),
-            x: node.x,
-            y: node.y,
-            w: node.w,
-            h: node.h,
-            title: titleInput ? titleInput.value : undefined
-        };
+        const layout = { id, x: node.x, y: node.y, w: node.w, h: node.h };
+        if (titleInput) layout.title = titleInput.value;
+        const content = drafts.get(id);
+        return content ? { ...content, ...layout } : layout;
     });
 
     const savePage = async () => {
@@ -105,7 +109,7 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
                 title: document.getElementById('page-title').value,
                 theme_prompt: document.getElementById('page-theme').value,
                 show_title: document.getElementById('page-show-title').checked,
-                layout: getLayout()
+                widgets: getWidgets()
             })
         });
         window.location.href = config.buildUrl('pages_detail', { page_id: pageId });
@@ -185,15 +189,66 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
         if (messages) messages.scrollTop = messages.scrollHeight;
     };
 
-    const addPendingMessages = (messagesEl, message) => {
-        const user = document.createElement('div');
-        user.className = 'chat-message chat-message-user';
-        user.textContent = message;
-        const pending = document.createElement('div');
-        pending.className = 'chat-message chat-message-assistant';
-        pending.textContent = 'Thinking…';
-        messagesEl.appendChild(user);
-        messagesEl.appendChild(pending);
+    const addChatMessage = (messagesEl, role, content, before = null) => {
+        const el = document.createElement('div');
+        el.className = `chat-message chat-message-${role}`;
+        el.textContent = content;
+        messagesEl.insertBefore(el, before);
+        return el;
+    };
+
+    // Render a draft widget's grid-item shell from its content (server resolves
+    // its data and inlines the frame as srcdoc — nothing is persisted).
+    const renderDraftShell = async (content) => {
+        const response = await fetch(config.buildUrl('pages_widget_preview', { page_id: pageId }), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(content)
+        });
+        return await response.text();
+    };
+
+    // A generated widget: hold its content and drop it on the grid.
+    const addDraftWidget = async (content) => {
+        drafts.set(content.id, content);
+        addWidgetEl(await renderDraftShell(content));
+    };
+
+    // An edited widget: hold the new content and swap the item's contents in place
+    // (keeps its grid position), or add it if it isn't on the grid yet.
+    const updateDraftWidget = async (content) => {
+        drafts.set(content.id, content);
+        const existing = document.querySelector(`.grid-stack-item[gs-id="${content.id}"]`);
+        if (!existing) {
+            addWidgetEl(await renderDraftShell(content));
+            return;
+        }
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = (await renderDraftShell(content)).trim();
+        existing.querySelector('.grid-stack-item-content')
+            .replaceWith(wrapper.firstElementChild.querySelector('.grid-stack-item-content'));
+        wireWidget(existing);
+    };
+
+    // Read a newline-delimited JSON stream, invoking onRecord per record. Awaits
+    // onRecord so records (incl. widget fetches) apply in order, never racing.
+    const readNdjson = async (response, onRecord) => {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let nl;
+            while ((nl = buffer.indexOf('\n')) >= 0) {
+                const line = buffer.slice(0, nl).trim();
+                buffer = buffer.slice(nl + 1);
+                if (line) await onRecord(JSON.parse(line));
+            }
+        }
+        const tail = (buffer + decoder.decode()).trim();
+        if (tail) await onRecord(JSON.parse(tail));
     };
 
     const sendMessage = async (event) => {
@@ -204,7 +259,10 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
         input.value = '';
 
         const messagesEl = document.getElementById('conversation-messages');
-        addPendingMessages(messagesEl, message);  // optimistic feedback during the (slow) run
+        addChatMessage(messagesEl, 'user', message);
+        // A status bubble pinned at the bottom; assistant replies insert above it,
+        // its text tracks the current step, and it's removed when the run ends.
+        const status = addChatMessage(messagesEl, 'assistant', 'Thinking…');
         scrollConversation();
 
         const response = await fetch(config.buildUrl('pages_chat', { page_id: pageId }), {
@@ -212,12 +270,24 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message, widget_errors: window.PHOTO_ORGANIZER.widgetErrors })
         });
-        const data = await response.json();
-        messagesEl.innerHTML = data.messages_html;
 
-        // Reflect edits to existing widgets, then drop in any newly created ones.
-        document.querySelectorAll('.widget-frame').forEach((f) => { f.src = f.src; });
-        (data.new_widgets || []).forEach((html) => addWidgetEl(html));
+        const apply = async (record) => {
+            if (record.event === 'message') {
+                addChatMessage(messagesEl, 'assistant', record.content, status);
+            } else if (record.event === 'status') {
+                status.textContent = record.text;
+            } else if (record.event === 'widget_new') {
+                await addDraftWidget(record.widget);
+            } else if (record.event === 'widget_updated') {
+                await updateDraftWidget(record.widget);
+            } else if (record.event === 'done') {
+                status.remove();
+            }
+            scrollConversation();
+        };
+
+        await readNdjson(response, apply);
+        status.remove();  // safety if the stream ended without a 'done'
         scrollConversation();
     };
 

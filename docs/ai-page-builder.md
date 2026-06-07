@@ -183,21 +183,47 @@ A page with ≥1 widget opens in presentation; an empty one redirects to design.
 
 ### Single Save + autosave-free layout
 
-One **Save** commits title, description, `show_title`, **and** the full grid
-layout (incl. per-widget titles) in a single request, then returns to
-presentation. Dragging/resizing buffers client-side until Save (no silent
-autosave). Adding/deleting widgets are immediate structural ops (they create or
-destroy server-side content), but their positions are captured by the next Save.
+**Generation is non-destructive: nothing the agent produces is written until the
+user clicks Save.** Generated and edited widgets stream to the browser as
+*drafts* the client holds in memory; one **Save** commits title, description,
+`show_title`, **and** the full widget set — content *and* layout (incl. per-widget
+titles) — in a single `POST /pages/<id>/update`, then returns to presentation.
+Dragging/resizing buffers client-side until Save too (no silent autosave).
 
-### Conversation → generation (mocked)
+The client is the **source of truth for the widget set on Save**: each entry
+carries layout always, plus content for widgets the client holds as drafts;
+entries that reference an untouched saved widget send layout only (the server
+keeps its stored content), and widgets absent from the payload are dropped.
+`save_page_widgets` reconciles add/edit/delete/reorder in one shot. Widgets are
+identified by **GUID** (minted server-side by the tool, or client-side for manual
+adds) so a draft's id is stable from creation through Save.
+
+### Conversation → generation (streamed, non-persisting)
 
 The page-level conversation drives generation. `POST /pages/<id>/chat` appends the
-user message, runs the model (mocked `generate_widget`), appends an assistant
-reply, and returns `{messages_html, widget_html}`. The client drops the generated
-widget straight onto the grid via the same add path. The new widget always lands
-at the bottom of the *live* grid so it never displaces existing ones.
+user message, runs the agent loop (`PageBuilderAgent.run_events`), and **streams
+progress back as newline-delimited JSON** (`application/x-ndjson`) so the page
+fills in live during the slow multi-step run. The `create_widget`/`update_widget`
+tools **do not touch the store** — each returns a `ToolResult` whose `host_data` is
+the widget content, which the route streams. Records:
 
-When un-stubbed, only `generate_widget` (→ Claude) and the `resolve_*` functions
+| record | meaning | client action |
+| ------ | ------- | ------------- |
+| `{event:"message", content}` | an assistant turn (persisted) | append a chat bubble |
+| `{event:"status", text}` | a tool started ("Creating widget…") | update the pinned status bubble |
+| `{event:"widget_new", widget}` | the agent drafted a widget (full content) | `POST .../widgets/preview` → set `iframe.srcdoc`, drop on the grid |
+| `{event:"widget_updated", widget}` | the agent edited a widget (full content) | re-render the draft in place |
+| `{event:"done"}` / `{event:"error",…}` | run finished | remove the status bubble |
+
+The stream carries widget **content**, never an id-to-fetch: the client holds each
+as a draft and renders it via the **preview** route (below), which resolves the
+widget's data server-side and returns the sandboxed frame for `srcdoc`. So data
+resolution stays server-side (the security model holds) while *nothing is
+persisted* — generated widgets exist only in the browser until Save. The stream
+lives inside the one POST: navigating away abandons the in-flight turn (its drafts
+are simply never saved).
+
+When un-stubbed, only the model call (→ Claude) and the `resolve_*` functions
 (→ DB) change; the conversation/render/broker plumbing stays.
 
 ## Drag-and-drop grid layout
@@ -223,7 +249,7 @@ The prototype stub mirrors the eventual SQLAlchemy models:
 
 ```python
 class GenPage:     # id, title, theme_prompt, show_title, widgets[], messages[], timestamps
-class GenWidget:   # id, title, prompt, data_query(JSON, named queries), state(JSON),
+class GenWidget:   # id (GUID), title, prompt, data_query(JSON, named queries), state(JSON),
                    #   html, css, js, status, grid_x/y/w/h
 class GenMessage:  # role (user|assistant), content
 ```
@@ -243,11 +269,12 @@ POST /pages/<id>                        create
 POST /pages/<id>/update                 save title/desc/show_title + layout
 POST /pages/<id>/delete                 delete
 POST /pages/<id>/widgets                add widget (returns widget fragment)
-GET  /pages/<id>/widgets/<wid>/frame    sandboxed render document (sets CSP)
+POST /pages/<id>/widgets/preview        render a draft's grid-item shell from posted content (srcdoc frame, no persist)
+GET  /pages/<id>/widgets/<wid>/frame    sandboxed render document for a saved widget (sets CSP)
 POST /pages/<id>/widgets/<wid>/delete   remove
 POST /pages/<id>/widgets/<wid>/query    live query  (broker: yaffo:query)
 POST /pages/<id>/widgets/<wid>/state    persist state (broker: yaffo:state)
-POST /pages/<id>/chat                   conversation → mock generation
+POST /pages/<id>/chat                   conversation → agent run, streamed as NDJSON (widget content)
 ```
 
 Page tabs are injected into every template via a context processor.

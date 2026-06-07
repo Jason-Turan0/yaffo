@@ -31,8 +31,9 @@ class ToolCall:
 class ToolCallResult:
     tool_call_id: str
     tool_name: str
-    result: str
+    result: str  # text shown to the model
     is_error: bool = False
+    data: Optional[dict] = None  # structured payload for the host (not the model)
 
 
 @dataclass
