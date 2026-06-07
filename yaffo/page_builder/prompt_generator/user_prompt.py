@@ -57,6 +57,8 @@ def build_user_message(
                         "widget",
                         [
                             el("prompt", w.get("prompt") or ""),
+                            el("layout", "", x=w.get("grid_x"), y=w.get("grid_y"),
+                               w=w.get("grid_w"), h=w.get("grid_h")),
                             el("data_query", json.dumps(w.get("data_query") or {})),
                             el("html", w.get("html") or ""),
                             el("css", w.get("css") or ""),

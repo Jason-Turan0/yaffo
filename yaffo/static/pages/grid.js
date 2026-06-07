@@ -167,14 +167,17 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
         }
     };
 
-    const addWidgetEl = (html) => {
+    const addWidgetEl = (html, pos = {}) => {
         const wrapper = document.createElement('div');
         wrapper.innerHTML = html.trim();
         const el = wrapper.firstElementChild;
-        // Place at the bottom of the current (live) layout so it never collides
-        // with or displaces existing widgets, regardless of unsaved moves.
-        el.setAttribute('gs-x', '0');
-        el.setAttribute('gs-y', String(grid.getRow()));
+        // Honor an explicit position from the model; otherwise place at the bottom
+        // of the current (live) layout so it never collides with or displaces
+        // existing widgets, regardless of unsaved moves.
+        const x = Number.isInteger(pos.x) ? pos.x : 0;
+        const y = Number.isInteger(pos.y) ? pos.y : grid.getRow();
+        el.setAttribute('gs-x', String(x));
+        el.setAttribute('gs-y', String(y));
         grid.addWidget(el);
         wireWidget(el);
     };
@@ -235,19 +238,21 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
         return await response.text();
     };
 
-    // A generated widget: hold its content and drop it on the grid.
+    // A generated widget: hold its content and drop it on the grid (at the model's
+    // position if it gave one, else the bottom).
     const addDraftWidget = async (content) => {
         drafts.set(content.id, content);
-        addWidgetEl(await renderDraftShell(content));
+        addWidgetEl(await renderDraftShell(content), { x: content.grid_x, y: content.grid_y });
     };
 
-    // An edited widget: hold the new content and swap the item's contents in place
-    // (keeps its grid position), or add it if it isn't on the grid yet.
+    // An edited widget: hold the new content and swap the item's contents in place,
+    // or add it if it isn't on the grid yet. The model may also reposition on edit —
+    // if it supplied coordinates, move the item; otherwise keep its grid position.
     const updateDraftWidget = async (content) => {
         drafts.set(content.id, content);
         const existing = document.querySelector(`.grid-stack-item[gs-id="${content.id}"]`);
         if (!existing) {
-            addWidgetEl(await renderDraftShell(content));
+            addWidgetEl(await renderDraftShell(content), { x: content.grid_x, y: content.grid_y });
             return;
         }
         const wrapper = document.createElement('div');
@@ -255,6 +260,9 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
         existing.querySelector('.grid-stack-item-content')
             .replaceWith(wrapper.firstElementChild.querySelector('.grid-stack-item-content'));
         wireWidget(existing);
+        if (Number.isInteger(content.grid_x) && Number.isInteger(content.grid_y)) {
+            grid.update(existing, { x: content.grid_x, y: content.grid_y });
+        }
     };
 
     // Read a newline-delimited JSON stream, invoking onRecord per record. Awaits

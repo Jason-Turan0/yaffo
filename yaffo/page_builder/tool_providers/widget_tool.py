@@ -12,11 +12,13 @@ update it, and so edits to an already-saved widget merge onto its current conten
 """
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import asdict, dataclass, field
-from typing import Optional
+from typing import Optional, get_args, get_type_hints
 
 from yaffo.db import db
 from yaffo.db.repositories import custom_page_repository as page_repo
+from yaffo.db.repositories.data_query_repository import DATA_QUERY_SCHEMA
 from yaffo.page_builder.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
@@ -35,49 +37,70 @@ class WidgetDraft:
     html: str = ""
     css: str = ""
     js: str = ""
+    grid_x: Optional[int] = None  # None = no explicit placement (bottom on create, keep on edit)
+    grid_y: Optional[int] = None
     grid_w: int = 4
     grid_h: int = 3
     state: dict = field(default_factory=dict)
 
-_SOURCES = ["photos", "persons", "locations", "tags", "stats", "facets"]
+# WidgetDraft is the single source of truth for a widget's content fields: both
+# the model-facing tool schema (_CONTENT_PROPS) and the editable-field list
+# (_CONTENT_FIELDS) are derived from it, so adding a content field there updates
+# the tools automatically.
+#
+# Two of its fields are not model-supplied content: `id` is minted server-side and
+# `state` is widget-authored runtime state, so neither is offered to the model.
+_NON_CONTENT_FIELDS = {"id", "state"}
 
-# A single query: a source plus filters (same shape as the DataQuery tool).
-_QUERY_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "source": {"type": "string", "enum": _SOURCES},
-        "location": {"type": "string"},
-        "year": {"type": "integer"},
-        "date_from": {"type": "string"},
-        "date_to": {"type": "string"},
-        "person": {"type": "string"},
-        "persons": {"type": "array", "items": {"type": "string"}},
-        "tags": {"type": "array", "items": {"type": "string"}},
-        "order_by": {"type": "string", "enum": ["date", "random"]},
-        "limit": {"type": "integer"},
-    },
-    "required": ["source"],
-    "additionalProperties": False,
+# dataclass annotation -> JSON Schema type for the scalar content fields. Optional
+# fields (grid_x/grid_y) are unwrapped to their inner type.
+_JSON_TYPE = {str: "string", int: "integer", dict: "object"}
+
+# Descriptions for the fields that warrant one (others are self-explanatory).
+_FIELD_DESCRIPTIONS = {
+    "title": "Short, human title for the widget.",
+    "grid_w": "Width in grid columns (1-12).",
+    "grid_h": "Height in grid rows.",
+    "grid_x": "Column position (0-based, 0-11). Omit to drop a new widget at the bottom of the page, or to leave an edited widget where it is.",
+    "grid_y": "Row position (0-based). Omit to drop a new widget at the bottom of the page, or to leave an edited widget where it is.",
 }
 
-# data_query is a dict of NAMED queries: { "<your_name>": <query> }.
-_DATA_QUERY_SCHEMA = {
-    "type": "object",
-    "description": "Named queries: each key is a query name you choose; each value is one query.",
-    "additionalProperties": _QUERY_SCHEMA,
+# Per-field schema overrides. data_query reuses the validated named-query contract
+# from the data-query repository, so the tool advertises exactly what the resolver
+# accepts (minus the top-level $schema meta key, which only belongs at a document
+# root, not on an embedded sub-schema).
+_FIELD_SCHEMA_OVERRIDES = {
+    "data_query": {k: v for k, v in DATA_QUERY_SCHEMA.items() if k != "$schema"},
 }
 
-_CONTENT_PROPS = {
-    "title": {"type": "string", "description": "Short, human title for the widget."},
-    "data_query": _DATA_QUERY_SCHEMA,
-    "html": {"type": "string"},
-    "css": {"type": "string"},
-    "js": {"type": "string"},
-    "grid_w": {"type": "integer", "description": "Width in grid columns (1-12)."},
-    "grid_h": {"type": "integer", "description": "Height in grid rows."},
-}
+_FIELD_TYPES = get_type_hints(WidgetDraft)
 
-_CONTENT_FIELDS = ("title", "data_query", "html", "css", "js", "grid_w", "grid_h")
+
+def _json_schema_type(annotation) -> str:
+    """Map a field annotation to a JSON Schema type, unwrapping Optional[X]."""
+    inner = [a for a in get_args(annotation) if a is not type(None)]
+    return _JSON_TYPE[inner[0] if inner else annotation]
+
+
+def _content_field_schema(name: str) -> dict:
+    if name in _FIELD_SCHEMA_OVERRIDES:
+        return _FIELD_SCHEMA_OVERRIDES[name]
+    schema = {"type": _json_schema_type(_FIELD_TYPES[name])}
+    if name in _FIELD_DESCRIPTIONS:
+        schema["description"] = _FIELD_DESCRIPTIONS[name]
+    return schema
+
+
+_CONTENT_FIELDS = tuple(
+    f.name for f in dataclasses.fields(WidgetDraft) if f.name not in _NON_CONTENT_FIELDS
+)
+_CONTENT_PROPS = {name: _content_field_schema(name) for name in _CONTENT_FIELDS}
+
+
+def _opt_int(value) -> Optional[int]:
+    """Coerce an optional grid coordinate: an int when supplied, else None (no
+    explicit placement)."""
+    return int(value) if value is not None else None
 
 
 class WidgetToolProvider(ToolProvider):
@@ -152,6 +175,8 @@ class WidgetToolProvider(ToolProvider):
             html=args.get("html", ""),
             css=args.get("css", ""),
             js=args.get("js", ""),
+            grid_x=_opt_int(args.get("grid_x")),
+            grid_y=_opt_int(args.get("grid_y")),
             grid_w=int(args.get("grid_w", 4)),
             grid_h=int(args.get("grid_h", 3)),
         )

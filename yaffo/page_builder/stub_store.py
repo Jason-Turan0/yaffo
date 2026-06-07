@@ -561,6 +561,8 @@ def merge_widget_content(stored_widgets: list, client_widgets: list[dict]) -> li
             "html": item.get("html", base.html),
             "css": item.get("css", base.css),
             "js": item.get("js", base.js),
+            "grid_x": int(item.get("x", base.grid_x)),
+            "grid_y": int(item.get("y", base.grid_y)),
             "grid_w": int(item.get("w", base.grid_w)),
             "grid_h": int(item.get("h", base.grid_h)),
         })
