@@ -497,32 +497,6 @@ def create_page(title: str, theme_prompt: str = "") -> GenPage:
     return page
 
 
-def _new_widget(page: GenPage, title: Optional[str] = None, prompt: str = "") -> GenWidget:
-    """Create an empty widget at the bottom of the current layout (the manual
-    'Add widget' button; generated widgets arrive from the agent as drafts)."""
-    next_y = max((w.grid_y + w.grid_h for w in page.widgets), default=0)
-    widget = GenWidget(
-        id=new_widget_id(),
-        title=title or "New Widget",
-        prompt=prompt,
-        status="ready",
-        grid_x=0,
-        grid_y=next_y,
-        grid_w=8,
-        grid_h=4,
-    )
-    page.widgets.append(widget)
-    page.updated_at = datetime.now()
-    return widget
-
-
-def add_widget(page_id: int) -> Optional[GenWidget]:
-    page = _pages.get(page_id)
-    if page is None:
-        return None
-    return _new_widget(page)
-
-
 def remove_widget(page_id: int, widget_id: str) -> None:
     page = _pages.get(page_id)
     if page is None:
@@ -565,6 +539,32 @@ def save_page_widgets(page_id: int, widgets: list[dict]) -> None:
     page.updated_at = datetime.now()
 
 
+def merge_widget_content(page_id: int, client_widgets: list[dict]) -> list[dict]:
+    """The current content of each widget on the client's grid: stored content
+    overlaid with any client-provided fields (unsaved drafts win), in client
+    order. Read-only — nothing is persisted. Gives the model the *real* current
+    html/css/js when editing, so it doesn't rewrite code it can't see."""
+    page = _pages.get(page_id)
+    existing = {w.id: w for w in page.widgets} if page else {}
+    resolved: list[dict] = []
+    for item in client_widgets:
+        wid = str(item.get("id") or "")
+        base = existing.get(wid) or GenWidget(id=wid)
+        resolved.append({
+            "id": wid,
+            "title": item.get("title", base.title),
+            "prompt": base.prompt,
+            "data_query": item.get("data_query", base.data_query) or {},
+            "state": item.get("state", base.state) or {},
+            "html": item.get("html", base.html),
+            "css": item.get("css", base.css),
+            "js": item.get("js", base.js),
+            "grid_w": int(item.get("w", base.grid_w)),
+            "grid_h": int(item.get("h", base.grid_h)),
+        })
+    return resolved
+
+
 def add_message(page_id: int, role: str, content: str) -> Optional[GenMessage]:
     page = _pages.get(page_id)
     if page is None:
@@ -573,27 +573,6 @@ def add_message(page_id: int, role: str, content: str) -> Optional[GenMessage]:
     page.messages.append(message)
     page.updated_at = datetime.now()
     return message
-
-
-def generate_widget(
-    page_id: int, prompt: str, widget_errors: Optional[dict] = None
-) -> Optional[GenWidget]:
-    """Mock model generation: turns a user prompt into a stub widget. Stands in
-    for a Claude call that emits a widget's data_query + html/css/js. The real
-    call would also receive `widget_errors` (recent runtime errors per widget) as
-    context so it can repair code that threw."""
-    page = _pages.get(page_id)
-    if page is None:
-        return None
-    return _new_widget(page, title=_title_from_prompt(prompt), prompt=prompt)
-
-
-def _title_from_prompt(prompt: str) -> str:
-    words = prompt.strip().split()
-    title = " ".join(words[:5])
-    if len(words) > 5:
-        title += "…"
-    return title[:1].upper() + title[1:] if title else "Untitled widget"
 
 
 def update_page(

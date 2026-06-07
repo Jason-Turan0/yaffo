@@ -26,7 +26,7 @@ from yaffo.page_builder.tool_providers import (
     WidgetToolProvider,
     to_anthropic_tools,
 )
-
+from pathlib import Path
 
 @dataclass
 class AgentResult:
@@ -77,9 +77,7 @@ class PageBuilderAgent:
     def run_events(self, user_message: str) -> Iterator[AgentEvent]:
         """Drive the tool-use loop, yielding an AgentEvent per step (assistant
         text, each finished tool call, and a terminal done/error) so callers can
-        stream progress. Side effects (widget create/edit) happen as the tools
-        run, before their "tool" event is yielded — so the store is already
-        updated when the caller sees it."""
+        stream progress."""
         self.client.add_user_message(user_message)
         iterations = 0
         try:
@@ -159,17 +157,24 @@ class PageBuilderAgent:
 def create_agent(
     page_id: int,
     *,
+    current_widgets: Optional[list[dict]] = None,
     model: Optional[str] = None,
     api_key: Optional[str] = None,
     max_iterations: int = 25,
 ) -> PageBuilderAgent:
     """Wire the default agent for a page: data-query + widget tools, the stable
-    system prompt, and an Anthropic client."""
-    providers: list[ToolProvider] = [DataQueryToolProvider(), WidgetToolProvider(page_id)]
+    system prompt, and an Anthropic client. `current_widgets` is the page's current
+    widget content (incl. unsaved client drafts) so edits merge onto what the user
+    actually sees."""
+    providers: list[ToolProvider] = [
+        DataQueryToolProvider(),
+        WidgetToolProvider(page_id, current_widgets=current_widgets),
+    ]
     client = AnthropicModelClient(
         model=model,
         system_prompt=build_system_prompt(),
         tools=to_anthropic_tools(providers),
         api_key=api_key,
+        log_dir= Path.cwd() / "model_logs",
     )
     return PageBuilderAgent(client, providers, max_iterations=max_iterations)

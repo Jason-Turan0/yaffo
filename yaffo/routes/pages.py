@@ -87,15 +87,6 @@ def init_pages_routes(app: Flask):
         stub_store.delete_page(page_id)
         return redirect(url_for("index"))
 
-    @app.route("/pages/<int:page_id>/widgets", methods=["POST"])
-    def pages_add_widget(page_id: int):
-        widget = stub_store.add_widget(page_id)
-        if widget is None:
-            abort(404)
-        return render_template(
-            "pages/_widget.html", widget=widget, page=stub_store.get_page(page_id), editable=True
-        )
-
     @app.route("/pages/<int:page_id>/widgets/<widget_id>/frame", methods=["GET"])
     def pages_widget_frame(page_id: int, widget_id: str):
         page = stub_store.get_page(page_id)
@@ -178,6 +169,7 @@ def init_pages_routes(app: Flask):
         # so the page fills in live instead of after the whole (slow) run. Widget
         # records carry the generated *content* (the tool's host payload) — nothing
         # is persisted; the client holds it as a draft until Save (see grid.js).
+        # TODO test streaming in GCP environment.
         def generate():
             if not message:
                 yield _ndjson({"event": "done"})
@@ -192,16 +184,21 @@ def init_pages_routes(app: Flask):
                 yield _ndjson({"event": "done"})
                 return
 
+            client_widgets = payload.get("widgets")
+            if client_widgets is None:
+                client_widgets = [{"id": w.id} for w in page.widgets]
+            current_widgets = stub_store.merge_widget_content(page_id, client_widgets)
+
             user_message = build_user_message(
                 message,
                 page_title=page.title,
                 page_description=page.theme_prompt,
-                widgets=[{"id": w.id, "title": w.title, "prompt": w.prompt} for w in page.widgets],
+                widgets=current_widgets,
                 widget_errors=widget_errors,
             )
 
             try:
-                agent = create_agent(page_id)
+                agent = create_agent(page_id, current_widgets=current_widgets)
                 for event in agent.run_events(user_message):
                     if event.type == "assistant":
                         stub_store.add_message(page_id, "assistant", event.text)

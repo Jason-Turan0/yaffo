@@ -13,6 +13,7 @@ update it, and so edits to an already-saved widget merge onto its current conten
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from typing import Optional
 
 from yaffo.page_builder import stub_store
 from yaffo.page_builder.tool_providers.tool_provider_types import (
@@ -82,11 +83,27 @@ class WidgetToolProvider(ToolProvider):
     CREATE = "create_widget"
     UPDATE = "update_widget"
 
-    def __init__(self, page_id: int):
+    def __init__(self, page_id: int, current_widgets: Optional[list[dict]] = None):
         self.page_id = page_id
-        # Drafts touched this run, keyed by widget id. Not persisted — they seed
-        # in-run updates and are streamed to the browser for Save to commit.
-        self._drafts: dict[str, WidgetDraft] = {}
+        # Widgets keyed by id. Seeded with the page's *current* content (incl.
+        # unsaved client drafts) so an update merges onto what the user actually
+        # sees, then holds whatever the model creates/edits this run. Not
+        # persisted — these are streamed to the browser for Save to commit.
+        self._drafts: dict[str, WidgetDraft] = {
+            c["id"]: WidgetDraft(
+                id=c["id"],
+                title=c.get("title") or "",
+                data_query=c.get("data_query") or {},
+                html=c.get("html") or "",
+                css=c.get("css") or "",
+                js=c.get("js") or "",
+                grid_w=int(c.get("grid_w", 4)),
+                grid_h=int(c.get("grid_h", 3)),
+                state=c.get("state") or {},
+            )
+            for c in (current_widgets or [])
+            if c.get("id")
+        }
 
     def get_tools(self) -> list[RawToolDefinition]:
         return [

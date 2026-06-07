@@ -179,10 +179,22 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
         wireWidget(el);
     };
 
-    const addWidget = async () => {
-        const response = await fetch(config.buildUrl('pages_add_widget', { page_id: pageId }), { method: 'POST' });
-        addWidgetEl(await response.text());
-    };
+    const newWidgetId = () =>
+        (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now())).replace(/-/g, '');
+
+    // Manual add: an empty client-side draft, just like a generated one — nothing
+    // is persisted until Save.
+    const addWidget = () => addDraftWidget({
+        id: newWidgetId(),
+        title: 'New Widget',
+        data_query: {},
+        html: '',
+        css: '',
+        js: '',
+        grid_w: 8,
+        grid_h: 4,
+        state: {}
+    });
 
     const scrollConversation = () => {
         const messages = document.getElementById('conversation-messages');
@@ -194,6 +206,21 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
         el.className = `chat-message chat-message-${role}`;
         el.textContent = content;
         messagesEl.insertBefore(el, before);
+        return el;
+    };
+
+    // A spinning status row pinned after the last message while the run is live;
+    // its label tracks the current step. Assistant replies insert above it.
+    const addStatusSpinner = (messagesEl, text) => {
+        const el = document.createElement('div');
+        el.className = 'chat-status';
+        const spinner = document.createElement('span');
+        spinner.className = 'chat-spinner';
+        const label = document.createElement('span');
+        label.className = 'chat-status-text';
+        label.textContent = text;
+        el.append(spinner, label);
+        messagesEl.appendChild(el);
         return el;
     };
 
@@ -254,28 +281,26 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
     const sendMessage = async (event) => {
         event.preventDefault();
         const input = document.getElementById('conversation-message');
+        const sendButton = document.querySelector('#conversation-form button[type="submit"]');
         const message = input.value.trim();
         if (!message) return;
         input.value = '';
 
         const messagesEl = document.getElementById('conversation-messages');
         addChatMessage(messagesEl, 'user', message);
-        // A status bubble pinned at the bottom; assistant replies insert above it,
-        // its text tracks the current step, and it's removed when the run ends.
-        const status = addChatMessage(messagesEl, 'assistant', 'Thinking…');
+        // A spinner pinned after the last message; assistant replies insert above
+        // it, its label tracks the current step, and it's removed when done.
+        const status = addStatusSpinner(messagesEl, 'Thinking…');
+        const statusLabel = status.querySelector('.chat-status-text');
+        // Lock Send for the whole run so a second request can't overlap.
+        if (sendButton) sendButton.disabled = true;
         scrollConversation();
-
-        const response = await fetch(config.buildUrl('pages_chat', { page_id: pageId }), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, widget_errors: window.PHOTO_ORGANIZER.widgetErrors })
-        });
 
         const apply = async (record) => {
             if (record.event === 'message') {
                 addChatMessage(messagesEl, 'assistant', record.content, status);
             } else if (record.event === 'status') {
-                status.textContent = record.text;
+                statusLabel.textContent = record.text;
             } else if (record.event === 'widget_new') {
                 await addDraftWidget(record.widget);
             } else if (record.event === 'widget_updated') {
@@ -286,9 +311,24 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
             scrollConversation();
         };
 
-        await readNdjson(response, apply);
-        status.remove();  // safety if the stream ended without a 'done'
-        scrollConversation();
+        try {
+            const response = await fetch(config.buildUrl('pages_chat', { page_id: pageId }), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // Send current widget content (drafts included) so the model edits
+                // with sight of the real html/css/js instead of guessing.
+                body: JSON.stringify({
+                    message,
+                    widgets: getWidgets(),
+                    widget_errors: window.PHOTO_ORGANIZER.widgetErrors
+                })
+            });
+            await readNdjson(response, apply);
+        } finally {
+            status.remove();  // safety if the stream ended without a 'done'
+            if (sendButton) sendButton.disabled = false;
+            scrollConversation();
+        }
     };
 
     const gridEl = document.querySelector('.grid-stack');

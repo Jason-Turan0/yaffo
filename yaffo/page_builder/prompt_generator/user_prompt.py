@@ -10,6 +10,7 @@ nested elements; empty sections are omitted to keep the turn tight.
 """
 from __future__ import annotations
 
+import json
 from typing import Optional
 
 from yaffo.page_builder.prompt_generator.xml_helpers import block, el
@@ -28,7 +29,9 @@ def build_user_message(
     Args:
         request: what the user asked for (the chat message).
         page_title / page_description: page-level context.
-        widgets: existing widgets on the page, each {id, title, prompt}.
+        widgets: existing widgets on the page, each {id, title, prompt} plus the
+            current {data_query, html, css, js} so the model edits with full sight
+            of the code (not blind). Empty code fields are fine for new/empty ones.
         widget_errors: {widget_id: [error messages]} captured at runtime, fed
             back so the model can repair code that threw.
     """
@@ -50,7 +53,18 @@ def build_user_message(
             block(
                 "existing_widgets",
                 [
-                    el("widget", w.get("prompt") or "", id=w.get("id"), title=w.get("title") or "Untitled widget")
+                    block(
+                        "widget",
+                        [
+                            el("prompt", w.get("prompt") or ""),
+                            el("data_query", json.dumps(w.get("data_query") or {})),
+                            el("html", w.get("html") or ""),
+                            el("css", w.get("css") or ""),
+                            el("js", w.get("js") or ""),
+                        ],
+                        id=w.get("id"),
+                        title=w.get("title") or "Untitled widget",
+                    )
                     for w in widgets
                 ],
             )

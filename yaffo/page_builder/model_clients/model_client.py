@@ -81,6 +81,7 @@ class AnthropicModelClient(ModelClient):
         self._client = anthropic.Anthropic(api_key=api_key or llm_config.get_api_key())
         self.log_dir = Path(log_dir) if log_dir else (ROOT_DIR / "model_logs")
         self._call_count = 0
+        self.task_start = datetime.now()
 
     @classmethod
     def from_config(cls, config: ModelClientConfig, **kwargs: Any) -> "AnthropicModelClient":
@@ -225,7 +226,7 @@ class AnthropicModelClient(ModelClient):
             "response": message.model_dump() if message is not None else None,
             "cost": self._estimate_cost(usage) if usage is not None else None,
         }
-        request_log_dir =self.log_dir / f"{timestamp:%Y%m%d-%H%M%S}"
+        request_log_dir =self.log_dir / f"{self.task_start:%Y%m%d-%H%M%S}"
         file_path = request_log_dir / f"{self._call_count:03d}.json"
         try:
             request_log_dir.mkdir(parents=True, exist_ok=True)

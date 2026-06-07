@@ -133,6 +133,35 @@
     border-color: #007BFF;
 }
 
+.conversation-input button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Spinner shown right after the last message while the assistant is working. */
+.chat-status {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #868e96;
+}
+
+.chat-spinner {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #dee2e6;
+    border-top-color: #007BFF;
+    border-radius: 50%;
+    animation: chat-spin 0.6s linear infinite;
+}
+
+@keyframes chat-spin {
+    to { transform: rotate(360deg); }
+}
+
 /* ---- Grid + widgets ---- */
 .grid-stack {
     min-height: 320px;
