@@ -15,6 +15,7 @@ the assistant turn, inspect `response.tool_calls`, then feed results back with
 from __future__ import annotations
 
 import json
+import logging
 import time
 from datetime import datetime
 from pathlib import Path
@@ -79,7 +80,6 @@ class AnthropicModelClient(ModelClient):
         self.messages: list[dict] = []
         self._client = anthropic.Anthropic(api_key=api_key or llm_config.get_api_key())
         self.log_dir = Path(log_dir) if log_dir else (ROOT_DIR / "model_logs")
-        self.log_dir.mkdir(parents=True, exist_ok=True)
         self._call_count = 0
 
     @classmethod
@@ -211,6 +211,8 @@ class AnthropicModelClient(ModelClient):
         }
 
     def _write_log(self, timestamp: datetime, duration_ms: float, params: dict, message: Any) -> None:
+        if  logger.getEffectiveLevel() > logging.DEBUG:
+            return
         self._call_count += 1
         usage = self._usage(message.usage) if message is not None else None
         record = {
@@ -223,8 +225,10 @@ class AnthropicModelClient(ModelClient):
             "response": message.model_dump() if message is not None else None,
             "cost": self._estimate_cost(usage) if usage is not None else None,
         }
-        path = self.log_dir / f"{timestamp:%Y%m%d-%H%M%S}-{self._call_count:03d}.json"
+        request_log_dir =self.log_dir / f"{timestamp:%Y%m%d-%H%M%S}"
+        file_path = request_log_dir / f"{self._call_count:03d}.json"
         try:
-            path.write_text(json.dumps(record, indent=2, default=_jsonable))
+            request_log_dir.mkdir(parents=True, exist_ok=True)
+            file_path.write_text(json.dumps(record, indent=2, default=_jsonable))
         except OSError:
             pass

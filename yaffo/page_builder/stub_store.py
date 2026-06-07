@@ -56,7 +56,9 @@ _widget_ids = count(1)
 _PHOTO_IDS = list(range(1, 16))
 _LOCATIONS = ["Acadia NP", "Portland, ME", "Bar Harbor", "Camden"]
 _TAGS = ["beach", "hike", "sunset", "family", "boat"]
-_PEOPLE = ["Mom", "Dad", "Grace", "Liam", "Ava"]
+# (name, face photo id) — face thumbnails reference real photos in the dev library.
+_PEOPLE_DATA = [("Michelle", 2), ("Malia", 3), ("Obama", 4)]
+_PEOPLE = [name for name, _ in _PEOPLE_DATA]
 _YEARS = [2021, 2022, 2023]
 
 
@@ -110,8 +112,8 @@ def _fake_locations() -> list[dict]:
 
 def _fake_people(limit: int) -> list[dict]:
     return [
-        {"name": name, "photo_count": 120 - i * 17, "face_thumb_url": f"/photos/{i + 1}"}
-        for i, name in enumerate(_PEOPLE[:limit])
+        {"name": name, "photo_count": 120 - i * 17, "face_thumb_url": f"/photos/{photo_id}"}
+        for i, (name, photo_id) in enumerate(_PEOPLE_DATA[:limit])
     ]
 
 
@@ -491,23 +493,38 @@ def create_page(title: str, theme_prompt: str = "") -> GenPage:
 
 def _new_widget(page: GenPage, title: Optional[str] = None, prompt: str = "") -> GenWidget:
     """Create a widget from the next stub layout, cycling through the catalog."""
-    global current_stub_index
-    spec = _WIDGET_STUBS[current_stub_index % len(_WIDGET_STUBS)]
-    current_stub_index += 1
+    # global current_stub_index
+    # spec = _WIDGET_STUBS[current_stub_index % len(_WIDGET_STUBS)]
+    # current_stub_index += 1
+    #
+    # widget = GenWidget(
+    #     id=next(_widget_ids),
+    #     title=title or spec["title"],
+    #     prompt=prompt,
+    #     data_query=dict(spec["data_query"]),
+    #     html=spec["html"],
+    #     css=spec["css"],
+    #     js=spec["js"],
+    #     status="ready",
+    #     grid_x=0,
+    #     grid_y=next_y,
+    #     grid_w=spec["grid_w"],
+    #     grid_h=spec["grid_h"],
+    # )
     next_y = max((w.grid_y + w.grid_h for w in page.widgets), default=0)
     widget = GenWidget(
         id=next(_widget_ids),
-        title=title or spec["title"],
+        title="New Widget",
         prompt=prompt,
-        data_query=dict(spec["data_query"]),
-        html=spec["html"],
-        css=spec["css"],
-        js=spec["js"],
+        data_query={},
+        html="",
+        css="",
+        js="",
         status="ready",
         grid_x=0,
         grid_y=next_y,
-        grid_w=spec["grid_w"],
-        grid_h=spec["grid_h"],
+        grid_w= 8,
+        grid_h= 4,
     )
     page.widgets.append(widget)
     page.updated_at = datetime.now()

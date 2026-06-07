@@ -138,7 +138,8 @@ def init_pages_routes(app: Flask):
                 # Synchronous for now — this blocks until the agent finishes.
                 # Streaming progress to the client is a later improvement.
                 try:
-                    result = create_agent(page_id).run(user_message)
+                    agent = create_agent(page_id)
+                    result = agent.run(user_message)
                     reply = result.text or ("Done." if result.ok else "Generation failed.")
                 except Exception as exc:  # surface failures to the user, don't 500
                     reply = f"Generation error: {exc}"
