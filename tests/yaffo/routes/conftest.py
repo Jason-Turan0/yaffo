@@ -1,0 +1,34 @@
+"""Shared fixtures for Flask route tests.
+
+Each test gets the real application wired up by `create_app()` but pointed at a
+fresh, throwaway SQLite database (create_app otherwise targets the production
+app.db), so route tests are isolated and order-independent. Generation is gated on
+an Anthropic API key that may live in the dev machine's keychain, so by default we
+neutralise it — the chat route is deterministic unless a test opts in.
+"""
+import pytest
+
+from yaffo.app import create_app
+from yaffo.db import db
+
+
+@pytest.fixture
+def app(tmp_path):
+    application = create_app(db_path=tmp_path / "test.db", config={"TESTING": True})
+    with application.app_context():
+        db.create_all()
+        yield application
+        db.session.remove()
+        db.drop_all()
+
+
+@pytest.fixture
+def client(app):
+    return app.test_client()
+
+
+@pytest.fixture(autouse=True)
+def no_api_key(monkeypatch):
+    """Default every route test to 'no API key' so the chat route never reaches a
+    real model. Tests that exercise generation override get_api_key + create_agent."""
+    monkeypatch.setattr("yaffo.page_builder.llm_config.get_api_key", lambda: None)

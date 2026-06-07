@@ -187,3 +187,70 @@ class ApplicationSettings(db.Model):
     name = db.Column(db.String, unique=True, nullable=False)
     type = db.Column(db.String, nullable=False)
     value = db.Column(db.String)
+
+
+# AI page builder models.
+WIDGET_STATUS_EMPTY = "empty"
+WIDGET_STATUS_GENERATING = "generating"
+WIDGET_STATUS_READY = "ready"
+WIDGET_STATUS_ERROR = "error"
+
+
+class CustomPage(db.Model):
+    __tablename__ = "custom_pages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String, nullable=False, default="Untitled Page")
+    theme_prompt = db.Column(db.Text, default="")
+    show_title = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    widgets = db.relationship(
+        "Widget",
+        back_populates="page",
+        cascade="all, delete-orphan",
+        order_by="Widget.position",
+    )
+    messages = db.relationship(
+        "Conversation",
+        back_populates="page",
+        cascade="all, delete-orphan",
+        order_by="Conversation.id",
+    )
+
+
+class Widget(db.Model):
+    __tablename__ = "widgets"
+
+    # GUID minted server-side by the tool or client-side for manual adds, so a
+    # draft's id is stable from creation through Save.
+    id = db.Column(db.String, primary_key=True)
+    page_id = db.Column(db.Integer, db.ForeignKey("custom_pages.id", ondelete="CASCADE"), nullable=False)
+    position = db.Column(db.Integer, nullable=False, default=0)  # order within the page
+    title = db.Column(db.String, default="Untitled widget")
+    prompt = db.Column(db.Text, default="")
+    data_query = db.Column(db.JSON, default=dict)  # named queries (author / AI-defined)
+    state = db.Column(db.JSON, default=dict)  # widget-owned persisted UI state
+    html = db.Column(db.Text, default="")
+    css = db.Column(db.Text, default="")
+    js = db.Column(db.Text, default="")
+    status = db.Column(db.String, default=WIDGET_STATUS_EMPTY)
+    grid_x = db.Column(db.Integer, default=0)
+    grid_y = db.Column(db.Integer, default=0)
+    grid_w = db.Column(db.Integer, default=4)
+    grid_h = db.Column(db.Integer, default=3)
+
+    page = db.relationship("CustomPage", back_populates="widgets")
+
+
+class Conversation(db.Model):
+    __tablename__ = "conversations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    page_id = db.Column(db.Integer, db.ForeignKey("custom_pages.id", ondelete="CASCADE"), nullable=False)
+    role = db.Column(db.String, nullable=False)  # user | assistant
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    page = db.relationship("CustomPage", back_populates="messages")

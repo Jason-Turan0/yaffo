@@ -539,13 +539,15 @@ def save_page_widgets(page_id: int, widgets: list[dict]) -> None:
     page.updated_at = datetime.now()
 
 
-def merge_widget_content(page_id: int, client_widgets: list[dict]) -> list[dict]:
+def merge_widget_content(stored_widgets: list, client_widgets: list[dict]) -> list[dict]:
     """The current content of each widget on the client's grid: stored content
     overlaid with any client-provided fields (unsaved drafts win), in client
     order. Read-only — nothing is persisted. Gives the model the *real* current
-    html/css/js when editing, so it doesn't rewrite code it can't see."""
-    page = _pages.get(page_id)
-    existing = {w.id: w for w in page.widgets} if page else {}
+    html/css/js when editing, so it doesn't rewrite code it can't see.
+
+    `stored_widgets` is the page's persisted widgets (storage-agnostic: any object
+    exposing the widget fields), so the caller owns where they come from."""
+    existing = {w.id: w for w in stored_widgets}
     resolved: list[dict] = []
     for item in client_widgets:
         wid = str(item.get("id") or "")

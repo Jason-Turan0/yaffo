@@ -12,6 +12,9 @@ from flask import (
     make_response,
 )
 
+from yaffo.db import db
+from yaffo.db.models import Widget
+from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.page_builder import stub_store, llm_config
 from yaffo.page_builder.agent import create_agent
 from yaffo.page_builder.prompt_generator import build_user_message
@@ -45,18 +48,18 @@ def _widget_frame_csp(origin: str) -> str:
 def init_pages_routes(app: Flask):
     @app.context_processor
     def inject_nav_pages():
-        return {"nav_pages": stub_store.list_pages()}
+        return {"nav_pages": page_repo.list_pages(db.session)}
 
     @app.route("/pages", methods=["POST"])
     def pages_create():
         title = (request.form.get("title") or "").strip() or "Untitled Page"
         theme_prompt = (request.form.get("theme_prompt") or "").strip()
-        page = stub_store.create_page(title=title, theme_prompt=theme_prompt)
+        page = page_repo.create_page(db.session, title=title, theme_prompt=theme_prompt)
         return redirect(url_for("pages_detail", page_id=page.id))
 
     @app.route("/pages/<int:page_id>", methods=["GET"])
     def pages_detail(page_id: int):
-        page = stub_store.get_page(page_id)
+        page = page_repo.get_page(db.session, page_id)
         if page is None:
             abort(404)
         if not page.widgets:
@@ -65,34 +68,31 @@ def init_pages_routes(app: Flask):
 
     @app.route("/pages/<int:page_id>/design", methods=["GET"])
     def pages_design(page_id: int):
-        page = stub_store.get_page(page_id)
+        page = page_repo.get_page(db.session, page_id)
         if page is None:
             abort(404)
         return render_template("pages/design.html", page=page)
 
     @app.route("/pages/<int:page_id>/update", methods=["POST"])
     def pages_update(page_id: int):
-        if stub_store.get_page(page_id) is None:
+        if page_repo.get_page(db.session, page_id) is None:
             abort(404)
         payload = request.get_json(silent=True) or {}
         title = (payload.get("title") or "").strip() or "Untitled Page"
         theme_prompt = (payload.get("theme_prompt") or "").strip()
         show_title = bool(payload.get("show_title", True))
-        stub_store.update_page(page_id, title=title, theme_prompt=theme_prompt, show_title=show_title)
-        stub_store.save_page_widgets(page_id, payload.get("widgets", []))
+        page_repo.update_page(db.session, page_id, title=title, theme_prompt=theme_prompt, show_title=show_title)
+        page_repo.save_page_widgets(db.session, page_id, payload.get("widgets", []))
         return "", 204
 
     @app.route("/pages/<int:page_id>/delete", methods=["POST"])
     def pages_delete(page_id: int):
-        stub_store.delete_page(page_id)
+        page_repo.delete_page(db.session, page_id)
         return redirect(url_for("index"))
 
     @app.route("/pages/<int:page_id>/widgets/<widget_id>/frame", methods=["GET"])
     def pages_widget_frame(page_id: int, widget_id: str):
-        page = stub_store.get_page(page_id)
-        if page is None:
-            abort(404)
-        widget = next((w for w in page.widgets if w.id == widget_id), None)
+        widget = page_repo.get_widget(db.session, page_id, widget_id)
         if widget is None:
             abort(404)
         csp = _widget_frame_csp(request.host_url.rstrip("/"))
@@ -109,18 +109,22 @@ def init_pages_routes(app: Flask):
         — the frame's data is resolved server-side and inlined as the iframe's
         srcdoc, so generated/edited drafts render live without writing to the store
         (Save is the only write). The client drops this straight onto its grid."""
-        page = stub_store.get_page(page_id)
+        page = page_repo.get_page(db.session, page_id)
         if page is None:
             abort(404)
         payload = request.get_json(silent=True) or {}
-        widget = stub_store.GenWidget(
-            id=str(payload.get("id") or stub_store.new_widget_id()),
+        # A transient (un-persisted) Widget purely to feed the template; never
+        # added to the session, so Save remains the only write.
+        widget = Widget(
+            id=str(payload.get("id") or page_repo.new_widget_id()),
             title=payload.get("title") or "",
             data_query=payload.get("data_query") or {},
             state=payload.get("state") or {},
             html=payload.get("html") or "",
             css=payload.get("css") or "",
             js=payload.get("js") or "",
+            grid_x=0,
+            grid_y=0,
             grid_w=int(payload.get("grid_w", 4)),
             grid_h=int(payload.get("grid_h", 3)),
         )
@@ -133,29 +137,27 @@ def init_pages_routes(app: Flask):
 
     @app.route("/pages/<int:page_id>/widgets/<widget_id>/delete", methods=["POST"])
     def pages_delete_widget(page_id: int, widget_id: str):
-        stub_store.remove_widget(page_id, widget_id)
+        page_repo.remove_widget(db.session, page_id, widget_id)
         return "", 204
 
     @app.route("/pages/<int:page_id>/widgets/<widget_id>/query", methods=["POST"])
     def pages_widget_query(page_id: int, widget_id: str):
-        page = stub_store.get_page(page_id)
-        if page is None or not any(w.id == widget_id for w in page.widgets):
+        if page_repo.get_widget(db.session, page_id, widget_id) is None:
             abort(404)
         payload = request.get_json(silent=True) or {}
         return {"data": stub_store.resolve_query(payload.get("query", {}))}
 
     @app.route("/pages/<int:page_id>/widgets/<widget_id>/state", methods=["POST"])
     def pages_widget_state(page_id: int, widget_id: str):
-        page = stub_store.get_page(page_id)
-        if page is None or not any(w.id == widget_id for w in page.widgets):
+        if page_repo.get_widget(db.session, page_id, widget_id) is None:
             abort(404)
         payload = request.get_json(silent=True) or {}
-        stub_store.set_widget_state(page_id, widget_id, payload.get("state", {}))
+        page_repo.set_widget_state(db.session, page_id, widget_id, payload.get("state", {}))
         return "", 204
 
     @app.route("/pages/<int:page_id>/chat", methods=["POST"])
     def pages_chat(page_id: int):
-        page = stub_store.get_page(page_id)
+        page = page_repo.get_page(db.session, page_id)
         if page is None:
             abort(404)
         payload = request.get_json(silent=True) or {}
@@ -175,11 +177,11 @@ def init_pages_routes(app: Flask):
                 yield _ndjson({"event": "done"})
                 return
 
-            stub_store.add_message(page_id, "user", message)
+            page_repo.add_message(db.session, page_id, "user", message)
 
             if llm_config.get_api_key() is None:
                 reply = "No API key configured. Add your Anthropic API key in Settings → AI Generation."
-                stub_store.add_message(page_id, "assistant", reply)
+                page_repo.add_message(db.session, page_id, "assistant", reply)
                 yield _ndjson({"event": "message", "content": reply})
                 yield _ndjson({"event": "done"})
                 return
@@ -187,7 +189,7 @@ def init_pages_routes(app: Flask):
             client_widgets = payload.get("widgets")
             if client_widgets is None:
                 client_widgets = [{"id": w.id} for w in page.widgets]
-            current_widgets = stub_store.merge_widget_content(page_id, client_widgets)
+            current_widgets = stub_store.merge_widget_content(page.widgets, client_widgets)
 
             user_message = build_user_message(
                 message,
@@ -201,7 +203,7 @@ def init_pages_routes(app: Flask):
                 agent = create_agent(page_id, current_widgets=current_widgets)
                 for event in agent.run_events(user_message):
                     if event.type == "assistant":
-                        stub_store.add_message(page_id, "assistant", event.text)
+                        page_repo.add_message(db.session, page_id, "assistant", event.text)
                         yield _ndjson({"event": "message", "content": event.text})
                     elif event.type == "tool":
                         yield _ndjson({
@@ -215,11 +217,11 @@ def init_pages_routes(app: Flask):
                             kind = "widget_updated" if event.name == "update_widget" else "widget_new"
                             yield _ndjson({"event": kind, "widget": event.tool_result_data})
                     elif event.type == "error":
-                        stub_store.add_message(page_id, "assistant", event.text)
+                        page_repo.add_message(db.session, page_id, "assistant", event.text)
                         yield _ndjson({"event": "message", "content": event.text})
             except Exception as exc:  # surface failures to the user, don't 500
                 reply = f"Generation error: {exc}"
-                stub_store.add_message(page_id, "assistant", reply)
+                page_repo.add_message(db.session, page_id, "assistant", reply)
                 yield _ndjson({"event": "message", "content": reply})
 
             yield _ndjson({"event": "done"})

@@ -15,7 +15,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
-from yaffo.page_builder import stub_store
+from yaffo.db import db
+from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.page_builder.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
@@ -145,7 +146,7 @@ class WidgetToolProvider(ToolProvider):
 
     def _create(self, args: dict) -> ToolResult:
         draft = WidgetDraft(
-            id=stub_store.new_widget_id(),
+            id=page_repo.new_widget_id(),
             title=args.get("title") or "Untitled widget",
             data_query=args.get("data_query") or {},
             html=args.get("html", ""),
@@ -179,8 +180,7 @@ class WidgetToolProvider(ToolProvider):
         )
 
     def _load_saved(self, widget_id: str) -> "WidgetDraft | None":
-        page = stub_store.get_page(self.page_id)
-        widget = next((w for w in page.widgets if w.id == widget_id), None) if page else None
+        widget = page_repo.get_widget(db.session, self.page_id, widget_id)
         if widget is None:
             return None
         return WidgetDraft(

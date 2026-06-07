@@ -1,5 +1,7 @@
 import os
 import logging
+from pathlib import Path
+from typing import Optional
 
 from flask import Flask
 from yaffo.db import db
@@ -10,7 +12,7 @@ from yaffo.routes.init_routes import init_routes
 
 logger = get_logger(__name__, 'webapp')
 
-def create_app():
+def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None):
     app = Flask(__name__)
 
     # Configure werkzeug logger to use our logging system
@@ -22,7 +24,7 @@ def create_app():
     app.logger.setLevel(logger.level)
 
     logger.info("Starting Photo Organizer application")
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ECHO"] = os.environ.get("SQLALCHEMY_ECHO", "").lower() == "true"
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
@@ -33,6 +35,10 @@ def create_app():
     app.config['SESSION_TYPE'] = 'filesystem'  # or 'redis', 'memcached', etc.
     app.config['SESSION_PERMANENT'] = True
     #app.config['SESSION_USE_SIGNER'] = True
+
+    # Caller overrides (e.g. tests) win over the defaults above.
+    if config:
+        app.config.update(config)
 
     db.init_app(app)
 
