@@ -194,6 +194,20 @@ class TestTermination:
         assert events[-1].type == "error"
         assert events[-1].text == "Generation failed."
 
+    def test_max_tokens_truncation_yields_error_without_acting(self):
+        # The turn was cut off (thinking ate the budget): a truncated tool_use must
+        # not be executed, and the run must not be reported as a clean done.
+        provider = StubToolProvider()
+        client = StubModelClient([_resp(tool_calls=[_call()], stop_reason="max_tokens")])
+        agent = PageBuilderAgent(client, [provider])
+        events = _events(agent)
+
+        assert provider.calls == []  # the truncated tool call was not executed
+        assert client.tool_result_batches == []
+        assert [e.type for e in events] == ["error"]
+        assert events[-1].stop_reason == "max_tokens"
+        assert "token limit" in events[-1].text
+
     def test_max_iterations_caps_the_loop(self):
         provider = StubToolProvider()
         # Always returns a tool call -> the loop would never end on its own.

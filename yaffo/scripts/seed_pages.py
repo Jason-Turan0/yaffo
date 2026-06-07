@@ -214,11 +214,11 @@ def _place(widget: dict, x: int, y: int, w: int, h: int) -> dict:
     return {**widget, "id": page_repo.new_widget_id(), "x": x, "y": y, "w": w, "h": h, "state": {}}
 
 
-# Each page: a title, a theme prompt, and its positioned widgets.
+# Each page: a title, a subtitle prompt, and its positioned widgets.
 PAGES: list[dict] = [
     {
         "title": "Maine Summer",
-        "theme": "Highlights and a polaroid wall from our Maine trip.",
+        "subtitle": "Highlights and a polaroid wall from our Maine trip.",
         "widgets": [
             _place(_hero(), 0, 0, 12, 2),
             _place(_photo_grid(), 0, 2, 6, 3),
@@ -227,7 +227,7 @@ PAGES: list[dict] = [
     },
     {
         "title": "Browse",
-        "theme": "Filter and skim the whole library.",
+        "subtitle": "Filter and skim the whole library.",
         "widgets": [
             _place(_filterable_gallery(), 0, 0, 12, 4),
             _place(_filmstrip(), 0, 4, 12, 2),
@@ -235,7 +235,7 @@ PAGES: list[dict] = [
     },
     {
         "title": "Connected",
-        "theme": "A global filter driving two linked galleries.",
+        "subtitle": "A global filter driving two linked galleries.",
         "widgets": [
             _place(_global_filter(), 0, 0, 12, 1),
             _place(_linked_gallery(), 0, 1, 6, 3),
@@ -244,7 +244,7 @@ PAGES: list[dict] = [
     },
     {
         "title": "Overview",
-        "theme": "The library at a glance.",
+        "subtitle": "The library at a glance.",
         "widgets": [
             _place(_stats(), 0, 0, 12, 2),
             _place(_photo_grid(), 0, 2, 12, 3),
@@ -261,7 +261,7 @@ def seed_pages() -> None:
         for spec in PAGES:
             if spec["title"] in existing:  # idempotent: replace a prior seed
                 page_repo.delete_page(db.session, existing[spec["title"]])
-            page = page_repo.create_page(db.session, title=spec["title"], subtitle=spec["theme"])
+            page = page_repo.create_page(db.session, title=spec["title"], subtitle=spec["subtitle"])
             page_repo.save_page_widgets(db.session, page.id, spec["widgets"])
             print(f"Seeded '{page.title}' (id={page.id}) with {len(spec['widgets'])} widgets")
         print(f"Done: {len(PAGES)} pages.")

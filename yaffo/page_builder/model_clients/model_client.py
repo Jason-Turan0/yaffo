@@ -60,6 +60,28 @@ def _jsonable(obj: Any) -> Any:
     return str(obj)
 
 
+def _error_payload(error: anthropic.APIError) -> dict:
+    """Serialize an Anthropic APIError's HTTP response for the log. APIStatusError
+    carries the response (status, body, headers); connection/timeout errors never
+    got one, so every field is read defensively with getattr."""
+    payload: dict[str, Any] = {
+        "type": type(error).__name__,
+        "message": str(error),
+        "request_id": getattr(error, "request_id", None),
+        "status_code": getattr(error, "status_code", None),
+        "body": getattr(error, "body", None),
+    }
+    response = getattr(error, "response", None)  # httpx.Response on APIStatusError
+    if response is not None:
+        payload["headers"] = dict(response.headers)
+        if payload["body"] is None:
+            try:
+                payload["body"] = response.json()
+            except ValueError:
+                payload["body"] = response.text
+    return payload
+
+
 class AnthropicModelClient(ModelClient):
     def __init__(
         self,
@@ -68,7 +90,11 @@ class AnthropicModelClient(ModelClient):
         system_prompt: str,
         tools: Optional[list[dict]] = None,
         output_schema: Optional[dict] = None,
-        max_tokens: int = 8192,
+        # Adaptive thinking draws from this same budget, so it must be generous —
+        # at 8192 the model could spend the whole budget thinking and get cut off
+        # (stop_reason=max_tokens) before emitting a widget. The streaming path
+        # (call_model_api) avoids HTTP timeouts at this size. Opus 4.8 allows 128K.
+        max_tokens: int = 64000,
         log_dir: Optional[Path] = None,
         api_key: Optional[str] = None,
     ):
@@ -119,6 +145,7 @@ class AnthropicModelClient(ModelClient):
         timestamp = datetime.now()
         started = time.monotonic()
         message: Optional[anthropic.types.Message] = None
+        error: Optional[anthropic.APIError] = None
         try:
             with self._client.messages.stream(**params) as stream:
                 message = stream.get_final_message()
@@ -129,10 +156,14 @@ class AnthropicModelClient(ModelClient):
             if response.text:
                 logger.debug("🤖 %s", response.text[:100])
             return response
-        except anthropic.APIError:
+        except anthropic.APIError as e:
+            logger.error("Anthropic API call failed: %s", e)
+            error = e
             return None
         finally:
-            self._write_log(timestamp, (time.monotonic() - started) * 1000, params, message)
+            # Log the raw request + raw response: the SDK message on success, or the
+            # error's HTTP response (status / body / headers) on failure.
+            self._write_log(timestamp, (time.monotonic() - started) * 1000, params, message, error)
 
     def _to_response(self, message: anthropic.types.Message) -> ModelResponse:
         text = "".join(b.text for b in message.content if b.type == "text")
@@ -211,11 +242,24 @@ class AnthropicModelClient(ModelClient):
             "total_usd": round(total, 6),
         }
 
-    def _write_log(self, timestamp: datetime, duration_ms: float, params: dict, message: Any) -> None:
-        if  logger.getEffectiveLevel() > logging.DEBUG:
+    def _write_log(
+        self,
+        timestamp: datetime,
+        duration_ms: float,
+        params: dict,
+        message: Any,
+        error: Optional[anthropic.APIError] = None,
+    ) -> None:
+        if logger.getEffectiveLevel() > logging.DEBUG:
             return
         self._call_count += 1
         usage = self._usage(message.usage) if message is not None else None
+        if message is not None:
+            response: Any = message.model_dump()
+        elif error is not None:
+            response = _error_payload(error)
+        else:
+            response = None
         record = {
             "timestamp": timestamp.isoformat(timespec="seconds"),
             "call": self._call_count,
@@ -223,7 +267,7 @@ class AnthropicModelClient(ModelClient):
             "duration_ms": round(duration_ms),
             "success": message is not None,
             "request": params,
-            "response": message.model_dump() if message is not None else None,
+            "response": response,
             "cost": self._estimate_cost(usage) if usage is not None else None,
         }
         request_log_dir =self.log_dir / f"{self.task_start:%Y%m%d-%H%M%S}"

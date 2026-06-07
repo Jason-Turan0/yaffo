@@ -88,6 +88,17 @@ class PageBuilderAgent:
                     yield AgentEvent("error", text="Generation failed.", stop_reason="error")
                     return
 
+                # The turn was cut off at max_tokens (thinking shares this budget):
+                # any text/tool_use is truncated, so surface it instead of acting on
+                # a half-streamed (invalid-JSON) tool call or treating it as done.
+                if response.stop_reason == "max_tokens":
+                    yield AgentEvent(
+                        "error",
+                        text="Generation hit the output token limit and was cut off — try a simpler request.",
+                        stop_reason="max_tokens",
+                    )
+                    return
+
                 if response.text:
                     yield AgentEvent("assistant", text=response.text)
 

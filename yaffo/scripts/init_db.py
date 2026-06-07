@@ -130,8 +130,8 @@ def init_db():
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS custom_pages (
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                       title TEXT UNIQUE NOT NULL,
-                       subtitle TEXT UNIQUE NOT NULL,
+                       title TEXT NOT NULL,
+                       subtitle TEXT NOT NULL,
                        show_title INTEGER NOT NULL DEFAULT 1,
                        value TEXT,
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

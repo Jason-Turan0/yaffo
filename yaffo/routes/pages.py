@@ -1,4 +1,5 @@
 import json
+import logging
 
 from flask import (
     Flask,
@@ -16,6 +17,7 @@ from yaffo.db import db
 from yaffo.db.models import Widget
 from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.db.repositories.data_query_repository import resolve_data_query, resolve_query
+from yaffo.logging_config import get_logger
 from yaffo.page_builder import llm_config, schemas
 from yaffo.page_builder.agent import create_agent
 from yaffo.page_builder.prompt_generator import build_user_message
@@ -31,6 +33,7 @@ _TOOL_STATUS = {
     "run_data_query": "Looking up information…",
 }
 
+logger = get_logger(__name__)
 
 def _ndjson(obj: dict) -> str:
     """One newline-delimited JSON record for the chat stream."""
@@ -245,6 +248,7 @@ def init_pages_routes(app: Flask):
             except Exception as exc:  # surface failures to the user, don't 500
                 reply = f"Generation error: {exc}"
                 page_repo.add_message(db.session, page_id, "assistant", reply)
+                logger.error(f"Generation error: {exc}")
                 yield _ndjson(schemas.chat_message(reply))
 
             yield _ndjson(schemas.chat_done())

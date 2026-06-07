@@ -19,9 +19,9 @@ pytestmark = pytest.mark.unit
 
 # --- helpers ---------------------------------------------------------------
 
-def _make_page(title="Trip", theme_prompt=""):
+def _make_page(title="Trip", subtitle=""):
     """Seed a page directly through the repo; return its id."""
-    return page_repo.create_page(db.session, title=title, subtitle=theme_prompt).id
+    return page_repo.create_page(db.session, title=title, subtitle=subtitle).id
 
 
 def _save_widget(page_id, wid="w1", **over):
@@ -46,12 +46,12 @@ def _reload_page(page_id):
 
 class TestCreatePage:
     def test_redirects_to_detail_and_persists(self, client):
-        resp = client.post("/pages", data={"title": "My Trip", "theme_prompt": "summer"})
+        resp = client.post("/pages", data={"title": "My Trip", "page_subtitle": "summer"})
         assert resp.status_code == 302
         page_id = int(resp.headers["Location"].rstrip("/").split("/")[-1])
         page = _reload_page(page_id)
         assert page.title == "My Trip"
-        assert page.theme_prompt == "summer"
+        assert page.subtitle == "summer"
 
     def test_blank_title_defaults(self, client):
         resp = client.post("/pages", data={"title": "   "})
@@ -97,7 +97,7 @@ class TestUpdate:
         pid = _make_page()
         resp = client.post(f"/pages/{pid}/update", json={
             "title": "Renamed",
-            "theme_prompt": "maine",
+            "subtitle": "maine",
             "show_title": False,
             "widgets": [{"id": "w1", "title": "Wall", "html": "<div>",
                          "x": 1, "y": 2, "w": 6, "h": 4}],
@@ -105,7 +105,7 @@ class TestUpdate:
         assert resp.status_code == 204
         page = _reload_page(pid)
         assert page.title == "Renamed"
-        assert page.theme_prompt == "maine"
+        assert page.subtitle == "maine"
         assert page.show_title is False
         assert [(w.id, w.title, w.grid_w) for w in page.widgets] == [("w1", "Wall", 6)]
 

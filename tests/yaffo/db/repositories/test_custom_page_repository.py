@@ -9,12 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from yaffo.db import db
-from yaffo.db.models import (
-    Conversation,
-    CustomPage,
-    Widget,
-    WIDGET_STATUS_READY,
-)
+from yaffo.db.models import Conversation, CustomPage, Widget
 from yaffo.db.repositories import custom_page_repository as repo
 
 pytestmark = pytest.mark.unit
@@ -57,7 +52,7 @@ class TestCreatePage:
         page = repo.create_page(session, "Trip")
         assert page.id is not None
         assert page.title == "Trip"
-        assert page.theme_prompt == ""
+        assert page.subtitle == ""
         assert page.show_title is True
         assert page.widgets == []
         assert page.messages == []
@@ -66,7 +61,7 @@ class TestCreatePage:
         page = repo.create_page(session, "Trip", subtitle="summer")
         fetched = repo.get_page(session, page.id)
         assert fetched.id == page.id
-        assert fetched.theme_prompt == "summer"
+        assert fetched.subtitle == "summer"
 
 
 class TestGetPage:
@@ -107,7 +102,7 @@ class TestUpdatePage:
         repo.update_page(session, page.id, title="Renamed")
         fetched = repo.get_page(session, page.id)
         assert fetched.title == "Renamed"
-        assert fetched.theme_prompt == "maine summer"  # untouched
+        assert fetched.subtitle == "maine summer"  # untouched
         assert fetched.show_title is True
 
     def test_can_clear_show_title(self, session, page):
@@ -198,7 +193,6 @@ class TestSavePageWidgets:
         assert widget.html == "<div>"
         assert widget.grid_w == 4 and widget.grid_h == 4
         assert widget.data_query == {"q": {"source": "photos"}}
-        assert widget.status == WIDGET_STATUS_READY
 
     def test_mints_id_when_absent(self, session, page):
         repo.save_page_widgets(session, page.id, [_widget_item()])  # no id

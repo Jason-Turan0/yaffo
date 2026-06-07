@@ -15,9 +15,9 @@ from yaffo.page_builder.schemas import WidgetDraft
 
 pytestmark = pytest.mark.unit
 
-# Widget columns the browser draft intentionally drops: the foreign key and the
-# persistence status. WidgetDraft == Widget - these.
-_OMITTED_WIDGET_COLUMNS = {"page_id", "status"}
+# Widget columns the browser draft intentionally drops: the foreign key.
+# WidgetDraft == Widget - this.
+_OMITTED_WIDGET_COLUMNS = {"page_id"}
 
 
 class TestWidgetDraftMatchesModel:
@@ -35,7 +35,6 @@ class TestWidgetDraftMatchesModel:
 class TestChatRecords:
     def test_record_event_tags(self):
         assert schemas.chat_message("hi") == {"event": "message", "content": "hi"}
-        assert schemas.chat_status("Working…") == {"event": "status", "text": "Working…"}
         assert schemas.chat_widget_new({"id": "w"}) == {"event": "widget_new", "widget": {"id": "w"}}
         assert schemas.chat_widget_updated({"id": "w"}) == {"event": "widget_updated", "widget": {"id": "w"}}
         assert schemas.chat_done() == {"event": "done"}

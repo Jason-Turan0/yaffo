@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 
 from yaffo.db import db
-from yaffo.db.repositories.data_query_repository import QUERY_SCHEMA, resolve_query
+from yaffo.db.repositories.data_query_repository import AGGREGATE_OPS, SOURCES, resolve_query
 from yaffo.page_builder.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
@@ -18,10 +18,23 @@ from yaffo.page_builder.tool_providers.tool_provider_types import (
 )
 from yaffo.page_builder.tool_providers.utils import truncate_tool_result
 
-# A single query, validated by the same contract the resolver and the sandbox
-# broker use (minus the top-level $schema meta key, which only belongs at a
-# document root, not on an embedded tool input_schema).
-_INPUT_SCHEMA = {k: v for k, v in QUERY_SCHEMA.items() if k != "$schema"}
+# Anthropic forbids oneOf/allOf/anyOf at a tool input_schema's top level, so this
+# preview tool advertises a single permissive object: the source, the aggregate
+# directives, and limit. Per-column filters ({ "column": { "op": value } }) ride
+# along as extra properties and are validated server-side by resolve_query, which
+# returns a precise error the model can correct from. (The strict, per-source
+# contract lives in the system prompt and data_query_repository.)
+_INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "source": {"type": "string", "enum": list(SOURCES), "description": "Which table to query."},
+        "op": {"enum": list(AGGREGATE_OPS), "description": "Aggregate op; omit to return rows."},
+        "field": {"type": "string", "description": "Column the aggregate operates on (omit for count)."},
+        "limit": {"type": "integer", "description": "Max rows to return (rows queries only)."},
+    },
+    "required": ["source"],
+    "additionalProperties": True,
+}
 
 _SAMPLE_SIZE = 5
 
