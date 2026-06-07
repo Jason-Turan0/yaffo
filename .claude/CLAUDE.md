@@ -82,6 +82,37 @@ Place reusable components in:
 - **Database Queries**: Create reusable query methods on SQLAlchemy models
 - **JavaScript**: Use modules and avoid inline scripts; extract repeated client-side logic
 
+### DTOs / Return Types (non-ORM payloads)
+
+Anything a route returns or streams that the client parses structurally — JSON
+bodies, NDJSON stream records, the browser-facing widget payloads — is a **wire
+contract**, not an ad-hoc dict. Conventions:
+
+- **ORM models never cross the wire.** SQLAlchemy entities (`db/models.py`) are
+  the persistence shape only. Serialize at the route boundary (a `to_dict()` on
+  the model, or a DTO) — never return a model where its persistence fields would
+  leak or lazy-loads would fire mid-serialization.
+- **Name the contract.** A structurally-parsed payload is a named type (a
+  `@dataclass` DTO, e.g. `WidgetDraft`, or a record constructor), not an inline
+  dict literal scattered through a route. One place documents and changes the
+  shape; it's unit-testable in isolation.
+- **One type per audience.** Keep model-facing and browser-facing shapes distinct
+  (e.g. `ToolResult.model_text` vs `host_data`). Don't overload one type when the
+  payload schemas differ by audience.
+- **Location: DTOs live with the layer that owns the contract, not under
+  `routes/`.** Put feature/domain DTOs in the owning package's `schemas.py`
+  (e.g. `page_builder/schemas.py`) or, for ORM→dict, a `serializers.py` beside
+  the repository — routes import and serialize. Only a *pure view-model* built
+  solely by one route belongs near that route. **Never name a DTO module
+  `models`** (that means SQLAlchemy here); use `schemas` / `serializers` / `dto`.
+- **Derive from the model where you can; pin it where you can't.** Python has no
+  static `Omit<T, K>`. When a DTO is "the model minus some columns," don't restate
+  the field list — assert the relationship with a drift-guard test (see
+  `tests/yaffo/page_builder/test_schemas.py`: `WidgetDraft` == `Widget` columns
+  minus the persistence set), so adding a column forces a deliberate choice.
+- **Standard envelopes.** Errors: `{"error": "message"}` + the HTTP status (don't
+  also send a `success` boolean — the status says it). Acks: `204` / a redirect.
+
 ## Global JavaScript Components
 
 ### Notification System

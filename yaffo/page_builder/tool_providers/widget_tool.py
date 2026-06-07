@@ -13,12 +13,13 @@ update it, and so edits to an already-saved widget merge onto its current conten
 from __future__ import annotations
 
 import dataclasses
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict
 from typing import Optional, get_args, get_type_hints
 
 from yaffo.db import db
 from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.db.repositories.data_query_repository import DATA_QUERY_SCHEMA
+from yaffo.page_builder.schemas import WidgetDraft
 from yaffo.page_builder.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
@@ -26,22 +27,6 @@ from yaffo.page_builder.tool_providers.tool_provider_types import (
     ToolResult,
 )
 
-
-@dataclass
-class WidgetDraft:
-    """The widget schema sent to the browser (distinct from the tool_result text
-    sent to the model). Mirrors the persisted widget's content + suggested size."""
-    id: str
-    title: str
-    data_query: dict = field(default_factory=dict)
-    html: str = ""
-    css: str = ""
-    js: str = ""
-    grid_x: Optional[int] = None  # None = no explicit placement (bottom on create, keep on edit)
-    grid_y: Optional[int] = None
-    grid_w: int = 4
-    grid_h: int = 3
-    state: dict = field(default_factory=dict)
 
 # WidgetDraft is the single source of truth for a widget's content fields: both
 # the model-facing tool schema (_CONTENT_PROPS) and the editable-field list

@@ -198,7 +198,6 @@ class TestSavePageWidgets:
         assert widget.html == "<div>"
         assert widget.grid_w == 4 and widget.grid_h == 4
         assert widget.data_query == {"q": {"source": "photos"}}
-        assert widget.position == 0
         assert widget.status == WIDGET_STATUS_READY
 
     def test_mints_id_when_absent(self, session, page):
@@ -207,17 +206,16 @@ class TestSavePageWidgets:
         assert len(widgets) == 1
         assert len(widgets[0].id) == 32  # minted GUID
 
-    def test_position_follows_payload_order(self, session, page):
+    def test_widgets_returned_in_grid_reading_order(self, session, page):
+        # No separate position column — get_page orders by grid coords (top-to-
+        # bottom, then left-to-right), regardless of save order.
         repo.save_page_widgets(session, page.id, [
-            _widget_item("a"), _widget_item("b"), _widget_item("c"),
-        ])
-        # Reorder: same widgets, new order.
-        repo.save_page_widgets(session, page.id, [
-            _widget_item("c"), _widget_item("a"), _widget_item("b"),
+            _widget_item("bottom", x=0, y=5),
+            _widget_item("top_right", x=4, y=0),
+            _widget_item("top_left", x=0, y=0),
         ])
         widgets = repo.get_page(session, page.id).widgets
-        assert [w.id for w in widgets] == ["c", "a", "b"]
-        assert [w.position for w in widgets] == [0, 1, 2]
+        assert [w.id for w in widgets] == ["top_left", "top_right", "bottom"]
 
     def test_layout_only_entry_keeps_stored_content(self, session, page):
         repo.save_page_widgets(session, page.id, [

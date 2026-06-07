@@ -37,9 +37,14 @@
     <div>⚠ This widget couldn't render</div>
     <div class="msg" id="__yaffo_error_msg__"></div>
 </div>
+{# The widget runtime API (window.yaffo). Inlined, not <script src>, because the
+   frame's CSP allows only inline scripts and the srcdoc preview is a null origin.
+   Same source the model is shown in the system prompt, so they never diverge. #}
+<script>{{ widget_api_js | safe }}</script>
 <script>
-    window.__DATA__ = {{ data | tojson }};
-    window.__STATE__ = {{ widget.state | tojson }};
+    // The template hands the server-resolved data + saved state to the init
+    // function (project convention); the widget then reads them via window.yaffo.
+    window.yaffo = window.PHOTO_ORGANIZER.initWidgetApi({{ data | tojson }}, {{ widget.state | tojson }});
 </script>
 <script>
     // Error boundary: a widget's bug (sync, async, or rejected promise) shows a

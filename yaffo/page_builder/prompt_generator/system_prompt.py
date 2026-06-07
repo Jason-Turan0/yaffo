@@ -9,7 +9,9 @@ turn so the cache stays valid.
 """
 from __future__ import annotations
 
-from yaffo.page_builder.prompt_generator.xml_helpers import block, el
+from yaffo.db.repositories.data_query_repository import FIELDS_BY_SOURCE
+from yaffo.page_builder.prompt_generator.xml_helpers import block
+from yaffo.page_builder.widget_api import widget_api_source
 
 
 def _role() -> str:
@@ -29,43 +31,67 @@ def _core_rule() -> str:
     ])
 
 
+def _source_line(source: str, fields: dict) -> str:
+    """`source -> col:type, col:type` — derived from the models so the advertised
+    columns always match what the resolver actually returns."""
+    columns = ", ".join(f"{name}:{schema['type']}" for name, schema in fields.items())
+    return f"{source} -> {columns}"
+
+
 def _data_query() -> str:
-    # TODO Draft instructions. Revisit once data query lib is created. Want an explicit
-    # schema that would be validated at runtime.
+    # Sources/columns are derived from FIELDS_BY_SOURCE (the SQLAlchemy models), so
+    # this block can't drift from the resolver. Stable across requests (changes
+    # only when the schema changes), so prompt caching still holds.
     sources = block("sources", [
-        "photos    -> [{ id, url, thumb_url, taken_at, year, location, persons[], tags[], width, height }]",
-        "persons   -> [{ name, photo_count, face_thumb_url }]",
-        "locations -> [{ name, lat, lon, count }]",
-        "tags      -> [{ name, count }]",
-        "stats     -> { photos, people, locations, years }",
-        "facets    -> { years[], tags[], locations[], persons[] }   (for in-widget filter controls)",
+        "Each source is one table; a query returns its rows as raw column dicts:",
+        *(_source_line(src, fields) for src, fields in FIELDS_BY_SOURCE.items()),
+    ])
+    filters = block("filters", [
+        'Filter a column with operators: { "COLUMN": { "OP": value } }.',
+        "- eq, ne            any column",
+        "- lt, lte, gt, gte  numbers",
+        "- contains          strings (substring match)",
+        "- in                value is an array; matches any of them",
+        '"limit": N caps the number of rows.',
+    ])
+    aggregates = block("aggregates", [
+        'For a summary instead of rows, add "op" (and "field", except for count):',
+        "- count                  -> a number (no field)",
+        "- count_distinct, field  -> a number",
+        "- facet, field           -> [{ value, count }]   (use to build filter controls)",
+        "- range, field           -> { min, max }",
+        "Column filters above may be combined with an aggregate as a WHERE.",
     ])
     return block("data_query", [
-        'A dict of NAMED queries: { "QUERY_NAME": { "source": "SOURCE", ...filters } }',
-        "Each named query resolves independently and is injected as window.__DATA__[queryName].",
-        'Use descriptive names (e.g. "maine_photos"); a widget may declare several queries and',
-        "stitch the results together in its code.",
+        'A dict of NAMED queries: { "QUERY_NAME": { "source": "SOURCE", ...filters, "limit": N } }',
+        "Each named query resolves independently and is available as yaffo.data[queryName].",
+        'Use descriptive names (e.g. "maine_photos"); declare several and stitch them in code.',
+        "There are NO server-side joins — one source per query. To relate sources, run separate",
+        "queries and join them in JS on the id / foreign-key columns (tags.photo_id, faces.photo_id,",
+        "people_face.person_id + people_face.face_id).",
         sources,
-        el("photo_filters", "location, year, date_from, date_to, persons[], tags[], person, order_by, limit"),
+        filters,
+        aggregates,
     ])
 
 
 def _widget_contract() -> str:
-    # TODO draft instructions. Want an official API spec in javascript that would be sent
-    # to the model. Would be read from the source code so is always up to date.
-    messaging = block("messaging", [
-        "For anything beyond a one-time render, postMessage to the parent:",
-        "yaffo:query   {requestId, query}   -> live server query; reply arrives as yaffo:result",
-        "yaffo:publish {topic, payload}     -> broadcast to other widgets (pub/sub)",
-        "yaffo:event   {topic, payload}     -> received from the bus",
-        "yaffo:state   {state}              -> persist this widget's state",
+    # The widget API is the actual runtime source (static/pages/widget_api.js),
+    # inlined here verbatim so the model writes against the real, current API. The
+    # same source is injected into every widget iframe, so the two never drift.
+    api = block("widget_api", [
+        "A `yaffo` helper is available globally inside the iframe — use it for your",
+        "data, server queries, pub/sub, and saved state. Do NOT hand-roll postMessage",
+        "or fetch. This is its exact source:",
+        widget_api_source(),
     ])
     return block("widget_contract", [
         "The widget renders in a sandboxed iframe.",
-        "- Read data from window.__DATA__[queryName] and window.__STATE__ (persisted widget state).",
-        "- Build the DOM from that data; reference photo images by `url` (e.g. /photos/123).",
-        "- The frame CANNOT fetch/XHR/WebSocket (connect-src 'none').",
-        messaging,
+        "- Read query results from yaffo.data[queryName]; read saved state from yaffo.state.",
+        "- Build the DOM from that data. Photos have no image-URL field: use yaffo.photoUrl(id)",
+        "  (or /photos/<id>) for an <img> src, e.g. /photos/123. No other image origin is allowed.",
+        "- You CANNOT fetch/XHR/WebSocket (connect-src 'none'); use yaffo.query for live data.",
+        api,
         "- Keep all CSS/JS inline and scoped to the widget. No external resources except photo images.",
     ])
 
@@ -73,8 +99,9 @@ def _widget_contract() -> str:
 def _conventions() -> str:
     return block("conventions", [
         "- Give the widget a short, human title.",
-        "- Pre-load a generous set + facets when filtering client-side; use yaffo:query when filtering",
-        "  server-side.",
+        "- For filter controls, get the options from a `facet` aggregate (e.g. {source:'photos',",
+        "  op:'facet', field:'year'}); pre-load a generous row set and filter client-side, or use",
+        "  yaffo:query to filter server-side.",
         "- Always handle empty data and broken images (img onerror -> /placeholder).",
     ])
 

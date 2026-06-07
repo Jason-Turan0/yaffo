@@ -29,8 +29,8 @@ def build_user_message(
     Args:
         request: what the user asked for (the chat message).
         page_title / page_description: page-level context.
-        widgets: existing widgets on the page, each {id, title, prompt} plus the
-            current {data_query, html, css, js} so the model edits with full sight
+        widgets: existing widgets on the page, each {id, title} plus its current
+            {layout, data_query, html, css, js} so the model edits with full sight
             of the code (not blind). Empty code fields are fine for new/empty ones.
         widget_errors: {widget_id: [error messages]} captured at runtime, fed
             back so the model can repair code that threw.
@@ -56,7 +56,6 @@ def build_user_message(
                     block(
                         "widget",
                         [
-                            el("prompt", w.get("prompt") or ""),
                             el("layout", "", x=w.get("grid_x"), y=w.get("grid_y"),
                                w=w.get("grid_w"), h=w.get("grid_h")),
                             el("data_query", json.dumps(w.get("data_query") or {})),

@@ -194,9 +194,18 @@ class TestWidgetQuery:
     def test_returns_resolved_data(self, client):
         pid = _make_page()
         _save_widget(pid)
-        resp = client.post(f"/pages/{pid}/widgets/w1/query", json={"query": {"source": "facets"}})
+        # A valid query against a real source; the test DB has no photos, so rows
+        # come back empty — the point is the route resolves and returns data.
+        resp = client.post(f"/pages/{pid}/widgets/w1/query", json={"query": {"source": "photos", "limit": 5}})
         assert resp.status_code == 200
-        assert "years" in resp.get_json()["data"]
+        assert resp.get_json()["data"] == []
+
+    def test_invalid_query_fails_closed(self, client):
+        pid = _make_page()
+        _save_widget(pid)
+        resp = client.post(f"/pages/{pid}/widgets/w1/query", json={"query": {"source": "bogus"}})
+        assert resp.status_code == 200
+        assert resp.get_json()["data"] is None
 
     def test_unknown_widget_404(self, client):
         pid = _make_page()

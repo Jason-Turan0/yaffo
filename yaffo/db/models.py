@@ -210,7 +210,9 @@ class CustomPage(db.Model):
         "Widget",
         back_populates="page",
         cascade="all, delete-orphan",
-        order_by="Widget.position",
+        # No list order of its own — widgets are placed on a 2D grid; iterate in
+        # reading order (top-to-bottom, left-to-right) for deterministic rendering.
+        order_by="(Widget.grid_y, Widget.grid_x)",
     )
     messages = db.relationship(
         "Conversation",
@@ -227,9 +229,7 @@ class Widget(db.Model):
     # draft's id is stable from creation through Save.
     id = db.Column(db.String, primary_key=True)
     page_id = db.Column(db.Integer, db.ForeignKey("custom_pages.id", ondelete="CASCADE"), nullable=False)
-    position = db.Column(db.Integer, nullable=False, default=0)  # order within the page
     title = db.Column(db.String, default="Untitled widget")
-    prompt = db.Column(db.Text, default="")
     data_query = db.Column(db.JSON, default=dict)  # named queries (author / AI-defined)
     state = db.Column(db.JSON, default=dict)  # widget-owned persisted UI state
     html = db.Column(db.Text, default="")

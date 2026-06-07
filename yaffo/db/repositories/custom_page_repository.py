@@ -18,7 +18,7 @@ from yaffo.db.models import Conversation, CustomPage, Widget, WIDGET_STATUS_READ
 
 # Client widget-entry keys that map onto Widget columns. Content keys share the
 # model's own name; layout uses short x/y/w/h aliases.
-_CONTENT_KEYS = ("title", "prompt", "data_query", "state", "html", "css", "js")
+_CONTENT_KEYS = ("title", "data_query", "state", "html", "css", "js")
 _JSON_KEYS = ("data_query", "state")
 _LAYOUT_KEYS = {"x": "grid_x", "y": "grid_y", "w": "grid_w", "h": "grid_h"}
 
@@ -103,7 +103,7 @@ def add_message(session: Session, page_id: int, role: str, content: str) -> Opti
 
 
 def set_widget_state(session: Session, page_id: int, widget_id: str, state: dict) -> None:
-    """Persist a widget's own state blob (re-injected as window.__STATE__)."""
+    """Persist a widget's own state blob (re-injected as yaffo.state next render)."""
     widget = get_widget(session, page_id, widget_id)
     if widget is None:
         return
@@ -122,10 +122,10 @@ def remove_widget(session: Session, page_id: int, widget_id: str) -> None:
     session.commit()
 
 
-def _apply_widget_fields(widget: Widget, item: dict, position: int) -> None:
+def _apply_widget_fields(widget: Widget, item: dict) -> None:
     """Overlay a client widget entry onto a Widget row: content keys the client
-    holds (drafts) win; omitted keys keep the stored value. Layout (x/y/w/h) and
-    position always apply, and Save marks the widget ready."""
+    holds (drafts) win; omitted keys keep the stored value. Layout (x/y/w/h) always
+    applies, and Save marks the widget ready."""
     for key in _CONTENT_KEYS:
         if key in item:
             value = item[key]
@@ -133,7 +133,6 @@ def _apply_widget_fields(widget: Widget, item: dict, position: int) -> None:
     for payload_key, attr in _LAYOUT_KEYS.items():
         if payload_key in item:
             setattr(widget, attr, int(item[payload_key]))
-    widget.position = position
     widget.status = WIDGET_STATUS_READY
 
 
@@ -142,19 +141,20 @@ def save_page_widgets(session: Session, page_id: int, widgets: list[dict]) -> No
     only thing that writes widget content. The client is the source of truth: each
     entry carries layout always, plus content for the drafts it holds; entries that
     omit content keep the stored value, and any widget absent from the list is
-    dropped. Reconciles add / edit / delete / reorder in one shot."""
+    dropped. Reconciles add / edit / delete in one shot (grid order is the layout
+    coords, so there is no separate ordering to track)."""
     page = get_page(session, page_id)
     if page is None:
         return
     existing = {w.id: w for w in page.widgets}
     seen: set[str] = set()
-    for position, item in enumerate(widgets):
+    for item in widgets:
         wid = str(item.get("id") or new_widget_id())
         widget = existing.get(wid)
         if widget is None:
             widget = Widget(id=wid, page_id=page.id)
             session.add(widget)
-        _apply_widget_fields(widget, item, position)
+        _apply_widget_fields(widget, item)
         seen.add(wid)
     for wid, widget in existing.items():
         if wid not in seen:

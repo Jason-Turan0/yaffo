@@ -15,9 +15,12 @@ from flask import (
 from yaffo.db import db
 from yaffo.db.models import Widget
 from yaffo.db.repositories import custom_page_repository as page_repo
-from yaffo.page_builder import stub_store, llm_config
+from yaffo.db.repositories.data_query_repository import resolve_data_query, resolve_query
+from yaffo.page_builder import llm_config, schemas
 from yaffo.page_builder.agent import create_agent
 from yaffo.page_builder.prompt_generator import build_user_message
+from yaffo.page_builder.widget_api import widget_api_source
+from yaffo.page_builder.widget_merge import merge_widget_content
 from yaffo.utils.context import context
 
 # Friendly progress text shown while a tool runs (keyed by tool name). Anything
@@ -44,11 +47,28 @@ def _widget_frame_csp(origin: str) -> str:
     )
 
 
+def _resolve_widget_data(data_query: dict) -> dict:
+    """Resolve a widget's named queries to {query_name: rows}, failing closed: an
+    empty query set, or one that fails validation, renders against nothing (the
+    sandbox guarantee) rather than erroring the frame."""
+    if not data_query:
+        return {}
+    try:
+        return resolve_data_query(db.session, data_query)
+    except ValueError:
+        return {}
+
+
 @context("yaffo-pages")
 def init_pages_routes(app: Flask):
     @app.context_processor
     def inject_nav_pages():
         return {"nav_pages": page_repo.list_pages(db.session)}
+
+    @app.context_processor
+    def inject_widget_api():
+        # The window.yaffo runtime, inlined into each widget frame (widget_frame.html).
+        return {"widget_api_js": widget_api_source()}
 
     @app.route("/pages", methods=["POST"])
     def pages_create():
@@ -96,7 +116,7 @@ def init_pages_routes(app: Flask):
         if widget is None:
             abort(404)
         csp = _widget_frame_csp(request.host_url.rstrip("/"))
-        data = stub_store.resolve_data(widget.data_query)
+        data = _resolve_widget_data(widget.data_query)
         response = make_response(
             render_template("pages/widget_frame.html", widget=widget, data=data, csp=csp)
         )
@@ -129,7 +149,7 @@ def init_pages_routes(app: Flask):
             grid_h=int(payload.get("grid_h", 3)),
         )
         csp = _widget_frame_csp(request.host_url.rstrip("/"))
-        data = stub_store.resolve_data(widget.data_query)
+        data = _resolve_widget_data(widget.data_query)
         frame_srcdoc = render_template("pages/widget_frame.html", widget=widget, data=data, csp=csp)
         return render_template(
             "pages/_widget.html", widget=widget, page=page, editable=True, frame_srcdoc=frame_srcdoc
@@ -145,7 +165,12 @@ def init_pages_routes(app: Flask):
         if page_repo.get_widget(db.session, page_id, widget_id) is None:
             abort(404)
         payload = request.get_json(silent=True) or {}
-        return {"data": stub_store.resolve_query(payload.get("query", {}))}
+        # Live broker query — AI-influenced, so it runs the same validation; fail
+        # closed to null data on an invalid query rather than erroring the widget.
+        try:
+            return {"data": resolve_query(db.session, payload.get("query", {}))}
+        except ValueError:
+            return {"data": None}
 
     @app.route("/pages/<int:page_id>/widgets/<widget_id>/state", methods=["POST"])
     def pages_widget_state(page_id: int, widget_id: str):
@@ -174,7 +199,7 @@ def init_pages_routes(app: Flask):
         # TODO test streaming in GCP environment.
         def generate():
             if not message:
-                yield _ndjson({"event": "done"})
+                yield _ndjson(schemas.chat_done())
                 return
 
             page_repo.add_message(db.session, page_id, "user", message)
@@ -182,14 +207,14 @@ def init_pages_routes(app: Flask):
             if llm_config.get_api_key() is None:
                 reply = "No API key configured. Add your Anthropic API key in Settings → AI Generation."
                 page_repo.add_message(db.session, page_id, "assistant", reply)
-                yield _ndjson({"event": "message", "content": reply})
-                yield _ndjson({"event": "done"})
+                yield _ndjson(schemas.chat_message(reply))
+                yield _ndjson(schemas.chat_done())
                 return
 
             client_widgets = payload.get("widgets")
             if client_widgets is None:
                 client_widgets = [{"id": w.id} for w in page.widgets]
-            current_widgets = stub_store.merge_widget_content(page.widgets, client_widgets)
+            current_widgets = merge_widget_content(page.widgets, client_widgets)
 
             user_message = build_user_message(
                 message,
@@ -204,27 +229,25 @@ def init_pages_routes(app: Flask):
                 for event in agent.run_events(user_message):
                     if event.type == "assistant":
                         page_repo.add_message(db.session, page_id, "assistant", event.text)
-                        yield _ndjson({"event": "message", "content": event.text})
+                        yield _ndjson(schemas.chat_message(event.text))
                     elif event.type == "tool":
-                        yield _ndjson({
-                            "event": "status",
-                            "text": _TOOL_STATUS.get(event.name, "Working…"),
-                        })
+                        yield _ndjson(schemas.chat_status(_TOOL_STATUS.get(event.name, "Working…")))
                         # A widget tool returns the generated content -> stream it;
                         # the client renders it as a draft (create) or swaps it in
                         # (update). Nothing is written to the store here.
                         if event.tool_result_data and not event.is_error:
-                            kind = "widget_updated" if event.name == "update_widget" else "widget_new"
-                            yield _ndjson({"event": kind, "widget": event.tool_result_data})
+                            record = (schemas.chat_widget_updated if event.name == "update_widget"
+                                      else schemas.chat_widget_new)
+                            yield _ndjson(record(event.tool_result_data))
                     elif event.type == "error":
                         page_repo.add_message(db.session, page_id, "assistant", event.text)
-                        yield _ndjson({"event": "message", "content": event.text})
+                        yield _ndjson(schemas.chat_message(event.text))
             except Exception as exc:  # surface failures to the user, don't 500
                 reply = f"Generation error: {exc}"
                 page_repo.add_message(db.session, page_id, "assistant", reply)
-                yield _ndjson({"event": "message", "content": reply})
+                yield _ndjson(schemas.chat_message(reply))
 
-            yield _ndjson({"event": "done"})
+            yield _ndjson(schemas.chat_done())
 
         response = Response(stream_with_context(generate()), mimetype="application/x-ndjson")
         response.headers["Cache-Control"] = "no-cache"

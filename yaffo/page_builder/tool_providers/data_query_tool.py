@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import json
 
-from yaffo.page_builder import stub_store
+from yaffo.db import db
+from yaffo.db.repositories.data_query_repository import QUERY_SCHEMA, resolve_query
 from yaffo.page_builder.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
@@ -17,25 +18,10 @@ from yaffo.page_builder.tool_providers.tool_provider_types import (
 )
 from yaffo.page_builder.tool_providers.utils import truncate_tool_result
 
-_SOURCES = ["photos", "persons", "locations", "tags", "stats", "facets"]
-
-_INPUT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "source": {"type": "string", "enum": _SOURCES, "description": "Which data source to query."},
-        "location": {"type": "string"},
-        "year": {"type": "integer"},
-        "date_from": {"type": "string", "description": "ISO date, inclusive."},
-        "date_to": {"type": "string", "description": "ISO date, inclusive."},
-        "person": {"type": "string", "description": "Single person name to filter photos by."},
-        "persons": {"type": "array", "items": {"type": "string"}},
-        "tags": {"type": "array", "items": {"type": "string"}},
-        "order_by": {"type": "string", "enum": ["date", "random"]},
-        "limit": {"type": "integer"},
-    },
-    "required": ["source"],
-    "additionalProperties": False,
-}
+# A single query, validated by the same contract the resolver and the sandbox
+# broker use (minus the top-level $schema meta key, which only belongs at a
+# document root, not on an embedded tool input_schema).
+_INPUT_SCHEMA = {k: v for k, v in QUERY_SCHEMA.items() if k != "$schema"}
 
 _SAMPLE_SIZE = 5
 
@@ -61,11 +47,13 @@ class DataQueryToolProvider(ToolProvider):
         if name != self.TOOL_NAME:
             return f"Unknown tool: {name}"
         args = args or {}
-        source = args.get("source")
-        if source not in _SOURCES:
-            return f"Unknown source '{source}'. Valid sources: {', '.join(_SOURCES)}."
-        data = stub_store.resolve_query(args)
-        return truncate_tool_result(_preview(source, data))
+        # The resolver validates the query; an invalid one is fed back to the model
+        # (with the precise error) so it can correct the source/filters.
+        try:
+            data = resolve_query(db.session, args)
+        except ValueError as exc:
+            return f"Invalid query: {exc}"
+        return truncate_tool_result(_preview(args.get("source"), data))
 
 
 def _preview(source: str, data) -> str:
