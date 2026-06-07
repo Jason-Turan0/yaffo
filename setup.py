@@ -22,6 +22,7 @@ setup(
         "invoke==2.2.0",
         "itsdangerous==2.2.0",
         "Jinja2==3.1.6",
+        "jsonschema==4.23.0",
         "joblib==1.5.2",
         "MarkupSafe==3.0.2",
         "mypy==1.18.2",
