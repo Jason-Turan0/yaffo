@@ -96,6 +96,17 @@ def _widget_contract() -> str:
     ])
 
 
+def _templates() -> str:
+    return block("templates", [
+        "A library of curated, app-styled widget templates is available via tools.",
+        "Before writing a widget from scratch, call list_widget_templates to see what",
+        "exists, then get_widget_template(name) to pull one and adapt its",
+        "data_query / html / css / js to the request. Prefer adapting a template — they",
+        "match the app's look and the data contract — and only build from scratch when",
+        "none fit.",
+    ])
+
+
 def _conventions() -> str:
     return block("conventions", [
         "- Give the widget a short, human title.",
@@ -114,5 +125,6 @@ def build_system_prompt() -> str:
         _core_rule(),
         _data_query(),
         _widget_contract(),
+        _templates(),
         _conventions(),
     ])

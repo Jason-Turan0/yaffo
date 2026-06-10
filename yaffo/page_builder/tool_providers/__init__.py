@@ -10,6 +10,7 @@ from yaffo.page_builder.tool_providers.tool_provider_types import (
 from yaffo.page_builder.tool_providers.utils import truncate_tool_result
 from yaffo.page_builder.tool_providers.data_query_tool import DataQueryToolProvider
 from yaffo.page_builder.tool_providers.widget_tool import WidgetToolProvider
+from yaffo.page_builder.tool_providers.widget_template_tool import WidgetTemplateToolProvider
 
 __all__ = [
     "CallToolReturn",
@@ -21,4 +22,5 @@ __all__ = [
     "truncate_tool_result",
     "DataQueryToolProvider",
     "WidgetToolProvider",
+    "WidgetTemplateToolProvider",
 ]

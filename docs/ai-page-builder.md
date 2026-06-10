@@ -110,15 +110,26 @@ The frame response sets a strict CSP (origin injected at request time, since the
 sandboxed frame is a null origin and `'self'` won't match):
 
 ```
-default-src 'none'; img-src <app-origin> data:;
-style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'
+default-src 'none';
+img-src <app-origin> data: https://tile.openstreetmap.org https://*.tile.openstreetmap.org;
+style-src 'unsafe-inline' <app-origin>;
+script-src 'unsafe-inline' <app-origin>;
+connect-src 'none'
 ```
 
 - **No `allow-same-origin`** → null origin: can't read parent cookies/session.
-- **`connect-src 'none'`** → generated JS cannot `fetch`/`XHR`/`WebSocket`. It
-  can't phone home or exfiltrate, even if buggy or adversarial.
-- **`img-src <app-origin> data:`** → photos load from the app's `/photos/<id>`
-  route; nothing else does.
+- **`connect-src 'none'`** → generated JS still cannot `fetch`/`XHR`/`WebSocket`. It
+  can't phone home or exfiltrate, even if buggy or adversarial — this is the load-bearing
+  rule and stays closed.
+- **`script-src`/`style-src` add `<app-origin>`** → a widget may load the app's *own
+  vendored* libraries (e.g. OpenLayers, `/static/vendor/ol`) — our code, not the model's.
+  Inline (`'unsafe-inline'`) still works (a host-source doesn't disable it; only a
+  nonce/hash would).
+- **`img-src <app-origin> data:` + OSM tile hosts** → photos load from `/photos/<id>`,
+  and OpenStreetMap basemap tiles load as images (the one third-party origin allowed —
+  raster tiles are `<img>`, so `connect-src` stays `'none'`). A widget reaching OSM
+  directly is a deliberate, accepted loosening (the alternative, a server-side tile proxy,
+  keeps widgets network-free but was not chosen).
 
 This reconciles free-form HTML/JS with private photos: freedom in layout, zero
 freedom in data access.
@@ -354,6 +365,8 @@ the other front-end libs are vendored under `static/vendor/`; refresh via
 - **Declared pub/sub contract.** Topics a widget publishes/subscribes are
   currently implicit in its JS. Declaring them on the widget would let the model
   wire widgets together intentionally and allow validation.
-- **Map tiles.** A real tiled map needs network the sandbox forbids
-  (`connect-src 'none'`); either keep stylized/pin renderings or special-case a
-  tile origin in the CSP.
+- ✅ **Map tiles** — *resolved.* The widget frame loads vendored **OpenLayers**
+  (`script-src`/`style-src` include `<app-origin>`) with an **OpenStreetMap** basemap
+  (OSM tile hosts whitelisted in `img-src`). See the `Photo map` widget template. A
+  server-side tile proxy (keeping widgets network-free) is the tighter alternative if
+  the direct-to-OSM loosening ever needs reversing.

@@ -1,0 +1,813 @@
+"""Curated widget templates for the AI page builder.
+
+A small, hand-styled catalog the model can adapt instead of inventing a look from
+scratch (which drifts all over the place). Every template:
+
+- uses the **real data contract** — named `data_query`s over the exposed sources
+  (`photos`, `people`, `people_face`, …; see data_query_repository) and the
+  in-iframe `window.yaffo` API (`yaffo.data[name]`, `yaffo.query`, `yaffo.photoUrl`,
+  `yaffo.publish`/`subscribe`, `yaffo.saveState`);
+- writes only its *specific* CSS: the app baseline (`widget_theme.WIDGET_THEME_CSS`)
+  is injected into every widget frame at render time, so templates inherit the look
+  (white surface, system font, `#212529` text, `.yf-muted`/`.yf-empty` helpers) and
+  just override specifics.
+
+This is the single source: the seed script renders them onto a page, and the
+template tool (presented to the agent) serves the same list.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from yaffo.db.repositories import custom_page_repository as page_repo
+
+
+@dataclass
+class WidgetTemplate:
+    """One reusable widget design. `description` is what the agent sees in the tool
+    (so it can pick); `data_query`/`html`/`css`/`js` are a ready-to-use example. `css`
+    is just the template's own rules — the frame supplies the shared baseline."""
+    name: str
+    description: str
+    data_query: dict
+    html: str
+    css: str
+    js: str
+    # A suggested grid size, used when seeding the showcase page.
+    grid_w: int = 6
+    grid_h: int = 4
+
+    def to_widget_item(self, x: int, y: int) -> dict:
+        """The client widget-entry shape Save posts (for the seed page)."""
+        return {
+            "id": page_repo.new_widget_id(),
+            "title": self.name,
+            "data_query": self.data_query,
+            "html": self.html,
+            "css": self.css,
+            "js": self.js,
+            "state": {},
+            "x": x, "y": y, "w": self.grid_w, "h": self.grid_h,
+        }
+
+
+# --- templates -------------------------------------------------------------
+
+_PHOTO_GRID = WidgetTemplate(
+    name="Photo grid",
+    description=(
+        "A responsive grid of photo thumbnails with rounded corners. Good default for "
+        "showing a set of photos. One query over `photos`."
+    ),
+    data_query={"photos": {"source": "photos", "limit": 24}},
+    html="<div class='grid' id='root'></div>",
+    css="""\
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; display: block; }
+""",
+    js="""\
+const root = document.getElementById('root');
+const photos = yaffo.data.photos || [];
+if (!photos.length) { root.innerHTML = "<div class='yf-empty'>No photos to show.</div>"; }
+photos.forEach((p) => {
+  const img = document.createElement('img');
+  img.src = yaffo.photoUrl(p.id);
+  img.loading = 'lazy';
+  img.alt = p.location_name || '';
+  root.appendChild(img);
+});
+""",
+    grid_w=6, grid_h=4,
+)
+
+
+_STATS = WidgetTemplate(
+    name="Library stats",
+    description=(
+        "A row of stat tiles (big number + uppercase label) for at-a-glance counts. "
+        "Uses aggregate queries (`op: count` and `op: facet`)."
+    ),
+    data_query={
+        "photos": {"source": "photos", "op": "count"},
+        "people": {"source": "people", "op": "count"},
+        "years": {"source": "photos", "op": "facet", "field": "year"},
+    },
+    html="<div class='tiles' id='root'></div>",
+    css="""\
+.tiles { display: flex; gap: 12px; flex-wrap: wrap; }
+.tile { flex: 1; min-width: 96px; background: #f8f9fa; border: 1px solid #dee2e6;
+        border-radius: 8px; padding: 16px; text-align: center; }
+.tile .num { font-size: 28px; font-weight: 700; color: #212529; line-height: 1; }
+.tile .lbl { margin-top: 6px; font-size: 11px; color: #6c757d;
+             text-transform: uppercase; letter-spacing: 0.04em; }
+""",
+    js="""\
+const root = document.getElementById('root');
+const d = yaffo.data;
+const years = (d.years || []).map((y) => y.value).filter((v) => v != null);
+const span = years.length ? Math.min(...years) + '\\u2013' + Math.max(...years) : '\\u2014';
+const tiles = [['Photos', d.photos], ['People', d.people], ['Years', span]];
+tiles.forEach(([label, value]) => {
+  const tile = document.createElement('div');
+  tile.className = 'tile';
+  tile.innerHTML = "<div class='num'></div><div class='lbl'></div>";
+  tile.querySelector('.num').textContent = value != null ? value : '\\u2014';
+  tile.querySelector('.lbl').textContent = label;
+  root.appendChild(tile);
+});
+""",
+    grid_w=12, grid_h=2,
+)
+
+
+_FEATURED = WidgetTemplate(
+    name="Featured photo",
+    description=(
+        "A single full-bleed hero photo with a caption overlay (location · year). "
+        "Use for a focal image at the top of a page. One query, limit 1."
+    ),
+    data_query={"featured": {"source": "photos", "limit": 1}},
+    html="<div class='hero' id='root'></div>",
+    css="""\
+body { padding: 0; }
+.hero { position: relative; width: 100%; height: 100%; min-height: 160px; background: #f1f3f5; }
+.hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 14px; color: #fff;
+             font-size: 13px; font-weight: 500; background: linear-gradient(transparent, rgba(0,0,0,0.55)); }
+.hero .yf-empty { padding: 14px; }
+""",
+    js="""\
+const root = document.getElementById('root');
+const p = (yaffo.data.featured || [])[0];
+if (!p) { root.innerHTML = "<div class='yf-empty'>No photo selected.</div>"; }
+else {
+  const img = document.createElement('img');
+  img.src = yaffo.photoUrl(p.id);
+  const cap = document.createElement('div');
+  cap.className = 'cap';
+  cap.textContent = [p.location_name, p.year].filter(Boolean).join(' \\u00b7 ');
+  root.appendChild(img);
+  if (cap.textContent) root.appendChild(cap);
+}
+""",
+    grid_w=6, grid_h=4,
+)
+
+
+_FILTERABLE_GALLERY = WidgetTemplate(
+    name="Filterable gallery",
+    description=(
+        "A photo grid with a year dropdown. The `year` facet supplies the options; "
+        "changing it re-queries the server (yaffo.query with a `{eq}` filter) so it "
+        "filters the whole library, not a preloaded slice. Use this pattern whenever "
+        "the filter options can exceed what's first loaded."
+    ),
+    data_query={
+        "years": {"source": "photos", "op": "facet", "field": "year"},
+    },
+    html="""\
+<div class='bar'>
+  <label for='year'>Year</label>
+  <select id='year'></select>
+</div>
+<div class='grid' id='grid'></div>
+""",
+    css="""\
+.bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.bar label { font-size: 12px; color: #6c757d; }
+select { font-size: 13px; padding: 6px 8px; border: 1px solid #ced4da; border-radius: 6px;
+         background: #fff; color: #212529; }
+select:focus { outline: none; border-color: #007BFF; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; display: block; }
+""",
+    js="""\
+const sel = document.getElementById('year');
+const grid = document.getElementById('grid');
+const opt = (value, label) => { const o = document.createElement('option'); o.value = value; o.textContent = label; return o; };
+sel.appendChild(opt('', 'All years'));
+(yaffo.data.years || []).filter((y) => y.value != null).sort((a, b) => b.value - a.value)
+  .forEach((y) => sel.appendChild(opt(y.value, y.value + ' (' + y.count + ')')));
+function draw(rows) {
+  grid.innerHTML = '';
+  if (!rows || !rows.length) { grid.innerHTML = "<div class='yf-empty'>No photos to show.</div>"; return; }
+  rows.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.photoUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
+}
+async function render() {
+  const year = sel.value;
+  const query = { source: 'photos', limit: 60 };
+  if (year) query.year = { eq: Number(year) };  // re-query the server, not a preloaded slice
+  draw(await yaffo.query(query));
+}
+sel.onchange = render;
+render();
+""",
+    grid_w=12, grid_h=4,
+)
+
+
+_PEOPLE = WidgetTemplate(
+    name="People",
+    description=(
+        "Selectable person pills, each showing that person's distinct photo count; "
+        "picking one shows their photos. Per-person photo counts span tables (no joins), "
+        "so the bridge is stitched client-side once: load `people_face` (person↔face) and "
+        "`faces` (face→photo), group distinct photo ids per person; selecting then loads "
+        "that person's `photos` by id. Uses the `in` filter, yaffo.query, yaffo.saveState."
+    ),
+    data_query={"people": {"source": "people", "limit": 60}},
+    html="""\
+<div class="pills" id="pills"></div>
+<div class="grid" id="grid"></div>
+""",
+    css="""\
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+  border: 1px solid #ced4da; border-radius: 999px; background: #fff; color: #495057;
+  font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s ease;
+}
+.pill:hover { border-color: #007BFF; color: #007BFF; }
+.pill.active { background: #007BFF; border-color: #007BFF; color: #fff; }
+.pill .count { font-size: 11px; opacity: 0.7; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; display: block; }
+""",
+    js="""\
+(async function () {
+  const pillsEl = document.getElementById('pills');
+  const grid = document.getElementById('grid');
+  const people = (yaffo.data.people || []).filter((p) => p.name);
+  if (!people.length) { pillsEl.innerHTML = "<div class='yf-empty'>No people yet.</div>"; return; }
+
+  // No joins: stitch the bridge once to get each person's distinct photo ids.
+  // people_face (person <-> face) + faces (face -> photo).
+  pillsEl.innerHTML = "<div class='yf-empty'>Loading…</div>";
+  const links = (await yaffo.query({ source: 'people_face', limit: 5000 })) || [];
+  const faceIds = [...new Set(links.map((l) => l.face_id).filter((v) => v != null))];
+  const faces = faceIds.length ? ((await yaffo.query({ source: 'faces', id: { in: faceIds }, limit: 5000 })) || []) : [];
+  const faceToPhoto = {};
+  faces.forEach((f) => { if (f.photo_id != null) faceToPhoto[f.id] = f.photo_id; });
+
+  const photosByPerson = {};  // person_id -> distinct photo ids (insertion order)
+  const seen = {};
+  links.forEach((l) => {
+    const photo = faceToPhoto[l.face_id];
+    if (photo == null) return;
+    (photosByPerson[l.person_id] = photosByPerson[l.person_id] || []);
+    (seen[l.person_id] = seen[l.person_id] || new Set());
+    if (!seen[l.person_id].has(photo)) { seen[l.person_id].add(photo); photosByPerson[l.person_id].push(photo); }
+  });
+  const photoCount = (id) => (photosByPerson[id] || []).length;
+
+  people.sort((a, b) => photoCount(b.id) - photoCount(a.id));
+  let activeId = (yaffo.state && yaffo.state.personId) || people[0].id;
+  let reqToken = 0;
+
+  function renderPills() {
+    pillsEl.innerHTML = '';
+    people.forEach((p) => {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'pill' + (p.id === activeId ? ' active' : '');
+      pill.innerHTML = "<span class='name'></span><span class='count'></span>";
+      pill.querySelector('.name').textContent = p.name;
+      pill.querySelector('.count').textContent = photoCount(p.id);
+      pill.addEventListener('click', () => select(p.id));
+      pillsEl.appendChild(pill);
+    });
+  }
+
+  async function select(personId) {
+    activeId = personId;
+    renderPills();
+    yaffo.saveState({ personId });
+    const token = ++reqToken;
+    grid.innerHTML = "<div class='yf-empty'>Loading…</div>";
+    const ids = (photosByPerson[personId] || []).slice(0, 60);
+    const photos = ids.length ? ((await yaffo.query({ source: 'photos', id: { in: ids }, limit: 60 })) || []) : [];
+    if (token !== reqToken) return;  // a newer selection superseded this one
+    grid.innerHTML = '';
+    if (!photos.length) { grid.innerHTML = "<div class='yf-empty'>No photos for this person.</div>"; return; }
+    photos.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.photoUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
+  }
+
+  renderPills();
+  select(activeId);
+})();
+""",
+    grid_w=12, grid_h=5,
+)
+
+
+# --- richer, self-contained designs (copied from liked AI generations and
+#     generalized: the trip-specific filters/ids are dropped, the CDATA artifact
+#     cleaned, the title made data-driven). These bring their own full styling, so
+#     they don't extend THEME_CSS. ----------------------------------------------
+
+_HERO_BANNER = WidgetTemplate(
+    name="Hero banner",
+    description=(
+        "A full-bleed cover banner: a cover photo under a soft dark gradient, with a "
+        "small accent eyebrow, a large title (the photo's location), and a date/location "
+        "line. A strong page header in the app's style. One photo (limit 1)."
+    ),
+    data_query={"hero_photo": {"source": "photos", "limit": 1}},
+    html="""\
+<div class="hero-wrap">
+  <img id="hero-img" src="" alt="" onerror="this.src='/placeholder'" />
+  <div class="hero-overlay">
+    <div class="hero-eyebrow">My Trip to</div>
+    <h1 class="hero-title" id="hero-title">Photos</h1>
+    <div class="hero-meta" id="hero-meta"></div>
+  </div>
+</div>
+""",
+    css="""\
+body, html { height: 100%; padding: 0; overflow: hidden; }
+.hero-wrap { position: relative; width: 100%; height: 100vh; min-height: 200px; overflow: hidden; background: #212529; }
+#hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hero-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 28px 32px;
+  background: linear-gradient(to top, rgba(33,37,41,0.78) 0%, rgba(33,37,41,0.25) 55%, rgba(33,37,41,0.05) 100%);
+}
+.hero-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #74c0fc; margin-bottom: 6px; }
+.hero-title { font-size: clamp(1.8rem, 6vw, 3.2rem); font-weight: 600; color: #fff; line-height: 1.05; letter-spacing: -0.01em; }
+.hero-meta { margin-top: 10px; font-size: 13px; color: rgba(255, 255, 255, 0.82); }
+""",
+    js="""\
+(function () {
+  const photo = (yaffo.data.hero_photo || [])[0];
+  if (!photo) return;
+  document.getElementById('hero-img').src = yaffo.photoUrl(photo.id);
+  if (photo.location_name) document.getElementById('hero-title').textContent = photo.location_name;
+  const parts = [];
+  if (photo.date_taken) {
+    const d = new Date(photo.date_taken);
+    parts.push(d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+  }
+  if (photo.location_name) parts.push('📍 ' + photo.location_name);
+  document.getElementById('hero-meta').textContent = parts.join('  •  ');
+})();
+""",
+    grid_w=12, grid_h=5,
+)
+
+
+_GALLERY = WidgetTemplate(
+    name="Photo gallery",
+    description=(
+        "A polished gallery in the app's style: a responsive grid of rounded tiles with a "
+        "subtle hover lift and a date overlay, plus a full lightbox (click a tile; arrow "
+        "keys / ESC to navigate). One query over photos (add a filter like location_name "
+        "to scope it)."
+    ),
+    data_query={"photos": {"source": "photos", "limit": 50}},
+    html="""\
+<div class="gallery-page">
+  <div class="gallery-header">
+    <h2 class="gallery-heading">Trip Photos</h2>
+    <span class="gallery-count" id="photo-count"></span>
+  </div>
+  <div class="gallery-grid" id="gallery-grid"></div>
+
+  <div class="lightbox" id="lightbox" style="display:none">
+    <button class="lb-close" id="lb-close">✕</button>
+    <button class="lb-nav lb-prev" id="lb-prev">&#8249;</button>
+    <button class="lb-nav lb-next" id="lb-next">&#8250;</button>
+    <div class="lb-img-wrap">
+      <img id="lb-img" src="" alt="" onerror="this.src='/placeholder'" />
+    </div>
+    <div class="lb-caption" id="lb-caption"></div>
+  </div>
+</div>
+""",
+    css="""\
+body { padding: 0; }
+.gallery-page { padding: 16px; }
+.gallery-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; border-bottom: 1px solid #dee2e6; padding-bottom: 12px; }
+.gallery-heading { font-size: 16px; font-weight: 600; color: #212529; }
+.gallery-count { font-size: 12px; color: #6c757d; background: #f1f3f5; border-radius: 20px; padding: 2px 10px; }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.gallery-item {
+  position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer;
+  background: #f1f3f5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.gallery-item:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.14); z-index: 2; }
+.gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery-item .item-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.55)); padding: 18px 8px 6px; opacity: 0; transition: opacity 0.18s ease;
+}
+.gallery-item:hover .item-overlay { opacity: 1; }
+.item-date { font-size: 11px; color: #fff; }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.lb-img-wrap { max-width: 90vw; max-height: 80vh; display: flex; align-items: center; justify-content: center; }
+#lb-img { max-width: 90vw; max-height: 78vh; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.5); object-fit: contain; }
+.lb-caption { margin-top: 14px; color: rgba(255,255,255,0.75); font-size: 13px; }
+.lb-close { position: absolute; top: 14px; right: 18px; background: none; border: none; color: #fff; font-size: 22px; line-height: 1; cursor: pointer; opacity: 0.8; transition: opacity 0.15s; }
+.lb-close:hover { opacity: 1; }
+.lb-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25); color: #fff; font-size: 28px; width: 40px; height: 56px;
+  border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+}
+.lb-nav:hover { background: rgba(255,255,255,0.22); }
+.lb-prev { left: 12px; }
+.lb-next { right: 12px; }
+""",
+    js="""\
+(function () {
+  const photos = (yaffo.data.photos || []);
+  document.getElementById('photo-count').textContent = photos.length + ' photo' + (photos.length !== 1 ? 's' : '');
+  const grid = document.getElementById('gallery-grid');
+
+  function formatDate(dt) {
+    if (!dt) return '';
+    return new Date(dt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  photos.forEach((photo, idx) => {
+    const item = document.createElement('div');
+    item.className = 'gallery-item';
+    const img = document.createElement('img');
+    img.src = yaffo.photoUrl(photo.id);
+    img.alt = photo.location_name || '';
+    img.loading = 'lazy';
+    img.onerror = () => { img.src = '/placeholder'; };
+    const overlay = document.createElement('div');
+    overlay.className = 'item-overlay';
+    const dateSpan = document.createElement('div');
+    dateSpan.className = 'item-date';
+    dateSpan.textContent = formatDate(photo.date_taken);
+    overlay.appendChild(dateSpan);
+    item.appendChild(img);
+    item.appendChild(overlay);
+    item.addEventListener('click', () => openLightbox(idx));
+    grid.appendChild(item);
+  });
+
+  let currentIdx = 0;
+  const lightbox = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lb-img');
+  const lbCaption = document.getElementById('lb-caption');
+
+  function showLightboxPhoto() {
+    const p = photos[currentIdx];
+    lbImg.src = yaffo.photoUrl(p.id);
+    const parts = [];
+    if (p.date_taken) parts.push(formatDate(p.date_taken));
+    if (p.location_name) parts.push('📍 ' + p.location_name);
+    lbCaption.textContent = parts.join('  •  ');
+  }
+  function openLightbox(idx) { currentIdx = idx; showLightboxPhoto(); lightbox.style.display = 'flex'; }
+
+  document.getElementById('lb-close').addEventListener('click', () => { lightbox.style.display = 'none'; });
+  document.getElementById('lb-prev').addEventListener('click', () => { currentIdx = (currentIdx - 1 + photos.length) % photos.length; showLightboxPhoto(); });
+  document.getElementById('lb-next').addEventListener('click', () => { currentIdx = (currentIdx + 1) % photos.length; showLightboxPhoto(); });
+  lightbox.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.style.display = 'none'; });
+  document.addEventListener('keydown', (e) => {
+    if (lightbox.style.display === 'none') return;
+    if (e.key === 'ArrowLeft') { currentIdx = (currentIdx - 1 + photos.length) % photos.length; showLightboxPhoto(); }
+    if (e.key === 'ArrowRight') { currentIdx = (currentIdx + 1) % photos.length; showLightboxPhoto(); }
+    if (e.key === 'Escape') lightbox.style.display = 'none';
+  });
+})();
+""",
+    grid_w=12, grid_h=6,
+)
+
+
+# --- pub/sub: widgets that talk to each other over the broker. A publisher calls
+#     yaffo.publish(topic, payload); subscribers call yaffo.subscribe(topic, handler).
+#     The broker fans an event out to every widget on the page, so a pair only works
+#     when both are on the same page and share a topic. ---------------------------
+
+# Pair 1 (topic 'filter'): a filter bar broadcasts criteria; galleries re-query.
+_FILTER_CONTROLS = WidgetTemplate(
+    name="Filter controls",
+    description=(
+        "PUB/SUB publisher (topic 'filter'). Year + Location dropdowns (from facets); "
+        "on change it yaffo.publish('filter', {year, location}) to every widget on the "
+        "page and persists the choice. Pair it with one or more 'Linked gallery' widgets "
+        "on the same page."
+    ),
+    data_query={
+        "years": {"source": "photos", "op": "facet", "field": "year"},
+        "locs": {"source": "photos", "op": "facet", "field": "location_name"},
+    },
+    html="<div class='bar' id='root'></div>",
+    css="""\
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.bar label { font-size: 12px; color: #6c757d; display: inline-flex; align-items: center; gap: 6px; }
+.bar select { font-size: 13px; padding: 6px 8px; border: 1px solid #ced4da; border-radius: 6px; background: #fff; color: #212529; }
+.bar select:focus { outline: none; border-color: #007BFF; }
+""",
+    js="""\
+const root = document.getElementById('root');
+const data = yaffo.data;
+const st = yaffo.state || {};
+function makeSelect(labelText, options) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const sel = document.createElement('select');
+  const all = document.createElement('option'); all.value = ''; all.textContent = 'All'; sel.appendChild(all);
+  options.forEach((o) => { const e = document.createElement('option'); e.value = String(o.value); e.textContent = o.label; sel.appendChild(e); });
+  label.appendChild(sel); root.appendChild(label);
+  return sel;
+}
+const years = (data.years || []).map((y) => y.value).filter((v) => v != null).sort((a, b) => b - a).map((v) => ({ value: v, label: String(v) }));
+const locs = (data.locs || []).map((l) => l.value).filter(Boolean).sort().map((v) => ({ value: v, label: v }));
+const yearSel = makeSelect('Year', years);
+const locSel = makeSelect('Location', locs);
+if (st.year != null) yearSel.value = String(st.year);
+if (st.location) locSel.value = st.location;
+function emit() {
+  const flt = { year: yearSel.value ? Number(yearSel.value) : null, location: locSel.value || null };
+  yaffo.publish('filter', flt);
+  yaffo.saveState(flt);
+}
+yearSel.onchange = emit;
+locSel.onchange = emit;
+""",
+    grid_w=12, grid_h=1,
+)
+
+
+_LINKED_GALLERY = WidgetTemplate(
+    name="Linked gallery",
+    description=(
+        "PUB/SUB subscriber (topic 'filter'). A photo grid that yaffo.subscribe('filter', "
+        "…) and re-queries on each event with the published year/location. Drop one or "
+        "more on a page with a 'Filter controls' widget; several stay in sync."
+    ),
+    data_query={"initial": {"source": "photos", "limit": 24}},
+    html="<div class='grid' id='root'></div>",
+    css="""\
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; display: block; }
+""",
+    js="""\
+const grid = document.getElementById('root');
+const st = yaffo.state || {};
+function draw(photos) {
+  grid.innerHTML = '';
+  if (!photos || !photos.length) { grid.innerHTML = "<div class='yf-empty'>No photos match.</div>"; return; }
+  photos.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.photoUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
+}
+async function apply(flt) {
+  yaffo.saveState({ filter: flt });
+  const q = { source: 'photos', limit: 24 };
+  if (flt && flt.year) q.year = { eq: flt.year };
+  if (flt && flt.location) q.location_name = { eq: flt.location };
+  draw(await yaffo.query(q));
+}
+yaffo.subscribe('filter', apply);
+if (st.filter && (st.filter.year || st.filter.location)) apply(st.filter);
+else draw(yaffo.data.initial || []);
+""",
+    grid_w=12, grid_h=4,
+)
+
+
+# Pair 2 (topic 'photo'): a picker broadcasts the selected photo; a spotlight shows it.
+_PHOTO_PICKER = WidgetTemplate(
+    name="Photo picker",
+    description=(
+        "PUB/SUB publisher (topic 'photo'). A compact thumbnail grid; clicking a thumb "
+        "highlights it and yaffo.publish('photo', <the photo row>) so a subscriber can "
+        "react. Pair it with a 'Photo spotlight' on the same page."
+    ),
+    data_query={"photos": {"source": "photos", "limit": 24}},
+    html="<div class='picker' id='root'></div>",
+    css="""\
+.picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+.picker img {
+  width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block; cursor: pointer;
+  border: 2px solid transparent; transition: border-color 0.15s ease;
+}
+.picker img:hover { border-color: #adb5bd; }
+.picker img.active { border-color: #007BFF; }
+""",
+    js="""\
+const root = document.getElementById('root');
+const photos = yaffo.data.photos || [];
+if (!photos.length) { root.innerHTML = "<div class='yf-empty'>No photos.</div>"; }
+let activeEl = null;
+photos.forEach((p, idx) => {
+  const img = document.createElement('img');
+  img.src = yaffo.photoUrl(p.id);
+  img.loading = 'lazy';
+  img.addEventListener('click', () => {
+    if (activeEl) activeEl.classList.remove('active');
+    img.classList.add('active');
+    activeEl = img;
+    yaffo.publish('photo', p);
+  });
+  if (idx === 0) { img.classList.add('active'); activeEl = img; }
+  root.appendChild(img);
+});
+""",
+    grid_w=6, grid_h=4,
+)
+
+
+_PHOTO_SPOTLIGHT = WidgetTemplate(
+    name="Photo spotlight",
+    description=(
+        "PUB/SUB subscriber (topic 'photo'). Shows one photo large with a caption; "
+        "yaffo.subscribe('photo', …) swaps it whenever a 'Photo picker' (or any widget) "
+        "publishes a photo. Starts on a recent photo until a selection arrives."
+    ),
+    data_query={"featured": {"source": "photos", "limit": 1}},
+    html="""\
+<div class="spot">
+  <img id="spot-img" src="" alt="" onerror="this.src='/placeholder'" />
+  <div class="spot-cap" id="spot-cap"></div>
+</div>
+""",
+    css="""\
+body { padding: 0; }
+.spot { display: flex; flex-direction: column; height: 100%; }
+.spot img { width: 100%; flex: 1; min-height: 0; object-fit: cover; display: block; background: #f1f3f5; }
+.spot-cap { padding: 10px 14px; font-size: 13px; color: #495057; border-top: 1px solid #dee2e6; }
+""",
+    js="""\
+const img = document.getElementById('spot-img');
+const cap = document.getElementById('spot-cap');
+function show(photo) {
+  if (!photo) return;
+  img.src = yaffo.photoUrl(photo.id);
+  cap.textContent = [photo.location_name, photo.year].filter(Boolean).join(' · ') || ('Photo #' + photo.id);
+}
+yaffo.subscribe('photo', show);
+show((yaffo.data.featured || [])[0]);
+""",
+    grid_w=6, grid_h=4,
+)
+
+
+# A real map of photo locations using OpenLayers (vendored under /static/vendor/ol)
+# with an OpenStreetMap basemap. The widget frame CSP allows loading the app's own
+# vendored ol.js/ol.css and OSM tile images; generated inline JS still has no network.
+_PHOTO_MAP = WidgetTemplate(
+    name="Photo map",
+    description=(
+        "A real interactive map (OpenLayers + OpenStreetMap basemap) of photos plotted "
+        "by latitude/longitude, clustered, with pan/zoom. Click a cluster for a popup "
+        "anchored over it (positioned from getPixelFromCoordinate, kept in place on "
+        "postrender) showing a large preview plus a thumbnail strip you click to flip "
+        "through the photos. Load "
+        "the vendored library in the HTML: <link> /static/vendor/ol/10.3.1/ol.css and "
+        "<script src> /static/vendor/ol/10.3.1/ol.js (the only allowed external script "
+        "origin is this app; OSM tiles are allowed as images). Use ol.proj.fromLonLat for "
+        "coordinates, ol.source.Cluster, and fit the view to the data."
+    ),
+    data_query={"photos": {"source": "photos", "limit": 500}},
+    html="""\
+<link rel="stylesheet" href="/static/vendor/ol/10.3.1/ol.css">
+<div id="map"></div>
+<div id="popup" class="map-popup" style="display:none">
+  <button type="button" class="map-popup-close" id="popup-close">✕</button>
+  <img class="map-popup-main" id="popup-main" src="" alt="" onerror="this.src='/placeholder'">
+  <div class="map-popup-cap" id="popup-cap"></div>
+  <div class="map-popup-thumbs" id="popup-thumbs"></div>
+</div>
+<script src="/static/vendor/ol/10.3.1/ol.js"></script>
+""",
+    css="""\
+html, body { height: 100%; }
+body { padding: 0; position: relative; }
+#map { width: 100%; height: 100%; background: #aadaff; }
+/* Popup positioned over the cluster's pixel; the transform centers it above the
+   point so the arrow points down at the circle. */
+.map-popup {
+  position: absolute; z-index: 5; width: 240px; padding: 8px;
+  transform: translate(-50%, calc(-100% - 12px));
+  background: #fff; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 4px 18px rgba(0,0,0,0.2);
+}
+.map-popup::before, .map-popup::after { content: ''; position: absolute; left: 50%; transform: translateX(-50%); width: 0; height: 0; }
+.map-popup::before { bottom: -9px; border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 9px solid #dee2e6; }
+.map-popup::after { bottom: -8px; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid #fff; }
+.map-popup-close {
+  position: absolute; top: 5px; right: 6px; z-index: 1; padding: 1px 6px; line-height: 1.2; font-size: 13px;
+  color: #495057; background: rgba(255,255,255,0.9); border: 1px solid #dee2e6; border-radius: 4px; cursor: pointer;
+}
+.map-popup-main { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; display: block; background: #f1f3f5; }
+.map-popup-cap { font-size: 12px; color: #6c757d; margin: 6px 2px; }
+.map-popup-thumbs { display: flex; gap: 4px; overflow-x: auto; }
+.map-popup-thumbs img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; flex: none; cursor: pointer; border: 2px solid transparent; }
+.map-popup-thumbs img:hover { border-color: #adb5bd; }
+.map-popup-thumbs img.active { border-color: #007BFF; }
+""",
+    js="""\
+(function () {
+  if (!window.ol) { document.getElementById('map').innerHTML = "<div class='yf-empty' style='padding:14px'>Map library failed to load.</div>"; return; }
+  const photos = (yaffo.data.photos || []).filter((p) => p.latitude != null && p.longitude != null);
+
+  const features = photos.map((p) => new ol.Feature({
+    geometry: new ol.geom.Point(ol.proj.fromLonLat([p.longitude, p.latitude])),
+    photo: p,
+  }));
+  const points = new ol.source.Vector({ features });
+  const clusters = new ol.source.Cluster({ distance: 42, source: points });
+
+  const styleCache = {};
+  const clusterLayer = new ol.layer.Vector({
+    source: clusters,
+    style: (feature) => {
+      const n = feature.get('features').length;
+      if (!styleCache[n]) {
+        styleCache[n] = new ol.style.Style({
+          image: new ol.style.Circle({
+            radius: Math.min(22, 11 + Math.sqrt(n) * 2),
+            fill: new ol.style.Fill({ color: 'rgba(0, 123, 255, 0.85)' }),
+            stroke: new ol.style.Stroke({ color: '#ffffff', width: 2 }),
+          }),
+          text: new ol.style.Text({
+            text: n > 1 ? String(n) : '',
+            font: '600 11px -apple-system, sans-serif',
+            fill: new ol.style.Fill({ color: '#ffffff' }),
+          }),
+        });
+      }
+      return styleCache[n];
+    },
+  });
+
+  const map = new ol.Map({
+    target: 'map',
+    layers: [new ol.layer.Tile({ source: new ol.source.OSM() }), clusterLayer],
+    view: new ol.View({ center: ol.proj.fromLonLat([0, 20]), zoom: 1 }),
+  });
+  if (features.length) {
+    map.getView().fit(points.getExtent(), { padding: [28, 28, 28, 28], maxZoom: 12, duration: 0 });
+  }
+
+  // A plain popup positioned over the clicked cluster: place it at the cluster's
+  // pixel and re-place it on every render so it tracks the map as it pans/zooms.
+  const popup = document.getElementById('popup');
+  const mainImg = document.getElementById('popup-main');
+  const cap = document.getElementById('popup-cap');
+  const thumbs = document.getElementById('popup-thumbs');
+  let activeCoord = null;
+
+  const caption = (p) => [p.location_name, p.year].filter(Boolean).join(' · ') || ('Photo #' + p.id);
+  function showPhoto(p, thumbEl) {
+    mainImg.src = yaffo.photoUrl(p.id);
+    cap.textContent = caption(p);
+    thumbs.querySelectorAll('img').forEach((t) => t.classList.remove('active'));
+    if (thumbEl) thumbEl.classList.add('active');
+  }
+  function reposition() {
+    if (!activeCoord) return;
+    const px = map.getPixelFromCoordinate(activeCoord);
+    if (px) { popup.style.left = px[0] + 'px'; popup.style.top = px[1] + 'px'; }
+  }
+  function close() { activeCoord = null; popup.style.display = 'none'; }
+  document.getElementById('popup-close').addEventListener('click', close);
+  map.on('postrender', reposition);  // keep it anchored as the map moves
+
+  map.on('pointermove', (e) => { map.getTargetElement().style.cursor = map.hasFeatureAtPixel(e.pixel) ? 'pointer' : ''; });
+  map.on('click', (e) => {
+    const feature = map.forEachFeatureAtPixel(e.pixel, (f) => f);
+    if (!feature) { close(); return; }
+    const pics = feature.get('features').map((f) => f.get('photo'));
+    thumbs.innerHTML = '';
+    pics.slice(0, 30).forEach((p, i) => {
+      const t = document.createElement('img');
+      t.src = yaffo.photoUrl(p.id);
+      t.loading = 'lazy';
+      t.addEventListener('click', () => showPhoto(p, t));  // click a thumbnail -> show it large
+      thumbs.appendChild(t);
+      if (i === 0) showPhoto(p, t);  // start on the first
+    });
+    activeCoord = feature.getGeometry().getCoordinates();
+    popup.style.display = 'block';
+    reposition();
+  });
+})();
+""",
+    grid_w=12, grid_h=5,
+)
+
+
+# The catalog, in a sensible reading order (pub/sub pairs kept adjacent so the seed
+# showcase lays them out together).
+TEMPLATES: list[WidgetTemplate] = [
+    _HERO_BANNER,
+    _PHOTO_GRID,
+    _GALLERY,
+    _STATS,
+    _FEATURED,
+    _FILTERABLE_GALLERY,
+    _PEOPLE,
+    _PHOTO_MAP,
+    _FILTER_CONTROLS,
+    _LINKED_GALLERY,
+    _PHOTO_PICKER,
+    _PHOTO_SPOTLIGHT,
+]
+
+TEMPLATES_BY_NAME: dict[str, WidgetTemplate] = {t.name: t for t in TEMPLATES}
+ 

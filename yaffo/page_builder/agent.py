@@ -26,6 +26,7 @@ from yaffo.page_builder.tool_providers import (
     DataQueryToolProvider,
     ToolProvider,
     ToolResult,
+    WidgetTemplateToolProvider,
     WidgetToolProvider,
     to_anthropic_tools,
 )
@@ -197,6 +198,7 @@ def create_agent(
     session)."""
     providers: list[ToolProvider] = [
         DataQueryToolProvider(session=session),
+        WidgetTemplateToolProvider(),
         WidgetToolProvider(version_id, session=session),
     ]
     client = AnthropicModelClient(

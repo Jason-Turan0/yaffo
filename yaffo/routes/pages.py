@@ -22,18 +22,27 @@ from yaffo.logging_config import get_logger
 from yaffo.page_builder import llm_config
 from yaffo.page_builder.serializers import version_status_payload
 from yaffo.page_builder.widget_api import widget_api_source
+from yaffo.page_builder.widget_theme import WIDGET_THEME_CSS
 from yaffo.utils.context import context
 
 logger = get_logger(__name__)
 
 
-# Sandboxed widget frames may only run their own inline code and load images
-# from this app's origin (the photo routes); no other network (connect-src
-# 'none') so injected data can't be exfiltrated.
+# Sandboxed widget frames run their own inline code and load images from this app's
+# origin (the photo routes). They may also load this app's *vendored* scripts/styles
+# (e.g. OpenLayers under /static/vendor) — our code, not the model's — and OSM basemap
+# tiles as images. Generated inline JS still has no fetch/XHR/WebSocket
+# (connect-src 'none'), so there's no channel to exfiltrate the injected photo data.
+_OSM_TILES = "https://tile.openstreetmap.org https://*.tile.openstreetmap.org"
+
+
 def _widget_frame_csp(origin: str) -> str:
     return (
-        f"default-src 'none'; img-src {origin} data:; style-src 'unsafe-inline'; "
-        "script-src 'unsafe-inline'; connect-src 'none'"
+        f"default-src 'none'; "
+        f"img-src {origin} data: {_OSM_TILES}; "
+        f"style-src 'unsafe-inline' {origin}; "
+        f"script-src 'unsafe-inline' {origin}; "
+        "connect-src 'none'"
     )
 
 
@@ -59,6 +68,12 @@ def init_pages_routes(app: Flask):
     def inject_widget_api():
         # The window.yaffo runtime, inlined into each widget frame (widget_frame.html).
         return {"widget_api_js": widget_api_source()}
+
+    @app.context_processor
+    def inject_widget_theme():
+        # The app styling baseline, prepended to every widget frame's CSS so generated
+        # widgets inherit the look without restating it.
+        return {"widget_theme_css": WIDGET_THEME_CSS}
 
     @app.route("/pages", methods=["POST"])
     def pages_create():
