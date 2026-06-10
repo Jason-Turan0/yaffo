@@ -30,7 +30,7 @@ window.PHOTO_ORGANIZER.initPresentationGrid = () => {
 //     model is building. The client polls …/versions/<id>/status, re-renders that
 //     version's widgets + conversation, and the user can only Save (publish, once
 //     READY) or Cancel (delete + revert). See docs/ai-page-builder-async-generation.md.
-window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, status, config) => {
+window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, startStatus, config) => {
     const grid = GridStack.init({ ...BASE_GRID_OPTS, handle: '.widget-header' });
 
     // Generated/edited widget content the client holds but hasn't saved (manual
@@ -50,7 +50,7 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, status, confi
 
     // Non-null while a generation is in flight: { versionId, status, startedAt,
     // pollTimer, elapsedTimer }. Its presence is the UI-lock predicate.
-    let generation = { versionId: workingVersionId, status: status, startedAt: null };
+    let generation = { versionId: workingVersionId, status: startStatus, startedAt: null };
     // id -> JSON signature of the version widget last rendered, so polls only
     // re-render widgets that actually changed.
     const rendered = new Map();
@@ -227,13 +227,13 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, status, confi
         if (designLayout) designLayout.classList.toggle('is-generating', running);
         grid.setStatic(running);
         if (addButton) addButton.disabled = running;
-        if (cancelButton) cancelButton.disabled = running || generation.status !== 'FAILED';
+        if (cancelButton) cancelButton.disabled = !(generation.status === 'FAILED' || generation.status === 'IN_PROGRESS');
         if (messageInput) messageInput.disabled = running;
         if (sendButton) sendButton.disabled = running;
         if (statusBar) statusBar.hidden = !running;
         // Save commits manual edits when idle, publishes a READY draft; disabled
         // while running or on a failed draft (nothing to publish).
-        if (saveButton) saveButton.disabled = running || status === 'FAILED';
+        if (saveButton) saveButton.disabled = running || generation.status === 'FAILED';
     };
 
 

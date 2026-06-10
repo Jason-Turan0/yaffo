@@ -169,7 +169,6 @@
 /* Live status bar pinned below the transcript while a generation runs. */
 .generation-status {
     padding: 10px 16px;
-    border-top: 1px solid #dee2e6;
 }
 
 /* .chat-status sets display:flex, which (author > UA) would override the `hidden`
