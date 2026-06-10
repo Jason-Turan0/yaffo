@@ -1,43 +1,30 @@
-import json
-import logging
-
 from flask import (
     Flask,
-    Response,
     render_template,
     request,
     redirect,
-    stream_with_context,
     url_for,
     abort,
     make_response,
 )
 
+from yaffo.background_tasks.tasks import generate_page_task
 from yaffo.db import db
-from yaffo.db.models import Widget
+from yaffo.db.models import (
+    PAGE_VERSION_STATUS_CANCELLED,
+    PAGE_VERSION_STATUS_IN_PROGRESS,
+    PAGE_VERSION_STATUS_READY,
+    Widget,
+)
 from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.db.repositories.data_query_repository import resolve_data_query, resolve_query
 from yaffo.logging_config import get_logger
-from yaffo.page_builder import llm_config, schemas
-from yaffo.page_builder.agent import create_agent
-from yaffo.page_builder.prompt_generator import build_user_message
+from yaffo.page_builder import llm_config
+from yaffo.page_builder.serializers import version_status_payload
 from yaffo.page_builder.widget_api import widget_api_source
-from yaffo.page_builder.widget_merge import merge_widget_content
 from yaffo.utils.context import context
 
-# Friendly progress text shown while a tool runs (keyed by tool name). Anything
-# not listed falls back to a generic "Working…".
-_TOOL_STATUS = {
-    "create_widget": "Creating widget…",
-    "update_widget": "Updating widget…",
-    "run_data_query": "Looking up information…",
-}
-
 logger = get_logger(__name__)
-
-def _ndjson(obj: dict) -> str:
-    """One newline-delimited JSON record for the chat stream."""
-    return json.dumps(obj) + "\n"
 
 
 # Sandboxed widget frames may only run their own inline code and load images
@@ -185,75 +172,74 @@ def init_pages_routes(app: Flask):
 
     @app.route("/pages/<int:page_id>/chat", methods=["POST"])
     def pages_chat(page_id: int):
+        """Start or continue an async generation, returning the working version id at
+        once. With no working version, fork one (seeded from the client's current
+        widget set, so unsaved manual edits carry in). With one already in review
+        (READY/FAILED), continue on it — commit the client's current widgets (manual
+        moves) and re-run — so the user can iterate on the draft. The run lives in the
+        version, not this request, so it survives tab close / disconnect / timeouts."""
         page = page_repo.get_page(db.session, page_id)
         if page is None:
             abort(404)
         payload = request.get_json(silent=True) or {}
         message = (payload.get("message") or "").strip()
-        # Runtime errors collected client-side, fed back so the model can repair
-        # code that threw.
+        if not message:
+            return {"error": "Message is required."}, 400
+        if llm_config.get_api_key() is None:
+            return {"error": "No API key configured. Add your Anthropic API key in Settings → AI Generation."}, 400
+
+        # Runtime errors collected client-side, fed back so the model can repair code
+        # that threw. `widgets` is the client's current set (layout + any draft
+        # content); None means "leave the version's widgets as-is".
         widget_errors = payload.get("widget_errors") or {}
+        widgets = payload.get("widgets")
+        working = page.working_version
+        if working is not None and working.status == PAGE_VERSION_STATUS_IN_PROGRESS:
+            return {"error": "A generation is already running."}, 409
+        if working is not None:
+            # Follow-up on the existing working draft: capture manual edits, then re-run.
+            if widgets is not None:
+                page_repo.save_version_widgets(db.session, working.id, widgets)
+            page_repo.restart_version(db.session, working.id)
+            version = working
+        else:
+            version = page_repo.fork_version(db.session, page_id, widgets=widgets)
+        page_repo.add_version_message(db.session, version.id, "user", message)
+        generate_page_task(version.id, message, widget_errors)
+        return {"version_id": version.id}, 202
 
-        # Stream the agent's progress to the browser as newline-delimited JSON:
-        # one record per assistant message, tool status, and new/updated widget,
-        # so the page fills in live instead of after the whole (slow) run. Widget
-        # records carry the generated *content* (the tool's host payload) — nothing
-        # is persisted; the client holds it as a draft until Save (see grid.js).
-        # TODO test streaming in GCP environment.
-        def generate():
-            if not message:
-                yield _ndjson(schemas.chat_done())
-                return
+    def _version_on_page(page_id: int, version_id: int):
+        version = page_repo.get_version(db.session, version_id)
+        if version is None or version.page_id != page_id:
+            abort(404)
+        return version
 
-            page_repo.add_message(db.session, page_id, "user", message)
+    @app.route("/pages/<int:page_id>/versions/<int:version_id>/status", methods=["GET"])
+    def pages_version_status(page_id: int, version_id: int):
+        """Poll an in-flight generation: status, the conversation feed, and the
+        version's widgets (rendered client-side via the preview route)."""
+        return version_status_payload(_version_on_page(page_id, version_id))
 
-            if llm_config.get_api_key() is None:
-                reply = "No API key configured. Add your Anthropic API key in Settings → AI Generation."
-                page_repo.add_message(db.session, page_id, "assistant", reply)
-                yield _ndjson(schemas.chat_message(reply))
-                yield _ndjson(schemas.chat_done())
-                return
+    @app.route("/pages/<int:page_id>/versions/<int:version_id>/cancel", methods=["POST"])
+    def pages_version_cancel(page_id: int, version_id: int):
+        """Cancel a generation: flag CANCELLED (the running task polls this and
+        stops), then delete the version and revert — the published version is
+        untouched, so the UI snaps back to it."""
+        _version_on_page(page_id, version_id)
+        page_repo.set_version_status(db.session, version_id, PAGE_VERSION_STATUS_CANCELLED)
+        page_repo.delete_version(db.session, version_id)
+        return "", 204
 
-            client_widgets = payload.get("widgets")
-            if client_widgets is None:
-                client_widgets = [{"id": w.id} for w in page.widgets]
-            current_widgets = merge_widget_content(page.widgets, client_widgets)
-
-            user_message = build_user_message(
-                message,
-                page_title=page.title,
-                page_subtitle=page.subtitle,
-                widgets=current_widgets,
-                widget_errors=widget_errors,
-            )
-
-            try:
-                agent = create_agent(page_id, current_widgets=current_widgets)
-                for event in agent.run_events(user_message):
-                    if event.type == "assistant":
-                        page_repo.add_message(db.session, page_id, "assistant", event.text)
-                        yield _ndjson(schemas.chat_message(event.text))
-                    elif event.type == "tool":
-                        yield _ndjson(schemas.chat_status(_TOOL_STATUS.get(event.name, "Working…")))
-                        # A widget tool returns the generated content -> stream it;
-                        # the client renders it as a draft (create) or swaps it in
-                        # (update). Nothing is written to the store here.
-                        if event.tool_result_data and not event.is_error:
-                            record = (schemas.chat_widget_updated if event.name == "update_widget"
-                                      else schemas.chat_widget_new)
-                            yield _ndjson(record(event.tool_result_data))
-                    elif event.type == "error":
-                        page_repo.add_message(db.session, page_id, "assistant", event.text)
-                        yield _ndjson(schemas.chat_message(event.text))
-            except Exception as exc:  # surface failures to the user, don't 500
-                reply = f"Generation error: {exc}"
-                page_repo.add_message(db.session, page_id, "assistant", reply)
-                logger.error(f"Generation error: {exc}")
-                yield _ndjson(schemas.chat_message(reply))
-
-            yield _ndjson(schemas.chat_done())
-
-        response = Response(stream_with_context(generate()), mimetype="application/x-ndjson")
-        response.headers["Cache-Control"] = "no-cache"
-        response.headers["X-Accel-Buffering"] = "no"  # don't let a proxy buffer the stream
-        return response
+    @app.route("/pages/<int:page_id>/versions/<int:version_id>/publish", methods=["POST"])
+    def pages_version_publish(page_id: int, version_id: int):
+        """Save (accept) a finished generation: commit the client's current widgets
+        (manual moves made during review) onto the version, then publish it as the
+        live page. Enabled only when the version is READY."""
+        version = _version_on_page(page_id, version_id)
+        if version.status != PAGE_VERSION_STATUS_READY:
+            return {"error": "Version is not ready to publish."}, 409
+        widgets = (request.get_json(silent=True) or {}).get("widgets")
+        if widgets is not None:
+            page_repo.save_version_widgets(db.session, version_id, widgets)
+        page_repo.publish_version(db.session, version_id)
+        return "", 204

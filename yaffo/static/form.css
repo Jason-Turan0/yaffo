@@ -61,3 +61,20 @@
     margin-right: 8px;
     cursor: pointer;
 }
+
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit; /* Ensures it matches the font of your inputs */
+    resize: vertical; /* Allows users to make it taller, but keeps layout from breaking horizontally */
+    min-height: 100px; /* Gives a good default starting height */
+}
+
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007BFF;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}

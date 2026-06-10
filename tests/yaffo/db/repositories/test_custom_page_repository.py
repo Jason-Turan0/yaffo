@@ -9,7 +9,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from yaffo.db import db
-from yaffo.db.models import Conversation, CustomPage, Widget
+from yaffo.db.models import (
+    PAGE_VERSION_STATUS_ACCEPTED,
+    PAGE_VERSION_STATUS_FAILED,
+    PAGE_VERSION_STATUS_IN_PROGRESS,
+    Conversation,
+    CustomPage,
+    PageVersion,
+    Widget,
+)
 from yaffo.db.repositories import custom_page_repository as repo
 
 pytestmark = pytest.mark.unit
@@ -56,6 +64,14 @@ class TestCreatePage:
         assert page.show_title is True
         assert page.widgets == []
         assert page.messages == []
+
+    def test_creates_initial_accepted_published_version(self, session):
+        page = repo.create_page(session, "Trip")
+        assert page.published_version_id is not None
+        assert page.working_version_id is None
+        assert page.published_version.status == PAGE_VERSION_STATUS_ACCEPTED
+        # Exactly one version exists for a fresh page.
+        assert session.query(PageVersion).count() == 1
 
     def test_is_readable_back(self, session):
         page = repo.create_page(session, "Trip", subtitle="summer")
@@ -131,7 +147,7 @@ class TestAddMessage:
         repo.add_message(session, page.id, "user", "one")
         repo.add_message(session, page.id, "assistant", "two")
         messages = repo.get_page(session, page.id).messages
-        assert [(m.role, m.content) for m in messages] == [
+        assert [(m.type, m.content) for m in messages] == [
             ("user", "one"),
             ("assistant", "two"),
         ]
@@ -245,3 +261,193 @@ class TestSavePageWidgets:
         widget = repo.get_widget(session, page.id, "a")
         assert widget.data_query == {}
         assert widget.state == {}
+
+    def test_writes_into_the_published_version(self, session, page):
+        # Manual edits land on the live (published) version, not a new one.
+        repo.save_page_widgets(session, page.id, [_widget_item("a")])
+        assert session.query(PageVersion).count() == 1
+        published = repo.get_page(session, page.id).published_version
+        assert [w.id for w in published.widgets] == ["a"]
+
+
+@pytest.fixture
+def populated_page(session):
+    """A published page with two widgets and a user/assistant exchange."""
+    page = repo.create_page(session, "Trip", subtitle="maine summer")
+    repo.add_message(session, page.id, "user", "make a wall")
+    repo.add_message(session, page.id, "assistant", "done")
+    repo.save_page_widgets(session, page.id, [
+        _widget_item("a", title="A", html="<p>a</p>", data_query={"q": {"source": "photos"}}),
+        _widget_item("b", title="B", html="<p>b</p>"),
+    ])
+    return repo.get_page(session, page.id)
+
+
+class TestForkVersion:
+    def test_missing_page_returns_none(self, session):
+        assert repo.fork_version(session, 999) is None
+
+    def test_creates_in_progress_working_version(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        assert version.status == PAGE_VERSION_STATUS_IN_PROGRESS
+        assert version.started_at is not None
+        assert version.parent_version_id == populated_page.published_version_id
+        page = repo.get_page(session, populated_page.id)
+        assert page.working_version_id == version.id
+        # Published pointer is untouched -- presentation still shows the old version.
+        assert page.published_version_id == populated_page.published_version_id
+
+    def test_snapshots_published_widgets_when_no_client_list(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        forked = repo.get_version(session, version.id)
+        assert [(w.id, w.title, w.html) for w in forked.widgets] == [
+            ("a", "A", "<p>a</p>"),
+            ("b", "B", "<p>b</p>"),
+        ]
+        assert forked.widgets[0].data_query == {"q": {"source": "photos"}}
+
+    def test_copies_prior_conversation(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        forked = repo.get_version(session, version.id)
+        assert [(m.type, m.content) for m in forked.messages] == [
+            ("user", "make a wall"),
+            ("assistant", "done"),
+        ]
+
+    def test_client_list_overlays_unsaved_edits_and_drops_omitted(self, session, populated_page):
+        # The client shows an edited "a" (new title) and a manually-added "c", and
+        # has dropped "b" -- the fork must capture exactly that set.
+        version = repo.fork_version(session, populated_page.id, widgets=[
+            {"id": "a", "title": "A edited", "x": 0, "y": 0, "w": 4, "h": 3},
+            _widget_item("c", title="C"),
+        ])
+        forked = repo.get_version(session, version.id)
+        assert {w.id: w.title for w in forked.widgets} == {"a": "A edited", "c": "C"}
+        # Omitted content (a's html) is preserved from the published snapshot.
+        assert next(w for w in forked.widgets if w.id == "a").html == "<p>a</p>"
+
+    def test_forked_widgets_do_not_share_json_with_published(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        forked = repo.get_version(session, version.id)
+        published = repo.get_page(session, populated_page.id).published_version
+        assert forked.widgets[0].data_query is not published.widgets[0].data_query
+
+
+class TestPublishVersion:
+    def test_missing_version_returns_none(self, session):
+        assert repo.publish_version(session, 999) is None
+
+    def test_accepts_and_publishes_clearing_working(self, session, populated_page):
+        old_published_id = populated_page.published_version_id
+        version = repo.fork_version(session, populated_page.id)
+        repo.publish_version(session, version.id)
+        page = repo.get_page(session, populated_page.id)
+        assert page.published_version_id == version.id
+        assert page.working_version_id is None
+        assert repo.get_version(session, version.id).status == PAGE_VERSION_STATUS_ACCEPTED
+
+    def test_drops_the_superseded_published_version(self, session, populated_page):
+        old_published_id = populated_page.published_version_id
+        version = repo.fork_version(session, populated_page.id)
+        repo.publish_version(session, version.id)
+        assert session.get(PageVersion, old_published_id) is None
+        assert session.query(PageVersion).count() == 1
+
+    def test_presentation_reads_published_widgets_after_save(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id, widgets=[_widget_item("z", title="Z")])
+        repo.publish_version(session, version.id)
+        assert [w.id for w in repo.get_page(session, populated_page.id).widgets] == ["z"]
+
+
+class TestDeleteVersion:
+    def test_missing_version_is_noop(self, session):
+        repo.delete_version(session, 999)  # does not raise
+
+    def test_deletes_working_version_and_reverts(self, session, populated_page):
+        old_published_id = populated_page.published_version_id
+        version = repo.fork_version(session, populated_page.id)
+        repo.delete_version(session, version.id)
+        page = repo.get_page(session, populated_page.id)
+        assert page.working_version_id is None
+        # Published pointer is untouched -- the UI snaps back to it.
+        assert page.published_version_id == old_published_id
+        assert session.get(PageVersion, version.id) is None
+
+    def test_cascades_widgets_and_messages(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        # Two widgets + two messages were copied into the working version.
+        before = session.query(Widget).count() + session.query(Conversation).count()
+        repo.delete_version(session, version.id)
+        # Only the published version's widgets + messages remain.
+        assert session.query(Widget).count() == 2
+        assert session.query(Conversation).count() == 2
+        assert before == 8  # 2 published + 2 forked, of each
+
+
+class TestSetVersionStatus:
+    def test_missing_version_returns_none(self, session):
+        assert repo.set_version_status(session, 999, PAGE_VERSION_STATUS_FAILED) is None
+
+    def test_transitions_and_records_error(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        repo.set_version_status(
+            session, version.id, PAGE_VERSION_STATUS_FAILED, error="boom", completed=True
+        )
+        fetched = repo.get_version(session, version.id)
+        assert fetched.status == PAGE_VERSION_STATUS_FAILED
+        assert fetched.error == "boom"
+        assert fetched.completed_at is not None
+
+
+class TestRestartVersion:
+    def test_missing_version_returns_none(self, session):
+        assert repo.restart_version(session, 999) is None
+
+    def test_resets_to_in_progress_and_clears_timing(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        repo.set_version_status(
+            session, version.id, PAGE_VERSION_STATUS_FAILED, error="boom", completed=True
+        )
+        repo.restart_version(session, version.id)
+        fetched = repo.get_version(session, version.id)
+        assert fetched.status == PAGE_VERSION_STATUS_IN_PROGRESS
+        assert fetched.error is None
+        assert fetched.completed_at is None
+        assert fetched.started_at is not None
+
+
+class TestSaveVersionWidgets:
+    def test_missing_version_is_noop(self, session):
+        repo.save_version_widgets(session, 999, [{"id": "x"}])  # does not raise
+
+    def test_writes_widgets_into_the_given_version(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        repo.save_version_widgets(session, version.id, [
+            _widget_item("x", title="X"),
+        ])
+        assert [(w.id, w.title) for w in repo.get_version(session, version.id).widgets] == [("x", "X")]
+
+    def test_does_not_touch_other_versions(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        repo.save_version_widgets(session, version.id, [])  # clear the fork only
+        assert repo.get_version(session, version.id).widgets == []
+        # The published version's widgets are untouched.
+        assert [w.id for w in repo.get_page(session, populated_page.id).widgets] == ["a", "b"]
+
+
+class TestAddVersionMessage:
+    def test_missing_version_returns_none(self, session):
+        assert repo.add_version_message(session, 999, "status", "hi") is None
+
+    def test_appends_to_the_version_not_the_published_feed(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        repo.add_version_message(session, version.id, "status", "Creating widget…")
+        repo.add_version_message(session, version.id, "error", "nope")
+        forked = repo.get_version(session, version.id)
+        # The two copied messages plus the two new annotations.
+        assert [(m.type, m.content) for m in forked.messages][-2:] == [
+            ("status", "Creating widget…"),
+            ("error", "nope"),
+        ]
+        # The published feed is unaffected.
+        assert len(repo.get_page(session, populated_page.id).messages) == 2

@@ -111,21 +111,25 @@
     color: #212529;
 }
 
-.conversation-input {
-    display: flex;
-    gap: 8px;
-    padding: 12px 16px;
-    border-top: 1px solid #dee2e6;
+/* Interleaved tool-progress and error lines in the transcript (display-only). */
+.chat-message-status {
+    align-self: flex-start;
+    background: transparent;
+    color: #868e96;
+    font-size: 13px;
+    padding: 2px 12px;
 }
 
-.conversation-input textarea {
-    flex: 1;
-    resize: none;
-    border: 1px solid #ced4da;
-    border-radius: 6px;
-    padding: 8px;
-    font-family: inherit;
-    font-size: 14px;
+.chat-message-error {
+    align-self: flex-start;
+    background: #fff0f0;
+    color: #c92a2a;
+    border: 1px solid #ffc9c9;
+}
+
+.conversation-input {
+    padding: 12px 16px;
+    border-top: 1px solid #dee2e6;
 }
 
 .conversation-input textarea:focus {
@@ -160,6 +164,32 @@
 
 @keyframes chat-spin {
     to { transform: rotate(360deg); }
+}
+
+/* Live status bar pinned below the transcript while a generation runs. */
+.generation-status {
+    padding: 10px 16px;
+    border-top: 1px solid #dee2e6;
+}
+
+/* .chat-status sets display:flex, which (author > UA) would override the `hidden`
+   attribute and leave the bar visible when idle — restore hiding. */
+.generation-status[hidden] {
+    display: none;
+}
+
+.generation-elapsed {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    color: #adb5bd;
+}
+
+/* Locked state: the page mirrors the working version, so manual widget controls
+   are hidden (the grid is also made static from JS). */
+.page-design.is-generating .widget-edit,
+.page-design.is-generating .widget-delete,
+.page-design.is-generating .widget-title-input {
+    display: none;
 }
 
 /* ---- Grid + widgets ---- */

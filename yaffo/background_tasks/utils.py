@@ -2,7 +2,10 @@ import time
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
 
-from yaffo.db.models import Job, JOB_STATUS_CANCELLED, Face, Person, JOB_STATUS_COMPLETED
+from yaffo.db.models import (
+    Job, JOB_STATUS_CANCELLED, Face, Person, JOB_STATUS_COMPLETED,
+    PageVersion, PAGE_VERSION_STATUS_CANCELLED,
+)
 from yaffo.common import DB_PATH
 from yaffo.logging_config import get_logger
 
@@ -22,6 +25,19 @@ def get_job_status(job_id: str) -> str:
     try:
         job = session.query(Job).filter_by(id=job_id).first()
         return job.status if job is not None else JOB_STATUS_CANCELLED
+    finally:
+        session.close()
+        SessionFactory.remove()
+
+
+def get_version_status(version_id: int) -> str:
+    """Current generation status of a page version -- the cancel signal the
+    generate_page task polls between agent iterations. A missing version (deleted on
+    cancel) reads as CANCELLED so the run stops."""
+    session = SessionFactory()
+    try:
+        row = session.query(PageVersion.status).filter_by(id=version_id).first()
+        return row[0] if row is not None else PAGE_VERSION_STATUS_CANCELLED
     finally:
         session.close()
         SessionFactory.remove()

@@ -17,7 +17,7 @@ pytestmark = pytest.mark.unit
 
 # Widget columns the browser draft intentionally drops: the foreign key.
 # WidgetDraft == Widget - this.
-_OMITTED_WIDGET_COLUMNS = {"page_id"}
+_OMITTED_WIDGET_COLUMNS = {"version_id"}
 
 
 class TestWidgetDraftMatchesModel:

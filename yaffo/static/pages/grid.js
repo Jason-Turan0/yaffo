@@ -13,6 +13,9 @@ const BASE_GRID_OPTS = {
     columnOpts: { breakpoints: [{ w: 768, c: 1 }] }
 };
 
+const POLL_INTERVAL_MS = 1500;
+const POLL_RETRY_MS = 3000;
+
 // The widget iframe broker (window.PHOTO_ORGANIZER.initWidgetBroker) lives in
 // widget_broker.js — the host-side counterpart of the in-iframe widget_api.js.
 
@@ -20,12 +23,37 @@ window.PHOTO_ORGANIZER.initPresentationGrid = () => {
     return GridStack.init({ ...BASE_GRID_OPTS, staticGrid: true });
 };
 
-window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
+// Design grid. Two modes:
+//   - Unlocked: manual editing — add / drag / resize / rename, committed by Save
+//     (POST pages_update) to the published version.
+//   - Locked (a generation is in flight): the page mirrors the working version the
+//     model is building. The client polls …/versions/<id>/status, re-renders that
+//     version's widgets + conversation, and the user can only Save (publish, once
+//     READY) or Cancel (delete + revert). See docs/ai-page-builder-async-generation.md.
+window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, status, config) => {
     const grid = GridStack.init({ ...BASE_GRID_OPTS, handle: '.widget-header' });
 
-    // Generated/edited widget content the client holds but hasn't saved, keyed by
-    // widget id. Nothing is persisted until Save sends these to the server.
+    // Generated/edited widget content the client holds but hasn't saved (manual
+    // adds), keyed by widget id. Nothing is persisted until Save sends these to the
+    // server.
     const drafts = new Map();
+
+    const designLayout = document.querySelector('.page-design');
+    const messagesEl = document.getElementById('conversation-messages');
+    const messageInput = document.getElementById('conversation-message');
+    const sendButton = document.querySelector('#conversation-form button[type="submit"]');
+    const addButton = document.getElementById('add-widget-button');
+    const saveButton = document.getElementById('save-page-button');
+    const cancelButton = document.getElementById('cancel-generation-button');
+    const statusBar = document.getElementById('generation-status');
+    const elapsedEl = document.getElementById('generation-elapsed');
+
+    // Non-null while a generation is in flight: { versionId, status, startedAt,
+    // pollTimer, elapsedTimer }. Its presence is the UI-lock predicate.
+    let generation = { versionId: workingVersionId, status: status, startedAt: null };
+    // id -> JSON signature of the version widget last rendered, so polls only
+    // re-render widgets that actually changed.
+    const rendered = new Map();
 
     // The full widget set for Save: layout for every grid item, plus content for
     // any the client holds as a draft (untouched saved widgets send layout only,
@@ -41,12 +69,11 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
 
     const savePage = async () => {
         const body = {
-                title: document.getElementById('page-title').value,
-                subtitle: document.getElementById('page-subtitle').value,
-                show_title: document.getElementById('page-show-title').checked,
-                widgets: getWidgets()
-            };
-        debugger
+            title: document.getElementById('page-title').value,
+            subtitle: document.getElementById('page-subtitle').value,
+            show_title: document.getElementById('page-show-title').checked,
+            widgets: getWidgets()
+        };
         await fetch(config.buildUrl('pages_update', { page_id: pageId }), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -98,11 +125,13 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
                     confirmClass: 'btn-danger'
                 });
                 if (!confirmed) return;
+
                 await fetch(
                     config.buildUrl('pages_delete_widget', { page_id: pageId, widget_id: deleteButton.dataset.widgetId }),
                     { method: 'POST' }
                 );
                 grid.removeWidget(el);
+                rendered.delete(deleteButton.dataset.widgetId);
             });
         }
     };
@@ -125,8 +154,7 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
     const newWidgetId = () =>
         (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now())).replace(/-/g, '');
 
-    // Manual add: an empty client-side draft, just like a generated one — nothing
-    // is persisted until Save.
+    // Manual add: an empty client-side draft — nothing is persisted until Save.
     const addWidget = () => addDraftWidget({
         id: newWidgetId(),
         title: 'New Widget',
@@ -140,36 +168,12 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
     });
 
     const scrollConversation = () => {
-        const messages = document.getElementById('conversation-messages');
-        if (messages) messages.scrollTop = messages.scrollHeight;
+        if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
     };
 
-    const addChatMessage = (messagesEl, role, content, before = null) => {
-        const el = document.createElement('div');
-        el.className = `chat-message chat-message-${role}`;
-        el.textContent = content;
-        messagesEl.insertBefore(el, before);
-        return el;
-    };
-
-    // A spinning status row pinned after the last message while the run is live;
-    // its label tracks the current step. Assistant replies insert above it.
-    const addStatusSpinner = (messagesEl, text) => {
-        const el = document.createElement('div');
-        el.className = 'chat-status';
-        const spinner = document.createElement('span');
-        spinner.className = 'chat-spinner';
-        const label = document.createElement('span');
-        label.className = 'chat-status-text';
-        label.textContent = text;
-        el.append(spinner, label);
-        messagesEl.appendChild(el);
-        return el;
-    };
-
-    // Render a draft widget's grid-item shell from its content (server resolves
-    // its data and inlines the frame as srcdoc — nothing is persisted).
-    const renderDraftShell = async (content) => {
+    // Render a widget's grid-item shell from its content (server resolves its data
+    // and inlines the frame as srcdoc — nothing is persisted by this call).
+    const renderShell = async (content) => {
         const response = await fetch(config.buildUrl('pages_widget_preview', { page_id: pageId }), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -178,25 +182,25 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
         return await response.text();
     };
 
-    // A generated widget: hold its content and drop it on the grid (at the model's
-    // position if it gave one, else the bottom).
+    // Hold content as a manual draft and drop it on the grid (at the given position
+    // if any, else the bottom).
     const addDraftWidget = async (content) => {
         drafts.set(content.id, content);
-        addWidgetEl(await renderDraftShell(content), { x: content.grid_x, y: content.grid_y });
+        addWidgetEl(await renderShell(content), { x: content.grid_x, y: content.grid_y });
     };
 
-    // An edited widget: hold the new content and swap the item's contents in place,
-    // or add it if it isn't on the grid yet. The model may also reposition on edit —
-    // if it supplied coordinates, move the item; otherwise keep its grid position.
-    const updateDraftWidget = async (content) => {
-        drafts.set(content.id, content);
+    // Render content into the grid: swap an existing item's contents in place, or
+    // add it if it isn't on the grid yet. Used by manual edits and by the locked
+    // reconcile. The model may reposition on edit — if it supplied coordinates,
+    // move the item; otherwise keep its grid position.
+    const renderWidget = async (content) => {
         const existing = document.querySelector(`.grid-stack-item[gs-id="${content.id}"]`);
         if (!existing) {
-            addWidgetEl(await renderDraftShell(content), { x: content.grid_x, y: content.grid_y });
+            addWidgetEl(await renderShell(content), { x: content.grid_x, y: content.grid_y });
             return;
         }
         const wrapper = document.createElement('div');
-        wrapper.innerHTML = (await renderDraftShell(content)).trim();
+        wrapper.innerHTML = (await renderShell(content)).trim();
         existing.querySelector('.grid-stack-item-content')
             .replaceWith(wrapper.firstElementChild.querySelector('.grid-stack-item-content'));
         wireWidget(existing);
@@ -205,77 +209,190 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
         }
     };
 
-    // Read a newline-delimited JSON stream, invoking onRecord per record. Awaits
-    // onRecord so records (incl. widget fetches) apply in order, never racing.
-    const readNdjson = async (response, onRecord) => {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        for (;;) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            let nl;
-            while ((nl = buffer.indexOf('\n')) >= 0) {
-                const line = buffer.slice(0, nl).trim();
-                buffer = buffer.slice(nl + 1);
-                if (line) await onRecord(JSON.parse(line));
-            }
+    // ---- Generation ----
+
+    const isRunning = () => {
+        return generation.status === 'IN_PROGRESS';
+    }
+
+    // Reflect the generation phase in the UI. Phase from `generation`:
+    //   idle (none)            — normal editing; Save commits to the published page.
+    //   running (IN_PROGRESS)  — the model is mutating the version: lock the grid and
+    //                            Send; only Cancel is available; status bar ticks.
+    //   review (READY/FAILED)  — the draft is the user's again: move widgets, send
+    //                            follow-ups to iterate; Save publishes (READY only),
+    //                            Cancel discards.
+    const refreshUi = () => {
+        const running = isRunning();
+        if (designLayout) designLayout.classList.toggle('is-generating', running);
+        grid.setStatic(running);
+        if (addButton) addButton.disabled = running;
+        if (cancelButton) cancelButton.disabled = running || generation.status !== 'FAILED';
+        if (messageInput) messageInput.disabled = running;
+        if (sendButton) sendButton.disabled = running;
+        if (statusBar) statusBar.hidden = !running;
+        // Save commits manual edits when idle, publishes a READY draft; disabled
+        // while running or on a failed draft (nothing to publish).
+        if (saveButton) saveButton.disabled = running || status === 'FAILED';
+    };
+
+
+
+    const formatElapsed = (fromIso, toMs) => {
+        const start = fromIso ? new Date(fromIso).getTime() : toMs;
+        const secs = Math.max(0, Math.round((toMs - start) / 1000));
+        return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+    };
+
+    const updateElapsed = () => {
+        if (elapsedEl && isRunning()) elapsedEl.textContent = formatElapsed(generation.startedAt, Date.now());
+    };
+
+    // Rebuild the conversation feed from the polled transcript (the source of truth
+    // while generating): user / assistant bubbles and interleaved status / error
+    // lines.
+    const renderFeed = (messages) => {
+        if (!messagesEl) return;
+        messagesEl.innerHTML = '';
+        for (const message of messages) {
+            const el = document.createElement('div');
+            el.className = `chat-message chat-message-${message.type}`;
+            el.textContent = message.content;
+            messagesEl.appendChild(el);
         }
-        const tail = (buffer + decoder.decode()).trim();
-        if (tail) await onRecord(JSON.parse(tail));
+        scrollConversation();
+    };
+
+    // Reconcile the grid to the version's widget set: drop widgets no longer
+    // present, (re-)render those that are new or changed.
+    const reconcileWidgets = async (widgets) => {
+        const incoming = new Set(widgets.map((w) => w.id));
+        grid.engine.nodes.slice().forEach((node) => {
+            if (!incoming.has(node.id)) {
+                grid.removeWidget(node.el);
+                rendered.delete(node.id);
+            }
+        });
+        for (const widget of widgets) {
+            const signature = JSON.stringify(widget);
+            if (rendered.get(widget.id) === signature) continue;
+            rendered.set(widget.id, signature);
+            await renderWidget(widget);
+        }
+    };
+
+    const stopPolling = () => {
+        if (!generation) return;
+        clearTimeout(generation.pollTimer);
+        clearInterval(generation.elapsedTimer);
+    };
+
+    const applyStatus = async (body) => {
+        generation.status = body.status;
+        generation.startedAt = body.started_at;
+        renderFeed(body.messages);
+        await reconcileWidgets(body.widgets);
+        if (body.status === 'CANCELLED') {
+            // The version was deleted out from under us; revert to the published page.
+            window.location.reload();
+            return;
+        }
+        if (body.status !== 'IN_PROGRESS') stopPolling();  // READY / FAILED -> review
+        refreshUi();
+    };
+
+    const poll = async () => {
+        try {
+            const url = config.buildUrl('pages_version_status', { page_id: pageId, version_id: generation.versionId });
+            const response = await fetch(url);
+            if (response.status === 404) { window.location.reload(); return; }
+            const body = await response.json();
+            await applyStatus(body);
+            if (body.status === 'IN_PROGRESS') generation.pollTimer = setTimeout(poll, POLL_INTERVAL_MS);
+        } catch (error) {
+            generation.pollTimer = setTimeout(poll, POLL_RETRY_MS);
+        }
+    };
+
+    // Enter the running phase for a new or continued generation: lock, restart the
+    // elapsed timer, and poll. Reconcile re-renders the grid from the version's poll,
+    // so a follow-up's committed manual edits come back from the server.
+    const enterRunning = (versionId) => {
+        stopPolling();  // a follow-up re-enters; clear any prior timers first
+        generation = { versionId, status: 'IN_PROGRESS', startedAt: null };
+        rendered.clear();
+        refreshUi();
+        updateElapsed();
+        generation.elapsedTimer = setInterval(updateElapsed, 1000);
+        poll();
+    };
+
+    const publishVersion = async () => {
+        await fetch(
+            config.buildUrl('pages_version_publish', { page_id: pageId, version_id: generation.versionId }),
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // Commit manual moves made during review before publishing.
+                body: JSON.stringify({ widgets: getWidgets() })
+            }
+        );
+        window.location.href = config.buildUrl('pages_detail', { page_id: pageId });
+    };
+
+    const cancelGeneration = async () => {
+        const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+            title: 'Cancel generation',
+            message: 'Discard this generation and return to the current page?',
+            confirmText: 'Cancel generation',
+            confirmClass: 'btn-danger'
+        });
+        if (!confirmed) return;
+        stopPolling();
+        await fetch(
+            config.buildUrl('pages_version_cancel', { page_id: pageId, version_id: generation.versionId }),
+            { method: 'POST' }
+        );
+        window.location.reload();  // back to the published version
+    };
+
+    const onSave = () => {
+        // While a finished generation is under review, Save publishes it; otherwise
+        // it commits manual edits.
+        if (generation.status === 'READY') return publishVersion();
+        return savePage();
     };
 
     const sendMessage = async (event) => {
         event.preventDefault();
-        const input = document.getElementById('conversation-message');
-        const sendButton = document.querySelector('#conversation-form button[type="submit"]');
-        const message = input.value.trim();
+        if (generation.status === 'IN_PROGRESS') return;  // a run is active
+        const message = messageInput.value.trim();
         if (!message) return;
-        input.value = '';
-
-        const messagesEl = document.getElementById('conversation-messages');
-        addChatMessage(messagesEl, 'user', message);
-        // A spinner pinned after the last message; assistant replies insert above
-        // it, its label tracks the current step, and it's removed when done.
-        const status = addStatusSpinner(messagesEl, 'Thinking…');
-        const statusLabel = status.querySelector('.chat-status-text');
-        // Lock Send for the whole run so a second request can't overlap.
-        if (sendButton) sendButton.disabled = true;
-        scrollConversation();
-
-        const apply = async (record) => {
-            if (record.event === 'message') {
-                addChatMessage(messagesEl, 'assistant', record.content, status);
-            } else if (record.event === 'status') {
-                statusLabel.textContent = record.text;
-            } else if (record.event === 'widget_new') {
-                await addDraftWidget(record.widget);
-            } else if (record.event === 'widget_updated') {
-                await updateDraftWidget(record.widget);
-            } else if (record.event === 'done') {
-                status.remove();
-            }
-            scrollConversation();
-        };
-
+        messageInput.value = '';
         try {
             const response = await fetch(config.buildUrl('pages_chat', { page_id: pageId }), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // Send current widget content (drafts included) so the model edits
-                // with sight of the real html/css/js instead of guessing.
+                // Send the current widget set (drafts + layout) so the server captures
+                // manual edits — on the initial fork and on every follow-up — and the
+                // model edits with sight of the code.
                 body: JSON.stringify({
                     message,
                     widgets: getWidgets(),
                     widget_errors: window.PHOTO_ORGANIZER.widgetErrors
                 })
             });
-            await readNdjson(response, apply);
-        } finally {
-            status.remove();  // safety if the stream ended without a 'done'
-            if (sendButton) sendButton.disabled = false;
-            scrollConversation();
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({}));
+                window.notification.error(body.error || 'Could not start generation.');
+                messageInput.value = message;  // let the user retry
+                return;
+            }
+            const { version_id } = await response.json();
+            enterRunning(version_id);
+        } catch (error) {
+            window.notification.error('Could not start generation.');
+            messageInput.value = message;
         }
     };
 
@@ -283,23 +400,20 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, config) => {
     grid.on('dragstart resizestart', () => gridEl.classList.add('is-interacting'));
     grid.on('dragstop resizestop', () => gridEl.classList.remove('is-interacting'));
 
-    const addButton = document.getElementById('add-widget-button');
-    if (addButton) {
-        addButton.addEventListener('click', addWidget);
-    }
-
-    const saveButton = document.getElementById('save-page-button');
-    if (saveButton) {
-        saveButton.addEventListener('click', savePage);
-    }
+    if (addButton) addButton.addEventListener('click', addWidget);
+    if (saveButton) saveButton.addEventListener('click', onSave);
+    if (cancelButton) cancelButton.addEventListener('click', cancelGeneration);
 
     const conversationForm = document.getElementById('conversation-form');
-    if (conversationForm) {
-        conversationForm.addEventListener('submit', sendMessage);
-    }
+    if (conversationForm) conversationForm.addEventListener('submit', sendMessage);
 
     grid.engine.nodes.forEach((node) => wireWidget(node.el));
     scrollConversation();
+    refreshUi();  // initial (idle) button state
+
+    // Resume: a working draft already exists (tab reload, navigation back). Re-enter
+    // and poll — the first response settles the phase (running vs. ready/failed review).
+    if (workingVersionId) enterRunning(workingVersionId);
 
     return { grid };
 };

@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import json
 
-from yaffo.db import db
+from sqlalchemy.orm import Session
+
 from yaffo.db.repositories.data_query_repository import AGGREGATE_OPS, SOURCES, resolve_query
 from yaffo.page_builder.tool_providers.tool_provider_types import (
     CallToolReturn,
@@ -42,6 +43,11 @@ _SAMPLE_SIZE = 5
 class DataQueryToolProvider(ToolProvider):
     TOOL_NAME = "run_data_query"
 
+    def __init__(self, session: Session):
+        # Injected so the provider works under either a request's db.session or a
+        # background worker's SessionFactory session (no global db.session).
+        self.session = session
+
     def get_tools(self) -> list[RawToolDefinition]:
         return [
             RawToolDefinition(
@@ -63,7 +69,7 @@ class DataQueryToolProvider(ToolProvider):
         # The resolver validates the query; an invalid one is fed back to the model
         # (with the precise error) so it can correct the source/filters.
         try:
-            data = resolve_query(db.session, args)
+            data = resolve_query(self.session, args)
         except ValueError as exc:
             return f"Invalid query: {exc}"
         return truncate_tool_result(_preview(args.get("source"), data))

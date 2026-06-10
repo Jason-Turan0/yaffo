@@ -9,10 +9,13 @@ and edited as a side effect of the model's tool calls (server-side), so the
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, Optional
+from typing import Callable, Iterator, Optional
+
+from sqlalchemy.orm import Session
 
 from yaffo.page_builder.model_clients import (
     AnthropicModelClient,
+    ModelAlias,
     ModelClient,
     ToolCall,
     ToolCallResult,
@@ -46,6 +49,7 @@ class AgentEvent:
       - "tool":      a tool finished (`name`, `tool_input`, `result`, `is_error`).
       - "done":      the model stopped without calling tools (`stop_reason`).
       - "error":     the run failed or hit a cap (`text` describes it).
+      - "cancelled": a cancel was requested between iterations and the loop stopped.
     """
     type: str
     text: str = ""
@@ -74,14 +78,25 @@ class PageBuilderAgent:
                     raise ValueError(f"Duplicate tool name: {tool.name}")
                 self._provider_by_tool[tool.name] = provider
 
-    def run_events(self, user_message: str) -> Iterator[AgentEvent]:
+    def run_events(
+        self, user_message: str, should_cancel: Optional[Callable[[], bool]] = None
+    ) -> Iterator[AgentEvent]:
         """Drive the tool-use loop, yielding an AgentEvent per step (assistant
         text, each finished tool call, and a terminal done/error) so callers can
-        stream progress."""
+        stream progress.
+
+        `should_cancel`, if given, is polled at the top of each iteration (before
+        the expensive model call); when it returns True the loop stops with a
+        terminal "cancelled" event. This is cooperative cancel at the iteration
+        boundary — an in-flight model call still runs to completion (responsive
+        mid-call cancel is a later, stream-level concern)."""
         self.client.add_user_message(user_message)
         iterations = 0
         try:
             while iterations < self.max_iterations:
+                if should_cancel is not None and should_cancel():
+                    yield AgentEvent("cancelled", text="Generation cancelled.", stop_reason="cancelled")
+                    return
                 iterations += 1
                 response = self.client.call_model_api()
                 if response is None:
@@ -144,7 +159,7 @@ class PageBuilderAgent:
                 text = event.text or text
                 stop_reason = event.stop_reason
                 ok = True
-            elif event.type == "error":
+            elif event.type in ("error", "cancelled"):
                 text = event.text
                 stop_reason = event.stop_reason
                 ok = False
@@ -166,20 +181,23 @@ class PageBuilderAgent:
 
 
 def create_agent(
-    page_id: int,
+    version_id: int,
     *,
-    current_widgets: Optional[list[dict]] = None,
-    model: Optional[str] = None,
-    api_key: Optional[str] = None,
+    model: ModelAlias,
+    api_key: str,
+    session: Session,
     max_iterations: int = 25,
 ) -> PageBuilderAgent:
-    """Wire the default agent for a page: data-query + widget tools, the stable
-    system prompt, and an Anthropic client. `current_widgets` is the page's current
-    widget content (incl. unsaved client drafts) so edits merge onto what the user
-    actually sees."""
+    """Wire the agent for a working version: data-query + widget tools, the stable
+    system prompt, and an Anthropic client. The widget tool persists directly into
+    `version_id`. `model` and `api_key` are required — the caller resolves them
+    (llm_config.get_model(session) / get_api_key()), so neither this nor the client
+    falls through to db.session or a global key lookup. `session` is the DB session
+    the tools read/write under (a request's db.session or a worker's SessionFactory
+    session)."""
     providers: list[ToolProvider] = [
-        DataQueryToolProvider(),
-        WidgetToolProvider(page_id, current_widgets=current_widgets),
+        DataQueryToolProvider(session=session),
+        WidgetToolProvider(version_id, session=session),
     ]
     client = AnthropicModelClient(
         model=model,

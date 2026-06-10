@@ -221,6 +221,44 @@ class TestTermination:
         assert events[-1].stop_reason == "max_iterations"
 
 
+# --- cancellation ----------------------------------------------------------
+
+class TestCancellation:
+    def test_cancel_before_first_call_makes_no_model_call(self):
+        provider = StubToolProvider()
+        client = StubModelClient([_resp(text="hi")])
+        agent = PageBuilderAgent(client, [provider])
+        events = list(agent.run_events(USER_MSG, should_cancel=lambda: True))
+
+        assert client.call_count == 0  # the model was never called
+        assert [e.type for e in events] == ["cancelled"]
+        assert events[-1].stop_reason == "cancelled"
+        assert provider.disconnects == 1  # cleanup still ran
+
+    def test_cancel_between_iterations_stops_before_the_next_model_call(self):
+        provider = StubToolProvider()
+        # Always returns a tool call -> the loop would never end on its own.
+        client = StubModelClient([_resp(tool_calls=[_call()]), _resp(tool_calls=[_call()])])
+        checks = {"n": 0}
+
+        def should_cancel():
+            # False at the top of iteration 1, True at the top of iteration 2.
+            checks["n"] += 1
+            return checks["n"] > 1
+
+        agent = PageBuilderAgent(client, [provider], max_iterations=10)
+        events = list(agent.run_events(USER_MSG, should_cancel=should_cancel))
+
+        assert client.call_count == 1  # only the first iteration reached the model
+        assert events[-1].type == "cancelled"
+
+    def test_no_cancel_callback_runs_normally(self):
+        client = StubModelClient([_resp(text="all done")])
+        agent = PageBuilderAgent(client, [StubToolProvider()])
+        events = list(agent.run_events(USER_MSG))  # should_cancel defaults to None
+        assert [e.type for e in events] == ["assistant", "done"]
+
+
 # --- provider lifecycle & wiring -------------------------------------------
 
 class TestProviderLifecycle:

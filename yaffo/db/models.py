@@ -189,6 +189,29 @@ class ApplicationSettings(db.Model):
     value = db.Column(db.String)
 
 
+# PageVersion generation state machine (see docs/ai-page-builder-async-generation.md).
+# A version is either "working" (IN_PROGRESS/READY/FAILED) or a committed snapshot
+# (ACCEPTED); CANCELLED is transient — cancelled versions are deleted.
+PAGE_VERSION_STATUS_IN_PROGRESS = "IN_PROGRESS"
+PAGE_VERSION_STATUS_READY = "READY"
+PAGE_VERSION_STATUS_FAILED = "FAILED"
+PAGE_VERSION_STATUS_ACCEPTED = "ACCEPTED"
+PAGE_VERSION_STATUS_CANCELLED = "CANCELLED"
+
+# Conversation entry kinds. `user`/`assistant` are real chat turns (the only kinds
+# fed back to the model); `status` is a tool-progress line ("Creating widget…") and
+# `error` a failure line — both UI-only annotations persisted so the polled feed can
+# replay the full back-and-forth, not just a live stream.
+CONVERSATION_TYPE_USER = "user"
+CONVERSATION_TYPE_ASSISTANT = "assistant"
+CONVERSATION_TYPE_STATUS = "status"
+CONVERSATION_TYPE_ERROR = "error"
+
+# Kinds that are real conversational turns (rebuilt as model context on a follow-up
+# / copied on fork); the rest are display-only annotations.
+CONVERSATION_MODEL_TYPES = (CONVERSATION_TYPE_USER, CONVERSATION_TYPE_ASSISTANT)
+
+
 class CustomPage(db.Model):
     __tablename__ = "custom_pages"
 
@@ -196,12 +219,56 @@ class CustomPage(db.Model):
     title = db.Column(db.String, nullable=False, default="Untitled Page")
     subtitle = db.Column(db.String, nullable=False, default="")
     show_title = db.Column(db.Boolean, nullable=False, default=True)
+    # The live version shown in presentation, and the in-flight version a chat run
+    # is generating into (or NULL — its presence is the UI-lock predicate). Plain
+    # pointers into page_versions; the page <-> version relationship is circular, so
+    # these use post_update to let the flush order them after the version exists.
+    published_version_id = db.Column(db.Integer, db.ForeignKey("page_versions.id"), nullable=True)
+    working_version_id = db.Column(db.Integer, db.ForeignKey("page_versions.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    versions = db.relationship(
+        "PageVersion",
+        back_populates="page",
+        cascade="all, delete-orphan",
+        foreign_keys="PageVersion.page_id",
+    )
+    published_version = db.relationship(
+        "PageVersion", foreign_keys=[published_version_id], post_update=True
+    )
+    working_version = db.relationship(
+        "PageVersion", foreign_keys=[working_version_id], post_update=True
+    )
+
+    # Widgets and the conversation are version-scoped now; presentation/design read
+    # through the published version so callers keep using page.widgets/page.messages.
+    @property
+    def widgets(self):
+        return self.published_version.widgets if self.published_version else []
+
+    @property
+    def messages(self):
+        return self.published_version.messages if self.published_version else []
+
+
+class PageVersion(db.Model):
+    __tablename__ = "page_versions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    page_id = db.Column(db.Integer, db.ForeignKey("custom_pages.id", ondelete="CASCADE"), nullable=False)
+    status = db.Column(db.String, nullable=False, default=PAGE_VERSION_STATUS_READY)
+    # The version this was forked from — lineage for a possible future revert.
+    parent_version_id = db.Column(db.Integer, db.ForeignKey("page_versions.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    started_at = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    error = db.Column(db.Text, nullable=True)
+
+    page = db.relationship("CustomPage", back_populates="versions", foreign_keys=[page_id])
     widgets = db.relationship(
         "Widget",
-        back_populates="page",
+        back_populates="version",
         cascade="all, delete-orphan",
         # No list order of its own — widgets are placed on a 2D grid; iterate in
         # reading order (top-to-bottom, left-to-right) for deterministic rendering.
@@ -209,7 +276,7 @@ class CustomPage(db.Model):
     )
     messages = db.relationship(
         "Conversation",
-        back_populates="page",
+        back_populates="version",
         cascade="all, delete-orphan",
         order_by="Conversation.id",
     )
@@ -219,9 +286,14 @@ class Widget(db.Model):
     __tablename__ = "widgets"
 
     # GUID minted server-side by the tool or client-side for manual adds, so a
-    # draft's id is stable from creation through Save.
+    # draft's id is stable from creation through Save. Identity is per-version: a
+    # fork copies a widget into a new version keeping its GUID, so the same GUID
+    # recurs across versions (the same widget evolving) -- hence the composite PK.
     id = db.Column(db.String, primary_key=True)
-    page_id = db.Column(db.Integer, db.ForeignKey("custom_pages.id", ondelete="CASCADE"), nullable=False)
+    version_id = db.Column(
+        db.Integer, db.ForeignKey("page_versions.id", ondelete="CASCADE"),
+        primary_key=True, nullable=False,
+    )
     title = db.Column(db.String, default="Untitled widget")
     data_query = db.Column(db.JSON, default=dict)  # named queries (author / AI-defined)
     state = db.Column(db.JSON, default=dict)  # widget-owned persisted UI state
@@ -233,16 +305,18 @@ class Widget(db.Model):
     grid_w = db.Column(db.Integer, default=4)
     grid_h = db.Column(db.Integer, default=3)
 
-    page = db.relationship("CustomPage", back_populates="widgets")
+    version = db.relationship("PageVersion", back_populates="widgets")
 
 
 class Conversation(db.Model):
     __tablename__ = "conversations"
 
     id = db.Column(db.Integer, primary_key=True)
-    page_id = db.Column(db.Integer, db.ForeignKey("custom_pages.id", ondelete="CASCADE"), nullable=False)
-    role = db.Column(db.String, nullable=False)  # user | assistant
+    version_id = db.Column(db.Integer, db.ForeignKey("page_versions.id", ondelete="CASCADE"), nullable=False)
+    # CONVERSATION_TYPE_*: user | assistant | status | error. `status`/`error` are
+    # display-only; only user/assistant are replayed to the model.
+    type = db.Column(db.String, nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    page = db.relationship("CustomPage", back_populates="messages")
+    version = db.relationship("PageVersion", back_populates="messages")

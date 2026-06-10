@@ -1,24 +1,24 @@
 """Widget tools: create_widget and update_widget.
 
-Tools the agent calls to draft or edit widgets on a page. The provider is scoped
-to a single page_id at construction, so the model cannot target another page — it
-only supplies content.
+Tools the agent calls to create or edit widgets on a page. The provider is scoped
+to a single working **version** at construction, so the model can only touch that
+version — it supplies content; the server owns placement and persistence.
 
-These tools do **not** persist: generation is non-destructive. Each call produces
-a `WidgetDraft` that is streamed to the browser and held there until the user
-clicks Save (which is the only thing that writes to the store). Within one run the
-provider keeps the drafts in memory so the model can create a widget and then
-update it, and so edits to an already-saved widget merge onto its current content.
+These tools **persist directly to the version in the database** (via
+``upsert_version_widget``): the working version is the durable draft, so a
+generation's widgets survive disconnect and the browser observes them by polling.
+The published page is untouched until the version is accepted (published).
 """
 from __future__ import annotations
 
 import dataclasses
-from dataclasses import asdict
 from typing import Optional, get_args, get_type_hints
 
-from yaffo.db import db
+from sqlalchemy.orm import Session
+
 from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.db.repositories.data_query_repository import DATA_QUERY_SCHEMA
+from yaffo.page_builder import serializers
 from yaffo.page_builder.schemas import WidgetDraft
 from yaffo.page_builder.tool_providers.tool_provider_types import (
     CallToolReturn,
@@ -92,27 +92,12 @@ class WidgetToolProvider(ToolProvider):
     CREATE = "create_widget"
     UPDATE = "update_widget"
 
-    def __init__(self, page_id: int, current_widgets: Optional[list[dict]] = None):
-        self.page_id = page_id
-        # Widgets keyed by id. Seeded with the page's *current* content (incl.
-        # unsaved client drafts) so an update merges onto what the user actually
-        # sees, then holds whatever the model creates/edits this run. Not
-        # persisted — these are streamed to the browser for Save to commit.
-        self._drafts: dict[str, WidgetDraft] = {
-            c["id"]: WidgetDraft(
-                id=c["id"],
-                title=c.get("title") or "",
-                data_query=c.get("data_query") or {},
-                html=c.get("html") or "",
-                css=c.get("css") or "",
-                js=c.get("js") or "",
-                grid_w=int(c.get("grid_w", 4)),
-                grid_h=int(c.get("grid_h", 3)),
-                state=c.get("state") or {},
-            )
-            for c in (current_widgets or [])
-            if c.get("id")
-        }
+    def __init__(self, version_id: int, session: Session):
+        # The working version this run writes into, and the session used to persist
+        # (a request's db.session or a worker's SessionFactory session — the tool
+        # doesn't care which).
+        self.version_id = version_id
+        self.session = session
 
     def get_tools(self) -> list[RawToolDefinition]:
         return [
@@ -153,54 +138,39 @@ class WidgetToolProvider(ToolProvider):
         return f"Unknown tool: {name}"
 
     def _create(self, args: dict) -> ToolResult:
-        draft = WidgetDraft(
-            id=page_repo.new_widget_id(),
-            title=args.get("title") or "Untitled widget",
-            data_query=args.get("data_query") or {},
-            html=args.get("html", ""),
-            css=args.get("css", ""),
-            js=args.get("js", ""),
-            grid_x=_opt_int(args.get("grid_x")),
-            grid_y=_opt_int(args.get("grid_y")),
-            grid_w=int(args.get("grid_w", 4)),
-            grid_h=int(args.get("grid_h", 3)),
-        )
-        self._drafts[draft.id] = draft
+        # Persist a new widget into the version. grid_x/grid_y omitted -> the repo
+        # places it at the bottom of the current grid (computed from the persisted
+        # set, so sequential creates stack rather than collide).
+        content = {
+            "id": page_repo.new_widget_id(),
+            "title": args.get("title") or "Untitled widget",
+            "data_query": args.get("data_query") or {},
+            "html": args.get("html", ""),
+            "css": args.get("css", ""),
+            "js": args.get("js", ""),
+            "grid_x": _opt_int(args.get("grid_x")),
+            "grid_y": _opt_int(args.get("grid_y")),
+            "grid_w": int(args.get("grid_w", 4)),
+            "grid_h": int(args.get("grid_h", 3)),
+        }
+        widget = page_repo.upsert_version_widget(self.session, self.version_id, content)
         return ToolResult(
-            model_text=f'Created widget {draft.id} "{draft.title}".',
-            host_data=asdict(draft),
+            model_text=f'Created widget {widget.id} "{widget.title}".',
+            host_data=serializers.widget_draft(widget),
         )
 
     def _update(self, args: dict) -> CallToolReturn:
         widget_id = args.get("widget_id")
         if not widget_id:
             return "update_widget requires widget_id."
-        # Merge onto the draft if we created/edited it this run, else onto the
-        # widget's currently-saved content. Reading the store is not persisting.
-        draft = self._drafts.get(widget_id) or self._load_saved(widget_id)
-        if draft is None:
-            return f"Widget {widget_id} not found on page {self.page_id}."
+        if page_repo.get_version_widget(self.session, self.version_id, widget_id) is None:
+            return f"Widget {widget_id} not found on this page version."
+        # Only the supplied fields change; omitted ones (incl. position) are left
+        # as-is by the repo merge.
         changed = [k for k in _CONTENT_FIELDS if args.get(k) is not None]
-        for key in changed:
-            setattr(draft, key, args[key])
-        self._drafts[draft.id] = draft
+        content = {"id": widget_id, **{k: args[k] for k in changed}}
+        widget = page_repo.upsert_version_widget(self.session, self.version_id, content)
         return ToolResult(
-            model_text=f'Updated widget {draft.id} "{draft.title}" (changed: {", ".join(changed) or "nothing"}).',
-            host_data=asdict(draft),
-        )
-
-    def _load_saved(self, widget_id: str) -> "WidgetDraft | None":
-        widget = page_repo.get_widget(db.session, self.page_id, widget_id)
-        if widget is None:
-            return None
-        return WidgetDraft(
-            id=widget.id,
-            title=widget.title,
-            data_query=widget.data_query,
-            html=widget.html,
-            css=widget.css,
-            js=widget.js,
-            grid_w=widget.grid_w,
-            grid_h=widget.grid_h,
-            state=widget.state,
+            model_text=f'Updated widget {widget.id} "{widget.title}" (changed: {", ".join(changed) or "nothing"}).',
+            host_data=serializers.widget_draft(widget),
         )

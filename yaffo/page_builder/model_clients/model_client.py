@@ -25,7 +25,6 @@ import anthropic
 
 from yaffo.common import ROOT_DIR
 from yaffo.logging_config import get_logger
-from yaffo.page_builder import llm_config
 from yaffo.page_builder.model_clients.model_client_types import (
     ModelAlias,
     ModelClient,
@@ -86,7 +85,7 @@ class AnthropicModelClient(ModelClient):
     def __init__(
         self,
         *,
-        model: Optional[ModelAlias] = None,
+        model: ModelAlias,
         system_prompt: str,
         tools: Optional[list[dict]] = None,
         output_schema: Optional[dict] = None,
@@ -96,15 +95,15 @@ class AnthropicModelClient(ModelClient):
         # (call_model_api) avoids HTTP timeouts at this size. Opus 4.8 allows 128K.
         max_tokens: int = 64000,
         log_dir: Optional[Path] = None,
-        api_key: Optional[str] = None,
+        api_key: str,
     ):
-        self.model: ModelAlias = model or llm_config.get_model()  # type: ignore[assignment]
+        self.model: ModelAlias = model
         self.system_prompt = system_prompt
         self.tools = tools or []
         self.output_schema = output_schema
         self.max_tokens = max_tokens
         self.messages: list[dict] = []
-        self._client = anthropic.Anthropic(api_key=api_key or llm_config.get_api_key())
+        self._client = anthropic.Anthropic(api_key=api_key)
         self.log_dir = Path(log_dir) if log_dir else (ROOT_DIR / "model_logs")
         self._call_count = 0
         self.task_start = datetime.now()

@@ -127,45 +127,67 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_application_settings_name ON application_settings(name)")
 
 
+    # The page builder is versioned: a page points at its live (published) version
+    # and at most one in-flight (working) version; widgets + the conversation are
+    # version-scoped. See docs/ai-page-builder-async-generation.md.
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS custom_pages (
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
                        title TEXT NOT NULL,
                        subtitle TEXT NOT NULL,
                        show_title INTEGER NOT NULL DEFAULT 1,
-                       value TEXT,
+                       published_version_id INTEGER,
+                       working_version_id INTEGER,
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                    )
                    """)
 
     cursor.execute("""
-                   CREATE TABLE IF NOT EXISTS widgets (
-                       id TEXT PRIMARY KEY,
+                   CREATE TABLE IF NOT EXISTS page_versions (
+                       id INTEGER PRIMARY KEY AUTOINCREMENT,
                        page_id INTEGER NOT NULL,
+                       status TEXT NOT NULL DEFAULT 'IN_PROGRESS',
+                       parent_version_id INTEGER,
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                       started_at TIMESTAMP,
+                       completed_at TIMESTAMP,
+                       error TEXT,
+                       FOREIGN KEY(page_id) REFERENCES custom_pages(id) ON DELETE CASCADE
+                   )
+                   """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_page_versions_page_id ON page_versions(page_id)")
+
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS widgets (
+                       id TEXT NOT NULL,
+                       version_id INTEGER NOT NULL,
                        title TEXT NOT NULL DEFAULT "Untitled widget",
                        data_query TEXT,
                        state TEXT,
                        html TEXT,
                        css TEXT,
-                       js TEXT,                        
+                       js TEXT,
                        grid_x INTEGER NOT NULL DEFAULT 0,
                        grid_y INTEGER NOT NULL DEFAULT 0,
                        grid_w INTEGER NOT NULL DEFAULT 4,
                        grid_h INTEGER NOT NULL DEFAULT 3,
-                       FOREIGN KEY(page_id) REFERENCES custom_pages(id) ON DELETE CASCADE
+                       PRIMARY KEY (id, version_id),
+                       FOREIGN KEY(version_id) REFERENCES page_versions(id) ON DELETE CASCADE
                    )
                    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_widgets_version_id ON widgets(version_id)")
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS conversations (
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      page_id INTEGER NOT NULL,
-                      role TEXT NOT NULL,
+                      version_id INTEGER NOT NULL,
+                      type TEXT NOT NULL,
                       content TEXT NOT NULL,
-                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-                      FOREIGN KEY(page_id) REFERENCES custom_pages(id) ON DELETE CASCADE
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                      FOREIGN KEY(version_id) REFERENCES page_versions(id) ON DELETE CASCADE
                        )
                    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_conversations_version_id ON conversations(version_id)")
 
     conn.commit()
 

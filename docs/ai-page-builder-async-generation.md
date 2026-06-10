@@ -48,7 +48,8 @@ untouched until the user clicks Save. So:
 
 ```
 CustomPage         id, title, subtitle, show_title, timestamps,
-                   published_version_id  → PageVersion   (the live version)
+                   published_version_id  → PageVersion   (the live version, shown in presentation)
+                   working_version_id    → PageVersion   (the in-flight version, or NULL; the UI-lock predicate)
 
 PageVersion        id, page_id, status, created_at, started_at, completed_at,
                    error, parent_version_id (the version it was forked from)
@@ -62,7 +63,22 @@ Conversation       …existing fields…, version_id        (was page_id)
 - **Conversation moves to the version** (per your note: "tied to a version so we
   can display the back-and-forth and status updates"). The transcript for one
   generation — user message, assistant turns, and interleaved status lines
-  ("Creating widget…", "Done", errors) — lives on its version.
+  ("Creating widget…", "Done", errors) — lives on its version. **Forking copies
+  the prior conversation into the new version** (resolved Q2), so follow-ups like
+  "make it bigger" have context and the transcript reads continuously.
+- **Every page always has one `ACCEPTED` version that owns its live widgets.**
+  `create_page` mints an initial empty `ACCEPTED` version and sets
+  `published_version_id`; a brand-new manual page is just a page whose committed
+  version is empty. Manual edits mutate that version in place (no fork — resolved
+  Q1: only AI requests fork).
+- **`published_version_id` vs the `ACCEPTED` status are different concepts that
+  compose.** `ACCEPTED` is the *status* of any saved snapshot; `published_version_id`
+  points at the one accepted version that is currently **live**. Keeping them
+  distinct is what makes a future revert-to-prior-accepted possible without
+  touching the state machine.
+- **`working_version_id`** points at the page's single in-flight version (at most
+  one at a time) or is `NULL`. It *is* the UI-lock predicate: the page is locked
+  iff `working_version_id is not None`. Fork sets it; Save and Cancel clear it.
 - **`PageVersion.status`** is the generation state machine (below). Note: we
   *removed* `Widget.status` earlier; generation status belongs on the version, not
   the widget — this is where it lands.
@@ -70,44 +86,71 @@ Conversation       …existing fields…, version_id        (was page_id)
 ### Status state machine
 
 ```
-            fork (copy widgets)
-published ───────────────────────▶ IN_PROGRESS
-                                      │   │
-                          task ok ────┘   └──── task error
-                                      ▼            ▼
-                                    READY        FAILED
-                                      │
-                            Save (publish) │      Cancel (any state)
-                                      ▼            ▼
-              set page.published_version_id   CANCELLED → delete version
+ACCEPTED (published) ──fork(copy widgets + convo)──▶ IN_PROGRESS
+                                                       │   │
+                                           task ok ────┘   └──── task error
+                                                   ▼            ▼
+                                                 READY        FAILED
+                                                   │            │
+                                   Save ──▶ ACCEPTED            │
+                                   (publish, unlock)            │
+                                                   │            │
+                       Cancel (IN_PROGRESS/READY/FAILED)        │
+                                                   ▼────────────┘
+                                               CANCELLED → delete version, revert
 ```
 
-| status | meaning | Save | Cancel |
-| --- | --- | --- | --- |
-| `IN_PROGRESS` | task running | disabled | yes → abort + delete |
-| `READY` | generation succeeded | **enabled** | yes → delete, revert |
-| `FAILED` | generation errored | disabled | yes → delete, revert |
-| `CANCELLED` | user cancelled | — | (terminal; version deleted) |
+The **UI is locked only while `IN_PROGRESS`** — the model is actively mutating the
+version, so the grid and Send are disabled and the only action is Cancel. Once the run
+settles into **review (`READY`/`FAILED`) the draft is the user's again**: they can
+**move/resize widgets** and **send follow-up messages to keep iterating on the same
+working version** (each follow-up commits the client's current widgets, then re-runs —
+see Lifecycle). Save (enabled at `READY`) publishes; Cancel discards. *(Revised from
+the original "locked through review / pure publish" idea — manual edits during review
+need to be captured, so **publish is not payload-free**: it commits the client's
+widgets onto the version before flipping `published_version_id`.)*
+
+| status | grid/Send | meaning | Save | Cancel |
+| --- | --- | --- | --- | --- |
+| `ACCEPTED` | editable | published/live; manual edits mutate it in place | commits to published | n/a |
+| `IN_PROGRESS` | **locked** | task running (live updates + elapsed counter) | disabled | yes → abort, delete, revert |
+| `READY` | **editable** | generation succeeded, under review (move/iterate) | **enabled → publish** | yes → delete, revert |
+| `FAILED` | **editable** | generation errored (edit / retry via follow-up) | disabled | yes → delete, revert |
+| `CANCELLED` | — | user cancelled | — | (transient; version deleted) |
+
+A **send while `IN_PROGRESS`** is rejected (409); a send during review continues on the
+working version (no new fork).
 
 ## Lifecycle
 
-1. **Chat request** → server creates a new `PageVersion` (copy widgets from the
-   current/working version), `status = IN_PROGRESS`, appends the user message to
-   the version's conversation, enqueues a huey task, and returns the
-   `version_id` immediately (no long-held request).
+1. **Chat request** → if there's **no working version**, server forks a new
+   `PageVersion`, **seeding its widgets from the client's currently-shown set** (the
+   posted widget payload = published widgets + any unsaved manual edits, so
+   "manual-tweak-then-ask-AI" is preserved and `merge_widget_content` retires) and
+   **copying the prior conversation** into it. If a working version already exists
+   (review), it **continues on that version** instead: commit the client's current
+   widgets (manual moves) via `save_version_widgets`, `restart_version`
+   (`IN_PROGRESS`, reset timing). Either way: `status = IN_PROGRESS`, set
+   `working_version_id`, append the user message, enqueue a huey task, return the
+   `version_id` at once. A send while already `IN_PROGRESS` → 409.
 2. **Task** runs `PageBuilderAgent.run_events` (see `yaffo/page_builder/agent.py`).
    Each `widget_new` / `widget_updated` event is **written to the version's
    widgets** (the widget tool persists now — see *Impacted code*). Each assistant /
    status / error event is appended to the version's conversation. On clean finish
    → `READY`; on exception or `max_tokens` → `FAILED` (+ `error`).
-3. **Browser observes** by polling the version: it gets the conversation feed, the
-   status, and re-renders the version's widgets (reuse the existing
-   `…/widgets/<id>/frame` render, pointed at version widgets). A **live elapsed
-   counter** ticks client-side from `started_at` and freezes on a terminal status.
-4. **Save** (enabled only when `status == READY`) → publish: set
-   `page.published_version_id = version.id`, return to presentation.
+3. **Browser observes** by polling the version (`…/versions/<id>/status`): it gets the
+   conversation feed, the status, and re-renders the version's widgets. A **live
+   elapsed counter** ticks client-side from `started_at`. The grid + Send are locked
+   **only while `IN_PROGRESS`**; on `READY`/`FAILED` polling stops and the draft
+   becomes editable (move widgets, send follow-ups → step 1's continue branch).
+4. **Save** (enabled only when `status == READY`) → **commit the client's current
+   widgets** onto the version (`save_version_widgets`, capturing review-time moves),
+   then publish: set `page.published_version_id = version.id`, mark `ACCEPTED`, clear
+   `working_version_id`, return to presentation. (The old published version is dropped
+   on publish for now — retention is a future option, see open Q3.)
 5. **Cancel** → signal the task to stop, then **delete the version** (cascade its
-   widgets + conversation) and revert the UI to the previously published version.
+   widgets + conversation), clear `working_version_id`, and revert the UI to the
+   previously published version.
 
 ## Cancellation
 
@@ -124,17 +167,22 @@ Cooperative, two levels:
   aborting the stream when cancelled. **Document caveat:** without this, Cancel
   won't take effect until the in-flight call returns.
 
-On cancel: set `status = CANCELLED`, delete the version + children, leave
-`published_version_id` untouched (UI snaps back to the published version).
+On cancel: set `status = CANCELLED`, delete the version + children, clear
+`working_version_id`, and leave `published_version_id` untouched (UI snaps back to
+the published version).
 
 ## UI decisions (yours)
 
 - **Hide versioning from the user.** No version picker / history UI — "more
   confusing than helpful." Versions are an internal mechanism for durable
   in-progress generation, cancel/rollback, and conversation scoping.
+- **Lock the page to the working version** from fork until the user resolves it —
+  what's shown stays consistent with what the model is mutating; the only exits are
+  Save or Cancel (no manual editing mid-generation/review).
 - **Live elapsed counter** while `IN_PROGRESS` (from `started_at`), frozen on
   terminal status.
-- **Save** disabled unless the latest generation is `READY`.
+- **Save** disabled unless the latest generation is `READY`; it accepts the working
+  version (→ `ACCEPTED`) and publishes it.
 - **Cancel** deletes the working version and returns to the previous (published)
   version.
 
@@ -142,11 +190,16 @@ On cancel: set `status = CANCELLED`, delete the version + children, leave
 
 - **`yaffo/db/models.py`** — add `PageVersion`; move `Widget.page_id` →
   `version_id` and `Conversation.page_id` → `version_id`; add
-  `CustomPage.published_version_id`. Add a `PAGE_VERSION_STATUS_*` set.
+  `CustomPage.published_version_id` **and `working_version_id`**. Add a
+  `PAGE_VERSION_STATUS_*` set: `IN_PROGRESS`, `READY`, `FAILED`, `ACCEPTED`,
+  `CANCELLED`.
 - **`yaffo/db/repositories/custom_page_repository.py`** — version-aware reads;
-  `fork_version(page_id)` (copy widgets), `publish_version`, `delete_version`,
-  conversation/widget writes scoped to a version. `save_page_widgets` becomes
-  "write widgets into version N."
+  `fork_version(page_id, widgets)` (seed widgets from the posted set + copy the
+  prior conversation, set `working_version_id`), `publish_version(version_id)` (no
+  payload: mark `ACCEPTED`, set `published_version_id`, clear `working_version_id`),
+  `delete_version` (cancel/fail), conversation/widget writes scoped to a version.
+  `create_page` mints the initial empty `ACCEPTED` version. `save_page_widgets`
+  becomes "write widgets into version N" (the published version for manual edits).
 - **`yaffo/page_builder/tool_providers/widget_tool.py`** — the widget tool
   **persists to the working version** now instead of returning non-persisting
   `WidgetDraft`s. (Or: keep returning drafts, and the *task* writes them to the
@@ -164,19 +217,18 @@ On cancel: set `status = CANCELLED`, delete the version + children, leave
 
 ## Open questions / decisions to make next weekend
 
-1. **Manual edits vs versions.** Drag/resize/manual-add currently buffer
-   client-side and commit on Save. Do those also happen on a working version
-   (design mode always forks a draft version), or only AI requests create
-   versions? Cleanest: design mode operates on a working version; AI and manual
-   edits both write to it; Save publishes it.
-2. **Conversation continuity across versions.** Forking copies widgets — should it
-   copy the prior conversation too (so follow-ups like "make it bigger" have
-   context and the transcript is continuous)? Lean: yes, snapshot the conversation
-   into the new version. Alternative: page-scoped conversation, version-tagged
-   messages.
-3. **Retention.** Cancelled versions are deleted. Keep superseded *published*
-   versions for a future revert (the `GenWidgetVersion` idea in
-   `ai-page-builder.md`), or delete on publish? UI stays hidden either way.
+1. ✅ **Manual edits vs versions** — *resolved: only AI requests fork.* Drag/resize/
+   manual-add keep buffering client-side and commit via `save_page_widgets` onto the
+   page's published (`ACCEPTED`) version in place; no version is created. Only a chat
+   request forks a working version. Manual and AI paths stay distinct (smaller blast
+   radius than "design mode always forks").
+2. ✅ **Conversation continuity across versions** — *resolved: copy on fork.* Forking
+   snapshots the prior conversation into the new version, so follow-ups have context
+   and the transcript reads continuously. Conversation is version-scoped.
+3. **Retention.** Cancelled versions are deleted; superseded *published* versions are
+   currently deleted on publish too. Keeping them for a future revert (the
+   `GenWidgetVersion` idea in `ai-page-builder.md`) is left open — `parent_version_id`
+   leaves the door open without touching the state machine. UI stays hidden either way.
 4. **Poll vs SSE.** Polling matches the existing jobs pattern and is robust; SSE
    would be snappier. Start with polling; SSE later if the latency annoys.
 5. **Where does the cancel flag live** — re-read `version.status` from the DB each

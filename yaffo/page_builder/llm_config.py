@@ -68,8 +68,12 @@ def _api_key_status() -> dict:
 
 # ---- Model (ApplicationSettings) ------------------------------------------
 
-def get_model() -> str:
-    row = db.session.query(ApplicationSettings).filter_by(name=_MODEL_SETTING).first()
+def get_model(session=None) -> str:
+    """The selected model id. `session` is injected by the background worker (which
+    has no Flask app context, so the request-scoped db.session is unavailable);
+    request-path callers omit it and get db.session."""
+    session = session or db.session
+    row = session.query(ApplicationSettings).filter_by(name=_MODEL_SETTING).first()
     if row and row.value in _MODEL_IDS:
         return row.value
     return DEFAULT_MODEL

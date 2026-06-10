@@ -6,10 +6,12 @@ from yaffo.background_tasks.tasks.organize_photos import organize_photos_task
 from yaffo.background_tasks.tasks.complete_job import complete_job_task
 from yaffo.background_tasks.tasks.find_duplicates import find_duplicates_task
 from yaffo.background_tasks.tasks.remove_duplicates import remove_duplicates_task
+from yaffo.background_tasks.tasks.generate_page import generate_page_task
 
 # Re-export utilities for backward compatibility
 from yaffo.background_tasks.utils import (
     get_job_status,
+    get_version_status,
     load_assign_faces_task_data,
     schedule_job_completion,
     SessionFactory,
@@ -25,8 +27,10 @@ __all__ = [
     'complete_job_task',
     'find_duplicates_task',
     'remove_duplicates_task',
+    'generate_page_task',
     # Utilities (for backward compatibility)
     'get_job_status',
+    'get_version_status',
     'load_assign_faces_task_data',
     'schedule_job_completion',
     'SessionFactory',

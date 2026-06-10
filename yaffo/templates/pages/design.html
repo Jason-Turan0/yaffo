@@ -57,7 +57,8 @@
 <script src="{{ url_for('static', filename='pages/detail.js') }}"></script>
 <script>
     window.PHOTO_ORGANIZER.pageDetail = window.PHOTO_ORGANIZER.initPageDetail({{ page.title | tojson }});
-    window.PHOTO_ORGANIZER.pageGrid = window.PHOTO_ORGANIZER.initDesignGrid({{ page.id }}, window.APP_CONFIG);
+    window.PHOTO_ORGANIZER.pageGrid = window.PHOTO_ORGANIZER.initDesignGrid(
+        {{ page.id }}, {{ page.working_version_id | tojson }}, '{{ (page.working_version or page.published_version).status  }}',  window.APP_CONFIG);
     window.PHOTO_ORGANIZER.initWidgetBroker({{ page.id }}, window.APP_CONFIG);
 </script>
 {% endblock %}

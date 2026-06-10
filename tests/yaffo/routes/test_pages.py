@@ -5,14 +5,15 @@ codes, redirects, 404s, and the database side-effects each route commits. Stubbe
 data resolution (resolve_data / resolve_query) and the model are not asserted on
 for content -- the chat route's generation path is driven by a fake agent.
 """
-import json
-
 import pytest
 
 from yaffo.db import db
-from yaffo.db.models import Conversation, Widget
+from yaffo.db.models import (
+    PAGE_VERSION_STATUS_IN_PROGRESS,
+    PAGE_VERSION_STATUS_READY,
+    Widget,
+)
 from yaffo.db.repositories import custom_page_repository as page_repo
-from yaffo.page_builder.agent import AgentEvent
 
 pytestmark = pytest.mark.unit
 
@@ -29,12 +30,6 @@ def _save_widget(page_id, wid="w1", **over):
             "js": "/*probe*/", "x": 0, "y": 0, "w": 4, "h": 3}
     item.update(over)
     page_repo.save_page_widgets(db.session, page_id, [item])
-
-
-def _records(resp):
-    """Parse a newline-delimited-JSON stream response into a list of records."""
-    db.session.expire_all()  # the stream committed in its own request context
-    return [json.loads(line) for line in resp.get_data(as_text=True).splitlines() if line.strip()]
 
 
 def _reload_page(page_id):
@@ -228,70 +223,185 @@ class TestWidgetState:
         assert client.post(f"/pages/{pid}/widgets/nope/state", json={"state": {}}).status_code == 404
 
 
-# --- POST /pages/<id>/chat : guard paths (no API key) ----------------------
+# --- POST /pages/<id>/chat : enqueue async generation ----------------------
+
+@pytest.fixture
+def with_key_and_task(monkeypatch):
+    """Configure an API key and capture enqueued generation tasks instead of
+    handing them to huey, so the route's fork + enqueue is exercised without a
+    worker. Returns the list of (args, kwargs) the task was called with."""
+    monkeypatch.setattr("yaffo.page_builder.llm_config.get_api_key", lambda: "test-key")
+    calls = []
+    monkeypatch.setattr("yaffo.routes.pages.generate_page_task",
+                        lambda *a, **k: calls.append((a, k)))
+    return calls
+
 
 class TestChatGuards:
-    def test_empty_message_streams_only_done(self, client):
+    def test_empty_message_is_400_and_does_not_fork(self, client):
         pid = _make_page()
         resp = client.post(f"/pages/{pid}/chat", json={"message": "  "})
-        assert resp.status_code == 200
-        assert _records(resp) == [{"event": "done"}]
+        assert resp.status_code == 400
+        assert "error" in resp.get_json()
+        assert _reload_page(pid).working_version_id is None
 
-    def test_no_api_key_message_and_persists_user_turn(self, client):
+    def test_no_api_key_is_400_and_does_not_fork(self, client):
+        # The autouse no_api_key fixture leaves generation disabled.
         pid = _make_page()
         resp = client.post(f"/pages/{pid}/chat", json={"message": "build a gallery"})
-        events = _records(resp)
-        assert events[-1] == {"event": "done"}
-        assert any(e["event"] == "message" and "API key" in e["content"] for e in events)
-        # The user turn and the assistant's no-key reply are both persisted.
-        roles = [(m.role, m.content) for m in _reload_page(pid).messages]
-        assert roles[0] == ("user", "build a gallery")
-        assert any(role == "assistant" and "API key" in content for role, content in roles)
+        assert resp.status_code == 400
+        assert "API key" in resp.get_json()["error"]
+        assert _reload_page(pid).working_version_id is None
 
     def test_unknown_page_404(self, client):
         assert client.post("/pages/999/chat", json={"message": "hi"}).status_code == 404
 
 
-# --- POST /pages/<id>/chat : mocked generation happy path ------------------
-
-class _FakeAgent:
-    def __init__(self, events):
-        self._events = events
-
-    def run_events(self, user_message):
-        yield from self._events
-
-
-class TestChatGeneration:
-    @pytest.fixture
-    def with_agent(self, monkeypatch):
-        """Pretend a key is configured and swap the real agent for one that emits a
-        canned assistant turn + a create_widget tool result + done."""
-        monkeypatch.setattr("yaffo.page_builder.llm_config.get_api_key", lambda: "test-key")
-        widget = {"id": "g1", "title": "Gallery", "html": "<div>", "css": "", "js": "",
-                  "data_query": {}, "grid_w": 4, "grid_h": 3}
-        events = [
-            AgentEvent("assistant", text="Here is a gallery."),
-            AgentEvent("tool", name="create_widget", tool_result_data=widget),
-            AgentEvent("done"),
-        ]
-        monkeypatch.setattr("yaffo.routes.pages.create_agent",
-                            lambda *a, **k: _FakeAgent(events))
-        return widget
-
-    def test_streams_message_status_widget_and_done(self, client, with_agent):
+class TestChatEnqueue:
+    def test_forks_version_persists_user_turn_and_enqueues(self, client, with_key_and_task):
         pid = _make_page()
         resp = client.post(f"/pages/{pid}/chat", json={"message": "make a gallery", "widgets": []})
-        events = _records(resp)
-        kinds = [e["event"] for e in events]
-        assert kinds == ["message", "status", "widget_new", "done"]
-        assert events[2]["widget"] == with_agent
+        assert resp.status_code == 202
+        version_id = resp.get_json()["version_id"]
 
-    def test_persists_messages_but_not_widgets(self, client, with_agent):
+        page = _reload_page(pid)
+        assert page.working_version_id == version_id  # UI is locked to the new version
+        # The user turn lives on the working version, not the published feed.
+        version = page_repo.get_version(db.session, version_id)
+        assert [(m.type, m.content) for m in version.messages] == [("user", "make a gallery")]
+        # The background task was enqueued with (version_id, message, widget_errors).
+        (args, _kwargs) = with_key_and_task[0]
+        assert args[0] == version_id
+        assert args[1] == "make a gallery"
+
+    def test_seeds_working_version_from_published_widgets_when_omitted(self, client, with_key_and_task):
         pid = _make_page()
-        client.post(f"/pages/{pid}/chat", json={"message": "make a gallery", "widgets": []})
-        roles = [(m.role, m.content) for m in _reload_page(pid).messages]
-        assert ("user", "make a gallery") in roles
-        assert ("assistant", "Here is a gallery.") in roles
-        # Generation is non-destructive: the streamed widget is a draft, unsaved.
-        assert db.session.query(Widget).count() == 0
+        _save_widget(pid, "w1", title="Saved")
+        resp = client.post(f"/pages/{pid}/chat", json={"message": "tweak it"})  # widgets omitted
+        version_id = resp.get_json()["version_id"]
+        version = page_repo.get_version(db.session, version_id)
+        assert [(w.id, w.title) for w in version.widgets] == [("w1", "Saved")]
+
+    def test_no_working_version_means_no_enqueue_on_guard(self, client):
+        # Guard paths must not enqueue (no key here via the autouse fixture).
+        pid = _make_page()
+        client.post(f"/pages/{pid}/chat", json={"message": "hi"})
+        assert _reload_page(pid).working_version_id is None
+
+    def test_follow_up_continues_on_the_same_working_version(self, client, with_key_and_task):
+        pid = _make_page()
+        v1 = client.post(f"/pages/{pid}/chat", json={"message": "build", "widgets": []}).get_json()["version_id"]
+        # Simulate the run finishing (the task is stubbed); the draft is now in review.
+        page_repo.set_version_status(db.session, v1, PAGE_VERSION_STATUS_READY, completed=True)
+
+        resp = client.post(f"/pages/{pid}/chat", json={"message": "make it bigger", "widgets": []})
+        assert resp.status_code == 202
+        assert resp.get_json()["version_id"] == v1  # same version, no new fork
+
+        version = page_repo.get_version(db.session, v1)
+        assert version.status == PAGE_VERSION_STATUS_IN_PROGRESS  # restarted
+        assert [m.content for m in version.messages if m.type == "user"] == ["build", "make it bigger"]
+
+    def test_rejects_a_send_while_a_generation_is_running(self, client, with_key_and_task):
+        pid = _make_page()
+        client.post(f"/pages/{pid}/chat", json={"message": "build", "widgets": []})  # leaves it IN_PROGRESS
+        resp = client.post(f"/pages/{pid}/chat", json={"message": "again"})
+        assert resp.status_code == 409
+
+    def test_follow_up_commits_client_widget_moves(self, client, with_key_and_task):
+        pid = _make_page()
+        v1 = client.post(f"/pages/{pid}/chat", json={"message": "build", "widgets": []}).get_json()["version_id"]
+        page_repo.set_version_status(db.session, v1, PAGE_VERSION_STATUS_READY, completed=True)
+        client.post(f"/pages/{pid}/chat", json={"message": "more", "widgets": [
+            {"id": "m1", "title": "Moved", "html": "<p>", "x": 5, "y": 5, "w": 4, "h": 3},
+        ]})
+        widget = page_repo.get_version_widget(db.session, v1, "m1")
+        assert (widget.grid_x, widget.grid_y) == (5, 5)
+
+
+# --- GET /pages/<id>/versions/<vid>/status ---------------------------------
+
+class TestVersionStatus:
+    def test_returns_status_feed_and_widgets(self, client):
+        pid = _make_page()
+        vid = page_repo.fork_version(db.session, pid).id
+        page_repo.add_version_message(db.session, vid, "status", "Creating widget…")
+        page_repo.upsert_version_widget(db.session, vid, {
+            "id": "g1", "title": "G", "html": "<div>", "data_query": {}, "grid_w": 4, "grid_h": 3,
+        })
+        resp = client.get(f"/pages/{pid}/versions/{vid}/status")
+        assert resp.status_code == 200
+        body = resp.get_json()
+        assert body["status"] == PAGE_VERSION_STATUS_IN_PROGRESS
+        assert {"type": "status", "content": "Creating widget…"} in body["messages"]
+        assert [w["id"] for w in body["widgets"]] == ["g1"]
+
+    def test_404_when_version_belongs_to_another_page(self, client):
+        pid = _make_page()
+        other = _make_page()
+        vid = page_repo.fork_version(db.session, other).id
+        assert client.get(f"/pages/{pid}/versions/{vid}/status").status_code == 404
+
+    def test_404_missing_version(self, client):
+        pid = _make_page()
+        assert client.get(f"/pages/{pid}/versions/9999/status").status_code == 404
+
+
+# --- POST /pages/<id>/versions/<vid>/cancel --------------------------------
+
+class TestVersionCancel:
+    def test_deletes_version_and_reverts_to_published(self, client):
+        pid = _make_page()
+        published_before = _reload_page(pid).published_version_id
+        vid = page_repo.fork_version(db.session, pid).id
+        resp = client.post(f"/pages/{pid}/versions/{vid}/cancel")
+        assert resp.status_code == 204
+        page = _reload_page(pid)
+        assert page.working_version_id is None
+        assert page.published_version_id == published_before
+        assert page_repo.get_version(db.session, vid) is None
+
+    def test_404_unknown(self, client):
+        pid = _make_page()
+        assert client.post(f"/pages/{pid}/versions/9999/cancel").status_code == 404
+
+
+# --- POST /pages/<id>/versions/<vid>/publish -------------------------------
+
+class TestVersionPublish:
+    def test_publishes_a_ready_version(self, client):
+        pid = _make_page()
+        vid = page_repo.fork_version(db.session, pid, widgets=[
+            {"id": "z", "title": "Z", "x": 0, "y": 0, "w": 4, "h": 3},
+        ]).id
+        page_repo.set_version_status(db.session, vid, PAGE_VERSION_STATUS_READY, completed=True)
+        resp = client.post(f"/pages/{pid}/versions/{vid}/publish")
+        assert resp.status_code == 204
+        page = _reload_page(pid)
+        assert page.published_version_id == vid
+        assert page.working_version_id is None
+        assert [w.id for w in page.widgets] == ["z"]
+
+    def test_409_when_not_ready(self, client):
+        pid = _make_page()
+        vid = page_repo.fork_version(db.session, pid).id  # still IN_PROGRESS
+        resp = client.post(f"/pages/{pid}/versions/{vid}/publish")
+        assert resp.status_code == 409
+        assert _reload_page(pid).published_version_id != vid
+
+    def test_commits_client_widget_moves_before_publishing(self, client):
+        pid = _make_page()
+        vid = page_repo.fork_version(db.session, pid, widgets=[
+            {"id": "z", "title": "Z", "x": 0, "y": 0, "w": 4, "h": 3},
+        ]).id
+        page_repo.set_version_status(db.session, vid, PAGE_VERSION_STATUS_READY, completed=True)
+        resp = client.post(f"/pages/{pid}/versions/{vid}/publish", json={"widgets": [
+            {"id": "z", "x": 7, "y": 2, "w": 4, "h": 3},  # moved during review
+        ]})
+        assert resp.status_code == 204
+        widget = _reload_page(pid).widgets[0]
+        assert (widget.id, widget.grid_x, widget.grid_y) == ("z", 7, 2)
+
+    def test_404_unknown(self, client):
+        pid = _make_page()
+        assert client.post(f"/pages/{pid}/versions/9999/publish").status_code == 404
