@@ -9,7 +9,12 @@ window.PHOTO_ORGANIZER.widgetErrors = window.PHOTO_ORGANIZER.widgetErrors || {};
 // (window.yaffo). Sandboxed frames can't fetch (connect-src 'none') or see each
 // other, so the parent brokers messages between them and the server. Used in both
 // modes. One handler per message type, dispatched by `type`.
-window.PHOTO_ORGANIZER.initWidgetBroker = (pageId, config) => {
+//
+// `getVersionId()` returns the version currently being displayed — published in
+// presentation, the edit version (draft or published) in design, re-read each call
+// so it tracks a draft forked mid-session. Widget state/query are scoped to that
+// version's widget (widgets are unique per version).
+window.PHOTO_ORGANIZER.initWidgetBroker = (pageId, getVersionId, config) => {
     const frames = () => [...document.querySelectorAll('.widget-frame')];
     const senderFrame = (event) => frames().find((f) => f.contentWindow === event.source);
 
@@ -26,7 +31,7 @@ window.PHOTO_ORGANIZER.initWidgetBroker = (pageId, config) => {
         const frame = senderFrame(event);
         if (!frame) return;
         fetch(
-            config.buildUrl('pages_widget_state', { page_id: pageId, widget_id: frame.dataset.widgetId }),
+            config.buildUrl('pages_version_widget_state', { page_id: pageId, version_id: getVersionId(), widget_id: frame.dataset.widgetId }),
             { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: msg.state }) }
         );
     };
@@ -38,7 +43,7 @@ window.PHOTO_ORGANIZER.initWidgetBroker = (pageId, config) => {
         let data = null;
         try {
             const response = await fetch(
-                config.buildUrl('pages_widget_query', { page_id: pageId, widget_id: frame.dataset.widgetId }),
+                config.buildUrl('pages_version_widget_query', { page_id: pageId, version_id: getVersionId(), widget_id: frame.dataset.widgetId }),
                 { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: msg.query }) }
             );
             data = (await response.json()).data;

@@ -16,6 +16,15 @@ const BASE_GRID_OPTS = {
 const POLL_INTERVAL_MS = 1500;
 const POLL_RETRY_MS = 3000;
 
+// Page-version statuses (mirror PAGE_VERSION_STATUS_* in yaffo/db/models.py).
+const STATUS = {
+    IN_PROGRESS: 'IN_PROGRESS',
+    READY: 'READY',
+    FAILED: 'FAILED',
+    ACCEPTED: 'ACCEPTED',
+    CANCELLED: 'CANCELLED',
+};
+
 // The widget iframe broker (window.PHOTO_ORGANIZER.initWidgetBroker) lives in
 // widget_broker.js — the host-side counterpart of the in-iframe widget_api.js.
 
@@ -23,14 +32,14 @@ window.PHOTO_ORGANIZER.initPresentationGrid = () => {
     return GridStack.init({ ...BASE_GRID_OPTS, staticGrid: true });
 };
 
-// Design grid. Two modes:
-//   - Unlocked: manual editing — add / drag / resize / rename, committed by Save
-//     (POST pages_update) to the published version.
-//   - Locked (a generation is in flight): the page mirrors the working version the
-//     model is building. The client polls …/versions/<id>/status, re-renders that
-//     version's widgets + conversation, and the user can only Save (publish, once
-//     READY) or Cancel (delete + revert). See docs/ai-page-builder-async-generation.md.
-window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, startStatus, config) => {
+// Design grid. The page edits exactly one version — `editVersionId` (its status is
+// `startStatus`): the working draft if a generation has produced one, else the
+// published version. Every edit targets that version, so there's no published-vs-
+// working ambiguity. `ACCEPTED` means it's the live published version (idle editing);
+// IN_PROGRESS/READY/FAILED mean it's a working draft (poll + review). A new draft is
+// forked on the first chat message, and `generation.versionId` then tracks it.
+// See docs/ai-page-builder-async-generation.md.
+window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, config) => {
     const grid = GridStack.init({ ...BASE_GRID_OPTS, handle: '.widget-header' });
 
     // Generated/edited widget content the client holds but hasn't saved (manual
@@ -48,9 +57,11 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, startStatus, 
     const statusBar = document.getElementById('generation-status');
     const elapsedEl = document.getElementById('generation-elapsed');
 
-    // Non-null while a generation is in flight: { versionId, status, startedAt,
-    // pollTimer, elapsedTimer }. Its presence is the UI-lock predicate.
-    let generation = { versionId: workingVersionId, status: startStatus, startedAt: null };
+    // The version being edited + its phase: { versionId, status, startedAt,
+    // pollTimer, elapsedTimer }. versionId is always a real version (the published
+    // one when status is ACCEPTED); status drives the UI phase. enterRunning swaps in
+    // the working version once a generation starts.
+    let generation = { versionId: editVersionId, status: startStatus, startedAt: null };
     // id -> JSON signature of the version widget last rendered, so polls only
     // re-render widgets that actually changed.
     const rendered = new Map();
@@ -125,9 +136,12 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, startStatus, 
                     confirmClass: 'btn-danger'
                 });
                 if (!confirmed) return;
-
+                // Delete from the version being edited (the working draft, or the
+                // published version when idle) — never a guess.
                 await fetch(
-                    config.buildUrl('pages_delete_widget', { page_id: pageId, widget_id: deleteButton.dataset.widgetId }),
+                    config.buildUrl('pages_version_delete_widget', {
+                        page_id: pageId, version_id: generation.versionId, widget_id: deleteButton.dataset.widgetId
+                    }),
                     { method: 'POST' }
                 );
                 grid.removeWidget(el);
@@ -210,9 +224,8 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, startStatus, 
     };
 
     // ---- Generation ----
-
     const isRunning = () => {
-        return generation.status === 'IN_PROGRESS';
+        return generation.status === STATUS.IN_PROGRESS;
     }
 
     // Reflect the generation phase in the UI. Phase from `generation`:
@@ -227,13 +240,13 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, startStatus, 
         if (designLayout) designLayout.classList.toggle('is-generating', running);
         grid.setStatic(running);
         if (addButton) addButton.disabled = running;
-        if (cancelButton) cancelButton.disabled = !(generation.status === 'FAILED' || generation.status === 'IN_PROGRESS');
+        if (cancelButton) cancelButton.disabled = !(generation.status === STATUS.FAILED || generation.status === STATUS.IN_PROGRESS);
         if (messageInput) messageInput.disabled = running;
         if (sendButton) sendButton.disabled = running;
         if (statusBar) statusBar.hidden = !running;
         // Save commits manual edits when idle, publishes a READY draft; disabled
         // while running or on a failed draft (nothing to publish).
-        if (saveButton) saveButton.disabled = running || generation.status === 'FAILED';
+        if (saveButton) saveButton.disabled = running || generation.status === STATUS.FAILED;
     };
 
 
@@ -292,12 +305,12 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, startStatus, 
         generation.startedAt = body.started_at;
         renderFeed(body.messages);
         await reconcileWidgets(body.widgets);
-        if (body.status === 'CANCELLED') {
+        if (body.status === STATUS.CANCELLED) {
             // The version was deleted out from under us; revert to the published page.
             window.location.reload();
             return;
         }
-        if (body.status !== 'IN_PROGRESS') stopPolling();  // READY / FAILED -> review
+        if (body.status !== STATUS.IN_PROGRESS) stopPolling();  // READY / FAILED -> review
         refreshUi();
     };
 
@@ -308,7 +321,7 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, startStatus, 
             if (response.status === 404) { window.location.reload(); return; }
             const body = await response.json();
             await applyStatus(body);
-            if (body.status === 'IN_PROGRESS') generation.pollTimer = setTimeout(poll, POLL_INTERVAL_MS);
+            if (body.status === STATUS.IN_PROGRESS) generation.pollTimer = setTimeout(poll, POLL_INTERVAL_MS);
         } catch (error) {
             generation.pollTimer = setTimeout(poll, POLL_RETRY_MS);
         }
@@ -319,7 +332,7 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, startStatus, 
     // so a follow-up's committed manual edits come back from the server.
     const enterRunning = (versionId) => {
         stopPolling();  // a follow-up re-enters; clear any prior timers first
-        generation = { versionId, status: 'IN_PROGRESS', startedAt: null };
+        generation = { versionId, status: STATUS.IN_PROGRESS, startedAt: null };
         rendered.clear();
         refreshUi();
         updateElapsed();
@@ -359,13 +372,13 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, startStatus, 
     const onSave = () => {
         // While a finished generation is under review, Save publishes it; otherwise
         // it commits manual edits.
-        if (generation.status === 'READY') return publishVersion();
+        if (generation.status === STATUS.READY) return publishVersion();
         return savePage();
     };
 
     const sendMessage = async (event) => {
         event.preventDefault();
-        if (generation.status === 'IN_PROGRESS') return;  // a run is active
+        if (generation.status === STATUS.IN_PROGRESS) return;  // a run is active
         const message = messageInput.value.trim();
         if (!message) return;
         messageInput.value = '';
@@ -411,9 +424,11 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, workingVersionId, startStatus, 
     scrollConversation();
     refreshUi();  // initial (idle) button state
 
-    // Resume: a working draft already exists (tab reload, navigation back). Re-enter
-    // and poll — the first response settles the phase (running vs. ready/failed review).
-    if (workingVersionId) enterRunning(workingVersionId);
+    // Resume: the edit version is a working draft (status is not ACCEPTED) — re-enter
+    // and poll; the first response settles the phase (running vs. ready/failed review).
+    if (startStatus !== STATUS.ACCEPTED) enterRunning(editVersionId);
 
-    return { grid };
+    // getVersionId lets the widget broker target the version currently being edited
+    // (it changes when a draft is forked, so it's read on demand, not captured).
+    return { grid, getVersionId: () => generation.versionId };
 };

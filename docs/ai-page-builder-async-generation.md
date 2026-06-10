@@ -93,7 +93,7 @@ ACCEPTED (published) ──fork(copy widgets + convo)──▶ IN_PROGRESS
                                                  READY        FAILED
                                                    │            │
                                    Save ──▶ ACCEPTED            │
-                                   (publish, unlock)            │
+                       (create new, publish)       │            │
                                                    │            │
                        Cancel (IN_PROGRESS/READY/FAILED)        │
                                                    ▼────────────┘

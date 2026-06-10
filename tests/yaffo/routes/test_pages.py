@@ -168,59 +168,92 @@ class TestWidgetPreview:
         assert client.post("/pages/999/widgets/preview", json={}).status_code == 404
 
 
-# --- POST /pages/<id>/widgets/<wid>/delete ---------------------------------
+# --- POST /pages/<id>/versions/<vid>/widgets/<wid>/delete ------------------
 
 class TestDeleteWidget:
-    def test_removes_widget(self, client):
+    def test_removes_widget_from_the_given_version(self, client):
         pid = _make_page()
-        _save_widget(pid)
-        resp = client.post(f"/pages/{pid}/widgets/w1/delete")
+        _save_widget(pid)  # into the published version
+        vid = _reload_page(pid).published_version_id
+        resp = client.post(f"/pages/{pid}/versions/{vid}/widgets/w1/delete")
         assert resp.status_code == 204
         assert _reload_page(pid).widgets == []
 
     def test_missing_widget_is_noop_204(self, client):
         pid = _make_page()
-        assert client.post(f"/pages/{pid}/widgets/nope/delete").status_code == 204
+        vid = _reload_page(pid).published_version_id
+        assert client.post(f"/pages/{pid}/versions/{vid}/widgets/nope/delete").status_code == 204
+
+    def test_404_when_version_not_on_page(self, client):
+        pid = _make_page()
+        other_vid = _reload_page(_make_page()).published_version_id
+        assert client.post(f"/pages/{pid}/versions/{other_vid}/widgets/x/delete").status_code == 404
+
+    def test_deleting_from_a_draft_leaves_the_published_page_untouched(self, client):
+        # The crux of editing an explicit version: with a draft open, deleting a
+        # widget hits the draft, not the live page (both hold the id after a fork).
+        pid = _make_page()
+        _save_widget(pid, "shared")
+        working = page_repo.fork_version(db.session, pid).id
+        resp = client.post(f"/pages/{pid}/versions/{working}/widgets/shared/delete")
+        assert resp.status_code == 204
+        assert page_repo.get_version_widget(db.session, working, "shared") is None
+        assert [w.id for w in _reload_page(pid).widgets] == ["shared"]  # published intact
 
 
-# --- POST /pages/<id>/widgets/<wid>/query ----------------------------------
+# --- POST /pages/<id>/versions/<vid>/widgets/<wid>/query --------------------
 
 class TestWidgetQuery:
     def test_returns_resolved_data(self, client):
         pid = _make_page()
         _save_widget(pid)
+        vid = _reload_page(pid).published_version_id
         # A valid query against a real source; the test DB has no photos, so rows
         # come back empty — the point is the route resolves and returns data.
-        resp = client.post(f"/pages/{pid}/widgets/w1/query", json={"query": {"source": "photos", "limit": 5}})
+        resp = client.post(f"/pages/{pid}/versions/{vid}/widgets/w1/query", json={"query": {"source": "photos", "limit": 5}})
         assert resp.status_code == 200
         assert resp.get_json()["data"] == []
 
     def test_invalid_query_fails_closed(self, client):
         pid = _make_page()
         _save_widget(pid)
-        resp = client.post(f"/pages/{pid}/widgets/w1/query", json={"query": {"source": "bogus"}})
+        vid = _reload_page(pid).published_version_id
+        resp = client.post(f"/pages/{pid}/versions/{vid}/widgets/w1/query", json={"query": {"source": "bogus"}})
         assert resp.status_code == 200
         assert resp.get_json()["data"] is None
 
     def test_unknown_widget_404(self, client):
         pid = _make_page()
-        assert client.post(f"/pages/{pid}/widgets/nope/query", json={"query": {}}).status_code == 404
+        vid = _reload_page(pid).published_version_id
+        assert client.post(f"/pages/{pid}/versions/{vid}/widgets/nope/query", json={"query": {}}).status_code == 404
 
 
-# --- POST /pages/<id>/widgets/<wid>/state ----------------------------------
+# --- POST /pages/<id>/versions/<vid>/widgets/<wid>/state --------------------
 
 class TestWidgetState:
-    def test_persists_state(self, client):
+    def test_persists_state_on_the_given_version(self, client):
         pid = _make_page()
         _save_widget(pid)
-        resp = client.post(f"/pages/{pid}/widgets/w1/state", json={"state": {"filter": "Camden"}})
+        vid = _reload_page(pid).published_version_id
+        resp = client.post(f"/pages/{pid}/versions/{vid}/widgets/w1/state", json={"state": {"filter": "Camden"}})
         assert resp.status_code == 204
         db.session.expire_all()
-        assert page_repo.get_widget(db.session, pid, "w1").state == {"filter": "Camden"}
+        assert page_repo.get_version_widget(db.session, vid, "w1").state == {"filter": "Camden"}
+
+    def test_draft_state_does_not_leak_to_the_published_widget(self, client):
+        # State written against a draft's widget stays on the draft.
+        pid = _make_page()
+        _save_widget(pid, "shared")
+        working = page_repo.fork_version(db.session, pid).id
+        client.post(f"/pages/{pid}/versions/{working}/widgets/shared/state", json={"state": {"k": 1}})
+        db.session.expire_all()
+        assert page_repo.get_version_widget(db.session, working, "shared").state == {"k": 1}
+        assert page_repo.get_widget(db.session, pid, "shared").state == {}  # published untouched
 
     def test_unknown_widget_404(self, client):
         pid = _make_page()
-        assert client.post(f"/pages/{pid}/widgets/nope/state", json={"state": {}}).status_code == 404
+        vid = _reload_page(pid).published_version_id
+        assert client.post(f"/pages/{pid}/versions/{vid}/widgets/nope/state", json={"state": {}}).status_code == 404
 
 
 # --- POST /pages/<id>/chat : enqueue async generation ----------------------

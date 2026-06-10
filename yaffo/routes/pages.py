@@ -145,29 +145,39 @@ def init_pages_routes(app: Flask):
             "pages/_widget.html", widget=widget, page=page, editable=True, frame_srcdoc=frame_srcdoc
         )
 
-    @app.route("/pages/<int:page_id>/widgets/<widget_id>/delete", methods=["POST"])
-    def pages_delete_widget(page_id: int, widget_id: str):
-        page_repo.remove_widget(db.session, page_id, widget_id)
+    @app.route("/pages/<int:page_id>/versions/<int:version_id>/widgets/<widget_id>/delete", methods=["POST"])
+    def pages_version_delete_widget(page_id: int, version_id: int, widget_id: str):
+        """Delete a widget from the version the design page is editing (passed in
+        explicitly), so the published page is never touched while a draft is open."""
+        _version_on_page(page_id, version_id)
+        page_repo.remove_version_widget(db.session, version_id, widget_id)
         return "", 204
 
-    @app.route("/pages/<int:page_id>/widgets/<widget_id>/query", methods=["POST"])
-    def pages_widget_query(page_id: int, widget_id: str):
-        if page_repo.get_widget(db.session, page_id, widget_id) is None:
+    @app.route("/pages/<int:page_id>/versions/<int:version_id>/widgets/<widget_id>/query", methods=["POST"])
+    def pages_version_widget_query(page_id: int, version_id: int, widget_id: str):
+        """Broker live query for a widget on the displayed version. Data resolution is
+        version-independent (it hits the photo library), but the widget existence
+        check is scoped to the exact version that asked."""
+        _version_on_page(page_id, version_id)
+        if page_repo.get_version_widget(db.session, version_id, widget_id) is None:
             abort(404)
         payload = request.get_json(silent=True) or {}
-        # Live broker query — AI-influenced, so it runs the same validation; fail
-        # closed to null data on an invalid query rather than erroring the widget.
+        # AI-influenced, so it runs the same validation; fail closed to null data on
+        # an invalid query rather than erroring the widget.
         try:
             return {"data": resolve_query(db.session, payload.get("query", {}))}
         except ValueError:
             return {"data": None}
 
-    @app.route("/pages/<int:page_id>/widgets/<widget_id>/state", methods=["POST"])
-    def pages_widget_state(page_id: int, widget_id: str):
-        if page_repo.get_widget(db.session, page_id, widget_id) is None:
+    @app.route("/pages/<int:page_id>/versions/<int:version_id>/widgets/<widget_id>/state", methods=["POST"])
+    def pages_version_widget_state(page_id: int, version_id: int, widget_id: str):
+        """Persist a widget's runtime state on the displayed version's widget (unique
+        per version), so a draft's state never leaks onto the published page."""
+        _version_on_page(page_id, version_id)
+        if page_repo.get_version_widget(db.session, version_id, widget_id) is None:
             abort(404)
         payload = request.get_json(silent=True) or {}
-        page_repo.set_widget_state(db.session, page_id, widget_id, payload.get("state", {}))
+        page_repo.set_version_widget_state(db.session, version_id, widget_id, payload.get("state", {}))
         return "", 204
 
     @app.route("/pages/<int:page_id>/chat", methods=["POST"])

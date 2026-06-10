@@ -194,6 +194,19 @@ def set_widget_state(session: Session, page_id: int, widget_id: str, state: dict
     session.commit()
 
 
+def set_version_widget_state(session: Session, version_id: int, widget_id: str, state: dict) -> None:
+    """Persist a widget's state on the version being displayed -- the broker targets
+    a specific version's widget (unique per version), not whichever the published
+    pointer happens to resolve to."""
+    widget = get_version_widget(session, version_id, widget_id)
+    if widget is None:
+        return
+    widget.state = state or {}
+    if widget.version.page is not None:
+        widget.version.page.updated_at = datetime.utcnow()
+    session.commit()
+
+
 def remove_widget(session: Session, page_id: int, widget_id: str) -> None:
     widget = get_widget(session, page_id, widget_id)
     if widget is None:
@@ -201,6 +214,20 @@ def remove_widget(session: Session, page_id: int, widget_id: str) -> None:
     page = widget.version.page
     session.delete(widget)
     page.updated_at = datetime.utcnow()
+    session.commit()
+
+
+def remove_version_widget(session: Session, version_id: int, widget_id: str) -> None:
+    """Delete a widget from a specific version -- the version the design page is
+    editing (its working draft, or the published version when idle), targeted
+    explicitly so there's no published-vs-working ambiguity."""
+    widget = get_version_widget(session, version_id, widget_id)
+    if widget is None:
+        return
+    page = widget.version.page
+    session.delete(widget)
+    if page is not None:
+        page.updated_at = datetime.utcnow()
     session.commit()
 
 

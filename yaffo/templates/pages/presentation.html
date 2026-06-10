@@ -32,6 +32,9 @@
 <script src="{{ url_for('static', filename='pages/grid.js') }}"></script>
 <script>
     window.PHOTO_ORGANIZER.pageGrid = window.PHOTO_ORGANIZER.initPresentationGrid();
-    window.PHOTO_ORGANIZER.initWidgetBroker({{ page.id }}, window.APP_CONFIG);
+    // Presentation always displays the published version.
+    const publishedVersionId = {{ page.published_version_id }};
+    window.PHOTO_ORGANIZER.initWidgetBroker(
+        {{ page.id }}, () => publishedVersionId, window.APP_CONFIG);
 </script>
 {% endblock %}

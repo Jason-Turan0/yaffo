@@ -185,6 +185,19 @@ class TestSetWidgetState:
         repo.set_widget_state(session, page.id, "nope", {"x": 1})  # does not raise
 
 
+class TestSetVersionWidgetState:
+    def test_persists_on_the_given_version_only(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)  # copies a, b
+        repo.set_version_widget_state(session, version.id, "a", {"filter": "Camden"})
+        assert repo.get_version_widget(session, version.id, "a").state == {"filter": "Camden"}
+        # The published version's widget is untouched.
+        assert repo.get_widget(session, populated_page.id, "a").state == {}
+
+    def test_missing_widget_is_noop(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        repo.set_version_widget_state(session, version.id, "nope", {"x": 1})  # does not raise
+
+
 class TestRemoveWidget:
     def test_removes_widget(self, session, page):
         repo.save_page_widgets(session, page.id, [_widget_item("a"), _widget_item("b")])
@@ -193,6 +206,19 @@ class TestRemoveWidget:
 
     def test_missing_widget_is_noop(self, session, page):
         repo.remove_widget(session, page.id, "nope")  # does not raise
+
+
+class TestRemoveVersionWidget:
+    def test_removes_from_the_given_version_only(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)  # copies a, b
+        repo.remove_version_widget(session, version.id, "a")
+        assert [w.id for w in repo.get_version(session, version.id).widgets] == ["b"]
+        # The published version still has both.
+        assert [w.id for w in repo.get_page(session, populated_page.id).widgets] == ["a", "b"]
+
+    def test_missing_widget_is_noop(self, session, populated_page):
+        version = repo.fork_version(session, populated_page.id)
+        repo.remove_version_widget(session, version.id, "nope")  # does not raise
 
 
 class TestSavePageWidgets:
