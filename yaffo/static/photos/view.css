@@ -5,13 +5,22 @@
     background: var(--color-bg);
 }
 
-.sidebar {
+.photo-sidebar {
     width: 350px;
     background: var(--color-surface);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     border-right: var(--border-width) solid var(--color-border);
+    /* Inherited from the global .sidebar card while this panel shared its
+       class name; kept so the rename doesn't change rendering. */
+    border-radius: var(--radius-md);
+    padding: 20px;
+    height: fit-content;
+    position: sticky;
+    top: 80px;
+    box-shadow: var(--shadow-sm);
+    max-height: calc(100vh - 100px);
 }
 
 .sidebar-header {
@@ -75,19 +84,13 @@
     padding: 10px 16px;
 }
 
-.no-data {
-    font-size: 14px;
-    color: var(--color-text-faint);
-    font-style: italic;
-}
-
 .people-list {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
 
-.person-tag {
+.person-link {
     display: inline-block;
     padding: 6px 12px;
     background: var(--color-surface);
@@ -99,7 +102,7 @@
     border: var(--border-width) solid var(--color-accent);
 }
 
-.person-tag:hover {
+.person-link:hover {
     background: var(--color-accent);
     color: var(--color-on-accent);
     transform: translateY(-1px);
@@ -210,23 +213,6 @@
     top: 0;
     left: 0;
     pointer-events: none;
-}
-
-.sidebar-content::-webkit-scrollbar {
-    width: 8px;
-}
-
-.sidebar-content::-webkit-scrollbar-track {
-    background: var(--color-bg);
-}
-
-.sidebar-content::-webkit-scrollbar-thumb {
-    background: var(--color-border-strong);
-    border-radius: var(--radius-sm);
-}
-
-.sidebar-content::-webkit-scrollbar-thumb:hover {
-    background: var(--color-border-hover);
 }
 
 .tags-list {
@@ -374,24 +360,6 @@
     padding-right: 5px;
 }
 
-#tags-editor-list::-webkit-scrollbar {
-    width: 8px;
-}
-
-#tags-editor-list::-webkit-scrollbar-track {
-    background: var(--color-bg);
-    border-radius: var(--radius-sm);
-}
-
-#tags-editor-list::-webkit-scrollbar-thumb {
-    background: var(--color-border-strong);
-    border-radius: var(--radius-sm);
-}
-
-#tags-editor-list::-webkit-scrollbar-thumb:hover {
-    background: var(--color-border-hover);
-}
-
 .tag-editor-item {
     display: flex;
     align-items: flex-start;
@@ -466,7 +434,7 @@
         flex-direction: column;
     }
 
-    .sidebar {
+    .photo-sidebar {
         width: 100%;
         height: 40vh;
         max-height: 400px;

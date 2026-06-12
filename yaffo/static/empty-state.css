@@ -17,3 +17,10 @@
     font-size: 14px;
     margin-bottom: 20px;
 }
+
+/* Inline "nothing here" text for an empty section or list. */
+.no-data {
+    font-size: 14px;
+    color: var(--color-text-faint);
+    font-style: italic;
+}

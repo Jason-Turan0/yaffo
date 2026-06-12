@@ -118,21 +118,3 @@
     font-size: 14px;
     font-style: italic;
 }
-
-/* Scrollbar styling for options list */
-.searchable-select-options::-webkit-scrollbar {
-    width: 8px;
-}
-
-.searchable-select-options::-webkit-scrollbar-track {
-    background: var(--color-bg);
-}
-
-.searchable-select-options::-webkit-scrollbar-thumb {
-    background: var(--color-border-strong);
-    border-radius: var(--radius-sm);
-}
-
-.searchable-select-options::-webkit-scrollbar-thumb:hover {
-    background: var(--color-border-hover);
-}

@@ -69,7 +69,7 @@ class SearchableSelect {
 
         // Create options list
         this.optionsList = document.createElement('div');
-        this.optionsList.className = 'searchable-select-options';
+        this.optionsList.className = 'searchable-select-options thin-scrollbar';
 
         // Build options
         this.renderOptions();

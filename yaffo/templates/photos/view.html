@@ -10,12 +10,12 @@
 
 {% block content %}
     <div class="photo-viewer">
-        <div class="sidebar">
+        <div class="photo-sidebar">
             <div class="sidebar-header">
                 <h2>Photo Details</h2>
             </div>
 
-            <div class="sidebar-content">
+            <div class="sidebar-content thin-scrollbar">
                 <div class="detail-section">
                     <h3>File Information</h3>
                     <div class="detail-item">
@@ -80,7 +80,7 @@
                     {% if people %}
                         <div class="people-list">
                             {% for person in people %}
-                                <a href="{{ url_for('person_faces', person_id=person.id) }}" class="person-tag">
+                                <a href="{{ url_for('person_faces', person_id=person.id) }}" class="person-link">
                                     {{ person.name }}
                                 </a>
                             {% endfor %}
@@ -160,7 +160,7 @@
 
     {% macro render_modal_edit_tags_form() %}
         <div id="tags-editor-container">
-            <div id="tags-editor-list"></div>
+            <div id="tags-editor-list" class="thin-scrollbar"></div>
 
             <div class="tag-add-section">
                 <h4>Add New Tag</h4>

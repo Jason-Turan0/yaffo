@@ -6,19 +6,6 @@
 
 .utilities-sidebar {
     width: 250px;
-    background: var(--color-surface);
-    border-radius: var(--radius-md);
-    padding: 20px;
-    height: fit-content;
-    position: sticky;
-    top: 80px;
-    box-shadow: var(--shadow-sm);
-}
-
-.utilities-sidebar h2 {
-    font-size: 18px;
-    margin: 0 0 20px 0;
-    color: var(--color-text);
 }
 
 .utilities-nav {

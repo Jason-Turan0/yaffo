@@ -93,8 +93,6 @@
 }
 
 .no-data {
-    color: var(--color-text-muted);
-    font-style: italic;
     margin: 10px 0;
 }
 
