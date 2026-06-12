@@ -35,7 +35,7 @@
     width: 28px;
     height: 28px;
     flex: none;
-    background: url("neobrutalist/favicon.svg") center / contain no-repeat;
+    background: url("/static/themes/neobrutalist/favicon.svg") center / contain no-repeat;
 }
 
 [data-theme="neobrutalist"] .navbar-nav {
@@ -144,22 +144,22 @@
     height: 15px;
 }
 
-[data-theme="neobrutalist"] [data-icon="library"]::before { background-image: url("neobrutalist/icon-library.svg"); }
-[data-theme="neobrutalist"] [data-icon="faces"]::before { background-image: url("neobrutalist/icon-faces.svg"); }
-[data-theme="neobrutalist"] [data-icon="people"]::before { background-image: url("neobrutalist/icon-people.svg"); }
-[data-theme="neobrutalist"] [data-icon="locations"]::before { background-image: url("neobrutalist/icon-locations.svg"); }
-[data-theme="neobrutalist"] [data-icon="utilities"]::before { background-image: url("neobrutalist/icon-utilities.svg"); }
-[data-theme="neobrutalist"] [data-icon="settings"]::before { background-image: url("neobrutalist/icon-settings.svg"); }
-[data-theme="neobrutalist"] [data-icon="add"]::before { background-image: url("neobrutalist/icon-add.svg"); }
-[data-theme="neobrutalist"] [data-icon="edit"]::before { background-image: url("neobrutalist/icon-edit.svg"); }
-[data-theme="neobrutalist"] [data-icon="delete"]::before { background-image: url("neobrutalist/icon-delete.svg"); }
-[data-theme="neobrutalist"] [data-icon="search"]::before { background-image: url("neobrutalist/icon-search.svg"); }
-[data-theme="neobrutalist"] [data-icon="sync"]::before { background-image: url("neobrutalist/icon-sync.svg"); }
+[data-theme="neobrutalist"] [data-icon="library"]::before { background-image: url("/static/themes/neobrutalist/icon-library.svg"); }
+[data-theme="neobrutalist"] [data-icon="faces"]::before { background-image: url("/static/themes/neobrutalist/icon-faces.svg"); }
+[data-theme="neobrutalist"] [data-icon="people"]::before { background-image: url("/static/themes/neobrutalist/icon-people.svg"); }
+[data-theme="neobrutalist"] [data-icon="locations"]::before { background-image: url("/static/themes/neobrutalist/icon-locations.svg"); }
+[data-theme="neobrutalist"] [data-icon="utilities"]::before { background-image: url("/static/themes/neobrutalist/icon-utilities.svg"); }
+[data-theme="neobrutalist"] [data-icon="settings"]::before { background-image: url("/static/themes/neobrutalist/icon-settings.svg"); }
+[data-theme="neobrutalist"] [data-icon="add"]::before { background-image: url("/static/themes/neobrutalist/icon-add.svg"); }
+[data-theme="neobrutalist"] [data-icon="edit"]::before { background-image: url("/static/themes/neobrutalist/icon-edit.svg"); }
+[data-theme="neobrutalist"] [data-icon="delete"]::before { background-image: url("/static/themes/neobrutalist/icon-delete.svg"); }
+[data-theme="neobrutalist"] [data-icon="search"]::before { background-image: url("/static/themes/neobrutalist/icon-search.svg"); }
+[data-theme="neobrutalist"] [data-icon="sync"]::before { background-image: url("/static/themes/neobrutalist/icon-sync.svg"); }
 
 /* Search glyph inside the searchable-select filter box */
 [data-theme="neobrutalist"] .searchable-select-search {
     padding-left: 32px;
-    background-image: url("neobrutalist/icon-search.svg");
+    background-image: url("/static/themes/neobrutalist/icon-search.svg");
     background-position: 10px center;
     background-size: 14px;
     background-repeat: no-repeat;

@@ -46,7 +46,7 @@
     width: 26px;
     height: 26px;
     flex: none;
-    background: url("memphis/favicon.svg") center / contain no-repeat;
+    background: url("/static/themes/memphis/favicon.svg") center / contain no-repeat;
 }
 
 [data-theme="memphis"] .navbar-nav {
@@ -101,11 +101,11 @@
     width: 14px;
     height: 14px;
     background-color: currentColor;
-    -webkit-mask-image: url("classic/icon-edit.svg");
+    -webkit-mask-image: url("/static/themes/classic/icon-edit.svg");
     -webkit-mask-position: center;
     -webkit-mask-size: contain;
     -webkit-mask-repeat: no-repeat;
-    mask-image: url("classic/icon-edit.svg");
+    mask-image: url("/static/themes/classic/icon-edit.svg");
     mask-position: center;
     mask-size: contain;
     mask-repeat: no-repeat;
@@ -270,14 +270,14 @@
     mask-repeat: no-repeat;
 }
 
-[data-theme="memphis"] [data-icon="library"]::before { -webkit-mask-image: url("classic/icon-library.svg"); mask-image: url("classic/icon-library.svg"); }
-[data-theme="memphis"] [data-icon="faces"]::before { -webkit-mask-image: url("classic/icon-faces.svg"); mask-image: url("classic/icon-faces.svg"); }
-[data-theme="memphis"] [data-icon="people"]::before { -webkit-mask-image: url("classic/icon-people.svg"); mask-image: url("classic/icon-people.svg"); }
-[data-theme="memphis"] [data-icon="locations"]::before { -webkit-mask-image: url("classic/icon-locations.svg"); mask-image: url("classic/icon-locations.svg"); }
-[data-theme="memphis"] [data-icon="utilities"]::before { -webkit-mask-image: url("classic/icon-utilities.svg"); mask-image: url("classic/icon-utilities.svg"); }
-[data-theme="memphis"] [data-icon="settings"]::before { -webkit-mask-image: url("classic/icon-settings.svg"); mask-image: url("classic/icon-settings.svg"); }
-[data-theme="memphis"] [data-icon="add"]::before { -webkit-mask-image: url("classic/icon-add.svg"); mask-image: url("classic/icon-add.svg"); }
-[data-theme="memphis"] [data-icon="edit"]::before { -webkit-mask-image: url("classic/icon-edit.svg"); mask-image: url("classic/icon-edit.svg"); }
-[data-theme="memphis"] [data-icon="delete"]::before { -webkit-mask-image: url("classic/icon-delete.svg"); mask-image: url("classic/icon-delete.svg"); }
-[data-theme="memphis"] [data-icon="search"]::before { -webkit-mask-image: url("classic/icon-search.svg"); mask-image: url("classic/icon-search.svg"); }
-[data-theme="memphis"] [data-icon="sync"]::before { -webkit-mask-image: url("classic/icon-sync.svg"); mask-image: url("classic/icon-sync.svg"); }
+[data-theme="memphis"] [data-icon="library"]::before { -webkit-mask-image: url("/static/themes/classic/icon-library.svg"); mask-image: url("/static/themes/classic/icon-library.svg"); }
+[data-theme="memphis"] [data-icon="faces"]::before { -webkit-mask-image: url("/static/themes/classic/icon-faces.svg"); mask-image: url("/static/themes/classic/icon-faces.svg"); }
+[data-theme="memphis"] [data-icon="people"]::before { -webkit-mask-image: url("/static/themes/classic/icon-people.svg"); mask-image: url("/static/themes/classic/icon-people.svg"); }
+[data-theme="memphis"] [data-icon="locations"]::before { -webkit-mask-image: url("/static/themes/classic/icon-locations.svg"); mask-image: url("/static/themes/classic/icon-locations.svg"); }
+[data-theme="memphis"] [data-icon="utilities"]::before { -webkit-mask-image: url("/static/themes/classic/icon-utilities.svg"); mask-image: url("/static/themes/classic/icon-utilities.svg"); }
+[data-theme="memphis"] [data-icon="settings"]::before { -webkit-mask-image: url("/static/themes/classic/icon-settings.svg"); mask-image: url("/static/themes/classic/icon-settings.svg"); }
+[data-theme="memphis"] [data-icon="add"]::before { -webkit-mask-image: url("/static/themes/classic/icon-add.svg"); mask-image: url("/static/themes/classic/icon-add.svg"); }
+[data-theme="memphis"] [data-icon="edit"]::before { -webkit-mask-image: url("/static/themes/classic/icon-edit.svg"); mask-image: url("/static/themes/classic/icon-edit.svg"); }
+[data-theme="memphis"] [data-icon="delete"]::before { -webkit-mask-image: url("/static/themes/classic/icon-delete.svg"); mask-image: url("/static/themes/classic/icon-delete.svg"); }
+[data-theme="memphis"] [data-icon="search"]::before { -webkit-mask-image: url("/static/themes/classic/icon-search.svg"); mask-image: url("/static/themes/classic/icon-search.svg"); }
+[data-theme="memphis"] [data-icon="sync"]::before { -webkit-mask-image: url("/static/themes/classic/icon-sync.svg"); mask-image: url("/static/themes/classic/icon-sync.svg"); }

@@ -78,13 +78,13 @@ def init_settings_routes(app: Flask):
             thumbnail_size=format_size(thumbnail_size),
             huey_db_path=str(HUEY_DB_PATH),
             llm=llm_config.status(),
-            themes=themes.THEMES,
+            themes=themes.list_themes(),
         )
 
     @app.route("/settings/theme", methods=["POST"])
     def settings_theme():
         selected = (request.form.get("theme") or "").strip()
-        if selected not in themes.THEMES:
+        if not themes.theme_exists(selected):
             return jsonify({"error": f"Unknown theme: {selected}"}), 400
         themes.set_theme(selected)
         # The theme lives on <html data-theme>, outside any swappable

@@ -1,10 +1,11 @@
 from yaffo.utils.image import convert_heif
-from flask import Flask, send_from_directory, send_file, render_template, request, jsonify
+from flask import Flask, Response, send_from_directory, send_file, render_template, request, jsonify
 from yaffo.common import ROOT_DIR
 from yaffo.db.models import db, Photo, Person, Tag
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import Face
 from pathlib import Path
+from yaffo import themes
 from yaffo.themes import get_theme
 import io
 import os
@@ -33,7 +34,15 @@ def init_photos_routes(app: Flask):
 
     @app.route("/placeholder")
     def placeholder():
-        return send_from_directory(f'static/themes/{get_theme()}', 'placeholder.svg')
+        theme = get_theme()
+        if not themes.is_builtin(theme):
+            custom = themes.get_custom_theme(theme)
+            if custom and custom.placeholder_svg:
+                response = Response(custom.placeholder_svg, mimetype="image/svg+xml")
+                response.headers["Cache-Control"] = "no-store"
+                return response
+            theme = themes.DEFAULT_THEME
+        return send_from_directory(f'static/themes/{theme}', 'placeholder.svg')
 
     @app.route("/photo-by-path")
     def photo_by_path():

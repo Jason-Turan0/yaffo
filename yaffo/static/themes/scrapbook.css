@@ -38,7 +38,7 @@
     width: 36px;
     height: 36px;
     flex: none;
-    background: url("scrapbook/scissors.svg") center / contain no-repeat;
+    background: url("/static/themes/scrapbook/scissors.svg") center / contain no-repeat;
 }
 
 [data-theme="scrapbook"] .navbar-nav,
@@ -103,11 +103,11 @@
     width: 14px;
     height: 14px;
     background-color: currentColor;
-    -webkit-mask-image: url("classic/icon-edit.svg");
+    -webkit-mask-image: url("/static/themes/classic/icon-edit.svg");
     -webkit-mask-position: center;
     -webkit-mask-size: contain;
     -webkit-mask-repeat: no-repeat;
-    mask-image: url("classic/icon-edit.svg");
+    mask-image: url("/static/themes/classic/icon-edit.svg");
     mask-position: center;
     mask-size: contain;
     mask-repeat: no-repeat;
@@ -379,22 +379,22 @@
     height: 15px;
 }
 
-[data-theme="scrapbook"] [data-icon="library"]::before { -webkit-mask-image: url("classic/icon-library.svg"); mask-image: url("classic/icon-library.svg"); }
-[data-theme="scrapbook"] [data-icon="faces"]::before { -webkit-mask-image: url("classic/icon-faces.svg"); mask-image: url("classic/icon-faces.svg"); }
-[data-theme="scrapbook"] [data-icon="people"]::before { -webkit-mask-image: url("classic/icon-people.svg"); mask-image: url("classic/icon-people.svg"); }
-[data-theme="scrapbook"] [data-icon="locations"]::before { -webkit-mask-image: url("classic/icon-locations.svg"); mask-image: url("classic/icon-locations.svg"); }
-[data-theme="scrapbook"] [data-icon="utilities"]::before { -webkit-mask-image: url("classic/icon-utilities.svg"); mask-image: url("classic/icon-utilities.svg"); }
-[data-theme="scrapbook"] [data-icon="settings"]::before { -webkit-mask-image: url("classic/icon-settings.svg"); mask-image: url("classic/icon-settings.svg"); }
-[data-theme="scrapbook"] [data-icon="add"]::before { -webkit-mask-image: url("classic/icon-add.svg"); mask-image: url("classic/icon-add.svg"); }
-[data-theme="scrapbook"] [data-icon="edit"]::before { -webkit-mask-image: url("classic/icon-edit.svg"); mask-image: url("classic/icon-edit.svg"); }
-[data-theme="scrapbook"] [data-icon="delete"]::before { -webkit-mask-image: url("classic/icon-delete.svg"); mask-image: url("classic/icon-delete.svg"); }
-[data-theme="scrapbook"] [data-icon="search"]::before { -webkit-mask-image: url("classic/icon-search.svg"); mask-image: url("classic/icon-search.svg"); }
-[data-theme="scrapbook"] [data-icon="sync"]::before { -webkit-mask-image: url("classic/icon-sync.svg"); mask-image: url("classic/icon-sync.svg"); }
+[data-theme="scrapbook"] [data-icon="library"]::before { -webkit-mask-image: url("/static/themes/classic/icon-library.svg"); mask-image: url("/static/themes/classic/icon-library.svg"); }
+[data-theme="scrapbook"] [data-icon="faces"]::before { -webkit-mask-image: url("/static/themes/classic/icon-faces.svg"); mask-image: url("/static/themes/classic/icon-faces.svg"); }
+[data-theme="scrapbook"] [data-icon="people"]::before { -webkit-mask-image: url("/static/themes/classic/icon-people.svg"); mask-image: url("/static/themes/classic/icon-people.svg"); }
+[data-theme="scrapbook"] [data-icon="locations"]::before { -webkit-mask-image: url("/static/themes/classic/icon-locations.svg"); mask-image: url("/static/themes/classic/icon-locations.svg"); }
+[data-theme="scrapbook"] [data-icon="utilities"]::before { -webkit-mask-image: url("/static/themes/classic/icon-utilities.svg"); mask-image: url("/static/themes/classic/icon-utilities.svg"); }
+[data-theme="scrapbook"] [data-icon="settings"]::before { -webkit-mask-image: url("/static/themes/classic/icon-settings.svg"); mask-image: url("/static/themes/classic/icon-settings.svg"); }
+[data-theme="scrapbook"] [data-icon="add"]::before { -webkit-mask-image: url("/static/themes/classic/icon-add.svg"); mask-image: url("/static/themes/classic/icon-add.svg"); }
+[data-theme="scrapbook"] [data-icon="edit"]::before { -webkit-mask-image: url("/static/themes/classic/icon-edit.svg"); mask-image: url("/static/themes/classic/icon-edit.svg"); }
+[data-theme="scrapbook"] [data-icon="delete"]::before { -webkit-mask-image: url("/static/themes/classic/icon-delete.svg"); mask-image: url("/static/themes/classic/icon-delete.svg"); }
+[data-theme="scrapbook"] [data-icon="search"]::before { -webkit-mask-image: url("/static/themes/classic/icon-search.svg"); mask-image: url("/static/themes/classic/icon-search.svg"); }
+[data-theme="scrapbook"] [data-icon="sync"]::before { -webkit-mask-image: url("/static/themes/classic/icon-sync.svg"); mask-image: url("/static/themes/classic/icon-sync.svg"); }
 
 /* Search glyph inside the searchable-select filter box */
 [data-theme="scrapbook"] .searchable-select-search {
     padding-left: 32px;
-    background-image: url("classic/icon-search.svg");
+    background-image: url("/static/themes/classic/icon-search.svg");
     background-position: 10px center;
     background-size: 14px;
     background-repeat: no-repeat;

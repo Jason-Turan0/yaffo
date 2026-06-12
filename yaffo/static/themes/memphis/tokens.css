@@ -1,0 +1,90 @@
+/*
+ * Memphis Pop: cream page sprinkled with confetti, solid ink navbar, chunky
+ * ink borders with big friendly rounding, hard candy-colored offset shadows
+ * (coral/teal/sun/sky), rounded display type.
+ * Mockup reference: design_mockups/07-memphis.html.
+ */
+[data-theme="memphis"] {
+    /* Typography — rounded stacks that exist on Mac and Windows */
+    --font-body: 'Arial Rounded MT Bold', 'Baloo 2', 'Trebuchet MS', 'Comic Sans MS', sans-serif;
+    --font-heading: var(--font-body);
+    --font-weight-heading: 800;
+
+    /* Surfaces — cream page, white cards */
+    --color-bg: #f7f3eb;
+    --color-surface: #ffffff;
+    --color-surface-hover: #fdf1d8;
+    --color-surface-sunken: #efe7d8;
+
+    /* Text — deep ink with cool muted steps */
+    --color-text: #22223b;
+    --color-text-secondary: #22223b;
+    --color-text-muted: #5f5d75;
+    --color-text-faint: #9b98ad;
+
+    /* Inverse — the ink navbar flips to cream */
+    --color-surface-inverse: #22223b;
+    --color-text-inverse: #f7f3eb;
+
+    /* Borders — every edge is ink */
+    --color-border-subtle: #efe7d8;
+    --color-border: #22223b;
+    --color-border-strong: #22223b;
+    --color-border-hover: #22223b;
+    --border-width: 2px;
+
+    /* Accent — coral, ink text on color fills */
+    --color-accent: #ff6b6b;
+    --color-accent-hover: #ff5252;
+    --color-accent-soft: #ffe0e0;
+    --color-accent-soft-text: #22223b;
+    --color-on-accent: #22223b;
+
+    /* Status — the candy palette (the skin also cycles these as card shadows) */
+    --color-success: #2ec4b6;
+    --color-success-hover: #29b0a3;
+    --color-success-soft: #d7f5f1;
+    --color-success-soft-text: #0f5950;
+    --color-success-soft-border: #22223b;
+    --color-danger: #e63946;
+    --color-danger-hover: #d62839;
+    --color-danger-soft: #fcd5d5;
+    --color-danger-soft-text: #8a1c24;
+    --color-danger-soft-border: #22223b;
+    --color-warning: #ffd166;
+    --color-warning-soft: #fff0c7;
+    --color-warning-soft-text: #6b5200;
+    --color-warning-soft-border: #22223b;
+    --color-info: #4cc9f0;
+
+    /* Neutral action — white pills that warm up on hover */
+    --color-neutral: #ffffff;
+    --color-neutral-hover: #fff0c7;
+
+    --color-disabled-bg: #efe7d8;
+    --color-disabled-text: #9b98ad;
+
+    /* Shape — big, friendly rounding */
+    --radius-sm: 12px;
+    --radius-md: 20px;
+
+    /* Elevation — hard offsets; panels pop teal, overlays pop violet */
+    --color-backdrop: rgba(34, 34, 59, 0.55);
+    --shadow-navbar: none;
+    --shadow-sm: 2px 2px 0 #22223b;
+    --shadow-md: 4px 4px 0 #22223b;
+    --shadow-lg: 6px 6px 0 #2ec4b6;
+    --shadow-xl: 8px 8px 0 #9b5de5;
+    --shadow-accent: 6px 6px 0 #22223b;
+    --shadow-inset: inset 0 -2px 0 #22223b;
+    --focus-ring: 0 0 0 3px #ffd166;
+
+    /* Violet pop + its pastel — consumed only by the memphis skin */
+    --pop-violet: #9b5de5;
+    --pop-violet-soft: #e6d7fa;
+
+    /* Component hooks */
+    --btn-border: 2px solid #22223b;
+    --shadow-btn: 3px 3px 0 #22223b;
+    --color-navbar-bg: #22223b;
+}

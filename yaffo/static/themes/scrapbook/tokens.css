@@ -1,0 +1,95 @@
+/*
+ * Scrapbook: kraft-paper page, paper-scrap surfaces with soft drop shadows,
+ * handwritten type, marker-red accent, washi-tape pastels.
+ * Mockup reference: design_mockups/05-scrapbook.html.
+ */
+[data-theme="scrapbook"] {
+    /* Typography — handwritten stacks that exist on Mac and Windows */
+    --font-body: 'Comic Sans MS', 'Chalkboard SE', 'Segoe Print', cursive;
+    --font-heading: 'Bradley Hand', 'Segoe Script', 'Chalkboard SE', cursive;
+    --font-weight-heading: 700;
+
+    /* Type scale — handwriting needs a size bump to stay legible */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-md: 1.125rem;
+    --font-size-lg: 1.25rem;
+    --font-size-xl: 1.625rem;
+    --font-size-2xl: 2.25rem;
+
+    /* Surfaces — kraft page, paper cards */
+    --color-bg: #d9c7a7;
+    --color-surface: #fffdf6;
+    --color-surface-hover: #fbf3dd;
+    --color-surface-sunken: #efe3c6;
+
+    /* Text — warm ink */
+    --color-text: #3e3528;
+    --color-text-secondary: #564b39;
+    --color-text-muted: #6d5f49;
+    --color-text-faint: #a89c86;
+
+    --color-surface-inverse: rgba(62, 53, 40, 0.92);
+    --color-text-inverse: #fffdf6;
+
+    /* Borders — kraft tones; emphasized edges are ink */
+    --color-border-subtle: #efe5cc;
+    --color-border: #cdbb98;
+    --color-border-strong: #3e3528;
+    --color-border-hover: #8a7a5e;
+
+    /* Accent — marker red */
+    --color-accent: #c0392b;
+    --color-accent-hover: #a33023;
+    --color-accent-soft: #fde9a8;
+    --color-accent-soft-text: #c0392b;
+    --color-on-accent: #fffdf6;
+
+    /* Status — muted craft-paint tones */
+    --color-success: #6a994e;
+    --color-success-hover: #5a8442;
+    --color-success-soft: #e9f0dd;
+    --color-success-soft-text: #344e1f;
+    --color-success-soft-border: #c9dab4;
+    --color-danger: #9b2226;
+    --color-danger-hover: #841d20;
+    --color-danger-soft: #f5dcd6;
+    --color-danger-soft-text: #7a1c14;
+    --color-danger-soft-border: #e4b8ac;
+    --color-warning: #d9a514;
+    --color-warning-soft: #fdeec3;
+    --color-warning-soft-text: #6b5400;
+    --color-warning-soft-border: #ecd28a;
+    --color-info: #4f93b8;
+
+    --color-neutral: #8a7a5e;
+    --color-neutral-hover: #6d5f49;
+
+    --color-disabled-bg: #e4d6b6;
+    --color-disabled-text: #8c7f68;
+
+    /* Shape — paper scraps, barely rounded */
+    --radius-sm: 2px;
+    --radius-md: 2px;
+
+    /* Elevation — soft paper drop shadows */
+    --color-backdrop: rgba(62, 53, 40, 0.5);
+    --shadow-navbar: 0 2px 6px rgba(0, 0, 0, 0.15);
+    --shadow-sm: 1px 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-md: 2px 3px 6px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 3px 4px 10px rgba(0, 0, 0, 0.25);
+    --shadow-xl: 4px 8px 20px rgba(0, 0, 0, 0.35);
+    --shadow-inset: inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+
+    /* Washi tape — consumed only by the scrapbook skin */
+    --tape-pink: rgba(244, 143, 177, 0.65);
+    --tape-blue: rgba(129, 212, 250, 0.6);
+    --tape-yellow: rgba(255, 224, 130, 0.7);
+
+    /* Component hooks */
+    --btn-border: 2px solid #3e3528;
+    --shadow-btn: 1px 2px 4px rgba(0, 0, 0, 0.2);
+    --color-navbar-bg: #c9b48f;
+    --font-size-brand: 1.875rem;  /* navbar wordmark, matches the mockup's 30px */
+}

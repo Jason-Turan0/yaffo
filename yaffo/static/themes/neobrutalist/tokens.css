@@ -1,0 +1,82 @@
+/*
+ * Neo-brutalist: thick ink borders, hard offset shadows (no blur), square
+ * corners, sticker colors (pink/green/yellow/blue) on a cream page.
+ * Mockup reference: design_mockups/04-neobrutalist.html.
+ */
+[data-theme="neobrutalist"] {
+    --font-weight-heading: 900;
+
+    /* Surfaces — cream page, white cards */
+    --color-bg: #fdf3e3;
+    --color-surface: #ffffff;
+    --color-surface-hover: #fff7dd;
+    --color-surface-sunken: #f6e7c6;
+
+    /* Text — ink, with warm muted steps */
+    --color-text: #121212;
+    --color-text-secondary: #121212;
+    --color-text-muted: #5f5848;
+    --color-text-faint: #968d77;
+
+    --color-surface-inverse: #121212;
+    --color-text-inverse: #ffffff;
+
+    /* Borders — every edge is ink, and thicker */
+    --color-border-subtle: #e9dcbf;
+    --color-border: #121212;
+    --color-border-strong: #121212;
+    --color-border-hover: #121212;
+    --border-width: 2px;
+
+    /* Accent — pink interactive, ink text on color fills */
+    --color-accent: #ff70a6;
+    --color-accent-hover: #ff4f93;
+    --color-accent-soft: #ffd9e7;
+    --color-accent-soft-text: #121212;
+    --color-on-accent: #121212;
+
+    /* Status — the sticker palette */
+    --color-success: #8ac926;
+    --color-success-hover: #79b51e;
+    --color-success-soft: #e8f6c8;
+    --color-success-soft-text: #2f4d00;
+    --color-success-soft-border: #121212;
+    --color-danger: #ff4f4f;
+    --color-danger-hover: #ef3030;
+    --color-danger-soft: #ffd9d9;
+    --color-danger-soft-text: #7a0f0f;
+    --color-danger-soft-border: #121212;
+    --color-warning: #ffd23f;
+    --color-warning-soft: #fff1bf;
+    --color-warning-soft-text: #6b5400;
+    --color-warning-soft-border: #121212;
+    --color-info: #43bccd;
+
+    /* Neutral action — white card buttons that go yellow on hover */
+    --color-neutral: #ffffff;
+    --color-neutral-hover: #ffd23f;
+
+    --color-disabled-bg: #efe6cf;
+    --color-disabled-text: #968d77;
+
+    /* Shape — no rounding anywhere */
+    --radius-sm: 0;
+    --radius-md: 0;
+    --radius-pill: 0;
+
+    /* Elevation — hard ink offsets instead of blurred shadows */
+    --color-backdrop: rgba(18, 18, 18, 0.55);
+    --shadow-navbar: 0 3px 0 #121212;
+    --shadow-sm: 2px 2px 0 #121212;
+    --shadow-md: 4px 4px 0 #121212;
+    --shadow-lg: 7px 7px 0 #121212;
+    --shadow-xl: 10px 10px 0 #121212;
+    --shadow-accent: 6px 6px 0 #121212;
+    --shadow-inset: inset 0 -2px 0 #121212;
+    --focus-ring: 0 0 0 3px #ff70a6;
+
+    /* Component hooks */
+    --btn-border: 2px solid #121212;
+    --shadow-btn: 3px 3px 0 #121212;
+    --color-navbar-bg: #ffd23f;
+}

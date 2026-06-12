@@ -1,0 +1,80 @@
+/*
+ * Photos App: bright white gallery in the style of a native photos app —
+ * frosted translucent topbar, pill navigation, an indigo→pink gradient for
+ * the wordmark and primary actions, generous tile rounding, iOS grays.
+ * Mockup reference: design_mockups/03-photos-app.html.
+ */
+[data-theme="photos-app"] {
+    /* Surfaces — pure white page and cards, iOS fill grays */
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-hover: #f2f2f7;
+    --color-surface-sunken: #e5e5ea;
+
+    /* Text — iOS label grays */
+    --color-text: #1c1c1e;
+    --color-text-secondary: #3a3a3c;
+    --color-text-muted: #8e8e93;
+    --color-text-faint: #c7c7cc;
+
+    /* Inverse — the solid-ink active nav pill */
+    --color-surface-inverse: #1c1c1e;
+    --color-text-inverse: #ffffff;
+
+    /* Borders — hairline separators */
+    --color-border-subtle: #f2f2f7;
+    --color-border: #e5e5ea;
+    --color-border-strong: #d1d1d6;
+    --color-border-hover: #8e8e93;
+
+    /* Accent — indigo; the full gradient is the skin-only token below */
+    --color-accent: #6366f1;
+    --color-accent-hover: #4f46e5;
+    --color-accent-soft: #eef2ff;
+    --color-accent-soft-text: #4338ca;
+    --color-on-accent: #ffffff;
+
+    /* Status — iOS system colors */
+    --color-success: #34c759;
+    --color-success-hover: #2eb350;
+    --color-success-soft: #e3f9e9;
+    --color-success-soft-text: #1d7a3a;
+    --color-success-soft-border: #c0eecd;
+    --color-danger: #ff3b30;
+    --color-danger-hover: #e6342a;
+    --color-danger-soft: #ffe5e3;
+    --color-danger-soft-text: #99231c;
+    --color-danger-soft-border: #ffc7c2;
+    --color-warning: #ffcc00;
+    --color-warning-soft: #fff8d6;
+    --color-warning-soft-text: #6e5a00;
+    --color-warning-soft-border: #f4e39a;
+    --color-info: #5ac8fa;
+
+    /* Neutral action */
+    --color-neutral: #8e8e93;
+    --color-neutral-hover: #6d6d72;
+
+    --color-disabled-bg: #f2f2f7;
+    --color-disabled-text: #aeaeb2;
+
+    /* Shape — generous tile rounding; pills come from the skin */
+    --radius-sm: 10px;
+    --radius-md: 14px;
+
+    /* Elevation — soft and airy; the accent glow carries primary actions */
+    --color-backdrop: rgba(28, 28, 30, 0.4);
+    --shadow-navbar: none;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --shadow-xl: 0 14px 44px rgba(0, 0, 0, 0.18);
+    --shadow-accent: 0 6px 20px color-mix(in srgb, var(--color-accent) 35%, transparent);
+    --shadow-inset: inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+
+    /* Wordmark / primary-action gradient — consumed only by the photos-app skin */
+    --photos-grad: linear-gradient(135deg, #6366f1, #ec4899);
+
+    /* Component hooks */
+    --color-navbar-bg: rgba(255, 255, 255, 0.78);
+}

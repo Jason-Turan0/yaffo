@@ -24,12 +24,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/percentage_slider.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/file_browser.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='pages/nav.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='themes/classic.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='themes/darkroom.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='themes/neobrutalist.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='themes/scrapbook.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='themes/photos-app.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='themes/memphis.css') }}">
+    {# Only the active theme's stylesheet: a static skin for built-in themes, or
+       DB-stored CSS for runtime (AI-generated) custom themes. #}
+    <link rel="stylesheet" href="{{ url_for('theme_css', slug=theme) }}">
 
 
     {% block extra_styles %}{% endblock %}

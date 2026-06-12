@@ -7,9 +7,12 @@
     {% if csp %}<meta http-equiv="Content-Security-Policy" content="{{ csp }}">{% endif %}
     {# Design tokens + app styling baseline, before the widget's own CSS so every
        widget inherits the active theme's look (var(--…) tokens, .yf-* helpers) and
-       can override specifics. The CSP allows same-origin stylesheets, and srcdoc
-       previews inherit the parent's base URL, so the link resolves there too. #}
+       can override specifics. The second link adds a custom (runtime) theme's
+       token block — tokens only, never its skin, whose body/app rules would leak
+       into the widget document. The CSP allows same-origin stylesheets, and
+       srcdoc previews inherit the parent's base URL, so the links resolve too. #}
     <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('theme_tokens_css', slug=theme) }}">
     <style>{{ widget_theme_css | safe }}</style>
     <style>{{ widget.css | safe }}</style>
     <style>
