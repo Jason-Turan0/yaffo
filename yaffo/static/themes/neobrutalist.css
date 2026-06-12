@@ -103,14 +103,17 @@
 /* ---- icons: any .nav-link or .btn with data-icon gets its themed SVG.
    Icons live in themes/neobrutalist/, so other themes never load them. ---- */
 [data-theme="neobrutalist"] .nav-link[data-icon],
-[data-theme="neobrutalist"] .btn[data-icon] {
+[data-theme="neobrutalist"] .btn[data-icon],
+[data-theme="neobrutalist"] button[data-icon] {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
 }
 
 [data-theme="neobrutalist"] .nav-link[data-icon]::before,
-[data-theme="neobrutalist"] .btn[data-icon]::before {
+[data-theme="neobrutalist"] .btn[data-icon]::before,
+[data-theme="neobrutalist"] button[data-icon]::before {
     content: "";
     width: 18px;
     height: 18px;
@@ -120,7 +123,8 @@
     background-repeat: no-repeat;
 }
 
-[data-theme="neobrutalist"] .btn[data-icon]::before {
+[data-theme="neobrutalist"] .btn[data-icon]::before,
+[data-theme="neobrutalist"] button[data-icon]::before {
     width: 15px;
     height: 15px;
 }

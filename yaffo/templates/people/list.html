@@ -11,7 +11,7 @@
 {% block content %}
 <div class="main-content">
     {% set header_actions %}
-        <button class="btn-primary" onclick="window.PHOTO_ORGANIZER.peopleList.openAddModal()">+ Add Person</button>
+        <button class="btn-primary" data-icon="add" onclick="window.PHOTO_ORGANIZER.peopleList.openAddModal()">Add Person</button>
     {% endset %}
     {{ page_header('People', actions=header_actions) }}
 
@@ -57,7 +57,7 @@
 <div class="empty-state">
     <h2>No people yet</h2>
     <p>Add your first person to start organizing photos.</p>
-    <button class="btn-primary btn-add" onclick="window.PHOTO_ORGANIZER.peopleList.openAddModal()">+ Add Person</button>
+    <button class="btn-primary btn-add" data-icon="add" onclick="window.PHOTO_ORGANIZER.peopleList.openAddModal()">Add Person</button>
 </div>
 {% endif %}
 

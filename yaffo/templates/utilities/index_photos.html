@@ -8,7 +8,7 @@
 <div class="utility-page">
     {% set header_actions %}
         {% if unindexed_photos|length > 0 or orphaned_photos|length > 0 %}
-        <button class="btn btn-primary" id="sync-button" {% if not can_sync or active_jobs|length > 0 %}disabled{% endif %}>Sync Database</button>
+        <button class="btn btn-primary" id="sync-button" data-icon="sync" {% if not can_sync or active_jobs|length > 0 %}disabled{% endif %}>Sync Database</button>
         {% endif %}
     {% endset %}
     {{ page_header('Index Photos', 'Compare photos on the file system with the database', actions=header_actions) }}

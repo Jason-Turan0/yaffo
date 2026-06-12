@@ -38,7 +38,7 @@
 
 .editor-actions {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 20px;
 }
