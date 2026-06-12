@@ -157,40 +157,10 @@
     transform: scale(1.05);
 }
 
-/* ---- icons: classic's line set, tinted by each control's text color ---- */
-[data-theme="photos-app"] .nav-link[data-icon],
-[data-theme="photos-app"] .btn[data-icon],
-[data-theme="photos-app"] button[data-icon] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
+/* ---- icons: the default set (components/icons.css), a notch smaller ---- */
 [data-theme="photos-app"] .nav-link[data-icon]::before,
 [data-theme="photos-app"] .btn[data-icon]::before,
 [data-theme="photos-app"] button[data-icon]::before {
-    content: "";
     width: 16px;
     height: 16px;
-    flex: none;
-    background-color: currentColor;
-    -webkit-mask-position: center;
-    -webkit-mask-size: contain;
-    -webkit-mask-repeat: no-repeat;
-    mask-position: center;
-    mask-size: contain;
-    mask-repeat: no-repeat;
 }
-
-[data-theme="photos-app"] [data-icon="library"]::before { -webkit-mask-image: url("/static/themes/classic/icon-library.svg"); mask-image: url("/static/themes/classic/icon-library.svg"); }
-[data-theme="photos-app"] [data-icon="faces"]::before { -webkit-mask-image: url("/static/themes/classic/icon-faces.svg"); mask-image: url("/static/themes/classic/icon-faces.svg"); }
-[data-theme="photos-app"] [data-icon="people"]::before { -webkit-mask-image: url("/static/themes/classic/icon-people.svg"); mask-image: url("/static/themes/classic/icon-people.svg"); }
-[data-theme="photos-app"] [data-icon="locations"]::before { -webkit-mask-image: url("/static/themes/classic/icon-locations.svg"); mask-image: url("/static/themes/classic/icon-locations.svg"); }
-[data-theme="photos-app"] [data-icon="utilities"]::before { -webkit-mask-image: url("/static/themes/classic/icon-utilities.svg"); mask-image: url("/static/themes/classic/icon-utilities.svg"); }
-[data-theme="photos-app"] [data-icon="settings"]::before { -webkit-mask-image: url("/static/themes/classic/icon-settings.svg"); mask-image: url("/static/themes/classic/icon-settings.svg"); }
-[data-theme="photos-app"] [data-icon="add"]::before { -webkit-mask-image: url("/static/themes/classic/icon-add.svg"); mask-image: url("/static/themes/classic/icon-add.svg"); }
-[data-theme="photos-app"] [data-icon="edit"]::before { -webkit-mask-image: url("/static/themes/classic/icon-edit.svg"); mask-image: url("/static/themes/classic/icon-edit.svg"); }
-[data-theme="photos-app"] [data-icon="delete"]::before { -webkit-mask-image: url("/static/themes/classic/icon-delete.svg"); mask-image: url("/static/themes/classic/icon-delete.svg"); }
-[data-theme="photos-app"] [data-icon="search"]::before { -webkit-mask-image: url("/static/themes/classic/icon-search.svg"); mask-image: url("/static/themes/classic/icon-search.svg"); }
-[data-theme="photos-app"] [data-icon="sync"]::before { -webkit-mask-image: url("/static/themes/classic/icon-sync.svg"); mask-image: url("/static/themes/classic/icon-sync.svg"); }

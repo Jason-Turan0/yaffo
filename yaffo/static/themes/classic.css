@@ -1,13 +1,8 @@
 /*
- * Classic theme skin: monochrome line icons for nav links and action buttons.
- * Icons render as currentColor through a mask, so each control's icon takes
- * its own text color (gray nav links, light button labels, accent on active).
- * Every rule is scoped to [data-theme="classic"], so this file is inert for
- * other themes; the icon files live in themes/classic/ and are only ever
- * referenced from here.
- *
- * Mask longhands only — the `mask:` shorthand resets mask-image, which the
- * lower-specificity per-icon rules below would then lose.
+ * Classic theme skin. The monochrome line icons that used to live here are now
+ * the app-wide default (components/icons.css) so every theme — including
+ * runtime custom ones — inherits them; this file keeps only what is uniquely
+ * classic. The icon files still live in themes/classic/.
  */
 
 /* Navbar brand carries the favicon mark so tab icon and logo match */
@@ -24,49 +19,6 @@
     flex: none;
     background: url("/static/themes/classic/favicon.svg") center / contain no-repeat;
 }
-
-[data-theme="classic"] .nav-link[data-icon],
-[data-theme="classic"] .btn[data-icon],
-[data-theme="classic"] button[data-icon] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-[data-theme="classic"] .nav-link[data-icon]::before,
-[data-theme="classic"] .btn[data-icon]::before,
-[data-theme="classic"] button[data-icon]::before {
-    content: "";
-    width: 18px;
-    height: 18px;
-    flex: none;
-    background-color: currentColor;
-    -webkit-mask-position: center;
-    -webkit-mask-size: contain;
-    -webkit-mask-repeat: no-repeat;
-    mask-position: center;
-    mask-size: contain;
-    mask-repeat: no-repeat;
-}
-
-[data-theme="classic"] .btn[data-icon]::before,
-[data-theme="classic"] button[data-icon]::before {
-    width: 15px;
-    height: 15px;
-}
-
-[data-theme="classic"] [data-icon="library"]::before { -webkit-mask-image: url("/static/themes/classic/icon-library.svg"); mask-image: url("/static/themes/classic/icon-library.svg"); }
-[data-theme="classic"] [data-icon="faces"]::before { -webkit-mask-image: url("/static/themes/classic/icon-faces.svg"); mask-image: url("/static/themes/classic/icon-faces.svg"); }
-[data-theme="classic"] [data-icon="people"]::before { -webkit-mask-image: url("/static/themes/classic/icon-people.svg"); mask-image: url("/static/themes/classic/icon-people.svg"); }
-[data-theme="classic"] [data-icon="locations"]::before { -webkit-mask-image: url("/static/themes/classic/icon-locations.svg"); mask-image: url("/static/themes/classic/icon-locations.svg"); }
-[data-theme="classic"] [data-icon="utilities"]::before { -webkit-mask-image: url("/static/themes/classic/icon-utilities.svg"); mask-image: url("/static/themes/classic/icon-utilities.svg"); }
-[data-theme="classic"] [data-icon="settings"]::before { -webkit-mask-image: url("/static/themes/classic/icon-settings.svg"); mask-image: url("/static/themes/classic/icon-settings.svg"); }
-[data-theme="classic"] [data-icon="add"]::before { -webkit-mask-image: url("/static/themes/classic/icon-add.svg"); mask-image: url("/static/themes/classic/icon-add.svg"); }
-[data-theme="classic"] [data-icon="edit"]::before { -webkit-mask-image: url("/static/themes/classic/icon-edit.svg"); mask-image: url("/static/themes/classic/icon-edit.svg"); }
-[data-theme="classic"] [data-icon="delete"]::before { -webkit-mask-image: url("/static/themes/classic/icon-delete.svg"); mask-image: url("/static/themes/classic/icon-delete.svg"); }
-[data-theme="classic"] [data-icon="search"]::before { -webkit-mask-image: url("/static/themes/classic/icon-search.svg"); mask-image: url("/static/themes/classic/icon-search.svg"); }
-[data-theme="classic"] [data-icon="sync"]::before { -webkit-mask-image: url("/static/themes/classic/icon-sync.svg"); mask-image: url("/static/themes/classic/icon-sync.svg"); }
 
 /* Animated translucent stripes over the accent fill while a job runs
    (the classic Bootstrap progress treatment). Both gradient layers are

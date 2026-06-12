@@ -117,6 +117,17 @@
 
 /* ---- icons: any .nav-link or .btn with data-icon gets its themed SVG.
    Icons live in themes/neobrutalist/, so other themes never load them. ---- */
+
+/* The app-wide default (components/icons.css) draws masked line icons in
+   currentColor; unset the mask and fill so this theme's own colored SVGs
+   (background-image) show instead of being clipped to the line-icon shapes. */
+[data-theme="neobrutalist"] [data-icon]::before,
+[data-theme="neobrutalist"] .nav-page-edit::before {
+    background-color: transparent;
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+
 [data-theme="neobrutalist"] .nav-link[data-icon],
 [data-theme="neobrutalist"] .btn[data-icon],
 [data-theme="neobrutalist"] button[data-icon] {

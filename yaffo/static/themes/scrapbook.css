@@ -347,49 +347,6 @@
     to { background-position: 40px 0; }
 }
 
-/* ---- icons: classic's line set, tinted by each control's text color ---- */
-[data-theme="scrapbook"] .nav-link[data-icon],
-[data-theme="scrapbook"] .btn[data-icon],
-[data-theme="scrapbook"] button[data-icon] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-[data-theme="scrapbook"] .nav-link[data-icon]::before,
-[data-theme="scrapbook"] .btn[data-icon]::before,
-[data-theme="scrapbook"] button[data-icon]::before {
-    content: "";
-    width: 18px;
-    height: 18px;
-    flex: none;
-    background-color: currentColor;
-    -webkit-mask-position: center;
-    -webkit-mask-size: contain;
-    -webkit-mask-repeat: no-repeat;
-    mask-position: center;
-    mask-size: contain;
-    mask-repeat: no-repeat;
-}
-
-[data-theme="scrapbook"] .btn[data-icon]::before,
-[data-theme="scrapbook"] button[data-icon]::before {
-    width: 15px;
-    height: 15px;
-}
-
-[data-theme="scrapbook"] [data-icon="library"]::before { -webkit-mask-image: url("/static/themes/classic/icon-library.svg"); mask-image: url("/static/themes/classic/icon-library.svg"); }
-[data-theme="scrapbook"] [data-icon="faces"]::before { -webkit-mask-image: url("/static/themes/classic/icon-faces.svg"); mask-image: url("/static/themes/classic/icon-faces.svg"); }
-[data-theme="scrapbook"] [data-icon="people"]::before { -webkit-mask-image: url("/static/themes/classic/icon-people.svg"); mask-image: url("/static/themes/classic/icon-people.svg"); }
-[data-theme="scrapbook"] [data-icon="locations"]::before { -webkit-mask-image: url("/static/themes/classic/icon-locations.svg"); mask-image: url("/static/themes/classic/icon-locations.svg"); }
-[data-theme="scrapbook"] [data-icon="utilities"]::before { -webkit-mask-image: url("/static/themes/classic/icon-utilities.svg"); mask-image: url("/static/themes/classic/icon-utilities.svg"); }
-[data-theme="scrapbook"] [data-icon="settings"]::before { -webkit-mask-image: url("/static/themes/classic/icon-settings.svg"); mask-image: url("/static/themes/classic/icon-settings.svg"); }
-[data-theme="scrapbook"] [data-icon="add"]::before { -webkit-mask-image: url("/static/themes/classic/icon-add.svg"); mask-image: url("/static/themes/classic/icon-add.svg"); }
-[data-theme="scrapbook"] [data-icon="edit"]::before { -webkit-mask-image: url("/static/themes/classic/icon-edit.svg"); mask-image: url("/static/themes/classic/icon-edit.svg"); }
-[data-theme="scrapbook"] [data-icon="delete"]::before { -webkit-mask-image: url("/static/themes/classic/icon-delete.svg"); mask-image: url("/static/themes/classic/icon-delete.svg"); }
-[data-theme="scrapbook"] [data-icon="search"]::before { -webkit-mask-image: url("/static/themes/classic/icon-search.svg"); mask-image: url("/static/themes/classic/icon-search.svg"); }
-[data-theme="scrapbook"] [data-icon="sync"]::before { -webkit-mask-image: url("/static/themes/classic/icon-sync.svg"); mask-image: url("/static/themes/classic/icon-sync.svg"); }
 
 /* Search glyph inside the searchable-select filter box */
 [data-theme="scrapbook"] .searchable-select-search {

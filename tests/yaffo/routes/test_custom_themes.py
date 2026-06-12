@@ -33,7 +33,8 @@ def test_save_get_list_roundtrip(app):
 
     themes.save_custom_theme(_vaporwave(label="Vapor Wave 2"))
     assert themes.get_custom_theme("vaporwave").label == "Vapor Wave 2"
-    assert len(themes.list_custom_themes()) == 1
+    slugs = [theme.slug for theme in themes.list_custom_themes()]
+    assert slugs.count("vaporwave") == 1  # updated in place, not duplicated
 
 
 def test_builtins_unaffected_by_custom_registry(app):
