@@ -73,8 +73,8 @@
     color: var(--color-text);
 }
 
-[data-theme="memphis"] .nav-divider {
-    background: color-mix(in srgb, var(--color-text-inverse) 25%, transparent);
+[data-theme="memphis"] .navbar-pages-bar {
+    border-top-color: color-mix(in srgb, var(--color-text-inverse) 18%, transparent);
 }
 
 [data-theme="memphis"] .nav-new-page {

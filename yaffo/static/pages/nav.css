@@ -1,13 +1,48 @@
-.nav-divider {
-    width: 1px;
-    background: var(--color-border);
-    margin: 10px 8px;
-    align-self: stretch;
-    flex: none;
+/* ---- "Pages ▾" toggle in the main bar: collapses the strip below ---- */
+.nav-pages-toggle {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
-/* Page tabs scroll horizontally when they outgrow the navbar; the core
-   links, divider, and new-page button stay fixed. */
+/* Outranks the theme skins' `.nav-link { margin: … }` shorthands, which would
+   otherwise reset the auto left margin that pushes the toggle right. */
+.navbar .nav-link.nav-pages-toggle {
+    margin-left: auto;
+}
+
+.nav-pages-toggle-arrow {
+    font-size: var(--font-size-xs);
+    transition: transform 0.15s;
+}
+
+.nav-pages-toggle.collapsed .nav-pages-toggle-arrow {
+    transform: rotate(-90deg);
+}
+
+/* ---- bookmarks-style strip under the main bar (inside the sticky navbar,
+   so theme backgrounds and shadows wrap both rows) ---- */
+.navbar-pages-bar {
+    border-top: var(--border-width) solid var(--color-border-subtle);
+}
+
+.navbar-pages-bar[hidden] {
+    display: none;
+}
+
+/* The strip is slimmer than the main bar. */
+.navbar-pages-bar .nav-link {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* Page tabs scroll horizontally when they outgrow the strip; the new-page
+   button stays fixed. */
 .navbar-pages {
     display: flex;
     align-items: center;
@@ -37,8 +72,14 @@
     border-bottom: 3px solid transparent;
     cursor: pointer;
     font-family: inherit;
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-base);
     line-height: 1;
+    white-space: nowrap;
+    color: var(--color-text-muted);
+}
+
+.nav-new-page:hover {
+    color: var(--color-accent);
 }
 
 .nav-page-li {

@@ -69,9 +69,11 @@
     padding: 20px;
     height: fit-content;
     position: sticky;
-    top: 80px;
+    /* --navbar-height is published by nav.js (the bar's height varies by theme
+       and with the pages strip toggled); the fallback approximates one row. */
+    top: calc(var(--navbar-height, 64px) + 16px);
     box-shadow: var(--shadow-sm);
-    max-height: calc(100vh - 100px);
+    max-height: calc(100vh - var(--navbar-height, 64px) - 36px);
     overflow-y: auto;
 }
 

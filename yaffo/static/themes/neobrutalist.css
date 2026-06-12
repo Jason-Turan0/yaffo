@@ -73,6 +73,10 @@
     margin: -5px 0 -5px -5px;
 }
 
+[data-theme="neobrutalist"] .navbar-pages-bar {
+    border-top-color: var(--color-border);
+}
+
 /* ---- page-tab edit pencil: hide the ✎ glyph, render as a small tile
    with the themed edit icon so it matches the rest of the navbar ---- */
 [data-theme="neobrutalist"] .nav-page-li .nav-page-tab.active {
