@@ -13,7 +13,7 @@
     padding: 8px;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     background: var(--color-surface);
     cursor: pointer;
     text-align: left;
@@ -41,7 +41,7 @@
 
 .searchable-select-arrow {
     margin-left: 8px;
-    font-size: 10px;
+    font-size: var(--font-size-xs);
     transition: transform 0.2s;
     color: var(--color-text-muted);
 }
@@ -75,7 +75,7 @@
     padding: 8px;
     border: none;
     border-bottom: var(--border-width) solid var(--color-border-strong);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     outline: none;
 }
 
@@ -91,7 +91,7 @@
 .searchable-select-option {
     padding: 8px 12px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     transition: background 0.1s;
 }
 
@@ -115,6 +115,6 @@
     padding: 12px;
     text-align: center;
     color: var(--color-text-muted);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     font-style: italic;
 }

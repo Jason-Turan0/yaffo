@@ -29,7 +29,7 @@ body {
 }
 
 .navbar-brand {
-    font-size: 20px;
+    font-size: var(--font-size-lg);
     font-weight: 600;
     color: var(--color-text);
     text-decoration: none;
@@ -51,7 +51,7 @@ body {
     display: block;
     border-bottom: 3px solid transparent;
     transition: all 0.2s;
-    font-size: 15px;
+    font-size: var(--font-size-base);
 }
 
 .nav-link:hover {
@@ -73,7 +73,7 @@ body {
     padding: 12px 20px;
     margin-bottom: 10px;
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -131,7 +131,7 @@ body {
 .alert-close {
     background: none;
     border: none;
-    font-size: 20px;
+    font-size: var(--font-size-lg);
     cursor: pointer;
     color: inherit;
     opacity: 0.5;
@@ -152,7 +152,7 @@ body {
 }
 
 .header-info h1 {
-    font-size: 24px;
+    font-size: var(--font-size-xl);
     margin: 0 0 5px 0;
     color: var(--color-text);
 }
@@ -173,13 +173,13 @@ body {
 
 .page-header h1 {
     font-family: var(--font-heading);
-    font-size: 24px;
+    font-size: var(--font-size-xl);
     margin: 0 0 10px 0;
     color: var(--color-text);
 }
 
 .page-header .subtitle {
-    font-size: 14px;
+    font-size: var(--font-size-base);
     color: var(--color-text-muted);
 }
 
@@ -194,7 +194,7 @@ body {
     display: flex;
     align-items: center;
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     color: var(--color-text-secondary);
     transition: color 0.2s;
 }

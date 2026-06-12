@@ -7,20 +7,20 @@
 }
 
 .empty-state h2 {
-    font-size: 20px;
+    font-size: var(--font-size-lg);
     color: var(--color-text-secondary);
     margin-bottom: 10px;
 }
 
 .empty-state p {
     color: var(--color-text-muted);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     margin-bottom: 20px;
 }
 
 /* Inline "nothing here" text for an empty section or list. */
 .no-data {
-    font-size: 14px;
+    font-size: var(--font-size-base);
     color: var(--color-text-faint);
     font-style: italic;
 }

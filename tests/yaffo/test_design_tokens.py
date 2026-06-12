@@ -29,6 +29,9 @@ RAW_COLOR = re.compile(
     r"|(?<![-\w])(?:white|black)(?![-\w])",  # named colors (not white-space etc.)
 )
 
+# font-size must come from the type scale (or inherit); no literal px/rem/em.
+RAW_FONT_SIZE = re.compile(r"font-size:(?!\s*(?:var\(|inherit\b))")
+
 
 def _css_files() -> list[Path]:
     return [
@@ -53,11 +56,43 @@ def test_no_raw_colors_outside_tokens(path: Path) -> None:
     violations = [
         f"  line {line_number}: {line.strip()}"
         for line_number, line in enumerate(path.read_text().splitlines(), start=1)
-        if RAW_COLOR.search(line)
+        if RAW_COLOR.search(line) or RAW_FONT_SIZE.search(line)
     ]
     assert not violations, (
-        f"{relative} contains raw color values; use var(--…) tokens from "
-        f"static/{TOKENS_FILE} instead:\n" + "\n".join(violations)
+        f"{relative} contains raw color or font-size values; use var(--…) "
+        f"tokens from static/{TOKENS_FILE} instead:\n" + "\n".join(violations)
+    )
+
+
+TEMPLATES_DIR = STATIC_DIR.parent / "templates"
+
+# The sandboxed widget iframe document cannot load the app stylesheets; it has
+# its own widget_theme_css injection instead.
+TEMPLATE_EXEMPT = {"pages/widget_frame.html"}
+
+TEMPLATE_HEX = re.compile(r"#[0-9a-fA-F]{3,8}\b")
+
+
+@pytest.mark.parametrize(
+    "path",
+    sorted(TEMPLATES_DIR.rglob("*.html")),
+    ids=lambda p: p.relative_to(TEMPLATES_DIR).as_posix(),
+)
+def test_no_styling_in_templates(path: Path) -> None:
+    relative = path.relative_to(TEMPLATES_DIR).as_posix()
+    if relative in TEMPLATE_EXEMPT:
+        pytest.skip(f"{relative} is a sandboxed iframe document")
+
+    text = path.read_text()
+    violations = [
+        f"  line {line_number}: {line.strip()}"
+        for line_number, line in enumerate(text.splitlines(), start=1)
+        if "<style" in line or TEMPLATE_HEX.search(line) or RAW_FONT_SIZE.search(line)
+    ]
+    assert not violations, (
+        f"{relative} contains embedded styling (style blocks, hex colors, or "
+        f"font sizes); move it to a stylesheet using var(--…) tokens:\n"
+        + "\n".join(violations)
     )
 
 

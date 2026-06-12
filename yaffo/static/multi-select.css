@@ -12,7 +12,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 14px;
+    font-size: var(--font-size-base);
 }
 
 .multi-select-header:hover {
@@ -20,7 +20,7 @@
 }
 
 .multi-select-header .arrow {
-    font-size: 10px;
+    font-size: var(--font-size-xs);
     transition: transform 0.2s;
 }
 
@@ -66,12 +66,12 @@
 }
 
 .multi-select-option span {
-    font-size: 14px;
+    font-size: var(--font-size-base);
 }
 
 .filter-hint {
     display: block;
     margin-top: 4px;
-    font-size: 12px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
 }

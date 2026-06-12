@@ -2,10 +2,15 @@
     margin-bottom: 20px;
 }
 
+.hint-text {
+    font-size: var(--font-size-base);
+    color: var(--color-text-muted);
+}
+
 .form-group label {
     display: block;
     margin-bottom: 5px;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     font-weight: 500;
     color: var(--color-text-secondary);
 }
@@ -21,7 +26,7 @@
     padding: 10px;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-base);
 }
 
 .form-group .inline input {
@@ -39,7 +44,7 @@
     padding: 0.5rem;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-base);
 }
 
 .checkbox-label {
@@ -49,7 +54,7 @@
     cursor: pointer;
     transition: background 0.2s;
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     user-select: none;
 }
 
@@ -67,7 +72,7 @@
     padding: 10px;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     font-family: inherit; /* Ensures it matches the font of your inputs */
     resize: vertical; /* Allows users to make it taller, but keeps layout from breaking horizontally */
     min-height: 100px; /* Gives a good default starting height */

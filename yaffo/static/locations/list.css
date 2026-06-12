@@ -16,7 +16,7 @@
 
 .page-header h1 {
     margin: 0 0 8px 0;
-    font-size: 24px;
+    font-size: var(--font-size-xl);
     color: var(--color-text);
 }
 
@@ -31,7 +31,7 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     color: var(--color-text-secondary);
     user-select: none;
 }
@@ -48,7 +48,7 @@
 
 .help-text {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
 }
 
@@ -111,7 +111,7 @@
     position: absolute;
     top: 8px;
     right: 8px;
-    font-size: 20px;
+    font-size: var(--font-size-lg);
     color: var(--color-text-muted);
     z-index: 1;
 }
@@ -122,13 +122,13 @@
 
 .popup-content h3 {
     margin: 0 0 8px 0;
-    font-size: 16px;
+    font-size: var(--font-size-md);
     color: var(--color-text);
 }
 
 .popup-content p {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     color: var(--color-text-muted);
 }
 
@@ -159,7 +159,7 @@
 
 .popup-select-container label {
     display: block;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     margin-bottom: 5px;
     font-weight: 500;
@@ -170,7 +170,7 @@
     padding: 8px;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     background: var(--color-surface);
     cursor: pointer;
 }
@@ -183,7 +183,7 @@
 
 .photo-location {
     margin: 8px 0 0 0;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
 }
 
@@ -206,7 +206,7 @@
 
 .selection-panel h3 {
     margin: 0 0 10px 0;
-    font-size: 18px;
+    font-size: var(--font-size-lg);
     color: var(--color-text);
 }
 
@@ -215,7 +215,7 @@
     padding: 10px;
     background: var(--color-accent-soft);
     border-radius: var(--radius-sm);
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-accent-soft-text);
 }
 
@@ -225,7 +225,7 @@
 }
 
 .summary-label {
-    font-size: 12px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
     margin-bottom: 8px;
     font-weight: 500;
@@ -254,12 +254,12 @@
 }
 
 .cluster-summary-item strong {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text);
 }
 
 .cluster-summary-item .current-location {
-    font-size: 12px;
+    font-size: var(--font-size-sm);
 }
 
 .cluster-item {
@@ -282,11 +282,11 @@
 
 .cluster-info strong {
     color: var(--color-text);
-    font-size: 14px;
+    font-size: var(--font-size-base);
 }
 
 .current-location {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
 }
 
@@ -295,7 +295,7 @@
 }
 
 .quick-action-label {
-    font-size: 12px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
     margin-bottom: 5px;
     font-weight: 500;
@@ -313,7 +313,7 @@
     color: var(--color-text-secondary);
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.2s;
@@ -345,7 +345,7 @@
     padding: 8px;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-base);
 }
 
 .location-input:focus {

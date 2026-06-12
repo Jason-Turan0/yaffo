@@ -9,14 +9,14 @@
 .settings-section h2 {
     margin-top: 0;
     margin-bottom: 10px;
-    font-size: 20px;
+    font-size: var(--font-size-lg);
     color: var(--color-text);
 }
 
 .section-description {
     margin-bottom: 20px;
     color: var(--color-text-muted);
-    font-size: 14px;
+    font-size: var(--font-size-base);
 }
 
 .media-dirs-list {
@@ -36,7 +36,7 @@
 
 .media-dir-path {
     font-family: var(--font-mono);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     color: var(--color-text-secondary);
     flex: 1;
 }
@@ -80,14 +80,14 @@
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-sm);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     margin-bottom: 8px;
 }
 
 .path-description {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
     line-height: 1.5;
 }
@@ -121,7 +121,7 @@
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-sm);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
 }
 
@@ -135,7 +135,7 @@
 }
 
 .stat-item {
-    font-size: 14px;
+    font-size: var(--font-size-base);
     color: var(--color-text-secondary);
 }
 

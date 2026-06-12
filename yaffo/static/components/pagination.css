@@ -14,7 +14,7 @@
 
 .results-count {
     color: var(--color-text-muted);
-    font-size: 0.875rem;
+    font-size: var(--font-size-base);
 }
 
 .pagination-controls {
@@ -33,7 +33,7 @@
 
 .page-size-selector label {
     color: var(--color-text-secondary);
-    font-size: 0.875rem;
+    font-size: var(--font-size-base);
     font-weight: 500;
 }
 
@@ -43,7 +43,7 @@
     border-radius: var(--radius-sm);
     background-color: var(--color-surface);
     color: var(--color-text);
-    font-size: 0.875rem;
+    font-size: var(--font-size-base);
     cursor: pointer;
     transition: border-color 0.15s ease-in-out;
 }
@@ -70,7 +70,7 @@
     border-radius: var(--radius-sm);
     background-color: var(--color-surface);
     color: var(--color-text-secondary);
-    font-size: 0.875rem;
+    font-size: var(--font-size-base);
     text-decoration: none;
     cursor: pointer;
     transition: all 0.15s ease-in-out;
@@ -92,7 +92,7 @@
 .page-info {
     padding: 0 0.5rem;
     color: var(--color-text-secondary);
-    font-size: 0.875rem;
+    font-size: var(--font-size-base);
     font-weight: 500;
     white-space: nowrap;
 }

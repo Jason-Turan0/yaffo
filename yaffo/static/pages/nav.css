@@ -18,7 +18,7 @@
     border-bottom: 3px solid transparent;
     cursor: pointer;
     font-family: inherit;
-    font-size: 20px;
+    font-size: var(--font-size-lg);
     line-height: 1;
 }
 
@@ -45,7 +45,7 @@
     padding: 0 12px 0 4px;
     color: var(--color-border-hover);
     text-decoration: none;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     border-bottom: 3px solid transparent;
 }
 

@@ -4,6 +4,10 @@
 
 {% block title %}Organize Photos - Utilities - Photo Organizer{% endblock %}
 
+{% block utility_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='utilities/organize_photos.css') }}">
+{% endblock %}
+
 {% block utility_content %}
 <div class="utility-page">
     <div class="page-header">
@@ -104,90 +108,6 @@
         </div>
     </div>
 </div>
-
-<style>
-.config-form {
-    max-width: 500px;
-    margin: 2rem 0;
-}
-
-.file-list {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.file-list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    background: white;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.file-count {
-    font-weight: 500;
-    color: #495057;
-}
-
-.file-items {
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-.file-item {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e9ecef;
-    background: white;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.file-item:last-child {
-    border-bottom: none;
-}
-
-.file-item.all-organized {
-    text-align: center;
-    color: #6c757d;
-    padding: 2rem;
-    display: block;
-}
-
-.file-source {
-    font-family: 'Courier New', monospace;
-    font-size: 0.875rem;
-    color: #666;
-    flex: 1;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-right: auto;
-}
-
-.file-destination {
-    font-family: 'Courier New', monospace;
-    font-size: 0.875rem;
-    color: #212529;
-    flex: 1;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-left: auto;
-}
-
-.arrow {
-    font-size: 0.875rem;
-    color: #007bff;
-    margin-right: 0.5rem;
-    align-self: center;
-}
-</style>
 {% endblock %}
 
 {% block scripts %}

@@ -1,7 +1,7 @@
 kbd {
     display: inline-block;
     padding: 2px 6px;
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     line-height: 1;
     color: var(--color-text-secondary);
     background-color: var(--color-bg);

@@ -3,6 +3,10 @@
 
 {% block title %}Sync Metadata - Utilities - Photo Organizer{% endblock %}
 
+{% block utility_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='utilities/sync_metadata.css') }}">
+{% endblock %}
+
 {% block utility_content %}
 <div class="utility-page">
     <div class="page-header">
@@ -73,82 +77,6 @@
     </div>
     {% endif %}
 </div>
-
-<style>
-.photo-list {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.photo-list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    background: white;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.photo-count {
-    font-weight: 500;
-    color: #495057;
-}
-
-.photo-items {
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-.photo-item {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e9ecef;
-    background: white;
-}
-
-.photo-item:last-child {
-    border-bottom: none;
-}
-
-.photo-item.more-items {
-    text-align: center;
-    color: #6c757d;
-    font-style: italic;
-}
-
-.photo-path {
-    font-family: 'Courier New', monospace;
-    font-size: 0.875rem;
-    margin-bottom: 0.5rem;
-    word-break: break-all;
-}
-
-.metadata-changes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.metadata-tag {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
-    background: #e7f3ff;
-    color: #004085;
-}
-
-.metadata-tag.location {
-    background: #d4edda;
-    color: #155724;
-}
-
-.metadata-tag.people {
-    background: #fff3cd;
-    color: #856404;
-}
-</style>
 {% endblock %}
 
 {% block scripts %}

@@ -16,7 +16,7 @@
 {% macro render_modal_keyboard_help() %}
     <div id="keyboard-help-content" style="overflow-y: auto; max-height: calc(90vh - 150px);">
         <h3 style="margin-top: 0;">How This Page Works</h3>
-        <ul style="margin: 0 0 20px 20px; line-height: 1.6; color: #495057;">
+        <ul class="help-list">
             <li>Faces are automatically grouped and selected for bulk assignment</li>
             <li><strong>Group by People:</strong> Matches faces to specific people</li>
             <li><strong>Group by Similarity:</strong> Clusters visually similar faces together</li>
@@ -54,8 +54,8 @@
             </div>
         </div>
 
-        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-left: 3px solid #007BFF; border-radius: 4px;">
-            <p style="margin: 0; color: #495057; font-size: 14px; line-height: 1.5;">
+        <div class="help-tips">
+            <p>
                 <strong>💡 Tips:</strong><br>
                 • Select faces then press a number key for quick assignment<br>
                 • Hold Shift+Click to select multiple faces at once

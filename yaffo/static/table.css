@@ -16,7 +16,7 @@ th {
     text-align: left;
     padding: 16px;
     font-weight: 600;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;

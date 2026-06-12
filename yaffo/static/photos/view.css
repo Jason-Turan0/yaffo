@@ -31,7 +31,7 @@
 
 .sidebar-header h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: var(--font-size-lg);
     font-weight: 600;
 }
 
@@ -47,7 +47,7 @@
 
 .detail-section h3 {
     margin: 0 0 15px 0;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     font-weight: 600;
     color: var(--color-text-muted);
     text-transform: uppercase;
@@ -61,7 +61,7 @@
 }
 
 .detail-item label {
-    font-size: 12px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
     margin-bottom: 4px;
     text-transform: uppercase;
@@ -69,7 +69,7 @@
 }
 
 .detail-item .detail-value {
-    font-size: 14px;
+    font-size: var(--font-size-base);
     word-break: break-word;
 }
 
@@ -96,7 +96,7 @@
     background: var(--color-surface);
     color: var(--color-accent);
     border-radius: var(--radius-pill);
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     text-decoration: none;
     transition: all 0.2s;
     border: var(--border-width) solid var(--color-accent);
@@ -150,7 +150,7 @@
     right: 0;
     background: color-mix(in srgb, var(--color-accent) 90%, transparent);
     color: var(--color-on-accent);
-    font-size: 9px;
+    font-size: var(--font-size-xs);
     padding: 2px 4px;
     text-align: center;
     white-space: nowrap;
@@ -178,7 +178,7 @@
 .photo-header .back-link {
     color: var(--color-accent);
     text-decoration: none;
-    font-size: 14px;
+    font-size: var(--font-size-base);
 }
 
 .photo-header .back-link:hover {
@@ -228,7 +228,7 @@
     background: var(--color-bg);
     border-radius: var(--radius-md);
     border-left: 3px solid var(--color-neutral);
-    font-size: 13px;
+    font-size: var(--font-size-sm);
 }
 
 .tag-name {
@@ -271,7 +271,7 @@
     background: var(--color-bg);
     border-radius: var(--radius-md);
     border-left: 3px solid var(--color-neutral);
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     gap: 10px;
 }
 
@@ -291,7 +291,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 16px;
+    font-size: var(--font-size-md);
     padding: 4px 6px;
     transition: transform 0.2s;
     border-radius: var(--radius-sm);
@@ -318,7 +318,7 @@
     padding: 8px 12px;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     font-family: inherit;
 }
 
@@ -332,7 +332,7 @@
     padding: 4px 8px;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     font-family: inherit;
     flex: 1;
 }
@@ -385,7 +385,7 @@
 
 .tag-add-section h4 {
     margin: 0 0 12px 0;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     font-weight: 600;
     color: var(--color-text-secondary);
 }
@@ -394,7 +394,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 18px;
+    font-size: var(--font-size-lg);
     padding: 4px 8px;
     transition: transform 0.2s;
     border-radius: var(--radius-sm);
@@ -407,7 +407,7 @@
 }
 
 .face-reassign-header {
-    font-size: 12px;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-text-secondary);
     margin-bottom: 8px;

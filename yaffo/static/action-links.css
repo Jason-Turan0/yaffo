@@ -6,7 +6,7 @@
 .action-link {
     color: var(--color-accent);
     text-decoration: none;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     transition: color 0.2s;
 }
 

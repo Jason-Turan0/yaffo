@@ -45,7 +45,7 @@
 
 .editor-actions button {
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     white-space: nowrap;
 }
 
@@ -66,12 +66,12 @@
 }
 
 .conversation-header h2 {
-    font-size: 15px;
+    font-size: var(--font-size-base);
     margin: 0;
 }
 
 .conversation-subtitle {
-    font-size: 12px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
     margin-top: 2px;
 }
@@ -86,14 +86,14 @@
 }
 
 .chat-empty {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-faint);
 }
 
 .chat-message {
     padding: 8px 12px;
     border-radius: var(--radius-md);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     max-width: 90%;
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -116,7 +116,7 @@
     align-self: flex-start;
     background: transparent;
     color: var(--color-text-muted);
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     padding: 2px 12px;
 }
 
@@ -148,7 +148,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
 }
 
@@ -224,7 +224,7 @@
 .widget-title {
     flex: 1;
     min-width: 0;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     color: var(--color-text-secondary);
     overflow: hidden;
@@ -236,7 +236,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     line-height: 1;
     color: var(--color-text-faint);
     padding: 0 4px;
@@ -249,7 +249,7 @@
 .widget-title-input {
     flex: 1;
     min-width: 0;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     color: var(--color-text-secondary);
     border: none;
@@ -273,7 +273,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 18px;
+    font-size: var(--font-size-lg);
     line-height: 1;
     color: var(--color-text-faint);
     padding: 0 4px;

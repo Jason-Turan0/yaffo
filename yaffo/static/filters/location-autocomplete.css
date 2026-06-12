@@ -6,7 +6,7 @@
 
 .location-proximity-filter .proximity-label {
     display: block;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     margin-bottom: 10px;
     font-weight: 500;
@@ -22,7 +22,7 @@
     padding: 8px;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     background: var(--color-surface);
 }
 
@@ -56,7 +56,7 @@
     padding: 8px 10px;
     cursor: pointer;
     border-bottom: var(--border-width) solid var(--color-border-subtle);
-    font-size: 13px;
+    font-size: var(--font-size-sm);
 }
 
 .location-suggestion-item:last-child {
@@ -89,7 +89,7 @@
 
 .location-suggestion-item .suggestion-source {
     color: var(--color-text-muted);
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     margin-left: 5px;
 }
 
@@ -100,7 +100,7 @@
 }
 
 .distance-input-wrapper label {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     margin: 0;
     white-space: nowrap;
@@ -113,7 +113,7 @@
     padding: 8px;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     background: var(--color-surface);
 }
 

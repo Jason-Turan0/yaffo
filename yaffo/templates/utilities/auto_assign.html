@@ -4,6 +4,10 @@
 
 {% block title %}Auto-Assign People - Utilities - Photo Organizer{% endblock %}
 
+{% block utility_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='utilities/auto_assign.css') }}">
+{% endblock %}
+
 {% block utility_content %}
 <div class="utility-page">
     <div class="page-header">
@@ -68,20 +72,6 @@
     </div>
     {% endif %}
 </div>
-
-<style>
-.config-form {
-    max-width: 500px;
-    margin: 2rem 0;
-}
-
-.slider-help-text {
-    font-size: 0.875rem;
-    color: #666;
-    margin-top: 0.5rem;
-}
-
-</style>
 {% endblock %}
 
 {% block scripts %}

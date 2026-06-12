@@ -66,7 +66,7 @@
     padding: 0.25rem 0.5rem;
     border-radius: var(--radius-sm);
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: var(--font-size-base);
     margin-bottom: 0.25rem;
 }
 
@@ -76,7 +76,7 @@
 }
 
 .face-meta {
-    font-size: 0.75rem;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
 }
 
