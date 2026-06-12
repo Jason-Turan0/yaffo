@@ -21,7 +21,7 @@
 
 [data-theme="scrapbook"] .navbar-brand {
     font-family: var(--font-heading);
-    font-size: 1.875rem;
+    font-size: var(--font-size-brand);
     color: var(--color-accent);
     background: var(--color-surface);
     box-shadow: var(--shadow-md);
@@ -125,7 +125,7 @@
     overflow: visible;
     position: relative;
     padding: 12px 12px 8px;
-    box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-lg);
     transition: transform 0.15s, box-shadow 0.15s;
 }
 
@@ -164,7 +164,7 @@
 
 [data-theme="scrapbook"] .photo-grid .photo-card:hover {
     transform: rotate(0deg) scale(1.06);
-    box-shadow: 4px 8px 20px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-xl);
     z-index: 5;
 }
 
@@ -201,7 +201,7 @@
     --polaroid-pad: 14px;
     background: var(--color-surface);
     padding: var(--polaroid-pad) var(--polaroid-pad) 46px;
-    box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-lg);
     transform: rotate(-0.8deg);
 }
 

@@ -193,6 +193,85 @@
 }
 
 /*
+ * Darkroom: near-black page, charcoal panels with hairline borders, quiet
+ * dim-gray text, amber safelight accent. Structure comes from borders, not
+ * shadows. Mockup reference: design_mockups/01-darkroom.html.
+ */
+[data-theme="darkroom"] {
+    /* Surfaces — charcoal page, slightly lifted panels */
+    --color-bg: #101216;
+    --color-surface: #181b21;
+    --color-surface-hover: #1f232b;
+    --color-surface-sunken: #13161b;
+
+    /* Text — cool grays */
+    --color-text: #e8eaed;
+    --color-text-secondary: #c2c8d0;
+    --color-text-muted: #9aa1ac;
+    --color-text-faint: #5f6672;
+
+    /* Inverse — tooltips flip to light-on-dark page */
+    --color-surface-inverse: rgba(232, 234, 237, 0.95);
+    --color-text-inverse: #101216;
+
+    /* Borders — hairlines do the structural work */
+    --color-border-subtle: #20242c;
+    --color-border: #2a2f39;
+    --color-border-strong: #353b47;
+    --color-border-hover: #4a5263;
+
+    /* Accent — amber safelight; dark ink on amber fills */
+    --color-accent: #e8a33d;
+    --color-accent-hover: #f2b455;
+    --color-accent-soft: rgba(232, 163, 61, 0.14);
+    --color-accent-soft-text: #e8a33d;
+    --color-on-accent: #1a1205;
+
+    /* Status — desaturated for dark panels; soft fills are translucent */
+    --color-success: #4caf6e;
+    --color-success-hover: #5dbf7e;
+    --color-success-soft: rgba(76, 175, 110, 0.15);
+    --color-success-soft-text: #7fd49d;
+    --color-success-soft-border: rgba(76, 175, 110, 0.35);
+    --color-danger: #e05d52;
+    --color-danger-hover: #ea6f64;
+    --color-danger-soft: rgba(224, 93, 82, 0.15);
+    --color-danger-soft-text: #f0958d;
+    --color-danger-soft-border: rgba(224, 93, 82, 0.35);
+    --color-warning: #d9b13b;
+    --color-warning-soft: rgba(217, 177, 59, 0.15);
+    --color-warning-soft-text: #e6c869;
+    --color-warning-soft-border: rgba(217, 177, 59, 0.35);
+    --color-info: #5aa7d6;
+
+    /* Neutral action — lifted slate buttons */
+    --color-neutral: #3a4150;
+    --color-neutral-hover: #4a5263;
+
+    --color-disabled-bg: #232831;
+    --color-disabled-text: #6b7280;
+
+    /* Shape — mockup radii */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+
+    /* Elevation — deep and soft; borders carry most of the structure */
+    --color-backdrop: rgba(0, 0, 0, 0.7);
+    --shadow-navbar: 0 1px 0 #2a2f39;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 4px 14px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 8px 28px rgba(0, 0, 0, 0.6);
+    --shadow-inset: inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+
+    /* Thumbnail scrim — consumed only by the darkroom skin */
+    --thumb-scrim: rgba(0, 0, 0, 0.35);
+
+    /* Component hooks */
+    --color-navbar-bg: rgba(16, 18, 22, 0.92);
+}
+
+/*
  * Scrapbook: kraft-paper page, paper-scrap surfaces with soft drop shadows,
  * handwritten type, marker-red accent, washi-tape pastels.
  * Mockup reference: design_mockups/05-scrapbook.html.
@@ -285,4 +364,5 @@
     --btn-border: 2px solid #3e3528;
     --shadow-btn: 1px 2px 4px rgba(0, 0, 0, 0.2);
     --color-navbar-bg: #c9b48f;
+    --font-size-brand: 1.875rem;  /* navbar wordmark, matches the mockup's 30px */
 }

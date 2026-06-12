@@ -16,6 +16,7 @@ DEFAULT_THEME = "classic"
 # tests/yaffo/test_design_tokens.py).
 THEMES: dict[str, str] = {
     "classic": "Classic",
+    "darkroom": "Darkroom",
     "neobrutalist": "Neo-Brutalist",
     "scrapbook": "Scrapbook",
 }

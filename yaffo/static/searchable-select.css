@@ -76,6 +76,7 @@
     border: none;
     border-bottom: var(--border-width) solid var(--color-border-strong);
     font-size: var(--font-size-base);
+    background: var(--color-surface);
     outline: none;
 }
 

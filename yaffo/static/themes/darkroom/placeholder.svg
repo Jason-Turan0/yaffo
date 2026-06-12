@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#101216"/>
+  <rect x="120" y="60" width="160" height="120" rx="10" fill="#181b21" stroke="#2a2f39"/>
+  <g opacity="0.85">
+    <circle cx="200" cy="120" r="30" fill="none" stroke="#e8a33d" stroke-width="4"/>
+    <g stroke="#e8a33d" stroke-width="3" stroke-linecap="round">
+      <line x1="200" y1="96" x2="212" y2="128"/>
+      <line x1="200" y1="96" x2="212" y2="128" transform="rotate(60 200 120)"/>
+      <line x1="200" y1="96" x2="212" y2="128" transform="rotate(120 200 120)"/>
+      <line x1="200" y1="96" x2="212" y2="128" transform="rotate(180 200 120)"/>
+      <line x1="200" y1="96" x2="212" y2="128" transform="rotate(240 200 120)"/>
+      <line x1="200" y1="96" x2="212" y2="128" transform="rotate(300 200 120)"/>
+    </g>
+  </g>
+  <text x="200" y="216" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" fill="#9aa1ac">image not found</text>
+</svg>
