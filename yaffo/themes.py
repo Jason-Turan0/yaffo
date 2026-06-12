@@ -17,6 +17,7 @@ DEFAULT_THEME = "classic"
 THEMES: dict[str, str] = {
     "classic": "Classic",
     "neobrutalist": "Neo-Brutalist",
+    "scrapbook": "Scrapbook",
 }
 
 _cached_theme: str | None = None

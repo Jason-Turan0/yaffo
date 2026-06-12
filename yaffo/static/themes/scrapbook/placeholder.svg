@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#d9c7a7"/>
+  <g transform="rotate(-3 200 130)" opacity="0.75">
+    <rect x="162" y="70" width="76" height="88" fill="#fffdf6"/>
+    <rect x="170" y="78" width="60" height="58" fill="#efe3c6"/>
+    <path d="M178 124l14-16 10 10 6-6 14 16z" fill="#a89c86"/>
+    <circle cx="186" cy="92" r="5" fill="#d9a514" opacity="0.7"/>
+  </g>
+  <rect x="178" y="56" width="44" height="14" fill="#f48fb1" opacity="0.65" transform="rotate(-6 200 63)"/>
+  <text x="200" y="208" text-anchor="middle" font-family="'Comic Sans MS', 'Chalkboard SE', cursive" font-size="19" fill="#6d5f49">image not found :(</text>
+</svg>
