@@ -173,6 +173,16 @@ const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
 
 **IMPORTANT:** Always use this instead of native `confirm()` or `alert()` functions.
 
+### Modals
+All modals share one skeleton (`static/components/modal.css`): `.modal > .modal-content` containing `.modal-header` (title + ✕ close), `.modal-body` (the only scroll region, `thin-scrollbar`), and `.modal-actions`. Never add ad-hoc scroll wrappers or restyle titles inside a modal.
+
+- **Form modals**: `render_modal()` from `components/modal.html` — Cancel + primary action.
+- **Info/help modals**: `render_info_modal()` from `components/info_modal.html` — no form, closes via ✕ or a `btn-secondary` button.
+- **Confirmations**: the global confirm dialog (see below) — don't build new ones.
+- **Width**: default 500px; pass `size_class="modal-lg"` (720px) for content-heavy bodies.
+- **Sub-headings** inside a body: `<h3 class="modal-section-title">` — never bare `h3`.
+- Both macros accept unique `id`s and derive element ids from them (`{{id}}Title`, `{{id}}Form`); wire behavior with `window.PHOTO_ORGANIZER.COMPONENTS.modal.init(id)`.
+
 ### APP_CONFIG
 Global configuration object with all Flask routes accessible in JavaScript:
 

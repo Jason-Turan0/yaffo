@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from flask import Flask
+from yaffo import themes
 from yaffo.db import db
 from yaffo.common import DB_PATH
 from yaffo.logging_config import get_logger
@@ -46,6 +47,10 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None):
     @app.context_processor
     def inject_url_map():
         return {'url_map': app.url_map}
+
+    @app.context_processor
+    def inject_theme():
+        return {'theme': themes.get_theme()}
 
     # Register template filters
 

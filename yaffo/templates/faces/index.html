@@ -14,8 +14,7 @@
 {% from "components/info_modal.html" import render_info_modal %}
 
 {% macro render_modal_keyboard_help() %}
-    <div id="keyboard-help-content" style="overflow-y: auto; max-height: calc(90vh - 150px);">
-        <h3 style="margin-top: 0;">How This Page Works</h3>
+        <h3 class="modal-section-title">How This Page Works</h3>
         <ul class="help-list">
             <li>Faces are automatically grouped and selected for bulk assignment</li>
             <li><strong>Group by People:</strong> Matches faces to specific people</li>
@@ -24,7 +23,7 @@
             </li>
         </ul>
 
-        <h3 style="margin-top: 20px;">Quick Assignment</h3>
+        <h3 class="modal-section-title">Quick Assignment</h3>
         <div class="help-shortcuts-list">
             {% for person in people[:9] %}
                 <div class="help-shortcut-item">
@@ -34,7 +33,7 @@
             {% endfor %}
         </div>
 
-        <h3 style="margin-top: 20px;">Other Shortcuts</h3>
+        <h3 class="modal-section-title">Other Shortcuts</h3>
         <div class="help-shortcuts-list">
             <div class="help-shortcut-item">
                 <kbd>Shift</kbd> + <kbd>Click</kbd>
@@ -61,7 +60,6 @@
                 • Hold Shift+Click to select multiple faces at once
             </p>
         </div>
-    </div>
 {% endmacro %}
 
 {% block content %}
@@ -244,7 +242,7 @@
     ) }}
         </div>
 
-        {{ render_info_modal('keyboardHelpModal', "Help", render_modal_keyboard_help) }}
+        {{ render_info_modal('keyboardHelpModal', "Help", render_modal_keyboard_help, size_class="modal-lg") }}
 
     </div>
 {% endblock %}

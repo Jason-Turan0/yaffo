@@ -1,7 +1,8 @@
 .btn, .btn-primary, .btn-secondary, .btn-danger, .action-button {
     padding: 10px 20px;
-    border: none;
+    border: var(--btn-border);
     border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-btn);
     font-size: var(--font-size-base);
     font-weight: 500;
     font-family: var(--font-body);

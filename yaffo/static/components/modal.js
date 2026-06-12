@@ -8,26 +8,26 @@ window.PHOTO_ORGANIZER.COMPONENTS.modal =
             if(modalElement == null){
                 throw new Error(`Failed to find dom element ${modalId}`);
             }
-            const cancelElement = modalElement.querySelector('[name="cancel"]');
+            const cancelElements = modalElement.querySelectorAll('[name="cancel"]');
 
             const formElement = modalElement.querySelector('form');
-            if(formElement == null){
-                throw new Error(`Failed to find form element in modal element ${modalId}`);
-            }
 
             const close = () => {
                 modalElement.classList.remove('active');
             }
-            if(cancelElement){
+            cancelElements.forEach((cancelElement) => {
                 cancelElement.addEventListener('click', (e) => {
                     close();
                 })
-            }
+            });
 
             const open = () => {
                 modalElement.classList.add('active');
             }
             const setFormAction = (url) => {
+                if(formElement == null){
+                    throw new Error(`Modal ${modalId} has no form to set an action on`);
+                }
                 formElement.action = url;
             }
 

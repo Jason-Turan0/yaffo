@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="{{ theme }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/percentage_slider.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/file_browser.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='pages/nav.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='themes/neobrutalist.css') }}">
 
 
     {% block extra_styles %}{% endblock %}
@@ -71,8 +72,7 @@
 <nav class="navbar">
     <div class="navbar-container">
         <a href="{{ url_for('index') }}" class="navbar-brand">
-            <img src="{{ url_for('static', filename='yaffo_logo.png') }}" alt="YAFFO"
-                 style="height: 54px; vertical-align: middle; margin-right: 8px;">
+            YAFFO!
         </a>
         <ul class="navbar-nav">
             <li><a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Home</a>
@@ -131,9 +131,11 @@
 <!-- Global Confirm Dialog -->
 <div id="global-confirm-dialog" class="modal">
     <div class="modal-content">
-        <h2 id="confirm-dialog-title">Confirm</h2>
+        <div class="modal-header">
+            <h2 id="confirm-dialog-title">Confirm</h2>
+        </div>
         <div class="modal-body">
-            <p id="confirm-dialog-message" style="margin: 0; white-space: pre-line;"></p>
+            <p id="confirm-dialog-message" class="modal-message"></p>
         </div>
         <div class="modal-actions">
             <button type="button" id="confirm-dialog-cancel" class="btn btn-secondary">Cancel</button>

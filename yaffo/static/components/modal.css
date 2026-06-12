@@ -1,3 +1,8 @@
+/* Modal convention: every modal is .modal > .modal-content holding
+   .modal-header (title + optional ✕), .modal-body (the only scroll region),
+   and .modal-actions. Form modals wrap body+actions in the <form>. Width
+   variants: default 500px, .modal-lg for content-heavy bodies. */
+
 .modal {
     display: none;
     position: fixed;
@@ -28,11 +33,37 @@
     overflow: hidden;
 }
 
-.modal-content h2 {
-    margin: 0 0 20px 0;
+.modal-content.modal-lg {
+    max-width: 720px;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.modal-header h2 {
+    margin: 0;
     font-size: var(--font-size-lg);
     color: var(--color-text);
-    flex-shrink: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: var(--font-size-lg);
+    line-height: 1;
+    color: var(--color-text-faint);
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.modal-close:hover {
+    color: var(--color-text);
 }
 
 .modal-content form {
@@ -42,16 +73,36 @@
     min-height: 0;
 }
 
-.modal-content form > :not(.modal-actions) {
-    flex-shrink: 0;
-}
-
-.modal-content form > div:first-child {
-    flex: 1;
-    margin-bottom: 20px;
+.modal-body {
     display: flex;
     flex-direction: column;
+    flex: 1;
     min-height: 0;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+}
+
+/* Sub-headings inside a modal body; same minor-heading style as the photo
+   sidebar's .detail-section h3. */
+.modal-section-title {
+    margin: 20px 0 10px;
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modal-section-title:first-child {
+    margin-top: 0;
+}
+
+.modal-message {
+    margin: 0;
+    white-space: pre-line;
 }
 
 .modal-actions {
@@ -60,11 +111,4 @@
     justify-content: flex-end;
     flex-shrink: 0;
     margin-top: auto;
-}
-
-.modal-body {
-    margin-bottom: 20px;
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-base);
-    line-height: 1.5;
 }

@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
+from yaffo import themes
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, Face
 from yaffo.common import DB_PATH, HUEY_DB_PATH
@@ -77,7 +78,20 @@ def init_settings_routes(app: Flask):
             thumbnail_size=format_size(thumbnail_size),
             huey_db_path=str(HUEY_DB_PATH),
             llm=llm_config.status(),
+            themes=themes.THEMES,
         )
+
+    @app.route("/settings/theme", methods=["POST"])
+    def settings_theme():
+        selected = (request.form.get("theme") or "").strip()
+        if selected not in themes.THEMES:
+            return jsonify({"error": f"Unknown theme: {selected}"}), 400
+        themes.set_theme(selected)
+        # The theme lives on <html data-theme>, outside any swappable
+        # fragment, so ask htmx for a full page refresh.
+        response = make_response("", 204)
+        response.headers["HX-Refresh"] = "true"
+        return response
 
     @app.route("/settings/llm/model", methods=["POST"])
     def settings_llm_model():

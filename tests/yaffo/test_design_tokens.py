@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pytest
 
+from yaffo import themes
+
 STATIC_DIR = Path(__file__).resolve().parents[2] / "yaffo" / "static"
 
 TOKENS_FILE = "tokens.css"
@@ -93,6 +95,19 @@ def test_no_styling_in_templates(path: Path) -> None:
         f"{relative} contains embedded styling (style blocks, hex colors, or "
         f"font sizes); move it to a stylesheet using var(--…) tokens:\n"
         + "\n".join(violations)
+    )
+
+
+def test_every_registered_theme_has_a_token_block() -> None:
+    """Each theme slug in the registry (except the :root default) must have a
+    [data-theme="slug"] override block in tokens.css, and vice versa."""
+    tokens_text = (STATIC_DIR / TOKENS_FILE).read_text()
+    tokens_text = re.sub(r"/\*.*?\*/", "", tokens_text, flags=re.DOTALL)
+    declared = set(re.findall(r'\[data-theme="([^"]+)"\]', tokens_text))
+    registered = set(themes.THEMES) - {themes.DEFAULT_THEME}
+    assert declared == registered, (
+        f"tokens.css [data-theme] blocks {sorted(declared)} must match the "
+        f"non-default entries of themes.THEMES {sorted(registered)}"
     )
 
 

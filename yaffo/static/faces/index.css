@@ -134,8 +134,8 @@
 }
 
 .help-shortcuts-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 8px;
 }
 
@@ -150,7 +150,6 @@
 }
 
 .help-shortcut-item kbd {
-    min-width: 28px;
     text-align: center;
     font-size: var(--font-size-sm);
     padding: 4px 8px;
