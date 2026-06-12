@@ -68,6 +68,29 @@
 [data-theme="classic"] [data-icon="search"]::before { -webkit-mask-image: url("classic/icon-search.svg"); mask-image: url("classic/icon-search.svg"); }
 [data-theme="classic"] [data-icon="sync"]::before { -webkit-mask-image: url("classic/icon-sync.svg"); mask-image: url("classic/icon-sync.svg"); }
 
+/* Animated translucent stripes over the accent fill while a job runs
+   (the classic Bootstrap progress treatment). Both gradient layers are
+   restated because background-image is a single property: stripes on top,
+   the accent fill underneath. */
+[data-theme="classic"] .progress-bar {
+    background-image:
+        linear-gradient(
+            45deg,
+            color-mix(in srgb, var(--color-on-accent) 18%, transparent) 25%,
+            transparent 25% 50%,
+            color-mix(in srgb, var(--color-on-accent) 18%, transparent) 50% 75%,
+            transparent 75%
+        ),
+        linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+    background-size: 24px 24px, 100% 100%;
+    animation: progress-stripes 1s linear infinite;
+}
+
+@keyframes progress-stripes {
+    from { background-position: 24px 0, 0 0; }
+    to { background-position: 0 0, 0 0; }
+}
+
 /* Search glyph inside the searchable-select filter box */
 [data-theme="classic"] .searchable-select-search {
     padding-left: 32px;

@@ -355,6 +355,29 @@
     accent-color: var(--color-text);
 }
 
+/* ---- job progress: striped green fill that chugs while running ---- */
+[data-theme="neobrutalist"] .progress-bar-container {
+    height: 26px;
+    border: 3px solid var(--color-border);
+    background: var(--color-surface);
+}
+
+[data-theme="neobrutalist"] .progress-bar {
+    background: repeating-linear-gradient(
+        45deg,
+        var(--color-success) 0 14px,
+        var(--color-success-hover) 14px 28px
+    );
+    background-size: 40px 40px;
+    border-right: 3px solid var(--color-border);
+    animation: progress-chug 1s linear infinite;
+}
+
+@keyframes progress-chug {
+    from { background-position: 0 0; }
+    to { background-position: 40px 0; }
+}
+
 /* ---- panels: ink frames + sticker headings ---- */
 [data-theme="neobrutalist"] .sidebar,
 [data-theme="neobrutalist"] .settings-section,
