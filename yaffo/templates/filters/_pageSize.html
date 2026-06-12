@@ -1,6 +1,6 @@
 <div class="filter-group">
     <label for="page-size">Page Size</label>
-    <select name="page-size" id="page-size">
+    <select name="page-size" id="page-size" class="searchable-select" data-search-disabled>
         {% for page_size in filters.page_sizes %}
         <option value="{{ page_size }}" {% if filters.page_size == page_size %}selected{%
                 endif %}>{{ page_size }}

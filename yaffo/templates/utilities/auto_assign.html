@@ -36,7 +36,7 @@
         <div class="config-form">
             <div class="form-group">
                 <label for="person-select">Person</label>
-                <select id="person-select" class="form-control">
+                <select id="person-select" class="form-control searchable-select">
                     <option value="">-- Select a person --</option>
                     {% for person in people %}
                     <option value="{{ person.id }}">{{ person.name }}</option>

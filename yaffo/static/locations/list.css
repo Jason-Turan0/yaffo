@@ -286,6 +286,9 @@
     font-size: var(--font-size-sm);
     cursor: pointer;
     white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
     transition: all 0.2s;
 }
 
@@ -307,11 +310,13 @@
 
 .cluster-assign {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
 .location-input {
     flex: 1;
+    min-width: 140px;
     padding: 8px;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);

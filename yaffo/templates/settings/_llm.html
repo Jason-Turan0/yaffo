@@ -7,7 +7,7 @@
 
     <div class="form-group">
         <label for="llm-model">Model</label>
-        <select id="llm-model" name="model"
+        <select id="llm-model" name="model" class="searchable-select" data-search-disabled
                 hx-post="{{ url_for('settings_llm_model') }}"
                 hx-target="#llm-section" hx-swap="outerHTML">
             {% for m in llm.models %}

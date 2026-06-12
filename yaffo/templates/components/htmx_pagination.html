@@ -22,6 +22,8 @@
                 <label for="page-size-{{ hx_target|replace('#', '')|replace('.', '') }}">Items per page:</label>
                 <select id="page-size-{{ hx_target|replace('#', '')|replace('.', '') }}"
                         name="page-size"
+                        class="searchable-select"
+                        data-search-disabled
                         {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
                         hx-target="{{ hx_target }}"
                         hx-swap="{{ hx_swap }}"

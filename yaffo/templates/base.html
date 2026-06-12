@@ -75,40 +75,40 @@
             YAFFO!
         </a>
         <ul class="navbar-nav">
-            <li><a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Home</a>
+            <li><a href="{{ url_for('index') }}" data-icon="library" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Home</a>
             </li>
-            <li><a href="{{ url_for('faces_index') }}"
+            <li><a href="{{ url_for('faces_index') }}" data-icon="faces"
                    class="nav-link {% if request.endpoint == 'faces_index' or request.endpoint == 'faces_assign' or request.endpoint == 'faces_remove' %}active{% endif %}">Faces</a>
             </li>
-            <li><a href="{{ url_for('people_list') }}"
+            <li><a href="{{ url_for('people_list') }}" data-icon="people"
                    class="nav-link {% if 'people' in request.endpoint %}active{% endif %}">People</a></li>
-            <li><a href="{{ url_for('locations_list') }}"
+            <li><a href="{{ url_for('locations_list') }}" data-icon="locations"
                    class="nav-link {% if 'locations' in request.endpoint %}active{% endif %}">Locations</a></li>
-            <li><a href="{{ url_for('utilities_index') }}"
+            <li><a href="{{ url_for('utilities_index') }}" data-icon="utilities"
                    class="nav-link {% if 'utilities' in request.endpoint %}active{% endif %}">Utilities</a></li>
-            <li><a href="{{ url_for('settings_index') }}"
+            <li><a href="{{ url_for('settings_index') }}" data-icon="settings"
                    class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">Settings</a></li>
 
-            {% if nav_pages %}
-            <li class="nav-divider" aria-hidden="true"></li>
-            {% endif %}
+        </ul>
+        {% if nav_pages %}
+        <div class="nav-divider" aria-hidden="true"></div>
+        <ul class="navbar-pages">
             {% for nav_page in nav_pages %}
             {% set is_active = request.view_args and request.view_args.get('page_id') == nav_page.id %}
             <li class="nav-page-li">
                 <a href="{{ url_for('pages_detail', page_id=nav_page.id) }}"
                    class="nav-link nav-page-tab {% if is_active %}active{% endif %}">{{ nav_page.title }}</a>
                 {% if is_active and request.endpoint == 'pages_detail' %}
-                <a href="{{ url_for('pages_design', page_id=nav_page.id) }}"
-                   class="nav-page-edit" title="Edit page" aria-label="Edit page">✎</a>
+                <a href="{{ url_for('pages_design', page_id=nav_page.id) }}" data-icon="edit"
+                   class="nav-page-edit" title="Edit page" aria-label="Edit page"><span class="nav-page-edit-glyph">✎</span></a>
                 {% endif %}
             </li>
             {% endfor %}
-            <li>
-                <form method="POST" action="{{ url_for('pages_create') }}" class="nav-new-page-form">
-                    <button type="submit" class="nav-link nav-new-page" title="New page" aria-label="New page">+</button>
-                </form>
-            </li>
         </ul>
+        {% endif %}
+        <form method="POST" action="{{ url_for('pages_create') }}" class="nav-new-page-form">
+            <button type="submit" class="nav-link nav-new-page" title="New page" aria-label="New page">+</button>
+        </form>
     </div>
 </nav>
 <div class="main-container">
@@ -166,6 +166,11 @@
 
         // Initialize image fallbacks for any img with data-fallback attribute
         window.PHOTO_ORGANIZER.utils.initImageFallbacks();
+
+        const activePageTab = document.querySelector('.navbar-pages .nav-page-tab.active');
+        if (activePageTab) {
+            activePageTab.closest('.nav-page-li').scrollIntoView({block: 'nearest', inline: 'nearest'});
+        }
     });
 
     function closeAlert(button) {

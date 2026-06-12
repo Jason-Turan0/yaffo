@@ -29,7 +29,22 @@
                 label_text='Source Directory'
             )}}
 
-           
+            <div class="form-group">
+                <label for="organization-pattern">Organization Pattern</label>
+                <select id="organization-pattern" class="form-control searchable-select" data-search-disabled>
+                    <option value="year_month">By Year and Month (2024/January/)</option>
+                    <option value="year_month_day">By Year/Month/Day (2024/January/15/)</option>
+                    <option value="year">By Year only (2024/)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label inline">
+                    <input type="checkbox" id="change-directory-checkbox">
+                    Organize into a different folder
+                </label>
+                <p class="hint-text">Builds the date folders under a separate destination instead of inside the source directory.</p>
+            </div>
 
             <div id="destination-directory-group" style="display: none;">
                 {{ file_browser(
@@ -39,27 +54,13 @@
                     label_text='Destination Directory'
                 ) }}
             </div>
-             <div class="form-group">
-                <label class="checkbox-label inline">
-                    <input type="checkbox" id="change-directory-checkbox">
-                    Change Directory?
-                </label>
-            </div>
 
             <div class="form-group">
                 <label class="checkbox-label inline">
                     <input type="checkbox" id="keep-original-checkbox">
-                    Keep original?
+                    Keep originals (copy instead of move)
                 </label>
-            </div>
-
-            <div class="form-group">
-                <label for="organization-pattern">Organization Pattern</label>
-                <select id="organization-pattern" class="form-control">
-                    <option value="year_month">By Year and Month (2024/January/)</option>
-                    <option value="year_month_day">By Year/Month/Day (2024/January/15/)</option>
-                    <option value="year">By Year only (2024/)</option>
-                </select>
+                <p class="hint-text">Photos are copied into the new folders; the source files stay where they are.</p>
             </div>
 
             <button class="btn btn-primary" id="preview-button">

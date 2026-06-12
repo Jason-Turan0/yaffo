@@ -24,7 +24,8 @@
             <label for="action-type">Action:</label>
             <select id="action-type"
                     name="action_type"
-                    class="form-control"
+                    class="form-control searchable-select"
+                    data-search-disabled
                     hx-post="{{ url_for('utilities_remove_duplicates_action_change', job_id=job_id) }}"
                     hx-trigger="change"
                     hx-target="#duplicates-header"

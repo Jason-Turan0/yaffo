@@ -30,7 +30,8 @@
             {% for person in people %}
             <tr>
                 <td>
-                    <span class="person-name">{{ person.name or "Unnamed" }}</span>
+                    <a href="{{ url_for('person_faces', person_id=person.id) }}"
+                       class="person-name row-link">{{ person.name or "Unnamed" }}</a>
                 </td>
                 <td>
                     <span class="stat-number">{{ person.num_faces }}</span>
@@ -42,7 +43,6 @@
                     <div class="actions">
                         <a href="#" class="action-link"
                            onclick="window.PHOTO_ORGANIZER.peopleList.openEditModal({{ person.id }}, '{{ person.name }}'); return false;">Edit</a>
-                        <a href="{{ url_for('person_faces', person_id=person.id) }}" class="action-link">View Faces</a>
                         <a href="#" class="action-link delete"
                            onclick="window.PHOTO_ORGANIZER.peopleList.confirmDelete({{ person.id }}, '{{ person.name }}'); return false;">Delete</a>
                     </div>

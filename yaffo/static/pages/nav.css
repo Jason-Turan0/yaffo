@@ -3,13 +3,32 @@
     background: var(--color-border);
     margin: 10px 8px;
     align-self: stretch;
+    flex: none;
+}
+
+/* Page tabs scroll horizontally when they outgrow the navbar; the core
+   links, divider, and new-page button stay fixed. */
+.navbar-pages {
+    display: flex;
+    align-items: center;
+    gap: 5px;
     list-style: none;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    flex: 0 1 auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.navbar-pages::-webkit-scrollbar {
+    display: none;
 }
 
 .nav-new-page-form {
     display: flex;
     align-items: stretch;
-    margin: 0;
+    margin: 0 0 0 8px;
 }
 
 .nav-new-page {

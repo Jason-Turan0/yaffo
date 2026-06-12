@@ -39,3 +39,15 @@ tbody tr {
 tbody tr:hover {
     background: var(--color-surface-hover);
 }
+
+/* Row title that links to the row's detail view */
+.row-link {
+    color: var(--color-accent);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.row-link:hover {
+    color: var(--color-accent-hover);
+    text-decoration: underline;
+}

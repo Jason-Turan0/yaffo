@@ -18,7 +18,7 @@
 
         <div class="form-group">
             <label for="theme-select">Theme</label>
-            <select id="theme-select" name="theme"
+            <select id="theme-select" name="theme" class="searchable-select" data-search-disabled
                     hx-post="{{ url_for('settings_theme') }}"
                     hx-swap="none">
                 {% for slug, label in themes.items() %}

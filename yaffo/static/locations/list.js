@@ -1,6 +1,13 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
 window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
+    const tokens = getComputedStyle(document.documentElement);
+    const markerColors = {
+        base: tokens.getPropertyValue('--color-accent').trim(),
+        selected: tokens.getPropertyValue('--color-success').trim(),
+        contrast: tokens.getPropertyValue('--color-on-accent').trim()
+    };
+
     const map = new ol.Map({
         target: 'map',
         layers: [
@@ -47,20 +54,20 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
 
             let style = styleCache[cacheKey];
             if (!style) {
-                const fillColor = isSelected ? '#28a745' : '#007BFF';
+                const fillColor = isSelected ? markerColors.selected : markerColors.base;
                 if (size > 1) {
                     style = new ol.style.Style({
                         image: new ol.style.Circle({
                             radius: 15,
                             fill: new ol.style.Fill({ color: fillColor }),
                             stroke: new ol.style.Stroke({
-                                color: '#fff',
+                                color: markerColors.contrast,
                                 width: 2
                             })
                         }),
                         text: new ol.style.Text({
                             text: size.toString(),
-                            fill: new ol.style.Fill({ color: '#fff' }),
+                            fill: new ol.style.Fill({ color: markerColors.contrast }),
                             font: 'bold 12px sans-serif'
                         })
                     });
@@ -70,7 +77,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                             radius: 7,
                             fill: new ol.style.Fill({ color: fillColor }),
                             stroke: new ol.style.Stroke({
-                                color: '#fff',
+                                color: markerColors.contrast,
                                 width: 2
                             })
                         })
@@ -186,7 +193,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                 popupContent.innerHTML = `
                     <div class="popup-select-container">
                         <label for="${selectId}">Select Photo (${photosData.length} total):</label>
-                        <select id="${selectId}" class="photo-select">
+                        <select id="${selectId}" class="photo-select searchable-select">
                             ${selectOptions}
                         </select>
                     </div>
@@ -200,6 +207,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                 `;
 
                 const selectElement = document.getElementById(selectId);
+                window.SearchableSelect.init(selectElement);
                 selectElement.addEventListener('change', function(e) {
                     const selectedIndex = parseInt(e.target.value);
                     const selectedPhoto = photosData[selectedIndex];
@@ -341,7 +349,8 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                         ${sortedLocations.map(([name, count]) => `
                             <button class="btn-quick-assign"
                                     data-photo-ids="${allPhotoIds.join(',')}"
-                                    data-location-name="${name}">
+                                    data-location-name="${name}"
+                                    title="${name} (${count})">
                                 ${name} (${count})
                             </button>
                         `).join('')}
@@ -469,7 +478,8 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                         <div class="quick-action-label">Recommended:</div>
                         <button class="btn-quick-assign btn-recommended"
                                 data-photo-ids="${allPhotoIds.join(',')}"
-                                data-location-name="${recommendedLocation}">
+                                data-location-name="${recommendedLocation}"
+                                title="${recommendedLocation}">
                             ${recommendedLocation}
                         </button>
                     `;

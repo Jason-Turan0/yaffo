@@ -41,7 +41,7 @@ body {
     display: flex;
     list-style: none;
     gap: 5px;
-    flex: 1;
+    flex: none;
 }
 
 .nav-link {
@@ -221,6 +221,10 @@ body {
     height: 18px;
     margin-right: 8px;
     cursor: pointer;
+    accent-color: var(--color-accent);
+}
+
+input[type="range"] {
     accent-color: var(--color-accent);
 }
 

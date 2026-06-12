@@ -54,6 +54,89 @@
     color: var(--color-text);
 }
 
+/* Bleed room inside the scroll clip so tile shadows and the hover lift
+   aren't cut off at the strip's edges. */
+[data-theme="neobrutalist"] .navbar-pages {
+    gap: 10px;
+    padding: 5px;
+    margin: -5px 0 -5px -5px;
+}
+
+/* ---- page-tab edit pencil: hide the ✎ glyph, render as a small tile
+   with the themed edit icon so it matches the rest of the navbar ---- */
+[data-theme="neobrutalist"] .nav-page-li .nav-page-tab.active {
+    padding-right: 14px;
+}
+
+[data-theme="neobrutalist"] .nav-page-edit .nav-page-edit-glyph {
+    display: none;
+}
+
+[data-theme="neobrutalist"] .nav-page-edit {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    box-shadow: 3px 3px 0 var(--color-border);
+    padding: 0 9px;
+    margin-left: 4px;
+    transition: transform 0.08s, box-shadow 0.08s;
+}
+
+[data-theme="neobrutalist"] .nav-page-edit::before {
+    content: "";
+    display: block;
+    width: 15px;
+    height: 15px;
+    background-position: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+[data-theme="neobrutalist"] .nav-page-edit:hover {
+    background: var(--color-surface);
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--color-border);
+}
+
+/* ---- icons: any .nav-link or .btn with data-icon gets its themed SVG.
+   Icons live in themes/neobrutalist/, so other themes never load them. ---- */
+[data-theme="neobrutalist"] .nav-link[data-icon],
+[data-theme="neobrutalist"] .btn[data-icon] {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+[data-theme="neobrutalist"] .nav-link[data-icon]::before,
+[data-theme="neobrutalist"] .btn[data-icon]::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    flex: none;
+    background-position: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+[data-theme="neobrutalist"] .btn[data-icon]::before {
+    width: 15px;
+    height: 15px;
+}
+
+[data-theme="neobrutalist"] [data-icon="library"]::before { background-image: url("neobrutalist/icon-library.svg"); }
+[data-theme="neobrutalist"] [data-icon="faces"]::before { background-image: url("neobrutalist/icon-faces.svg"); }
+[data-theme="neobrutalist"] [data-icon="people"]::before { background-image: url("neobrutalist/icon-people.svg"); }
+[data-theme="neobrutalist"] [data-icon="locations"]::before { background-image: url("neobrutalist/icon-locations.svg"); }
+[data-theme="neobrutalist"] [data-icon="utilities"]::before { background-image: url("neobrutalist/icon-utilities.svg"); }
+[data-theme="neobrutalist"] [data-icon="settings"]::before { background-image: url("neobrutalist/icon-settings.svg"); }
+[data-theme="neobrutalist"] [data-icon="add"]::before { background-image: url("neobrutalist/icon-add.svg"); }
+[data-theme="neobrutalist"] [data-icon="edit"]::before { background-image: url("neobrutalist/icon-edit.svg"); }
+[data-theme="neobrutalist"] [data-icon="delete"]::before { background-image: url("neobrutalist/icon-delete.svg"); }
+[data-theme="neobrutalist"] [data-icon="search"]::before { background-image: url("neobrutalist/icon-search.svg"); }
+[data-theme="neobrutalist"] [data-icon="sync"]::before { background-image: url("neobrutalist/icon-sync.svg"); }
+
 /* ---- page header: sticker title directly on the page, no card ---- */
 [data-theme="neobrutalist"] .page-header {
     background: transparent;
@@ -241,15 +324,18 @@
     font-weight: 600;
 }
 
-/* Native check/radio glyphs follow the theme via accent-color */
+/* Native check/radio/slider glyphs follow the theme via accent-color */
 [data-theme="neobrutalist"] input[type="checkbox"],
-[data-theme="neobrutalist"] input[type="radio"] {
+[data-theme="neobrutalist"] input[type="radio"],
+[data-theme="neobrutalist"] input[type="range"] {
     accent-color: var(--color-text);
 }
 
 /* ---- panels: ink frames + sticker headings ---- */
 [data-theme="neobrutalist"] .sidebar,
-[data-theme="neobrutalist"] .settings-section {
+[data-theme="neobrutalist"] .settings-section,
+[data-theme="neobrutalist"] #map,
+[data-theme="neobrutalist"] .selection-panel.active {
     border: 3px solid var(--color-border);
     box-shadow: var(--shadow-lg);
 }
