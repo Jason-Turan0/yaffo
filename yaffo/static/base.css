@@ -151,12 +151,6 @@ body {
     padding: 20px;
 }
 
-.header-info h1 {
-    font-size: var(--font-size-xl);
-    margin: 0 0 5px 0;
-    color: var(--color-text);
-}
-
 .main-container-layout {
     display: flex;
     gap: 20px;
@@ -169,6 +163,23 @@ body {
     border-radius: var(--radius-md);
     margin-bottom: 20px;
     box-shadow: var(--shadow-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.page-header-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.page-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
 }
 
 .page-header h1 {
@@ -182,6 +193,7 @@ body {
 .page-header .subtitle {
     font-size: var(--font-size-base);
     color: var(--color-text-muted);
+    margin: 0;
 }
 
 /* Radio Button Styles */

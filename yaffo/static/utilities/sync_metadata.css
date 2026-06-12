@@ -1,0 +1,73 @@
+.photo-list {
+    background: var(--color-bg);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.photo-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--color-surface);
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.photo-count {
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.photo-items {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.photo-item {
+    padding: 1rem 1.5rem;
+    border-bottom: var(--border-width) solid var(--color-border);
+    background: var(--color-surface);
+}
+
+.photo-item:last-child {
+    border-bottom: none;
+}
+
+.photo-item.more-items {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+.photo-path {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-base);
+    margin-bottom: 0.5rem;
+    word-break: break-all;
+}
+
+.metadata-changes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.metadata-tag {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-base);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+}
+
+.metadata-tag.location {
+    background: var(--color-success-soft);
+    color: var(--color-success-soft-text);
+}
+
+.metadata-tag.people {
+    background: var(--color-warning-soft);
+    color: var(--color-warning-soft-text);
+}

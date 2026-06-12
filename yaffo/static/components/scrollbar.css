@@ -1,0 +1,16 @@
+.thin-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+    background: var(--color-bg);
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: var(--radius-sm);
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-border-hover);
+}

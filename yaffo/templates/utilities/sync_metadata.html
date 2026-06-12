@@ -1,5 +1,6 @@
 {% extends "utilities/_base.html" %}
 {% from "components/job_section.html" import job_section %}
+{% from "components/page_header.html" import page_header %}
 
 {% block title %}Sync Metadata - Utilities - Photo Organizer{% endblock %}
 
@@ -9,12 +10,7 @@
 
 {% block utility_content %}
 <div class="utility-page">
-    <div class="page-header">
-        <h1>Sync Metadata to Files</h1>
-        <p class="subtitle">
-            Write location and people names from the database into image file metadata
-        </p>
-    </div>
+    {{ page_header('Sync Metadata to Files', 'Write location and people names from the database into image file metadata') }}
 
     {{ job_section(active_jobs, show_cancel=true) }}
 

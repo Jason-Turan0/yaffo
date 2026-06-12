@@ -48,22 +48,6 @@
     width: 100%;
 }
 
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.page-header > div {
-    flex: 1;
-}
-
-.page-header button {
-    flex-shrink: 0;
-}
-
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

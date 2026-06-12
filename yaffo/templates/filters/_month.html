@@ -1,6 +1,6 @@
 <div class="filter-group">
     <label for="month-select">Month</label>
-    <select name="month" id="month-select">
+    <select name="month" id="month-select" class="searchable-select" data-search-disabled>
         <option value="">All Months</option>
         {% for month in filters.months %}
         <option value="{{ month.value }}" {% if filters.selected_month== month.value %}selected{% endif %}>

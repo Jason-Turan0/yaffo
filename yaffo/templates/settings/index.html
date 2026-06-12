@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "components/file_browser.html" import file_browser %}
+{% from "components/page_header.html" import page_header %}
 
 {% block title %}Settings - Photo Organizer{% endblock %}
 
@@ -9,10 +10,7 @@
 
 {% block content %}
 <div class="main-content">
-    <div class="page-header">
-        <h1>Settings</h1>
-        <p class="subtitle">Configure application settings</p>
-    </div>
+    {{ page_header('Settings', 'Configure application settings') }}
 
     <div class="settings-section">
         <h2>Appearance</h2>

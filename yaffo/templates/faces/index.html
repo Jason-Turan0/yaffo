@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='searchable-select.css') }}">
 {% endblock %}
 {% from "_sidebar.html" import render_sidebar %}
+{% from "components/page_header.html" import page_header %}
 {% from "components/pagination.html" import pagination as render_pagination %}
 {% from "components/info_modal.html" import render_info_modal %}
 
@@ -159,13 +160,10 @@
         {% endmacro %}
         {{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions) }}
         <div class="main-content" data-unassigned-count="{{ unassigned_face_count }}">
-            <div class="page-header">
-                <h1>Unassigned Faces</h1>
-                <p class="subtitle">
-                    Showing {{ faces|length }} of {{ unassigned_face_count }} unassigned
-                    face{{ 's' if faces|length != 1 else '' }}
-                </p>
-            </div>
+            {% call page_header('Unassigned Faces') %}
+                Showing {{ faces|length }} of {{ unassigned_face_count }} unassigned
+                face{{ 's' if faces|length != 1 else '' }}
+            {% endcall %}
             <form method="POST" action="{{ url_for('faces_assign') }}" id="main-form">
                 <input type="hidden" name="face_status" id="face_status" value="">
 

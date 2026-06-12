@@ -8,20 +8,19 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='components/kbd.css') }}">
 {% endblock %}
 
+{% from "components/page_header.html" import page_header %}
+
 {% block content %}
 <div class="locations-container">
-    <div class="page-header">
-        <div class="header-main">
-            <h1>Photo Locations</h1>
-            <p class="help-text">Hold <kbd>Shift</kbd> and drag to select multiple clusters</p>
-        </div>
-        <div class="filter-controls">
-            <label class="filter-toggle">
-                <input type="checkbox" id="filter-unnamed">
-                <span>Only show photos without location names</span>
-            </label>
-        </div>
-    </div>
+    {% set header_actions %}
+        <label class="filter-toggle">
+            <input type="checkbox" id="filter-unnamed">
+            <span>Only show photos without location names</span>
+        </label>
+    {% endset %}
+    {% call page_header('Photo Locations', actions=header_actions) %}
+        Hold <kbd>Shift</kbd> and drag to select multiple clusters
+    {% endcall %}
 
     <div class="map-layout">
         <div id="map"></div>

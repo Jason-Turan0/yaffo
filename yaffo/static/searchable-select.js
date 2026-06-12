@@ -6,11 +6,16 @@
  * 1. Add 'searchable-select' class to any <select> element
  * 2. Component will automatically initialize on DOMContentLoaded
  * 3. Dynamically call SearchableSelect.init(selectElement) for runtime-created selects
+ *
+ * Options (attributes on the <select>):
+ * - data-search-disabled: omit the search box (for short option lists);
+ *   keyboard navigation still works.
  */
 
 class SearchableSelect {
     constructor(selectElement) {
         this.select = selectElement;
+        this.searchEnabled = !selectElement.hasAttribute('data-search-disabled');
         this.wrapper = null;
         this.searchInput = null;
         this.optionsList = null;
@@ -75,10 +80,14 @@ class SearchableSelect {
         this.renderOptions();
 
         // Assemble structure
-        dropdown.appendChild(this.searchInput);
+        if (this.searchEnabled) {
+            dropdown.appendChild(this.searchInput);
+        }
         dropdown.appendChild(this.optionsList);
         this.wrapper.appendChild(displayButton);
         this.wrapper.appendChild(dropdown);
+
+        this.wrapper.classList.toggle('disabled', this.select.disabled);
 
         // Insert after original select and hide select
         this.select.style.display = 'none';
@@ -135,8 +144,11 @@ class SearchableSelect {
             this.renderOptions(e.target.value);
         });
 
-        // Keyboard navigation
-        this.searchInput.addEventListener('keydown', (e) => {
+        // Keyboard navigation (bound to the wrapper so it also works when the
+        // search box is disabled and focus stays on the display button)
+        this.wrapper.addEventListener('keydown', (e) => {
+            if (!this.isOpen) return;
+
             const optionElements = this.optionsList.querySelectorAll('.searchable-select-option');
             const optionCount = optionElements.length;
 
@@ -187,17 +199,21 @@ class SearchableSelect {
             this.updateOptions();
             this.renderOptions(this.searchInput.value);
             this.updateDisplayText();
+            this.wrapper.classList.toggle('disabled', this.select.disabled);
         });
 
         observer.observe(this.select, {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ['selected']
+            attributeFilter: ['selected', 'disabled']
         });
     }
 
     toggle() {
+        if (this.select.disabled) {
+            return;
+        }
         if (this.isOpen) {
             this.close();
         } else {
@@ -210,7 +226,9 @@ class SearchableSelect {
         this.wrapper.classList.add('open');
         this.searchInput.value = '';
         this.renderOptions('');
-        this.searchInput.focus();
+        if (this.searchEnabled) {
+            this.searchInput.focus();
+        }
     }
 
     close() {
@@ -278,6 +296,12 @@ class SearchableSelect {
 
 // Auto-initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    SearchableSelect.initAll();
+});
+
+// Re-initialize selects arriving in htmx-swapped fragments (initAll skips
+// anything already initialized via data-searchable-initialized)
+document.addEventListener('htmx:afterSwap', () => {
     SearchableSelect.initAll();
 });
 

@@ -2,12 +2,6 @@
     flex: 1;
 }
 
-
-.face-count {
-    font-size: var(--font-size-base);
-    color: var(--color-text-muted);
-}
-
 .selection-controls {
     display: flex;
     gap: 15px;

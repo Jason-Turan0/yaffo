@@ -1,6 +1,7 @@
 {% extends "utilities/_base.html" %}
 {% from "components/file_browser.html" import file_browser %}
 {% from "components/job_section.html" import job_section %}
+{% from "components/page_header.html" import page_header %}
 
 {% block title %}Organize Photos - Utilities - Photo Organizer{% endblock %}
 
@@ -10,12 +11,7 @@
 
 {% block utility_content %}
 <div class="utility-page">
-    <div class="page-header">
-        <h1>Organize Photos</h1>
-        <p class="subtitle">
-            Automatically organize your photos into folders by date using EXIF metadata
-        </p>
-    </div>
+    {{ page_header('Organize Photos', 'Automatically organize your photos into folders by date using EXIF metadata') }}
 
      {{ job_section(active_jobs, show_cancel=true) }}
 

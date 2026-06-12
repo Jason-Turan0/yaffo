@@ -58,6 +58,13 @@
     box-shadow: var(--focus-ring);
 }
 
+/* When the select is enhanced to a searchable-select, keep the widget
+   compact instead of its default full-width layout. */
+.page-size-selector .searchable-select-wrapper {
+    width: auto;
+    min-width: 90px;
+}
+
 .page-navigation {
     display: flex;
     align-items: center;

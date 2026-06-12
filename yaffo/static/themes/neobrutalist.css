@@ -1,0 +1,305 @@
+/*
+ * Neo-brutalist theme skin: structural rules that tokens alone can't express
+ * (sticker headings, tile nav, uppercase buttons, press-down interactions).
+ * Every rule is scoped to [data-theme="neobrutalist"], so this file is inert
+ * for other themes; palette values still come from tokens.css.
+ * Mockup reference: design_mockups/04-neobrutalist.html.
+ */
+
+/* ---- navbar: yellow bar, sticker brand, tile links ---- */
+[data-theme="neobrutalist"] .navbar {
+    border-bottom-width: 3px;
+}
+
+[data-theme="neobrutalist"] .navbar-container {
+    padding: 10px 20px;
+}
+
+[data-theme="neobrutalist"] .navbar-brand {
+    background: var(--color-surface);
+    border: 3px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+    font-size: var(--font-size-xl);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    padding: 4px 14px;
+    margin-right: 24px;
+    transform: rotate(-2deg);
+}
+
+[data-theme="neobrutalist"] .navbar-nav {
+    gap: 10px;
+    align-items: center;
+}
+
+[data-theme="neobrutalist"] .nav-link {
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    box-shadow: 3px 3px 0 var(--color-border);
+    padding: 7px 14px;
+    font-weight: 700;
+    color: var(--color-text);
+    transition: transform 0.08s, box-shadow 0.08s;
+}
+
+[data-theme="neobrutalist"] .nav-link:hover {
+    background: var(--color-surface);
+    color: var(--color-text);
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--color-border);
+}
+
+[data-theme="neobrutalist"] .nav-link.active {
+    background: var(--color-accent);
+    color: var(--color-text);
+}
+
+/* ---- page header: sticker title directly on the page, no card ---- */
+[data-theme="neobrutalist"] .page-header {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
+[data-theme="neobrutalist"] .page-header h1 {
+    display: inline-block;
+    background: var(--color-surface);
+    border: 3px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+    padding: 6px 18px;
+    letter-spacing: -0.02em;
+    transform: rotate(-1deg);
+}
+
+[data-theme="neobrutalist"] .page-header .subtitle {
+    font-weight: 700;
+    color: var(--color-text);
+    margin-top: 12px;
+}
+
+/* ---- buttons: uppercase, chunky border, press-down mechanics ---- */
+[data-theme="neobrutalist"] .btn,
+[data-theme="neobrutalist"] .btn-primary,
+[data-theme="neobrutalist"] .btn-secondary,
+[data-theme="neobrutalist"] .btn-danger,
+[data-theme="neobrutalist"] .btn-success,
+[data-theme="neobrutalist"] .action-button {
+    border-width: 3px;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    transition: transform 0.08s, box-shadow 0.08s;
+}
+
+[data-theme="neobrutalist"] .btn:hover:not(:disabled),
+[data-theme="neobrutalist"] .btn-primary:hover:not(:disabled),
+[data-theme="neobrutalist"] .btn-secondary:hover:not(:disabled),
+[data-theme="neobrutalist"] .btn-danger:hover:not(:disabled),
+[data-theme="neobrutalist"] .btn-success:hover:not(:disabled),
+[data-theme="neobrutalist"] .action-button:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-border);
+}
+
+[data-theme="neobrutalist"] .btn:active:not(:disabled),
+[data-theme="neobrutalist"] .btn-primary:active:not(:disabled),
+[data-theme="neobrutalist"] .btn-secondary:active:not(:disabled),
+[data-theme="neobrutalist"] .btn-danger:active:not(:disabled),
+[data-theme="neobrutalist"] .btn-success:active:not(:disabled),
+[data-theme="neobrutalist"] .action-button:active:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--color-border);
+}
+
+[data-theme="neobrutalist"] .btn-sm {
+    border-width: 2px;
+}
+
+/* ---- forms: hard-shadowed inputs, shouty labels ---- */
+/* Claim every text-like input by element type so one-off wrappers
+   (.distance-input-wrapper, .location-search-input, …) can't fall through. */
+[data-theme="neobrutalist"] input[type="text"],
+[data-theme="neobrutalist"] input[type="number"],
+[data-theme="neobrutalist"] input[type="search"],
+[data-theme="neobrutalist"] input[type="password"],
+[data-theme="neobrutalist"] input[type="date"],
+[data-theme="neobrutalist"] textarea,
+[data-theme="neobrutalist"] .form-control {
+    box-shadow: 3px 3px 0 var(--color-border);
+    font-weight: 600;
+}
+
+/* …except search boxes embedded inside an already-framed dropdown float */
+[data-theme="neobrutalist"] .searchable-select-dropdown input[type="text"] {
+    box-shadow: none;
+}
+
+/* Native spinner steppers are OS chrome; off-theme */
+[data-theme="neobrutalist"] input[type="number"] {
+    appearance: textfield;
+}
+
+[data-theme="neobrutalist"] input[type="number"]::-webkit-inner-spin-button,
+[data-theme="neobrutalist"] input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+
+/* Native select chrome can't be styled; opt out of it entirely and draw the
+   chevron as two currentColor gradient triangles (no raw colors needed). */
+[data-theme="neobrutalist"] select {
+    appearance: none;
+    background-color: var(--color-surface);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    box-shadow: 3px 3px 0 var(--color-border);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    padding: 9px 36px 9px 10px;
+    cursor: pointer;
+    background-image:
+        linear-gradient(45deg, transparent 50%, currentColor 50%),
+        linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+}
+
+[data-theme="neobrutalist"] select:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring), 3px 3px 0 var(--color-border);
+}
+
+[data-theme="neobrutalist"] .form-group label,
+[data-theme="neobrutalist"] .filter-group label {
+    text-transform: uppercase;
+    font-weight: 800;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+}
+
+/* ---- searchable select: match the themed native selects ---- */
+[data-theme="neobrutalist"] .searchable-select-display {
+    box-shadow: 3px 3px 0 var(--color-border);
+    font-weight: 600;
+    padding: 9px 10px;
+}
+
+[data-theme="neobrutalist"] .searchable-select-wrapper.open .searchable-select-display {
+    box-shadow: var(--focus-ring), 3px 3px 0 var(--color-border);
+}
+
+[data-theme="neobrutalist"] .searchable-select-arrow {
+    color: var(--color-text);
+}
+
+[data-theme="neobrutalist"] .searchable-select-dropdown {
+    margin-top: 6px;
+}
+
+[data-theme="neobrutalist"] .searchable-select-search {
+    font-weight: 600;
+}
+
+[data-theme="neobrutalist"] .searchable-select-option {
+    font-weight: 600;
+}
+
+[data-theme="neobrutalist"] .searchable-select-option.selected {
+    background: var(--color-accent);
+    color: var(--color-text);
+    font-weight: 800;
+}
+
+/* ---- multi select: with detached dropdown ---- */
+[data-theme="neobrutalist"] .multi-select-header {
+    box-shadow: 3px 3px 0 var(--color-border);
+    font-weight: 600;
+    padding: 9px 10px;
+}
+
+[data-theme="neobrutalist"] .multi-select-wrapper.open .multi-select-header {
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring), 3px 3px 0 var(--color-border);
+}
+
+[data-theme="neobrutalist"] .multi-select-header .arrow {
+    color: var(--color-text);
+}
+
+/* Base styles glue the list to the header (no top border, no gap); float it
+   like the searchable-select dropdown instead. */
+[data-theme="neobrutalist"] .multi-select-options {
+    border-top: var(--border-width) solid var(--color-border);
+    margin-top: 6px;
+}
+
+[data-theme="neobrutalist"] .multi-select-option span {
+    font-weight: 600;
+}
+
+/* Native check/radio glyphs follow the theme via accent-color */
+[data-theme="neobrutalist"] input[type="checkbox"],
+[data-theme="neobrutalist"] input[type="radio"] {
+    accent-color: var(--color-text);
+}
+
+/* ---- panels: ink frames + sticker headings ---- */
+[data-theme="neobrutalist"] .sidebar,
+[data-theme="neobrutalist"] .settings-section {
+    border: 3px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+}
+
+[data-theme="neobrutalist"] .sidebar h2,
+[data-theme="neobrutalist"] .settings-section h2 {
+    display: inline-block;
+    font-size: var(--font-size-md);
+    font-weight: 900;
+    text-transform: uppercase;
+    background: var(--color-warning);
+    border: 2px solid var(--color-border);
+    box-shadow: 3px 3px 0 var(--color-border);
+    padding: 2px 10px;
+    margin-bottom: 16px;
+    transform: rotate(-1deg);
+}
+
+/* ---- tables: ink header band, bold rows ---- */
+[data-theme="neobrutalist"] table {
+    border: 3px solid var(--color-border);
+}
+
+[data-theme="neobrutalist"] thead {
+    background: var(--color-surface-inverse);
+}
+
+[data-theme="neobrutalist"] th {
+    color: var(--color-text-inverse);
+    font-weight: 900;
+    letter-spacing: 0.06em;
+}
+
+[data-theme="neobrutalist"] td {
+    font-weight: 600;
+    border-bottom: 2px solid var(--color-border);
+}
+
+/* ---- modals & alerts ---- */
+[data-theme="neobrutalist"] .modal-content {
+    border: 3px solid var(--color-border);
+}
+
+[data-theme="neobrutalist"] .modal-header h2 {
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+[data-theme="neobrutalist"] .alert {
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+    font-weight: 600;
+}

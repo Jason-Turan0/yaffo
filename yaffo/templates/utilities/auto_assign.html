@@ -1,6 +1,7 @@
 {% extends "utilities/_base.html" %}
 {% from "components/job_section.html" import job_section %}
 {% from "components/percentage_slider.html" import percentage_slider %}
+{% from "components/page_header.html" import page_header %}
 
 {% block title %}Auto-Assign People - Utilities - Photo Organizer{% endblock %}
 
@@ -10,12 +11,7 @@
 
 {% block utility_content %}
 <div class="utility-page">
-    <div class="page-header">
-        <h1>Auto-Assign People</h1>
-        <p class="subtitle">
-            Automatically find and assign unassigned faces to a person based on similarity
-        </p>
-    </div>
+    {{ page_header('Auto-Assign People', 'Automatically find and assign unassigned faces to a person based on similarity') }}
 
     {{ job_section(active_jobs, show_cancel=true) }}
 

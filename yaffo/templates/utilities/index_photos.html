@@ -1,19 +1,17 @@
 {% extends "utilities/_base.html" %}
 {% from "components/job_section.html" import job_section %}
+{% from "components/page_header.html" import page_header %}
 
 {% block title %}Index Photos - Utilities - Photo Organizer{% endblock %}
 
 {% block utility_content %}
 <div class="utility-page">
-    <div class="page-header">
-        <h1>Index Photos</h1>
-        <p class="subtitle">
-            Compare photos on the file system with the database
-        </p>
+    {% set header_actions %}
         {% if unindexed_photos|length > 0 or orphaned_photos|length > 0 %}
         <button class="btn btn-primary" id="sync-button" {% if not can_sync or active_jobs|length > 0 %}disabled{% endif %}>Sync Database</button>
         {% endif %}
-    </div>
+    {% endset %}
+    {{ page_header('Index Photos', 'Compare photos on the file system with the database', actions=header_actions) }}
 
     {% if warnings|length > 0 %}
     <div class="warnings-section">

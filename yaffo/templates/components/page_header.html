@@ -1,0 +1,31 @@
+{# Standard page header — one structure for every page:
+     .page-header > .page-header-main    (h1 + optional .subtitle)
+                  > .page-header-actions (optional right-side controls)
+
+   Simple:
+       {{ page_header('Settings', 'Configure application settings') }}
+
+   Subtitle with markup or conditionals — use a call block:
+       {% call page_header('Photo Library') %}
+           Showing {{ photos|length }} photos
+       {% endcall %}
+
+   Right-side actions — capture with a set block and pass:
+       {% set header_actions %}<button class="btn btn-primary">Sync</button>{% endset %}
+       {{ page_header('Index Photos', 'Compare…', actions=header_actions) }}
+#}
+{% macro page_header(title, subtitle=none, actions=none) %}
+<div class="page-header">
+    <div class="page-header-main">
+        <h1>{{ title }}</h1>
+        {% if caller %}
+        <p class="subtitle">{{ caller() }}</p>
+        {% elif subtitle %}
+        <p class="subtitle">{{ subtitle }}</p>
+        {% endif %}
+    </div>
+    {% if actions and actions|trim %}
+    <div class="page-header-actions">{{ actions }}</div>
+    {% endif %}
+</div>
+{% endmacro %}

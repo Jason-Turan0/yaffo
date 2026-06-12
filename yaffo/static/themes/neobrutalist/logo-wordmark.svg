@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 84">
+  <g transform="rotate(-2 125 42)">
+    <rect x="29" y="25" width="196" height="44" fill="#121212"/>
+    <rect x="24" y="20" width="196" height="44" fill="#fff" stroke="#121212" stroke-width="3"/>
+    <text x="118" y="53" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="30" letter-spacing="2" fill="#121212">YAFFO<tspan fill="#ff70a6">!</tspan></text>
+  </g>
+</svg>
