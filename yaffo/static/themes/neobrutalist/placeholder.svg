@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#f6e7c6"/>
+  <g transform="translate(168 84)" opacity="0.5">
+    <rect x="10" y="10" width="48" height="48" fill="#121212"/>
+    <rect x="5" y="5" width="48" height="48" fill="#ffd23f" stroke="#121212" stroke-width="4"/>
+    <text x="29" y="44" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="34" fill="#121212">Y</text>
+  </g>
+  <text x="200" y="192" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="15" letter-spacing="1" fill="#5f5848">IMAGE NOT FOUND</text>
+</svg>

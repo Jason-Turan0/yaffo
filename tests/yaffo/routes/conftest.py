@@ -8,6 +8,7 @@ neutralise it — the chat route is deterministic unless a test opts in.
 """
 import pytest
 
+from yaffo import themes
 from yaffo.app import create_app
 from yaffo.db import db
 
@@ -25,6 +26,15 @@ def app(tmp_path):
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+@pytest.fixture(autouse=True)
+def reset_theme_cache():
+    """themes caches the active slug in a module global that outlives each
+    test's throwaway database; reset it so tests stay order-independent."""
+    themes._cached_theme = None
+    yield
+    themes._cached_theme = None
 
 
 @pytest.fixture(autouse=True)

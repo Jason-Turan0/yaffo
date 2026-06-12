@@ -10,6 +10,21 @@
  * lower-specificity per-icon rules below would then lose.
  */
 
+/* Navbar brand carries the favicon mark so tab icon and logo match */
+[data-theme="classic"] .navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+[data-theme="classic"] .navbar-brand::before {
+    content: "";
+    width: 24px;
+    height: 24px;
+    flex: none;
+    background: url("classic/favicon.svg") center / contain no-repeat;
+}
+
 [data-theme="classic"] .nav-link[data-icon],
 [data-theme="classic"] .btn[data-icon],
 [data-theme="classic"] button[data-icon] {
@@ -52,3 +67,12 @@
 [data-theme="classic"] [data-icon="delete"]::before { -webkit-mask-image: url("classic/icon-delete.svg"); mask-image: url("classic/icon-delete.svg"); }
 [data-theme="classic"] [data-icon="search"]::before { -webkit-mask-image: url("classic/icon-search.svg"); mask-image: url("classic/icon-search.svg"); }
 [data-theme="classic"] [data-icon="sync"]::before { -webkit-mask-image: url("classic/icon-sync.svg"); mask-image: url("classic/icon-sync.svg"); }
+
+/* Search glyph inside the searchable-select filter box */
+[data-theme="classic"] .searchable-select-search {
+    padding-left: 32px;
+    background-image: url("classic/icon-search.svg");
+    background-position: 10px center;
+    background-size: 14px;
+    background-repeat: no-repeat;
+}
