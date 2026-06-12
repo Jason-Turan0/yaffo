@@ -1,0 +1,57 @@
+/*
+ * Default icon set: the classic monochrome line icons, for any nav link or
+ * button carrying a data-icon attribute. Icons render as currentColor through
+ * a mask, so they tint to each control's own text color under EVERY theme —
+ * including runtime (AI-generated) custom themes, which get icons for free
+ * without shipping any icon rules of their own.
+ *
+ * Built-in themes only override what differs: icon size (darkroom, memphis,
+ * photos-app), or whole icon art (neobrutalist, which also unsets the mask —
+ * see its skin). The icon files live in themes/classic/.
+ *
+ * Mask longhands only — the `mask:` shorthand resets mask-image, which the
+ * lower-specificity per-icon rules below would then lose.
+ */
+
+.nav-link[data-icon],
+.btn[data-icon],
+button[data-icon] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.nav-link[data-icon]::before,
+.btn[data-icon]::before,
+button[data-icon]::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    flex: none;
+    background-color: currentColor;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+}
+
+.btn[data-icon]::before,
+button[data-icon]::before {
+    width: 15px;
+    height: 15px;
+}
+
+[data-icon="library"]::before { -webkit-mask-image: url("/static/themes/classic/icon-library.svg"); mask-image: url("/static/themes/classic/icon-library.svg"); }
+[data-icon="faces"]::before { -webkit-mask-image: url("/static/themes/classic/icon-faces.svg"); mask-image: url("/static/themes/classic/icon-faces.svg"); }
+[data-icon="people"]::before { -webkit-mask-image: url("/static/themes/classic/icon-people.svg"); mask-image: url("/static/themes/classic/icon-people.svg"); }
+[data-icon="locations"]::before { -webkit-mask-image: url("/static/themes/classic/icon-locations.svg"); mask-image: url("/static/themes/classic/icon-locations.svg"); }
+[data-icon="utilities"]::before { -webkit-mask-image: url("/static/themes/classic/icon-utilities.svg"); mask-image: url("/static/themes/classic/icon-utilities.svg"); }
+[data-icon="settings"]::before { -webkit-mask-image: url("/static/themes/classic/icon-settings.svg"); mask-image: url("/static/themes/classic/icon-settings.svg"); }
+[data-icon="add"]::before { -webkit-mask-image: url("/static/themes/classic/icon-add.svg"); mask-image: url("/static/themes/classic/icon-add.svg"); }
+[data-icon="edit"]::before { -webkit-mask-image: url("/static/themes/classic/icon-edit.svg"); mask-image: url("/static/themes/classic/icon-edit.svg"); }
+[data-icon="delete"]::before { -webkit-mask-image: url("/static/themes/classic/icon-delete.svg"); mask-image: url("/static/themes/classic/icon-delete.svg"); }
+[data-icon="search"]::before { -webkit-mask-image: url("/static/themes/classic/icon-search.svg"); mask-image: url("/static/themes/classic/icon-search.svg"); }
+[data-icon="sync"]::before { -webkit-mask-image: url("/static/themes/classic/icon-sync.svg"); mask-image: url("/static/themes/classic/icon-sync.svg"); }
