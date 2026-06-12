@@ -10,25 +10,29 @@
  * theme ships no icon files of its own — only a favicon and placeholder.
  */
 
-/* ---- navbar: frosted charcoal, amber wordmark with a dim suffix ---- */
+/* ---- navbar: frosted charcoal, aperture mark + amber wordmark ---- */
 [data-theme="darkroom"] .navbar {
     backdrop-filter: blur(8px);
     border-bottom: var(--border-width) solid var(--color-border);
 }
 
+/* Brand carries the favicon mark so tab icon and logo match (app convention). */
 [data-theme="darkroom"] .navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
     color: var(--color-accent);
     font-size: var(--font-size-base);
     font-weight: 700;
     letter-spacing: 0.18em;
 }
 
-[data-theme="darkroom"] .navbar-brand::after {
-    content: "/ darkroom";
-    color: var(--color-text-muted);
-    font-weight: 400;
-    letter-spacing: normal;
-    margin-left: 10px;
+[data-theme="darkroom"] .navbar-brand::before {
+    content: "";
+    width: 22px;
+    height: 22px;
+    flex: none;
+    background: url("darkroom/favicon.svg") center / contain no-repeat;
 }
 
 [data-theme="darkroom"] .nav-link:hover {
@@ -46,7 +50,9 @@
 /* ---- panels: hairline borders carry the structure ---- */
 [data-theme="darkroom"] .sidebar,
 [data-theme="darkroom"] .photo-sidebar,
-[data-theme="darkroom"] .settings-section {
+[data-theme="darkroom"] .settings-section,
+[data-theme="darkroom"] .editor-card,
+[data-theme="darkroom"] .widget-card {
     border: var(--border-width) solid var(--color-border);
 }
 

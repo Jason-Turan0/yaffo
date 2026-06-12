@@ -1,9 +1,9 @@
 """Widget template tools: list_widget_templates and get_widget_template.
 
 Exposes the curated catalog (yaffo/page_builder/widget_templates.py) to the agent so
-it adapts a hand-styled, app-consistent reference design instead of inventing a look
-from scratch (which drifts). The flow is: `list_widget_templates` to browse names +
-purposes, then `get_widget_template` to pull one template's full data_query + html /
+it adapts a hand-styled, design-token-based reference design instead of inventing a
+look from scratch (which drifts). The flow is: `list_widget_templates` to browse names
++ purposes, then `get_widget_template` to pull one template's full data_query + html /
 css / js, which the model tweaks and passes to `create_widget`.
 
 Static, read-only data — no session or DB needed.
@@ -30,9 +30,11 @@ class WidgetTemplateToolProvider(ToolProvider):
                 name=self.LIST,
                 description=(
                     "List the curated widget templates (name + what each is for). They are "
-                    "hand-styled, app-consistent reference designs built on the real data "
-                    "contract (named data_query + the window.yaffo API). Browse these before "
-                    "writing a widget, then fetch one with get_widget_template and adapt it."
+                    "hand-styled reference designs built on the real data contract (named "
+                    "data_query + the window.yaffo API) and styled with the app's design "
+                    "tokens (var(--color-…), var(--radius-…), var(--font-size-…)) so they "
+                    "follow the active theme. Browse these before writing a widget, then "
+                    "fetch one with get_widget_template and adapt it."
                 ),
                 input_schema={"type": "object", "properties": {}, "additionalProperties": False},
             ),

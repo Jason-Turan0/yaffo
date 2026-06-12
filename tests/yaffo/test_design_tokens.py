@@ -68,8 +68,8 @@ def test_no_raw_colors_outside_tokens(path: Path) -> None:
 
 TEMPLATES_DIR = STATIC_DIR.parent / "templates"
 
-# The sandboxed widget iframe document cannot load the app stylesheets; it has
-# its own widget_theme_css injection instead.
+# The sandboxed widget iframe document links tokens.css but carries its own
+# inline baseline/error styling instead of the app stylesheets.
 TEMPLATE_EXEMPT = {"pages/widget_frame.html"}
 
 TEMPLATE_HEX = re.compile(r"#[0-9a-fA-F]{3,8}\b")

@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="{{ theme }}">
 <head>
     <meta charset="UTF-8">
     {# Carried in the document itself so it also protects srcdoc-rendered draft
        previews, which have no HTTP response to set the header on. #}
     {% if csp %}<meta http-equiv="Content-Security-Policy" content="{{ csp }}">{% endif %}
-    {# App styling baseline, before the widget's own CSS so every widget inherits the
-       look (system font, colors, .yf-* helpers) and can override specifics. #}
+    {# Design tokens + app styling baseline, before the widget's own CSS so every
+       widget inherits the active theme's look (var(--…) tokens, .yf-* helpers) and
+       can override specifics. The CSP allows same-origin stylesheets, and srcdoc
+       previews inherit the parent's base URL, so the link resolves there too. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
     <style>{{ widget_theme_css | safe }}</style>
     <style>{{ widget.css | safe }}</style>
     <style>

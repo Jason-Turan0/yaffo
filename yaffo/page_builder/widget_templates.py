@@ -7,10 +7,13 @@ scratch (which drifts all over the place). Every template:
   (`photos`, `people`, `people_face`, …; see data_query_repository) and the
   in-iframe `window.yaffo` API (`yaffo.data[name]`, `yaffo.query`, `yaffo.photoUrl`,
   `yaffo.publish`/`subscribe`, `yaffo.saveState`);
-- writes only its *specific* CSS: the app baseline (`widget_theme.WIDGET_THEME_CSS`)
-  is injected into every widget frame at render time, so templates inherit the look
-  (white surface, system font, `#212529` text, `.yf-muted`/`.yf-empty` helpers) and
-  just override specifics.
+- writes only its *specific* CSS, in terms of the **design tokens**: the widget
+  frame loads `static/tokens.css` with the active theme stamped on
+  `<html data-theme>`, plus the app baseline (`widget_theme.WIDGET_THEME_CSS`), so
+  templates style with `var(--color-…)` / `var(--radius-…)` / `var(--font-size-…)`
+  / `var(--shadow-…)` and follow whichever theme is active. Raw color values are
+  reserved for content that sits *on top of photos* (caption scrims, lightbox
+  chrome), which must stay legible regardless of theme.
 
 This is the single source: the seed script renders them onto a page, and the
 template tool (presented to the agent) serves the same list.
@@ -63,7 +66,7 @@ _PHOTO_GRID = WidgetTemplate(
     html="<div class='grid' id='root'></div>",
     css="""\
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
-.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; display: block; }
+.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-md); display: block; }
 """,
     js="""\
 const root = document.getElementById('root');
@@ -95,10 +98,10 @@ _STATS = WidgetTemplate(
     html="<div class='tiles' id='root'></div>",
     css="""\
 .tiles { display: flex; gap: 12px; flex-wrap: wrap; }
-.tile { flex: 1; min-width: 96px; background: #f8f9fa; border: 1px solid #dee2e6;
-        border-radius: 8px; padding: 16px; text-align: center; }
-.tile .num { font-size: 28px; font-weight: 700; color: #212529; line-height: 1; }
-.tile .lbl { margin-top: 6px; font-size: 11px; color: #6c757d;
+.tile { flex: 1; min-width: 96px; background: var(--color-bg); border: var(--border-width) solid var(--color-border);
+        border-radius: var(--radius-md); padding: 16px; text-align: center; }
+.tile .num { font-size: var(--font-size-2xl); font-weight: 700; color: var(--color-text); line-height: 1; }
+.tile .lbl { margin-top: 6px; font-size: var(--font-size-xs); color: var(--color-text-muted);
              text-transform: uppercase; letter-spacing: 0.04em; }
 """,
     js="""\
@@ -130,10 +133,11 @@ _FEATURED = WidgetTemplate(
     html="<div class='hero' id='root'></div>",
     css="""\
 body { padding: 0; }
-.hero { position: relative; width: 100%; height: 100%; min-height: 160px; background: #f1f3f5; }
+.hero { position: relative; width: 100%; height: 100%; min-height: 160px; background: var(--color-surface-sunken); }
 .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Caption scrim sits on the photo itself, so it stays white-on-dark in every theme. */
 .hero .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 14px; color: #fff;
-             font-size: 13px; font-weight: 500; background: linear-gradient(transparent, rgba(0,0,0,0.55)); }
+             font-size: var(--font-size-sm); font-weight: 500; background: linear-gradient(transparent, rgba(0,0,0,0.55)); }
 .hero .yf-empty { padding: 14px; }
 """,
     js="""\
@@ -157,29 +161,33 @@ else {
 _FILTERABLE_GALLERY = WidgetTemplate(
     name="Filterable gallery",
     description=(
-        "A photo grid with a year dropdown. The `year` facet supplies the options; "
-        "changing it re-queries the server (yaffo.query with a `{eq}` filter) so it "
-        "filters the whole library, not a preloaded slice. Use this pattern whenever "
-        "the filter options can exceed what's first loaded."
+        "A photo grid with a year filter built on the app's searchable-select "
+        "component (load /static/searchable-select.css + .js; never use a bare native "
+        "<select> — it isn't themed). The `year` facet supplies the options; changing "
+        "it re-queries the server (yaffo.query with a `{eq}` filter) so it filters the "
+        "whole library, not a preloaded slice. Use this pattern whenever the filter "
+        "options can exceed what's first loaded."
     ),
     data_query={
         "years": {"source": "photos", "op": "facet", "field": "year"},
     },
     html="""\
+<link rel="stylesheet" href="/static/searchable-select.css">
 <div class='bar'>
   <label for='year'>Year</label>
-  <select id='year'></select>
+  <select id='year' class='searchable-select' data-search-disabled></select>
 </div>
 <div class='grid' id='grid'></div>
+<script src="/static/searchable-select.js"></script>
 """,
     css="""\
 .bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.bar label { font-size: 12px; color: #6c757d; }
-select { font-size: 13px; padding: 6px 8px; border: 1px solid #ced4da; border-radius: 6px;
-         background: #fff; color: #212529; }
-select:focus { outline: none; border-color: #007BFF; }
+.bar label { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.bar .searchable-select-wrapper { width: 180px; }
+/* The dropdown can't escape the widget iframe, so keep it short enough to fit. */
+.bar .searchable-select-options { max-height: 160px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
-.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; display: block; }
+.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-md); display: block; }
 """,
     js="""\
 const sel = document.getElementById('year');
@@ -188,6 +196,8 @@ const opt = (value, label) => { const o = document.createElement('option'); o.va
 sel.appendChild(opt('', 'All years'));
 (yaffo.data.years || []).filter((y) => y.value != null).sort((a, b) => b.value - a.value)
   .forEach((y) => sel.appendChild(opt(y.value, y.value + ' (' + y.count + ')')));
+// Upgrade after the options exist; falls back to the native select if the script failed.
+if (window.SearchableSelect) SearchableSelect.init(sel);
 function draw(rows) {
   grid.innerHTML = '';
   if (!rows || !rows.length) { grid.innerHTML = "<div class='yf-empty'>No photos to show.</div>"; return; }
@@ -224,14 +234,15 @@ _PEOPLE = WidgetTemplate(
 .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .pill {
   display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
-  border: 1px solid #ced4da; border-radius: 999px; background: #fff; color: #495057;
-  font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s ease;
+  border: var(--border-width) solid var(--color-border-strong); border-radius: var(--radius-pill);
+  background: var(--color-surface); color: var(--color-text-secondary);
+  font-size: var(--font-size-sm); font-family: inherit; cursor: pointer; transition: all 0.15s ease;
 }
-.pill:hover { border-color: #007BFF; color: #007BFF; }
-.pill.active { background: #007BFF; border-color: #007BFF; color: #fff; }
-.pill .count { font-size: 11px; opacity: 0.7; }
+.pill:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.pill.active { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); }
+.pill .count { font-size: var(--font-size-xs); opacity: 0.7; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
-.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; display: block; }
+.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-md); display: block; }
 """,
     js="""\
 (async function () {
@@ -302,8 +313,9 @@ _PEOPLE = WidgetTemplate(
 
 # --- richer, self-contained designs (copied from liked AI generations and
 #     generalized: the trip-specific filters/ids are dropped, the CDATA artifact
-#     cleaned, the title made data-driven). These bring their own full styling, so
-#     they don't extend THEME_CSS. ----------------------------------------------
+#     cleaned, the title made data-driven). They bring their own layout but still
+#     style with the design tokens; only photo scrims and lightbox chrome (which
+#     overlay the photos themselves) keep raw colors. ----------------------------
 
 _HERO_BANNER = WidgetTemplate(
     name="Hero banner",
@@ -325,15 +337,17 @@ _HERO_BANNER = WidgetTemplate(
 """,
     css="""\
 body, html { height: 100%; padding: 0; overflow: hidden; }
+/* The overlay sits on the photo itself, so the scrim and white text are fixed;
+   only the accent eyebrow follows the theme. */
 .hero-wrap { position: relative; width: 100%; height: 100vh; min-height: 200px; overflow: hidden; background: #212529; }
 #hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .hero-overlay {
   position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 28px 32px;
-  background: linear-gradient(to top, rgba(33,37,41,0.78) 0%, rgba(33,37,41,0.25) 55%, rgba(33,37,41,0.05) 100%);
+  background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.22) 55%, rgba(0,0,0,0.04) 100%);
 }
-.hero-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #74c0fc; margin-bottom: 6px; }
-.hero-title { font-size: clamp(1.8rem, 6vw, 3.2rem); font-weight: 600; color: #fff; line-height: 1.05; letter-spacing: -0.01em; }
-.hero-meta { margin-top: 10px; font-size: 13px; color: rgba(255, 255, 255, 0.82); }
+.hero-eyebrow { font-size: var(--font-size-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent); margin-bottom: 6px; }
+.hero-title { font-size: clamp(1.8rem, 6vw, 3.2rem); font-family: var(--font-heading); font-weight: var(--font-weight-heading); color: #fff; line-height: 1.05; letter-spacing: -0.01em; }
+.hero-meta { margin-top: 10px; font-size: var(--font-size-sm); color: rgba(255, 255, 255, 0.82); }
 """,
     js="""\
 (function () {
@@ -385,32 +399,33 @@ _GALLERY = WidgetTemplate(
     css="""\
 body { padding: 0; }
 .gallery-page { padding: 16px; }
-.gallery-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; border-bottom: 1px solid #dee2e6; padding-bottom: 12px; }
-.gallery-heading { font-size: 16px; font-weight: 600; color: #212529; }
-.gallery-count { font-size: 12px; color: #6c757d; background: #f1f3f5; border-radius: 20px; padding: 2px 10px; }
+.gallery-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; border-bottom: var(--border-width) solid var(--color-border); padding-bottom: 12px; }
+.gallery-heading { font-size: var(--font-size-md); font-family: var(--font-heading); font-weight: 600; color: var(--color-text); }
+.gallery-count { font-size: var(--font-size-xs); color: var(--color-text-muted); background: var(--color-surface-sunken); border-radius: var(--radius-pill); padding: 2px 10px; }
 .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 .gallery-item {
-  position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer;
-  background: #f1f3f5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.18s ease, box-shadow 0.18s ease;
+  position: relative; aspect-ratio: 1; border-radius: var(--radius-md); overflow: hidden; cursor: pointer;
+  background: var(--color-surface-sunken); box-shadow: var(--shadow-sm); transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-.gallery-item:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.14); z-index: 2; }
+.gallery-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); z-index: 2; }
 .gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .gallery-item .item-overlay {
   position: absolute; bottom: 0; left: 0; right: 0;
   background: linear-gradient(transparent, rgba(0,0,0,0.55)); padding: 18px 8px 6px; opacity: 0; transition: opacity 0.18s ease;
 }
 .gallery-item:hover .item-overlay { opacity: 1; }
-.item-date { font-size: 11px; color: #fff; }
+.item-date { font-size: var(--font-size-xs); color: #fff; }
+/* Lightbox is viewer chrome over the photo: it stays dark in every theme. */
 .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .lb-img-wrap { max-width: 90vw; max-height: 80vh; display: flex; align-items: center; justify-content: center; }
-#lb-img { max-width: 90vw; max-height: 78vh; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.5); object-fit: contain; }
-.lb-caption { margin-top: 14px; color: rgba(255,255,255,0.75); font-size: 13px; }
+#lb-img { max-width: 90vw; max-height: 78vh; border-radius: var(--radius-md); box-shadow: 0 8px 40px rgba(0,0,0,0.5); object-fit: contain; }
+.lb-caption { margin-top: 14px; color: rgba(255,255,255,0.75); font-size: var(--font-size-sm); }
 .lb-close { position: absolute; top: 14px; right: 18px; background: none; border: none; color: #fff; font-size: 22px; line-height: 1; cursor: pointer; opacity: 0.8; transition: opacity 0.15s; }
 .lb-close:hover { opacity: 1; }
 .lb-nav {
   position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.12);
   border: 1px solid rgba(255,255,255,0.25); color: #fff; font-size: 28px; width: 40px; height: 56px;
-  border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+  border-radius: var(--radius-md); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s;
 }
 .lb-nav:hover { background: rgba(255,255,255,0.22); }
 .lb-prev { left: 12px; }
@@ -487,30 +502,40 @@ body { padding: 0; }
 _FILTER_CONTROLS = WidgetTemplate(
     name="Filter controls",
     description=(
-        "PUB/SUB publisher (topic 'filter'). Year + Location dropdowns (from facets); "
-        "on change it yaffo.publish('filter', {year, location}) to every widget on the "
-        "page and persists the choice. Pair it with one or more 'Linked gallery' widgets "
-        "on the same page."
+        "PUB/SUB publisher (topic 'filter'). Year + Location filters built on the "
+        "app's searchable-select component (load /static/searchable-select.css + .js; "
+        "never use a bare native <select> — it isn't themed); the Location one is "
+        "searchable since the list can be long. Options come from facets; on change it "
+        "yaffo.publish('filter', {year, location}) to every widget on the page and "
+        "persists the choice. Pair it with one or more 'Linked gallery' widgets on the "
+        "same page."
     ),
     data_query={
         "years": {"source": "photos", "op": "facet", "field": "year"},
         "locs": {"source": "photos", "op": "facet", "field": "location_name"},
     },
-    html="<div class='bar' id='root'></div>",
+    html="""\
+<link rel="stylesheet" href="/static/searchable-select.css">
+<div class='bar' id='root'></div>
+<script src="/static/searchable-select.js"></script>
+""",
     css="""\
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
-.bar label { font-size: 12px; color: #6c757d; display: inline-flex; align-items: center; gap: 6px; }
-.bar select { font-size: 13px; padding: 6px 8px; border: 1px solid #ced4da; border-radius: 6px; background: #fff; color: #212529; }
-.bar select:focus { outline: none; border-color: #007BFF; }
+.bar label { font-size: var(--font-size-xs); color: var(--color-text-muted); display: inline-flex; align-items: center; gap: 6px; }
+.bar .searchable-select-wrapper { width: 200px; }
+/* The dropdown can't escape the widget iframe, so keep it short enough to fit. */
+.bar .searchable-select-options { max-height: 120px; }
 """,
     js="""\
 const root = document.getElementById('root');
 const data = yaffo.data;
 const st = yaffo.state || {};
-function makeSelect(labelText, options) {
+function makeSelect(labelText, options, searchable) {
   const label = document.createElement('label');
   label.textContent = labelText;
   const sel = document.createElement('select');
+  sel.className = 'searchable-select';
+  if (!searchable) sel.setAttribute('data-search-disabled', '');
   const all = document.createElement('option'); all.value = ''; all.textContent = 'All'; sel.appendChild(all);
   options.forEach((o) => { const e = document.createElement('option'); e.value = String(o.value); e.textContent = o.label; sel.appendChild(e); });
   label.appendChild(sel); root.appendChild(label);
@@ -518,10 +543,13 @@ function makeSelect(labelText, options) {
 }
 const years = (data.years || []).map((y) => y.value).filter((v) => v != null).sort((a, b) => b - a).map((v) => ({ value: v, label: String(v) }));
 const locs = (data.locs || []).map((l) => l.value).filter(Boolean).sort().map((v) => ({ value: v, label: v }));
-const yearSel = makeSelect('Year', years);
-const locSel = makeSelect('Location', locs);
+const yearSel = makeSelect('Year', years, false);
+const locSel = makeSelect('Location', locs, true);
 if (st.year != null) yearSel.value = String(st.year);
 if (st.location) locSel.value = st.location;
+// Upgrade after the saved values are set so the display text starts correct;
+// falls back to the native selects if the script failed.
+if (window.SearchableSelect) { SearchableSelect.init(yearSel); SearchableSelect.init(locSel); }
 function emit() {
   const flt = { year: yearSel.value ? Number(yearSel.value) : null, location: locSel.value || null };
   yaffo.publish('filter', flt);
@@ -530,7 +558,7 @@ function emit() {
 yearSel.onchange = emit;
 locSel.onchange = emit;
 """,
-    grid_w=12, grid_h=1,
+    grid_w=12, grid_h=3,
 )
 
 
@@ -545,7 +573,7 @@ _LINKED_GALLERY = WidgetTemplate(
     html="<div class='grid' id='root'></div>",
     css="""\
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
-.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; display: block; }
+.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-md); display: block; }
 """,
     js="""\
 const grid = document.getElementById('root');
@@ -583,11 +611,11 @@ _PHOTO_PICKER = WidgetTemplate(
     css="""\
 .picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
 .picker img {
-  width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block; cursor: pointer;
+  width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-sm); display: block; cursor: pointer;
   border: 2px solid transparent; transition: border-color 0.15s ease;
 }
-.picker img:hover { border-color: #adb5bd; }
-.picker img.active { border-color: #007BFF; }
+.picker img:hover { border-color: var(--color-border-hover); }
+.picker img.active { border-color: var(--color-accent); }
 """,
     js="""\
 const root = document.getElementById('root');
@@ -629,8 +657,8 @@ _PHOTO_SPOTLIGHT = WidgetTemplate(
     css="""\
 body { padding: 0; }
 .spot { display: flex; flex-direction: column; height: 100%; }
-.spot img { width: 100%; flex: 1; min-height: 0; object-fit: cover; display: block; background: #f1f3f5; }
-.spot-cap { padding: 10px 14px; font-size: 13px; color: #495057; border-top: 1px solid #dee2e6; }
+.spot img { width: 100%; flex: 1; min-height: 0; object-fit: cover; display: block; background: var(--color-surface-sunken); }
+.spot-cap { padding: 10px 14px; font-size: var(--font-size-sm); color: var(--color-text-secondary); border-top: var(--border-width) solid var(--color-border); }
 """,
     js="""\
 const img = document.getElementById('spot-img');
@@ -678,27 +706,30 @@ _PHOTO_MAP = WidgetTemplate(
     css="""\
 html, body { height: 100%; }
 body { padding: 0; position: relative; }
+/* The map background matches OSM water while tiles load; the basemap doesn't theme. */
 #map { width: 100%; height: 100%; background: #aadaff; }
 /* Popup positioned over the cluster's pixel; the transform centers it above the
    point so the arrow points down at the circle. */
 .map-popup {
   position: absolute; z-index: 5; width: 240px; padding: 8px;
   transform: translate(-50%, calc(-100% - 12px));
-  background: #fff; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 4px 18px rgba(0,0,0,0.2);
+  background: var(--color-surface); border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-xl);
 }
 .map-popup::before, .map-popup::after { content: ''; position: absolute; left: 50%; transform: translateX(-50%); width: 0; height: 0; }
-.map-popup::before { bottom: -9px; border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 9px solid #dee2e6; }
-.map-popup::after { bottom: -8px; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid #fff; }
+.map-popup::before { bottom: -9px; border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 9px solid var(--color-border); }
+.map-popup::after { bottom: -8px; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid var(--color-surface); }
 .map-popup-close {
-  position: absolute; top: 5px; right: 6px; z-index: 1; padding: 1px 6px; line-height: 1.2; font-size: 13px;
-  color: #495057; background: rgba(255,255,255,0.9); border: 1px solid #dee2e6; border-radius: 4px; cursor: pointer;
+  position: absolute; top: 5px; right: 6px; z-index: 1; padding: 1px 6px; line-height: 1.2; font-size: var(--font-size-sm);
+  color: var(--color-text-secondary); background: var(--color-surface); border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm); cursor: pointer;
 }
-.map-popup-main { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; display: block; background: #f1f3f5; }
-.map-popup-cap { font-size: 12px; color: #6c757d; margin: 6px 2px; }
+.map-popup-main { width: 100%; height: 150px; object-fit: cover; border-radius: var(--radius-sm); display: block; background: var(--color-surface-sunken); }
+.map-popup-cap { font-size: var(--font-size-xs); color: var(--color-text-muted); margin: 6px 2px; }
 .map-popup-thumbs { display: flex; gap: 4px; overflow-x: auto; }
-.map-popup-thumbs img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; flex: none; cursor: pointer; border: 2px solid transparent; }
-.map-popup-thumbs img:hover { border-color: #adb5bd; }
-.map-popup-thumbs img.active { border-color: #007BFF; }
+.map-popup-thumbs img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-sm); flex: none; cursor: pointer; border: 2px solid transparent; }
+.map-popup-thumbs img:hover { border-color: var(--color-border-hover); }
+.map-popup-thumbs img.active { border-color: var(--color-accent); }
 """,
     js="""\
 (function () {
@@ -712,6 +743,14 @@ body { padding: 0; position: relative; }
   const points = new ol.source.Vector({ features });
   const clusters = new ol.source.Cluster({ distance: 42, source: points });
 
+  // Cluster circles follow the active theme: read the design tokens off the
+  // document, since OpenLayers canvas styles can't use var(--…) directly.
+  const tokens = getComputedStyle(document.documentElement);
+  const token = (name, fallback) => (tokens.getPropertyValue(name) || fallback).trim();
+  const accent = token('--color-accent', '#007BFF');
+  const onAccent = token('--color-on-accent', '#ffffff');
+  const surface = token('--color-surface', '#ffffff');
+
   const styleCache = {};
   const clusterLayer = new ol.layer.Vector({
     source: clusters,
@@ -721,13 +760,13 @@ body { padding: 0; position: relative; }
         styleCache[n] = new ol.style.Style({
           image: new ol.style.Circle({
             radius: Math.min(22, 11 + Math.sqrt(n) * 2),
-            fill: new ol.style.Fill({ color: 'rgba(0, 123, 255, 0.85)' }),
-            stroke: new ol.style.Stroke({ color: '#ffffff', width: 2 }),
+            fill: new ol.style.Fill({ color: accent }),
+            stroke: new ol.style.Stroke({ color: surface, width: 2 }),
           }),
           text: new ol.style.Text({
             text: n > 1 ? String(n) : '',
             font: '600 11px -apple-system, sans-serif',
-            fill: new ol.style.Fill({ color: '#ffffff' }),
+            fill: new ol.style.Fill({ color: onAccent }),
           }),
         });
       }

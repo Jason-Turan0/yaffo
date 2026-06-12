@@ -19,6 +19,8 @@ THEMES: dict[str, str] = {
     "darkroom": "Darkroom",
     "neobrutalist": "Neo-Brutalist",
     "scrapbook": "Scrapbook",
+    "photos-app": "Photos App",
+    "memphis": "Memphis",
 }
 
 _cached_theme: str | None = None

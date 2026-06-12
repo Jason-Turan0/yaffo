@@ -382,9 +382,17 @@
 [data-theme="neobrutalist"] .sidebar,
 [data-theme="neobrutalist"] .settings-section,
 [data-theme="neobrutalist"] #map,
-[data-theme="neobrutalist"] .selection-panel.active {
+[data-theme="neobrutalist"] .selection-panel.active,
+[data-theme="neobrutalist"] .editor-card {
     border: 3px solid var(--color-border);
     box-shadow: var(--shadow-lg);
+}
+
+/* Widget cards sit close together in the grid, so they take a thinner frame
+   and a smaller offset than full panels. */
+[data-theme="neobrutalist"] .widget-card {
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-md);
 }
 
 [data-theme="neobrutalist"] .sidebar h2,

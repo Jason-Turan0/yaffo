@@ -92,7 +92,17 @@ def _widget_contract() -> str:
         "  (or /photos/<id>) for an <img> src, e.g. /photos/123. No other image origin is allowed.",
         "- You CANNOT fetch/XHR/WebSocket (connect-src 'none'); use yaffo.query for live data.",
         api,
-        "- Keep all CSS/JS inline and scoped to the widget. No external resources except photo images.",
+        "- Keep all CSS/JS inline and scoped to the widget. No external resources except photo",
+        "  images and this app's own /static assets (e.g. /static/searchable-select.css/.js,",
+        "  vendored OpenLayers under /static/vendor/ol).",
+        "- The frame loads the app's design tokens (CSS custom properties) plus a small baseline,",
+        "  themed to match the rest of the app. Style with the tokens instead of raw colors/sizes so",
+        "  the widget follows the active theme: --color-bg, --color-surface, --color-surface-sunken,",
+        "  --color-text, --color-text-secondary, --color-text-muted, --color-text-faint,",
+        "  --color-border, --color-border-strong, --color-accent, --color-accent-hover,",
+        "  --color-on-accent, --border-width, --radius-sm/md/pill, --shadow-sm/md/lg/xl,",
+        "  --focus-ring, --font-body/heading, --font-size-xs/sm/base/md/lg/xl/2xl.",
+        "  Raw colors are only for content layered on photos (caption scrims, lightbox chrome).",
     ])
 
 
@@ -113,6 +123,14 @@ def _conventions() -> str:
         "- For filter controls, get the options from a `facet` aggregate (e.g. {source:'photos',",
         "  op:'facet', field:'year'}); pre-load a generous row set and filter client-side, or use",
         "  yaffo:query to filter server-side.",
+        "- Avoid bare native <select> elements — the browser-drawn dropdown ignores the design",
+        "  tokens, so it clashes with every theme. Use the app's searchable-select component:",
+        "  <link> /static/searchable-select.css and <script src> /static/searchable-select.js in",
+        "  the HTML, give the <select> class 'searchable-select' (plus data-search-disabled for",
+        "  short lists), populate its options, then call SearchableSelect.init(sel). It hides the",
+        "  native select and dispatches 'change' on it, so existing handlers keep working. The",
+        "  dropdown cannot escape the widget iframe — cap .searchable-select-options max-height",
+        "  to fit your widget's height. See the 'Filter controls' / 'Filterable gallery' templates.",
         "- Always handle empty data and broken images (img onerror -> /placeholder).",
     ])
 

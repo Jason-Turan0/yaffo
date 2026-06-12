@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#f7f3eb"/>
+  <circle cx="46" cy="52" r="4" fill="#2ec4b6"/>
+  <circle cx="356" cy="244" r="4" fill="#ff6b6b"/>
+  <polyline points="320,48 332,38 344,48 356,38" stroke="#ffd166" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="44,250 56,240 68,250 80,240" stroke="#9b5de5" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="120" y="60" width="160" height="120" rx="20" fill="#ffffff" stroke="#22223b" stroke-width="3"/>
+  <circle cx="186" cy="114" r="22" fill="#ff6b6b"/>
+  <path d="M214 96 a22 22 0 0 1 0 44 z" fill="#2ec4b6"/>
+  <circle cx="232" cy="92" r="5" fill="#4cc9f0"/>
+  <text x="200" y="216" text-anchor="middle" font-family="'Arial Rounded MT Bold', 'Trebuchet MS', 'Comic Sans MS', sans-serif" font-size="16" font-weight="700" fill="#5f5d75">image not found</text>
+</svg>

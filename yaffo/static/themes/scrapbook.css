@@ -79,6 +79,46 @@
     border-bottom: none;
 }
 
+/* ---- page-tab edit pencil: hide the ✎ glyph and draw classic's line icon
+   on a small tilted paper scrap so it matches the nav tabs ---- */
+[data-theme="scrapbook"] .nav-page-edit .nav-page-edit-glyph {
+    display: none;
+}
+
+[data-theme="scrapbook"] .nav-page-edit {
+    align-self: center;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+    border-bottom: none;
+    padding: 8px 9px;
+    margin-left: 4px;
+    color: var(--color-text-secondary);
+    transform: rotate(2deg);
+    transition: transform 0.12s;
+}
+
+[data-theme="scrapbook"] .nav-page-edit::before {
+    content: "";
+    display: block;
+    width: 14px;
+    height: 14px;
+    background-color: currentColor;
+    -webkit-mask-image: url("classic/icon-edit.svg");
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-image: url("classic/icon-edit.svg");
+    mask-position: center;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+}
+
+[data-theme="scrapbook"] .nav-page-edit:hover {
+    background: var(--color-surface);
+    color: var(--color-accent);
+    transform: rotate(0deg) scale(1.1);
+}
+
 /* ---- page header: handwritten title with a marker underline ---- */
 [data-theme="scrapbook"] .page-header {
     background: transparent;
@@ -231,9 +271,16 @@
 
 /* ---- panels: paper scraps held down by washi tape ---- */
 [data-theme="scrapbook"] .sidebar,
-[data-theme="scrapbook"] .settings-section {
+[data-theme="scrapbook"] .settings-section,
+[data-theme="scrapbook"] .editor-card {
     position: relative;
     box-shadow: var(--shadow-lg);
+}
+
+/* Widget cards are smaller scraps: a deeper shadow than the default sm so
+   they lift off the kraft page, but lighter than full panels. */
+[data-theme="scrapbook"] .widget-card {
+    box-shadow: var(--shadow-md);
 }
 
 /* tilt the whole stack, not each panel — pages with two panels (e.g. Faces)

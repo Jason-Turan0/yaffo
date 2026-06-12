@@ -1,0 +1,196 @@
+/*
+ * Photos App theme skin: structural rules that tokens alone can't express —
+ * the frosted topbar, the gradient wordmark and primary buttons, pill-shaped
+ * nav links and buttons, and the hover zoom on photo tiles. Every rule is
+ * scoped to [data-theme="photos-app"], so this file is inert for other
+ * themes; palette values come from tokens.css.
+ * Mockup reference: design_mockups/03-photos-app.html.
+ *
+ * Icons reuse the classic theme's line set via mask + currentColor, so this
+ * theme ships no icon files of its own — only a favicon and placeholder.
+ * Mask longhands only — the `mask:` shorthand resets mask-image, which the
+ * lower-specificity per-icon rules below would then lose.
+ */
+
+/* ---- navbar: frosted glass bar, gradient wordmark, pill links ---- */
+[data-theme="photos-app"] .navbar {
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom-color: var(--color-border-subtle);
+}
+
+/* Brand carries the favicon mark so tab icon and logo match (app convention).
+   The gradient is clipped to the wordmark's glyphs; the ::before pseudo has its
+   own background, so the mark is unaffected by the text clip. */
+[data-theme="photos-app"] .navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    background: var(--photos-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+[data-theme="photos-app"] .navbar-brand::before {
+    content: "";
+    width: 24px;
+    height: 24px;
+    flex: none;
+    background: url("photos-app/favicon.svg") center / contain no-repeat;
+}
+
+[data-theme="photos-app"] .nav-link {
+    border-bottom: none;
+    border-radius: var(--radius-pill);
+    padding: 7px 14px;
+    margin: 10px 1px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+}
+
+[data-theme="photos-app"] .nav-link:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+}
+
+[data-theme="photos-app"] .nav-link.active {
+    background: var(--color-surface-inverse);
+    color: var(--color-text-inverse);
+}
+
+[data-theme="photos-app"] .nav-new-page {
+    border-bottom: none;
+}
+
+/* ---- page-tab edit pencil: hide the ✎ glyph, draw the line icon in a pill ---- */
+[data-theme="photos-app"] .nav-page-edit .nav-page-edit-glyph {
+    display: none;
+}
+
+[data-theme="photos-app"] .nav-page-edit {
+    align-self: center;
+    border-bottom: none;
+    border-radius: var(--radius-pill);
+    padding: 8px 10px;
+    margin-left: 2px;
+    color: var(--color-text-muted);
+}
+
+[data-theme="photos-app"] .nav-page-edit::before {
+    content: "";
+    display: block;
+    width: 14px;
+    height: 14px;
+    background-color: currentColor;
+    -webkit-mask-image: url("classic/icon-edit.svg");
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-image: url("classic/icon-edit.svg");
+    mask-position: center;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+}
+
+[data-theme="photos-app"] .nav-page-edit:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+}
+
+/* ---- page header: bare large title with tight tracking, no panel ---- */
+[data-theme="photos-app"] .page-header {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
+[data-theme="photos-app"] .page-header h1 {
+    letter-spacing: -0.02em;
+}
+
+/* ---- buttons: pills; primary actions take the gradient and its glow ---- */
+[data-theme="photos-app"] .btn,
+[data-theme="photos-app"] .btn-primary,
+[data-theme="photos-app"] .btn-secondary,
+[data-theme="photos-app"] .btn-danger,
+[data-theme="photos-app"] .btn-success,
+[data-theme="photos-app"] .btn-outline-primary,
+[data-theme="photos-app"] .action-button {
+    border-radius: var(--radius-pill);
+    font-weight: 600;
+}
+
+[data-theme="photos-app"] .btn-primary,
+[data-theme="photos-app"] .action-button {
+    background: var(--photos-grad);
+    box-shadow: var(--shadow-accent);
+}
+
+[data-theme="photos-app"] .btn-primary:hover:not(:disabled),
+[data-theme="photos-app"] .action-button:hover:not(:disabled) {
+    background: var(--photos-grad);
+    filter: brightness(1.06);
+}
+
+/* ---- panels: white-on-white cards need a hairline + a soft float ---- */
+[data-theme="photos-app"] .sidebar,
+[data-theme="photos-app"] .photo-sidebar,
+[data-theme="photos-app"] .settings-section,
+[data-theme="photos-app"] .editor-card,
+[data-theme="photos-app"] .widget-card {
+    border: var(--border-width) solid var(--color-border-subtle);
+    box-shadow: var(--shadow-md);
+}
+
+/* ---- photo tiles: quiet until hover, then the photo zooms ---- */
+[data-theme="photos-app"] .photo-card {
+    border: var(--border-width) solid var(--color-border-subtle);
+}
+
+[data-theme="photos-app"] .photo-card img {
+    transition: transform 0.25s ease;
+}
+
+[data-theme="photos-app"] .photo-card:hover img {
+    transform: scale(1.05);
+}
+
+/* ---- icons: classic's line set, tinted by each control's text color ---- */
+[data-theme="photos-app"] .nav-link[data-icon],
+[data-theme="photos-app"] .btn[data-icon],
+[data-theme="photos-app"] button[data-icon] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+[data-theme="photos-app"] .nav-link[data-icon]::before,
+[data-theme="photos-app"] .btn[data-icon]::before,
+[data-theme="photos-app"] button[data-icon]::before {
+    content: "";
+    width: 16px;
+    height: 16px;
+    flex: none;
+    background-color: currentColor;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+}
+
+[data-theme="photos-app"] [data-icon="library"]::before { -webkit-mask-image: url("classic/icon-library.svg"); mask-image: url("classic/icon-library.svg"); }
+[data-theme="photos-app"] [data-icon="faces"]::before { -webkit-mask-image: url("classic/icon-faces.svg"); mask-image: url("classic/icon-faces.svg"); }
+[data-theme="photos-app"] [data-icon="people"]::before { -webkit-mask-image: url("classic/icon-people.svg"); mask-image: url("classic/icon-people.svg"); }
+[data-theme="photos-app"] [data-icon="locations"]::before { -webkit-mask-image: url("classic/icon-locations.svg"); mask-image: url("classic/icon-locations.svg"); }
+[data-theme="photos-app"] [data-icon="utilities"]::before { -webkit-mask-image: url("classic/icon-utilities.svg"); mask-image: url("classic/icon-utilities.svg"); }
+[data-theme="photos-app"] [data-icon="settings"]::before { -webkit-mask-image: url("classic/icon-settings.svg"); mask-image: url("classic/icon-settings.svg"); }
+[data-theme="photos-app"] [data-icon="add"]::before { -webkit-mask-image: url("classic/icon-add.svg"); mask-image: url("classic/icon-add.svg"); }
+[data-theme="photos-app"] [data-icon="edit"]::before { -webkit-mask-image: url("classic/icon-edit.svg"); mask-image: url("classic/icon-edit.svg"); }
+[data-theme="photos-app"] [data-icon="delete"]::before { -webkit-mask-image: url("classic/icon-delete.svg"); mask-image: url("classic/icon-delete.svg"); }
+[data-theme="photos-app"] [data-icon="search"]::before { -webkit-mask-image: url("classic/icon-search.svg"); mask-image: url("classic/icon-search.svg"); }
+[data-theme="photos-app"] [data-icon="sync"]::before { -webkit-mask-image: url("classic/icon-sync.svg"); mask-image: url("classic/icon-sync.svg"); }
