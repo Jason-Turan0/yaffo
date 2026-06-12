@@ -2,7 +2,7 @@
     position: absolute;
     z-index: 1000;
     min-width: 200px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: transparent; /* background moved to inner container */
     pointer-events: none;
     opacity: 0;
@@ -13,11 +13,11 @@
 /* The actual visible box */
 .overlay-content {
     position: relative;
-    background: white;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    border-radius: 8px;
+    background: var(--color-surface);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
     padding: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-lg);
     pointer-events: auto;
     z-index: 1;
 }
@@ -42,7 +42,7 @@
     left: 50%;
     transform: translateX(-50%);
     border-width: 6px 6px 0 6px;
-    border-color: white transparent transparent transparent;
+    border-color: var(--color-surface) transparent transparent transparent;
 }
 
 .overlay[data-placement="bottom"] .overlay-content::after {
@@ -50,7 +50,7 @@
     left: 50%;
     transform: translateX(-50%);
     border-width: 0 6px 6px 6px;
-    border-color: transparent transparent white transparent;
+    border-color: transparent transparent var(--color-surface) transparent;
 }
 
 .overlay[data-placement="left"] .overlay-content::after {
@@ -58,7 +58,7 @@
     right: -6px;
     transform: translateY(-50%);
     border-width: 6px 0 6px 6px;
-    border-color: transparent transparent transparent white;
+    border-color: transparent transparent transparent var(--color-surface);
 }
 
 .overlay[data-placement="right"] .overlay-content::after {
@@ -66,5 +66,5 @@
     left: -6px;
     transform: translateY(-50%);
     border-width: 6px 6px 6px 0;
-    border-color: transparent white transparent transparent;
+    border-color: transparent var(--color-surface) transparent transparent;
 }

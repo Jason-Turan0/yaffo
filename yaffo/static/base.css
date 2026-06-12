@@ -5,18 +5,19 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background: #f8f9fa;
+    font-family: var(--font-body);
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
 .navbar {
-    background: white;
-    border-bottom: 1px solid #dee2e6;
+    background: var(--color-surface);
+    border-bottom: var(--border-width) solid var(--color-border);
     padding: 0;
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow-navbar);
 }
 
 .navbar-container {
@@ -30,7 +31,7 @@ body {
 .navbar-brand {
     font-size: 20px;
     font-weight: 600;
-    color: #212529;
+    color: var(--color-text);
     text-decoration: none;
     padding: 16px 0;
     margin-right: 30px;
@@ -44,7 +45,7 @@ body {
 }
 
 .nav-link {
-    color: #495057;
+    color: var(--color-text-secondary);
     text-decoration: none;
     padding: 16px 16px;
     display: block;
@@ -54,13 +55,13 @@ body {
 }
 
 .nav-link:hover {
-    color: #007BFF;
-    background: #f8f9fa;
+    color: var(--color-accent);
+    background: var(--color-surface-hover);
 }
 
 .nav-link.active {
-    color: #007BFF;
-    border-bottom-color: #007BFF;
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
     font-weight: 500;
 }
 
@@ -71,7 +72,7 @@ body {
 .alert {
     padding: 12px 20px;
     margin-bottom: 10px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-size: 14px;
     display: flex;
     justify-content: space-between;
@@ -106,15 +107,21 @@ body {
 }
 
 .alert-success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background: var(--color-success-soft);
+    color: var(--color-success-soft-text);
+    border: var(--border-width) solid var(--color-success-soft-border);
 }
 
 .alert-error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    background: var(--color-danger-soft);
+    color: var(--color-danger-soft-text);
+    border: var(--border-width) solid var(--color-danger-soft-border);
+}
+
+.alert-warning {
+    background: var(--color-warning-soft);
+    color: var(--color-warning-soft-text);
+    border: var(--border-width) solid var(--color-warning-soft-border);
 }
 
 .alert-message {
@@ -147,7 +154,7 @@ body {
 .header-info h1 {
     font-size: 24px;
     margin: 0 0 5px 0;
-    color: #212529;
+    color: var(--color-text);
 }
 
 .main-container-layout {
@@ -157,22 +164,23 @@ body {
 }
 
 .page-header {
-    background: white;
+    background: var(--color-surface);
     padding: 20px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     margin-bottom: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-sm);
 }
 
 .page-header h1 {
+    font-family: var(--font-heading);
     font-size: 24px;
     margin: 0 0 10px 0;
-    color: #212529;
+    color: var(--color-text);
 }
 
 .page-header .subtitle {
     font-size: 14px;
-    color: #6c757d;
+    color: var(--color-text-muted);
 }
 
 /* Radio Button Styles */
@@ -187,12 +195,12 @@ body {
     align-items: center;
     cursor: pointer;
     font-size: 14px;
-    color: #495057;
+    color: var(--color-text-secondary);
     transition: color 0.2s;
 }
 
 .radio-label:hover {
-    color: #212529;
+    color: var(--color-text);
 }
 
 .radio-label input[type="radio"] {
@@ -200,7 +208,7 @@ body {
     height: 18px;
     margin-right: 8px;
     cursor: pointer;
-    accent-color: #007BFF;
+    accent-color: var(--color-accent);
 }
 
 .radio-label span {

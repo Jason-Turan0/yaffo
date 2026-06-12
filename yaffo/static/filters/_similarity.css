@@ -1,19 +1,6 @@
-.filter-group input[type="range"] {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 14px;
-    background: white;
-}
-
-.filter-group input[type="range"] {
-    padding: 0;
-}
-
 .similarity-display {
     text-align: center;
     font-size: 13px;
-    color: #495057;
+    color: var(--color-text-secondary);
     margin-top: 5px;
 }

@@ -1,8 +1,8 @@
 .collapsible-panel {
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
     margin-bottom: 15px;
-    background: white;
+    background: var(--color-surface);
 }
 
 .panel-header {
@@ -11,29 +11,29 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 15px;
-    background: #f8f9fa;
+    background: var(--color-bg);
     border: none;
-    border-radius: 6px 6px 0 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
     cursor: pointer;
     transition: background-color 0.2s;
     font-family: inherit;
 }
 
 .panel-header:hover {
-    background: #e9ecef;
+    background: color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .panel-title {
     font-size: 14px;
     font-weight: 600;
-    color: #495057;
+    color: var(--color-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 .panel-icon {
     transition: transform 0.2s;
-    color: #6c757d;
+    color: var(--color-text-muted);
 }
 
 .panel-header[aria-expanded="true"] .panel-icon {
@@ -41,7 +41,7 @@
 }
 
 .panel-content {
-    border-top: 1px solid #dee2e6;
+    border-top: var(--border-width) solid var(--color-border);
 }
 
 .panel-body {

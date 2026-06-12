@@ -5,11 +5,11 @@
     top: 20px;
     right: 20px;
     padding: 16px 24px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-size: 14px;
     font-weight: 500;
-    color: white;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    color: var(--color-on-accent);
+    box-shadow: var(--shadow-lg);
     z-index: 2000;
     opacity: 0;
     transform: translateY(-20px);
@@ -25,18 +25,18 @@
 }
 
 .notification.success {
-    background: #28a745;
+    background: var(--color-success);
 }
 
 .notification.error {
-    background: #dc3545;
+    background: var(--color-danger);
 }
 
 .notification.warning {
-    background: #ffc107;
-    color: #212529;
+    background: var(--color-warning);
+    color: var(--color-text);
 }
 
 .notification.info {
-    background: #17a2b8;
+    background: var(--color-info);
 }

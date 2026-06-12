@@ -7,7 +7,7 @@
     margin-bottom: 5px;
     font-size: 14px;
     font-weight: 500;
-    color: #495057;
+    color: var(--color-text-secondary);
 }
 
 .form-group label.checkbox-label {
@@ -19,8 +19,8 @@
 .form-group input {
     width: 100%;
     padding: 10px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
     font-size: 14px;
 }
 
@@ -30,15 +30,15 @@
 
 .form-group input:focus {
     outline: none;
-    border-color: #007BFF;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
 }
 
 .form-control {
     width: 100%;
     padding: 0.5rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
     font-size: 14px;
 }
 
@@ -48,13 +48,13 @@
     padding: 8px 12px;
     cursor: pointer;
     transition: background 0.2s;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-size: 14px;
     user-select: none;
 }
 
 .checkbox-label:hover {
-    background: #f8f9fa;
+    background: var(--color-surface-hover);
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -65,8 +65,8 @@
 .form-group textarea {
     width: 100%;
     padding: 10px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
     font-size: 14px;
     font-family: inherit; /* Ensures it matches the font of your inputs */
     resize: vertical; /* Allows users to make it taller, but keeps layout from breaking horizontally */
@@ -75,6 +75,6 @@
 
 .form-group textarea:focus {
     outline: none;
-    border-color: #007BFF;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
 }

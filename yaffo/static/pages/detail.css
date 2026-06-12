@@ -21,9 +21,9 @@
 }
 
 .editor-card {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
     padding: 20px;
 }
 
@@ -62,7 +62,7 @@
 
 .conversation-header {
     padding: 14px 16px;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: var(--border-width) solid var(--color-border);
 }
 
 .conversation-header h2 {
@@ -72,7 +72,7 @@
 
 .conversation-subtitle {
     font-size: 12px;
-    color: #868e96;
+    color: var(--color-text-muted);
     margin-top: 2px;
 }
 
@@ -87,12 +87,12 @@
 
 .chat-empty {
     font-size: 13px;
-    color: #adb5bd;
+    color: var(--color-text-faint);
 }
 
 .chat-message {
     padding: 8px 12px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     font-size: 14px;
     max-width: 90%;
     white-space: pre-wrap;
@@ -101,40 +101,40 @@
 
 .chat-message-user {
     align-self: flex-end;
-    background: #007BFF;
-    color: white;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
 }
 
 .chat-message-assistant {
     align-self: flex-start;
-    background: #f1f3f5;
-    color: #212529;
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
 /* Interleaved tool-progress and error lines in the transcript (display-only). */
 .chat-message-status {
     align-self: flex-start;
     background: transparent;
-    color: #868e96;
+    color: var(--color-text-muted);
     font-size: 13px;
     padding: 2px 12px;
 }
 
 .chat-message-error {
     align-self: flex-start;
-    background: #fff0f0;
-    color: #c92a2a;
-    border: 1px solid #ffc9c9;
+    background: var(--color-danger-soft);
+    color: var(--color-danger-soft-text);
+    border: var(--border-width) solid var(--color-danger-soft-border);
 }
 
 .conversation-input {
     padding: 12px 16px;
-    border-top: 1px solid #dee2e6;
+    border-top: var(--border-width) solid var(--color-border);
 }
 
 .conversation-input textarea:focus {
     outline: none;
-    border-color: #007BFF;
+    border-color: var(--color-accent);
 }
 
 .conversation-input button:disabled {
@@ -149,15 +149,15 @@
     align-items: center;
     gap: 8px;
     font-size: 13px;
-    color: #868e96;
+    color: var(--color-text-muted);
 }
 
 .chat-spinner {
     flex: none;
     width: 14px;
     height: 14px;
-    border: 2px solid #dee2e6;
-    border-top-color: #007BFF;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-accent);
     border-radius: 50%;
     animation: chat-spin 0.6s linear infinite;
 }
@@ -180,7 +180,7 @@
 .generation-elapsed {
     margin-left: auto;
     font-variant-numeric: tabular-nums;
-    color: #adb5bd;
+    color: var(--color-text-faint);
 }
 
 /* Locked state: the page mirrors the working version, so manual widget controls
@@ -204,10 +204,10 @@
 .widget-card {
     display: flex;
     flex-direction: column;
-    background: white;
-    border-radius: 8px;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
 }
 
 .widget-header {
@@ -216,8 +216,8 @@
     justify-content: space-between;
     gap: 6px;
     padding: 6px 10px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
+    background: var(--color-bg);
+    border-bottom: var(--border-width) solid var(--color-border);
     cursor: move;
 }
 
@@ -226,7 +226,7 @@
     min-width: 0;
     font-size: 13px;
     font-weight: 500;
-    color: #495057;
+    color: var(--color-text-secondary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -238,12 +238,12 @@
     cursor: pointer;
     font-size: 13px;
     line-height: 1;
-    color: #adb5bd;
+    color: var(--color-text-faint);
     padding: 0 4px;
 }
 
 .widget-edit:hover {
-    color: #007BFF;
+    color: var(--color-accent);
 }
 
 .widget-title-input {
@@ -251,21 +251,21 @@
     min-width: 0;
     font-size: 13px;
     font-weight: 500;
-    color: #495057;
+    color: var(--color-text-secondary);
     border: none;
     background: transparent;
     padding: 2px 4px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
 }
 
 .widget-title-input:hover {
-    background: #eceef0;
+    background: color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .widget-title-input:focus {
     outline: none;
-    background: white;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+    background: var(--color-surface);
+    box-shadow: var(--focus-ring);
     cursor: text;
 }
 
@@ -275,12 +275,12 @@
     cursor: pointer;
     font-size: 18px;
     line-height: 1;
-    color: #adb5bd;
+    color: var(--color-text-faint);
     padding: 0 4px;
 }
 
 .widget-delete:hover {
-    color: #dc3545;
+    color: var(--color-danger);
 }
 
 .widget-body {
@@ -293,7 +293,7 @@
     height: 100%;
     border: 0;
     display: block;
-    background: white;
+    background: var(--color-surface);
 }
 
 /* While dragging/resizing, let pointer events pass through the iframes to the

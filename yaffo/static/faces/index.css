@@ -1,26 +1,7 @@
-.faces-layout {
-    display: flex;
-    height: calc(100vh - 60px);
-    margin: -20px;
-}
-
-.filter-group select,
-.filter-group input[type="range"] {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 14px;
-}
-
-.filter-group input[type="range"] {
-    padding: 0;
-}
-
 .threshold-display {
     text-align: center;
     font-size: 13px;
-    color: #495057;
+    color: var(--color-text-secondary);
     margin-top: 5px;
 }
 
@@ -53,22 +34,8 @@
 .person-assign-select label {
     font-size: 13px;
     font-weight: 600;
-    color: #495057;
+    color: var(--color-text-secondary);
     margin-bottom: 4px;
-}
-
-kbd {
-    display: inline-block;
-    padding: 2px 6px;
-    font-size: 11px;
-    line-height: 1;
-    color: #495057;
-    background-color: #f8f9fa;
-    border: 1px solid #ced4da;
-    border-radius: 3px;
-    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-    font-family: 'Courier New', monospace;
-    font-weight: 600;
 }
 
 .btn-kbd {
@@ -80,13 +47,13 @@ kbd {
 .keyboard-shortcuts-list {
     margin-top: 15px;
     padding-top: 15px;
-    border-top: 1px solid #dee2e6;
+    border-top: var(--border-width) solid var(--color-border);
 }
 
 .shortcuts-label {
     font-size: 12px;
     font-weight: 600;
-    color: #6c757d;
+    color: var(--color-text-muted);
     margin-bottom: 8px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -98,12 +65,12 @@ kbd {
     gap: 8px;
     padding: 6px 8px;
     margin-bottom: 4px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     transition: background-color 0.2s;
 }
 
 .shortcut-item:hover {
-    background-color: #f8f9fa;
+    background-color: var(--color-surface-hover);
 }
 
 .shortcut-item kbd {
@@ -113,19 +80,19 @@ kbd {
 
 .shortcut-item span {
     font-size: 13px;
-    color: #495057;
+    color: var(--color-text-secondary);
 }
 
 .keyboard-help {
     margin-top: 15px;
     padding-top: 15px;
-    border-top: 1px solid #dee2e6;
+    border-top: var(--border-width) solid var(--color-border);
     text-align: center;
 }
 
 .keyboard-help small {
     font-size: 12px;
-    color: #6c757d;
+    color: var(--color-text-muted);
 }
 
 .keyboard-activated {
@@ -134,8 +101,8 @@ kbd {
 
 @keyframes flash-highlight {
     0% {
-        background-color: #007bff;
-        color: white;
+        background-color: var(--color-accent);
+        color: var(--color-on-accent);
         transform: scale(1.05);
     }
     100% {
@@ -156,9 +123,9 @@ kbd {
     align-items: center;
     gap: 12px;
     padding: 10px 12px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    border: var(--border-width) solid var(--color-border);
 }
 
 .help-shortcut-item kbd {
@@ -170,7 +137,7 @@ kbd {
 
 .help-shortcut-item span {
     font-size: 14px;
-    color: #495057;
+    color: var(--color-text-secondary);
 }
 
 .main-content {
@@ -192,7 +159,7 @@ kbd {
 }
 
 .global-actions a {
-    color: #007BFF;
+    color: var(--color-accent);
     text-decoration: none;
     font-size: 14px;
     cursor: pointer;
@@ -203,21 +170,21 @@ kbd {
 }
 
 .global-actions .separator {
-    color: #dee2e6;
+    color: var(--color-border);
 }
 
 .suggestion-group {
     margin-bottom: 30px;
     padding: 20px;
-    background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
+    background: var(--color-surface);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
 }
 
 .suggestion-group h2 {
     margin: 0 0 15px 0;
     font-size: 18px;
-    color: #212529;
+    color: var(--color-text);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -232,7 +199,7 @@ kbd {
 .group-select-label {
     font-size: 14px;
     font-weight: normal;
-    color: #495057;
+    color: var(--color-text-secondary);
     cursor: pointer;
     user-select: none;
 }
@@ -246,15 +213,15 @@ kbd {
 
 .group-actions button {
     padding: 6px 12px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    background: white;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
     cursor: pointer;
     font-size: 13px;
 }
 
 .group-actions button:hover {
-    background: #f8f9fa;
+    background: var(--color-surface-hover);
 }
 
 
@@ -267,18 +234,18 @@ kbd {
 .face {
     border: 2px solid transparent;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
     transition: border-color 0.2s;
 }
 
 .face:hover {
-    border-color: #adb5bd;
+    border-color: var(--color-border-hover);
     border-width: thick;
 }
 
 .face.selected {
-    border-color: #007BFF;
+    border-color: var(--color-accent);
     border-width: thick;
 }
 
@@ -287,37 +254,6 @@ kbd {
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-.tooltip {
-    position: absolute;
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    pointer-events: none;
-    z-index: 1000;
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-.tooltip.visible {
-    opacity: 1;
-}
-
-.tooltip::before {
-    content: '';
-    position: absolute;
-    bottom: -4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 8px;
-    height: 8px;
-    background: rgba(0, 0, 0, 0.9);
-    transform: translateX(-50%) rotate(45deg);
 }
 
 .new-person-controls,

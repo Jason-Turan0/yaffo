@@ -1,10 +1,10 @@
 .percentage-slider input[type="range"] {
     width: 100%;
     padding: 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
     font-size: 14px;
-    background: white;
+    background: var(--color-surface);
 }
 
 .percentage-slider input[type="range"] {
@@ -14,8 +14,8 @@
 .percentage-slider-display {
     text-align: center;
     font-size: 13px;
-    color: #495057;
+    color: var(--color-text-secondary);
     margin-top: 5px;
-    font-family: monospace;
+    font-family: var(--font-mono);
     font-weight: 700;
 }

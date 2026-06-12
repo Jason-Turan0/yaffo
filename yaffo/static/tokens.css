@@ -1,0 +1,93 @@
+/*
+ * Design tokens — the theming contract.
+ *
+ * Every visual decision (color, font, radius, border, shadow) lives here and
+ * ONLY here. Component stylesheets must reference these via var(--…); raw hex
+ * colors / rgb() / named colors outside this file fail the drift-guard test
+ * (tests/yaffo/test_design_tokens.py).
+ *
+ * A theme is a block that overrides these variables, e.g.:
+ *
+ *   [data-theme="darkroom"] { --color-bg: #101216; --color-accent: #e8a33d; … }
+ *
+ * Effects derived from the accent (focus ring, accent glow) use color-mix so
+ * they follow --color-accent automatically; themes rarely need to touch them.
+ */
+
+:root {
+    /* Typography */
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    --font-heading: var(--font-body);
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    /* Surfaces */
+    --color-bg: #f8f9fa;              /* page background */
+    --color-surface: #ffffff;         /* cards, panels, inputs, nav */
+    --color-surface-hover: #f8f9fa;   /* hover state on surface rows/options */
+    --color-surface-sunken: #dee2e6;  /* table headers, progress tracks */
+
+    /* Text */
+    --color-text: #212529;
+    --color-text-secondary: #495057;  /* labels, table headers */
+    --color-text-muted: #6c757d;      /* hints, subtitles, placeholders */
+    --color-text-faint: #adb5bd;      /* empty states, separators */
+
+    /* Inverse (dark-on-light UI like tooltips) */
+    --color-surface-inverse: rgba(0, 0, 0, 0.9);
+    --color-text-inverse: #ffffff;
+
+    /* Borders */
+    --color-border-subtle: #f1f3f5;   /* faint row dividers */
+    --color-border: #dee2e6;          /* default borders */
+    --color-border-strong: #ced4da;   /* inputs, emphasized edges */
+    --color-border-hover: #adb5bd;
+    --border-width: 1px;
+
+    /* Accent (interactive) */
+    --color-accent: #007BFF;
+    --color-accent-hover: #0056b3;
+    --color-accent-soft: #e7f3ff;     /* selected option bg, tag chips, info callouts */
+    --color-accent-soft-text: #004085; /* text on accent-soft */
+    --color-on-accent: #ffffff;       /* text on accent/status fills */
+
+    /* Status */
+    --color-success: #28a745;
+    --color-success-hover: #218838;
+    --color-success-soft: #d4edda;
+    --color-success-soft-text: #155724;
+    --color-success-soft-border: #c3e6cb;
+    --color-danger: #dc3545;
+    --color-danger-hover: #c82333;
+    --color-danger-soft: #f8d7da;
+    --color-danger-soft-text: #721c24;
+    --color-danger-soft-border: #f5c6cb;
+    --color-warning: #ffc107;
+    --color-warning-soft: #fff3cd;
+    --color-warning-soft-text: #856404;
+    --color-warning-soft-border: #ffeaa7;
+    --color-info: #17a2b8;
+
+    /* Neutral action (secondary buttons) */
+    --color-neutral: #6c757d;
+    --color-neutral-hover: #545b62;
+
+    /* Disabled */
+    --color-disabled-bg: #e9ecef;
+    --color-disabled-text: #6c757d;
+
+    /* Shape */
+    --radius-sm: 4px;                 /* buttons, inputs */
+    --radius-md: 8px;                 /* cards, panels, modals */
+    --radius-pill: 999px;             /* chips, progress bars */
+
+    /* Elevation & effects */
+    --color-backdrop: rgba(0, 0, 0, 0.5);
+    --shadow-navbar: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --shadow-xl: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --shadow-accent: 0 2px 8px color-mix(in srgb, var(--color-accent) 30%, transparent);
+    --shadow-inset: inset 0 -1px 0 rgba(0, 0, 0, 0.1);  /* keycap/bevel edge */
+    --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-accent) 12%, transparent);
+}

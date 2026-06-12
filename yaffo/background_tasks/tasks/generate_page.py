@@ -36,12 +36,14 @@ from yaffo.page_builder.serializers import widget_draft
 
 logger = get_logger(__name__, 'background_tasks')
 
-# Friendly progress text per tool (mirrors the route's _TOOL_STATUS); anything else
-# falls back to a generic line.
+# Friendly progress text per tool, shown as a status line in the conversation feed;
+# anything not listed falls back to a generic "Working…".
 _TOOL_STATUS = {
     "create_widget": "Creating widget…",
     "update_widget": "Updating widget…",
     "run_data_query": "Looking up information…",
+    "list_widget_templates": "Browsing templates…",
+    "get_widget_template": "Picking a template…",
 }
 
 

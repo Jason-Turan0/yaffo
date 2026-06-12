@@ -354,7 +354,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                        class="location-input"
                        placeholder="Or enter custom location"
                        id="mass-location-input">
-                <button class="btn-assign"
+                <button class="btn btn-primary btn-assign"
                         data-photo-ids="${allPhotoIds.join(',')}"
                         id="mass-assign-btn">
                     Assign to All
@@ -373,7 +373,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                 </div>
             </div>
 
-            <button class="btn-clear-selection">Clear Selection</button>
+            <button class="btn btn-secondary btn-block btn-clear-selection">Clear Selection</button>
         `;
 
         const assignLocation = async (photoIds, locationName) => {

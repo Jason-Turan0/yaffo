@@ -5,9 +5,9 @@
 .multi-select-header {
     width: 100%;
     padding: 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    background: white;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
     cursor: pointer;
     display: flex;
     justify-content: space-between;
@@ -16,7 +16,7 @@
 }
 
 .multi-select-header:hover {
-    border-color: #adb5bd;
+    border-color: var(--color-border-hover);
 }
 
 .multi-select-header .arrow {
@@ -34,14 +34,14 @@
     top: 100%;
     left: 0;
     right: 0;
-    background: white;
-    border: 1px solid #ced4da;
+    background: var(--color-surface);
+    border: var(--border-width) solid var(--color-border-strong);
     border-top: none;
-    border-radius: 0 0 4px 4px;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
     max-height: 200px;
     overflow-y: auto;
     z-index: 100;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-md);
 }
 
 .multi-select-wrapper.open .multi-select-options {
@@ -57,7 +57,7 @@
 }
 
 .multi-select-option:hover {
-    background: #f8f9fa;
+    background: var(--color-surface-hover);
 }
 
 .multi-select-option input[type="checkbox"] {
@@ -73,5 +73,5 @@
     display: block;
     margin-top: 4px;
     font-size: 12px;
-    color: #6c757d;
+    color: var(--color-text-muted);
 }

@@ -10,7 +10,6 @@ import dataclasses
 import pytest
 
 from yaffo.db.models import Widget
-from yaffo.page_builder import schemas
 from yaffo.page_builder.schemas import WidgetDraft
 
 pytestmark = pytest.mark.unit
@@ -30,11 +29,3 @@ class TestWidgetDraftMatchesModel:
         # Keeps the omit set honest: a renamed/removed column can't linger here.
         model_columns = {c.name for c in Widget.__table__.columns}
         assert _OMITTED_WIDGET_COLUMNS <= model_columns
-
-
-class TestChatRecords:
-    def test_record_event_tags(self):
-        assert schemas.chat_message("hi") == {"event": "message", "content": "hi"}
-        assert schemas.chat_widget_new({"id": "w"}) == {"event": "widget_new", "widget": {"id": "w"}}
-        assert schemas.chat_widget_updated({"id": "w"}) == {"event": "widget_updated", "widget": {"id": "w"}}
-        assert schemas.chat_done() == {"event": "done"}

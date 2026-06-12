@@ -19,22 +19,22 @@
 
 .face-card {
     position: relative;
-    border: 2px solid #ddd;
-    border-radius: 8px;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
     overflow: hidden;
-    background: white;
+    background: var(--color-surface);
     transition: all 0.2s ease;
     cursor: pointer;
 }
 
 .face-card:hover {
-    border-color: #4CAF50;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-color: var(--color-success);
+    box-shadow: var(--shadow-md);
 }
 
 .face-card.selected {
-    border-color: #4CAF50;
-    background-color: #f0f9f0;
+    border-color: var(--color-success);
+    background-color: var(--color-success-soft);
 }
 
 .face-checkbox-container {
@@ -64,24 +64,24 @@
 .similarity-badge {
     display: inline-block;
     padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     font-size: 0.875rem;
     margin-bottom: 0.25rem;
 }
 
 .similarity-badge[data-similarity] {
-    background-color: #e8f5e9;
-    color: #2e7d32;
+    background-color: var(--color-success-soft);
+    color: var(--color-success-soft-text);
 }
 
 .face-meta {
     font-size: 0.75rem;
-    color: #666;
+    color: var(--color-text-muted);
 }
 
 #selected-count {
-    color: #4CAF50;
+    color: var(--color-success);
     font-weight: 700;
 }
 
@@ -92,10 +92,10 @@
 
 .empty-state h2 {
     margin-bottom: 1rem;
-    color: #666;
+    color: var(--color-text-muted);
 }
 
 .empty-state p {
     margin-bottom: 1.5rem;
-    color: #999;
+    color: var(--color-text-faint);
 }

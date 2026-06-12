@@ -81,7 +81,7 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, config) => {
         container.innerHTML = mediaDirs.map((dir, index) => `
             <div class="media-dir-item" data-index="${index}">
                 <span class="media-dir-path">${dir}</span>
-                <button type="button" class="btn-danger btn-sm" onclick="window.PHOTO_ORGANIZER.settings.removeMediaDir(${index})">Remove</button>
+                <button type="button" class="btn btn-danger btn-sm" onclick="window.PHOTO_ORGANIZER.settings.removeMediaDir(${index})">Remove</button>
             </div>
         `).join('');
     };

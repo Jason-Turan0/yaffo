@@ -1,6 +1,6 @@
 .nav-divider {
     width: 1px;
-    background: #dee2e6;
+    background: var(--color-border);
     margin: 10px 8px;
     align-self: stretch;
     list-style: none;
@@ -43,13 +43,13 @@
     display: flex;
     align-items: center;
     padding: 0 12px 0 4px;
-    color: #adb5bd;
+    color: var(--color-border-hover);
     text-decoration: none;
     font-size: 14px;
     border-bottom: 3px solid transparent;
 }
 
 .nav-page-edit:hover {
-    color: #007BFF;
-    background: #f8f9fa;
+    color: var(--color-accent);
+    background: var(--color-surface-hover);
 }

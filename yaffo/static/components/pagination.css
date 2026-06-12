@@ -3,7 +3,7 @@
     flex-direction: column;
     gap: 1rem;
     padding: 1rem 0;
-    border-top: 1px solid #e5e7eb;
+    border-top: var(--border-width) solid var(--color-border);
     margin-top: 2rem;
 }
 
@@ -13,7 +13,7 @@
 }
 
 .results-count {
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-size: 0.875rem;
 }
 
@@ -32,30 +32,30 @@
 }
 
 .page-size-selector label {
-    color: #4b5563;
+    color: var(--color-text-secondary);
     font-size: 0.875rem;
     font-weight: 500;
 }
 
 .page-size-selector select {
     padding: 0.375rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-    background-color: white;
-    color: #1f2937;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-surface);
+    color: var(--color-text);
     font-size: 0.875rem;
     cursor: pointer;
     transition: border-color 0.15s ease-in-out;
 }
 
 .page-size-selector select:hover {
-    border-color: #9ca3af;
+    border-color: var(--color-border-hover);
 }
 
 .page-size-selector select:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
 }
 
 .page-navigation {
@@ -66,10 +66,10 @@
 
 .page-btn {
     padding: 0.375rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-    background-color: white;
-    color: #374151;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-surface);
+    color: var(--color-text-secondary);
     font-size: 0.875rem;
     text-decoration: none;
     cursor: pointer;
@@ -78,20 +78,20 @@
 }
 
 .page-btn:hover:not(.disabled) {
-    background-color: #f9fafb;
-    border-color: #9ca3af;
+    background-color: var(--color-surface-hover);
+    border-color: var(--color-border-hover);
 }
 
 .page-btn.disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background-color: #f3f4f6;
-    color: #9ca3af;
+    background-color: var(--color-disabled-bg);
+    color: var(--color-disabled-text);
 }
 
 .page-info {
     padding: 0 0.5rem;
-    color: #4b5563;
+    color: var(--color-text-secondary);
     font-size: 0.875rem;
     font-weight: 500;
     white-space: nowrap;

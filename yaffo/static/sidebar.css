@@ -9,28 +9,51 @@
 .clear-filters {
     width: 100%;
     padding: 8px;
-    background: white;
-    color: #6c757d;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
     font-size: 13px;
+    font-family: var(--font-body);
     cursor: pointer;
     margin-top: 10px;
     transition: all 0.2s;
 }
 
 .clear-filters:hover {
-    background: #f8f9fa;
-    border-color: #adb5bd;
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-hover);
+}
+
+.filter-group label {
+    display: block;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin-bottom: 5px;
+    font-weight: 500;
 }
 
 .filter-group select {
     width: 100%;
     padding: 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
     font-size: 14px;
-    background: white;
+    background: var(--color-surface);
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
+}
+
+.filter-group input[type="range"] {
+    width: 100%;
+    padding: 0;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
 }
 
 .sidebar-container {
@@ -41,13 +64,13 @@
 }
 
 .sidebar {
-    background: white;
-    border-radius: 8px;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
     padding: 20px;
     height: fit-content;
     position: sticky;
     top: 80px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-sm);
     max-height: calc(100vh - 100px);
     overflow-y: auto;
 }
@@ -57,14 +80,15 @@
 }
 
 .sidebar h2 {
+    font-family: var(--font-heading);
     font-size: 18px;
     margin: 0 0 20px 0;
-    color: #212529;
+    color: var(--color-text);
 }
 
 .sidebar h3 {
     font-size: 14px;
     margin: 20px 0 10px 0;
-    color: #495057;
+    color: var(--color-text-secondary);
     font-weight: 600;
 }

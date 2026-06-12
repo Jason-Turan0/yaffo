@@ -4,6 +4,7 @@
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='people/faces.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/tooltip.css') }}">
 {% endblock %}
 {% from "_sidebar.html" import render_sidebar %}
 {% from "filters/_similarity.html" import similarity_filter %}
@@ -19,7 +20,7 @@
         {% macro render_actions() %}
             <form method="POST" action="{{ url_for('person_faces_remove', person_id=person.id) }}" id="remove-form">
                 <div id="selected-faces-container"></div>
-                <button type="button" class="remove-selected-btn" onclick="removeSelectedFaces()">
+                <button type="button" class="btn btn-danger btn-block" onclick="removeSelectedFaces()">
                     Remove Selected
                 </button>
             </form>

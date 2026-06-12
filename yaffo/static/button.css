@@ -1,9 +1,10 @@
 .btn, .btn-primary, .btn-secondary, .btn-danger, .action-button {
     padding: 10px 20px;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-size: 14px;
     font-weight: 500;
+    font-family: var(--font-body);
     cursor: pointer;
     transition: all 0.2s;
     text-decoration: none;
@@ -12,14 +13,14 @@
 }
 
 .btn-primary, .action-button {
-    background: #007BFF;
-    color: white;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
 }
 
 .btn-primary:hover, .action-button:hover {
-    background: #0056b3;
+    background: var(--color-accent-hover);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    box-shadow: var(--shadow-accent);
 }
 
 .btn-primary:active, .action-button:active {
@@ -27,30 +28,30 @@
 }
 
 .btn-secondary {
-    background: #6c757d;
-    color: white;
+    background: var(--color-neutral);
+    color: var(--color-on-accent);
 }
 
 .btn-secondary:hover {
-    background: #545b62;
+    background: var(--color-neutral-hover);
 }
 
 .btn-danger {
-    background: #dc3545;
-    color: white;
+    background: var(--color-danger);
+    color: var(--color-on-accent);
 }
 
 .btn-danger:hover {
-    background: #c82333;
+    background: var(--color-danger-hover);
 }
 
 /* Outline Button Variant */
 .btn-outline-primary {
     padding: 10px 12px;
-    border: 1px solid #007BFF;
-    border-radius: 4px;
-    background: white;
-    color: #007BFF;
+    border: var(--border-width) solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-accent);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
@@ -58,10 +59,10 @@
 }
 
 .btn-outline-primary:hover {
-    background: #007BFF;
-    color: white;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+    box-shadow: var(--shadow-accent);
 }
 
 .btn-outline-primary:active {
@@ -69,17 +70,23 @@
 }
 
 .btn-success {
-    background-color: #4CAF50;
-    color: white;
+    background-color: var(--color-success);
+    color: var(--color-on-accent);
 }
 
 .btn-success:hover:not(:disabled) {
-    background-color: #45a049;
+    background-color: var(--color-success-hover);
 }
 
 /* Full-width button variant */
 .btn-block {
     width: 100%;
+}
+
+/* Small button variant */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
 }
 
 /* Disabled button state */
@@ -91,13 +98,13 @@
 .btn-outline-primary:disabled,
 .action-button:disabled,
 button:disabled {
-    background: #e9ecef;
-    color: #6c757d;
+    background: var(--color-disabled-bg);
+    color: var(--color-disabled-text);
     cursor: not-allowed;
     opacity: 0.65;
     transform: none;
     box-shadow: none;
-    border-color: #dee2e6;
+    border-color: var(--color-border);
 }
 
 .btn:disabled:hover,
@@ -108,8 +115,8 @@ button:disabled {
 .btn-outline-primary:disabled:hover,
 .action-button:disabled:hover,
 button:disabled:hover {
-    background: #e9ecef;
-    color: #6c757d;
+    background: var(--color-disabled-bg);
+    color: var(--color-disabled-text);
     transform: none;
     box-shadow: none;
 }

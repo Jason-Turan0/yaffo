@@ -8,6 +8,5 @@
 .people-header h1 {
     font-size: 24px;
     margin: 0;
-    color: #212529;
+    color: var(--color-text);
 }
-

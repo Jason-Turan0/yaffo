@@ -5,6 +5,8 @@
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='faces/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/tooltip.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/kbd.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='searchable-select.css') }}">
 {% endblock %}
 {% from "_sidebar.html" import render_sidebar %}

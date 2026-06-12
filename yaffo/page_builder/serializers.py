@@ -4,8 +4,8 @@ Turns persisted ``Widget`` / ``PageVersion`` rows into the shapes the browser
 parses. Kept distinct from ``schemas.py`` (pure wire shapes, no ORM) and from the
 SQLAlchemy models: this module is the one place an entity becomes a wire payload.
 
-- ``widget_draft`` reuses ``WidgetDraft`` (the same widget shape the chat stream
-  used) so a persisted version widget renders through the existing preview path.
+- ``widget_draft`` reuses ``WidgetDraft`` (the browser widget shape) so a persisted
+  version widget renders through the existing preview path.
 - ``version_status_payload`` is the poll contract for an in-flight generation: the
   status the client gates Save/Cancel on, the live conversation feed, and the
   version's widgets to render.

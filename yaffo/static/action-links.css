@@ -4,21 +4,21 @@
 }
 
 .action-link {
-    color: #007BFF;
+    color: var(--color-accent);
     text-decoration: none;
     font-size: 14px;
     transition: color 0.2s;
 }
 
 .action-link:hover {
-    color: #0056b3;
+    color: var(--color-accent-hover);
     text-decoration: underline;
 }
 
 .action-link.delete {
-    color: #dc3545;
+    color: var(--color-danger);
 }
 
 .action-link.delete:hover {
-    color: #c82333;
+    color: var(--color-danger-hover);
 }

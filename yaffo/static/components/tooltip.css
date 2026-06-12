@@ -1,0 +1,29 @@
+.tooltip {
+    position: absolute;
+    background: var(--color-surface-inverse);
+    color: var(--color-text-inverse);
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: var(--shadow-md);
+}
+
+.tooltip.visible {
+    opacity: 1;
+}
+
+.tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    background: var(--color-surface-inverse);
+    transform: translateX(-50%) rotate(45deg);
+}

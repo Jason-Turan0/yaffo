@@ -3,7 +3,7 @@
     gap: 15px;
     margin-bottom: 10px;
     padding: 8px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
 }
 
 .match-option {
@@ -20,5 +20,5 @@
 
 .match-option:has(input:checked) {
     font-weight: 600;
-    color: #212529;
+    color: var(--color-text);
 }

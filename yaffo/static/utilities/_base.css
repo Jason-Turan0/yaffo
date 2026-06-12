@@ -6,19 +6,19 @@
 
 .utilities-sidebar {
     width: 250px;
-    background: white;
-    border-radius: 8px;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
     padding: 20px;
     height: fit-content;
     position: sticky;
     top: 80px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-sm);
 }
 
 .utilities-sidebar h2 {
     font-size: 18px;
     margin: 0 0 20px 0;
-    color: #212529;
+    color: var(--color-text);
 }
 
 .utilities-nav {
@@ -34,21 +34,21 @@
 .utilities-nav a {
     display: block;
     padding: 12px 16px;
-    color: #495057;
+    color: var(--color-text-secondary);
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     transition: all 0.2s;
     font-size: 14px;
 }
 
 .utilities-nav a:hover {
-    background: #f8f9fa;
-    color: #007BFF;
+    background: var(--color-surface-hover);
+    color: var(--color-accent);
 }
 
 .utilities-nav a.active {
-    background: #007BFF;
-    color: white;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
     font-weight: 500;
 }
 
@@ -85,15 +85,15 @@
 }
 
 .stat-card {
-    background: white;
+    background: var(--color-surface);
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
 }
 
 .stat-label {
     font-size: 13px;
-    color: #6c757d;
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 8px;
@@ -103,42 +103,42 @@
 .stat-value {
     font-size: 32px;
     font-weight: 600;
-    color: #212529;
+    color: var(--color-text);
 }
 
 .section {
-    background: white;
+    background: var(--color-surface);
     padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
     margin-bottom: 20px;
 }
 
 .section h2 {
     font-size: 18px;
     margin: 0 0 10px 0;
-    color: #212529;
+    color: var(--color-text);
 }
 
 .section-description {
     font-size: 14px;
-    color: #6c757d;
+    color: var(--color-text-muted);
     margin-bottom: 20px;
 }
 
 .section-description code {
-    background: #f8f9fa;
+    background: var(--color-bg);
     padding: 2px 6px;
-    border-radius: 3px;
-    font-family: 'Courier New', monospace;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
     font-size: 13px;
-    color: #495057;
+    color: var(--color-text-secondary);
 }
 
 .table-container {
     overflow-x: auto;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
 }
 
 .data-table {
@@ -147,8 +147,8 @@
 }
 
 .data-table thead {
-    background: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
+    background: var(--color-bg);
+    border-bottom: 2px solid var(--color-border);
 }
 
 .data-table th {
@@ -156,25 +156,25 @@
     padding: 12px 16px;
     font-weight: 600;
     font-size: 13px;
-    color: #495057;
+    color: var(--color-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 .data-table td {
     padding: 12px 16px;
-    border-bottom: 1px solid #f1f3f5;
-    color: #212529;
+    border-bottom: var(--border-width) solid var(--color-border-subtle);
+    color: var(--color-text);
     font-size: 14px;
 }
 
 .data-table td code {
-    background: #f8f9fa;
+    background: var(--color-bg);
     padding: 2px 6px;
-    border-radius: 3px;
-    font-family: 'Courier New', monospace;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
     font-size: 12px;
-    color: #495057;
+    color: var(--color-text-secondary);
 }
 
 .data-table tr:last-child td {
@@ -186,26 +186,12 @@
 }
 
 .data-table tbody tr:hover {
-    background: #f8f9fa;
+    background: var(--color-surface-hover);
 }
 
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.empty-state h2 {
-    font-size: 20px;
-    color: #495057;
-    margin-bottom: 10px;
-}
-
+/* Global empty-state.css reserves bottom margin for a CTA button; utility
+   empty states have none. */
 .empty-state p {
-    color: #6c757d;
-    font-size: 14px;
     margin-bottom: 0;
 }
 
@@ -213,23 +199,13 @@
     margin-bottom: 20px;
 }
 
-.alert-warning {
-    background: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeaa7;
-    padding: 12px 20px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    font-size: 14px;
-}
-
 .alert-link {
-    color: #007BFF;
+    color: var(--color-accent);
     font-weight: 600;
     text-decoration: underline;
     margin-left: 5px;
 }
 
 .alert-link:hover {
-    color: #0056b3;
+    color: var(--color-accent-hover);
 }

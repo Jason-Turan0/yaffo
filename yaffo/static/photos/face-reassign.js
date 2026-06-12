@@ -12,10 +12,10 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, config) => {
         ).join('')}
                 </select>
                 <div class="face-reassign-actions">
-                    <button class="face-reassign-btn face-reassign-btn-cancel" data-action="cancel">
+                    <button class="btn btn-secondary btn-sm" data-action="cancel">
                         Cancel
                     </button>
-                    <button class="face-reassign-btn face-reassign-btn-apply" data-action="apply">
+                    <button class="btn btn-primary btn-sm" data-action="apply">
                         Apply
                     </button>
                 </div>
