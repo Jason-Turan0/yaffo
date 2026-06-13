@@ -24,6 +24,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/percentage_slider.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/file_browser.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/icons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/panel_nav.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/chat_dialog.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='pages/nav.css') }}">
     {# Only the active theme's stylesheet: a static skin for built-in themes, or
        DB-stored CSS for runtime (AI-generated) custom themes. #}
@@ -89,6 +91,8 @@
                    class="nav-link {% if 'locations' in request.endpoint %}active{% endif %}">Locations</a></li>
             <li><a href="{{ url_for('utilities_index') }}" data-icon="utilities"
                    class="nav-link {% if 'utilities' in request.endpoint %}active{% endif %}">Utilities</a></li>
+            <li><a href="{{ url_for('themes_index') }}" data-icon="themes"
+                   class="nav-link {% if request.endpoint in ['themes_index', 'themes_show'] %}active{% endif %}">Themes</a></li>
             <li><a href="{{ url_for('settings_index') }}" data-icon="settings"
                    class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">Settings</a></li>
 

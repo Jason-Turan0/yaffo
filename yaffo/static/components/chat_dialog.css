@@ -1,0 +1,153 @@
+/* Chat dialog component (templates/components/chat_dialog.html): a surface card
+   with header, scrolling transcript, busy-status bar, and message form. */
+
+.chat-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.chat-dialog {
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-dialog-header {
+    padding: 14px 16px;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.chat-dialog-header h2 {
+    font-size: var(--font-size-base);
+    margin: 0;
+}
+
+.chat-dialog-subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-top: 2px;
+}
+
+.chat-dialog-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.chat-empty {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-faint);
+}
+
+.chat-message {
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    max-width: 90%;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.chat-message-user {
+    align-self: flex-end;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+}
+
+.chat-message-assistant {
+    align-self: flex-start;
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+/* Interleaved tool-progress and error lines in the transcript (display-only). */
+.chat-message-status {
+    align-self: flex-start;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    padding: 2px 12px;
+}
+
+.chat-message-error {
+    align-self: flex-start;
+    background: var(--color-danger-soft);
+    color: var(--color-danger-soft-text);
+    border: var(--border-width) solid var(--color-danger-soft-border);
+}
+
+.chat-dialog-input {
+    padding: 12px 16px;
+    border-top: var(--border-width) solid var(--color-border);
+}
+
+.chat-dialog-input .form-group {
+    padding-top: 8px;
+}
+
+.chat-dialog-input textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
+.chat-dialog-input button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.chat-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.chat-dialog-actions button {
+    padding: 8px 12px;
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+}
+
+/* Spinner shown right after the last message while the assistant is working. */
+.chat-status {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+.chat-spinner {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: chat-spin 0.6s linear infinite;
+}
+
+@keyframes chat-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Live status bar pinned below the transcript while a generation runs. */
+.chat-status-bar {
+    padding: 10px 16px;
+}
+
+/* .chat-status sets display:flex, which (author > UA) would override the `hidden`
+   attribute and leave the bar visible when idle — restore hiding. */
+.chat-status-bar[hidden] {
+    display: none;
+}
+
+.chat-elapsed {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-faint);
+}

@@ -161,6 +161,7 @@
 [data-theme="neobrutalist"] [data-icon="locations"]::before { background-image: url("/static/themes/neobrutalist/icon-locations.svg"); }
 [data-theme="neobrutalist"] [data-icon="utilities"]::before { background-image: url("/static/themes/neobrutalist/icon-utilities.svg"); }
 [data-theme="neobrutalist"] [data-icon="settings"]::before { background-image: url("/static/themes/neobrutalist/icon-settings.svg"); }
+[data-theme="neobrutalist"] [data-icon="themes"]::before { background-image: url("/static/themes/neobrutalist/icon-themes.svg"); }
 [data-theme="neobrutalist"] [data-icon="add"]::before { background-image: url("/static/themes/neobrutalist/icon-add.svg"); }
 [data-theme="neobrutalist"] [data-icon="edit"]::before { background-image: url("/static/themes/neobrutalist/icon-edit.svg"); }
 [data-theme="neobrutalist"] [data-icon="delete"]::before { background-image: url("/static/themes/neobrutalist/icon-delete.svg"); }

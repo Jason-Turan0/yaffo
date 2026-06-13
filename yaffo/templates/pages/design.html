@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/chat_dialog.html" import chat_dialog %}
 
 {% block title %}{{ page.title }} - Yaffo{% endblock %}
 
@@ -35,8 +36,15 @@
                 </div>
             </div>
 
-            <div class="editor-card conversation-card">
-                {% include "pages/_conversation.html" %}
+            <div class="chat-card">
+                {{ chat_dialog(
+                    'conversation',
+                    'Assistant',
+                    'Collaborate to build your page.',
+                    'Describe what you want…',
+                    messages=page.messages,
+                    empty_text="Describe what you want and I'll add widgets — e.g. “a map of Maine” or “our beach photos from 2023”."
+                ) }}
             </div>
         </aside>
 

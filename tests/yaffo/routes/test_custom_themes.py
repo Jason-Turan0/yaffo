@@ -72,7 +72,7 @@ def test_delete_active_custom_theme_falls_back_to_default(app):
 
 def test_custom_theme_selectable_and_stamped_on_html(app, client):
     themes.save_custom_theme(_vaporwave())
-    response = client.post("/settings/theme", data={"theme": "vaporwave"})
+    response = client.post("/themes/vaporwave/default")
     assert response.status_code == 204
 
     page = client.get("/settings")
@@ -80,10 +80,10 @@ def test_custom_theme_selectable_and_stamped_on_html(app, client):
     assert b'/themes/vaporwave/theme.css' in page.data
 
 
-def test_settings_picker_lists_custom_theme(app, client):
+def test_themes_page_lists_custom_theme(app, client):
     themes.save_custom_theme(_vaporwave())
-    page = client.get("/settings").data.decode()
-    assert 'value="vaporwave"' in page
+    page = client.get("/themes/vaporwave").data.decode()
+    assert '/themes/vaporwave"' in page
     assert "Vaporwave" in page
 
 

@@ -13,22 +13,6 @@
     {{ page_header('Settings', 'Configure application settings') }}
 
     <div class="settings-section">
-        <h2>Appearance</h2>
-        <p class="section-description">Choose the visual theme for the interface. Themes restyle every page via the design tokens in tokens.css.</p>
-
-        <div class="form-group">
-            <label for="theme-select">Theme</label>
-            <select id="theme-select" name="theme" class="searchable-select" data-search-disabled
-                    hx-post="{{ url_for('settings_theme') }}"
-                    hx-swap="none">
-                {% for slug, label in themes.items() %}
-                <option value="{{ slug }}" {% if slug == theme %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
-    </div>
-
-    <div class="settings-section">
         <h2>Media Directories</h2>
         <p class="section-description">Add directories where your photos are stored. The application will scan these directories for photos to index.</p>
 

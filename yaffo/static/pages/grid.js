@@ -53,9 +53,9 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, con
     const sendButton = document.querySelector('#conversation-form button[type="submit"]');
     const addButton = document.getElementById('add-widget-button');
     const saveButton = document.getElementById('save-page-button');
-    const cancelButton = document.getElementById('cancel-generation-button');
-    const statusBar = document.getElementById('generation-status');
-    const elapsedEl = document.getElementById('generation-elapsed');
+    const cancelButton = document.getElementById('conversation-cancel');
+    const statusBar = document.getElementById('conversation-status');
+    const elapsedEl = document.getElementById('conversation-elapsed');
 
     // The version being edited + its phase: { versionId, status, startedAt,
     // pollTimer, elapsedTimer }. versionId is always a real version (the published

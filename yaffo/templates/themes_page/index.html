@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% from "components/chat_dialog.html" import chat_dialog %}
+{% from "components/modal.html" import render_modal %}
+
+{% block title %}Themes - Yaffo{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='themes_page/index.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="themes-container">
+    <nav class="sidebar themes-sidebar">
+        <h2>Themes</h2>
+
+        <h3 class="themes-nav-heading">System</h3>
+        <ul class="panel-nav">
+            {% for theme in system_themes %}
+            <li>
+                <a href="{{ url_for('themes_show', slug=theme.slug) }}"
+                   class="{% if theme.slug == selected_slug %}active{% endif %}">
+                    {{ theme.label }}
+                    {% if theme.slug == default_slug %}<span class="theme-nav-default">default</span>{% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <h3 class="themes-nav-heading">Custom</h3>
+        {% if custom_themes %}
+        <ul class="panel-nav">
+            {% for theme in custom_themes %}
+            <li>
+                <a href="{{ url_for('themes_show', slug=theme.slug) }}"
+                   class="{% if theme.slug == selected_slug %}active{% endif %}">
+                    {{ theme.label }}
+                    {% if theme.slug == default_slug %}<span class="theme-nav-default">default</span>{% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="no-data">No custom themes yet</p>
+        {% endif %}
+
+        <button type="button" id="new-theme-button" class="btn-secondary new-theme-button"
+                data-icon="add">New theme</button>
+    </nav>
+
+    <div class="themes-content">
+        <div class="theme-panel">
+            <div class="theme-panel-header">
+                <h2>{{ selected_label }}</h2>
+                {% if selected_is_builtin %}
+                <span class="theme-badge theme-badge-system">System</span>
+                {% else %}
+                <span class="theme-badge theme-badge-custom">Custom</span>
+                {% endif %}
+                {% if selected_slug == default_slug %}
+                <span class="theme-badge theme-badge-default">Default</span>
+                {% endif %}
+            </div>
+
+            {% if selected_is_builtin %}
+            <p class="section-description">A built-in theme that ships with Yaffo. System themes cannot be deleted.</p>
+            {% else %}
+            <p class="section-description">A custom theme stored in the application database.</p>
+            {% endif %}
+
+            <div class="theme-actions">
+                {% if selected_slug != default_slug %}
+                <button type="button" class="btn-primary"
+                        hx-post="{{ url_for('themes_set_default', slug=selected_slug) }}"
+                        hx-swap="none">Make default</button>
+                {% endif %}
+                {% if not selected_is_builtin %}
+                <button type="button" id="delete-theme-button" class="btn-danger"
+                        data-icon="delete">Delete</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="chat-card theme-conversation">
+            {{ chat_dialog(
+                'theme-chat',
+                'Conversation',
+                'The conversation used to design this theme.',
+                'Describe how this theme should look…',
+                messages=none,
+                empty_text=('System themes are hand-crafted and have no conversation.'
+                            if selected_is_builtin
+                            else 'No conversation yet — theme generation is coming soon.'),
+                disabled=true
+            ) }}
+        </div>
+    </div>
+</div>
+
+{% macro render_new_theme_form() %}
+<div class="form-group">
+    <label for="new-theme-label">Name</label>
+    <input type="text" id="new-theme-label" name="label" required
+           placeholder="e.g. Midnight, Pastel, Forest">
+    <p class="hint-text">Starts from the classic look — design it through a conversation later.</p>
+</div>
+{% endmacro %}
+
+{{ render_modal('newThemeModal', 'New Theme', url_for('themes_create'), render_new_theme_form, 'Create') }}
+
+<form id="delete-theme-form" method="POST"
+      action="{{ url_for('themes_delete', slug=selected_slug) }}" hidden></form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='themes_page/index.js') }}"></script>
+<script>
+window.PHOTO_ORGANIZER.themesPage = window.PHOTO_ORGANIZER.initThemesPage(
+    {{ selected_label | tojson }},
+    window.APP_CONFIG
+);
+</script>
+{% endblock %}

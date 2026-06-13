@@ -1,0 +1,44 @@
+{# Reusable chat dialog: header, scrolling transcript, busy-status bar, and a
+   message form. Element ids derive from `id` ({{id}}-messages, {{id}}-form,
+   {{id}}-message, {{id}}-status, {{id}}-elapsed, {{id}}-cancel) so page modules
+   can wire behavior; styles live in static/components/chat_dialog.css.
+   Pass disabled=true for a display-only transcript (no send/cancel controls). #}
+
+{% macro chat_messages(messages, empty_text) %}
+{% if messages %}
+{% for message in messages %}
+<div class="chat-message chat-message-{{ message.type }}">{{ message.content }}</div>
+{% endfor %}
+{% else %}
+<div class="chat-empty">{{ empty_text }}</div>
+{% endif %}
+{% endmacro %}
+
+{% macro chat_dialog(id, title, subtitle, placeholder, messages=none, empty_text='', disabled=false) %}
+<div class="chat-dialog" id="{{ id }}">
+    <div class="chat-dialog-header">
+        <h2>{{ title }}</h2>
+        <p class="chat-dialog-subtitle">{{ subtitle }}</p>
+    </div>
+    <div class="chat-dialog-messages thin-scrollbar" id="{{ id }}-messages">
+        {{ chat_messages(messages, empty_text) }}
+    </div>
+    <div class="chat-status chat-status-bar" id="{{ id }}-status" hidden>
+        <span class="chat-spinner"></span>
+        <span class="chat-status-text">Generating…</span>
+        <span class="chat-elapsed" id="{{ id }}-elapsed">0:00</span>
+    </div>
+    {% if not disabled %}
+    <form class="chat-dialog-input" id="{{ id }}-form">
+        <div class="form-group">
+            <textarea rows="3" name="message" id="{{ id }}-message"
+                      placeholder="{{ placeholder }}"></textarea>
+        </div>
+        <div class="chat-dialog-actions">
+            <button type="submit" class="btn-primary">Send</button>
+            <button type="button" id="{{ id }}-cancel" class="btn-danger">Cancel</button>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endmacro %}
