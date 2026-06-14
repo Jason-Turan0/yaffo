@@ -86,6 +86,7 @@
             pagination.page_sizes,
             url_for('index'),
             {
+                'path': filters.selected_path,
                 'year': filters.selected_year,
                 'month': filters.selected_month,
                 'person': filters.selected_person_ids,
