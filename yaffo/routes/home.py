@@ -34,6 +34,8 @@ def init_home_routes(app: Flask):
     @app.route("/", methods=["GET"])
     def index():
         # Get filter parameters
+        path = request.args.get("path", type=str)
+        path = path.strip() if path else None
         person_ids = request.args.getlist("person", type=int)
         person_match_type = request.args.get("person-match-type", default='any', type=str)
         tag_name = request.args.get("tag-name", type=str)
@@ -57,6 +59,10 @@ def init_home_routes(app: Flask):
         )
 
         # Apply filters
+        if path:
+            # Partial, case-insensitive match on any part of the stored path
+            # (folders or file name); autoescape so %/_ in the term stay literal.
+            query = query.filter(Photo.full_file_path.icontains(path, autoescape=True))
         if year:
             query = query.filter(Photo.year == year)
         if month:
@@ -167,6 +173,7 @@ def init_home_routes(app: Flask):
             'months': get_distinct_months(),
             'tag_names': tag_names_list,
             'location_names': location_names_list,
+            'selected_path': path,
             'selected_person_ids': person_ids,
             'selected_person_match_type': person_match_type,
             'selected_tag_name': tag_name,

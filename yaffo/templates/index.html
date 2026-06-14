@@ -15,6 +15,7 @@
 
 <div class="main-container-layout">
     {% macro render_filters() %}
+        {% include "filters/_path.html" %}
         {% include "filters/_people.html" %}
         {% include "filters/_tags.html" %}
         {% include "filters/_locations.html" %}

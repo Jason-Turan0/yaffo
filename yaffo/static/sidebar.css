@@ -56,6 +56,22 @@
     background: var(--color-surface);
 }
 
+.filter-text-input {
+    width: 100%;
+    padding: 8px;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-base);
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.filter-text-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
+}
+
 .sidebar-container {
     width: 280px;
     display: flex;
