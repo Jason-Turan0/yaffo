@@ -125,6 +125,12 @@ class Job(db.Model):
     name = db.Column(db.String, nullable=False)
     status = db.Column(db.String, nullable=False, default=JOB_STATUS_PENDING)
 
+    # Set when this job is a run of an automation; NULL for user-initiated jobs.
+    # Reuses the job machinery as the automation's run state/history.
+    automation_id = db.Column(
+        db.Integer, db.ForeignKey("automations.id", ondelete="SET NULL"), nullable=True
+    )
+
     task_count = db.Column(db.Integer, default=0)
     completed_count = db.Column(db.Integer, default=0)
     cancelled_count = db.Column(db.Integer, default=0)
@@ -137,6 +143,7 @@ class Job(db.Model):
     message = db.Column(db.Text)
     job_data = db.Column(db.Text)
     results = db.relationship("JobResult", back_populates="job", cascade="all, delete-orphan")
+    automation = db.relationship("Automation", back_populates="jobs")
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -189,47 +196,115 @@ class ApplicationSettings(db.Model):
     value = db.Column(db.String)
 
 
-# `action` values for TaskSchedule rows: the registered handler the dispatcher
-# enqueues (see background_tasks.actions.ACTIONS). Action *types* are fixed at
-# import time; schedule *rows* are created freely at runtime.
-TASK_ACTION_FILE_SYNC = "file_sync"
+# Automations: a named unit of functionality that runs on a schedule or in
+# response to events. Two tiers (mirrors the theme registry): **system** ones
+# ship with the app, are code-backed (a `handler` key into
+# background_tasks.registry.HANDLERS) and route-locked against edit/delete;
+# **custom** ones are AI-generated at runtime, carry their logic in `code`, and
+# move through a generation status like themes/page_versions. A *run* of an
+# automation reuses the Job table (jobs.automation_id), so the existing job UI /
+# progress machinery is the run history.
+
+# Generation status for custom automations (system rows are READY/ACCEPTED).
+AUTOMATION_STATUS_IN_PROGRESS = "IN_PROGRESS"
+AUTOMATION_STATUS_READY = "READY"
+AUTOMATION_STATUS_FAILED = "FAILED"
+AUTOMATION_STATUS_ACCEPTED = "ACCEPTED"
+
+# How a trigger fires its automation.
+TRIGGER_TYPE_SCHEDULE = "schedule"   # cron + next_run_at, driven by the dispatcher
+TRIGGER_TYPE_EVENT = "event"         # an emitted domain event (see EVENTS)
+
+# The fixed catalog of events an automation can subscribe to. Emission/dispatch
+# for these is a later step; the constants pin the contract triggers reference.
+EVENT_PHOTO_IMPORTED = "photo_imported"
+EVENT_PHOTO_INDEXED = "photo_indexed"
+EVENT_DUPLICATES_FOUND = "duplicates_found"
+EVENTS = {
+    EVENT_PHOTO_IMPORTED: "Photo imported",
+    EVENT_PHOTO_INDEXED: "Photo indexed",
+    EVENT_DUPLICATES_FOUND: "Duplicates found",
+}
+
+# Handler keys for system automations (registry in background_tasks.registry).
+AUTOMATION_HANDLER_FILE_SYNC = "file_sync"
 
 
-class TaskSchedule(db.Model):
-    """A runtime-created cron schedule for a background action.
+class Automation(db.Model):
+    """A schedulable / event-driven unit of functionality (the definition).
 
-    A single dispatcher (@huey.periodic_task firing every minute) reads this
-    table, fires every row whose `next_run_at` has passed, and advances
-    `next_run_at` from `cron` -- so schedules can be created/edited/disabled at
-    runtime with no consumer restart and no new task registration. `action`
-    names a handler in background_tasks.actions.ACTIONS; `args` is its JSON
-    payload. `next_run_at` (not exact cron-matching) is what makes firing robust
-    to dispatcher latency: a due row still fires on the next tick after its slot.
-    """
+    System automations (`is_system`) are code-backed via `handler` and locked in
+    the UI; custom automations carry AI-generated logic in `code` and a `status`.
+    `enabled` is the master switch; per-trigger toggles live on the triggers.
+    Runs are Job rows pointing back via jobs.automation_id."""
 
-    __tablename__ = "task_schedules"
+    __tablename__ = "automations"
 
     id = db.Column(db.Integer, primary_key=True)
-    key = db.Column(db.String, unique=True, nullable=False)
+    slug = db.Column(db.String, unique=True, nullable=False)
     name = db.Column(db.String, nullable=False)
-    action = db.Column(db.String, nullable=False)
-    args = db.Column(db.JSON, nullable=True)
+    description = db.Column(db.String)
+    is_system = db.Column(db.Boolean, nullable=False, default=False)
     enabled = db.Column(db.Boolean, nullable=False, default=False)
-    cron = db.Column(db.String, nullable=False)
-    next_run_at = db.Column(db.DateTime, nullable=True)
-    last_run_at = db.Column(db.DateTime, nullable=True)
+    handler = db.Column(db.String)   # system: key into HANDLERS; custom: NULL
+    code = db.Column(db.Text)        # custom: AI-generated body; system: NULL
+    status = db.Column(db.String, nullable=False, default=AUTOMATION_STATUS_READY)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    triggers = db.relationship(
+        "AutomationTrigger", back_populates="automation", cascade="all, delete-orphan"
+    )
+    jobs = db.relationship("Job", back_populates="automation")
 
     def to_dict(self):
         return {
             'id': self.id,
-            'key': self.key,
+            'slug': self.slug,
             'name': self.name,
-            'action': self.action,
-            'args': self.args,
+            'description': self.description,
+            'is_system': self.is_system,
+            'enabled': self.enabled,
+            'handler': self.handler,
+            'status': self.status,
+            'triggers': [t.to_dict() for t in self.triggers],
+        }
+
+
+class AutomationTrigger(db.Model):
+    """When an automation runs. A schedule trigger carries `cron` and the
+    dispatcher bookkeeping (`next_run_at`/`last_run_at`); an event trigger carries
+    `event_type`. `config` holds per-trigger JSON (event filters / handler args).
+    Firing keys off `next_run_at <= now`, not exact cron-matching, so a due
+    schedule still runs on the first dispatcher tick after its slot."""
+
+    __tablename__ = "automation_triggers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    automation_id = db.Column(
+        db.Integer, db.ForeignKey("automations.id", ondelete="CASCADE"), nullable=False
+    )
+    trigger_type = db.Column(db.String, nullable=False)
+    enabled = db.Column(db.Boolean, nullable=False, default=True)
+    cron = db.Column(db.String)
+    next_run_at = db.Column(db.DateTime)
+    last_run_at = db.Column(db.DateTime)
+    event_type = db.Column(db.String)
+    config = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    automation = db.relationship("Automation", back_populates="triggers")
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'automation_id': self.automation_id,
+            'trigger_type': self.trigger_type,
             'enabled': self.enabled,
             'cron': self.cron,
+            'event_type': self.event_type,
+            'config': self.config,
             'next_run_at': self.next_run_at.isoformat() if self.next_run_at else None,
             'last_run_at': self.last_run_at.isoformat() if self.last_run_at else None,
         }

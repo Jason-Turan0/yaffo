@@ -79,6 +79,7 @@ def init_db():
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'PENDING',
+            automation_id INTEGER REFERENCES automations(id) ON DELETE SET NULL,
             task_count INTEGER DEFAULT 0,
             completed_count INTEGER DEFAULT 0,
             cancelled_count INTEGER DEFAULT 0,
@@ -126,29 +127,60 @@ def init_db():
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_application_settings_name ON application_settings(name)")
 
-    # Runtime-created cron schedules for background actions. A single dispatcher
-    # (background_tasks/tasks/dispatcher.py) fires every minute, runs rows whose
-    # next_run_at has passed, and advances next_run_at from `cron` -- so schedules
-    # are fully dynamic with no consumer restart. `action` names a handler in
-    # background_tasks/actions.py; `args` is its JSON payload.
+    # Automations: schedulable / event-driven units of functionality. System ones
+    # (is_system=1) are code-backed via `handler`; custom ones carry AI-generated
+    # `code`. A run of an automation reuses the jobs table (jobs.automation_id).
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS task_schedules (
+        CREATE TABLE IF NOT EXISTS automations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key TEXT UNIQUE NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
             name TEXT NOT NULL,
-            action TEXT NOT NULL,
-            args TEXT,
+            description TEXT,
+            is_system INTEGER NOT NULL DEFAULT 0,
             enabled INTEGER NOT NULL DEFAULT 0,
-            cron TEXT NOT NULL,
-            next_run_at TIMESTAMP,
-            last_run_at TIMESTAMP,
+            handler TEXT,
+            code TEXT,
+            status TEXT NOT NULL DEFAULT 'READY',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    # When an automation runs: schedule triggers carry `cron` + the dispatcher's
+    # next_run_at/last_run_at bookkeeping; event triggers carry `event_type`.
     cursor.execute("""
-        INSERT OR IGNORE INTO task_schedules (key, name, action, enabled, cron)
-        VALUES ('file_sync', 'File sync', 'file_sync', 0, '0 * * * *')
+        CREATE TABLE IF NOT EXISTS automation_triggers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            automation_id INTEGER NOT NULL,
+            trigger_type TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            cron TEXT,
+            next_run_at TIMESTAMP,
+            last_run_at TIMESTAMP,
+            event_type TEXT,
+            config TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(automation_id) REFERENCES automations(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_automation_triggers_automation_id ON automation_triggers(automation_id)")
+
+    # Seed the built-in file-sync automation (disabled) + its hourly schedule.
+    cursor.execute("""
+        INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status)
+        VALUES ('file_sync', 'File sync',
+                'Reconcile the photo index with the files on disk.',
+                1, 0, 'file_sync', 'READY')
+    """)
+    cursor.execute("""
+        INSERT INTO automation_triggers (automation_id, trigger_type, enabled, cron)
+        SELECT a.id, 'schedule', 1, '0 * * * *'
+        FROM automations a
+        WHERE a.slug = 'file_sync'
+          AND NOT EXISTS (
+              SELECT 1 FROM automation_triggers t
+              WHERE t.automation_id = a.id AND t.trigger_type = 'schedule'
+          )
     """)
 
 
