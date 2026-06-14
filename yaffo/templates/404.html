@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found - Yaffo{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='error.css') }}">
+{% endblock %}
+
+{% block content %}
+{% from "components/error_screen.html" import error_screen %}
+{{ error_screen(
+    404,
+    "This page didn’t develop",
+    "We searched every album and contact sheet, but this one never made it out of
+     the darkroom. The link may be broken or the page may have moved."
+) }}
+{% endblock %}

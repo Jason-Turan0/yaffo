@@ -1,5 +1,5 @@
 from yaffo.utils.image import convert_heif
-from flask import Flask, Response, send_from_directory, send_file, render_template, request, jsonify
+from flask import Flask, Response, abort, send_from_directory, send_file, render_template, request, jsonify
 from yaffo.common import ROOT_DIR
 from yaffo.db.models import db, Photo, Person, Tag
 from sqlalchemy.orm import joinedload
@@ -83,7 +83,7 @@ def init_photos_routes(app: Flask):
                  .first())
 
         if not photo:
-            return "Photo not found", 404
+            abort(404)
 
         # Get unique people assigned to this photo
         people_set = set()

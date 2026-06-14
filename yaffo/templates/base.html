@@ -88,15 +88,15 @@
                    class="nav-link {% if request.endpoint == 'faces_index' or request.endpoint == 'faces_assign' or request.endpoint == 'faces_remove' %}active{% endif %}">Faces</a>
             </li>
             <li><a href="{{ url_for('people_list') }}" data-icon="people"
-                   class="nav-link {% if 'people' in request.endpoint %}active{% endif %}">People</a></li>
+                   class="nav-link {% if request.endpoint and 'people' in request.endpoint %}active{% endif %}">People</a></li>
             <li><a href="{{ url_for('locations_list') }}" data-icon="locations"
-                   class="nav-link {% if 'locations' in request.endpoint %}active{% endif %}">Locations</a></li>
+                   class="nav-link {% if request.endpoint and 'locations' in request.endpoint %}active{% endif %}">Locations</a></li>
             <li><a href="{{ url_for('utilities_index') }}" data-icon="utilities"
-                   class="nav-link {% if 'utilities' in request.endpoint %}active{% endif %}">Utilities</a></li>
+                   class="nav-link {% if request.endpoint and 'utilities' in request.endpoint %}active{% endif %}">Utilities</a></li>
             <li><a href="{{ url_for('themes_index') }}" data-icon="themes"
                    class="nav-link {% if request.endpoint in ['themes_index', 'themes_show'] %}active{% endif %}">Themes</a></li>
             <li><a href="{{ url_for('settings_index') }}" data-icon="settings"
-                   class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">Settings</a></li>
+                   class="nav-link {% if request.endpoint and 'settings' in request.endpoint %}active{% endif %}">Settings</a></li>
 
         </ul>
         <button type="button" id="nav-pages-toggle" class="nav-link nav-pages-toggle"

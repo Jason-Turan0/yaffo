@@ -1,0 +1,69 @@
+.error-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 40px 20px;
+}
+
+.error-card {
+    max-width: 480px;
+    text-align: center;
+    padding: 48px 40px;
+    background: var(--color-surface);
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+}
+
+.error-icon {
+    width: 96px;
+    height: 96px;
+    margin-bottom: 20px;
+}
+
+.error-icon-card {
+    fill: var(--color-surface);
+    stroke: var(--color-border-strong);
+    stroke-width: 2;
+}
+
+.error-icon-window {
+    fill: var(--color-accent-soft);
+    stroke: var(--color-accent);
+    stroke-width: 1.5;
+}
+
+.error-icon-mark {
+    fill: var(--color-accent);
+    font-family: var(--font-heading);
+    font-weight: var(--font-weight-heading);
+}
+
+.error-code {
+    margin: 0 0 12px;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+}
+
+.error-title {
+    margin: 0 0 12px;
+    font-family: var(--font-heading);
+    font-weight: var(--font-weight-heading);
+    font-size: var(--font-size-2xl);
+    color: var(--color-text);
+}
+
+.error-message {
+    margin: 0 0 28px;
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+    color: var(--color-text-muted);
+}
+
+.error-action {
+    text-decoration: none;
+}

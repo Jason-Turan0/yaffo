@@ -1,0 +1,19 @@
+{# Shared full-page error screen (404, 500). The icon is inlined (not an <img>)
+   so its fills come from the active theme's design tokens via error.css. #}
+{% macro error_screen(code, title, message) %}
+<section class="error-screen">
+    <div class="error-card">
+        <svg class="error-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <g transform="rotate(-6 32 32)">
+                <rect class="error-icon-card" x="15" y="9" width="34" height="44" rx="2"/>
+                <rect class="error-icon-window" x="20" y="14" width="24" height="24"/>
+                <text class="error-icon-mark" x="32" y="34" text-anchor="middle" font-size="20">?</text>
+            </g>
+        </svg>
+        <p class="error-code">Error {{ code }}</p>
+        <h1 class="error-title">{{ title }}</h1>
+        <p class="error-message">{{ message }}</p>
+        <a href="{{ url_for('index') }}" class="btn btn-primary error-action">Back to your library</a>
+    </div>
+</section>
+{% endmacro %}

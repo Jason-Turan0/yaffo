@@ -1,4 +1,4 @@
-from flask import Flask, Response, abort, request, send_from_directory
+from flask import Flask, Response, abort, render_template, request, send_from_directory
 
 from yaffo import themes
 
@@ -22,6 +22,14 @@ def _assemble_theme_css(assets) -> str:
 
 
 def init_base_routes(app: Flask):
+    @app.errorhandler(404)
+    def page_not_found(error):
+        return render_template('404.html'), 404
+
+    @app.errorhandler(500)
+    def internal_server_error(error):
+        return render_template('500.html'), 500
+
     @app.route('/favicon.ico', methods=["GET"])
     def favicon():
         theme = request.args.get('theme', themes.DEFAULT_THEME)
