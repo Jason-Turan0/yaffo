@@ -68,6 +68,21 @@ def start_tasks(c, workers=4, worker_type="process"):
 
 
 @task
+def start_watcher(c):
+    """
+    Start the file-system watcher that auto-indexes new photos.
+
+    Watches MEDIA_DIRS and enqueues import/index Huey tasks when files settle.
+    Requires the Huey consumer (`inv start-tasks`) to be running to do the work.
+
+    Example:
+        inv start-watcher
+    """
+    print("Starting photo watcher...")
+    c.run("python -m yaffo.background_tasks.watcher", pty=True)
+
+
+@task
 def test(c, verbose=False, coverage=False, path="tests", k=None, failed=False, markers=None):
     """
     Run tests using pytest.

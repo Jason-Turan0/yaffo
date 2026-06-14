@@ -2,13 +2,10 @@ from flask import render_template, Flask, request, jsonify
 from yaffo.db import db
 from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED
 from yaffo.common import PHOTO_EXTENSIONS
-from yaffo.background_tasks.tasks import index_photo_task, import_photo_task, schedule_job_completion
 from pathlib import Path
-from itertools import batched
-import uuid
-import json
 
 from yaffo.utils.index_photos import delete_orphaned_photos, delete_orphaned_thumbnails
+from yaffo.utils.index_jobs import enqueue_index_jobs
 from yaffo.routes.utilities.common import is_system_file, get_media_dirs, get_thumbnail_dir
 
 
@@ -122,55 +119,8 @@ def init_index_photos_routes(app: Flask):
 
         thumbnail_dir.mkdir(parents=True, exist_ok=True)
 
-        db_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.status).all()
-        db_photos_dict = {photo[1]: photo for photo in db_photos}
-
-        files_to_import = [file_path for file_path in files_to_index if not file_path in db_photos_dict.keys()]
-
-        import_job_id = str(uuid.uuid4())
-        import_job = Job(
-            id=import_job_id,
-            name='import_photos',
-            status=JOB_STATUS_PENDING,
-            task_count=len(files_to_import),
-            message='Imported {totalCount}/{taskCount} photos',
-            completed_count=0,
-            error_count=0,
-            cancelled_count=0,
-            job_data=json.dumps({
-                'files_to_import': files_to_import
-            })
-        )
-        files_needing_indexing = [file_path for file_path in files_to_index if
-                                  not file_path in db_photos_dict.keys() or
-                                  db_photos_dict[file_path][2] != PHOTO_STATUS_INDEXED]
-        index_job_id = str(uuid.uuid4())
-        index_job = Job(
-            id=index_job_id,
-            name='index_photos',
-            status=JOB_STATUS_PENDING,
-            task_count=len(files_needing_indexing),
-            message='Indexed {totalCount}/{taskCount} photos',
-            completed_count=0,
-            error_count=0,
-            cancelled_count=0,
-            job_data=json.dumps({
-                'files_to_index': files_needing_indexing
-            })
-        )
-        db.session.add(import_job)
-        db.session.add(index_job)
-        db.session.commit()
-
         delete_orphaned_photos(db.session, files_to_delete)
         delete_orphaned_thumbnails(db.session, thumbnail_dir)
 
-        for batch in batched(files_to_import, 250):
-            import_photo_task(import_job_id, list(batch))
-        schedule_job_completion(import_job_id)
-
-        for batch in batched(files_needing_indexing, 10):
-            index_photo_task(index_job_id, list(batch))
-
-        schedule_job_completion(index_job_id)
-        return jsonify({'job_id': import_job_id}), 202
+        jobs = enqueue_index_jobs(db.session, files_to_index)
+        return jsonify({'job_id': jobs.import_job_id}), 202

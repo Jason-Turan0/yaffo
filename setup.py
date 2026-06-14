@@ -43,6 +43,7 @@ setup(
         "setuptools==80.9.0",
         "SQLAlchemy==2.0.43",
         "threadpoolctl==3.6.0",
+        "watchdog==6.0.0",
         "tqdm==4.67.1",
         "typing_extensions==4.15.0",
         "Werkzeug==3.1.3",

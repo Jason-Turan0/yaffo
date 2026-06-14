@@ -410,15 +410,64 @@ def delete_orphaned_photos(session: Session, photo_ids: List[int]) -> int:
     if not photo_ids:
         return 0
 
-    # Delete related faces first (SQLite foreign keys may not cascade)
+    # Capture each face's thumbnail path before the rows are gone
+    face_thumbnails = [
+        row[0] for row in
+        session.query(Face.full_file_path).filter(Face.photo_id.in_(photo_ids)).all()
+    ]
+
+    # Delete dependents first (SQLite foreign keys may not cascade)
+    session.query(Tag).filter(Tag.photo_id.in_(photo_ids)).delete(synchronize_session=False)
     deleted_faces = session.query(Face).filter(Face.photo_id.in_(photo_ids)).delete(synchronize_session=False)
 
     # Bulk delete photos using IN clause
     deleted_count = session.query(Photo).filter(Photo.id.in_(photo_ids)).delete(synchronize_session=False)
 
     session.commit()
+
+    for thumb in face_thumbnails:
+        try:
+            Path(thumb).unlink(missing_ok=True)
+        except OSError as e:
+            logger.warning(f"Failed to delete face thumbnail {thumb}: {e}")
+
     logger.debug(f"Deleted {deleted_count} photos and {deleted_faces} associated faces")
     return deleted_count
+
+
+def delete_photos_by_paths(session: Session, full_file_paths: List[str]) -> int:
+    """Delete photos (and their faces/tags/thumbnails) by file path.
+
+    Resolves paths to ids and reuses delete_orphaned_photos so the row and
+    thumbnail cleanup stays in one place. Used by the file-system watcher when
+    a photo is deleted or moved out of a watched directory.
+    """
+    if not full_file_paths:
+        return 0
+
+    photo_ids = [
+        row[0] for row in
+        session.query(Photo.id).filter(Photo.full_file_path.in_(full_file_paths)).all()
+    ]
+    return delete_orphaned_photos(session, photo_ids)
+
+
+def delete_photos_under_dir(session: Session, directory: str) -> int:
+    """Delete every photo whose file lives anywhere under `directory`.
+
+    Used when a directory is renamed or moved out of a watched tree: the files
+    are gone from their old paths, so their old DB rows are orphaned. The old
+    paths can't be listed from disk (the directory no longer exists there), so
+    the DB is the source of truth. Matching is by path ancestry, not string
+    prefix, so '/m/2020' won't match '/m/2020-backup'.
+    """
+    directory_path = Path(directory)
+    photo_ids = [
+        photo_id
+        for photo_id, full_file_path in session.query(Photo.id, Photo.full_file_path).all()
+        if directory_path in Path(full_file_path).parents
+    ]
+    return delete_orphaned_photos(session, photo_ids)
 
 
 def get_orphaned_thumbnails(session: Session, thumbnail_dir: Path) -> List[Path]:
