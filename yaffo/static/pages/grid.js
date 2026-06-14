@@ -263,7 +263,7 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, con
 
     // Rebuild the conversation feed from the polled transcript (the source of truth
     // while generating): user / assistant bubbles and interleaved status / error
-    // lines.
+    // lines. #TODO refactor to use chat_dialog component
     const renderFeed = (messages) => {
         if (!messagesEl) return;
         messagesEl.innerHTML = '';

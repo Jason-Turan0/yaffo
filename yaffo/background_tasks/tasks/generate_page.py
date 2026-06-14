@@ -30,8 +30,8 @@ from yaffo.db.models import (
 from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.logging_config import get_logger
 from yaffo.page_builder import llm_config
-from yaffo.page_builder.agent import create_agent
-from yaffo.page_builder.prompt_generator import build_user_message
+from yaffo.page_builder.agent import create_theme_builder_agent, create_page_builder_agent
+from yaffo.page_builder.prompt_generator import build_user_message, build_system_prompt
 from yaffo.page_builder.serializers import widget_draft
 
 logger = get_logger(__name__, 'background_tasks')
@@ -87,7 +87,7 @@ def run_generation(
     )
 
     try:
-        agent = create_agent(version_id, model=model, api_key=api_key, session=session)
+        agent = create_page_builder_agent(version_id, model=model, api_key=api_key, session=session)
         for event in agent.run_events(user_message, should_cancel=should_cancel):
             if event.type == "assistant":
                 page_repo.add_version_message(session, version_id, CONVERSATION_TYPE_ASSISTANT, event.text)

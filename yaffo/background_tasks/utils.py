@@ -4,10 +4,11 @@ from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
 
 from yaffo.db.models import (
     Job, JOB_STATUS_CANCELLED, Face, Person, JOB_STATUS_COMPLETED,
-    PageVersion, PAGE_VERSION_STATUS_CANCELLED,
+    PageVersion, PAGE_VERSION_STATUS_CANCELLED, ApplicationSettings,
 )
 from yaffo.common import DB_PATH
 from yaffo.logging_config import get_logger
+from yaffo.themes import _setting_name, _theme_from_json
 
 engine = create_engine(
     f"sqlite:///{DB_PATH}",
@@ -42,6 +43,24 @@ def get_version_status(version_id: int) -> str:
         session.close()
         SessionFactory.remove()
 
+def get_theme_status(slug: str) -> str:
+    """Current generation status of a theme -- the cancel signal the
+    generate_page task polls between agent iterations. A missing theme (deleted on
+    cancel) reads as CANCELLED so the run stops."""
+    session = SessionFactory()
+    try:
+        row = (
+            session.query(ApplicationSettings)
+            .filter_by(name=_setting_name(slug))
+            .first()
+        )
+        if row is not None:
+            return _theme_from_json(row.value).status
+        else:
+            return PAGE_VERSION_STATUS_CANCELLED
+    finally:
+        session.close()
+        SessionFactory.remove()
 
 def load_assign_faces_task_data(person_id: int, face_ids: list[int]) -> tuple[Person, list[Face]]:
     """Load person and faces data for face assignment tasks."""

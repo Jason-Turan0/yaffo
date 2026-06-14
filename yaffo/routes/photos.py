@@ -37,8 +37,8 @@ def init_photos_routes(app: Flask):
         theme = get_theme()
         if not themes.is_builtin(theme):
             custom = themes.get_custom_theme(theme)
-            if custom and custom.placeholder_svg:
-                response = Response(custom.placeholder_svg, mimetype="image/svg+xml")
+            if custom and custom.published_theme.placeholder_svg:
+                response = Response(custom.published_theme.placeholder_svg, mimetype="image/svg+xml")
                 response.headers["Cache-Control"] = "no-store"
                 return response
             theme = themes.DEFAULT_THEME

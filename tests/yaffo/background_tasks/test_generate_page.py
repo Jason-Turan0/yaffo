@@ -54,7 +54,7 @@ class _FakeAgent:
 
 
 def _use_agent(monkeypatch, events):
-    monkeypatch.setattr(task, "create_agent", lambda *a, **k: _FakeAgent(events))
+    monkeypatch.setattr(task, "create_page_builder_agent", lambda *a, **k: _FakeAgent(events))
 
 
 def _widget(wid="g1", title="Gallery", **overrides):
@@ -122,8 +122,9 @@ class TestFailure:
 
     def test_missing_api_key_fails_closed(self, session, version, monkeypatch):
         monkeypatch.setattr("yaffo.page_builder.llm_config.get_api_key", lambda: None)
-        # create_agent must never be reached without a key.
-        monkeypatch.setattr(task, "create_agent", lambda *a, **k: pytest.fail("agent built without a key"))
+        # the agent must never be built without a key.
+        monkeypatch.setattr(task, "create_page_builder_agent",
+                            lambda *a, **k: pytest.fail("agent built without a key"))
         task.run_generation(session, version.id, "go", should_cancel=_no_cancel)
 
         fetched = repo.get_version(session, version.id)
@@ -135,7 +136,7 @@ class TestFailure:
             def run_events(self, user_message, should_cancel=None):
                 raise RuntimeError("kaboom")
                 yield  # pragma: no cover -- makes this a generator
-        monkeypatch.setattr(task, "create_agent", lambda *a, **k: _Boom())
+        monkeypatch.setattr(task, "create_page_builder_agent", lambda *a, **k: _Boom())
         task.run_generation(session, version.id, "go", should_cancel=_no_cancel)
 
         fetched = repo.get_version(session, version.id)

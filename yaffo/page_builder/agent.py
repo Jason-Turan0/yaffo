@@ -21,9 +21,12 @@ from yaffo.page_builder.model_clients import (
     ToolCallResult,
 )
 from yaffo.page_builder.prompt_generator import build_system_prompt
+from yaffo.page_builder.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
 from yaffo.page_builder.tool_providers import (
     ContentBlock,
     DataQueryToolProvider,
+    ThemeCatalogToolProvider,
+    ThemeToolProvider,
     ToolProvider,
     ToolResult,
     WidgetTemplateToolProvider,
@@ -62,7 +65,7 @@ class AgentEvent:
     stop_reason: Optional[str] = None
 
 
-class PageBuilderAgent:
+class Agent:
     def __init__(
         self,
         client: ModelClient,
@@ -180,15 +183,15 @@ class PageBuilderAgent:
         except Exception as exc:  # tool failures are fed back, not raised
             return ToolCallResult(call.id, call.name, f"Error: {exc}", is_error=True)
 
-
-def create_agent(
+#TODO rename this namespace from page_builder to something more generic like yaffo agents
+def create_page_builder_agent(
     version_id: int,
     *,
     model: ModelAlias,
     api_key: str,
     session: Session,
     max_iterations: int = 25,
-) -> PageBuilderAgent:
+) -> Agent:
     """Wire the agent for a working version: data-query + widget tools, the stable
     system prompt, and an Anthropic client. The widget tool persists directly into
     `version_id`. `model` and `api_key` are required — the caller resolves them
@@ -208,4 +211,29 @@ def create_agent(
         api_key=api_key,
         log_dir= Path.cwd() / "model_logs",
     )
-    return PageBuilderAgent(client, providers, max_iterations=max_iterations)
+    return Agent(client, providers, max_iterations=max_iterations)
+
+def create_theme_builder_agent(
+    slug: str,
+    *,
+    model: ModelAlias,
+    api_key: str,
+    session: Session,
+    max_iterations: int = 25,
+) -> Agent:
+    """Wire the agent for a custom theme: the write_theme tool (scoped to `slug`, which
+    persists the working draft via `session`) and the stable theme-builder system
+    prompt. `model` and `api_key` are required — the caller resolves them — so neither
+    this nor the client falls through to db.session or a global key lookup."""
+    providers: list[ToolProvider] = [
+        ThemeToolProvider(slug, session=session),
+        ThemeCatalogToolProvider(session=session),
+    ]
+    client = AnthropicModelClient(
+        model=model,
+        system_prompt=build_template_builder_system_prompt(),
+        tools=to_anthropic_tools(providers),
+        api_key=api_key,
+        log_dir=Path.cwd() / "model_logs",
+    )
+    return Agent(client, providers, max_iterations=max_iterations)

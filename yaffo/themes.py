@@ -20,9 +20,18 @@ the active slug onto <html data-theme="…">.
 import json
 import re
 from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
+
+from sqlalchemy.orm import Session
 
 from yaffo.db import db
-from yaffo.db.models import ApplicationSettings
+from yaffo.db.models import ApplicationSettings, PAGE_VERSION_STATUS_ACCEPTED
+
+# Built-in themes ship their CSS as static files (tokens.css override block +
+# <slug>.css skin); custom themes carry theirs in the DB.
+_THEMES_STATIC_DIR = Path(__file__).resolve().parent / "static" / "themes"
 
 THEME_SETTING_NAME = "theme"
 DEFAULT_THEME = "classic"
@@ -43,26 +52,56 @@ THEMES: dict[str, str] = {
     "memphis": "Memphis",
 }
 
+@dataclass
+class ThemeAssets:
+    tokens_css: str
+    skin_css: str = ""
+    favicon_svg: str = ""
+    placeholder_svg: str = ""
+
+@dataclass
+class ThemeConversation:
+    type: str
+    content: str
+    created_at: str
 
 @dataclass
 class CustomTheme:
     """A runtime-defined theme, stored whole in ApplicationSettings.
-
     `tokens_css` must be a `[data-theme="<slug>"] { --… }` token-override block —
     it is the only part widget frames load, so it must stand alone. `skin_css`
     holds optional structural rules (scoped to the same attribute) that only the
     main app pages load. `favicon_svg`/`placeholder_svg` are optional; the
     default theme's files are served when they are empty."""
     slug: str
+    status: str
     label: str
-    tokens_css: str
-    skin_css: str = ""
-    favicon_svg: str = ""
-    placeholder_svg: str = ""
-
+    conversations: list[ThemeConversation]
+    published_theme: Optional[ThemeAssets]
+    working_theme: Optional[ThemeAssets]
 
 def _setting_name(slug: str) -> str:
     return f"{CUSTOM_THEME_PREFIX}{slug}"
+
+
+def _session(session: Optional[Session]) -> Session:
+    """The session to read/write under. Routes pass nothing and use Flask-SQLAlchemy's
+    request-scoped db.session; the background worker (no app context) passes its own
+    SessionFactory session explicitly, the same way the page repository takes one."""
+    return session if session is not None else db.session
+
+
+def _theme_from_json(value: str) -> "CustomTheme":
+    """Rebuild a CustomTheme from its stored JSON, rehydrating the nested
+    dataclasses (asdict flattens them, so a bare ** would leave plain dicts)."""
+    data = json.loads(value)
+    data["conversations"] = [
+        ThemeConversation(**c) for c in data.get("conversations") or []
+    ]
+    for field in ("published_theme", "working_theme"):
+        if data.get(field) is not None:
+            data[field] = ThemeAssets(**data[field])
+    return CustomTheme(**data)
 
 
 def is_builtin(slug: str) -> bool:
@@ -80,7 +119,9 @@ _STUB_THEMES: dict[str, CustomTheme] = {
     "sunset": CustomTheme(
         slug="sunset",
         label="Sunset (sample)",
-        tokens_css="""\
+        status= PAGE_VERSION_STATUS_ACCEPTED,
+        published_theme=ThemeAssets(
+            tokens_css="""\
 [data-theme="sunset"] {
     /* Surfaces — warm peach cream */
     --color-bg: #fff4ec;
@@ -206,48 +247,69 @@ _STUB_THEMES: dict[str, CustomTheme] = {
   <rect x="160" y="150" width="80" height="6" rx="3" fill="url(#sun)"/>
   <text x="200" y="216" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Roboto, sans-serif" font-size="15" fill="#8a6f84">image not found</text>
 </svg>
-""",
+"""
     ),
+    working_theme=None,
+    conversations=[]
+    )
 }
 
 
-def get_custom_theme(slug: str) -> CustomTheme | None:
+def get_custom_theme(slug: str, session: Optional[Session] = None) -> CustomTheme | None:
     row = (
-        db.session.query(ApplicationSettings)
+        _session(session).query(ApplicationSettings)
         .filter_by(name=_setting_name(slug))
         .first()
     )
     if row is not None:
-        return CustomTheme(**json.loads(row.value))
+        return _theme_from_json(row.value)
     return _STUB_THEMES.get(slug)
 
 
-def list_custom_themes() -> list[CustomTheme]:
+def list_custom_themes(session: Optional[Session] = None) -> list[CustomTheme]:
     themes_by_slug = dict(_STUB_THEMES)
     rows = (
-        db.session.query(ApplicationSettings)
+        _session(session).query(ApplicationSettings)
         .filter(ApplicationSettings.name.like(f"{CUSTOM_THEME_PREFIX}%"))
         .order_by(ApplicationSettings.name)
         .all()
     )
     for row in rows:  # stored themes override stubs on slug collisions
-        theme = CustomTheme(**json.loads(row.value))
+        theme = _theme_from_json(row.value)
         themes_by_slug[theme.slug] = theme
     return list(themes_by_slug.values())
 
 
-def list_themes() -> dict[str, str]:
+def list_themes(session: Optional[Session] = None) -> dict[str, str]:
     """slug -> label for every selectable theme, built-in then custom."""
     merged = dict(THEMES)
-    merged.update({theme.slug: theme.label for theme in list_custom_themes()})
+    merged.update({theme.slug: theme.label for theme in list_custom_themes(session)})
     return merged
+
+
+def read_theme_css(slug: str, session: Optional[Session] = None) -> Optional[ThemeAssets]:
+    """The token + skin CSS a theme contributes, for any theme — built-in themes from
+    their static files, custom themes from their published draft. Only the styling pair
+    is returned (favicon/placeholder are left empty); icon art, when a theme has any,
+    already lives in the skin. None if the slug is unknown. Built-in `classic` has no
+    override file, so its tokens come back empty (they are static/tokens.css's :root
+    contract)."""
+    if is_builtin(slug):
+        tokens = _THEMES_STATIC_DIR / slug / "tokens.css"
+        skin = _THEMES_STATIC_DIR / f"{slug}.css"
+        return ThemeAssets(
+            tokens_css=tokens.read_text() if tokens.is_file() else "",
+            skin_css=skin.read_text() if skin.is_file() else "",
+        )
+    custom = get_custom_theme(slug, session)
+    return custom.published_theme if custom else None
 
 
 def theme_exists(slug: str) -> bool:
     return is_builtin(slug) or get_custom_theme(slug) is not None
 
 
-def save_custom_theme(theme: CustomTheme) -> None:
+def save_custom_theme(theme: CustomTheme, session: Optional[Session] = None) -> None:
     """Create or update a custom theme (validates before touching the DB)."""
     if not _SLUG_RE.match(theme.slug):
         raise ValueError(
@@ -258,24 +320,49 @@ def save_custom_theme(theme: CustomTheme) -> None:
         raise ValueError(f"Slug {theme.slug!r} belongs to a built-in theme")
     if not (theme.label or "").strip():
         raise ValueError("Theme label is required")
-    if f'[data-theme="{theme.slug}"]' not in theme.tokens_css:
+    if f'[data-theme="{theme.slug}"]' not in theme.published_theme.tokens_css:
         raise ValueError(
             f'tokens_css must contain a [data-theme="{theme.slug}"] override block'
         )
 
+    sess = _session(session)
     payload = json.dumps(asdict(theme))
     row = (
-        db.session.query(ApplicationSettings)
+        sess.query(ApplicationSettings)
         .filter_by(name=_setting_name(theme.slug))
         .first()
     )
     if row:
         row.value = payload
     else:
-        db.session.add(
+        sess.add(
             ApplicationSettings(name=_setting_name(theme.slug), type="json", value=payload)
         )
-    db.session.commit()
+    sess.commit()
+
+
+def add_theme_message(slug: str, entry_type: str, content: str, session: Optional[Session] = None) -> None:
+    """Append a line (user / assistant / status / error) to a theme's transcript.
+    Used by the chat route to record the prompt and by the generator task to stream
+    its progress."""
+    theme = get_custom_theme(slug, session)
+    if theme is None:
+        raise ValueError(f"Unknown custom theme: {slug!r}")
+    theme.conversations.append(
+        ThemeConversation(type=entry_type, content=content, created_at=datetime.now(timezone.utc).isoformat())
+    )
+    save_custom_theme(theme, session)
+
+
+def set_theme_status(slug: str, status: str, session: Optional[Session] = None) -> None:
+    """Move a theme to a new generation status (a PAGE_VERSION_STATUS_* value).
+    The generator task polls this between iterations and stops when it is no longer
+    IN_PROGRESS, so writing any terminal status here doubles as the cancel signal."""
+    theme = get_custom_theme(slug, session)
+    if theme is None:
+        raise ValueError(f"Unknown custom theme: {slug!r}")
+    theme.status = status
+    save_custom_theme(theme, session)
 
 
 def delete_custom_theme(slug: str) -> None:

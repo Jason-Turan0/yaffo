@@ -3,24 +3,39 @@ dynamic /themes/<slug>/*.css routes, and selectable alongside built-ins."""
 import pytest
 
 from yaffo import themes
-from yaffo.themes import CustomTheme
+from yaffo.db.models import PAGE_VERSION_STATUS_ACCEPTED
+from yaffo.themes import CustomTheme, ThemeAssets
 
 TOKENS = '[data-theme="vaporwave"] { --color-accent: #ff71ce; --color-bg: #05ffa1; }'
 SKIN = '[data-theme="vaporwave"] .navbar-brand { letter-spacing: 0.3em; }'
 FAVICON = '<svg xmlns="http://www.w3.org/2000/svg"><circle r="8"/></svg>'
 
 
-def _vaporwave(**overrides) -> CustomTheme:
-    fields = dict(
-        slug="vaporwave",
-        label="Vaporwave",
-        tokens_css=TOKENS,
-        skin_css=SKIN,
-        favicon_svg=FAVICON,
-        placeholder_svg="",
+def _vaporwave(
+    *,
+    slug="vaporwave",
+    label="Vaporwave",
+    tokens_css=TOKENS,
+    skin_css=SKIN,
+    favicon_svg=FAVICON,
+    placeholder_svg="",
+    status=PAGE_VERSION_STATUS_ACCEPTED,
+) -> CustomTheme:
+    # The published draft is what the app serves; flat kwargs map onto its assets so
+    # the existing cases (overriding tokens / favicon / placeholder) read naturally.
+    return CustomTheme(
+        slug=slug,
+        label=label,
+        status=status,
+        conversations=[],
+        published_theme=ThemeAssets(
+            tokens_css=tokens_css,
+            skin_css=skin_css,
+            favicon_svg=favicon_svg,
+            placeholder_svg=placeholder_svg,
+        ),
+        working_theme=None,
     )
-    fields.update(overrides)
-    return CustomTheme(**fields)
 
 
 # ---- registry / persistence -------------------------------------------------

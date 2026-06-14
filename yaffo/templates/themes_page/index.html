@@ -84,13 +84,13 @@
             {{ chat_dialog(
                 'theme-chat',
                 'Conversation',
-                'The conversation used to design this theme.',
+                'Describe how this theme should look and the assistant will design it.',
                 'Describe how this theme should look…',
-                messages=none,
+                messages=selected_conversations,
                 empty_text=('System themes are hand-crafted and have no conversation.'
                             if selected_is_builtin
-                            else 'No conversation yet — theme generation is coming soon.'),
-                disabled=true
+                            else 'No conversation yet — describe the look you want and the assistant will build it.'),
+                disabled=selected_is_builtin
             ) }}
         </div>
     </div>
@@ -116,6 +116,11 @@
 <script>
 window.PHOTO_ORGANIZER.themesPage = window.PHOTO_ORGANIZER.initThemesPage(
     {{ selected_label | tojson }},
+    window.APP_CONFIG
+);
+window.PHOTO_ORGANIZER.themeChat = window.PHOTO_ORGANIZER.initThemeChat(
+    {{ selected_slug | tojson }},
+    {{ selected_status | tojson }},
     window.APP_CONFIG
 );
 </script>

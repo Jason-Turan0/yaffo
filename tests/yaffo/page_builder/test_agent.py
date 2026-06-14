@@ -7,7 +7,7 @@ are stubbed too, so tool dispatch / error handling is exercised in isolation.
 """
 import pytest
 
-from yaffo.page_builder.agent import PageBuilderAgent
+from yaffo.page_builder.agent import Agent
 from yaffo.page_builder.model_clients import (
     ModelClient,
     ModelResponse,
@@ -100,7 +100,7 @@ def _events(agent):
 class TestUserMessage:
     def test_user_message_is_forwarded_to_the_client(self):
         client = StubModelClient([_resp(text="hi")])
-        agent = PageBuilderAgent(client, [StubToolProvider()])
+        agent = Agent(client, [StubToolProvider()])
         _events(agent)
         assert client.user_messages == [USER_MSG]
         assert client.call_count == 1
@@ -113,7 +113,7 @@ class TestToolResultsSentBack:
             _resp(tool_calls=[_call(inp={"q": 1})]),  # turn 1: one tool call
             _resp(text="done"),                        # turn 2: model finishes
         ])
-        agent = PageBuilderAgent(client, [provider])
+        agent = Agent(client, [provider])
         _events(agent)
 
         assert client.call_count == 2
@@ -130,7 +130,7 @@ class TestToolResultsSentBack:
         # (event stream) gets host_data. They must not bleed into each other.
         provider = StubToolProvider(result=ToolResult(model_text="for-model", host_data={"widget": "x"}))
         client = StubModelClient([_resp(tool_calls=[_call()]), _resp(text="done")])
-        agent = PageBuilderAgent(client, [provider])
+        agent = Agent(client, [provider])
         events = _events(agent)
 
         (result,) = client.tool_result_batches[0]
@@ -145,7 +145,7 @@ class TestToolResultsSentBack:
             _resp(tool_calls=[_call(id="call-1", inp={"n": 1}), _call(id="call-2", inp={"n": 2})]),
             _resp(text="done"),
         ])
-        agent = PageBuilderAgent(client, [provider])
+        agent = Agent(client, [provider])
         _events(agent)
 
         assert provider.calls == [("stub_tool", {"n": 1}), ("stub_tool", {"n": 2})]
@@ -159,7 +159,7 @@ class TestToolResultsSentBack:
             _resp(tool_calls=[_call(name="ghost")]),  # no provider handles 'ghost'
             _resp(text="done"),
         ])
-        agent = PageBuilderAgent(client, [provider])
+        agent = Agent(client, [provider])
         _events(agent)
 
         assert provider.calls == []  # never reached the registered tool
@@ -170,7 +170,7 @@ class TestToolResultsSentBack:
     def test_tool_exception_is_fed_back_not_raised(self):
         provider = StubToolProvider(raises=ValueError("boom"))
         client = StubModelClient([_resp(tool_calls=[_call()]), _resp(text="done")])
-        agent = PageBuilderAgent(client, [provider])
+        agent = Agent(client, [provider])
         events = _events(agent)  # must not raise
 
         (result,) = client.tool_result_batches[0]
@@ -185,7 +185,7 @@ class TestToolResultsSentBack:
 class TestTermination:
     def test_none_response_yields_error_and_sends_no_tool_results(self):
         client = StubModelClient([None])
-        agent = PageBuilderAgent(client, [StubToolProvider()])
+        agent = Agent(client, [StubToolProvider()])
         events = _events(agent)
 
         assert client.user_messages == [USER_MSG]
@@ -199,7 +199,7 @@ class TestTermination:
         # not be executed, and the run must not be reported as a clean done.
         provider = StubToolProvider()
         client = StubModelClient([_resp(tool_calls=[_call()], stop_reason="max_tokens")])
-        agent = PageBuilderAgent(client, [provider])
+        agent = Agent(client, [provider])
         events = _events(agent)
 
         assert provider.calls == []  # the truncated tool call was not executed
@@ -212,7 +212,7 @@ class TestTermination:
         provider = StubToolProvider()
         # Always returns a tool call -> the loop would never end on its own.
         client = StubModelClient([_resp(tool_calls=[_call()]), _resp(tool_calls=[_call()])])
-        agent = PageBuilderAgent(client, [provider], max_iterations=2)
+        agent = Agent(client, [provider], max_iterations=2)
         events = _events(agent)
 
         assert client.call_count == 2
@@ -227,7 +227,7 @@ class TestCancellation:
     def test_cancel_before_first_call_makes_no_model_call(self):
         provider = StubToolProvider()
         client = StubModelClient([_resp(text="hi")])
-        agent = PageBuilderAgent(client, [provider])
+        agent = Agent(client, [provider])
         events = list(agent.run_events(USER_MSG, should_cancel=lambda: True))
 
         assert client.call_count == 0  # the model was never called
@@ -246,7 +246,7 @@ class TestCancellation:
             checks["n"] += 1
             return checks["n"] > 1
 
-        agent = PageBuilderAgent(client, [provider], max_iterations=10)
+        agent = Agent(client, [provider], max_iterations=10)
         events = list(agent.run_events(USER_MSG, should_cancel=should_cancel))
 
         assert client.call_count == 1  # only the first iteration reached the model
@@ -254,7 +254,7 @@ class TestCancellation:
 
     def test_no_cancel_callback_runs_normally(self):
         client = StubModelClient([_resp(text="all done")])
-        agent = PageBuilderAgent(client, [StubToolProvider()])
+        agent = Agent(client, [StubToolProvider()])
         events = list(agent.run_events(USER_MSG))  # should_cancel defaults to None
         assert [e.type for e in events] == ["assistant", "done"]
 
@@ -264,13 +264,13 @@ class TestCancellation:
 class TestProviderLifecycle:
     def test_disconnect_called_after_a_normal_run(self):
         provider = StubToolProvider()
-        agent = PageBuilderAgent(StubModelClient([_resp(text="hi")]), [provider])
+        agent = Agent(StubModelClient([_resp(text="hi")]), [provider])
         _events(agent)
         assert provider.disconnects == 1
 
     def test_disconnect_called_even_when_generation_fails(self):
         provider = StubToolProvider()
-        agent = PageBuilderAgent(StubModelClient([None]), [provider])
+        agent = Agent(StubModelClient([None]), [provider])
         _events(agent)
         assert provider.disconnects == 1
 
@@ -278,7 +278,7 @@ class TestProviderLifecycle:
 class TestDuplicateToolNames:
     def test_duplicate_tool_name_across_providers_raises(self):
         with pytest.raises(ValueError, match="Duplicate tool name"):
-            PageBuilderAgent(
+            Agent(
                 StubModelClient([]),
                 [StubToolProvider(name="dup"), StubToolProvider(name="dup")],
             )
@@ -289,7 +289,7 @@ class TestDuplicateToolNames:
 class TestRunWrapper:
     def test_run_aggregates_a_successful_loop(self):
         client = StubModelClient([_resp(tool_calls=[_call()]), _resp(text="all set")])
-        agent = PageBuilderAgent(client, [StubToolProvider()])
+        agent = Agent(client, [StubToolProvider()])
         result = agent.run(USER_MSG)
 
         assert result.ok is True
@@ -298,7 +298,7 @@ class TestRunWrapper:
         assert result.stop_reason == "end_turn"
 
     def test_run_reports_failure(self):
-        agent = PageBuilderAgent(StubModelClient([None]), [StubToolProvider()])
+        agent = Agent(StubModelClient([None]), [StubToolProvider()])
         result = agent.run(USER_MSG)
 
         assert result.ok is False

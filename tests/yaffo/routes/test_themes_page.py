@@ -1,7 +1,14 @@
 """Themes page: lists system + custom themes, sets the default (persisted in
 ApplicationSettings, stamped on <html data-theme>), creates and deletes custom
-themes."""
+themes, and drives the async theme-design conversation (chat / status / cancel)."""
+import pytest
+
 from yaffo import themes
+from yaffo.db.models import (
+    CONVERSATION_TYPE_USER,
+    PAGE_VERSION_STATUS_CANCELLED,
+    PAGE_VERSION_STATUS_IN_PROGRESS,
+)
 
 
 def test_default_theme_on_html_element(client):
@@ -55,7 +62,8 @@ def test_create_custom_theme(client):
 
     created = themes.get_custom_theme("vapor-wave")
     assert created.label == "Vapor Wave"
-    assert '[data-theme="vapor-wave"]' in created.tokens_css
+    assert created.conversations == []
+    assert '[data-theme="vapor-wave"]' in created.published_theme.tokens_css
 
     panel = client.get("/themes/vapor-wave").data.decode()
     assert "Vapor Wave" in panel
@@ -98,3 +106,92 @@ def test_settings_page_no_longer_has_theme_control(client):
     page = client.get("/settings").data.decode()
     assert "theme-select" not in page
     assert "Appearance" not in page
+
+
+# --- async theme-design conversation: chat / status / cancel -----------------
+
+@pytest.fixture
+def with_key_and_task(monkeypatch):
+    """Configure an API key and capture the enqueued generation task instead of
+    handing it to huey, so the route's record-prompt + enqueue is exercised without
+    a worker. Returns the list of (args, kwargs) the task was called with."""
+    monkeypatch.setattr("yaffo.page_builder.llm_config.get_api_key", lambda: "test-key")
+    calls = []
+    monkeypatch.setattr("yaffo.routes.themes_page.generate_theme_task",
+                        lambda *a, **k: calls.append((a, k)))
+    return calls
+
+
+def test_chat_records_prompt_sets_running_and_enqueues(client, with_key_and_task):
+    client.post("/themes/create", data={"label": "Vapor Wave"})
+    response = client.post("/themes/vapor-wave/chat", json={"message": "make it neon"})
+    assert response.status_code == 202
+    assert response.get_json() == {"slug": "vapor-wave"}
+
+    theme = themes.get_custom_theme("vapor-wave")
+    assert theme.status == PAGE_VERSION_STATUS_IN_PROGRESS
+    assert [(c.type, c.content) for c in theme.conversations] == [
+        (CONVERSATION_TYPE_USER, "make it neon")
+    ]
+    assert with_key_and_task == [(("vapor-wave", "make it neon"), {})]
+
+
+def test_chat_requires_message(client, with_key_and_task):
+    client.post("/themes/create", data={"label": "Vapor Wave"})
+    response = client.post("/themes/vapor-wave/chat", json={"message": "  "})
+    assert response.status_code == 400
+    assert with_key_and_task == []
+
+
+def test_chat_without_api_key_is_400(client):
+    # The autouse no_api_key fixture leaves generation disabled.
+    client.post("/themes/create", data={"label": "Vapor Wave"})
+    response = client.post("/themes/vapor-wave/chat", json={"message": "make it neon"})
+    assert response.status_code == 400
+    assert "API key" in response.get_json()["error"]
+
+
+def test_chat_rejects_concurrent_run(client, with_key_and_task):
+    client.post("/themes/create", data={"label": "Vapor Wave"})
+    client.post("/themes/vapor-wave/chat", json={"message": "first"})
+    response = client.post("/themes/vapor-wave/chat", json={"message": "second"})
+    assert response.status_code == 409
+    assert len(with_key_and_task) == 1  # the second prompt was not enqueued
+
+
+def test_chat_on_builtin_theme_rejected(client, with_key_and_task):
+    response = client.post("/themes/classic/chat", json={"message": "hi"})
+    assert response.status_code == 400
+    assert with_key_and_task == []
+
+
+def test_chat_unknown_theme_404s(client, with_key_and_task):
+    assert client.post("/themes/nope/chat", json={"message": "hi"}).status_code == 404
+
+
+def test_status_returns_feed_and_started_at(client, with_key_and_task):
+    client.post("/themes/create", data={"label": "Vapor Wave"})
+    client.post("/themes/vapor-wave/chat", json={"message": "make it neon"})
+
+    payload = client.get("/themes/vapor-wave/status").get_json()
+    assert payload["slug"] == "vapor-wave"
+    assert payload["status"] == PAGE_VERSION_STATUS_IN_PROGRESS
+    assert payload["messages"] == [{"type": CONVERSATION_TYPE_USER, "content": "make it neon"}]
+    assert payload["started_at"] is not None  # the prompt timestamp drives the elapsed counter
+
+
+def test_status_unknown_theme_404s(client):
+    assert client.get("/themes/nope/status").status_code == 404
+
+
+def test_cancel_flags_cancelled(client, with_key_and_task):
+    client.post("/themes/create", data={"label": "Vapor Wave"})
+    client.post("/themes/vapor-wave/chat", json={"message": "make it neon"})
+
+    response = client.post("/themes/vapor-wave/cancel")
+    assert response.status_code == 204
+    assert themes.get_custom_theme("vapor-wave").status == PAGE_VERSION_STATUS_CANCELLED
+
+
+def test_cancel_unknown_theme_404s(client):
+    assert client.post("/themes/nope/cancel").status_code == 404

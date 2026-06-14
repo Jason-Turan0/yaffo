@@ -11,7 +11,15 @@ import re
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 
 from yaffo import themes
-from yaffo.themes import CustomTheme
+from yaffo.background_tasks.tasks.generate_theme import generate_theme_task
+from yaffo.db.models import (
+    CONVERSATION_TYPE_USER,
+    PAGE_VERSION_STATUS_ACCEPTED,
+    PAGE_VERSION_STATUS_CANCELLED,
+    PAGE_VERSION_STATUS_IN_PROGRESS,
+)
+from yaffo.page_builder import llm_config
+from yaffo.themes import CustomTheme, ThemeAssets
 
 # save_custom_theme caps slugs at 41 chars; leave room for a "-N" uniqueness
 # suffix when two labels slugify identically.
@@ -37,6 +45,14 @@ def _unique_slug(label: str) -> str:
 
 def init_themes_page_routes(app: Flask):
     def _render_page(selected_slug: str):
+        # Built-in themes are hand-crafted and have no conversation; custom themes
+        # carry the transcript that designed them (and the in-flight status that
+        # tells the chat whether a generation is still running).
+        selected_theme = (
+            None
+            if themes.is_builtin(selected_slug)
+            else themes.get_custom_theme(selected_slug)
+        )
         return render_template(
             "themes_page/index.html",
             system_themes=[
@@ -49,6 +65,8 @@ def init_themes_page_routes(app: Flask):
             selected_slug=selected_slug,
             selected_label=themes.list_themes()[selected_slug],
             selected_is_builtin=themes.is_builtin(selected_slug),
+            selected_conversations=selected_theme.conversations if selected_theme else [],
+            selected_status=selected_theme.status if selected_theme else None,
             default_slug=themes.get_theme(),
         )
 
@@ -79,10 +97,18 @@ def init_themes_page_routes(app: Flask):
         if not label:
             return jsonify({"error": "Theme name is required"}), 400
         slug = _unique_slug(label)
-        # A new theme starts as an empty token override (the classic look);
-        # the conversation with the generator agent will fill it in.
+        # A new theme starts published as an empty token override (the classic
+        # look) with no conversation yet; the chat with the generator agent fills
+        # in a working_theme that is later published over this one.
         themes.save_custom_theme(
-            CustomTheme(slug=slug, label=label, tokens_css=f'[data-theme="{slug}"] {{\n}}\n')
+            CustomTheme(
+                slug=slug,
+                label=label,
+                status=PAGE_VERSION_STATUS_ACCEPTED,
+                conversations=[],
+                published_theme=ThemeAssets(tokens_css=f'[data-theme="{slug}"] {{\n}}\n'),
+                working_theme=None,
+            )
         )
         return redirect(url_for("themes_show", slug=slug))
 
@@ -92,3 +118,62 @@ def init_themes_page_routes(app: Flask):
             return jsonify({"error": "System themes cannot be deleted"}), 400
         themes.delete_custom_theme(slug)
         return redirect(url_for("themes_index"))
+
+    def _theme_status_payload(theme: CustomTheme) -> dict:
+        """Poll contract for an in-flight theme generation: the status the client
+        gates Send/Cancel on, the timestamp that drives the elapsed counter (the last
+        prompt that kicked off the run), and the conversation feed."""
+        started_at = next(
+            (entry.created_at for entry in reversed(theme.conversations)
+             if entry.type == CONVERSATION_TYPE_USER),
+            None,
+        )
+        return {
+            "slug": theme.slug,
+            "status": theme.status,
+            "started_at": started_at,
+            "messages": [{"type": entry.type, "content": entry.content} for entry in theme.conversations],
+        }
+
+    @app.route("/themes/<slug>/chat", methods=["POST"])
+    def themes_chat(slug: str):
+        """Start or continue an async theme generation, returning at once. The run
+        lives on the theme (status + transcript), not this request, so it survives tab
+        close / reload. A generation already running is rejected."""
+        if themes.is_builtin(slug):
+            return {"error": "System themes cannot be generated."}, 400
+        theme = themes.get_custom_theme(slug)
+        if theme is None:
+            abort(404)
+        if theme.status == PAGE_VERSION_STATUS_IN_PROGRESS:
+            return {"error": "A generation is already running."}, 409
+        payload = request.get_json(silent=True) or {}
+        message = (payload.get("message") or "").strip()
+        if not message:
+            return {"error": "Message is required."}, 400
+        if llm_config.get_api_key() is None:
+            return {"error": "No API key configured. Add your Anthropic API key in Settings → AI Generation."}, 400
+
+        themes.add_theme_message(slug, CONVERSATION_TYPE_USER, message)
+        themes.set_theme_status(slug, PAGE_VERSION_STATUS_IN_PROGRESS)
+        generate_theme_task(slug, message)
+        return {"slug": slug}, 202
+
+    @app.route("/themes/<slug>/status", methods=["GET"])
+    def themes_status(slug: str):
+        """Poll an in-flight generation: status, timing, and the conversation feed."""
+        theme = themes.get_custom_theme(slug)
+        if theme is None:
+            abort(404)
+        return _theme_status_payload(theme)
+
+    @app.route("/themes/<slug>/cancel", methods=["POST"])
+    def themes_cancel(slug: str):
+        """Cancel a generation: flag CANCELLED (the running task polls this and stops).
+        The published theme is untouched, so the UI snaps back to it on reload."""
+        theme = themes.get_custom_theme(slug)
+        if theme is None:
+            abort(404)
+        themes.set_theme_status(slug, PAGE_VERSION_STATUS_CANCELLED)
+        return "", 204
+
