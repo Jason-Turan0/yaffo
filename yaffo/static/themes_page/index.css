@@ -85,6 +85,25 @@
     margin-top: 20px;
 }
 
+.theme-draft {
+    margin-top: 20px;
+    padding: 16px;
+    border: var(--border-width) solid var(--color-accent-soft-text);
+    border-radius: var(--radius-md);
+    background: var(--color-accent-soft);
+}
+
+.theme-draft-text {
+    margin: 0 0 12px;
+    color: var(--color-accent-soft-text);
+    font-size: var(--font-size-sm);
+}
+
+.theme-draft-actions {
+    display: flex;
+    gap: 8px;
+}
+
 .theme-conversation {
     max-width: 560px;
 }

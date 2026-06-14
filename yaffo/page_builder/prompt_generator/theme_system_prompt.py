@@ -16,8 +16,12 @@ from pathlib import Path
 
 from yaffo.page_builder.prompt_generator.xml_helpers import block
 
-# yaffo/page_builder/prompt_generator/theme_system_prompt.py -> yaffo/static/tokens.css
-_TOKENS_FILE = Path(__file__).resolve().parents[2] / "static" / "tokens.css"
+# yaffo/page_builder/prompt_generator/theme_system_prompt.py -> yaffo/static/...
+_STATIC_DIR = Path(__file__).resolve().parents[2] / "static"
+_TOKENS_FILE = _STATIC_DIR / "tokens.css"
+# The classic theme ships one icon-<name>.svg per data-icon the app uses, so the set
+# of overridable icon names is derived from it (rather than hard-coded, which drifts).
+_CLASSIC_ICON_DIR = _STATIC_DIR / "themes" / "classic"
 
 _ROOT_BLOCK_RE = re.compile(r":root\s*\{(.*?)\n\}", re.DOTALL)
 _DECL_RE = re.compile(r"(--[\w-]+)\s*:\s*([^;]+);")
@@ -31,6 +35,11 @@ def _token_defaults() -> list[str]:
     match = _ROOT_BLOCK_RE.search(text)
     body = match.group(1) if match else ""
     return [f"{name}: {value.strip()}" for name, value in _DECL_RE.findall(body)]
+
+
+def _icon_names() -> list[str]:
+    """The data-icon names the app uses, from the classic icon set (icon-<name>.svg)."""
+    return sorted(p.stem.removeprefix("icon-") for p in _CLASSIC_ICON_DIR.glob("icon-*.svg"))
 
 
 def _role() -> str:
@@ -75,9 +84,35 @@ def _contract() -> str:
         "  and the missing-image placeholder.",
         "Everything must be inert, self-contained CSS/SVG: no @import, no external url(),",
         "no <script> — the tokens load even inside sandboxed widget frames.",
-        "Nav/button icons are inherited automatically — they tint to each control's text",
-        "color, so they match any palette for free; you never need to provide them. (To",
-        "change the icon art itself, set its mask-image in skin_css with an inline data: URI.)",
+        "Nav/button icons are inherited and recolor to your palette automatically — you",
+        "never need to provide them. To replace the icon ART, see <icons>.",
+    ])
+
+
+def _icons() -> str:
+    return block("icons", [
+        "Every nav/button icon is inherited for free: the app draws it as a currentColor",
+        "MASK, so it tints to each control's text color and already matches your palette.",
+        "Leave them alone unless the user wants different icon art.",
+        "",
+        "To replace an icon, override it in skin_css. The default paints the glyph with a",
+        "mask tinted by `background-color`, which flattens art to one color — so for your",
+        "own (especially multi-color) art, UNSET the mask and use a background image:",
+        '  [data-theme="<slug>"] [data-icon="add"]::before {',
+        "    -webkit-mask-image: none; mask-image: none;   /* drop the inherited mask */",
+        "    background-color: transparent;",
+        "    background-image: url(\"data:image/svg+xml,<svg .../></svg>\");",
+        "    background-size: contain; background-position: center; background-repeat: no-repeat;",
+        "  }",
+        "The art must be a self-contained inline data: URI (no external url()). Inside it,",
+        "single-quote the SVG attributes and percent-encode '#' as %23 so the url() stays",
+        "valid — e.g. fill='%23ff0066'.",
+        "",
+        "Overridable icon names (each used as [data-icon=\"NAME\"]):",
+        "  " + ", ".join(_icon_names()),
+        "",
+        "For a full worked example, call get_theme('neobrutalist') — it overrides the whole",
+        "icon set this exact way, with inline data: URIs you can adapt.",
     ])
 
 
@@ -86,8 +121,8 @@ def _references() -> str:
         "You can stand on existing themes instead of starting cold:",
         "- list_themes: browse the existing themes (built-in and custom).",
         "- get_theme(slug): read one theme's token values (and skin) to reuse or tweak —",
-        "  handy for requests like 'like the darkroom theme but warmer'.",
-        "Reuse token VALUES, not a built-in's icon-art file paths (icons come for free).",
+        "  handy for requests like 'like the darkroom theme but warmer', or to copy how a",
+        "  theme overrides its icons (neobrutalist is the icon-override example).",
     ])
 
 
@@ -113,6 +148,7 @@ def build_template_builder_system_prompt() -> str:
         _core_rule(),
         _tokens(),
         _contract(),
+        _icons(),
         _references(),
         _conventions(),
     ])

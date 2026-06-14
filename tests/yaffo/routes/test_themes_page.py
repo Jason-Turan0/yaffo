@@ -6,9 +6,27 @@ import pytest
 from yaffo import themes
 from yaffo.db.models import (
     CONVERSATION_TYPE_USER,
+    PAGE_VERSION_STATUS_ACCEPTED,
     PAGE_VERSION_STATUS_CANCELLED,
     PAGE_VERSION_STATUS_IN_PROGRESS,
+    PAGE_VERSION_STATUS_READY,
 )
+from yaffo.themes import CustomTheme, ThemeAssets
+
+
+def _save_ready_draft(slug="draft-me", working_accent="#abcdef") -> str:
+    """A custom theme with a finished working draft awaiting publish (status READY)."""
+    themes.save_custom_theme(
+        CustomTheme(
+            slug=slug,
+            label="Draft Me",
+            status=PAGE_VERSION_STATUS_READY,
+            conversations=[],
+            published_theme=ThemeAssets(tokens_css=f'[data-theme="{slug}"] {{\n}}\n'),
+            working_theme=ThemeAssets(tokens_css=f'[data-theme="{slug}"] {{ --color-accent: {working_accent}; }}'),
+        )
+    )
+    return slug
 
 
 def test_default_theme_on_html_element(client):
@@ -195,3 +213,65 @@ def test_cancel_flags_cancelled(client, with_key_and_task):
 
 def test_cancel_unknown_theme_404s(client):
     assert client.post("/themes/nope/cancel").status_code == 404
+
+
+# --- publish / discard a finished draft --------------------------------------
+
+def test_publish_promotes_working_into_published(client):
+    slug = _save_ready_draft()
+    response = client.post(f"/themes/{slug}/publish")
+    assert response.status_code == 204
+    assert response.headers["HX-Refresh"] == "true"
+
+    theme = themes.get_custom_theme(slug)
+    assert theme.status == PAGE_VERSION_STATUS_ACCEPTED
+    assert theme.working_theme is None
+    assert "--color-accent: #abcdef;" in theme.published_theme.tokens_css
+
+
+def test_published_theme_css_reflects_published_draft(client):
+    slug = _save_ready_draft()
+    client.post(f"/themes/{slug}/publish")
+    css = client.get(f"/themes/{slug}/theme.css").get_data(as_text=True)
+    assert "--color-accent: #abcdef;" in css  # the served CSS is now the promoted draft
+
+
+def test_publish_without_draft_is_409(client):
+    client.post("/themes/create", data={"label": "No Draft"})  # ACCEPTED, no working draft
+    response = client.post("/themes/no-draft/publish")
+    assert response.status_code == 409
+
+
+def test_publish_unknown_theme_404s(client):
+    assert client.post("/themes/nope/publish").status_code == 404
+
+
+def test_discard_drops_draft_and_keeps_published(client):
+    slug = _save_ready_draft()
+    published_before = themes.get_custom_theme(slug).published_theme.tokens_css
+
+    response = client.post(f"/themes/{slug}/discard")
+    assert response.status_code == 204
+    assert response.headers["HX-Refresh"] == "true"
+
+    theme = themes.get_custom_theme(slug)
+    assert theme.status == PAGE_VERSION_STATUS_ACCEPTED
+    assert theme.working_theme is None
+    assert theme.published_theme.tokens_css == published_before
+
+
+def test_discard_unknown_theme_404s(client):
+    assert client.post("/themes/nope/discard").status_code == 404
+
+
+def test_page_shows_draft_controls_only_when_ready(client):
+    slug = _save_ready_draft()
+    page = client.get(f"/themes/{slug}").data.decode()
+    assert "Save draft" in page
+    assert f"/themes/{slug}/publish" in page
+    assert f"/themes/{slug}/discard" in page
+
+    # once published, the draft banner is gone.
+    client.post(f"/themes/{slug}/publish")
+    page = client.get(f"/themes/{slug}").data.decode()
+    assert "Save draft" not in page

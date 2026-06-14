@@ -365,6 +365,32 @@ def set_theme_status(slug: str, status: str, session: Optional[Session] = None) 
     save_custom_theme(theme, session)
 
 
+def publish_theme(slug: str, session: Optional[Session] = None) -> None:
+    """Promote a theme's working draft to its published, live form: the working_theme
+    becomes the published_theme the app serves, the draft is cleared, and the theme
+    returns to ACCEPTED (idle). Raises if there is no draft to publish."""
+    theme = get_custom_theme(slug, session)
+    if theme is None:
+        raise ValueError(f"Unknown custom theme: {slug!r}")
+    if theme.working_theme is None:
+        raise ValueError(f"Theme {slug!r} has no working draft to publish")
+    theme.published_theme = theme.working_theme
+    theme.working_theme = None
+    theme.status = PAGE_VERSION_STATUS_ACCEPTED
+    save_custom_theme(theme, session)
+
+
+def discard_theme_draft(slug: str, session: Optional[Session] = None) -> None:
+    """Drop a theme's working draft and return it to ACCEPTED (idle). The published
+    theme is untouched, so the live look is unchanged."""
+    theme = get_custom_theme(slug, session)
+    if theme is None:
+        raise ValueError(f"Unknown custom theme: {slug!r}")
+    theme.working_theme = None
+    theme.status = PAGE_VERSION_STATUS_ACCEPTED
+    save_custom_theme(theme, session)
+
+
 def delete_custom_theme(slug: str) -> None:
     """Remove a custom theme; if it was active, fall back to the default."""
     row = (

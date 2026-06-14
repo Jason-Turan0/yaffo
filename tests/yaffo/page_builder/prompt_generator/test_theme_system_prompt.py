@@ -7,6 +7,7 @@ so the cached prefix holds across every theme.
 import pytest
 
 from yaffo.page_builder.prompt_generator.theme_system_prompt import (
+    _icon_names,
     _token_defaults,
     build_template_builder_system_prompt,
 )
@@ -37,3 +38,19 @@ def test_prompt_is_volatile_free():
     prompt = build_template_builder_system_prompt()
     assert "[data-theme=\"custom" not in prompt
     assert "vapor-wave" not in prompt
+
+
+def test_icon_names_derived_from_classic_set():
+    names = _icon_names()
+    # representative icons the app uses; derived from classic's icon-*.svg files.
+    assert {"add", "delete", "search", "settings"} <= set(names)
+
+
+def test_prompt_documents_icon_override_with_neobrutalist_example():
+    prompt = build_template_builder_system_prompt()
+    assert "<icons>" in prompt
+    assert "data:image/svg+xml" in prompt          # the inline-art mechanism
+    assert "mask-image: none" in prompt            # the unset-mask step for custom art
+    assert "%23" in prompt                         # the # -> %23 encoding note
+    assert "get_theme('neobrutalist')" in prompt   # the worked example
+    assert "add, delete" in prompt                 # the derived icon-name list

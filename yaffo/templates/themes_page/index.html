@@ -78,6 +78,20 @@
                         data-icon="delete">Delete</button>
                 {% endif %}
             </div>
+
+            {% if selected_has_draft %}
+            <div class="theme-draft">
+                <p class="theme-draft-text">The assistant has an unpublished design for this theme. Save it to make it live, or discard the draft.</p>
+                <div class="theme-draft-actions">
+                    <button type="button" class="btn-primary"
+                            hx-post="{{ url_for('themes_publish', slug=selected_slug) }}"
+                            hx-swap="none">Save draft</button>
+                    <button type="button" class="btn-secondary"
+                            hx-post="{{ url_for('themes_discard', slug=selected_slug) }}"
+                            hx-swap="none">Discard</button>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <div class="chat-card theme-conversation">

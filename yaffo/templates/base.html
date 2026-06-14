@@ -28,8 +28,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/chat_dialog.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='pages/nav.css') }}">
     {# Only the active theme's stylesheet: a static skin for built-in themes, or
-       DB-stored CSS for runtime (AI-generated) custom themes. #}
-    <link rel="stylesheet" href="{{ url_for('theme_css', slug=theme) }}">
+       DB-stored CSS for runtime (AI-generated) custom themes. A page may override
+       `theme_css_url` to load a different sheet (e.g. the themes page previews the
+       theme it's viewing, working draft included). #}
+    <link rel="stylesheet" href="{{ theme_css_url | default(url_for('theme_css', slug=theme), true) }}">
 
 
     {% block extra_styles %}{% endblock %}

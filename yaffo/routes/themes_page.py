@@ -17,6 +17,7 @@ from yaffo.db.models import (
     PAGE_VERSION_STATUS_ACCEPTED,
     PAGE_VERSION_STATUS_CANCELLED,
     PAGE_VERSION_STATUS_IN_PROGRESS,
+    PAGE_VERSION_STATUS_READY,
 )
 from yaffo.page_builder import llm_config
 from yaffo.themes import CustomTheme, ThemeAssets
@@ -55,6 +56,11 @@ def init_themes_page_routes(app: Flask):
         )
         return render_template(
             "themes_page/index.html",
+            # Render the page AS the theme being viewed (overriding the active default),
+            # previewing its working draft when one is pending — so the look is visible
+            # before it's made default or published.
+            theme=selected_slug,
+            theme_css_url=url_for("theme_preview_css", slug=selected_slug),
             system_themes=[
                 {"slug": slug, "label": label} for slug, label in themes.THEMES.items()
             ],
@@ -67,6 +73,13 @@ def init_themes_page_routes(app: Flask):
             selected_is_builtin=themes.is_builtin(selected_slug),
             selected_conversations=selected_theme.conversations if selected_theme else [],
             selected_status=selected_theme.status if selected_theme else None,
+            # A finished generation leaves a working draft (READY) awaiting Save; the
+            # panel shows the publish/discard controls only then.
+            selected_has_draft=(
+                selected_theme is not None
+                and selected_theme.status == PAGE_VERSION_STATUS_READY
+                and selected_theme.working_theme is not None
+            ),
             default_slug=themes.get_theme(),
         )
 
@@ -80,16 +93,40 @@ def init_themes_page_routes(app: Flask):
             abort(404)
         return _render_page(slug)
 
+    def _hx_refresh():
+        # Theme CSS lives on <html data-theme> / the linked stylesheet, outside any
+        # swappable fragment, so ask htmx for a full page refresh.
+        response = make_response("", 204)
+        response.headers["HX-Refresh"] = "true"
+        return response
+
     @app.route("/themes/<slug>/default", methods=["POST"])
     def themes_set_default(slug: str):
         if not themes.theme_exists(slug):
             return jsonify({"error": f"Unknown theme: {slug}"}), 400
         themes.set_theme(slug)
-        # The theme lives on <html data-theme>, outside any swappable
-        # fragment, so ask htmx for a full page refresh.
-        response = make_response("", 204)
-        response.headers["HX-Refresh"] = "true"
-        return response
+        return _hx_refresh()
+
+    @app.route("/themes/<slug>/publish", methods=["POST"])
+    def themes_publish(slug: str):
+        """Save a finished generation: promote the working draft into the published
+        theme the app serves. Enabled only when a READY draft exists."""
+        theme = themes.get_custom_theme(slug)
+        if theme is None:
+            abort(404)
+        if theme.status != PAGE_VERSION_STATUS_READY or theme.working_theme is None:
+            return jsonify({"error": "No theme draft to publish."}), 409
+        themes.publish_theme(slug)
+        return _hx_refresh()
+
+    @app.route("/themes/<slug>/discard", methods=["POST"])
+    def themes_discard(slug: str):
+        """Drop a finished generation's draft and keep the published theme as-is."""
+        theme = themes.get_custom_theme(slug)
+        if theme is None:
+            abort(404)
+        themes.discard_theme_draft(slug)
+        return _hx_refresh()
 
     @app.route("/themes/create", methods=["POST"])
     def themes_create():

@@ -3,7 +3,7 @@ dynamic /themes/<slug>/*.css routes, and selectable alongside built-ins."""
 import pytest
 
 from yaffo import themes
-from yaffo.db.models import PAGE_VERSION_STATUS_ACCEPTED
+from yaffo.db.models import PAGE_VERSION_STATUS_ACCEPTED, PAGE_VERSION_STATUS_READY
 from yaffo.themes import CustomTheme, ThemeAssets
 
 TOKENS = '[data-theme="vaporwave"] { --color-accent: #ff71ce; --color-bg: #05ffa1; }'
@@ -50,6 +50,42 @@ def test_save_get_list_roundtrip(app):
     assert themes.get_custom_theme("vaporwave").label == "Vapor Wave 2"
     slugs = [theme.slug for theme in themes.list_custom_themes()]
     assert slugs.count("vaporwave") == 1  # updated in place, not duplicated
+
+
+def _with_working_draft(slug="vaporwave", tokens='[data-theme="vaporwave"] { --color-bg: #000; }'):
+    """Save the vaporwave theme carrying a finished working draft (status READY)."""
+    themes.save_custom_theme(_vaporwave(status=PAGE_VERSION_STATUS_READY))
+    theme = themes.get_custom_theme(slug)
+    theme.working_theme = ThemeAssets(tokens_css=tokens)
+    themes.save_custom_theme(theme)
+    return slug
+
+
+def test_publish_theme_promotes_working_to_published(app):
+    slug = _with_working_draft()
+    themes.publish_theme(slug)
+
+    theme = themes.get_custom_theme(slug)
+    assert theme.status == PAGE_VERSION_STATUS_ACCEPTED
+    assert theme.working_theme is None
+    assert "--color-bg: #000;" in theme.published_theme.tokens_css
+
+
+def test_publish_theme_without_draft_raises(app):
+    themes.save_custom_theme(_vaporwave())  # ACCEPTED, no working draft
+    with pytest.raises(ValueError, match="no working draft"):
+        themes.publish_theme("vaporwave")
+
+
+def test_discard_theme_draft_reverts_to_published(app):
+    slug = _with_working_draft()
+    published_before = themes.get_custom_theme(slug).published_theme.tokens_css
+
+    themes.discard_theme_draft(slug)
+    theme = themes.get_custom_theme(slug)
+    assert theme.status == PAGE_VERSION_STATUS_ACCEPTED
+    assert theme.working_theme is None
+    assert theme.published_theme.tokens_css == published_before
 
 
 def test_builtins_unaffected_by_custom_registry(app):
@@ -119,6 +155,44 @@ def test_theme_css_serves_custom_tokens_and_skin(app, client):
     assert TOKENS in response.text
     assert SKIN in response.text
     assert response.headers["Cache-Control"] == "no-store"
+
+
+def test_preview_css_serves_working_draft_when_present(app, client):
+    _with_working_draft()  # vaporwave with a #000 bg draft pending
+    response = client.get("/themes/vaporwave/preview.css")
+    assert response.status_code == 200
+    assert "--color-bg: #000;" in response.text  # the draft, not the published tokens
+    assert TOKENS not in response.text
+
+
+def test_preview_css_falls_back_to_published_without_draft(app, client):
+    themes.save_custom_theme(_vaporwave())  # no working draft
+    response = client.get("/themes/vaporwave/preview.css")
+    assert response.status_code == 200
+    assert TOKENS in response.text
+
+
+def test_preview_css_serves_builtin(client):
+    response = client.get("/themes/neobrutalist/preview.css")
+    assert response.status_code == 200
+    assert '[data-theme="neobrutalist"]' in response.text
+
+
+def test_preview_css_unknown_slug_404s(client):
+    assert client.get("/themes/nope/preview.css").status_code == 404
+
+
+def test_themes_page_renders_as_the_viewed_theme(app, client):
+    themes.save_custom_theme(_vaporwave())  # not the active default
+    page = client.get("/themes/vaporwave").data.decode()
+    assert 'data-theme="vaporwave"' in page  # the page previews the theme it's viewing
+    assert "/themes/vaporwave/preview.css" in page  # via the preview stylesheet
+
+
+def test_themes_page_preview_reflects_working_draft(app, client):
+    _with_working_draft()
+    css = client.get("/themes/vaporwave/preview.css").text
+    assert "--color-bg: #000;" in css  # the page's preview sheet serves the draft
 
 
 def test_theme_css_unknown_slug_404s(client):

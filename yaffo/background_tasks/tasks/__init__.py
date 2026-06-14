@@ -7,6 +7,7 @@ from yaffo.background_tasks.tasks.complete_job import complete_job_task
 from yaffo.background_tasks.tasks.find_duplicates import find_duplicates_task
 from yaffo.background_tasks.tasks.remove_duplicates import remove_duplicates_task
 from yaffo.background_tasks.tasks.generate_page import generate_page_task
+from yaffo.background_tasks.tasks.generate_theme import generate_theme_task
 
 # Re-export utilities for backward compatibility
 from yaffo.background_tasks.utils import (
@@ -28,6 +29,7 @@ __all__ = [
     'find_duplicates_task',
     'remove_duplicates_task',
     'generate_page_task',
+    'generate_theme_task',
     # Utilities (for backward compatibility)
     'get_job_status',
     'get_version_status',
