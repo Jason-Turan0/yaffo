@@ -1,4 +1,6 @@
 import math
+from pathlib import Path
+
 import requests
 from flask import Flask, render_template, request, jsonify
 from sqlalchemy import distinct, func
@@ -147,6 +149,10 @@ def init_home_routes(app: Flask):
                 for face in photo.faces
                 for person in face.people
             })
+            # Split the stored path into name + folder for the hover details
+            file_path = Path(photo.full_file_path) if photo.full_file_path else None
+            photo.file_name = file_path.name if file_path else ""
+            photo.folder = str(file_path.parent) if file_path else ""
 
         # Get distinct tag names and location names
         distinct_tag_names = (

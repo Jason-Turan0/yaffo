@@ -34,9 +34,37 @@
         <div class="photo-grid">
             {% for photo in photos %}
             <div class="photo-card" onclick="window.open('{{ url_for('photo_view', photo_id=photo.id) }}', '_blank')">
-                <img src="{{ url_for('photo', photo_id=photo.id) }}"
-                     data-fallback="{{ url_for('placeholder') }}"
-                     alt="Photo from {{ photo.date_taken | format_date ('date') }}">
+                <div class="photo-thumb">
+                    <img src="{{ url_for('photo', photo_id=photo.id) }}"
+                         data-fallback="{{ url_for('placeholder') }}"
+                         alt="Photo from {{ photo.date_taken | format_date ('date') }}">
+                    <dl class="photo-hover">
+                        <div class="photo-hover-row">
+                            <dt>Name</dt>
+                            <dd class="photo-hover-path" title="{{ photo.full_file_path }}">{{ photo.file_name }}</dd>
+                        </div>
+                        <div class="photo-hover-row">
+                            <dt>Folder</dt>
+                            <dd class="photo-hover-path" title="{{ photo.folder }}">{{ photo.folder }}</dd>
+                        </div>
+                        <div class="photo-hover-row">
+                            <dt>Taken</dt>
+                            <dd>{{ photo.date_taken | format_date('datetime') if photo.date_taken else 'Unknown date' }}</dd>
+                        </div>
+                        {% if photo.location_name %}
+                        <div class="photo-hover-row">
+                            <dt>Location</dt>
+                            <dd>{{ photo.location_name }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if photo.latitude is not none and photo.longitude is not none %}
+                        <div class="photo-hover-row">
+                            <dt>Coordinates</dt>
+                            <dd>{{ '%.5f'|format(photo.latitude) }}, {{ '%.5f'|format(photo.longitude) }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
                 <div class="photo-info">
                     <div class="photo-date">{{ photo.date_taken | format_date ("date")  if photo.date_taken else 'Unknown date' }}</div>
                     {% if photo.people|length > 0 %}

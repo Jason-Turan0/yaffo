@@ -61,3 +61,16 @@ def test_blank_path_filter_matches_all(client, photo_ids):
     response = client.get("/?path=%20%20")  # whitespace only
 
     assert _rendered_ids(response.data.decode()) == set(photo_ids.values())
+
+
+def test_card_hover_details_split_name_and_folder(client, photo_ids):
+    body = client.get("/").data.decode()
+
+    assert "photo-hover" in body
+    assert "<dt>Name</dt>" in body
+    assert "<dt>Folder</dt>" in body
+    # the path is split into file name + parent folder
+    assert ">IMG_1234.jpg</dd>" in body
+    assert ">/media/organized/2021</dd>" in body
+    assert ">vacation_beach.png</dd>" in body
+    assert ">/media/organized/2020</dd>" in body

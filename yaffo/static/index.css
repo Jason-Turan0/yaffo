@@ -24,11 +24,57 @@
     box-shadow: var(--shadow-lg);
 }
 
+.photo-thumb {
+    position: relative;
+}
+
 .photo-card img {
     width: 100%;
     height: 250px;
     object-fit: cover;
     display: block;
+}
+
+.photo-hover {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    background: var(--color-surface-inverse);
+    color: var(--color-text-inverse);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.photo-card:hover .photo-hover {
+    opacity: 1;
+}
+
+.photo-hover-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.photo-hover-row dt {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.65;
+}
+
+.photo-hover-row dd {
+    margin: 0;
+    font-size: var(--font-size-sm);
+}
+
+.photo-hover-path {
+    font-family: var(--font-mono);
+    word-break: break-all;
 }
 
 .photo-info {
