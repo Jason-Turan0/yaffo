@@ -23,13 +23,18 @@ class IndexJobs:
     index_job_id: str
 
 
-def enqueue_index_jobs(session: Session, files_to_index: list[str]) -> IndexJobs:
+def enqueue_index_jobs(
+    session: Session, files_to_index: list[str], automation_id: int | None = None
+) -> IndexJobs:
     """Create import/index Jobs for the given files and dispatch the Huey tasks.
 
     Files not already present are imported; files not already INDEXED are
     (re)indexed. Shared by the index-photos route and the file-system watcher so
     both schedule work identically. The caller owns the session and any other
     work (orphan cleanup); this commits the two Job rows before dispatching.
+
+    `automation_id` tags the Jobs as a run of that automation (NULL for
+    user-initiated syncs), so the job machinery doubles as the run history.
     """
     existing = {
         full_path: status
@@ -50,6 +55,7 @@ def enqueue_index_jobs(session: Session, files_to_index: list[str]) -> IndexJobs
         id=import_job_id,
         name='import_photos',
         status=JOB_STATUS_PENDING,
+        automation_id=automation_id,
         task_count=len(files_to_import),
         message='Imported {totalCount}/{taskCount} photos',
         completed_count=0,
@@ -61,6 +67,7 @@ def enqueue_index_jobs(session: Session, files_to_index: list[str]) -> IndexJobs
         id=index_job_id,
         name='index_photos',
         status=JOB_STATUS_PENDING,
+        automation_id=automation_id,
         task_count=len(files_needing_indexing),
         message='Indexed {totalCount}/{taskCount} photos',
         completed_count=0,

@@ -88,21 +88,25 @@ def perform_sync(
     files_to_index: list[str],
     orphaned_photo_ids: list[int],
     thumbnail_dir: Path,
+    automation_id: int | None = None,
 ) -> IndexJobs:
     """Apply a sync: drop orphaned rows + thumbnails, then enqueue index jobs.
 
     The single action behind both the manual sync button and the scheduled task,
     so both create the same import/index Job rows the index-photos UI displays.
+    `automation_id` tags those Jobs as a run of that automation (NULL when a user
+    triggers the sync by hand).
     """
     delete_orphaned_photos(session, orphaned_photo_ids)
     delete_orphaned_thumbnails(session, thumbnail_dir)
-    return enqueue_index_jobs(session, files_to_index)
+    return enqueue_index_jobs(session, files_to_index, automation_id=automation_id)
 
 
-def run_file_sync(session: Session) -> IndexJobs | None:
+def run_file_sync(session: Session, automation_id: int | None = None) -> IndexJobs | None:
     """Unattended full reconcile for the scheduled task: scan the configured
     media dirs and run the same sync the user would trigger by hand. Returns the
-    created Jobs, or None when nothing is configured or already in sync."""
+    created Jobs, or None when nothing is configured or already in sync.
+    `automation_id` tags the created Jobs as that automation's run."""
     media_dirs = get_media_dirs(session)
     thumbnail_dir = get_thumbnail_dir(session)
     if not media_dirs:
@@ -126,5 +130,6 @@ def run_file_sync(session: Session) -> IndexJobs | None:
         f"{len(scan.orphaned)} orphan rows to remove"
     )
     return perform_sync(
-        session, scan.files_to_index, scan.orphaned_photo_ids, thumbnail_dir
+        session, scan.files_to_index, scan.orphaned_photo_ids, thumbnail_dir,
+        automation_id=automation_id,
     )
