@@ -202,6 +202,15 @@
     vertical-align: top;
 }
 
+/* When the photo fails and the data-fallback placeholder is swapped in, the SVG may
+   carry no intrinsic width/height (e.g. a custom theme's). In this shrink-wrapping
+   inline-block container that collapses the <img> to 0×0, so give the placeholder a
+   fixed 4:3 frame to display in. */
+.photo-main[src$="/placeholder"] {
+    width: min(420px, 100%);
+    aspect-ratio: 4 / 3;
+}
+
 .face-overlay {
     position: absolute;
     top: 0;

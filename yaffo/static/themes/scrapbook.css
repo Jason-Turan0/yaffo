@@ -273,7 +273,6 @@
 [data-theme="scrapbook"] .sidebar,
 [data-theme="scrapbook"] .settings-section,
 [data-theme="scrapbook"] .editor-card {
-    position: relative;
     box-shadow: var(--shadow-lg);
 }
 
