@@ -6,7 +6,9 @@ from itertools import batched
 from sqlalchemy.orm import Session
 
 from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
-from yaffo.background_tasks.tasks import index_photo_task, import_photo_task, schedule_job_completion
+from yaffo.background_tasks.tasks.index_photo import index_photo_task
+from yaffo.background_tasks.tasks.import_photo import import_photo_task
+from yaffo.background_tasks.utils import schedule_job_completion
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__, 'background_tasks')

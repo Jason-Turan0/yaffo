@@ -2,11 +2,9 @@ from yaffo.db import db
 from pathlib import Path
 
 from yaffo.utils import settings
+from yaffo.utils.index_photos import is_system_file  # re-exported for route modules
 
-
-def is_system_file(filename: str) -> bool:
-    system_files = {'.DS_Store', 'Thumbs.db', 'desktop.ini', '.Spotlight-V100', '.Trashes', '.fseventsd'}
-    return filename.startswith('._') or filename in system_files
+__all__ = ["is_system_file", "get_media_dirs", "get_thumbnail_dir"]
 
 
 def get_media_dirs() -> list[Path]:

@@ -27,6 +27,13 @@ logger = get_logger(__name__, 'background_tasks')
 _EXIFTOOL_PATH = get_exiftool_path()
 _HAS_EXIFTOOL = is_exiftool_available()
 
+SYSTEM_FILES = {'.DS_Store', 'Thumbs.db', 'desktop.ini', '.Spotlight-V100', '.Trashes', '.fseventsd'}
+
+
+def is_system_file(filename: str) -> bool:
+    return filename.startswith('._') or filename in SYSTEM_FILES
+
+
 def get_photo_files(root: Path) -> List[Path]:
     return [
         p for p in root.rglob("*")

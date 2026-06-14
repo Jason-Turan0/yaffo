@@ -189,6 +189,52 @@ class ApplicationSettings(db.Model):
     value = db.Column(db.String)
 
 
+# `action` values for TaskSchedule rows: the registered handler the dispatcher
+# enqueues (see background_tasks.actions.ACTIONS). Action *types* are fixed at
+# import time; schedule *rows* are created freely at runtime.
+TASK_ACTION_FILE_SYNC = "file_sync"
+
+
+class TaskSchedule(db.Model):
+    """A runtime-created cron schedule for a background action.
+
+    A single dispatcher (@huey.periodic_task firing every minute) reads this
+    table, fires every row whose `next_run_at` has passed, and advances
+    `next_run_at` from `cron` -- so schedules can be created/edited/disabled at
+    runtime with no consumer restart and no new task registration. `action`
+    names a handler in background_tasks.actions.ACTIONS; `args` is its JSON
+    payload. `next_run_at` (not exact cron-matching) is what makes firing robust
+    to dispatcher latency: a due row still fires on the next tick after its slot.
+    """
+
+    __tablename__ = "task_schedules"
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String, unique=True, nullable=False)
+    name = db.Column(db.String, nullable=False)
+    action = db.Column(db.String, nullable=False)
+    args = db.Column(db.JSON, nullable=True)
+    enabled = db.Column(db.Boolean, nullable=False, default=False)
+    cron = db.Column(db.String, nullable=False)
+    next_run_at = db.Column(db.DateTime, nullable=True)
+    last_run_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'key': self.key,
+            'name': self.name,
+            'action': self.action,
+            'args': self.args,
+            'enabled': self.enabled,
+            'cron': self.cron,
+            'next_run_at': self.next_run_at.isoformat() if self.next_run_at else None,
+            'last_run_at': self.last_run_at.isoformat() if self.last_run_at else None,
+        }
+
+
 # PageVersion generation state machine (see docs/ai-page-builder-async-generation.md).
 # A version is either "working" (IN_PROGRESS/READY/FAILED) or a committed snapshot
 # (ACCEPTED); CANCELLED is transient — cancelled versions are deleted.

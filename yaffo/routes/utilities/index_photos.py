@@ -1,19 +1,14 @@
 from flask import render_template, Flask, request, jsonify
 from yaffo.db import db
-from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED
-from yaffo.common import PHOTO_EXTENSIONS
-from pathlib import Path
+from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING
 
-from yaffo.utils.index_photos import delete_orphaned_photos, delete_orphaned_thumbnails
-from yaffo.utils.index_jobs import enqueue_index_jobs
-from yaffo.routes.utilities.common import is_system_file, get_media_dirs, get_thumbnail_dir
+from yaffo.utils.file_sync import perform_sync, scan_media_dirs
+from yaffo.routes.utilities.common import get_media_dirs, get_thumbnail_dir
 
 
 def init_index_photos_routes(app: Flask):
     @app.route("/utilities/index-photos", methods=["GET"])
     def utilities_index_photos():
-        filesystem_photos = []
-        orphaned_db_entries = []
         warnings = []
 
         media_dirs = get_media_dirs()
@@ -45,40 +40,7 @@ def init_index_photos_routes(app: Flask):
 
         can_sync = len(media_dirs) > 0 and all(d.exists() for d in media_dirs) and thumbnail_dir is not None
 
-        db_photos = db.session.query(Photo.id, Photo.full_file_path, Photo.status).all()
-
-        indexed_paths = {photo[1] for photo in db_photos if photo[2] == PHOTO_STATUS_INDEXED or photo[2] == PHOTO_STATUS_SYNCED}
-
-        filesystem_paths = set()
-        for media_dir in media_dirs:
-            if media_dir.exists():
-                for photo_file in media_dir.rglob("*"):
-                    if photo_file.is_file() and photo_file.suffix.lower() in PHOTO_EXTENSIONS:
-                        if is_system_file(photo_file.name):
-                            continue
-
-                        if thumbnail_dir and photo_file.is_relative_to(thumbnail_dir):
-                            continue
-
-                        full_path = str(photo_file)
-                        filesystem_paths.add(full_path)
-
-                        if full_path not in indexed_paths:
-                            filesystem_photos.append({
-                                'filename': photo_file.name,
-                                'full_path': full_path
-                            })
-
-        for photo in db_photos:
-            photo_id, full_path, status = photo
-            if not Path(full_path).exists():
-                orphaned_db_entries.append({
-                    'id': photo_id,
-                    'full_path': full_path
-                })
-
-        filesystem_photos.sort(key=lambda x: x['full_path'])
-        orphaned_db_entries.sort(key=lambda x: x['full_path'])
+        scan = scan_media_dirs(db.session, media_dirs, thumbnail_dir)
 
         active_jobs = db.session.query(Job).filter(
             Job.status.in_([JOB_STATUS_PENDING, JOB_STATUS_RUNNING]),
@@ -87,11 +49,11 @@ def init_index_photos_routes(app: Flask):
 
         return render_template(
             "utilities/index_photos.html",
-            unindexed_photos=filesystem_photos,
-            orphaned_photos=orphaned_db_entries,
-            total_imported=len(db_photos),
-            total_indexed=len(indexed_paths),
-            total_filesystem=len(filesystem_paths),
+            unindexed_photos=scan.unindexed,
+            orphaned_photos=scan.orphaned,
+            total_imported=scan.total_imported,
+            total_indexed=scan.total_indexed,
+            total_filesystem=scan.total_filesystem,
             media_dirs=[str(d) for d in media_dirs],
             active_jobs=[job.to_dict_with_view_props() for job in active_jobs],
             warnings=warnings,
@@ -119,8 +81,5 @@ def init_index_photos_routes(app: Flask):
 
         thumbnail_dir.mkdir(parents=True, exist_ok=True)
 
-        delete_orphaned_photos(db.session, files_to_delete)
-        delete_orphaned_thumbnails(db.session, thumbnail_dir)
-
-        jobs = enqueue_index_jobs(db.session, files_to_index)
+        jobs = perform_sync(db.session, files_to_index, files_to_delete, thumbnail_dir)
         return jsonify({'job_id': jobs.import_job_id}), 202

@@ -126,6 +126,31 @@ def init_db():
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_application_settings_name ON application_settings(name)")
 
+    # Runtime-created cron schedules for background actions. A single dispatcher
+    # (background_tasks/tasks/dispatcher.py) fires every minute, runs rows whose
+    # next_run_at has passed, and advances next_run_at from `cron` -- so schedules
+    # are fully dynamic with no consumer restart. `action` names a handler in
+    # background_tasks/actions.py; `args` is its JSON payload.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS task_schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            action TEXT NOT NULL,
+            args TEXT,
+            enabled INTEGER NOT NULL DEFAULT 0,
+            cron TEXT NOT NULL,
+            next_run_at TIMESTAMP,
+            last_run_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        INSERT OR IGNORE INTO task_schedules (key, name, action, enabled, cron)
+        VALUES ('file_sync', 'File sync', 'file_sync', 0, '0 * * * *')
+    """)
+
 
     # The page builder is versioned: a page points at its live (published) version
     # and at most one in-flight (working) version; widgets + the conversation are
