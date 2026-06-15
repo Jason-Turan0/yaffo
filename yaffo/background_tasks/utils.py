@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
 
 from yaffo.db.models import (
     Job, JOB_STATUS_CANCELLED, Face, Person, JOB_STATUS_COMPLETED,
-    PageVersion, PAGE_VERSION_STATUS_CANCELLED, ApplicationSettings,
+    PageVersion, PAGE_VERSION_STATUS_CANCELLED, ApplicationSettings, Automation,
 )
 from yaffo.common import DB_PATH
 from yaffo.logging_config import get_logger
@@ -42,6 +42,19 @@ def get_version_status(version_id: int) -> str:
     finally:
         session.close()
         SessionFactory.remove()
+
+def get_automation_status(slug: str) -> str | None:
+    """Current generation status of an automation -- the cancel signal the
+    generate_automation task polls between agent iterations. A missing automation
+    (deleted mid-run) reads as None so the run stops."""
+    session = SessionFactory()
+    try:
+        row = session.query(Automation.status).filter_by(slug=slug).first()
+        return row[0] if row is not None else None
+    finally:
+        session.close()
+        SessionFactory.remove()
+
 
 def get_theme_status(slug: str) -> str:
     """Current generation status of a theme -- the cancel signal the

@@ -22,7 +22,9 @@ from yaffo.page_builder.model_clients import (
 )
 from yaffo.page_builder.prompt_generator import build_system_prompt
 from yaffo.page_builder.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
+from yaffo.page_builder.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
 from yaffo.page_builder.tool_providers import (
+    AutomationToolProvider,
     ContentBlock,
     DataQueryToolProvider,
     ThemeCatalogToolProvider,
@@ -232,6 +234,33 @@ def create_theme_builder_agent(
     client = AnthropicModelClient(
         model=model,
         system_prompt=build_template_builder_system_prompt(),
+        tools=to_anthropic_tools(providers),
+        api_key=api_key,
+        log_dir=Path.cwd() / "model_logs",
+    )
+    return Agent(client, providers, max_iterations=max_iterations)
+
+def create_automation_builder_agent(
+    slug: str,
+    *,
+    model: ModelAlias,
+    api_key: str,
+    session: Session,
+    max_iterations: int = 25,
+) -> Agent:
+    """Wire the agent for a custom automation: the write_automation_code tool (scoped
+    to `slug`, which persists the working draft via `session`) plus the data-query
+    tool so the model can inspect real data while writing, and the stable
+    automation-builder system prompt. `model` and `api_key` are required — the caller
+    resolves them — so neither this nor the client falls through to db.session or a
+    global key lookup."""
+    providers: list[ToolProvider] = [
+        DataQueryToolProvider(session=session),
+        AutomationToolProvider(slug, session=session),
+    ]
+    client = AnthropicModelClient(
+        model=model,
+        system_prompt=build_automation_builder_system_prompt(),
         tools=to_anthropic_tools(providers),
         api_key=api_key,
         log_dir=Path.cwd() / "model_logs",

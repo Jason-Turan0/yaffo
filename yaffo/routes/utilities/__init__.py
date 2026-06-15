@@ -6,6 +6,7 @@ from yaffo.routes.utilities.index_photos import init_index_photos_routes
 from yaffo.routes.utilities.organize_photos import init_organize_photos_routes
 from yaffo.routes.utilities.sync_metadata import init_sync_metadata_routes
 from yaffo.routes.utilities.remove_duplicates import init_remove_duplicates_routes
+from yaffo.routes.utilities.automations import init_automations_routes
 
 
 def init_utilities_routes(app: Flask):
@@ -15,3 +16,4 @@ def init_utilities_routes(app: Flask):
     init_sync_metadata_routes(app)
     init_organize_photos_routes(app)
     init_remove_duplicates_routes(app)
+    init_automations_routes(app)

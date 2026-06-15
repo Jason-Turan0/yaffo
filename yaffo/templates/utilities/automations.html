@@ -1,0 +1,116 @@
+{% extends "utilities/_base.html" %}
+{% from "components/chat_dialog.html" import chat_dialog %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Automations - Yaffo{% endblock %}
+
+{% block utility_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='utilities/automations.css') }}">
+{% endblock %}
+
+{% block utility_content %}
+    {% if not selected %}
+        <div class="empty-state">
+            <h2>No automation selected</h2>
+            <p>Pick one from the sidebar, or create one with “New automation”.</p>
+        </div>
+    {% else %}
+        {% set header_actions %}
+        <div class="automation-actions">
+            <button type="button" class="{{ 'btn-secondary' if selected.enabled else 'btn-primary' }}"
+                    hx-post="{{ url_for('automations_toggle_enabled', slug=selected.slug) }}"
+                    hx-swap="none">{{ 'Disable' if selected.enabled else 'Enable' }}
+            </button>
+            {% if not selected.is_system %}
+                <button type="button" id="delete-automation-button" class="btn-danger"
+                        data-icon="delete">Delete
+                </button>
+            {% endif %}
+        </div>
+        {% endset %}
+        {% call page_header(selected.name, actions=header_actions) %}
+            {{ 'A built-in automation that ships with Yaffo. System automations cannot be edited or deleted.'
+               if selected.is_system
+               else 'A custom automation built by the assistant.' }}
+        {% endcall %}
+
+        <div class="automation-detail">
+            <section class="automation-meta">
+                <h3 class="automation-section-title">Triggers</h3>
+                {% if selected.triggers %}
+                    <ul class="automation-triggers">
+                        {% for trigger in selected.triggers %}
+                            <li>
+                                {% if trigger.trigger_type == 'schedule' %}
+                                    Schedule <code>{{ trigger.cron }}</code>
+                                {% else %}
+                                    Event <code>{{ trigger.event_type }}</code>
+                                {% endif %}
+                                {% if not trigger.enabled %}<span class="automation-trigger-off">(off)</span>{% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="no-data">No triggers — this automation won't run until one is added.</p>
+                {% endif %}
+
+                <h3 class="automation-section-title">Code</h3>
+                {% if selected.published_code %}
+                    <pre class="automation-code thin-scrollbar"><code>{{ selected.published_code }}</code></pre>
+                {% else %}
+                    <p class="no-data">No published code yet.</p>
+                {% endif %}
+            </section>
+
+            <section class="chat-card automation-conversation">
+                {% if selected_has_draft %}
+                    <div class="automation-draft">
+                        <p class="automation-draft-text">The assistant has an unpublished draft for this automation.
+                            Publish it to make it live, or discard the draft.</p>
+                        <pre class="automation-code automation-draft-code thin-scrollbar"><code>{{ selected.working_code }}</code></pre>
+                        <div class="automation-draft-actions">
+                            <button type="button" class="btn-primary"
+                                    hx-post="{{ url_for('automations_publish', slug=selected.slug) }}"
+                                    hx-swap="none">Publish draft
+                            </button>
+                            <button type="button" class="btn-secondary"
+                                    hx-post="{{ url_for('automations_discard', slug=selected.slug) }}"
+                                    hx-swap="none">Discard
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
+                {{ chat_dialog(
+                    'automation-chat',
+                    'Conversation',
+                    'Describe what this automation should do and the assistant will write it.',
+                    'Describe what this automation should do…',
+                    messages=selected.messages,
+                    empty_text=('System automations are built-in and have no conversation.'
+                                if selected.is_system
+                                else 'No conversation yet — describe what you want and the assistant will build it.'),
+                    disabled=selected.is_system
+                ) }}
+            </section>
+        </div>
+
+        {% if not selected.is_system %}
+        <form id="delete-automation-form" method="POST"
+              action="{{ url_for('automations_delete', slug=selected.slug) }}" hidden></form>
+        {% endif %}
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+    {% if selected %}
+    <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
+    <script>
+        window.PHOTO_ORGANIZER.initAutomationDelete({{ selected.name | tojson }});
+        window.PHOTO_ORGANIZER.automationChat = window.PHOTO_ORGANIZER.initAutomationChat(
+            {{ selected_slug | tojson }},
+            {{ selected_status | tojson }},
+            window.APP_CONFIG
+        );
+    </script>
+    {% endif %}
+{% endblock %}

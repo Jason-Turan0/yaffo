@@ -1,50 +1,100 @@
 {% extends "base.html" %}
+{% from "components/modal.html" import render_modal %}
 
 {% block extra_styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='utilities/_base.css') }}">
-{% block utility_styles %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='utilities/_base.css') }}">
+    {% block utility_styles %}{% endblock %}
 {% endblock %}
 
-{% block content %}
-<div class="utilities-container">
-    <nav class="sidebar utilities-sidebar">
-        <h2>Utilities</h2>
-        <ul class="panel-nav">
-            <li>
-                <a href="{{ url_for('utilities_index_photos') }}"
-                   class="{% if request.endpoint == 'utilities_index_photos' %}active{% endif %}">
-                    Index Photos
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('utilities_organize_photos') }}"
-                   class="{% if request.endpoint == 'utilities_organize_photos' %}active{% endif %}">
-                    Organize Photos
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('utilities_auto_assign') }}"
-                   class="{% if request.endpoint == 'utilities_auto_assign' %}active{% endif %}">
-                    Auto-Assign People
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('utilities_sync_metadata') }}"
-                   class="{% if request.endpoint == 'utilities_sync_metadata' %}active{% endif %}">
-                    Sync Metadata to Files
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('utilities_remove_duplicates') }}"
-                   class="{% if request.endpoint in ['utilities_remove_duplicates', 'utilities_remove_duplicates_results'] %}active{% endif %}">
-                    Remove Duplicates
-                </a>
-            </li>
-        </ul>
-    </nav>
-
-    <div class="utilities-content">
-        {% block utility_content %}{% endblock %}
+{% macro render_new_automation_form() %}
+    <div class="form-group">
+        <label for="new-automation-name">Name</label>
+        <input type="text" id="new-automation-name" name="name" required
+               placeholder="e.g. Tag beach photos, Weekly cleanup">
+        <p class="hint-text">Starts empty — build it through a conversation, then publish.</p>
     </div>
-</div>
+{% endmacro %}
+
+{% macro automation_nav_list(automations) %}
+    <ul class="panel-nav">
+        {% for automation in automations %}
+            <li>
+                <a href="{{ url_for('automations_show', slug=automation.slug) }}"
+                   class="{% if automation.slug == selected_slug %}active{% endif %}">
+                    {{ automation.name }}
+                    {% if automation.enabled %}<span class="automation-nav-badge">on</span>{% endif %}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+{% endmacro %}
+
+{% block content %}
+    <div class="utilities-container">
+        <div class="utilities-sidebars">
+            <nav class="sidebar utilities-sidebar">
+                <h2>Utilities</h2>
+                <ul class="panel-nav">
+                    <li>
+                        <a href="{{ url_for('utilities_index_photos') }}"
+                           class="{% if request.endpoint == 'utilities_index_photos' %}active{% endif %}">
+                            Index Photos
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('utilities_organize_photos') }}"
+                           class="{% if request.endpoint == 'utilities_organize_photos' %}active{% endif %}">
+                            Organize Photos
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('utilities_auto_assign') }}"
+                           class="{% if request.endpoint == 'utilities_auto_assign' %}active{% endif %}">
+                            Auto-Assign People
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('utilities_sync_metadata') }}"
+                           class="{% if request.endpoint == 'utilities_sync_metadata' %}active{% endif %}">
+                            Sync Metadata to Files
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('utilities_remove_duplicates') }}"
+                           class="{% if request.endpoint in ['utilities_remove_duplicates', 'utilities_remove_duplicates_results'] %}active{% endif %}">
+                            Remove Duplicates
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <nav class="sidebar utilities-sidebar">
+                <h2>Automations</h2>
+                <h3 class="automations-nav-heading">System</h3>
+                {% if system_automations %}
+                    {{ automation_nav_list(system_automations) }}
+                {% else %}
+                    <p class="no-data">None</p>
+                {% endif %}
+
+                <h3 class="automations-nav-heading">Custom</h3>
+                {% if custom_automations %}
+                    {{ automation_nav_list(custom_automations) }}
+                {% else %}
+                    <p class="no-data">No custom automations yet</p>
+                {% endif %}
+
+                <button type="button" id="new-automation-button" class="btn-secondary new-automation-button"
+                        data-icon="add">New automation
+                </button>
+            </nav>
+        </div>
+
+        <div class="utilities-content">
+            {% block utility_content %}{% endblock %}
+        </div>
+    </div>
+
+    {# Shared across every utilities page so the sidebar's "New automation" works anywhere. #}
+    {{ render_modal('newAutomationModal', 'New Automation', url_for('automations_create'), render_new_automation_form, 'Create') }}
+    <script src="{{ url_for('static', filename='utilities/_base.js') }}"></script>
 {% endblock %}

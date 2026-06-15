@@ -14,7 +14,7 @@ import send2trash
 import os
 import shutil
 
-from yaffo.routes.utilities.common import is_system_file, get_thumbnail_dir
+from yaffo.routes.utilities.common import is_system_file, get_thumbnail_dir, automations_sidebar_context
 from yaffo.utils.file_system import show_file_dialog
 
 
@@ -155,7 +155,8 @@ def init_remove_duplicates_routes(app: Flask):
             "utilities/remove_duplicates.html",
             active_jobs=jobs_data,
             directories=[],
-            total_photos=0
+            total_photos=0,
+            **automations_sidebar_context(),
         )
 
     @app.route("/utilities/remove-duplicates-form", methods=["POST"])
@@ -231,6 +232,7 @@ def init_remove_duplicates_routes(app: Flask):
             job_id=job_id,
             action_type='trash',
             destination_folder='',
+            **automations_sidebar_context(),
         )
 
     @app.route("/utilities/remove-duplicates/results-form/<job_id>", methods=["POST"])

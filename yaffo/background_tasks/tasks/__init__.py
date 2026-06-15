@@ -12,6 +12,7 @@ from yaffo.background_tasks.tasks.file_sync import file_sync_task
 from yaffo.background_tasks.tasks.dispatcher import dispatch_scheduled_tasks
 from yaffo.background_tasks.tasks.dispatch_event import dispatch_event_task
 from yaffo.background_tasks.tasks.run_automation import run_automation_code_task
+from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
 
 # Re-export utilities for backward compatibility
 from yaffo.background_tasks.utils import (
@@ -38,6 +39,7 @@ __all__ = [
     'dispatch_scheduled_tasks',
     'dispatch_event_task',
     'run_automation_code_task',
+    'generate_automation_task',
     # Utilities (for backward compatibility)
     'get_job_status',
     'get_version_status',

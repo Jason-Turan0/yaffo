@@ -1,0 +1,96 @@
+/* Detail-view styles for a selected automation (the sidebar panel styles live in
+   utilities/_base.css, which loads on every utilities page). */
+
+.automation-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.automation-detail {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.automation-meta {
+    flex: 1;
+    min-width: 280px;
+}
+
+.automation-section-title {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+    margin: 0 0 8px;
+}
+
+.automation-meta .automation-section-title:not(:first-child) {
+    margin-top: 20px;
+}
+
+.automation-triggers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.automation-triggers li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    font-size: var(--font-size-sm);
+}
+
+.automation-triggers code {
+    background: var(--color-surface-sunken);
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+}
+
+.automation-trigger-off {
+    color: var(--color-text-muted);
+}
+
+.automation-code {
+    background: var(--color-surface-sunken);
+    padding: 12px;
+    border-radius: var(--radius-md);
+    overflow: auto;
+    max-height: 320px;
+    margin: 0;
+    font-size: var(--font-size-sm);
+}
+
+.automation-conversation {
+    flex: 1;
+    min-width: 320px;
+    max-width: 560px;
+}
+
+.automation-draft {
+    margin-bottom: 16px;
+    padding: 16px;
+    border: var(--border-width) solid var(--color-accent-soft-text);
+    border-radius: var(--radius-md);
+    background: var(--color-accent-soft);
+}
+
+.automation-draft-text {
+    margin: 0 0 12px;
+    color: var(--color-accent-soft-text);
+    font-size: var(--font-size-sm);
+}
+
+.automation-draft-code {
+    margin-bottom: 12px;
+    max-height: 200px;
+}
+
+.automation-draft-actions {
+    display: flex;
+    gap: 8px;
+}

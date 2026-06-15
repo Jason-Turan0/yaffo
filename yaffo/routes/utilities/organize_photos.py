@@ -8,7 +8,7 @@ from itertools import batched
 import uuid
 import json
 
-from yaffo.routes.utilities.common import is_system_file, get_thumbnail_dir
+from yaffo.routes.utilities.common import is_system_file, get_thumbnail_dir, automations_sidebar_context
 
 
 def init_organize_photos_routes(app: Flask):
@@ -21,7 +21,8 @@ def init_organize_photos_routes(app: Flask):
 
         return render_template(
             "utilities/organize_photos.html",
-            active_jobs=[job.to_dict_with_view_props() for job in active_jobs]
+            active_jobs=[job.to_dict_with_view_props() for job in active_jobs],
+            **automations_sidebar_context(),
         )
 
     @app.route("/utilities/organize-photos/preview", methods=["POST"])

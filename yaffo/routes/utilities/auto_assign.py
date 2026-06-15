@@ -8,6 +8,8 @@ import json
 
 from sqlalchemy.orm import joinedload
 
+from yaffo.routes.utilities.common import automations_sidebar_context
+
 
 def init_auto_assign_routes(app: Flask):
     @app.route("/utilities/auto-assign", methods=["GET"])
@@ -24,7 +26,8 @@ def init_auto_assign_routes(app: Flask):
             "utilities/auto_assign.html",
             people=[{"id": person.id, "name": person.name} for person in people],
             unassigned_count=unassigned_count,
-            active_jobs=[job.to_dict_with_view_props(has_results=True, results_route='utilities_auto_assign_results') for job in active_jobs]
+            active_jobs=[job.to_dict_with_view_props(has_results=True, results_route='utilities_auto_assign_results') for job in active_jobs],
+            **automations_sidebar_context(),
         )
 
     @app.route("/utilities/auto-assign-people/start", methods=["POST"])

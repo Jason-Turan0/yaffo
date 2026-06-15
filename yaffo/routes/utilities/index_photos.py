@@ -3,7 +3,7 @@ from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING
 
 from yaffo.utils.file_sync import perform_sync, scan_media_dirs
-from yaffo.routes.utilities.common import get_media_dirs, get_thumbnail_dir
+from yaffo.routes.utilities.common import get_media_dirs, get_thumbnail_dir, automations_sidebar_context
 
 
 def init_index_photos_routes(app: Flask):
@@ -49,6 +49,7 @@ def init_index_photos_routes(app: Flask):
 
         return render_template(
             "utilities/index_photos.html",
+            **automations_sidebar_context(),
             unindexed_photos=scan.unindexed,
             orphaned_photos=scan.orphaned,
             total_imported=scan.total_imported,

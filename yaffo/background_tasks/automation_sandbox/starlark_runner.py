@@ -36,6 +36,17 @@ class StarlarkResult:
     error: str | None = None
 
 
+def validate_starlark(code: str, *, filename: str = "automation.star") -> str | None:
+    """Parse-check Starlark without running it. Returns None when it parses, else the
+    error message. Used to validate authored code before it's persisted (the
+    write_automation_code tool), so syntax errors are caught at save time."""
+    try:
+        starlark.parse(filename, code, _DIALECT)
+        return None
+    except starlark.StarlarkError as exc:
+        return str(exc)
+
+
 def run_starlark(
     code: str,
     *,

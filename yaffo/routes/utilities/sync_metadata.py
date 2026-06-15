@@ -7,6 +7,8 @@ from itertools import batched
 import uuid
 import json
 
+from yaffo.routes.utilities.common import automations_sidebar_context
+
 
 def init_sync_metadata_routes(app: Flask):
     @app.route("/utilities/sync-metadata", methods=["GET"])
@@ -51,7 +53,8 @@ def init_sync_metadata_routes(app: Flask):
             total_photos=total_photos,
             photos_with_metadata=len(photos_with_metadata),
             photos_to_sync=photos_to_sync,
-            active_jobs=[job.to_dict_with_view_props() for job in active_jobs]
+            active_jobs=[job.to_dict_with_view_props() for job in active_jobs],
+            **automations_sidebar_context(),
         )
 
     @app.route("/utilities/sync-metadata/start", methods=["POST"])
