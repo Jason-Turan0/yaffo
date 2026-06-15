@@ -26,12 +26,12 @@ def run_automation(session: Session, automation: Automation, context=None) -> St
     (data_query, ...) bound to `session`; it can't reach anything else. Returns
     the StarlarkResult -- a bad script is data (success=False), never an
     exception, so the caller can record/log it without crashing the worker."""
-    if not automation.code:
-        logger.warning(f"automation '{automation.slug}' has no code to run")
-        return StarlarkResult(success=False, error="automation has no code")
+    if not automation.published_code:
+        logger.warning(f"automation '{automation.slug}' has no published code to run")
+        return StarlarkResult(success=False, error="automation has no published code")
 
     result = run_starlark(
-        automation.code,
+        automation.published_code,
         inputs={"ctx": _context_globals(context)},
         functions=build_host_functions(session),
         filename=f"{automation.slug}.star",

@@ -73,7 +73,7 @@ def seed_automations() -> None:
             is_system=False,
             enabled=True,
             handler=None,
-            code=_EVENT_CODE,
+            published_code=_EVENT_CODE,
             status=AUTOMATION_STATUS_READY,
             triggers=[AutomationTrigger(
                 trigger_type=TRIGGER_TYPE_EVENT,
@@ -89,7 +89,7 @@ def seed_automations() -> None:
             is_system=False,
             enabled=True,
             handler=None,
-            code=_SCHEDULE_CODE,
+            published_code=_SCHEDULE_CODE,
             status=AUTOMATION_STATUS_READY,
             triggers=[AutomationTrigger(
                 trigger_type=TRIGGER_TYPE_SCHEDULE,

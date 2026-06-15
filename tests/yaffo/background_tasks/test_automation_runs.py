@@ -35,7 +35,7 @@ def session(tmp_path):
 def _custom_automation(session, slug, code):
     automation = Automation(
         slug=slug, name=slug.title(), is_system=False, enabled=True,
-        handler=None, code=code,
+        handler=None, published_code=code,
     )
     session.add(automation)
     session.commit()

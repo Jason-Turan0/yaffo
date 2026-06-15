@@ -234,9 +234,12 @@ class Automation(db.Model):
     """A schedulable / event-driven unit of functionality (the definition).
 
     System automations (`is_system`) are code-backed via `handler` and locked in
-    the UI; custom automations carry AI-generated logic in `code` and a `status`.
-    `enabled` is the master switch; per-trigger toggles live on the triggers.
-    Runs are Job rows pointing back via jobs.automation_id."""
+    the UI; custom automations carry AI-generated Starlark. `published_code` is the
+    live code the dispatchers run; `working_code` is the in-progress draft the
+    builder edits before publishing (like a page's published vs working version).
+    `enabled` is the master switch; per-trigger toggles live on the triggers. Runs
+    are Job rows pointing back via jobs.automation_id; the build chat is the
+    Conversation rows pointing back via conversations.automation_id."""
 
     __tablename__ = "automations"
 
@@ -246,8 +249,9 @@ class Automation(db.Model):
     description = db.Column(db.String)
     is_system = db.Column(db.Boolean, nullable=False, default=False)
     enabled = db.Column(db.Boolean, nullable=False, default=False)
-    handler = db.Column(db.String)   # system: key into HANDLERS; custom: NULL
-    code = db.Column(db.Text)        # custom: AI-generated body; system: NULL
+    handler = db.Column(db.String)          # system: key into HANDLERS; custom: NULL
+    published_code = db.Column(db.Text)     # custom: the live Starlark; system: NULL
+    working_code = db.Column(db.Text)       # custom: the in-progress draft; system: NULL
     status = db.Column(db.String, nullable=False, default=AUTOMATION_STATUS_READY)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -256,6 +260,12 @@ class Automation(db.Model):
         "AutomationTrigger", back_populates="automation", cascade="all, delete-orphan"
     )
     jobs = db.relationship("Job", back_populates="automation")
+    messages = db.relationship(
+        "Conversation",
+        back_populates="automation",
+        cascade="all, delete-orphan",
+        order_by="Conversation.id",
+    )
 
     def to_dict(self):
         return {
@@ -433,7 +443,11 @@ class Conversation(db.Model):
     __tablename__ = "conversations"
 
     id = db.Column(db.Integer, primary_key=True)
-    version_id = db.Column(db.Integer, db.ForeignKey("page_versions.id", ondelete="CASCADE"), nullable=False)
+    # A conversation message belongs to exactly one owner: a page version (the page
+    # builder) or an automation (the automation builder). Both FKs are nullable;
+    # the owning feature sets one.
+    version_id = db.Column(db.Integer, db.ForeignKey("page_versions.id", ondelete="CASCADE"), nullable=True)
+    automation_id = db.Column(db.Integer, db.ForeignKey("automations.id", ondelete="CASCADE"), nullable=True)
     # CONVERSATION_TYPE_*: user | assistant | status | error. `status`/`error` are
     # display-only; only user/assistant are replayed to the model.
     type = db.Column(db.String, nullable=False)
@@ -441,3 +455,4 @@ class Conversation(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     version = db.relationship("PageVersion", back_populates="messages")
+    automation = db.relationship("Automation", back_populates="messages")

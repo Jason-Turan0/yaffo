@@ -139,7 +139,8 @@ def init_db():
             is_system INTEGER NOT NULL DEFAULT 0,
             enabled INTEGER NOT NULL DEFAULT 0,
             handler TEXT,
-            code TEXT,
+            published_code TEXT,
+            working_code TEXT,
             status TEXT NOT NULL DEFAULT 'READY',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -237,14 +238,17 @@ def init_db():
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS conversations (
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      version_id INTEGER NOT NULL,
+                      version_id INTEGER,
+                      automation_id INTEGER,
                       type TEXT NOT NULL,
                       content TEXT NOT NULL,
                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                      FOREIGN KEY(version_id) REFERENCES page_versions(id) ON DELETE CASCADE
+                      FOREIGN KEY(version_id) REFERENCES page_versions(id) ON DELETE CASCADE,
+                      FOREIGN KEY(automation_id) REFERENCES automations(id) ON DELETE CASCADE
                        )
                    """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_conversations_version_id ON conversations(version_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_conversations_automation_id ON conversations(automation_id)")
 
     conn.commit()
 

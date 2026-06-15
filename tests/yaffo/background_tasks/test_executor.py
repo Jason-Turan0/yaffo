@@ -15,7 +15,7 @@ pytestmark = pytest.mark.unit
 
 class _FakeAutomation:
     def __init__(self, code, slug="custom"):
-        self.code = code
+        self.published_code = code
         self.slug = slug
 
 

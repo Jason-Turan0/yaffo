@@ -19,7 +19,7 @@ def invoke_automation(automation: Automation, context: EventContext | None) -> b
         handler(automation, context)
         return True
 
-    if automation.code:
+    if automation.published_code:
         from yaffo.background_tasks.tasks.run_automation import run_automation_code_task
         payload = None if context is None else {
             "event_type": context.event_type,
@@ -31,6 +31,6 @@ def invoke_automation(automation: Automation, context: EventContext | None) -> b
 
     logger.warning(
         f"automation '{automation.slug}' has neither a known handler "
-        f"('{automation.handler}') nor code; skipping"
+        f"('{automation.handler}') nor published code; skipping"
     )
     return False
