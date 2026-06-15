@@ -19,6 +19,7 @@ setup(
         "Flask-SQLAlchemy==3.1.1",
         "croniter==6.2.2",
         "huey==2.5.2",
+        "starlark-pyo3==2026.1",
         "ImageHash==4.3.2",
         "invoke==2.2.0",
         "itsdangerous==2.2.0",

@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from yaffo.common import PHOTO_EXTENSIONS
 from yaffo.db.models import Photo, PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED
 from yaffo.logging_config import get_logger
-from yaffo.utils.index_jobs import IndexJobs, enqueue_index_jobs
+from yaffo.utils.index_jobs import enqueue_index_jobs
+from yaffo.utils.index_jobs_dto import IndexJobs
 from yaffo.utils.index_photos import (
     delete_orphaned_photos,
     delete_orphaned_thumbnails,

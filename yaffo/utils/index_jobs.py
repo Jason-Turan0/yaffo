@@ -1,26 +1,18 @@
 import json
 import uuid
-from dataclasses import dataclass
 from itertools import batched
 
 from sqlalchemy.orm import Session
 
 from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
-from yaffo.background_tasks.tasks.index_photo import index_photo_task
-from yaffo.background_tasks.tasks.import_photo import import_photo_task
 from yaffo.background_tasks.utils import schedule_job_completion
+from yaffo.utils.index_jobs_dto import IndexJobs
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__, 'background_tasks')
 
 IMPORT_BATCH_SIZE = 250
 INDEX_BATCH_SIZE = 10
-
-
-@dataclass(frozen=True)
-class IndexJobs:
-    import_job_id: str
-    index_job_id: str
 
 
 def enqueue_index_jobs(
@@ -35,7 +27,14 @@ def enqueue_index_jobs(
 
     `automation_id` tags the Jobs as a run of that automation (NULL for
     user-initiated syncs), so the job machinery doubles as the run history.
+
+    The import/index task functions are imported in-function (like the sibling
+    schedule_job_completion) so this module never imports the background_tasks
+    package at load time -- which is what would form a util<->tasks import cycle.
     """
+    from yaffo.background_tasks.tasks.index_photo import index_photo_task
+    from yaffo.background_tasks.tasks.import_photo import import_photo_task
+
     existing = {
         full_path: status
         for _id, full_path, status in session.query(

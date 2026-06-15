@@ -1,4 +1,5 @@
 from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, AUTOMATION_HANDLER_FILE_SYNC
@@ -23,7 +24,8 @@ def file_sync_task(automation_id: int | None = None):
 
 
 @register_handler(AUTOMATION_HANDLER_FILE_SYNC)
-def enqueue_file_sync(automation: Automation) -> None:
+def enqueue_file_sync(automation: Automation, context: EventContext | None = None) -> None:
     """Handler for the built-in file-sync automation: enqueue the task tagged
-    with the automation's id so its run Jobs link back."""
+    with the automation's id so its run Jobs link back. `context` is unused (a
+    full reconcile ignores the triggering event's subjects)."""
     file_sync_task(automation.id)

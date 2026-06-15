@@ -2,8 +2,8 @@ from datetime import datetime
 
 from huey import crontab
 
+from yaffo.background_tasks.automation_dispatch import invoke_automation
 from yaffo.background_tasks.config import huey
-from yaffo.background_tasks.registry import HANDLERS
 from yaffo.background_tasks.schedule import compute_next_run
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, AutomationTrigger, TRIGGER_TYPE_SCHEDULE
@@ -44,17 +44,9 @@ def dispatch_scheduled_tasks():
                 if trigger.next_run_at > now:
                     continue
 
-                automation = trigger.automation
-                handler = HANDLERS.get(automation.handler)
-                if handler is None:
-                    logger.warning(
-                        f"automation '{automation.slug}' has no runnable handler "
-                        f"('{automation.handler}'); skipping"
-                    )
-                else:
-                    handler(automation)
+                if invoke_automation(trigger.automation, None):
                     trigger.last_run_at = now
-                    logger.info(f"Dispatched automation '{automation.slug}'")
+                    logger.info(f"Dispatched automation '{trigger.automation.slug}'")
 
                 trigger.next_run_at = compute_next_run(trigger.cron, now)
             except Exception:

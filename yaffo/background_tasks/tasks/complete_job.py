@@ -3,6 +3,7 @@ import time
 from yaffo.db.models import Job, JOB_STATUS_CANCELLED, JOB_STATUS_COMPLETED
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.events import emit_job_completed_event
 from yaffo.background_tasks.utils import SessionFactory
 
 logger = get_logger(__name__, 'background_tasks')
@@ -43,6 +44,7 @@ def complete_job_task(job_id: str, max_wait_seconds: int = 30):
                     f"{job.completed_count} completed, {job.error_count} errors, "
                     f"{job.cancelled_count} cancelled"
                 )
+                emit_job_completed_event(session, job)
                 return
         except Exception as e:
             logger.error(f"Error checking job {job_id} completion: {e}", exc_info=True)
@@ -65,6 +67,7 @@ def complete_job_task(job_id: str, max_wait_seconds: int = 30):
                 f"Job {job_id} force-completed after {max_wait_seconds}s timeout. "
                 f"Status: {total_finished}/{job.task_count} tasks finished"
             )
+            emit_job_completed_event(session, job)
     except Exception as e:
         logger.error(f"Error force-completing job {job_id}: {e}", exc_info=True)
         session.rollback()

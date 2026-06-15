@@ -10,6 +10,8 @@ from yaffo.background_tasks.tasks.generate_page import generate_page_task
 from yaffo.background_tasks.tasks.generate_theme import generate_theme_task
 from yaffo.background_tasks.tasks.file_sync import file_sync_task
 from yaffo.background_tasks.tasks.dispatcher import dispatch_scheduled_tasks
+from yaffo.background_tasks.tasks.dispatch_event import dispatch_event_task
+from yaffo.background_tasks.tasks.run_automation import run_automation_code_task
 
 # Re-export utilities for backward compatibility
 from yaffo.background_tasks.utils import (
@@ -34,6 +36,8 @@ __all__ = [
     'generate_theme_task',
     'file_sync_task',
     'dispatch_scheduled_tasks',
+    'dispatch_event_task',
+    'run_automation_code_task',
     # Utilities (for backward compatibility)
     'get_job_status',
     'get_version_status',
