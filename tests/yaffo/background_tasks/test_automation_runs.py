@@ -1,0 +1,79 @@
+"""Unit tests for custom-automation run recording (background_tasks/automation_runs).
+
+run_and_record runs a custom automation's sandboxed code and writes the run to the
+Job table (tagged with automation_id) -- a COMPLETED job on success, a FAILED job
+with the error on a bad script. Run against a throwaway SQLite DB; data_query is
+faked so the script needn't hit real photo data.
+"""
+import json
+
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+
+from yaffo.background_tasks.automation_runs import run_and_record
+from yaffo.db import db
+from yaffo.db.models import (
+    Automation,
+    Job,
+    JOB_STATUS_COMPLETED,
+    JOB_STATUS_FAILED,
+)
+
+pytestmark = pytest.mark.unit
+
+
+@pytest.fixture
+def session(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    db.metadata.create_all(engine)
+    with Session(engine) as sess:
+        yield sess
+    engine.dispose()
+
+
+def _custom_automation(session, slug, code):
+    automation = Automation(
+        slug=slug, name=slug.title(), is_system=False, enabled=True,
+        handler=None, code=code,
+    )
+    session.add(automation)
+    session.commit()
+    return automation
+
+
+def test_successful_run_writes_completed_job(session, monkeypatch):
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.automation_host.resolve_query",
+        lambda s, q: [{"id": 1}, {"id": 2}],
+    )
+    automation = _custom_automation(
+        session, "logger",
+        'rows = data_query({"source": "photos", "limit": 2})\n'
+        'for r in rows:\n    print(r)',
+    )
+
+    job = run_and_record(session, automation, None)
+
+    assert job.automation_id == automation.id
+    assert job.name == automation.slug
+    assert job.status == JOB_STATUS_COMPLETED
+    assert job.completed_count == 1
+    assert job.started_at is not None and job.completed_at is not None
+    # captured print output is persisted on the job
+    assert "output" in json.loads(job.job_data)
+    assert len(json.loads(job.job_data)["output"]) == 2
+
+    # and it's discoverable via the automation -> jobs relationship
+    assert session.query(Job).filter_by(automation_id=automation.id).count() == 1
+
+
+def test_bad_script_writes_failed_job(session):
+    automation = _custom_automation(session, "broken", "this is ( not valid starlark")
+
+    job = run_and_record(session, automation, None)
+
+    assert job.status == JOB_STATUS_FAILED
+    assert job.error_count == 1
+    assert job.error
+    assert job.automation_id == automation.id

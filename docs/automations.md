@@ -65,6 +65,14 @@ There is **no `automation_runs` table**. A run is a `Job` tagged with
 `jobs.automation_id` (`ON DELETE SET NULL`), so the existing job status / progress
 / UI machinery *is* the run history. `Automation.jobs` ↔ `Job.automation`.
 
+- **System** automations record via their concrete tasks (e.g. file_sync's
+  import/index Jobs are tagged with `automation_id`).
+- **Custom** automations record via `background_tasks/automation_runs.py`
+  `run_and_record`: a RUNNING Job (named by slug) is opened, the sandboxed code
+  runs, then the Job is finalised to COMPLETED/FAILED with the captured print
+  `output` in `job_data` (and `error` on failure). These Jobs are never handed to
+  `complete_job_task`, so they emit no events (and can't feed a trigger loop).
+
 Schema lives in `yaffo/scripts/init_db.py` (no migrations — edit + reseed; the
 `file_sync` system automation + its hourly schedule trigger are seeded there).
 
@@ -205,9 +213,6 @@ sync — tagged with `automation_id` as the run history.
 
 ## Deferred (flagged, not built)
 
-- **Run recording for custom automations.** Schedule/event custom runs enqueue the
-  executor but don't yet create a `Job` to represent the run; only file_sync's
-  index/import Jobs are tagged today. Wrap custom runs in a `Job` for UI history.
 - **Loop guard.** Now that an automation can both emit and subscribe to events, add
   self-trigger / depth protection. Deliberately *not* a blanket "don't emit from
   automation jobs" (that would mute the legitimate "react when file_sync indexes"
@@ -234,5 +239,6 @@ sync — tagged with `automation_id` as the run history.
 | Handler registry | `yaffo/background_tasks/registry.py` |
 | Sandbox | `yaffo/background_tasks/automation_sandbox/` |
 | Executor task | `yaffo/background_tasks/tasks/run_automation.py` |
+| Custom run → Job recording | `yaffo/background_tasks/automation_runs.py` |
 | Built-in file_sync | `yaffo/background_tasks/tasks/file_sync.py`, `yaffo/utils/file_sync.py` |
 | Tests | `tests/yaffo/background_tasks/` |
