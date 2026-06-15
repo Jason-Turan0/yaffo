@@ -2,6 +2,31 @@
     margin-bottom: 20px;
 }
 
+/* Inline label/control row — the horizontal counterpart to .form-group (which
+   stacks a full-width control under its label). .form-row puts a fixed-width
+   label column beside the control(s) so controls line up across stacked rows.
+   Vertical spacing is the container's job (e.g. a flex column with gap); set the
+   label width per container via --form-row-label-width. */
+.form-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.form-row-label {
+    flex: 0 0 var(--form-row-label-width, 5rem);
+    text-align: right;
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+/* Controls in a horizontal row size to content rather than filling the line. */
+.form-row .form-control {
+    width: auto;
+}
+
 .hint-text {
     font-size: var(--font-size-base);
     color: var(--color-text-muted);

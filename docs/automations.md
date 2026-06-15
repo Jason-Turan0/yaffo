@@ -1,12 +1,17 @@
 # Automations — Scheduled & Event-Driven Background Behavior (Architecture)
 
-> **Status:** built and unit-tested; not yet exposed in the UI. An **Automation**
-> is a named unit of functionality that runs on a **schedule** (cron) or in
-> response to a **domain event** (e.g. photos indexed). Two tiers, mirroring the
-> theme registry: **system** automations ship with the app and are code-backed;
-> **custom** automations are AI-generated and run sandboxed Starlark. This doc is
-> the reference for the data model, the two dispatch paths, the sandbox, and the
-> design decisions behind them.
+> **Status (2026-06-14):** runtime + builder + UI built and unit-tested. An
+> **Automation** is a named unit of functionality that runs on a **schedule**
+> (cron) or in response to a **domain event** (e.g. photos indexed). Two tiers,
+> mirroring the theme registry: **system** automations ship with the app and are
+> code-backed; **custom** automations are AI-generated and run sandboxed Starlark.
+> The AI builder chat + publish flow and the management UI are live under the
+> **Utilities** page (`/utilities/automations`). This doc is the reference for the
+> data model, the two dispatch paths, the sandbox, the builder, and the design
+> decisions behind them.
+>
+> **Not yet built:** the loop guard; a hard Starlark CPU/time limit. See
+> *Deferred* at the bottom.
 
 ## Overview
 
@@ -49,10 +54,17 @@ fully runtime-editable with no consumer restart.
 | `is_system` | ships with the app; route-locked against edit/delete (themes pattern) |
 | `enabled` | master switch |
 | `handler` | **system**: key into `background_tasks.registry.HANDLERS`; **custom**: `NULL` |
-| `code` | **custom**: AI-generated Starlark body; **system**: `NULL` |
+| `published_code` | **custom**: the **live** Starlark the dispatchers run; **system**: `NULL` |
+| `working_code` | **custom**: the in-progress draft the builder edits before publishing; **system**: `NULL` |
 | `status` | generation lifecycle for custom (`IN_PROGRESS/READY/FAILED/ACCEPTED`); system rows are `READY` |
 
-Relationships: `triggers` (cascade), `jobs` (run history — see below).
+`published_code` vs `working_code` is a page-style published/working split: the
+executor only ever runs `published_code`, so a draft can't fire until it's
+published (copy `working_code → published_code`, status `ACCEPTED`).
+
+Relationships: `triggers` (cascade), `jobs` (run history — see below), `messages`
+(the builder chat — `Conversation` rows via `conversations.automation_id`, which is
+nullable and shared with the page builder's `version_id`).
 
 ### `AutomationTrigger` — when it runs
 One automation → many triggers, so it can run on a schedule *and* react to events.
@@ -126,8 +138,8 @@ Both dispatchers funnel through `invoke_automation(automation, context) -> bool`
 
 - **system** — `automation.handler` is in `HANDLERS` → call the registered handler
   (which enqueues the concrete task, e.g. `file_sync_task`).
-- **custom** — `handler is None` and `code` set → enqueue `run_automation_code_task`
-  with the automation id + serialised context.
+- **custom** — `handler is None` and `published_code` set → enqueue
+  `run_automation_code_task` with the automation id + serialised context.
 - **misconfigured** — neither → log and return `False` (so the schedule dispatcher
   won't stamp `last_run_at`).
 
@@ -164,18 +176,73 @@ automation_sandbox/
   `data_query(query)` → `data_query_repository.resolve_query`. Add a capability =
   add one `HostFunction`.
 - **`executor.run_automation(session, automation, context)`** — runs
-  `automation.code` with `inputs={"ctx": …}` (the trigger context:
+  `automation.published_code` with `inputs={"ctx": …}` (the trigger context:
   `event_type`/`job_id`/`photo_ids`, empty for a schedule) and
   `functions=build_host_functions(session)`. Returns the `StarlarkResult`.
 - **`tasks/run_automation.py::run_automation_code_task`** — the registered huey
-  task wrapping the executor (loads the automation, rebuilds the `EventContext`).
+  task wrapping the executor (loads the automation, rebuilds the `EventContext`,
+  records the run as a Job via `run_and_record`).
 
-### Prompt / tool-call generation
-The future automation system prompt composes three reusable sources, none
-restated: `render_host_api()` (callables a script may invoke), `FIELDS_BY_SOURCE`
-from `data_query_repository` (the sources/columns `data_query` accepts — already
-used by the page-builder prompt), and the `EVENTS` catalog + trigger context (the
-`ctx` a script receives).
+The sandbox parses authored code with the **extended Starlark dialect**, so
+scripts may use top-level `for`/`if`/f-strings/lambda while staying hermetic
+(`load` is inert with no file loader; still no `while`/recursion/I/O).
+
+## The builder (AI chat + publish + UI)
+
+Custom automations are authored by an AI chat that writes their Starlark, mirroring
+the theme builder: async via huey, durable on the automation, browser observes by
+polling. Reuses the page-builder agent/model infrastructure.
+
+- **Persistence** (`db/repositories/automation_repository.py`): `add_message`
+  (Conversation rows via `automation_id`), `set_status`, `write_working_code`,
+  **`publish`** (working → published, `ACCEPTED`), `discard_draft`, `get_status`.
+- **Tool** (`page_builder/tool_providers/automation_tool.py`) —
+  `write_automation_code`: parse-checks via `validate_starlark` and persists into
+  `working_code`, returning syntax errors to the model to retry.
+- **Prompts** — `prompt_generator/automation_system_prompt.py` (stable: language
+  rules, the `ctx` contract, the host API via `render_host_api()`, data sources via
+  `FIELDS_BY_SOURCE`, the `EVENTS` catalog — all *derived*, none restated) +
+  `automation_user_prompt.py` (volatile: request + current code).
+- **Agent + task** — `agent.create_automation_builder_agent` (data-query +
+  write-code tools); `tasks/generate_automation.py::generate_automation_task` runs
+  it, persisting the conversation and driving `IN_PROGRESS → READY/FAILED`, with
+  cooperative cancel via `get_automation_status`.
+
+### UI (`/utilities/automations`)
+A first-class **utility** (not a top-level page). The Automations panel is the
+*second* stacked nav in the shared utilities sidebar
+(`templates/utilities/_base.html`), populated on every utilities page by
+`automations_sidebar_context()` (each utilities route spreads it — deliberately not
+a context processor). The detail (triggers, published code, chat, publish/discard,
+enable/delete) renders in `utility_content` (`templates/utilities/automations.html`).
+Routes: `routes/utilities/automations.py` at `/utilities/automations/...` (endpoint
+names kept as `automations_*`). The "New automation" modal lives in `_base.html`
+and is wired by `static/utilities/_base.js` (deferred to `DOMContentLoaded` since
+`modal.js` loads later in the body), so New works from any utilities page.
+
+**Trigger editing** is the HTMX server-rendered-fragment pattern (the one in
+`CLAUDE.md`): the `templates/utilities/automations_triggers.html` fragment is
+`{% include %}`d on first page render and re-rendered in place by the single
+`automations_triggers` endpoint (`POST .../<slug>/triggers`), which dispatches on
+an `action` from `hx-vals` (`save_schedule` / `add_event` / `remove` / `toggle`).
+`save_schedule` adds or edits in place — an `edit_trigger_id` form field (empty =
+add) tells the route which; a saved schedule leaves `next_run_at` NULL so the
+dispatcher (re)initialises it from the cron on the next tick (its "freshly enabled"
+path). Trigger edits are allowed on **system** automations too — a schedule is
+runtime state (the dispatcher reads rows live), so users can reschedule built-ins
+like `file_sync`, even though the automation's code/identity stays route-locked.
+
+**Capturing a cron** is the one place that breaks from server-rendered HTMX: the
+cron editor is a client-side component (`static/components/cron_builder.{js,css}`,
+mounted by `<div data-cron-builder>`) because a per-keystroke/per-dropdown server
+round-trip is the wrong fit for an interactive widget (cf. react-js-cron). It
+offers a preset list + a Period-driven single-value builder (Hourly/Daily/Weekly/
+Monthly) + an Advanced raw-cron escape hatch, composes one 5-field cron into a
+hidden `cron` input, and live-previews it via `describeCron` (which also fills the
+`data-cron` text on existing rows). The server stays the trust boundary: the
+`add_schedule` action only validates the submitted `cron` with `is_valid_cron`
+before persisting — no cron-building logic lives in Python. The component re-inits
+itself on load and on `htmx:afterSwap`, so it survives the fragment re-render.
 
 ## The one built-in: `file_sync`
 
@@ -216,13 +283,14 @@ sync — tagged with `automation_id` as the run history.
 - **Loop guard.** Now that an automation can both emit and subscribe to events, add
   self-trigger / depth protection. Deliberately *not* a blanket "don't emit from
   automation jobs" (that would mute the legitimate "react when file_sync indexes"
-  case).
+  case). Note custom-run Jobs are finalised synchronously and never go through
+  `complete_job_task`, so they don't emit events today — a partial mitigation.
 - **Hard CPU/time limit.** Starlark blocks unbounded loops/recursion, but a large
   bounded `for` can still burn CPU; `starlark-pyo3` exposes no step budget and a
   thread soft-timeout can't kill a runaway eval. Real hardening = subprocess +
   kill / resource limits before exposing arbitrary user scripts.
-- **Utilities page UI.** System vs custom lists (themes structure) + the AI-build
-  chat (reuse the page-builder `Conversation`/versioning pattern).
+- **Job Status** Show status of the automation on the UI
+- **Testing features** Ability to run the script generated by the AI from the UI and get a preview (no actions taken) of what the script would do.
 
 ## File map
 
@@ -241,4 +309,11 @@ sync — tagged with `automation_id` as the run history.
 | Executor task | `yaffo/background_tasks/tasks/run_automation.py` |
 | Custom run → Job recording | `yaffo/background_tasks/automation_runs.py` |
 | Built-in file_sync | `yaffo/background_tasks/tasks/file_sync.py`, `yaffo/utils/file_sync.py` |
-| Tests | `tests/yaffo/background_tasks/` |
+| Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |
+| Builder tool | `yaffo/page_builder/tool_providers/automation_tool.py` |
+| Builder prompts | `yaffo/page_builder/prompt_generator/automation_{system,user}_prompt.py` |
+| Builder agent + task | `yaffo/page_builder/agent.py`, `yaffo/background_tasks/tasks/generate_automation.py` |
+| UI routes | `yaffo/routes/utilities/automations.py` (+ `common.automations_sidebar_context`) |
+| UI templates / static | `yaffo/templates/utilities/{_base,automations,automations_triggers}.html`, `yaffo/static/utilities/{_base,automations}.{js,css}` |
+| Cron editor component | `yaffo/static/components/cron_builder.{js,css}` |
+| Tests | `tests/yaffo/background_tasks/`, `tests/yaffo/routes/test_automations_page.py` |

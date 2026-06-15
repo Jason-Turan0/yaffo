@@ -5,6 +5,7 @@
 {% block title %}Automations - Yaffo{% endblock %}
 
 {% block utility_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/cron_builder.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='utilities/automations.css') }}">
 {% endblock %}
 
@@ -37,22 +38,9 @@
         <div class="automation-detail">
             <section class="automation-meta">
                 <h3 class="automation-section-title">Triggers</h3>
-                {% if selected.triggers %}
-                    <ul class="automation-triggers">
-                        {% for trigger in selected.triggers %}
-                            <li>
-                                {% if trigger.trigger_type == 'schedule' %}
-                                    Schedule <code>{{ trigger.cron }}</code>
-                                {% else %}
-                                    Event <code>{{ trigger.event_type }}</code>
-                                {% endif %}
-                                {% if not trigger.enabled %}<span class="automation-trigger-off">(off)</span>{% endif %}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="no-data">No triggers — this automation won't run until one is added.</p>
-                {% endif %}
+                {% with triggers=selected.triggers|sort(attribute='id'), slug=selected.slug %}
+                    {% include "utilities/automations_triggers.html" %}
+                {% endwith %}
 
                 <h3 class="automation-section-title">Code</h3>
                 {% if selected.published_code %}
@@ -103,9 +91,11 @@
 
 {% block scripts %}
     {% if selected %}
+    <script src="{{ url_for('static', filename='components/cron_builder.js') }}"></script>
     <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
     <script>
         window.PHOTO_ORGANIZER.initAutomationDelete({{ selected.name | tojson }});
+        window.PHOTO_ORGANIZER.initScheduleEditor();
         window.PHOTO_ORGANIZER.automationChat = window.PHOTO_ORGANIZER.initAutomationChat(
             {{ selected_slug | tojson }},
             {{ selected_status | tojson }},

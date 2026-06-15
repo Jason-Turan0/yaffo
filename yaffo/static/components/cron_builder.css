@@ -1,0 +1,59 @@
+/* Styles for the cron editor component (components/cron_builder.js). Layout only;
+   all visual values come from design tokens. The label/control row layout is the
+   generic .form-row / .form-row-label from form.css; only the cron-specific bits
+   live here. */
+
+.cron-builder {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-sunken);
+}
+
+/* The cadence sub-fields (and the advanced raw input) sit inline on the Repeat
+   row: display:contents hoists each wrapper's controls into the row's flex flow,
+   so "Repeat [Monthly] on day [1] at [09]:[00]" reads on one line, while the
+   wrapper still toggles its whole group via .is-hidden. */
+.cron-fields-row,
+.cron-block-advanced {
+    display: contents;
+}
+
+/* An inline "label control" cluster within a row, e.g. "on [Monday]". */
+.cron-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cron-label {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.cron-raw {
+    min-width: 180px;
+    font-family: var(--font-mono);
+}
+
+.cron-colon {
+    color: var(--color-text-muted);
+}
+
+.cron-hint {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+    font-family: var(--font-mono);
+}
+
+.cron-preview {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}
+
+.cron-builder .is-hidden {
+    display: none;
+}

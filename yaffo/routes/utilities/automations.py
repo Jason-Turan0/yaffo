@@ -11,14 +11,19 @@ import re
 
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 
+from yaffo.background_tasks.schedule import is_valid_cron
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
 from yaffo.db import db
 from yaffo.db.models import (
     Automation,
+    AutomationTrigger,
     AUTOMATION_STATUS_ACCEPTED,
     AUTOMATION_STATUS_IN_PROGRESS,
     AUTOMATION_STATUS_READY,
     CONVERSATION_TYPE_USER,
+    EVENTS,
+    TRIGGER_TYPE_EVENT,
+    TRIGGER_TYPE_SCHEDULE,
 )
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.page_builder import llm_config
@@ -56,8 +61,25 @@ def init_automations_routes(app: Flask):
                 and selected.status == AUTOMATION_STATUS_READY
                 and selected.working_code is not None
             ),
+            events=EVENTS,
             **automations_sidebar_context(),
         )
+
+    def _render_triggers(automation: Automation, error: str | None = None):
+        return render_template(
+            "utilities/automations_triggers.html",
+            triggers=sorted(automation.triggers, key=lambda t: t.id),
+            slug=automation.slug,
+            events=EVENTS,
+            error=error,
+        )
+
+    def _find_trigger(automation: Automation, raw_id) -> AutomationTrigger | None:
+        try:
+            trigger_id = int(raw_id)
+        except (TypeError, ValueError):
+            return None
+        return next((t for t in automation.triggers if t.id == trigger_id), None)
 
     def _hx_refresh():
         response = make_response("", 204)
@@ -123,6 +145,72 @@ def init_automations_routes(app: Flask):
         automation.enabled = not automation.enabled
         db.session.commit()
         return _hx_refresh()
+
+    @app.route("/utilities/automations/validate-cron", methods=["GET"])
+    def automations_validate_cron():
+        """Authoritative cron check for the editor's Advanced field, so the client can
+        disable Save without reimplementing croniter. (Static path outranks the
+        `<slug>` rule in Werkzeug routing.)"""
+        return jsonify({"valid": is_valid_cron((request.args.get("cron") or "").strip())})
+
+    @app.route("/utilities/automations/<slug>/triggers", methods=["POST"])
+    def automations_triggers(slug: str):
+        """Single HTMX endpoint for trigger save/add-event/remove/toggle; dispatches
+        on the hx-vals action and re-renders the triggers fragment. Allowed on system
+        automations too: a schedule is runtime state (the dispatcher reads rows live),
+        so users can reschedule built-ins like file_sync."""
+        automation = repo.get_by_slug(db.session, slug)
+        if automation is None:
+            abort(404)
+        action = request.form.get("action")
+        error = None
+
+        if action == "save_schedule":
+            # The cron builder (cron_builder.js) composes the expression client-side
+            # and submits it in `cron`; the server is the trust boundary and only
+            # validates before persisting. `edit_trigger_id` distinguishes editing an
+            # existing schedule from adding one. A new (or rescheduled) trigger leaves
+            # next_run_at NULL so the dispatcher re-initialises it from the cron.
+            cron = (request.form.get("cron") or "").strip()
+            edit_id = request.form.get("edit_trigger_id") or ""
+            trigger = _find_trigger(automation, edit_id) if edit_id else None
+            if edit_id and trigger is None:
+                abort(404)
+            if not is_valid_cron(cron):
+                error = "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
+            elif trigger is not None:
+                trigger.cron = cron
+                trigger.next_run_at = None
+                db.session.commit()
+            else:
+                db.session.add(AutomationTrigger(
+                    automation_id=automation.id, trigger_type=TRIGGER_TYPE_SCHEDULE,
+                    enabled=True, cron=cron,
+                ))
+                db.session.commit()
+        elif action == "add_event":
+            event_type = (request.form.get("new_event_type") or "").strip()
+            if event_type not in EVENTS:
+                error = "Choose an event type."
+            else:
+                db.session.add(AutomationTrigger(
+                    automation_id=automation.id, trigger_type=TRIGGER_TYPE_EVENT,
+                    enabled=True, event_type=event_type,
+                ))
+                db.session.commit()
+        elif action in ("remove", "toggle"):
+            trigger = _find_trigger(automation, request.form.get("trigger_id"))
+            if trigger is None:
+                abort(404)
+            if action == "remove":
+                db.session.delete(trigger)
+            else:
+                trigger.enabled = not trigger.enabled
+            db.session.commit()
+        else:
+            return jsonify({"error": "Unknown trigger action."}), 400
+
+        return _render_triggers(automation, error)
 
     @app.route("/utilities/automations/<slug>/chat", methods=["POST"])
     def automations_chat(slug: str):

@@ -8,14 +8,12 @@
 
 .automation-detail {
     display: flex;
+    flex-direction: column;
     gap: 24px;
-    flex-wrap: wrap;
-    align-items: flex-start;
 }
 
 .automation-meta {
-    flex: 1;
-    min-width: 280px;
+    width: 100%;
 }
 
 .automation-section-title {
@@ -33,26 +31,96 @@
 
 .automation-triggers {
     list-style: none;
-    margin: 0;
+    margin: 0 0 12px;
     padding: 0;
 }
 
-.automation-triggers li {
+.automation-trigger-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 0;
+    gap: 8px;
+    padding: 6px 0;
     font-size: var(--font-size-sm);
 }
 
-.automation-triggers code {
+.automation-trigger-row.is-off {
+    opacity: 0.6;
+}
+
+.automation-trigger-kind {
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: var(--font-size-xs);
+    min-width: 60px;
+}
+
+.automation-trigger-event {
     background: var(--color-surface-sunken);
     padding: 1px 6px;
     border-radius: var(--radius-sm);
 }
 
-.automation-trigger-off {
+.automation-trigger-spacer {
+    flex: 1;
+}
+
+.automation-trigger-desc {
+    font-size: var(--font-size-sm);
+}
+
+.automation-trigger-error {
+    margin: 0 0 10px;
+    color: var(--color-danger);
+    font-size: var(--font-size-sm);
+}
+
+.automation-trigger-add {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.automation-add-title {
+    margin: 12px 0 0;
+    font-size: var(--font-size-sm);
     color: var(--color-text-muted);
+}
+
+.automation-add-title:first-child {
+    margin-top: 0;
+}
+
+/* Collapsed by default: show the "Add a schedule" button, hide the builder panel.
+   automations.js adds .is-editing to flip them. */
+.schedule-editor-panel {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.schedule-editor.is-editing .schedule-editor-panel {
+    display: flex;
+}
+
+.schedule-editor.is-editing .js-add-schedule {
+    display: none;
+}
+
+.schedule-editor-title {
+    margin-top: 0;
+}
+
+.automation-trigger-add-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.schedule-editor-error {
+    color: var(--color-danger);
+    font-size: var(--font-size-sm);
 }
 
 .automation-code {
@@ -66,9 +134,8 @@
 }
 
 .automation-conversation {
-    flex: 1;
-    min-width: 320px;
-    max-width: 560px;
+    width: 100%;
+    max-width: 720px;
 }
 
 .automation-draft {
