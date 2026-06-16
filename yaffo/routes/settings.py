@@ -170,7 +170,7 @@ def init_settings_routes(app: Flask):
 
     @app.route("/api/settings/select-folder", methods=["GET"])
     def select_folder():
-        result = show_file_dialog()
+        result = show_file_dialog(request.args.get("mode", "folder"))
         return jsonify({
             'success': result.success,
             'path': result.selected_path,

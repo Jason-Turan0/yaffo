@@ -328,59 +328,55 @@ def test_trigger_missing_id_404(app, client):
     assert resp.status_code == 404
 
 
-def test_test_endpoint_schedule_runs_code(app, client):
-    _add(app, published_code="print('ran')")
-    resp = client.post("/utilities/automations/a1/test")
-    assert resp.status_code == 200
-    data = resp.get_json()
-    assert data["success"] is True
-    assert data["code_source"] == "published"
-    assert data["context"] == {"type": "schedule"}
-    assert data["output"] == ["ran"]
-
-
-def test_test_endpoint_prefers_working_code(app, client):
-    _add(app, working_code="print('draft')", published_code="print('live')")
-    data = client.post("/utilities/automations/a1/test").get_json()
-    assert data["code_source"] == "working"
-    assert data["output"] == ["draft"]
-
-
-def test_test_endpoint_event_context_uses_photo_ids(app, client):
+def test_test_files_runs_against_photos_under_path(app, client):
     from yaffo.db.models import Photo
     _add(app, published_code="print(len(ctx['photo_ids']))")
-    _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="photo_indexed")
     with app.app_context():
-        db.session.add_all([Photo(full_file_path="/a.jpg"), Photo(full_file_path="/b.jpg")])
+        db.session.add_all([
+            Photo(full_file_path="/media/trip/a.jpg"),
+            Photo(full_file_path="/media/trip/b.jpg"),
+            Photo(full_file_path="/media/other/c.jpg"),
+        ])
         db.session.commit()
-    data = client.post("/utilities/automations/a1/test").get_json()
-    assert data["context"]["type"] == "event"
-    assert data["context"]["event_type"] == "photo_indexed"
+    data = client.post("/utilities/automations/a1/test-files", json={"path": "/media/trip"}).get_json()
+    assert data["context"]["type"] == "files"
     assert len(data["context"]["photo_ids"]) == 2
     assert data["output"] == ["2"]
 
 
-def test_test_endpoint_records_mutating_action_without_performing(app, client):
+def test_test_files_prefers_working_code(app, client):
+    _add(app, working_code="print('draft')", published_code="print('live')")
+    data = client.post("/utilities/automations/a1/test-files", json={"path": "/x"}).get_json()
+    assert data["code_source"] == "working"
+    assert data["output"] == ["draft"]
+
+
+def test_test_files_records_mutating_action_without_performing(app, client):
     from yaffo.db.models import Photo, Tag
-    _add(app, published_code="tag_photo(1, 'beach')")
+    _add(app, published_code="for pid in ctx['photo_ids']:\n    tag_photo(pid, 'beach')")
     with app.app_context():
-        db.session.add(Photo(full_file_path="/a.jpg"))
+        db.session.add(Photo(full_file_path="/media/a.jpg"))
         db.session.commit()
-    data = client.post("/utilities/automations/a1/test").get_json()
+    data = client.post("/utilities/automations/a1/test-files", json={"path": "/media/a.jpg"}).get_json()
     assert data["success"] is True
-    assert data["actions"][0]["summary"] == "Tag photo 1 as 'beach'"
+    assert data["actions"][0]["summary"] == "Tag a.jpg as 'beach'"
     assert data["actions"][0]["name"] == "tag_photo"
     with app.app_context():
         assert db.session.query(Tag).count() == 0  # dry run performed no tagging
 
 
-def test_test_endpoint_no_code_400(app, client):
+def test_test_files_requires_path(app, client):
+    _add(app, published_code="print('x')")
+    assert client.post("/utilities/automations/a1/test-files", json={}).status_code == 400
+
+
+def test_test_files_no_code_400(app, client):
     _add(app, working_code=None, published_code=None)
-    assert client.post("/utilities/automations/a1/test").status_code == 400
+    assert client.post("/utilities/automations/a1/test-files", json={"path": "/x"}).status_code == 400
 
 
-def test_test_endpoint_unknown_404(app, client):
-    assert client.post("/utilities/automations/nope/test").status_code == 404
+def test_test_files_unknown_404(app, client):
+    assert client.post("/utilities/automations/nope/test-files", json={"path": "/x"}).status_code == 404
 
 
 def test_cancel_settles_to_accepted(app, client):

@@ -34,8 +34,12 @@ window.PHOTO_ORGANIZER.initAutomationDetails = () => {
 // nothing (no Job recorded; the host surface is read-only).
 window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
     const button = document.getElementById('automation-test-button');
+    const filesButtons = document.querySelectorAll('.js-test-files');
     const resultEl = document.getElementById('automation-test-result');
     if (!button || !resultEl) return;
+
+    // The last file/folder picked; Test is disabled until one exists and reruns it.
+    let selection = null;
 
     const el = (tag, className, text) => {
         const node = document.createElement(tag);
@@ -44,12 +48,15 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
         return node;
     };
 
-    const describeContext = (ctx) => {
-        if (ctx.type === 'event') {
-            const n = (ctx.photo_ids || []).length;
-            return `Event ${ctx.event_type} · ${n} photo${n === 1 ? '' : 's'}`;
-        }
-        return 'Schedule · no context';
+    const photoCount = (ctx) => {
+        const n = (ctx.photo_ids || []).length;
+        return `${n} photo${n === 1 ? '' : 's'}`;
+    };
+
+    // Action name -> a generic label for a grouped run, e.g. "tag_photo" -> "Tag photo".
+    const humanize = (name) => {
+        const words = name.replace(/_/g, ' ');
+        return words.charAt(0).toUpperCase() + words.slice(1);
     };
 
     const render = (data) => {
@@ -57,8 +64,11 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
         resultEl.hidden = false;
         resultEl.classList.toggle('is-error', !data.success);
 
+        if (selection) {
+            resultEl.append(el('p', 'automation-test-meta', `Testing on ${selection.mode}: ${selection.path}`));
+        }
         resultEl.append(el('p', 'automation-test-meta',
-            `Ran ${data.code_source} code · ${describeContext(data.context)}`));
+            `Ran ${data.code_source} code · ${photoCount(data.context)}`));
         if (data.error) resultEl.append(el('pre', 'automation-test-error', data.error));
 
         const head = el('div', 'automation-test-actions-head');
@@ -74,15 +84,33 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
         resultEl.append(head);
 
         if (data.actions.length) {
+            // Collapse a run of the same action into one row with a × count; the
+            // per-item detail lives behind "Show details".
+            const groups = [];
+            data.actions.forEach((action) => {
+                const last = groups[groups.length - 1];
+                if (last && last[0].name === action.name) last.push(action);
+                else groups.push([action]);
+            });
+
             const table = el('table', 'automation-test-table');
             const tbody = el('tbody');
-            data.actions.forEach((action) => {
+            groups.forEach((group) => {
                 const row = el('tr');
-                row.append(el('td', 'test-action-summary', action.summary));
-                const args = (action.args || []).map((a) => JSON.stringify(a)).join(', ');
+                const summary = el('td', 'test-action-summary');
                 const detail = el('td', 'test-action-detail automation-test-advanced');
-                detail.append(el('code', null, `${action.name}(${args})`));
-                row.append(detail);
+                if (group.length === 1) {
+                    summary.textContent = group[0].summary;
+                    const args = (group[0].args || []).map((a) => JSON.stringify(a)).join(', ');
+                    detail.append(el('code', null, `${group[0].name}(${args})`));
+                } else {
+                    summary.append(document.createTextNode(`${humanize(group[0].name)} `));
+                    summary.append(el('span', 'automation-test-count', `× ${group.length}`));
+                    const list = el('ul', 'automation-test-group');
+                    group.forEach((action) => list.append(el('li', null, action.summary)));
+                    detail.append(list);
+                }
+                row.append(summary, detail);
                 tbody.append(row);
             });
             table.append(tbody);
@@ -98,12 +126,12 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
         }
     };
 
-    button.addEventListener('click', async () => {
-        const label = button.textContent;
-        button.disabled = true;
-        button.textContent = 'Running…';
+    const run = async (clicked, doFetch) => {
+        const label = clicked.textContent;
+        clicked.disabled = true;
+        clicked.textContent = 'Running…';
         try {
-            const response = await fetch(config.buildUrl('automations_test', { slug }), { method: 'POST' });
+            const response = await doFetch();
             const data = await response.json().catch(() => ({}));
             if (response.ok) {
                 render(data);
@@ -115,9 +143,50 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
         } catch {
             window.notification.error('Failed to run the test.');
         } finally {
-            button.disabled = false;
-            button.textContent = label;
+            clicked.disabled = false;
+            clicked.textContent = label;
         }
+    };
+
+    const runFiles = (clicked, path) => run(clicked, () =>
+        fetch(config.buildUrl('automations_test_files', { slug }), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path }),
+        }));
+
+    const setSelection = (path, mode) => {
+        selection = { path, mode };
+        button.disabled = false;
+    };
+
+    // Native picker (server-side), in the chosen mode (folder|file); returns the
+    // path or null (and surfaces any picker error).
+    const pickPath = async (mode) => {
+        try {
+            const picked = await (await fetch(`${config.urls.select_folder}?mode=${mode}`)).json();
+            if (picked.success && picked.path) return picked.path;
+            if (picked.error) window.notification.error(picked.error);
+        } catch {
+            window.notification.error('Failed to open the picker.');
+        }
+        return null;
+    };
+
+    // Test reruns the remembered selection (disabled until one is picked).
+    button.addEventListener('click', () => {
+        if (selection) runFiles(button, selection.path);
+    });
+
+    // Pick a file/folder, remember it, and run against it.
+    filesButtons.forEach((filesButton) => {
+        filesButton.addEventListener('click', async () => {
+            const mode = filesButton.dataset.mode;
+            const path = await pickPath(mode);
+            if (!path) return;
+            setSelection(path, mode);
+            runFiles(filesButton, path);
+        });
     });
 };
 

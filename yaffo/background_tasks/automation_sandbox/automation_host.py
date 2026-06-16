@@ -15,6 +15,7 @@ from typing import Any, Callable
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox import automation_actions as actions
+from yaffo.background_tasks.automation_sandbox import automation_compare as compare
 from yaffo.db.repositories.data_query_repository import resolve_query
 
 
@@ -23,15 +24,16 @@ class HostFunction:
     """One callable exposed to sandboxed scripts. `impl` takes the session as its
     first argument; the bound callable a script sees drops it. `signature`,
     `description`, `returns`, `example` are the agent docs. `summarize` turns a
-    call's args into a friendly one-line action for the test/preview UI. `mutating`
-    marks a capability that changes state -- recorded but NOT run in a test/preview."""
+    call's args into a friendly one-line action for the test/preview UI (it takes the
+    session so it can resolve ids to file names / person names). `mutating` marks a
+    capability that changes state -- recorded but NOT run in a test/preview."""
     name: str
     signature: str
     description: str
     returns: str
     example: str
     impl: Callable[..., Any]
-    summarize: Callable[[list[Any]], str] | None = None
+    summarize: Callable[[list[Any], Session], str] | None = None
     mutating: bool = False
 
 
@@ -39,7 +41,7 @@ def _data_query(session: Session, query: dict) -> Any:
     return resolve_query(session, query)
 
 
-def _summarize_data_query(args: list[Any]) -> str:
+def _summarize_data_query(args: list[Any], session: Session) -> str:
     query = args[0] if args and isinstance(args[0], dict) else {}
     return f"Looking up {query.get('source', 'data')}"
 
@@ -88,17 +90,47 @@ HOST_API: tuple[HostFunction, ...] = (
         mutating=True,
     ),
     HostFunction(
-        name="assign_person",
-        signature="assign_person(photo_id, person_name)",
+        name="assign_face",
+        signature="assign_face(face_id, person_id)",
         description=(
-            "Assign a person (by name, created if new) to every detected face in the "
-            "photo. Faces already assigned to someone are left as-is."
+            "Assign an existing person (by id) to one detected face -- use the "
+            "face_id + person_id from match_people. A face already assigned to "
+            "someone is left as-is; an unknown person_id is a no-op. (Assign per "
+            "face: a photo can contain several different people.)"
         ),
         returns="Nothing.",
-        example='assign_person(photo_id, "Grandma")',
-        impl=actions.assign_person,
-        summarize=actions.summarize_assign_person,
+        example="assign_face(face_id, person_id)",
+        impl=actions.assign_face,
+        summarize=actions.summarize_assign_face,
         mutating=True,
+    ),
+    HostFunction(
+        name="face_similarity",
+        signature="face_similarity(photo_id, person_id)",
+        description=(
+            "How similar each face in the photo is to a known person, by face "
+            "embeddings -- use it to decide whether to assign_face. Empty if the "
+            "person is unknown or the photo has no faces."
+        ),
+        returns="A list of {face_id, score (0.0–1.0)}.",
+        example="scores = face_similarity(photo_id, person_id)",
+        impl=compare.face_similarity,
+        summarize=compare.summarize_face_similarity,
+    ),
+    HostFunction(
+        name="match_people",
+        signature="match_people(photo_id)",
+        description=(
+            "Score every face in the photo against all known people -- the inverse "
+            "of face_similarity, for identifying who is in a photo."
+        ),
+        returns=(
+            "A list of {face_id, matches: [{person_id, person_name, "
+            "score (0.0–1.0)}]}."
+        ),
+        example="matches = match_people(photo_id)",
+        impl=compare.match_people,
+        summarize=compare.summarize_match_people,
     ),
 )
 
@@ -128,13 +160,14 @@ class HostCall:
 _HOST_BY_NAME = {fn.name: fn for fn in HOST_API}
 
 
-def summarize_call(call: HostCall) -> str:
+def summarize_call(call: HostCall, session: Session) -> str:
     """A friendly one-line description of a recorded call for the test UI (e.g.
-    "Looking up photos"), falling back to the call's signature/name."""
+    "Looking up photos"), resolving ids against `session`; falls back to the call's
+    signature/name."""
     fn = _HOST_BY_NAME.get(call.name)
     if fn is not None and fn.summarize is not None:
         try:
-            return fn.summarize(call.args)
+            return fn.summarize(call.args, session)
         except Exception:
             pass
     return fn.signature if fn is not None else call.name

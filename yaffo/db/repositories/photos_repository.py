@@ -1,11 +1,41 @@
 import calendar
+import os
+from pathlib import Path
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from yaffo.db.models import Face, Photo, Tag
 
 
 def get_faces_for_photo(session: Session, photo_id: int) -> list[Face]:
     return session.query(Face).filter_by(photo_id=photo_id).all()
+
+
+def get_photo_ids_under_path(session: Session, path: str) -> list[int]:
+    """Ids of indexed photos at `path` (an exact file) or under it (a directory)."""
+    path = path.rstrip("/\\")
+    under = f"{path}{os.sep}%"
+    rows = (
+        session.query(Photo.id)
+        .filter(or_(Photo.full_file_path == path, Photo.full_file_path.like(under)))
+        .order_by(Photo.id)
+        .all()
+    )
+    return [row[0] for row in rows]
+
+
+def get_photo_filename(session: Session, photo_id: int) -> str | None:
+    """The photo's file name (basename of its stored path), for display."""
+    path = get_photo_path(session, photo_id)
+    return Path(path).name if path else None
+
+
+def get_photo_filename_for_face(session: Session, face_id: int) -> str | None:
+    """The file name of the photo a face belongs to, for display."""
+    face = session.get(Face, face_id)
+    if face is None or face.photo_id is None:
+        return None
+    return get_photo_filename(session, face.photo_id)
 
 
 def add_tag(session: Session, photo_id: int, name: str, value=None) -> Tag:

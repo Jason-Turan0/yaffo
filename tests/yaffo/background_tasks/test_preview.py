@@ -31,14 +31,14 @@ def _fake_host(monkeypatch, impl):
     )
 
 
-def test_schedule_preview_records_actions(monkeypatch):
+def test_preview_records_actions(monkeypatch):
     _fake_host(monkeypatch, lambda session, query: [{"id": 1}])
     code = "print('hi')\ndata_query({'source': 'photos', 'limit': 5})"
-    result = preview_automation(object(), _FakeAutomation(published_code=code))
+    result = preview_automation(object(), _FakeAutomation(published_code=code), [1, 2])
 
     assert result.success is True, result.error
     assert result.code_source == "published"
-    assert result.context == {"type": "schedule"}
+    assert result.context == {"type": "files", "photo_ids": [1, 2]}
     assert result.output == ["hi"]
     assert result.actions == [{
         "summary": "Looking up photos",
@@ -51,12 +51,12 @@ def test_schedule_preview_records_actions(monkeypatch):
 def test_working_code_is_preferred(monkeypatch):
     _fake_host(monkeypatch, lambda session, query: [])
     automation = _FakeAutomation(working_code="print('draft')", published_code="print('live')")
-    result = preview_automation(object(), automation)
+    result = preview_automation(object(), automation, [])
     assert result.code_source == "working"
     assert result.output == ["draft"]
 
 
 def test_no_host_calls_is_empty_actions(monkeypatch):
     _fake_host(monkeypatch, lambda session, query: [])
-    result = preview_automation(object(), _FakeAutomation(published_code="print('x')"))
+    result = preview_automation(object(), _FakeAutomation(published_code="print('x')"), [])
     assert result.actions == []

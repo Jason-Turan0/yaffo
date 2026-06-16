@@ -27,6 +27,7 @@ from yaffo.db.models import (
     TRIGGER_TYPE_SCHEDULE,
 )
 from yaffo.db.repositories import automation_repository as repo
+from yaffo.db.repositories import photos_repository
 from yaffo.page_builder import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
 
@@ -283,18 +284,22 @@ def init_automations_routes(app: Flask):
         repo.set_status(db.session, slug, AUTOMATION_STATUS_ACCEPTED)
         return "", 204
 
-    @app.route("/utilities/automations/<slug>/test", methods=["POST"])
-    def automations_test(slug: str):
-        """Dry-run the automation's current code (working draft if any, else
-        published) against a synthetic context, returning the host-API actions it
-        performed plus its output. Records no Job and (with today's read-only host
-        surface) changes nothing."""
+    @app.route("/utilities/automations/<slug>/test-files", methods=["POST"])
+    def automations_test_files(slug: str):
+        """Dry-run the automation against the indexed photos at/under a user-selected
+        path (a file or a folder). Records no Job; mutating actions are recorded but
+        not performed, so nothing changes -- the run's photo_ids are the matched
+        photos."""
         automation = repo.get_by_slug(db.session, slug)
         if automation is None:
             abort(404)
         if not (automation.working_code or automation.published_code):
             return jsonify({"error": "No code to test yet."}), 400
-        return jsonify(preview_automation(db.session, automation).to_dict())
+        path = ((request.get_json(silent=True) or {}).get("path") or "").strip()
+        if not path:
+            return jsonify({"error": "No path selected."}), 400
+        photo_ids = photos_repository.get_photo_ids_under_path(db.session, path)
+        return jsonify(preview_automation(db.session, automation, photo_ids=photo_ids).to_dict())
 
     @app.route("/utilities/automations/<slug>/publish", methods=["POST"])
     def automations_publish(slug: str):

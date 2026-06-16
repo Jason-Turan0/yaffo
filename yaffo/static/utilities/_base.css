@@ -30,7 +30,7 @@
 }
 
 .automation-nav-badge {
-    float: right;
+    flex: none;
     font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;

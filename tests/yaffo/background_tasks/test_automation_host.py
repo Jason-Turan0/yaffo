@@ -102,8 +102,41 @@ def test_live_run_performs_mutating_impl(monkeypatch):
     assert performed == [(1, "beach")]
 
 
-def test_summaries_are_friendly():
-    assert summarize_call(HostCall("tag_photo", [12, "beach"])) == "Tag photo 12 as 'beach'"
-    assert summarize_call(HostCall("rename_file", [3, "x.jpg"])) == "Rename photo 3 to 'x.jpg'"
-    assert summarize_call(HostCall("assign_person", [7, "Grandma"])) == "Assign Grandma to photo 7"
-    assert summarize_call(HostCall("data_query", [{"source": "photos"}])) == "Looking up photos"
+def test_summaries_are_friendly(monkeypatch):
+    # summaries resolve ids to file names / person names via labels
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.labels.photos_repository.get_photo_filename",
+        lambda session, photo_id: {12: "beach.jpg", 3: "old.jpg", 5: "p5.jpg"}.get(photo_id),
+    )
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.labels.photos_repository.get_photo_filename_for_face",
+        lambda session, face_id: "fam.jpg" if face_id == 8 else None,
+    )
+
+    class _P:
+        def __init__(self, name): self.name = name
+
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.labels.person_repository.get_person_by_id",
+        lambda session, person_id: _P("Grandma") if person_id == 9 else None,
+    )
+    s = object()
+    assert summarize_call(HostCall("tag_photo", [12, "beach"]), s) == "Tag beach.jpg as 'beach'"
+    assert summarize_call(HostCall("rename_file", [3, "x.jpg"]), s) == "Rename old.jpg to 'x.jpg'"
+    assert summarize_call(HostCall("assign_face", [8, 9]), s) == "Assign Grandma to a face in fam.jpg"
+    assert summarize_call(HostCall("data_query", [{"source": "photos"}]), s) == "Looking up photos"
+    assert summarize_call(HostCall("face_similarity", [5, 9]), s) == "Compare faces in p5.jpg to Grandma"
+    assert summarize_call(HostCall("match_people", [5]), s) == "Match faces in p5.jpg to known people"
+
+
+def test_face_similarity_is_read_only_and_runs_in_preview(monkeypatch):
+    # read-only compare functions execute (and are recorded) even in a recording run
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.automation_compare.person_repository.get_person_by_id",
+        lambda session, person_id: None,  # unknown person -> empty scores, no embedding math
+    )
+    functions, calls = build_recording_host_functions(object())
+    result = run_starlark("face_similarity(1, 9)", functions=functions)
+    assert result.success is True, result.error
+    assert result.value == []
+    assert calls == [HostCall(name="face_similarity", args=[1, 9])]

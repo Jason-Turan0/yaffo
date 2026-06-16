@@ -12,8 +12,31 @@ class ShowFileDialogResult:
     status_code: int
 
 
-def show_file_dialog() -> ShowFileDialogResult:
-    """Open a native folder selection dialog using OS-specific commands"""
+_MACOS_SCRIPT = {
+    "folder": 'choose folder with prompt "Select a folder"',
+    "file": 'choose file with prompt "Select a file"',
+}
+_WINDOWS_DIALOG = {
+    "folder": (
+        '$dialog = New-Object System.Windows.Forms.FolderBrowserDialog;'
+        ' $dialog.Description = "Select a folder";'
+        ' if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK)'
+        ' { Write-Output $dialog.SelectedPath }'
+    ),
+    "file": (
+        '$dialog = New-Object System.Windows.Forms.OpenFileDialog;'
+        ' $dialog.Title = "Select a file";'
+        ' if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK)'
+        ' { Write-Output $dialog.FileName }'
+    ),
+}
+
+
+def show_file_dialog(mode: str = "folder") -> ShowFileDialogResult:
+    """Open a native picker and return the chosen path. `mode` is "folder" or "file"
+    (no single native dialog portably selects either, so they're separate modes)."""
+    if mode not in ("folder", "file"):
+        mode = "folder"
     selected_path = None
     status_code = 500
     success = False
@@ -22,14 +45,13 @@ def show_file_dialog() -> ShowFileDialogResult:
     try:
         system = platform.system()
         if system == "Darwin":  # macOS
-            # Use AppleScript to show folder picker
-            script = '''
-                    tell application "System Events"
-                        activate
-                        set folderPath to choose folder with prompt "Select Media Directory"
-                        return POSIX path of folderPath
-                    end tell
-                    '''
+            script = (
+                'tell application "System Events"\n'
+                "    activate\n"
+                f"    set chosen to {_MACOS_SCRIPT[mode]}\n"
+                "    return POSIX path of chosen\n"
+                "end tell"
+            )
             result = subprocess.run(
                 ['osascript', '-e', script],
                 capture_output=True,
@@ -42,16 +64,9 @@ def show_file_dialog() -> ShowFileDialogResult:
                 if selected_path.endswith('/'):
                     selected_path = selected_path[:-1]
         elif system == "Windows":
-            # Use PowerShell for Windows
-            script = '''
-                    Add-Type -AssemblyName System.Windows.Forms
-                    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-                    $dialog.Description = "Select Media Directory"
-                    $result = $dialog.ShowDialog()
-                    if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
-                        Write-Output $dialog.SelectedPath
-                    }
-                    '''
+            script = (
+                "Add-Type -AssemblyName System.Windows.Forms; " + _WINDOWS_DIALOG[mode]
+            )
             result = subprocess.run(
                 ['powershell', '-Command', script],
                 capture_output=True,
@@ -61,7 +76,7 @@ def show_file_dialog() -> ShowFileDialogResult:
             if result.returncode == 0 and result.stdout.strip():
                 selected_path = result.stdout.strip()
         else:
-            error ="Folder browser not available on Linux. Please enter path manually."
+            error = f"File browser not available on Linux. Please enter the {mode} path manually."
 
         if selected_path:
             success = True
@@ -73,7 +88,7 @@ def show_file_dialog() -> ShowFileDialogResult:
     except subprocess.TimeoutExpired:
         success = False
         status_code = 500
-        error ="Folder selection timed out"
+        error = "Selection timed out"
     except Exception as e:
         success = False
         status_code = 500

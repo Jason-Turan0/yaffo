@@ -9,25 +9,24 @@ from yaffo.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-def get_or_create_person(session: Session, name: str) -> Person:
-    person = session.query(Person).filter_by(name=name).first()
-    if person is None:
-        person = Person(name=name)
-        session.add(person)
-        session.commit()
-    return person
+def get_person_by_id(session: Session, person_id: int) -> Person | None:
+    return session.get(Person, person_id)
 
 
-def assign_person_to_photo_faces(session: Session, person_id: int, photo_id: int) -> int:
-    """Link every face in the photo to the person (skipping faces already linked,
-    since a face maps to one person). Returns how many new links were made."""
-    linked = 0
-    for face in session.query(Face).filter_by(photo_id=photo_id):
-        if session.query(PersonFace).filter_by(face_id=face.id).first() is None:
-            session.add(PersonFace(person_id=person_id, face_id=face.id))
-            linked += 1
+def get_people_with_embeddings(session: Session) -> list[Person]:
+    """All people that have at least one per-year embedding, so face-similarity
+    calculations have something to compare against (and don't max() over empty)."""
+    return [p for p in session.query(Person).all() if p.embeddings_by_year]
+
+
+def link_face_to_person(session: Session, person_id: int, face_id: int) -> bool:
+    """Link one face to a person, unless it's already assigned (a face maps to one
+    person). Returns whether a new link was made."""
+    if session.query(PersonFace).filter_by(face_id=face_id).first() is not None:
+        return False
+    session.add(PersonFace(person_id=person_id, face_id=face_id))
     session.commit()
-    return linked
+    return True
 
 def update_person_embedding(person_id: int, session):
     try:

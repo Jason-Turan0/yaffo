@@ -149,6 +149,12 @@
     margin-top: 12px;
 }
 
+.automation-test-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 .automation-test-result {
     margin-top: 12px;
     padding: 12px;
@@ -196,6 +202,15 @@
 .test-action-detail {
     font-family: var(--font-mono);
     color: var(--color-text-muted);
+}
+
+.automation-test-count {
+    color: var(--color-text-muted);
+}
+
+.automation-test-group {
+    margin: 0;
+    padding-left: 16px;
 }
 
 /* Advanced rows/cells are hidden until "Show details" sets .show-details. */

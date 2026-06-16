@@ -21,7 +21,7 @@
             <li>
                 <a href="{{ url_for('automations_show', slug=automation.slug) }}"
                    class="{% if automation.slug == selected_slug %}active{% endif %}">
-                    {{ automation.name }}
+                    <span class="panel-nav-label">{{ automation.name }}</span>
                     {% if automation.enabled %}<span class="automation-nav-badge">on</span>{% endif %}
                 </a>
             </li>
