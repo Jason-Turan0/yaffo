@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox.labels import face_label, person_label, photo_label
 from yaffo.db.repositories import person_repository, photos_repository
+from yaffo.utils.settings import media_dir_by_id
 
 
 def tag_photo(session: Session, photo_id: int, name: str, value: Any = None) -> None:
@@ -34,7 +35,8 @@ def rename_file(session: Session, photo_id: int, new_name: str) -> None:
     current = photos_repository.get_photo_path(session, photo_id)
     if not current:
         return
-    new_path = Path(current).with_name(new_name)
+    # basename only + in-place, so `new_name` can't escape the photo's folder
+    new_path = Path(current).with_name(Path(new_name).name)
     Path(current).rename(new_path)
     photos_repository.update_photo_path(session, photo_id, str(new_path))
 
@@ -42,7 +44,32 @@ def rename_file(session: Session, photo_id: int, new_name: str) -> None:
 def summarize_rename_file(args: list[Any], session: Session) -> str:
     photo_id = args[0] if args else None
     new_name = args[1] if len(args) > 1 else "?"
-    return f"Rename {photo_label(session, photo_id)} to '{new_name}'"
+    return f"Rename {photo_label(session, photo_id)} to '{Path(new_name).name}'"
+
+
+def move_photo(session: Session, photo_id: int, media_dir_id: str, target_path: str) -> None:
+    current = photos_repository.get_photo_path(session, photo_id)
+    media_dir = media_dir_by_id(session, media_dir_id)
+    if not current or media_dir is None:
+        return
+    root = media_dir.path.resolve()
+    destination = (root / target_path / Path(current).name).resolve()
+    try:
+        destination.relative_to(root)  # refuse a target that escapes the media dir
+    except ValueError:
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    Path(current).rename(destination)
+    photos_repository.update_photo_path(session, photo_id, str(destination))
+
+
+def summarize_move_photo(args: list[Any], session: Session) -> str:
+    photo_id = args[0] if args else None
+    media_dir_id = args[1] if len(args) > 1 else None
+    target_path = args[2] if len(args) > 2 else "?"
+    media_dir = media_dir_by_id(session, media_dir_id) if media_dir_id else None
+    where = f"{target_path} in {media_dir.path.name}" if media_dir else target_path
+    return f"Move {photo_label(session, photo_id)} to {where}"
 
 
 def assign_face(session: Session, face_id: int, person_id: int) -> None:

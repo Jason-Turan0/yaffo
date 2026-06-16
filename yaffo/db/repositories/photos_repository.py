@@ -51,6 +51,12 @@ def get_photo_path(session: Session, photo_id: int) -> str | None:
     return row[0] if row else None
 
 
+def get_paths_by_ids(session: Session, photo_ids: list[int]) -> dict[int, str]:
+    return dict(
+        session.query(Photo.id, Photo.full_file_path).filter(Photo.id.in_(photo_ids)).all()
+    )
+
+
 def update_photo_path(session: Session, photo_id: int, new_path: str) -> None:
     session.query(Photo).filter_by(id=photo_id).update({"full_file_path": new_path})
     session.commit()

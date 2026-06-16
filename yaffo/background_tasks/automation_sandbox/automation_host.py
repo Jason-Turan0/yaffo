@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox import automation_actions as actions
 from yaffo.background_tasks.automation_sandbox import automation_compare as compare
+from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_photo_rows
 from yaffo.db.repositories.data_query_repository import resolve_query
 
 
@@ -38,7 +39,10 @@ class HostFunction:
 
 
 def _data_query(session: Session, query: dict) -> Any:
-    return resolve_query(session, query)
+    rows = resolve_query(session, query)
+    if query.get("source") == "photos" and isinstance(rows, list):
+        return enrich_photo_rows(session, rows)
+    return rows
 
 
 def _summarize_data_query(args: list[Any], session: Session) -> str:
@@ -56,7 +60,9 @@ HOST_API: tuple[HostFunction, ...] = (
             'operator filters and a limit, e.g. {"source": "photos", "year": '
             '{"eq": 2024}, "id": {"in": [1, 2, 3]}, "limit": 24}. Operators: eq, ne, '
             "lt, lte, gt, gte, contains, in. You never touch the database directly "
-            "-- declare what you want and the server resolves it."
+            "-- declare what you want and the server resolves it. Photo rows also "
+            "carry `media_dir_id` and `relative_path` (the file's location, never an "
+            "absolute path) -- pass media_dir_id to move_photo."
         ),
         returns="A list of row dicts; or a single number/object for count/range queries.",
         example='recent = data_query({"source": "photos", "limit": 10})',
@@ -87,6 +93,22 @@ HOST_API: tuple[HostFunction, ...] = (
         example='rename_file(photo_id, "2024-06-01_beach.jpg")',
         impl=actions.rename_file,
         summarize=actions.summarize_rename_file,
+        mutating=True,
+    ),
+    HostFunction(
+        name="move_photo",
+        signature="move_photo(photo_id, media_dir_id, target_path)",
+        description=(
+            "Move the photo into `target_path` (a sub-folder of the media dir named "
+            "by `media_dir_id`, created if needed), keeping its file name. Use a "
+            "photo row's media_dir_id (from data_query) to move within its dir, or "
+            "another media dir's id to move between dirs. A target outside the media "
+            "dir, or an unknown media_dir_id, is refused."
+        ),
+        returns="Nothing.",
+        example='move_photo(photo_id, media_dir_id, "2024/06")',
+        impl=actions.move_photo,
+        summarize=actions.summarize_move_photo,
         mutating=True,
     ),
     HostFunction(

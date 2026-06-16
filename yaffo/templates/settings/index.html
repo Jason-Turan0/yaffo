@@ -20,7 +20,7 @@
             {% if media_dirs|length > 0 %}
                 {% for dir in media_dirs %}
                 <div class="media-dir-item" data-index="{{ loop.index0 }}">
-                    <span class="media-dir-path">{{ dir }}</span>
+                    <span class="media-dir-path">{{ dir.path }}</span>
                     <button type="button" class="btn-danger btn-sm" data-icon="delete" onclick="window.PHOTO_ORGANIZER.settings.removeMediaDir({{ loop.index0 }})">Remove</button>
                 </div>
                 {% endfor %}

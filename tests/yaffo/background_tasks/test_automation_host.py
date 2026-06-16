@@ -29,6 +29,10 @@ def test_data_query_callable_is_invoked_from_starlark(monkeypatch):
     monkeypatch.setattr(
         "yaffo.background_tasks.automation_sandbox.automation_host.resolve_query", fake_resolve_query
     )
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.automation_host.enrich_photo_rows",
+        lambda session, rows: rows,  # enrichment tested separately
+    )
 
     session = object()  # sentinel; the fake doesn't touch it
     functions = build_host_functions(session)
@@ -120,9 +124,16 @@ def test_summaries_are_friendly(monkeypatch):
         "yaffo.background_tasks.automation_sandbox.labels.person_repository.get_person_by_id",
         lambda session, person_id: _P("Grandma") if person_id == 9 else None,
     )
+    from pathlib import Path
+    from yaffo.utils.settings import MediaDir
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.automation_actions.media_dir_by_id",
+        lambda session, mid: MediaDir(id=mid, path=Path("/lib/Photos")) if mid == "GUID" else None,
+    )
     s = object()
     assert summarize_call(HostCall("tag_photo", [12, "beach"]), s) == "Tag beach.jpg as 'beach'"
     assert summarize_call(HostCall("rename_file", [3, "x.jpg"]), s) == "Rename old.jpg to 'x.jpg'"
+    assert summarize_call(HostCall("move_photo", [3, "GUID", "2024/06"]), s) == "Move old.jpg to 2024/06 in Photos"
     assert summarize_call(HostCall("assign_face", [8, 9]), s) == "Assign Grandma to a face in fam.jpg"
     assert summarize_call(HostCall("data_query", [{"source": "photos"}]), s) == "Looking up photos"
     assert summarize_call(HostCall("face_similarity", [5, 9]), s) == "Compare faces in p5.jpg to Grandma"

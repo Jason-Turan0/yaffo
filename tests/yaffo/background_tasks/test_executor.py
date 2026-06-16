@@ -30,6 +30,10 @@ def test_script_reads_ctx_and_calls_host_api(monkeypatch):
         "yaffo.background_tasks.automation_sandbox.automation_host.resolve_query",
         fake_resolve_query,
     )
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.automation_host.enrich_photo_rows",
+        lambda session, rows: rows,  # enrichment tested separately
+    )
 
     session = object()
     code = "data_query({'source': 'photos', 'in_ids': ctx['photo_ids']})"

@@ -10,6 +10,7 @@ import shutil
 from pathlib import Path
 
 from yaffo.utils.file_system import show_file_dialog
+from yaffo.utils import settings as media_settings
 
 
 def init_settings_routes(app: Flask):
@@ -41,22 +42,7 @@ def init_settings_routes(app: Flask):
 
     @app.route("/settings", methods=["GET"])
     def settings_index():
-        # Get media_dirs setting
-        media_dirs_setting = db.session.query(ApplicationSettings).filter_by(name="media_dirs").first()
-
-        if media_dirs_setting and media_dirs_setting.value:
-            media_dirs = json.loads(media_dirs_setting.value)
-        else:
-            # Initialize with empty list if not exists
-            media_dirs = []
-            if not media_dirs_setting:
-                media_dirs_setting = ApplicationSettings(
-                    name="media_dirs",
-                    type="json",
-                    value="[]"
-                )
-                db.session.add(media_dirs_setting)
-                db.session.commit()
+        media_dirs = media_settings.list_media_dirs(db.session)
 
         # Get thumbnail directory setting
         thumbnail_setting = db.session.query(ApplicationSettings).filter_by(name="thumbnail_dir").first()
@@ -105,67 +91,26 @@ def init_settings_routes(app: Flask):
         if not new_dir:
             return jsonify({"error": "Directory path is required"}), 400
 
-        new_dir_path = Path(new_dir)
-
         try:
-            new_dir_path.mkdir(parents=True, exist_ok=True)
+            Path(new_dir).mkdir(parents=True, exist_ok=True)
         except Exception as e:
             return jsonify({"error": f"Failed to create directory: {str(e)}"}), 400
 
-        # Get current media_dirs
-        media_dirs_setting = db.session.query(ApplicationSettings).filter_by(name="media_dirs").first()
-
-        if media_dirs_setting and media_dirs_setting.value:
-            media_dirs = json.loads(media_dirs_setting.value)
-        else:
-            media_dirs = []
-
-        # Check if directory already exists
-        if new_dir in media_dirs:
+        if media_settings.add_media_dir(db.session, new_dir) is None:
             return jsonify({"error": "Directory already exists"}), 400
 
-        # Add new directory
-        media_dirs.append(new_dir)
-
-        if media_dirs_setting:
-            media_dirs_setting.value = json.dumps(media_dirs)
-        else:
-            media_dirs_setting = ApplicationSettings(
-                name="media_dirs",
-                type="json",
-                value=json.dumps(media_dirs)
-            )
-            db.session.add(media_dirs_setting)
-
-        db.session.commit()
-
-        return jsonify({
-            "success": True,
-            "media_dirs": media_dirs
-        })
+        return jsonify({"success": True, "media_dirs": media_settings.list_media_dirs(db.session)})
 
     @app.route("/api/settings/media-dirs/<int:index>", methods=["DELETE"])
     def remove_media_dir(index: int):
         """Remove a media directory by index"""
-        media_dirs_setting = db.session.query(ApplicationSettings).filter_by(name="media_dirs").first()
-
-        if not media_dirs_setting or not media_dirs_setting.value:
-            return jsonify({"error": "No media directories configured"}), 404
-
-        media_dirs = json.loads(media_dirs_setting.value)
-
-        if index < 0 or index >= len(media_dirs):
+        removed = media_settings.remove_media_dir(db.session, index)
+        if removed is None:
             return jsonify({"error": "Invalid index"}), 400
-
-        # Remove directory
-        removed_dir = media_dirs.pop(index)
-        media_dirs_setting.value = json.dumps(media_dirs)
-        db.session.commit()
-
         return jsonify({
             "success": True,
-            "removed": removed_dir,
-            "media_dirs": media_dirs
+            "removed": removed,
+            "media_dirs": media_settings.list_media_dirs(db.session),
         })
 
     @app.route("/api/settings/select-folder", methods=["GET"])

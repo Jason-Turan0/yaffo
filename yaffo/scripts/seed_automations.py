@@ -8,8 +8,10 @@ something to exercise end-to-end without the builder UI:
    (fires when an index/import job completes),
 2. "Log photos each minute" — a SCHEDULE automation on `* * * * *`, and
 3. "Auto-assign faces" — an EVENT automation that, on `photo_indexed`, assigns each
-   face to the one person it matches at 95%+ (using match_people + assign_face),
-   demonstrating the read + mutating host API.
+   face to the one person it matches at 95%+ (using match_people + assign_face), and
+4. "Organize by date" — an EVENT automation that moves each indexed photo into a
+   Year/Month sub-folder of its media dir (using data_query's media_dir_id +
+   move_photo), demonstrating the read + mutating host API.
 
 All are custom (handler=None, code set) and enabled. The first two run a
 data_query and print rows; the sandbox captures the prints and the executor logs
@@ -67,9 +69,22 @@ for photo_id in ctx["photo_ids"]:
             assign_face(face["face_id"], strong[0])
 """
 
+# On photo_indexed, move each photo into a Year/Month sub-folder of its media dir.
+# data_query gives each photo's media_dir_id + year/month; move_photo keeps the
+# file name and is confined to that media dir.
+_ORGANIZE_CODE = """\
+rows = data_query({"source": "photos", "id": {"in": ctx["photo_ids"]}})
+for row in rows:
+    if row["year"] and row["month"] and row["media_dir_id"]:
+        month = row["month"]
+        mm = str(month) if month >= 10 else "0" + str(month)
+        move_photo(row["id"], row["media_dir_id"], str(row["year"]) + "/" + mm)
+"""
+
 _EVENT_SLUG = "log-photos-on-index"
 _SCHEDULE_SLUG = "log-photos-each-minute"
 _ASSIGN_FACES_SLUG = "auto-assign-faces"
+_ORGANIZE_SLUG = "organize-by-date"
 
 
 def seed_automations() -> None:
@@ -78,7 +93,7 @@ def seed_automations() -> None:
         db.create_all()
 
         # Replace any prior copies (ORM delete cascades to their triggers).
-        for slug in (_EVENT_SLUG, _SCHEDULE_SLUG, _ASSIGN_FACES_SLUG):
+        for slug in (_EVENT_SLUG, _SCHEDULE_SLUG, _ASSIGN_FACES_SLUG, _ORGANIZE_SLUG):
             existing = db.session.query(Automation).filter_by(slug=slug).first()
             if existing is not None:
                 db.session.delete(existing)
@@ -135,12 +150,32 @@ def seed_automations() -> None:
             )],
         )
 
-        db.session.add_all([event_automation, schedule_automation, assign_faces_automation])
+        organize_automation = Automation(
+            slug=_ORGANIZE_SLUG,
+            name="Organize by date",
+            description=(
+                "When a photo is indexed, move it into a Year/Month sub-folder of its "
+                "media dir (keeping its file name)."
+            ),
+            is_system=False,
+            enabled=True,
+            handler=None,
+            published_code=_ORGANIZE_CODE,
+            status=AUTOMATION_STATUS_READY,
+            triggers=[AutomationTrigger(
+                trigger_type=TRIGGER_TYPE_EVENT,
+                enabled=True,
+                event_type=EVENT_PHOTO_INDEXED,
+            )],
+        )
+
+        db.session.add_all([
+            event_automation, schedule_automation, assign_faces_automation, organize_automation,
+        ])
         db.session.commit()
         print(
-            f"Seeded automations: '{event_automation.slug}' (event: {EVENT_PHOTO_INDEXED}), "
-            f"'{schedule_automation.slug}' (schedule: * * * * *), "
-            f"and '{assign_faces_automation.slug}' (event: {EVENT_PHOTO_INDEXED})."
+            f"Seeded automations: '{event_automation.slug}', '{schedule_automation.slug}', "
+            f"'{assign_faces_automation.slug}', and '{organize_automation.slug}'."
         )
 
 

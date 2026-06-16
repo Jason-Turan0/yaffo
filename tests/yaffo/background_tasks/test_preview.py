@@ -33,6 +33,10 @@ def _fake_host(monkeypatch, impl):
 
 def test_preview_records_actions(monkeypatch):
     _fake_host(monkeypatch, lambda session, query: [{"id": 1}])
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.automation_host.enrich_photo_rows",
+        lambda session, rows: rows,  # enrichment tested separately
+    )
     code = "print('hi')\ndata_query({'source': 'photos', 'limit': 5})"
     result = preview_automation(object(), _FakeAutomation(published_code=code), [1, 2])
 
