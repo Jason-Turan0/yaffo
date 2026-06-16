@@ -18,76 +18,189 @@ window.PHOTO_ORGANIZER.initAutomationDelete = (selectedName) => {
     });
 };
 
-// Reveal/populate the collapsed schedule editor. The cron builder stays hidden until
-// "Add a schedule" (add mode) or a row's "Edit" (edit mode, pre-populated from the
-// trigger's cron) is clicked; Cancel collapses it again. Delegated off document so it
-// survives the #automation-triggers HTMX re-renders without re-binding. Save is plain
-// HTMX (the edit_trigger_id hidden input tells the server add vs update).
-window.PHOTO_ORGANIZER.initScheduleEditor = () => {
+// Wire the "Edit details" button to the name/description modal (custom automations
+// only). The modal posts a normal form that redirects back, refreshing the header
+// and the sidebar name.
+window.PHOTO_ORGANIZER.initAutomationDetails = () => {
+    const button = document.getElementById('edit-automation-button');
+    const components = window.PHOTO_ORGANIZER.COMPONENTS;
+    if (!button || !components || !components.modal) return;
+    const modal = components.modal.init('editAutomationModal');
+    button.addEventListener('click', modal.open);
+};
+
+// Run the automation's code in a sandbox dry-run and render what it did: the host-API
+// actions intercepted during the run, the captured output, and any error. Changes
+// nothing (no Job recorded; the host surface is read-only).
+window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
+    const button = document.getElementById('automation-test-button');
+    const resultEl = document.getElementById('automation-test-result');
+    if (!button || !resultEl) return;
+
+    const el = (tag, className, text) => {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+    };
+
+    const describeContext = (ctx) => {
+        if (ctx.type === 'event') {
+            const n = (ctx.photo_ids || []).length;
+            return `Event ${ctx.event_type} · ${n} photo${n === 1 ? '' : 's'}`;
+        }
+        return 'Schedule · no context';
+    };
+
+    const render = (data) => {
+        resultEl.replaceChildren();
+        resultEl.hidden = false;
+        resultEl.classList.toggle('is-error', !data.success);
+
+        resultEl.append(el('p', 'automation-test-meta',
+            `Ran ${data.code_source} code · ${describeContext(data.context)}`));
+        if (data.error) resultEl.append(el('pre', 'automation-test-error', data.error));
+
+        const head = el('div', 'automation-test-actions-head');
+        head.append(el('h4', 'automation-test-heading', `Actions (${data.actions.length})`));
+        if (data.actions.length) {
+            const label = el('label', 'automation-test-toggle');
+            const toggle = document.createElement('input');
+            toggle.type = 'checkbox';
+            toggle.addEventListener('change', () => resultEl.classList.toggle('show-details', toggle.checked));
+            label.append(toggle, document.createTextNode(' Show details'));
+            head.append(label);
+        }
+        resultEl.append(head);
+
+        if (data.actions.length) {
+            const table = el('table', 'automation-test-table');
+            const tbody = el('tbody');
+            data.actions.forEach((action) => {
+                const row = el('tr');
+                row.append(el('td', 'test-action-summary', action.summary));
+                const args = (action.args || []).map((a) => JSON.stringify(a)).join(', ');
+                const detail = el('td', 'test-action-detail automation-test-advanced');
+                detail.append(el('code', null, `${action.name}(${args})`));
+                row.append(detail);
+                tbody.append(row);
+            });
+            table.append(tbody);
+            resultEl.append(table);
+        } else {
+            resultEl.append(el('p', 'no-data', 'No actions performed.'));
+        }
+
+        if (data.value !== null && data.value !== undefined) {
+            resultEl.append(el('h4', 'automation-test-heading automation-test-advanced', 'Result'));
+            resultEl.append(el('pre', 'automation-test-output thin-scrollbar automation-test-advanced',
+                JSON.stringify(data.value, null, 2)));
+        }
+    };
+
+    button.addEventListener('click', async () => {
+        const label = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Running…';
+        try {
+            const response = await fetch(config.buildUrl('automations_test', { slug }), { method: 'POST' });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                render(data);
+            } else {
+                resultEl.replaceChildren(el('p', 'automation-test-error', data.error || 'Test failed.'));
+                resultEl.hidden = false;
+                resultEl.classList.add('is-error');
+            }
+        } catch {
+            window.notification.error('Failed to run the test.');
+        } finally {
+            button.disabled = false;
+            button.textContent = label;
+        }
+    });
+};
+
+// Drive the "add a trigger" area: two buttons ("Add a schedule" / "Add an event")
+// each reveal their own panel (only one at a time, via .adding-schedule /
+// .adding-event on the .automation-trigger-add container); a row's "Edit" opens the
+// schedule panel pre-populated; Cancel collapses back to the buttons. Delegated off
+// document so it survives the #automation-triggers HTMX re-renders. Save/Add-event
+// are plain HTMX (edit_trigger_id tells the server add vs update for a schedule).
+window.PHOTO_ORGANIZER.initTriggerEditor = () => {
     const cronBuilder = window.PHOTO_ORGANIZER.COMPONENTS.cronBuilder;
+    const areaFor = (el) => el.closest('#automation-triggers').querySelector('.automation-trigger-add');
 
-    const open = (editor, { cron, triggerId, title } = {}) => {
-        const mount = editor.querySelector('[data-cron-builder]');
-        editor.querySelector('[name="edit_trigger_id"]').value = triggerId || '';
-        editor.querySelector('.schedule-editor-title').textContent = title;
+    const openSchedule = (area, { cron, triggerId, title }) => {
+        area.querySelector('[name="edit_trigger_id"]').value = triggerId || '';
+        area.querySelector('.schedule-editor-title').textContent = title;
+        const mount = area.querySelector('[data-cron-builder]');
         if (cron) cronBuilder.setCron(mount, cron); else cronBuilder.reset(mount);
-        editor.classList.add('is-editing');
-        editor.scrollIntoView({ block: 'nearest' });
+        area.classList.remove('adding-event');
+        area.classList.add('adding-schedule');
+        area.scrollIntoView({ block: 'nearest' });
     };
 
-    const close = (editor) => {
-        editor.querySelector('[name="edit_trigger_id"]').value = '';
-        editor.classList.remove('is-editing');
+    const openEvent = (area) => {
+        area.classList.remove('adding-schedule');
+        area.classList.add('adding-event');
+        area.scrollIntoView({ block: 'nearest' });
     };
 
-    const editorFor = (el) => el.closest('#automation-triggers').querySelector('.schedule-editor');
+    const collapse = (area) => {
+        area.querySelector('[name="edit_trigger_id"]').value = '';
+        area.classList.remove('adding-schedule', 'adding-event');
+    };
 
     // Gate Save on cron validity. The builder reports preset/builder output as valid
     // outright; only the Advanced field is checked against the server (croniter is the
-    // authoritative source), debounced and guarded against stale responses.
-    // Save is disabled whenever the cron is invalid; the error line shows only for a
-    // non-empty invalid expression (an empty field already reads "Enter a cron…").
-    const applyValidity = (editor, { valid, showError }) => {
-        editor.querySelector('.js-save-schedule').disabled = !valid;
-        editor.querySelector('.schedule-editor-error').hidden = !showError;
+    // authoritative source), debounced and guarded against stale responses. Save is
+    // disabled whenever the cron is invalid; the error line shows only for a non-empty
+    // invalid expression (an empty field already reads "Enter a cron…").
+    const applyValidity = (area, { valid, showError }) => {
+        area.querySelector('.js-save-schedule').disabled = !valid;
+        area.querySelector('.schedule-editor-error').hidden = !showError;
     };
 
     let validateTimer = null;
-    const validateOnServer = (editor, cron) => {
+    const validateOnServer = (area, cron) => {
         clearTimeout(validateTimer);
-        if (!cron) { applyValidity(editor, { valid: false, showError: false }); return; }
+        if (!cron) { applyValidity(area, { valid: false, showError: false }); return; }
         validateTimer = setTimeout(async () => {
             const url = `${window.APP_CONFIG.urls.automations_validate_cron}?cron=${encodeURIComponent(cron)}`;
             try {
                 const { valid } = await (await fetch(url)).json();
-                if (editor.querySelector('[name="cron"]').value === cron) {
-                    applyValidity(editor, { valid, showError: !valid });
+                if (area.querySelector('[name="cron"]').value === cron) {
+                    applyValidity(area, { valid, showError: !valid });
                 }
             } catch { /* leave Save as-is on a network error; the server still re-validates on save */ }
         }, 250);
     };
 
     document.addEventListener('cron:change', (event) => {
-        const editor = editorFor(event.target);
-        if (!editor) return;
-        if (event.detail.valid === null) validateOnServer(editor, event.detail.cron);
-        else { clearTimeout(validateTimer); applyValidity(editor, { valid: true, showError: false }); }
+        const area = areaFor(event.target);
+        if (!area) return;
+        if (event.detail.valid === null) validateOnServer(area, event.detail.cron);
+        else { clearTimeout(validateTimer); applyValidity(area, { valid: true, showError: false }); }
     });
 
     document.addEventListener('click', (event) => {
         const add = event.target.closest('.js-add-schedule');
         const edit = event.target.closest('.js-edit-schedule');
-        const cancel = event.target.closest('.js-cancel-schedule');
+        const addEvent = event.target.closest('.js-add-event');
+        const cancel = event.target.closest('.js-cancel');
         if (add) {
-            open(editorFor(add), { title: 'Add a schedule' });
+            openSchedule(areaFor(add), { title: 'Add a schedule' });
         } else if (edit) {
-            open(editorFor(edit), {
+            openSchedule(areaFor(edit), {
                 cron: edit.dataset.cronValue,
                 triggerId: edit.dataset.triggerId,
                 title: 'Edit schedule',
             });
+        } else if (addEvent) {
+            openEvent(areaFor(addEvent));
         } else if (cancel) {
-            close(editorFor(cancel));
+            collapse(areaFor(cancel));
         }
     });
 };

@@ -1,6 +1,19 @@
 {% extends "utilities/_base.html" %}
 {% from "components/chat_dialog.html" import chat_dialog %}
 {% from "components/page_header.html" import page_header %}
+{% from "components/modal.html" import render_modal %}
+
+{% macro render_edit_automation_form() %}
+    <div class="form-group">
+        <label for="edit-automation-name">Name</label>
+        <input type="text" id="edit-automation-name" name="name" required value="{{ selected.name }}">
+    </div>
+    <div class="form-group">
+        <label for="edit-automation-description">Description</label>
+        <textarea id="edit-automation-description" name="description" rows="3"
+                  placeholder="What does this automation do?">{{ selected.description or '' }}</textarea>
+    </div>
+{% endmacro %}
 
 {% block title %}Automations - Yaffo{% endblock %}
 
@@ -22,7 +35,12 @@
                     hx-post="{{ url_for('automations_toggle_enabled', slug=selected.slug) }}"
                     hx-swap="none">{{ 'Disable' if selected.enabled else 'Enable' }}
             </button>
+            <a href="{{ url_for('automations_edit_triggers', slug=selected.slug) }}"
+               class="btn-secondary" data-icon="edit">Edit triggers</a>
             {% if not selected.is_system %}
+                <button type="button" id="edit-automation-button" class="btn-secondary"
+                        data-icon="edit">Edit details
+                </button>
                 <button type="button" id="delete-automation-button" class="btn-danger"
                         data-icon="delete">Delete
                 </button>
@@ -30,72 +48,80 @@
         </div>
         {% endset %}
         {% call page_header(selected.name, actions=header_actions) %}
-            {{ 'A built-in automation that ships with Yaffo. System automations cannot be edited or deleted.'
-               if selected.is_system
-               else 'A custom automation built by the assistant.' }}
+            {% if selected.is_system %}
+                A built-in automation that ships with Yaffo. System automations cannot be edited or deleted.
+            {% else %}
+                {{ selected.description or 'No description yet — use “Edit details” to add one.' }}
+            {% endif %}
         {% endcall %}
 
         <div class="automation-detail">
-            <section class="automation-meta">
-                <h3 class="automation-section-title">Triggers</h3>
-                {% with triggers=selected.triggers|sort(attribute='id'), slug=selected.slug %}
-                    {% include "utilities/automations_triggers.html" %}
-                {% endwith %}
-
-                <h3 class="automation-section-title">Code</h3>
-                {% if selected.published_code %}
-                    <pre class="automation-code thin-scrollbar"><code>{{ selected.published_code }}</code></pre>
-                {% else %}
-                    <p class="no-data">No published code yet.</p>
-                {% endif %}
-            </section>
-
-            <section class="chat-card automation-conversation">
-                {% if selected_has_draft %}
-                    <div class="automation-draft">
-                        <p class="automation-draft-text">The assistant has an unpublished draft for this automation.
-                            Publish it to make it live, or discard the draft.</p>
-                        <pre class="automation-code automation-draft-code thin-scrollbar"><code>{{ selected.working_code }}</code></pre>
-                        <div class="automation-draft-actions">
-                            <button type="button" class="btn-primary"
-                                    hx-post="{{ url_for('automations_publish', slug=selected.slug) }}"
-                                    hx-swap="none">Publish draft
-                            </button>
-                            <button type="button" class="btn-secondary"
-                                    hx-post="{{ url_for('automations_discard', slug=selected.slug) }}"
-                                    hx-swap="none">Discard
-                            </button>
+            <div class="automation-lower">
+                <section class="chat-card automation-conversation">
+                    {% if selected_has_draft %}
+                        <div class="automation-draft">
+                            <p class="automation-draft-text">The assistant has an unpublished draft for this automation.
+                                Publish it to make it live, or discard the draft.</p>
+                            <pre class="automation-code automation-draft-code thin-scrollbar"><code>{{ selected.working_code }}</code></pre>
+                            <div class="automation-draft-actions">
+                                <button type="button" class="btn-primary"
+                                        hx-post="{{ url_for('automations_publish', slug=selected.slug) }}"
+                                        hx-swap="none">Publish draft
+                                </button>
+                                <button type="button" class="btn-secondary"
+                                        hx-post="{{ url_for('automations_discard', slug=selected.slug) }}"
+                                        hx-swap="none">Discard
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                {% endif %}
-                {{ chat_dialog(
-                    'automation-chat',
-                    'Conversation',
-                    'Describe what this automation should do and the assistant will write it.',
-                    'Describe what this automation should do…',
-                    messages=selected.messages,
-                    empty_text=('System automations are built-in and have no conversation.'
-                                if selected.is_system
-                                else 'No conversation yet — describe what you want and the assistant will build it.'),
-                    disabled=selected.is_system
-                ) }}
-            </section>
+                    {% endif %}
+                    {{ chat_dialog(
+                        'automation-chat',
+                        'Conversation',
+                        'Describe what this automation should do and the assistant will write it.',
+                        'Describe what this automation should do…',
+                        messages=selected.messages,
+                        empty_text=('System automations are built-in and have no conversation.'
+                                    if selected.is_system
+                                    else 'No conversation yet — describe what you want and the assistant will build it.'),
+                        disabled=selected.is_system
+                    ) }}
+                </section>
+
+                <section class="automation-code-section">
+                    <h3 class="automation-section-title">Code</h3>
+                    {% if selected.published_code %}
+                        <pre class="automation-code thin-scrollbar"><code>{{ selected.published_code }}</code></pre>
+                    {% else %}
+                        <p class="no-data">No published code yet.</p>
+                    {% endif %}
+                    {% if selected.published_code or selected.working_code %}
+                        <div class="automation-test">
+                            <button type="button" class="btn-secondary" id="automation-test-button">Test</button>
+                            <div id="automation-test-result" class="automation-test-result" hidden></div>
+                        </div>
+                    {% endif %}
+                </section>
+            </div>
         </div>
 
         {% if not selected.is_system %}
         <form id="delete-automation-form" method="POST"
               action="{{ url_for('automations_delete', slug=selected.slug) }}" hidden></form>
+        {{ render_modal('editAutomationModal', 'Edit automation',
+                        url_for('automations_update_details', slug=selected.slug),
+                        render_edit_automation_form, 'Save') }}
         {% endif %}
     {% endif %}
 {% endblock %}
 
 {% block scripts %}
     {% if selected %}
-    <script src="{{ url_for('static', filename='components/cron_builder.js') }}"></script>
     <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
     <script>
         window.PHOTO_ORGANIZER.initAutomationDelete({{ selected.name | tojson }});
-        window.PHOTO_ORGANIZER.initScheduleEditor();
+        {% if not selected.is_system %}window.PHOTO_ORGANIZER.initAutomationDetails();{% endif %}
+        window.PHOTO_ORGANIZER.initAutomationTest({{ selected_slug | tojson }}, window.APP_CONFIG);
         window.PHOTO_ORGANIZER.automationChat = window.PHOTO_ORGANIZER.initAutomationChat(
             {{ selected_slug | tojson }},
             {{ selected_status | tojson }},

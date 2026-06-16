@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 from sqlalchemy.orm import Session
 
+from yaffo.background_tasks.automation_sandbox import automation_actions as actions
 from yaffo.db.repositories.data_query_repository import resolve_query
 
 
@@ -21,17 +22,26 @@ from yaffo.db.repositories.data_query_repository import resolve_query
 class HostFunction:
     """One callable exposed to sandboxed scripts. `impl` takes the session as its
     first argument; the bound callable a script sees drops it. `signature`,
-    `description`, `returns`, `example` are the agent docs."""
+    `description`, `returns`, `example` are the agent docs. `summarize` turns a
+    call's args into a friendly one-line action for the test/preview UI. `mutating`
+    marks a capability that changes state -- recorded but NOT run in a test/preview."""
     name: str
     signature: str
     description: str
     returns: str
     example: str
     impl: Callable[..., Any]
+    summarize: Callable[[list[Any]], str] | None = None
+    mutating: bool = False
 
 
 def _data_query(session: Session, query: dict) -> Any:
     return resolve_query(session, query)
+
+
+def _summarize_data_query(args: list[Any]) -> str:
+    query = args[0] if args and isinstance(args[0], dict) else {}
+    return f"Looking up {query.get('source', 'data')}"
 
 
 HOST_API: tuple[HostFunction, ...] = (
@@ -49,6 +59,46 @@ HOST_API: tuple[HostFunction, ...] = (
         returns="A list of row dicts; or a single number/object for count/range queries.",
         example='recent = data_query({"source": "photos", "limit": 10})',
         impl=_data_query,
+        summarize=_summarize_data_query,
+    ),
+    HostFunction(
+        name="tag_photo",
+        signature="tag_photo(photo_id, name, value=None)",
+        description=(
+            "Add a tag to a photo. `name` is the tag (e.g. \"beach\"); `value` is an "
+            "optional value for name/value tags (e.g. name=\"rating\", value=5)."
+        ),
+        returns="Nothing.",
+        example='tag_photo(photo_id, "beach")',
+        impl=actions.tag_photo,
+        summarize=actions.summarize_tag_photo,
+        mutating=True,
+    ),
+    HostFunction(
+        name="rename_file",
+        signature="rename_file(photo_id, new_name)",
+        description=(
+            "Rename the photo's file on disk to `new_name` (the new filename incl. "
+            "extension, kept in the same folder) and update its stored path."
+        ),
+        returns="Nothing.",
+        example='rename_file(photo_id, "2024-06-01_beach.jpg")',
+        impl=actions.rename_file,
+        summarize=actions.summarize_rename_file,
+        mutating=True,
+    ),
+    HostFunction(
+        name="assign_person",
+        signature="assign_person(photo_id, person_name)",
+        description=(
+            "Assign a person (by name, created if new) to every detected face in the "
+            "photo. Faces already assigned to someone are left as-is."
+        ),
+        returns="Nothing.",
+        example='assign_person(photo_id, "Grandma")',
+        impl=actions.assign_person,
+        summarize=actions.summarize_assign_person,
+        mutating=True,
     ),
 )
 
@@ -64,6 +114,52 @@ def build_host_functions(session: Session) -> dict[str, Callable[..., Any]]:
     `session` so each reads within the caller's transaction. Pass as `functions`
     to run_starlark."""
     return {fn.name: _bind(fn.impl, session) for fn in HOST_API}
+
+
+@dataclass(frozen=True)
+class HostCall:
+    """One host-API invocation a script made, captured by a recording run so a
+    test/preview can show the actions performed. `name` is the host function,
+    `args` the arguments the script passed (e.g. the data_query dict)."""
+    name: str
+    args: list[Any]
+
+
+_HOST_BY_NAME = {fn.name: fn for fn in HOST_API}
+
+
+def summarize_call(call: HostCall) -> str:
+    """A friendly one-line description of a recorded call for the test UI (e.g.
+    "Looking up photos"), falling back to the call's signature/name."""
+    fn = _HOST_BY_NAME.get(call.name)
+    if fn is not None and fn.summarize is not None:
+        try:
+            return fn.summarize(call.args)
+        except Exception:
+            pass
+    return fn.signature if fn is not None else call.name
+
+
+def build_recording_host_functions(
+    session: Session,
+) -> tuple[dict[str, Callable[..., Any]], list[HostCall]]:
+    """Like build_host_functions, but every invocation is appended to the returned
+    `calls` list before the real impl runs. The read-only surface still executes so
+    the script gets live data; the same hook is where a future mutating capability
+    would be recorded-but-not-performed for a true dry run."""
+    calls: list[HostCall] = []
+
+    def record(fn: HostFunction) -> Callable[..., Any]:
+        bound = _bind(fn.impl, session)
+
+        def call(*args: Any) -> Any:
+            calls.append(HostCall(name=fn.name, args=list(args)))
+            # Reads still run so the script gets live data; mutating actions are
+            # recorded but not performed -- a test/preview changes nothing.
+            return None if fn.mutating else bound(*args)
+        return call
+
+    return {fn.name: record(fn) for fn in HOST_API}, calls
 
 
 def render_host_api() -> str:

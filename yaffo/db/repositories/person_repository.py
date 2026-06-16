@@ -2,11 +2,32 @@ import json
 import numpy as np
 from sqlalchemy.orm import joinedload, Session
 import pydash as _
-from yaffo.db.models import Person, Face, PersonEmbedding
+from yaffo.db.models import Person, Face, PersonEmbedding, PersonFace
 from yaffo.domain.compare_utils import load_embedding
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+
+def get_or_create_person(session: Session, name: str) -> Person:
+    person = session.query(Person).filter_by(name=name).first()
+    if person is None:
+        person = Person(name=name)
+        session.add(person)
+        session.commit()
+    return person
+
+
+def assign_person_to_photo_faces(session: Session, person_id: int, photo_id: int) -> int:
+    """Link every face in the photo to the person (skipping faces already linked,
+    since a face maps to one person). Returns how many new links were made."""
+    linked = 0
+    for face in session.query(Face).filter_by(photo_id=photo_id):
+        if session.query(PersonFace).filter_by(face_id=face.id).first() is None:
+            session.add(PersonFace(person_id=person_id, face_id=face.id))
+            linked += 1
+    session.commit()
+    return linked
 
 def update_person_embedding(person_id: int, session):
     try:

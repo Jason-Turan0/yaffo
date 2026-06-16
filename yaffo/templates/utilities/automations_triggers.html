@@ -42,37 +42,48 @@
             <p class="no-data">No triggers — this automation won't run until one is added.</p>
         {% endif %}
 
+        {# Two entry points; each reveals its own panel (one at a time). automations.js
+           (initTriggerEditor) toggles .adding-schedule / .adding-event on this
+           container and drives the cron builder; a row's Edit reuses the schedule
+           panel pre-populated. #}
         <div class="automation-trigger-add">
-            {# Collapsed by default; the Add button or a row's Edit button opens it
-               (automations.js toggles .is-editing and populates the builder). #}
-            <div class="schedule-editor" id="schedule-editor">
-                <input type="hidden" name="edit_trigger_id" value="">
+            <input type="hidden" name="edit_trigger_id" value="">
+
+            <div class="automation-add-actions">
                 <button type="button" class="btn-secondary js-add-schedule">Add a schedule</button>
-                <div class="schedule-editor-panel">
-                    <h4 class="automation-add-title schedule-editor-title">Add a schedule</h4>
-                    <div data-cron-builder data-cron-name="cron"></div>
-                    <div class="automation-trigger-add-row">
-                        <button type="button" class="btn-primary js-save-schedule"
-                                hx-post="{{ url_for('automations_triggers', slug=slug) }}"
-                                hx-vals='{"action": "save_schedule"}'
-                                hx-target="#automation-triggers">Save schedule</button>
-                        <button type="button" class="btn-secondary js-cancel-schedule">Cancel</button>
-                        <span class="schedule-editor-error" hidden>Not a valid cron expression</span>
-                    </div>
+                <button type="button" class="btn-secondary js-add-event">Add an event</button>
+            </div>
+
+            <div class="schedule-editor">
+                <h4 class="automation-add-title schedule-editor-title">Add a schedule</h4>
+                <div data-cron-builder data-cron-name="cron"></div>
+                <div class="automation-trigger-add-row">
+                    <button type="button" class="btn-primary js-save-schedule"
+                            hx-post="{{ url_for('automations_triggers', slug=slug) }}"
+                            hx-vals='{"action": "save_schedule"}'
+                            hx-target="#automation-triggers">Save schedule</button>
+                    <button type="button" class="btn-secondary js-cancel">Cancel</button>
+                    <span class="schedule-editor-error" hidden>Not a valid cron expression</span>
                 </div>
             </div>
 
-            <h4 class="automation-add-title">Add an event trigger</h4>
-            <div class="automation-trigger-add-row">
-                <select name="new_event_type" class="form-control" aria-label="Event type">
-                    {% for value, label in events.items() %}
-                        <option value="{{ value }}">{{ label }}</option>
-                    {% endfor %}
-                </select>
-                <button type="button" class="btn-secondary"
-                        hx-post="{{ url_for('automations_triggers', slug=slug) }}"
-                        hx-vals='{"action": "add_event"}'
-                        hx-target="#automation-triggers">Add event</button>
+            <div class="event-editor">
+                <h4 class="automation-add-title">Add an event trigger</h4>
+                <div class="form-row">
+                    <label class="form-row-label" for="new-event-type">Event</label>
+                    <select id="new-event-type" name="new_event_type" class="form-control" aria-label="Event type">
+                        {% for value, label in events.items() %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="automation-trigger-add-row">
+                    <button type="button" class="btn-primary"
+                            hx-post="{{ url_for('automations_triggers', slug=slug) }}"
+                            hx-vals='{"action": "add_event"}'
+                            hx-target="#automation-triggers">Add event</button>
+                    <button type="button" class="btn-secondary js-cancel">Cancel</button>
+                </div>
             </div>
         </div>
     </form>

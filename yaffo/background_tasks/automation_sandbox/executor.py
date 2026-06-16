@@ -8,7 +8,7 @@ from yaffo.logging_config import get_logger
 logger = get_logger(__name__, 'background_tasks')
 
 
-def _context_globals(context) -> dict:
+def context_globals(context) -> dict:
     """The `ctx` global a script reads: what triggered this run. `context` is an
     EventContext for event-driven runs, or None for a schedule (then ctx fields
     are empty)."""
@@ -17,6 +17,25 @@ def _context_globals(context) -> dict:
         "job_id": context.job_id if context else None,
         "photo_ids": list(context.photo_ids) if context else [],
     }
+
+
+def run_automation_code(
+    session: Session,
+    code: str,
+    context=None,
+    *,
+    functions=None,
+    filename: str = "automation.star",
+) -> StarlarkResult:
+    """Run a Starlark `code` string in the sandbox with the trigger `context` as
+    `ctx` and the host API as `functions` (defaults to the live, executing host
+    functions; pass recording ones to capture a test run's actions)."""
+    return run_starlark(
+        code,
+        inputs={"ctx": context_globals(context)},
+        functions=functions if functions is not None else build_host_functions(session),
+        filename=filename,
+    )
 
 
 def run_automation(session: Session, automation: Automation, context=None) -> StarlarkResult:
@@ -30,11 +49,8 @@ def run_automation(session: Session, automation: Automation, context=None) -> St
         logger.warning(f"automation '{automation.slug}' has no published code to run")
         return StarlarkResult(success=False, error="automation has no published code")
 
-    result = run_starlark(
-        automation.published_code,
-        inputs={"ctx": _context_globals(context)},
-        functions=build_host_functions(session),
-        filename=f"{automation.slug}.star",
+    result = run_automation_code(
+        session, automation.published_code, context, filename=f"{automation.slug}.star"
     )
     if result.success:
         logger.info(f"automation '{automation.slug}' ran; output={result.output}")

@@ -124,6 +124,37 @@ def test_create_requires_name(app, client):
     assert client.post("/utilities/automations/create", data={"name": "  "}).status_code == 400
 
 
+def test_update_details_renames_and_describes(app, client):
+    _add(app, name="Old", description=None)
+    resp = client.post(
+        "/utilities/automations/a1/details",
+        data={"name": "New name", "description": "Tags beaches"},
+    )
+    assert resp.status_code == 302
+    with app.app_context():
+        a = db.session.query(Automation).filter_by(slug="a1").first()
+        assert a.name == "New name"
+        assert a.description == "Tags beaches"
+        assert a.slug == "a1"  # slug stays stable on rename
+
+
+def test_update_details_blank_description_clears(app, client):
+    _add(app, description="something")
+    client.post("/utilities/automations/a1/details", data={"name": "A1", "description": "  "})
+    with app.app_context():
+        assert db.session.query(Automation).filter_by(slug="a1").first().description is None
+
+
+def test_update_details_requires_name(app, client):
+    _add(app)
+    assert client.post("/utilities/automations/a1/details", data={"name": " "}).status_code == 400
+
+
+def test_update_details_system_rejected(app, client):
+    _add(app, slug="sys", name="Sys", is_system=True, handler="file_sync")
+    assert client.post("/utilities/automations/sys/details", data={"name": "x"}).status_code == 400
+
+
 def test_delete_removes_custom(app, client):
     _add(app)
     assert client.post("/utilities/automations/a1/delete").status_code == 302
@@ -141,6 +172,27 @@ def test_toggle_enabled_flips(app, client):
     assert client.post("/utilities/automations/a1/enabled").status_code == 204
     with app.app_context():
         assert db.session.query(Automation).filter_by(slug="a1").first().enabled is True
+
+
+def test_edit_triggers_page_renders(app, client):
+    _add(app, name="Renders")
+    _add_trigger(app, trigger_type=TRIGGER_TYPE_SCHEDULE, enabled=True, cron="0 9 * * 1")
+    resp = client.get("/utilities/automations/a1/triggers/edit")
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Renders" in body
+    assert "data-cron-builder" in body  # the full editor is present on this screen
+
+
+def test_edit_triggers_unknown_404(app, client):
+    assert client.get("/utilities/automations/nope/triggers/edit").status_code == 404
+
+
+def test_detail_page_shows_edit_triggers_link(app, client):
+    _add(app)
+    body = client.get("/utilities/automations/a1").get_data(as_text=True)
+    assert "/utilities/automations/a1/triggers/edit" in body
+    assert "data-cron-builder" not in body  # editor moved off the detail page
 
 
 def test_save_schedule_adds_trigger(app, client):
@@ -274,6 +326,61 @@ def test_trigger_missing_id_404(app, client):
         data={"action": "remove", "trigger_id": "999"},
     )
     assert resp.status_code == 404
+
+
+def test_test_endpoint_schedule_runs_code(app, client):
+    _add(app, published_code="print('ran')")
+    resp = client.post("/utilities/automations/a1/test")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["success"] is True
+    assert data["code_source"] == "published"
+    assert data["context"] == {"type": "schedule"}
+    assert data["output"] == ["ran"]
+
+
+def test_test_endpoint_prefers_working_code(app, client):
+    _add(app, working_code="print('draft')", published_code="print('live')")
+    data = client.post("/utilities/automations/a1/test").get_json()
+    assert data["code_source"] == "working"
+    assert data["output"] == ["draft"]
+
+
+def test_test_endpoint_event_context_uses_photo_ids(app, client):
+    from yaffo.db.models import Photo
+    _add(app, published_code="print(len(ctx['photo_ids']))")
+    _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="photo_indexed")
+    with app.app_context():
+        db.session.add_all([Photo(full_file_path="/a.jpg"), Photo(full_file_path="/b.jpg")])
+        db.session.commit()
+    data = client.post("/utilities/automations/a1/test").get_json()
+    assert data["context"]["type"] == "event"
+    assert data["context"]["event_type"] == "photo_indexed"
+    assert len(data["context"]["photo_ids"]) == 2
+    assert data["output"] == ["2"]
+
+
+def test_test_endpoint_records_mutating_action_without_performing(app, client):
+    from yaffo.db.models import Photo, Tag
+    _add(app, published_code="tag_photo(1, 'beach')")
+    with app.app_context():
+        db.session.add(Photo(full_file_path="/a.jpg"))
+        db.session.commit()
+    data = client.post("/utilities/automations/a1/test").get_json()
+    assert data["success"] is True
+    assert data["actions"][0]["summary"] == "Tag photo 1 as 'beach'"
+    assert data["actions"][0]["name"] == "tag_photo"
+    with app.app_context():
+        assert db.session.query(Tag).count() == 0  # dry run performed no tagging
+
+
+def test_test_endpoint_no_code_400(app, client):
+    _add(app, working_code=None, published_code=None)
+    assert client.post("/utilities/automations/a1/test").status_code == 400
+
+
+def test_test_endpoint_unknown_404(app, client):
+    assert client.post("/utilities/automations/nope/test").status_code == 404
 
 
 def test_cancel_settles_to_accepted(app, client):

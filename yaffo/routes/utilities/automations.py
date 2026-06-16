@@ -11,6 +11,7 @@ import re
 
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 
+from yaffo.background_tasks.automation_sandbox.preview import preview_automation
 from yaffo.background_tasks.schedule import is_valid_cron
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
 from yaffo.db import db
@@ -61,17 +62,20 @@ def init_automations_routes(app: Flask):
                 and selected.status == AUTOMATION_STATUS_READY
                 and selected.working_code is not None
             ),
-            events=EVENTS,
             **automations_sidebar_context(),
         )
 
+    def _triggers_context(automation: Automation, error: str | None = None) -> dict:
+        return {
+            "triggers": sorted(automation.triggers, key=lambda t: t.id),
+            "slug": automation.slug,
+            "events": EVENTS,
+            "error": error,
+        }
+
     def _render_triggers(automation: Automation, error: str | None = None):
         return render_template(
-            "utilities/automations_triggers.html",
-            triggers=sorted(automation.triggers, key=lambda t: t.id),
-            slug=automation.slug,
-            events=EVENTS,
-            error=error,
+            "utilities/automations_triggers.html", **_triggers_context(automation, error)
         )
 
     def _find_trigger(automation: Automation, raw_id) -> AutomationTrigger | None:
@@ -123,6 +127,39 @@ def init_automations_routes(app: Flask):
             slug=slug, name=name, is_system=False, enabled=False,
             status=AUTOMATION_STATUS_ACCEPTED,
         ))
+        db.session.commit()
+        return redirect(url_for("automations_show", slug=slug))
+
+    @app.route("/utilities/automations/<slug>/triggers/edit", methods=["GET"])
+    def automations_edit_triggers(slug: str):
+        """The full trigger editor on its own screen (the detail page only shows a
+        read-only summary), so the cron builder has room to breathe."""
+        automation = repo.get_by_slug(db.session, slug)
+        if automation is None:
+            abort(404)
+        return render_template(
+            "utilities/automations_triggers_edit.html",
+            selected=automation,
+            selected_slug=slug,
+            **_triggers_context(automation),
+            **automations_sidebar_context(),
+        )
+
+    @app.route("/utilities/automations/<slug>/details", methods=["POST"])
+    def automations_update_details(slug: str):
+        """Rename / re-describe a custom automation. The slug stays fixed (it's the
+        stable id in URLs and the sidebar), so only the display name and description
+        change. System automations are route-locked like elsewhere."""
+        automation = repo.get_by_slug(db.session, slug)
+        if automation is None:
+            abort(404)
+        if automation.is_system:
+            return jsonify({"error": "System automations cannot be edited."}), 400
+        name = (request.form.get("name") or "").strip()
+        if not name:
+            return jsonify({"error": "Automation name is required"}), 400
+        automation.name = name
+        automation.description = (request.form.get("description") or "").strip() or None
         db.session.commit()
         return redirect(url_for("automations_show", slug=slug))
 
@@ -245,6 +282,19 @@ def init_automations_routes(app: Flask):
             abort(404)
         repo.set_status(db.session, slug, AUTOMATION_STATUS_ACCEPTED)
         return "", 204
+
+    @app.route("/utilities/automations/<slug>/test", methods=["POST"])
+    def automations_test(slug: str):
+        """Dry-run the automation's current code (working draft if any, else
+        published) against a synthetic context, returning the host-API actions it
+        performed plus its output. Records no Job and (with today's read-only host
+        surface) changes nothing."""
+        automation = repo.get_by_slug(db.session, slug)
+        if automation is None:
+            abort(404)
+        if not (automation.working_code or automation.published_code):
+            return jsonify({"error": "No code to test yet."}), 400
+        return jsonify(preview_automation(db.session, automation).to_dict())
 
     @app.route("/utilities/automations/<slug>/publish", methods=["POST"])
     def automations_publish(slug: str):

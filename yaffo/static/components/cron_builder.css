@@ -3,14 +3,11 @@
    generic .form-row / .form-row-label from form.css; only the cron-specific bits
    live here. */
 
+/* Layout only — the host supplies any surrounding card/panel chrome. */
 .cron-builder {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 12px;
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-surface-sunken);
 }
 
 /* The cadence sub-fields (and the advanced raw input) sit inline on the Repeat
