@@ -17,7 +17,18 @@ from sqlalchemy.orm import Session
 from yaffo.background_tasks.automation_sandbox.labels import face_label, person_label, photo_label
 from yaffo.db.repositories import person_repository, photos_repository
 from yaffo.utils.settings import media_dir_by_id
+from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_photo_rows
+from yaffo.db.repositories.data_query_repository import resolve_query
 
+def data_query(session: Session, query: dict) -> Any:
+    rows = resolve_query(session, query)
+    if query.get("source") == "photos" and isinstance(rows, list):
+        return enrich_photo_rows(session, rows)
+    return rows
+
+def summarize_data_query(args: list[Any], session: Session) -> str:
+    query = args[0] if args and isinstance(args[0], dict) else {}
+    return f"Looking up {query.get('source', 'data')}"
 
 def tag_photo(session: Session, photo_id: int, name: str, value: Any = None) -> None:
     photos_repository.add_tag(session, photo_id, name, value)

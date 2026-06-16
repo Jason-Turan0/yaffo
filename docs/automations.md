@@ -1,17 +1,21 @@
 # Automations — Scheduled & Event-Driven Background Behavior (Architecture)
 
-> **Status (2026-06-14):** runtime + builder + UI built and unit-tested. An
-> **Automation** is a named unit of functionality that runs on a **schedule**
-> (cron) or in response to a **domain event** (e.g. photos indexed). Two tiers,
-> mirroring the theme registry: **system** automations ship with the app and are
-> code-backed; **custom** automations are AI-generated and run sandboxed Starlark.
-> The AI builder chat + publish flow and the management UI are live under the
-> **Utilities** page (`/utilities/automations`). This doc is the reference for the
-> data model, the two dispatch paths, the sandbox, the builder, and the design
-> decisions behind them.
+> **Status (2026-06-16):** runtime + builder + management UI + host action API +
+> a test/preview harness, all built and unit-tested. An **Automation** is a named
+> unit of functionality that runs on a **schedule** (cron) or in response to a
+> **domain event** (e.g. photos indexed). Two tiers, mirroring the theme registry:
+> **system** automations ship with the app and are code-backed; **custom**
+> automations are AI-generated and run sandboxed Starlark against a curated host
+> API (read `data_query` + face-similarity; mutating tag / rename / move /
+> assign-face). The AI builder chat + publish flow, full trigger-editing UI (cron
+> builder), name/description editing, and a no-op **Test** harness (preview the
+> actions a script would take) are live under the **Utilities** page
+> (`/utilities/automations`). This doc is the reference for the data model, the two
+> dispatch paths, the sandbox + host API, the builder, the test harness, and the
+> design decisions behind them.
 >
-> **Not yet built:** the loop guard; a hard Starlark CPU/time limit. See
-> *Deferred* at the bottom.
+> **Not yet built:** the loop guard; a hard Starlark CPU/time limit; per-automation
+> run status on the UI. See *Deferred* at the bottom.
 
 ## Overview
 
@@ -170,11 +174,32 @@ automation_sandbox/
   data** (`success=False, error=…`) — it never raises `StarlarkError`, so the
   worker treats a bad AI script as a value, not a crash.
 - **`automation_host.py`** — the host API declared **once** in `HOST_API`
-  (`HostFunction` specs) and read in two places that can't diverge:
-  `build_host_functions(session)` (the live, session-bound callables) and
-  `render_host_api()` (agent-facing docs for the system prompt). Current surface:
-  `data_query(query)` → `data_query_repository.resolve_query`. Add a capability =
-  add one `HostFunction`.
+  (`HostFunction` specs) and read in three places that can't diverge:
+  `build_host_functions(session)` (the live, session-bound callables),
+  `build_recording_host_functions(session)` (the test/preview variant — see below),
+  and `render_host_api()` (agent-facing docs for the system prompt). Add a
+  capability = add one `HostFunction`. Each spec carries `impl` (takes the session
+  first; delegates DB work to `db/repositories`), `mutating` (state-changing →
+  recorded-but-skipped in a test), and `summarize(args, session)` (a friendly
+  one-line action for the test UI, resolving ids to file/person names via
+  `automation_sandbox/labels.py`). Current surface:
+
+  | function | kind | does |
+  |---|---|---|
+  | `data_query(query)` | read | `data_query_repository.resolve_query`; photo rows are enriched with `media_dir_id` + `relative_path` (see *Media dirs*) |
+  | `face_similarity(photo_id, person_id)` | read | per-face similarity to a person (`domain/compare_utils`) |
+  | `match_people(photo_id)` | read | per-face similarity to all known people |
+  | `tag_photo(photo_id, name, value=None)` | mutating | add a `Tag` |
+  | `rename_file(photo_id, new_name)` | mutating | rename in place (basename only) |
+  | `move_photo(photo_id, media_dir_id, target_path)` | mutating | move into a sub-folder of a media dir (confined to it) |
+  | `assign_face(face_id, person_id)` | mutating | link a face to a person (per-face, not per-photo) |
+
+  The actions live in `automation_actions.py`; the read comparisons in
+  `automation_compare.py`; both keep all `session.query/add/commit` in
+  `db/repositories`. **Host functions return string-keyed dicts / lists of them**:
+  the `starlark-pyo3` binding coerces returned dict *keys* to strings, so ids are
+  values, not keys (e.g. `match_people` → `[{face_id, matches:[{person_id,
+  person_name, score}]}]`).
 - **`executor.run_automation(session, automation, context)`** — runs
   `automation.published_code` with `inputs={"ctx": …}` (the trigger context:
   `event_type`/`job_id`/`photo_ids`, empty for a schedule) and
@@ -186,6 +211,42 @@ automation_sandbox/
 The sandbox parses authored code with the **extended Starlark dialect**, so
 scripts may use top-level `for`/`if`/f-strings/lambda while staying hermetic
 (`load` is inert with no file loader; still no `while`/recursion/I/O).
+
+## Test / preview harness (`automation_sandbox/preview.py`)
+
+A **dry run** that shows what a script *would* do without doing it. `Test`
+re-runs the last-selected file/folder; `Test on a folder…` / `Test on a file…`
+open the native picker (`select_folder?mode=folder|file`, see `utils/file_system.py`)
+and run against the indexed photos at/under that path
+(`photos_repository.get_photo_ids_under_path`). The route is `POST
+.../<slug>/test-files` → `preview_automation(session, automation, photo_ids)`.
+
+- **Nothing changes.** `preview_automation` runs the code with
+  `build_recording_host_functions`: every host call is appended to a `HostCall`
+  list; **reads still execute** (so the script sees live data), **mutating actions
+  are recorded but not performed**. No `Job` is opened.
+- **The result is a named DTO** `TestRunResult` (success, `code_source`
+  working/published, `context`, `actions`, `output`, `value`, `error`). Each action
+  carries a friendly `summary` (via `summarize_call`) plus the raw `name`/`args`.
+- **UI** (`static/utilities/automations.js` + the code panel in
+  `automations.html`): renders a meta line (`Testing on folder: … / Ran published
+  code · N photos`), then an **Actions table** — consecutive runs of the same
+  action collapse to one row with a `× N` count, and `Show details` reveals the
+  raw calls. All built with safe DOM construction (no innerHTML injection).
+
+## Media dirs (script-facing paths)
+
+Scripts never see absolute paths. Each configured media dir has a stable **uuid4**
+guid, stored in the `media_dirs` setting as `[{id, path}]` (helpers in
+`utils/settings.py`: `get_media_dir_entries`, `media_dir_by_id`, `add_media_dir`,
+`remove_media_dir`; the add-media-dir route assigns the guid; legacy string entries
+are migrated by `scripts/backfill_media_dir_ids.py`). The automation `data_query`
+wrapper enriches photo rows with `media_dir_id` + `relative_path`
+(`automation_sandbox/media_dirs.py::enrich_photo_rows`, derived from
+`full_file_path`, which stays server-side); the shared `resolve_query` (page
+builder) is untouched. `move_photo` addresses its destination by `media_dir_id` +
+`target_path` and **refuses any target that resolves outside that media dir**, so a
+script can organise within or move between media dirs but can't write elsewhere.
 
 ## The builder (AI chat + publish + UI)
 
@@ -240,9 +301,18 @@ offers a preset list + a Period-driven single-value builder (Hourly/Daily/Weekly
 Monthly) + an Advanced raw-cron escape hatch, composes one 5-field cron into a
 hidden `cron` input, and live-previews it via `describeCron` (which also fills the
 `data-cron` text on existing rows). The server stays the trust boundary: the
-`add_schedule` action only validates the submitted `cron` with `is_valid_cron`
-before persisting — no cron-building logic lives in Python. The component re-inits
-itself on load and on `htmx:afterSwap`, so it survives the fragment re-render.
+`save_schedule` action only validates the submitted `cron` with `is_valid_cron`
+before persisting (`automations_validate_cron` also gates the Save button live for
+the Advanced field) — no cron-building logic lives in Python. The component
+re-inits itself on load and on `htmx:afterSwap`, so it survives the fragment
+re-render.
+
+**Trigger editing lives on its own screen** (`GET .../<slug>/triggers/edit`,
+`automations_triggers_edit.html`) to keep the detail page uncluttered — the detail
+header links to it via **Edit triggers**. **Name + description** are editable for
+custom automations through an **Edit details** modal (`render_modal`, `POST
+.../<slug>/details`); the slug stays fixed on rename. The detail page also hosts
+the **Test** panel (above) and the published `code`.
 
 ## The one built-in: `file_sync`
 
@@ -253,6 +323,16 @@ runs `utils/file_sync.run_file_sync`: the same disk↔index reconcile as the man
 index-photos button (`scan_media_dirs` + `perform_sync` are shared with the
 route), so its import/index Jobs show up in the UI exactly like a hand-triggered
 sync — tagged with `automation_id` as the run history.
+
+## Seed examples (`scripts/seed_automations.py`)
+
+A dev seeder (run `python -m yaffo.scripts.seed_automations`, idempotent) that
+stands in for AI-generated custom automations so the runtime + host API can be
+exercised end-to-end without the builder: `log-photos-on-index` /
+`log-photos-each-minute` (read-only `data_query`), `auto-assign-faces` (on
+`photo_indexed`, per-face `match_people` → `assign_face` at ≥95%, ambiguous faces
+skipped), and `organize-by-date` (on `photo_indexed`, `move_photo(id,
+media_dir_id, "YYYY/MM")` from each row's `media_dir_id`).
 
 ## Key design decisions / invariants
 
@@ -288,10 +368,19 @@ sync — tagged with `automation_id` as the run history.
 - **Hard CPU/time limit.** Starlark blocks unbounded loops/recursion, but a large
   bounded `for` can still burn CPU; `starlark-pyo3` exposes no step budget and a
   thread soft-timeout can't kill a runaway eval. Real hardening = subprocess +
-  kill / resource limits before exposing arbitrary user scripts.
-- **Job Status** Show status of the automation on the UI
-- **Testing features** Ability to run the script generated by the AI from the UI and get a preview (no actions taken) of what the script would do.
-
+  kill / resource limits before exposing arbitrary user scripts. **More pressing
+  now** that mutating actions (move/rename/tag/assign) run real file/DB writes on a
+  triggered run.
+- **Run status on the UI.** Custom-run Jobs are recorded (`automation_runs.py`) but
+  the detail page doesn't surface them yet — no last-run / success-fail / output on
+  the automation page.
+- **`media_dir_id` / `relative_path` aren't filterable.** They're enrichment, not
+  `FIELDS_BY_SOURCE` columns, so a script can read them on a photo row but can't
+  `data_query` *by* them (e.g. "photos in media dir X"). Would need a real filter
+  mechanism.
+- **Built (was deferred):** trigger-editing UI + cron builder, and the test/preview
+  harness (now live; mutating actions are recorded-not-performed).
+- **More complex use cases** More use cases of the automation feature to stress test the API.
 ## File map
 
 | Concern | File |
@@ -305,15 +394,20 @@ sync — tagged with `automation_id` as the run history.
 | Emission hook | `yaffo/background_tasks/tasks/complete_job.py` |
 | Tier routing | `yaffo/background_tasks/automation_dispatch.py` |
 | Handler registry | `yaffo/background_tasks/registry.py` |
-| Sandbox | `yaffo/background_tasks/automation_sandbox/` |
+| Sandbox runner + executor | `yaffo/background_tasks/automation_sandbox/{starlark_runner,executor}.py` |
+| Host API (registry + docs) | `yaffo/background_tasks/automation_sandbox/automation_host.py` |
+| Host actions / comparisons / labels | `yaffo/background_tasks/automation_sandbox/{automation_actions,automation_compare,labels}.py` |
+| Media-dir guids + row enrichment | `yaffo/utils/settings.py`, `yaffo/background_tasks/automation_sandbox/media_dirs.py`, `yaffo/scripts/backfill_media_dir_ids.py` |
+| Test / preview harness | `yaffo/background_tasks/automation_sandbox/preview.py` (+ `routes` `test-files`, `utils/file_system.py` picker) |
 | Executor task | `yaffo/background_tasks/tasks/run_automation.py` |
 | Custom run → Job recording | `yaffo/background_tasks/automation_runs.py` |
 | Built-in file_sync | `yaffo/background_tasks/tasks/file_sync.py`, `yaffo/utils/file_sync.py` |
+| Seed examples | `yaffo/scripts/seed_automations.py` |
 | Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |
 | Builder tool | `yaffo/page_builder/tool_providers/automation_tool.py` |
 | Builder prompts | `yaffo/page_builder/prompt_generator/automation_{system,user}_prompt.py` |
 | Builder agent + task | `yaffo/page_builder/agent.py`, `yaffo/background_tasks/tasks/generate_automation.py` |
 | UI routes | `yaffo/routes/utilities/automations.py` (+ `common.automations_sidebar_context`) |
-| UI templates / static | `yaffo/templates/utilities/{_base,automations,automations_triggers}.html`, `yaffo/static/utilities/{_base,automations}.{js,css}` |
+| UI templates / static | `yaffo/templates/utilities/{_base,automations,automations_triggers,automations_triggers_edit}.html`, `yaffo/static/utilities/{_base,automations}.{js,css}` |
 | Cron editor component | `yaffo/static/components/cron_builder.{js,css}` |
-| Tests | `tests/yaffo/background_tasks/`, `tests/yaffo/routes/test_automations_page.py` |
+| Tests | `tests/yaffo/background_tasks/` (incl. `test_automation_{host,actions}`, `test_preview`), `tests/yaffo/routes/test_automations_page.py` |

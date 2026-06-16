@@ -16,8 +16,6 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox import automation_actions as actions
 from yaffo.background_tasks.automation_sandbox import automation_compare as compare
-from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_photo_rows
-from yaffo.db.repositories.data_query_repository import resolve_query
 
 
 @dataclass(frozen=True)
@@ -38,23 +36,12 @@ class HostFunction:
     mutating: bool = False
 
 
-def _data_query(session: Session, query: dict) -> Any:
-    rows = resolve_query(session, query)
-    if query.get("source") == "photos" and isinstance(rows, list):
-        return enrich_photo_rows(session, rows)
-    return rows
-
-
-def _summarize_data_query(args: list[Any], session: Session) -> str:
-    query = args[0] if args and isinstance(args[0], dict) else {}
-    return f"Looking up {query.get('source', 'data')}"
-
-
 HOST_API: tuple[HostFunction, ...] = (
     HostFunction(
         name="data_query",
         signature="data_query(query)",
         description=(
+            #TODO. Provide the actual schema in the description.
             "Read-only access to the app's data through the validated data_query "
             "contract. `query` is a dict naming a source, with optional per-column "
             'operator filters and a limit, e.g. {"source": "photos", "year": '
@@ -66,8 +53,8 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         returns="A list of row dicts; or a single number/object for count/range queries.",
         example='recent = data_query({"source": "photos", "limit": 10})',
-        impl=_data_query,
-        summarize=_summarize_data_query,
+        impl=actions.data_query,
+        summarize=actions.summarize_data_query,
     ),
     HostFunction(
         name="tag_photo",
