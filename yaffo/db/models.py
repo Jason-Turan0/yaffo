@@ -235,6 +235,15 @@ AUTOMATION_HANDLER_DUPLICATE_SCAN = "duplicate_scan"
 AUTOMATION_HANDLER_EXPORT_PHOTO_TAG = "export_photo_tag"
 AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME = "assign_location_name"
 
+# System handlers that operate over the whole library and ignore the event's photo
+# subjects (their Run-now is a context-less full scan). Every other automation is
+# "scoped": Run-now runs it over a user-picked file/folder's photos. New handlers
+# default to scoped — add one here only if it genuinely scans everything.
+AUTOMATION_WHOLE_LIBRARY_HANDLERS = {
+    AUTOMATION_HANDLER_FILE_SYNC,
+    AUTOMATION_HANDLER_DUPLICATE_SCAN,
+}
+
 # Default match threshold for the auto-assign-faces automation (overridable via
 # Automation.config["threshold"]; see background_tasks.automation_config).
 AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 0.95

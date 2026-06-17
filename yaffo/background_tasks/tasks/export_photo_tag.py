@@ -14,6 +14,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session, joinedload
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
+from yaffo.background_tasks.automation_runs import record_run
 from yaffo.background_tasks.config import huey
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
@@ -80,7 +81,7 @@ def _export_tags(
 def export_photo_tag_task(automation_id: int, photo_ids: list[int]):
     """Write people/location tags to the given photos' files. Enqueued by the
     export_photo_tag handler on a photo_modified event; which tags to write is read
-    live from the automation's config."""
+    live from the automation's config. The run is recorded as a Job."""
     session = SessionFactory()
     try:
         automation = session.get(Automation, automation_id)
@@ -88,11 +89,15 @@ def export_photo_tag_task(automation_id: int, photo_ids: list[int]):
             return
         export_location = bool(config_value(automation, _LOCATION_FIELD))
         export_people = bool(config_value(automation, _PEOPLE_FIELD))
-        written = _export_tags(session, photo_ids, export_location, export_people)
-        logger.info(
-            f"export_photo_tag: wrote metadata to {written}/{len(photo_ids)} file(s) "
-            f"(location={export_location}, people={export_people})"
-        )
+
+        def work() -> str:
+            written = _export_tags(session, photo_ids, export_location, export_people)
+            return (
+                f"wrote metadata to {written}/{len(photo_ids)} file(s) "
+                f"(location={export_location}, people={export_people})"
+            )
+
+        record_run(session, automation, work)
     finally:
         session.close()
         SessionFactory.remove()

@@ -188,8 +188,65 @@ def test_run_now_nothing_to_run_400(app, client, monkeypatch):
     assert "Nothing to run" in resp.get_json()["error"]
 
 
+def test_run_now_scoped_runs_over_photos_under_path(app, client, monkeypatch):
+    """A path in the body scopes the run: photos under it become the EventContext
+    the automation fires with (the live twin of the test-files dry run)."""
+    _add(app)
+    monkeypatch.setattr(
+        "yaffo.routes.utilities.automations.photos_repository.get_photo_ids_under_path",
+        lambda session, path: [11, 22, 33],
+    )
+    calls = []
+    monkeypatch.setattr(
+        "yaffo.routes.utilities.automations.invoke_automation",
+        lambda automation, context: calls.append((automation.slug, context)) or True,
+    )
+    resp = client.post("/utilities/automations/a1/run", json={"path": "/media/2022"})
+    assert resp.status_code == 202
+    assert resp.get_json()["photo_count"] == 3
+    (slug, context), = calls
+    assert slug == "a1"
+    assert context.photo_ids == [11, 22, 33]
+    assert context.event_type == "manual"
+
+
+def test_run_now_scoped_no_photos_under_path_400(app, client, monkeypatch):
+    _add(app)
+    monkeypatch.setattr(
+        "yaffo.routes.utilities.automations.photos_repository.get_photo_ids_under_path",
+        lambda session, path: [],
+    )
+    fired = []
+    monkeypatch.setattr(
+        "yaffo.routes.utilities.automations.invoke_automation",
+        lambda automation, context: fired.append(context) or True,
+    )
+    resp = client.post("/utilities/automations/a1/run", json={"path": "/media/empty"})
+    assert resp.status_code == 400
+    assert "No indexed photos" in resp.get_json()["error"]
+    assert fired == []  # didn't fire the automation
+
+
 def test_run_now_unknown_404(app, client):
     assert client.post("/utilities/automations/nope/run").status_code == 404
+
+
+def test_scoped_automation_shows_run_on_folder_file_buttons(app, client):
+    """A per-photo automation (here a custom one) gets the folder/file pickers, not
+    the plain whole-library Run-now button."""
+    _add(app)
+    body = client.get("/utilities/automations/a1").get_data(as_text=True)
+    assert 'js-run-files" data-mode="folder"' in body
+    assert 'js-run-files" data-mode="file"' in body
+    assert 'id="run-automation-button"' not in body
+
+
+def test_whole_library_automation_shows_plain_run_now(app, client):
+    """file_sync (whole-library) keeps the plain Run-now button and no pickers."""
+    _add(app, slug="fs", name="File sync", is_system=True, handler="file_sync")
+    body = client.get("/utilities/automations/fs").get_data(as_text=True)
+    assert 'id="run-automation-button"' in body
+    assert "js-run-files" not in body
 
 
 def test_run_view_summarizes_batch_job():

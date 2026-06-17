@@ -22,6 +22,12 @@ class EventContext:
     photo_ids: list[int] = field(default_factory=list)
 
 
+# event_type stamped on the EventContext of a manual "Run now" over a picked
+# file/folder (no domain event fired it). Handlers act on photo_ids regardless;
+# custom scripts can read ctx['event_type'] to tell a manual run from a real event.
+MANUAL_RUN_EVENT_TYPE = "manual"
+
+
 # Which completed Job names emit which event (per-job-completion granularity).
 # Jobs not listed emit nothing.
 JOB_EVENT_MAP: dict[str, str] = {

@@ -20,6 +20,7 @@ from typing import Callable, Optional
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
+from yaffo.background_tasks.automation_runs import record_run
 from yaffo.background_tasks.config import huey
 from yaffo.background_tasks.events import EventContext, emit_event
 from yaffo.background_tasks.registry import register_handler
@@ -30,11 +31,8 @@ from yaffo.db.models import (
     AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME,
 )
 from yaffo.db.repositories import photos_repository
-from yaffo.logging_config import get_logger
 from yaffo.utils.geo import haversine_meters
 from yaffo.utils.reverse_geocode import reverse_geocode
-
-logger = get_logger(__name__, 'background_tasks')
 
 # The handler's config fields (see automation_config.AUTOMATION_CONFIG), by key.
 _FIELDS = {f.key: f for f in AUTOMATION_CONFIG[AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME]}
@@ -112,7 +110,8 @@ def _throttled_geocoder() -> Callable[[float, float], Optional[str]]:
 @huey.task()
 def assign_location_name_automation_task(automation_id: int, photo_ids: list[int]):
     """Assign location names to the given photos. Enqueued by the
-    assign_location_name handler on a photo_indexed event; config is read live."""
+    assign_location_name handler on a photo_indexed event; config is read live. The
+    run is recorded as a Job."""
     session = SessionFactory()
     try:
         automation = session.get(Automation, automation_id)
@@ -123,21 +122,24 @@ def assign_location_name_automation_task(automation_id: int, photo_ids: list[int
         overwrite = bool(config_value(automation, _FIELDS["overwrite_existing"]))
         geocode = _throttled_geocoder() if bool(config_value(automation, _FIELDS["reverse_geocode_enabled"])) else None
 
-        updated = _assign_location_names(
-            session,
-            photo_ids,
-            reuse_enabled=reuse_enabled,
-            radius_m=radius_m,
-            overwrite=overwrite,
-            geocode=geocode,
-        )
-        logger.info(
-            f"assign_location_name: named {len(updated)}/{len(photo_ids)} photo(s) "
-            f"(reuse={reuse_enabled} radius={radius_m}m geocode={geocode is not None})"
-        )
-        if updated:
-            # Let export_photo_tag (photo_modified) write the new name into the file.
-            emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": updated})
+        def work() -> str:
+            updated = _assign_location_names(
+                session,
+                photo_ids,
+                reuse_enabled=reuse_enabled,
+                radius_m=radius_m,
+                overwrite=overwrite,
+                geocode=geocode,
+            )
+            if updated:
+                # Let export_photo_tag (photo_modified) write the new name into the file.
+                emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": updated})
+            return (
+                f"named {len(updated)}/{len(photo_ids)} photo(s) "
+                f"(reuse={reuse_enabled} radius={radius_m}m geocode={geocode is not None})"
+            )
+
+        record_run(session, automation, work)
     finally:
         session.close()
         SessionFactory.remove()

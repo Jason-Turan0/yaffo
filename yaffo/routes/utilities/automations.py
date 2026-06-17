@@ -16,6 +16,7 @@ from flask import Flask, abort, jsonify, make_response, redirect, render_templat
 from yaffo.background_tasks.automation_config import config_fields_for, config_value
 from yaffo.background_tasks.automation_dispatch import invoke_automation
 from yaffo.background_tasks.automation_sandbox.preview import preview_automation
+from yaffo.background_tasks.events import EventContext, MANUAL_RUN_EVENT_TYPE
 from yaffo.background_tasks.schedule import is_valid_cron
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
 from yaffo.db import db
@@ -26,6 +27,7 @@ from yaffo.db.models import (
     AUTOMATION_STATUS_ACCEPTED,
     AUTOMATION_STATUS_IN_PROGRESS,
     AUTOMATION_STATUS_READY,
+    AUTOMATION_WHOLE_LIBRARY_HANDLERS,
     CONVERSATION_TYPE_USER,
     EVENTS,
     JOB_STATUS_CANCELLED,
@@ -134,6 +136,15 @@ def init_automations_routes(app: Flask):
             for f in config_fields_for(automation)
         ]
 
+    def _supports_scoped_run(automation: Automation) -> bool:
+        """Whether Run-now scopes to a user-picked file/folder (vs a context-less
+        whole-library run). True for any custom automation and for system handlers
+        that act on event subjects; False for whole-library handlers like file_sync
+        and duplicate_scan, which keep a plain Run-now."""
+        if not automation.is_system:
+            return True
+        return automation.handler not in AUTOMATION_WHOLE_LIBRARY_HANDLERS
+
     def _render_page(selected_slug: str | None):
         selected = repo.get_by_slug(db.session, selected_slug) if selected_slug else None
         return render_template(
@@ -148,6 +159,7 @@ def init_automations_routes(app: Flask):
             ),
             config_fields=_config_fields(selected),
             recent_runs=_recent_runs(selected),
+            scoped_run=_supports_scoped_run(selected) if selected else False,
             **automations_sidebar_context(),
         )
 
@@ -323,17 +335,30 @@ def init_automations_routes(app: Flask):
 
     @app.route("/utilities/automations/<slug>/run", methods=["POST"])
     def automations_run_now(slug: str):
-        """Fire the automation immediately, independent of its triggers and its
-        enabled state — the same path a schedule tick takes (`invoke_automation`
-        with no event context). The run is enqueued async and shows up in Run
-        history once a worker records its Job. Returns 400 for a custom automation
-        with nothing published to run."""
+        """Run the automation now, independent of its triggers and enabled state.
+
+        A per-photo automation sends a `path` (a user-picked file/folder); the run
+        executes for real over the indexed photos under it, via an EventContext —
+        the live twin of the test-files dry run. A whole-library handler (file_sync
+        / duplicate_scan) sends no path and fires context-less, like a schedule tick.
+        Either way the run is enqueued async and shows up in Run history once a
+        worker records its Job. Returns 400 when a scoped run matches no indexed
+        photos, or for a custom automation with nothing published to run."""
         automation = repo.get_by_slug(db.session, slug)
         if automation is None:
             abort(404)
-        if not invoke_automation(automation, None):
+
+        path = ((request.get_json(silent=True) or {}).get("path") or "").strip()
+        context = None
+        if path:
+            photo_ids = photos_repository.get_photo_ids_under_path(db.session, path)
+            if not photo_ids:
+                return jsonify({"error": "No indexed photos found under that path."}), 400
+            context = EventContext(event_type=MANUAL_RUN_EVENT_TYPE, photo_ids=photo_ids)
+
+        if not invoke_automation(automation, context):
             return jsonify({"error": "Nothing to run yet — publish the automation's code first."}), 400
-        return jsonify({"slug": slug}), 202
+        return jsonify({"slug": slug, "photo_count": len(context.photo_ids) if context else None}), 202
 
     @app.route("/utilities/automations/validate-cron", methods=["GET"])
     def automations_validate_cron():

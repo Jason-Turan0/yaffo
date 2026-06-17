@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from yaffo.background_tasks.automation_runs import run_and_record
+from yaffo.background_tasks.automation_runs import record_run, run_and_record
 from yaffo.db import db
 from yaffo.db.models import (
     Automation,
@@ -77,3 +77,46 @@ def test_bad_script_writes_failed_job(session):
     assert job.error_count == 1
     assert job.error
     assert job.automation_id == automation.id
+
+
+def _system_automation(session, slug):
+    automation = Automation(
+        slug=slug, name=slug.title(), is_system=True, enabled=True, handler=slug,
+    )
+    session.add(automation)
+    session.commit()
+    return automation
+
+
+def test_record_run_writes_completed_job(session):
+    """A system automation's run is recorded as a COMPLETED Job with the work's
+    summary in job_data, discoverable via jobs.automation_id."""
+    automation = _system_automation(session, "assign_location_name")
+    ran = []
+
+    job = record_run(session, automation, lambda: ran.append(True) or "named 3/5 photo(s)")
+
+    assert ran == [True]
+    assert job.automation_id == automation.id
+    assert job.name == automation.slug
+    assert job.status == JOB_STATUS_COMPLETED
+    assert job.completed_count == 1
+    assert job.started_at is not None and job.completed_at is not None
+    assert json.loads(job.job_data)["output"] == "named 3/5 photo(s)"
+    assert session.query(Job).filter_by(automation_id=automation.id).count() == 1
+
+
+def test_record_run_captures_work_failure(session):
+    """If the work raises, the run is a FAILED Job (error recorded, not re-raised)."""
+    automation = _system_automation(session, "export_photo_tag")
+
+    def boom() -> str:
+        raise RuntimeError("disk on fire")
+
+    job = record_run(session, automation, boom)  # must not raise
+
+    assert job.status == JOB_STATUS_FAILED
+    assert job.error_count == 1
+    assert "disk on fire" in job.error
+    assert job.automation_id == automation.id
+    assert job.completed_at is not None

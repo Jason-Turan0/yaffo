@@ -12,6 +12,7 @@ UI -- this one matches each face against *all* people and is fired by an event.
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
+from yaffo.background_tasks.automation_runs import record_run
 from yaffo.background_tasks.config import huey
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
@@ -19,9 +20,6 @@ from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, AUTOMATION_HANDLER_AUTO_ASSIGN_FACES
 from yaffo.db.repositories import person_repository, photos_repository
 from yaffo.domain.compare_utils import calculate_face_similarity
-from yaffo.logging_config import get_logger
-
-logger = get_logger(__name__, 'background_tasks')
 
 # The handler's lone config field (see automation_config.AUTOMATION_CONFIG).
 _THRESHOLD_FIELD = AUTOMATION_CONFIG[AUTOMATION_HANDLER_AUTO_ASSIGN_FACES][0]
@@ -51,16 +49,22 @@ def _assign_faces(session: Session, photo_ids: list[int], threshold: float) -> i
 def auto_assign_faces_automation_task(automation_id: int, photo_ids: list[int]):
     """Assign the faces in `photo_ids` to their unique strong match. Enqueued by the
     auto_assign_faces system handler when a photo_indexed event fires; the threshold
-    is read live from the automation's config."""
+    is read live from the automation's config. The run is recorded as a Job."""
     session = SessionFactory()
     try:
         automation = session.get(Automation, automation_id)
-        threshold = config_value(automation, _THRESHOLD_FIELD) if automation else _THRESHOLD_FIELD.default
-        assigned = _assign_faces(session, photo_ids, threshold)
-        logger.info(
-            f"auto_assign_faces: assigned {assigned} face(s) across {len(photo_ids)} "
-            f"photo(s) at threshold {threshold}"
-        )
+        if automation is None:
+            return
+        threshold = config_value(automation, _THRESHOLD_FIELD)
+
+        def work() -> str:
+            assigned = _assign_faces(session, photo_ids, threshold)
+            return (
+                f"assigned {assigned} face(s) across {len(photo_ids)} "
+                f"photo(s) at threshold {threshold}"
+            )
+
+        record_run(session, automation, work)
     finally:
         session.close()
         SessionFactory.remove()

@@ -82,13 +82,27 @@ There is **no `automation_runs` table**. A run is a `Job` tagged with
 `jobs.automation_id` (`ON DELETE SET NULL`), so the existing job status / progress
 / UI machinery *is* the run history. `Automation.jobs` ↔ `Job.automation`.
 
-- **System** automations record via their concrete tasks (e.g. file_sync's
-  import/index Jobs are tagged with `automation_id`).
-- **Custom** automations record via `background_tasks/automation_runs.py`
-  `run_and_record`: a RUNNING Job (named by slug) is opened, the sandboxed code
-  runs, then the Job is finalised to COMPLETED/FAILED with the captured print
-  `output` in `job_data` (and `error` on failure). These Jobs are never handed to
-  `complete_job_task`, so they emit no events (and can't feed a trigger loop).
+- **Schedule-driven system** automations record via their concrete tasks (e.g.
+  file_sync's import/index Jobs are tagged with `automation_id`).
+- **Event-driven system** automations (`auto_assign_faces`, `export_photo_tag`,
+  `assign_location_name`) record via `background_tasks/automation_runs.py`
+  `record_run`: a RUNNING Job (named by slug) is opened, the handler's work runs and
+  returns a one-line summary, then the Job is finalised to COMPLETED (summary in
+  `job_data.output`) or FAILED (the work's exception captured, not re-raised). So an
+  event-triggered run now shows up in the detail page's run history like a scheduled
+  one.
+- **Custom** automations record via the same module's `run_and_record`: a RUNNING
+  Job is opened, the sandboxed code runs, then the Job is finalised to
+  COMPLETED/FAILED with the captured print `output` in `job_data` (and `error` on
+  failure). The sandbox returns failures as data, so a bad script becomes a FAILED
+  Job, not an exception.
+
+Both `record_run` and `run_and_record` share `_open_run_job` and, like the custom
+path, **never hand their Jobs to `complete_job_task`** — so an automation run emits
+no job-completion event (and can't feed a trigger loop). Domain events an automation
+*chooses* to emit (e.g. `assign_location_name` emitting `photo_modified` so
+`export_photo_tag` writes the file) are explicit `emit_event` calls inside the work,
+independent of the run's Job.
 
 Schema lives in `yaffo/scripts/init_db.py` (no migrations — edit + reseed; the
 `file_sync` system automation + its hourly schedule trigger, the
@@ -382,14 +396,10 @@ is the event-driven replacement for the deleted Sync Metadata page — instead o
 batch button, the on-disk file stays in sync as you tag.
 
 **Known gaps (pick up later):**
-- **No backfill / no "export all".** It only ever writes the photos a
-  `photo_modified` event names, so existing photos aren't touched until you
-  re-edit them. **Run now is a no-op** for this handler (a manual tick passes no
-  `photo_ids`). A backfill path (Run-now over all indexed photos, or a per-photo
-  "export now") is the obvious next step.
-- **No run-history row.** Like `auto_assign_faces`, it creates no `Job`, so runs
-  don't appear in the detail page's run history. Wrap the write in an
-  `automation_id`-tagged Job to surface it.
+- **Backfill is manual, scoped by Run-now.** Events only name the photos they
+  concern, so existing photos aren't touched until you re-edit them — but **Run on a
+  folder…/file…** (see *Run-now* below) now re-runs the handler for real over a
+  picked path's photos, so you can apply it to existing files without re-editing.
 - **Format is dispatched by file *extension*** (`write_metadata.py`), so a WebP
   file mislabeled `.jpg` takes the JPEG path. exiftool usually copes, but
   detecting the real format (magic bytes / exiftool) would be more robust.
@@ -472,8 +482,11 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
 - **Loop guard.** Now that an automation can both emit and subscribe to events, add
   self-trigger / depth protection. Deliberately *not* a blanket "don't emit from
   automation jobs" (that would mute the legitimate "react when file_sync indexes"
-  case). Note custom-run Jobs are finalised synchronously and never go through
-  `complete_job_task`, so they don't emit events today — a partial mitigation.
+  case). Note automation-run Jobs (both `record_run` and `run_and_record`) are
+  finalised synchronously and never go through `complete_job_task`, so the run Job
+  itself emits no event — a partial mitigation. An automation that *explicitly*
+  emits (e.g. `assign_location_name` → `photo_modified` → `export_photo_tag`) is the
+  case a real loop guard must still bound.
 - **Hard CPU/time limit.** Starlark blocks unbounded loops/recursion, but a large
   bounded `for` can still burn CPU; `starlark-pyo3` exposes no step budget and a
   thread soft-timeout can't kill a runaway eval. Real hardening = subprocess +
@@ -485,9 +498,14 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
   `data_query` *by* them (e.g. "photos in media dir X"). Would need a real filter
   mechanism.
 - **Built (was deferred):** trigger-editing UI + cron builder; the test/preview
-  harness (mutating actions are recorded-not-performed); a **Run now** button
-  (`automations_run_now` → `invoke_automation(automation, None)`, a manual
-  schedule-style tick independent of triggers/enabled); and **run history on the
+  harness (mutating actions are recorded-not-performed); **Run now**
+  (`automations_run_now`, independent of triggers/enabled) — a whole-library handler
+  (file_sync/duplicate_scan) fires context-less like a schedule tick, while every
+  other automation gets **Run on a folder…/file…** buttons that pick a path and
+  invoke for real over the indexed photos under it (`get_photo_ids_under_path` →
+  `EventContext(event_type="manual", photo_ids=…)` → `invoke_automation`), the live
+  twin of the test-files dry run; whether an automation is scoped is
+  `AUTOMATION_WHOLE_LIBRARY_HANDLERS` (route `_supports_scoped_run`). And **run history on the
   detail page** — `automation_repository.get_recent_jobs` + the `AutomationRunView`
   view-model render the recent Jobs (system *and* custom runs) as a status/percent/
   summary/time list. The `automations_runs.html` fragment self-polls every 5s
@@ -519,7 +537,7 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
 | Media-dir guids + row enrichment | `yaffo/utils/settings.py`, `yaffo/background_tasks/automation_sandbox/media_dirs.py`, `yaffo/scripts/backfill_media_dir_ids.py` |
 | Test / preview harness | `yaffo/background_tasks/automation_sandbox/preview.py` (+ `routes` `test-files`, `utils/file_system.py` picker) |
 | Executor task | `yaffo/background_tasks/tasks/run_automation.py` |
-| Custom run → Job recording | `yaffo/background_tasks/automation_runs.py` |
+| Run → Job recording (system `record_run` + custom `run_and_record`) | `yaffo/background_tasks/automation_runs.py` |
 | Built-in file_sync | `yaffo/background_tasks/tasks/file_sync.py`, `yaffo/utils/file_sync.py` |
 | Built-in auto_assign_faces | `yaffo/background_tasks/tasks/auto_assign_faces_automation.py` |
 | Built-in duplicate_scan | `yaffo/background_tasks/tasks/duplicate_scan.py` |

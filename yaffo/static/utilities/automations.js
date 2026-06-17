@@ -1,5 +1,19 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
+// Open the native server-side picker in the chosen mode (folder|file); returns the
+// selected path or null (surfacing any picker error). Shared by the Test and Run
+// controls, which both scope an action to a user-picked file/folder.
+const pickAutomationPath = async (config, mode) => {
+    try {
+        const picked = await (await fetch(`${config.urls.select_folder}?mode=${mode}`)).json();
+        if (picked.success && picked.path) return picked.path;
+        if (picked.error) window.notification.error(picked.error);
+    } catch {
+        window.notification.error('Failed to open the picker.');
+    }
+    return null;
+};
+
 // Confirm + submit the hidden delete form for the selected automation. (The "New
 // automation" modal is wired globally in utilities/_base.js.)
 window.PHOTO_ORGANIZER.initAutomationDelete = (selectedName) => {
@@ -29,16 +43,20 @@ window.PHOTO_ORGANIZER.initAutomationDetails = () => {
     button.addEventListener('click', modal.open);
 };
 
-// Wire the "Run now" button: fire the automation immediately (independent of its
-// triggers/enabled state). The run is enqueued async, so we confirm with a
-// notification rather than refreshing — it shows up in Run history once it finishes.
-window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl) => {
-    const button = document.getElementById('run-automation-button');
-    if (!button) return;
-    button.addEventListener('click', async () => {
+// Wire "Run now". A whole-library automation (file_sync/duplicate_scan) has a plain
+// button that fires context-less; a per-photo automation has "Run on a folder…/file…"
+// buttons that pick a path and run for real over the photos under it. Either way the
+// run is enqueued async, so we confirm with a notification — it shows up in Run
+// history once it finishes.
+window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl, config) => {
+    const post = async (button, body) => {
         button.disabled = true;
         try {
-            const response = await fetch(runUrl, { method: 'POST' });
+            const response = await fetch(runUrl, {
+                method: 'POST',
+                headers: body ? { 'Content-Type': 'application/json' } : {},
+                body: body ? JSON.stringify(body) : undefined,
+            });
             if (response.ok) {
                 notification.success('Run started — it will appear in Run history when it finishes.');
             } else {
@@ -50,6 +68,18 @@ window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl) => {
         } finally {
             button.disabled = false;
         }
+    };
+
+    const plainButton = document.getElementById('run-automation-button');
+    if (plainButton) {
+        plainButton.addEventListener('click', () => post(plainButton, null));
+    }
+
+    document.querySelectorAll('.js-run-files').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const path = await pickAutomationPath(config, button.dataset.mode);
+            if (path) post(button, { path });
+        });
     });
 };
 
@@ -195,19 +225,6 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
         button.disabled = false;
     };
 
-    // Native picker (server-side), in the chosen mode (folder|file); returns the
-    // path or null (and surfaces any picker error).
-    const pickPath = async (mode) => {
-        try {
-            const picked = await (await fetch(`${config.urls.select_folder}?mode=${mode}`)).json();
-            if (picked.success && picked.path) return picked.path;
-            if (picked.error) window.notification.error(picked.error);
-        } catch {
-            window.notification.error('Failed to open the picker.');
-        }
-        return null;
-    };
-
     // Test reruns the remembered selection (disabled until one is picked).
     button.addEventListener('click', () => {
         if (selection) runFiles(button, selection.path);
@@ -217,7 +234,7 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
     filesButtons.forEach((filesButton) => {
         filesButton.addEventListener('click', async () => {
             const mode = filesButton.dataset.mode;
-            const path = await pickPath(mode);
+            const path = await pickAutomationPath(config, mode);
             if (!path) return;
             setSelection(path, mode);
             runFiles(filesButton, path);

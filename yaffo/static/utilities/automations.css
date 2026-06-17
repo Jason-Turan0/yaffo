@@ -3,7 +3,22 @@
 
 .automation-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
+}
+
+/* The detail header can carry up to ~6 action buttons. page-header-actions is
+   flex-shrink:0 by default, so it sizes to one overflowing row; let it shrink (only
+   on pages with automation actions) so the buttons above can wrap instead. */
+.page-header:has(.automation-actions) .page-header-actions {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+/* Keep the title/subtitle column readable — give it a floor so the action buttons
+   wrap before the subtitle gets squeezed (overrides the base min-width: 0). */
+.page-header:has(.automation-actions) .page-header-main {
+    min-width: 240px;
 }
 
 .automation-detail {
