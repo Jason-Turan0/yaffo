@@ -18,7 +18,9 @@ from yaffo.db.models import (
     Automation,
     AUTOMATION_HANDLER_AUTO_ASSIGN_FACES,
     AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD,
-    AUTOMATION_HANDLER_EXPORT_PHOTO_TAG
+    AUTOMATION_HANDLER_EXPORT_PHOTO_TAG,
+    AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME,
+    ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M,
 )
 
 
@@ -70,7 +72,49 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
             default=False,
             type='bool'
         ),
-    ]
+    ],
+    AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME: [
+        ConfigField(
+            key="reuse_nearby_enabled",
+            label="Reuse a nearby photo's name",
+            help=(
+                "Copy the location name of the closest already-named photo within "
+                "the radius below. Free, offline, and keeps your own naming."
+            ),
+            default=True,
+            type='bool',
+        ),
+        ConfigField(
+            key="nearby_radius_meters",
+            label="Nearby radius (metres)",
+            help=(
+                "How close an already-named photo must be to copy its name. Larger "
+                "values reuse names more aggressively and make fewer online lookups."
+            ),
+            min=10,
+            max=50000,
+            step=10,
+            default=ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M,
+            type='int',
+        ),
+        ConfigField(
+            key="reverse_geocode_enabled",
+            label="Look up name online (OpenStreetMap)",
+            help=(
+                "When no nearby photo is named, reverse-geocode the coordinates via "
+                "OpenStreetMap Nominatim (throttled to ~1 request/second)."
+            ),
+            default=True,
+            type='bool',
+        ),
+        ConfigField(
+            key="overwrite_existing",
+            label="Overwrite existing location names",
+            help="When off, photos that already have a location name are left untouched.",
+            default=False,
+            type='bool',
+        ),
+    ],
 }
 
 

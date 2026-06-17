@@ -397,6 +397,29 @@ batch button, the on-disk file stays in sync as you tag.
   [--all] <path>`) — prints the `XMP:PersonInImage` / `XMP:Location` the handler
   writes, via the bundled exiftool.
 
+### `assign_location_name`
+
+`tasks/assign_location_name_automation.py` — a system automation
+(`handler='assign_location_name'`, seeded disabled with a `photo_indexed` **event**
+trigger). On each indexed batch its handler `enqueue_assign_location_name` enqueues
+`assign_location_name_automation_task(automation_id, photo_ids)`, which gives each
+GPS-tagged photo a `location_name` via two strategies tried cheapest-first per
+photo: **(1) reuse** the name of the closest already-named photo within
+`nearby_radius_meters` (`photos_repository.get_named_coordinates` +
+`utils/geo.haversine_meters`), then **(2) reverse-geocode** the coordinates via
+`utils/reverse_geocode.reverse_geocode` (the same Nominatim helper the Locations
+screen uses — extracted from `routes/locations.py` so both share one
+implementation), throttled to ~1 req/sec. A photo named in step 2 joins the reuse
+candidates for the rest of the batch, so a cluster of fresh photos costs one online
+lookup, not one each. Four **config** fields tune it: `reuse_nearby_enabled`,
+`nearby_radius_meters` (default 1000), `reverse_geocode_enabled`, and
+`overwrite_existing` (off → photos that already have a name are left alone).
+Photos without GPS are skipped. After committing, it **emits `photo_modified`** for
+the named photos so `export_photo_tag` can write the new location into the file —
+a deliberate `photo_indexed → assign_location_name → photo_modified →
+export_photo_tag` chain (not a loop: export_photo_tag emits nothing).
+`_assign_location_names` is the testable core (the geocoder is injected).
+
 ### Configurable system automations
 
 A system automation can expose runtime-tunable settings without a code change.
@@ -471,7 +494,12 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
   (`automations_runs` endpoint), so in-progress runs appear and tick toward
   completion (with a live percent) without a reload.
 - **More complex use cases** More use cases of the automation feature to stress test the API.
-- **GPS Parsing from file is probably incorrect** Seeing a bunch of images being located to china after indexing
+- **~~GPS Parsing from file is probably incorrect~~ (fixed)** The "located to China"
+  symptom was a longitude sign bug — exiftool's `-n` reports `EXIF:GPSLongitude` as
+  an unsigned magnitude (hemisphere in the `…Ref` tag), so `90° W` was stored as
+  `+90` (→ China). Fixed in `utils/index_photos.get_signed_gps_from_exiftool`
+  (prefers the signed `Composite:GPS*`, else applies the Ref); existing rows were
+  corrected by re-reading the files.
 ## File map
 
 | Concern | File |
@@ -496,6 +524,7 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
 | Built-in auto_assign_faces | `yaffo/background_tasks/tasks/auto_assign_faces_automation.py` |
 | Built-in duplicate_scan | `yaffo/background_tasks/tasks/duplicate_scan.py` |
 | Built-in export_photo_tag | `yaffo/background_tasks/tasks/export_photo_tag.py` (+ emit hooks in `routes/{faces,people,locations}.py`) |
+| Built-in assign_location_name | `yaffo/background_tasks/tasks/assign_location_name_automation.py` (+ `utils/reverse_geocode.py`, `utils/geo.py`, `photos_repository.{get_photos_with_coords,get_named_coordinates}`) |
 | Tag inspector (debug) | `yaffo/scripts/print_photo_tags.py` (`inv tags <path>`) |
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |

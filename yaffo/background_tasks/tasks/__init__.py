@@ -9,6 +9,7 @@ from yaffo.background_tasks.tasks.file_sync import file_sync_task
 from yaffo.background_tasks.tasks.auto_assign_faces_automation import auto_assign_faces_automation_task
 from yaffo.background_tasks.tasks.duplicate_scan import duplicate_scan_task
 from yaffo.background_tasks.tasks.export_photo_tag import export_photo_tag_task
+from yaffo.background_tasks.tasks.assign_location_name_automation import assign_location_name_automation_task
 from yaffo.background_tasks.tasks.dispatcher import dispatch_scheduled_tasks
 from yaffo.background_tasks.tasks.dispatch_event import dispatch_event_task
 from yaffo.background_tasks.tasks.run_automation import run_automation_code_task
@@ -35,6 +36,7 @@ __all__ = [
     'auto_assign_faces_automation_task',
     'duplicate_scan_task',
     'export_photo_tag_task',
+    'assign_location_name_automation_task',
     'dispatch_scheduled_tasks',
     'dispatch_event_task',
     'run_automation_code_task',

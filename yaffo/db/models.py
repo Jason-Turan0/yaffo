@@ -233,10 +233,15 @@ AUTOMATION_HANDLER_FILE_SYNC = "file_sync"
 AUTOMATION_HANDLER_AUTO_ASSIGN_FACES = "auto_assign_faces"
 AUTOMATION_HANDLER_DUPLICATE_SCAN = "duplicate_scan"
 AUTOMATION_HANDLER_EXPORT_PHOTO_TAG = "export_photo_tag"
+AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME = "assign_location_name"
 
 # Default match threshold for the auto-assign-faces automation (overridable via
 # Automation.config["threshold"]; see background_tasks.automation_config).
 AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 0.95
+
+# Default radius (metres) within which the assign-location-name automation reuses a
+# nearby photo's location_name (overridable via config["nearby_radius_meters"]).
+ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M = 1000
 
 
 class Automation(db.Model):

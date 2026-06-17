@@ -66,6 +66,33 @@ def get_paths_by_ids(session: Session, photo_ids: list[int]) -> dict[int, str]:
 
 def update_photo_path(session: Session, photo_id: int, new_path: str) -> None:
     session.query(Photo).filter_by(id=photo_id).update({"full_file_path": new_path})
+
+
+def get_photos_with_coords(session: Session, photo_ids: list[int]) -> list[Photo]:
+    """The given photos that have both latitude and longitude set."""
+    if not photo_ids:
+        return []
+    return (
+        session.query(Photo)
+        .filter(Photo.id.in_(photo_ids))
+        .filter(Photo.latitude.isnot(None))
+        .filter(Photo.longitude.isnot(None))
+        .all()
+    )
+
+
+def get_named_coordinates(session: Session) -> list[tuple[float, float, str]]:
+    """(latitude, longitude, location_name) for every photo that has all three —
+    the candidates the assign-location-name automation reuses names from."""
+    rows = (
+        session.query(Photo.latitude, Photo.longitude, Photo.location_name)
+        .filter(Photo.latitude.isnot(None))
+        .filter(Photo.longitude.isnot(None))
+        .filter(Photo.location_name.isnot(None))
+        .filter(Photo.location_name != "")
+        .all()
+    )
+    return [(row[0], row[1], row[2]) for row in rows]
     session.commit()
 
 

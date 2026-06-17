@@ -223,6 +223,27 @@ def init_db():
                    )
                    """)
 
+    # Seed the built-in assign-location-name automation (disabled) + its
+    # photo_indexed event trigger. config holds the naming strategy + radius
+    # (see automation_config).
+    cursor.execute("""
+        INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status, config)
+        VALUES ('assign_location_name', 'Assign location name',
+                'When a photo is indexed, name its location from GPS — reuse a nearby named photo''s name, then fall back to an OpenStreetMap lookup.',
+                1, 0, 'assign_location_name', 'READY',
+                '{"reuse_nearby_enabled": true, "nearby_radius_meters": 1000, "reverse_geocode_enabled": true, "overwrite_existing": false}')
+    """)
+    cursor.execute("""
+        INSERT INTO automation_triggers (automation_id, trigger_type, enabled, event_type)
+        SELECT a.id, 'event', 1, 'photo_indexed'
+        FROM automations a
+        WHERE a.slug = 'assign_location_name'
+          AND NOT EXISTS (
+              SELECT 1 FROM automation_triggers t
+              WHERE t.automation_id = a.id AND t.trigger_type = 'event'
+          )
+    """)
+
     # Seed the built-in duplicate-scan automation (disabled) + its daily schedule.
     cursor.execute("""
         INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status)
