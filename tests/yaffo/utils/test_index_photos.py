@@ -12,6 +12,7 @@ from yaffo.utils.index_photos import (
     save_face_thumbnail,
     convert_to_degrees,
     get_exif_data_with_exiftool,
+    get_signed_gps_from_exiftool,
     get_gps_coordinates,
     get_exif_tags,
     index_photo,
@@ -241,6 +242,62 @@ class TestGetGpsCoordinates:
         assert longitude is None
 
 
+class TestGetSignedGpsFromExiftool:
+    """exiftool's -n flag reports EXIF:GPS* as unsigned magnitudes; the
+    hemisphere lives in the ...Ref tag. Composite:GPS* is already signed.
+    """
+
+    def test_western_longitude_is_negative(self):
+        # Regression: 90.482583 W was stored as +90.48 (wrong hemisphere).
+        exif_data = {
+            "EXIF:GPSLatitude": 38.775258,
+            "EXIF:GPSLatitudeRef": "N",
+            "EXIF:GPSLongitude": 90.482583,
+            "EXIF:GPSLongitudeRef": "W",
+        }
+
+        latitude, longitude = get_signed_gps_from_exiftool(exif_data)
+
+        assert latitude == 38.775258
+        assert longitude == -90.482583
+
+    def test_southern_latitude_is_negative(self):
+        exif_data = {
+            "EXIF:GPSLatitude": 33.8688,
+            "EXIF:GPSLatitudeRef": "S",
+            "EXIF:GPSLongitude": 151.2093,
+            "EXIF:GPSLongitudeRef": "E",
+        }
+
+        latitude, longitude = get_signed_gps_from_exiftool(exif_data)
+
+        assert latitude == -33.8688
+        assert longitude == 151.2093
+
+    def test_prefers_signed_composite_tags(self):
+        # Composite is already signed; EXIF magnitude + ref must agree, and the
+        # signed Composite value should win when present.
+        exif_data = {
+            "EXIF:GPSLatitude": 38.775258,
+            "EXIF:GPSLatitudeRef": "N",
+            "EXIF:GPSLongitude": 90.482583,
+            "EXIF:GPSLongitudeRef": "W",
+            "Composite:GPSLatitude": 38.775258,
+            "Composite:GPSLongitude": -90.482583,
+        }
+
+        latitude, longitude = get_signed_gps_from_exiftool(exif_data)
+
+        assert latitude == 38.775258
+        assert longitude == -90.482583
+
+    def test_missing_gps_returns_none(self):
+        latitude, longitude = get_signed_gps_from_exiftool({"EXIF:Make": "Canon"})
+
+        assert latitude is None
+        assert longitude is None
+
+
 class TestGetExifTags:
     def test_get_exif_tags_valid_data(self, test_image_with_exif):
         img = Image.open(test_image_with_exif)
@@ -327,6 +384,38 @@ class TestIndexPhoto:
             assert result is not None
             assert result['latitude'] is not None
             assert result['longitude'] is not None
+
+
+class TestRealFileHemispheres:
+    """Real-file GPS parsing through index_photo (the exiftool path).
+
+    DSCN0010.jpg sits at 43.467448 N, 11.885127 E. The *_NW/_SE/_SW copies
+    flip only the GPS reference tags so each hemisphere combination is covered;
+    they guard the W/S sign bug that DSCN0010.jpg (N/E only) could not catch.
+    """
+
+    @pytest.fixture
+    def gps_dir(self) -> Path:
+        return Path(__file__).parent / "test_data" / "jpg" / "gps"
+
+    @pytest.mark.parametrize("filename, expected_lat, expected_lon", [
+        ("DSCN0010.jpg", 43.467448, 11.885127),
+        ("DSCN0010_NW.jpg", 43.467448, -11.885127),
+        ("DSCN0010_SE.jpg", -43.467448, 11.885127),
+        ("DSCN0010_SW.jpg", -43.467448, -11.885127),
+    ])
+    @patch('yaffo.utils.index_photos.face_recognition')
+    def test_index_photo_signs_coordinates_by_hemisphere(
+        self, mock_fr, gps_dir, temp_dir, filename, expected_lat, expected_lon
+    ):
+        mock_fr.face_locations.return_value = []
+        mock_fr.face_encodings.return_value = []
+
+        result = index_photo(gps_dir / filename, temp_dir)
+
+        assert result is not None
+        assert abs(result['latitude'] - expected_lat) < 0.0001
+        assert abs(result['longitude'] - expected_lon) < 0.0001
 
 
 class TestDeleteOrphanedPhotos:
