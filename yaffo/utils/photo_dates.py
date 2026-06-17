@@ -183,3 +183,23 @@ def get_photo_date(path: str, data: Optional[dict]) -> Optional[datetime]:
     """
     date_info = get_photo_date_info(path, data)
     return date_info.date
+
+
+def parse_date_taken(value: Optional[str]) -> Optional[datetime]:
+    """Parse a stored `Photo.date_taken` string back to a datetime.
+
+    `date_taken` is the camera's local wall-clock capture time (EXIF
+    DateTimeOriginal), stored naive ISO-8601 — never UTC (see Photo.date_taken).
+    This is the single boundary that reads it back: returns None for a missing or
+    unparseable value, and asserts the value is naive so a tz-aware datetime (a
+    convention violation that would break time comparisons) fails loudly instead of
+    silently corrupting them.
+    """
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    assert dt.tzinfo is None, "date_taken must be naive local time, not tz-aware"
+    return dt

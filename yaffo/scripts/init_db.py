@@ -244,6 +244,25 @@ def init_db():
           )
     """)
 
+    # Seed the built-in geotag-from-neighbors automation (disabled) + its
+    # photo_indexed event trigger. config holds the time window in minutes.
+    cursor.execute("""
+        INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status, config)
+        VALUES ('geotag_from_neighbors', 'Geotag from neighbors',
+                'When a photo is indexed, give a GPS-less photo the coordinates of the closest-in-time photo that has GPS (e.g. a camera shot taken alongside phone shots).',
+                1, 0, 'geotag_from_neighbors', 'READY', '{"max_minutes": 30}')
+    """)
+    cursor.execute("""
+        INSERT INTO automation_triggers (automation_id, trigger_type, enabled, event_type)
+        SELECT a.id, 'event', 1, 'photo_indexed'
+        FROM automations a
+        WHERE a.slug = 'geotag_from_neighbors'
+          AND NOT EXISTS (
+              SELECT 1 FROM automation_triggers t
+              WHERE t.automation_id = a.id AND t.trigger_type = 'event'
+          )
+    """)
+
     # Seed the built-in duplicate-scan automation (disabled) + its daily schedule.
     cursor.execute("""
         INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status)

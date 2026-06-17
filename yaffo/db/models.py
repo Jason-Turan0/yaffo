@@ -10,6 +10,11 @@ class Photo(db.Model):
     __tablename__ = "photos"
     id = db.Column(db.Integer, primary_key=True)
     full_file_path = db.Column(db.String, unique=True)
+    # The camera's *local wall-clock* capture time (EXIF DateTimeOriginal), stored
+    # naive ISO-8601 — never UTC. EXIF carries no timezone, so there is no UTC
+    # instant to recover; converting only some photos (e.g. phones that record an
+    # offset) would mix clocks and break time comparisons like geotag_from_neighbors.
+    # Parse it back through utils.photo_dates.parse_date_taken (asserts naive).
     date_taken = db.Column(db.String, nullable=True)
     year = db.Column(db.Integer, nullable=True)
     month = db.Column(db.Integer, nullable=True)
@@ -234,6 +239,7 @@ AUTOMATION_HANDLER_AUTO_ASSIGN_FACES = "auto_assign_faces"
 AUTOMATION_HANDLER_DUPLICATE_SCAN = "duplicate_scan"
 AUTOMATION_HANDLER_EXPORT_PHOTO_TAG = "export_photo_tag"
 AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME = "assign_location_name"
+AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS = "geotag_from_neighbors"
 
 # System handlers that operate over the whole library and ignore the event's photo
 # subjects (their Run-now is a context-less full scan). Every other automation is
@@ -251,6 +257,10 @@ AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 0.95
 # Default radius (metres) within which the assign-location-name automation reuses a
 # nearby photo's location_name (overridable via config["nearby_radius_meters"]).
 ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M = 1000
+
+# Default window (minutes) within which the geotag-from-neighbors automation borrows
+# a GPS-tagged photo's coordinates (overridable via config["max_minutes"]).
+GEOTAG_FROM_NEIGHBORS_DEFAULT_MINUTES = 30
 
 
 class Automation(db.Model):

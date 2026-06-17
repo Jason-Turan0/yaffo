@@ -430,6 +430,28 @@ a deliberate `photo_indexed → assign_location_name → photo_modified →
 export_photo_tag` chain (not a loop: export_photo_tag emits nothing).
 `_assign_location_names` is the testable core (the geocoder is injected).
 
+### `geotag_from_neighbors`
+
+`tasks/geotag_from_neighbors_automation.py` — a system automation
+(`handler='geotag_from_neighbors'`, seeded disabled with a `photo_indexed` **event**
+trigger). On each indexed batch its handler enqueues
+`geotag_from_neighbors_automation_task(automation_id, photo_ids)`, which gives each
+GPS-less photo (`photos_repository.get_photos_missing_gps`) the coordinates of the
+closest-in-time photo that *does* have GPS — time-correlation geotagging, for the
+case of a no-GPS camera shooting alongside a phone on the same outing. Candidates
+(`get_gps_timestamps` — every photo with a date + coordinates) are parsed to
+datetimes, sorted once, and matched per target with a `bisect` over the sorted times;
+the nearest within the configurable window wins. When the matched source already has
+a `location_name`, that's copied to the target too (unless the target already has its
+own). The lone **config** field `max_minutes` (default 30) bounds the window so
+coordinates aren't copied across a long gap. Candidates are frozen at the start of the
+run, so a just-geotagged photo is never reused as a source (inferred coordinates can't
+chain/drift).
+`_geotag_from_neighbors` is the testable core. It writes lat/lon to the **index**
+only (it does not emit `photo_modified`); pairs naturally with `assign_location_name`
+on a later run. **Depends on consistent `date_taken` clocks across photos** — see the
+timezone note below.
+
 ### Configurable system automations
 
 A system automation can expose runtime-tunable settings without a code change.
@@ -543,6 +565,7 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
 | Built-in duplicate_scan | `yaffo/background_tasks/tasks/duplicate_scan.py` |
 | Built-in export_photo_tag | `yaffo/background_tasks/tasks/export_photo_tag.py` (+ emit hooks in `routes/{faces,people,locations}.py`) |
 | Built-in assign_location_name | `yaffo/background_tasks/tasks/assign_location_name_automation.py` (+ `utils/reverse_geocode.py`, `utils/geo.py`, `photos_repository.{get_photos_with_coords,get_named_coordinates}`) |
+| Built-in geotag_from_neighbors | `yaffo/background_tasks/tasks/geotag_from_neighbors_automation.py` (+ `photos_repository.{get_photos_missing_gps,get_gps_timestamps}`) |
 | Tag inspector (debug) | `yaffo/scripts/print_photo_tags.py` (`inv tags <path>`) |
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |

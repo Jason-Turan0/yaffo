@@ -21,6 +21,8 @@ from yaffo.db.models import (
     AUTOMATION_HANDLER_EXPORT_PHOTO_TAG,
     AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME,
     ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M,
+    AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS,
+    GEOTAG_FROM_NEIGHBORS_DEFAULT_MINUTES,
 )
 
 
@@ -113,6 +115,22 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
             help="When off, photos that already have a location name are left untouched.",
             default=False,
             type='bool',
+        ),
+    ],
+    AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS: [
+        ConfigField(
+            key="max_minutes",
+            label="Time window (minutes)",
+            help=(
+                "A photo with no GPS borrows the coordinates of the closest-in-time "
+                "GPS-tagged photo, but only if it was taken within this many minutes "
+                "(so coordinates aren't copied across a long gap / a different place)."
+            ),
+            min=1,
+            max=1440,
+            step=1,
+            default=GEOTAG_FROM_NEIGHBORS_DEFAULT_MINUTES,
+            type='int',
         ),
     ],
 }

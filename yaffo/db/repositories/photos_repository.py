@@ -93,7 +93,34 @@ def get_named_coordinates(session: Session) -> list[tuple[float, float, str]]:
         .all()
     )
     return [(row[0], row[1], row[2]) for row in rows]
-    session.commit()
+
+
+def get_photos_missing_gps(session: Session, photo_ids: list[int]) -> list[Photo]:
+    """The given photos that have a capture date but no coordinates — the targets the
+    geotag-from-neighbors automation tries to locate."""
+    if not photo_ids:
+        return []
+    return (
+        session.query(Photo)
+        .filter(Photo.id.in_(photo_ids))
+        .filter(Photo.date_taken.isnot(None))
+        .filter(Photo.latitude.is_(None))
+        .all()
+    )
+
+
+def get_gps_timestamps(session: Session) -> list[tuple[str, float, float, str | None]]:
+    """(date_taken, latitude, longitude, location_name) for every photo that has a
+    date + coordinates — the GPS-tagged photos the geotag-from-neighbors automation
+    borrows coordinates (and, when present, the location name) from."""
+    rows = (
+        session.query(Photo.date_taken, Photo.latitude, Photo.longitude, Photo.location_name)
+        .filter(Photo.date_taken.isnot(None))
+        .filter(Photo.latitude.isnot(None))
+        .filter(Photo.longitude.isnot(None))
+        .all()
+    )
+    return [(row[0], row[1], row[2], row[3]) for row in rows]
 
 
 def get_distinct_years(session: Session) -> list[int]:

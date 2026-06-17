@@ -7,12 +7,33 @@ import piexif
 import pytest
 from PIL import Image
 
+from datetime import timezone
+
 from yaffo.utils.photo_dates import (
     PhotoDateInfo,
     get_date_from_filename,
     get_date_from_metadata,
     get_photo_date_info,
+    parse_date_taken,
 )
+
+
+class TestParseDateTaken:
+    def test_parses_naive_iso(self):
+        assert parse_date_taken("2022-07-03T17:28:22") == datetime(2022, 7, 3, 17, 28, 22)
+
+    def test_none_and_empty_return_none(self):
+        assert parse_date_taken(None) is None
+        assert parse_date_taken("") is None
+
+    def test_unparseable_returns_none(self):
+        assert parse_date_taken("not-a-date") is None
+
+    def test_tz_aware_value_asserts(self):
+        # date_taken is naive local by convention; a tz-aware value must fail loudly.
+        aware = datetime(2022, 7, 3, 17, 28, 22, tzinfo=timezone.utc).isoformat()
+        with pytest.raises(AssertionError):
+            parse_date_taken(aware)
 
 
 class TestGetDateFromFilename:
