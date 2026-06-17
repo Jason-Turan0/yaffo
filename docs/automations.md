@@ -381,6 +381,22 @@ photos whose file is missing are skipped. `_export_tags` is the testable core. T
 is the event-driven replacement for the deleted Sync Metadata page — instead of a
 batch button, the on-disk file stays in sync as you tag.
 
+**Known gaps (pick up later):**
+- **No backfill / no "export all".** It only ever writes the photos a
+  `photo_modified` event names, so existing photos aren't touched until you
+  re-edit them. **Run now is a no-op** for this handler (a manual tick passes no
+  `photo_ids`). A backfill path (Run-now over all indexed photos, or a per-photo
+  "export now") is the obvious next step.
+- **No run-history row.** Like `auto_assign_faces`, it creates no `Job`, so runs
+  don't appear in the detail page's run history. Wrap the write in an
+  `automation_id`-tagged Job to surface it.
+- **Format is dispatched by file *extension*** (`write_metadata.py`), so a WebP
+  file mislabeled `.jpg` takes the JPEG path. exiftool usually copes, but
+  detecting the real format (magic bytes / exiftool) would be more robust.
+- **Verify with** `inv tags <path>` (or `python -m yaffo.scripts.print_photo_tags
+  [--all] <path>`) — prints the `XMP:PersonInImage` / `XMP:Location` the handler
+  writes, via the bundled exiftool.
+
 ### Configurable system automations
 
 A system automation can expose runtime-tunable settings without a code change.
@@ -455,6 +471,7 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
   (`automations_runs` endpoint), so in-progress runs appear and tick toward
   completion (with a live percent) without a reload.
 - **More complex use cases** More use cases of the automation feature to stress test the API.
+- **GPS Parsing from file is probably incorrect** Seeing a bunch of images being located to china after indexing
 ## File map
 
 | Concern | File |
@@ -479,6 +496,7 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
 | Built-in auto_assign_faces | `yaffo/background_tasks/tasks/auto_assign_faces_automation.py` |
 | Built-in duplicate_scan | `yaffo/background_tasks/tasks/duplicate_scan.py` |
 | Built-in export_photo_tag | `yaffo/background_tasks/tasks/export_photo_tag.py` (+ emit hooks in `routes/{faces,people,locations}.py`) |
+| Tag inspector (debug) | `yaffo/scripts/print_photo_tags.py` (`inv tags <path>`) |
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |
 | Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |
