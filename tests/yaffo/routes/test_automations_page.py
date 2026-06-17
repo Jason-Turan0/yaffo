@@ -53,6 +53,22 @@ def test_status_returns_code_and_messages(app, client):
     assert body["messages"] == []
 
 
+def test_status_started_at_is_utc_stamped(app, client):
+    """started_at must carry a UTC offset (created_at is naive utcnow) so the chat's
+    elapsed counter doesn't read it as local time and go negative."""
+    from yaffo.db.repositories import automation_repository as repo
+    from yaffo.db.models import CONVERSATION_TYPE_USER
+
+    _add(app)
+    with app.app_context():
+        automation = db.session.query(Automation).filter_by(slug="a1").first()
+        repo.add_message(db.session, automation.id, CONVERSATION_TYPE_USER, "build it")
+
+    started_at = client.get("/utilities/automations/a1/status").get_json()["started_at"]
+    assert started_at is not None
+    assert started_at.endswith("+00:00")  # offset-aware UTC, not naive
+
+
 def test_publish_promotes_working_to_published(app, client):
     _add(app, working_code="print('new')", published_code=None)
     resp = client.post("/utilities/automations/a1/publish")
@@ -231,22 +247,53 @@ def test_run_now_unknown_404(app, client):
     assert client.post("/utilities/automations/nope/run").status_code == 404
 
 
-def test_scoped_automation_shows_run_on_folder_file_buttons(app, client):
-    """A per-photo automation (here a custom one) gets the folder/file pickers, not
-    the plain whole-library Run-now button."""
+def _run_buttons(client, slug="a1"):
+    body = client.get(f"/utilities/automations/{slug}").get_data(as_text=True)
+    collapsed = "".join(body.split())  # whitespace-insensitive for the JS init args
+    return {
+        "pickers": 'js-run-files" data-mode="folder"' in body and 'js-run-files" data-mode="file"' in body,
+        "plain": 'id="run-automation-button"' in body,
+        # 3rd arg of initAutomationRunNow — the hasTriggers flag the click handler
+        # uses to warn before running a trigger-less automation.
+        "has_triggers_flag": ("window.APP_CONFIG,true" in collapsed),
+        "no_triggers_flag": ("window.APP_CONFIG,false" in collapsed),
+    }
+
+
+def test_all_event_triggers_show_run_on_folder_file_buttons(app, client):
+    """Every trigger an event → the automation is purely photo-driven → folder/file
+    pickers, not the plain Run-now button."""
     _add(app)
-    body = client.get("/utilities/automations/a1").get_data(as_text=True)
-    assert 'js-run-files" data-mode="folder"' in body
-    assert 'js-run-files" data-mode="file"' in body
-    assert 'id="run-automation-button"' not in body
+    _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="photo_indexed")
+    buttons = _run_buttons(client)
+    assert buttons["pickers"] and not buttons["plain"]
 
 
-def test_whole_library_automation_shows_plain_run_now(app, client):
-    """file_sync (whole-library) keeps the plain Run-now button and no pickers."""
-    _add(app, slug="fs", name="File sync", is_system=True, handler="file_sync")
-    body = client.get("/utilities/automations/fs").get_data(as_text=True)
-    assert 'id="run-automation-button"' in body
-    assert "js-run-files" not in body
+def test_schedule_trigger_shows_plain_run_now(app, client):
+    """A schedule trigger → whole-library context-less Run-now, no pickers, no warning."""
+    _add(app)
+    _add_trigger(app, trigger_type=TRIGGER_TYPE_SCHEDULE, enabled=True, cron="0 9 * * 1")
+    buttons = _run_buttons(client)
+    assert buttons["plain"] and not buttons["pickers"]
+    assert buttons["has_triggers_flag"]  # has a trigger → no click warning
+
+
+def test_mixed_triggers_show_plain_run_now(app, client):
+    """An event + a schedule trigger → not all events → plain Run-now."""
+    _add(app)
+    _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="photo_indexed")
+    _add_trigger(app, trigger_type=TRIGGER_TYPE_SCHEDULE, enabled=True, cron="0 9 * * 1")
+    buttons = _run_buttons(client)
+    assert buttons["plain"] and not buttons["pickers"]
+
+
+def test_no_triggers_show_plain_run_now_with_warning_flag(app, client):
+    """No triggers → plain Run-now, and the init is wired with hasTriggers=false so the
+    click handler warns the automation won't run on its own."""
+    _add(app)
+    buttons = _run_buttons(client)
+    assert buttons["plain"] and not buttons["pickers"]
+    assert buttons["no_triggers_flag"]
 
 
 def test_run_view_summarizes_batch_job():

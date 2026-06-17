@@ -15,7 +15,7 @@
                 {% if not run.is_finished %}<span class="automation-run-progress">{{ run.progress }}%</span>{% endif %}
                 <span class="automation-run-summary">{{ run.summary }}</span>
                 <span class="automation-run-spacer"></span>
-                <span class="automation-run-time">{{ (run.finished_at or run.started_at) | format_date }}</span>
+                <span class="automation-run-time">{{ (run.finished_at or run.started_at) | format_date(utc=True) }}</span>
                 {% if run.error %}<p class="automation-run-error">{{ run.error }}</p>{% endif %}
             </li>
             {% endfor %}

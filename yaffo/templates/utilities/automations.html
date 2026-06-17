@@ -91,6 +91,10 @@
 {% endcall %}
 
 <div class="automation-detail">
+    {# System automations are code-backed (no AI builder, no editable code), so the
+       conversation panel and code section are hidden — only the header actions,
+       config, and run history apply to them. #}
+    {% if not selected.is_system %}
     <div class="automation-lower">
         <section class="chat-card automation-conversation">
             {% if selected_has_draft %}
@@ -144,6 +148,7 @@
             {% endif %}
         </section>
     </div>
+    {% endif %}
 
     {% include "utilities/automations_runs.html" %}
 </div>
@@ -168,15 +173,21 @@
         <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
         <script>
             window.PHOTO_ORGANIZER.initAutomationDelete({{ selected.name | tojson }});
-            window.PHOTO_ORGANIZER.initAutomationRunNow({{ url_for('automations_run_now', slug=selected.slug) | tojson }}, window.APP_CONFIG);
-            {% if not selected.is_system %}window.PHOTO_ORGANIZER.initAutomationDetails();{% endif %}
+            window.PHOTO_ORGANIZER.initAutomationRunNow(
+                {{ url_for('automations_run_now', slug=selected.slug) | tojson }},
+                window.APP_CONFIG,
+                {{ (selected.triggers | length > 0) | tojson }}
+            );
             {% if config_fields %}window.PHOTO_ORGANIZER.initAutomationConfigure();{% endif %}
+            {% if not selected.is_system %}
+            window.PHOTO_ORGANIZER.initAutomationDetails();
             window.PHOTO_ORGANIZER.initAutomationTest({{ selected_slug | tojson }}, window.APP_CONFIG);
             window.PHOTO_ORGANIZER.automationChat = window.PHOTO_ORGANIZER.initAutomationChat(
                 {{ selected_slug | tojson }},
                 {{ selected_status | tojson }},
                 window.APP_CONFIG
             );
+            {% endif %}
         </script>
     {% endif %}
 {% endblock %}

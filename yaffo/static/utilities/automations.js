@@ -43,12 +43,12 @@ window.PHOTO_ORGANIZER.initAutomationDetails = () => {
     button.addEventListener('click', modal.open);
 };
 
-// Wire "Run now". A whole-library automation (file_sync/duplicate_scan) has a plain
-// button that fires context-less; a per-photo automation has "Run on a folder…/file…"
-// buttons that pick a path and run for real over the photos under it. Either way the
-// run is enqueued async, so we confirm with a notification — it shows up in Run
-// history once it finishes.
-window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl, config) => {
+// Wire "Run now". An automation whose triggers are all events has "Run on a
+// folder…/file…" buttons that pick a path and run over the photos under it; anything
+// else has a plain button that fires context-less. A trigger-less automation still
+// shows the plain button, but clicking it only warns (add a trigger first) and does
+// not run. Otherwise the run is enqueued async and shows up in Run history.
+window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl, config, hasTriggers) => {
     const post = async (button, body) => {
         button.disabled = true;
         try {
@@ -72,7 +72,13 @@ window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl, config) => {
 
     const plainButton = document.getElementById('run-automation-button');
     if (plainButton) {
-        plainButton.addEventListener('click', () => post(plainButton, null));
+        plainButton.addEventListener('click', () => {
+            if (!hasTriggers) {
+                notification.warning("This automation has no triggers — add one under Edit triggers before running it.");
+                return;
+            }
+            post(plainButton, null);
+        });
     }
 
     document.querySelectorAll('.js-run-files').forEach((button) => {

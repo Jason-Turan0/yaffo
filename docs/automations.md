@@ -521,13 +521,14 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
   mechanism.
 - **Built (was deferred):** trigger-editing UI + cron builder; the test/preview
   harness (mutating actions are recorded-not-performed); **Run now**
-  (`automations_run_now`, independent of triggers/enabled) — a whole-library handler
-  (file_sync/duplicate_scan) fires context-less like a schedule tick, while every
-  other automation gets **Run on a folder…/file…** buttons that pick a path and
-  invoke for real over the indexed photos under it (`get_photo_ids_under_path` →
-  `EventContext(event_type="manual", photo_ids=…)` → `invoke_automation`), the live
-  twin of the test-files dry run; whether an automation is scoped is
-  `AUTOMATION_WHOLE_LIBRARY_HANDLERS` (route `_supports_scoped_run`). And **run history on the
+  (`automations_run_now`, independent of triggers/enabled) — an automation whose
+  **every trigger is an event** (purely photo-driven) gets **Run on a folder…/file…**
+  buttons that pick a path and invoke for real over the indexed photos under it
+  (`get_photo_ids_under_path` → `EventContext(event_type="manual", photo_ids=…)` →
+  `invoke_automation`), the live twin of the test-files dry run; an automation with a
+  schedule trigger (or no triggers) gets the plain context-less **Run now** instead.
+  The choice is the automation's live trigger config (route `_supports_scoped_run`),
+  so adding/removing a schedule trigger flips the buttons. And **run history on the
   detail page** — `automation_repository.get_recent_jobs` + the `AutomationRunView`
   view-model render the recent Jobs (system *and* custom runs) as a status/percent/
   summary/time list. The `automations_runs.html` fragment self-polls every 5s

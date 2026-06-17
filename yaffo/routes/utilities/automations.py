@@ -9,7 +9,7 @@ code-backed built-ins: read-only chat, can't be deleted.
 """
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 
@@ -27,7 +27,6 @@ from yaffo.db.models import (
     AUTOMATION_STATUS_ACCEPTED,
     AUTOMATION_STATUS_IN_PROGRESS,
     AUTOMATION_STATUS_READY,
-    AUTOMATION_WHOLE_LIBRARY_HANDLERS,
     CONVERSATION_TYPE_USER,
     EVENTS,
     JOB_STATUS_CANCELLED,
@@ -137,13 +136,15 @@ def init_automations_routes(app: Flask):
         ]
 
     def _supports_scoped_run(automation: Automation) -> bool:
-        """Whether Run-now scopes to a user-picked file/folder (vs a context-less
-        whole-library run). True for any custom automation and for system handlers
-        that act on event subjects; False for whole-library handlers like file_sync
-        and duplicate_scan, which keep a plain Run-now."""
-        if not automation.is_system:
-            return True
-        return automation.handler not in AUTOMATION_WHOLE_LIBRARY_HANDLERS
+        """Whether Run-now scopes to a user-picked file/folder (the "Run on a
+        folder…/file…" actions) vs the plain context-less "Run now".
+
+        Driven by the automation's configured triggers: when **every** trigger is an
+        event (so the automation is purely photo-driven), running it manually means
+        "run it over these photos" — show the file/folder pickers. If any trigger is a
+        schedule, or there are no triggers, it gets the whole-library Run-now instead."""
+        triggers = automation.triggers
+        return bool(triggers) and all(t.trigger_type == TRIGGER_TYPE_EVENT for t in triggers)
 
     def _render_page(selected_slug: str | None):
         selected = repo.get_by_slug(db.session, selected_slug) if selected_slug else None
@@ -196,7 +197,10 @@ def init_automations_routes(app: Flask):
         return {
             "slug": automation.slug,
             "status": automation.status,
-            "started_at": started_at.isoformat() if started_at else None,
+            # created_at is naive UTC (datetime.utcnow); stamp it so the browser's
+            # Date parser reads it as UTC, not local — the chat's elapsed counter
+            # subtracts it from Date.now(). (Mirrors page_builder serializers._utc_iso.)
+            "started_at": started_at.replace(tzinfo=timezone.utc).isoformat() if started_at else None,
             "working_code": automation.working_code,
             "published_code": automation.published_code,
             "messages": [{"type": m.type, "content": m.content} for m in automation.messages],
