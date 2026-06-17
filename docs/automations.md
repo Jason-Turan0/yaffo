@@ -340,9 +340,9 @@ links the face to the **one** person clearing the configured threshold — a fac
 with zero or several strong matches is left unassigned. The threshold is the lone
 **configurable** setting: stored in `config["threshold"]`, declared in
 `automation_config.AUTOMATION_CONFIG`, edited via the **Configure** modal on the
-detail page. (Was a Starlark seed example before it was promoted; distinct from
-`tasks/auto_assign_faces.py`, the manual "assign every matching face to ONE chosen
-person" batch job.)
+detail page. (Was a Starlark seed example before it was promoted. It also replaced
+the old manual "Auto-Assign People" utility page — that page, its route, and its
+`auto_assign_faces` batch task were removed in favour of this automation.)
 
 ### `duplicate_scan`
 

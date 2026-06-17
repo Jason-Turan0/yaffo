@@ -1,9 +1,9 @@
 import time
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from yaffo.db.models import (
-    Job, JOB_STATUS_CANCELLED, Face, Person, JOB_STATUS_COMPLETED,
+    Job, JOB_STATUS_CANCELLED,
     PageVersion, PAGE_VERSION_STATUS_CANCELLED, ApplicationSettings, Automation,
 )
 from yaffo.common import DB_PATH
@@ -74,18 +74,6 @@ def get_theme_status(slug: str) -> str:
     finally:
         session.close()
         SessionFactory.remove()
-
-def load_assign_faces_task_data(person_id: int, face_ids: list[int]) -> tuple[Person, list[Face]]:
-    """Load person and faces data for face assignment tasks."""
-    session = SessionFactory()
-    try:
-        person = session.query(Person).options(joinedload(Person.embeddings_by_year)).filter_by(id=person_id).first()
-        faces = session.query(Face).filter(Face.id.in_(face_ids)).all()
-        return person, faces
-    finally:
-        session.close()
-        SessionFactory.remove()
-
 
 def schedule_job_completion(job_id: str, delay_seconds: int = 2, max_wait_seconds: int = 30):
     """

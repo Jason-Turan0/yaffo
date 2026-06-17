@@ -42,24 +42,6 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ url_for('utilities_organize_photos') }}"
-                           class="{% if request.endpoint == 'utilities_organize_photos' %}active{% endif %}">
-                            Organize Photos
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('utilities_auto_assign') }}"
-                           class="{% if request.endpoint == 'utilities_auto_assign' %}active{% endif %}">
-                            Auto-Assign People
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('utilities_sync_metadata') }}"
-                           class="{% if request.endpoint == 'utilities_sync_metadata' %}active{% endif %}">
-                            Sync Metadata to Files
-                        </a>
-                    </li>
-                    <li>
                         <a href="{{ url_for('utilities_remove_duplicates') }}"
                            class="{% if request.endpoint in ['utilities_remove_duplicates', 'utilities_remove_duplicates_results'] %}active{% endif %}">
                             Remove Duplicates
