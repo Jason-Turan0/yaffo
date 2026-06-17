@@ -44,7 +44,7 @@ def _custom_automation(session, slug, code):
 
 def test_successful_run_writes_completed_job(session, monkeypatch):
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_host.resolve_query",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query",
         lambda s, q: [{"id": 1}, {"id": 2}],
     )
     automation = _custom_automation(

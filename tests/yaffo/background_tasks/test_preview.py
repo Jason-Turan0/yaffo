@@ -27,14 +27,14 @@ class _FakeAutomation:
 
 def _fake_host(monkeypatch, impl):
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_host.resolve_query", impl
+        "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query", impl
     )
 
 
 def test_preview_records_actions(monkeypatch):
     _fake_host(monkeypatch, lambda session, query: [{"id": 1}])
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_host.enrich_photo_rows",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_photo_rows",
         lambda session, rows: rows,  # enrichment tested separately
     )
     code = "print('hi')\ndata_query({'source': 'photos', 'limit': 5})"

@@ -27,11 +27,11 @@ def test_script_reads_ctx_and_calls_host_api(monkeypatch):
         return [{"id": 7}]
 
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_host.resolve_query",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query",
         fake_resolve_query,
     )
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_host.enrich_photo_rows",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_photo_rows",
         lambda session, rows: rows,  # enrichment tested separately
     )
 
@@ -53,7 +53,7 @@ def test_script_reads_ctx_and_calls_host_api(monkeypatch):
 def test_schedule_run_has_empty_ctx(monkeypatch):
     captured = {}
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_host.resolve_query",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query",
         lambda session, query: query,
     )
     # context=None (a schedule trigger) -> ctx fields are empty/None

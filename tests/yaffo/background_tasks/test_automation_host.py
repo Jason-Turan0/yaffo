@@ -27,10 +27,10 @@ def test_data_query_callable_is_invoked_from_starlark(monkeypatch):
         return [{"id": 1}, {"id": 2}]
 
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_host.resolve_query", fake_resolve_query
+        "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query", fake_resolve_query
     )
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_host.enrich_photo_rows",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_photo_rows",
         lambda session, rows: rows,  # enrichment tested separately
     )
 
@@ -55,7 +55,7 @@ def test_data_query_callable_is_invoked_from_starlark(monkeypatch):
 def test_data_query_not_called_when_script_omits_it(monkeypatch):
     calls = []
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_host.resolve_query",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query",
         lambda session, query: calls.append(query),
     )
 
