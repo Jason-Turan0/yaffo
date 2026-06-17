@@ -204,6 +204,25 @@ def init_db():
           )
     """)
 
+    # Seed the built-in export_photo_tag automation (disabled) + its photo_modified
+    # event trigger. config holds which tags to export (see automation_config).
+    cursor.execute("""
+                   INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status, config)
+           VALUES ('export_photo_tag', 'Export photo tag',
+                   'When a photo is modified, write its people and/or location tags back into the photo file.',
+                   1, 0, 'export_photo_tag', 'READY', '{"export_location_tag_enabled": true, "export_people_tag_enabled": true}')
+                   """)
+    cursor.execute("""
+                   INSERT INTO automation_triggers (automation_id, trigger_type, enabled, event_type)
+                   SELECT a.id, 'event', 1, 'photo_modified'
+                   FROM automations a
+                   WHERE a.slug = 'export_photo_tag'
+                     AND NOT EXISTS (
+                       SELECT 1 FROM automation_triggers t
+                       WHERE t.automation_id = a.id AND t.trigger_type = 'event'
+                   )
+                   """)
+
     # Seed the built-in duplicate-scan automation (disabled) + its daily schedule.
     cursor.execute("""
         INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status)

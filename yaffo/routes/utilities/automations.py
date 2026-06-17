@@ -127,8 +127,9 @@ def init_automations_routes(app: Flask):
         return [
             {
                 "key": f.key, "label": f.label, "help": f.help,
-                "min": f.min, "max": f.max, "step": f.step,
-                "value": config_value(automation, f),
+                "min": f.min, "max": f.max, "step": f.step, "type": f.type,
+                "required": f.required,
+                "value": config_value(automation, f)
             }
             for f in config_fields_for(automation)
         ]
@@ -264,12 +265,24 @@ def init_automations_routes(app: Flask):
         config = dict(automation.config or {})
         for field in fields:
             raw = (request.form.get(field.key) or "").strip()
-            try:
-                value = float(raw)
-            except ValueError:
-                return jsonify({"error": f"{field.label} must be a number."}), 400
-            if not (field.min <= value <= field.max):
-                return jsonify({"error": f"{field.label} must be between {field.min} and {field.max}."}), 400
+            if field.type == "bool":
+                value = raw in ("on", "true", "True")
+            elif field.type in ("float", "int"):
+                try:
+                    value = float(raw) if field.type == "float" else int(raw)
+                except ValueError:
+                    return jsonify({"error": f"{field.label} must be a number."}), 400
+                if (field.min is not None and value < field.min) or \
+                        (field.max is not None and value > field.max):
+                    return jsonify(
+                        {"error": f"{field.label} must be between {field.min} and {field.max}."}
+                    ), 400
+            elif field.type == "string":
+                if field.required and not raw:
+                    return jsonify({"error": f"{field.label} is required."}), 400
+                value = raw
+            else:
+                raise NotImplementedError(field.type)
             config[field.key] = value
         automation.config = config
         db.session.commit()

@@ -10,7 +10,8 @@ from sqlalchemy.dialects.sqlite import insert
 import pydash as _
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
-    FACE_STATUS_ASSIGNED, Photo, PHOTO_STATUS_INDEXED
+    FACE_STATUS_ASSIGNED, Photo, PHOTO_STATUS_INDEXED, EVENT_PHOTO_MODIFIED
+from yaffo.background_tasks.events import emit_event
 from sklearn.metrics.pairwise import cosine_similarity
 
 from yaffo.db.repositories.person_repository import update_person_embedding
@@ -264,6 +265,7 @@ def init_faces_routes(app: Flask):
 
                 db.session.commit()
                 update_person_embedding(person_id, db.session)
+                emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": list(set(photo_ids))})
                 return jsonify({
                     "success": True,
                     "message": f"Successfully assigned {len(selected_face_ids)} face(s) to {person.name}",

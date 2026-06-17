@@ -17,12 +17,27 @@
 
 {% macro render_configure_form() %}
     {% for field in config_fields %}
-    <div class="form-group">
-        <label for="config-{{ field.key }}">{{ field.label }}</label>
-        <input type="number" id="config-{{ field.key }}" name="{{ field.key }}" required
-               min="{{ field.min }}" max="{{ field.max }}" step="{{ field.step }}" value="{{ field.value }}">
-        {% if field.help %}<p class="hint-text">{{ field.help }}</p>{% endif %}
-    </div>
+        <div class="form-group">
+            {% if field.type in ('float', 'int') %}
+                <label for="config-{{ field.key }}">{{ field.label }}</label>
+                <input type="number" id="config-{{ field.key }}" name="{{ field.key }}" {{ "required" if field.required }}
+                       {% if field.min is not none %}min="{{ field.min }}"{% endif %}
+                       {% if field.max is not none %}max="{{ field.max }}"{% endif %}
+                       step="{{ field.step if field.step is not none else (1 if field.type == 'int' else 'any') }}"
+                       value="{{ field.value }}">
+            {% endif %}
+            {% if field.type == 'string' %}
+                <label for="config-{{ field.key }}">{{ field.label }}</label>
+                <input type="text" id="config-{{ field.key }}" name="{{ field.key }}" {{ "required" if field.required }} value="{{ field.value }}">
+            {% endif %}
+            {% if field.type == 'bool' %}
+                <label class="checkbox-label" for="config-{{ field.key }}">
+                    <input type="checkbox" id="config-{{ field.key }}" name="{{ field.key }}" {{ "checked" if field.value else "" }}>
+                    {{ field.label }}
+                </label>
+            {% endif %}
+            {% if field.help %}<p class="hint-text">{{ field.help }}</p>{% endif %}
+        </div>
     {% endfor %}
 {% endmacro %}
 
@@ -34,63 +49,63 @@
 {% endblock %}
 
 {% block utility_content %}
-    {% if not selected %}
-        <div class="empty-state">
-            <h2>No automation selected</h2>
-            <p>Pick one from the sidebar, or create one with “New automation”.</p>
-        </div>
+{% if not selected %}
+<div class="empty-state">
+    <h2>No automation selected</h2>
+    <p>Pick one from the sidebar, or create one with “New automation”.</p>
+</div>
+{% else %}
+{% set header_actions %}
+<div class="automation-actions">
+    <button type="button" class="{{ 'btn-secondary' if selected.enabled else 'btn-primary' }}"
+            hx-post="{{ url_for('automations_toggle_enabled', slug=selected.slug) }}"
+            hx-swap="none">{{ 'Disable' if selected.enabled else 'Enable' }}
+    </button>
+    <button type="button" id="run-automation-button" class="btn-secondary">Run now</button>
+    <a href="{{ url_for('automations_edit_triggers', slug=selected.slug) }}"
+       class="btn-secondary" data-icon="edit">Edit triggers</a>
+    {% if config_fields %}
+        <button type="button" id="configure-automation-button" class="btn-secondary">Configure
+        </button>
+    {% endif %}
+    {% if not selected.is_system %}
+        <button type="button" id="edit-automation-button" class="btn-secondary">Edit details
+        </button>
+        <button type="button" id="delete-automation-button" class="btn-danger"
+                data-icon="delete">Delete
+        </button>
+    {% endif %}
+</div>
+{% endset %}
+{% call page_header(selected.name, actions=header_actions) %}
+    {% if selected.is_system %}
+        {{ selected.description or 'A built-in automation that ships with Yaffo. System automations cannot be edited or deleted.' }}
     {% else %}
-        {% set header_actions %}
-        <div class="automation-actions">
-            <button type="button" class="{{ 'btn-secondary' if selected.enabled else 'btn-primary' }}"
-                    hx-post="{{ url_for('automations_toggle_enabled', slug=selected.slug) }}"
-                    hx-swap="none">{{ 'Disable' if selected.enabled else 'Enable' }}
-            </button>
-            <button type="button" id="run-automation-button" class="btn-secondary">Run now</button>
-            <a href="{{ url_for('automations_edit_triggers', slug=selected.slug) }}"
-               class="btn-secondary" data-icon="edit">Edit triggers</a>
-            {% if config_fields %}
-                <button type="button" id="configure-automation-button" class="btn-secondary">Configure
-                </button>
-            {% endif %}
-            {% if not selected.is_system %}
-                <button type="button" id="edit-automation-button" class="btn-secondary">Edit details
-                </button>
-                <button type="button" id="delete-automation-button" class="btn-danger"
-                        data-icon="delete">Delete
-                </button>
-            {% endif %}
-        </div>
-        {% endset %}
-        {% call page_header(selected.name, actions=header_actions) %}
-            {% if selected.is_system %}
-                {{ selected.description or 'A built-in automation that ships with Yaffo. System automations cannot be edited or deleted.' }}
-            {% else %}
-                {{ selected.description or 'No description yet — use “Edit details” to add one.' }}
-            {% endif %}
-        {% endcall %}
+        {{ selected.description or 'No description yet — use “Edit details” to add one.' }}
+    {% endif %}
+{% endcall %}
 
-        <div class="automation-detail">
-            <div class="automation-lower">
-                <section class="chat-card automation-conversation">
-                    {% if selected_has_draft %}
-                        <div class="automation-draft">
-                            <p class="automation-draft-text">The assistant has an unpublished draft for this automation.
-                                Publish it to make it live, or discard the draft.</p>
-                            <pre class="automation-code automation-draft-code thin-scrollbar"><code>{{ selected.working_code }}</code></pre>
-                            <div class="automation-draft-actions">
-                                <button type="button" class="btn-primary"
-                                        hx-post="{{ url_for('automations_publish', slug=selected.slug) }}"
-                                        hx-swap="none">Publish draft
-                                </button>
-                                <button type="button" class="btn-secondary"
-                                        hx-post="{{ url_for('automations_discard', slug=selected.slug) }}"
-                                        hx-swap="none">Discard
-                                </button>
-                            </div>
-                        </div>
-                    {% endif %}
-                    {{ chat_dialog(
+<div class="automation-detail">
+    <div class="automation-lower">
+        <section class="chat-card automation-conversation">
+            {% if selected_has_draft %}
+                <div class="automation-draft">
+                    <p class="automation-draft-text">The assistant has an unpublished draft for this automation.
+                        Publish it to make it live, or discard the draft.</p>
+                    <pre class="automation-code automation-draft-code thin-scrollbar"><code>{{ selected.working_code }}</code></pre>
+                    <div class="automation-draft-actions">
+                        <button type="button" class="btn-primary"
+                                hx-post="{{ url_for('automations_publish', slug=selected.slug) }}"
+                                hx-swap="none">Publish draft
+                        </button>
+                        <button type="button" class="btn-secondary"
+                                hx-post="{{ url_for('automations_discard', slug=selected.slug) }}"
+                                hx-swap="none">Discard
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+            {{ chat_dialog(
                         'automation-chat',
                         'Conversation',
                         'Describe what this automation should do and the assistant will write it.',
@@ -101,60 +116,62 @@
                                     else 'No conversation yet — describe what you want and the assistant will build it.'),
                         disabled=selected.is_system
                     ) }}
-                </section>
+        </section>
 
-                <section class="automation-code-section">
-                    <h3 class="automation-section-title">Code</h3>
-                    {% if selected.published_code %}
-                        <pre class="automation-code thin-scrollbar"><code>{{ selected.published_code }}</code></pre>
-                    {% else %}
-                        <p class="no-data">No published code yet.</p>
-                    {% endif %}
-                    {% if selected.published_code or selected.working_code %}
-                        <div class="automation-test">
-                            <div class="automation-test-controls">
-                                <button type="button" class="btn-secondary" id="automation-test-button" disabled>Test</button>
-                                <button type="button" class="btn-secondary js-test-files" data-mode="folder">Test on a folder…</button>
-                                <button type="button" class="btn-secondary js-test-files" data-mode="file">Test on a file…</button>
-                            </div>
-                            <div id="automation-test-result" class="automation-test-result" hidden></div>
-                        </div>
-                    {% endif %}
-                </section>
-            </div>
+        <section class="automation-code-section">
+            <h3 class="automation-section-title">Code</h3>
+            {% if selected.published_code %}
+                <pre class="automation-code thin-scrollbar"><code>{{ selected.published_code }}</code></pre>
+            {% else %}
+                <p class="no-data">No published code yet.</p>
+            {% endif %}
+            {% if selected.published_code or selected.working_code %}
+                <div class="automation-test">
+                    <div class="automation-test-controls">
+                        <button type="button" class="btn-secondary" id="automation-test-button" disabled>Test</button>
+                        <button type="button" class="btn-secondary js-test-files" data-mode="folder">Test on a folder…
+                        </button>
+                        <button type="button" class="btn-secondary js-test-files" data-mode="file">Test on a file…
+                        </button>
+                    </div>
+                    <div id="automation-test-result" class="automation-test-result" hidden></div>
+                </div>
+            {% endif %}
+        </section>
+    </div>
 
-            {% include "utilities/automations_runs.html" %}
-        </div>
+    {% include "utilities/automations_runs.html" %}
+</div>
 
-        {% if not selected.is_system %}
-        <form id="delete-automation-form" method="POST"
-              action="{{ url_for('automations_delete', slug=selected.slug) }}" hidden></form>
-        {{ render_modal('editAutomationModal', 'Edit automation',
+{% if not selected.is_system %}
+    <form id="delete-automation-form" method="POST"
+          action="{{ url_for('automations_delete', slug=selected.slug) }}" hidden></form>
+    {{ render_modal('editAutomationModal', 'Edit automation',
                         url_for('automations_update_details', slug=selected.slug),
                         render_edit_automation_form, 'Save') }}
-        {% endif %}
-        {% if config_fields %}
-        {{ render_modal('configureAutomationModal', 'Configure automation',
+{% endif %}
+{% if config_fields %}
+    {{ render_modal('configureAutomationModal', 'Configure automation',
                         url_for('automations_update_config', slug=selected.slug),
                         render_configure_form, 'Save') }}
-        {% endif %}
-    {% endif %}
+{% endif %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
     {% if selected %}
-    <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
-    <script>
-        window.PHOTO_ORGANIZER.initAutomationDelete({{ selected.name | tojson }});
-        window.PHOTO_ORGANIZER.initAutomationRunNow({{ url_for('automations_run_now', slug=selected.slug) | tojson }});
-        {% if not selected.is_system %}window.PHOTO_ORGANIZER.initAutomationDetails();{% endif %}
-        {% if config_fields %}window.PHOTO_ORGANIZER.initAutomationConfigure();{% endif %}
-        window.PHOTO_ORGANIZER.initAutomationTest({{ selected_slug | tojson }}, window.APP_CONFIG);
-        window.PHOTO_ORGANIZER.automationChat = window.PHOTO_ORGANIZER.initAutomationChat(
-            {{ selected_slug | tojson }},
-            {{ selected_status | tojson }},
-            window.APP_CONFIG
-        );
-    </script>
+        <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
+        <script>
+            window.PHOTO_ORGANIZER.initAutomationDelete({{ selected.name | tojson }});
+            window.PHOTO_ORGANIZER.initAutomationRunNow({{ url_for('automations_run_now', slug=selected.slug) | tojson }});
+            {% if not selected.is_system %}window.PHOTO_ORGANIZER.initAutomationDetails();{% endif %}
+            {% if config_fields %}window.PHOTO_ORGANIZER.initAutomationConfigure();{% endif %}
+            window.PHOTO_ORGANIZER.initAutomationTest({{ selected_slug | tojson }}, window.APP_CONFIG);
+            window.PHOTO_ORGANIZER.automationChat = window.PHOTO_ORGANIZER.initAutomationChat(
+                {{ selected_slug | tojson }},
+                {{ selected_status | tojson }},
+                window.APP_CONFIG
+            );
+        </script>
     {% endif %}
 {% endblock %}

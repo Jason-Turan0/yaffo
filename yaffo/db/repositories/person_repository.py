@@ -13,6 +13,18 @@ def get_person_by_id(session: Session, person_id: int) -> Person | None:
     return session.get(Person, person_id)
 
 
+def get_photo_ids_for_person(session: Session, person_id: int) -> list[int]:
+    """Distinct ids of photos that have at least one face linked to this person."""
+    rows = (
+        session.query(Face.photo_id)
+        .join(PersonFace, PersonFace.face_id == Face.id)
+        .filter(PersonFace.person_id == person_id, Face.photo_id.isnot(None))
+        .distinct()
+        .all()
+    )
+    return [photo_id for (photo_id,) in rows]
+
+
 def get_people_with_embeddings(session: Session) -> list[Person]:
     """All people that have at least one per-year embedding, so face-similarity
     calculations have something to compare against (and don't max() over empty)."""

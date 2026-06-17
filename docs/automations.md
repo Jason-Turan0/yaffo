@@ -92,8 +92,10 @@ There is **no `automation_runs` table**. A run is a `Job` tagged with
 
 Schema lives in `yaffo/scripts/init_db.py` (no migrations — edit + reseed; the
 `file_sync` system automation + its hourly schedule trigger, the
-`auto_assign_faces` automation + its `photo_indexed` event trigger, and the
-`duplicate_scan` automation + its daily schedule trigger, are seeded there).
+`auto_assign_faces` automation + its `photo_indexed` event trigger, the
+`duplicate_scan` automation + its daily schedule trigger, and the
+`export_photo_tag` automation + its `photo_modified` event trigger, are seeded
+there).
 
 ## Schedule path (poll)
 
@@ -137,7 +139,14 @@ The push twin of the schedule dispatcher.
 run: `event_type`, `job_id`, `photo_ids`.
 
 Event catalog (fixed, in `models.py`): `photo_imported`, `photo_indexed`,
-`duplicates_found` (`EVENTS`).
+`duplicates_found`, `photo_modified` (`EVENTS`).
+
+**Not all events come from job completion.** `photo_modified` is emitted
+*synchronously from routes* (not via `JOB_EVENT_MAP`) when a user edits a photo's
+people/location: face assign (`routes/faces.py`), person rename + face removal
+(`routes/people.py`), and location bulk-update (`routes/locations.py`) each call
+`emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": [...]})` after their commit. These
+are UI edits, not bulk jobs, so per-edit granularity is fine (no fan-out storm).
 
 ## Tier routing (`background_tasks/automation_dispatch.py`)
 
@@ -357,6 +366,21 @@ results show up there identically. Same shape as `file_sync`: a lightweight hand
 run passes `context=None`, which the handler ignores — a full-library scan has no
 event subjects.)
 
+### `export_photo_tag`
+
+`tasks/export_photo_tag.py` — a system automation (`handler='export_photo_tag'`,
+seeded disabled with a `photo_modified` **event** trigger). When a photo's people
+or location change in the UI, its handler `enqueue_export_photo_tag` enqueues
+`export_photo_tag_task(automation_id, photo_ids)`, which writes the photo's tags
+back into the **file's** metadata via `utils.write_metadata.write_photo_metadata`
+(the same writer the old manual "Sync Metadata" utility used). Two independent
+**config** toggles decide what's written: `export_location_tag_enabled` (the
+photo's `location_name`) and `export_people_tag_enabled` (names of people linked to
+the photo's faces, deduped + sorted); with neither enabled the run is a no-op, and
+photos whose file is missing are skipped. `_export_tags` is the testable core. This
+is the event-driven replacement for the deleted Sync Metadata page — instead of a
+batch button, the on-disk file stays in sync as you tag.
+
 ### Configurable system automations
 
 A system automation can expose runtime-tunable settings without a code change.
@@ -454,6 +478,7 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
 | Built-in file_sync | `yaffo/background_tasks/tasks/file_sync.py`, `yaffo/utils/file_sync.py` |
 | Built-in auto_assign_faces | `yaffo/background_tasks/tasks/auto_assign_faces_automation.py` |
 | Built-in duplicate_scan | `yaffo/background_tasks/tasks/duplicate_scan.py` |
+| Built-in export_photo_tag | `yaffo/background_tasks/tasks/export_photo_tag.py` (+ emit hooks in `routes/{faces,people,locations}.py`) |
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |
 | Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |

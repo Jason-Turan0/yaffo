@@ -4,7 +4,8 @@ from flask import Flask, render_template, jsonify, request
 from sqlalchemy import func
 
 from yaffo.db import db
-from yaffo.db.models import Photo, PHOTO_STATUS_INDEXED
+from yaffo.db.models import Photo, PHOTO_STATUS_INDEXED, EVENT_PHOTO_MODIFIED
+from yaffo.background_tasks.events import emit_event
 
 def init_locations_routes(app: Flask):
     @app.route("/locations", methods=["GET"])
@@ -58,6 +59,7 @@ def init_locations_routes(app: Flask):
             )
             db.session.commit()
 
+            emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": photo_ids})
             return jsonify({
                 'success': True,
                 'updated_count': updated_count,

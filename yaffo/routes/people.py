@@ -3,9 +3,10 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload, aliased
 
 from yaffo.db import db
-from yaffo.db.models import Person, PersonFace, Face, FACE_STATUS_UNASSIGNED, Photo
-from yaffo.db.repositories.person_repository import update_person_embedding
+from yaffo.db.models import Person, PersonFace, Face, FACE_STATUS_UNASSIGNED, Photo, EVENT_PHOTO_MODIFIED
+from yaffo.db.repositories.person_repository import update_person_embedding, get_photo_ids_for_person
 from yaffo.db.repositories.photos_repository import get_distinct_months, get_distinct_years
+from yaffo.background_tasks.events import emit_event
 from yaffo.utils.context import context
 
 DEFAULT_THRESHOLD = 0.95  # configurable similarity threshold
@@ -106,8 +107,11 @@ def init_people_routes(app: Flask):
 
         old_name = person.name
         person.name = name
+        photo_ids = get_photo_ids_for_person(db.session, person_id)
         db.session.commit()
 
+        if photo_ids:
+            emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": photo_ids})
         flash(f"Renamed '{old_name}' to '{name}'", "success")
         return redirect(url_for("people_list"))
 
@@ -237,6 +241,12 @@ def init_people_routes(app: Flask):
             # Convert to ints
             face_ids = [int(fid) for fid in selected_face_ids]
 
+            photo_ids = [
+                pid for (pid,) in db.session.query(Face.photo_id)
+                .filter(Face.id.in_(face_ids), Face.photo_id.isnot(None))
+                .distinct()
+            ]
+
             # Step 1: delete from bridge table (PersonFace)
             PersonFace.query.filter(PersonFace.face_id.in_(face_ids)).delete(synchronize_session=False)
 
@@ -246,6 +256,8 @@ def init_people_routes(app: Flask):
                 synchronize_session=False
             )
             db.session.commit()
+            if photo_ids:
+                emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": photo_ids})
         flash("Person updated", "success")
         update_person_embedding(person_id, db.session)
         return redirect(request.referrer or url_for("faces_index"))

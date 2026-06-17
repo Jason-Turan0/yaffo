@@ -12,25 +12,32 @@ Add a tunable setting = add one `ConfigField` to the handler's list.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 from yaffo.db.models import (
     Automation,
     AUTOMATION_HANDLER_AUTO_ASSIGN_FACES,
     AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD,
+    AUTOMATION_HANDLER_EXPORT_PHOTO_TAG
 )
 
 
 @dataclass(frozen=True)
 class ConfigField:
-    """A single numeric setting on a system automation, rendered as a number input
-    and validated against [min, max] before being written to Automation.config."""
+    """A single runtime setting on a system automation, written to Automation.config.
+
+    `type` drives both the input rendered in the Configure modal and the coercion
+    applied on save: 'float'/'int' -> number input, 'string' -> text input,
+    'bool' -> checkbox. min/max/step apply to the numeric types only."""
     key: str
     label: str
-    help: str
-    min: float
-    max: float
-    step: float
-    default: float
+    type: str
+    default: str | float | int | bool
+    help: Optional[str] = None
+    min: Optional[float] = None
+    max: Optional[float] = None
+    step: Optional[float] = None
+    required: bool = True
 
 
 AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
@@ -47,8 +54,23 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
             max=1.0,
             step=0.01,
             default=AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD,
+            type='float'
         ),
     ],
+    AUTOMATION_HANDLER_EXPORT_PHOTO_TAG: [
+        ConfigField(
+            key="export_location_tag_enabled",
+            label="Export Location Tags",
+            default=False,
+            type='bool'
+        ),
+        ConfigField(
+            key="export_people_tag_enabled",
+            label="Export People Tags",
+            default=False,
+            type='bool'
+        ),
+    ]
 }
 
 
@@ -60,4 +82,4 @@ def config_fields_for(automation: Automation) -> list[ConfigField]:
 def config_value(automation: Automation, field: ConfigField) -> float:
     """The live value of a config field: the stored value, else the default."""
     stored = (automation.config or {}).get(field.key)
-    return stored if isinstance(stored, (int, float)) else field.default
+    return stored if isinstance(stored, (str, bool, int, float)) else field.default
