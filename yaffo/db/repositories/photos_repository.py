@@ -68,6 +68,20 @@ def update_photo_path(session: Session, photo_id: int, new_path: str) -> None:
     session.query(Photo).filter_by(id=photo_id).update({"full_file_path": new_path})
 
 
+def move_photo_path(session: Session, old_path: str, new_path: str) -> bool:
+    """Update a photo's stored path in place (old_path -> new_path), preserving its
+    row id and its faces/tags (which reference photo_id, not the path). Returns True
+    if a photo at old_path existed and was moved, False if there was none."""
+    updated = (
+        session.query(Photo)
+        .filter(Photo.full_file_path == old_path)
+        .update({"full_file_path": new_path}, synchronize_session=False)
+    )
+    if updated:
+        session.commit()
+    return bool(updated)
+
+
 def get_photos_with_coords(session: Session, photo_ids: list[int]) -> list[Photo]:
     """The given photos that have both latitude and longitude set."""
     if not photo_ids:

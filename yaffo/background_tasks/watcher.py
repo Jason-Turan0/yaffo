@@ -9,6 +9,7 @@ from watchdog.observers.api import BaseObserver, ObservedWatch
 
 from yaffo.background_tasks.tasks import SessionFactory
 from yaffo.common import PHOTO_EXTENSIONS, TEMP_DIR, THUMBNAIL_DIR, TRASH_DIR
+from yaffo.db.repositories.photos_repository import move_photo_path
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
 from yaffo.utils.index_photos import delete_photos_by_paths, delete_photos_under_dir
@@ -18,8 +19,8 @@ logger = get_logger(__name__, 'watcher')
 
 IGNORED_DIRS = (TEMP_DIR, TRASH_DIR, THUMBNAIL_DIR)
 
-SETTLE_SECONDS = 5.0   # a file must be quiet this long before we touch it
-POLL_INTERVAL = 1.0    # how often the flusher checks for settled files
+SETTLE_SECONDS = 10.0   # a file must be quiet this long before we touch it
+POLL_INTERVAL = 5.0    # how often the flusher checks for settled files
 
 
 class DirOp(NamedTuple):
@@ -27,10 +28,16 @@ class DirOp(NamedTuple):
     dest: Path | None   # None when the directory was deleted rather than moved
 
 
+class FileMove(NamedTuple):
+    src: Path
+    dest: Path
+
+
 class Drained(NamedTuple):
     adds: list[Path]
     deletes: list[Path]
     dir_ops: list[DirOp]
+    file_moves: list[FileMove]
 
 
 def _is_indexable(path: Path) -> bool:
@@ -52,6 +59,7 @@ class _DebouncedHandler(FileSystemEventHandler):
         self._pending_adds: dict[Path, float] = {}
         self._pending_deletes: dict[Path, float] = {}
         self._pending_dir_ops: dict[Path, tuple[Path | None, float]] = {}
+        self._pending_file_moves: dict[Path, tuple[Path, float]] = {}  # dest -> (src, ts)
         self._lock = threading.Lock()
 
     def _mark_add(self, raw_path: str) -> None:
@@ -84,6 +92,20 @@ class _DebouncedHandler(FileSystemEventHandler):
         with self._lock:
             self._pending_dir_ops[src] = (dest, time.monotonic())
 
+    def _mark_file_move(self, src_path: str, dest_path: str) -> None:
+        """A file rename/move within the watched tree. Recorded as a (src, dest) pair
+        so the flusher can update the photo in place (preserving its id/faces/tags)
+        rather than deleting the old row and re-indexing the new path from scratch."""
+        src, dest = Path(src_path), Path(dest_path)
+        if not _is_indexable(src) and not _is_indexable(dest):
+            return
+        with self._lock:
+            # Supersede any add/delete already queued for these exact paths.
+            for path in (src, dest):
+                self._pending_adds.pop(path, None)
+                self._pending_deletes.pop(path, None)
+            self._pending_file_moves[dest] = (src, time.monotonic())
+
     def on_deleted(self, event: FileSystemEvent) -> None:
         if event.is_directory:
             self._mark_dir_op(event.src_path, None)
@@ -94,14 +116,14 @@ class _DebouncedHandler(FileSystemEventHandler):
         if event.is_directory:
             self._mark_dir_op(event.src_path, event.dest_path)
         else:
-            self._mark_delete(event.src_path)
-            self._mark_add(event.dest_path)
+            self._mark_file_move(event.src_path, event.dest_path)
 
     def drain_settled(self) -> Drained:
         now = time.monotonic()
         adds: list[Path] = []
         deletes: list[Path] = []
         dir_ops: list[DirOp] = []
+        file_moves: list[FileMove] = []
         with self._lock:
             for path, last_seen in list(self._pending_adds.items()):
                 if now - last_seen < SETTLE_SECONDS:
@@ -120,7 +142,12 @@ class _DebouncedHandler(FileSystemEventHandler):
                     continue
                 del self._pending_dir_ops[src]
                 dir_ops.append(DirOp(src=src, dest=dest))
-        return Drained(adds=adds, deletes=deletes, dir_ops=dir_ops)
+            for dest, (src, last_seen) in list(self._pending_file_moves.items()):
+                if now - last_seen < SETTLE_SECONDS:
+                    continue
+                del self._pending_file_moves[dest]
+                file_moves.append(FileMove(src=src, dest=dest))
+        return Drained(adds=adds, deletes=deletes, dir_ops=dir_ops, file_moves=file_moves)
 
 
 def _enqueue(paths: list[Path]) -> None:
@@ -180,6 +207,34 @@ def _resolve_dir_ops(dir_ops: list[DirOp], watched: set[Path]) -> tuple[list[Pat
     return paths_to_index, dirs_to_remove
 
 
+def _move_in_index(file_moves: list[FileMove], watched: set[Path]) -> tuple[list[Path], list[Path]]:
+    """Apply settled file moves to the index in place, preserving the photo's id (and
+    its faces/tags) instead of deleting + re-indexing.
+
+    A move whose destination is an indexable photo still inside a watched media dir
+    updates the photo's stored path; if nothing was indexed at the source, the
+    destination is returned for a fresh index. A move out of the watched tree (or onto
+    a non-photo / now-missing destination) removes the source. Returns
+    (paths_to_index, paths_to_remove) for the caller to enqueue / remove.
+    """
+    paths_to_index: list[Path] = []
+    paths_to_remove: list[Path] = []
+    session = SessionFactory()
+    try:
+        for move in file_moves:
+            if _is_indexable(move.dest) and move.dest.exists() and _under_watched(move.dest, watched):
+                if move_photo_path(session, str(move.src), str(move.dest)):
+                    logger.info(f"Moved photo in index: {move.src} -> {move.dest}")
+                else:
+                    paths_to_index.append(move.dest)  # not previously indexed; index fresh
+            else:
+                paths_to_remove.append(move.src)  # left the library
+    finally:
+        session.close()
+        SessionFactory.remove()
+    return paths_to_index, paths_to_remove
+
+
 def _desired_media_dirs() -> set[Path]:
     """Currently-configured media dirs that exist on disk."""
     session = SessionFactory()
@@ -234,12 +289,14 @@ def main() -> None:
 
             result = handler.drain_settled()
             to_index, dirs_to_remove = _resolve_dir_ops(result.dir_ops, set(watches))
+            move_adds, move_removes = _move_in_index(result.file_moves, set(watches))
 
-            adds = list(dict.fromkeys(result.adds + to_index))
+            adds = list(dict.fromkeys(result.adds + to_index + move_adds))
             if adds:
                 _enqueue(adds)
-            if result.deletes:
-                _remove(result.deletes)
+            deletes = list(dict.fromkeys(result.deletes + move_removes))
+            if deletes:
+                _remove(deletes)
             for directory in dirs_to_remove:
                 _remove_dir(directory)
     except KeyboardInterrupt:

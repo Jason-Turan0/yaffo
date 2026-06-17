@@ -27,6 +27,7 @@ from yaffo.background_tasks import watcher
 from yaffo.background_tasks.watcher import (
     DirOp,
     Drained,
+    FileMove,
     _DebouncedHandler,
     _is_indexable,
     _resolve_dir_ops,
@@ -72,23 +73,39 @@ class _Collector:
         self._adds: list[Path] = []
         self._deletes: list[Path] = []
         self._dir_ops: list[DirOp] = []
+        self._file_moves: list[FileMove] = []
 
     def poll(self) -> None:
         result = self._handler.drain_settled()
         self._adds += result.adds
         self._deletes += result.deletes
         self._dir_ops += result.dir_ops
+        self._file_moves += result.file_moves
 
     def _resolved(self) -> tuple[list[Path], list[Path]]:
         return _resolve_dir_ops(self._dir_ops, self._watched)
 
+    def _resolved_moves(self) -> tuple[list[Path], list[Path]]:
+        """A file move's convergent outcome: the destination ends up indexed (when it
+        landed in the watched tree), and the source path is no longer indexed either
+        way — whether the index updated it in place or removed it."""
+        to_index: list[Path] = []
+        to_remove: list[Path] = []
+        for move in self._file_moves:
+            to_remove.append(move.src)
+            if _is_indexable(move.dest) and move.dest.exists() and _under_watched(move.dest, self._watched):
+                to_index.append(move.dest)
+        return to_index, to_remove
+
     def indexes(self, path: Path) -> bool:
-        to_index, _ = self._resolved()
-        return path in self._adds or path in to_index
+        dir_index, _ = self._resolved()
+        move_index, _ = self._resolved_moves()
+        return path in self._adds or path in dir_index or path in move_index
 
     def removes(self, path: Path) -> bool:
         _, removed_dirs = self._resolved()
-        if path in self._deletes:
+        _, move_removes = self._resolved_moves()
+        if path in self._deletes or path in move_removes:
             return True
         return any(path == d or d in path.parents for d in removed_dirs)
 
@@ -138,7 +155,7 @@ class TestFileEvents:
 
         handler.on_created(FileCreatedEvent(str(photo)))
 
-        assert handler.drain_settled() == Drained(adds=[photo], deletes=[], dir_ops=[])
+        assert handler.drain_settled() == Drained(adds=[photo], deletes=[], dir_ops=[], file_moves=[])
 
     def test_deleted_photo_is_removed(self, tmp_path):
         gone = tmp_path / "gone.jpg"  # never created on disk
@@ -146,7 +163,7 @@ class TestFileEvents:
 
         handler.on_deleted(FileDeletedEvent(str(gone)))
 
-        assert handler.drain_settled() == Drained(adds=[], deletes=[gone], dir_ops=[])
+        assert handler.drain_settled() == Drained(adds=[], deletes=[gone], dir_ops=[], file_moves=[])
 
     def test_non_photo_is_ignored(self, tmp_path):
         txt = _touch(tmp_path / "note.txt")
@@ -155,7 +172,7 @@ class TestFileEvents:
         handler.on_created(FileCreatedEvent(str(txt)))
         handler.on_deleted(FileDeletedEvent(str(tmp_path / "other.txt")))
 
-        assert handler.drain_settled() == Drained(adds=[], deletes=[], dir_ops=[])
+        assert handler.drain_settled() == Drained(adds=[], deletes=[], dir_ops=[], file_moves=[])
 
     def test_create_then_delete_of_missing_file_nets_to_delete(self, tmp_path):
         gone = tmp_path / "a.jpg"  # not on disk
@@ -165,7 +182,7 @@ class TestFileEvents:
         handler.on_deleted(FileDeletedEvent(str(gone)))
 
         # the delete pops the pending add; the file is gone, so a delete remains
-        assert handler.drain_settled() == Drained(adds=[], deletes=[gone], dir_ops=[])
+        assert handler.drain_settled() == Drained(adds=[], deletes=[gone], dir_ops=[], file_moves=[])
 
     def test_delete_then_recreate_nets_to_add(self, tmp_path):
         photo = _touch(tmp_path / "a.jpg")
@@ -174,16 +191,20 @@ class TestFileEvents:
         handler.on_deleted(FileDeletedEvent(str(photo)))
         handler.on_created(FileCreatedEvent(str(photo)))
 
-        assert handler.drain_settled() == Drained(adds=[photo], deletes=[], dir_ops=[])
+        assert handler.drain_settled() == Drained(adds=[photo], deletes=[], dir_ops=[], file_moves=[])
 
-    def test_file_move_removes_source_and_adds_dest(self, tmp_path):
+    def test_file_move_is_recorded_as_a_file_move(self, tmp_path):
+        # A moved file is no longer a delete+add: it's a (src, dest) pair so the
+        # flusher can update the photo in place.
         old = tmp_path / "old.jpg"          # moved away, no longer on disk
         new = _touch(tmp_path / "new.jpg")
         handler = _DebouncedHandler()
 
         handler.on_moved(FileMovedEvent(str(old), str(new)))
 
-        assert handler.drain_settled() == Drained(adds=[new], deletes=[old], dir_ops=[])
+        assert handler.drain_settled() == Drained(
+            adds=[], deletes=[], dir_ops=[], file_moves=[FileMove(src=old, dest=new)]
+        )
 
 
 class TestDirectoryEvents:
@@ -256,6 +277,110 @@ class TestHelpers:
         assert not _is_indexable(Path("/photos/a.txt"))
 
 
+class _DummySessionFactory:
+    """Stands in for the scoped SessionFactory: callable -> dummy session, + remove()."""
+    def __call__(self):
+        from types import SimpleNamespace
+        return SimpleNamespace(close=lambda: None)
+
+    def remove(self):
+        pass
+
+
+class TestMoveInIndex:
+    """_move_in_index turns settled file moves into in-place index updates, with
+    fresh-index / remove fallbacks. move_photo_path + SessionFactory are stubbed."""
+
+    def _run(self, monkeypatch, moves, watched, *, moved=True):
+        calls = []
+        monkeypatch.setattr(watcher, "move_photo_path",
+                            lambda s, old, new: calls.append((old, new)) or moved)
+        monkeypatch.setattr(watcher, "SessionFactory", _DummySessionFactory())
+        adds, removes = watcher._move_in_index(moves, watched)
+        return adds, removes, calls
+
+    def test_in_place_update_when_dest_in_watched(self, tmp_path, monkeypatch):
+        media = tmp_path / "organized"
+        new = _touch(media / "new.jpg")
+        old = media / "old.jpg"  # source gone after the move
+        adds, removes, calls = self._run(monkeypatch, [FileMove(src=old, dest=new)], {media})
+        assert adds == [] and removes == []           # updated in place, nothing re-indexed/removed
+        assert calls == [(str(old), str(new))]
+
+    def test_fresh_index_when_source_not_in_index(self, tmp_path, monkeypatch):
+        media = tmp_path / "organized"
+        new = _touch(media / "new.jpg")
+        old = media / "old.jpg"
+        adds, removes, calls = self._run(monkeypatch, [FileMove(src=old, dest=new)], {media}, moved=False)
+        assert adds == [new] and removes == []        # nothing at src -> index dest fresh
+        assert calls == [(str(old), str(new))]
+
+    def test_move_in_from_outside_indexes_dest(self, tmp_path, monkeypatch):
+        # src is outside the media dirs (never indexed), dest lands inside: there's no
+        # row to update in place, so the destination is fresh-indexed.
+        media = tmp_path / "organized"
+        dest = _touch(media / "photo.jpg")
+        outside_src = tmp_path / "incoming" / "photo.jpg"  # outside the watched tree
+        adds, removes, calls = self._run(
+            monkeypatch, [FileMove(src=outside_src, dest=dest)], {media}, moved=False
+        )
+        assert adds == [dest] and removes == []
+        assert calls == [(str(outside_src), str(dest))]  # tried in-place, found nothing
+
+    def test_move_out_of_watched_removes_source(self, tmp_path, monkeypatch):
+        media = tmp_path / "organized"
+        outside = _touch(tmp_path / "elsewhere" / "new.jpg")
+        old = media / "old.jpg"
+        adds, removes, calls = self._run(monkeypatch, [FileMove(src=old, dest=outside)], {media})
+        assert adds == [] and removes == [old]        # left the library -> remove
+        assert calls == []                            # never touched the index path
+
+    def test_move_to_non_photo_removes_source(self, tmp_path, monkeypatch):
+        media = tmp_path / "organized"
+        txt = _touch(media / "new.txt")
+        old = media / "old.jpg"
+        adds, removes, calls = self._run(monkeypatch, [FileMove(src=old, dest=txt)], {media})
+        assert removes == [old] and adds == [] and calls == []
+
+    def test_move_to_missing_dest_removes_source(self, tmp_path, monkeypatch):
+        media = tmp_path / "organized"
+        missing = media / "new.jpg"  # never created on disk
+        old = media / "old.jpg"
+        adds, removes, calls = self._run(monkeypatch, [FileMove(src=old, dest=missing)], {media})
+        assert removes == [old] and adds == [] and calls == []
+
+
+class TestMovePhotoPath:
+    """move_photo_path updates the row in place (preserving id), against a real DB."""
+
+    @pytest.fixture
+    def session(self, tmp_path):
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import Session as SASession
+        from yaffo.db import db
+        engine = create_engine(f"sqlite:///{tmp_path / 'wt.db'}")
+        db.metadata.create_all(engine)
+        with SASession(engine) as sess:
+            yield sess
+        engine.dispose()
+
+    def test_updates_path_in_place_preserving_id(self, session):
+        from yaffo.db.models import Photo
+        from yaffo.db.repositories.photos_repository import move_photo_path
+        photo = Photo(full_file_path="/m/old.jpg", status="INDEXED")
+        session.add(photo)
+        session.commit()
+        original_id = photo.id
+
+        assert move_photo_path(session, "/m/old.jpg", "/m/new.jpg") is True
+        moved = session.query(Photo).filter_by(id=original_id).one()
+        assert moved.full_file_path == "/m/new.jpg"  # same row, new path
+
+    def test_returns_false_when_no_photo_at_old_path(self, session):
+        from yaffo.db.repositories.photos_repository import move_photo_path
+        assert move_photo_path(session, "/m/missing.jpg", "/m/new.jpg") is False
+
+
 class TestLiveObserver:
     """Live-Observer mirrors of the unit tests above, driving real filesystem ops.
 
@@ -311,6 +436,17 @@ class TestLiveObserver:
             assert _eventually(
                 collector, lambda: collector.removes(old) and collector.indexes(new)
             )
+
+    def test_file_moved_in_from_outside_is_indexed(self, tmp_path):
+        # A file living outside the watched media dir, moved in: however the OS reports
+        # it (created, or moved with an out-of-tree source), the destination is indexed.
+        media = tmp_path / "organized"
+        media.mkdir(parents=True)
+        incoming = _touch(tmp_path / "incoming" / "photo.jpg")  # outside the watched tree
+        with _watching(media) as collector:
+            dest = media / "photo.jpg"
+            incoming.rename(dest)
+            assert _eventually(collector, lambda: collector.indexes(dest))
 
     # --- mirrors of TestDirectoryEvents ---
 
