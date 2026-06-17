@@ -61,6 +61,10 @@ instance/
 yaffo/scripts/test_data/
 yaffo/scripts/performance_profiles/
 
+# Local, throwaway dev-DB migration scripts (init_db.py is the committed source of
+# truth; these just sync an existing ~/Pictures/yaffo.db and are not version-controlled)
+migrations/dev/
+
 # ExifTool binaries (download separately, see EXIFTOOL_SETUP.md)
 resources/*
 

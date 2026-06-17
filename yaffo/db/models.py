@@ -228,6 +228,11 @@ EVENTS = {
 
 # Handler keys for system automations (registry in background_tasks.registry).
 AUTOMATION_HANDLER_FILE_SYNC = "file_sync"
+AUTOMATION_HANDLER_AUTO_ASSIGN_FACES = "auto_assign_faces"
+
+# Default match threshold for the auto-assign-faces automation (overridable via
+# Automation.config["threshold"]; see background_tasks.automation_config).
+AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 0.95
 
 
 class Automation(db.Model):
@@ -252,6 +257,7 @@ class Automation(db.Model):
     handler = db.Column(db.String)          # system: key into HANDLERS; custom: NULL
     published_code = db.Column(db.Text)     # custom: the live Starlark; system: NULL
     working_code = db.Column(db.Text)       # custom: the in-progress draft; system: NULL
+    config = db.Column(db.JSON)             # system: runtime-tunable settings (e.g. a threshold); custom: NULL
     status = db.Column(db.String, nullable=False, default=AUTOMATION_STATUS_READY)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -276,6 +282,7 @@ class Automation(db.Model):
             'is_system': self.is_system,
             'enabled': self.enabled,
             'handler': self.handler,
+            'config': self.config,
             'status': self.status,
             'triggers': [t.to_dict() for t in self.triggers],
         }

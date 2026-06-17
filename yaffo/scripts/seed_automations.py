@@ -7,11 +7,13 @@ something to exercise end-to-end without the builder UI:
 1. "Log photos on index" — an EVENT automation subscribed to `photo_indexed`
    (fires when an index/import job completes),
 2. "Log photos each minute" — a SCHEDULE automation on `* * * * *`, and
-3. "Auto-assign faces" — an EVENT automation that, on `photo_indexed`, assigns each
-   face to the one person it matches at 95%+ (using match_people + assign_face), and
-4. "Organize by date" — an EVENT automation that moves each indexed photo into a
+3. "Organize by date" — an EVENT automation that moves each indexed photo into a
    Year/Month sub-folder of its media dir (using data_query's media_dir_id +
    move_photo), demonstrating the read + mutating host API.
+
+(Auto-assign faces was promoted to a built-in *system* automation —
+background_tasks.tasks.auto_assign_faces_automation, seeded by init_db — so it's
+no longer a Starlark seed here. The old custom slug is cleaned up below.)
 
 All are custom (handler=None, code set) and enabled. The first two run a
 data_query and print rows; the sandbox captures the prints and the executor logs
@@ -55,20 +57,6 @@ for row in rows:
     print(row)
 """
 
-# On photo_indexed, assign each face to the one person it matches at 95%+, leaving
-# a face unassigned when it matches several people. The threshold/ambiguity logic
-# lives in the script; match_people does the per-face scoring
-# (calculate_face_similarity) and assign_face performs the action per face only when
-# exactly one person clears the bar.
-_ASSIGN_FACES_CODE = """\
-THRESHOLD = 0.95
-for photo_id in ctx["photo_ids"]:
-    for face in match_people(photo_id):
-        strong = [m["person_id"] for m in face["matches"] if m["score"] >= THRESHOLD]
-        if len(strong) == 1:
-            assign_face(face["face_id"], strong[0])
-"""
-
 # On photo_indexed, move each photo into a Year/Month sub-folder of its media dir.
 # data_query gives each photo's media_dir_id + year/month; move_photo keeps the
 # file name and is confined to that media dir.
@@ -83,8 +71,11 @@ for row in rows:
 
 _EVENT_SLUG = "log-photos-on-index"
 _SCHEDULE_SLUG = "log-photos-each-minute"
-_ASSIGN_FACES_SLUG = "auto-assign-faces"
 _ORGANIZE_SLUG = "organize-by-date"
+
+# Promoted to a system automation; deleted here so re-running the seeder removes any
+# stale custom copy from before the promotion.
+_RETIRED_SLUGS = ("auto-assign-faces",)
 
 
 def seed_automations() -> None:
@@ -92,8 +83,9 @@ def seed_automations() -> None:
     with app.app_context():
         db.create_all()
 
-        # Replace any prior copies (ORM delete cascades to their triggers).
-        for slug in (_EVENT_SLUG, _SCHEDULE_SLUG, _ASSIGN_FACES_SLUG, _ORGANIZE_SLUG):
+        # Replace any prior copies (ORM delete cascades to their triggers), and drop
+        # any retired slugs left over from before they became system automations.
+        for slug in (_EVENT_SLUG, _SCHEDULE_SLUG, _ORGANIZE_SLUG, *_RETIRED_SLUGS):
             existing = db.session.query(Automation).filter_by(slug=slug).first()
             if existing is not None:
                 db.session.delete(existing)
@@ -131,25 +123,6 @@ def seed_automations() -> None:
             )],
         )
 
-        assign_faces_automation = Automation(
-            slug=_ASSIGN_FACES_SLUG,
-            name="Auto-assign faces",
-            description=(
-                "When a photo is indexed, assign each face to the one person it "
-                "matches at 95%+ — a face matching several people is left unassigned."
-            ),
-            is_system=False,
-            enabled=True,
-            handler=None,
-            published_code=_ASSIGN_FACES_CODE,
-            status=AUTOMATION_STATUS_READY,
-            triggers=[AutomationTrigger(
-                trigger_type=TRIGGER_TYPE_EVENT,
-                enabled=True,
-                event_type=EVENT_PHOTO_INDEXED,
-            )],
-        )
-
         organize_automation = Automation(
             slug=_ORGANIZE_SLUG,
             name="Organize by date",
@@ -169,13 +142,11 @@ def seed_automations() -> None:
             )],
         )
 
-        db.session.add_all([
-            event_automation, schedule_automation, assign_faces_automation, organize_automation,
-        ])
+        db.session.add_all([event_automation, schedule_automation, organize_automation])
         db.session.commit()
         print(
             f"Seeded automations: '{event_automation.slug}', '{schedule_automation.slug}', "
-            f"'{assign_faces_automation.slug}', and '{organize_automation.slug}'."
+            f"and '{organize_automation.slug}'."
         )
 
 

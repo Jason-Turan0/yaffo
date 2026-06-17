@@ -1,5 +1,12 @@
 # Database Migrations
 
+> **Current convention (no prod DB, no CI):** the committed source of truth is
+> `yaffo/scripts/init_db.py` — edit it so a database can be built from scratch.
+> To sync an *existing* local dev DB (`~/Pictures/yaffo.db`), write a throwaway,
+> idempotent script under `migrations/dev/` (gitignored — **not** version
+> controlled) and run it. The numbered `*.sql` files below are the older, abandoned
+> approach, kept for reference only.
+
 This folder contains SQL migration scripts for the photo organizer database.
 
 ## Running Migrations

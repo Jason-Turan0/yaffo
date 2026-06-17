@@ -11,6 +11,7 @@ import re
 
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 
+from yaffo.background_tasks.automation_config import config_fields_for, config_value
 from yaffo.background_tasks.automation_sandbox.preview import preview_automation
 from yaffo.background_tasks.schedule import is_valid_cron
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
@@ -51,6 +52,19 @@ def _unique_slug(name: str) -> str:
 
 
 def init_automations_routes(app: Flask):
+    def _config_fields(automation: Automation | None) -> list[dict]:
+        """The Configure-modal context: each declared field plus its live value."""
+        if automation is None:
+            return []
+        return [
+            {
+                "key": f.key, "label": f.label, "help": f.help,
+                "min": f.min, "max": f.max, "step": f.step,
+                "value": config_value(automation, f),
+            }
+            for f in config_fields_for(automation)
+        ]
+
     def _render_page(selected_slug: str | None):
         selected = repo.get_by_slug(db.session, selected_slug) if selected_slug else None
         return render_template(
@@ -63,6 +77,7 @@ def init_automations_routes(app: Flask):
                 and selected.status == AUTOMATION_STATUS_READY
                 and selected.working_code is not None
             ),
+            config_fields=_config_fields(selected),
             **automations_sidebar_context(),
         )
 
@@ -161,6 +176,33 @@ def init_automations_routes(app: Flask):
             return jsonify({"error": "Automation name is required"}), 400
         automation.name = name
         automation.description = (request.form.get("description") or "").strip() or None
+        db.session.commit()
+        return redirect(url_for("automations_show", slug=slug))
+
+    @app.route("/utilities/automations/<slug>/config", methods=["POST"])
+    def automations_update_config(slug: str):
+        """Save a system automation's runtime settings (e.g. the auto-assign-faces
+        match threshold) into Automation.config. Allowed on system automations: like
+        a schedule, config is runtime state the task reads live, even though the
+        automation's code/identity stays route-locked. Fields/bounds come from the
+        declared schema (automation_config), which is the trust boundary."""
+        automation = repo.get_by_slug(db.session, slug)
+        if automation is None:
+            abort(404)
+        fields = config_fields_for(automation)
+        if not fields:
+            return jsonify({"error": "This automation has no configurable settings."}), 400
+        config = dict(automation.config or {})
+        for field in fields:
+            raw = (request.form.get(field.key) or "").strip()
+            try:
+                value = float(raw)
+            except ValueError:
+                return jsonify({"error": f"{field.label} must be a number."}), 400
+            if not (field.min <= value <= field.max):
+                return jsonify({"error": f"{field.label} must be between {field.min} and {field.max}."}), 400
+            config[field.key] = value
+        automation.config = config
         db.session.commit()
         return redirect(url_for("automations_show", slug=slug))
 

@@ -15,6 +15,17 @@
     </div>
 {% endmacro %}
 
+{% macro render_configure_form() %}
+    {% for field in config_fields %}
+    <div class="form-group">
+        <label for="config-{{ field.key }}">{{ field.label }}</label>
+        <input type="number" id="config-{{ field.key }}" name="{{ field.key }}" required
+               min="{{ field.min }}" max="{{ field.max }}" step="{{ field.step }}" value="{{ field.value }}">
+        {% if field.help %}<p class="hint-text">{{ field.help }}</p>{% endif %}
+    </div>
+    {% endfor %}
+{% endmacro %}
+
 {% block title %}Automations - Yaffo{% endblock %}
 
 {% block utility_styles %}
@@ -37,6 +48,11 @@
             </button>
             <a href="{{ url_for('automations_edit_triggers', slug=selected.slug) }}"
                class="btn-secondary" data-icon="edit">Edit triggers</a>
+            {% if config_fields %}
+                <button type="button" id="configure-automation-button" class="btn-secondary"
+                        data-icon="edit">Configure
+                </button>
+            {% endif %}
             {% if not selected.is_system %}
                 <button type="button" id="edit-automation-button" class="btn-secondary"
                         data-icon="edit">Edit details
@@ -116,6 +132,11 @@
                         url_for('automations_update_details', slug=selected.slug),
                         render_edit_automation_form, 'Save') }}
         {% endif %}
+        {% if config_fields %}
+        {{ render_modal('configureAutomationModal', 'Configure automation',
+                        url_for('automations_update_config', slug=selected.slug),
+                        render_configure_form, 'Save') }}
+        {% endif %}
     {% endif %}
 {% endblock %}
 
@@ -125,6 +146,7 @@
     <script>
         window.PHOTO_ORGANIZER.initAutomationDelete({{ selected.name | tojson }});
         {% if not selected.is_system %}window.PHOTO_ORGANIZER.initAutomationDetails();{% endif %}
+        {% if config_fields %}window.PHOTO_ORGANIZER.initAutomationConfigure();{% endif %}
         window.PHOTO_ORGANIZER.initAutomationTest({{ selected_slug | tojson }}, window.APP_CONFIG);
         window.PHOTO_ORGANIZER.automationChat = window.PHOTO_ORGANIZER.initAutomationChat(
             {{ selected_slug | tojson }},

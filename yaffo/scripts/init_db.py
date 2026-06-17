@@ -141,6 +141,7 @@ def init_db():
             handler TEXT,
             published_code TEXT,
             working_code TEXT,
+            config TEXT,
             status TEXT NOT NULL DEFAULT 'READY',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -181,6 +182,25 @@ def init_db():
           AND NOT EXISTS (
               SELECT 1 FROM automation_triggers t
               WHERE t.automation_id = a.id AND t.trigger_type = 'schedule'
+          )
+    """)
+
+    # Seed the built-in auto-assign-faces automation (disabled) + its photo_indexed
+    # event trigger. config holds the tunable match threshold (see automation_config).
+    cursor.execute("""
+        INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status, config)
+        VALUES ('auto_assign_faces', 'Auto-assign faces',
+                'When a photo is indexed, assign each detected face to the one person it matches above the threshold — a face matching several people is left unassigned.',
+                1, 0, 'auto_assign_faces', 'READY', '{"threshold": 0.95}')
+    """)
+    cursor.execute("""
+        INSERT INTO automation_triggers (automation_id, trigger_type, enabled, event_type)
+        SELECT a.id, 'event', 1, 'photo_indexed'
+        FROM automations a
+        WHERE a.slug = 'auto_assign_faces'
+          AND NOT EXISTS (
+              SELECT 1 FROM automation_triggers t
+              WHERE t.automation_id = a.id AND t.trigger_type = 'event'
           )
     """)
 

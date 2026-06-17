@@ -155,6 +155,63 @@ def test_update_details_system_rejected(app, client):
     assert client.post("/utilities/automations/sys/details", data={"name": "x"}).status_code == 400
 
 
+def _add_system_assign_faces(app):
+    """The seeded auto-assign-faces system automation, the one row that exposes a
+    configurable threshold (see background_tasks.automation_config)."""
+    _add(
+        app, slug="auto_assign_faces", name="Auto-assign faces",
+        is_system=True, handler="auto_assign_faces", config={"threshold": 0.95},
+    )
+
+
+def test_config_saves_valid_threshold(app, client):
+    _add_system_assign_faces(app)
+    resp = client.post(
+        "/utilities/automations/auto_assign_faces/config", data={"threshold": "0.8"}
+    )
+    assert resp.status_code == 302
+    with app.app_context():
+        a = db.session.query(Automation).filter_by(slug="auto_assign_faces").first()
+        assert a.config == {"threshold": 0.8}
+
+
+def test_config_rejects_out_of_range(app, client):
+    _add_system_assign_faces(app)
+    resp = client.post(
+        "/utilities/automations/auto_assign_faces/config", data={"threshold": "2.0"}
+    )
+    assert resp.status_code == 400
+    with app.app_context():
+        a = db.session.query(Automation).filter_by(slug="auto_assign_faces").first()
+        assert a.config == {"threshold": 0.95}  # unchanged
+
+
+def test_config_rejects_non_numeric(app, client):
+    _add_system_assign_faces(app)
+    resp = client.post(
+        "/utilities/automations/auto_assign_faces/config", data={"threshold": "high"}
+    )
+    assert resp.status_code == 400
+
+
+def test_config_rejected_for_non_configurable(app, client):
+    _add(app)  # a plain custom automation declares no config fields
+    assert client.post("/utilities/automations/a1/config", data={"threshold": "0.8"}).status_code == 400
+
+
+def test_detail_page_shows_configure_for_configurable(app, client):
+    _add_system_assign_faces(app)
+    body = client.get("/utilities/automations/auto_assign_faces").get_data(as_text=True)
+    assert "configure-automation-button" in body
+    assert "configureAutomationModal" in body
+
+
+def test_detail_page_hides_configure_when_no_config(app, client):
+    _add(app)
+    body = client.get("/utilities/automations/a1").get_data(as_text=True)
+    assert "configure-automation-button" not in body
+
+
 def test_delete_removes_custom(app, client):
     _add(app)
     assert client.post("/utilities/automations/a1/delete").status_code == 302

@@ -29,6 +29,17 @@ window.PHOTO_ORGANIZER.initAutomationDetails = () => {
     button.addEventListener('click', modal.open);
 };
 
+// Wire the "Configure" button to the settings modal (system automations that
+// declare config fields, e.g. auto-assign-faces' match threshold). The modal posts
+// a normal form that redirects back, refreshing the page with the new value.
+window.PHOTO_ORGANIZER.initAutomationConfigure = () => {
+    const button = document.getElementById('configure-automation-button');
+    const components = window.PHOTO_ORGANIZER.COMPONENTS;
+    if (!button || !components || !components.modal) return;
+    const modal = components.modal.init('configureAutomationModal');
+    button.addEventListener('click', modal.open);
+};
+
 // Run the automation's code in a sandbox dry-run and render what it did: the host-API
 // actions intercepted during the run, the captured output, and any error. Changes
 // nothing (no Job recorded; the host surface is read-only).

@@ -2,12 +2,93 @@ from invoke import task
 from pathlib import Path
 from urllib.request import urlopen
 import json
+import os
 import platform
 import subprocess
+import threading
+import time
 
 
 VENDOR_DIR = Path("yaffo/static/vendor")
 VENDOR_MANIFEST = VENDOR_DIR / "manifest.json"
+
+
+def _flask_command(host, port):
+    return f"flask run --host={host} --port={port}"
+
+
+def _flask_env(debug):
+    return {
+        "FLASK_APP": "yaffo.app:create_app",
+        "FLASK_ENV": "development" if debug else "production",
+        "FLASK_DEBUG": "1" if debug else "0",
+    }
+
+
+def _huey_command(workers, worker_type):
+    return f"huey_consumer.py yaffo.background_tasks.main.huey -w {workers} -k {worker_type}"
+
+
+def _watcher_command():
+    return "python -m yaffo.background_tasks.watcher"
+
+
+def _open_chrome(url, delay=2):
+    system = platform.system()
+    if system == "Darwin":
+        chrome_cmd = f'sleep {delay} && open -na "Google Chrome" --args --incognito {url}'
+    elif system == "Windows":
+        chrome_cmd = f'timeout /t {delay} /nobreak && start chrome --incognito {url}'
+    else:
+        chrome_cmd = f'sleep {delay} && google-chrome --incognito {url}'
+
+    subprocess.Popen(chrome_cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    print(f"Chrome will open in incognito mode at {url}")
+
+
+def _run_concurrently(processes):
+    """
+    Launch (label, command, env) tuples as concurrent subprocesses, prefix each
+    line of their merged output with the label, and tear them all down together
+    on Ctrl+C or when any one of them exits.
+    """
+    procs = []
+    for label, command, env in processes:
+        full_env = {**os.environ, **(env or {})}
+        proc = subprocess.Popen(
+            command,
+            shell=True,
+            env=full_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+        )
+        procs.append((label, proc))
+
+    def stream(label, proc):
+        for line in proc.stdout:
+            print(f"[{label}] {line}", end="", flush=True)
+
+    for label, proc in procs:
+        threading.Thread(target=stream, args=(label, proc), daemon=True).start()
+
+    try:
+        while all(proc.poll() is None for _, proc in procs):
+            time.sleep(0.5)
+        exited = next(label for label, proc in procs if proc.poll() is not None)
+        print(f"\n[{exited}] exited — shutting down the rest...")
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+    finally:
+        for _, proc in procs:
+            if proc.poll() is None:
+                proc.terminate()
+        for _, proc in procs:
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
 
 
 @task
@@ -25,26 +106,8 @@ def start_app(c, host="127.0.0.1", port=5000, debug=True):
         inv start-app --host=0.0.0.0 --port=8000
     """
     print(f"Starting Flask app on {host}:{port} (debug={debug})")
-
-    url = f"http://{host}:{port}"
-    system = platform.system()
-
-    if system == "Darwin":
-        chrome_cmd = f'sleep 2 && open -na "Google Chrome" --args --incognito {url}'
-    elif system == "Windows":
-        chrome_cmd = f'timeout /t 2 /nobreak && start chrome --incognito {url}'
-    else:
-        chrome_cmd = f'sleep 2 && google-chrome --incognito {url}'
-
-    subprocess.Popen(chrome_cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    print(f"Chrome will open in incognito mode at {url}")
-
-    env = {
-        "FLASK_APP": "yaffo.app:create_app",
-        "FLASK_ENV": "development" if debug else "production",
-        "FLASK_DEBUG": "1" if debug else "0"
-    }
-    c.run(f"flask run --host={host} --port={port}", env=env, pty=True)
+    _open_chrome(f"http://{host}:{port}")
+    c.run(_flask_command(host, port), env=_flask_env(debug), pty=True)
 
 
 @task
@@ -61,10 +124,7 @@ def start_tasks(c, workers=4, worker_type="process"):
         inv start-tasks --workers=4 --worker-type=thread
     """
     print(f"Starting Huey consumer with {workers} {worker_type} workers")
-    c.run(
-        f"huey_consumer.py yaffo.background_tasks.main.huey -w {workers} -k {worker_type}",
-        pty=True
-    )
+    c.run(_huey_command(workers, worker_type), pty=True)
 
 
 @task
@@ -79,7 +139,34 @@ def start_watcher(c):
         inv start-watcher
     """
     print("Starting photo watcher...")
-    c.run("python -m yaffo.background_tasks.watcher", pty=True)
+    c.run(_watcher_command(), pty=True)
+
+
+@task
+def app_local(c, host="127.0.0.1", port=5000, debug=True, workers=4, worker_type="process"):
+    """
+    Launch the full local stack at once: the Flask app, the Huey consumer, and
+    the photo watcher. Output from all three is interleaved with [flask]/[huey]/
+    [watcher] prefixes. Press Ctrl+C to stop everything together.
+
+    Args:
+        host: Host to bind the Flask app to (default: 127.0.0.1)
+        port: Port to bind the Flask app to (default: 5000)
+        debug: Run Flask in debug mode (default: True)
+        workers: Number of Huey workers (default: 4)
+        worker_type: Huey worker type - 'process' or 'thread' (default: process)
+
+    Example:
+        inv app-local
+        inv app-local --port=8000 --workers=8
+    """
+    print(f"Starting the full local stack on {host}:{port} (debug={debug})")
+    _open_chrome(f"http://{host}:{port}")
+    _run_concurrently([
+        ("flask", _flask_command(host, port), _flask_env(debug)),
+        ("huey", _huey_command(workers, worker_type), None),
+        ("watcher", _watcher_command(), None),
+    ])
 
 
 @task

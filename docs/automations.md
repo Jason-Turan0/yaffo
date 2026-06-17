@@ -60,6 +60,7 @@ fully runtime-editable with no consumer restart.
 | `handler` | **system**: key into `background_tasks.registry.HANDLERS`; **custom**: `NULL` |
 | `published_code` | **custom**: the **live** Starlark the dispatchers run; **system**: `NULL` |
 | `working_code` | **custom**: the in-progress draft the builder edits before publishing; **system**: `NULL` |
+| `config` | **system**: JSON of runtime-tunable settings (e.g. `{"threshold": 0.95}`); **custom**: `NULL`. Schema declared in `background_tasks/automation_config.py`, edited via the Configure modal |
 | `status` | generation lifecycle for custom (`IN_PROGRESS/READY/FAILED/ACCEPTED`); system rows are `READY` |
 
 `published_code` vs `working_code` is a page-style published/working split: the
@@ -90,7 +91,9 @@ There is **no `automation_runs` table**. A run is a `Job` tagged with
   `complete_job_task`, so they emit no events (and can't feed a trigger loop).
 
 Schema lives in `yaffo/scripts/init_db.py` (no migrations — edit + reseed; the
-`file_sync` system automation + its hourly schedule trigger are seeded there).
+`file_sync` system automation + its hourly schedule trigger, and the
+`auto_assign_faces` automation + its `photo_indexed` event trigger, are seeded
+there).
 
 ## Schedule path (poll)
 
@@ -314,7 +317,9 @@ custom automations through an **Edit details** modal (`render_modal`, `POST
 .../<slug>/details`); the slug stays fixed on rename. The detail page also hosts
 the **Test** panel (above) and the published `code`.
 
-## The one built-in: `file_sync`
+## Built-ins
+
+### `file_sync`
 
 `tasks/file_sync.py` — a system automation (`handler='file_sync'`, seeded
 disabled, hourly). Its handler `enqueue_file_sync` enqueues `file_sync_task`
@@ -324,15 +329,43 @@ index-photos button (`scan_media_dirs` + `perform_sync` are shared with the
 route), so its import/index Jobs show up in the UI exactly like a hand-triggered
 sync — tagged with `automation_id` as the run history.
 
+### `auto_assign_faces`
+
+`tasks/auto_assign_faces_automation.py` — a system automation
+(`handler='auto_assign_faces'`, seeded disabled with a `photo_indexed` **event**
+trigger). On each indexed batch its handler `enqueue_auto_assign_faces` enqueues
+`auto_assign_faces_automation_task(automation_id, photo_ids)`, which for every
+detected face computes `calculate_face_similarity` against all known people and
+links the face to the **one** person clearing the configured threshold — a face
+with zero or several strong matches is left unassigned. The threshold is the lone
+**configurable** setting: stored in `config["threshold"]`, declared in
+`automation_config.AUTOMATION_CONFIG`, edited via the **Configure** modal on the
+detail page. (Was a Starlark seed example before it was promoted; distinct from
+`tasks/auto_assign_faces.py`, the manual "assign every matching face to ONE chosen
+person" batch job.)
+
+### Configurable system automations
+
+A system automation can expose runtime-tunable settings without a code change.
+`background_tasks/automation_config.py` is the single source of truth: a list of
+`ConfigField`s keyed by handler, read in two non-diverging places — the route
+(`automations_update_config` validates each field against its `[min, max]` and
+writes `Automation.config`; bounds are the trust boundary) and the running task
+(reads the live value via `config_value`). The detail page renders a **Configure**
+modal (`render_modal`) when the selected automation declares fields. Config is
+runtime state the task reads live (like a schedule), so it's editable on system
+rows even though their code/identity stays route-locked.
+
 ## Seed examples (`scripts/seed_automations.py`)
 
 A dev seeder (run `python -m yaffo.scripts.seed_automations`, idempotent) that
 stands in for AI-generated custom automations so the runtime + host API can be
 exercised end-to-end without the builder: `log-photos-on-index` /
-`log-photos-each-minute` (read-only `data_query`), `auto-assign-faces` (on
-`photo_indexed`, per-face `match_people` → `assign_face` at ≥95%, ambiguous faces
-skipped), and `organize-by-date` (on `photo_indexed`, `move_photo(id,
-media_dir_id, "YYYY/MM")` from each row's `media_dir_id`).
+`log-photos-each-minute` (read-only `data_query`) and `organize-by-date` (on
+`photo_indexed`, `move_photo(id, media_dir_id, "YYYY/MM")` from each row's
+`media_dir_id`). (Auto-assign-faces used to be a seed example here; it was promoted
+to the `auto_assign_faces` system built-in above. The seeder still deletes the old
+`auto-assign-faces` slug so re-running it cleans up any stale custom copy.)
 
 ## Key design decisions / invariants
 
@@ -402,6 +435,8 @@ media_dir_id, "YYYY/MM")` from each row's `media_dir_id`).
 | Executor task | `yaffo/background_tasks/tasks/run_automation.py` |
 | Custom run → Job recording | `yaffo/background_tasks/automation_runs.py` |
 | Built-in file_sync | `yaffo/background_tasks/tasks/file_sync.py`, `yaffo/utils/file_sync.py` |
+| Built-in auto_assign_faces | `yaffo/background_tasks/tasks/auto_assign_faces_automation.py` |
+| System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |
 | Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |
 | Builder tool | `yaffo/page_builder/tool_providers/automation_tool.py` |

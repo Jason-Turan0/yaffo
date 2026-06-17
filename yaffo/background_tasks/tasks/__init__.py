@@ -9,6 +9,7 @@ from yaffo.background_tasks.tasks.remove_duplicates import remove_duplicates_tas
 from yaffo.background_tasks.tasks.generate_page import generate_page_task
 from yaffo.background_tasks.tasks.generate_theme import generate_theme_task
 from yaffo.background_tasks.tasks.file_sync import file_sync_task
+from yaffo.background_tasks.tasks.auto_assign_faces_automation import auto_assign_faces_automation_task
 from yaffo.background_tasks.tasks.dispatcher import dispatch_scheduled_tasks
 from yaffo.background_tasks.tasks.dispatch_event import dispatch_event_task
 from yaffo.background_tasks.tasks.run_automation import run_automation_code_task
@@ -36,6 +37,7 @@ __all__ = [
     'generate_page_task',
     'generate_theme_task',
     'file_sync_task',
+    'auto_assign_faces_automation_task',
     'dispatch_scheduled_tasks',
     'dispatch_event_task',
     'run_automation_code_task',
