@@ -46,7 +46,7 @@
 
                 <div class="detail-section">
                     <h3>Location</h3>
-                    {% if photo.location_name or photo.latitude or photo.longitude %}
+                    {% if photo.location_name or photo.latitude is not none or photo.longitude is not none %}
                         <div class="location-details">
                             {% if photo.location_name %}
                                 <div class="detail-item">
@@ -54,11 +54,11 @@
                                     <span class="detail-value">{{ photo.location_name }}</span>
                                 </div>
                             {% endif %}
-                            {% if photo.latitude and photo.longitude %}
+                            {% if photo.latitude is not none and photo.longitude is not none %}
                                 <div class="detail-item">
                                     <label>Coordinates:</label>
                                     <span class="detail-value">
-                            {{ "%.6f"|format(photo.latitude) }}, {{ "%.6f"|format(photo.longitude) }}
+                            {{ "%.6f"|format(photo.latitude | abs) }}° {{ 'N' if photo.latitude >= 0 else 'S' }}, {{ "%.6f"|format(photo.longitude | abs) }}° {{ 'E' if photo.longitude >= 0 else 'W' }}
                         </span>
                                 </div>
                                 <div class="detail-actions">

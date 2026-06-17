@@ -65,6 +65,29 @@ def convert_to_degrees(value: Tuple) -> float:
     return d + (m / 60.0) + (s / 3600.0)
 
 
+def get_signed_gps_from_exiftool(exif_data: Dict) -> Tuple[Optional[float], Optional[float]]:
+    """Return (latitude, longitude) as signed decimal degrees.
+
+    exiftool's ``-n`` flag reports EXIF:GPSLatitude/Longitude as unsigned
+    magnitudes; the hemisphere lives in the separate ...Ref tag. The Composite
+    tags are already signed, so prefer those and fall back to applying the Ref.
+    """
+    def signed(exif_key: str, ref_key: str, composite_key: str, negative_ref: str) -> Optional[float]:
+        composite = exif_data.get(composite_key)
+        if composite is not None:
+            return composite
+        value = exif_data.get(exif_key)
+        if value is None:
+            return None
+        if exif_data.get(ref_key) == negative_ref:
+            return -abs(value)
+        return abs(value)
+
+    latitude = signed("EXIF:GPSLatitude", "EXIF:GPSLatitudeRef", "Composite:GPSLatitude", "S")
+    longitude = signed("EXIF:GPSLongitude", "EXIF:GPSLongitudeRef", "Composite:GPSLongitude", "W")
+    return latitude, longitude
+
+
 def get_exif_data_with_exiftool(photo_path: Path) -> Optional[Dict]:
     if not _HAS_EXIFTOOL:
         return None
@@ -265,9 +288,8 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
             tags = parse_exiftool_to_tags(exif_data)
             xmp_fields = extract_xmp_metadata(exif_data)
 
-            # Extract GPS from exiftool data (exiftool returns decimal degrees)
-            latitude = exif_data.get("EXIF:GPSLatitude") or exif_data.get("Composite:GPSLatitude")
-            longitude = exif_data.get("EXIF:GPSLongitude") or exif_data.get("Composite:GPSLongitude")
+            # Extract GPS as signed decimal degrees (handles W/S hemispheres)
+            latitude, longitude = get_signed_gps_from_exiftool(exif_data)
 
             # Get location name from XMP if available
             location_name = xmp_fields.get('location_name')
