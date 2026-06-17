@@ -28,6 +28,7 @@ from yaffo.db.models import (
     Automation,
     AutomationTrigger,
     AUTOMATION_STATUS_READY,
+    EVENT_DUPLICATES_FOUND,
     EVENT_PHOTO_INDEXED,
     TRIGGER_TYPE_EVENT,
     TRIGGER_TYPE_SCHEDULE,
@@ -45,9 +46,28 @@ for row in rows:
         move_photo(row["id"], row["media_dir_id"], str(row["year"]) + "/" + mm)
 """
 
+# On duplicates_found, move every duplicate except the keeper into a "_Duplicates"
+# sub-folder of its media dir. ctx["groups"] is a list of duplicate sets, each a list
+# of photo ids ordered earliest-indexed first, so group[0] is the keeper and
+# group[1:] are the copies to move out.
+_DEDUPE_CODE = """\
+to_move = []
+for group in ctx["groups"]:
+    for photo_id in group[1:]:
+        to_move.append(photo_id)
+
+if to_move:
+    print("Moving " + str(len(to_move)) + " duplicate(s) to _Duplicates")
+    rows = data_query({"source": "photos", "id": {"in": to_move}})
+    for row in rows:
+        if row["media_dir_id"]:
+            move_photo(row["id"], row["media_dir_id"], "_Duplicates")
+"""
+
 _EVENT_SLUG = "log-photos-on-index"
 _SCHEDULE_SLUG = "log-photos-each-minute"
 _ORGANIZE_SLUG = "organize-by-date"
+_DEDUPE_SLUG = "move-duplicates"
 
 
 def seed_automations() -> None:
@@ -57,7 +77,7 @@ def seed_automations() -> None:
 
         # Replace any prior copies (ORM delete cascades to their triggers), and drop
         # any retired slugs left over from before they became system automations.
-        for slug in (_EVENT_SLUG, _SCHEDULE_SLUG, _ORGANIZE_SLUG):
+        for slug in (_EVENT_SLUG, _SCHEDULE_SLUG, _ORGANIZE_SLUG, _DEDUPE_SLUG):
             existing = db.session.query(Automation).filter_by(slug=slug).first()
             if existing is not None:
                 db.session.delete(existing)
@@ -82,10 +102,32 @@ def seed_automations() -> None:
             )],
         )
 
-        db.session.add_all([  organize_automation])
+        # Seeded DISABLED: it moves files, so the user opts in by enabling it. Once on,
+        # any duplicate scan (the scheduled duplicate_scan automation or the manual
+        # Remove Duplicates tool) fires duplicates_found and this moves the copies out.
+        dedupe_automation = Automation(
+            slug=_DEDUPE_SLUG,
+            name="Move duplicates",
+            description=(
+                "When a duplicate scan finds duplicates, move every copy except the "
+                "keeper into a \"_Duplicates\" sub-folder of its media dir."
+            ),
+            is_system=False,
+            enabled=False,
+            handler=None,
+            published_code=_DEDUPE_CODE,
+            status=AUTOMATION_STATUS_READY,
+            triggers=[AutomationTrigger(
+                trigger_type=TRIGGER_TYPE_EVENT,
+                enabled=True,
+                event_type=EVENT_DUPLICATES_FOUND,
+            )],
+        )
+
+        db.session.add_all([organize_automation, dedupe_automation])
         db.session.commit()
         print(
-            f"Seeded automations:'{organize_automation.slug}'."
+            f"Seeded automations: '{organize_automation.slug}', '{dedupe_automation.slug}'."
         )
 
 

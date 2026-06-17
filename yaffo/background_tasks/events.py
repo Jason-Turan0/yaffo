@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.db.models import (
     Job, Photo,
-    EVENT_PHOTO_IMPORTED, EVENT_PHOTO_INDEXED, EVENT_DUPLICATES_FOUND,
+    EVENT_PHOTO_IMPORTED, EVENT_PHOTO_INDEXED,
 )
 from yaffo.logging_config import get_logger
 
@@ -16,10 +16,15 @@ logger = get_logger(__name__, 'background_tasks')
 class EventContext:
     """What a domain event hands to a subscribed automation's handler. Built by
     dispatch_event_task from the queued (event_type, payload); `photo_ids` are the
-    subjects the event concerns (empty when an event has no photo subjects)."""
+    subjects the event concerns (empty when an event has no photo subjects).
+
+    `groups` carries related-photo groupings when an event provides them — e.g.
+    duplicates_found passes one list of photo ids per duplicate set (each ordered
+    earliest-indexed first). Empty for events without groupings."""
     event_type: str
     job_id: str | None = None
     photo_ids: list[int] = field(default_factory=list)
+    groups: list[list[int]] = field(default_factory=list)
 
 
 # event_type stamped on the EventContext of a manual "Run now" over a picked
@@ -29,11 +34,11 @@ MANUAL_RUN_EVENT_TYPE = "manual"
 
 
 # Which completed Job names emit which event (per-job-completion granularity).
-# Jobs not listed emit nothing.
+# Jobs not listed emit nothing. (duplicates_found is emitted directly from
+# find_duplicates_task, which carries the duplicate groups, not via this map.)
 JOB_EVENT_MAP: dict[str, str] = {
     'index_photos': EVENT_PHOTO_INDEXED,
     'import_photos': EVENT_PHOTO_IMPORTED,
-    'find_duplicates': EVENT_DUPLICATES_FOUND,
 }
 
 

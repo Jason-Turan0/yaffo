@@ -25,6 +25,7 @@ def invoke_automation(automation: Automation, context: EventContext | None) -> b
             "event_type": context.event_type,
             "job_id": context.job_id,
             "photo_ids": context.photo_ids,
+            "groups": context.groups,
         }
         run_automation_code_task(automation.id, payload)
         return True

@@ -150,10 +150,21 @@ The push twin of the schedule dispatcher.
    automations and calls `invoke_automation` with an `EventContext`.
 
 `EventContext` (`background_tasks/events.py`) is the typed payload handed to a
-run: `event_type`, `job_id`, `photo_ids`.
+run: `event_type`, `job_id`, `photo_ids`, and `groups` (related-photo groupings —
+one list of photo ids per duplicate set for `duplicates_found`, each ordered
+earliest-indexed first; empty for events without groupings). It threads through to
+the Starlark `ctx` (so a script reads `ctx["groups"]`) via `dispatch_event_task` →
+`invoke_automation`'s serialized payload → `executor.context_globals`.
 
 Event catalog (fixed, in `models.py`): `photo_imported`, `photo_indexed`,
 `duplicates_found`, `photo_modified` (`EVENTS`).
+
+**`duplicates_found` is emitted directly from `find_duplicates_task`** (not via
+`JOB_EVENT_MAP`/`complete_job_task`, which a find_duplicates job never reaches): the
+task already holds the duplicate groups as file paths, so it resolves them to photo
+ids (`_resolve_group_photo_ids` — paths stay out of the sandbox) and emits both the
+flattened `photo_ids` and the per-set `groups` with the keeper first. Fires for both
+the scheduled `duplicate_scan` and the manual Remove Duplicates tool.
 
 **Not all events come from job completion.** `photo_modified` is emitted
 *synchronously from routes* (not via `JOB_EVENT_MAP`) when a user edits a photo's
@@ -469,9 +480,11 @@ rows even though their code/identity stays route-locked.
 A dev seeder (run `python -m yaffo.scripts.seed_automations`, idempotent) that
 stands in for AI-generated custom automations so the runtime + host API can be
 exercised end-to-end without the builder: `log-photos-on-index` /
-`log-photos-each-minute` (read-only `data_query`) and `organize-by-date` (on
+`log-photos-each-minute` (read-only `data_query`), `organize-by-date` (on
 `photo_indexed`, `move_photo(id, media_dir_id, "YYYY/MM")` from each row's
-`media_dir_id`). (Auto-assign-faces used to be a seed example here; it was promoted
+`media_dir_id`), and `move-duplicates` (on `duplicates_found`, seeded **disabled**
+since it moves files — keeps `ctx["groups"][i][0]` and `move_photo`s the rest into a
+`_Duplicates` sub-folder). (Auto-assign-faces used to be a seed example here; it was promoted
 to the `auto_assign_faces` system built-in above. The seeder still deletes the old
 `auto-assign-faces` slug so re-running it cleans up any stale custom copy.)
 

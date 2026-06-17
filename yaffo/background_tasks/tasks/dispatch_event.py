@@ -20,6 +20,7 @@ def dispatch_event_task(event_type: str, payload: dict):
         event_type=event_type,
         job_id=payload.get('job_id'),
         photo_ids=payload.get('photo_ids', []),
+        groups=payload.get('groups', []),
     )
     session = SessionFactory()
     try:
