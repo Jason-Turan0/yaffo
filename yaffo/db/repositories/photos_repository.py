@@ -51,6 +51,13 @@ def get_photo_path(session: Session, photo_id: int) -> str | None:
     return row[0] if row else None
 
 
+def get_all_photo_paths(session: Session) -> list[str]:
+    """Every indexed photo's stored file path (skipping any null), for batch jobs
+    like the scheduled duplicate scan."""
+    rows = session.query(Photo.full_file_path).filter(Photo.full_file_path.isnot(None)).all()
+    return [row[0] for row in rows]
+
+
 def get_paths_by_ids(session: Session, photo_ids: list[int]) -> dict[int, str]:
     return dict(
         session.query(Photo.id, Photo.full_file_path).filter(Photo.id.in_(photo_ids)).all()

@@ -91,9 +91,9 @@ There is **no `automation_runs` table**. A run is a `Job` tagged with
   `complete_job_task`, so they emit no events (and can't feed a trigger loop).
 
 Schema lives in `yaffo/scripts/init_db.py` (no migrations — edit + reseed; the
-`file_sync` system automation + its hourly schedule trigger, and the
-`auto_assign_faces` automation + its `photo_indexed` event trigger, are seeded
-there).
+`file_sync` system automation + its hourly schedule trigger, the
+`auto_assign_faces` automation + its `photo_indexed` event trigger, and the
+`duplicate_scan` automation + its daily schedule trigger, are seeded there).
 
 ## Schedule path (poll)
 
@@ -344,6 +344,19 @@ detail page. (Was a Starlark seed example before it was promoted; distinct from
 `tasks/auto_assign_faces.py`, the manual "assign every matching face to ONE chosen
 person" batch job.)
 
+### `duplicate_scan`
+
+`tasks/duplicate_scan.py` — a system automation (`handler='duplicate_scan'`, seeded
+disabled with a **daily** `0 3 * * *` schedule trigger). Its handler
+`enqueue_duplicate_scan` enqueues `duplicate_scan_task`, which opens a
+`find_duplicates` Job over **every indexed photo** (`photos_repository.get_all_photo_paths`),
+tags it with `automation_id`, and hands it to the existing `find_duplicates_task`
+— the exact perceptual-hash scan the manual **Remove Duplicates** tool runs, so its
+results show up there identically. Same shape as `file_sync`: a lightweight handler
+→ task → reuse of an existing job. (`_open_scan_job` is the testable core; a schedule
+run passes `context=None`, which the handler ignores — a full-library scan has no
+event subjects.)
+
 ### Configurable system automations
 
 A system automation can expose runtime-tunable settings without a code change.
@@ -436,6 +449,7 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
 | Custom run → Job recording | `yaffo/background_tasks/automation_runs.py` |
 | Built-in file_sync | `yaffo/background_tasks/tasks/file_sync.py`, `yaffo/utils/file_sync.py` |
 | Built-in auto_assign_faces | `yaffo/background_tasks/tasks/auto_assign_faces_automation.py` |
+| Built-in duplicate_scan | `yaffo/background_tasks/tasks/duplicate_scan.py` |
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |
 | Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |

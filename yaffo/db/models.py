@@ -229,6 +229,7 @@ EVENTS = {
 # Handler keys for system automations (registry in background_tasks.registry).
 AUTOMATION_HANDLER_FILE_SYNC = "file_sync"
 AUTOMATION_HANDLER_AUTO_ASSIGN_FACES = "auto_assign_faces"
+AUTOMATION_HANDLER_DUPLICATE_SCAN = "duplicate_scan"
 
 # Default match threshold for the auto-assign-faces automation (overridable via
 # Automation.config["threshold"]; see background_tasks.automation_config).

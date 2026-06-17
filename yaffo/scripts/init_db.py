@@ -204,6 +204,24 @@ def init_db():
           )
     """)
 
+    # Seed the built-in duplicate-scan automation (disabled) + its daily schedule.
+    cursor.execute("""
+        INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status)
+        VALUES ('duplicate_scan', 'Duplicate scan',
+                'Scan your indexed photos for duplicates on a schedule — results appear in the Remove Duplicates tool.',
+                1, 0, 'duplicate_scan', 'READY')
+    """)
+    cursor.execute("""
+        INSERT INTO automation_triggers (automation_id, trigger_type, enabled, cron)
+        SELECT a.id, 'schedule', 1, '0 3 * * *'
+        FROM automations a
+        WHERE a.slug = 'duplicate_scan'
+          AND NOT EXISTS (
+              SELECT 1 FROM automation_triggers t
+              WHERE t.automation_id = a.id AND t.trigger_type = 'schedule'
+          )
+    """)
+
 
     # The page builder is versioned: a page points at its live (published) version
     # and at most one in-flight (working) version; widgets + the conversation are
