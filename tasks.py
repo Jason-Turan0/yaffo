@@ -296,6 +296,19 @@ def index_photos(c):
     print("Indexing complete")
 
 
+@task(help={"photo": "Path to the photo file", "all": "Dump every tag, not just people/location/date"})
+def tags(c, photo, all=False):
+    """
+    Print the metadata tags of a photo file (people / location / date).
+
+    Examples:
+        inv tags /path/to/photo.jpg
+        inv tags --all /path/to/photo.jpg
+    """
+    flag = " --all" if all else ""
+    c.run(f'python -m yaffo.scripts.print_photo_tags{flag} "{photo}"', pty=True)
+
+
 @task
 def kill_python(c, force=False):
     """
