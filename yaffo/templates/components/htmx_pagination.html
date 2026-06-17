@@ -44,7 +44,7 @@
                         hx-target="{{ hx_target }}"
                         hx-swap="{{ hx_swap }}"
                         hx-include="closest form"
-                        hx-vals='{"page": 0, "page_size": {{ page_size }}}'
+                        hx-vals='{"page": 0, "page-size": {{ page_size }}}'
                         class="page-btn {% if current_page == 0 %}disabled{% endif %}"
                         {% if current_page == 0 %}disabled{% endif %}>
                     &laquo; First
@@ -55,7 +55,7 @@
                         hx-target="{{ hx_target }}"
                         hx-swap="{{ hx_swap }}"
                         hx-include="closest form"
-                        hx-vals='{"page": {{ current_page - 1 }}, "page_size": {{ page_size }}}'
+                        hx-vals='{"page": {{ current_page - 1 }}, "page-size": {{ page_size }}}'
                         class="page-btn {% if current_page == 0 %}disabled{% endif %}"
                         {% if current_page == 0 %}disabled{% endif %}>
                     &lsaquo; Prev
@@ -70,7 +70,7 @@
                         hx-target="{{ hx_target }}"
                         hx-swap="{{ hx_swap }}"
                         hx-include="closest form"
-                        hx-vals='{"page": {{ current_page + 1 }}, "page_size": {{ page_size }}}'
+                        hx-vals='{"page": {{ current_page + 1 }}, "page-size": {{ page_size }}}'
                         class="page-btn {% if current_page >= total_pages-1 %}disabled{% endif %}"
                         {% if current_page >= total_pages - 1 %}disabled{% endif %}>
                     Next &rsaquo;
@@ -81,7 +81,7 @@
                         hx-target="{{ hx_target }}"
                         hx-swap="{{ hx_swap }}"
                         hx-include="closest form"
-                        hx-vals='{"page": {{ total_pages - 1 }}, "page_size": {{ page_size }}}'
+                        hx-vals='{"page": {{ total_pages - 1 }}, "page-size": {{ page_size }}}'
                         class="page-btn {% if current_page >= total_pages - 1 %}disabled{% endif %}"
                         {% if current_page >= total_pages - 1 %}disabled{% endif %}>
                     Last &raquo;

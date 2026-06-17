@@ -8,10 +8,13 @@ generate_automation_task; the run lives on the automation, so the browser polls
 code-backed built-ins: read-only chat, can't be deleted.
 """
 import re
+from dataclasses import dataclass
+from datetime import datetime
 
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 
 from yaffo.background_tasks.automation_config import config_fields_for, config_value
+from yaffo.background_tasks.automation_dispatch import invoke_automation
 from yaffo.background_tasks.automation_sandbox.preview import preview_automation
 from yaffo.background_tasks.schedule import is_valid_cron
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
@@ -19,11 +22,15 @@ from yaffo.db import db
 from yaffo.db.models import (
     Automation,
     AutomationTrigger,
+    Job,
     AUTOMATION_STATUS_ACCEPTED,
     AUTOMATION_STATUS_IN_PROGRESS,
     AUTOMATION_STATUS_READY,
     CONVERSATION_TYPE_USER,
     EVENTS,
+    JOB_STATUS_CANCELLED,
+    JOB_STATUS_COMPLETED,
+    JOB_STATUS_FAILED,
     TRIGGER_TYPE_EVENT,
     TRIGGER_TYPE_SCHEDULE,
 )
@@ -33,6 +40,67 @@ from yaffo.page_builder import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
 
 _MAX_BASE_SLUG_LENGTH = 30
+
+_RUN_FINISHED_STATUSES = (JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, JOB_STATUS_CANCELLED)
+
+
+@dataclass(frozen=True)
+class AutomationRunView:
+    """A single row of an automation's run history, rendered on the detail page.
+    Built from a Job (runs reuse the Job table) so the template stays dumb and the
+    per-run-kind display logic lives in one tested place."""
+    status: str
+    is_finished: bool
+    is_error: bool
+    progress: int          # 0–100; shown for in-progress runs
+    started_at: datetime | None
+    finished_at: datetime | None
+    summary: str
+    error: str | None
+
+
+def _run_progress(job: Job) -> int:
+    """Percent complete (0–100) — processed (done + errored + cancelled) over the
+    task count, matching the live job card's math."""
+    if not job.task_count or job.task_count <= 0:
+        return 0
+    processed = (job.completed_count or 0) + (job.error_count or 0) + (job.cancelled_count or 0)
+    return min(100, int(processed / job.task_count * 100))
+
+
+def _run_summary(job: Job) -> str:
+    """One-line result for a run: progress counts for batch jobs (find_duplicates /
+    index), else the job's message (custom runs carry the automation name)."""
+    completed = job.completed_count or 0
+    errors = job.error_count or 0
+    cancelled = job.cancelled_count or 0
+    if job.task_count and job.task_count > 1:
+        summary = f"{completed} of {job.task_count} processed"
+        if errors:
+            summary += f", {errors} error{'s' if errors != 1 else ''}"
+        if cancelled:
+            summary += f", {cancelled} cancelled"
+        return summary
+    return job.message or job.name
+
+
+def _run_view(job: Job) -> AutomationRunView:
+    return AutomationRunView(
+        status=job.status,
+        is_finished=job.status in _RUN_FINISHED_STATUSES,
+        is_error=job.status == JOB_STATUS_FAILED or bool(job.error_count),
+        progress=_run_progress(job),
+        started_at=job.started_at or job.created_at,
+        finished_at=job.completed_at,
+        summary=_run_summary(job),
+        error=job.error,
+    )
+
+
+def _recent_runs(automation: Automation | None) -> list[AutomationRunView]:
+    if automation is None:
+        return []
+    return [_run_view(j) for j in repo.get_recent_jobs(db.session, automation.id)]
 
 
 def _slugify(name: str) -> str:
@@ -78,6 +146,7 @@ def init_automations_routes(app: Flask):
                 and selected.working_code is not None
             ),
             config_fields=_config_fields(selected),
+            recent_runs=_recent_runs(selected),
             **automations_sidebar_context(),
         )
 
@@ -225,6 +294,33 @@ def init_automations_routes(app: Flask):
         automation.enabled = not automation.enabled
         db.session.commit()
         return _hx_refresh()
+
+    @app.route("/utilities/automations/<slug>/runs", methods=["GET"])
+    def automations_runs(slug: str):
+        """The run-history fragment, re-served for the section's 5s self-poll so
+        in-progress runs appear and tick toward completion without a page reload."""
+        automation = repo.get_by_slug(db.session, slug)
+        if automation is None:
+            abort(404)
+        return render_template(
+            "utilities/automations_runs.html",
+            selected=automation,
+            recent_runs=_recent_runs(automation),
+        )
+
+    @app.route("/utilities/automations/<slug>/run", methods=["POST"])
+    def automations_run_now(slug: str):
+        """Fire the automation immediately, independent of its triggers and its
+        enabled state — the same path a schedule tick takes (`invoke_automation`
+        with no event context). The run is enqueued async and shows up in Run
+        history once a worker records its Job. Returns 400 for a custom automation
+        with nothing published to run."""
+        automation = repo.get_by_slug(db.session, slug)
+        if automation is None:
+            abort(404)
+        if not invoke_automation(automation, None):
+            return jsonify({"error": "Nothing to run yet — publish the automation's code first."}), 400
+        return jsonify({"slug": slug}), 202
 
     @app.route("/utilities/automations/validate-cron", methods=["GET"])
     def automations_validate_cron():

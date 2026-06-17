@@ -91,37 +91,37 @@ def seed_automations() -> None:
                 db.session.delete(existing)
         db.session.commit()
 
-        event_automation = Automation(
-            slug=_EVENT_SLUG,
-            name="Log photos on index",
-            description="On photo_indexed, log the first 10 photos.",
-            is_system=False,
-            enabled=True,
-            handler=None,
-            published_code=_EVENT_CODE,
-            status=AUTOMATION_STATUS_READY,
-            triggers=[AutomationTrigger(
-                trigger_type=TRIGGER_TYPE_EVENT,
-                enabled=True,
-                event_type=EVENT_PHOTO_INDEXED,
-            )],
-        )
-
-        schedule_automation = Automation(
-            slug=_SCHEDULE_SLUG,
-            name="Log photos each minute",
-            description="Every minute, log the first 10 photos.",
-            is_system=False,
-            enabled=True,
-            handler=None,
-            published_code=_SCHEDULE_CODE,
-            status=AUTOMATION_STATUS_READY,
-            triggers=[AutomationTrigger(
-                trigger_type=TRIGGER_TYPE_SCHEDULE,
-                enabled=True,
-                cron="* * * * *",
-            )],
-        )
+        # event_automation = Automation(
+        #     slug=_EVENT_SLUG,
+        #     name="Log photos on index",
+        #     description="On photo_indexed, log the first 10 photos.",
+        #     is_system=False,
+        #     enabled=True,
+        #     handler=None,
+        #     published_code=_EVENT_CODE,
+        #     status=AUTOMATION_STATUS_READY,
+        #     triggers=[AutomationTrigger(
+        #         trigger_type=TRIGGER_TYPE_EVENT,
+        #         enabled=True,
+        #         event_type=EVENT_PHOTO_INDEXED,
+        #     )],
+        # )
+        #
+        # schedule_automation = Automation(
+        #     slug=_SCHEDULE_SLUG,
+        #     name="Log photos each minute",
+        #     description="Every minute, log the first 10 photos.",
+        #     is_system=False,
+        #     enabled=True,
+        #     handler=None,
+        #     published_code=_SCHEDULE_CODE,
+        #     status=AUTOMATION_STATUS_READY,
+        #     triggers=[AutomationTrigger(
+        #         trigger_type=TRIGGER_TYPE_SCHEDULE,
+        #         enabled=True,
+        #         cron="* * * * *",
+        #     )],
+        # )
 
         organize_automation = Automation(
             slug=_ORGANIZE_SLUG,
@@ -142,11 +142,10 @@ def seed_automations() -> None:
             )],
         )
 
-        db.session.add_all([event_automation, schedule_automation, organize_automation])
+        db.session.add_all([  organize_automation])
         db.session.commit()
         print(
-            f"Seeded automations: '{event_automation.slug}', '{schedule_automation.slug}', "
-            f"and '{organize_automation.slug}'."
+            f"Seeded automations:'{organize_automation.slug}'."
         )
 
 

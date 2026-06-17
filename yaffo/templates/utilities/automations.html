@@ -46,16 +46,15 @@
                     hx-post="{{ url_for('automations_toggle_enabled', slug=selected.slug) }}"
                     hx-swap="none">{{ 'Disable' if selected.enabled else 'Enable' }}
             </button>
+            <button type="button" id="run-automation-button" class="btn-secondary">Run now</button>
             <a href="{{ url_for('automations_edit_triggers', slug=selected.slug) }}"
                class="btn-secondary" data-icon="edit">Edit triggers</a>
             {% if config_fields %}
-                <button type="button" id="configure-automation-button" class="btn-secondary"
-                        data-icon="edit">Configure
+                <button type="button" id="configure-automation-button" class="btn-secondary">Configure
                 </button>
             {% endif %}
             {% if not selected.is_system %}
-                <button type="button" id="edit-automation-button" class="btn-secondary"
-                        data-icon="edit">Edit details
+                <button type="button" id="edit-automation-button" class="btn-secondary">Edit details
                 </button>
                 <button type="button" id="delete-automation-button" class="btn-danger"
                         data-icon="delete">Delete
@@ -123,6 +122,8 @@
                     {% endif %}
                 </section>
             </div>
+
+            {% include "utilities/automations_runs.html" %}
         </div>
 
         {% if not selected.is_system %}
@@ -145,6 +146,7 @@
     <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
     <script>
         window.PHOTO_ORGANIZER.initAutomationDelete({{ selected.name | tojson }});
+        window.PHOTO_ORGANIZER.initAutomationRunNow({{ url_for('automations_run_now', slug=selected.slug) | tojson }});
         {% if not selected.is_system %}window.PHOTO_ORGANIZER.initAutomationDetails();{% endif %}
         {% if config_fields %}window.PHOTO_ORGANIZER.initAutomationConfigure();{% endif %}
         window.PHOTO_ORGANIZER.initAutomationTest({{ selected_slug | tojson }}, window.APP_CONFIG);

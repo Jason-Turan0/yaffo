@@ -155,6 +155,134 @@ def test_update_details_system_rejected(app, client):
     assert client.post("/utilities/automations/sys/details", data={"name": "x"}).status_code == 400
 
 
+def _add_job(app, slug="a1", **kw):
+    from yaffo.db.models import Job
+    with app.app_context():
+        automation = db.session.query(Automation).filter_by(slug=slug).first()
+        defaults = dict(name="find_duplicates", status="COMPLETED", automation_id=automation.id)
+        defaults.update(kw)
+        db.session.add(Job(**defaults))
+        db.session.commit()
+
+
+def test_run_now_fires_automation(app, client, monkeypatch):
+    _add(app)
+    calls = []
+    monkeypatch.setattr(
+        "yaffo.routes.utilities.automations.invoke_automation",
+        lambda automation, context: calls.append((automation.slug, context)) or True,
+    )
+    resp = client.post("/utilities/automations/a1/run")
+    assert resp.status_code == 202
+    assert calls == [("a1", None)]  # fired with no event context, like a schedule tick
+
+
+def test_run_now_nothing_to_run_400(app, client, monkeypatch):
+    _add(app)
+    monkeypatch.setattr(
+        "yaffo.routes.utilities.automations.invoke_automation",
+        lambda automation, context: False,
+    )
+    resp = client.post("/utilities/automations/a1/run")
+    assert resp.status_code == 400
+    assert "Nothing to run" in resp.get_json()["error"]
+
+
+def test_run_now_unknown_404(app, client):
+    assert client.post("/utilities/automations/nope/run").status_code == 404
+
+
+def test_run_view_summarizes_batch_job():
+    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.db.models import Job
+    job = Job(id="j", name="find_duplicates", status="COMPLETED",
+              task_count=120, completed_count=118, error_count=2)
+    view = _run_view(job)
+    assert view.summary == "118 of 120 processed, 2 errors"
+    assert view.is_finished is True
+    assert view.is_error is True  # error_count > 0
+
+
+def test_run_view_uses_message_for_single_task_run():
+    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.db.models import Job
+    job = Job(id="j", name="my-automation", status="COMPLETED",
+              task_count=1, completed_count=1, message="My automation")
+    view = _run_view(job)
+    assert view.summary == "My automation"
+    assert view.is_error is False
+
+
+def test_run_view_flags_failed():
+    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.db.models import Job
+    job = Job(id="j", name="x", status="FAILED", task_count=1, error="boom")
+    view = _run_view(job)
+    assert view.is_error is True
+    assert view.error == "boom"
+
+
+def test_run_view_computes_progress_for_in_progress():
+    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.db.models import Job
+    job = Job(id="j", name="find_duplicates", status="RUNNING",
+              task_count=50, completed_count=10, error_count=2)
+    view = _run_view(job)
+    assert view.is_finished is False
+    assert view.progress == 24  # (10 + 2) / 50
+
+
+def test_run_view_progress_zero_when_no_task_count():
+    from yaffo.routes.utilities.automations import _run_view
+    from yaffo.db.models import Job
+    job = Job(id="j", name="x", status="RUNNING", task_count=0)
+    assert _run_view(job).progress == 0
+
+
+def test_runs_fragment_polls_and_shows_in_progress(app, client):
+    _add(app)
+    _add_job(app, id="running", status="RUNNING", task_count=50,
+             completed_count=10, error_count=0)
+    body = client.get("/utilities/automations/a1/runs").get_data(as_text=True)
+    assert 'hx-trigger="every 5s"' in body  # self-polls
+    assert "status-running" in body
+    assert "20%" in body  # 10 / 50
+    assert "10 of 50 processed" in body
+
+
+def test_runs_fragment_unknown_404(app, client):
+    assert client.get("/utilities/automations/nope/runs").status_code == 404
+
+
+def test_detail_page_shows_run_history(app, client):
+    _add(app)
+    _add_job(app, id="run1", task_count=10, completed_count=10)
+    body = client.get("/utilities/automations/a1").get_data(as_text=True)
+    assert "Run history" in body
+    assert "10 of 10 processed" in body
+
+
+def test_detail_page_run_history_empty_state(app, client):
+    _add(app, enabled=False)
+    body = client.get("/utilities/automations/a1").get_data(as_text=True)
+    assert "Run history" in body
+    assert "No runs yet" in body
+
+
+def test_recent_jobs_newest_first_and_scoped(app, client):
+    from datetime import datetime
+    from yaffo.db.repositories import automation_repository as repo
+    _add(app, slug="a1")
+    _add(app, slug="a2", name="A2")
+    _add_job(app, slug="a1", id="old", created_at=datetime(2026, 1, 1))
+    _add_job(app, slug="a1", id="new", created_at=datetime(2026, 6, 1))
+    _add_job(app, slug="a2", id="other")
+    with app.app_context():
+        a1 = db.session.query(Automation).filter_by(slug="a1").first()
+        jobs = repo.get_recent_jobs(db.session, a1.id)
+        assert [j.id for j in jobs] == ["new", "old"]  # newest first, a2's job excluded
+
+
 def _add_system_assign_faces(app):
     """The seeded auto-assign-faces system automation, the one row that exposes a
     configurable threshold (see background_tasks.automation_config)."""

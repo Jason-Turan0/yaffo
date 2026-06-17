@@ -11,12 +11,25 @@ from sqlalchemy.orm import Session
 from yaffo.db.models import (
     Automation,
     Conversation,
+    Job,
     AUTOMATION_STATUS_ACCEPTED,
 )
 
 
 def get_by_slug(session: Session, slug: str) -> Automation | None:
     return session.query(Automation).filter_by(slug=slug).first()
+
+
+def get_recent_jobs(session: Session, automation_id: int, limit: int = 10) -> list[Job]:
+    """The automation's most recent runs (Jobs tagged with its id), newest first.
+    Reuses the Job table as the run history (jobs.automation_id)."""
+    return (
+        session.query(Job)
+        .filter(Job.automation_id == automation_id)
+        .order_by(Job.created_at.desc())
+        .limit(limit)
+        .all()
+    )
 
 
 def get_status(session: Session, slug: str) -> str | None:

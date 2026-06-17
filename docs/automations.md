@@ -417,15 +417,19 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
   kill / resource limits before exposing arbitrary user scripts. **More pressing
   now** that mutating actions (move/rename/tag/assign) run real file/DB writes on a
   triggered run.
-- **Run status on the UI.** Custom-run Jobs are recorded (`automation_runs.py`) but
-  the detail page doesn't surface them yet — no last-run / success-fail / output on
-  the automation page.
 - **`media_dir_id` / `relative_path` aren't filterable.** They're enrichment, not
   `FIELDS_BY_SOURCE` columns, so a script can read them on a photo row but can't
   `data_query` *by* them (e.g. "photos in media dir X"). Would need a real filter
   mechanism.
-- **Built (was deferred):** trigger-editing UI + cron builder, and the test/preview
-  harness (now live; mutating actions are recorded-not-performed).
+- **Built (was deferred):** trigger-editing UI + cron builder; the test/preview
+  harness (mutating actions are recorded-not-performed); a **Run now** button
+  (`automations_run_now` → `invoke_automation(automation, None)`, a manual
+  schedule-style tick independent of triggers/enabled); and **run history on the
+  detail page** — `automation_repository.get_recent_jobs` + the `AutomationRunView`
+  view-model render the recent Jobs (system *and* custom runs) as a status/percent/
+  summary/time list. The `automations_runs.html` fragment self-polls every 5s
+  (`automations_runs` endpoint), so in-progress runs appear and tick toward
+  completion (with a live percent) without a reload.
 - **More complex use cases** More use cases of the automation feature to stress test the API.
 ## File map
 

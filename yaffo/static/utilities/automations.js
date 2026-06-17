@@ -29,6 +29,30 @@ window.PHOTO_ORGANIZER.initAutomationDetails = () => {
     button.addEventListener('click', modal.open);
 };
 
+// Wire the "Run now" button: fire the automation immediately (independent of its
+// triggers/enabled state). The run is enqueued async, so we confirm with a
+// notification rather than refreshing — it shows up in Run history once it finishes.
+window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl) => {
+    const button = document.getElementById('run-automation-button');
+    if (!button) return;
+    button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+            const response = await fetch(runUrl, { method: 'POST' });
+            if (response.ok) {
+                notification.success('Run started — it will appear in Run history when it finishes.');
+            } else {
+                const data = await response.json().catch(() => ({}));
+                notification.error(data.error || 'Could not start the run.');
+            }
+        } catch (error) {
+            notification.error('Could not start the run.');
+        } finally {
+            button.disabled = false;
+        }
+    });
+};
+
 // Wire the "Configure" button to the settings modal (system automations that
 // declare config fields, e.g. auto-assign-faces' match threshold). The modal posts
 // a normal form that redirects back, refreshing the page with the new value.

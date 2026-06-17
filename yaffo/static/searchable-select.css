@@ -1,3 +1,12 @@
+/* Keep the native control hidden whenever it has been enhanced into a widget.
+   The component also sets inline display:none, but that inline style can be lost
+   when htmx swaps/settles a fragment containing the select -- which would leave the
+   raw <select> showing next to the widget (a "duplicate" control). Keying the hide
+   on the persistent data-searchable-initialized attribute makes it stick. */
+select.searchable-select[data-searchable-initialized] {
+    display: none !important;
+}
+
 .searchable-select-wrapper {
     position: relative;
     width: 100%;

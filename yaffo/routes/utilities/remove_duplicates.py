@@ -238,7 +238,7 @@ def init_remove_duplicates_routes(app: Flask):
     @app.route("/utilities/remove-duplicates/results-form/<job_id>", methods=["POST"])
     def utilities_remove_duplicates_results_form(job_id: str):
         page = request.form.get('page', 0, type=int)
-        page_size = request.form.get('page_size', 10, type=int)
+        page_size = request.form.get('page-size', 10, type=int)
         action_type = request.form.get('action_type', 'trash')
         destination_folder = request.form.get('destination_folder', '')
         view_model = create_duplicate_job_view_model(job_id=job_id, page=page, page_size=page_size)
