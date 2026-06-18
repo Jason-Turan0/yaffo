@@ -98,7 +98,7 @@ def init_db():
                    CREATE TABLE IF NOT EXISTS job_results (
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
                        job_id TEXT NOT NULL,
-                       huey_task_id TEXT NOT NULL,
+                       task_id TEXT NOT NULL,
                        result_data TEXT,                       
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                        FOREIGN KEY (job_id) REFERENCES job(id) ON DELETE CASCADE

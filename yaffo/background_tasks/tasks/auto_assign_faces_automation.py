@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
 from yaffo.background_tasks.automation_runs import record_run
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
@@ -45,7 +45,7 @@ def _assign_faces(session: Session, photo_ids: list[int], threshold: float) -> i
     return assigned
 
 
-@huey.task()
+@task_queue.task()
 def auto_assign_faces_automation_task(automation_id: int, photo_ids: list[int]):
     """Assign the faces in `photo_ids` to their unique strong match. Enqueued by the
     auto_assign_faces system handler when a photo_indexed event fires; the threshold

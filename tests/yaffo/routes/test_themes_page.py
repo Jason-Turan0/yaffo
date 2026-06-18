@@ -131,7 +131,7 @@ def test_settings_page_no_longer_has_theme_control(client):
 @pytest.fixture
 def with_key_and_task(monkeypatch):
     """Configure an API key and capture the enqueued generation task instead of
-    handing it to huey, so the route's record-prompt + enqueue is exercised without
+    handing it to the task queue, so the route's record-prompt + enqueue is exercised without
     a worker. Returns the list of (args, kwargs) the task was called with."""
     monkeypatch.setattr("yaffo.page_builder.llm_config.get_api_key", lambda: "test-key")
     calls = []

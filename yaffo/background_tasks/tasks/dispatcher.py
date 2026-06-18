@@ -1,9 +1,9 @@
 from datetime import datetime
 
-from huey import crontab
+from yaffo.taskq import crontab
 
 from yaffo.background_tasks.automation_dispatch import invoke_automation
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.schedule import compute_next_run
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, AutomationTrigger, TRIGGER_TYPE_SCHEDULE
@@ -12,11 +12,11 @@ from yaffo.logging_config import get_logger
 logger = get_logger(__name__, 'background_tasks')
 
 
-@huey.periodic_task(crontab(minute='*'))
+@task_queue.periodic_task(crontab(minute='*'))
 def dispatch_scheduled_tasks():
     """Fire every schedule trigger whose next_run_at has passed, then advance it.
 
-    The one registered periodic task: huey's scheduler enqueues it every minute,
+    The one registered periodic task: the task-queue host enqueues it every minute,
     and it drives all schedule-triggered automations. Firing keys off
     `next_run_at` (not exact cron-matching) so a trigger still runs on the first
     tick after its slot even if this dispatcher is delayed by queue latency. A

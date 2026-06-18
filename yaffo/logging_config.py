@@ -5,7 +5,7 @@ from yaffo.common import ROOT_DIR
 LOG_FORMAT = '%(asctime)s - %(name)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s'
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
-HUEY_LOG_FILE = ROOT_DIR / "background_tasks.log"
+BACKGROUND_TASKS_LOG_FILE = ROOT_DIR / "background_tasks.log"
 WEB_LOG_FILE = ROOT_DIR / "yaffo.log"
 
 
@@ -65,7 +65,7 @@ def get_logger(module_name: str, log_type: str ='webapp', level=logging.DEBUG):
         logger = get_logger(__name__, 'background_tasks')
         logger.info('Processing started')
     """
-    log_file = HUEY_LOG_FILE if log_type == 'background_tasks' else WEB_LOG_FILE
+    log_file = BACKGROUND_TASKS_LOG_FILE if log_type == 'background_tasks' else WEB_LOG_FILE
     return setup_logger(module_name, log_file, level)
 
 
@@ -74,9 +74,9 @@ def get_webapp_logger():
     return setup_logger('webapp', WEB_LOG_FILE)
 
 
-def get_huey_logger():
-    """Get or create the Huey task logger."""
-    return setup_logger('background_tasks', HUEY_LOG_FILE)
+def get_background_tasks_logger():
+    """Get or create the background-tasks logger."""
+    return setup_logger('background_tasks', BACKGROUND_TASKS_LOG_FILE)
 
 
 def set_log_level(logger, level_name):
@@ -95,4 +95,4 @@ def set_log_level(logger, level_name):
 
 # Initialize default loggers
 webapp_logger = get_webapp_logger()
-huey_logger = get_huey_logger()
+background_tasks_logger = get_background_tasks_logger()

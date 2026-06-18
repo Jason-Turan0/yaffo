@@ -1,5 +1,5 @@
 from yaffo.background_tasks.automation_dispatch import invoke_automation
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, AutomationTrigger, TRIGGER_TYPE_EVENT
@@ -8,7 +8,7 @@ from yaffo.logging_config import get_logger
 logger = get_logger(__name__, 'background_tasks')
 
 
-@huey.task()
+@task_queue.task()
 def dispatch_event_task(event_type: str, payload: dict):
     """Fan a domain event out to every enabled automation subscribed to it.
 

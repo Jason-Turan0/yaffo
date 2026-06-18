@@ -1,9 +1,9 @@
 """Integration tests for the index-jobs chord pipeline (utils/index_jobs).
 
-enqueue_index_jobs dispatches a Huey chord pipeline: import members run as a
+enqueue_index_jobs dispatches a chord pipeline: import members run as a
 group, their completion finalizes the import job and triggers start_index_stage,
 which runs the index members as a second group whose completion finalizes the
-index job. These tests drive the *real* pipeline in Huey immediate mode against a
+index job. These tests drive the *real* pipeline in immediate mode against a
 throwaway SQLite DB, mocking only the heavy face-recognition leaf (index_photo).
 
 Because index_photo_task reads the Photo rows that import_photo_task creates,
@@ -22,7 +22,7 @@ from yaffo.db.models import (
     Photo, Job,
     JOB_STATUS_COMPLETED, PHOTO_STATUS_INDEXED,
 )
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory, engine as prod_engine
 import yaffo.background_tasks.tasks.complete_job as complete_job
 from yaffo.utils.index_jobs import enqueue_index_jobs
@@ -48,7 +48,7 @@ def _session(engine):
 
 @pytest.fixture
 def immediate_db(tmp_path, monkeypatch):
-    """Point the global SessionFactory at a temp DB, run Huey inline, and stub
+    """Point the global SessionFactory at a temp DB, run the queue inline, and stub
     the face-recognition leaf. Records the (in-order) job ids whose completion
     event fired, so tests can assert import completes before index."""
     engine = create_engine(
@@ -57,7 +57,7 @@ def immediate_db(tmp_path, monkeypatch):
     )
     db.metadata.create_all(engine)
     SessionFactory.configure(bind=engine)
-    huey.immediate = True
+    task_queue.immediate = True
 
     monkeypatch.setattr(
         "yaffo.background_tasks.tasks.index_photo.index_photo",
@@ -72,7 +72,7 @@ def immediate_db(tmp_path, monkeypatch):
     try:
         yield engine, completed_events
     finally:
-        huey.immediate = False
+        task_queue.immediate = False
         SessionFactory.remove()
         SessionFactory.configure(bind=prod_engine)
         engine.dispose()

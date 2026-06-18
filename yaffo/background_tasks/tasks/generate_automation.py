@@ -18,7 +18,7 @@ from typing import Callable, Optional
 
 from sqlalchemy.orm import Session
 
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory, get_automation_status
 from yaffo.db.models import (
     AUTOMATION_STATUS_FAILED,
@@ -50,7 +50,7 @@ def run_automation_generation(
     should_cancel: Optional[Callable[[], bool]] = None,
 ) -> None:
     """Run the agent against a custom automation and persist its conversation /
-    status. Split out from the huey wrapper so it can be driven from a test."""
+    status. Split out from the task wrapper so it can be driven from a test."""
     if should_cancel is None:
         should_cancel = lambda: get_automation_status(slug) != AUTOMATION_STATUS_IN_PROGRESS
 
@@ -100,7 +100,7 @@ def run_automation_generation(
         repo.set_status(session, slug, AUTOMATION_STATUS_FAILED)
 
 
-@huey.task()
+@task_queue.task()
 def generate_automation_task(slug: str, message: str) -> None:
     session = SessionFactory()
     try:

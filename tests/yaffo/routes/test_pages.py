@@ -261,7 +261,7 @@ class TestWidgetState:
 @pytest.fixture
 def with_key_and_task(monkeypatch):
     """Configure an API key and capture enqueued generation tasks instead of
-    handing them to huey, so the route's fork + enqueue is exercised without a
+    handing them to the task queue, so the route's fork + enqueue is exercised without a
     worker. Returns the list of (args, kwargs) the task was called with."""
     monkeypatch.setattr("yaffo.page_builder.llm_config.get_api_key", lambda: "test-key")
     calls = []

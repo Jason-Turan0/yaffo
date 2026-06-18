@@ -1,11 +1,11 @@
 import json
 from itertools import batched
 
-from huey import chord
+from yaffo.taskq import chord
 
 from yaffo.db.models import Job
 from yaffo.logging_config import get_logger
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.background_tasks.tasks.index_photo import index_photo_task
 from yaffo.background_tasks.tasks.complete_job import complete_job_callback, finalize_job
@@ -15,7 +15,7 @@ logger = get_logger(__name__, 'background_tasks')
 INDEX_BATCH_SIZE = 10
 
 
-@huey.task()
+@task_queue.task()
 def start_index_stage(index_job_id: str, prev_result=None) -> None:
     """Dispatch the index chord once the import job has finished.
 
@@ -23,7 +23,7 @@ def start_index_stage(index_job_id: str, prev_result=None) -> None:
     the index tasks read are guaranteed to exist). The files to index are read
     back from the index Job's job_data rather than threaded through the pipeline.
     `index_job_id` is the bound argument; `prev_result` only receives a value
-    when the upstream step returns non-None (Huey appends the previous result to
+    when the upstream step returns non-None (the task queue appends the previous result to
     a pipeline step's args) -- the completion steps return None, so it stays
     unused. An empty index set finalizes the job directly, since a chord callback
     never fires for an empty group.
@@ -44,7 +44,7 @@ def start_index_stage(index_job_id: str, prev_result=None) -> None:
         for batch in batched(files_to_index, INDEX_BATCH_SIZE)
     ]
     if members:
-        huey.enqueue(chord(members, complete_job_callback.s(index_job_id)))
+        task_queue.enqueue(chord(members, complete_job_callback.s(index_job_id)))
         logger.info(f"Dispatched index chord for job {index_job_id} ({len(files_to_index)} files)")
     else:
         finalize_job(index_job_id)

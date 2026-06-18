@@ -88,7 +88,7 @@ def schedule_job_completion(job_id: str, delay_seconds: int = 2, max_wait_second
         max_wait_seconds: Maximum time to wait for completion (default: 30)
 
     Returns:
-        The Huey Result object for the completion task
+        The Result handle for the completion task
     """
     from yaffo.background_tasks.tasks.complete_job import complete_job_task
     return complete_job_task.schedule(

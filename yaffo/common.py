@@ -24,4 +24,4 @@ MEDIA_DIRS = [
 ]
 THUMBNAIL_DIR = ROOT_DIR / "thumbnails"
 DB_PATH = ROOT_DIR / f"{app_name}.db"
-HUEY_DB_PATH = ROOT_DIR / f"{app_name}-huey.db"
+QUEUE_DB_PATH = ROOT_DIR / f"{app_name}-queue.db"

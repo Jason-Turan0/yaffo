@@ -6,7 +6,7 @@ import imagehash
 from yaffo.db.models import Job, JobResult, Photo, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, JOB_STATUS_PENDING, \
     JOB_STATUS_COMPLETED, EVENT_DUPLICATES_FOUND
 from yaffo.logging_config import get_logger
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import emit_event
 from yaffo.background_tasks.utils import SessionFactory, get_job_status
 from yaffo.utils.image import image_from_path
@@ -32,9 +32,9 @@ def _resolve_group_photo_ids(session, duplicate_groups: list[dict]) -> list[list
     return resolved
 
 
-@huey.task(context=True)
+@task_queue.task(context=True)
 def find_duplicates_task(job_id: str, file_paths: list[str], task=None):
-    """Huey task to find duplicate photos using perceptual hashing."""
+    """Background task to find duplicate photos using perceptual hashing."""
     logger.info(f"Starting find_duplicates_task for job {job_id} with {len(file_paths)} files")
 
     check_cancel_frequency = 10
@@ -107,7 +107,7 @@ def find_duplicates_task(job_id: str, file_paths: list[str], task=None):
         if duplicate_groups:
             job_result = JobResult(
                 job_id=job_id,
-                huey_task_id=task.id,
+                task_id=task.id,
                 result_data=json.dumps(duplicate_groups)
             )
             session.add(job_result)

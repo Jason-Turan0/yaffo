@@ -25,8 +25,8 @@ def _flask_env(debug):
     }
 
 
-def _huey_command(workers, worker_type):
-    return f"huey_consumer yaffo.background_tasks.main.huey -w {workers} -k {worker_type}"
+def _host_command(workers, recycle):
+    return f"python -m yaffo.taskq.host -w {workers} -r {recycle}"
 
 
 def _watcher_command():
@@ -111,26 +111,26 @@ def start_app(c, host="127.0.0.1", port=5000, debug=True):
 
 
 @task
-def start_tasks(c, workers=1, worker_type="thread"):
+def start_tasks(c, workers=4, recycle=100):
     """
-    Start the Huey task consumer for background job processing.
+    Start the task-queue host for background job processing.
+
+    The host owns the SQLite queue and supervises a pool of spawn-started worker
+    children. Each child runs in its own interpreter, so concurrent dlib indexing
+    is isolated and crash-contained: a segfaulting child is recovered without
+    taking down the host (the failure mode that forced Huey onto a single thread).
 
     Args:
-        workers: Number of worker threads/processes (default: 4)
-        worker_type: Worker type - 'thread' or 'process' (default: thread).
-            Process workers are unusable on macOS with Huey 3.0: under 'spawn'
-            (the macOS default) Huey passes a non-picklable local closure to
-            multiprocessing and the consumer dies at startup; forcing 'fork'
-            instead makes the workers segfault the moment they touch SQLite
-            (os_log is not fork-safe). So we stay on thread workers -- see
-            index_photo for how dlib is kept from crashing under concurrency.
+        workers: Number of spawn worker processes (default: 4)
+        recycle: Recycle each worker after this many tasks, to cap native memory
+            growth (default: 100)
 
     Example:
         inv start-tasks
-        inv start-tasks --workers=4 --worker-type=process
+        inv start-tasks --workers=8 --recycle=200
     """
-    print(f"Starting Huey consumer with {workers} {worker_type} workers")
-    c.run(_huey_command(workers, worker_type), pty=True)
+    print(f"Starting task-queue host with {workers} spawn workers (recycle every {recycle})")
+    c.run(_host_command(workers, recycle), pty=True)
 
 
 @task
@@ -138,8 +138,8 @@ def start_watcher(c):
     """
     Start the file-system watcher that auto-indexes new photos.
 
-    Watches MEDIA_DIRS and enqueues import/index Huey tasks when files settle.
-    Requires the Huey consumer (`inv start-tasks`) to be running to do the work.
+    Watches MEDIA_DIRS and enqueues import/index tasks when files settle.
+    Requires the task-queue host (`inv start-tasks`) to be running to do the work.
 
     Example:
         inv start-watcher
@@ -149,19 +149,18 @@ def start_watcher(c):
 
 
 @task
-def app_local(c, host="127.0.0.1", port=5000, debug=True, workers=4, worker_type="thread"):
+def app_local(c, host="127.0.0.1", port=5000, debug=True, workers=4, recycle=100):
     """
-    Launch the full local stack at once: the Flask app, the Huey consumer, and
-    the photo watcher. Output from all three is interleaved with [flask]/[huey]/
+    Launch the full local stack at once: the Flask app, the task-queue host, and
+    the photo watcher. Output from all three is interleaved with [flask]/[host]/
     [watcher] prefixes. Press Ctrl+C to stop everything together.
 
     Args:
         host: Host to bind the Flask app to (default: 127.0.0.1)
         port: Port to bind the Flask app to (default: 5000)
         debug: Run Flask in debug mode (default: True)
-        workers: Number of Huey workers (default: 4)
-        worker_type: Huey worker type - 'thread' or 'process' (default: thread;
-            process workers fail under macOS/Windows 'spawn' on Huey 3.0)
+        workers: Number of spawn worker processes (default: 4)
+        recycle: Recycle each worker after this many tasks (default: 100)
 
     Example:
         inv app-local
@@ -171,7 +170,7 @@ def app_local(c, host="127.0.0.1", port=5000, debug=True, workers=4, worker_type
     _open_chrome(f"http://{host}:{port}")
     _run_concurrently([
         ("flask", _flask_command(host, port), _flask_env(debug)),
-        ("huey", _huey_command(workers, worker_type), None),
+        ("host", _host_command(workers, recycle), None),
         ("watcher", _watcher_command(), None),
     ])
 

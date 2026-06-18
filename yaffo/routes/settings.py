@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, Face
-from yaffo.common import DB_PATH, HUEY_DB_PATH
+from yaffo.common import DB_PATH, QUEUE_DB_PATH
 from yaffo.page_builder import llm_config
 import json
 import subprocess
@@ -61,7 +61,7 @@ def init_settings_routes(app: Flask):
             current_thumbnail_dir=str(current_thumbnail_dir) if current_thumbnail_dir else None,
             thumbnail_count=thumbnail_count,
             thumbnail_size=format_size(thumbnail_size),
-            huey_db_path=str(HUEY_DB_PATH),
+            queue_db_path=str(QUEUE_DB_PATH),
             llm=llm_config.status(),
         )
 

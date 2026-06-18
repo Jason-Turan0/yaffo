@@ -17,7 +17,7 @@ from typing import Callable, Optional
 
 from sqlalchemy.orm import Session
 
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory, get_version_status
 from yaffo.db.models import (
     CONVERSATION_TYPE_ASSISTANT,
@@ -55,7 +55,7 @@ def run_generation(
     should_cancel: Optional[Callable[[], bool]] = None,
 ) -> None:
     """Run the agent against a version and persist its widgets / conversation /
-    status. Split out from the huey wrapper so it can be driven directly from a test
+    status. Split out from the task wrapper so it can be driven directly from a test
     or script. `should_cancel` defaults to polling the version's status."""
     widget_errors = widget_errors or {}
     if should_cancel is None:
@@ -118,7 +118,7 @@ def run_generation(
         )
 
 
-@huey.task()
+@task_queue.task()
 def generate_page_task(version_id: int, message: str, widget_errors: Optional[dict] = None):
     session = SessionFactory()
     try:

@@ -59,8 +59,11 @@ The directory should contain:
 # Start the Flask web app
 flask run
 
-# In a separate terminal, start the background task worker
-huey_consumer yaffo.background_tasks.config.huey
+# In a separate terminal, start the background task host (spawn worker pool)
+python -m yaffo.taskq.host
+
+# Or launch the whole local stack (Flask + task host + watcher) at once
+inv app-local
 ```
 
 The app will be available at http://127.0.0.1:5000
@@ -77,7 +80,8 @@ yaffo/
 │   ├── templates/           # Jinja2 templates
 │   ├── static/              # CSS, JavaScript
 │   ├── utils/               # Utility functions
-│   ├── background_tasks/    # Huey task queue
+│   ├── background_tasks/    # Background task definitions
+│   ├── taskq/               # SQLite-backed task queue + spawn worker host
 │   └── scripts/             # CLI tools
 ├── tests/                   # Python unit tests
 ├── yaffo_ui_tests/          # Playwright UI tests
@@ -115,15 +119,20 @@ flask run  # Will recreate on startup
 
 ### Background Tasks
 
-Background tasks (photo indexing, face detection, etc.) are handled by [Huey](https://huey.readthedocs.io/):
+Background tasks (photo indexing, face detection, etc.) run on a small
+purpose-built queue (`yaffo/taskq`): a SQLite-durable queue plus a host process
+that supervises a pool of `spawn`-started worker children, so CPU-bound dlib work
+runs in parallel, isolated, and crash-contained. See `docs/task-queue-migration.md`.
 
 ```bash
-# Start the task consumer
-huey_consumer yaffo.background_tasks.config.huey --workers 2
+# Start the task host with 4 workers, recycling each after 200 tasks
+python -m yaffo.taskq.host --workers 4 --recycle 200
 
-# Or for development (immediate mode)
-huey_consumer yaffo.background_tasks.config.huey --immediate
+# Or via invoke
+inv start-tasks --workers=4
 ```
+
+Tests drive tasks synchronously by setting `task_queue.immediate = True`.
 
 ## UI Testing
 

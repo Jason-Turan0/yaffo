@@ -186,7 +186,7 @@ class JobResult(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.String, db.ForeignKey("jobs.id"), nullable=False)
-    huey_task_id = db.Column(db.String, nullable=False, unique=True)
+    task_id = db.Column(db.String, nullable=False, unique=True)
     result_data = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

@@ -4,7 +4,7 @@ from yaffo.background_tasks.events import EventContext
 from yaffo.db.models import Automation
 
 # Maps Automation.handler -> a function that enqueues a system automation's
-# concrete huey task. Populated by @register_handler at task-definition time, so
+# concrete background task. Populated by @register_handler at task-definition time, so
 # this module imports no task code and the dispatchers read HANDLERS at call time
 # -- which keeps it free of the import-order cycles a task<->dispatcher mapping
 # would otherwise create. Custom automations have handler=None and run their

@@ -5,15 +5,15 @@ import send2trash
 
 from yaffo.db.models import Job, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, JOB_STATUS_PENDING, JOB_STATUS_COMPLETED
 from yaffo.logging_config import get_logger
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory, get_job_status
 
 logger = get_logger(__name__, 'background_tasks')
 
 
-@huey.task()
+@task_queue.task()
 def remove_duplicates_task(job_id: str, file_paths: list[str], action_type: str, destination_folder: str = None):
-    """Huey task to remove duplicate photos by trash, delete, or move."""
+    """Background task to remove duplicate photos by trash, delete, or move."""
     logger.info(f"Starting remove_duplicates_task for job {job_id} with {len(file_paths)} files, action={action_type}")
 
     check_cancel_frequency = 10

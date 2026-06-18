@@ -1,6 +1,17 @@
 # Task Queue Migration: Huey → roll-your-own (master/child processes)
 
-**Status:** Planning (not started) · **Created:** 2026-06-18
+**Status:** Implemented · **Created:** 2026-06-18 · **Completed:** 2026-06-18
+
+The replacement lives in `yaffo/taskq/` (`signatures.py` composition primitives,
+`store.py` SQLite queue, `core.py` `TaskQueue`/coordinator, `host.py` host process,
+`worker.py` spawn child, `cron.py` minute cron). The process-wide queue object is
+`yaffo.background_tasks.config.task_queue`; periodic tasks the host schedules are
+declared in `yaffo/background_tasks/periodic.py`. Run the host with
+`python -m yaffo.taskq.host` (or `inv start-tasks` / `inv app-local`). Tests:
+immediate-mode composition spec `tests/yaffo/utils/test_index_jobs.py`, persistent
+coordinator `tests/yaffo/taskq/test_coordinator.py`, and spawn-pool + crash
+isolation `tests/yaffo/taskq/test_host_spawn.py`. Huey is removed from
+`pyproject.toml`; the `job_results.huey_task_id` column was renamed to `task_id`.
 
 ## 1. Why
 

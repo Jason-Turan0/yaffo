@@ -15,7 +15,7 @@ All are custom (handler=None, code set) and enabled. The first two run a
 data_query and print rows; the sandbox captures the prints and the executor logs
 them, so the rows show up in the consumer console.
 
-Needs the Huey consumer running to actually fire (`inv start-tasks`). Run:
+Needs the task host running to actually fire (`inv start-tasks`). Run:
     python -m yaffo.scripts.seed_automations
 
 Idempotent: re-running replaces the two seeded automations (and their triggers).

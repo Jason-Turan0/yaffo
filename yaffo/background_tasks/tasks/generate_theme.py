@@ -23,7 +23,7 @@ from typing import Callable, Optional
 from sqlalchemy.orm import Session
 
 from yaffo import themes
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory, get_theme_status
 from yaffo.db.models import (
     CONVERSATION_TYPE_ASSISTANT,
@@ -56,7 +56,7 @@ def run_theme_generation(
     should_cancel: Optional[Callable[[], bool]] = None,
 ) -> None:
     """Run the agent against a custom theme and persist its conversation / status.
-    Split out from the huey wrapper so it can be driven directly from a test or
+    Split out from the task wrapper so it can be driven directly from a test or
     script. `should_cancel` defaults to polling the theme's status."""
     if should_cancel is None:
         should_cancel = lambda: get_theme_status(slug) != PAGE_VERSION_STATUS_IN_PROGRESS
@@ -115,7 +115,7 @@ def run_theme_generation(
         themes.set_theme_status(slug, PAGE_VERSION_STATUS_FAILED, session)
 
 
-@huey.task()
+@task_queue.task()
 def generate_theme_task(slug: str, message: str) -> None:
     session = SessionFactory()
     try:

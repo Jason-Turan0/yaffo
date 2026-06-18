@@ -8,7 +8,7 @@ the file_sync built-in: a lightweight handler enqueuing a task that does the wor
 import json
 import uuid
 
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.tasks.find_duplicates import find_duplicates_task
@@ -44,7 +44,7 @@ def _open_scan_job(session, automation_id: int | None) -> tuple[str, list[str]] 
     return job_id, file_paths
 
 
-@huey.task()
+@task_queue.task()
 def duplicate_scan_task(automation_id: int | None = None):
     """Open a find_duplicates Job over every indexed photo and enqueue the scan.
     `automation_id` tags the Job as that automation's run. No-op when there are no

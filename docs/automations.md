@@ -22,7 +22,7 @@
 ```
                     ┌──────────────────────── triggers ────────────────────────┐
                     │                                                           │
-   huey scheduler   │   schedule trigger (cron + next_run_at)                   │
+   taskq host       │   schedule trigger (cron + next_run_at)                   │
    every 60s  ──────┼─►  dispatch_scheduled_tasks ──┐                           │
                     │                                │                          │
    a job completes  │   event trigger (event_type)   ├─► invoke_automation ─────┤
@@ -114,10 +114,10 @@ there).
 ## Schedule path (poll)
 
 `tasks/dispatcher.py::dispatch_scheduled_tasks` is the **single** registered
-periodic task — `@huey.periodic_task(crontab(minute='*'))`. huey's scheduler
-enqueues it every 60s (see `huey/consumer.py` `Scheduler`, `periodic_task_seconds
-= 60`). Each tick it loads enabled schedule triggers on enabled automations and,
-per trigger:
+periodic task — `@task_queue.periodic_task(crontab(minute='*'))`. The task-queue
+host enqueues it once per minute (`taskq/host.py` `_tick_periodic`, with a
+single-fire-per-minute guard). Each tick it loads enabled schedule triggers on
+enabled automations and, per trigger:
 
 - `next_run_at is None` (freshly enabled) → initialise to the next slot, **don't**
   fire this tick.
@@ -131,9 +131,8 @@ Cron math is `croniter` (`background_tasks/schedule.py`: `compute_next_run`,
 after a queue hop, so `now` is the execution time, with latency. Keying off
 `next_run_at <= now` gives **catch-up** (a due trigger still fires on the first
 tick after its slot) and **no double-fire** (the slot advances once fired). This
-is the cost of the dispatcher pattern vs huey-native `@periodic_task`, which is
-evaluated exactly once per minute in the scheduler thread and so can match the
-wall clock statelessly.
+is the cost of the dispatcher pattern vs a scheduler that evaluates the cron
+expression exactly once per minute and so could match the wall clock statelessly.
 
 ## Event path (push)
 
@@ -241,7 +240,7 @@ automation_sandbox/
   `automation.published_code` with `inputs={"ctx": …}` (the trigger context:
   `event_type`/`job_id`/`photo_ids`, empty for a schedule) and
   `functions=build_host_functions(session)`. Returns the `StarlarkResult`.
-- **`tasks/run_automation.py::run_automation_code_task`** — the registered huey
+- **`tasks/run_automation.py::run_automation_code_task`** — the registered
   task wrapping the executor (loads the automation, rebuilds the `EventContext`,
   records the run as a Job via `run_and_record`).
 
@@ -288,7 +287,7 @@ script can organise within or move between media dirs but can't write elsewhere.
 ## The builder (AI chat + publish + UI)
 
 Custom automations are authored by an AI chat that writes their Starlark, mirroring
-the theme builder: async via huey, durable on the automation, browser observes by
+the theme builder: async via the task queue, durable on the automation, browser observes by
 polling. Reuses the page-builder agent/model infrastructure.
 
 - **Persistence** (`db/repositories/automation_repository.py`): `add_message`
@@ -357,7 +356,7 @@ the **Test** panel (above) and the published `code`.
 
 `tasks/file_sync.py` — a system automation (`handler='file_sync'`, seeded
 disabled, hourly). Its handler `enqueue_file_sync` enqueues `file_sync_task`
-(wrapped in `@huey.lock_task('file-sync')` so slow scans can't overlap), which
+(wrapped in `@task_queue.lock_task('file-sync')` so slow scans can't overlap), which
 runs `utils/file_sync.run_file_sync`: the same disk↔index reconcile as the manual
 index-photos button (`scan_media_dirs` + `perform_sync` are shared with the
 route), so its import/index Jobs show up in the UI exactly like a hand-triggered

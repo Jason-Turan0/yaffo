@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
 from yaffo.background_tasks.automation_runs import record_run
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
@@ -98,7 +98,7 @@ def _geotag_from_neighbors(session: Session, photo_ids: list[int], max_minutes: 
     return updated
 
 
-@huey.task()
+@task_queue.task()
 def geotag_from_neighbors_automation_task(automation_id: int, photo_ids: list[int]):
     """Geotag the GPS-less photos in `photo_ids` from their temporal neighbours.
     Enqueued by the geotag_from_neighbors handler on a photo_indexed event; the time

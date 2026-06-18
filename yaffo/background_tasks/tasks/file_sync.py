@@ -1,4 +1,4 @@
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
@@ -6,8 +6,8 @@ from yaffo.db.models import Automation, AUTOMATION_HANDLER_FILE_SYNC
 from yaffo.utils.file_sync import run_file_sync
 
 
-@huey.task()
-@huey.lock_task('file-sync')
+@task_queue.task()
+@task_queue.lock_task('file-sync')
 def file_sync_task(automation_id: int | None = None):
     """Reconcile the photo index with disk. Enqueued by the schedule dispatcher
     (the 'file_sync' automation handler) or directly; runs the same sync as the

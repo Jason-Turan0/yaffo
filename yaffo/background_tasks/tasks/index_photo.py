@@ -5,15 +5,15 @@ from yaffo.db.models import Job, Photo, Face, Tag, JOB_STATUS_CANCELLED, FACE_ST
 from yaffo.utils.index_photos import index_photo
 from yaffo.common import THUMBNAIL_DIR
 from yaffo.logging_config import get_logger
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory, get_job_status
 
 logger = get_logger(__name__, 'background_tasks')
 
 
-@huey.task()
+@task_queue.task()
 def index_photo_task(job_id: str, file_path_batch: list[str]):
-    """Huey task to index photos - detect faces, extract tags, etc."""
+    """Background task to index photos - detect faces, extract tags, etc."""
     logger.info(f"Starting index_photo_task for job {job_id} with {len(file_path_batch)} files")
     processed_results = []
     error_count = 0

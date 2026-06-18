@@ -16,7 +16,7 @@ IMPORT_BATCH_SIZE = 250
 def enqueue_index_jobs(
     session: Session, files_to_index: list[str], automation_id: int | None = None
 ) -> IndexJobs:
-    """Create import/index Jobs for the given files and dispatch the Huey tasks.
+    """Create import/index Jobs for the given files and dispatch the queue tasks.
 
     Files not already present are imported; files not already INDEXED are
     (re)indexed. Shared by the index-photos route and the file-system watcher so
@@ -31,12 +31,12 @@ def enqueue_index_jobs(
     start_index_stage, which dispatches the index members as a second group whose
     completion finalizes the index job. Indexing therefore can't begin until
     every import task has finished (the index tasks read the Photo rows the
-    import tasks create). The Huey instance, chord primitive and task functions
+    import tasks create). The task queue, chord primitive and task functions
     are imported in-function so this module never imports the background_tasks
     package at load time -- which is what would form a util<->tasks import cycle.
     """
-    from huey import chord
-    from yaffo.background_tasks.config import huey
+    from yaffo.taskq import chord
+    from yaffo.background_tasks.config import task_queue
     from yaffo.background_tasks.tasks.import_photo import import_photo_task
     from yaffo.background_tasks.tasks.complete_job import (
         complete_job_callback, finalize_job_task,
@@ -93,7 +93,7 @@ def enqueue_index_jobs(
         pipeline.then(start_index_stage, index_job_id)
     else:
         pipeline = finalize_job_task.s(import_job_id).then(start_index_stage, index_job_id)
-    huey.enqueue(pipeline)
+    task_queue.enqueue(pipeline)
 
     logger.info(
         f"Scheduled import_job={import_job_id} ({len(files_to_import)} files), "

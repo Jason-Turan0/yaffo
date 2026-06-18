@@ -2,7 +2,7 @@ import time
 
 from yaffo.db.models import Job, JOB_STATUS_CANCELLED, JOB_STATUS_COMPLETED
 from yaffo.logging_config import get_logger
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import emit_job_completed_event
 from yaffo.background_tasks.utils import SessionFactory
 
@@ -42,24 +42,24 @@ def finalize_job(job_id: str) -> None:
         SessionFactory.remove()
 
 
-@huey.task()
+@task_queue.task()
 def complete_job_callback(job_id: str, results=None) -> None:
     """Chord callback: fires once every member task of a job's chord has
     finished, so the Job's counts are already final -- just finalize. `job_id` is
-    the bound argument; Huey appends the member return values as `results`, which
+    the bound argument; the task queue appends the member return values as `results`, which
     are unused (the callback is purely a completion barrier)."""
     finalize_job(job_id)
 
 
-@huey.task()
+@task_queue.task()
 def finalize_job_task(job_id: str) -> None:
     """Finalize a job with no member tasks to wait on (an empty import/index
-    stage). Huey chord callbacks never fire for an empty group, so empty stages
+    stage). Chord callbacks never fire for an empty group, so empty stages
     finalize through this task instead."""
     finalize_job(job_id)
 
 
-@huey.task()
+@task_queue.task()
 def complete_job_task(job_id: str, max_wait_seconds: int = 30):
     """
     Final task for a job that marks it as complete.

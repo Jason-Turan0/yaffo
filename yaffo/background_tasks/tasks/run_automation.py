@@ -1,5 +1,5 @@
 from yaffo.background_tasks.automation_runs import run_and_record
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation
@@ -8,7 +8,7 @@ from yaffo.logging_config import get_logger
 logger = get_logger(__name__, 'background_tasks')
 
 
-@huey.task()
+@task_queue.task()
 def run_automation_code_task(automation_id: int, context_payload: dict | None = None):
     """Run a custom automation's Starlark code in a worker, recording the run as a
     Job (the run history).

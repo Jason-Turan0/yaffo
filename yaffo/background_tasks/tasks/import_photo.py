@@ -2,16 +2,16 @@ from pathlib import Path
 
 from yaffo.db.models import Job, Photo, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, JOB_STATUS_PENDING
 from yaffo.logging_config import get_logger
-from yaffo.background_tasks.config import huey
+from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory, get_job_status
 
 logger = get_logger(__name__, 'background_tasks')
 
 
-@huey.task()
+@task_queue.task()
 def import_photo_task(job_id: str, file_path_batch: list[str]):
     """
-    Huey task to import photos - create photos in database.
+    Background task to import photos - create photos in database.
     Supports graceful cancellation and crash recovery.
     """
     logger.info(f"Starting import_photo_task for job {job_id} with {len(file_path_batch)} files")
