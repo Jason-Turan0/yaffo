@@ -2,6 +2,9 @@
 project_name = "Yaffo Photo Organizer"
 bundle = "com.jasonturan"
 
+[tool.setuptools]
+packages = ["yaffo"]
+
 [tool.briefcase.app.yaffo]
 formal_name = "Yaffo Photo Organizer"
 description = "An app to organize photos using face recognition and metadata"
@@ -19,12 +22,14 @@ requires = [
     "face_recognition_models==0.3.0",
     "Flask==3.1.2",
     "Flask-SQLAlchemy==3.1.1",
-    "huey==2.5.2",
+    "huey==3.0.3",
     "ImageHash==4.3.2",
-    "invoke==2.2.0",
+    "invoke==3.0.3",
     "itsdangerous==2.2.0",
     "Jinja2==3.1.6",
     "joblib==1.5.2",
+    "jsonschema==4.23.0",
+    "keyring",
     "MarkupSafe==3.0.2",
     "numpy==2.2.6",
     "opencv-python==4.12.0.88",
@@ -38,10 +43,14 @@ requires = [
     "requests==2.32.3",
     "scikit-learn==1.7.2",
     "scipy==1.16.2",
+    "send2trash==1.8.3",
+    "setuptools==80.9.0",
+    "starlark-pyo3==2026.1",
     "SQLAlchemy==2.0.43",
     "threadpoolctl==3.6.0",
     "tqdm==4.67.1",
     "typing_extensions==4.15.0",
+    "watchdog==6.0.0",
     "Werkzeug==3.1.3",
 ]
 
@@ -89,21 +98,25 @@ name = "yaffo"
 version = "0.0.1"
 description = "An app to organize photos"
 authors = [{name = "Jason Turan"}]
-requires-python = ">=3.8"
+requires-python = "~=3.13.0"
 dependencies = [
+    "anthropic",
     "blinker==1.9.0",
     "click==8.3.0",
+    "croniter==6.2.2",
     "dlib==20.0.0",
     "face-recognition==1.3.0",
     "face_recognition_models==0.3.0",
     "Flask==3.1.2",
     "Flask-SQLAlchemy==3.1.1",
-    "huey==2.5.2",
+    "huey==3.0.3",
     "ImageHash==4.3.2",
     "invoke==2.2.0",
     "itsdangerous==2.2.0",
     "Jinja2==3.1.6",
     "joblib==1.5.2",
+    "jsonschema==4.23.0",
+    "keyring",
     "MarkupSafe==3.0.2",
     "numpy==2.2.6",
     "opencv-python==4.12.0.88",
@@ -117,10 +130,14 @@ dependencies = [
     "requests==2.32.3",
     "scikit-learn==1.7.2",
     "scipy==1.16.2",
+    "send2trash==1.8.3",
+    "setuptools==80.9.0",
+    "starlark-pyo3==2026.1",
     "SQLAlchemy==2.0.43",
     "threadpoolctl==3.6.0",
     "tqdm==4.67.1",
     "typing_extensions==4.15.0",
+    "watchdog==6.0.0",
     "Werkzeug==3.1.3",
 ]
 
@@ -130,4 +147,6 @@ dev = [
     "pytest-cov==6.0.0",
     "snakeviz",
     "briefcase",
+    "mypy==1.18.2",
+    "mypy_extensions==1.1.0",
 ]

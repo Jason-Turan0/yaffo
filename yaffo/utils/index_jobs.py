@@ -5,14 +5,12 @@ from itertools import batched
 from sqlalchemy.orm import Session
 
 from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
-from yaffo.background_tasks.utils import schedule_job_completion
 from yaffo.utils.index_jobs_dto import IndexJobs
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__, 'background_tasks')
 
 IMPORT_BATCH_SIZE = 250
-INDEX_BATCH_SIZE = 10
 
 
 def enqueue_index_jobs(
@@ -28,12 +26,22 @@ def enqueue_index_jobs(
     `automation_id` tags the Jobs as a run of that automation (NULL for
     user-initiated syncs), so the job machinery doubles as the run history.
 
-    The import/index task functions are imported in-function (like the sibling
-    schedule_job_completion) so this module never imports the background_tasks
+    Work is dispatched as a single chord pipeline: the import members run as a
+    group, their completion finalizes the import job and then triggers
+    start_index_stage, which dispatches the index members as a second group whose
+    completion finalizes the index job. Indexing therefore can't begin until
+    every import task has finished (the index tasks read the Photo rows the
+    import tasks create). The Huey instance, chord primitive and task functions
+    are imported in-function so this module never imports the background_tasks
     package at load time -- which is what would form a util<->tasks import cycle.
     """
-    from yaffo.background_tasks.tasks.index_photo import index_photo_task
+    from huey import chord
+    from yaffo.background_tasks.config import huey
     from yaffo.background_tasks.tasks.import_photo import import_photo_task
+    from yaffo.background_tasks.tasks.complete_job import (
+        complete_job_callback, finalize_job_task,
+    )
+    from yaffo.background_tasks.tasks.index_stage import start_index_stage
 
     existing = {
         full_path: status
@@ -76,13 +84,16 @@ def enqueue_index_jobs(
     ))
     session.commit()
 
-    for batch in batched(files_to_import, IMPORT_BATCH_SIZE):
-        import_photo_task(import_job_id, list(batch))
-    schedule_job_completion(import_job_id)
-
-    for batch in batched(files_needing_indexing, INDEX_BATCH_SIZE):
-        index_photo_task(index_job_id, list(batch))
-    schedule_job_completion(index_job_id)
+    import_members = [
+        import_photo_task.s(import_job_id, list(batch))
+        for batch in batched(files_to_import, IMPORT_BATCH_SIZE)
+    ]
+    if import_members:
+        pipeline = chord(import_members, complete_job_callback.s(import_job_id))
+        pipeline.then(start_index_stage, index_job_id)
+    else:
+        pipeline = finalize_job_task.s(import_job_id).then(start_index_stage, index_job_id)
+    huey.enqueue(pipeline)
 
     logger.info(
         f"Scheduled import_job={import_job_id} ({len(files_to_import)} files), "

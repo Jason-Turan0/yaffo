@@ -9,6 +9,56 @@ from yaffo.background_tasks.utils import SessionFactory
 logger = get_logger(__name__, 'background_tasks')
 
 
+def finalize_job(job_id: str) -> None:
+    """Mark a job COMPLETED and emit its completion event.
+
+    The shared terminal step for the chord completion path. Idempotent and safe
+    to call once a job's tasks have all finished: a CANCELLED job is left
+    untouched and an already-COMPLETED job is a no-op. Chord-dispatched jobs
+    reach here via complete_job_callback (no polling -- the chord only fires once
+    every member finished); the legacy polling complete_job_task keeps its own
+    logic for the duplicate-removal flow.
+    """
+    session = SessionFactory()
+    try:
+        job = session.query(Job).filter_by(id=job_id).first()
+        if not job:
+            logger.error(f"Job {job_id} not found in finalize_job")
+            return
+        if job.status in (JOB_STATUS_CANCELLED, JOB_STATUS_COMPLETED):
+            return
+        job.status = JOB_STATUS_COMPLETED
+        session.commit()
+        logger.info(
+            f"Job {job_id} completed: {job.completed_count} completed, "
+            f"{job.error_count} errors, {job.cancelled_count} cancelled"
+        )
+        emit_job_completed_event(session, job)
+    except Exception as e:
+        logger.error(f"Error finalizing job {job_id}: {e}", exc_info=True)
+        session.rollback()
+    finally:
+        session.close()
+        SessionFactory.remove()
+
+
+@huey.task()
+def complete_job_callback(job_id: str, results=None) -> None:
+    """Chord callback: fires once every member task of a job's chord has
+    finished, so the Job's counts are already final -- just finalize. `job_id` is
+    the bound argument; Huey appends the member return values as `results`, which
+    are unused (the callback is purely a completion barrier)."""
+    finalize_job(job_id)
+
+
+@huey.task()
+def finalize_job_task(job_id: str) -> None:
+    """Finalize a job with no member tasks to wait on (an empty import/index
+    stage). Huey chord callbacks never fire for an empty group, so empty stages
+    finalize through this task instead."""
+    finalize_job(job_id)
+
+
 @huey.task()
 def complete_job_task(job_id: str, max_wait_seconds: int = 30):
     """

@@ -26,7 +26,7 @@ def _flask_env(debug):
 
 
 def _huey_command(workers, worker_type):
-    return f"huey_consumer.py yaffo.background_tasks.main.huey -w {workers} -k {worker_type}"
+    return f"huey_consumer yaffo.background_tasks.main.huey -w {workers} -k {worker_type}"
 
 
 def _watcher_command():
@@ -111,17 +111,20 @@ def start_app(c, host="127.0.0.1", port=5000, debug=True):
 
 
 @task
-def start_tasks(c, workers=4, worker_type="process"):
+def start_tasks(c, workers=4, worker_type="thread"):
     """
     Start the Huey task consumer for background job processing.
 
     Args:
-        workers: Number of worker processes/threads (default: 8)
-        worker_type: Worker type - 'process' or 'thread' (default: process)
+        workers: Number of worker threads/processes (default: 4)
+        worker_type: Worker type - 'thread' or 'process' (default: thread).
+            Thread is the cross-platform default: Huey 3.0's process workers rely
+            on a non-picklable closure, which fails under the multiprocessing
+            'spawn' start method (the default on macOS and Windows).
 
     Example:
         inv start-tasks
-        inv start-tasks --workers=4 --worker-type=thread
+        inv start-tasks --workers=4 --worker-type=process
     """
     print(f"Starting Huey consumer with {workers} {worker_type} workers")
     c.run(_huey_command(workers, worker_type), pty=True)
@@ -143,7 +146,7 @@ def start_watcher(c):
 
 
 @task
-def app_local(c, host="127.0.0.1", port=5000, debug=True, workers=4, worker_type="process"):
+def app_local(c, host="127.0.0.1", port=5000, debug=True, workers=4, worker_type="thread"):
     """
     Launch the full local stack at once: the Flask app, the Huey consumer, and
     the photo watcher. Output from all three is interleaved with [flask]/[huey]/
@@ -154,7 +157,8 @@ def app_local(c, host="127.0.0.1", port=5000, debug=True, workers=4, worker_type
         port: Port to bind the Flask app to (default: 5000)
         debug: Run Flask in debug mode (default: True)
         workers: Number of Huey workers (default: 4)
-        worker_type: Huey worker type - 'process' or 'thread' (default: process)
+        worker_type: Huey worker type - 'thread' or 'process' (default: thread;
+            process workers fail under macOS/Windows 'spawn' on Huey 3.0)
 
     Example:
         inv app-local
