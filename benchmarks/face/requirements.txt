@@ -1,0 +1,8 @@
+# Core tranche: cross-platform CPU wheels, no source builds. Enough to compare
+# the two leading candidates end-to-end (OpenCV YuNet+SFace, InsightFace SCRFD+ArcFace).
+numpy
+pillow
+pillow-heif            # HEIC decode (the dataset is ~1/3 HEIC)
+opencv-contrib-python  # YuNet detector + SFace recognizer (FaceDetectorYN / FaceRecognizerSF)
+onnxruntime            # CPU runtime for InsightFace
+insightface            # SCRFD detector + ArcFace embedder (buffalo_l, auto-downloaded)
