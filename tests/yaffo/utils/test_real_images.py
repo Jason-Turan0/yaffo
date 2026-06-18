@@ -45,9 +45,8 @@ class TestGPSExtraction:
         """Test that index_photo correctly extracts GPS data."""
         test_file = Path(__file__).parent / "test_data" / "jpg" / "gps" / "DSCN0010.jpg"
 
-        with patch('yaffo.utils.index_photos.face_recognition') as mock_fr:
-            mock_fr.face_locations.return_value = []
-            mock_fr.face_encodings.return_value = []
+        with patch("yaffo.utils.index_photos.detect_faces") as mock_detect:
+            mock_detect.return_value = []
 
             result = index_photo(test_file, temp_dir)
 
@@ -76,9 +75,8 @@ class TestInvalidImages:
 
         # Should not raise an exception, should return None or handle gracefully
         try:
-            with patch('yaffo.utils.index_photos.face_recognition') as mock_fr:
-                mock_fr.face_locations.return_value = []
-                mock_fr.face_encodings.return_value = []
+            with patch("yaffo.utils.index_photos.detect_faces") as mock_detect:
+                mock_detect.return_value = []
 
                 result = index_photo(test_file, temp_dir)
                 # Either returns None or returns result with minimal data
@@ -281,9 +279,8 @@ class TestCanon40D:
         if not test_file.exists():
             pytest.skip("Canon_40D.jpg not found")
 
-        with patch('yaffo.utils.index_photos.face_recognition') as mock_fr:
-            mock_fr.face_locations.return_value = []
-            mock_fr.face_encodings.return_value = []
+        with patch("yaffo.utils.index_photos.detect_faces") as mock_detect:
+            mock_detect.return_value = []
 
             result = index_photo(test_file, temp_dir)
 

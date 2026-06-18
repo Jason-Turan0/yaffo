@@ -3,6 +3,7 @@ from pathlib import Path
 from yaffo.db.models import Job, Photo, Face, Tag, JOB_STATUS_CANCELLED, FACE_STATUS_UNASSIGNED, \
     JOB_STATUS_RUNNING, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
 from yaffo.utils.index_photos import index_photo
+from yaffo.domain.compare_utils import serialize_embedding
 from yaffo.common import THUMBNAIL_DIR
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
@@ -84,7 +85,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
 
             for face_data in faces_data:
                 face = Face(
-                    embedding=face_data['embedding'].tobytes(),
+                    embedding=serialize_embedding(face_data['embedding']),
                     full_file_path=face_data['full_file_path'],
                     status=FACE_STATUS_UNASSIGNED,
                     photo_id=photo.id,

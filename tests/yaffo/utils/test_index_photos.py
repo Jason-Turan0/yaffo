@@ -20,6 +20,7 @@ from yaffo.utils.index_photos import (
     delete_photos_by_paths,
     delete_photos_under_dir,
 )
+from yaffo.utils.face_analysis import DetectedFace
 
 
 @pytest.fixture
@@ -333,12 +334,11 @@ class TestGetExifTags:
         assert len(tags) == 0
 
 class TestIndexPhoto:
-    @patch('yaffo.utils.index_photos.face_recognition')
+    @patch('yaffo.utils.index_photos.detect_faces')
     @patch('yaffo.utils.index_photos.save_face_thumbnail')
-    def test_index_photo_no_faces(self, mock_save_thumb, mock_fr, test_image_with_exif, temp_dir):
-        # Mock face recognition to find no faces
-        mock_fr.face_locations.return_value = []
-        mock_fr.face_encodings.return_value = []
+    def test_index_photo_no_faces(self, mock_save_thumb, mock_detect, test_image_with_exif, temp_dir):
+        # No faces detected
+        mock_detect.return_value = []
 
         result = index_photo(test_image_with_exif, temp_dir)
 
@@ -349,15 +349,14 @@ class TestIndexPhoto:
         assert 'faces_data' in result
         assert len(result['faces_data']) == 0
 
-    @patch('yaffo.utils.index_photos.face_recognition')
+    @patch('yaffo.utils.index_photos.detect_faces')
     @patch('yaffo.utils.index_photos.save_face_thumbnail')
-    def test_index_photo_with_faces(self, mock_save_thumb, mock_fr, test_image_with_exif, temp_dir):
-        # Mock face recognition to find one face
-        mock_face_location = (50, 150, 150, 50)
-        mock_embedding = np.array([0.1] * 128)
-
-        mock_fr.face_locations.return_value = [mock_face_location]
-        mock_fr.face_encodings.return_value = [mock_embedding]
+    def test_index_photo_with_faces(self, mock_save_thumb, mock_detect, test_image_with_exif, temp_dir):
+        # One detected face (boxes in top/right/bottom/left, 512-d ArcFace embedding)
+        mock_detect.return_value = [DetectedFace(
+            location_top=50, location_right=150, location_bottom=150, location_left=50,
+            embedding=np.array([0.1] * 512, dtype=np.float32),
+        )]
         mock_save_thumb.return_value = temp_dir / "face_thumb.jpg"
 
         result = index_photo(test_image_with_exif, temp_dir)
@@ -375,9 +374,8 @@ class TestIndexPhoto:
         assert face['location_right'] == 150
 
     def test_index_photo_extracts_gps(self, test_image_with_exif, temp_dir):
-        with patch('yaffo.utils.index_photos.face_recognition') as mock_fr:
-            mock_fr.face_locations.return_value = []
-            mock_fr.face_encodings.return_value = []
+        with patch('yaffo.utils.index_photos.detect_faces') as mock_detect:
+            mock_detect.return_value = []
 
             result = index_photo(test_image_with_exif, temp_dir)
 
@@ -404,12 +402,11 @@ class TestRealFileHemispheres:
         ("DSCN0010_SE.jpg", -43.467448, 11.885127),
         ("DSCN0010_SW.jpg", -43.467448, -11.885127),
     ])
-    @patch('yaffo.utils.index_photos.face_recognition')
+    @patch('yaffo.utils.index_photos.detect_faces')
     def test_index_photo_signs_coordinates_by_hemisphere(
-        self, mock_fr, gps_dir, temp_dir, filename, expected_lat, expected_lon
+        self, mock_detect, gps_dir, temp_dir, filename, expected_lat, expected_lon
     ):
-        mock_fr.face_locations.return_value = []
-        mock_fr.face_encodings.return_value = []
+        mock_detect.return_value = []
 
         result = index_photo(gps_dir / filename, temp_dir)
 
@@ -627,11 +624,10 @@ class TestDSCN0010RealFile:
         assert 'ISOSpeedRatings' in tag_dict
         assert tag_dict['ISOSpeedRatings'] == '64'
 
-    @patch('yaffo.utils.index_photos.face_recognition')
-    def test_index_photo_extracts_all_metadata(self, mock_fr, dscn0010_path: Path, temp_dir):
+    @patch('yaffo.utils.index_photos.detect_faces')
+    def test_index_photo_extracts_all_metadata(self, mock_detect, dscn0010_path: Path, temp_dir):
         """index_photo should extract date, GPS, and tags from DSCN0010.jpg."""
-        mock_fr.face_locations.return_value = []
-        mock_fr.face_encodings.return_value = []
+        mock_detect.return_value = []
 
         result = index_photo(dscn0010_path, temp_dir)
 

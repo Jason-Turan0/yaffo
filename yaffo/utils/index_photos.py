@@ -11,7 +11,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from PIL.Image import Image as PIL_Image
 from PIL import Image
 
-import face_recognition
 import piexif
 from sqlalchemy.orm import Session
 
@@ -20,6 +19,7 @@ from yaffo.db.models import Photo, Face, Tag, FACE_STATUS_UNASSIGNED
 from yaffo.common import PHOTO_EXTENSIONS, TEMP_DIR, THUMBNAIL_DIR, ROOT_DIR
 from yaffo.utils.photo_dates import PhotoDateInfo, get_photo_date_info
 from yaffo.utils.image import image_from_path, image_to_numpy
+from yaffo.utils.face_analysis import detect_faces
 from yaffo.utils.exiftool_path import get_exiftool_path, is_exiftool_available
 
 logger = get_logger(__name__, 'background_tasks')
@@ -307,20 +307,19 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
 
         image = image_tag if image_tag is not None else image_from_path(photo_path)
         image_numpy = image_to_numpy(image)
-        face_locations = face_recognition.face_locations(image_numpy)
-        face_embeddings = face_recognition.face_encodings(image_numpy, face_locations)
+        detected_faces = detect_faces(image_numpy)
 
         faces_data = []
-        for i, (loc, emb) in enumerate(zip(face_locations, face_embeddings)):
+        for i, face in enumerate(detected_faces):
+            loc = (face.location_top, face.location_right, face.location_bottom, face.location_left)
             thumb_path = save_face_thumbnail(photo_path, i, thumbnail_dir, loc)
-            top, right, bottom, left = loc
             faces_data.append({
-                'embedding': emb,
+                'embedding': face.embedding,
                 'full_file_path': str(thumb_path),
-                'location_top': top,
-                'location_right': right,
-                'location_bottom': bottom,
-                'location_left': left
+                'location_top': face.location_top,
+                'location_right': face.location_right,
+                'location_bottom': face.location_bottom,
+                'location_left': face.location_left,
             })
 
         date_taken_str = date_info.date.isoformat() if date_info.date else None

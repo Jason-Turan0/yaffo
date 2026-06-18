@@ -3,7 +3,7 @@ import numpy as np
 from sqlalchemy.orm import joinedload, Session
 import pydash as _
 from yaffo.db.models import Person, Face, PersonEmbedding, PersonFace
-from yaffo.domain.compare_utils import load_embedding
+from yaffo.domain.compare_utils import load_embedding, serialize_embedding
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -56,7 +56,7 @@ def update_person_embedding(person_id: int, session):
 
         # --- Compute overall avg_embedding ---
         embeddings = [load_embedding(f.embedding) for f in person.faces]
-        person.avg_embedding = np.mean(embeddings, axis=0).tobytes()
+        person.avg_embedding = serialize_embedding(np.mean(embeddings, axis=0))
 
         def get_year(face: Face) -> int | None:
             return face.photo.year if face.photo else None
@@ -76,7 +76,7 @@ def update_person_embedding(person_id: int, session):
             if record is None:
                 record = PersonEmbedding(person_id=person.id, year=year)
                 session.add(record)
-            record.avg_embedding = avg_year.tobytes()
+            record.avg_embedding = serialize_embedding(avg_year)
             record.included_face_ids = json.dumps(face_ids)
 
         session.commit()

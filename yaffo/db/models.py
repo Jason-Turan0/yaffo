@@ -51,7 +51,7 @@ class Face(db.Model):
     full_file_path = db.Column(db.String, unique=True)
     photo_id = db.Column(db.Integer, db.ForeignKey("photos.id"))
     status = db.Column(db.String)
-    # Face bounding box coordinates (from face_recognition)
+    # Face bounding box coordinates (top/right/bottom/left, from face detection)
     location_top = db.Column(db.Integer)
     location_right = db.Column(db.Integer)
     location_bottom = db.Column(db.Integer)
@@ -243,7 +243,9 @@ AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS = "geotag_from_neighbors"
 
 # Default match threshold for the auto-assign-faces automation (overridable via
 # Automation.config["threshold"]; see background_tasks.automation_config).
-AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 0.95
+# ArcFace cosine: genuine pairs land ~0.4-0.65, impostors below ~0.3 (see
+# benchmarks/face/); 0.45 favours confident assignments. Tune empirically.
+AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 0.45
 
 # Default radius (metres) within which the assign-location-name automation reuses a
 # nearby photo's location_name (overridable via config["nearby_radius_meters"]).

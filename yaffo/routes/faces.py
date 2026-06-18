@@ -56,8 +56,11 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int)
         embeddings.append(load_embedding(face.embedding))
         face_ids.append(face.id)
     embeddings = np.array(embeddings)
-    eps = 0.45 - ((threshold * 2) / 100)
-    clustering = DBSCAN(eps=eps, min_samples=DEFAULT_MIN_SAMPLE_SIZE, metric="euclidean").fit(embeddings)
+    # ArcFace embeddings are L2-normalized -> cluster by cosine distance (1 - cos).
+    # eps is a cosine-distance radius (~0.5 center); the slider tightens it. Tune
+    # against benchmarks/face/.
+    eps = 0.6 - (threshold / 100)
+    clustering = DBSCAN(eps=eps, min_samples=DEFAULT_MIN_SAMPLE_SIZE, metric="cosine").fit(embeddings)
     clusters = {}
     for face_id, label in zip(face_ids, clustering.labels_):
         if label == -1:  # skip noise faces
@@ -91,7 +94,9 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
         photo_date='',
         faces=[]
     )
-    computed_threshold = 0.9 + (threshold / 100)
+    # ArcFace cosine similarity: genuine matches ~0.4-0.65. Center ~0.3 and let the
+    # slider raise it. Tune against benchmarks/face/.
+    computed_threshold = 0.3 + (threshold / 100)
     for face in unassigned_faces:
         emb = load_embedding(face.embedding)
 

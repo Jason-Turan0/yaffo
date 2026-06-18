@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import face_recognition
 from sqlalchemy import create_engine, insert
 from sqlalchemy.orm import sessionmaker, joinedload
 from tqdm import tqdm
@@ -8,15 +7,16 @@ from yaffo.common import DB_PATH
 from yaffo.db.models import Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
     FACE_STATUS_ASSIGNED
 from yaffo.db.repositories.person_repository import update_person_embedding
-from yaffo.domain.compare_utils import calculate_face_similarity, load_embedding
+from yaffo.domain.compare_utils import calculate_face_similarity, load_embedding, serialize_embedding
+from yaffo.utils.image import image_from_path, image_to_numpy
+from yaffo.utils.face_analysis import detect_faces
 from concurrent.futures import ProcessPoolExecutor, as_completed
-
-from yaffo.scripts.index_photos import load_image_file
 
 engine = create_engine(f"sqlite:///{DB_PATH}")
 session = sessionmaker(bind=engine)()
-THRESHOLD = 0.96  # configurable similarity threshold
-IGNORE_THRESHOLD = 0.92  # configurable similarity threshold
+# ArcFace cosine thresholds (genuine ~0.4-0.65). Tune against benchmarks/face/.
+THRESHOLD = 0.45  # assign when exactly one person clears this
+IGNORE_THRESHOLD = 0.30  # below this for everyone -> ignore the face
 max_workers = 8
 batch_size = 50
 
@@ -94,11 +94,11 @@ def recalculate_face_embedding():
             load_embedding(face.embedding)
         except:
             print("Fixing face due to error:", face.id)
-            image = load_image_file(Path(face.full_file_path))
-            face_embeddings = face_recognition.face_encodings(image)
+            image = image_to_numpy(image_from_path(Path(face.full_file_path)))
+            detected = detect_faces(image)
 
-            if len(face_embeddings) == 1:
-                face.embedding = face_embeddings.tobytes()
+            if len(detected) == 1:
+                face.embedding = serialize_embedding(detected[0].embedding)
             else:
                 print("Deleting face due to error:", face.id)
                 session.query(PersonFace).filter(PersonFace.face_id == face.id).delete()

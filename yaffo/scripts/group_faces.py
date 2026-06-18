@@ -7,17 +7,16 @@ import pickle
 from yaffo.common import DB_PATH
 from yaffo.db import db
 from yaffo.db.models import Face, Person, PersonFace  # adjust imports to your project
+from yaffo.domain.compare_utils import load_embedding
 
 # --- CONFIG ---
-EPS = 0.45  # distance threshold (tune this!)
+# ArcFace embeddings are L2-normalized, so we cluster by cosine distance (1 - cos).
+# Genuine pairs sit well below this, impostors above; tune against the benchmark.
+EPS = 0.5  # cosine-distance threshold (tune this!)
 MIN_SAMPLES = 1  # how many faces needed to form a cluster
 
 engine = create_engine(f"sqlite:///{DB_PATH}")
 session = sessionmaker(bind=engine)()
-
-def load_embedding(blob: bytes) -> np.ndarray:
-    arr = np.frombuffer(blob, dtype=np.float64)
-    return arr.reshape((128,))
 
 
 def group_faces_and_create_people():
@@ -42,7 +41,7 @@ def group_faces_and_create_people():
     embeddings = np.array(embeddings)
 
     # Step 2: cluster with DBSCAN
-    clustering = DBSCAN(eps=EPS, min_samples=MIN_SAMPLES, metric="euclidean").fit(embeddings)
+    clustering = DBSCAN(eps=EPS, min_samples=MIN_SAMPLES, metric="cosine").fit(embeddings)
     labels = clustering.labels_  # -1 means noise/unclustered
 
     # Step 3: create Person and link faces
