@@ -19,12 +19,18 @@ from yaffo.utils.settings import get_media_dirs, get_thumbnail_dir
 logger = get_logger(__name__, 'background_tasks')
 
 
+# Why a DB row no longer has a live file under the media dirs. Drives the orphaned
+# table copy so the user can tell a deleted file from a de-configured directory.
+ORPHAN_MISSING = "missing"          # file gone from disk (its media dir still configured)
+ORPHAN_UNCONFIGURED = "unconfigured"  # path no longer under any configured media dir
+
+
 @dataclass(frozen=True)
 class MediaScan:
     """Diff between the configured media dirs and the photo index. Shared by the
     index-photos page (for display) and the scheduled file-sync task (as work)."""
     unindexed: list[dict]   # {filename, full_path} -- on disk, not yet indexed
-    orphaned: list[dict]    # {id, full_path} -- in the DB, file gone from disk
+    orphaned: list[dict]    # {id, full_path, reason} -- in the DB, no live file under media dirs
     total_imported: int
     total_indexed: int
     total_filesystem: int
@@ -36,6 +42,22 @@ class MediaScan:
     @property
     def orphaned_photo_ids(self) -> list[int]:
         return [o['id'] for o in self.orphaned]
+
+
+def _orphan_reason(path: Path, media_dirs: list[Path]) -> str | None:
+    """Why an indexed photo at `path` is orphaned, or None if it's still valid.
+
+    A row is orphaned when (a) its path is no longer under any configured media dir
+    (the directory was removed from Settings -- the file may still sit on disk), or
+    (b) it's under a configured dir but the file is gone. Case (b) only counts when
+    that dir's root currently exists on disk, so an unmounted drive doesn't get its
+    whole subtree marked orphaned and wiped on the next sync."""
+    owning_dir = next((d for d in media_dirs if path.is_relative_to(d)), None)
+    if owning_dir is None:
+        return ORPHAN_UNCONFIGURED
+    if owning_dir.exists() and not path.exists():
+        return ORPHAN_MISSING
+    return None
 
 
 def iter_media_scan(
@@ -80,11 +102,11 @@ def iter_media_scan(
             if full_path not in indexed_paths:
                 unindexed.append({'filename': photo_file.name, 'full_path': full_path})
 
-    orphaned = [
-        {'id': photo_id, 'full_path': path}
-        for photo_id, path, _status in db_photos
-        if not Path(path).exists()
-    ]
+    orphaned = []
+    for photo_id, path, _status in db_photos:
+        reason = _orphan_reason(Path(path), media_dirs)
+        if reason is not None:
+            orphaned.append({'id': photo_id, 'full_path': path, 'reason': reason})
 
     unindexed.sort(key=lambda x: x['full_path'])
     orphaned.sort(key=lambda x: x['full_path'])

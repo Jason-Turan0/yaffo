@@ -8,7 +8,13 @@ from sqlalchemy.orm import Session
 
 from yaffo.db import db
 from yaffo.db.models import Photo, PHOTO_STATUS_INDEXED
-from yaffo.utils.file_sync import MediaScan, iter_media_scan, scan_media_dirs
+from yaffo.utils.file_sync import (
+    MediaScan,
+    ORPHAN_MISSING,
+    ORPHAN_UNCONFIGURED,
+    iter_media_scan,
+    scan_media_dirs,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -57,6 +63,41 @@ def test_scan_media_dirs_diffs_disk_against_index(session, media):
     assert scan.total_indexed == 2             # both INDEXED
     assert [u["filename"] for u in scan.unindexed] == ["b.jpg"]
     assert [o["full_path"] for o in scan.orphaned] == [str(media / "gone.jpg")]
+    assert scan.orphaned[0]["reason"] == ORPHAN_MISSING
+
+
+def test_removed_media_dir_orphans_its_photos_even_when_files_exist(tmp_path, session):
+    """A photo whose media dir was dropped from config is orphaned even though the
+    file still sits on disk -- so syncing removes rows for de-configured dirs."""
+    kept = tmp_path / "kept"
+    dropped = tmp_path / "dropped"
+    in_kept = _touch(kept / "keep.jpg")
+    in_dropped = _touch(dropped / "old.jpg")  # file still on disk
+
+    session.add(Photo(full_file_path=str(in_kept), status=PHOTO_STATUS_INDEXED))
+    session.add(Photo(full_file_path=str(in_dropped), status=PHOTO_STATUS_INDEXED))
+    session.commit()
+
+    # 'dropped' is no longer in the configured media dirs.
+    scan = scan_media_dirs(session, [kept], None)
+
+    assert [(o["full_path"], o["reason"]) for o in scan.orphaned] == [
+        (str(in_dropped), ORPHAN_UNCONFIGURED)
+    ]
+
+
+def test_unmounted_media_dir_does_not_orphan_its_photos(tmp_path, session):
+    """A configured media dir whose root is gone (e.g. unmounted drive) must NOT
+    orphan its photos -- otherwise a transient mount loss would wipe the index."""
+    missing_dir = tmp_path / "external"  # configured but never exists on disk
+    photo_path = missing_dir / "photo.jpg"
+
+    session.add(Photo(full_file_path=str(photo_path), status=PHOTO_STATUS_INDEXED))
+    session.commit()
+
+    scan = scan_media_dirs(session, [missing_dir], None)
+
+    assert scan.orphaned == []
 
 
 def test_iter_media_scan_yields_progress_then_final_scan(session, media):

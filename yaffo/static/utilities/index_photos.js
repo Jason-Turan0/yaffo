@@ -84,13 +84,22 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (config, opts) => {
         return section;
     };
 
+    // Keep these labels in sync with ORPHAN_* in yaffo/utils/file_sync.py.
+    const ORPHAN_REASON_LABELS = {
+        missing: 'File deleted from disk',
+        unconfigured: 'Media directory no longer configured',
+    };
+
     const buildOrphanedSection = () => {
         const section = el('div', 'section');
         section.append(el('h2', null, 'Orphaned Database Entries'));
         section.append(el('p', 'section-description',
-            'The following photos are in the database but no longer exist on the filesystem.'));
-        const rows = orphaned.slice(0, MAX_DISPLAY_ROWS).map((p) => [String(p.id), p.full_path]);
-        section.append(buildTable(['Photo ID', 'Location'], rows));
+            'The following photos are in the database but no longer have a file under the '
+            + 'configured media directories — either the file was deleted, or its media '
+            + 'directory was removed from Settings. Syncing removes these entries.'));
+        const rows = orphaned.slice(0, MAX_DISPLAY_ROWS).map(
+            (p) => [String(p.id), ORPHAN_REASON_LABELS[p.reason] || p.reason || '—', p.full_path]);
+        section.append(buildTable(['Photo ID', 'Reason', 'Location'], rows));
         if (orphaned.length > MAX_DISPLAY_ROWS) section.append(truncationNote(orphaned.length));
         return section;
     };

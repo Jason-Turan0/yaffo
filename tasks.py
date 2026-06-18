@@ -111,16 +111,19 @@ def start_app(c, host="127.0.0.1", port=5000, debug=True):
 
 
 @task
-def start_tasks(c, workers=4, worker_type="thread"):
+def start_tasks(c, workers=1, worker_type="thread"):
     """
     Start the Huey task consumer for background job processing.
 
     Args:
         workers: Number of worker threads/processes (default: 4)
         worker_type: Worker type - 'thread' or 'process' (default: thread).
-            Thread is the cross-platform default: Huey 3.0's process workers rely
-            on a non-picklable closure, which fails under the multiprocessing
-            'spawn' start method (the default on macOS and Windows).
+            Process workers are unusable on macOS with Huey 3.0: under 'spawn'
+            (the macOS default) Huey passes a non-picklable local closure to
+            multiprocessing and the consumer dies at startup; forcing 'fork'
+            instead makes the workers segfault the moment they touch SQLite
+            (os_log is not fork-safe). So we stay on thread workers -- see
+            index_photo for how dlib is kept from crashing under concurrency.
 
     Example:
         inv start-tasks
