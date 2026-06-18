@@ -48,13 +48,20 @@ def _first_event_type(automation: Automation) -> str | None:
 
 
 def preview_automation(
-    session: Session, automation: Automation, photo_ids: list[int]
+    session: Session, automation: Automation, photo_ids: list[int], version: str | None = None
 ) -> TestRunResult:
-    """Run the automation's working (if any) or published code against `photo_ids`
-    (the user-selected file/folder), recording host calls. Assumes the caller
-    checked there is code to run."""
-    code = automation.working_code or automation.published_code
-    code_source = "working" if automation.working_code else "published"
+    """Run the automation's code against `photo_ids` (the user-selected file/folder),
+    recording host calls. `version` ("working" | "published") selects which code to
+    run — the version the user is currently viewing in the code panel — and falls back
+    to whichever exists when the requested one is absent. With no `version`, prefers
+    working over published. Assumes the caller checked there is code to run."""
+    if version == "published" and automation.published_code:
+        code, code_source = automation.published_code, "published"
+    elif version == "working" and automation.working_code:
+        code, code_source = automation.working_code, "working"
+    else:
+        code = automation.working_code or automation.published_code
+        code_source = "working" if automation.working_code else "published"
     context = EventContext(
         event_type=_first_event_type(automation), job_id=None, photo_ids=photo_ids
     )

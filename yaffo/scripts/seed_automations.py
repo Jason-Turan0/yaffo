@@ -64,10 +64,14 @@ if to_move:
             move_photo(row["id"], row["media_dir_id"], "_Duplicates")
 """
 
+# Always raises, to exercise the error path (a FAILED run in the history).
+_ERROR_CODE = 'fail("This automation always fails — used to test error handling.")\n'
+
 _EVENT_SLUG = "log-photos-on-index"
 _SCHEDULE_SLUG = "log-photos-each-minute"
 _ORGANIZE_SLUG = "organize-by-date"
 _DEDUPE_SLUG = "move-duplicates"
+_ERROR_SLUG = "always-fails"
 
 
 def seed_automations() -> None:
@@ -77,7 +81,7 @@ def seed_automations() -> None:
 
         # Replace any prior copies (ORM delete cascades to their triggers), and drop
         # any retired slugs left over from before they became system automations.
-        for slug in (_EVENT_SLUG, _SCHEDULE_SLUG, _ORGANIZE_SLUG, _DEDUPE_SLUG):
+        for slug in (_EVENT_SLUG, _SCHEDULE_SLUG, _ORGANIZE_SLUG, _DEDUPE_SLUG, _ERROR_SLUG):
             existing = db.session.query(Automation).filter_by(slug=slug).first()
             if existing is not None:
                 db.session.delete(existing)
@@ -124,11 +128,28 @@ def seed_automations() -> None:
             )],
         )
 
-        db.session.add_all([organize_automation, dedupe_automation])
-        db.session.commit()
-        print(
-            f"Seeded automations: '{organize_automation.slug}', '{dedupe_automation.slug}'."
+        # A deliberately-failing automation: each photo_indexed batch records a FAILED
+        # run so the error path (and the run-history error display) can be eyeballed.
+        error_automation = Automation(
+            slug=_ERROR_SLUG,
+            name="Always fails",
+            description="Always raises an error — for testing the failed-run path.",
+            is_system=False,
+            enabled=True,
+            handler=None,
+            published_code=_ERROR_CODE,
+            status=AUTOMATION_STATUS_READY,
+            triggers=[AutomationTrigger(
+                trigger_type=TRIGGER_TYPE_EVENT,
+                enabled=True,
+                event_type=EVENT_PHOTO_INDEXED,
+            )],
         )
+
+        seeded = [organize_automation, dedupe_automation, error_automation]
+        db.session.add_all(seeded)
+        db.session.commit()
+        print("Seeded automations: " + ", ".join(f"'{a.slug}'" for a in seeded) + ".")
 
 
 if __name__ == "__main__":

@@ -259,28 +259,43 @@
     min-width: 320px;
 }
 
-.automation-draft {
-    margin-bottom: 16px;
-    padding: 16px;
-    border: var(--border-width) solid var(--color-accent-soft-text);
-    border-radius: var(--radius-md);
-    background: var(--color-accent-soft);
-}
-
-.automation-draft-text {
-    margin: 0 0 12px;
-    color: var(--color-accent-soft-text);
-    font-size: var(--font-size-sm);
-}
-
-.automation-draft-code {
-    margin-bottom: 12px;
-    max-height: 200px;
-}
-
-.automation-draft-actions {
+/* Code panel: a header row (title + working/active toggle) above the code view. */
+.automation-code-head {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.automation-code-head .automation-section-title {
+    margin: 0;
+}
+
+/* Segmented toggle to switch the code view between the working draft and active code. */
+.automation-code-toggle {
+    display: inline-flex;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.js-code-toggle {
+    border: none;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    padding: 4px 12px;
+    cursor: pointer;
+}
+
+.js-code-toggle + .js-code-toggle {
+    border-left: var(--border-width) solid var(--color-border);
+}
+
+.js-code-toggle.active {
+    background: var(--color-accent);
+    color: var(--color-on-accent);
 }
 
 /* Run history: a compact list of recent runs (Jobs tagged with the automation). */

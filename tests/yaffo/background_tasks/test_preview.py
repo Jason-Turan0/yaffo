@@ -60,6 +60,31 @@ def test_working_code_is_preferred(monkeypatch):
     assert result.output == ["draft"]
 
 
+def test_version_published_runs_published_code(monkeypatch):
+    _fake_host(monkeypatch, lambda session, query: [])
+    automation = _FakeAutomation(working_code="print('draft')", published_code="print('live')")
+    result = preview_automation(object(), automation, [], version="published")
+    assert result.code_source == "published"
+    assert result.output == ["live"]
+
+
+def test_version_working_runs_working_code(monkeypatch):
+    _fake_host(monkeypatch, lambda session, query: [])
+    automation = _FakeAutomation(working_code="print('draft')", published_code="print('live')")
+    result = preview_automation(object(), automation, [], version="working")
+    assert result.code_source == "working"
+    assert result.output == ["draft"]
+
+
+def test_version_falls_back_when_requested_code_absent(monkeypatch):
+    # Asked for the published view but nothing published yet -> falls back to working.
+    _fake_host(monkeypatch, lambda session, query: [])
+    automation = _FakeAutomation(working_code="print('draft')", published_code=None)
+    result = preview_automation(object(), automation, [], version="published")
+    assert result.code_source == "working"
+    assert result.output == ["draft"]
+
+
 def test_no_host_calls_is_empty_actions(monkeypatch):
     _fake_host(monkeypatch, lambda session, query: [])
     result = preview_automation(object(), _FakeAutomation(published_code="print('x')"), [])

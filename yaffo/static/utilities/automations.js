@@ -104,6 +104,22 @@ window.PHOTO_ORGANIZER.initAutomationConfigure = () => {
 // actions intercepted during the run, the captured output, and any error. Changes
 // nothing (no Job recorded; the host surface is read-only).
 window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
+    // Code-version toggle (working draft vs active/published). The visible view is the
+    // version a Test runs against. The toggle is only rendered when there's an
+    // unpublished draft; otherwise there's a single (published) view.
+    const toggleButtons = document.querySelectorAll('.js-code-toggle');
+    const codeViews = document.querySelectorAll('.js-code-view');
+    let currentVersion = toggleButtons.length
+        ? (document.querySelector('.js-code-toggle.active')?.dataset.version || 'working')
+        : 'published';
+    toggleButtons.forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+            currentVersion = toggle.dataset.version;
+            toggleButtons.forEach((b) => b.classList.toggle('active', b === toggle));
+            codeViews.forEach((view) => { view.hidden = view.dataset.version !== currentVersion; });
+        });
+    });
+
     const button = document.getElementById('automation-test-button');
     const filesButtons = document.querySelectorAll('.js-test-files');
     const resultEl = document.getElementById('automation-test-result');
@@ -223,7 +239,7 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
         fetch(config.buildUrl('automations_test_files', { slug }), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path }),
+            body: JSON.stringify({ path, version: currentVersion }),
         }));
 
     const setSelection = (path, mode) => {

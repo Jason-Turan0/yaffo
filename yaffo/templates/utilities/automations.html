@@ -97,23 +97,6 @@
     {% if not selected.is_system %}
     <div class="automation-lower">
         <section class="chat-card automation-conversation">
-            {% if selected_has_draft %}
-                <div class="automation-draft">
-                    <p class="automation-draft-text">The assistant has an unpublished draft for this automation.
-                        Publish it to make it live, or discard the draft.</p>
-                    <pre class="automation-code automation-draft-code thin-scrollbar"><code>{{ selected.working_code }}</code></pre>
-                    <div class="automation-draft-actions">
-                        <button type="button" class="btn-primary"
-                                hx-post="{{ url_for('automations_publish', slug=selected.slug) }}"
-                                hx-swap="none">Publish draft
-                        </button>
-                        <button type="button" class="btn-secondary"
-                                hx-post="{{ url_for('automations_discard', slug=selected.slug) }}"
-                                hx-swap="none">Discard
-                        </button>
-                    </div>
-                </div>
-            {% endif %}
             {{ chat_dialog(
                         'automation-chat',
                         'Conversation',
@@ -128,12 +111,31 @@
         </section>
 
         <section class="automation-code-section">
-            <h3 class="automation-section-title">Code</h3>
-            {% if selected.published_code %}
+            <div class="automation-code-head">
+                <h3 class="automation-section-title">Code</h3>
+                {% if selected_has_draft %}
+                    {# Unpublished draft: one panel toggles between the working draft and
+                       the live (active) code. The visible view is the version tested. #}
+                    <div class="automation-code-toggle" role="group" aria-label="Code version">
+                        <button type="button" class="js-code-toggle active" data-version="working">Working code</button>
+                        <button type="button" class="js-code-toggle" data-version="published">Active code</button>
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if selected_has_draft %}
+                <pre class="automation-code thin-scrollbar js-code-view" data-version="working"><code>{{ selected.working_code }}</code></pre>
+                {% if selected.published_code %}
+                    <pre class="automation-code thin-scrollbar js-code-view" data-version="published" hidden><code>{{ selected.published_code }}</code></pre>
+                {% else %}
+                    <p class="no-data js-code-view" data-version="published" hidden>No active code yet — this draft hasn’t been published.</p>
+                {% endif %}
+            {% elif selected.published_code %}
                 <pre class="automation-code thin-scrollbar"><code>{{ selected.published_code }}</code></pre>
             {% else %}
                 <p class="no-data">No published code yet.</p>
             {% endif %}
+
             {% if selected.published_code or selected.working_code %}
                 <div class="automation-test">
                     <div class="automation-test-controls">
@@ -142,6 +144,16 @@
                         </button>
                         <button type="button" class="btn-secondary js-test-files" data-mode="file">Test on a file…
                         </button>
+                        {% if selected_has_draft %}
+                        <button type="button" class="btn-primary"
+                                hx-post="{{ url_for('automations_publish', slug=selected.slug) }}"
+                                hx-swap="none">Publish draft
+                        </button>
+                        <button type="button" class="btn-secondary"
+                                hx-post="{{ url_for('automations_discard', slug=selected.slug) }}"
+                                hx-swap="none">Discard
+                        </button>
+                        {% endif %}
                     </div>
                     <div id="automation-test-result" class="automation-test-result" hidden></div>
                 </div>

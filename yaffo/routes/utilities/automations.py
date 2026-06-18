@@ -475,11 +475,14 @@ def init_automations_routes(app: Flask):
             abort(404)
         if not (automation.working_code or automation.published_code):
             return jsonify({"error": "No code to test yet."}), 400
-        path = ((request.get_json(silent=True) or {}).get("path") or "").strip()
+        body = request.get_json(silent=True) or {}
+        path = (body.get("path") or "").strip()
         if not path:
             return jsonify({"error": "No path selected."}), 400
+        version = body.get("version")  # which code panel view to test: working | published
         photo_ids = photos_repository.get_photo_ids_under_path(db.session, path)
-        return jsonify(preview_automation(db.session, automation, photo_ids=photo_ids).to_dict())
+        result = preview_automation(db.session, automation, photo_ids=photo_ids, version=version)
+        return jsonify(result.to_dict())
 
     @app.route("/utilities/automations/<slug>/publish", methods=["POST"])
     def automations_publish(slug: str):
