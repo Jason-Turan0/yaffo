@@ -137,9 +137,9 @@ def test_empty_import_still_indexes_existing(immediate_db, tmp_path):
 
 
 def test_nothing_to_do_completes_both_jobs(immediate_db, tmp_path):
-    """Files already imported AND indexed: both groups empty. Chord callbacks
-    never fire for an empty group, so both jobs must finalize via the direct
-    (finalize) paths."""
+    """Files already imported AND indexed: both groups empty. An empty group is
+    immediately done, so each stage's callback still fires once and finalizes its
+    job."""
     engine, completed_events = immediate_db
     files = _make_files(tmp_path, 2)
     with _session(engine) as session:

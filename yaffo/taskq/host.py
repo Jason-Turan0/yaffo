@@ -135,13 +135,23 @@ class Host:
                 w.busy_task = None
             if row is None:
                 continue
-            if status == DONE:
-                self.store.mark_done(task_id, payload)
-                self._advance(row, payload)
-            else:
-                logger.error(f"task {row.name}[{task_id}] failed:\n{payload}")
-                self.store.mark_error(task_id, str(payload))
-                self._advance(row, None)
+            # A result/store error must never take down the supervisor; record the
+            # task as failed and keep going. (Non-JSON returns are already caught
+            # in the worker and arrive here as ERROR, so this is belt-and-braces.)
+            try:
+                if status == DONE:
+                    self.store.mark_done(task_id, payload)
+                    self._advance(row, payload)
+                else:
+                    logger.error(f"task {row.name}[{task_id}] failed:\n{payload}")
+                    self.store.mark_error(task_id, str(payload))
+                    self._advance(row, None)
+            except Exception:
+                logger.exception(f"failed to record result for {row.name}[{task_id}]")
+                try:
+                    self.store.mark_error(task_id, "host failed to record result")
+                except Exception:
+                    logger.exception(f"could not even mark {task_id} errored")
 
     def _check_crashes(self) -> None:
         for worker_id, w in list(self.workers.items()):

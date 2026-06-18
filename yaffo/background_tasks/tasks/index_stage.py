@@ -8,7 +8,7 @@ from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.background_tasks.tasks.index_photo import index_photo_task
-from yaffo.background_tasks.tasks.complete_job import complete_job_callback, finalize_job
+from yaffo.background_tasks.tasks.complete_job import complete_job_callback
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -23,10 +23,10 @@ def start_index_stage(index_job_id: str, prev_result=None) -> None:
     the index tasks read are guaranteed to exist). The files to index are read
     back from the index Job's job_data rather than threaded through the pipeline.
     `index_job_id` is the bound argument; `prev_result` only receives a value
-    when the upstream step returns non-None (the task queue appends the previous result to
-    a pipeline step's args) -- the completion steps return None, so it stays
-    unused. An empty index set finalizes the job directly, since a chord callback
-    never fires for an empty group.
+    when the upstream step returns non-None (the task queue appends the previous
+    result to a pipeline step's args) -- the completion steps return None, so it
+    stays unused. An empty index set still goes through the chord: an empty group
+    is immediately done, so the callback fires once and finalizes the job.
     """
     session = SessionFactory()
     try:
@@ -43,9 +43,5 @@ def start_index_stage(index_job_id: str, prev_result=None) -> None:
         index_photo_task.s(index_job_id, list(batch))
         for batch in batched(files_to_index, INDEX_BATCH_SIZE)
     ]
-    if members:
-        task_queue.enqueue(chord(members, complete_job_callback.s(index_job_id)))
-        logger.info(f"Dispatched index chord for job {index_job_id} ({len(files_to_index)} files)")
-    else:
-        finalize_job(index_job_id)
-        logger.info(f"Index job {index_job_id} had no files; finalized directly")
+    task_queue.enqueue(chord(members, complete_job_callback.s(index_job_id)))
+    logger.info(f"Dispatched index chord for job {index_job_id} ({len(files_to_index)} files)")

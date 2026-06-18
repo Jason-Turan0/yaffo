@@ -86,6 +86,36 @@ def test_chord_callback_fires_once_after_all_members(queue):
     assert cb_args == ("job", [7, 7, 7])
 
 
+def test_empty_chord_fires_callback_immediately(queue):
+    """An empty group is immediately done: the callback runs once with an empty
+    results list, no member tasks are created."""
+    @queue.task()
+    def callback(job_id, results=None):
+        return None
+
+    queue.enqueue(chord([], callback.s("job")))
+    executed = drain(queue.store)
+
+    assert executed == [("callback", ("job", []))]
+
+
+def test_empty_chord_then_pipeline_runs_continuation(queue):
+    """Empty group + `.then(next)`: callback fires with [], then the continuation
+    runs with the callback's result appended -- the empty-import-stage shape."""
+    @queue.task()
+    def callback(job_id, results=None):
+        return "CB"
+
+    @queue.task()
+    def nxt(arg, prev=None):
+        return None
+
+    queue.enqueue(chord([], callback.s("imp")).then(nxt, "idx"))
+    executed = drain(queue.store, results={"callback": "CB"})
+
+    assert executed == [("callback", ("imp", [])), ("nxt", ("idx", "CB"))]
+
+
 def test_pipeline_appends_prev_result(queue):
     @queue.task()
     def first(x):

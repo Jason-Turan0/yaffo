@@ -38,7 +38,7 @@ def worker_main(
     importlib.import_module(bootstrap)  # side effect: registers every @task
     module_name, attr = queue_ref.split(":")
     task_queue = getattr(importlib.import_module(module_name), attr)
-    from yaffo.taskq.core import TaskContext
+    from yaffo.taskq.core import TaskContext, assert_json_result
     from yaffo.logging_config import get_logger
 
     logger = get_logger(__name__, "background_tasks")
@@ -56,6 +56,7 @@ def worker_main(
             if context:
                 call_kwargs["task"] = TaskContext(id=task_id)
             result: Any = task.fn(*args, **call_kwargs)
+            assert_json_result(name, result)  # bad return -> reported as a failure below
             outbox.put((worker_id, task_id, DONE, result))
         except Exception:
             outbox.put((worker_id, task_id, ERROR, traceback.format_exc()))

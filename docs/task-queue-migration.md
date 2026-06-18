@@ -156,7 +156,7 @@ Key decisions:
 - [ ] Registry import module the children load on spawn (equivalent of `main.py` importing all tasks).
 
 ### C. Composition (the hard part)
-- [ ] **Group + chord**: enqueue N members with a shared `group_id`; when the last member finishes, enqueue the callback once with the members' results. Handle the **empty group** case (today empty stages call `finalize_job_task` directly — the callback must NOT fire for an empty group).
+- [x] **Group + chord**: enqueue N members with a shared `group_id`; when the last member finishes, enqueue the callback once with the members' results. **Empty group = immediately done** (changed from Huey, which never fired the callback): the callback fires once with an empty results list and the continuation runs, so the app no longer special-cases empty import/index stages (`finalize_job_task` removed; `index_jobs`/`index_stage` use one uniform chord path).
 - [ ] **Pipeline / `.then()`**: on a step finishing, enqueue the next step with `prev_result` appended to its args (matches `start_index_stage(index_job_id, prev_result=None)`).
 - [ ] **chord-then-pipeline**: reproduce `chord(members, cb).then(start_index_stage, index_job_id)` and `finalize_job_task.s(id).then(start_index_stage, id)` from `index_jobs.py`.
 - [ ] `enqueue(pipeline)` entry point that persists a whole composed graph atomically.

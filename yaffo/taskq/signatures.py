@@ -108,6 +108,18 @@ def links_from_json(data: Any) -> list[Link]:
     return [link_from_dict(d) for d in (data or [])]
 
 
+def iter_signatures(links: list[Link]):
+    """Every Signature in a pipeline (chord members, chord callbacks, single
+    links) -- used to validate args before a graph is enqueued."""
+    for link in links:
+        if isinstance(link, SingleLink):
+            yield link.sig
+        elif isinstance(link, ChordLink):
+            yield from link.members
+            if link.callback is not None:
+                yield link.callback
+
+
 def chord(members: list[Signature], callback: Optional[Signature] = None) -> Pipeline:
     """A group of member signatures with a barrier callback that fires once with
     the list of member results appended to its args. Returns a Pipeline so it can

@@ -38,9 +38,7 @@ def enqueue_index_jobs(
     from yaffo.taskq import chord
     from yaffo.background_tasks.config import task_queue
     from yaffo.background_tasks.tasks.import_photo import import_photo_task
-    from yaffo.background_tasks.tasks.complete_job import (
-        complete_job_callback, finalize_job_task,
-    )
+    from yaffo.background_tasks.tasks.complete_job import complete_job_callback
     from yaffo.background_tasks.tasks.index_stage import start_index_stage
 
     existing = {
@@ -88,11 +86,8 @@ def enqueue_index_jobs(
         import_photo_task.s(import_job_id, list(batch))
         for batch in batched(files_to_import, IMPORT_BATCH_SIZE)
     ]
-    if import_members:
-        pipeline = chord(import_members, complete_job_callback.s(import_job_id))
-        pipeline.then(start_index_stage, index_job_id)
-    else:
-        pipeline = finalize_job_task.s(import_job_id).then(start_index_stage, index_job_id)
+    pipeline = chord(import_members, complete_job_callback.s(import_job_id))
+    pipeline.then(start_index_stage, index_job_id)
     task_queue.enqueue(pipeline)
 
     logger.info(

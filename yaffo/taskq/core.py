@@ -24,7 +24,8 @@ from typing import Any, Callable, Optional
 
 from yaffo.taskq.cron import CronSpec
 from yaffo.taskq.signatures import (
-    ChordLink, Link, Pipeline, Signature, SingleLink, links_from_json, links_to_json,
+    ChordLink, Link, Pipeline, Signature, SingleLink,
+    iter_signatures, links_from_json, links_to_json,
 )
 from yaffo.taskq.store import Store, TaskRow
 
@@ -127,6 +128,7 @@ class TaskQueue:
     # ---- enqueue --------------------------------------------------------
 
     def enqueue(self, pipeline: Pipeline, delay: float = 0) -> Result:
+        _assert_json_safe(pipeline.links)
         if self.immediate:
             value = self._run_immediate(pipeline.links, _NO_PREV)
             return Result(None, value)
@@ -145,12 +147,9 @@ class TaskQueue:
                     args.append(prev)
                 prev = self._run_one(link.sig.task_name, args, dict(link.sig.kwargs))
             elif isinstance(link, ChordLink):
-                if not link.members:
-                    # An empty group: Huey's chord callback never fires, so neither
-                    # does ours, and the chain stops. (The app avoids this by
-                    # finalising empty stages directly.)
-                    prev = _NO_PREV
-                    continue
+                # An empty group is immediately done: results is [], the callback
+                # fires once with that empty list, and the chain continues. (No
+                # special-casing needed in the app for empty import/index stages.)
                 results = [
                     self._run_one(m.task_name, list(m.args), dict(m.kwargs))
                     for m in link.members
@@ -166,7 +165,43 @@ class TaskQueue:
         task = self.registry[name]
         if task.context:
             kwargs["task"] = TaskContext(id=str(uuid.uuid4()))
-        return task.fn(*args, **kwargs)
+        result = task.fn(*args, **kwargs)
+        assert_json_result(name, result)
+        return result
+
+
+def _assert_json_safe(links: list[Link]) -> None:
+    """Fail loudly at the enqueue boundary if any task's args/kwargs aren't
+    JSON-serializable. Everything enqueued is persisted as JSON and its return
+    value is JSON-appended to downstream steps, so a non-JSON arg would otherwise
+    blow up deep in the store (or in a worker) with an opaque error."""
+    for sig in iter_signatures(links):
+        try:
+            json.dumps(list(sig.args))
+            json.dumps(dict(sig.kwargs))
+        except TypeError as e:
+            raise TypeError(
+                f"task '{sig.task_name}' was enqueued with non-JSON-serializable "
+                f"args/kwargs ({e}); task payloads must be JSON-safe "
+                f"(ids/strings/numbers/lists/dicts/None)"
+            ) from e
+
+
+def assert_json_result(task_name: str, result: Any) -> None:
+    """The return-value counterpart of `_assert_json_safe`: a task's result is
+    stored as JSON and appended (positionally) to downstream chord callbacks /
+    pipeline steps, so it must be JSON-serializable. Checked right after a task
+    runs (in the worker and in immediate mode) so a bad return surfaces as a clear
+    task failure instead of crashing the host's store write."""
+    try:
+        json.dumps(result)
+    except TypeError as e:
+        raise TypeError(
+            f"task '{task_name}' returned a non-JSON-serializable value ({e}); "
+            f"task return values must be JSON-safe "
+            f"(ids/strings/numbers/lists/dicts/None) -- they are persisted and "
+            f"appended to downstream steps"
+        ) from e
 
 
 # ---- coordinator (shared by host; pure functions over a Store) ----------
@@ -197,8 +232,18 @@ def enqueue_pipeline_rows(
     callback_json = json.dumps(head.callback.to_dict()) if head.callback else None
     continuation_json = json.dumps(links_to_json(rest)) if rest else None
     if not members:
-        # Empty group -> callback never fires (Huey semantics). The app finalises
-        # empty stages directly, so this graph is never enqueued in practice.
+        # Empty group is immediately done: there are no members to wait on, so
+        # fire the callback now (with an empty results list) carrying the rest of
+        # the pipeline, or run the continuation directly if there's no callback.
+        if head.callback is not None:
+            cb = head.callback
+            return store.insert_task(
+                cb.task_name, list(cb.args) + [[]], dict(cb.kwargs),
+                context=cb.context, lock_name=cb.lock_name,
+                continuation=links_to_json(rest) if rest else None,
+            )
+        if rest:
+            return enqueue_pipeline_rows(store, rest, [])
         return None
     group_id = store.create_group(callback_json, continuation_json, len(members))
     for m in members:

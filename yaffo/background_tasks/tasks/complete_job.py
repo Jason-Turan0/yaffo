@@ -47,15 +47,9 @@ def complete_job_callback(job_id: str, results=None) -> None:
     """Chord callback: fires once every member task of a job's chord has
     finished, so the Job's counts are already final -- just finalize. `job_id` is
     the bound argument; the task queue appends the member return values as `results`, which
-    are unused (the callback is purely a completion barrier)."""
-    finalize_job(job_id)
-
-
-@task_queue.task()
-def finalize_job_task(job_id: str) -> None:
-    """Finalize a job with no member tasks to wait on (an empty import/index
-    stage). Chord callbacks never fire for an empty group, so empty stages
-    finalize through this task instead."""
+    are unused (the callback is purely a completion barrier). An empty group is
+    immediately done, so this still fires once (with an empty results list) and
+    finalizes an empty import/index stage."""
     finalize_job(job_id)
 
 

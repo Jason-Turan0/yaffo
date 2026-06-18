@@ -39,6 +39,10 @@ def marker(name):
 @tq.task()
 def boom():
     os._exit(139)  # simulate a native segfault
+
+@tq.task()
+def bad_return():
+    return {1, 2, 3}  # a set: not JSON-serializable
 '''
 
 
@@ -123,3 +127,20 @@ def test_worker_crash_is_isolated_and_recovered(probe):
     assert ok, _recorded(out)
     # the crash did not take down the host, and the pool was kept at strength
     assert len([w for w in host.workers.values()]) == 2
+
+
+def test_non_json_return_is_a_clean_failure(probe):
+    import sqlite3
+    mod, db, out = probe
+    res = mod.bad_return()   # worker rejects the non-JSON return -> task error
+    mod.marker("after")
+
+    host = _host(db)
+    ok = _run_until(host, lambda: _recorded(out) >= {"after"})
+    assert ok, _recorded(out)
+
+    conn = sqlite3.connect(db)
+    status = conn.execute("SELECT status FROM task WHERE id=?", (res.id,)).fetchone()[0]
+    conn.close()
+    assert status == "error"          # reported as a failure, not a host crash
+    assert len(host.workers) == 2     # host survived, pool intact

@@ -1,7 +1,7 @@
 from yaffo.background_tasks.tasks.import_photo import import_photo_task
 from yaffo.background_tasks.tasks.index_photo import index_photo_task
 from yaffo.background_tasks.tasks.complete_job import (
-    complete_job_task, complete_job_callback, finalize_job_task, finalize_job,
+    complete_job_task, complete_job_callback, finalize_job,
 )
 from yaffo.background_tasks.tasks.index_stage import start_index_stage
 from yaffo.background_tasks.tasks.find_duplicates import find_duplicates_task
@@ -33,7 +33,6 @@ __all__ = [
     'index_photo_task',
     'complete_job_task',
     'complete_job_callback',
-    'finalize_job_task',
     'finalize_job',
     'start_index_stage',
     'find_duplicates_task',
