@@ -79,6 +79,36 @@
     color: var(--color-text);
 }
 
+/* Live "Scanning the filesystem…" indicator shown while the scan stream runs. */
+.scan-status {
+    font-size: var(--font-size-base);
+    color: var(--color-text-muted);
+    margin: 0 0 20px 0;
+}
+
+.scan-status::before {
+    content: "";
+    display: inline-block;
+    width: 0.8em;
+    height: 0.8em;
+    margin-right: 0.5em;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    vertical-align: -0.1em;
+    animation: scan-spin 0.7s linear infinite;
+}
+
+@keyframes scan-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* "Showing the first N of M" note under a capped scan-results table. */
+.scan-truncation {
+    margin: 12px 0 0 0;
+    font-style: italic;
+}
+
 .section {
     background: var(--color-surface);
     padding: 25px;

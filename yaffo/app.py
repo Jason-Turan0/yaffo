@@ -60,4 +60,6 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None):
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True)
+    # threaded so a long streaming response (e.g. the index-photos scan) doesn't block
+    # the page's other requests on the single-user dev server.
+    app.run(debug=True, threaded=True)

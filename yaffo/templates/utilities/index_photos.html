@@ -7,9 +7,8 @@
 {% block utility_content %}
 <div class="utility-page">
     {% set header_actions %}
-        {% if unindexed_photos|length > 0 or orphaned_photos|length > 0 %}
-        <button class="btn btn-primary" id="sync-button" data-icon="sync" {% if not can_sync or active_jobs|length > 0 %}disabled{% endif %}>Sync Database</button>
-        {% endif %}
+        {# Shown by JS once the scan finds work to do. #}
+        <button class="btn btn-primary" id="sync-button" data-icon="sync" hidden>Sync Database</button>
     {% endset %}
     {{ page_header('Index Photos', 'Compare photos on the file system with the database', actions=header_actions) }}
 
@@ -28,100 +27,41 @@
 
     {{ job_section(active_jobs, show_cancel=true) }}
 
+    {% if media_dirs|length > 0 %}
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-label">Total on Filesystem</div>
-            <div class="stat-value">{{ total_filesystem }}</div>
+            <div class="stat-value" id="stat-total-filesystem">—</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Imported in Database</div>
-            <div class="stat-value">{{ total_imported }}</div>
+            <div class="stat-value" id="stat-total-imported">—</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Indexed in Database</div>
-            <div class="stat-value">{{ total_indexed }}</div>
+            <div class="stat-value" id="stat-total-indexed">—</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Not Indexed</div>
-            <div class="stat-value">{{ unindexed_photos|length }}</div>
+            <div class="stat-value" id="stat-unindexed">—</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Orphaned in DB</div>
-            <div class="stat-value">{{ orphaned_photos|length }}</div>
+            <div class="stat-value" id="stat-orphaned">—</div>
         </div>
     </div>
 
-    {% if unindexed_photos|length > 0 %}
-    <div class="section">
-        <h2>Unindexed Photos</h2>
-        <p class="section-description">
-            The following photos exist in the configured media directories but are not in the database.
-            {% if media_dirs|length > 0 %}
-            <br>Media directories:
-            {% for dir in media_dirs %}
-                <code>{{ dir }}</code>{% if not loop.last %}, {% endif %}
-            {% endfor %}
-            {% endif %}
-        </p>
+    <p class="scan-status" id="scan-status" hidden></p>
 
-        <div class="table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Filename</th>
-                        <th>Location</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for photo in unindexed_photos %}
-                    <tr>
-                        <td>{{ photo.filename }}</td>
-                        <td><code>{{ photo.full_path }}</code></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if orphaned_photos|length > 0 %}
-    <div class="section">
-        <h2>Orphaned Database Entries</h2>
-        <p class="section-description">
-            The following photos are in the database but no longer exist on the filesystem.
-        </p>
-
-        <div class="table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Photo ID</th>
-                        <th>Location</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for photo in orphaned_photos %}
-                    <tr>
-                        <td>{{ photo.id }}</td>
-                        <td><code>{{ photo.full_path }}</code></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+    {# JS fills this with the unindexed / orphaned tables (or an "in sync" state)
+       once the scan stream completes. #}
+    <div id="scan-results"></div>
     {% endif %}
 
     {% if media_dirs|length == 0 %}
     <div class="empty-state">
         <h2>No Media Directories Configured</h2>
         <p>Please configure media directories in <a href="{{ url_for('settings_index') }}">Settings</a> to start indexing photos.</p>
-    </div>
-    {% elif unindexed_photos|length == 0 and orphaned_photos|length == 0 %}
-    <div class="empty-state">
-        <h2>Everything is in sync</h2>
-        <p>All photos on the filesystem are indexed, and all database entries have corresponding files.</p>
     </div>
     {% endif %}
 </div>
@@ -130,6 +70,11 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='utilities/index_photos.js') }}"></script>
 <script>
-window.PHOTO_ORGANIZER.initIndexPhotos({{ unindexed_photos | tojson }}, {{ orphaned_photos | tojson }});
+window.PHOTO_ORGANIZER.initIndexPhotos(window.APP_CONFIG, {
+    canScan: {{ can_scan | tojson }},
+    canSync: {{ can_sync | tojson }},
+    hasActiveJobs: {{ has_active_jobs | tojson }},
+    mediaDirs: {{ media_dirs | tojson }},
+});
 </script>
 {% endblock %}
