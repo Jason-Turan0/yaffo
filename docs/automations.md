@@ -293,15 +293,28 @@ polling. Reuses the page-builder agent/model infrastructure.
 - **Persistence** (`db/repositories/automation_repository.py`): `add_message`
   (Conversation rows via `automation_id`), `set_status`, `write_working_code`,
   **`publish`** (working → published, `ACCEPTED`), `discard_draft`, `get_status`.
-- **Tool** (`page_builder/tool_providers/automation_tool.py`) —
-  `write_automation_code`: parse-checks via `validate_starlark` and persists into
-  `working_code`, returning syntax errors to the model to retry.
+- **Tools** — `write_automation_code`
+  (`page_builder/tool_providers/automation_tool.py`): parse-checks via
+  `validate_starlark` and persists into `working_code`, returning syntax errors to
+  the model to retry. And **`add_automation_trigger` / `remove_automation_trigger`**
+  (`automation_trigger_tool.py`): the model decides *when* the automation runs (the
+  twin of write-code's *what*), managing `schedule` triggers (cron, validated with
+  `is_valid_cron` — the server stays the trust boundary, as in the UI) and `event`
+  triggers (an `EVENTS` key). Both tools address a trigger by the same shape —
+  `trigger_type` + its cron/event_type — so the model removes one the way it adds it
+  (no ids to track). All slug-scoped, persisting via
+  `automation_repository.{add,remove}_{schedule,event}_trigger` (the add helpers are
+  shared with the trigger-edit route, so creation lives in one place); add is
+  idempotent and remove-of-absent is reported, not an error. The detail page reloads
+  when the generation finishes, so the trigger changes show up then. The system
+  prompt's `<triggers>` section tells the model to set up the triggers that fit the
+  request.
 - **Prompts** — `prompt_generator/automation_system_prompt.py` (stable: language
   rules, the `ctx` contract, the host API via `render_host_api()`, data sources via
   `FIELDS_BY_SOURCE`, the `EVENTS` catalog — all *derived*, none restated) +
   `automation_user_prompt.py` (volatile: request + current code).
 - **Agent + task** — `agent.create_automation_builder_agent` (data-query +
-  write-code tools); `tasks/generate_automation.py::generate_automation_task` runs
+  write-code + add-trigger tools); `tasks/generate_automation.py::generate_automation_task` runs
   it, persisting the conversation and driving `IN_PROGRESS → READY/FAILED`, with
   cooperative cancel via `get_automation_status`.
 
@@ -583,7 +596,7 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |
 | Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |
-| Builder tool | `yaffo/page_builder/tool_providers/automation_tool.py` |
+| Builder tools (write-code + add-trigger) | `yaffo/page_builder/tool_providers/{automation_tool,automation_trigger_tool}.py` |
 | Builder prompts | `yaffo/page_builder/prompt_generator/automation_{system,user}_prompt.py` |
 | Builder agent + task | `yaffo/page_builder/agent.py`, `yaffo/background_tasks/tasks/generate_automation.py` |
 | UI routes | `yaffo/routes/utilities/automations.py` (+ `common.automations_sidebar_context`) |

@@ -73,9 +73,24 @@ def _sources() -> str:
 def _events() -> str:
     names = ", ".join(f"{key} ({label})" for key, label in EVENTS.items())
     return block("events", [
-        "Events an automation can be triggered by (the trigger is configured separately;",
-        "you only write the script that reacts):",
+        "Domain events an automation can be triggered by (add one with",
+        "add_automation_trigger; you write the script that reacts to it):",
         names,
+    ])
+
+
+def _triggers() -> str:
+    return block("triggers", [
+        "Decide when the automation should run and add the matching trigger with",
+        "add_automation_trigger:",
+        "- A schedule trigger runs on a 5-field cron (e.g. '0 3 * * *' = daily at 3am).",
+        "- An event trigger runs when a domain event fires (see <events>); the run's",
+        "  ctx names the photos that event concerns.",
+        "Pick the trigger that fits the request — recurring upkeep wants a schedule, a",
+        "react-to-new-photos task wants an event. An automation may have several. Drop",
+        "one you no longer want with remove_automation_trigger (identified the same way",
+        "— trigger_type plus its cron / event_type). The user can still adjust triggers",
+        "in the UI afterward, so set up what's clearly intended and don't ask.",
     ])
 
 
@@ -98,5 +113,6 @@ def build_automation_builder_system_prompt() -> str:
         _host_api(),
         _sources(),
         _events(),
+        _triggers(),
         _conventions(),
     ])

@@ -10,14 +10,80 @@ from sqlalchemy.orm import Session
 
 from yaffo.db.models import (
     Automation,
+    AutomationTrigger,
     Conversation,
     Job,
     AUTOMATION_STATUS_ACCEPTED,
+    TRIGGER_TYPE_EVENT,
+    TRIGGER_TYPE_SCHEDULE,
 )
 
 
 def get_by_slug(session: Session, slug: str) -> Automation | None:
     return session.query(Automation).filter_by(slug=slug).first()
+
+
+def add_schedule_trigger(session: Session, slug: str, cron: str) -> AutomationTrigger | None:
+    """Add an enabled schedule trigger (caller validates `cron` first). next_run_at
+    is left NULL so the dispatcher initialises it from the cron on its next tick.
+    Returns None when the automation is gone."""
+    automation = get_by_slug(session, slug)
+    if automation is None:
+        return None
+    trigger = AutomationTrigger(
+        automation_id=automation.id, trigger_type=TRIGGER_TYPE_SCHEDULE,
+        enabled=True, cron=cron,
+    )
+    session.add(trigger)
+    session.commit()
+    return trigger
+
+
+def add_event_trigger(session: Session, slug: str, event_type: str) -> AutomationTrigger | None:
+    """Add an enabled event trigger (caller validates `event_type` against EVENTS).
+    Returns None when the automation is gone."""
+    automation = get_by_slug(session, slug)
+    if automation is None:
+        return None
+    trigger = AutomationTrigger(
+        automation_id=automation.id, trigger_type=TRIGGER_TYPE_EVENT,
+        enabled=True, event_type=event_type,
+    )
+    session.add(trigger)
+    session.commit()
+    return trigger
+
+
+def remove_schedule_trigger(session: Session, slug: str, cron: str) -> int:
+    """Delete the automation's schedule trigger(s) matching `cron`. Returns the
+    number removed (0 if the automation is gone or nothing matched)."""
+    automation = get_by_slug(session, slug)
+    if automation is None:
+        return 0
+    matches = [
+        t for t in automation.triggers
+        if t.trigger_type == TRIGGER_TYPE_SCHEDULE and t.cron == cron
+    ]
+    for trigger in matches:
+        session.delete(trigger)
+    session.commit()
+    return len(matches)
+
+
+def remove_event_trigger(session: Session, slug: str, event_type: str) -> int:
+    """Delete the automation's event trigger(s) for `event_type`. Returns the number
+    removed (0 if the automation is gone or nothing matched)."""
+    automation = get_by_slug(session, slug)
+    if automation is None:
+        return 0
+    matches = [
+        t for t in automation.triggers
+        if t.trigger_type == TRIGGER_TYPE_EVENT and t.event_type == event_type
+    ]
+    for trigger in matches:
+        session.delete(trigger)
+    session.commit()
+    return len(matches)
 
 
 def get_recent_jobs(session: Session, automation_id: int, limit: int = 10) -> list[Job]:

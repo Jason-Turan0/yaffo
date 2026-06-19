@@ -14,6 +14,7 @@ from yaffo.page_builder.tool_providers.widget_template_tool import WidgetTemplat
 from yaffo.page_builder.tool_providers.theme_tool import ThemeToolProvider
 from yaffo.page_builder.tool_providers.theme_catalog_tool import ThemeCatalogToolProvider
 from yaffo.page_builder.tool_providers.automation_tool import AutomationToolProvider
+from yaffo.page_builder.tool_providers.automation_trigger_tool import AutomationTriggerToolProvider
 
 __all__ = [
     "CallToolReturn",
@@ -29,4 +30,5 @@ __all__ = [
     "ThemeToolProvider",
     "ThemeCatalogToolProvider",
     "AutomationToolProvider",
+    "AutomationTriggerToolProvider",
 ]

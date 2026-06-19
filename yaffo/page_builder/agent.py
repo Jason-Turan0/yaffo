@@ -25,6 +25,7 @@ from yaffo.page_builder.prompt_generator.theme_system_prompt import build_templa
 from yaffo.page_builder.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
 from yaffo.page_builder.tool_providers import (
     AutomationToolProvider,
+    AutomationTriggerToolProvider,
     ContentBlock,
     DataQueryToolProvider,
     ThemeCatalogToolProvider,
@@ -250,13 +251,14 @@ def create_automation_builder_agent(
 ) -> Agent:
     """Wire the agent for a custom automation: the write_automation_code tool (scoped
     to `slug`, which persists the working draft via `session`) plus the data-query
-    tool so the model can inspect real data while writing, and the stable
-    automation-builder system prompt. `model` and `api_key` are required — the caller
-    resolves them — so neither this nor the client falls through to db.session or a
-    global key lookup."""
+    tool so the model can inspect real data while writing, the add-trigger tool so it
+    can decide when the automation runs, and the stable automation-builder system
+    prompt. `model` and `api_key` are required — the caller resolves them — so neither
+    this nor the client falls through to db.session or a global key lookup."""
     providers: list[ToolProvider] = [
         DataQueryToolProvider(session=session),
         AutomationToolProvider(slug, session=session),
+        AutomationTriggerToolProvider(slug, session=session),
     ]
     client = AnthropicModelClient(
         model=model,

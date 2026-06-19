@@ -33,7 +33,6 @@ from yaffo.db.models import (
     JOB_STATUS_COMPLETED,
     JOB_STATUS_FAILED,
     TRIGGER_TYPE_EVENT,
-    TRIGGER_TYPE_SCHEDULE,
 )
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.db.repositories import photos_repository
@@ -401,21 +400,13 @@ def init_automations_routes(app: Flask):
                 trigger.next_run_at = None
                 db.session.commit()
             else:
-                db.session.add(AutomationTrigger(
-                    automation_id=automation.id, trigger_type=TRIGGER_TYPE_SCHEDULE,
-                    enabled=True, cron=cron,
-                ))
-                db.session.commit()
+                repo.add_schedule_trigger(db.session, slug, cron)
         elif action == "add_event":
             event_type = (request.form.get("new_event_type") or "").strip()
             if event_type not in EVENTS:
                 error = "Choose an event type."
             else:
-                db.session.add(AutomationTrigger(
-                    automation_id=automation.id, trigger_type=TRIGGER_TYPE_EVENT,
-                    enabled=True, event_type=event_type,
-                ))
-                db.session.commit()
+                repo.add_event_trigger(db.session, slug, event_type)
         elif action in ("remove", "toggle"):
             trigger = _find_trigger(automation, request.form.get("trigger_id"))
             if trigger is None:
