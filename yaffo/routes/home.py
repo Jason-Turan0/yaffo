@@ -40,6 +40,7 @@ def init_home_routes(app: Flask):
         path = path.strip() if path else None
         person_ids = request.args.getlist("person", type=int)
         person_match_type = request.args.get("person-match-type", default='any', type=str)
+        gender = request.args.get("gender", type=int)
         labels_ids = request.args.getlist("labels", type=int)
         labels_match_type = request.args.get("labels-match-type", default='any', type=str)
         tag_name = request.args.get("tag-name", type=str)
@@ -59,6 +60,7 @@ def init_home_routes(app: Flask):
         query = (
             db.session.query(Photo)
             .options(joinedload(Photo.faces).joinedload(Face.people))
+            .options(joinedload(Photo.labels).joinedload(PhotoLabel.label))
             .order_by(Photo.date_taken.desc())
         )
 
@@ -92,6 +94,16 @@ def init_home_routes(app: Flask):
                     .distinct()
                 )
                 query = query.filter(Photo.id.in_(subquery))
+
+        if gender is not None:
+            ##TODO capture actual gender from user and use that for deterministic instead of approximate filter
+            subquery = (
+                db.session.query(Photo.id)
+                .join(Photo.faces)
+                .filter(Face.gender == gender)
+            )
+            query = query.filter(Photo.id.in_(subquery))
+
         if labels_ids and labels_match_type and len(labels_ids) > 0:
             if labels_match_type == 'all':
                 for label_id in labels_ids:
@@ -204,6 +216,7 @@ def init_home_routes(app: Flask):
             'tag_names': tag_names_list,
             'location_names': location_names_list,
             'labels': labels,
+            'genders': [{'name': "Male", 'value': 1},{'name': "Female", 'value': 0}],
             'selected_path': path,
             'selected_person_ids': person_ids,
             'selected_person_match_type': person_match_type,
@@ -219,6 +232,7 @@ def init_home_routes(app: Flask):
             'selected_proximity_location': proximity_location,
             'selected_year': year,
             'selected_month': month,
+            'selected_gender': gender,
             "page_sizes": [10, 25, 50, 100, 250],
             "page_size": filter_page_size
         }

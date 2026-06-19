@@ -9,78 +9,88 @@
 {% endblock %}
 
 {% block content %}
-{% from "_sidebar.html" import render_sidebar  %}
-{% from "components/pagination.html" import pagination as render_pagination %}
-{% from "components/page_header.html" import page_header %}
+    {% from "_sidebar.html" import render_sidebar %}
+    {% from "components/pagination.html" import pagination as render_pagination %}
+    {% from "components/page_header.html" import page_header %}
 
-<div class="main-container-layout">
-    {% macro render_filters() %}
-        {% include "filters/_path.html" %}
-        {% include "filters/_people.html" %}
-        {% include "filters/_labels.html" %}
-        {% include "filters/_tags.html" %}
-        {% include "filters/_locations.html" %}
-    {% endmacro %}
-    {{ render_sidebar(url_for('index'), filters, render_filters) }}
-    <div class="main-content photo-gallery">
-        {% call page_header('Photo Library') %}
+    <div class="main-container-layout">
+        {% macro render_filters() %}
+            {% include "filters/_path.html" %}
+            {% include "filters/_people.html" %}
+            {% include "filters/_gender.html" %}
+            {% include "filters/_labels.html" %}
+            {% include "filters/_tags.html" %}
+            {% include "filters/_locations.html" %}
+        {% endmacro %}
+        {{ render_sidebar(url_for('index'), filters, render_filters) }}
+        <div class="main-content photo-gallery">
+            {% call page_header('Photo Library') %}
+                {% if photos|length > 0 %}
+                    Showing {{ photos|length }} of {{ photo_count }} photo{{ 's' if photos|length != 1 else '' }}
+                {% else %}
+                    No photos found
+                {% endif %}
+            {% endcall %}
+
             {% if photos|length > 0 %}
-                Showing {{ photos|length }} of {{photo_count}} photo{{ 's' if photos|length != 1 else '' }}
-            {% else %}
-                No photos found
-            {% endif %}
-        {% endcall %}
+                <div class="photo-grid">
+                    {% for photo in photos %}
+                        <div class="photo-card"
+                             onclick="window.open('{{ url_for('photo_view', photo_id=photo.id) }}', '_blank')">
+                            <div class="photo-thumb">
+                                <img src="{{ url_for('photo', photo_id=photo.id) }}"
+                                     data-fallback="{{ url_for('placeholder') }}"
+                                     alt="Photo from {{ photo.date_taken | format_date ('date') }}">
+                                <dl class="photo-hover">
+                                    <div class="photo-hover-row">
+                                        <dt>Name</dt>
+                                        <dd class="photo-hover-path"
+                                            title="{{ photo.full_file_path }}">{{ photo.file_name }}</dd>
+                                    </div>
+                                    <div class="photo-hover-row">
+                                        <dt>Folder</dt>
+                                        <dd class="photo-hover-path" title="{{ photo.folder }}">{{ photo.folder }}</dd>
+                                    </div>
+                                    <div class="photo-hover-row">
+                                        <dt>Taken</dt>
+                                        <dd>{{ photo.date_taken | format_date('datetime') if photo.date_taken else 'Unknown date' }}</dd>
+                                    </div>
+                                    {% if photo.location_name %}
+                                        <div class="photo-hover-row">
+                                            <dt>Location</dt>
+                                            <dd>{{ photo.location_name }}</dd>
+                                        </div>
+                                    {% endif %}
+                                    {% if photo.latitude is not none and photo.longitude is not none %}
+                                        <div class="photo-hover-row">
+                                            <dt>Coordinates</dt>
+                                            <dd>{{ '%.5f'|format(photo.latitude) }}, {{ '%.5f'|format(photo.longitude) }}</dd>
+                                        </div>
+                                    {% endif %}
+                                    {% if photo.labels %}
+                                        <div class="photo-hover-row">
+                                            <dt>Labels</dt>
+                                            <dd>{{ photo.labels | map(attribute='label.name') | join(', ') }}</dd>
+                                        </div>
+                                    {% endif %}
 
-        {% if photos|length > 0 %}
-        <div class="photo-grid">
-            {% for photo in photos %}
-            <div class="photo-card" onclick="window.open('{{ url_for('photo_view', photo_id=photo.id) }}', '_blank')">
-                <div class="photo-thumb">
-                    <img src="{{ url_for('photo', photo_id=photo.id) }}"
-                         data-fallback="{{ url_for('placeholder') }}"
-                         alt="Photo from {{ photo.date_taken | format_date ('date') }}">
-                    <dl class="photo-hover">
-                        <div class="photo-hover-row">
-                            <dt>Name</dt>
-                            <dd class="photo-hover-path" title="{{ photo.full_file_path }}">{{ photo.file_name }}</dd>
+                                </dl>
+                            </div>
+                            <div class="photo-info">
+                                <div class="photo-date">{{ photo.date_taken | format_date ("date")  if photo.date_taken else 'Unknown date' }}</div>
+                                {% if photo.people|length > 0 %}
+                                    <div class="photo-people">
+                                        {% for person in photo.people %}
+                                            <span class="person-tag">{{ person.name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
-                        <div class="photo-hover-row">
-                            <dt>Folder</dt>
-                            <dd class="photo-hover-path" title="{{ photo.folder }}">{{ photo.folder }}</dd>
-                        </div>
-                        <div class="photo-hover-row">
-                            <dt>Taken</dt>
-                            <dd>{{ photo.date_taken | format_date('datetime') if photo.date_taken else 'Unknown date' }}</dd>
-                        </div>
-                        {% if photo.location_name %}
-                        <div class="photo-hover-row">
-                            <dt>Location</dt>
-                            <dd>{{ photo.location_name }}</dd>
-                        </div>
-                        {% endif %}
-                        {% if photo.latitude is not none and photo.longitude is not none %}
-                        <div class="photo-hover-row">
-                            <dt>Coordinates</dt>
-                            <dd>{{ '%.5f'|format(photo.latitude) }}, {{ '%.5f'|format(photo.longitude) }}</dd>
-                        </div>
-                        {% endif %}
-                    </dl>
+                    {% endfor %}
                 </div>
-                <div class="photo-info">
-                    <div class="photo-date">{{ photo.date_taken | format_date ("date")  if photo.date_taken else 'Unknown date' }}</div>
-                    {% if photo.people|length > 0 %}
-                    <div class="photo-people">
-                        {% for person in photo.people %}
-                        <span class="person-tag">{{ person.name }}</span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
 
-        {{ render_pagination(
+                {{ render_pagination(
             pagination.current_page,
             pagination.total_items,
             pagination.page_size,
@@ -99,22 +109,25 @@
                 'proximity-lat': filters.selected_proximity_lat,
                 'proximity-lon': filters.selected_proximity_lon,
                 'proximity-distance': filters.selected_proximity_distance,
-                'proximity-location': filters.selected_proximity_location
+                'proximity-location': filters.selected_proximity_location,
+                'labels':filters.selected_label_ids,
+                'labels-match-type': filters.selected_labels_match_type,
+                'gender': filters.selected_gender
             }
         ) }}
-        {% else %}
-        <div class="empty-state">
-            <h2>No photos found</h2>
-            <p>Try adjusting your filters or check back later.</p>
+            {% else %}
+                <div class="empty-state">
+                    <h2>No photos found</h2>
+                    <p>Try adjusting your filters or check back later.</p>
+                </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='filters/location-autocomplete.js') }}"></script>
-<script>
-window.PHOTO_ORGANIZER.initLocationAutocomplete(window.APP_CONFIG);
-</script>
+    <script src="{{ url_for('static', filename='filters/location-autocomplete.js') }}"></script>
+    <script>
+        window.PHOTO_ORGANIZER.initLocationAutocomplete(window.APP_CONFIG);
+    </script>
 {% endblock %}
