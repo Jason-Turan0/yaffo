@@ -23,7 +23,10 @@ def image_from_path(path: Path) -> PIL_Image:
             image = Image.open(path)
     else:
         image = Image.open(path)
-    if image.mode in ("RGBA", "LA", "P"):
+    if image.mode != "RGB":
+        # Normalize everything to 3-channel RGB: grayscale ("L") would otherwise
+        # reach face detection as a 2-D array and break its channel indexing, and
+        # RGBA/LA/P/CMYK each have their own channel count.
         image = image.convert("RGB")
     return image
 
