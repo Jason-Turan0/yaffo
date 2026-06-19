@@ -253,11 +253,12 @@ AUTOMATION_HANDLER_EXPORT_PHOTO_TAG = "export_photo_tag"
 AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME = "assign_location_name"
 AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS = "geotag_from_neighbors"
 
-# Default match threshold for the auto-assign-faces automation (overridable via
-# Automation.config["threshold"]; see background_tasks.automation_config).
-# ArcFace cosine: genuine pairs land ~0.4-0.65, impostors below ~0.3 (see
-# benchmarks/face/); 0.45 favours confident assignments. Tune empirically.
-AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 0.45
+# Default match threshold for the auto-assign-faces automation, on the SAME 0-100
+# UI similarity scale as the face screens (0 = least similar, 100 = most similar;
+# overridable via Automation.config["threshold"]). The task scales it to a cosine
+# cutoff against the live similarity band (compare_utils.ui_threshold_to_similarity).
+# 50 is the neutral midpoint, matching the assignment screen's default.
+AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 50
 
 # Default radius (metres) within which the assign-location-name automation reuses a
 # nearby photo's location_name (overridable via config["nearby_radius_meters"]).

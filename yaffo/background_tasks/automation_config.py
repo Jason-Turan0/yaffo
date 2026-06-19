@@ -51,14 +51,15 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
             label="Match threshold",
             help=(
                 "A detected face is assigned only when exactly one person matches at "
-                "or above this cosine similarity. Higher is stricter — fewer, more "
-                "confident assignments. ArcFace genuine matches sit ~0.4–0.65."
+                "or above this similarity (0 = least similar, 100 = most similar — "
+                "the same scale as the face assignment screen). Higher is stricter: "
+                "fewer, more confident assignments."
             ),
-            min=0.2,
-            max=0.8,
-            step=0.01,
+            min=0,
+            max=100,
+            step=1,
             default=AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD,
-            type='float'
+            type='int'
         ),
     ],
     AUTOMATION_HANDLER_EXPORT_PHOTO_TAG: [

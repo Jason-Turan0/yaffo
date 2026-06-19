@@ -392,30 +392,30 @@ def _add_system_assign_faces(app):
     configurable threshold (see background_tasks.automation_config)."""
     _add(
         app, slug="auto_assign_faces", name="Auto-assign faces",
-        is_system=True, handler="auto_assign_faces", config={"threshold": 0.95},
+        is_system=True, handler="auto_assign_faces", config={"threshold": 60},
     )
 
 
 def test_config_saves_valid_threshold(app, client):
     _add_system_assign_faces(app)
     resp = client.post(
-        "/utilities/automations/auto_assign_faces/config", data={"threshold": "0.8"}
+        "/utilities/automations/auto_assign_faces/config", data={"threshold": "70"}
     )
     assert resp.status_code == 302
     with app.app_context():
         a = db.session.query(Automation).filter_by(slug="auto_assign_faces").first()
-        assert a.config == {"threshold": 0.8}
+        assert a.config == {"threshold": 70}  # 0-100 UI scale, stored as int
 
 
 def test_config_rejects_out_of_range(app, client):
     _add_system_assign_faces(app)
     resp = client.post(
-        "/utilities/automations/auto_assign_faces/config", data={"threshold": "2.0"}
+        "/utilities/automations/auto_assign_faces/config", data={"threshold": "150"}
     )
     assert resp.status_code == 400
     with app.app_context():
         a = db.session.query(Automation).filter_by(slug="auto_assign_faces").first()
-        assert a.config == {"threshold": 0.95}  # unchanged
+        assert a.config == {"threshold": 60}  # unchanged
 
 
 def test_config_rejects_non_numeric(app, client):

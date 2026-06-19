@@ -196,7 +196,7 @@ def init_db():
         INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status, config)
         VALUES ('auto_assign_faces', 'Auto-assign faces',
                 'When a photo is indexed, assign each detected face to the one person it matches above the threshold — a face matching several people is left unassigned.',
-                1, 0, 'auto_assign_faces', 'READY', '{"threshold": 0.45}')
+                1, 0, 'auto_assign_faces', 'READY', '{"threshold": 50}')
     """)
     cursor.execute("""
         INSERT INTO automation_triggers (automation_id, trigger_type, enabled, event_type)

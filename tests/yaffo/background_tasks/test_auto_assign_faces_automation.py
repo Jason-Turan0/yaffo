@@ -78,6 +78,37 @@ def test_no_people_is_noop(monkeypatch):
     assert mod._assign_faces(session=None, photo_ids=[1], threshold=0.95) == 0
 
 
+def test_task_scales_ui_threshold_to_cosine_against_the_band(monkeypatch):
+    """The stored config value is a 0-100 UI threshold; the task must scale it to a
+    cosine cutoff against the live similarity band before matching -- not pass the
+    raw UI number to _assign_faces."""
+    captured = {}
+
+    class FakeFactory:
+        def __call__(self):
+            return SimpleNamespace(get=lambda model, _id: SimpleNamespace(id=_id), close=lambda: None)
+
+        def remove(self):
+            pass
+
+    monkeypatch.setattr(mod, "SessionFactory", FakeFactory())
+    monkeypatch.setattr(mod, "config_value", lambda automation, field: 50)  # UI midpoint
+    monkeypatch.setattr(mod, "get_similarity_bounds", lambda session: (0.40, 0.80))
+    monkeypatch.setattr(mod, "record_run", lambda session, automation, work: work())
+
+    def _capture(session, photo_ids, threshold):
+        captured["threshold"] = threshold
+        return 0
+
+    monkeypatch.setattr(mod, "_assign_faces", _capture)
+
+    # .fn is the undecorated function -- run it inline instead of enqueueing.
+    mod.auto_assign_faces_automation_task.fn(automation_id=1, photo_ids=[1])
+
+    # ui_threshold_to_similarity(50, 0.40, 0.80) == midpoint == 0.60
+    assert captured["threshold"] == pytest.approx(0.60)
+
+
 def test_handler_enqueues_for_event_photos(monkeypatch):
     calls: list[tuple[int, list[int]]] = []
     monkeypatch.setattr(

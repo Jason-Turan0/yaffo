@@ -19,7 +19,8 @@ from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, AUTOMATION_HANDLER_AUTO_ASSIGN_FACES
 from yaffo.db.repositories import person_repository, photos_repository
-from yaffo.domain.compare_utils import calculate_face_similarity
+from yaffo.db.repositories.person_repository import get_similarity_bounds
+from yaffo.domain.compare_utils import calculate_face_similarity, ui_threshold_to_similarity
 
 # The handler's lone config field (see automation_config.AUTOMATION_CONFIG).
 _THRESHOLD_FIELD = AUTOMATION_CONFIG[AUTOMATION_HANDLER_AUTO_ASSIGN_FACES][0]
@@ -55,13 +56,16 @@ def auto_assign_faces_automation_task(automation_id: int, photo_ids: list[int]):
         automation = session.get(Automation, automation_id)
         if automation is None:
             return
-        threshold = config_value(automation, _THRESHOLD_FIELD)
+        # The stored threshold is a 0-100 UI value; scale it to a cosine cutoff
+        # against the live similarity band, exactly as the face screens do.
+        ui_threshold = config_value(automation, _THRESHOLD_FIELD)
+        threshold = ui_threshold_to_similarity(ui_threshold, *get_similarity_bounds(session))
 
         def work() -> str:
             assigned = _assign_faces(session, photo_ids, threshold)
             return (
                 f"assigned {assigned} face(s) across {len(photo_ids)} "
-                f"photo(s) at threshold {threshold}"
+                f"photo(s) at threshold {ui_threshold} (cosine {threshold:.3f})"
             )
 
         record_run(session, automation, work)
