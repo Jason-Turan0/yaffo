@@ -1,5 +1,6 @@
 import sqlite3
 from yaffo.common import DB_PATH
+from yaffo.db.models import CLASSIFY_LABELS_DEFAULT_THRESHOLD, CLASSIFY_LABELS_DEFAULT_MAX
 
 # Starter vocabulary for the classify-labels automation — common subjects, scenes,
 # activities, and events in personal photos. Seeded as `is_default` rows; users
@@ -205,8 +206,8 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_photo_labels_photo_id ON photo_labels(photo_id)")
 
     cursor.executemany(
-        "INSERT OR IGNORE INTO classification_labels (name, is_default) VALUES (?, 1)",
-        [(name,) for name in DEFAULT_CLASSIFICATION_LABELS],
+        "INSERT OR IGNORE INTO classification_labels (name, prompt, is_default) VALUES (?, ?, 1)",
+        DEFAULT_CLASSIFICATION_LABELS,
     )
 
     cursor.execute("""
@@ -356,13 +357,14 @@ def init_db():
     """)
 
     # Seed the built-in classify-labels automation (disabled) + its photo_indexed
-    # event trigger. config holds the CLIP cosine threshold + per-photo label cap
-    # (see automation_config); the label vocabulary lives in classification_labels.
-    cursor.execute("""
+    # event trigger. config holds the 0-100 strictness threshold + per-photo label
+    # cap (see automation_config); the label vocabulary lives in classification_labels.
+    cursor.execute(f"""
         INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status, config)
         VALUES ('classify_labels', 'Classify labels',
                 'When a photo is indexed, label it with the subjects, scenes, and activities it matches from your label vocabulary (offline CLIP image recognition).',
-                1, 0, 'classify_labels', 'READY', '{"confidence_threshold": 0.23, "max_labels": 4}')
+                1, 0, 'classify_labels', 'READY',
+                '{{"confidence_threshold": {CLASSIFY_LABELS_DEFAULT_THRESHOLD}, "max_labels": {CLASSIFY_LABELS_DEFAULT_MAX}}}')
     """)
     cursor.execute("""
         INSERT INTO automation_triggers (automation_id, trigger_type, enabled, event_type)

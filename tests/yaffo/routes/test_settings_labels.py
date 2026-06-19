@@ -44,9 +44,12 @@ def test_create_rejects_duplicate(app, client):
     assert "already exists" in resp.get_data(as_text=True)
 
 
-def test_toggle_flips_enabled(app, client):
+def test_toggle_flips_enabled_without_rerender(app, client):
     label_id = _add_label(app, "dog", enabled=True)
-    client.post("/settings/labels", data={"action": "toggle", "label_id": label_id})
+    resp = client.post("/settings/labels", data={"action": "toggle", "label_id": label_id})
+    # fire-and-forget: persists but returns no fragment to swap
+    assert resp.status_code == 204
+    assert resp.get_data(as_text=True) == ""
     with app.app_context():
         assert db.session.get(ClassificationLabel, label_id).enabled is False
 

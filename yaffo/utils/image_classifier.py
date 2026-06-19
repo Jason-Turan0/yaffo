@@ -35,10 +35,13 @@ _FILES = {"visual": "visual/model.onnx", "textual": "textual/model.onnx"}
 _visual = None
 _textual = None
 
-# The practical range for OpenAI CLIP ViT-B/32 cosine similarity scores.
-# 0.18 is the noise floor (high recall); 0.35 is the reliable ceiling (high precision).
+# The practical range for OpenAI CLIP ViT-B/32 cosine similarity scores, mapped onto
+# the 0-100 strictness slider. 0.18 is the noise floor (slider 0, high recall); 0.298
+# is the ceiling (slider 100, high precision). The band is centred so the neutral
+# midpoint (slider 50) lands on ~0.239 cosine — the measured sweet spot where most
+# photos get their top label while weak matches are dropped.
 CLIP_SIMILARITY_FLOOR = 0.18
-CLIP_SIMILARITY_CEILING = 0.35
+CLIP_SIMILARITY_CEILING = 0.298
 
 def get_clip_threshold(ui_threshold: int) -> float:
     """Maps a 0-100 strictness slider to the practical CLIP similarity range."""

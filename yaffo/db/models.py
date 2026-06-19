@@ -310,14 +310,13 @@ ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M = 10000
 # a GPS-tagged photo's coordinates (overridable via config["max_minutes"]).
 GEOTAG_FROM_NEIGHBORS_DEFAULT_MINUTES = 30
 
-# Defaults for the classify-labels automation. The threshold is a raw CLIP cosine
-# cutoff (image vs label text, both L2-normalized): a photo gets a label only when
-# their similarity is at least this. ViT-B/32 cosines are compressed — measured over
-# this library the best-matching label per photo runs ~0.23-0.26 (median ~0.24), so
-# 0.23 labels ~85% of photos with their top match while dropping weak ones; raise it
-# for precision. At most CLASSIFY_LABELS_DEFAULT_MAX labels are kept per photo. Both
-# overridable via Automation.config.
-CLASSIFY_LABELS_DEFAULT_THRESHOLD = 80
+# Defaults for the classify-labels automation. The threshold is a 0-100 strictness
+# slider (image_classifier.get_clip_threshold maps it onto the practical ViT-B/32
+# cosine band, with the neutral midpoint 50 ≈ 0.239 cosine — the measured sweet spot
+# where most photos get their top label while weak matches are dropped). 50 is the
+# default; raise it for precision, lower it for recall. At most
+# CLASSIFY_LABELS_DEFAULT_MAX labels are kept per photo. Both via Automation.config.
+CLASSIFY_LABELS_DEFAULT_THRESHOLD = 50
 CLASSIFY_LABELS_DEFAULT_MAX = 4
 
 

@@ -17,7 +17,7 @@
                 <input type="checkbox" {% if label.enabled %}checked{% endif %}
                        hx-post="{{ url_for('settings_labels') }}"
                        hx-vals='{"action": "toggle", "label_id": {{ label.id }}}'
-                       hx-target="#labels-section" hx-swap="outerHTML">
+                       hx-swap="none">
             </label>
             <span class="label-name">{{ label.name }}</span>
             {% if label.prompt %}<span class="label-prompt">{{ label.prompt }}</span>{% endif %}
@@ -39,6 +39,12 @@
         <input type="text" name="prompt" placeholder="Optional prompt (e.g. people swimming in water)">
         <button type="submit" class="btn-primary" data-icon="add">Add label</button>
     </form>
+    <p class="hint-text">
+        The <strong>name</strong> is the tag shown on photos. The optional <strong>prompt</strong> is the
+        phrase the recognizer actually matches against — leave it blank to use
+        “a&nbsp;photo&nbsp;of&nbsp;&lt;name&gt;”. Plain objects (dog, beach) work blank; activities and events
+        match better with a fuller phrase, e.g. <em>swimming</em> → <em>people swimming in water</em>.
+    </p>
 
     <div class="labels-reclassify">
         <button type="button" class="btn-secondary"

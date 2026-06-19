@@ -79,8 +79,15 @@ def init_settings_routes(app: Flask):
     @app.route("/settings/labels", methods=["POST"])
     def settings_labels():
         """CRUD for the classification-label vocabulary, one HTMX endpoint keyed by
-        `action`; always re-renders the labels section fragment."""
+        `action`. Create/delete re-render the section fragment; toggle is a
+        fire-and-forget that just persists (the browser already flipped the box), so
+        it returns 204 and the panel isn't re-rendered."""
         action = request.form.get("action")
+        if action == "toggle":
+            label = db.session.get(ClassificationLabel, int(request.form["label_id"]))
+            if label is not None:
+                classification_repository.set_enabled(db.session, label.id, not label.enabled)
+            return "", 204
         if action == "create":
             name = (request.form.get("name") or "").strip()
             prompt = (request.form.get("prompt") or "").strip()
@@ -91,10 +98,6 @@ def init_settings_routes(app: Flask):
             classification_repository.create_label(db.session, name, prompt or None)
         elif action == "delete":
             classification_repository.delete_label(db.session, int(request.form["label_id"]))
-        elif action == "toggle":
-            label = db.session.get(ClassificationLabel, int(request.form["label_id"]))
-            if label is not None:
-                classification_repository.set_enabled(db.session, label.id, not label.enabled)
         return _render_labels()
 
     @app.route("/settings/labels/reclassify", methods=["POST"])
