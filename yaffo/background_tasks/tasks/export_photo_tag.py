@@ -19,6 +19,7 @@ from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
+from yaffo.background_tasks.watcher_suppression import record_self_write
 from yaffo.db.models import Automation, Face, Photo, AUTOMATION_HANDLER_EXPORT_PHOTO_TAG
 from yaffo.logging_config import get_logger
 from yaffo.utils.write_metadata import write_photo_metadata
@@ -72,6 +73,9 @@ def _export_tags(
         )
         if success:
             written += 1
+            # We just wrote a watched file; record it so the watcher doesn't re-index it
+            # and loop back through photo_indexed (loop guard, Mechanism 2).
+            record_self_write(photo_path)
         else:
             logger.warning(f"export_photo_tag: failed to write {photo_path}: {error}")
     return written

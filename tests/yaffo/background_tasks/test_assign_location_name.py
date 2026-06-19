@@ -157,21 +157,26 @@ def test_no_photos_with_coords_is_noop(monkeypatch):
 
 
 def test_handler_enqueues_for_event_photos(monkeypatch):
-    calls: list[tuple[int, list[int]]] = []
+    calls: list[tuple[int, list[int], list[int]]] = []
     monkeypatch.setattr(
         mod, "assign_location_name_automation_task",
-        lambda automation_id, photo_ids: calls.append((automation_id, photo_ids)),
+        lambda automation_id, photo_ids, origin: calls.append((automation_id, photo_ids, origin)),
     )
-    mod.enqueue_assign_location_name(SimpleNamespace(id=7), SimpleNamespace(photo_ids=[11, 12]))
-    assert calls == [(7, [11, 12])]
+    mod.enqueue_assign_location_name(
+        SimpleNamespace(id=7),
+        SimpleNamespace(photo_ids=[11, 12], origin_automation_ids=[9]),
+    )
+    assert calls == [(7, [11, 12], [9])]
 
 
 def test_handler_noop_without_context_or_photos(monkeypatch):
     calls: list = []
     monkeypatch.setattr(
         mod, "assign_location_name_automation_task",
-        lambda automation_id, photo_ids: calls.append((automation_id, photo_ids)),
+        lambda automation_id, photo_ids, origin: calls.append((automation_id, photo_ids, origin)),
     )
     mod.enqueue_assign_location_name(SimpleNamespace(id=7), None)
-    mod.enqueue_assign_location_name(SimpleNamespace(id=7), SimpleNamespace(photo_ids=[]))
+    mod.enqueue_assign_location_name(
+        SimpleNamespace(id=7), SimpleNamespace(photo_ids=[], origin_automation_ids=[])
+    )
     assert calls == []

@@ -8,6 +8,7 @@ from watchdog.observers import Observer
 from watchdog.observers.api import BaseObserver, ObservedWatch
 
 from yaffo.background_tasks.tasks import SessionFactory
+from yaffo.background_tasks.watcher_suppression import should_suppress, sweep_expired
 from yaffo.common import PHOTO_EXTENSIONS, TEMP_DIR, THUMBNAIL_DIR, TRASH_DIR
 from yaffo.db.repositories.photos_repository import move_photo_path
 from yaffo.logging_config import get_logger
@@ -159,6 +160,14 @@ def _enqueue(paths: list[Path]) -> None:
         SessionFactory.remove()
 
 
+def _filter_self_writes(adds: list[Path]) -> list[Path]:
+    """Drop paths yaffo itself just wrote (loop guard, Mechanism 2): a matching
+    self-write is consumed and the path skipped, so the watcher doesn't re-index its
+    own metadata/content write and loop back through `photo_indexed`. A path with no
+    recorded self-write (a real external add/edit) passes through unchanged."""
+    return [p for p in adds if not should_suppress(p)]
+
+
 def _remove(paths: list[Path]) -> None:
     session = SessionFactory()
     try:
@@ -282,6 +291,7 @@ def main() -> None:
     try:
         while True:
             time.sleep(POLL_INTERVAL)
+            sweep_expired()  # drop stale self-write suppressions (loop guard, Mechanism 2)
 
             desired = _desired_media_dirs()
             if desired != set(watches):
@@ -291,7 +301,7 @@ def main() -> None:
             to_index, dirs_to_remove = _resolve_dir_ops(result.dir_ops, set(watches))
             move_adds, move_removes = _move_in_index(result.file_moves, set(watches))
 
-            adds = list(dict.fromkeys(result.adds + to_index + move_adds))
+            adds = _filter_self_writes(list(dict.fromkeys(result.adds + to_index + move_adds)))
             if adds:
                 _enqueue(adds)
             deletes = list(dict.fromkeys(result.deletes + move_removes))

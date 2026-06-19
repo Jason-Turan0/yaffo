@@ -98,13 +98,16 @@ def test_unreadable_image_is_skipped(monkeypatch):
 
 
 def test_handler_enqueues_for_event_photos(monkeypatch):
-    calls: list[tuple[int, list[int]]] = []
+    calls: list[tuple[int, list[int], list[int]]] = []
     monkeypatch.setattr(
         mod, "classify_labels_automation_task",
-        lambda automation_id, photo_ids: calls.append((automation_id, photo_ids)),
+        lambda automation_id, photo_ids, origin: calls.append((automation_id, photo_ids, origin)),
     )
-    mod.enqueue_classify_labels(SimpleNamespace(id=3), SimpleNamespace(photo_ids=[11, 12]))
-    assert calls == [(3, [11, 12])]
+    mod.enqueue_classify_labels(
+        SimpleNamespace(id=3),
+        SimpleNamespace(photo_ids=[11, 12], origin_automation_ids=[9]),
+    )
+    assert calls == [(3, [11, 12], [9])]
 
 
 def test_handler_noop_without_context(monkeypatch):

@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
 from yaffo.background_tasks.automation_runs import record_run
 from yaffo.background_tasks.config import task_queue
-from yaffo.background_tasks.events import EventContext, emit_event
+from yaffo.background_tasks.events import EventContext, emit_event, event_chain_scope
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import (
@@ -69,10 +69,13 @@ def _classify_photos(session: Session, photo_ids: list[int], threshold: float, m
 
 
 @task_queue.task()
-def classify_labels_automation_task(automation_id: int, photo_ids: list[int]):
+def classify_labels_automation_task(
+    automation_id: int, photo_ids: list[int], origin_automation_ids: list[int] | None = None
+):
     """Label `photo_ids` against the enabled vocabulary. Enqueued by the handler on a
     photo_indexed event (the new photos) or by the Settings backfill (every indexed
-    photo). The run is recorded as a Job."""
+    photo). The run is recorded as a Job. `origin_automation_ids` is the loop guard's
+    causal chain threaded from the triggering event."""
     session = SessionFactory()
     try:
         automation = session.get(Automation, automation_id)
@@ -92,11 +95,13 @@ def classify_labels_automation_task(automation_id: int, photo_ids: list[int]):
                 f"at threshold {threshold:.2f} (max {max_labels} each)"
             )
 
-        record_run(session, automation, work)
-        # Emit after record_run so the labels are committed before subscribers run
-        # (record_run commits work's writes); fire only when something was labeled.
-        if labeled:
-            emit_event(EVENT_PHOTO_LABELED, {"photo_ids": labeled})
+        # Scope the run so the photo_labeled it emits carries this automation (loop guard).
+        with event_chain_scope(origin_automation_ids, automation_id):
+            record_run(session, automation, work)
+            # Emit after record_run so the labels are committed before subscribers run
+            # (record_run commits work's writes); fire only when something was labeled.
+            if labeled:
+                emit_event(EVENT_PHOTO_LABELED, {"photo_ids": labeled})
     finally:
         session.close()
         SessionFactory.remove()
@@ -108,4 +113,5 @@ def enqueue_classify_labels(automation: Automation, context: EventContext | None
     photos the triggering event concerns. A schedule trigger (no context) is a no-op."""
     photo_ids = context.photo_ids if context else []
     if photo_ids:
-        classify_labels_automation_task(automation.id, photo_ids)
+        origin = context.origin_automation_ids if context else []
+        classify_labels_automation_task(automation.id, photo_ids, origin)

@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
 from yaffo.background_tasks.automation_runs import record_run
 from yaffo.background_tasks.config import task_queue
-from yaffo.background_tasks.events import EventContext, emit_event
+from yaffo.background_tasks.events import EventContext, emit_event, event_chain_scope
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import (
@@ -108,10 +108,13 @@ def _throttled_geocoder() -> Callable[[float, float], Optional[str]]:
 
 
 @task_queue.task()
-def assign_location_name_automation_task(automation_id: int, photo_ids: list[int]):
+def assign_location_name_automation_task(
+    automation_id: int, photo_ids: list[int], origin_automation_ids: list[int] | None = None
+):
     """Assign location names to the given photos. Enqueued by the
     assign_location_name handler on a photo_indexed event; config is read live. The
-    run is recorded as a Job."""
+    run is recorded as a Job. `origin_automation_ids` is the loop guard's causal chain
+    threaded from the triggering event."""
     session = SessionFactory()
     try:
         automation = session.get(Automation, automation_id)
@@ -139,7 +142,9 @@ def assign_location_name_automation_task(automation_id: int, photo_ids: list[int
                 f"(reuse={reuse_enabled} radius={radius_m}m geocode={geocode is not None})"
             )
 
-        record_run(session, automation, work)
+        # Scope the run so the photo_modified it emits carries this automation (loop guard).
+        with event_chain_scope(origin_automation_ids, automation_id):
+            record_run(session, automation, work)
     finally:
         session.close()
         SessionFactory.remove()
@@ -152,4 +157,5 @@ def enqueue_assign_location_name(automation: Automation, context: EventContext |
     no photo subjects) has nothing to act on, so it's a no-op."""
     photo_ids = context.photo_ids if context else []
     if photo_ids:
-        assign_location_name_automation_task(automation.id, photo_ids)
+        origin = context.origin_automation_ids if context else []
+        assign_location_name_automation_task(automation.id, photo_ids, origin)

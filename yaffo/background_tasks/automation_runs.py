@@ -6,7 +6,7 @@ from typing import Callable
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox.executor import run_automation
-from yaffo.background_tasks.events import EventContext
+from yaffo.background_tasks.events import EventContext, event_chain_scope
 from yaffo.db.models import (
     Automation,
     Job,
@@ -78,7 +78,12 @@ def run_and_record(session: Session, automation: Automation, context: EventConte
     complete_job_task, so they emit no events (and can't feed a trigger loop)."""
     job = _open_run_job(session, automation)
 
-    result = run_automation(session, automation, context)
+    # Establish the causal chain so any event the script emits — including ones fired
+    # from inside a mutating host action — carries this automation, letting the loop
+    # guard break a cycle that would re-trigger it.
+    origin = context.origin_automation_ids if context else []
+    with event_chain_scope(origin, automation.id):
+        result = run_automation(session, automation, context)
 
     job.completed_at = datetime.utcnow()
     job.job_data = json.dumps({"output": result.output})

@@ -64,6 +64,14 @@ CREATE TABLE IF NOT EXISTS periodic_state (
     name TEXT PRIMARY KEY,
     last_minute INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS watcher_suppression (
+    id INTEGER PRIMARY KEY,
+    path TEXT NOT NULL,
+    signature TEXT NOT NULL,
+    created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_watcher_suppression_path ON watcher_suppression(path);
 """
 
 
@@ -254,6 +262,57 @@ class Store:
 
     def release_lock(self, name: str) -> None:
         self._conn().execute("DELETE FROM task_lock WHERE name=?", (name,))
+
+    # ---- watcher self-write suppression ---------------------------------
+    # Loop-guard companion (Mechanism 2, see docs/automations.md): when yaffo writes a
+    # file it also watches, it records the write here so the watcher ignores the OS
+    # event it caused — breaking a write -> reindex -> photo_indexed -> automation loop
+    # the in-memory causal chain can't see (the write re-enters via a separate process).
+
+    def add_suppression(self, path: str, signature: str) -> None:
+        """Record that yaffo just wrote `path`, leaving it with `signature`
+        (e.g. "size:mtime_ns"). The watcher consumes a matching entry instead of
+        re-indexing."""
+        self._conn().execute(
+            "INSERT INTO watcher_suppression (path, signature, created_at) VALUES (?, ?, ?)",
+            (path, signature, time.time()),
+        )
+
+    def consume_suppression(self, path: str, signature: str, max_age: float) -> bool:
+        """If a non-expired self-write for (`path`, `signature`) is recorded, delete one
+        such row and return True (the watcher should skip this event). Otherwise False —
+        a genuine external edit has a different signature and is not suppressed.
+        Matching by exact signature makes a wrong suppression of a real edit
+        near-impossible; the delete makes each self-write suppress at most one event."""
+        conn = self._conn()
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            cutoff = time.time() - max_age
+            row = conn.execute(
+                """SELECT id FROM watcher_suppression
+                   WHERE path = ? AND signature = ? AND created_at >= ?
+                   ORDER BY created_at LIMIT 1""",
+                (path, signature, cutoff),
+            ).fetchone()
+            if row is None:
+                conn.execute("COMMIT")
+                return False
+            conn.execute("DELETE FROM watcher_suppression WHERE id = ?", (row["id"],))
+            conn.execute("COMMIT")
+            return True
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+
+    def sweep_suppressions(self, max_age: float) -> int:
+        """Delete suppression rows older than `max_age` seconds (so a crash between
+        write and detection can't leave a stale entry that mutes a later real edit).
+        Returns the number swept."""
+        cur = self._conn().execute(
+            "DELETE FROM watcher_suppression WHERE created_at < ?",
+            (time.time() - max_age,),
+        )
+        return cur.rowcount
 
     # ---- periodic single-fire -------------------------------------------
 

@@ -14,39 +14,54 @@
 > dispatch paths, the sandbox + host API, the builder, the test harness, and the
 > design decisions behind them.
 >
-> **Not yet built:** the loop guard; a hard Starlark CPU/time limit; per-automation
-> run status on the UI. See *Deferred* at the bottom.
+> **Not yet built:** a hard Starlark CPU/time limit; per-automation run status on the
+> UI. See *Deferred* at the bottom. (The **loop guard** — both the in-process causal
+> chain and the watcher self-write suppression — is now built; see *Loop guard*.)
 
 ## Overview
 
-```
-                    ┌──────────────────────── triggers ────────────────────────┐
-                    │                                                           │
-   taskq host       │   schedule trigger (cron + next_run_at)                   │
-   every 60s  ──────┼─►  dispatch_scheduled_tasks ──┐                           │
-                    │                                │                          │
-   a job completes  │   event trigger (event_type)   ├─► invoke_automation ─────┤
-   emit_event  ─────┼─►  dispatch_event_task ────────┘        │                 │
-                    │                                          │                 │
-                    └──────────────────────────────────────────┼─────────────────┘
-                                                               │
-                            ┌──────────────────────────────────┴───────────┐
-                            │                                               │
-                     system tier                                    custom tier
-                  (handler in HANDLERS)                       (handler is None, code set)
-                            │                                               │
-                  enqueue the system task                     run_automation_code_task
-                  (e.g. file_sync_task)                                     │
-                            │                                    run_starlark(code,
-                            │                                      inputs=ctx,
-                            ▼                                      functions=host API)
-                     Jobs (run history) ◄───────────────────────────────────┘
-                     jobs.automation_id
+```mermaid
+flowchart TD
+    host(["taskq host · every 60s"]) --> sched["dispatch_scheduled_tasks<br/>schedule triggers: cron + next_run_at"]
+    emit(["emit_event<br/>job completes · host-action edit · route edit"]) --> dispatch["dispatch_event_task<br/>event triggers: event_type"]
+
+    sched --> invoke{{"invoke_automation"}}
+    dispatch --> guard{"loop guard:<br/>automation.id already in<br/>event's causal chain?"}
+    guard -->|yes| skip[/"skip · logged"/]
+    guard -->|no| invoke
+
+    invoke --> system["system tier<br/>handler in HANDLERS"]
+    invoke --> custom["custom tier<br/>handler is None, code set"]
+
+    system --> systask["enqueue the system task<br/>e.g. file_sync_task"]
+    custom --> runtask["run_automation_code_task<br/>run_starlark(code, inputs=ctx, functions=host API)"]
+
+    systask --> jobs[("Jobs · run history<br/>jobs.automation_id")]
+    runtask --> jobs
+
+    systask -.->|"explicit emit<br/>chain += this automation"| emit
+    runtask -.->|"host-action / explicit emit<br/>chain += this automation"| emit
+
+    %% Filesystem-mediated re-entry: a write to a watched file comes back via the OS,
+    %% in a separate process, so the in-memory causal chain is LOST here.
+    runtask -. "writes a watched file<br/>(metadata / move)" .-> fswrite[["file on disk"]]
+    systask -. "writes a watched file" .-> fswrite
+    fswrite -. "OS event" .-> watcher["watcher (separate process)<br/>debounce + enqueue_index_jobs"]
+    watcher -. "index job completes<br/>chain = [] — guard blind" .-> emit
+
+    classDef planned stroke:#c0392b,stroke-width:1px,stroke-dasharray:5 5;
+    classDef gap stroke:#e67e22,stroke-width:1px,stroke-dasharray:2 3;
+    class guard,skip planned;
+    class fswrite,watcher gap;
 ```
 
-The trigger model is fixed at import time only in that **action *types*** (system
-handlers, the event catalog) are code; the **schedule/subscription *rows*** are
-fully runtime-editable with no consumer restart.
+The dashed red **loop guard** node (and the chain-accumulating feedback edges) breaks
+in-process event cycles; the orange **watcher** path is a *second* loop class the
+in-memory chain can't bound — a write to a watched file re-enters via the OS in a
+separate process, so `photo_indexed` arrives with an empty chain, handled instead by
+the watcher self-write suppression. Both are described in *Loop guard* below. The trigger model is fixed at import time only in that
+**action *types*** (system handlers, the event catalog) are code; the
+**schedule/subscription *rows*** are fully runtime-editable with no consumer restart.
 
 ## Data model (`yaffo/db/models.py`)
 
@@ -527,6 +542,197 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
   pre-existing `schedule_job_completion`. The `IndexJobs` DTO was split into
   `utils/index_jobs_dto.py` for the same reason.
 
+## Loop guard
+
+> **Status:** built. Two complementary mechanisms — an in-process causal chain and
+> watcher self-write suppression — for the two loop classes below.
+
+### The problem
+
+An automation can both **emit** and **subscribe to** events, so a misconfigured
+trigger graph can cycle. Because triggers are runtime-editable on system rows too,
+the cases are concrete:
+
+- `classify_labels` given a `photo_labeled` trigger → it labels, emits
+  `photo_labeled`, re-triggers itself → a **tight infinite loop**, and every hop is a
+  full CLIP pass over the library (the expensive worst case).
+- `assign_location_name` ↔ `export_photo_tag`-style `A → photo_modified → B → … → A`
+  chains.
+
+**Custom automations are loop participants too — via their host actions, not an
+explicit emit.** The mutating host actions (`tag_photo`, `move_photo`, `assign_face`,
+`rename_file`) are expected to fire `photo_modified` (the same event the routes
+already emit for those exact edits). That emission happens *inside the host action
+implementation* (`automation_sandbox/automation_actions.py`), which only ever
+receives a `session` — it has no automation id or triggering context in scope. So a
+custom automation on `photo_modified` that calls `tag_photo` would re-trigger itself,
+and the emit site **cannot be handed the chain explicitly** — it comes "from outside",
+below the script.
+
+**There are two loop classes, and they need two different guards:**
+
+1. **In-process event chains** — `emit_event → dispatch_event_task → automation →
+   emit_event`, all within the app/worker memory. Bounded by the **causal-chain
+   guard** below.
+2. **Filesystem-mediated loops via the watcher** — an automation (or a system task
+   like `export_photo_tag`) **writes a watched file**; `watcher.py` (a *separate
+   process* running watchdog) detects the OS event, debounces, and
+   `enqueue_index_jobs`; the index job completes and `complete_job_task` emits
+   **`photo_indexed`** — which re-triggers automations. The causal chain **cannot
+   cross this boundary**: the write leaves the process entirely, comes back as an OS
+   event with no metadata, and the re-emit happens in a fresh worker with an empty
+   contextvar. Example loop:
+   `photo_indexed → assign_location_name → photo_modified → export_photo_tag →
+   [file write] → watcher → index job → photo_indexed → …`, where every `photo_indexed`
+   has `chain=[]`, so the causal-chain guard is blind to it. This class needs the
+   **watcher self-write suppression** mechanism below.
+
+### Mechanism 1 (in-process loops): a causal chain carried on each event, set ambiently
+
+Every event carries `origin_automation_ids` — the list of automations that have
+already **fired in this causal chain**. The guard, at the single dispatch chokepoint,
+skips any automation already in that list. An automation therefore fires **at most
+once per causal chain**: no arbitrary depth number, arbitrarily-long *legitimate*
+acyclic chains still allowed, and the tight self-loop stops at **zero extra runs**
+(the re-dispatch is skipped *before* the expensive handler is invoked — a depth
+counter would instead let it run N expensive times).
+
+The chain is **not** stamped at each `emit_event` call (that fails for host-action
+emits, which have no ids in scope). Instead it is established **once at the run
+boundary** in a `contextvar`, and `emit_event` reads it implicitly — so *any* emit
+during the run is stamped automatically, including host-action emits added later,
+with zero loop-guard wiring per new action:
+
+```python
+# events.py
+_event_chain: ContextVar[tuple[int, ...]] = ContextVar("event_chain", default=())
+
+@contextmanager
+def event_chain_scope(origin_ids, automation_id):
+    token = _event_chain.set(tuple(origin_ids) + (automation_id,))
+    try: yield
+    finally: _event_chain.reset(token)
+
+def emit_event(event_type, payload):                       # callers unchanged
+    payload = {**payload, "origin_automation_ids": list(_event_chain.get())}
+    dispatch_event_task(event_type, payload)
+```
+
+Flow for the host-action self-loop, now caught:
+
+```
+photo_modified (chain=[])                  ← e.g. a UI edit (genuine origin)
+  └─ custom automation X runs
+       run_and_record opens scope → chain=[X]
+       script calls tag_photo() → emit_event(photo_modified)   ← stamped [X] ambiently
+         └─ dispatch: X.id ∈ [X] → SKIP (logged); X never re-runs
+```
+
+Chains accumulate across hops (`A` emits with `received_chain + [A]`), so
+`A → e → B → e → A` is caught when `A` recurs (`chain=[A, B]`). contextvars nest with
+set/reset tokens, so this is correct in immediate mode (recursive dispatch runs inside
+the parent scope) and in spawn workers (each task is its own process).
+
+### Mechanism 2 (watcher loops): suppress self-induced re-index
+
+The causal chain can't cross the filesystem, so the watcher boundary needs its own
+guard. The standard pattern for "an app that watches a directory it also writes to":
+**record yaffo's own writes and have the watcher ignore the events they cause.**
+
+- **A shared suppression ledger.** When yaffo writes a watched file as part of an
+  automation/system action (`export_photo_tag`'s metadata write; any file-writing host
+  action — `move_photo` to a new path, a future content writer), record
+  `(path, signature)` in a small **cross-process** store (a DB table, e.g.
+  `watcher_suppressions`, since the writer is a worker and the watcher is a separate
+  process). `signature` is the post-write `(size, mtime)` (cheap) — or a content hash
+  if we want to be airtight.
+- **The watcher consumes it.** In `drain_settled` / before `_enqueue`, the watcher
+  looks up each settled add path. If the file's *current* signature matches a recorded
+  self-write, it **drops the event and deletes the ledger entry** (no re-index, no
+  `photo_indexed`). A genuine *external* edit (or a user editing the same file right
+  after) produces a different signature → not suppressed → indexes normally. So
+  suppression is specific to the exact bytes yaffo wrote, not a blanket mute on the
+  path.
+- **TTL.** Entries expire (≈ 2× `SETTLE_SECONDS`, so ~30–60s) and are swept, so a
+  crash between write and detection can't leave a stale entry that suppresses a later
+  real edit.
+
+This breaks the `export_photo_tag → file write → watcher → photo_indexed` re-entry at
+its source: the write yaffo just made is recognised and not treated as a new external
+change. Pure in-tree moves already avoid re-index (`move_photo_path` updates the row
+in place and emits nothing), so the ledger mainly covers metadata/content writes.
+
+*Lighter alternative considered:* gate `photo_indexed` emission on the indexed content
+actually changing (skip the emit when an index pass finds the photo's indexed fields
+unchanged). More surgical, no cross-process store — but it makes emission per-photo
+(today it's per-job) and is sensitive to *which* fields the indexer reads vs. what a
+writer touches. The ledger is preferred as the general, write-agnostic guard; the two
+are complementary if we want both.
+
+### Implementation
+
+**Mechanism 1 (in-process causal chain):**
+
+1. **`background_tasks/events.py`** — `EventContext.origin_automation_ids:
+   list[int] = []`; the `_event_chain` contextvar + `event_chain_scope`; `emit_event`
+   stamps the payload from the contextvar. External callers (routes, `complete_job`
+   job-completion) are unchanged → empty chain → genuine origins.
+2. **`tasks/dispatch_event.py`** (the guard) — read `origin_automation_ids` from the
+   payload into the `EventContext`; in the dispatch loop, `if automation.id in
+   context.origin_automation_ids:` log `"loop guard: skipping <slug> (already in
+   chain)"` and `continue`. Other subscribers not in the chain still run.
+3. **`automation_runs.py`** — `run_and_record` opens `event_chain_scope(context's
+   origin or [], automation.id)` around the **custom-code execution**. This single
+   line covers every host-action emit (current and future) for free.
+4. **The two system emitters** (`assign_location_name`, `classify_labels`) — open the
+   same scope around their explicit `emit_event`; their handlers thread the incoming
+   `context.origin_automation_ids` across the queue hop into the task.
+5. **`automation_dispatch.py`** — carry `origin_automation_ids` into the custom-code
+   task payload, so the chain survives the dispatch → `run_automation_code_task` hop.
+
+**Mechanism 2 (watcher self-write suppression):**
+
+1. **Schema** — a `watcher_suppressions` table in the yaffo_queue database (`path`, `signature`, `created_at`) in
+   `scripts/init_db.py`, plus a repository (`add_suppression`, `consume_match`,
+   `sweep_expired`).
+2. **At the write sites** — wherever yaffo writes a watched file as part of an action
+   (`utils/write_metadata` via `export_photo_tag`; file-writing host actions) record a
+   suppression for the resulting `(path, size, mtime)` after the write.
+3. **`background_tasks/watcher.py`** — before `_enqueue`, filter settled adds through
+   `consume_match` (drop + delete on a signature hit); run `sweep_expired` each poll.
+
+### Tests
+
+In-process chain (immediate mode runs the chain synchronously — loops are directly
+testable):
+- Self-loop is bounded: an automation subscribed to the event it emits runs exactly
+  once.
+- Chain propagation: `A → B → A` skips `A` on recurrence; an unrelated subscriber not
+  in the chain still runs on the same event.
+- Genuine origin: an event emitted with no scope set (empty chain) dispatches to all
+  subscribers normally.
+
+Watcher suppression (unit, no real observer):
+- A settled add whose `(path, signature)` matches a recorded self-write is dropped and
+  the entry consumed; the same path with a *different* signature is **not** dropped.
+- Expired entries are swept and no longer suppress.
+
+### Out of scope / known gaps (flag, don't build here)
+
+- **Commit-vs-emit ordering for host actions.** A host mutation commits at
+  `run_and_record`'s end, but a mid-script `tag_photo` emit enqueues immediately. In
+  spawn mode the dispatch task runs after the commit (fine); immediate mode needs
+  care. This is part of the still-in-flux "how should host actions emit" design; the
+  guard doesn't depend on resolving it.
+- **Job boundary in general.** The contextvar chain doesn't survive *any* enqueued
+  `Job` whose completion emits (the watcher's index job is the one concrete instance,
+  handled by Mechanism 2). No other automation enqueues an emitting job today (only
+  `file_sync`, schedule-triggered). A fully general fix — chain stored *on the Job* and
+  re-established by `complete_job_task` — is noted, not built; Mechanism 2 covers the
+  case that actually loops.
+- **`find_duplicates`** emits `duplicates_found` outside the handler-context path, so
+  with an empty chain. Harmless while `duplicate_scan` is schedule-triggered.
+
 ## Dependencies
 
 `croniter` (schedule next-run math) and `starlark-pyo3` (the sandbox) — both in
@@ -534,14 +740,6 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
 
 ## Deferred (flagged, not built)
 
-- **Loop guard.** Now that an automation can both emit and subscribe to events, add
-  self-trigger / depth protection. Deliberately *not* a blanket "don't emit from
-  automation jobs" (that would mute the legitimate "react when file_sync indexes"
-  case). Note automation-run Jobs (both `record_run` and `run_and_record`) are
-  finalised synchronously and never go through `complete_job_task`, so the run Job
-  itself emits no event — a partial mitigation. An automation that *explicitly*
-  emits (e.g. `assign_location_name` → `photo_modified` → `export_photo_tag`) is the
-  case a real loop guard must still bound.
 - **Hard CPU/time limit.** Starlark blocks unbounded loops/recursion, but a large
   bounded `for` can still burn CPU; `starlark-pyo3` exposes no step budget and a
   thread soft-timeout can't kill a runaway eval. Real hardening = subprocess +
@@ -582,8 +780,9 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
 | Schema + seed | `yaffo/scripts/init_db.py` |
 | Cron math | `yaffo/background_tasks/schedule.py` |
 | Schedule dispatcher | `yaffo/background_tasks/tasks/dispatcher.py` |
-| Event emit + job→event map | `yaffo/background_tasks/events.py` |
-| Event dispatcher | `yaffo/background_tasks/tasks/dispatch_event.py` |
+| Event emit + job→event map + loop-guard chain (`event_chain_scope`) | `yaffo/background_tasks/events.py` |
+| Event dispatcher (+ loop-guard skip) | `yaffo/background_tasks/tasks/dispatch_event.py` |
+| Loop guard — watcher self-write suppression | `yaffo/background_tasks/watcher_suppression.py`, `Store.{add,consume,sweep}_suppression*` in `yaffo/taskq/store.py`, filter in `yaffo/background_tasks/watcher.py` |
 | Emission hook | `yaffo/background_tasks/tasks/complete_job.py` |
 | Tier routing | `yaffo/background_tasks/automation_dispatch.py` |
 | Handler registry | `yaffo/background_tasks/registry.py` |
@@ -610,4 +809,4 @@ to the `auto_assign_faces` system built-in above. The seeder still deletes the o
 | UI routes | `yaffo/routes/utilities/automations.py` (+ `common.automations_sidebar_context`) |
 | UI templates / static | `yaffo/templates/utilities/{_base,automations,automations_triggers,automations_triggers_edit}.html`, `yaffo/static/utilities/{_base,automations}.{js,css}` |
 | Cron editor component | `yaffo/static/components/cron_builder.{js,css}` |
-| Tests | `tests/yaffo/background_tasks/` (incl. `test_automation_{host,actions}`, `test_preview`), `tests/yaffo/routes/test_automations_page.py` |
+| Tests | `tests/yaffo/background_tasks/` (incl. `test_automation_{host,actions}`, `test_preview`, `test_loop_guard`, `test_watcher_suppression`), `tests/yaffo/routes/test_automations_page.py` |
