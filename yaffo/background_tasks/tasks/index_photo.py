@@ -92,7 +92,10 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                     location_top=face_data['location_top'],
                     location_right=face_data['location_right'],
                     location_bottom=face_data['location_bottom'],
-                    location_left=face_data['location_left']
+                    location_left=face_data['location_left'],
+                    estimated_age=face_data.get('estimated_age'),
+                    gender=face_data.get('gender'),
+                    det_score=face_data.get('det_score'),
                 )
                 session.add(face)
             processed_count += 1

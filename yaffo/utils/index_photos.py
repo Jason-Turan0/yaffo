@@ -320,6 +320,9 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
                 'location_right': face.location_right,
                 'location_bottom': face.location_bottom,
                 'location_left': face.location_left,
+                'estimated_age': face.age,
+                'gender': face.gender,
+                'det_score': face.det_score,
             })
 
         date_taken_str = date_info.date.isoformat() if date_info.date else None

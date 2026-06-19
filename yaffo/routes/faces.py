@@ -100,9 +100,9 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
     for face in unassigned_faces:
         emb = load_embedding(face.embedding)
 
-        def flat_map_people(person: Person) -> List[Tuple[Person, int, np.ndarray]]:
-            return [(person, embedding_by_year.year, load_embedding(embedding_by_year.avg_embedding))
-                    for embedding_by_year in person.embeddings_by_year]
+        def flat_map_people(person: Person) -> List[Tuple[Person, str, np.ndarray]]:
+            return [(person, stage_emb.life_stage, load_embedding(stage_emb.avg_embedding))
+                    for stage_emb in person.stage_embeddings]
 
         matching_people: List[Tuple[Person, float]] = (
             _.chain(people)
@@ -181,7 +181,7 @@ def init_faces_routes(app: Flask):
         people = (db.session.query(Person)
                   .outerjoin(PersonFace)
                   .group_by(Person.id)
-                  .options(joinedload(Person.embeddings_by_year))
+                  .options(joinedload(Person.stage_embeddings))
                   .order_by(Person.name)
                   .all()
                   )
@@ -240,7 +240,7 @@ def init_faces_routes(app: Flask):
 
             elif selected_face_ids and person_id and face_status == FACE_STATUS_ASSIGNED:
                 person: Person | None = (
-                    Person.query.options(joinedload(Person.embeddings_by_year)).order_by(Person.name).get(
+                    Person.query.options(joinedload(Person.stage_embeddings)).order_by(Person.name).get(
                         int(person_id)))
                 if person is None:
                     error_msg = f'Person {person_id} not found'

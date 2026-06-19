@@ -1,6 +1,6 @@
 from sqlalchemy import PrimaryKeyConstraint
 from yaffo.db import db
-from datetime import datetime
+from datetime import datetime, date
 
 PHOTO_STATUS_IMPORTED = "IMPORTED"
 PHOTO_STATUS_INDEXED = "INDEXED"
@@ -51,6 +51,13 @@ class Face(db.Model):
     full_file_path = db.Column(db.String, unique=True)
     photo_id = db.Column(db.Integer, db.ForeignKey("photos.id"))
     status = db.Column(db.String)
+    # Predicted age at the time the photo was taken (InsightFace genderage); used,
+    # aggregated over a person's faces, to estimate their birthdate.
+    estimated_age = db.Column(db.Float)
+    # InsightFace genderage prediction: 0 = female, 1 = male.
+    gender = db.Column(db.Integer)
+    # SCRFD detection confidence (0-1); low values flag blurry/occluded/false faces.
+    det_score = db.Column(db.Float)
     # Face bounding box coordinates (top/right/bottom/left, from face detection)
     location_top = db.Column(db.Integer)
     location_right = db.Column(db.Integer)
@@ -76,13 +83,18 @@ class Person(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     avg_embedding = db.Column(db.LargeBinary)
+    # User-entered actual birthdate (wins for life-stage bucketing) and the
+    # birthdate estimated from the person's faces' predicted ages.
+    birthdate = db.Column(db.Date)
+    estimated_birthdate = db.Column(db.Date)
     # Relationship to faces through bridge table
     faces = db.relationship(
         "Face",
         secondary="people_face",
         back_populates="people"
     )
-    embeddings_by_year = db.relationship(
+    # One representative (medoid) embedding per life stage (baby/child/teen/...).
+    stage_embeddings = db.relationship(
         "PersonEmbedding",
         back_populates="person",
         cascade="all, delete-orphan"
@@ -93,15 +105,15 @@ class Person(db.Model):
 class PersonEmbedding(db.Model):
     __tablename__ = "people_embeddings"
     person_id = db.Column(db.Integer, db.ForeignKey("people.id"), primary_key=True)
-    year = db.Column(db.Integer, primary_key=True)
+    life_stage = db.Column(db.String, primary_key=True)
     included_face_ids = db.Column(db.Text)
     avg_embedding = db.Column(db.LargeBinary)
     person = db.relationship(
         "Person",
-        back_populates="embeddings_by_year"
+        back_populates="stage_embeddings"
     )
     __table_args__ = (
-        PrimaryKeyConstraint("person_id", "year"),
+        PrimaryKeyConstraint("person_id", "life_stage"),
     )
 
 class PersonFace(db.Model):

@@ -39,7 +39,7 @@ def assign_faces():
              .filter(Face.status == FACE_STATUS_UNASSIGNED).all())
 
     people: list[Person] = (session.query(Person)
-              .options(joinedload(Person.embeddings_by_year))
+              .options(joinedload(Person.stage_embeddings))
               .order_by(Person.name)
               .all()
               )
@@ -108,7 +108,7 @@ def recalculate_face_embedding():
 
 def recalculate_person_embedding():
     people: list[Person] = (session.query(Person)
-                            .options(joinedload(Person.embeddings_by_year))
+                            .options(joinedload(Person.stage_embeddings))
                             .order_by(Person.name)
                             .all()
                             )

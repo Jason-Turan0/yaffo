@@ -21,6 +21,7 @@
             <thead>
             <tr>
                 <th>Name</th>
+                <th>Born</th>
                 <th>Faces</th>
                 <th>Photos</th>
                 <th>Actions</th>
@@ -34,6 +35,11 @@
                        class="person-name row-link">{{ person.name or "Unnamed" }}</a>
                 </td>
                 <td>
+                    {% if person.birthdate %}{{ person.birthdate.isoformat() }}
+                    {% elif person.estimated_birthdate %}<span class="hint-text" title="estimated">~{{ person.estimated_birthdate.year }}</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td>
                     <span class="stat-number">{{ person.num_faces }}</span>
                 </td>
                 <td>
@@ -42,7 +48,7 @@
                 <td>
                     <div class="actions">
                         <a href="#" class="action-link"
-                           onclick="window.PHOTO_ORGANIZER.peopleList.openEditModal({{ person.id }}, '{{ person.name }}'); return false;">Edit</a>
+                           onclick="window.PHOTO_ORGANIZER.peopleList.openEditModal({{ person.id }}, '{{ person.name }}', '{{ person.birthdate.isoformat() if person.birthdate else '' }}'); return false;">Edit</a>
                         <a href="#" class="action-link delete"
                            onclick="window.PHOTO_ORGANIZER.peopleList.confirmDelete({{ person.id }}, '{{ person.name }}'); return false;">Delete</a>
                     </div>
@@ -66,6 +72,11 @@
 <div class="form-group">
     <label for="personName">Name</label>
     <input type="text" id="personName" name="name" required autofocus>
+</div>
+<div class="form-group">
+    <label for="personBirthdate">Birthdate</label>
+    <input type="date" id="personBirthdate" name="birthdate">
+    <p class="hint-text">Used to improve the performance of the facial recognition algorithms.</p>
 </div>
 {% endmacro %}
 {% macro render_modal_delete_person_form() %}

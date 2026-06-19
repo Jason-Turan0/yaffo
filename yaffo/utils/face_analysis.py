@@ -14,6 +14,7 @@ detection + recognition sub-models are loaded; gender/age/landmark extras are no
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
 
@@ -36,7 +37,9 @@ def _get_app():
         _app = FaceAnalysis(
             name=MODEL_NAME,
             providers=["CPUExecutionProvider"],
-            allowed_modules=["detection", "recognition"],
+            # genderage adds a cheap per-face age estimate, aggregated later into a
+            # person's birthdate; landmark modules stay off.
+            allowed_modules=["detection", "recognition", "genderage"],
         )
         _app.prepare(ctx_id=-1, det_size=DET_SIZE)
     return _app
@@ -46,12 +49,17 @@ def _get_app():
 class DetectedFace:
     """A face found in an image. Box is in dlib's (top, right, bottom, left)
     convention so it drops into the existing Face rows / thumbnail crop unchanged.
-    `embedding` is a 512-d L2-normalized float32 ArcFace vector."""
+    `embedding` is a 512-d L2-normalized float32 ArcFace vector. `age` is the
+    genderage model's predicted age in years; `gender` is 0=female/1=male;
+    `det_score` is the detector's confidence (0-1). (None if unavailable.)"""
     location_top: int
     location_right: int
     location_bottom: int
     location_left: int
     embedding: np.ndarray
+    age: Optional[float] = None
+    gender: Optional[int] = None
+    det_score: Optional[float] = None
 
 
 def detect_faces(image_rgb: np.ndarray) -> list[DetectedFace]:
@@ -67,11 +75,20 @@ def detect_faces(image_rgb: np.ndarray) -> list[DetectedFace]:
         bottom, right = min(h, int(round(y2))), min(w, int(round(x2)))
         if bottom <= top or right <= left:
             continue
+        embedding = np.asarray(f.normed_embedding, dtype=np.float32)
+        if not np.all(np.isfinite(embedding)):
+            continue  # degenerate crop produced a NaN/inf embedding; skip it
+        age = getattr(f, "age", None)
+        gender = getattr(f, "gender", None)
+        det_score = getattr(f, "det_score", None)
         out.append(DetectedFace(
             location_top=top,
             location_right=right,
             location_bottom=bottom,
             location_left=left,
-            embedding=np.asarray(f.normed_embedding, dtype=np.float32),
+            embedding=embedding,
+            age=float(age) if age is not None else None,
+            gender=int(gender) if gender is not None else None,
+            det_score=float(det_score) if det_score is not None else None,
         ))
     return out

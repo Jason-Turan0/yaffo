@@ -209,7 +209,9 @@ class TestGeneratedSql:
     """A query translates to the expected SQLAlchemy SELECT."""
 
     def test_selects_the_sources_exposed_columns(self):
-        assert _sql({"source": "people"}) == "SELECT people.id, people.name FROM people"
+        assert _sql({"source": "people"}) == (
+            "SELECT people.id, people.name, people.birthdate, people.estimated_birthdate FROM people"
+        )
 
     def test_eq_filter_and_limit(self):
         sql = _sql({"source": "people", "name": {"eq": "Obama"}, "limit": 5})
@@ -245,7 +247,7 @@ class TestResolve:
 
     def test_rows_expose_exactly_the_source_columns(self, session):
         rows = dq.resolve_query(session, {"source": "people", "id": {"eq": 1}})
-        assert rows == [{"id": 1, "name": "Obama"}]
+        assert rows == [{"id": 1, "name": "Obama", "birthdate": None, "estimated_birthdate": None}]
 
     def test_contains_filter(self, session):
         rows = dq.resolve_query(session, {"source": "people", "name": {"contains": "Mich"}})

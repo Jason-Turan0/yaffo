@@ -34,6 +34,9 @@ def init_db():
             location_bottom INTEGER,
             location_left INTEGER,
             location_right INTEGER,
+            estimated_age REAL,
+            gender INTEGER,
+            det_score REAL,
             FOREIGN KEY(photo_id) REFERENCES photos(id) ON DELETE CASCADE
         )
     """)
@@ -44,7 +47,9 @@ def init_db():
            CREATE TABLE IF NOT EXISTS people (
                id INTEGER PRIMARY KEY,
                name TEXT,
-               avg_embedding BLOB
+               avg_embedding BLOB,
+               birthdate DATE,
+               estimated_birthdate DATE
            )
        """)
 
@@ -65,10 +70,10 @@ def init_db():
     cursor.execute("""
                 CREATE TABLE IF NOT EXISTS people_embeddings (
                     person_id INTEGER NOT NULL,
-                    year INTEGER NOT NULL,
+                    life_stage TEXT NOT NULL,
                     avg_embedding BLOB NOT NULL,
                     included_face_ids TEXT,
-                    PRIMARY KEY (person_id, year),
+                    PRIMARY KEY (person_id, life_stage),
                     FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
                 )
     """)
@@ -191,7 +196,7 @@ def init_db():
         INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status, config)
         VALUES ('auto_assign_faces', 'Auto-assign faces',
                 'When a photo is indexed, assign each detected face to the one person it matches above the threshold — a face matching several people is left unassigned.',
-                1, 0, 'auto_assign_faces', 'READY', '{"threshold": 0.95}')
+                1, 0, 'auto_assign_faces', 'READY', '{"threshold": 0.45}')
     """)
     cursor.execute("""
         INSERT INTO automation_triggers (automation_id, trigger_type, enabled, event_type)

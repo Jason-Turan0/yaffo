@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload, aliased
@@ -107,12 +109,27 @@ def init_people_routes(app: Flask):
 
         old_name = person.name
         person.name = name
+
+        # Birthdate drives life-stage bucketing; a change re-buckets the gallery.
+        raw_birthdate = (request.form.get("birthdate") or "").strip()
+        old_birthdate = person.birthdate
+        if raw_birthdate:
+            try:
+                person.birthdate = date.fromisoformat(raw_birthdate)
+            except ValueError:
+                flash("Birthdate must be YYYY-MM-DD", "error")
+                return redirect(url_for("people_list"))
+        else:
+            person.birthdate = None
+
         photo_ids = get_photo_ids_for_person(db.session, person_id)
         db.session.commit()
 
+        if person.birthdate != old_birthdate:
+            update_person_embedding(person_id, db.session)
         if photo_ids:
             emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": photo_ids})
-        flash(f"Renamed '{old_name}' to '{name}'", "success")
+        flash(f"Updated '{name}'" if name == old_name else f"Renamed '{old_name}' to '{name}'", "success")
         return redirect(url_for("people_list"))
 
     @app.route("/people/<int:person_id>/delete", methods=["POST"])
