@@ -3,6 +3,7 @@ function toggleMultiSelect(header) {
     wrapper.classList.toggle('open');
 }
 
+//TODO. Nice to add a option to allow for search
 function updateMultiSelectText(checkbox) {
     const wrapper = checkbox.closest('.multi-select-wrapper');
     const header = wrapper.querySelector('.selected-text');

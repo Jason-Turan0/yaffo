@@ -300,11 +300,11 @@ AUTOMATION_HANDLER_CLASSIFY_LABELS = "classify_labels"
 # overridable via Automation.config["threshold"]). The task scales it to a cosine
 # cutoff against the live similarity band (compare_utils.ui_threshold_to_similarity).
 # 50 is the neutral midpoint, matching the assignment screen's default.
-AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 50
+AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 80
 
 # Default radius (metres) within which the assign-location-name automation reuses a
 # nearby photo's location_name (overridable via config["nearby_radius_meters"]).
-ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M = 1000
+ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M = 10000
 
 # Default window (minutes) within which the geotag-from-neighbors automation borrows
 # a GPS-tagged photo's coordinates (overridable via config["max_minutes"]).
@@ -317,7 +317,7 @@ GEOTAG_FROM_NEIGHBORS_DEFAULT_MINUTES = 30
 # 0.23 labels ~85% of photos with their top match while dropping weak ones; raise it
 # for precision. At most CLASSIFY_LABELS_DEFAULT_MAX labels are kept per photo. Both
 # overridable via Automation.config.
-CLASSIFY_LABELS_DEFAULT_THRESHOLD = 0.23
+CLASSIFY_LABELS_DEFAULT_THRESHOLD = 80
 CLASSIFY_LABELS_DEFAULT_MAX = 4
 
 

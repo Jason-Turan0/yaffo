@@ -7,7 +7,7 @@ from sqlalchemy import distinct, func
 from sqlalchemy.orm import joinedload
 import pydash as _
 from yaffo.db import db
-from yaffo.db.models import Photo, Face, Person, PersonFace, Tag
+from yaffo.db.models import Photo, Face, Person, PersonFace, Tag, ClassificationLabel, PhotoLabel
 from yaffo.db.repositories.photos_repository import get_distinct_years, get_distinct_months
 from yaffo.utils.context import context
 
@@ -40,6 +40,8 @@ def init_home_routes(app: Flask):
         path = path.strip() if path else None
         person_ids = request.args.getlist("person", type=int)
         person_match_type = request.args.get("person-match-type", default='any', type=str)
+        labels_ids = request.args.getlist("labels", type=int)
+        labels_match_type = request.args.get("labels-match-type", default='any', type=str)
         tag_name = request.args.get("tag-name", type=str)
         tag_value = request.args.get("tag-value", type=str)
         location_names = request.args.getlist("location", type=str)
@@ -89,6 +91,21 @@ def init_home_routes(app: Flask):
                     .filter(PersonFace.person_id.in_(person_ids))
                     .distinct()
                 )
+                query = query.filter(Photo.id.in_(subquery))
+        if labels_ids and labels_match_type and len(labels_ids) > 0:
+            if labels_match_type == 'all':
+                for label_id in labels_ids:
+                    subquery = (
+                        db.session.query(Photo.id)
+                        .join(Photo.labels)
+                        .filter(PhotoLabel.label_id == label_id)
+                    )
+                    query = query.filter(Photo.id.in_(subquery))
+            else:
+                subquery = (
+                    db.session.query(Photo.id)
+                        .join(Photo.labels)
+                        .filter(PhotoLabel.label_id.in_(labels_ids)))
                 query = query.filter(Photo.id.in_(subquery))
 
         if tag_name and tag_value:
@@ -172,6 +189,13 @@ def init_home_routes(app: Flask):
         )
         location_names_list = [loc[0] for loc in distinct_locations if loc[0]]
 
+        labels = (
+            db.session.query(ClassificationLabel)
+            .filter(ClassificationLabel.enabled == True)
+            .order_by(ClassificationLabel.name)
+            .all()
+        )
+
         # Prepare filter options
         filters = {
             'people': Person.query.order_by(Person.name).all(),
@@ -179,9 +203,12 @@ def init_home_routes(app: Flask):
             'months': get_distinct_months(),
             'tag_names': tag_names_list,
             'location_names': location_names_list,
+            'labels': labels,
             'selected_path': path,
             'selected_person_ids': person_ids,
             'selected_person_match_type': person_match_type,
+            'selected_label_ids':labels_ids,
+            'selected_labels_match_type': labels_match_type,
             'selected_tag_name': tag_name,
             'selected_tag_value': tag_value,
             'selected_location_names': location_names,

@@ -54,9 +54,8 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
             label="Match threshold",
             help=(
                 "A detected face is assigned only when exactly one person matches at "
-                "or above this similarity (0 = least similar, 100 = most similar — "
-                "the same scale as the face assignment screen). Higher is stricter: "
-                "fewer, more confident assignments."
+                "or above this similarity (0 = least similar, 100 = most similar) "
+                "Higher is stricter: fewer, more confident assignments."
             ),
             min=0,
             max=100,
@@ -142,15 +141,14 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
             key="confidence_threshold",
             label="Confidence threshold",
             help=(
-                "A photo gets a label only when the CLIP image–text similarity is at "
-                "least this. Scores are compressed (true matches ~0.26–0.30, noise "
-                "~0.20–0.23); higher is stricter — fewer, more confident labels."
+                "A photo gets a label only when the CLIP image–text similarity is at or above this confidence "
+                "(0 = least similar, 100 = most similar) Higher is stricter: fewer, more confident labels."
             ),
             min=0.0,
-            max=1.0,
-            step=0.01,
+            max=100.0,
+            step=1,
             default=CLASSIFY_LABELS_DEFAULT_THRESHOLD,
-            type='float',
+            type='int',
         ),
         ConfigField(
             key="max_labels",

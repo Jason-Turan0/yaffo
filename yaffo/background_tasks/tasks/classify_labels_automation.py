@@ -18,11 +18,11 @@ from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
-from yaffo.db.models import Automation, AUTOMATION_HANDLER_CLASSIFY_LABELS
+from yaffo.db.models import Automation, AUTOMATION_HANDLER_CLASSIFY_LABELS, CLASSIFY_LABELS_DEFAULT_THRESHOLD
 from yaffo.db.repositories import classification_repository, photos_repository
 from yaffo.logging_config import get_logger
 from yaffo.utils.image import image_from_path, image_to_numpy
-from yaffo.utils.image_classifier import embed_image, embed_texts
+from yaffo.utils.image_classifier import embed_image, embed_texts, get_clip_threshold
 
 logger = get_logger(__name__, "background_tasks")
 
@@ -73,7 +73,8 @@ def classify_labels_automation_task(automation_id: int, photo_ids: list[int]):
         automation = session.get(Automation, automation_id)
         if automation is None:
             return
-        threshold = float(config_value(automation, _FIELDS["confidence_threshold"]))
+        ui_threshold = int(config_value(automation, _FIELDS["confidence_threshold"])) or CLASSIFY_LABELS_DEFAULT_THRESHOLD
+        threshold = get_clip_threshold(ui_threshold)
         max_labels = int(config_value(automation, _FIELDS["max_labels"]))
 
         def work() -> str:
