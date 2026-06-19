@@ -8,7 +8,7 @@ const minSimilarityRange = document.getElementById('min_similarity-range');
 const minSimilarityValue = document.getElementById('min_similarity-value');
 if (minSimilarityRange) {
     minSimilarityRange.addEventListener('input', (e) => {
-        minSimilarityValue.textContent = Math.round(e.target.value * 100) + '%';
+        minSimilarityValue.textContent = Math.round(e.target.value) + '%';
     });
 }
 
@@ -16,7 +16,7 @@ const maxSimilarityRange = document.getElementById('max_similarity-range');
 const maxSimilarityValue = document.getElementById('max_similarity-value');
 if (maxSimilarityRange) {
     maxSimilarityRange.addEventListener('input', (e) => {
-        maxSimilarityValue.textContent = Math.round(e.target.value * 100) + '%';
+        maxSimilarityValue.textContent = Math.round(e.target.value) + '%';
     });
 }
 

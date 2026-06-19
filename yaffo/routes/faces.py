@@ -14,12 +14,12 @@ from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED
 from yaffo.background_tasks.events import emit_event
 from sklearn.metrics.pairwise import cosine_similarity
 
-from yaffo.db.repositories.person_repository import update_person_embedding
+from yaffo.db.repositories.person_repository import update_person_embedding, get_similarity_bounds
 from yaffo.db.repositories.photos_repository import get_distinct_years, get_distinct_months
-from yaffo.domain.compare_utils import load_embedding, calculate_similarity
+from yaffo.domain.compare_utils import load_embedding, calculate_similarity, ui_threshold_to_similarity
 from yaffo.utils.context import context
 
-DEFAULT_THRESHOLD = 10  # configurable similarity threshold
+DEFAULT_THRESHOLD = 50  # UI similarity slider 0-100 (0 = least similar, 100 = most)
 DEFAULT_PAGE_SIZE = 2000
 DEFAULT_MIN_SAMPLE_SIZE = 3
 DEFAULT_GROUP_BY = 'similarity'
@@ -45,7 +45,7 @@ class FaceSuggestion:
 logger = get_logger(__name__, 'webapp')
 
 
-def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int) -> list[FaceSuggestion]:
+def make_suggestions_by_similarity(unassigned_faces: list[Face], min_similarity: float) -> list[FaceSuggestion]:
     embeddings = []
     face_ids = []
     face_dict = {face.id: face for face in unassigned_faces}
@@ -57,9 +57,10 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int)
         face_ids.append(face.id)
     embeddings = np.array(embeddings)
     # ArcFace embeddings are L2-normalized -> cluster by cosine distance (1 - cos).
-    # eps is a cosine-distance radius (~0.5 center); the slider tightens it. Tune
-    # against benchmarks/face/.
-    eps = 0.6 - (threshold / 100)
+    # min_similarity is the required cosine similarity (already scaled from the UI
+    # slider); eps is the complementary distance radius, so requiring more
+    # similarity tightens the clusters.
+    eps = 1.0 - min_similarity
     clustering = DBSCAN(eps=eps, min_samples=DEFAULT_MIN_SAMPLE_SIZE, metric="cosine").fit(embeddings)
     clusters = {}
     for face_id, label in zip(face_ids, clustering.labels_):
@@ -84,7 +85,7 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], threshold: int)
     return suggestions
 
 
-def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Person], threshold: int, person_id) -> list[
+def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Person], min_similarity: float, person_id) -> list[
     FaceSuggestion]:
     face_suggestions = []
     default_suggestion = FaceSuggestion(
@@ -94,9 +95,9 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
         photo_date='',
         faces=[]
     )
-    # ArcFace cosine similarity: genuine matches ~0.4-0.65. Center ~0.3 and let the
-    # slider raise it. Tune against benchmarks/face/.
-    computed_threshold = 0.3 + (threshold / 100)
+    # min_similarity is the required cosine similarity, already scaled from the UI
+    # slider against the live similarity band.
+    computed_threshold = min_similarity
     for face in unassigned_faces:
         emb = load_embedding(face.embedding)
 
@@ -186,10 +187,12 @@ def init_faces_routes(app: Flask):
                   .all()
                   )
 
+        # Scale the 0-100 slider to a cosine similarity against the live data band.
+        min_similarity = ui_threshold_to_similarity(threshold, *get_similarity_bounds(db.session))
         face_suggestions = (
-            make_suggestions_by_similarity(unassigned_faces, threshold)) \
+            make_suggestions_by_similarity(unassigned_faces, min_similarity)) \
             if (group_by == 'similarity') else \
-            make_suggestions_for_people(unassigned_faces, people, threshold, person_id)
+            make_suggestions_for_people(unassigned_faces, people, min_similarity, person_id)
 
         for suggestion in face_suggestions:
             suggestion.faces = _.sort_by(suggestion.faces, lambda f: f.similarity if f.similarity is not None else 0,

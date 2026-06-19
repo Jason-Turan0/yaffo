@@ -84,9 +84,9 @@
             </div>
             <div class="filter-group">
                 <label for="threshold-range">Similarity Threshold</label>
-                <input type="range" id="threshold-range" name="threshold" min="0" max="10" step="1"
-                       value="{{ filters.selected_threshold or 5 }}">
-                <div class="threshold-display"><span id="threshold-value">{{ (filters.selected_threshold or 5) }}</span>
+                <input type="range" id="threshold-range" name="threshold" min="0" max="100" step="1"
+                       value="{{ filters.selected_threshold }}">
+                <div class="threshold-display"><span id="threshold-value">{{ filters.selected_threshold }}</span>%
                 </div>
             </div>
             {% if filters.selected_assign_person_id %}

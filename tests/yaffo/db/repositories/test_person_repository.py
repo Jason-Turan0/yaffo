@@ -12,8 +12,10 @@ from yaffo.db.models import Person, Photo, Face, PersonFace, PersonEmbedding, FA
 from yaffo.domain.compare_utils import serialize_embedding, load_embedding
 from yaffo.db.repositories.person_repository import (
     update_person_embedding,
+    get_similarity_bounds,
     MAX_REPRESENTATIVE_FACES,
 )
+from yaffo.domain.compare_utils import DEFAULT_SIMILARITY_FLOOR, DEFAULT_SIMILARITY_CEIL
 
 pytestmark = pytest.mark.unit
 
@@ -34,7 +36,7 @@ def _unit(*vals) -> np.ndarray:
     return v / n if n else v
 
 
-def _add_face(sess, person, photo, vec, age, det_score=None):
+def _add_face(sess, person, photo, vec, age, det_score=None, similarity=None):
     face = Face(
         embedding=serialize_embedding(vec), photo_id=photo.id, estimated_age=age,
         status=FACE_STATUS_ASSIGNED, det_score=det_score, location_top=0,
@@ -42,7 +44,7 @@ def _add_face(sess, person, photo, vec, age, det_score=None):
     )
     sess.add(face)
     sess.flush()
-    sess.add(PersonFace(person_id=person.id, face_id=face.id))
+    sess.add(PersonFace(person_id=person.id, face_id=face.id, similarity=similarity))
     sess.flush()
     return face
 
@@ -192,3 +194,33 @@ def test_caps_at_max_representative_faces_by_score(session):
     included = {fid for e in person.stage_embeddings for fid in json.loads(e.included_face_ids)}
     assert len(included) == MAX_REPRESENTATIVE_FACES
     assert included == kept_ids
+
+
+def test_similarity_bounds_falls_back_when_too_few_samples(session):
+    """Below the sample floor the percentiles are noisy, so the documented defaults
+    are used instead."""
+    person = Person(name="Sparse")
+    photo = Photo(year=2010)
+    session.add_all([person, photo])
+    session.flush()
+    _add_face(session, person, photo, _unit(1.0), age=20, similarity=0.5)
+    session.commit()
+
+    assert get_similarity_bounds(session) == (DEFAULT_SIMILARITY_FLOOR, DEFAULT_SIMILARITY_CEIL)
+
+
+def test_similarity_bounds_reads_percentiles_from_data(session):
+    """With enough assignments the band is the low/high percentiles of the actual
+    stored similarities, not the hardcoded defaults."""
+    person = Person(name="Busy")
+    photo = Photo(year=2010)
+    session.add_all([person, photo])
+    session.flush()
+    # similarities 0.00, 0.01, ... 0.99 -> p5 ~= 0.05, p95 ~= 0.95.
+    for i in range(100):
+        _add_face(session, person, photo, _unit(1.0, i), age=20, similarity=i / 100.0)
+    session.commit()
+
+    floor, ceil = get_similarity_bounds(session)
+    assert floor == pytest.approx(0.05, abs=0.02)
+    assert ceil == pytest.approx(0.95, abs=0.02)

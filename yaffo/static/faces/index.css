@@ -94,6 +94,11 @@
     background-color: var(--color-surface-hover);
 }
 
+/* Only the person shortcuts perform an action on click; Enter/ignore rows don't. */
+.shortcut-item[data-person-id] {
+    cursor: pointer;
+}
+
 .shortcut-item kbd {
     min-width: 20px;
     text-align: center;

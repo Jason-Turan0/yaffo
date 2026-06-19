@@ -54,7 +54,7 @@
                     {% for face_data in faces %}
                         <div class="face-card"
                              data-face-id="{{ face_data.face.id }}"
-                             data-similarity="{{ '%.2f' % (face_data.similarity * 100) if face_data.similarity is not none else 'N/A' }}"
+                             data-similarity="{{ face_data.similarity_pct if face_data.similarity_pct is not none else 'N/A' }}"
                              data-date="{{ face_data.face.photo.date_taken }}">
                             <img src="{{ url_for('face_thumbnail', face_id=face_data.face.id) }}"
                                  data-fallback="{{ url_for('placeholder') }}"
@@ -64,9 +64,9 @@
                                 </div>
                                 <div class="face-similarity">
                                     Similarity:
-                                    {% if face_data.similarity is not none %}
-                                        {% set sim_pct = (face_data.similarity * 100)|int %}
-                                        <span class="{% if sim_pct >= 95 %}similarity-high{% elif sim_pct >= 85 %}similarity-medium{% else %}similarity-low{% endif %}">
+                                    {% if face_data.similarity_pct is not none %}
+                                        {% set sim_pct = face_data.similarity_pct %}
+                                        <span class="{% if sim_pct >= 80 %}similarity-high{% elif sim_pct >= 50 %}similarity-medium{% else %}similarity-low{% endif %}">
                                 {{ sim_pct }}%
                             </span>
                                     {% else %}

@@ -2,10 +2,10 @@
 <div class="filter-group">
     <link rel="stylesheet" href="{{ url_for('static', filename='filters/_similarity.css') }}">
     <label for="{{ key_name }}-range">{{ label }}</label>
-    <input type="range" id="{{ key_name }}-range" name="{{ key_name }}" min="0" max="1" step="0.01"
+    <input type="range" id="{{ key_name }}-range" name="{{ key_name }}" min="0" max="100" step="1"
            value="{{ filters.get(key_name) or 0 }}">
     <div class="similarity-display"><span
-            id="{{ key_name }}-value">{{ ((filters.get(key_name) or 0) * 100)|int }}%</span>
+            id="{{ key_name }}-value">{{ (filters.get(key_name) or 0)|int }}%</span>
     </div>
 </div>
 {% endmacro %}

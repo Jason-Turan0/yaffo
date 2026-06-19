@@ -6,11 +6,51 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 import pydash as _
 from yaffo.db.models import Person, Face, PersonEmbedding, PersonFace
-from yaffo.domain.compare_utils import load_embedding, serialize_embedding
+from yaffo.domain.compare_utils import (
+    load_embedding,
+    serialize_embedding,
+    DEFAULT_SIMILARITY_FLOOR,
+    DEFAULT_SIMILARITY_CEIL,
+)
 from yaffo.domain.life_stages import life_stage, effective_birthdate
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+# Below this many assignments the percentiles are too noisy to calibrate a band.
+_SIMILARITY_BOUNDS_MIN_SAMPLES = 50
+
+# Nearest-rank low/high percentiles of stored similarities (SQLite has no
+# percentile aggregate). Percentiles, not min/max, so a few mis-assignments at the
+# tails don't stretch the band. COUNT(*) lets the caller fall back when sparse.
+_SIMILARITY_BOUNDS_SQL = text("""
+    SELECT
+        (SELECT similarity FROM people_face WHERE similarity IS NOT NULL
+         ORDER BY similarity
+         LIMIT 1 OFFSET (SELECT CAST(:low * (COUNT(*) - 1) AS INT)
+                         FROM people_face WHERE similarity IS NOT NULL)),
+        (SELECT similarity FROM people_face WHERE similarity IS NOT NULL
+         ORDER BY similarity
+         LIMIT 1 OFFSET (SELECT CAST(:high * (COUNT(*) - 1) AS INT)
+                         FROM people_face WHERE similarity IS NOT NULL)),
+        (SELECT COUNT(*) FROM people_face WHERE similarity IS NOT NULL)
+""")
+
+
+def get_similarity_bounds(
+    session: Session, low_pct: float = 0.05, high_pct: float = 0.95
+) -> tuple[float, float]:
+    """The (floor, ceil) cosine band the 0-100 UI similarity scale is calibrated
+    against, read from the live distribution of assigned-face similarities. Falls
+    back to the documented defaults until there are enough assignments to measure a
+    stable band (or if the data is degenerate). Cheap enough to call once per
+    request; the band drifts slowly as the gallery grows."""
+    floor, ceil, n = session.execute(
+        _SIMILARITY_BOUNDS_SQL, {"low": low_pct, "high": high_pct}
+    ).one()
+    if n < _SIMILARITY_BOUNDS_MIN_SAMPLES or floor is None or ceil is None or ceil <= floor:
+        return DEFAULT_SIMILARITY_FLOOR, DEFAULT_SIMILARITY_CEIL
+    return float(floor), float(ceil)
 
 
 def _medoid(embeddings: list[np.ndarray]) -> np.ndarray:

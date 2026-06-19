@@ -6,8 +6,9 @@ from sqlalchemy.orm import joinedload, aliased
 
 from yaffo.db import db
 from yaffo.db.models import Person, PersonFace, Face, FACE_STATUS_UNASSIGNED, Photo, EVENT_PHOTO_MODIFIED
-from yaffo.db.repositories.person_repository import update_person_embedding, get_photo_ids_for_person
+from yaffo.db.repositories.person_repository import update_person_embedding, get_photo_ids_for_person, get_similarity_bounds
 from yaffo.db.repositories.photos_repository import get_distinct_months, get_distinct_years
+from yaffo.domain.compare_utils import ui_threshold_to_similarity, similarity_to_ui_percent
 from yaffo.background_tasks.events import emit_event
 from yaffo.utils.context import context
 
@@ -172,8 +173,8 @@ def init_people_routes(app: Flask):
         person = db.session.get(Person, person_id)
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
-        min_similarity = request.args.get("min_similarity", type=float)
-        max_similarity = request.args.get("max_similarity", type=float)
+        min_similarity = request.args.get("min_similarity", type=int)
+        max_similarity = request.args.get("max_similarity", type=int)
         page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", type=int)
         filter_face_page_size = page_size if page_size else FACE_LOAD_LIMIT
@@ -200,10 +201,13 @@ def init_people_routes(app: Flask):
             query = query.filter(photo_alias.year == year)
         if month:
             query = query.filter(photo_alias.month == month)
+        # Sliders are 0-100 UI values; PersonFace.similarity is stored cosine. The
+        # band the 0-100 scale maps onto is read from the live data, not hardcoded.
+        bounds = get_similarity_bounds(db.session)
         if min_similarity and min_similarity > 0:
-            query = query.filter(PersonFace.similarity > min_similarity)
+            query = query.filter(PersonFace.similarity > ui_threshold_to_similarity(min_similarity, *bounds))
         if max_similarity and max_similarity > 0:
-            query = query.filter(PersonFace.similarity < max_similarity)
+            query = query.filter(PersonFace.similarity < ui_threshold_to_similarity(max_similarity, *bounds))
 
         # Get total count for pagination
         total_faces = query.count()
@@ -230,7 +234,14 @@ def init_people_routes(app: Flask):
         }
 
         face_data = [
-            {"face": face, "similarity": face.person_face.similarity}
+            {
+                "face": face,
+                "similarity": face.person_face.similarity,
+                "similarity_pct": (
+                    similarity_to_ui_percent(face.person_face.similarity, *bounds)
+                    if face.person_face.similarity is not None else None
+                ),
+            }
             for face in faces
         ]
 

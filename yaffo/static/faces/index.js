@@ -3,6 +3,15 @@ const tooltip = document.createElement('div');
 tooltip.className = 'tooltip';
 document.body.appendChild(tooltip);
 
+// Re-load /faces with the filters currently in the URL. Reset to the first page:
+// assignments shrink the unassigned set, so page 1 always holds the next batch,
+// and the server falls through to the "All Faces Assigned!" panel when it's empty.
+function loadNextBatchWithCurrentFilters() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('page');
+    window.location.assign(url.toString());
+}
+
 // Async submit function
 async function submitFaces(personId, faceStatus) {
     const selectedCheckboxes = document.querySelectorAll('#main-form input[name="faces"]:checked');
@@ -44,6 +53,21 @@ async function submitFaces(personId, faceStatus) {
 
             // Update face count after removal
             setTimeout(() => {
+                // Remove empty suggestion groups
+                document.querySelectorAll('.suggestion-group').forEach(group => {
+                    if (group.querySelectorAll('.face').length === 0) {
+                        group.remove();
+                    }
+                });
+
+                // The last group on screen was just cleared: re-request the same
+                // filters to pull the next batch. The server renders the
+                // "All Faces Assigned!" panel itself when nothing is left.
+                if (document.querySelectorAll('.suggestion-group').length === 0) {
+                    loadNextBatchWithCurrentFilters();
+                    return;
+                }
+
                 const remainingFaces = document.querySelectorAll('.face').length;
                 const subtitle = document.querySelector('.subtitle');
                 const mainContent = document.querySelector('.main-content');
@@ -52,12 +76,6 @@ async function submitFaces(personId, faceStatus) {
                     subtitle.textContent = `Showing ${remainingFaces} of ${totalUnassigned} unassigned face${remainingFaces !== 1 ? 's' : ''}`;
                 }
 
-                // Remove empty suggestion groups
-                document.querySelectorAll('.suggestion-group').forEach(group => {
-                    if (group.querySelectorAll('.face').length === 0) {
-                        group.remove();
-                    }
-                });
                 const nextSuggestionGroup = document.querySelectorAll('.suggestion-group')[0];
                 if (nextSuggestionGroup) {
                     const selectAllCheckbox = nextSuggestionGroup.querySelector('.group-select-checkbox');
@@ -301,6 +319,12 @@ document.querySelectorAll('[data-shortcut]').forEach(element => {
         keyboardShortcutMap.set(shortcut, {
             personId: personId,
             element: element
+        });
+        // Clicking a shortcut does the same as pressing its key: assign the
+        // currently selected group to that person.
+        element.addEventListener('click', () => {
+            flashElement(element);
+            submitFaces(personId, 'ASSIGNED');
         });
     }
 });
