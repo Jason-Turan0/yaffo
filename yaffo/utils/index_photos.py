@@ -144,6 +144,28 @@ def get_gps_coordinates(img: PIL_Image) -> Tuple[Optional[float], Optional[float
         return None, None, None
 
 
+def _exif_field(exif_data: Dict, name: str) -> Optional[str]:
+    """Look up an exiftool field by its bare name, ignoring the `-G` group prefix
+    (so both "EXIF:Make" and "Make" resolve)."""
+    for key, value in exif_data.items():
+        if key.split(":")[-1] == name and value not in (None, ""):
+            return str(value).strip()
+    return None
+
+
+def device_from_exif(exif_data: Dict) -> Optional[str]:
+    """The capture device as one display string from EXIF Make/Model. Model often
+    already starts with the make (Canon → "Canon EOS 5D Mark III"), so it isn't
+    repeated; otherwise the two are joined ("FUJIFILM" + "X-T200")."""
+    make = _exif_field(exif_data, "Make") or ""
+    model = _exif_field(exif_data, "Model") or ""
+    if not (make or model):
+        return None
+    if model and make and model.lower().startswith(make.lower()):
+        return model
+    return " ".join(part for part in (make, model) if part) or None
+
+
 def parse_exiftool_to_tags(exif_data: Dict) -> List[Dict[str, str]]:
     """
     Convert exiftool JSON output to tag list format.
@@ -284,8 +306,9 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
         exif_data = get_exif_data_with_exiftool(photo_path)
 
         if exif_data:
-            # Parse exiftool output
-            tags = parse_exiftool_to_tags(exif_data)
+            # Promote the capture device to a first-class photo property; the rest
+            # of the EXIF payload is intentionally not persisted as tags.
+            device = device_from_exif(exif_data)
             xmp_fields = extract_xmp_metadata(exif_data)
 
             # Extract GPS as signed decimal degrees (handles W/S hemispheres)
@@ -300,7 +323,7 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
             logger.debug(f"Falling back to PIL for metadata extraction: {photo_path}")
             image_tag = image_from_path(photo_path)
             latitude, longitude, location_name = get_gps_coordinates(image_tag)
-            tags = get_exif_tags(image_tag)
+            device = None
             xmp_fields = {}
 
         date_info = get_photo_date_info(str(photo_path), exif_data)
@@ -335,7 +358,7 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
             'latitude': latitude,
             'longitude': longitude,
             'location_name': location_name,
-            'tags': tags,
+            'device': device,
             'faces_data': faces_data
         }
 

@@ -7,6 +7,12 @@ window.PHOTO_ORGANIZER.initThemesPage = (selectedLabel, config) => {
         newThemeButton.addEventListener('click', newThemeModal.open);
     }
 
+    const renameButton = document.getElementById('rename-theme-button');
+    if (renameButton) {
+        const renameModal = window.PHOTO_ORGANIZER.COMPONENTS.modal.init('renameThemeModal');
+        renameButton.addEventListener('click', renameModal.open);
+    }
+
     const confirmDelete = async () => {
         const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
             title: 'Delete Theme',

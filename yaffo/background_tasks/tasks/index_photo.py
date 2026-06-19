@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from yaffo.db.models import Job, Photo, Face, Tag, JOB_STATUS_CANCELLED, FACE_STATUS_UNASSIGNED, \
+from yaffo.db.models import Job, Photo, Face, JOB_STATUS_CANCELLED, FACE_STATUS_UNASSIGNED, \
     JOB_STATUS_RUNNING, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
 from yaffo.utils.index_photos import index_photo
 from yaffo.domain.compare_utils import serialize_embedding
@@ -61,7 +61,6 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             latitude = index_results["latitude"]
             longitude = index_results["longitude"]
             location_name = index_results["location_name"]
-            tags = index_results["tags"]
             photo = next(photo for photo in photos_in_batch if photo.full_file_path == full_file_path)
             if photo is None:
                 logger.error(f"Failed to find photo in db for {full_file_path}")
@@ -73,14 +72,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             photo.date_taken = index_results["date_taken"]
             photo.year = index_results["year"]
             photo.month = index_results["month"]
-
-            for tag_data in tags:
-                tag = Tag(
-                    photo_id=photo.id,
-                    tag_name=tag_data['tag_name'],
-                    tag_value=tag_data['tag_value']
-                )
-                session.add(tag)
+            photo.device = index_results["device"]
             photo.status = PHOTO_STATUS_INDEXED
 
             for face_data in faces_data:

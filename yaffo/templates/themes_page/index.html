@@ -59,13 +59,16 @@
                 </button>
             {% endif %}
             {% if not selected_is_builtin %}
+                <button type="button" id="rename-theme-button" class="btn-secondary"
+                        data-icon="edit">Rename
+                </button>
                 <button type="button" id="delete-theme-button" class="btn-danger"
                         data-icon="delete">Delete
                 </button>
             {% endif %}
         </div>
         {% endset %}
-        {% call page_header(selected_label, subdfdftitle, header_actions) %}
+        {% call page_header(selected_label, none, header_actions) %}
             {{ 'A built-in theme that ships with Yaffo. System themes cannot be deleted.' if selected_is_builtin else 'A custom theme stored in the application database.' }}
         {% endcall %}
         {# Built-in themes are hand-crafted (no AI builder), so the conversation
@@ -116,6 +119,19 @@
 {% endmacro %}
 
 {{ render_modal('newThemeModal', 'New Theme', url_for('themes_create'), render_new_theme_form, 'Create') }}
+
+{% if not selected_is_builtin %}
+{% macro render_rename_theme_form() %}
+    <div class="form-group">
+        <label for="rename-theme-label">Name</label>
+        <input type="text" id="rename-theme-label" name="label" required
+               value="{{ selected_label }}">
+        <p class="hint-text">Renaming updates the theme's web address (slug) to match.</p>
+    </div>
+{% endmacro %}
+
+{{ render_modal('renameThemeModal', 'Rename Theme', url_for('themes_rename', slug=selected_slug), render_rename_theme_form, 'Save') }}
+{% endif %}
 
 <form id="delete-theme-form" method="POST"
       action="{{ url_for('themes_delete', slug=selected_slug) }}" hidden></form>

@@ -15,12 +15,36 @@ from yaffo.utils.index_photos import (
     get_signed_gps_from_exiftool,
     get_gps_coordinates,
     get_exif_tags,
+    device_from_exif,
     index_photo,
     delete_orphaned_photos,
     delete_photos_by_paths,
     delete_photos_under_dir,
 )
 from yaffo.utils.face_analysis import DetectedFace
+
+
+class TestDeviceFromExif:
+    def test_model_already_includes_make_not_repeated(self):
+        assert device_from_exif({"EXIF:Make": "Canon", "EXIF:Model": "Canon EOS 5D Mark III"}) == "Canon EOS 5D Mark III"
+
+    def test_make_and_model_joined(self):
+        assert device_from_exif({"EXIF:Make": "FUJIFILM", "EXIF:Model": "X-T200"}) == "FUJIFILM X-T200"
+
+    def test_bare_keys_without_group_prefix(self):
+        assert device_from_exif({"Make": "Apple", "Model": "iPhone 6"}) == "Apple iPhone 6"
+
+    def test_only_make(self):
+        assert device_from_exif({"EXIF:Make": "GoPro"}) == "GoPro"
+
+    def test_only_model(self):
+        assert device_from_exif({"EXIF:Model": "X-T200"}) == "X-T200"
+
+    def test_neither(self):
+        assert device_from_exif({"EXIF:ISO": "100"}) is None
+
+    def test_empty_values_ignored(self):
+        assert device_from_exif({"EXIF:Make": "", "EXIF:Model": ""}) is None
 
 
 @pytest.fixture
@@ -345,7 +369,7 @@ class TestIndexPhoto:
         assert result is not None
         assert 'latitude' in result
         assert 'longitude' in result
-        assert 'tags' in result
+        assert 'device' in result
         assert 'faces_data' in result
         assert len(result['faces_data']) == 0
 
@@ -626,7 +650,7 @@ class TestDSCN0010RealFile:
 
     @patch('yaffo.utils.index_photos.detect_faces')
     def test_index_photo_extracts_all_metadata(self, mock_detect, dscn0010_path: Path, temp_dir):
-        """index_photo should extract date, GPS, and tags from DSCN0010.jpg."""
+        """index_photo should extract date, GPS, and the capture device from DSCN0010.jpg."""
         mock_detect.return_value = []
 
         result = index_photo(dscn0010_path, temp_dir)
@@ -640,7 +664,5 @@ class TestDSCN0010RealFile:
         assert result['date_taken'] is not None
         assert '2008-10-22' in result['date_taken']
 
-        assert result['tags'] is not None
-        tag_names = [t['tag_name'] for t in result['tags']]
-        assert 'MaxApertureValue' in tag_names
-        assert 'Make' in tag_names
+        # Make/Model promoted to a single device string (Make + Model, not repeated)
+        assert result['device'] == 'NIKON COOLPIX P6000'

@@ -32,6 +32,12 @@
                             <span class="detail-value">{{ photo.date_taken | format_date ("datetime") }}</span>
                         </div>
                     {% endif %}
+                    {% if photo.device %}
+                        <div class="detail-item">
+                            <label>Device:</label>
+                            <span class="detail-value">{{ photo.device }}</span>
+                        </div>
+                    {% endif %}
                     <div class="detail-actions">
                         <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFile('{{ absolute_file_path }}')"
                                 class="action-button">

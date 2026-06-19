@@ -34,11 +34,11 @@ def _slugify(label: str) -> str:
     return slug[:_MAX_BASE_SLUG_LENGTH].rstrip("-")
 
 
-def _unique_slug(label: str) -> str:
+def _unique_slug(label: str, exclude: str | None = None) -> str:
     base = _slugify(label)
     slug = base
     counter = 2
-    while themes.theme_exists(slug):
+    while themes.theme_exists(slug) and slug != exclude:
         slug = f"{base}-{counter}"
         counter += 1
     return slug
@@ -148,6 +148,21 @@ def init_themes_page_routes(app: Flask):
             )
         )
         return redirect(url_for("themes_show", slug=slug))
+
+    @app.route("/themes/<slug>/rename", methods=["POST"])
+    def themes_rename(slug: str):
+        """Rename a custom theme. The slug is re-derived from the new label and the
+        theme moves to it, so the response redirects to the new URL."""
+        if themes.is_builtin(slug):
+            return jsonify({"error": "System themes cannot be renamed"}), 400
+        if themes.get_custom_theme(slug) is None:
+            abort(404)
+        label = (request.form.get("label") or "").strip()
+        if not label:
+            return jsonify({"error": "Theme name is required"}), 400
+        new_slug = _unique_slug(label, exclude=slug)
+        themes.rename_custom_theme(slug, new_slug, label)
+        return redirect(url_for("themes_show", slug=new_slug))
 
     @app.route("/themes/<slug>/delete", methods=["POST"])
     def themes_delete(slug: str):

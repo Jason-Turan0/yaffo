@@ -21,6 +21,10 @@ class Photo(db.Model):
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     location_name = db.Column(db.String)
+    # Capture device, derived from EXIF Make/Model at index time (e.g. "FUJIFILM
+    # X-T200", "Apple iPhone 6"). The rest of the EXIF metadata is intentionally
+    # not persisted; see utils.index_photos.device_from_exif.
+    device = db.Column(db.String, nullable=True)
     status = db.Column(db.String, default=PHOTO_STATUS_IMPORTED)
     faces = db.relationship(
         "Face",

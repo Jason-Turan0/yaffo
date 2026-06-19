@@ -108,153 +108,6 @@ def is_builtin(slug: str) -> bool:
     return slug in THEMES
 
 
-# --- TEMPORARY STUB ----------------------------------------------------------
-# A sample custom theme served as if an agent had stored it in
-# ApplicationSettings, so the runtime-theme pipeline (settings picker, dynamic
-# /themes/<slug>/*.css routes, widget-frame tokens, favicon route, and the
-# empty-placeholder fallback) can be exercised end to end before the generator
-# exists. A real DB row with the same slug overrides it. Remove once the
-# theme-generator agent lands.
-_STUB_THEMES: dict[str, CustomTheme] = {
-    "sunset": CustomTheme(
-        slug="sunset",
-        label="Sunset (sample)",
-        status= PAGE_VERSION_STATUS_ACCEPTED,
-        published_theme=ThemeAssets(
-            tokens_css="""\
-[data-theme="sunset"] {
-    /* Surfaces — warm peach cream */
-    --color-bg: #fff4ec;
-    --color-surface: #fffdfb;
-    --color-surface-hover: #ffeede;
-    --color-surface-sunken: #f7e2d3;
-
-    /* Text — dusk plum */
-    --color-text: #43273e;
-    --color-text-secondary: #5d4057;
-    --color-text-muted: #8a6f84;
-    --color-text-faint: #c4afc0;
-
-    --color-surface-inverse: #43273e;
-    --color-text-inverse: #fff4ec;
-
-    /* Borders — toasted peach */
-    --color-border-subtle: #f9e8dc;
-    --color-border: #efd6c4;
-    --color-border-strong: #ddb89f;
-    --color-border-hover: #c08a6b;
-
-    /* Accent — sunset orange */
-    --color-accent: #f4623a;
-    --color-accent-hover: #d94e2a;
-    --color-accent-soft: #ffe3d6;
-    --color-accent-soft-text: #9c3517;
-    --color-on-accent: #fff8f2;
-
-    /* Status */
-    --color-success: #4f9d69;
-    --color-success-hover: #428a59;
-    --color-success-soft: #def0e2;
-    --color-success-soft-text: #1f5c35;
-    --color-success-soft-border: #bfe3c8;
-    --color-danger: #d2385a;
-    --color-danger-hover: #b82c4c;
-    --color-danger-soft: #fadbe2;
-    --color-danger-soft-text: #861f3a;
-    --color-danger-soft-border: #f2bcc9;
-    --color-warning: #f5a623;
-    --color-warning-soft: #fdeccd;
-    --color-warning-soft-text: #7a5200;
-    --color-warning-soft-border: #f3d9a4;
-    --color-info: #5b8fc9;
-
-    --color-neutral: #8a6f84;
-    --color-neutral-hover: #6f5569;
-
-    --color-disabled-bg: #f3e4da;
-    --color-disabled-text: #a8918c;
-
-    /* Shape */
-    --radius-sm: 6px;
-    --radius-md: 12px;
-
-    /* Elevation — soft plum-tinted shadows */
-    --color-backdrop: rgba(67, 39, 62, 0.5);
-    --shadow-navbar: 0 2px 6px rgba(67, 39, 62, 0.08);
-    --shadow-sm: 0 1px 3px rgba(67, 39, 62, 0.12);
-    --shadow-md: 0 3px 10px rgba(67, 39, 62, 0.14);
-    --shadow-lg: 0 6px 18px rgba(67, 39, 62, 0.18);
-    --shadow-xl: 0 10px 32px rgba(67, 39, 62, 0.25);
-}
-""",
-        skin_css="""\
-[data-theme="sunset"] .navbar {
-    background: linear-gradient(90deg, var(--color-warning-soft), var(--color-accent-soft));
-}
-
-/* Brand carries the theme mark so tab icon and logo match (app convention);
-   custom themes have no static favicon file, so reference the favicon route. */
-[data-theme="sunset"] .navbar-brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--color-accent);
-    font-weight: 800;
-}
-
-[data-theme="sunset"] .navbar-brand::before {
-    content: "";
-    width: 24px;
-    height: 24px;
-    flex: none;
-    background: url("/favicon.ico?theme=sunset") center / contain no-repeat;
-}
-
-[data-theme="sunset"] .page-header h1 {
-    display: inline-block;
-    border-bottom: 4px solid var(--color-accent);
-    padding-bottom: 4px;
-}
-""",
-        favicon_svg="""\
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f5a623"/>
-      <stop offset="1" stop-color="#f4623a"/>
-    </linearGradient>
-  </defs>
-  <rect x="1" y="1" width="62" height="62" rx="14" fill="#fffdfb" stroke="#efd6c4" stroke-width="2"/>
-  <circle cx="32" cy="28" r="14" fill="url(#sun)"/>
-  <line x1="16" y1="30" x2="48" y2="30" stroke="#fffdfb" stroke-width="3"/>
-  <line x1="20" y1="36" x2="44" y2="36" stroke="#fffdfb" stroke-width="3"/>
-  <rect x="12" y="46" width="40" height="4" rx="2" fill="url(#sun)"/>
-</svg>
-""",
-        placeholder_svg="""\
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
-  <defs>
-    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f5a623"/>
-      <stop offset="1" stop-color="#f4623a"/>
-    </linearGradient>
-  </defs>
-  <rect width="400" height="300" fill="#fff4ec"/>
-  <rect x="120" y="60" width="160" height="120" rx="12" fill="#fffdfb" stroke="#efd6c4" stroke-width="2"/>
-  <circle cx="200" cy="116" r="26" fill="url(#sun)"/>
-  <line x1="170" y1="120" x2="230" y2="120" stroke="#fffdfb" stroke-width="5"/>
-  <line x1="176" y1="131" x2="224" y2="131" stroke="#fffdfb" stroke-width="5"/>
-  <rect x="160" y="150" width="80" height="6" rx="3" fill="url(#sun)"/>
-  <text x="200" y="216" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Roboto, sans-serif" font-size="15" fill="#8a6f84">image not found</text>
-</svg>
-"""
-    ),
-    working_theme=None,
-    conversations=[]
-    )
-}
-
-
 def get_custom_theme(slug: str, session: Optional[Session] = None) -> CustomTheme | None:
     row = (
         _session(session).query(ApplicationSettings)
@@ -263,21 +116,17 @@ def get_custom_theme(slug: str, session: Optional[Session] = None) -> CustomThem
     )
     if row is not None:
         return _theme_from_json(row.value)
-    return _STUB_THEMES.get(slug)
+    return None
 
 
 def list_custom_themes(session: Optional[Session] = None) -> list[CustomTheme]:
-    themes_by_slug = dict(_STUB_THEMES)
     rows = (
         _session(session).query(ApplicationSettings)
         .filter(ApplicationSettings.name.like(f"{CUSTOM_THEME_PREFIX}%"))
         .order_by(ApplicationSettings.name)
         .all()
     )
-    for row in rows:  # stored themes override stubs on slug collisions
-        theme = _theme_from_json(row.value)
-        themes_by_slug[theme.slug] = theme
-    return list(themes_by_slug.values())
+    return [_theme_from_json(row.value) for row in rows]
 
 
 def list_themes(session: Optional[Session] = None) -> dict[str, str]:
@@ -389,6 +238,56 @@ def discard_theme_draft(slug: str, session: Optional[Session] = None) -> None:
     theme.working_theme = None
     theme.status = PAGE_VERSION_STATUS_ACCEPTED
     save_custom_theme(theme, session)
+
+
+def _rewrite_theme_slug(theme: CustomTheme, old_slug: str, new_slug: str) -> None:
+    """Re-point the slug baked into a theme's CSS at a new slug: the
+    `[data-theme="…"]` selectors every block is scoped by, and the `theme=…` query
+    the skin uses to fetch the theme's own favicon."""
+    replacements = (
+        (f'[data-theme="{old_slug}"]', f'[data-theme="{new_slug}"]'),
+        (f"theme={old_slug}", f"theme={new_slug}"),
+    )
+    for assets in (theme.published_theme, theme.working_theme):
+        if assets is None:
+            continue
+        for old, new in replacements:
+            assets.tokens_css = assets.tokens_css.replace(old, new)
+            assets.skin_css = assets.skin_css.replace(old, new)
+
+
+def rename_custom_theme(
+    old_slug: str, new_slug: str, new_label: str, session: Optional[Session] = None
+) -> None:
+    """Rename a custom theme. The slug moves with the label, so the
+    ApplicationSettings key, the `[data-theme]` selectors baked into the published
+    and working CSS, and (when this theme is the active default) the default-theme
+    setting all follow. `new_slug` is the caller-validated, collision-free target;
+    pass `new_slug == old_slug` to change only the label."""
+    if is_builtin(old_slug):
+        raise ValueError(f"Slug {old_slug!r} belongs to a built-in theme")
+    sess = _session(session)
+    theme = get_custom_theme(old_slug, session)
+    if theme is None:
+        raise ValueError(f"Unknown custom theme: {old_slug!r}")
+
+    was_default = get_theme() == old_slug
+    theme.label = new_label
+    if new_slug != old_slug:
+        theme.slug = new_slug
+        _rewrite_theme_slug(theme, old_slug, new_slug)
+        old_row = (
+            sess.query(ApplicationSettings)
+            .filter_by(name=_setting_name(old_slug))
+            .first()
+        )
+        if old_row is not None:
+            sess.delete(old_row)
+
+    save_custom_theme(theme, session)
+
+    if new_slug != old_slug and was_default:
+        set_theme(new_slug)
 
 
 def delete_custom_theme(slug: str) -> None:

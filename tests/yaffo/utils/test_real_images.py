@@ -285,9 +285,7 @@ class TestCanon40D:
             result = index_photo(test_file, temp_dir)
 
             assert result is not None
-            assert 'tags' in result
-            assert isinstance(result['tags'], list)
-            assert len(result['tags']) > 0
+            assert result['device'] == 'Canon EOS 40D'
 
 
 class TestExifToolIntegration:

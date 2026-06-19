@@ -31,8 +31,9 @@ pytestmark = pytest.mark.unit
 
 
 _EMPTY_INDEX_RESULT = {
-    "faces_data": [], "tags": [],
+    "faces_data": [],
     "latitude": None, "longitude": None, "location_name": None,
+    "device": None,
     "date_taken": None, "year": None, "month": None,
 }
 
