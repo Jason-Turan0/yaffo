@@ -156,7 +156,15 @@ the Starlark `ctx` (so a script reads `ctx["groups"]`) via `dispatch_event_task`
 `invoke_automation`'s serialized payload → `executor.context_globals`.
 
 Event catalog (fixed, in `models.py`): `photo_imported`, `photo_indexed`,
-`duplicates_found`, `photo_modified` (`EVENTS`).
+`duplicates_found`, `photo_modified`, `photo_labeled` (`EVENTS`).
+
+**`photo_labeled` is emitted from `classify_labels_automation_task`** after a batch
+is labelled — for the photos that received at least one label. Like
+`assign_location_name` emits its event from inside the run, but **after `record_run`
+commits** (classify's `replace_photo_labels` defers its commit to `record_run`), so a
+subscriber reading `photo_labels` sees the new rows. Fires for both the
+`photo_indexed`-driven run and the Settings "re-classify all" backfill; a run that
+labels nothing emits nothing.
 
 **`duplicates_found` is emitted directly from `find_duplicates_task`** (not via
 `JOB_EVENT_MAP`/`complete_job_task`, which a find_duplicates job never reaches): the

@@ -45,7 +45,7 @@ def test_keeps_only_labels_at_or_above_threshold(monkeypatch):
         image_vectors={"/photos/5.jpg": [1.0, 0.0]},
     )
     labeled = mod._classify_photos(session=None, photo_ids=[5], threshold=0.5, max_labels=5)
-    assert labeled == 1
+    assert labeled == [5]
     assert written[5] == [(1, pytest.approx(1.0))]
 
 
@@ -71,13 +71,13 @@ def test_no_match_clears_labels(monkeypatch):
         image_vectors={"/photos/9.jpg": [0.0, 1.0]},  # orthogonal -> cos 0
     )
     labeled = mod._classify_photos(session=None, photo_ids=[9], threshold=0.23, max_labels=5)
-    assert labeled == 0
+    assert labeled == []
     assert written[9] == []  # still replaced (wipes any stale labels)
 
 
 def test_no_enabled_labels_is_noop(monkeypatch):
     written = _patch(monkeypatch, labels=[], label_vectors=[], image_vectors={})
-    assert mod._classify_photos(session=None, photo_ids=[1], threshold=0.23, max_labels=5) == 0
+    assert mod._classify_photos(session=None, photo_ids=[1], threshold=0.23, max_labels=5) == []
     assert written == {}
 
 
@@ -93,7 +93,7 @@ def test_unreadable_image_is_skipped(monkeypatch):
         raise OSError("corrupt")
 
     monkeypatch.setattr(mod, "image_from_path", _boom)
-    assert mod._classify_photos(session=None, photo_ids=[2], threshold=0.5, max_labels=5) == 0
+    assert mod._classify_photos(session=None, photo_ids=[2], threshold=0.5, max_labels=5) == []
     assert written == {}  # skipped entirely, not replaced
 
 

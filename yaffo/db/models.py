@@ -279,11 +279,13 @@ EVENT_PHOTO_IMPORTED = "photo_imported"
 EVENT_PHOTO_INDEXED = "photo_indexed"
 EVENT_DUPLICATES_FOUND = "duplicates_found"
 EVENT_PHOTO_MODIFIED = "photo_modified"
+EVENT_PHOTO_LABELED = "photo_labeled"
 EVENTS = {
     EVENT_PHOTO_IMPORTED: "Photo imported",
     EVENT_PHOTO_INDEXED: "Photo indexed",
     EVENT_DUPLICATES_FOUND: "Duplicates found",
     EVENT_PHOTO_MODIFIED: "Photo modified",
+    EVENT_PHOTO_LABELED: "Photo labeled",
 }
 
 # Handler keys for system automations (registry in background_tasks.registry).

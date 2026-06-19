@@ -15,10 +15,15 @@ from sqlalchemy.orm import Session
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
 from yaffo.background_tasks.automation_runs import record_run
 from yaffo.background_tasks.config import task_queue
-from yaffo.background_tasks.events import EventContext
+from yaffo.background_tasks.events import EventContext, emit_event
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
-from yaffo.db.models import Automation, AUTOMATION_HANDLER_CLASSIFY_LABELS, CLASSIFY_LABELS_DEFAULT_THRESHOLD
+from yaffo.db.models import (
+    Automation,
+    AUTOMATION_HANDLER_CLASSIFY_LABELS,
+    CLASSIFY_LABELS_DEFAULT_THRESHOLD,
+    EVENT_PHOTO_LABELED,
+)
 from yaffo.db.repositories import classification_repository, photos_repository
 from yaffo.logging_config import get_logger
 from yaffo.utils.image import image_from_path, image_to_numpy
@@ -29,18 +34,18 @@ logger = get_logger(__name__, "background_tasks")
 _FIELDS = {field.key: field for field in AUTOMATION_CONFIG[AUTOMATION_HANDLER_CLASSIFY_LABELS]}
 
 
-def _classify_photos(session: Session, photo_ids: list[int], threshold: float, max_labels: int) -> int:
+def _classify_photos(session: Session, photo_ids: list[int], threshold: float, max_labels: int) -> list[int]:
     """Label each photo with the vocabulary entries scoring >= threshold (cosine),
-    keeping the top `max_labels`. Replaces each photo's prior labels. Returns the
-    number of photos that received at least one label. Label embeddings are computed
-    once for the whole batch."""
+    keeping the top `max_labels`. Replaces each photo's prior labels. Returns the ids
+    of the photos that received at least one label. Label embeddings are computed once
+    for the whole batch."""
     labels = classification_repository.get_enabled_labels(session)
     if not labels:
-        return 0
+        return []
     label_embeddings = embed_texts([label.effective_prompt for label in labels])
     paths = photos_repository.get_paths_by_ids(session, photo_ids)
 
-    labeled = 0
+    labeled: list[int] = []
     for photo_id in photo_ids:
         path = paths.get(photo_id)
         if not path:
@@ -59,7 +64,7 @@ def _classify_photos(session: Session, photo_ids: list[int], threshold: float, m
         assignments = [(labels[i].id, float(sims[i])) for i in order if sims[i] >= threshold]
         classification_repository.replace_photo_labels(session, photo_id, assignments)
         if assignments:
-            labeled += 1
+            labeled.append(photo_id)
     return labeled
 
 
@@ -77,14 +82,21 @@ def classify_labels_automation_task(automation_id: int, photo_ids: list[int]):
         threshold = get_clip_threshold(ui_threshold)
         max_labels = int(config_value(automation, _FIELDS["max_labels"]))
 
+        labeled: list[int] = []
+
         def work() -> str:
+            nonlocal labeled
             labeled = _classify_photos(session, photo_ids, threshold, max_labels)
             return (
-                f"labeled {labeled} of {len(photo_ids)} photo(s) "
+                f"labeled {len(labeled)} of {len(photo_ids)} photo(s) "
                 f"at threshold {threshold:.2f} (max {max_labels} each)"
             )
 
         record_run(session, automation, work)
+        # Emit after record_run so the labels are committed before subscribers run
+        # (record_run commits work's writes); fire only when something was labeled.
+        if labeled:
+            emit_event(EVENT_PHOTO_LABELED, {"photo_ids": labeled})
     finally:
         session.close()
         SessionFactory.remove()
