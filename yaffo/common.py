@@ -1,5 +1,5 @@
 from pathlib import Path
-from platformdirs import site_data_dir
+from platformdirs import site_data_dir, user_cache_dir
 import os
 
 app_author = "Jason Turan"
@@ -25,3 +25,7 @@ MEDIA_DIRS = [
 THUMBNAIL_DIR = ROOT_DIR / "thumbnails"
 DB_PATH = ROOT_DIR / f"{app_name}.db"
 QUEUE_DB_PATH = ROOT_DIR / f"{app_name}-queue.db"
+
+# Downloaded vision models (CLIP ONNX encoders) cache here on first use, like
+# InsightFace's ~/.insightface — kept out of the photo library / data dir.
+MODEL_CACHE_DIR = Path(user_cache_dir(app_name, app_author))

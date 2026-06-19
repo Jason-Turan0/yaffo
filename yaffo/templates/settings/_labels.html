@@ -1,0 +1,49 @@
+<div class="settings-section" id="labels-section">
+    <h2>Photo labels</h2>
+    <p class="section-description">
+        The vocabulary the <strong>Classify labels</strong> automation scores photos against (offline image
+        recognition). Enable the labels you want detected, or add your own. A custom prompt fine-tunes how a
+        label is matched — e.g. label <em>swimming</em> with prompt <em>people swimming in water</em>.
+    </p>
+
+    {% if message %}<p class="form-success">{{ message }}</p>{% endif %}
+    {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+    {% if labels %}
+    <ul class="labels-list">
+        {% for label in labels %}
+        <li class="label-row">
+            <label class="checkbox-label">
+                <input type="checkbox" {% if label.enabled %}checked{% endif %}
+                       hx-post="{{ url_for('settings_labels') }}"
+                       hx-vals='{"action": "toggle", "label_id": {{ label.id }}}'
+                       hx-target="#labels-section" hx-swap="outerHTML">
+            </label>
+            <span class="label-name">{{ label.name }}</span>
+            {% if label.prompt %}<span class="label-prompt">{{ label.prompt }}</span>{% endif %}
+            {% if label.is_default %}<span class="label-badge">default</span>{% endif %}
+            <button type="button" class="btn-danger btn-sm" data-icon="delete"
+                    hx-post="{{ url_for('settings_labels') }}"
+                    hx-vals='{"action": "delete", "label_id": {{ label.id }}}'
+                    hx-target="#labels-section" hx-swap="outerHTML">Remove</button>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="no-data">No labels yet</p>
+    {% endif %}
+
+    <form class="add-label-form" hx-post="{{ url_for('settings_labels') }}"
+          hx-vals='{"action": "create"}' hx-target="#labels-section" hx-swap="outerHTML">
+        <input type="text" name="name" placeholder="Label name (e.g. dog)" required>
+        <input type="text" name="prompt" placeholder="Optional prompt (e.g. people swimming in water)">
+        <button type="submit" class="btn-primary" data-icon="add">Add label</button>
+    </form>
+
+    <div class="labels-reclassify">
+        <button type="button" class="btn-secondary"
+                hx-post="{{ url_for('settings_labels_reclassify') }}"
+                hx-target="#labels-section" hx-swap="outerHTML">Re-classify all photos</button>
+        <p class="hint-text">Run the classifier over your whole library to apply vocabulary changes.</p>
+    </div>
+</div>

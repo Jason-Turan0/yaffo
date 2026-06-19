@@ -447,3 +447,18 @@
         height: 60vh;
     }
 }
+/* Classification labels (read-only chips) */
+.labels-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.label-chip {
+    padding: 4px 10px;
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}

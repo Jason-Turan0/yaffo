@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from yaffo.db import db
-from yaffo.db.models import ApplicationSettings, Face
+from yaffo.db.models import ApplicationSettings, Face, ClassificationLabel, AUTOMATION_HANDLER_CLASSIFY_LABELS
 from yaffo.common import DB_PATH, QUEUE_DB_PATH
 from yaffo.page_builder import llm_config
 import json
@@ -9,6 +9,8 @@ import platform
 import shutil
 from pathlib import Path
 
+from yaffo.background_tasks.tasks.classify_labels_automation import classify_labels_automation_task
+from yaffo.db.repositories import automation_repository, classification_repository, photos_repository
 from yaffo.utils.file_system import show_file_dialog
 from yaffo.utils import settings as media_settings
 
@@ -63,7 +65,50 @@ def init_settings_routes(app: Flask):
             thumbnail_size=format_size(thumbnail_size),
             queue_db_path=str(QUEUE_DB_PATH),
             llm=llm_config.status(),
+            labels=classification_repository.list_labels(db.session),
         )
+
+    def _render_labels(error: str | None = None, message: str | None = None):
+        return render_template(
+            "settings/_labels.html",
+            labels=classification_repository.list_labels(db.session),
+            error=error,
+            message=message,
+        )
+
+    @app.route("/settings/labels", methods=["POST"])
+    def settings_labels():
+        """CRUD for the classification-label vocabulary, one HTMX endpoint keyed by
+        `action`; always re-renders the labels section fragment."""
+        action = request.form.get("action")
+        if action == "create":
+            name = (request.form.get("name") or "").strip()
+            prompt = (request.form.get("prompt") or "").strip()
+            if not name:
+                return _render_labels(error="Label name is required.")
+            if classification_repository.get_label_by_name(db.session, name):
+                return _render_labels(error=f"Label '{name}' already exists.")
+            classification_repository.create_label(db.session, name, prompt or None)
+        elif action == "delete":
+            classification_repository.delete_label(db.session, int(request.form["label_id"]))
+        elif action == "toggle":
+            label = db.session.get(ClassificationLabel, int(request.form["label_id"]))
+            if label is not None:
+                classification_repository.set_enabled(db.session, label.id, not label.enabled)
+        return _render_labels()
+
+    @app.route("/settings/labels/reclassify", methods=["POST"])
+    def settings_labels_reclassify():
+        """Backfill: re-run the classifier over every indexed photo so vocabulary
+        changes take effect. Enqueues the automation's task (recorded as a Job)."""
+        automation = automation_repository.get_by_slug(db.session, AUTOMATION_HANDLER_CLASSIFY_LABELS)
+        if automation is None:
+            return _render_labels(error="Classify-labels automation is not installed.")
+        photo_ids = photos_repository.get_indexed_photo_ids(db.session)
+        if not photo_ids:
+            return _render_labels(error="No indexed photos to classify yet.")
+        classify_labels_automation_task(automation.id, photo_ids)
+        return _render_labels(message=f"Re-classifying {len(photo_ids)} photo(s) in the background…")
 
     @app.route("/settings/llm/model", methods=["POST"])
     def settings_llm_model():

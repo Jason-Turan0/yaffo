@@ -124,6 +124,21 @@
                 </div>
 
                 <div class="detail-section">
+                    <h3>Labels ({{ photo.labels|length }})</h3>
+                    {% if photo.labels %}
+                        <div class="labels-chips">
+                            {% for photo_label in photo.labels %}
+                                <span class="label-chip" title="confidence {{ '%.2f'|format(photo_label.confidence) }}">
+                                    {{ photo_label.label.name }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="no-data">No labels</p>
+                    {% endif %}
+                </div>
+
+                <div class="detail-section">
                     <h3>Tags ({{ photo.tags|length }})</h3>
                     {% if photo.tags %}
                         <div class="tags-list">

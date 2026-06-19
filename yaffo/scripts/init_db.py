@@ -1,6 +1,61 @@
 import sqlite3
 from yaffo.common import DB_PATH
 
+# Starter vocabulary for the classify-labels automation — common subjects, scenes,
+# activities, and events in personal photos. Seeded as `is_default` rows; users
+# add/remove/disable their own from Settings. Each entry is (name, prompt): the
+# prompt is the phrase CLIP actually matches against, or None to use the default
+# "a photo of <name>" template. Concrete nouns work fine bare; activities, events,
+# and abstract terms match better with a fuller phrase.
+DEFAULT_CLASSIFICATION_LABELS = [
+    # Animals
+    ("dog", None), ("cat", None), ("bird", None), ("horse", None),
+    ("fish", None), ("rabbit", None),
+    # Activities
+    ("swimming", "people swimming in water"),
+    ("hiking", "people hiking on a trail in nature"),
+    ("skiing", "people skiing on snow"),
+    ("running", "a person running outdoors"),
+    ("cycling", "people riding bicycles"),
+    ("dancing", "people dancing"),
+    ("fishing", "a person fishing"),
+    ("camping", "a campsite with tents"),
+    ("surfing", "a person surfing on ocean waves"),
+    ("playing sports", "people playing a sport"),
+    # Nature & scenes
+    ("beach", None), ("mountains", None), ("forest", None), ("lake", None),
+    ("river", None), ("ocean", None), ("waterfall", None), ("garden", None),
+    ("park", None), ("sunset", "a sunset sky"), ("snow", "a snowy winter scene"),
+    ("autumn leaves", "autumn leaves in fall colors"),
+    # Urban
+    ("city skyline", "a city skyline"), ("street", "a city street"),
+    ("building", None), ("bridge", None),
+    # Events
+    ("wedding", "a wedding ceremony"),
+    ("birthday party", "a birthday party with a cake"),
+    ("graduation", "a graduation ceremony with caps and gowns"),
+    ("concert", "a live music concert"),
+    ("parade", "a parade on a street"),
+    ("fireworks", "fireworks in the night sky"),
+    ("christmas", "a christmas celebration with decorations"),
+    ("halloween", "halloween costumes and decorations"),
+    # Food & drink
+    ("food", None), ("coffee", None), ("dessert", None), ("cake", None),
+    ("pizza", None), ("barbecue", "a barbecue cookout with grilled food"),
+    ("wine", None),
+    # People
+    ("baby", None), ("children", None),
+    ("group of people", "a group of people together"),
+    ("selfie", "a selfie of a person"),
+    ("portrait", "a portrait of a person"),
+    ("crowd", "a large crowd of people"),
+    # Objects & transport
+    ("car", None), ("boat", None), ("airplane", None), ("bicycle", None),
+    ("train", None), ("flowers", None), ("christmas tree", None),
+    # Utility
+    ("document", None), ("screenshot", None), ("artwork", None), ("map", None),
+]
+
 
 # @formatter:off
 def init_db():
@@ -122,6 +177,37 @@ def init_db():
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_photo_id ON tags(photo_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_tag_name ON tags(tag_name)")
+
+    # Curated vocabulary the classify-labels automation scores photos against
+    # (zero-shot CLIP). User-editable from Settings; `prompt` overrides the default
+    # "a photo of <name>" embedding text.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS classification_labels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            prompt TEXT,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            is_default INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    # Labels the classifier assigned to a photo, with the CLIP cosine confidence.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS photo_labels (
+            photo_id INTEGER NOT NULL,
+            label_id INTEGER NOT NULL,
+            confidence REAL,
+            PRIMARY KEY (photo_id, label_id),
+            FOREIGN KEY(photo_id) REFERENCES photos(id) ON DELETE CASCADE,
+            FOREIGN KEY(label_id) REFERENCES classification_labels(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_photo_labels_photo_id ON photo_labels(photo_id)")
+
+    cursor.executemany(
+        "INSERT OR IGNORE INTO classification_labels (name, is_default) VALUES (?, 1)",
+        [(name,) for name in DEFAULT_CLASSIFICATION_LABELS],
+    )
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS application_settings (
@@ -263,6 +349,26 @@ def init_db():
         SELECT a.id, 'event', 1, 'photo_indexed'
         FROM automations a
         WHERE a.slug = 'geotag_from_neighbors'
+          AND NOT EXISTS (
+              SELECT 1 FROM automation_triggers t
+              WHERE t.automation_id = a.id AND t.trigger_type = 'event'
+          )
+    """)
+
+    # Seed the built-in classify-labels automation (disabled) + its photo_indexed
+    # event trigger. config holds the CLIP cosine threshold + per-photo label cap
+    # (see automation_config); the label vocabulary lives in classification_labels.
+    cursor.execute("""
+        INSERT OR IGNORE INTO automations (slug, name, description, is_system, enabled, handler, status, config)
+        VALUES ('classify_labels', 'Classify labels',
+                'When a photo is indexed, label it with the subjects, scenes, and activities it matches from your label vocabulary (offline CLIP image recognition).',
+                1, 0, 'classify_labels', 'READY', '{"confidence_threshold": 0.23, "max_labels": 4}')
+    """)
+    cursor.execute("""
+        INSERT INTO automation_triggers (automation_id, trigger_type, enabled, event_type)
+        SELECT a.id, 'event', 1, 'photo_indexed'
+        FROM automations a
+        WHERE a.slug = 'classify_labels'
           AND NOT EXISTS (
               SELECT 1 FROM automation_triggers t
               WHERE t.automation_id = a.id AND t.trigger_type = 'event'

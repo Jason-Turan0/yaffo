@@ -23,6 +23,9 @@ from yaffo.db.models import (
     ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M,
     AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS,
     GEOTAG_FROM_NEIGHBORS_DEFAULT_MINUTES,
+    AUTOMATION_HANDLER_CLASSIFY_LABELS,
+    CLASSIFY_LABELS_DEFAULT_THRESHOLD,
+    CLASSIFY_LABELS_DEFAULT_MAX,
 )
 
 
@@ -131,6 +134,32 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
             max=1440,
             step=1,
             default=GEOTAG_FROM_NEIGHBORS_DEFAULT_MINUTES,
+            type='int',
+        ),
+    ],
+    AUTOMATION_HANDLER_CLASSIFY_LABELS: [
+        ConfigField(
+            key="confidence_threshold",
+            label="Confidence threshold",
+            help=(
+                "A photo gets a label only when the CLIP image–text similarity is at "
+                "least this. Scores are compressed (true matches ~0.26–0.30, noise "
+                "~0.20–0.23); higher is stricter — fewer, more confident labels."
+            ),
+            min=0.0,
+            max=1.0,
+            step=0.01,
+            default=CLASSIFY_LABELS_DEFAULT_THRESHOLD,
+            type='float',
+        ),
+        ConfigField(
+            key="max_labels",
+            label="Max labels per photo",
+            help="At most this many labels are kept per photo (the highest-scoring ones).",
+            min=1,
+            max=20,
+            step=1,
+            default=CLASSIFY_LABELS_DEFAULT_MAX,
             type='int',
         ),
     ],

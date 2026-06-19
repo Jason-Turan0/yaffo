@@ -4,7 +4,7 @@ from pathlib import Path
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from yaffo.db.models import Face, Photo, Tag
+from yaffo.db.models import Face, Photo, Tag, PHOTO_STATUS_INDEXED
 
 
 def get_faces_for_photo(session: Session, photo_id: int) -> list[Face]:
@@ -62,6 +62,18 @@ def get_paths_by_ids(session: Session, photo_ids: list[int]) -> dict[int, str]:
     return dict(
         session.query(Photo.id, Photo.full_file_path).filter(Photo.id.in_(photo_ids)).all()
     )
+
+
+def get_indexed_photo_ids(session: Session) -> list[int]:
+    """Ids of every indexed photo, for whole-library backfills (e.g. re-classifying
+    all photos after the label vocabulary changes)."""
+    rows = (
+        session.query(Photo.id)
+        .filter(Photo.status == PHOTO_STATUS_INDEXED)
+        .order_by(Photo.id)
+        .all()
+    )
+    return [row[0] for row in rows]
 
 
 def update_photo_path(session: Session, photo_id: int, new_path: str) -> None:

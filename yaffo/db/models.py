@@ -35,6 +35,12 @@ class Photo(db.Model):
         back_populates="photo",
         cascade="all, delete-orphan"
     )
+    labels = db.relationship(
+        "PhotoLabel",
+        back_populates="photo",
+        cascade="all, delete-orphan",
+        order_by="PhotoLabel.confidence.desc()",
+    )
 
 class Tag(db.Model):
     __tablename__ = "tags"
@@ -43,6 +49,37 @@ class Tag(db.Model):
     tag_name = db.Column(db.String, nullable=False)
     tag_value = db.Column(db.String)
     photo = db.relationship("Photo", back_populates="tags")
+
+
+class ClassificationLabel(db.Model):
+    """An entry in the user-curated vocabulary the classify-labels automation scores
+    photos against (zero-shot CLIP). `prompt` overrides the embedded text when set;
+    otherwise the default "a photo of <name>" template is used (see effective_prompt).
+    `is_default` marks the rows seeded with a fresh install (vs. user-added)."""
+    __tablename__ = "classification_labels"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, unique=True, nullable=False)
+    prompt = db.Column(db.String)
+    enabled = db.Column(db.Boolean, nullable=False, default=True)
+    is_default = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def effective_prompt(self) -> str:
+        return (self.prompt or "").strip() or f"a photo of {self.name}"
+
+
+class PhotoLabel(db.Model):
+    """A label the classifier assigned to a photo, with its CLIP cosine confidence.
+    Distinct from Tag (manual, freeform k/v): these are auto-generated, scored, and
+    replaced wholesale on each re-classification of a photo."""
+    __tablename__ = "photo_labels"
+    photo_id = db.Column(db.Integer, db.ForeignKey("photos.id", ondelete="CASCADE"), nullable=False)
+    label_id = db.Column(db.Integer, db.ForeignKey("classification_labels.id", ondelete="CASCADE"), nullable=False)
+    confidence = db.Column(db.Float)
+    __table_args__ = (PrimaryKeyConstraint("photo_id", "label_id"),)
+    photo = db.relationship("Photo", back_populates="labels")
+    label = db.relationship("ClassificationLabel")
 
 FACE_STATUS_UNASSIGNED = "UNASSIGNED"
 FACE_STATUS_ASSIGNED = "ASSIGNED"
@@ -256,6 +293,7 @@ AUTOMATION_HANDLER_DUPLICATE_SCAN = "duplicate_scan"
 AUTOMATION_HANDLER_EXPORT_PHOTO_TAG = "export_photo_tag"
 AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME = "assign_location_name"
 AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS = "geotag_from_neighbors"
+AUTOMATION_HANDLER_CLASSIFY_LABELS = "classify_labels"
 
 # Default match threshold for the auto-assign-faces automation, on the SAME 0-100
 # UI similarity scale as the face screens (0 = least similar, 100 = most similar;
@@ -271,6 +309,16 @@ ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M = 1000
 # Default window (minutes) within which the geotag-from-neighbors automation borrows
 # a GPS-tagged photo's coordinates (overridable via config["max_minutes"]).
 GEOTAG_FROM_NEIGHBORS_DEFAULT_MINUTES = 30
+
+# Defaults for the classify-labels automation. The threshold is a raw CLIP cosine
+# cutoff (image vs label text, both L2-normalized): a photo gets a label only when
+# their similarity is at least this. ViT-B/32 cosines are compressed — measured over
+# this library the best-matching label per photo runs ~0.23-0.26 (median ~0.24), so
+# 0.23 labels ~85% of photos with their top match while dropping weak ones; raise it
+# for precision. At most CLASSIFY_LABELS_DEFAULT_MAX labels are kept per photo. Both
+# overridable via Automation.config.
+CLASSIFY_LABELS_DEFAULT_THRESHOLD = 0.23
+CLASSIFY_LABELS_DEFAULT_MAX = 4
 
 
 class Automation(db.Model):
