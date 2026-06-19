@@ -1,5 +1,6 @@
 """update_person_embedding: birthdate estimation + per-life-stage medoid gallery."""
-from datetime import date
+import json
+from datetime import date, timedelta
 
 import numpy as np
 import pytest
@@ -9,7 +10,10 @@ from sqlalchemy.orm import Session
 from yaffo.db import db
 from yaffo.db.models import Person, Photo, Face, PersonFace, PersonEmbedding, FACE_STATUS_ASSIGNED
 from yaffo.domain.compare_utils import serialize_embedding, load_embedding
-from yaffo.db.repositories.person_repository import update_person_embedding
+from yaffo.db.repositories.person_repository import (
+    update_person_embedding,
+    MAX_REPRESENTATIVE_FACES,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -30,11 +34,11 @@ def _unit(*vals) -> np.ndarray:
     return v / n if n else v
 
 
-def _add_face(sess, person, photo, vec, age):
+def _add_face(sess, person, photo, vec, age, det_score=None):
     face = Face(
         embedding=serialize_embedding(vec), photo_id=photo.id, estimated_age=age,
-        status=FACE_STATUS_ASSIGNED, location_top=0, location_right=10,
-        location_bottom=10, location_left=0,
+        status=FACE_STATUS_ASSIGNED, det_score=det_score, location_top=0,
+        location_right=10, location_bottom=10, location_left=0,
     )
     sess.add(face)
     sess.flush()
@@ -115,3 +119,76 @@ def test_medoid_is_a_real_stored_embedding(session):
     medoid = load_embedding(stage.avg_embedding)
     # the medoid is one of the actual face vectors (not an average)
     assert any(np.allclose(medoid, v) for v in vecs)
+
+
+def test_collapses_same_day_faces_to_highest_score(session):
+    """Many faces from one day collapse to the single highest-confidence detection
+    (so a burst can't dominate the medoid), while distinct days each stay
+    represented."""
+    person = Person(name="Burst", birthdate=date(1990, 1, 1))
+    june_a = Photo(year=2010, date_taken="2010-06-01T10:00:00")
+    june_b = Photo(year=2010, date_taken="2010-06-01T10:00:05")  # same day, sharper
+    august = Photo(year=2010, date_taken="2010-08-15T09:00:00")
+    session.add_all([person, june_a, june_b, august])
+    session.flush()
+
+    _add_face(session, person, june_a, _unit(1.0), age=20, det_score=0.50)
+    june_winner = _add_face(session, person, june_b, _unit(0.99, 0.01), age=20, det_score=0.99)
+    august_face = _add_face(session, person, august, _unit(0.0, 1.0), age=20, det_score=0.80)
+    session.commit()
+
+    update_person_embedding(person.id, session)
+    session.expire_all()
+    person = session.get(Person, person.id)
+
+    [stage] = person.stage_embeddings
+    included = set(json.loads(stage.included_face_ids))
+    assert included == {june_winner.id, august_face.id}  # one per day, the sharper June frame
+
+
+def test_undated_faces_are_each_kept(session):
+    """Faces whose photo has no capture date can't be day-bucketed, so none are
+    dropped -- each is its own representative."""
+    person = Person(name="NoDates", birthdate=date(1990, 1, 1))
+    photo = Photo(year=2010)  # no date_taken
+    session.add_all([person, photo])
+    session.flush()
+    f1 = _add_face(session, person, photo, _unit(1.0), age=20, det_score=0.4)
+    f2 = _add_face(session, person, photo, _unit(0.0, 1.0), age=20, det_score=0.9)
+    session.commit()
+
+    update_person_embedding(person.id, session)
+    session.expire_all()
+    person = session.get(Person, person.id)
+
+    [stage] = person.stage_embeddings
+    assert set(json.loads(stage.included_face_ids)) == {f1.id, f2.id}
+
+
+def test_caps_at_max_representative_faces_by_score(session):
+    """Beyond the daily collapse, a person photographed across thousands of days is
+    capped to the MAX_REPRESENTATIVE_FACES sharpest faces."""
+    person = Person(name="Prolific", birthdate=date(1990, 1, 1))
+    session.add(person)
+    session.flush()
+
+    n_days = MAX_REPRESENTATIVE_FACES + 50
+    kept_ids = set()
+    for i in range(n_days):
+        day = date(2010, 1, 1) + timedelta(days=i)
+        photo = Photo(year=2010, date_taken=f"{day.isoformat()}T10:00:00")
+        session.add(photo)
+        session.flush()
+        # Higher day index -> higher det_score, so the last MAX faces survive.
+        face = _add_face(session, person, photo, _unit(1.0), age=20, det_score=i / 1000.0)
+        if i >= n_days - MAX_REPRESENTATIVE_FACES:
+            kept_ids.add(face.id)
+    session.commit()
+
+    update_person_embedding(person.id, session)
+    session.expire_all()
+    person = session.get(Person, person.id)
+
+    included = {fid for e in person.stage_embeddings for fid in json.loads(e.included_face_ids)}
+    assert len(included) == MAX_REPRESENTATIVE_FACES
+    assert included == kept_ids

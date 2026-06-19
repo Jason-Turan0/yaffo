@@ -2,7 +2,8 @@ import json
 from datetime import date
 
 import numpy as np
-from sqlalchemy.orm import joinedload, Session
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 import pydash as _
 from yaffo.db.models import Person, Face, PersonEmbedding, PersonFace
 from yaffo.domain.compare_utils import load_embedding, serialize_embedding
@@ -35,17 +36,60 @@ def _medoid(embeddings: list[np.ndarray]) -> np.ndarray:
     return finite[int(np.argmax(sims))]
 
 
-def _estimate_birthdate(person: Person) -> date | None:
-    """Median of (photo year − predicted age) over the person's faces. Single-face
-    age is noisy, but the median over many photos is robust. Year precision."""
-    births = [
-        f.photo.year - f.estimated_age
-        for f in person.faces
-        if f.estimated_age is not None and f.photo is not None and f.photo.year is not None
-    ]
-    if not births:
-        return None
-    return date(int(round(float(np.median(births)))), 1, 1)
+MAX_REPRESENTATIVE_FACES = 200
+
+# One representative face per capture-day -- the highest-confidence detection -- so
+# a burst of near-identical frames from a single day can't drag the medoid toward
+# that day. Faces whose photo has no parseable capture date can't be day-bucketed,
+# so COALESCE gives each its own bucket (kept individually). The whole set is then
+# capped to the MAX sharpest, bounding how many embedding blobs we deserialize no
+# matter how prolific the person. SQLite's date() yields NULL for missing/garbage
+# timestamps, and DESC sorts NULL det_scores last -- both matching the prior
+# Python (-inf) behaviour.
+_REP_FACES_SQL = text("""
+    WITH daily AS (
+        SELECT
+            f.id            AS face_id,
+            f.embedding     AS embedding,
+            f.estimated_age AS estimated_age,
+            p.year          AS year,
+            f.det_score     AS det_score,
+            ROW_NUMBER() OVER (
+                PARTITION BY COALESCE(date(p.date_taken), 'u' || f.id)
+                ORDER BY f.det_score DESC, f.id
+            ) AS rn
+        FROM people_face pf
+        JOIN faces f       ON f.id = pf.face_id
+        LEFT JOIN photos p ON p.id = f.photo_id
+        WHERE pf.person_id = :person_id
+    )
+    SELECT face_id, embedding, estimated_age, year
+    FROM daily
+    WHERE rn = 1
+    ORDER BY det_score DESC, face_id
+    LIMIT :k
+""")
+
+# Median of (photo year - predicted age) over every face. Single-face age is noisy,
+# but the median over many photos is robust. Computed DB-side so estimating the
+# birthdate doesn't require loading any face rows. Returns NULL for an empty set;
+# AVG of the middle one (odd) or two (even) values reproduces numpy's median.
+_MEDIAN_BIRTH_YEAR_SQL = text("""
+    WITH births AS (
+        SELECT (p.year - f.estimated_age) AS b
+        FROM people_face pf
+        JOIN faces f  ON f.id = pf.face_id
+        JOIN photos p ON p.id = f.photo_id
+        WHERE pf.person_id = :person_id
+          AND f.estimated_age IS NOT NULL
+          AND p.year IS NOT NULL
+    )
+    SELECT AVG(b) FROM (
+        SELECT b FROM births ORDER BY b
+        LIMIT  2 - (SELECT COUNT(*) FROM births) % 2
+        OFFSET (SELECT (COUNT(*) - 1) / 2 FROM births)
+    )
+""")
 
 
 def get_person_by_id(session: Session, person_id: int) -> Person | None:
@@ -83,43 +127,49 @@ def update_person_embedding(person_id: int, session):
     """Recompute a person's estimated birthdate and their per-life-stage medoid
     gallery from their assigned faces. Stage embeddings are derived data, rebuilt
     from scratch each time. Bucketing uses the effective birthdate (actual if set,
-    else estimated); with no birthdate every face lands in the 'unknown' stage."""
+    else estimated); with no birthdate every face lands in the 'unknown' stage.
+
+    Birthdate is a DB-side median over every face; the medoids use the daily-
+    collapsed, top-N-by-confidence subset (_REP_FACES_SQL) so we deserialize at
+    most MAX_REPRESENTATIVE_FACES embeddings instead of eager-loading every face."""
     try:
-        person = (
-            session.query(Person)
-            .options(
-                joinedload(Person.faces).joinedload(Face.photo),  # load photo for each face
-                joinedload(Person.stage_embeddings),
-            )
-            .filter(Person.id == person_id)
-            .first()
-        )
+        person = session.get(Person, person_id)
         if person is None:
             return
 
         person.stage_embeddings.clear()  # delete-orphan removes old rows
-        embeddings = [load_embedding(f.embedding) for f in person.faces]
-        if not embeddings:
+
+        median_year = session.execute(
+            _MEDIAN_BIRTH_YEAR_SQL, {"person_id": person_id}
+        ).scalar()
+        person.estimated_birthdate = (
+            date(int(round(median_year)), 1, 1) if median_year is not None else None
+        )
+
+        rows = session.execute(
+            _REP_FACES_SQL, {"person_id": person_id, "k": MAX_REPRESENTATIVE_FACES}
+        ).all()
+        if not rows:
             person.avg_embedding = None
-            person.estimated_birthdate = None
             session.commit()
             return
 
-        person.avg_embedding = serialize_embedding(_medoid(embeddings))
-        person.estimated_birthdate = _estimate_birthdate(person)
-        birthdate = effective_birthdate(person)
+        birthdate = effective_birthdate(person)  # actual wins, else the estimate above
+        reps = [
+            (r.face_id,
+             load_embedding(r.embedding),
+             life_stage(birthdate, r.year, r.estimated_age))
+            for r in rows
+        ]
 
-        def stage_of(face: Face) -> str:
-            photo_year = face.photo.year if face.photo else None
-            return life_stage(birthdate, photo_year, face.estimated_age)
+        person.avg_embedding = serialize_embedding(_medoid([emb for _id, emb, _stage in reps]))
 
         session.flush()  # apply the clear() before inserting fresh rows (same PK)
-        for stage, faces_in_stage in _.group_by(person.faces, stage_of).items():
-            embs = [load_embedding(f.embedding) for f in faces_in_stage]
+        for stage, group in _.group_by(reps, lambda t: t[2]).items():
             person.stage_embeddings.append(PersonEmbedding(
                 life_stage=stage,
-                avg_embedding=serialize_embedding(_medoid(embs)),
-                included_face_ids=json.dumps([f.id for f in faces_in_stage]),
+                avg_embedding=serialize_embedding(_medoid([emb for _id, emb, _stage in group])),
+                included_face_ids=json.dumps([face_id for face_id, _emb, _stage in group]),
             ))
 
         session.commit()
