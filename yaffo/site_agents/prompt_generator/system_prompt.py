@@ -10,8 +10,8 @@ turn so the cache stays valid.
 from __future__ import annotations
 
 from yaffo.db.repositories.data_query_repository import FIELDS_BY_SOURCE
-from yaffo.page_builder.prompt_generator.xml_helpers import block
-from yaffo.page_builder.widget_api import widget_api_source
+from yaffo.site_agents.prompt_generator.xml_helpers import block
+from yaffo.site_agents.widget_api import widget_api_source
 
 
 def _role() -> str:

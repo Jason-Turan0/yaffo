@@ -17,7 +17,7 @@ from yaffo.db.models import (
     PAGE_VERSION_STATUS_IN_PROGRESS,
     PAGE_VERSION_STATUS_READY,
 )
-from yaffo.page_builder.agent import AgentEvent
+from yaffo.site_agents.agent import AgentEvent
 from yaffo.themes import CustomTheme, ThemeAssets
 
 pytestmark = pytest.mark.unit
@@ -29,7 +29,7 @@ SLUG = "vapor-wave"
 def api_key(monkeypatch):
     """A configured key by default; the agent is stubbed so it's never used to call
     a model, but run_theme_generation resolves it up front (and fails closed without)."""
-    monkeypatch.setattr("yaffo.page_builder.llm_config.get_api_key", lambda: "test-key")
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda: "test-key")
 
 
 @pytest.fixture
@@ -124,7 +124,7 @@ class TestFailure:
         assert ("error", "hit the output token limit") in [(m.type, m.content) for m in reloaded.conversations]
 
     def test_missing_api_key_fails_closed(self, session, theme, monkeypatch):
-        monkeypatch.setattr("yaffo.page_builder.llm_config.get_api_key", lambda: None)
+        monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda: None)
         # the agent must never be built without a key.
         monkeypatch.setattr(task, "create_theme_builder_agent",
                             lambda *a, **k: pytest.fail("agent built without a key"))

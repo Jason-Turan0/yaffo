@@ -1,4 +1,4 @@
-"""Unit tests for the theme tool (yaffo/page_builder/tool_providers/theme_tool.py).
+"""Unit tests for the theme tool (yaffo/site_agents/tool_providers/theme_tool.py).
 
 The tool persists directly into a custom theme's working_theme, so these exercise it
 against a throwaway database: the model-facing schema, the sanitation rules (scoped
@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 from yaffo import themes
 from yaffo.db import db
 from yaffo.db.models import PAGE_VERSION_STATUS_ACCEPTED
-from yaffo.page_builder.tool_providers import theme_tool as tt
-from yaffo.page_builder.tool_providers.tool_provider_types import ToolResult
+from yaffo.site_agents.tool_providers import theme_tool as tt
+from yaffo.site_agents.tool_providers.tool_provider_types import ToolResult
 from yaffo.themes import CustomTheme, ThemeAssets
 
 pytestmark = pytest.mark.unit

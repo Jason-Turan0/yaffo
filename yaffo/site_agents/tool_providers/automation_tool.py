@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox.starlark_runner import validate_starlark
 from yaffo.db.repositories import automation_repository as repo
-from yaffo.page_builder.tool_providers.tool_provider_types import (
+from yaffo.site_agents.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
     ToolProvider,

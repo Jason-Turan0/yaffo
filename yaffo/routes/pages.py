@@ -19,10 +19,10 @@ from yaffo.db.models import (
 from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.db.repositories.data_query_repository import resolve_data_query, resolve_query
 from yaffo.logging_config import get_logger
-from yaffo.page_builder import llm_config
-from yaffo.page_builder.serializers import version_status_payload
-from yaffo.page_builder.widget_api import widget_api_source
-from yaffo.page_builder.widget_theme import WIDGET_THEME_CSS
+from yaffo.site_agents import llm_config
+from yaffo.site_agents.serializers import version_status_payload
+from yaffo.site_agents.widget_api import widget_api_source
+from yaffo.site_agents.widget_theme import WIDGET_THEME_CSS
 from yaffo.utils.context import context
 
 logger = get_logger(__name__)

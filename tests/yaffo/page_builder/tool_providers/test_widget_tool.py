@@ -1,4 +1,4 @@
-"""Unit tests for the widget tools (yaffo/page_builder/tool_providers/widget_tool.py).
+"""Unit tests for the widget tools (yaffo/site_agents/tool_providers/widget_tool.py).
 
 The tools persist directly into a working PageVersion, so these exercise them against
 a throwaway database: the model-facing schema (derived from WidgetDraft), and the
@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.db import db
 from yaffo.db.repositories import custom_page_repository as repo
-from yaffo.page_builder.tool_providers import widget_tool as wt
+from yaffo.site_agents.tool_providers import widget_tool as wt
 
 pytestmark = pytest.mark.unit
 

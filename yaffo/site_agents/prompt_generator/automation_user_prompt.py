@@ -7,7 +7,7 @@ across generations.
 """
 from __future__ import annotations
 
-from yaffo.page_builder.prompt_generator.xml_helpers import block, el
+from yaffo.site_agents.prompt_generator.xml_helpers import block, el
 
 
 def build_automation_user_message(

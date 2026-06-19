@@ -5,8 +5,8 @@ these pin that the model-facing API is actually present and named as expected.
 """
 import pytest
 
-from yaffo.page_builder.prompt_generator.system_prompt import build_system_prompt
-from yaffo.page_builder.widget_api import widget_api_source
+from yaffo.site_agents.prompt_generator.system_prompt import build_system_prompt
+from yaffo.site_agents.widget_api import widget_api_source
 
 pytestmark = pytest.mark.unit
 

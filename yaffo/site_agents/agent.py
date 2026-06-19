@@ -13,17 +13,17 @@ from typing import Callable, Iterator, Optional
 
 from sqlalchemy.orm import Session
 
-from yaffo.page_builder.model_clients import (
+from yaffo.site_agents.model_clients import (
     AnthropicModelClient,
     ModelAlias,
     ModelClient,
     ToolCall,
     ToolCallResult,
 )
-from yaffo.page_builder.prompt_generator import build_system_prompt
-from yaffo.page_builder.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
-from yaffo.page_builder.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
-from yaffo.page_builder.tool_providers import (
+from yaffo.site_agents.prompt_generator import build_system_prompt
+from yaffo.site_agents.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
+from yaffo.site_agents.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
+from yaffo.site_agents.tool_providers import (
     AutomationToolProvider,
     AutomationTriggerToolProvider,
     ContentBlock,
@@ -186,7 +186,7 @@ class Agent:
         except Exception as exc:  # tool failures are fed back, not raised
             return ToolCallResult(call.id, call.name, f"Error: {exc}", is_error=True)
 
-#TODO rename this namespace from page_builder to something more generic like yaffo agents
+#TODO rename this namespace from site_agents to something more generic like yaffo agents
 def create_page_builder_agent(
     version_id: int,
     *,

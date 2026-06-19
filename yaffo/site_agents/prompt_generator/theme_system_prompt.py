@@ -14,9 +14,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from yaffo.page_builder.prompt_generator.xml_helpers import block
+from yaffo.site_agents.prompt_generator.xml_helpers import block
 
-# yaffo/page_builder/prompt_generator/theme_system_prompt.py -> yaffo/static/...
+# yaffo/site_agents/prompt_generator/theme_system_prompt.py -> yaffo/static/...
 _STATIC_DIR = Path(__file__).resolve().parents[2] / "static"
 _TOKENS_FILE = _STATIC_DIR / "tokens.css"
 # The classic theme ships one icon-<name>.svg per data-icon the app uses, so the set

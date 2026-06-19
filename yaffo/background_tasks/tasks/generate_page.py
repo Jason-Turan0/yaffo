@@ -29,10 +29,10 @@ from yaffo.db.models import (
 )
 from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.logging_config import get_logger
-from yaffo.page_builder import llm_config
-from yaffo.page_builder.agent import create_theme_builder_agent, create_page_builder_agent
-from yaffo.page_builder.prompt_generator import build_user_message, build_system_prompt
-from yaffo.page_builder.serializers import widget_draft
+from yaffo.site_agents import llm_config
+from yaffo.site_agents.agent import create_theme_builder_agent, create_page_builder_agent
+from yaffo.site_agents.prompt_generator import build_user_message, build_system_prompt
+from yaffo.site_agents.serializers import widget_draft
 
 logger = get_logger(__name__, 'background_tasks')
 

@@ -41,4 +41,4 @@ def reset_theme_cache():
 def no_api_key(monkeypatch):
     """Default every route test to 'no API key' so the chat route never reaches a
     real model. Tests that exercise generation override get_api_key + create_agent."""
-    monkeypatch.setattr("yaffo.page_builder.llm_config.get_api_key", lambda: None)
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda: None)

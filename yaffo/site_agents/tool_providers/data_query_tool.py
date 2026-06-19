@@ -12,12 +12,12 @@ import json
 from sqlalchemy.orm import Session
 
 from yaffo.db.repositories.data_query_repository import AGGREGATE_OPS, SOURCES, resolve_query
-from yaffo.page_builder.tool_providers.tool_provider_types import (
+from yaffo.site_agents.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
     ToolProvider,
 )
-from yaffo.page_builder.tool_providers.utils import truncate_tool_result
+from yaffo.site_agents.tool_providers.utils import truncate_tool_result
 
 # Anthropic forbids oneOf/allOf/anyOf at a tool input_schema's top level, so this
 # preview tool advertises a single permissive object: the source, the aggregate

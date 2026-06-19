@@ -30,9 +30,9 @@ from yaffo.db.models import (
 )
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.logging_config import get_logger
-from yaffo.page_builder import llm_config
-from yaffo.page_builder.agent import create_automation_builder_agent
-from yaffo.page_builder.prompt_generator.automation_user_prompt import build_automation_user_message
+from yaffo.site_agents import llm_config
+from yaffo.site_agents.agent import create_automation_builder_agent
+from yaffo.site_agents.prompt_generator.automation_user_prompt import build_automation_user_message
 
 logger = get_logger(__name__, 'background_tasks')
 

@@ -1,5 +1,5 @@
 """Unit tests for the add_automation_trigger tool
-(yaffo/page_builder/tool_providers/automation_trigger_tool.py).
+(yaffo/site_agents/tool_providers/automation_trigger_tool.py).
 
 The tool lets the automation-builder agent decide when its automation runs. These
 exercise it against a throwaway database: adding schedule + event triggers, the
@@ -19,7 +19,7 @@ from yaffo.db.models import (
     TRIGGER_TYPE_EVENT,
     TRIGGER_TYPE_SCHEDULE,
 )
-from yaffo.page_builder.tool_providers.automation_trigger_tool import (
+from yaffo.site_agents.tool_providers.automation_trigger_tool import (
     AutomationTriggerToolProvider,
 )
 

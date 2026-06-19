@@ -1,6 +1,6 @@
 """Model clients for the page-builder agent (provider-agnostic interface +
 Anthropic implementation)."""
-from yaffo.page_builder.model_clients.model_client_types import (
+from yaffo.site_agents.model_clients.model_client_types import (
     ModelAlias,
     ModelClient,
     ModelClientConfig,
@@ -12,7 +12,7 @@ from yaffo.page_builder.model_clients.model_client_types import (
     to_text_part,
     to_tool_result_part,
 )
-from yaffo.page_builder.model_clients.model_client import AnthropicModelClient
+from yaffo.site_agents.model_clients.model_client import AnthropicModelClient
 
 __all__ = [
     "ModelAlias",

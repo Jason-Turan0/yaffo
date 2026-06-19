@@ -1,4 +1,4 @@
-"""Unit tests for the page-builder agent loop (yaffo/page_builder/agent.py).
+"""Unit tests for the page-builder agent loop (yaffo/site_agents/agent.py).
 
 The ModelClient is stubbed so it (a) records every message the agent hands it and
 (b) replays scripted responses, letting us assert exactly what the agent sends to
@@ -7,15 +7,15 @@ are stubbed too, so tool dispatch / error handling is exercised in isolation.
 """
 import pytest
 
-from yaffo.page_builder.agent import Agent
-from yaffo.page_builder.model_clients import (
+from yaffo.site_agents.agent import Agent
+from yaffo.site_agents.model_clients import (
     ModelClient,
     ModelResponse,
     ToolCall,
     ToolCallResult,
     Usage,
 )
-from yaffo.page_builder.tool_providers import (
+from yaffo.site_agents.tool_providers import (
     RawToolDefinition,
     ToolProvider,
     ToolResult,

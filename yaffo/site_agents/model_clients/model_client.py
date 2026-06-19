@@ -25,7 +25,7 @@ import anthropic
 
 from yaffo.common import ROOT_DIR
 from yaffo.logging_config import get_logger
-from yaffo.page_builder.model_clients.model_client_types import (
+from yaffo.site_agents.model_clients.model_client_types import (
     ModelAlias,
     ModelClient,
     ModelClientConfig,

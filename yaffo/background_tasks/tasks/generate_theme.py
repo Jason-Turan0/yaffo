@@ -34,9 +34,9 @@ from yaffo.db.models import (
     PAGE_VERSION_STATUS_READY,
 )
 from yaffo.logging_config import get_logger
-from yaffo.page_builder import llm_config
-from yaffo.page_builder.agent import create_theme_builder_agent
-from yaffo.page_builder.prompt_generator.theme_user_prompt import build_theme_user_message
+from yaffo.site_agents import llm_config
+from yaffo.site_agents.agent import create_theme_builder_agent
+from yaffo.site_agents.prompt_generator.theme_user_prompt import build_theme_user_message
 
 logger = get_logger(__name__, 'background_tasks')
 

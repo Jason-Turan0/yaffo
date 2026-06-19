@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from yaffo.db.models import PageVersion, Widget
-from yaffo.page_builder.schemas import WidgetDraft
+from yaffo.site_agents.schemas import WidgetDraft
 
 
 def _utc_iso(value: Optional[datetime]) -> Optional[str]:

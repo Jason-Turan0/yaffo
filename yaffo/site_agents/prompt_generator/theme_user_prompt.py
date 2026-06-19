@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from yaffo.page_builder.prompt_generator.xml_helpers import block, el
+from yaffo.site_agents.prompt_generator.xml_helpers import block, el
 
 
 def build_theme_user_message(

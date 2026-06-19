@@ -18,9 +18,9 @@ from sqlalchemy.orm import Session
 
 from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.db.repositories.data_query_repository import DATA_QUERY_SCHEMA
-from yaffo.page_builder import serializers
-from yaffo.page_builder.schemas import WidgetDraft
-from yaffo.page_builder.tool_providers.tool_provider_types import (
+from yaffo.site_agents import serializers
+from yaffo.site_agents.schemas import WidgetDraft
+from yaffo.site_agents.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
     ToolProvider,

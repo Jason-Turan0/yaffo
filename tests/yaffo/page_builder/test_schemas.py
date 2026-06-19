@@ -1,4 +1,4 @@
-"""Contract tests for the page-builder wire schemas (yaffo/page_builder/schemas.py).
+"""Contract tests for the page-builder wire schemas (yaffo/site_agents/schemas.py).
 
 The browser WidgetDraft is deliberately the persisted Widget *minus* its
 persistence/internal columns (Python has no static Omit<T, K>, so the relationship
@@ -10,7 +10,7 @@ import dataclasses
 import pytest
 
 from yaffo.db.models import Widget
-from yaffo.page_builder.schemas import WidgetDraft
+from yaffo.site_agents.schemas import WidgetDraft
 
 pytestmark = pytest.mark.unit
 

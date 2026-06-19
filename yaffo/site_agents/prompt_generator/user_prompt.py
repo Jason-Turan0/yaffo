@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from typing import Optional
 
-from yaffo.page_builder.prompt_generator.xml_helpers import block, el
+from yaffo.site_agents.prompt_generator.xml_helpers import block, el
 
 
 def build_user_message(

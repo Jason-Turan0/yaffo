@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from yaffo import themes
 from yaffo.db import db
 from yaffo.db.models import PAGE_VERSION_STATUS_ACCEPTED
-from yaffo.page_builder.tool_providers import theme_catalog_tool as tct
+from yaffo.site_agents.tool_providers import theme_catalog_tool as tct
 from yaffo.themes import CustomTheme, ThemeAssets
 
 pytestmark = pytest.mark.unit

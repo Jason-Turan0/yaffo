@@ -19,7 +19,7 @@ from yaffo.db.models import (
     PAGE_VERSION_STATUS_IN_PROGRESS,
     PAGE_VERSION_STATUS_READY,
 )
-from yaffo.page_builder import llm_config
+from yaffo.site_agents import llm_config
 from yaffo.themes import CustomTheme, ThemeAssets
 
 # save_custom_theme caps slugs at 41 chars; leave room for a "-N" uniqueness

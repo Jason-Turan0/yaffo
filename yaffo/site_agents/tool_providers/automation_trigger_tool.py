@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from yaffo.background_tasks.schedule import is_valid_cron
 from yaffo.db.models import EVENTS, TRIGGER_TYPE_EVENT, TRIGGER_TYPE_SCHEDULE
 from yaffo.db.repositories import automation_repository as repo
-from yaffo.page_builder.tool_providers.tool_provider_types import (
+from yaffo.site_agents.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
     ToolProvider,

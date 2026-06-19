@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Seed a 'Widget Templates' showcase page from the curated catalog.
 
-Renders every template in yaffo/page_builder/widget_templates.py onto one page so
+Renders every template in yaffo/site_agents/widget_templates.py onto one page so
 the consistent, app-styled designs can be reviewed in the browser. Same catalog the
 agent's template tool serves, so what you see here is what the model is shown.
 
@@ -15,7 +15,7 @@ from __future__ import annotations
 from yaffo.app import create_app
 from yaffo.db import db
 from yaffo.db.repositories import custom_page_repository as page_repo
-from yaffo.page_builder.widget_templates import TEMPLATES
+from yaffo.site_agents.widget_templates import TEMPLATES
 
 _PAGE_TITLE = "Widget Templates"
 _PAGE_SUBTITLE = "Reference designs for the AI page builder — consistent with the app's styling."

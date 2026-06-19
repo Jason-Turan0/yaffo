@@ -4,7 +4,7 @@ than restarts.
 """
 import pytest
 
-from yaffo.page_builder.prompt_generator.theme_user_prompt import build_theme_user_message
+from yaffo.site_agents.prompt_generator.theme_user_prompt import build_theme_user_message
 
 pytestmark = pytest.mark.unit
 

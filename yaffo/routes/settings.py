@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, Face, ClassificationLabel, AUTOMATION_HANDLER_CLASSIFY_LABELS
 from yaffo.common import DB_PATH, QUEUE_DB_PATH
-from yaffo.page_builder import llm_config
+from yaffo.site_agents import llm_config
 import json
 import subprocess
 import platform

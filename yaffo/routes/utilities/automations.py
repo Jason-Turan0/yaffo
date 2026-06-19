@@ -36,7 +36,7 @@ from yaffo.db.models import (
 )
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.db.repositories import photos_repository
-from yaffo.page_builder import llm_config
+from yaffo.site_agents import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
 
 _MAX_BASE_SLUG_LENGTH = 30
@@ -198,7 +198,7 @@ def init_automations_routes(app: Flask):
             "status": automation.status,
             # created_at is naive UTC (datetime.utcnow); stamp it so the browser's
             # Date parser reads it as UTC, not local — the chat's elapsed counter
-            # subtracts it from Date.now(). (Mirrors page_builder serializers._utc_iso.)
+            # subtracts it from Date.now(). (Mirrors site_agents serializers._utc_iso.)
             "started_at": started_at.replace(tzinfo=timezone.utc).isoformat() if started_at else None,
             "working_code": automation.working_code,
             "published_code": automation.published_code,

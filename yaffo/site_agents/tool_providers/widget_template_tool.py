@@ -1,6 +1,6 @@
 """Widget template tools: list_widget_templates and get_widget_template.
 
-Exposes the curated catalog (yaffo/page_builder/widget_templates.py) to the agent so
+Exposes the curated catalog (yaffo/site_agents/widget_templates.py) to the agent so
 it adapts a hand-styled, design-token-based reference design instead of inventing a
 look from scratch (which drifts). The flow is: `list_widget_templates` to browse names
 + purposes, then `get_widget_template` to pull one template's full data_query + html /
@@ -12,12 +12,12 @@ from __future__ import annotations
 
 import json
 
-from yaffo.page_builder.tool_providers.tool_provider_types import (
+from yaffo.site_agents.tool_providers.tool_provider_types import (
     CallToolReturn,
     RawToolDefinition,
     ToolProvider,
 )
-from yaffo.page_builder.widget_templates import TEMPLATES, TEMPLATES_BY_NAME
+from yaffo.site_agents.widget_templates import TEMPLATES, TEMPLATES_BY_NAME
 
 
 class WidgetTemplateToolProvider(ToolProvider):
