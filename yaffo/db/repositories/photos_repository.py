@@ -14,6 +14,21 @@ def get_faces_for_photo(session: Session, photo_id: int) -> list[Face]:
     return session.query(Face).filter_by(photo_id=photo_id).all()
 
 
+def get_photo_ids_for_faces(session: Session, face_ids: list[int]) -> list[int]:
+    """Distinct ids of the photos those faces belong to — used to announce
+    photo_modified for a face-assign without the caller tracking each face's photo."""
+    photo_ids: set[int] = set()
+    for start in range(0, len(face_ids), _DELETE_CHUNK):
+        chunk = face_ids[start:start + _DELETE_CHUNK]
+        photo_ids.update(
+            row[0]
+            for row in session.query(Face.photo_id).filter(
+                Face.id.in_(chunk), Face.photo_id.isnot(None)
+            ).all()
+        )
+    return list(photo_ids)
+
+
 def get_photo_ids_under_path(session: Session, path: str) -> list[int]:
     """Ids of indexed photos at `path` (an exact file) or under it (a directory)."""
     path = path.rstrip("/\\")

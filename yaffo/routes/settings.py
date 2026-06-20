@@ -127,8 +127,10 @@ def init_settings_routes(app: Flask):
 
     @app.route("/settings/llm/model", methods=["POST"])
     def settings_llm_model():
+        # Persist only the model and confirm via a toast — no section re-render, so an
+        # in-progress (unsaved) API key the user is typing isn't wiped.
         llm_config.set_model((request.form.get("model") or "").strip())
-        return render_template("settings/_llm.html", llm=llm_config.status())
+        return _notify("AI model updated.")
 
     @app.route("/settings/llm/api-key", methods=["POST"])
     def settings_llm_api_key():

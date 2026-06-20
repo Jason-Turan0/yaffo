@@ -16,7 +16,9 @@ from typing import Annotated, Any, Optional
 import send2trash
 from sqlalchemy.orm import Session
 
+from yaffo.background_tasks.events import emit_event
 from yaffo.background_tasks.progress_reporter import ProgressReporter
+from yaffo.db.models import EVENT_PHOTO_MODIFIED
 from yaffo.db.repositories import person_repository, photos_repository
 from yaffo.db.repositories.media_dir_repository import media_dir_by_id
 from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_photo_rows
@@ -24,6 +26,16 @@ from yaffo.db.repositories.data_query_repository import resolve_query
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__, "background_tasks")
+
+
+def _emit_photo_modified(photo_ids: list[int]) -> None:
+    """Announce that a script changed these photos' exported data, so subscribers like
+    export_photo_tag write the change to the file. Safe inside a run: emit_event stamps
+    the run's causal chain (event_chain_scope), so the loop guard skips re-triggering
+    the same automation. No-op for an empty set."""
+    ids = list(dict.fromkeys(pid for pid in photo_ids if pid is not None))  # distinct, ordered
+    if ids:
+        emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": ids})
 
 def data_query(
     session: Session, query: dict
@@ -52,13 +64,18 @@ def summarize_report_progress(args: list[Any], session: Session) -> str:
     return f"Report progress: {completed}/{total}"
 
 def tag_photos(session: Session, tags: list[dict]) -> None:
-    """Batch-add tags in one write. `tags` is a list of {photo_id, name, value?}."""
+    """Batch-add tags in one write, then announce the change (photo_modified) so
+    export_photo_tag can write the tags into the files. `tags` is a list of
+    {photo_id, name, value?}."""
     items = [
         (tag["photo_id"], tag["name"], tag.get("value"))
         for tag in tags
         if tag.get("photo_id") is not None and tag.get("name")
     ]
+    if not items:
+        return
     photos_repository.add_tags(session, items)
+    _emit_photo_modified([photo_id for photo_id, _, _ in items])
 
 
 def summarize_tag_photos(args: list[Any], session: Session) -> str:
@@ -133,17 +150,22 @@ def move_photo(session: Session, photo_id: int, media_dir_id: str, target_path: 
 
 
 def assign_faces(session: Session, assignments: list[dict]) -> None:
-    """Batch-assign faces to people in one write. `assignments` is a list of
-    {face_id, person_id}; unknown people and already-assigned faces are skipped."""
+    """Batch-assign faces to people in one write, then announce the change
+    (photo_modified) for the faces' photos so export_photo_tag writes the new people
+    into the files. `assignments` is a list of {face_id, person_id}; unknown people
+    and already-assigned faces are skipped."""
     pairs = [
         (entry["person_id"], entry["face_id"])
         for entry in assignments
         if entry.get("person_id") is not None and entry.get("face_id") is not None
     ]
     known = person_repository.existing_person_ids(session, [person_id for person_id, _ in pairs])
-    person_repository.bulk_link_faces_to_people(
+    face_ids = [face_id for person_id, face_id in pairs if person_id in known]
+    linked = person_repository.bulk_link_faces_to_people(
         session, [(person_id, face_id) for person_id, face_id in pairs if person_id in known]
     )
+    if linked:
+        _emit_photo_modified(photos_repository.get_photo_ids_for_faces(session, face_ids))
 
 
 def summarize_assign_faces(args: list[Any], session: Session) -> str:

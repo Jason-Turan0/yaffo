@@ -10,6 +10,18 @@ from yaffo.db.repositories.media_dir_repository import MediaDir
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def emitted_events(monkeypatch):
+    """Capture (and neutralise) emit_event so the host actions don't enqueue a real
+    dispatch task during unit tests. Returns the list of (event_type, payload)."""
+    events: list[tuple] = []
+    monkeypatch.setattr(
+        automation_actions, "emit_event",
+        lambda event_type, payload: events.append((event_type, payload)),
+    )
+    return events
+
+
 def _patch(monkeypatch, target, fn):
     monkeypatch.setattr(target, fn)
 
@@ -77,7 +89,7 @@ def test_move_photo_noop_when_destination_equals_source(monkeypatch, tmp_path):
 _ACTIONS = "yaffo.background_tasks.automation_sandbox.automation_actions."
 
 
-def test_tag_photos_batches_and_drops_incomplete(monkeypatch):
+def test_tag_photos_batches_and_drops_incomplete(monkeypatch, emitted_events):
     captured = {}
     _patch(monkeypatch, _ACTIONS + "photos_repository.add_tags",
            lambda s, items: captured.update(items=items))
@@ -90,6 +102,14 @@ def test_tag_photos_batches_and_drops_incomplete(monkeypatch):
     ])
 
     assert captured["items"] == [(1, "beach", None), (2, "rating", 5)]
+    # announces photo_modified for the tagged photos so export_photo_tag reacts
+    assert emitted_events == [("photo_modified", {"photo_ids": [1, 2]})]
+
+
+def test_tag_photos_with_nothing_to_write_does_not_emit(monkeypatch, emitted_events):
+    _patch(monkeypatch, _ACTIONS + "photos_repository.add_tags", lambda s, items: None)
+    automation_actions.tag_photos(object(), [{"name": "no_photo"}])  # all dropped
+    assert emitted_events == []
 
 
 def test_assign_faces_filters_unknown_persons(monkeypatch):
@@ -98,6 +118,19 @@ def test_assign_faces_filters_unknown_persons(monkeypatch):
     _patch(monkeypatch, _ACTIONS + "person_repository.bulk_link_faces_to_people",
            lambda s, links: captured.update(links=links))
 
+
+def test_assign_faces_filters_unknown_persons(monkeypatch, emitted_events):
+    captured = {}
+    _patch(monkeypatch, _ACTIONS + "person_repository.existing_person_ids", lambda s, ids: {7})
+
+    def _bulk_link(s, links):
+        captured["links"] = links
+        return len(links)  # number newly linked
+
+    _patch(monkeypatch, _ACTIONS + "person_repository.bulk_link_faces_to_people", _bulk_link)
+    _patch(monkeypatch, _ACTIONS + "photos_repository.get_photo_ids_for_faces",
+           lambda s, face_ids: [100] if face_ids == [10] else [])
+
     automation_actions.assign_faces(object(), [
         {"face_id": 10, "person_id": 7},
         {"face_id": 11, "person_id": 99},   # dropped: unknown person
@@ -105,9 +138,18 @@ def test_assign_faces_filters_unknown_persons(monkeypatch):
     ])
 
     assert captured["links"] == [(7, 10)]  # (person_id, face_id) for the known person
+    # announces photo_modified for the assigned faces' photo
+    assert emitted_events == [("photo_modified", {"photo_ids": [100]})]
 
 
-def test_delete_photos_trashes_files_then_removes_rows(monkeypatch, tmp_path):
+def test_assign_faces_emits_nothing_when_no_links_made(monkeypatch, emitted_events):
+    _patch(monkeypatch, _ACTIONS + "person_repository.existing_person_ids", lambda s, ids: {7})
+    _patch(monkeypatch, _ACTIONS + "person_repository.bulk_link_faces_to_people", lambda s, links: 0)
+    automation_actions.assign_faces(object(), [{"face_id": 10, "person_id": 7}])
+    assert emitted_events == []
+
+
+def test_delete_photos_trashes_files_then_removes_rows(monkeypatch, tmp_path, emitted_events):
     a = tmp_path / "a.jpg"
     b = tmp_path / "b.jpg"
     a.write_text("x")
@@ -128,6 +170,7 @@ def test_delete_photos_trashes_files_then_removes_rows(monkeypatch, tmp_path):
 
     assert sorted(trashed) == sorted([str(a), str(b)])
     assert captured["ids"] == [1, 2]  # both rows removed after their files were trashed
+    assert emitted_events == []  # the photos are gone -> no photo_modified for them
 
 
 def test_delete_photos_keeps_row_when_trash_fails(monkeypatch, tmp_path):
@@ -171,7 +214,7 @@ class _CommitCountingSession:
         self.commits += 1
 
 
-def test_move_photos_moves_all_and_commits_once(monkeypatch, tmp_path):
+def test_move_photos_moves_all_and_commits_once(monkeypatch, tmp_path, emitted_events):
     media_root = tmp_path / "lib"
     media_root.mkdir(parents=True)
     srcs = {}
@@ -195,6 +238,7 @@ def test_move_photos_moves_all_and_commits_once(monkeypatch, tmp_path):
     assert (media_root / "2024" / "a.jpg").exists()
     assert (media_root / "2024" / "b.jpg").exists()
     assert session.commits == 1  # one transaction for the whole batch
+    assert emitted_events == []  # a move changes no exported metadata -> no photo_modified
 
 
 def test_rename_files_renames_all_and_commits_once(monkeypatch, tmp_path):

@@ -6,17 +6,18 @@
 > **domain event** (e.g. photos indexed). Two tiers, mirroring the theme registry:
 > **system** automations ship with the app and are code-backed; **custom**
 > automations are AI-generated and run sandboxed Starlark against a curated host
-> API (read `data_query` + face-similarity; mutating tag / rename / move /
-> assign-face). The AI builder chat + publish flow, full trigger-editing UI (cron
+> API (read `data_query` + face-similarity + `report_progress`; mutating **batch**
+> writes — tag / rename / move / assign-face / delete). The AI builder chat + publish flow, full trigger-editing UI (cron
 > builder), name/description editing, and a no-op **Test** harness (preview the
 > actions a script would take) are live under the **Utilities** page
 > (`/utilities/automations`). This doc is the reference for the data model, the two
 > dispatch paths, the sandbox + host API, the builder, the test harness, and the
 > design decisions behind them.
 >
-> **Not yet built:** a hard Starlark CPU/time limit; per-automation run status on the
-> UI. See *Deferred* at the bottom. (The **loop guard** — both the in-process causal
-> chain and the watcher self-write suppression — is now built; see *Loop guard*.)
+> **Not yet built:** a hard Starlark CPU/time limit (recursion + large bounded loops
+> still run). See *Deferred* at the bottom. (The **loop guard** — in-process causal
+> chain + watcher self-write suppression — and per-automation **run history** on the
+> detail page are now built; see *Loop guard* / *Deferred*.)
 
 ## Overview
 
@@ -250,7 +251,7 @@ automation_sandbox/
 
   | function | kind | does |
   |---|---|---|
-  | `data_query(query)` | read | `data_query_repository.resolve_query`; photo rows are enriched with `media_dir_id` + `relative_path` (see *Media dirs*) |
+  | `data_query(query)` | read | `data_query_repository.resolve_query`; photo rows are enriched with `media_dir_id` + `relative_path` (see *Media dirs*). Sources are every exposed table — incl. `classification_labels` + `photo_labels` (the auto-classifier's labels, read-only; stitch to photos client-side on `photo_labels.photo_id` / `.label_id`) |
   | `report_progress(completed, total)` | run control | update this run's Job `task_count`/`completed_count` → live percent + "N of TOTAL processed" in the run history |
   | `face_similarity(photo_id, person_id)` | read | per-face similarity to a person (`domain/compare_utils`) |
   | `match_people(photo_id)` | read | per-face similarity to all known people |
@@ -285,7 +286,11 @@ automation_sandbox/
   `db/repositories`. **Host functions return string-keyed dicts / lists of them**:
   the `starlark-pyo3` binding coerces returned dict *keys* to strings, so ids are
   values, not keys (e.g. `match_people` → `[{face_id, matches:[{person_id,
-  person_name, score}]}]`).
+  person_name, score}]}]`). The binding also marshals returns via JSON, which can't
+  encode the DB types some rows carry (dates like `people.birthdate`, `Decimal`), so
+  `_bind` runs every host return through `_json_safe` (dates → ISO strings, Decimal →
+  float). The agent's preview tool does the same at its own JSON boundary
+  (`data_query_tool._json_default`).
 - **`executor.run_automation(session, automation, context)`** — runs
   `automation.published_code` with `inputs={"ctx": …}` (the trigger context:
   `event_type`/`job_id`/`photo_ids`, empty for a schedule) and
@@ -330,9 +335,10 @@ are migrated by `scripts/backfill_media_dir_ids.py`). The automation `data_query
 wrapper enriches photo rows with `media_dir_id` + `relative_path`
 (`automation_sandbox/media_dirs.py::enrich_photo_rows`, derived from
 `full_file_path`, which stays server-side); the shared `resolve_query` (page
-builder) is untouched. `move_photo` addresses its destination by `media_dir_id` +
-`target_path` and **refuses any target that resolves outside that media dir**, so a
-script can organise within or move between media dirs but can't write elsewhere.
+builder) is untouched. `move_photos` addresses each destination by `media_dir_id` +
+`target_path` and **refuses any target that resolves outside that media dir** (and
+no-ops when a photo is already at its target), so a script can organise within or move
+between media dirs but can't write elsewhere.
 
 ## The builder (AI chat + publish + UI)
 
@@ -362,8 +368,12 @@ package — formerly `page_builder` — that the page and theme builders also us
   request.
 - **Prompts** — `prompt_generator/automation_system_prompt.py` (stable: language
   rules, the `ctx` contract, the host API via `render_host_api()`, data sources via
-  `FIELDS_BY_SOURCE`, the `EVENTS` catalog — all *derived*, none restated — plus a
-  `<batching>` section requiring batched writes over per-item loops) +
+  `FIELDS_BY_SOURCE` (incl. the FK join map from `source_catalog.relationship_summary()`,
+  derived from the models), the `EVENTS` catalog — all *derived*, none restated — plus
+  a `<scoping>` section (event runs filter `data_query` to `ctx['photo_ids']`, never
+  sweep the library; library-wide only on a schedule), a `<batching>` section (collect
+  writes, call one batch function — no per-item write loops), and a `<progress>`
+  section (call `report_progress` while looping)) +
   `automation_user_prompt.py` (volatile: request + current code).
 - **Agent + task** — `agent.create_automation_builder_agent` (data-query +
   write-code + add-trigger tools); `tasks/generate_automation.py::generate_automation_task` runs
@@ -545,10 +555,13 @@ A dev seeder (run `python -m yaffo.scripts.seed_automations`, idempotent) that
 stands in for AI-generated custom automations so the runtime + host API can be
 exercised end-to-end without the builder: `log-photos-on-index` /
 `log-photos-each-minute` (read-only `data_query`), `organize-by-date` (on
-`photo_indexed`, `move_photo(id, media_dir_id, "YYYY/MM")` from each row's
-`media_dir_id`), and `move-duplicates` (on `duplicates_found`, seeded **disabled**
-since it moves files — keeps `ctx["groups"][i][0]` and `move_photo`s the rest into a
-`_Duplicates` sub-folder). (Auto-assign-faces used to be a seed example here; it was promoted
+`photo_indexed`, collects each row's `media_dir_id` + `YYYY/MM` and batch-`move_photos`
+into Year/Month), `move-duplicates` (on `duplicates_found`, seeded **disabled** since
+it moves files — keeps `ctx["groups"][i][0]` and `move_photos` the rest into a
+`_Duplicates` sub-folder), and `file-favorite-kid-photos` (a **no-trigger / Run-now**,
+library-wide organize seeded **disabled** — walks people → faces → photos, keeps the
+favorites, batch-`move_photos` each into `<kid>/<year>`; exercises the `favorite`
+filter, `report_progress`, and a batched write). (Auto-assign-faces used to be a seed example here; it was promoted
 to the `auto_assign_faces` system built-in above. The seeder still deletes the old
 `auto-assign-faces` slug so re-running it cleans up any stale custom copy.)
 
@@ -589,12 +602,12 @@ the cases are concrete:
   chains.
 
 **Custom automations are loop participants too — via their host actions, not an
-explicit emit.** The mutating host actions (`tag_photo`, `move_photo`, `assign_face`,
-`rename_file`) are expected to fire `photo_modified` (the same event the routes
-already emit for those exact edits). That emission happens *inside the host action
-implementation* (`automation_sandbox/automation_actions.py`), which only ever
-receives a `session` — it has no automation id or triggering context in scope. So a
-custom automation on `photo_modified` that calls `tag_photo` would re-trigger itself,
+explicit emit.** The mutating host actions (`tag_photos`, `move_photos`, `assign_faces`,
+`rename_files`, `delete_photos`) are expected to fire `photo_modified` (the same event
+the routes already emit for those exact edits). That emission happens *inside the host
+action implementation* (`automation_sandbox/automation_actions.py`), which only ever
+receives a `session`/reporter — it has no automation id or triggering context in scope.
+So a custom automation on `photo_modified` that calls `tag_photos` would re-trigger itself,
 and the emit site **cannot be handed the chain explicitly** — it comes "from outside",
 below the script.
 
@@ -653,7 +666,7 @@ Flow for the host-action self-loop, now caught:
 photo_modified (chain=[])                  ← e.g. a UI edit (genuine origin)
   └─ custom automation X runs
        run_and_record opens scope → chain=[X]
-       script calls tag_photo() → emit_event(photo_modified)   ← stamped [X] ambiently
+       script calls tag_photos() → emit_event(photo_modified)  ← stamped [X] ambiently
          └─ dispatch: X.id ∈ [X] → SKIP (logged); X never re-runs
 ```
 
@@ -670,7 +683,7 @@ guard. The standard pattern for "an app that watches a directory it also writes 
 
 - **A shared suppression ledger.** When yaffo writes a watched file as part of an
   automation/system action (`export_photo_tag`'s metadata write; any file-writing host
-  action — `move_photo` to a new path, a future content writer), record
+  action — `move_photos` to a new path, a future content writer), record
   `(path, signature)` in a small **cross-process** store (a DB table, e.g.
   `watcher_suppressions`, since the writer is a worker and the watcher is a separate
   process). `signature` is the post-write `(size, mtime)` (cheap) — or a content hash
@@ -758,7 +771,7 @@ Watcher suppression (unit, no real observer):
 ### Out of scope / known gaps (flag, don't build here)
 
 - **Commit-vs-emit ordering for host actions.** A host mutation commits at
-  `run_and_record`'s end, but a mid-script `tag_photo` emit enqueues immediately. In
+  `run_and_record`'s end, but a mid-script `tag_photos` emit enqueues immediately. In
   spawn mode the dispatch task runs after the commit (fine); immediate mode needs
   care. This is part of the still-in-flux "how should host actions emit" design; the
   guard doesn't depend on resolving it.
@@ -778,12 +791,15 @@ Watcher suppression (unit, no real observer):
 
 ## Deferred (flagged, not built)
 
-- **Hard CPU/time limit.** Starlark blocks unbounded loops/recursion, but a large
-  bounded `for` can still burn CPU; `starlark-pyo3` exposes no step budget and a
-  thread soft-timeout can't kill a runaway eval. Real hardening = subprocess +
-  kill / resource limits before exposing arbitrary user scripts. **More pressing
-  now** that mutating actions (move/rename/tag/assign) run real file/DB writes on a
-  triggered run.
+- **Hard CPU/time limit.** Starlark blocks `while`, but in this `starlark-pyo3` build
+  **recursion is NOT blocked** (verified — a recursive call runs), and a large bounded
+  `for` can still burn CPU; the binding exposes no step budget and a thread soft-timeout
+  can't kill a runaway eval. Real hardening = subprocess + kill / resource limits before
+  exposing arbitrary user scripts. **More pressing now** that mutating actions
+  (move/rename/tag/assign/delete) run real file/DB writes on a triggered run. (The other
+  containment guarantees — no imports, no I/O, no network, no eval/introspection
+  builtins, no attribute-walking to host internals, host surface = injected callables
+  only — are pinned by `tests/.../test_starlark_containment.py`.)
 - **`media_dir_id` / `relative_path` aren't filterable.** They're enrichment, not
   `FIELDS_BY_SOURCE` columns, so a script can read them on a photo row but can't
   `data_query` *by* them (e.g. "photos in media dir X"). Would need a real filter
@@ -847,4 +863,4 @@ Watcher suppression (unit, no real observer):
 | UI routes | `yaffo/routes/utilities/automations.py` (+ `common.automations_sidebar_context`) |
 | UI templates / static | `yaffo/templates/utilities/{_base,automations,automations_triggers,automations_triggers_edit}.html`, `yaffo/static/utilities/{_base,automations}.{js,css}` |
 | Cron editor component | `yaffo/static/components/cron_builder.{js,css}` |
-| Tests | `tests/yaffo/background_tasks/` (incl. `test_automation_{host,actions}`, `test_preview`, `test_loop_guard`, `test_watcher_suppression`), `tests/yaffo/routes/test_automations_page.py` |
+| Tests | `tests/yaffo/background_tasks/` (incl. `test_automation_{host,actions}`, `test_starlark_{runner,containment}`, `test_preview`, `test_loop_guard`, `test_watcher_suppression`, `test_generate_automation` — tool→progress-label guard), `tests/yaffo/site_agents/tool_providers/test_data_query_tool.py`, `tests/yaffo/routes/test_automations_page.py` |

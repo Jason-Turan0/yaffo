@@ -65,3 +65,19 @@ def test_delete_photos_removes_photo_and_all_dependents(session):
 
 def test_delete_photos_empty_is_noop(session):
     assert repo.delete_photos(session, []) == []
+
+
+def test_get_photo_ids_for_faces_resolves_distinct_photos(session):
+    p1, p2 = Photo(full_file_path="/lib/1.jpg"), Photo(full_file_path="/lib/2.jpg")
+    session.add_all([p1, p2])
+    session.flush()
+    f1 = Face(photo_id=p1.id, full_file_path="/t/1.jpg")
+    f2 = Face(photo_id=p1.id, full_file_path="/t/2.jpg")  # second face on the same photo
+    f3 = Face(photo_id=p2.id, full_file_path="/t/3.jpg")
+    session.add_all([f1, f2, f3])
+    session.commit()
+
+    ids = repo.get_photo_ids_for_faces(session, [f1.id, f2.id, f3.id])
+
+    assert set(ids) == {p1.id, p2.id}  # distinct, two faces on p1 collapse to one
+    assert repo.get_photo_ids_for_faces(session, []) == []
