@@ -14,7 +14,8 @@ from yaffo.utils.index_photos import (
     delete_orphaned_thumbnails,
     is_system_file,
 )
-from yaffo.utils.settings import get_media_dirs, get_thumbnail_dir
+from yaffo.utils.settings import get_thumbnail_dir
+from yaffo.db.repositories.media_dir_repository import get_media_dirs
 
 logger = get_logger(__name__, 'background_tasks')
 

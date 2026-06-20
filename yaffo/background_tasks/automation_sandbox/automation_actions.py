@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox.labels import face_label, person_label, photo_label
 from yaffo.db.repositories import person_repository, photos_repository
-from yaffo.utils.settings import media_dir_by_id
+from yaffo.db.repositories.media_dir_repository import media_dir_by_id
 from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_photo_rows
 from yaffo.db.repositories.data_query_repository import resolve_query
 

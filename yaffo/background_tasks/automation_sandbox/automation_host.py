@@ -215,5 +215,6 @@ def render_host_api() -> str:
             f"  {fn.description}\n"
             f"  Returns: {fn.returns}\n"
             f"  Example: {fn.example}"
+            f"  Mutating: {fn.mutating}"
         )
     return "\n\n".join(blocks)

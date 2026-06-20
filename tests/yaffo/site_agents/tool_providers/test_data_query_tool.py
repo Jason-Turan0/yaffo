@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from yaffo.site_agents.tool_providers import data_query_tool
-from yaffo.utils.settings import MediaDir
+from yaffo.db.repositories.media_dir_repository import MediaDir
 
 pytestmark = pytest.mark.unit
 

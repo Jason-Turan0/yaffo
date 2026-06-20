@@ -14,7 +14,7 @@ from yaffo.db import db
 from yaffo.db.models import Photo
 from yaffo.db.repositories import data_query_repository as dq
 from yaffo.db.repositories import media_dir_repository as mdr
-from yaffo.utils.settings import add_media_dir
+from yaffo.db.repositories.media_dir_repository import add_media_dir
 
 pytestmark = pytest.mark.unit
 

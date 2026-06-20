@@ -104,6 +104,14 @@ class TestUpdate:
         assert page.show_title is False
         assert [(w.id, w.title, w.grid_w) for w in page.widgets] == [("w1", "Wall", 6)]
 
+    def test_tab_order_displaces_others(self, client):
+        # Three pages at positions 1, 2, 3; move the first to position 3.
+        a, b, c = _make_page(title="A"), _make_page(title="B"), _make_page(title="C")
+        resp = client.post(f"/pages/{a}/update", json={"title": "A", "tab_order": 3, "widgets": []})
+        assert resp.status_code == 204
+        order = {p.title: p.tab_order for p in page_repo.list_pages(db.session)}
+        assert order == {"B": 1, "C": 2, "A": 3}
+
     def test_blank_title_defaults(self, client):
         pid = _make_page(title="Original")
         client.post(f"/pages/{pid}/update", json={"title": "  ", "widgets": []})

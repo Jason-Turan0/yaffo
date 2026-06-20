@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, jsonify
+
+import yaffo.db.repositories.media_dir_repository
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, Face, ClassificationLabel, AUTOMATION_HANDLER_CLASSIFY_LABELS
 from yaffo.common import DB_PATH, QUEUE_DB_PATH
@@ -44,7 +46,7 @@ def init_settings_routes(app: Flask):
 
     @app.route("/settings", methods=["GET"])
     def settings_index():
-        media_dirs = media_settings.list_media_dirs(db.session)
+        media_dirs = yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session)
 
         # Get thumbnail directory setting
         thumbnail_setting = db.session.query(ApplicationSettings).filter_by(name="thumbnail_dir").first()
@@ -144,21 +146,21 @@ def init_settings_routes(app: Flask):
         except Exception as e:
             return jsonify({"error": f"Failed to create directory: {str(e)}"}), 400
 
-        if media_settings.add_media_dir(db.session, new_dir) is None:
+        if yaffo.db.repositories.media_dir_repository.add_media_dir(db.session, new_dir) is None:
             return jsonify({"error": "Directory already exists"}), 400
 
-        return jsonify({"success": True, "media_dirs": media_settings.list_media_dirs(db.session)})
+        return jsonify({"success": True, "media_dirs": yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session)})
 
     @app.route("/api/settings/media-dirs/<int:index>", methods=["DELETE"])
     def remove_media_dir(index: int):
         """Remove a media directory by index"""
-        removed = media_settings.remove_media_dir(db.session, index)
+        removed = yaffo.db.repositories.media_dir_repository.remove_media_dir(db.session, index)
         if removed is None:
             return jsonify({"error": "Invalid index"}), 400
         return jsonify({
             "success": True,
             "removed": removed,
-            "media_dirs": media_settings.list_media_dirs(db.session),
+            "media_dirs": yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session),
         })
 
     @app.route("/api/settings/select-folder", methods=["GET"])

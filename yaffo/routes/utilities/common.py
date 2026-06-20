@@ -1,3 +1,4 @@
+import yaffo.db.repositories.media_dir_repository
 from yaffo.db import db
 from pathlib import Path
 
@@ -11,7 +12,7 @@ __all__ = [
 
 
 def get_media_dirs() -> list[Path]:
-    return settings.get_media_dirs(db.session)
+    return yaffo.db.repositories.media_dir_repository.get_media_dirs(db.session)
 
 
 def get_thumbnail_dir() -> Path | None:

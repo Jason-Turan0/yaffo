@@ -106,7 +106,12 @@ def init_pages_routes(app: Flask):
         title = (payload.get("title") or "").strip() or "Untitled Page"
         subtitle = (payload.get("subtitle") or "").strip()
         show_title = bool(payload.get("show_title", True))
-        page_repo.update_page(db.session, page_id, title=title, subtitle=subtitle, show_title=show_title)
+        tab_order = payload.get("tab_order")
+        tab_order = int(tab_order) if tab_order is not None else None
+        page_repo.update_page(
+            db.session, page_id, title=title, subtitle=subtitle,
+            show_title=show_title, tab_order=tab_order,
+        )
         page_repo.save_page_widgets(db.session, page_id, payload.get("widgets", []))
         return "", 204
 

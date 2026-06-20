@@ -14,7 +14,7 @@ from yaffo.db.repositories.photos_repository import move_photo_path
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
 from yaffo.utils.index_photos import delete_photos_by_paths, delete_photos_under_dir
-from yaffo.utils.settings import get_media_dirs
+from yaffo.db.repositories.media_dir_repository import get_media_dirs
 
 logger = get_logger(__name__, 'watcher')
 

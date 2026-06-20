@@ -83,6 +83,7 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, con
             title: document.getElementById('page-title').value,
             subtitle: document.getElementById('page-subtitle').value,
             show_title: document.getElementById('page-show-title').checked,
+            tab_order: parseInt(document.getElementById('page-tab-order').value, 10) || 0,
             widgets: getWidgets()
         };
         await fetch(config.buildUrl('pages_update', { page_id: pageId }), {

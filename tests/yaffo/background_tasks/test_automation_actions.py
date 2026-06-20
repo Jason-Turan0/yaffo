@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from yaffo.background_tasks.automation_sandbox import automation_actions, media_dirs
-from yaffo.utils.settings import MediaDir
+from yaffo.db.repositories.media_dir_repository import MediaDir
 
 pytestmark = pytest.mark.unit
 

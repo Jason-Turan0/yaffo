@@ -405,6 +405,7 @@ def init_db():
                        title TEXT NOT NULL,
                        subtitle TEXT NOT NULL,
                        show_title INTEGER NOT NULL DEFAULT 1,
+                       tab_order INTEGER NOT NULL DEFAULT 0,
                        published_version_id INTEGER,
                        working_version_id INTEGER,
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

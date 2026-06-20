@@ -13,7 +13,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from yaffo.db.repositories import photos_repository
-from yaffo.utils.settings import MediaDir, get_media_dir_entries
+from yaffo.db.repositories.media_dir_repository import MediaDir, get_media_dir_entries
 
 
 def media_dir_for_path(entries: list[MediaDir], full_path: str) -> MediaDir | None:

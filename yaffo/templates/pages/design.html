@@ -23,6 +23,11 @@
                               >{{ page.subtitle }}</textarea>
                 </div>
                 <div class="form-group">
+                    <label for="page-tab-order">Tab order</label>
+                    <input type="number" id="page-tab-order" name="tab_order" step="1"
+                           value="{{ page.tab_order }}" class="form-control">
+                </div>
+                <div class="form-group">
                     <label class="checkbox-label inline">
                         <input type="checkbox" id="page-show-title" {% if page.show_title %}checked{% endif %}>
                         Display title?

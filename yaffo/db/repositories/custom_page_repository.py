@@ -22,7 +22,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from yaffo.db.models import (
@@ -63,8 +63,11 @@ def _with_relations(stmt):
 
 
 def list_pages(session: Session) -> list[CustomPage]:
-    """All pages, most-recently-updated first (the order used for the nav tabs)."""
-    stmt = _with_relations(select(CustomPage).order_by(CustomPage.updated_at.desc()))
+    """All pages in nav-tab order (tab_order ascending), with updated_at as the
+    tiebreak for pages sharing a position."""
+    stmt = _with_relations(
+        select(CustomPage).order_by(CustomPage.tab_order.asc(), CustomPage.updated_at.desc())
+    )
     return list(session.execute(stmt).scalars().all())
 
 
@@ -107,8 +110,10 @@ def get_version_widget(session: Session, version_id: int, widget_id: str) -> Opt
 
 def create_page(session: Session, title: str, subtitle: str = "") -> CustomPage:
     """Create a page with an initial empty ACCEPTED version as its published
-    version -- every page always has one version that owns its (live) widgets."""
-    page = CustomPage(title=title, subtitle=subtitle)
+    version -- every page always has one version that owns its (live) widgets. New
+    pages land at the end of the nav strip (max tab_order + 1)."""
+    next_order = (session.execute(select(func.max(CustomPage.tab_order))).scalar() or 0) + 1
+    page = CustomPage(title=title, subtitle=subtitle, tab_order=next_order)
     session.add(page)
     session.flush()  # assign page.id for the version's FK
     version = PageVersion(
@@ -129,6 +134,7 @@ def update_page(
     title: Optional[str] = None,
     subtitle: Optional[str] = None,
     show_title: Optional[bool] = None,
+    tab_order: Optional[int] = None,
 ) -> Optional[CustomPage]:
     page = get_page(session, page_id)
     if page is None:
@@ -139,9 +145,28 @@ def update_page(
         page.subtitle = subtitle
     if show_title is not None:
         page.show_title = show_title
+    if tab_order is not None:
+        _reposition(session, page, tab_order)
     page.updated_at = datetime.utcnow()
     session.commit()
     return page
+
+
+def _reposition(session: Session, page: CustomPage, target: int) -> None:
+    """Move `page` to nav position `target` (1-based), displacing the others, then
+    re-sequence every page's tab_order to a unique, contiguous 1..N. Pulling the page
+    out and re-inserting keeps the rest in their current relative order, so setting a
+    page to 3 slots it third and shifts whoever held that spot down by one."""
+    others = [p for p in _all_by_tab_order(session) if p.id != page.id]
+    index = max(0, min(target - 1, len(others)))
+    ordered = others[:index] + [page] + others[index:]
+    for position, p in enumerate(ordered, start=1):
+        p.tab_order = position
+
+
+def _all_by_tab_order(session: Session) -> list[CustomPage]:
+    stmt = select(CustomPage).order_by(CustomPage.tab_order.asc(), CustomPage.id.asc())
+    return list(session.execute(stmt).scalars().all())
 
 
 def delete_page(session: Session, page_id: int) -> None:

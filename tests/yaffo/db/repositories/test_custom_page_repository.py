@@ -101,13 +101,29 @@ class TestListPages:
     def test_empty(self, session):
         assert repo.list_pages(session) == []
 
-    def test_orders_by_updated_at_desc(self, session):
-        first = repo.create_page(session, "First")
-        second = repo.create_page(session, "Second")
-        # Touch the first so it becomes the most recently updated.
-        repo.update_page(session, first.id, title="First (edited)")
-        titles = [p.title for p in repo.list_pages(session)]
-        assert titles == ["First (edited)", "Second"]
+    def test_orders_by_tab_order(self, session):
+        # New pages land at the end of the strip in creation order.
+        repo.create_page(session, "First")
+        repo.create_page(session, "Second")
+        assert [p.title for p in repo.list_pages(session)] == ["First", "Second"]
+
+    def test_tab_order_displaces_and_stays_contiguous(self, session):
+        a = repo.create_page(session, "A")
+        repo.create_page(session, "B")
+        repo.create_page(session, "C")
+        # Move A into C's slot; B and C shift up, numbers stay unique 1..N.
+        repo.update_page(session, a.id, tab_order=3)
+        pages = repo.list_pages(session)
+        assert [(p.title, p.tab_order) for p in pages] == [("B", 1), ("C", 2), ("A", 3)]
+
+    def test_tab_order_clamps_out_of_range(self, session):
+        a = repo.create_page(session, "A")
+        repo.create_page(session, "B")
+        # A target past the end just lands the page last; 0/negative lands it first.
+        repo.update_page(session, a.id, tab_order=99)
+        assert [p.title for p in repo.list_pages(session)] == ["B", "A"]
+        repo.update_page(session, a.id, tab_order=0)
+        assert [p.title for p in repo.list_pages(session)] == ["A", "B"]
 
 
 class TestUpdatePage:

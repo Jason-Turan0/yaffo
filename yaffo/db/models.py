@@ -444,6 +444,8 @@ class CustomPage(db.Model):
     title = db.Column(db.String, nullable=False, default="Untitled Page")
     subtitle = db.Column(db.String, nullable=False, default="")
     show_title = db.Column(db.Boolean, nullable=False, default=True)
+    # Position in the nav's Pages strip; lower sorts first (see list_pages).
+    tab_order = db.Column(db.Integer, nullable=False, default=0)
     # The live version shown in presentation, and the in-flight version a chat run
     # is generating into (or NULL — its presence is the UI-lock predicate). Plain
     # pointers into page_versions; the page <-> version relationship is circular, so

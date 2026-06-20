@@ -125,7 +125,7 @@ def test_summaries_are_friendly(monkeypatch):
         lambda session, person_id: _P("Grandma") if person_id == 9 else None,
     )
     from pathlib import Path
-    from yaffo.utils.settings import MediaDir
+    from yaffo.db.repositories.media_dir_repository import MediaDir
     monkeypatch.setattr(
         "yaffo.background_tasks.automation_sandbox.automation_actions.media_dir_by_id",
         lambda session, mid: MediaDir(id=mid, path=Path("/lib/Photos")) if mid == "GUID" else None,
