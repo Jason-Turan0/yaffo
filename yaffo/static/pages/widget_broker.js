@@ -36,15 +36,17 @@ window.PHOTO_ORGANIZER.initWidgetBroker = (pageId, getVersionId, config) => {
         );
     };
 
-    // yaffo:query -> fetch server data, reply yaffo:result to the sender
-    const handleQuery = async (event, msg) => {
+    // POST `body` to a version/widget-scoped endpoint for the sending widget and
+    // reply yaffo:result with the response's `data` (null on any failure). The
+    // request/response round trip every read-style message shares.
+    const brokerResult = async (event, msg, endpoint, body) => {
         const frame = senderFrame(event);
         if (!frame) return;
         let data = null;
         try {
             const response = await fetch(
-                config.buildUrl('pages_version_widget_query', { page_id: pageId, version_id: getVersionId(), widget_id: frame.dataset.widgetId }),
-                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: msg.query }) }
+                config.buildUrl(endpoint, { page_id: pageId, version_id: getVersionId(), widget_id: frame.dataset.widgetId }),
+                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
             );
             data = (await response.json()).data;
         } catch (e) {
@@ -52,6 +54,12 @@ window.PHOTO_ORGANIZER.initWidgetBroker = (pageId, getVersionId, config) => {
         }
         frame.contentWindow.postMessage({ type: 'yaffo:result', requestId: msg.requestId, data }, '*');
     };
+
+    // yaffo:query -> resolve a live data_query, reply yaffo:result to the sender.
+    // Media dirs + the folder tree are just sources (media_dirs / folders), so they
+    // go through this same path — no dedicated message types.
+    const handleQuery = (event, msg) =>
+        brokerResult(event, msg, 'pages_version_widget_query', { query: msg.query });
 
     // yaffo:error -> record the sending widget's runtime error locally
     const handleError = (event, msg) => {

@@ -49,7 +49,11 @@ class TestSchemaDerivation:
     """The query surface is introspected from the exposed models."""
 
     def test_sources_are_the_exposed_tables(self):
-        assert dq.SOURCES == ("photos", "tags", "faces", "people", "people_face")
+        assert tuple(dq.FIELDS_BY_SOURCE) == ("photos", "tags", "faces", "people", "people_face")
+
+    def test_sources_include_the_virtual_sources(self):
+        # Tables first, then the non-table (media-dir / folder-tree) sources.
+        assert dq.SOURCES == ("photos", "tags", "faces", "people", "people_face", "media_dirs", "folders")
 
     def test_photos_exposes_primitive_columns(self):
         fields = dq.FIELDS_BY_SOURCE["photos"]
@@ -113,7 +117,10 @@ class TestSchemaShape:
     """The published JSON Schema is a strict, fail-closed per-source union."""
 
     def test_query_schema_has_rows_and_aggregate_branch_per_source(self):
-        assert len(dq.QUERY_SCHEMA["oneOf"]) == 2 * len(dq.SOURCES)
+        # Two branches (rows + aggregate) per table source, one branch per virtual source.
+        tables = len(dq.FIELDS_BY_SOURCE)
+        virtual = len(dq.SOURCES) - tables
+        assert len(dq.QUERY_SCHEMA["oneOf"]) == 2 * tables + virtual
 
     def test_branches_are_closed_and_require_source(self):
         for branch in dq.QUERY_SCHEMA["oneOf"]:
@@ -131,7 +138,7 @@ class TestValidateQuery:
         assert dq.validate_query({"source": "photos", "year": {"eq": 2023}, "limit": 9}) == []
 
     def test_limit_allowed_on_every_source(self):
-        for source in dq.SOURCES:
+        for source in dq.FIELDS_BY_SOURCE:  # table sources; virtual sources take no limit
             assert dq.validate_query({"source": source, "limit": 5}) == []
 
     def test_unknown_source_names_valid_sources(self):
@@ -227,6 +234,59 @@ class TestValidateDataQuery:
         })
         assert any(e.startswith("a:") for e in errors)
         assert any(e.startswith("b:") and "unknown source" in e for e in errors)
+
+
+class TestCalculatedColumnFilters:
+    """Calculated columns are returned-only by default, but the queryable ones
+    (media_dir_id, relative_path) can be filtered with their own restricted ops."""
+
+    def test_media_dir_id_is_filterable(self):
+        assert dq.validate_query({"source": "photos", "media_dir_id": {"eq": "GUID"}}) == []
+        assert dq.validate_query({"source": "photos", "media_dir_id": {"in": ["a", "b"]}}) == []
+
+    def test_relative_path_requires_media_dir_id(self):
+        errors = dq.validate_query({"source": "photos", "relative_path": {"prefix": "2024/"}})
+        assert errors and "media_dir_id" in errors[0]
+
+    def test_relative_path_with_media_dir_id_is_valid(self):
+        query = {"source": "photos", "media_dir_id": {"eq": "G"}, "relative_path": {"prefix": "2024/"}}
+        assert dq.validate_query(query) == []
+
+    def test_relative_path_rejects_ops_outside_its_set(self):
+        # relative_path advertises only eq/prefix — ordering/contains aren't offered.
+        query = {"source": "photos", "media_dir_id": {"eq": "G"}, "relative_path": {"contains": "x"}}
+        assert dq.validate_query(query)
+
+    def test_calculated_filters_combine_with_an_aggregate(self):
+        query = {"source": "photos", "op": "count", "media_dir_id": {"eq": "G"}, "relative_path": {"prefix": "2024/"}}
+        assert dq.validate_query(query) == []
+
+    def test_calculated_columns_cannot_be_aggregated(self):
+        # They're filterable but not a groupable/measurable `field`.
+        assert dq.validate_query({"source": "photos", "op": "facet", "field": "media_dir_id"})
+
+
+class TestVirtualSources:
+    """media_dirs / folders are queried like tables but take params, not column filters."""
+
+    def test_media_dirs_takes_no_params(self):
+        assert dq.validate_query({"source": "media_dirs"}) == []
+
+    def test_media_dirs_rejects_extras(self):
+        assert dq.validate_query({"source": "media_dirs", "limit": 5})
+
+    def test_folders_requires_a_media_dir_id(self):
+        assert dq.validate_query({"source": "folders"})
+
+    def test_folders_is_valid_with_media_dir_id_and_path(self):
+        assert dq.validate_query({"source": "folders", "media_dir_id": "G", "path": "2024"}) == []
+
+    def test_folders_rejects_unknown_params(self):
+        assert dq.validate_query({"source": "folders", "media_dir_id": "G", "op": "count"})
+
+    def test_source_schema_describes_virtual_rows(self):
+        assert set(dq.source_schema("media_dirs")) == {"id", "name"}
+        assert set(dq.source_schema("folders")) == {"name", "photo_count"}
 
 
 class TestGeneratedSql:

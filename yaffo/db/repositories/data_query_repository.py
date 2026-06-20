@@ -19,13 +19,15 @@ SQLAlchemy reads + serialization) will live alongside it as the repo grows.
 from __future__ import annotations
 
 import datetime
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any, Callable, Optional
 
 from jsonschema import Draft202012Validator
 from sqlalchemy import Select, distinct, func, select
 from sqlalchemy.orm import Session
 
 from yaffo.db.models import Face, Person, PersonFace, Photo, Tag
+from yaffo.db.repositories import media_dir_repository
 
 _DRAFT = "https://json-schema.org/draft/2020-12/schema"
 
@@ -40,12 +42,21 @@ _DENY: dict[type, set[str]] = {
     Face: {"full_file_path"},
 }
 
-# Calculated columns per model. File system paths are fed to the model relative to the root media dirs so local
-# disk layout is not exposed.
+# Calculated columns per model: not real DB columns — the host derives them from
+# full_file_path (never exposed) and appends them to each row. They're always part of
+# a source's returned schema; `queryable` ones may also be filtered (with their own
+# restricted `ops`, and any `requires` co-filters), translated to full_file_path SQL
+# in media_dir_repository. `prefix` matches a relative-path string prefix (recursive).
 _CALCULATED: dict[type, dict[str, Any]] = {
     Photo: {
-        "media_dir_id": {"type": "string", "description": "Media directory ID", 'queryable': False},
-        "relative_path": {"type": "string", "description": "Relative path to file from media directory", 'queryable': False},
+        "media_dir_id": {
+            "type": "string", "description": "Media directory id (from the media_dirs source).",
+            "queryable": True, "ops": ("eq", "in"),
+        },
+        "relative_path": {
+            "type": "string", "description": "Path to the file relative to its media directory.",
+            "queryable": True, "ops": ("eq", "prefix"), "requires": ("media_dir_id",),
+        },
     },
 }
 
@@ -88,25 +99,76 @@ def _source_fields(model: type) -> dict[str, dict]:
     return fields
 
 
-# {source_table: {column: json_type_schema}} — each source's column shapes (the
+# {source_table: {column: json_type_schema}} — each table source's column shapes (the
 # returned-field types, and the basis the query filters are built from).
 FIELDS_BY_SOURCE: dict[str, dict[str, dict]] = {
     model.__tablename__: _source_fields(model) for model in _EXPOSED_MODELS
 }
-SOURCES = tuple(FIELDS_BY_SOURCE)
 
-# Calculated columns keyed by source table. These aren't real DB columns — the host
-# appends them to each photos row (enrich_photo_rows) — so they're returned-only:
-# part of source_schema() but never the filter/select/aggregate surface.
+# Calculated columns keyed by source table. Not real DB columns (see _CALCULATED);
+# always in source_schema(), only filterable when `queryable`.
 CALCULATED_BY_SOURCE: dict[str, dict[str, dict]] = {
     model.__tablename__: _CALCULATED[model] for model in _EXPOSED_MODELS if model in _CALCULATED
 }
 
 
+@dataclass(frozen=True)
+class _VirtualSource:
+    """A source not backed by a SQLAlchemy table: a JSON Schema for its query (named
+    params, not column filters), the `fields` a returned row carries (for
+    source_schema / prompts), and a resolver run against the session."""
+    schema: dict
+    fields: dict
+    resolve: Callable[[Session, dict], Any]
+
+
+def _virtual_schema(source: str, params: dict, required: list[str]) -> dict:
+    return {
+        "type": "object",
+        "properties": {"source": {"const": source}, **params},
+        "required": ["source", *required],
+        "additionalProperties": False,
+    }
+
+
+# Virtual sources: media dirs and the on-disk folder tree, queried through the same
+# query()/run_data_query path as tables (their resolvers live in media_dir_repository).
+_VIRTUAL_SOURCES: dict[str, _VirtualSource] = {
+    "media_dirs": _VirtualSource(
+        schema=_virtual_schema("media_dirs", {}, []),
+        fields={
+            "id": {"type": "string", "description": "Media directory id."},
+            "name": {"type": "string", "description": "Media directory name."},
+        },
+        resolve=media_dir_repository.resolve_media_dirs,
+    ),
+    "folders": _VirtualSource(
+        schema=_virtual_schema(
+            "folders",
+            {
+                "media_dir_id": {"type": "string", "description": "Media directory id (from media_dirs)."},
+                "path": {"type": "string", "description": "Folder path within the dir; omit/'' for the root."},
+            },
+            ["media_dir_id"],
+        ),
+        fields={
+            "name": {"type": "string", "description": "Immediate subfolder name."},
+            "photo_count": {"type": "integer", "description": "Photos indexed under that subfolder."},
+        },
+        resolve=media_dir_repository.resolve_folders,
+    ),
+}
+
+# Every queryable source name: tables first, then the virtual ones.
+SOURCES = (*FIELDS_BY_SOURCE, *_VIRTUAL_SOURCES)
+
+
 def source_schema(source: str) -> dict[str, dict]:
-    """The full returned-row schema for a source: its queryable columns followed by
-    the host-derived calculated columns appended at the end. Raises ValueError for
-    an unknown source."""
+    """The full returned-row schema for a source. For a table: its queryable columns
+    followed by the calculated columns. For a virtual source: the fields its rows
+    carry. Raises ValueError for an unknown source."""
+    if source in _VIRTUAL_SOURCES:
+        return dict(_VIRTUAL_SOURCES[source].fields)
     if source not in FIELDS_BY_SOURCE:
         raise ValueError(f"unknown source '{source}' (valid: {', '.join(SOURCES)})")
     return {**FIELDS_BY_SOURCE[source], **CALCULATED_BY_SOURCE.get(source, {})}
@@ -140,29 +202,63 @@ def _filter_schema(json_type: str) -> dict:
 AGGREGATE_OPS = ("count", "count_distinct", "facet", "range")
 
 
-def _filters_for(fields: dict[str, dict]) -> dict[str, dict]:
-    return {column: _filter_schema(schema["type"]) for column, schema in fields.items()}
+def _calc_filter_schema(col_def: dict) -> dict:
+    """The filter a queryable calculated column accepts — its declared `ops` only
+    (not the type-generic set), since e.g. relative_path supports eq/prefix, not
+    ordering. `prefix` is a string-prefix match; `in` takes an array."""
+    value = {"type": col_def["type"]}
+    operators = {
+        op: ({"type": "array", "items": value, "minItems": 1} if op == "in" else value)
+        for op in col_def["ops"]
+    }
+    return {"type": "object", "properties": operators, "additionalProperties": False, "minProperties": 1}
+
+
+def _queryable_calculated(source: str) -> dict[str, dict]:
+    return {n: c for n, c in CALCULATED_BY_SOURCE.get(source, {}).items() if c.get("queryable")}
+
+
+def _filters_for(source: str, fields: dict[str, dict]) -> dict[str, dict]:
+    props = {column: _filter_schema(schema["type"]) for column, schema in fields.items()}
+    for name, col_def in _queryable_calculated(source).items():
+        props[name] = _calc_filter_schema(col_def)
+    return props
+
+
+def _requires_rules(source: str) -> list[dict]:
+    """if/then rules: filtering a calculated column with a `requires` list forces its
+    co-filters (e.g. relative_path requires media_dir_id to pin the root)."""
+    return [
+        {"if": {"required": [name]}, "then": {"required": [req]}}
+        for name, col_def in _queryable_calculated(source).items()
+        for req in col_def.get("requires", ())
+    ]
 
 
 def _rows_branch(source: str, fields: dict[str, dict]) -> dict:
     """A row-fetch query: a discriminating `source` const, per-column operator
     filters, `limit`, and nothing else (fail closed)."""
-    properties = _filters_for(fields)
+    properties = _filters_for(source, fields)
     properties["source"] = {"const": source}
     properties["limit"] = _LIMIT
-    return {
+    branch = {
         "type": "object",
         "properties": properties,
         "required": ["source"],
         "additionalProperties": False,
     }
+    rules = _requires_rules(source)
+    if rules:
+        branch["allOf"] = rules
+    return branch
 
 
 def _aggregate_branch(source: str, fields: dict[str, dict]) -> dict:
     """An aggregate query: `source` const, `op`, a `field` (required for every op
     but `count`, forbidden for `count`), plus the same operator filters as an
-    optional WHERE."""
-    properties = _filters_for(fields)
+    optional WHERE. `field` aggregates a real column only (calculated columns may be
+    filtered but not grouped/measured)."""
+    properties = _filters_for(source, fields)
     properties["source"] = {"const": source}
     properties["op"] = {"enum": list(AGGREGATE_OPS)}
     properties["field"] = {"enum": list(fields)}
@@ -176,6 +272,7 @@ def _aggregate_branch(source: str, fields: dict[str, dict]) -> dict:
              "then": {"required": ["field"]}},
             {"if": {"required": ["op"], "properties": {"op": {"const": "count"}}},
              "then": {"not": {"required": ["field"]}}},
+            *_requires_rules(source),
         ],
     }
 
@@ -186,10 +283,12 @@ def _aggregate_branch(source: str, fields: dict[str, dict]) -> dict:
 # "not valid under any of the given schemas".
 _ROWS_VALIDATORS = {s: Draft202012Validator(_rows_branch(s, f)) for s, f in FIELDS_BY_SOURCE.items()}
 _AGG_VALIDATORS = {s: Draft202012Validator(_aggregate_branch(s, f)) for s, f in FIELDS_BY_SOURCE.items()}
+_VIRTUAL_VALIDATORS = {s: Draft202012Validator(vs.schema) for s, vs in _VIRTUAL_SOURCES.items()}
 
 _QUERY = {"oneOf": [
     *(_rows_branch(s, f) for s, f in FIELDS_BY_SOURCE.items()),
     *(_aggregate_branch(s, f) for s, f in FIELDS_BY_SOURCE.items()),
+    *(vs.schema for vs in _VIRTUAL_SOURCES.values()),
 ]}
 
 QUERY_SCHEMA: dict[str, Any] = {"$schema": _DRAFT, **_QUERY}
@@ -219,6 +318,8 @@ def validate_query(query: Any) -> list[str]:
     if not isinstance(query, dict):
         return ["query must be an object"]
     source = query.get("source")
+    if source in _VIRTUAL_SOURCES:
+        return _format_errors(_VIRTUAL_VALIDATORS[source], query)
     if source not in FIELDS_BY_SOURCE:
         if source is None:
             return [f"missing 'source' (one of: {', '.join(SOURCES)})"]
@@ -263,11 +364,14 @@ _OPERATORS = {
 _RESERVED_KEYS = ("source", "op", "field", "limit")
 
 
-def _where_conditions(table, query: dict) -> list:
+def _where_conditions(table, query: dict, source: str) -> list:
+    # Calculated columns aren't real table columns; their filters are translated to
+    # full_file_path SQL separately (media_dir_repository), so skip them here.
+    skip = set(_RESERVED_KEYS) | set(CALCULATED_BY_SOURCE.get(source, {}))
     return [
         _OPERATORS[op](table.c[column], operand)
         for column, filters in query.items()
-        if column not in _RESERVED_KEYS
+        if column not in skip
         for op, operand in filters.items()
     ]
 
@@ -288,16 +392,19 @@ def _aggregate_select(table, query: dict, conditions: list) -> Select:
     return stmt.where(*conditions) if conditions else stmt
 
 
-def build_query(query: dict) -> Select:
-    """Translate one query into a SQLAlchemy Select over its source table. A rows
-    query selects the source's exposed columns with the per-column operator
-    filters + `limit`; an aggregate query (`op` present) builds the count / facet /
-    range. Pure translation — assumes the query already passed `validate_query`."""
-    table = _MODEL_BY_SOURCE[query["source"]].__table__
-    conditions = _where_conditions(table, query)
+def build_query(query: dict, extra_conditions: tuple = ()) -> Select:
+    """Translate one table query into a SQLAlchemy Select. A rows query selects the
+    source's exposed columns with the per-column operator filters + `limit`; an
+    aggregate query (`op` present) builds the count / facet / range. `extra_conditions`
+    are pre-built WHERE clauses (e.g. the calculated-column path filters resolved by
+    resolve_query) ANDed in. Pure translation — assumes the query passed
+    `validate_query`; virtual sources never reach here."""
+    source = query["source"]
+    table = _MODEL_BY_SOURCE[source].__table__
+    conditions = _where_conditions(table, query, source) + list(extra_conditions)
     if "op" in query:
         return _aggregate_select(table, query, conditions)
-    stmt = select(*(table.c[name] for name in FIELDS_BY_SOURCE[query["source"]]))
+    stmt = select(*(table.c[name] for name in FIELDS_BY_SOURCE[source]))
     if conditions:
         stmt = stmt.where(*conditions)
     if "limit" in query:
@@ -313,7 +420,13 @@ def resolve_query(session: Session, query: dict) -> Any:
     errors = validate_query(query)
     if errors:
         raise ValueError("; ".join(errors))
-    stmt = build_query(query)
+    source = query["source"]
+    if source in _VIRTUAL_SOURCES:
+        return _VIRTUAL_SOURCES[source].resolve(session, query)
+    # Calculated-column filters (media_dir_id / relative_path) need the media-dir
+    # registry, so they're translated here (with the session) and fed into build_query.
+    extra = tuple(media_dir_repository.photo_path_conditions(session, query)) if source == "photos" else ()
+    stmt = build_query(query, extra)
     op = query.get("op")
     if op in ("count", "count_distinct"):
         return session.execute(stmt).scalar()

@@ -2,6 +2,11 @@
 (media_dir_id, relative_path) rather than absolute paths: data_query photo rows are
 enriched with those two fields (derived from full_file_path, which is never
 exposed), and move_photo addresses a destination by media_dir_id.
+
+The page-builder side of this (browsing the folder tree, listing media dirs) is now
+served generically through the data-query contract — the `folders` / `media_dirs`
+sources and the queryable media_dir_id / relative_path columns (see
+db/repositories/media_dir_repository.py).
 """
 from pathlib import Path
 

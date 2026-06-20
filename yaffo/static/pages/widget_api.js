@@ -26,6 +26,19 @@ window.PHOTO_ORGANIZER.initWidgetApi = function (data, state) {
         }
     });
 
+    // Send a request to the host and resolve when its yaffo:result comes back
+    // (matched by requestId). `fields` are merged into the message alongside the
+    // type/requestId. Resolves to null on a host-side error.
+    function request(type, fields) {
+        return new Promise(function (resolve) {
+            var id = ++nextRequestId;
+            pending[id] = resolve;
+            var msg = { type: type, requestId: id };
+            Object.keys(fields || {}).forEach(function (k) { msg[k] = fields[k]; });
+            parent.postMessage(msg, '*');
+        });
+    }
+
     var api = {
         /** Results of this widget's data_query, keyed by query name (e.g. yaffo.data.maine_photos). */
         data: data || {},
@@ -39,11 +52,7 @@ window.PHOTO_ORGANIZER.initWidgetApi = function (data, state) {
          * value in data_query. Use it to filter or drill down after first render.
          */
         query: function (query) {
-            return new Promise(function (resolve) {
-                var id = ++nextRequestId;
-                pending[id] = resolve;
-                parent.postMessage({ type: 'yaffo:query', requestId: id, query: query }, '*');
-            });
+            return request('yaffo:query', { query: query });
         },
 
         /** Broadcast `payload` on `topic` to every widget on the page (pub/sub bus). */

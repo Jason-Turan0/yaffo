@@ -24,6 +24,20 @@ def get_photo_ids_under_path(session: Session, path: str) -> list[int]:
     return [row[0] for row in rows]
 
 
+def get_photo_paths_under_path(session: Session, path: str) -> list[tuple[int, str]]:
+    """(id, full_file_path) of indexed photos at `path` (an exact file) or under it
+    (a directory), ordered by id — for walking the indexed folder tree."""
+    path = path.rstrip("/\\")
+    under = f"{path}{os.sep}%"
+    rows = (
+        session.query(Photo.id, Photo.full_file_path)
+        .filter(or_(Photo.full_file_path == path, Photo.full_file_path.like(under)))
+        .order_by(Photo.id)
+        .all()
+    )
+    return [(row[0], row[1]) for row in rows]
+
+
 def get_photo_filename(session: Session, photo_id: int) -> str | None:
     """The photo's file name (basename of its stored path), for display."""
     path = get_photo_path(session, photo_id)

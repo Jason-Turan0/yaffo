@@ -831,6 +831,165 @@ body { padding: 0; position: relative; }
 )
 
 
+# Pair 3 (topic 'folder'): a picker walks the indexed on-disk folder tree; a gallery
+# shows the photos indexed at the selected folder.
+_FOLDER_PICKER = WidgetTemplate(
+    name="Folder picker",
+    description=(
+        "PUB/SUB publisher (topic 'folder'). Walks the indexed library's on-disk folder "
+        "tree using the media-dir sources: a select from yaffo.query({source:'media_dirs'}) "
+        "plus breadcrumbs and folder chips (with photo counts) from "
+        "yaffo.query({source:'folders', media_dir_id, path}). On each navigation it "
+        "yaffo.publish('folder', {mediaDirId, path}) and persists the spot. Pair it with a "
+        "'Folder gallery'."
+    ),
+    data_query={},
+    html="""\
+<link rel="stylesheet" href="/static/searchable-select.css">
+<div class='fb' id='root'>
+  <div class='fb-bar'>
+    <select id='dir' class='searchable-select' data-search-disabled></select>
+    <nav class='fb-crumbs' id='crumbs'></nav>
+  </div>
+  <div class='fb-folders' id='folders'></div>
+</div>
+<script src="/static/searchable-select.js"></script>
+""",
+    css="""\
+.fb { display: flex; flex-direction: column; gap: 10px; }
+.fb-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fb-bar .searchable-select-wrapper { width: 170px; }
+/* The dropdown can't escape the widget iframe, so keep it short enough to fit. */
+.fb-bar .searchable-select-options { max-height: 160px; }
+.fb-crumbs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: var(--font-size-sm); }
+.fb-crumb { background: none; border: none; color: var(--color-accent); cursor: pointer; padding: 2px 6px; border-radius: var(--radius-sm); font: inherit; }
+.fb-crumb:hover { background: var(--color-surface-sunken); }
+.fb-sep { color: var(--color-text-faint); }
+.fb-folders { display: flex; flex-wrap: wrap; gap: 8px; }
+.fb-folder { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--color-surface); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text); cursor: pointer; font: inherit; font-size: var(--font-size-sm); }
+.fb-folder:hover { border-color: var(--color-border-strong); background: var(--color-surface-sunken); }
+.fb-ico { font-size: var(--font-size-md); }
+.fb-count { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+""",
+    js="""\
+const dirSel = document.getElementById('dir');
+const crumbs = document.getElementById('crumbs');
+const foldersEl = document.getElementById('folders');
+
+// Persisted across renders: which media dir we're in and the path within it.
+const state = Object.assign({ mediaDirId: null, path: '' }, yaffo.state || {});
+const opt = (value, label) => { const o = document.createElement('option'); o.value = value; o.textContent = label; return o; };
+
+function emit() {
+  yaffo.publish('folder', { mediaDirId: state.mediaDirId, path: state.path });
+  yaffo.saveState({ mediaDirId: state.mediaDirId, path: state.path });
+}
+function go(path) { state.path = path; emit(); render(); }
+
+function drawCrumbs() {
+  crumbs.innerHTML = '';
+  const home = document.createElement('button');
+  home.className = 'fb-crumb'; home.textContent = '🏠'; home.title = 'Top';
+  home.onclick = () => go('');
+  crumbs.appendChild(home);
+  let acc = '';
+  (state.path ? state.path.split('/') : []).forEach((part) => {
+    acc = acc ? acc + '/' + part : part;
+    const target = acc;
+    const sep = document.createElement('span'); sep.className = 'fb-sep'; sep.textContent = '/';
+    const b = document.createElement('button'); b.className = 'fb-crumb'; b.textContent = part;
+    b.onclick = () => go(target);
+    crumbs.appendChild(sep); crumbs.appendChild(b);
+  });
+}
+
+// folders: [{ name, photo_count }] from the `folders` source.
+function drawFolders(folders) {
+  foldersEl.innerHTML = '';
+  if (!folders.length) { foldersEl.innerHTML = "<div class='yf-empty'>No subfolders here.</div>"; return; }
+  folders.forEach((f) => {
+    const b = document.createElement('button');
+    b.className = 'fb-folder';
+    const ico = document.createElement('span'); ico.className = 'fb-ico'; ico.textContent = '📁';
+    const label = document.createElement('span'); label.textContent = f.name;
+    const count = document.createElement('span'); count.className = 'fb-count'; count.textContent = f.photo_count;
+    b.append(ico, label, count);
+    b.onclick = () => go(state.path ? state.path + '/' + f.name : f.name);
+    foldersEl.appendChild(b);
+  });
+}
+
+async function render() {
+  drawCrumbs();
+  if (!state.mediaDirId) { foldersEl.innerHTML = ''; return; }
+  foldersEl.innerHTML = "<div class='yf-empty'>Loading…</div>";
+  const folders = await yaffo.query({ source: 'folders', media_dir_id: state.mediaDirId, path: state.path });
+  if (!folders) { foldersEl.innerHTML = "<div class='yf-empty'>Couldn't read this folder.</div>"; return; }
+  drawFolders(folders);
+}
+
+async function init() {
+  const dirs = (await yaffo.query({ source: 'media_dirs' })) || [];
+  if (!dirs.length) { document.getElementById('root').innerHTML = "<div class='yf-empty'>No media directories are configured.</div>"; return; }
+  dirs.forEach((d) => dirSel.appendChild(opt(d.id, d.name)));
+  // Restore the saved dir if it still exists, otherwise start at the first.
+  if (!dirs.some((d) => d.id === state.mediaDirId)) { state.mediaDirId = dirs[0].id; state.path = ''; }
+  dirSel.value = state.mediaDirId;
+  if (window.SearchableSelect) SearchableSelect.init(dirSel);
+  dirSel.onchange = () => { state.mediaDirId = dirSel.value; state.path = ''; emit(); render(); };
+  emit();   // sync a gallery already on the page to the starting location
+  render();
+}
+init();
+""",
+    grid_w=5, grid_h=4,
+)
+
+
+_FOLDER_GALLERY = WidgetTemplate(
+    name="Folder gallery",
+    description=(
+        "PUB/SUB subscriber (topic 'folder'). A photo grid that yaffo.subscribe('folder', …) "
+        "and, on each event, re-queries the photos under that folder with "
+        "yaffo.query({source:'photos', media_dir_id:{eq}, relative_path:{prefix}}). No "
+        "data_query — it shows whatever the paired 'Folder picker' selects (and restores the "
+        "last folder from state on reload)."
+    ),
+    data_query={},
+    html="<div class='grid' id='root'></div>",
+    css="""\
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-md); display: block; }
+""",
+    js="""\
+const grid = document.getElementById('root');
+const st = yaffo.state || {};
+
+function draw(rows) {
+  grid.innerHTML = '';
+  if (!rows || !rows.length) { grid.innerHTML = "<div class='yf-empty'>No photos in this folder.</div>"; return; }
+  rows.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.photoUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
+}
+
+async function show(loc) {
+  yaffo.saveState(loc || {});
+  if (!loc || !loc.mediaDirId) { grid.innerHTML = "<div class='yf-empty'>Pick a folder.</div>"; return; }
+  grid.innerHTML = "<div class='yf-empty'>Loading…</div>";
+  // Photos anywhere under the selected folder; relative_path needs media_dir_id to pin the root.
+  const q = { source: 'photos', media_dir_id: { eq: loc.mediaDirId }, limit: 500 };
+  if (loc.path) q.relative_path = { prefix: loc.path + '/' };
+  draw(await yaffo.query(q));
+}
+
+yaffo.subscribe('folder', show);
+// Restore the last folder on reload; otherwise wait for the picker's first event.
+if (st.mediaDirId) show(st);
+else grid.innerHTML = "<div class='yf-empty'>Pick a folder.</div>";
+""",
+    grid_w=7, grid_h=4,
+)
+
+
 # The catalog, in a sensible reading order (pub/sub pairs kept adjacent so the seed
 # showcase lays them out together).
 TEMPLATES: list[WidgetTemplate] = [
@@ -846,6 +1005,8 @@ TEMPLATES: list[WidgetTemplate] = [
     _LINKED_GALLERY,
     _PHOTO_PICKER,
     _PHOTO_SPOTLIGHT,
+    _FOLDER_PICKER,
+    _FOLDER_GALLERY,
 ]
 
 TEMPLATES_BY_NAME: dict[str, WidgetTemplate] = {t.name: t for t in TEMPLATES}
