@@ -47,19 +47,21 @@ def _returns_of(impl: Callable[..., Any]) -> str:
 
 @dataclass(frozen=True)
 class HostFunction:
-    """One callable exposed to sandboxed scripts. `impl` takes the session as its
-    first argument; the bound callable a script sees drops it. `name`, `signature`,
-    and `returns` are introspected from `impl` (its name, its params minus session,
-    and its return annotation), so the docs can't drift from the function.
-    `description` and `example` are the prose docs. `summarize` turns a call's args
-    into a friendly one-line action for the test/preview UI (it takes the session so
-    it can resolve ids to file names / person names). `mutating` marks a capability
-    that changes state -- recorded but NOT run in a test/preview."""
+    """One callable exposed to sandboxed scripts. `impl` takes an injected run
+    dependency as its first argument (`injects`: the run's "session" by default, or
+    its "progress" reporter); the bound callable a script sees drops it. `name`,
+    `signature`, and `returns` are introspected from `impl` (its name, its params
+    minus the injected first one, and its return annotation), so the docs can't drift
+    from the function. `description` and `example` are the prose docs. `summarize`
+    turns a call's args into a friendly one-line action for the test/preview UI (it
+    takes the session so it can resolve ids to file names / person names). `mutating`
+    marks a capability that changes state -- recorded but NOT run in a test/preview."""
     impl: Callable[..., Any]
     description: str
     example: str
     summarize: Callable[[list[Any], Session], str] | None = None
     mutating: bool = False
+    injects: str = "session"
 
     @property
     def name(self) -> str:
@@ -91,6 +93,20 @@ HOST_API: tuple[HostFunction, ...] = (
         impl=actions.data_query,
         summarize=actions.summarize_data_query,
         mutating=False,
+    ),
+    HostFunction(
+        description=(
+            "Report how far along the run is, so the run history shows a live "
+            "percentage and an \"N of TOTAL processed\" line. Call it as you work "
+            "through a set -- once per chunk or every few items -- passing how many "
+            "are done so far and the total. Optional, but do it for any run that loops "
+            "over many items."
+        ),
+        example='report_progress(done, len(ctx["photo_ids"]))',
+        impl=actions.report_progress,
+        summarize=actions.summarize_report_progress,
+        mutating=False,
+        injects="progress",
     ),
     HostFunction(
         description=(
@@ -165,17 +181,23 @@ HOST_API: tuple[HostFunction, ...] = (
 )
 
 
-def _bind(impl: Callable[..., Any], session: Session) -> Callable[..., Any]:
+def _bind(impl: Callable[..., Any], dependency: Any) -> Callable[..., Any]:
     def call(*args: Any) -> Any:
-        return impl(session, *args)
+        return impl(dependency, *args)
     return call
 
 
-def build_host_functions(session: Session) -> dict[str, Callable[..., Any]]:
-    """The curated host callables for a run, derived from HOST_API and bound to
-    `session` so each reads within the caller's transaction. Pass as `functions`
-    to run_starlark."""
-    return {fn.name: _bind(fn.impl, session) for fn in HOST_API}
+def _dependency(fn: HostFunction, session: Session, progress: Any) -> Any:
+    """The run dependency injected as `fn.impl`'s first arg: the run's progress
+    reporter for fn.injects == 'progress', else the session."""
+    return progress if fn.injects == "progress" else session
+
+
+def build_host_functions(session: Session, progress: Any = None) -> dict[str, Callable[..., Any]]:
+    """The curated host callables for a run, derived from HOST_API and bound to their
+    run dependency -- the `session` (so each reads within the caller's transaction),
+    or the `progress` reporter for report_progress. Pass as `functions` to run_starlark."""
+    return {fn.name: _bind(fn.impl, _dependency(fn, session, progress)) for fn in HOST_API}
 
 
 @dataclass(frozen=True)
@@ -204,16 +226,17 @@ def summarize_call(call: HostCall, session: Session) -> str:
 
 
 def build_recording_host_functions(
-    session: Session,
+    session: Session, progress: Any = None,
 ) -> tuple[dict[str, Callable[..., Any]], list[HostCall]]:
     """Like build_host_functions, but every invocation is appended to the returned
     `calls` list before the real impl runs. The read-only surface still executes so
-    the script gets live data; the same hook is where a future mutating capability
-    would be recorded-but-not-performed for a true dry run."""
+    the script gets live data; mutating actions are recorded but not performed (a
+    test/preview changes nothing). `progress` is None in a preview, so report_progress
+    no-ops."""
     calls: list[HostCall] = []
 
     def record(fn: HostFunction) -> Callable[..., Any]:
-        bound = _bind(fn.impl, session)
+        bound = _bind(fn.impl, _dependency(fn, session, progress))
 
         def call(*args: Any) -> Any:
             calls.append(HostCall(name=fn.name, args=list(args)))

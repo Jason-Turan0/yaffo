@@ -251,6 +251,7 @@ automation_sandbox/
   | function | kind | does |
   |---|---|---|
   | `data_query(query)` | read | `data_query_repository.resolve_query`; photo rows are enriched with `media_dir_id` + `relative_path` (see *Media dirs*) |
+  | `report_progress(completed, total)` | run control | update this run's Job `task_count`/`completed_count` → live percent + "N of TOTAL processed" in the run history |
   | `face_similarity(photo_id, person_id)` | read | per-face similarity to a person (`domain/compare_utils`) |
   | `match_people(photo_id)` | read | per-face similarity to all known people |
   | `tag_photos(tags)` | mutating (batch) | add `Tag`s in one write — `[{photo_id, name, value?}]` |
@@ -266,6 +267,15 @@ automation_sandbox/
   `<batching>` section tells the model to collect its writes into a list and call a
   batch function once — short, batched writes keep the SQLite write lock from being
   taken per item.
+
+  **Run dependency injection.** Each `HostFunction` declares what its impl receives as
+  its injected first arg via `injects` (default `"session"`). `report_progress` uses
+  `injects="progress"`, so the binding hands it the run's `ProgressReporter` instead of
+  the session. `run_and_record` constructs that one reporter (`ProgressReporter(session,
+  job.id)`) and threads it through `run_automation → build_host_functions(session,
+  progress)` — no global/contextvar. In a test/preview there's no Job, so `progress` is
+  `None` and `report_progress` is a recorded no-op. The system prompt's `<progress>`
+  section tells the model to call `report_progress(done, total)` while looping.
 
   The actions live in `automation_actions.py`; the read comparisons in
   `automation_compare.py`; both keep all `session.query/add/commit` in

@@ -137,6 +137,26 @@ def test_rename_files_renames_all_and_commits_once(monkeypatch, tmp_path):
     assert session.commits == 1
 
 
+class _RecordingReporter:
+    def __init__(self):
+        self.updates = []
+
+    def progress_update(self, task_count, completed, cancelled, errors):
+        self.updates.append((task_count, completed, cancelled, errors))
+
+
+def test_report_progress_updates_the_injected_reporter():
+    reporter = _RecordingReporter()
+    automation_actions.report_progress(reporter, 3, 10)
+    # (task_count=total, completed, cancelled, errors)
+    assert reporter.updates == [(10, 3, 0, 0)]
+
+
+def test_report_progress_noop_without_a_reporter():
+    # In a test/preview no Job exists, so the injected reporter is None — harmless.
+    automation_actions.report_progress(None, 3, 10)  # must not raise
+
+
 def test_enrich_photo_rows_adds_media_dir_id_and_relative_path(monkeypatch):
     _patch(monkeypatch, "yaffo.background_tasks.automation_sandbox.media_dirs."
            "photos_repository.get_paths_by_ids",

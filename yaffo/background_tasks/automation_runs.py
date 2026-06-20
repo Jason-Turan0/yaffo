@@ -78,8 +78,11 @@ def run_and_record(session: Session, automation: Automation, context: EventConte
     # from inside a mutating host action — carries this automation, letting the loop
     # guard break a cycle that would re-trigger it.
     origin = context.origin_automation_ids if context else []
+    # The reporter binds this run's Job + session; it's handed to the sandbox so the
+    # script's report_progress host action updates *this* run (no global state).
+    reporter = ProgressReporter(session, job.id)
     with event_chain_scope(origin, automation.id):
-        result = run_automation(session, automation, context)
+        result = run_automation(session, automation, context, progress=reporter)
 
     job.completed_at = utcnow()
     job.job_data = json.dumps({"output": result.output})

@@ -11,10 +11,11 @@ Each capability ships with a `summarize_*(args, session)` that turns the call's
 args into the friendly one-line action shown in the test UI (e.g. "Tag 3 photo(s)").
 """
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Optional
 
 from sqlalchemy.orm import Session
 
+from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.db.repositories import person_repository, photos_repository
 from yaffo.db.repositories.media_dir_repository import media_dir_by_id
 from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_photo_rows
@@ -31,6 +32,20 @@ def data_query(
 def summarize_data_query(args: list[Any], session: Session) -> str:
     query = args[0] if args and isinstance(args[0], dict) else {}
     return f"Looking up {query.get('source', 'data')}"
+
+
+def report_progress(progress: Optional[ProgressReporter], completed: int, total: int) -> None:
+    """Update the active run's progress (drives the run-history percentage and the
+    "N of TOTAL processed" line). `progress` is the run's reporter, injected by the
+    host; it's None in a test/preview (no Job), so the call is a harmless no-op."""
+    if progress is not None:
+        progress.progress_update(int(total), int(completed), 0, 0)
+
+
+def summarize_report_progress(args: list[Any], session: Session) -> str:
+    completed = args[0] if args else 0
+    total = args[1] if len(args) > 1 else 0
+    return f"Report progress: {completed}/{total}"
 
 def tag_photos(session: Session, tags: list[dict]) -> None:
     """Batch-add tags in one write. `tags` is a list of {photo_id, name, value?}."""

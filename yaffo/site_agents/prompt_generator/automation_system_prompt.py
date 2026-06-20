@@ -119,6 +119,24 @@ def _batching() -> str:
     ])
 
 
+def _progress() -> str:
+    return block("progress", [
+        "Report progress on long runs. If the script loops over many items (e.g. the",
+        "photos in ctx, or a large data_query result), call report_progress(done,",
+        "total) as you go — once per chunk or every several items — so the run history",
+        "shows a live percentage instead of just spinning. `total` is the full count,",
+        "`done` is how many you've handled so far; a final report_progress(total, total)",
+        "marks it complete. Skip it for trivial, near-instant runs.",
+        "Example — report while building the batch, then write once:",
+        '  pids = ctx["photo_ids"]',
+        "  to_tag = []",
+        "  for i, pid in enumerate(pids):",
+        '      to_tag.append({"photo_id": pid, "name": "reviewed"})',
+        "      report_progress(i + 1, len(pids))",
+        "  tag_photos(to_tag)",
+    ])
+
+
 def _conventions() -> str:
     return block("conventions", [
         "- Use ctx to scope the work to what triggered the run when it makes sense.",
@@ -140,5 +158,6 @@ def build_automation_builder_system_prompt() -> str:
         _events(),
         _triggers(),
         _batching(),
+        _progress(),
         _conventions(),
     ])

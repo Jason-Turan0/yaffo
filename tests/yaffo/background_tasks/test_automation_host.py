@@ -81,6 +81,34 @@ def test_rendered_docs_cover_every_host_function():
         assert fn.returns in docs
 
 
+def test_report_progress_is_bound_to_the_injected_reporter():
+    # report_progress (injects="progress") gets the run's reporter, not the session;
+    # the others get the session. No global state, no contextvar.
+    class _Reporter:
+        def __init__(self):
+            self.updates = []
+
+        def progress_update(self, task_count, completed, cancelled, errors):
+            self.updates.append((task_count, completed, cancelled, errors))
+
+    reporter = _Reporter()
+    functions = build_host_functions(object(), reporter)
+
+    result = run_starlark("report_progress(2, 8)", functions=functions)
+
+    assert result.success is True, result.error
+    assert reporter.updates == [(8, 2, 0, 0)]
+
+
+def test_report_progress_noops_without_a_reporter_in_preview():
+    # A preview builds host functions with no reporter (None) -> the call is a no-op
+    # and is recorded like any other action.
+    functions, calls = build_recording_host_functions(object())  # progress defaults to None
+    result = run_starlark("report_progress(2, 8)", functions=functions)
+    assert result.success is True, result.error
+    assert calls == [HostCall(name="report_progress", args=[2, 8])]
+
+
 def test_recording_run_skips_mutating_impl_but_records_it(monkeypatch):
     performed = []
     monkeypatch.setattr(
@@ -122,6 +150,7 @@ def test_summaries_are_friendly(monkeypatch):
     )
     s = object()
     assert summarize_call(HostCall("data_query", [{"source": "photos"}]), s) == "Looking up photos"
+    assert summarize_call(HostCall("report_progress", [3, 10]), s) == "Report progress: 3/10"
     assert summarize_call(HostCall("face_similarity", [5, 9]), s) == "Compare faces in p5.jpg to Grandma"
     assert summarize_call(HostCall("match_people", [5]), s) == "Match faces in p5.jpg to known people"
     # batch writes summarize by count
