@@ -1,11 +1,14 @@
-{% macro render_modal(id, title, action_url, render_modal_form, action_text = "Save", action_class = "btn-primary", size_class = "") %}
+{% macro render_modal(id, title, action_url, render_modal_form, action_text = "Save", action_class = "btn-primary", size_class = "", posts = true) %}
+    {# posts=false marks a JS-handled form (submitted via fetch, not the server):
+       it renders no method/action and is flagged data-js-form so modal.js stops the
+       default submit — so a missed preventDefault can't navigate the page. #}
     <div id="{{id}}" class="modal">
     <div class="modal-content {{size_class}}">
         <div class="modal-header">
             <h2 id="{{id}}Title">{{title}}</h2>
             <button type="button" class="modal-close" name="cancel" aria-label="Close">&times;</button>
         </div>
-        <form id="{{id}}Form" method="POST" action="{{ action_url }}">
+        <form id="{{id}}Form" {% if posts %}method="POST" action="{{ action_url }}"{% else %}data-js-form{% endif %}>
             <div class="modal-body thin-scrollbar">
                 {{ render_modal_form() }}
             </div>

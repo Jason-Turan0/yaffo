@@ -6,9 +6,6 @@
         label is matched — e.g. label <em>swimming</em> with prompt <em>people swimming in water</em>.
     </p>
 
-    {% if message %}<p class="form-success">{{ message }}</p>{% endif %}
-    {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
-
     {% if labels %}
     <ul class="labels-list">
         {% for label in labels %}
@@ -49,7 +46,7 @@
     <div class="labels-reclassify">
         <button type="button" class="btn-secondary"
                 hx-post="{{ url_for('settings_labels_reclassify') }}"
-                hx-target="#labels-section" hx-swap="outerHTML">Re-classify all photos</button>
+                hx-swap="none">Re-classify all photos</button>
         <p class="hint-text">Run the classifier over your whole library to apply vocabulary changes.</p>
     </div>
 </div>

@@ -12,6 +12,13 @@ window.PHOTO_ORGANIZER.COMPONENTS.modal =
 
             const formElement = modalElement.querySelector('form');
 
+            // A JS-handled form (render_modal posts=false) never submits to the
+            // server; stop the default so a missed preventDefault in the page's own
+            // submit handler can't navigate the page away.
+            if (formElement && formElement.hasAttribute('data-js-form')) {
+                formElement.addEventListener('submit', (e) => e.preventDefault());
+            }
+
             const close = () => {
                 modalElement.classList.remove('active');
             }

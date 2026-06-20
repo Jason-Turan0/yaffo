@@ -140,7 +140,8 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
 
             if (response.ok) {
                 modal.close();
-                notification.success('Tags updated successfully');
+                // Queue the confirmation so it survives the reload below.
+                notification.flash('Tags updated successfully');
                 window.location.reload();
             } else {
                 notification.error('Failed to update tags');

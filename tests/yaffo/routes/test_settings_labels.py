@@ -1,6 +1,8 @@
 """Route tests for the classification-label admin on the Settings page: the single
 HTMX CRUD endpoint and the re-classify backfill. Uses the shared throwaway-DB app
 fixture; the backfill's task enqueue is stubbed."""
+import json
+
 import pytest
 
 from yaffo.db import db
@@ -35,13 +37,17 @@ def test_create_label(app, client):
 
 def test_create_requires_name(app, client):
     resp = client.post("/settings/labels", data={"action": "create", "name": "  "})
-    assert "Label name is required" in resp.get_data(as_text=True)
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "Label name is required" in message and type_ == "error"
 
 
 def test_create_rejects_duplicate(app, client):
     _add_label(app, "dog")
     resp = client.post("/settings/labels", data={"action": "create", "name": "dog"})
-    assert "already exists" in resp.get_data(as_text=True)
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "already exists" in message and type_ == "error"
 
 
 def test_toggle_flips_enabled_without_rerender(app, client):
@@ -62,9 +68,17 @@ def test_delete_removes_label(app, client):
         assert db.session.get(ClassificationLabel, label_id) is None
 
 
+def _notification(resp):
+    """The showNotification toast (message, type) carried on the HX-Trigger header."""
+    payload = json.loads(resp.headers["HX-Trigger"])["showNotification"]
+    return payload["message"], payload["type"]
+
+
 def test_reclassify_without_automation_errors(app, client):
     resp = client.post("/settings/labels/reclassify")
-    assert "not installed" in resp.get_data(as_text=True)
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "not installed" in message and type_ == "error"
 
 
 def test_reclassify_without_photos_errors(app, client):
@@ -73,7 +87,9 @@ def test_reclassify_without_photos_errors(app, client):
                                   is_system=True, handler="classify_labels"))
         db.session.commit()
     resp = client.post("/settings/labels/reclassify")
-    assert "No indexed photos" in resp.get_data(as_text=True)
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "No indexed photos" in message and type_ == "error"
 
 
 def test_reclassify_enqueues_over_indexed_photos(app, client, monkeypatch):
@@ -89,6 +105,7 @@ def test_reclassify_enqueues_over_indexed_photos(app, client, monkeypatch):
         db.session.add(Photo(full_file_path="/p/2.jpg", status=PHOTO_STATUS_INDEXED))
         db.session.commit()
     resp = client.post("/settings/labels/reclassify")
-    assert resp.status_code == 200
-    assert "Re-classifying 2 photo" in resp.get_data(as_text=True)
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "Re-classifying 2 photo" in message and type_ == "success"
     assert len(calls) == 1 and len(calls[0][1]) == 2

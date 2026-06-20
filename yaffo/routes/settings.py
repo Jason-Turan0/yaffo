@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
 
 import yaffo.db.repositories.media_dir_repository
 from yaffo.db import db
@@ -70,18 +70,27 @@ def init_settings_routes(app: Flask):
             labels=classification_repository.list_labels(db.session),
         )
 
-    def _render_labels(error: str | None = None, message: str | None = None):
+    def _render_labels():
         return render_template(
             "settings/_labels.html",
             labels=classification_repository.list_labels(db.session),
-            error=error,
-            message=message,
         )
+
+    def _notify(message: str, type: str = "success"):
+        """Empty 204 that fires the global showNotification toast (base.html), for
+        HTMX actions whose only feedback is a notification — no DOM swap (HTMX skips
+        the swap on 204, so the user's form input is preserved on error)."""
+        response = make_response("", 204)
+        response.headers["HX-Trigger"] = json.dumps({
+            "showNotification": {"message": message, "type": type}
+        })
+        return response
 
     @app.route("/settings/labels", methods=["POST"])
     def settings_labels():
         """CRUD for the classification-label vocabulary, one HTMX endpoint keyed by
-        `action`. Create/delete re-render the section fragment; toggle is a
+        `action`. Create/delete re-render the section fragment on success; validation
+        errors return a toast (204, no swap, so typed input is kept). Toggle is a
         fire-and-forget that just persists (the browser already flipped the box), so
         it returns 204 and the panel isn't re-rendered."""
         action = request.form.get("action")
@@ -94,9 +103,9 @@ def init_settings_routes(app: Flask):
             name = (request.form.get("name") or "").strip()
             prompt = (request.form.get("prompt") or "").strip()
             if not name:
-                return _render_labels(error="Label name is required.")
+                return _notify("Label name is required.", "error")
             if classification_repository.get_label_by_name(db.session, name):
-                return _render_labels(error=f"Label '{name}' already exists.")
+                return _notify(f"Label '{name}' already exists.", "error")
             classification_repository.create_label(db.session, name, prompt or None)
         elif action == "delete":
             classification_repository.delete_label(db.session, int(request.form["label_id"]))
@@ -105,15 +114,16 @@ def init_settings_routes(app: Flask):
     @app.route("/settings/labels/reclassify", methods=["POST"])
     def settings_labels_reclassify():
         """Backfill: re-run the classifier over every indexed photo so vocabulary
-        changes take effect. Enqueues the automation's task (recorded as a Job)."""
+        changes take effect. Enqueues the automation's task (recorded as a Job).
+        Feedback is a toast (no section re-render)."""
         automation = automation_repository.get_by_slug(db.session, AUTOMATION_HANDLER_CLASSIFY_LABELS)
         if automation is None:
-            return _render_labels(error="Classify-labels automation is not installed.")
+            return _notify("Classify-labels automation is not installed.", "error")
         photo_ids = photos_repository.get_indexed_photo_ids(db.session)
         if not photo_ids:
-            return _render_labels(error="No indexed photos to classify yet.")
+            return _notify("No indexed photos to classify yet.", "error")
         classify_labels_automation_task(automation.id, photo_ids)
-        return _render_labels(message=f"Re-classifying {len(photo_ids)} photo(s) in the background…")
+        return _notify(f"Re-classifying {len(photo_ids)} photo(s) in the background…")
 
     @app.route("/settings/llm/model", methods=["POST"])
     def settings_llm_model():

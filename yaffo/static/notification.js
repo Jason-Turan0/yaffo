@@ -1,5 +1,9 @@
 // Notification component - reusable across the application
 
+// A flash queued for the *next* page load (e.g. just before a reload), so a
+// confirmation survives the navigation that would otherwise wipe the toast.
+const NOTIFICATION_FLASH_KEY = 'app-notification-flash';
+
 class Notification {
     constructor() {
         // Create notification element if it doesn't exist
@@ -13,6 +17,7 @@ class Notification {
         }
 
         this.hideTimeout = null;
+        this.showPendingFlash();
     }
 
     /**
@@ -47,6 +52,38 @@ class Notification {
         if (this.hideTimeout) {
             clearTimeout(this.hideTimeout);
             this.hideTimeout = null;
+        }
+    }
+
+    /**
+     * Queue a notification to show after the next page load. Use this instead of
+     * show() right before a window.location.reload()/navigation, which would
+     * otherwise destroy the toast before it's seen.
+     */
+    flash(message, type = 'success', duration = 3000) {
+        try {
+            sessionStorage.setItem(NOTIFICATION_FLASH_KEY, JSON.stringify({ message, type, duration }));
+        } catch (e) {
+            // sessionStorage unavailable — fall back to an immediate toast.
+            this.show(message, type, duration);
+        }
+    }
+
+    /** Show and clear any flash queued by a prior flash() call. */
+    showPendingFlash() {
+        let raw = null;
+        try {
+            raw = sessionStorage.getItem(NOTIFICATION_FLASH_KEY);
+            if (raw) sessionStorage.removeItem(NOTIFICATION_FLASH_KEY);
+        } catch (e) {
+            return;
+        }
+        if (!raw) return;
+        try {
+            const { message, type, duration } = JSON.parse(raw);
+            this.show(message, type, duration);
+        } catch (e) {
+            // Ignore a malformed flash payload.
         }
     }
 
