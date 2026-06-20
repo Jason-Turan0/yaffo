@@ -7,7 +7,10 @@ named queries use and the same resolver the sandbox broker calls.
 """
 from __future__ import annotations
 
+import datetime
 import json
+from decimal import Decimal
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -115,9 +118,21 @@ class DataQueryToolProvider(ToolProvider):
         return truncate_tool_result(json.dumps({"source": source, "fields": fields}, indent=2))
 
 
+def _json_default(value: Any) -> Any:
+    """Serialize the types DB rows carry that json doesn't handle natively -- dates
+    (e.g. people.birthdate) as ISO strings, Decimals as floats -- so previewing a
+    source like `people` doesn't crash the tool. Anything else falls back to str() so
+    the preview never raises on the agent."""
+    if isinstance(value, datetime.date):  # date and datetime (datetime subclasses date)
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    return str(value)
+
+
 def _preview(source: str, data) -> str:
     if isinstance(data, list):
         payload = {"source": source, "count": len(data), "sample": data[:_SAMPLE_SIZE]}
     else:
         payload = {"source": source, "data": data}
-    return json.dumps(payload, indent=2)
+    return json.dumps(payload, indent=2, default=_json_default)

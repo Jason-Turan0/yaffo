@@ -36,10 +36,15 @@ from yaffo.site_agents.prompt_generator.automation_user_prompt import build_auto
 
 logger = get_logger(__name__, 'background_tasks')
 
-# Friendly progress text per tool, shown as a status line in the conversation feed.
+# Friendly progress text per tool (keyed by the tool's *name*, e.g. run_data_query —
+# not the sandbox host fn data_query), shown as a status line in the conversation feed.
+# Anything not listed falls back to a generic "Working…".
 _TOOL_STATUS = {
     "write_automation_code": "Writing the automation…",
-    "data_query": "Inspecting your data…",
+    "run_data_query": "Inspecting your data…",
+    "get_source_schema": "Checking available fields…",
+    "add_automation_trigger": "Setting up a trigger…",
+    "remove_automation_trigger": "Removing a trigger…",
 }
 
 

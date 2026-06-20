@@ -65,7 +65,24 @@ def _context() -> str:
     return block("context", [
         "Your script is given a `ctx` dict describing what triggered the run:",
         *fields,
-        "Read ctx to act on exactly what triggered the run (e.g. the photos just indexed).",
+        "Read ctx to act on exactly what triggered the run (e.g. the photos just",
+        "indexed) — see <scoping>.",
+    ])
+
+
+def _scoping() -> str:
+    return block("scoping", [
+        "Scope an event run to its photos — never sweep the whole library on an event.",
+        "When ctx['event_type'] is set, the run is about exactly ctx['photo_ids'] (the",
+        "photos that event concerns), so every photos query MUST filter to them:",
+        '  data_query({"source": "photos", "id": {"in": ctx["photo_ids"]}, ...})',
+        "and derive faces/people/labels from that set. Querying photos without an `id`",
+        "filter on an event run re-scans the entire library on every event — that is the",
+        "wrong behaviour: slow, and it acts on photos the event never mentioned.",
+        "If ctx['photo_ids'] is empty on an event run, there's nothing to do — stop.",
+        "Operate library-wide ONLY on a schedule run (ctx['event_type'] is None and",
+        "ctx['photo_ids'] is empty) — that's the one case where you query without an id",
+        "filter.",
     ])
 
 
@@ -156,7 +173,8 @@ def _progress() -> str:
 
 def _conventions() -> str:
     return block("conventions", [
-        "- Use ctx to scope the work to what triggered the run when it makes sense.",
+        "- Scope work to ctx on an event run (see <scoping>); go library-wide only on a",
+        "  schedule run.",
         "- Keep it small and readable; one write_automation_code call with the finished",
         "  script, then a short summary of what it does. Call again to refine.",
     ])
@@ -170,6 +188,7 @@ def build_automation_builder_system_prompt() -> str:
         _role(),
         _language(),
         _context(),
+        _scoping(),
         _host_api(),
         _sources(),
         _events(),

@@ -29,5 +29,5 @@ def test_context_documents_groups():
 
 def test_full_prompt_includes_required_sections():
     prompt = build_automation_builder_system_prompt()
-    for tag in ("<context>", "<host_api>", "<batching>", "<progress>", "<events>"):
+    for tag in ("<context>", "<scoping>", "<host_api>", "<batching>", "<progress>", "<events>"):
         assert tag in prompt

@@ -161,3 +161,25 @@ class TestMissingVersion:
     def test_missing_version_is_a_noop(self, session, monkeypatch):
         _use_agent(monkeypatch, [AgentEvent("done")])
         task.run_generation(session, 9999, "go", should_cancel=_no_cancel)  # does not raise
+
+class TestProgressLabelsCoverAgentTools:
+    """The conversation feed shows a friendly status line per tool the agent calls
+    (_TOOL_STATUS); anything unmapped falls back to "Working…". Keep the map in sync
+    with the page agent's real tool set so a new/renamed tool gets a label."""
+
+    def _agent_tool_names(self) -> set[str]:
+        from yaffo.site_agents.tool_providers.data_query_tool import DataQueryToolProvider
+        from yaffo.site_agents.tool_providers.widget_template_tool import WidgetTemplateToolProvider
+        from yaffo.site_agents.tool_providers.widget_tool import WidgetToolProvider
+
+        session = object()  # get_tools doesn't touch the session
+        providers = [
+            DataQueryToolProvider(session=session),
+            WidgetTemplateToolProvider(),
+            WidgetToolProvider(1, session=session),
+        ]
+        return {tool.name for provider in providers for tool in provider.get_tools()}
+
+    def test_every_agent_tool_has_a_progress_label(self):
+        missing = self._agent_tool_names() - set(task._TOOL_STATUS)
+        assert not missing, f"_TOOL_STATUS is missing progress text for: {sorted(missing)}"

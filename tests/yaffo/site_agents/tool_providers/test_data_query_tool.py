@@ -68,6 +68,20 @@ class TestCalculatedColumns:
 
         assert sample == {"id": 1, "name": "Obama"}
 
+    def test_date_columns_are_serialized_not_crashed(self, monkeypatch):
+        # people rows carry date columns (birthdate); the preview must JSON-encode
+        # them as ISO strings instead of raising "Object of type date is not JSON
+        # serializable".
+        import datetime
+
+        provider = _provider(monkeypatch, [
+            {"id": 1, "name": "Chase", "birthdate": datetime.date(2015, 6, 1), "estimated_birthdate": None},
+        ])
+
+        sample = json.loads(provider.call_tool("run_data_query", {"source": "people"}))["sample"][0]
+
+        assert sample == {"id": 1, "name": "Chase", "birthdate": "2015-06-01", "estimated_birthdate": None}
+
     def test_photos_aggregate_is_not_enriched(self, monkeypatch):
         # An aggregate resolves to a scalar/dict, not a row list, so there's
         # nothing to enrich and the calculated-column path is skipped.

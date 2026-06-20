@@ -121,6 +121,8 @@ def move_photo(session: Session, photo_id: int, media_dir_id: str, target_path: 
         return
     root = media_dir.path.resolve()
     destination = (root / target_path / Path(current).name).resolve()
+    if destination == Path(current).resolve():
+        return  # already where it'd land -- no-op (e.g. re-running an organize)
     try:
         destination.relative_to(root)  # refuse a target that escapes the media dir
     except ValueError:

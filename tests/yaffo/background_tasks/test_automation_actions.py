@@ -54,6 +54,26 @@ def test_move_photo_refuses_escape(monkeypatch, tmp_path):
     assert src.exists() and not saved  # escaping target refused, nothing moved
 
 
+def test_move_photo_noop_when_destination_equals_source(monkeypatch, tmp_path):
+    media_root = tmp_path / "lib"
+    src = media_root / "2024" / "IMG.jpg"
+    src.parent.mkdir(parents=True)
+    src.write_text("x")
+    saved = {}
+
+    _patch(monkeypatch, "yaffo.background_tasks.automation_sandbox.automation_actions."
+           "photos_repository.get_photo_path", lambda s, pid: str(src))
+    _patch(monkeypatch, "yaffo.background_tasks.automation_sandbox.automation_actions."
+           "photos_repository.update_photo_path", lambda s, pid, path: saved.update(path=path))
+    _patch(monkeypatch, "yaffo.background_tasks.automation_sandbox.automation_actions.media_dir_by_id",
+           lambda s, mid: MediaDir(id=mid, path=media_root))
+
+    # Target resolves to where the file already is (re-running an organize) -> no-op.
+    automation_actions.move_photo(object(), 1, "GUID", "2024")
+
+    assert src.exists() and not saved  # left in place, no path update
+
+
 _ACTIONS = "yaffo.background_tasks.automation_sandbox.automation_actions."
 
 
