@@ -238,32 +238,34 @@ automation_sandbox/
   `build_recording_host_functions(session)` (the test/preview variant — see below),
   and `render_host_api()` (agent-facing docs for the system prompt). Add a
   capability = add one `HostFunction`. Each spec carries `impl` (takes the session
-  first; delegates DB work to `db/repositories`), `mutating` (state-changing →
-  recorded-but-skipped in a test), and `summarize(args, session)` (a friendly
-  one-line action for the test UI, resolving ids to file/person names via
-  `automation_sandbox/labels.py`). Current surface:
+  first; delegates DB work to `db/repositories`), a `description` + `example`,
+  `mutating` (state-changing → recorded-but-skipped in a test), and
+  `summarize(args, session)` (a friendly one-line action for the test UI, resolving
+  ids to file/person names via `automation_sandbox/labels.py`). The **`name`,
+  `signature`, and `returns` are introspected from `impl`** (its `__name__`, its
+  params minus the leading `session`, and its return annotation), so the advertised
+  docs can't drift from the function — annotate the impl (`-> None` reads as
+  "Nothing.", `-> Any` as "varies", else the type) and put the return *shape* in the
+  description. Current surface:
 
   | function | kind | does |
   |---|---|---|
   | `data_query(query)` | read | `data_query_repository.resolve_query`; photo rows are enriched with `media_dir_id` + `relative_path` (see *Media dirs*) |
   | `face_similarity(photo_id, person_id)` | read | per-face similarity to a person (`domain/compare_utils`) |
   | `match_people(photo_id)` | read | per-face similarity to all known people |
-  | `tag_photos(tags)` | mutating (batch) | add many `Tag`s in one write — `[{photo_id, name, value?}]` |
-  | `assign_faces(assignments)` | mutating (batch) | link many faces to people in one write — `[{face_id, person_id}]` (skips unknown people / already-assigned) |
-  | `move_photos(moves)` | mutating (batch) | move many photos in one transaction — `[{photo_id, media_dir_id, target_path}]` |
-  | `rename_files(renames)` | mutating (batch) | rename many files in one transaction — `[{photo_id, new_name}]` |
-  | `tag_photo(photo_id, name, value=None)` | mutating (single) | add a `Tag` |
-  | `rename_file(photo_id, new_name)` | mutating (single) | rename in place (basename only) |
-  | `move_photo(photo_id, media_dir_id, target_path)` | mutating (single) | move into a sub-folder of a media dir (confined to it) |
-  | `assign_face(face_id, person_id)` | mutating (single) | link a face to a person (per-face, not per-photo) |
+  | `tag_photos(tags)` | mutating (batch) | add `Tag`s in one write — `[{photo_id, name, value?}]` |
+  | `assign_faces(assignments)` | mutating (batch) | link faces to people in one write — `[{face_id, person_id}]` (skips unknown people / already-assigned) |
+  | `move_photos(moves)` | mutating (batch) | move photos in one transaction — `[{photo_id, media_dir_id, target_path}]` |
+  | `rename_files(renames)` | mutating (batch) | rename files in one transaction — `[{photo_id, new_name}]` |
 
-  **Batch writes are the default.** The plural functions take a list and persist the
+  **Writes are batch-only.** Every mutating host function takes a list and persists the
   whole set in one commit (`photos_repository.add_tags`,
   `person_repository.bulk_link_faces_to_people`, and a single commit for the file
-  moves/renames); the single-item forms remain for a genuine one-off. The system
-  prompt's `<batching>` section tells the model to collect its writes and call a batch
-  function once rather than looping a single-item mutator (which commits per call) —
-  short, batched writes keep the SQLite write lock from being taken per item.
+  moves/renames); there are no single-item write functions (`move_photo` / `rename_file`
+  remain as internal per-item helpers, not host-exposed). The system prompt's
+  `<batching>` section tells the model to collect its writes into a list and call a
+  batch function once — short, batched writes keep the SQLite write lock from being
+  taken per item.
 
   The actions live in `automation_actions.py`; the read comparisons in
   `automation_compare.py`; both keep all `session.query/add/commit` in

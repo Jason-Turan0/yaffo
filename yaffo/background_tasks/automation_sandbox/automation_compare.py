@@ -8,7 +8,7 @@ supports int-keyed dicts, but the starlark-pyo3 binding only converts a returned
 Python dict when its keys are strings, so ids are values, not keys.) They're not
 mutating, so a test/preview executes and records them like data_query.
 """
-from typing import Any
+from typing import Annotated, Any
 
 from sqlalchemy.orm import Session
 
@@ -17,7 +17,9 @@ from yaffo.db.repositories import person_repository, photos_repository
 from yaffo.domain.compare_utils import calculate_face_similarity, calculate_similarity
 
 
-def face_similarity(session: Session, photo_id: int, person_id: int) -> list[dict]:
+def face_similarity(
+    session: Session, photo_id: int, person_id: int
+) -> Annotated[list[dict], "A list of {face_id, score (0.0–1.0)}; empty if the person is unknown or the photo has no faces."]:
     """How similar each detected face in the photo is to the given person (0–1), as
     a list of {face_id, score}. Empty if the person is unknown or there are no faces."""
     person = person_repository.get_person_by_id(session, person_id)
@@ -34,7 +36,9 @@ def summarize_face_similarity(args: list[Any], session: Session) -> str:
     return f"Compare faces in {photo_label(session, photo_id)} to {person_label(session, person_id)}"
 
 
-def match_people(session: Session, photo_id: int) -> list[dict]:
+def match_people(
+    session: Session, photo_id: int
+) -> Annotated[list[dict], "A list of {face_id, matches: [{person_id, person_name, score (0.0–1.0)}]}."]:
     """For each face in the photo, its similarity (0–1) to every known person, as a
     list of {face_id, matches: [{person_id, person_name, score}]}."""
     people = person_repository.get_people_with_embeddings(session)

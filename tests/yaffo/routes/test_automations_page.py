@@ -642,14 +642,14 @@ def test_test_files_prefers_working_code(app, client):
 
 def test_test_files_records_mutating_action_without_performing(app, client):
     from yaffo.db.models import Photo, Tag
-    _add(app, published_code="for pid in ctx['photo_ids']:\n    tag_photo(pid, 'beach')")
+    _add(app, published_code="tag_photos([{'photo_id': pid, 'name': 'beach'} for pid in ctx['photo_ids']])")
     with app.app_context():
         db.session.add(Photo(full_file_path="/media/a.jpg"))
         db.session.commit()
     data = client.post("/utilities/automations/a1/test-files", json={"path": "/media/a.jpg"}).get_json()
     assert data["success"] is True
-    assert data["actions"][0]["summary"] == "Tag a.jpg as 'beach'"
-    assert data["actions"][0]["name"] == "tag_photo"
+    assert data["actions"][0]["summary"] == "Tag 1 photo(s)"
+    assert data["actions"][0]["name"] == "tag_photos"
     with app.app_context():
         assert db.session.query(Tag).count() == 0  # dry run performed no tagging
 

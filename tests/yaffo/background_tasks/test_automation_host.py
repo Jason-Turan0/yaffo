@@ -84,37 +84,33 @@ def test_rendered_docs_cover_every_host_function():
 def test_recording_run_skips_mutating_impl_but_records_it(monkeypatch):
     performed = []
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_actions.photos_repository.add_tag",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.photos_repository.add_tags",
         lambda *a, **k: performed.append(a),
     )
     functions, calls = build_recording_host_functions(object())
 
-    result = run_starlark("tag_photo(1, 'beach')", functions=functions)
+    result = run_starlark("tag_photos([{'photo_id': 1, 'name': 'beach'}])", functions=functions)
 
     assert result.success is True, result.error
     assert performed == []                       # mutating impl not executed
-    assert calls == [HostCall(name="tag_photo", args=[1, "beach"])]  # but recorded
+    assert calls == [HostCall(name="tag_photos", args=[[{"photo_id": 1, "name": "beach"}]])]  # but recorded
 
 
 def test_live_run_performs_mutating_impl(monkeypatch):
     performed = []
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_actions.photos_repository.add_tag",
-        lambda session, photo_id, name, value=None: performed.append((photo_id, name)),
+        "yaffo.background_tasks.automation_sandbox.automation_actions.photos_repository.add_tags",
+        lambda session, items: performed.extend(items),
     )
-    run_starlark("tag_photo(1, 'beach')", functions=build_host_functions(object()))
-    assert performed == [(1, "beach")]
+    run_starlark("tag_photos([{'photo_id': 1, 'name': 'beach'}])", functions=build_host_functions(object()))
+    assert performed == [(1, "beach", None)]
 
 
 def test_summaries_are_friendly(monkeypatch):
-    # summaries resolve ids to file names / person names via labels
+    # read summaries resolve ids to file names / person names via labels
     monkeypatch.setattr(
         "yaffo.background_tasks.automation_sandbox.labels.photos_repository.get_photo_filename",
-        lambda session, photo_id: {12: "beach.jpg", 3: "old.jpg", 5: "p5.jpg"}.get(photo_id),
-    )
-    monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.labels.photos_repository.get_photo_filename_for_face",
-        lambda session, face_id: "fam.jpg" if face_id == 8 else None,
+        lambda session, photo_id: {5: "p5.jpg"}.get(photo_id),
     )
 
     class _P:
@@ -124,17 +120,7 @@ def test_summaries_are_friendly(monkeypatch):
         "yaffo.background_tasks.automation_sandbox.labels.person_repository.get_person_by_id",
         lambda session, person_id: _P("Grandma") if person_id == 9 else None,
     )
-    from pathlib import Path
-    from yaffo.db.repositories.media_dir_repository import MediaDir
-    monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_actions.media_dir_by_id",
-        lambda session, mid: MediaDir(id=mid, path=Path("/lib/Photos")) if mid == "GUID" else None,
-    )
     s = object()
-    assert summarize_call(HostCall("tag_photo", [12, "beach"]), s) == "Tag beach.jpg as 'beach'"
-    assert summarize_call(HostCall("rename_file", [3, "x.jpg"]), s) == "Rename old.jpg to 'x.jpg'"
-    assert summarize_call(HostCall("move_photo", [3, "GUID", "2024/06"]), s) == "Move old.jpg to 2024/06 in Photos"
-    assert summarize_call(HostCall("assign_face", [8, 9]), s) == "Assign Grandma to a face in fam.jpg"
     assert summarize_call(HostCall("data_query", [{"source": "photos"}]), s) == "Looking up photos"
     assert summarize_call(HostCall("face_similarity", [5, 9]), s) == "Compare faces in p5.jpg to Grandma"
     assert summarize_call(HostCall("match_people", [5]), s) == "Match faces in p5.jpg to known people"

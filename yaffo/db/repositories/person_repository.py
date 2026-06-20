@@ -137,8 +137,8 @@ def get_person_by_id(session: Session, person_id: int) -> Person | None:
 
 
 def existing_person_ids(session: Session, person_ids: list[int]) -> set[int]:
-    """Which of `person_ids` are real people — one query, for a batch assign to drop
-    unknown ids before linking (the single assign_face checks one at a time)."""
+    """Which of `person_ids` are real people — one query, so a batch assign can drop
+    unknown ids before linking."""
     if not person_ids:
         return set()
     unique = list(set(person_ids))

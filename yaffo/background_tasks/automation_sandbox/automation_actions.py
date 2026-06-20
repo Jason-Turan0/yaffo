@@ -1,26 +1,28 @@
-"""Mutating host capabilities an automation can perform (tag a photo, rename its
-file, assign a person to a face). Each takes the run's session first, like the
-read-only host impls, and delegates DB work to db/repositories. These are flagged
-`mutating` in HOST_API, so a test/preview records the call but does NOT execute it
-(build_recording_host_functions) -- a test never changes anything; only a real
-triggered run performs them.
+"""Mutating host capabilities an automation can perform (tag photos, rename their
+files, move them, assign people to faces). The host API exposes these as **batch**
+functions only -- each takes a list and persists the whole set in one transaction;
+`move_photo` / `rename_file` are internal per-item helpers, not host-exposed. Each
+takes the run's session first, like the read-only host impls, and delegates DB work
+to db/repositories. These are flagged `mutating` in HOST_API, so a test/preview
+records the call but does NOT execute it (build_recording_host_functions) -- a test
+never changes anything; only a real triggered run performs them.
 
 Each capability ships with a `summarize_*(args, session)` that turns the call's
-args into the friendly one-line action shown in the test UI (e.g. "Tag
-2024_beach.jpg as 'beach'"), resolving ids to names/file names via labels.
+args into the friendly one-line action shown in the test UI (e.g. "Tag 3 photo(s)").
 """
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from sqlalchemy.orm import Session
 
-from yaffo.background_tasks.automation_sandbox.labels import face_label, person_label, photo_label
 from yaffo.db.repositories import person_repository, photos_repository
 from yaffo.db.repositories.media_dir_repository import media_dir_by_id
 from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_photo_rows
 from yaffo.db.repositories.data_query_repository import resolve_query
 
-def data_query(session: Session, query: dict) -> Any:
+def data_query(
+    session: Session, query: dict
+) -> Annotated[Any, "A list of row dicts, or a single number/object for count/range queries."]:
     rows = resolve_query(session, query)
     if query.get("source") == "photos" and isinstance(rows, list):
         return enrich_photo_rows(session, rows)
@@ -45,18 +47,6 @@ def summarize_tag_photos(args: list[Any], session: Session) -> str:
     return f"Tag {len(tags)} photo(s)"
 
 
-def tag_photo(session: Session, photo_id: int, name: str, value: Any = None) -> None:
-    photos_repository.add_tag(session, photo_id, name, value)
-
-
-def summarize_tag_photo(args: list[Any], session: Session) -> str:
-    photo_id = args[0] if args else None
-    name = args[1] if len(args) > 1 else "?"
-    value = args[2] if len(args) > 2 and args[2] else None
-    label = f"{name}={value}" if value else name
-    return f"Tag {photo_label(session, photo_id)} as '{label}'"
-
-
 def rename_files(session: Session, renames: list[dict]) -> None:
     """Batch-rename files in one transaction. `renames` is a list of
     {photo_id, new_name}; each file is renamed in place, then all path updates commit
@@ -74,6 +64,8 @@ def summarize_rename_files(args: list[Any], session: Session) -> str:
 
 
 def rename_file(session: Session, photo_id: int, new_name: str) -> None:
+    """Per-item helper for rename_files (not host-exposed; no commit -- the batch
+    commits once)."""
     current = photos_repository.get_photo_path(session, photo_id)
     if not current:
         return
@@ -81,12 +73,6 @@ def rename_file(session: Session, photo_id: int, new_name: str) -> None:
     new_path = Path(current).with_name(Path(new_name).name)
     Path(current).rename(new_path)
     photos_repository.update_photo_path(session, photo_id, str(new_path))
-
-
-def summarize_rename_file(args: list[Any], session: Session) -> str:
-    photo_id = args[0] if args else None
-    new_name = args[1] if len(args) > 1 else "?"
-    return f"Rename {photo_label(session, photo_id)} to '{Path(new_name).name}'"
 
 
 def move_photos(session: Session, moves: list[dict]) -> None:
@@ -108,6 +94,8 @@ def summarize_move_photos(args: list[Any], session: Session) -> str:
 
 
 def move_photo(session: Session, photo_id: int, media_dir_id: str, target_path: str) -> None:
+    """Per-item helper for move_photos (not host-exposed; no commit -- the batch
+    commits once)."""
     current = photos_repository.get_photo_path(session, photo_id)
     media_dir = media_dir_by_id(session, media_dir_id)
     if not current or media_dir is None:
@@ -121,15 +109,6 @@ def move_photo(session: Session, photo_id: int, media_dir_id: str, target_path: 
     destination.parent.mkdir(parents=True, exist_ok=True)
     Path(current).rename(destination)
     photos_repository.update_photo_path(session, photo_id, str(destination))
-
-
-def summarize_move_photo(args: list[Any], session: Session) -> str:
-    photo_id = args[0] if args else None
-    media_dir_id = args[1] if len(args) > 1 else None
-    target_path = args[2] if len(args) > 2 else "?"
-    media_dir = media_dir_by_id(session, media_dir_id) if media_dir_id else None
-    where = f"{target_path} in {media_dir.path.name}" if media_dir else target_path
-    return f"Move {photo_label(session, photo_id)} to {where}"
 
 
 def assign_faces(session: Session, assignments: list[dict]) -> None:
@@ -149,15 +128,3 @@ def assign_faces(session: Session, assignments: list[dict]) -> None:
 def summarize_assign_faces(args: list[Any], session: Session) -> str:
     assignments = args[0] if args and isinstance(args[0], list) else []
     return f"Assign {len(assignments)} face(s)"
-
-
-def assign_face(session: Session, face_id: int, person_id: int) -> None:
-    if person_repository.get_person_by_id(session, person_id) is None:
-        return
-    person_repository.link_face_to_person(session, person_id, face_id)
-
-
-def summarize_assign_face(args: list[Any], session: Session) -> str:
-    face_id = args[0] if args else None
-    person_id = args[1] if len(args) > 1 else None
-    return f"Assign {person_label(session, person_id)} to {face_label(session, face_id)}"
