@@ -107,10 +107,12 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='settings/index.js') }}"></script>
+<script src="{{ url_for('static', filename='settings/labels.js') }}"></script>
 <script>
 window.PHOTO_ORGANIZER.settings = window.PHOTO_ORGANIZER.initSettings(
     {{ media_dirs | tojson }},
     window.APP_CONFIG
 );
+window.PHOTO_ORGANIZER.initLabelFilter();
 </script>
 {% endblock %}

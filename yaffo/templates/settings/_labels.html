@@ -7,6 +7,8 @@
     </p>
 
     {% if labels %}
+    <input type="text" id="label-filter" class="label-filter" placeholder="Filter labels…"
+           aria-label="Filter labels" autocomplete="off">
     <ul class="labels-list">
         {% for label in labels %}
         <li class="label-row">
@@ -26,6 +28,7 @@
         </li>
         {% endfor %}
     </ul>
+    <p class="no-data label-filter-empty" hidden>No labels match your filter.</p>
     {% else %}
     <p class="no-data">No labels yet</p>
     {% endif %}

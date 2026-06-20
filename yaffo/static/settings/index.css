@@ -155,6 +155,28 @@
     flex: 1;
 }
 /* Photo labels (classification vocabulary) admin */
+.label-filter {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+    padding: 10px;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-base);
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.label-filter::placeholder {
+    color: var(--color-text-faint);
+}
+
+.label-filter:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
+}
+
 .labels-list {
     list-style: none;
     margin: 0 0 15px;
@@ -173,6 +195,11 @@
     padding: 8px 12px;
     background: var(--color-surface-sunken);
     border-radius: var(--radius-sm);
+}
+
+/* Filtered-out rows (the [hidden] attr alone can't beat .label-row's display:flex). */
+.label-row[hidden] {
+    display: none;
 }
 
 .label-row .checkbox-label {
@@ -229,10 +256,20 @@
     box-shadow: var(--focus-ring);
 }
 
+/* More breathing room below the add-label helper before the reclassify divider. */
+.add-label-form + .hint-text {
+    margin-bottom: 24px;
+}
+
 .labels-reclassify {
     margin-top: 15px;
     padding-top: 15px;
     border-top: 1px solid var(--color-border-subtle);
+}
+
+/* Space between the reclassify button and its hint line. */
+.labels-reclassify .btn-secondary {
+    margin-bottom: 12px;
 }
 
 .form-error {
