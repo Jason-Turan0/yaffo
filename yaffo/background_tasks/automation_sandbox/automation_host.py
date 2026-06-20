@@ -41,9 +41,9 @@ HOST_API: tuple[HostFunction, ...] = (
         name="data_query",
         signature="data_query(query)",
         description=(
-            #TODO. Provide the actual schema in the description.
             "Read-only access to the app's data through the validated data_query "
-            "contract. `query` is a dict naming a source, with optional per-column "
+            "contract. See the data_query tool for detailed schema. "
+            "`query` is a dict naming a source, with optional per-column "
             'operator filters and a limit, e.g. {"source": "photos", "year": '
             '{"eq": 2024}, "id": {"in": [1, 2, 3]}, "limit": 24}. Operators: eq, ne, '
             "lt, lte, gt, gte, contains, in. You never touch the database directly "

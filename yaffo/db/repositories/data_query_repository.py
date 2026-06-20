@@ -40,6 +40,15 @@ _DENY: dict[type, set[str]] = {
     Face: {"full_file_path"},
 }
 
+# Calculated columns per model. File system paths are fed to the model relative to the root media dirs so local
+# disk layout is not exposed.
+_CALCULATED: dict[type, dict[str, Any]] = {
+    Photo: {
+        "media_dir_id": {"type": "string", "description": "Media directory ID", 'queryable': False},
+        "relative_path": {"type": "string", "description": "Relative path to file from media directory", 'queryable': False},
+    },
+}
+
 # Reserved query keys (directives, not columns); they win over any same-named
 # column so they can't be shadowed.
 _LIMIT = {"type": "integer", "minimum": 1, "description": "Max rows to return."}
@@ -85,6 +94,22 @@ FIELDS_BY_SOURCE: dict[str, dict[str, dict]] = {
     model.__tablename__: _source_fields(model) for model in _EXPOSED_MODELS
 }
 SOURCES = tuple(FIELDS_BY_SOURCE)
+
+# Calculated columns keyed by source table. These aren't real DB columns — the host
+# appends them to each photos row (enrich_photo_rows) — so they're returned-only:
+# part of source_schema() but never the filter/select/aggregate surface.
+CALCULATED_BY_SOURCE: dict[str, dict[str, dict]] = {
+    model.__tablename__: _CALCULATED[model] for model in _EXPOSED_MODELS if model in _CALCULATED
+}
+
+
+def source_schema(source: str) -> dict[str, dict]:
+    """The full returned-row schema for a source: its queryable columns followed by
+    the host-derived calculated columns appended at the end. Raises ValueError for
+    an unknown source."""
+    if source not in FIELDS_BY_SOURCE:
+        raise ValueError(f"unknown source '{source}' (valid: {', '.join(SOURCES)})")
+    return {**FIELDS_BY_SOURCE[source], **CALCULATED_BY_SOURCE.get(source, {})}
 
 
 def _filter_schema(json_type: str) -> dict:

@@ -311,13 +311,14 @@ script can organise within or move between media dirs but can't write elsewhere.
 
 Custom automations are authored by an AI chat that writes their Starlark, mirroring
 the theme builder: async via the task queue, durable on the automation, browser observes by
-polling. Reuses the page-builder agent/model infrastructure.
+polling. Reuses the shared agent/model infrastructure in `yaffo/site_agents` (the
+package — formerly `page_builder` — that the page and theme builders also use).
 
 - **Persistence** (`db/repositories/automation_repository.py`): `add_message`
   (Conversation rows via `automation_id`), `set_status`, `write_working_code`,
   **`publish`** (working → published, `ACCEPTED`), `discard_draft`, `get_status`.
 - **Tools** — `write_automation_code`
-  (`page_builder/tool_providers/automation_tool.py`): parse-checks via
+  (`site_agents/tool_providers/automation_tool.py`): parse-checks via
   `validate_starlark` and persists into `working_code`, returning syntax errors to
   the model to retry. And **`add_automation_trigger` / `remove_automation_trigger`**
   (`automation_trigger_tool.py`): the model decides *when* the automation runs (the
@@ -676,7 +677,8 @@ are complementary if we want both.
 1. **`background_tasks/events.py`** — `EventContext.origin_automation_ids:
    list[int] = []`; the `_event_chain` contextvar + `event_chain_scope`; `emit_event`
    stamps the payload from the contextvar. External callers (routes, `complete_job`
-   job-completion) are unchanged → empty chain → genuine origins.
+   job-completion) are unchanged → empty c
+2. hain → genuine origins.
 2. **`tasks/dispatch_event.py`** (the guard) — read `origin_automation_ids` from the
    payload into the `EventContext`; in the dispatch loop, `if automation.id in
    context.origin_automation_ids:` log `"loop guard: skipping <slug> (already in
@@ -692,14 +694,22 @@ are complementary if we want both.
 
 **Mechanism 2 (watcher self-write suppression):**
 
-1. **Schema** — a `watcher_suppressions` table in the yaffo_queue database (`path`, `signature`, `created_at`) in
-   `scripts/init_db.py`, plus a repository (`add_suppression`, `consume_match`,
-   `sweep_expired`).
-2. **At the write sites** — wherever yaffo writes a watched file as part of an action
-   (`utils/write_metadata` via `export_photo_tag`; file-writing host actions) record a
-   suppression for the resulting `(path, size, mtime)` after the write.
-3. **`background_tasks/watcher.py`** — before `_enqueue`, filter settled adds through
-   `consume_match` (drop + delete on a signature hit); run `sweep_expired` each poll.
+1. **Schema + store methods** — a `watcher_suppression` table (`id`, `path`,
+   `signature`, `created_at`) in the **queue DB**, declared in `yaffo/taskq/store.py`'s
+   `_SCHEMA` (`CREATE TABLE IF NOT EXISTS`, so an existing `queue.db` picks it up on
+   next start — no migration), plus `Store.add_suppression` / `consume_suppression`
+   (atomic match-and-delete, signature + TTL) / `sweep_suppressions`. The queue DB is
+   the natural home: it's already the cross-process store the writer (a worker) and the
+   watcher (a separate process) share.
+2. **Helper** — `background_tasks/watcher_suppression.py`: `record_self_write` /
+   `should_suppress` / `sweep_expired`, keyed on a `"<size>:<mtime_ns>"` signature
+   (exact integer compare across processes), TTL `SUPPRESSION_TTL_SECONDS` (120s).
+3. **At the write site** — `export_photo_tag._export_tags` calls
+   `record_self_write(photo_path)` after each successful `write_photo_metadata`. Future
+   file-writing host actions record the same way.
+4. **`background_tasks/watcher.py`** — `_filter_self_writes` drops settled adds for
+   which `should_suppress` hits (consuming the entry) before `_enqueue`; `sweep_expired`
+   runs each poll.
 
 ### Tests
 
@@ -803,9 +813,9 @@ Watcher suppression (unit, no real observer):
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |
 | Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |
-| Builder tools (write-code + add-trigger) | `yaffo/page_builder/tool_providers/{automation_tool,automation_trigger_tool}.py` |
-| Builder prompts | `yaffo/page_builder/prompt_generator/automation_{system,user}_prompt.py` |
-| Builder agent + task | `yaffo/page_builder/agent.py`, `yaffo/background_tasks/tasks/generate_automation.py` |
+| Builder tools (write-code + add-trigger) | `yaffo/site_agents/tool_providers/{automation_tool,automation_trigger_tool}.py` |
+| Builder prompts | `yaffo/site_agents/prompt_generator/automation_{system,user}_prompt.py` |
+| Builder agent + task | `yaffo/site_agents/agent.py`, `yaffo/background_tasks/tasks/generate_automation.py` |
 | UI routes | `yaffo/routes/utilities/automations.py` (+ `common.automations_sidebar_context`) |
 | UI templates / static | `yaffo/templates/utilities/{_base,automations,automations_triggers,automations_triggers_edit}.html`, `yaffo/static/utilities/{_base,automations}.{js,css}` |
 | Cron editor component | `yaffo/static/components/cron_builder.{js,css}` |

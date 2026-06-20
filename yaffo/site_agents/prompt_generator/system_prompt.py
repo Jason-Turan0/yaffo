@@ -43,8 +43,12 @@ def _data_query() -> str:
     # this block can't drift from the resolver. Stable across requests (changes
     # only when the schema changes), so prompt caching still holds.
     sources = block("sources", [
-        "Each source is one table; a query returns its rows as raw column dicts:",
+        "Each source is one table; a query returns its rows as raw column dicts. The",
+        "columns below are the filterable/queryable columns:",
         *(_source_line(src, fields) for src, fields in FIELDS_BY_SOURCE.items()),
+        "A row may also carry host-derived columns the resolver appends but you can't",
+        "filter on. Call get_source_schema(source) for a source's full returned-row",
+        "fields (name, type, description) before relying on a column.",
     ])
     filters = block("filters", [
         'Filter a column with operators: { "COLUMN": { "OP": value } }.',

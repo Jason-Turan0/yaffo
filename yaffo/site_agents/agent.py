@@ -186,7 +186,6 @@ class Agent:
         except Exception as exc:  # tool failures are fed back, not raised
             return ToolCallResult(call.id, call.name, f"Error: {exc}", is_error=True)
 
-#TODO rename this namespace from site_agents to something more generic like yaffo agents
 def create_page_builder_agent(
     version_id: int,
     *,

@@ -34,7 +34,9 @@ def print_summary() -> None:
 
 
 def print_schema() -> None:
-    print(json.dumps(dq.DATA_QUERY_SCHEMA, indent=2))
+    with open("temp.json", "w") as file:
+        print(json.dumps(dq.DATA_QUERY_SCHEMA, indent=2))
+        json.dump(dq.DATA_QUERY_SCHEMA, file, indent=4)
 
 
 def main() -> None:

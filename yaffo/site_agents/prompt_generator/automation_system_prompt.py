@@ -62,11 +62,14 @@ def _sources() -> str:
     )
     return block("data_sources", [
         "Sources data_query can read (each a table; a query returns its rows as column",
-        "dicts, or an aggregate):",
+        "dicts, or an aggregate). The columns shown are the filterable/queryable columns:",
         lines,
         'Filter columns with operators at the top level, e.g. {"source": "photos",',
         '"year": {"eq": 2024}, "id": {"in": [1,2,3]}, "limit": 24}. Operators: eq, ne,',
         "lt, lte, gt, gte, contains, in.",
+        "Rows may also carry host-derived columns the resolver appends but you can't filter",
+        "on (e.g. a photo's media_dir_id / relative_path, which move_photo addresses by).",
+        "Call get_source_schema(source) for a source's full returned-row fields.",
     ])
 
 

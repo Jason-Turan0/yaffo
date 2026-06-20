@@ -84,6 +84,30 @@ class TestSchemaDerivation:
         assert "jobs" not in dq.SOURCES
         assert "application_settings" not in dq.SOURCES
 
+    def test_calculated_columns_are_out_of_the_query_surface(self):
+        # Calculated columns are host-derived (enrich_photo_rows), not real DB
+        # columns, so they must never reach the filter/select/aggregate surface.
+        assert "media_dir_id" not in dq.FIELDS_BY_SOURCE["photos"]
+        assert "relative_path" not in dq.FIELDS_BY_SOURCE["photos"]
+
+
+class TestSourceSchema:
+    """source_schema() is the returned-row shape: queryable columns plus the
+    host-derived calculated columns appended at the end."""
+
+    def test_appends_calculated_columns_after_real_columns(self):
+        fields = dq.source_schema("photos")
+        assert "id" in fields
+        assert list(fields)[-2:] == ["media_dir_id", "relative_path"]
+        assert fields["relative_path"]["type"] == "string"
+
+    def test_source_without_calculated_columns_matches_its_fields(self):
+        assert dq.source_schema("people") == dq.FIELDS_BY_SOURCE["people"]
+
+    def test_unknown_source_raises(self):
+        with pytest.raises(ValueError, match="unknown source 'widgets'"):
+            dq.source_schema("widgets")
+
 
 class TestSchemaShape:
     """The published JSON Schema is a strict, fail-closed per-source union."""

@@ -42,6 +42,7 @@ _TOOL_STATUS = {
     "create_widget": "Creating widget…",
     "update_widget": "Updating widget…",
     "run_data_query": "Looking up information…",
+    "get_source_schema": "Checking available fields…",
     "list_widget_templates": "Browsing templates…",
     "get_widget_template": "Picking a template…",
 }
