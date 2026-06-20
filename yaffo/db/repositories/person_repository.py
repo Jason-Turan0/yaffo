@@ -2,7 +2,7 @@ import json
 from datetime import date
 
 import numpy as np
-from sqlalchemy import text
+from sqlalchemy import insert, text
 from sqlalchemy.orm import Session
 import pydash as _
 from yaffo.db.models import Person, Face, PersonEmbedding, PersonFace
@@ -162,6 +162,35 @@ def link_face_to_person(session: Session, person_id: int, face_id: int) -> bool:
     session.add(PersonFace(person_id=person_id, face_id=face_id))
     session.commit()
     return True
+
+
+# Face ids per IN-clause — stay under SQLite's ~999 bound-param cap.
+_LINK_CHUNK = 500
+
+
+def bulk_link_faces_to_people(session: Session, links: list[tuple[int, int]]) -> int:
+    """Link a batch of faces to people in one transaction, skipping any face already
+    assigned (a face maps to one person). `links` is [(person_id, face_id), ...].
+    Returns the number of new links created; commits once. Lets a batch job compute
+    its matches lock-free and persist them in one short write."""
+    if not links:
+        return 0
+    face_ids = [face_id for _, face_id in links]
+    existing: set[int] = set()
+    for start in range(0, len(face_ids), _LINK_CHUNK):
+        chunk = face_ids[start:start + _LINK_CHUNK]
+        existing.update(
+            row[0] for row in session.query(PersonFace.face_id).filter(PersonFace.face_id.in_(chunk)).all()
+        )
+    rows = [
+        {"person_id": person_id, "face_id": face_id}
+        for person_id, face_id in links
+        if face_id not in existing
+    ]
+    if rows:
+        session.execute(insert(PersonFace), rows)
+    session.commit()
+    return len(rows)
 
 def update_person_embedding(person_id: int, session):
     """Recompute a person's estimated birthdate and their per-life-stage medoid

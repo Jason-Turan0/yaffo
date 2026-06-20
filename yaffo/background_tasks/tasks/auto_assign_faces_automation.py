@@ -26,26 +26,49 @@ from yaffo.domain.compare_utils import calculate_face_similarity, ui_threshold_t
 # The handler's lone config field (see automation_config.AUTOMATION_CONFIG).
 _THRESHOLD_FIELD = AUTOMATION_CONFIG[AUTOMATION_HANDLER_AUTO_ASSIGN_FACES][0]
 
+# Photos buffered before each bulk link write. Similarity matching runs lock-free;
+# the links are flushed in chunks so the write lock is taken only in short bursts.
+_FLUSH_SIZE = 200
+
 
 def _assign_faces(session: Session, progress_reporter: ProgressReporter, photo_ids: list[int], threshold: float) -> int:
     """For each face in the given photos, assign it to the single person it matches
     at/above `threshold`; skip faces with zero or multiple strong matches. Returns
-    how many links were made. People are loaded once for the whole batch."""
+    how many links were made. People are loaded once for the whole batch.
+
+    Similarity matching holds no DB lock: matched (person_id, face_id) links are
+    buffered and bulk-written every `_FLUSH_SIZE` photos (and once at the end)."""
     people = person_repository.get_people_with_embeddings(session)
     if not people:
         return 0
+
     assigned = 0
-    def photo_processor (photo_id: int):
-        nonlocal assigned
+    pending: list[tuple[int, int]] = []
+    photos_in_buffer = 0
+
+    def flush():
+        nonlocal assigned, photos_in_buffer
+        if pending:
+            assigned += person_repository.bulk_link_faces_to_people(session, pending)
+            pending.clear()
+        photos_in_buffer = 0
+
+    def photo_processor(photo_id: int):
+        nonlocal photos_in_buffer
         for face in photos_repository.get_faces_for_photo(session, photo_id):
             strong = [
                 person_id
                 for person_id, score in calculate_face_similarity(face, people).items()
                 if score >= threshold
             ]
-            if len(strong) == 1 and person_repository.link_face_to_person(session, strong[0], face.id):
-                assigned += 1
+            if len(strong) == 1:
+                pending.append((strong[0], face.id))
+        photos_in_buffer += 1
+        if photos_in_buffer >= _FLUSH_SIZE:
+            flush()
+
     progress_reporter.run_with_progress(photo_ids, photo_processor)
+    flush()  # remaining tail
     return assigned
 
 

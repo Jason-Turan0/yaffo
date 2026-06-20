@@ -43,6 +43,11 @@ _MIN_GEOCODE_INTERVAL_S = 1.0
 # A coordinate -> name lookup; None when online geocoding is disabled.
 Geocoder = Optional[Callable[[float, float], Optional[str]]]
 
+# Photos named before each commit. Geocoding (slow, throttled) runs without a write
+# lock held; the name updates are committed in chunks so progress is durable and the
+# lock is taken only in short bursts rather than one commit at the very end.
+_FLUSH_SIZE = 200
+
 
 def _nearest_name(
     lat: float, lon: float, candidates: list[tuple[float, float, str]], radius_m: float
@@ -77,6 +82,13 @@ def _assign_location_names(
     candidates = photos_repository.get_named_coordinates(session) if reuse_enabled else []
 
     updated: list[int] = []
+    pending: list[int] = []
+
+    def flush():
+        if pending:
+            session.commit()  # persist the chunk's name updates (dirty ORM photos)
+            pending.clear()
+
     def photo_processor(photo):
         if not overwrite and (photo.location_name or "").strip():
             return
@@ -87,11 +99,12 @@ def _assign_location_names(
             photo.location_name = name
             candidates.append((photo.latitude, photo.longitude, name))
             updated.append(photo.id)
+            pending.append(photo.id)
+            if len(pending) >= _FLUSH_SIZE:
+                flush()
 
     progress_reporter.run_with_progress(photos, photo_processor)
-
-    if updated:
-        session.commit()
+    flush()  # remaining tail
     return updated
 
 

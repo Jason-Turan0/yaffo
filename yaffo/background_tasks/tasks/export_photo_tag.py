@@ -40,6 +40,10 @@ _FAVORITE_FIELD = _FIELDS["export_favorite_enabled"]
 # The keyword written into the file when a photo is favorited.
 FAVORITE_KEYWORD = "Favorite"
 
+# Photo ids per load query — stay under SQLite's ~999 bound-param cap and bound the
+# joinedload's memory for a large batch.
+_LOAD_CHUNK = 500
+
 
 def _people_names(photo: Photo) -> list[str]:
     """Distinct names of people linked to any face in the photo."""
@@ -78,19 +82,26 @@ def _export_tags(
     export_favorite: bool = False,
 ) -> int:
     """Write the enabled tag(s) into each photo's file metadata. Returns how many
-    files were written. Photos whose file is missing are skipped."""
+    files were written. Photos whose file is missing are skipped.
+
+    The work is file I/O (exiftool), not a DB write, so no lock is held while writing;
+    the photos are *loaded* in chunks (one IN-clause per chunk) to stay under SQLite's
+    bound-param cap and bound the joinedload's memory."""
     if not photo_ids or not (export_location or export_people or export_labels or export_custom_tags or export_favorite):
         return 0
-    photos = (
-        session.query(Photo)
-        .options(
-            joinedload(Photo.faces).joinedload(Face.people),
-            joinedload(Photo.labels).joinedload(PhotoLabel.label),
-            joinedload(Photo.tags),
+    photos = []
+    for start in range(0, len(photo_ids), _LOAD_CHUNK):
+        chunk = photo_ids[start:start + _LOAD_CHUNK]
+        photos.extend(
+            session.query(Photo)
+            .options(
+                joinedload(Photo.faces).joinedload(Face.people),
+                joinedload(Photo.labels).joinedload(PhotoLabel.label),
+                joinedload(Photo.tags),
+            )
+            .filter(Photo.id.in_(chunk))
+            .all()
         )
-        .filter(Photo.id.in_(photo_ids))
-        .all()
-    )
     written = 0
     def photo_processor(photo: Photo):
         nonlocal written

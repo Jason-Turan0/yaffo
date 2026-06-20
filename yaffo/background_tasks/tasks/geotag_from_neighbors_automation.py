@@ -37,6 +37,10 @@ _MINUTES_FIELD = AUTOMATION_CONFIG[AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS][0]
 # A matched GPS source: (latitude, longitude, location_name | None).
 Match = tuple[float, float, Optional[str]]
 
+# Photos geotagged before each commit — flush the coordinate updates in chunks so a
+# long batch stays durable and the write lock is taken in short bursts.
+_FLUSH_SIZE = 200
+
 
 def _nearest_match(
     target: datetime,
@@ -83,6 +87,13 @@ def _geotag_from_neighbors(session: Session, progress_reporter: ProgressReporter
     max_delta = timedelta(minutes=max_minutes)
 
     updated: list[int] = []
+    pending: list[int] = []
+
+    def flush():
+        if pending:
+            session.commit()  # persist the chunk's coordinate updates (dirty ORM photos)
+            pending.clear()
+
     def photo_processor (photo: Photo):
         target = parse_date_taken(photo.date_taken)
         if target is None:
@@ -95,9 +106,11 @@ def _geotag_from_neighbors(session: Session, progress_reporter: ProgressReporter
             if location_name and not (photo.location_name or "").strip():
                 photo.location_name = location_name
             updated.append(photo.id)
+            pending.append(photo.id)
+            if len(pending) >= _FLUSH_SIZE:
+                flush()
     progress_reporter.run_with_progress(targets, photo_processor)
-    if updated:
-        session.commit()
+    flush()  # remaining tail
     return updated
 
 

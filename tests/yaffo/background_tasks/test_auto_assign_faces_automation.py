@@ -14,7 +14,7 @@ pytestmark = pytest.mark.unit
 
 def _patch(monkeypatch, *, faces_by_photo, scores_by_face, people=("p",)):
     """Stub the repos + similarity so _assign_faces runs against fixture data, and
-    record every (person_id, face_id) the code tries to link."""
+    record every (person_id, face_id) the code flushes via bulk_link_faces_to_people."""
     linked: list[tuple[int, int]] = []
 
     monkeypatch.setattr(mod.person_repository, "get_people_with_embeddings", lambda session: list(people))
@@ -24,11 +24,11 @@ def _patch(monkeypatch, *, faces_by_photo, scores_by_face, people=("p",)):
     )
     monkeypatch.setattr(mod, "calculate_face_similarity", lambda face, people: scores_by_face[face.id])
 
-    def _link(session, person_id, face_id):
-        linked.append((person_id, face_id))
-        return True
+    def _bulk_link(session, links):
+        linked.extend(links)
+        return len(links)
 
-    monkeypatch.setattr(mod.person_repository, "link_face_to_person", _link)
+    monkeypatch.setattr(mod.person_repository, "bulk_link_faces_to_people", _bulk_link)
     return linked
 
 
