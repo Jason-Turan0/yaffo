@@ -413,11 +413,16 @@
     background: none;
     border: none;
     cursor: pointer;
-    font-size: var(--font-size-lg);
+    color: var(--color-danger);
     padding: 4px 8px;
     transition: transform 0.2s;
     border-radius: var(--radius-sm);
     line-height: 1;
+}
+
+.btn-icon-delete::before {
+    width: 18px;
+    height: 18px;
 }
 
 .btn-icon-delete:hover {

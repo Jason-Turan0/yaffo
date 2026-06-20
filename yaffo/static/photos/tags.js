@@ -31,10 +31,9 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
                 </div>
                 <button type="button"
                         class="btn-icon-delete"
+                        data-icon="delete"
                         onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.removeTagFromList(${tag.tempId})"
-                        title="Remove">
-                    🗑️
-                </button>
+                        title="Remove" aria-label="Remove"></button>
             </div>
         `).join('');
     };

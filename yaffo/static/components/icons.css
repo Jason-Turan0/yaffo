@@ -11,6 +11,9 @@
  *
  * Mask longhands only — the `mask:` shorthand resets mask-image, which the
  * lower-specificity per-icon rules below would then lose.
+ *
+ * The add-an-icon convention (one shared outline + one punchy neobrutalist
+ * override) is documented in docs/icons.md.
  */
 
 .nav-link[data-icon],

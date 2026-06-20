@@ -176,20 +176,27 @@
 [data-theme="neobrutalist"] [data-icon="favorite"]::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff' stroke='%23121212' stroke-width='2' stroke-linejoin='round'> <path d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'/> </svg>"); }
 [data-theme="neobrutalist"] .favorite-toggle.is-favorite[data-icon="favorite"]::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff70a6' stroke='%23121212' stroke-width='2' stroke-linejoin='round'> <path d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'/> </svg>"); }
 
-/* Favorite chip: a square sticker with the theme's hard offset shadow. */
-[data-theme="neobrutalist"] .favorite-toggle {
+/* Icon buttons (heart chip, filters "Configure", tag delete) all wear the same
+   square sticker: surface fill, hard border + offset shadow, press-in on hover. */
+[data-theme="neobrutalist"] .favorite-toggle,
+[data-theme="neobrutalist"] .filter-config-trigger,
+[data-theme="neobrutalist"] .btn-icon-delete {
     background: var(--color-surface);
     border: 2px solid var(--color-border);
     border-radius: 6px;
     box-shadow: 3px 3px 0 var(--color-border);
     color: var(--color-text);
 }
-[data-theme="neobrutalist"] .favorite-toggle::before { width: 20px; height: 20px; }
-[data-theme="neobrutalist"] .favorite-toggle:hover {
+[data-theme="neobrutalist"] .favorite-toggle:hover,
+[data-theme="neobrutalist"] .filter-config-trigger:hover,
+[data-theme="neobrutalist"] .btn-icon-delete:hover {
     background: var(--color-surface);
+    color: var(--color-text);
     transform: translate(-1px, -1px);
     box-shadow: 4px 4px 0 var(--color-border);
 }
+[data-theme="neobrutalist"] .favorite-toggle::before { width: 20px; height: 20px; }
+[data-theme="neobrutalist"] .btn-icon-delete::before { width: 18px; height: 18px; }
 
 /* Search glyph inside the searchable-select filter box */
 [data-theme="neobrutalist"] .searchable-select-search {
