@@ -87,6 +87,62 @@ def test_assign_faces_filters_unknown_persons(monkeypatch):
     assert captured["links"] == [(7, 10)]  # (person_id, face_id) for the known person
 
 
+def test_delete_photos_trashes_files_then_removes_rows(monkeypatch, tmp_path):
+    a = tmp_path / "a.jpg"
+    b = tmp_path / "b.jpg"
+    a.write_text("x")
+    b.write_text("y")
+    trashed = []
+    captured = {}
+
+    def _capture_delete(s, ids):
+        captured["ids"] = ids
+        return []
+
+    _patch(monkeypatch, _ACTIONS + "photos_repository.get_paths_by_ids",
+           lambda s, ids: {1: str(a), 2: str(b)})
+    monkeypatch.setattr(automation_actions.send2trash, "send2trash", lambda p: trashed.append(p))
+    _patch(monkeypatch, _ACTIONS + "photos_repository.delete_photos", _capture_delete)
+
+    automation_actions.delete_photos(object(), [1, 2])
+
+    assert sorted(trashed) == sorted([str(a), str(b)])
+    assert captured["ids"] == [1, 2]  # both rows removed after their files were trashed
+
+
+def test_delete_photos_keeps_row_when_trash_fails(monkeypatch, tmp_path):
+    a = tmp_path / "a.jpg"
+    a.write_text("x")
+    captured = {}
+
+    _patch(monkeypatch, _ACTIONS + "photos_repository.get_paths_by_ids", lambda s, ids: {1: str(a)})
+
+    def _boom(_path):
+        raise OSError("locked")
+
+    def _capture_delete(s, ids):
+        captured["ids"] = ids
+        return []
+
+    monkeypatch.setattr(automation_actions.send2trash, "send2trash", _boom)
+    _patch(monkeypatch, _ACTIONS + "photos_repository.delete_photos", _capture_delete)
+
+    automation_actions.delete_photos(object(), [1])
+
+    assert captured["ids"] == []  # file couldn't be trashed -> index row left intact
+
+
+def test_delete_photos_unlinks_returned_face_thumbnails(monkeypatch, tmp_path):
+    thumb = tmp_path / "face.jpg"
+    thumb.write_text("t")
+    _patch(monkeypatch, _ACTIONS + "photos_repository.get_paths_by_ids", lambda s, ids: {})
+    _patch(monkeypatch, _ACTIONS + "photos_repository.delete_photos", lambda s, ids: [str(thumb)])
+
+    automation_actions.delete_photos(object(), [1])
+
+    assert not thumb.exists()  # face thumbnail cleaned up
+
+
 class _CommitCountingSession:
     def __init__(self):
         self.commits = 0

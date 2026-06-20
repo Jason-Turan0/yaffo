@@ -9,14 +9,32 @@ Declared once in HOST_API and read in two places that must never diverge:
 Add a capability = add one HostFunction entry; both the runtime and the docs pick
 it up.
 """
+import datetime
 import inspect
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any, Callable
 
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox import automation_actions as actions
 from yaffo.background_tasks.automation_sandbox import automation_compare as compare
+
+
+def _json_safe(value: Any) -> Any:
+    """Coerce a host return value into types the starlark-pyo3 binding can marshal
+    back into the sandbox (it JSON-encodes the value). DB rows carry types Starlark
+    has no equivalent for -- dates (people.birthdate) and Decimals -- so map them to
+    ISO strings / floats; dict/list are walked. Everything else passes through."""
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, datetime.date):  # date and datetime (datetime subclasses date)
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
 
 
 def _signature_of(impl: Callable[..., Any]) -> str:
@@ -160,6 +178,18 @@ HOST_API: tuple[HostFunction, ...] = (
     ),
     HostFunction(
         description=(
+            "Delete photos in one batched write. `photo_ids` is a list of ids; each "
+            "photo's file is sent to the OS trash (recoverable) and the photo with its "
+            "faces/tags/labels is removed from the index. Destructive -- only delete "
+            "what the request clearly asks to remove."
+        ),
+        example='delete_photos([r["id"] for r in junk])',
+        impl=actions.delete_photos,
+        summarize=actions.summarize_delete_photos,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
             "How similar each face in the photo is to a known person, by face "
             "embeddings -- use it to decide whether to assign_faces."
         ),
@@ -183,7 +213,8 @@ HOST_API: tuple[HostFunction, ...] = (
 
 def _bind(impl: Callable[..., Any], dependency: Any) -> Callable[..., Any]:
     def call(*args: Any) -> Any:
-        return impl(dependency, *args)
+        # Coerce the return to sandbox-marshalable types (e.g. DB dates -> ISO strings).
+        return _json_safe(impl(dependency, *args))
     return call
 
 

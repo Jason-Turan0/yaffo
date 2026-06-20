@@ -86,12 +86,18 @@ def run_and_record(session: Session, automation: Automation, context: EventConte
 
     job.completed_at = utcnow()
     job.job_data = json.dumps({"output": result.output})
+    # A script that called report_progress already set task_count/completed_count —
+    # keep those. Only stamp a single unit of work for a run that reported none, so
+    # the history still shows the run happened.
+    reported_progress = bool(job.task_count)
     if result.success:
         job.status = JOB_STATUS_COMPLETED
-        job.completed_count = 1
+        if not reported_progress:
+            job.completed_count = 1
     else:
         job.status = JOB_STATUS_FAILED
-        job.error_count = 1
+        if not reported_progress:
+            job.error_count = 1
         job.error = result.error
     session.commit()
 

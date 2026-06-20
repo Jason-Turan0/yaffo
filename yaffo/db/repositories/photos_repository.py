@@ -4,7 +4,10 @@ from pathlib import Path
 
 from sqlalchemy import insert, or_
 from sqlalchemy.orm import Session
-from yaffo.db.models import Face, Photo, Tag, PHOTO_STATUS_INDEXED
+from yaffo.db.models import Face, PersonFace, Photo, PhotoLabel, Tag, PHOTO_STATUS_INDEXED
+
+# Ids per IN-clause — stay under SQLite's ~999 bound-param cap.
+_DELETE_CHUNK = 500
 
 
 def get_faces_for_photo(session: Session, photo_id: int) -> list[Face]:
@@ -91,6 +94,33 @@ def get_paths_by_ids(session: Session, photo_ids: list[int]) -> dict[int, str]:
     return dict(
         session.query(Photo.id, Photo.full_file_path).filter(Photo.id.in_(photo_ids)).all()
     )
+
+
+def delete_photos(session: Session, photo_ids: list[int]) -> list[str]:
+    """Remove photos from the index in one transaction: their tags, labels, faces
+    (and the people_face links + the face thumbnail files), then the photo rows.
+    SQLite FK cascade is off, so dependents are deleted explicitly. Returns the face
+    thumbnail paths to unlink (the caller owns the filesystem). Commits."""
+    ids = [int(pid) for pid in photo_ids]
+    if not ids:
+        return []
+    thumbnails: list[str] = []
+    for start in range(0, len(ids), _DELETE_CHUNK):
+        chunk = ids[start:start + _DELETE_CHUNK]
+        face_rows = (
+            session.query(Face.id, Face.full_file_path).filter(Face.photo_id.in_(chunk)).all()
+        )
+        face_ids = [row[0] for row in face_rows]
+        thumbnails.extend(row[1] for row in face_rows if row[1])
+        for f_start in range(0, len(face_ids), _DELETE_CHUNK):
+            f_chunk = face_ids[f_start:f_start + _DELETE_CHUNK]
+            session.query(PersonFace).filter(PersonFace.face_id.in_(f_chunk)).delete(synchronize_session=False)
+        session.query(Face).filter(Face.photo_id.in_(chunk)).delete(synchronize_session=False)
+        session.query(PhotoLabel).filter(PhotoLabel.photo_id.in_(chunk)).delete(synchronize_session=False)
+        session.query(Tag).filter(Tag.photo_id.in_(chunk)).delete(synchronize_session=False)
+        session.query(Photo).filter(Photo.id.in_(chunk)).delete(synchronize_session=False)
+    session.commit()
+    return thumbnails
 
 
 def get_indexed_photo_ids(session: Session) -> list[int]:

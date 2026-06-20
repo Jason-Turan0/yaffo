@@ -65,6 +65,49 @@ if to_move:
     move_photos(moves)
 """
 
+# A library-wide organize for the prompt "Take all my favorite photos of my kids
+# Chase and Nathan and put them in their own folders grouped by year". Context-less
+# (queries the whole library, not ctx), so it's run via Run now. Walks people ->
+# their faces -> the photos those faces are in, keeps the favorites, and batch-moves
+# each into "<Kid>/<Year>" within its media dir. Exercises the favorite filter,
+# report_progress, and the batched move_photos write.
+_FILE_KIDS_CODE = """\
+people = data_query({"source": "people", "name": {"in": ["Chase", "Nathan"]}})
+name_by_person = {p["id"]: p["name"] for p in people}
+person_ids = [p["id"] for p in people]
+
+moves = []
+if person_ids:
+    links = data_query({"source": "people_face", "person_id": {"in": person_ids}})
+    person_by_face = {link["face_id"]: link["person_id"] for link in links}
+    face_ids = [link["face_id"] for link in links]
+
+    person_by_photo = {}
+    if face_ids:
+        faces = data_query({"source": "faces", "id": {"in": face_ids}})
+        for face in faces:
+            photo_id = face["photo_id"]
+            if photo_id != None and photo_id not in person_by_photo:
+                person_by_photo[photo_id] = person_by_face[face["id"]]
+
+    photo_ids = [pid for pid in person_by_photo]
+    if photo_ids:
+        favorites = data_query({"source": "photos", "favorite": {"eq": True}, "id": {"in": photo_ids}})
+        total = len(favorites)
+        for i, row in enumerate(favorites):
+            if row["year"] and row["media_dir_id"]:
+                kid = name_by_person[person_by_photo[row["id"]]]
+                moves.append({
+                    "photo_id": row["id"],
+                    "media_dir_id": row["media_dir_id"],
+                    "target_path": kid + "/" + str(row["year"]),
+                })
+            report_progress(i + 1, total)
+
+print("Filing " + str(len(moves)) + " favorite photo(s) of Chase & Nathan into <kid>/<year> folders")
+move_photos(moves)
+"""
+
 # Always raises, to exercise the error path (a FAILED run in the history).
 _ERROR_CODE = 'fail("This automation always fails — used to test error handling.")\n'
 
@@ -72,6 +115,7 @@ _EVENT_SLUG = "log-photos-on-index"
 _SCHEDULE_SLUG = "log-photos-each-minute"
 _ORGANIZE_SLUG = "organize-by-date"
 _DEDUPE_SLUG = "move-duplicates"
+_FILE_KIDS_SLUG = "file-favorite-kid-photos"
 _ERROR_SLUG = "always-fails"
 
 
@@ -82,7 +126,7 @@ def seed_automations() -> None:
 
         # Replace any prior copies (ORM delete cascades to their triggers), and drop
         # any retired slugs left over from before they became system automations.
-        for slug in (_EVENT_SLUG, _SCHEDULE_SLUG, _ORGANIZE_SLUG, _DEDUPE_SLUG, _ERROR_SLUG):
+        for slug in (_EVENT_SLUG, _SCHEDULE_SLUG, _ORGANIZE_SLUG, _DEDUPE_SLUG, _FILE_KIDS_SLUG, _ERROR_SLUG):
             existing = db.session.query(Automation).filter_by(slug=slug).first()
             if existing is not None:
                 db.session.delete(existing)
@@ -129,6 +173,25 @@ def seed_automations() -> None:
             )],
         )
 
+        # A library-wide organize, the kind the builder would generate from a natural
+        # prompt. No triggers — it queries the whole library, not an event's photos —
+        # so it's invoked via Run now on the detail page. Seeded DISABLED since it moves
+        # files; the user enables it and clicks Run now.
+        file_kids_automation = Automation(
+            slug=_FILE_KIDS_SLUG,
+            name="File favorite kid photos",
+            description=(
+                "Take all favorite photos of Chase and Nathan and move each into a "
+                "\"<kid>/<year>\" folder within its media dir. Run it from Run now."
+            ),
+            is_system=False,
+            enabled=False,
+            handler=None,
+            published_code=_FILE_KIDS_CODE,
+            status=AUTOMATION_STATUS_READY,
+            triggers=[],
+        )
+
         # A deliberately-failing automation: each photo_indexed batch records a FAILED
         # run so the error path (and the run-history error display) can be eyeballed.
         error_automation = Automation(
@@ -147,7 +210,7 @@ def seed_automations() -> None:
             )],
         )
 
-        seeded = [organize_automation, dedupe_automation, error_automation]
+        seeded = [organize_automation, dedupe_automation, file_kids_automation, error_automation]
         db.session.add_all(seeded)
         db.session.commit()
         print("Seeded automations: " + ", ".join(f"'{a.slug}'" for a in seeded) + ".")

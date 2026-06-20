@@ -13,6 +13,7 @@ args into the friendly one-line action shown in the test UI (e.g. "Tag 3 photo(s
 from pathlib import Path
 from typing import Annotated, Any, Optional
 
+import send2trash
 from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.progress_reporter import ProgressReporter
@@ -20,6 +21,9 @@ from yaffo.db.repositories import person_repository, photos_repository
 from yaffo.db.repositories.media_dir_repository import media_dir_by_id
 from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_photo_rows
 from yaffo.db.repositories.data_query_repository import resolve_query
+from yaffo.logging_config import get_logger
+
+logger = get_logger(__name__, "background_tasks")
 
 def data_query(
     session: Session, query: dict
@@ -143,3 +147,34 @@ def assign_faces(session: Session, assignments: list[dict]) -> None:
 def summarize_assign_faces(args: list[Any], session: Session) -> str:
     assignments = args[0] if args and isinstance(args[0], list) else []
     return f"Assign {len(assignments)} face(s)"
+
+
+def delete_photos(session: Session, photo_ids: list[int]) -> None:
+    """Delete photos: send each file to the OS trash (recoverable), then remove the
+    photo and its faces/tags/labels from the index. `photo_ids` is a list of ids.
+    A photo whose file can't be trashed is left in the index (not half-deleted)."""
+    if not photo_ids:
+        return
+    paths = photos_repository.get_paths_by_ids(session, photo_ids)
+    removed: list[int] = []
+    for photo_id in photo_ids:
+        path = paths.get(photo_id)
+        if not path or not Path(path).exists():
+            removed.append(photo_id)  # no live file -> just drop the index row
+            continue
+        try:
+            send2trash.send2trash(str(Path(path)))
+            removed.append(photo_id)
+        except Exception as e:
+            logger.warning(f"delete_photos: could not trash {path}: {e}")
+    thumbnails = photos_repository.delete_photos(session, removed)
+    for thumb in thumbnails:
+        try:
+            Path(thumb).unlink(missing_ok=True)
+        except OSError as e:
+            logger.warning(f"delete_photos: could not remove face thumbnail {thumb}: {e}")
+
+
+def summarize_delete_photos(args: list[Any], session: Session) -> str:
+    photo_ids = args[0] if args and isinstance(args[0], list) else []
+    return f"Delete {len(photo_ids)} photo(s)"

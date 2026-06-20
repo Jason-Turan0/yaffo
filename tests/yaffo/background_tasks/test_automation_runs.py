@@ -68,6 +68,21 @@ def test_successful_run_writes_completed_job(session, monkeypatch):
     assert session.query(Job).filter_by(automation_id=automation.id).count() == 1
 
 
+def test_report_progress_counts_are_kept_not_clobbered(session):
+    """A custom script that calls report_progress keeps the counts it reported — the
+    run finaliser must not overwrite completed_count with its single-unit default."""
+    automation = _custom_automation(
+        session, "progressive",
+        "total = 5\nfor i in range(total):\n    report_progress(i + 1, total)\n",
+    )
+
+    job = run_and_record(session, automation, None)
+
+    assert job.status == JOB_STATUS_COMPLETED
+    assert job.task_count == 5
+    assert job.completed_count == 5  # not 1
+
+
 def test_bad_script_writes_failed_job(session):
     automation = _custom_automation(session, "broken", "this is ( not valid starlark")
 

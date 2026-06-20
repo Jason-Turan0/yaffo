@@ -258,12 +258,15 @@ automation_sandbox/
   | `assign_faces(assignments)` | mutating (batch) | link faces to people in one write — `[{face_id, person_id}]` (skips unknown people / already-assigned) |
   | `move_photos(moves)` | mutating (batch) | move photos in one transaction — `[{photo_id, media_dir_id, target_path}]` |
   | `rename_files(renames)` | mutating (batch) | rename files in one transaction — `[{photo_id, new_name}]` |
+  | `delete_photos(photo_ids)` | mutating (batch) | trash each file (send2trash) + remove the photo and its faces/tags/labels from the index, in one transaction — `[id, ...]` |
 
   **Writes are batch-only.** Every mutating host function takes a list and persists the
-  whole set in one commit (`photos_repository.add_tags`,
+  whole set in one commit (`photos_repository.add_tags` / `.delete_photos`,
   `person_repository.bulk_link_faces_to_people`, and a single commit for the file
   moves/renames); there are no single-item write functions (`move_photo` / `rename_file`
-  remain as internal per-item helpers, not host-exposed). The system prompt's
+  remain as internal per-item helpers, not host-exposed). `delete_photos` sends each
+  file to the OS trash (recoverable) before removing the photo and its faces/tags/labels
+  from the index. The system prompt's
   `<batching>` section tells the model to collect its writes into a list and call a
   batch function once — short, batched writes keep the SQLite write lock from being
   taken per item.

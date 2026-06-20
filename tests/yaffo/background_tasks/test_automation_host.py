@@ -19,6 +19,30 @@ from yaffo.background_tasks.automation_sandbox.starlark_runner import run_starla
 pytestmark = pytest.mark.unit
 
 
+def test_host_returns_are_coerced_to_sandbox_safe_types(monkeypatch):
+    # DB rows can carry dates (people.birthdate) / Decimals, which the starlark-pyo3
+    # binding can't marshal back; the host boundary coerces them to ISO strings / floats.
+    import datetime
+    from decimal import Decimal
+
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query",
+        lambda session, query: [{"name": "Chase", "birthdate": datetime.date(2015, 6, 1), "score": Decimal("0.5")}],
+    )
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_photo_rows",
+        lambda session, rows: rows,
+    )
+
+    result = run_starlark(
+        "data_query({'source': 'people'})",
+        functions=build_host_functions(object()),
+    )
+
+    assert result.success is True, result.error
+    assert result.value == [{"name": "Chase", "birthdate": "2015-06-01", "score": 0.5}]
+
+
 def test_data_query_callable_is_invoked_from_starlark(monkeypatch):
     calls = []
 
@@ -158,6 +182,7 @@ def test_summaries_are_friendly(monkeypatch):
     assert summarize_call(HostCall("assign_faces", [[{"face_id": 1, "person_id": 2}]]), s) == "Assign 1 face(s)"
     assert summarize_call(HostCall("move_photos", [[{"photo_id": 1}]]), s) == "Move 1 photo(s)"
     assert summarize_call(HostCall("rename_files", [[]]), s) == "Rename 0 file(s)"
+    assert summarize_call(HostCall("delete_photos", [[1, 2, 3]]), s) == "Delete 3 photo(s)"
 
 
 def test_batch_write_is_recorded_not_performed(monkeypatch):

@@ -13,13 +13,16 @@ class ProgressReporter:
         self.job_id = job_id
 
     def progress_update(self, task_count: int, completed_count: int, cancelled: int, error_count: int):
-        update_job_params = {
-            'task_count': task_count,
-            'completed_count': completed_count,
-            'cancelled_count': cancelled,
-            'error_count': error_count,
-        }
-        self.session.query(Job).filter_by(id=self.job_id).update(update_job_params)
+        # Mutate the identity-mapped Job (not a bulk query.update): a caller that holds
+        # its own Job object across the run (automation_runs.run_and_record) would
+        # otherwise clobber these counts with its stale copy on its final commit.
+        job = self.session.get(Job, self.job_id)
+        if job is None:
+            return
+        job.task_count = task_count
+        job.completed_count = completed_count
+        job.cancelled_count = cancelled
+        job.error_count = error_count
         self.session.commit()
 
     def run_with_progress(self,
