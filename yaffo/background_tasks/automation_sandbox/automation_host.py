@@ -55,6 +55,7 @@ HOST_API: tuple[HostFunction, ...] = (
         example='recent = data_query({"source": "photos", "limit": 10})',
         impl=actions.data_query,
         summarize=actions.summarize_data_query,
+        mutating=False,
     ),
     HostFunction(
         name="tag_photo",
@@ -125,6 +126,7 @@ HOST_API: tuple[HostFunction, ...] = (
         example="scores = face_similarity(photo_id, person_id)",
         impl=compare.face_similarity,
         summarize=compare.summarize_face_similarity,
+        mutating=False,
     ),
     HostFunction(
         name="match_people",
@@ -140,6 +142,7 @@ HOST_API: tuple[HostFunction, ...] = (
         example="matches = match_people(photo_id)",
         impl=compare.match_people,
         summarize=compare.summarize_match_people,
+        mutating=False
     ),
 )
 
@@ -215,6 +218,6 @@ def render_host_api() -> str:
             f"  {fn.description}\n"
             f"  Returns: {fn.returns}\n"
             f"  Example: {fn.example}"
-            f"  Mutating: {fn.mutating}"
+            f"  Mutating: {fn.mutating or False}"
         )
     return "\n\n".join(blocks)

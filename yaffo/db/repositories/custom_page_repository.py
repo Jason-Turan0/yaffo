@@ -19,12 +19,12 @@ repositories), so callers don't manage transactions.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from yaffo.utils.time import utcnow
 from yaffo.db.models import (
     PAGE_VERSION_STATUS_ACCEPTED,
     PAGE_VERSION_STATUS_IN_PROGRESS,
@@ -119,7 +119,7 @@ def create_page(session: Session, title: str, subtitle: str = "") -> CustomPage:
     version = PageVersion(
         page_id=page.id,
         status=PAGE_VERSION_STATUS_ACCEPTED,
-        completed_at=datetime.utcnow(),
+        completed_at=utcnow(),
     )
     session.add(version)
     session.flush()  # assign version.id
@@ -147,7 +147,7 @@ def update_page(
         page.show_title = show_title
     if tab_order is not None:
         _reposition(session, page, tab_order)
-    page.updated_at = datetime.utcnow()
+    page.updated_at = utcnow()
     session.commit()
     return page
 
@@ -204,7 +204,7 @@ def _append_message(
     message = Conversation(version_id=version_id, type=entry_type, content=content)
     session.add(message)
     if page is not None:
-        page.updated_at = datetime.utcnow()
+        page.updated_at = utcnow()
     session.commit()
     return message
 
@@ -215,7 +215,7 @@ def set_widget_state(session: Session, page_id: int, widget_id: str, state: dict
     if widget is None:
         return
     widget.state = state or {}
-    widget.version.page.updated_at = datetime.utcnow()
+    widget.version.page.updated_at = utcnow()
     session.commit()
 
 
@@ -228,7 +228,7 @@ def set_version_widget_state(session: Session, version_id: int, widget_id: str, 
         return
     widget.state = state or {}
     if widget.version.page is not None:
-        widget.version.page.updated_at = datetime.utcnow()
+        widget.version.page.updated_at = utcnow()
     session.commit()
 
 
@@ -238,7 +238,7 @@ def remove_widget(session: Session, page_id: int, widget_id: str) -> None:
         return
     page = widget.version.page
     session.delete(widget)
-    page.updated_at = datetime.utcnow()
+    page.updated_at = utcnow()
     session.commit()
 
 
@@ -252,7 +252,7 @@ def remove_version_widget(session: Session, version_id: int, widget_id: str) -> 
     page = widget.version.page
     session.delete(widget)
     if page is not None:
-        page.updated_at = datetime.utcnow()
+        page.updated_at = utcnow()
     session.commit()
 
 
@@ -301,7 +301,7 @@ def save_version_widgets(session: Session, version_id: int, widgets: list[dict])
         return
     _write_widgets(session, version, widgets)
     if version.page is not None:
-        version.page.updated_at = datetime.utcnow()
+        version.page.updated_at = utcnow()
     session.commit()
 
 
@@ -359,7 +359,7 @@ def upsert_version_widget(
         if widget.get(key) is not None:
             value = widget[key]
             setattr(existing, key, value or {} if key in _JSON_KEYS else value)
-    version.page.updated_at = datetime.utcnow()
+    version.page.updated_at = utcnow()
     session.commit()
     return existing
 
@@ -412,7 +412,7 @@ def fork_version(
         page_id=page.id,
         status=PAGE_VERSION_STATUS_IN_PROGRESS,
         parent_version_id=published.id if published else None,
-        started_at=datetime.utcnow(),
+        started_at=utcnow(),
     )
     session.add(version)
     session.flush()  # assign version.id for the seeded widget / message rows
@@ -421,7 +421,7 @@ def fork_version(
         for message in published.messages:
             session.add(Conversation(version_id=version.id, type=message.type, content=message.content))
     page.working_version_id = version.id
-    page.updated_at = datetime.utcnow()
+    page.updated_at = utcnow()
     session.commit()
     return version
 
@@ -443,7 +443,7 @@ def set_version_status(
     if error is not None:
         version.error = error
     if completed:
-        version.completed_at = datetime.utcnow()
+        version.completed_at = utcnow()
     session.commit()
     return version
 
@@ -456,7 +456,7 @@ def restart_version(session: Session, version_id: int) -> Optional[PageVersion]:
     if version is None:
         return None
     version.status = PAGE_VERSION_STATUS_IN_PROGRESS
-    version.started_at = datetime.utcnow()
+    version.started_at = utcnow()
     version.completed_at = None
     version.error = None
     session.commit()
@@ -473,10 +473,10 @@ def publish_version(session: Session, version_id: int) -> Optional[PageVersion]:
     page = version.page
     old_published_id = page.published_version_id
     version.status = PAGE_VERSION_STATUS_ACCEPTED
-    version.completed_at = version.completed_at or datetime.utcnow()
+    version.completed_at = version.completed_at or utcnow()
     page.published_version_id = version.id
     page.working_version_id = None
-    page.updated_at = datetime.utcnow()
+    page.updated_at = utcnow()
     session.flush()
     if old_published_id is not None and old_published_id != version.id:
         old = session.get(PageVersion, old_published_id)
@@ -499,6 +499,6 @@ def delete_version(session: Session, version_id: int) -> None:
             page.working_version_id = None
         if page.published_version_id == version_id:
             page.published_version_id = None
-        page.updated_at = datetime.utcnow()
+        page.updated_at = utcnow()
     session.delete(version)
     session.commit()

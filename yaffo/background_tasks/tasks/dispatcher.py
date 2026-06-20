@@ -1,6 +1,6 @@
-from datetime import datetime
-
 from yaffo.taskq import crontab
+
+from yaffo.utils.time import utcnow
 
 from yaffo.background_tasks.automation_dispatch import invoke_automation
 from yaffo.background_tasks.config import task_queue
@@ -23,7 +23,7 @@ def dispatch_scheduled_tasks():
     freshly enabled trigger (next_run_at NULL) is initialised to its next slot
     here rather than firing immediately. Event triggers are dispatched elsewhere
     (a later step), not here."""
-    now = datetime.utcnow()
+    now = utcnow()
     session = SessionFactory()
     try:
         triggers = (

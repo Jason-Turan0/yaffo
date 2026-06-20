@@ -1,8 +1,8 @@
 import json
 import uuid
-from datetime import datetime
 from typing import Callable
 from sqlalchemy.orm import Session
+from yaffo.utils.time import utcnow
 from yaffo.background_tasks.automation_sandbox.executor import run_automation
 from yaffo.background_tasks.events import EventContext, event_chain_scope
 from yaffo.background_tasks.progress_reporter import ProgressReporter
@@ -26,7 +26,7 @@ def _open_run_job(session: Session, automation: Automation) -> Job:
         status=JOB_STATUS_RUNNING,
         automation_id=automation.id,
         message=automation.name,
-        started_at=datetime.utcnow(),
+        started_at=utcnow(),
     )
     session.add(job)
     session.commit()
@@ -51,13 +51,13 @@ def record_run(session: Session, automation: Automation, work: Callable[[Progres
         job = session.get(Job, job.id)
         job.status = JOB_STATUS_FAILED
         job.error = str(e)
-        job.completed_at = datetime.utcnow()
+        job.completed_at = utcnow()
         session.commit()
         logger.error(f"automation '{automation.slug}' run {job.id} failed: {e}", exc_info=True)
         return job
 
     job.status = JOB_STATUS_COMPLETED
-    job.completed_at = datetime.utcnow()
+    job.completed_at = utcnow()
     job.job_data = json.dumps({"output": summary or ""})
     session.commit()
     logger.info(f"automation '{automation.slug}' run recorded as job {job.id} ({job.status})")
@@ -81,7 +81,7 @@ def run_and_record(session: Session, automation: Automation, context: EventConte
     with event_chain_scope(origin, automation.id):
         result = run_automation(session, automation, context)
 
-    job.completed_at = datetime.utcnow()
+    job.completed_at = utcnow()
     job.job_data = json.dumps({"output": result.output})
     if result.success:
         job.status = JOB_STATUS_COMPLETED

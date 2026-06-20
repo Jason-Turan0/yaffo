@@ -1,6 +1,6 @@
 from sqlalchemy import PrimaryKeyConstraint
 from yaffo.db import db
-from datetime import datetime, date
+from yaffo.utils.time import utcnow
 
 PHOTO_STATUS_IMPORTED = "IMPORTED"
 PHOTO_STATUS_INDEXED = "INDEXED"
@@ -62,7 +62,7 @@ class ClassificationLabel(db.Model):
     prompt = db.Column(db.String)
     enabled = db.Column(db.Boolean, nullable=False, default=True)
     is_default = db.Column(db.Boolean, nullable=False, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     @property
     def effective_prompt(self) -> str:
@@ -116,7 +116,8 @@ class Face(db.Model):
     people = db.relationship(
         "Person",
         secondary="people_face",
-        back_populates="faces"
+        back_populates="faces",
+        overlaps="person_face,person,face,person_faces",
     )
 
 class Person(db.Model):
@@ -132,7 +133,8 @@ class Person(db.Model):
     faces = db.relationship(
         "Face",
         secondary="people_face",
-        back_populates="people"
+        back_populates="people",
+        overlaps="person_face,person,face,person_faces",
     )
     # One representative (medoid) embedding per life stage (baby/child/teen/...).
     stage_embeddings = db.relationship(
@@ -140,7 +142,9 @@ class Person(db.Model):
         back_populates="person",
         cascade="all, delete-orphan"
     )
-    person_faces = db.relationship("PersonFace", back_populates="person", cascade="all, delete-orphan")
+    person_faces = db.relationship(
+        "PersonFace", back_populates="person", cascade="all, delete-orphan", overlaps="faces,people"
+    )
 
 
 class PersonEmbedding(db.Model):
@@ -165,7 +169,7 @@ class PersonFace(db.Model):
 
     similarity = db.Column(db.Float)
 
-    face = db.relationship("Face", back_populates="person_face", uselist=False, overlaps="people")
+    face = db.relationship("Face", back_populates="person_face", uselist=False, overlaps="faces,people")
     person = db.relationship("Person", back_populates="person_faces", overlaps="faces,people")
 
 
@@ -203,8 +207,8 @@ class Job(db.Model):
     results = db.relationship("JobResult", back_populates="job", cascade="all, delete-orphan")
     automation = db.relationship("Automation", back_populates="jobs")
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 
     def to_dict(self):
         progress = 0
@@ -241,7 +245,7 @@ class JobResult(db.Model):
     job_id = db.Column(db.String, db.ForeignKey("jobs.id"), nullable=False)
     task_id = db.Column(db.String, nullable=False, unique=True)
     result_data = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     job = db.relationship("Job", back_populates="results")
 
@@ -346,8 +350,8 @@ class Automation(db.Model):
     working_code = db.Column(db.Text)       # custom: the in-progress draft; system: NULL
     config = db.Column(db.JSON)             # system: runtime-tunable settings (e.g. a threshold); custom: NULL
     status = db.Column(db.String, nullable=False, default=AUTOMATION_STATUS_READY)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 
     triggers = db.relationship(
         "AutomationTrigger", back_populates="automation", cascade="all, delete-orphan"
@@ -395,8 +399,8 @@ class AutomationTrigger(db.Model):
     last_run_at = db.Column(db.DateTime)
     event_type = db.Column(db.String)
     config = db.Column(db.JSON)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 
     automation = db.relationship("Automation", back_populates="triggers")
 
@@ -450,10 +454,16 @@ class CustomPage(db.Model):
     # is generating into (or NULL — its presence is the UI-lock predicate). Plain
     # pointers into page_versions; the page <-> version relationship is circular, so
     # these use post_update to let the flush order them after the version exists.
-    published_version_id = db.Column(db.Integer, db.ForeignKey("page_versions.id"), nullable=True)
-    working_version_id = db.Column(db.Integer, db.ForeignKey("page_versions.id"), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # use_alter marks this as a known cycle (page -> version -> page) so metadata DDL
+    # can sort the DROP without warning; the real schema is init_db.py's raw SQL.
+    published_version_id = db.Column(
+        db.Integer, db.ForeignKey("page_versions.id", use_alter=True, name="fk_custom_pages_published_version"), nullable=True
+    )
+    working_version_id = db.Column(
+        db.Integer, db.ForeignKey("page_versions.id", use_alter=True, name="fk_custom_pages_working_version"), nullable=True
+    )
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 
     versions = db.relationship(
         "PageVersion",
@@ -487,7 +497,7 @@ class PageVersion(db.Model):
     status = db.Column(db.String, nullable=False, default=PAGE_VERSION_STATUS_READY)
     # The version this was forked from — lineage for a possible future revert.
     parent_version_id = db.Column(db.Integer, db.ForeignKey("page_versions.id"), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
     started_at = db.Column(db.DateTime, nullable=True)
     completed_at = db.Column(db.DateTime, nullable=True)
     error = db.Column(db.Text, nullable=True)
@@ -548,7 +558,7 @@ class Conversation(db.Model):
     # display-only; only user/assistant are replayed to the model.
     type = db.Column(db.String, nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     version = db.relationship("PageVersion", back_populates="messages")
     automation = db.relationship("Automation", back_populates="messages")
