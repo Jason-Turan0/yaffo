@@ -77,6 +77,20 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
             default=False,
             type='bool'
         ),
+        ConfigField(
+            key="export_labels_enabled",
+            label="Export Labels",
+            help="Write the photo's classification labels into the file's keywords.",
+            default=False,
+            type='bool'
+        ),
+        ConfigField(
+            key="export_custom_tags_enabled",
+            label="Export Custom Tags",
+            help="Write the photo's manual tags (name, or name: value) into the file's keywords.",
+            default=False,
+            type='bool'
+        ),
     ],
     AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME: [
         ConfigField(

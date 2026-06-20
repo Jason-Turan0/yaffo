@@ -40,63 +40,67 @@ def _counting_geocoder(name="Geocoded City"):
     return geocode
 
 
-def test_reuses_nearby_name_without_geocoding(monkeypatch):
+def test_reuses_nearby_name_without_geocoding(monkeypatch, progress_reporter):
     photo = _photo(1, 38.6000, -90.2000)
     _stub_repo(monkeypatch, batch=[photo], named=[(38.6005, -90.2005, "Tower Grove")])
     geocode = _counting_geocoder()
 
     updated = mod._assign_location_names(
-        _FakeSession(), [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
+        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
     )
 
     assert updated == [1]
     assert photo.location_name == "Tower Grove"
     assert geocode.calls == []
+    assert progress_reporter.run_with_progress_calls == [[photo]]
 
 
-def test_geocodes_when_no_named_photo_in_radius(monkeypatch):
+def test_geocodes_when_no_named_photo_in_radius(monkeypatch, progress_reporter):
     photo = _photo(1, 38.6000, -90.2000)
     # Named photo is ~1.2 km away — outside a 1 km radius.
     _stub_repo(monkeypatch, batch=[photo], named=[(38.6100, -90.2050, "Far Place")])
     geocode = _counting_geocoder("Nominatim Name")
 
     updated = mod._assign_location_names(
-        _FakeSession(), [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
+        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
     )
 
     assert updated == [1]
     assert photo.location_name == "Nominatim Name"
     assert len(geocode.calls) == 1
+    assert progress_reporter.run_with_progress_calls == [[photo]]
 
 
-def test_skips_already_named_unless_overwrite(monkeypatch):
+def test_skips_already_named_unless_overwrite(monkeypatch, progress_reporter):
     photo = _photo(1, 38.6, -90.2, location_name="My Name")
     _stub_repo(monkeypatch, batch=[photo], named=[])
     geocode = _counting_geocoder()
 
     updated = mod._assign_location_names(
-        _FakeSession(), [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
+        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
     )
 
     assert updated == []
     assert photo.location_name == "My Name"
     assert geocode.calls == []
+    assert progress_reporter.run_with_progress_calls == [[photo]]
 
 
-def test_overwrite_renames_already_named(monkeypatch):
+def test_overwrite_renames_already_named(monkeypatch, progress_reporter):
     photo = _photo(1, 38.6, -90.2, location_name="Old")
     _stub_repo(monkeypatch, batch=[photo], named=[])
     geocode = _counting_geocoder("New")
 
     updated = mod._assign_location_names(
-        _FakeSession(), [1], reuse_enabled=True, radius_m=1000, overwrite=True, geocode=geocode
+        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_m=1000, overwrite=True, geocode=geocode
     )
 
     assert updated == [1]
     assert photo.location_name == "New"
+    assert progress_reporter.run_with_progress_calls == [[photo]]
 
 
-def test_within_batch_reuse_geocodes_once_per_cluster(monkeypatch):
+def test_within_batch_reuse_geocodes_once_per_cluster(monkeypatch, progress_reporter):
     # Two unnamed photos ~55 m apart: the first geocodes, the second reuses it.
     a = _photo(1, 38.6000, -90.2000)
     b = _photo(2, 38.6005, -90.2000)
@@ -104,27 +108,29 @@ def test_within_batch_reuse_geocodes_once_per_cluster(monkeypatch):
     geocode = _counting_geocoder("Cluster City")
 
     updated = mod._assign_location_names(
-        _FakeSession(), [1, 2], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
+        _FakeSession(), progress_reporter, [1, 2], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
     )
 
     assert updated == [1, 2]
     assert a.location_name == b.location_name == "Cluster City"
     assert len(geocode.calls) == 1
+    assert progress_reporter.run_with_progress_calls == [[a, b]]
 
 
-def test_no_geocoder_leaves_unmatched_photo_unnamed(monkeypatch):
+def test_no_geocoder_leaves_unmatched_photo_unnamed(monkeypatch, progress_reporter):
     photo = _photo(1, 38.6, -90.2)
     _stub_repo(monkeypatch, batch=[photo], named=[])
 
     updated = mod._assign_location_names(
-        _FakeSession(), [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=None
+        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=None
     )
 
     assert updated == []
     assert photo.location_name is None
+    assert progress_reporter.run_with_progress_calls == [[photo]]
 
 
-def test_reuse_disabled_goes_straight_to_geocode(monkeypatch):
+def test_reuse_disabled_goes_straight_to_geocode(monkeypatch, progress_reporter):
     photo = _photo(1, 38.6000, -90.2000)
     # A name sits right on top, but reuse is off, so it must geocode instead.
     named_calls = []
@@ -136,24 +142,27 @@ def test_reuse_disabled_goes_straight_to_geocode(monkeypatch):
     geocode = _counting_geocoder("Geo")
 
     updated = mod._assign_location_names(
-        _FakeSession(), [1], reuse_enabled=False, radius_m=1000, overwrite=False, geocode=geocode
+        _FakeSession(), progress_reporter, [1], reuse_enabled=False, radius_m=1000, overwrite=False, geocode=geocode
     )
 
     assert updated == [1]
     assert photo.location_name == "Geo"
     assert named_calls == []  # candidates not even loaded when reuse is off
+    assert progress_reporter.run_with_progress_calls == [[photo]]
 
 
-def test_no_photos_with_coords_is_noop(monkeypatch):
+def test_no_photos_with_coords_is_noop(monkeypatch, progress_reporter):
     _stub_repo(monkeypatch, batch=[], named=[])
     session = _FakeSession()
 
     updated = mod._assign_location_names(
-        session, [1, 2], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=_counting_geocoder()
+        session, progress_reporter, [1, 2], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=_counting_geocoder()
     )
 
     assert updated == []
     assert session.commits == 0
+    # No photos with coordinates — the function returns before reporting any progress.
+    assert progress_reporter.run_with_progress_calls == []
 
 
 def test_handler_enqueues_for_event_photos(monkeypatch):

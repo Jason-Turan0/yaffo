@@ -32,53 +32,59 @@ def _patch(monkeypatch, *, faces_by_photo, scores_by_face, people=("p",)):
     return linked
 
 
-def test_assigns_unique_strong_match(monkeypatch):
+def test_assigns_unique_strong_match(monkeypatch, progress_reporter):
     face = SimpleNamespace(id=10)
     linked = _patch(
         monkeypatch,
         faces_by_photo={1: [face]},
         scores_by_face={10: {7: 0.97, 8: 0.40}},  # only person 7 clears 0.95
     )
-    assigned = mod._assign_faces(session=None, photo_ids=[1], threshold=0.95)
+    assigned = mod._assign_faces(None, progress_reporter, photo_ids=[1], threshold=0.95)
     assert assigned == 1
     assert linked == [(7, 10)]
+    assert progress_reporter.run_with_progress_calls == [[1]]
 
 
-def test_ambiguous_match_is_skipped(monkeypatch):
+def test_ambiguous_match_is_skipped(monkeypatch, progress_reporter):
     face = SimpleNamespace(id=10)
     linked = _patch(
         monkeypatch,
         faces_by_photo={1: [face]},
         scores_by_face={10: {7: 0.97, 8: 0.96}},  # two people clear the bar -> ambiguous
     )
-    assert mod._assign_faces(session=None, photo_ids=[1], threshold=0.95) == 0
+    assert mod._assign_faces(None, progress_reporter, photo_ids=[1], threshold=0.95) == 0
     assert linked == []
+    assert progress_reporter.run_with_progress_calls == [[1]]
 
 
-def test_no_match_above_threshold_is_skipped(monkeypatch):
+def test_no_match_above_threshold_is_skipped(monkeypatch, progress_reporter):
     face = SimpleNamespace(id=10)
     _patch(monkeypatch, faces_by_photo={1: [face]}, scores_by_face={10: {7: 0.5}})
-    assert mod._assign_faces(session=None, photo_ids=[1], threshold=0.95) == 0
+    assert mod._assign_faces(None, progress_reporter, photo_ids=[1], threshold=0.95) == 0
+    assert progress_reporter.run_with_progress_calls == [[1]]
 
 
-def test_threshold_is_respected(monkeypatch):
+def test_threshold_is_respected(monkeypatch, progress_reporter):
     face = SimpleNamespace(id=10)
     linked = _patch(
         monkeypatch,
         faces_by_photo={1: [face]},
         scores_by_face={10: {7: 0.90}},  # below 0.95 but above a relaxed 0.85
     )
-    assert mod._assign_faces(session=None, photo_ids=[1], threshold=0.85) == 1
+    assert mod._assign_faces(None, progress_reporter, photo_ids=[1], threshold=0.85) == 1
     assert linked == [(7, 10)]
+    assert progress_reporter.run_with_progress_calls == [[1]]
 
 
-def test_no_people_is_noop(monkeypatch):
+def test_no_people_is_noop(monkeypatch, progress_reporter):
     face = SimpleNamespace(id=10)
     _patch(monkeypatch, faces_by_photo={1: [face]}, scores_by_face={10: {}}, people=())
-    assert mod._assign_faces(session=None, photo_ids=[1], threshold=0.95) == 0
+    assert mod._assign_faces(None, progress_reporter, photo_ids=[1], threshold=0.95) == 0
+    # No people to match against — the function returns before reporting any progress.
+    assert progress_reporter.run_with_progress_calls == []
 
 
-def test_task_scales_ui_threshold_to_cosine_against_the_band(monkeypatch):
+def test_task_scales_ui_threshold_to_cosine_against_the_band(monkeypatch, progress_reporter):
     """The stored config value is a 0-100 UI threshold; the task must scale it to a
     cosine cutoff against the live similarity band before matching -- not pass the
     raw UI number to _assign_faces."""
@@ -94,10 +100,11 @@ def test_task_scales_ui_threshold_to_cosine_against_the_band(monkeypatch):
     monkeypatch.setattr(mod, "SessionFactory", FakeFactory())
     monkeypatch.setattr(mod, "config_value", lambda automation, field: 50)  # UI midpoint
     monkeypatch.setattr(mod, "get_similarity_bounds", lambda session: (0.40, 0.80))
-    monkeypatch.setattr(mod, "record_run", lambda session, automation, work: work())
+    monkeypatch.setattr(mod, "record_run", lambda session, automation, work: work(progress_reporter))
 
-    def _capture(session, photo_ids, threshold):
+    def _capture(session, reporter, photo_ids, threshold):
         captured["threshold"] = threshold
+        captured["reporter"] = reporter
         return 0
 
     monkeypatch.setattr(mod, "_assign_faces", _capture)
@@ -107,6 +114,8 @@ def test_task_scales_ui_threshold_to_cosine_against_the_band(monkeypatch):
 
     # ui_threshold_to_similarity(50, 0.40, 0.80) == midpoint == 0.60
     assert captured["threshold"] == pytest.approx(0.60)
+    # record_run hands work the ProgressReporter, which is threaded through to _assign_faces.
+    assert captured["reporter"] is progress_reporter
 
 
 def test_handler_enqueues_for_event_photos(monkeypatch):

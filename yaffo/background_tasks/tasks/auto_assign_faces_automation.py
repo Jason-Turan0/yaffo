@@ -15,6 +15,7 @@ from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_v
 from yaffo.background_tasks.automation_runs import record_run
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
+from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, AUTOMATION_HANDLER_AUTO_ASSIGN_FACES
@@ -26,7 +27,7 @@ from yaffo.domain.compare_utils import calculate_face_similarity, ui_threshold_t
 _THRESHOLD_FIELD = AUTOMATION_CONFIG[AUTOMATION_HANDLER_AUTO_ASSIGN_FACES][0]
 
 
-def _assign_faces(session: Session, photo_ids: list[int], threshold: float) -> int:
+def _assign_faces(session: Session, progress_reporter: ProgressReporter, photo_ids: list[int], threshold: float) -> int:
     """For each face in the given photos, assign it to the single person it matches
     at/above `threshold`; skip faces with zero or multiple strong matches. Returns
     how many links were made. People are loaded once for the whole batch."""
@@ -34,7 +35,8 @@ def _assign_faces(session: Session, photo_ids: list[int], threshold: float) -> i
     if not people:
         return 0
     assigned = 0
-    for photo_id in photo_ids:
+    def photo_processor (photo_id: int):
+        nonlocal assigned
         for face in photos_repository.get_faces_for_photo(session, photo_id):
             strong = [
                 person_id
@@ -43,6 +45,7 @@ def _assign_faces(session: Session, photo_ids: list[int], threshold: float) -> i
             ]
             if len(strong) == 1 and person_repository.link_face_to_person(session, strong[0], face.id):
                 assigned += 1
+    progress_reporter.run_with_progress(photo_ids, photo_processor)
     return assigned
 
 
@@ -61,8 +64,8 @@ def auto_assign_faces_automation_task(automation_id: int, photo_ids: list[int]):
         ui_threshold = config_value(automation, _THRESHOLD_FIELD)
         threshold = ui_threshold_to_similarity(ui_threshold, *get_similarity_bounds(session))
 
-        def work() -> str:
-            assigned = _assign_faces(session, photo_ids, threshold)
+        def work(progress_reporter: ProgressReporter) -> str:
+            assigned = _assign_faces(session, progress_reporter, photo_ids, threshold)
             return (
                 f"assigned {assigned} face(s) across {len(photo_ids)} "
                 f"photo(s) at threshold {ui_threshold} (cosine {threshold:.3f})"

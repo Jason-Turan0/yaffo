@@ -23,9 +23,10 @@ from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_v
 from yaffo.background_tasks.automation_runs import record_run
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
+from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
-from yaffo.db.models import Automation, AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS
+from yaffo.db.models import Automation, AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS, Photo
 from yaffo.db.repositories import photos_repository
 from yaffo.utils.photo_dates import parse_date_taken
 
@@ -58,13 +59,14 @@ def _nearest_match(
     return best
 
 
-def _geotag_from_neighbors(session: Session, photo_ids: list[int], max_minutes: int) -> list[int]:
+def _geotag_from_neighbors(session: Session, progress_reporter: ProgressReporter, photo_ids: list[int], max_minutes: int) -> list[int]:
     """Give each GPS-less photo in `photo_ids` the coordinates (and location name, if
     the source has one) of the closest-in-time GPS-tagged photo within `max_minutes`;
     return the ids actually updated (committed). Candidates are loaded once up front,
     so newly-geotagged photos aren't reused."""
     targets = photos_repository.get_photos_missing_gps(session, photo_ids)
     if not targets:
+        progress_reporter.progress_update(1,1,0,0)
         return []
 
     candidates = []
@@ -73,6 +75,7 @@ def _geotag_from_neighbors(session: Session, photo_ids: list[int], max_minutes: 
         if dt is not None:
             candidates.append((dt, lat, lon, location_name))
     if not candidates:
+        progress_reporter.progress_update(1, 1, 0, 0)
         return []
     candidates.sort(key=lambda c: c[0])
     times = [c[0] for c in candidates]
@@ -80,10 +83,10 @@ def _geotag_from_neighbors(session: Session, photo_ids: list[int], max_minutes: 
     max_delta = timedelta(minutes=max_minutes)
 
     updated: list[int] = []
-    for photo in targets:
+    def photo_processor (photo: Photo):
         target = parse_date_taken(photo.date_taken)
         if target is None:
-            continue
+            return
         match = _nearest_match(target, times, values, max_delta)
         if match is not None:
             lat, lon, location_name = match
@@ -92,7 +95,7 @@ def _geotag_from_neighbors(session: Session, photo_ids: list[int], max_minutes: 
             if location_name and not (photo.location_name or "").strip():
                 photo.location_name = location_name
             updated.append(photo.id)
-
+    progress_reporter.run_with_progress(targets, photo_processor)
     if updated:
         session.commit()
     return updated
@@ -110,8 +113,8 @@ def geotag_from_neighbors_automation_task(automation_id: int, photo_ids: list[in
             return
         max_minutes = int(config_value(automation, _MINUTES_FIELD))
 
-        def work() -> str:
-            updated = _geotag_from_neighbors(session, photo_ids, max_minutes)
+        def work(progress_reporter: ProgressReporter) -> str:
+            updated = _geotag_from_neighbors(session, progress_reporter, photo_ids, max_minutes)
             return f"geotagged {len(updated)}/{len(photo_ids)} photo(s) within {max_minutes} min"
 
         record_run(session, automation, work)

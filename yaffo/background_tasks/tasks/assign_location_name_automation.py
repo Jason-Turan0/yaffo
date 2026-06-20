@@ -23,6 +23,7 @@ from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_v
 from yaffo.background_tasks.automation_runs import record_run
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext, emit_event, event_chain_scope
+from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import (
@@ -59,6 +60,7 @@ def _nearest_name(
 
 def _assign_location_names(
     session: Session,
+    progress_reporter: ProgressReporter,
     photo_ids: list[int],
     *,
     reuse_enabled: bool,
@@ -75,9 +77,9 @@ def _assign_location_names(
     candidates = photos_repository.get_named_coordinates(session) if reuse_enabled else []
 
     updated: list[int] = []
-    for photo in photos:
+    def photo_processor(photo):
         if not overwrite and (photo.location_name or "").strip():
-            continue
+            return
         name = _nearest_name(photo.latitude, photo.longitude, candidates, radius_m) if reuse_enabled else None
         if name is None and geocode is not None:
             name = geocode(photo.latitude, photo.longitude)
@@ -85,6 +87,8 @@ def _assign_location_names(
             photo.location_name = name
             candidates.append((photo.latitude, photo.longitude, name))
             updated.append(photo.id)
+
+    progress_reporter.run_with_progress(photos, photo_processor)
 
     if updated:
         session.commit()
@@ -125,9 +129,10 @@ def assign_location_name_automation_task(
         overwrite = bool(config_value(automation, _FIELDS["overwrite_existing"]))
         geocode = _throttled_geocoder() if bool(config_value(automation, _FIELDS["reverse_geocode_enabled"])) else None
 
-        def work() -> str:
+        def work(progress_callback: ProgressReporter) -> str:
             updated = _assign_location_names(
                 session,
+                progress_callback,
                 photo_ids,
                 reuse_enabled=reuse_enabled,
                 radius_m=radius_m,

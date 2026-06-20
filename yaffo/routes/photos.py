@@ -1,7 +1,7 @@
 from yaffo.utils.image import convert_heif
 from flask import Flask, Response, abort, send_from_directory, send_file, render_template, request, jsonify
-from yaffo.common import ROOT_DIR
-from yaffo.db.models import db, Photo, Person, Tag
+from yaffo.background_tasks.events import emit_event
+from yaffo.db.models import db, Photo, Person, Tag, EVENT_PHOTO_MODIFIED
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import Face
 from pathlib import Path
@@ -191,73 +191,39 @@ def init_photos_routes(app: Flask):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    @app.route("/api/photo/<int:photo_id>/tags", methods=["POST"])
-    def add_photo_tag(photo_id: int):
-        """Add a tag to a photo"""
+    @app.route("/api/photo/<int:photo_id>/tags", methods=["PUT"])
+    def update_photo_tags(photo_id: int):
+        """Replace a photo's full tag set in one request, then emit photo_modified so
+        downstream automations (e.g. export_photo_tag) react once per save."""
         photo = db.session.get(Photo, photo_id)
         if not photo:
             return jsonify({"error": "Photo not found"}), 404
 
-        data = request.get_json()
-        tag_name = data.get("tag_name", "").strip()
-        tag_value = data.get("tag_value", "").strip()
+        data = request.get_json(silent=True) or {}
+        incoming = data.get("tags", [])
+        if not isinstance(incoming, list):
+            return jsonify({"error": "tags must be a list"}), 400
 
-        if not tag_name:
-            return jsonify({"error": "Tag name is required"}), 400
+        normalized = []
+        for item in incoming:
+            if not isinstance(item, dict):
+                return jsonify({"error": "each tag must be an object"}), 400
+            tag_name = (item.get("tag_name") or "").strip()
+            tag_value = (item.get("tag_value") or "").strip()
+            if not tag_name:
+                return jsonify({"error": "Tag name is required"}), 400
+            normalized.append((tag_name, tag_value or None))
 
-        # Create new tag
-        tag = Tag(
-            photo_id=photo_id,
-            tag_name=tag_name,
-            tag_value=tag_value if tag_value else None
-        )
-        db.session.add(tag)
+        # Replace the collection; delete-orphan cascade removes the old rows on flush.
+        photo.tags = [Tag(tag_name=name, tag_value=value) for name, value in normalized]
         db.session.commit()
+
+        emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": [photo_id]})
 
         return jsonify({
             "success": True,
-            "tag": {
-                "id": tag.id,
-                "tag_name": tag.tag_name,
-                "tag_value": tag.tag_value
-            }
+            "tags": [
+                {"id": tag.id, "tag_name": tag.tag_name, "tag_value": tag.tag_value}
+                for tag in photo.tags
+            ],
         })
-
-    @app.route("/api/photo/tags/<int:tag_id>", methods=["PUT"])
-    def update_photo_tag(tag_id: int):
-        """Update a tag"""
-        tag = db.session.get(Tag, tag_id)
-        if not tag:
-            return jsonify({"error": "Tag not found"}), 404
-
-        data = request.get_json()
-        tag_name = data.get("tag_name", "").strip()
-        tag_value = data.get("tag_value", "").strip()
-
-        if not tag_name:
-            return jsonify({"error": "Tag name is required"}), 400
-
-        tag.tag_name = tag_name
-        tag.tag_value = tag_value if tag_value else None
-        db.session.commit()
-
-        return jsonify({
-            "success": True,
-            "tag": {
-                "id": tag.id,
-                "tag_name": tag.tag_name,
-                "tag_value": tag.tag_value
-            }
-        })
-
-    @app.route("/api/photo/tags/<int:tag_id>", methods=["DELETE"])
-    def delete_photo_tag(tag_id: int):
-        """Delete a tag"""
-        tag = db.session.get(Tag, tag_id)
-        if not tag:
-            return jsonify({"error": "Tag not found"}), 404
-
-        db.session.delete(tag)
-        db.session.commit()
-
-        return jsonify({"success": True})

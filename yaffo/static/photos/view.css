@@ -393,6 +393,22 @@
     color: var(--color-text-secondary);
 }
 
+.tag-add-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tag-add-row .tag-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.tag-add-row .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
 .btn-icon-delete {
     background: none;
     border: none;

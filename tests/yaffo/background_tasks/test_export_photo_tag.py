@@ -34,75 +34,124 @@ class _FakeSession:
         return _FakeQuery(self._photos)
 
 
-def _photo(tmp_path, *, location, people, name="p.jpg"):
+def _photo(tmp_path, *, location, people, labels=(), tags=(), name="p.jpg"):
     f = tmp_path / name
     f.write_bytes(b"x")
     faces = [SimpleNamespace(people=[SimpleNamespace(name=n) for n in group]) for group in people]
-    return SimpleNamespace(full_file_path=str(f), location_name=location, faces=faces)
+    label_rows = [SimpleNamespace(label=SimpleNamespace(name=n)) for n in labels]
+    tag_rows = [SimpleNamespace(tag_name=tn, tag_value=tv) for tn, tv in tags]
+    return SimpleNamespace(
+        full_file_path=str(f), location_name=location, faces=faces, labels=label_rows, tags=tag_rows
+    )
 
 
 def _patch_writes(monkeypatch):
-    """Stub the file write to record (location_name, people_names) per call."""
+    """Stub the file write to record (location_name, people_names, keywords) per call."""
     calls: list[tuple] = []
 
-    def _write(photo_path, location_name=None, people_names=None):
-        calls.append((location_name, people_names))
+    def _write(photo_path, location_name=None, people_names=None, keywords=None):
+        calls.append((location_name, people_names, keywords))
         return True, None
 
     monkeypatch.setattr(mod, "write_photo_metadata", _write)
     return calls
 
 
-def test_exports_both_tags(tmp_path, monkeypatch):
+def test_exports_both_tags(tmp_path, monkeypatch, progress_reporter):
     calls = _patch_writes(monkeypatch)
     photo = _photo(tmp_path, location="Paris", people=[["Alice"], ["Bob"]])
     session = _FakeSession([photo])
-    written = mod._export_tags(session, [1], export_location=True, export_people=True)
+    written = mod._export_tags(session, progress_reporter, [1], export_location=True, export_people=True)
     assert written == 1
-    assert calls == [("Paris", ["Alice", "Bob"])]
+    assert calls == [("Paris", ["Alice", "Bob"], None)]
+    assert progress_reporter.run_with_progress_calls == [[photo]]
 
 
-def test_location_only(tmp_path, monkeypatch):
+def test_location_only(tmp_path, monkeypatch, progress_reporter):
     calls = _patch_writes(monkeypatch)
     photo = _photo(tmp_path, location="Paris", people=[["Alice"]])
-    written = mod._export_tags(_FakeSession([photo]), [1], export_location=True, export_people=False)
+    written = mod._export_tags(_FakeSession([photo]), progress_reporter, [1], export_location=True, export_people=False)
     assert written == 1
-    assert calls == [("Paris", None)]
+    assert calls == [("Paris", None, None)]
+    assert progress_reporter.run_with_progress_calls == [[photo]]
 
 
-def test_people_only(tmp_path, monkeypatch):
+def test_people_only(tmp_path, monkeypatch, progress_reporter):
     calls = _patch_writes(monkeypatch)
     photo = _photo(tmp_path, location="Paris", people=[["Alice"]])
-    written = mod._export_tags(_FakeSession([photo]), [1], export_location=False, export_people=True)
+    written = mod._export_tags(_FakeSession([photo]), progress_reporter, [1], export_location=False, export_people=True)
     assert written == 1
-    assert calls == [(None, ["Alice"])]
+    assert calls == [(None, ["Alice"], None)]
+    assert progress_reporter.run_with_progress_calls == [[photo]]
 
 
-def test_neither_enabled_is_noop(tmp_path, monkeypatch):
+def test_neither_enabled_is_noop(tmp_path, monkeypatch, progress_reporter):
     calls = _patch_writes(monkeypatch)
     photo = _photo(tmp_path, location="Paris", people=[["Alice"]])
-    assert mod._export_tags(_FakeSession([photo]), [1], export_location=False, export_people=False) == 0
+    assert mod._export_tags(_FakeSession([photo]), progress_reporter, [1], export_location=False, export_people=False) == 0
     assert calls == []
+    # Nothing enabled to export — the function returns before reporting any progress.
+    assert progress_reporter.run_with_progress_calls == []
 
 
-def test_no_photo_ids_is_noop(monkeypatch):
+def test_no_photo_ids_is_noop(monkeypatch, progress_reporter):
     calls = _patch_writes(monkeypatch)
-    assert mod._export_tags(_FakeSession([]), [], export_location=True, export_people=True) == 0
+    assert mod._export_tags(_FakeSession([]), progress_reporter, [], export_location=True, export_people=True) == 0
     assert calls == []
+    # No photo ids — the function returns before reporting any progress.
+    assert progress_reporter.run_with_progress_calls == []
 
 
-def test_missing_file_is_skipped(tmp_path, monkeypatch):
+def test_missing_file_is_skipped(tmp_path, monkeypatch, progress_reporter):
     calls = _patch_writes(monkeypatch)
     photo = SimpleNamespace(full_file_path=str(tmp_path / "gone.jpg"), location_name="X", faces=[])
-    assert mod._export_tags(_FakeSession([photo]), [1], export_location=True, export_people=True) == 0
+    assert mod._export_tags(_FakeSession([photo]), progress_reporter, [1], export_location=True, export_people=True) == 0
     assert calls == []
+    assert progress_reporter.run_with_progress_calls == [[photo]]
 
 
-def test_people_names_deduped_and_sorted(tmp_path, monkeypatch):
+def test_people_names_deduped_and_sorted(tmp_path, monkeypatch, progress_reporter):
     calls = _patch_writes(monkeypatch)
     photo = _photo(tmp_path, location=None, people=[["Bob", "Alice"], ["Alice"]])
-    mod._export_tags(_FakeSession([photo]), [1], export_location=False, export_people=True)
-    assert calls == [(None, ["Alice", "Bob"])]
+    mod._export_tags(_FakeSession([photo]), progress_reporter, [1], export_location=False, export_people=True)
+    assert calls == [(None, ["Alice", "Bob"], None)]
+    assert progress_reporter.run_with_progress_calls == [[photo]]
+
+
+def test_exports_labels_as_keywords(tmp_path, monkeypatch, progress_reporter):
+    calls = _patch_writes(monkeypatch)
+    photo = _photo(tmp_path, location="Paris", people=[["Alice"]], labels=["beach", "sunset"])
+    written = mod._export_tags(_FakeSession([photo]), progress_reporter, [1], False, False, export_labels=True)
+    assert written == 1
+    # only labels go out (location/people off); labels become keywords, sorted+deduped
+    assert calls == [(None, None, ["beach", "sunset"])]
+    assert progress_reporter.run_with_progress_calls == [[photo]]
+
+
+def test_exports_custom_tags_as_keywords(tmp_path, monkeypatch, progress_reporter):
+    calls = _patch_writes(monkeypatch)
+    photo = _photo(tmp_path, location=None, people=[], tags=[("rating", "5"), ("favorite", None)])
+    mod._export_tags(_FakeSession([photo]), progress_reporter, [1], False, False, export_custom_tags=True)
+    # 'name: value' when a value is present, bare 'name' otherwise; sorted
+    assert calls == [(None, None, ["favorite", "rating: 5"])]
+    assert progress_reporter.run_with_progress_calls == [[photo]]
+
+
+def test_labels_and_custom_tags_combine_into_keywords(tmp_path, monkeypatch, progress_reporter):
+    calls = _patch_writes(monkeypatch)
+    photo = _photo(tmp_path, location=None, people=[], labels=["beach"], tags=[("trip", "maui")])
+    mod._export_tags(_FakeSession([photo]), progress_reporter, [1], False, False, export_labels=True, export_custom_tags=True)
+    assert calls == [(None, None, ["beach", "trip: maui"])]
+    assert progress_reporter.run_with_progress_calls == [[photo]]
+
+
+def test_labels_off_means_no_keywords(tmp_path, monkeypatch, progress_reporter):
+    calls = _patch_writes(monkeypatch)
+    photo = _photo(tmp_path, location="Paris", people=[["Alice"]], labels=["beach"], tags=[("x", "y")])
+    mod._export_tags(_FakeSession([photo]), progress_reporter, [1], export_location=True, export_people=True)
+    # labels/custom-tags toggles default off, so keywords stay None even when present
+    assert calls == [("Paris", ["Alice"], None)]
+    assert progress_reporter.run_with_progress_calls == [[photo]]
 
 
 def test_handler_enqueues_for_event_photos(monkeypatch):

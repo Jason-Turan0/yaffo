@@ -497,3 +497,42 @@ class TestIntegrationWithRealImage:
         else:
             # Single value or not set
             assert "Alice" in str(person_in_image) or "Bob" in str(person_in_image)
+
+class TestWriteKeywords:
+    """Labels + custom tags are written as keywords across the three formats."""
+
+    @patch('yaffo.utils.write_metadata._HAS_EXIFTOOL', True)
+    @patch('yaffo.utils.write_metadata._get_existing_keywords', return_value=[])
+    @patch('yaffo.utils.write_metadata._run_exiftool')
+    def test_jpeg_keywords_via_exiftool(self, mock_exiftool, _existing, temp_jpeg):
+        _write_jpeg_metadata(temp_jpeg, None, None, None, ["beach", "sunset"])
+
+        args = mock_exiftool.call_args[0][0]
+        # written to both standard keyword fields
+        assert "-XMP:Subject=beach" in args
+        assert "-IPTC:Keywords=beach" in args
+        assert "-XMP:Subject=sunset" in args
+        assert "-IPTC:Keywords=sunset" in args
+
+    @patch('yaffo.utils.write_metadata._HAS_EXIFTOOL', True)
+    @patch('yaffo.utils.write_metadata._get_existing_keywords', return_value=["beach"])
+    @patch('yaffo.utils.write_metadata._run_exiftool')
+    def test_keywords_merge_with_existing(self, mock_exiftool, _existing, temp_jpeg):
+        _write_jpeg_metadata(temp_jpeg, None, None, None, ["BEACH", "city"])
+
+        subjects = [a for a in mock_exiftool.call_args[0][0] if a.startswith("-XMP:Subject=")]
+        # existing 'beach' kept (first casing wins), new 'city' added, no duplicate
+        assert subjects == ["-XMP:Subject=beach", "-XMP:Subject=city"]
+
+    @patch('yaffo.utils.write_metadata._HAS_EXIFTOOL', False)
+    def test_jpeg_keywords_via_piexif(self, temp_jpeg):
+        _write_jpeg_metadata(temp_jpeg, None, None, None, ["sunset", "beach"])
+
+        exif_dict = piexif.load(Image.open(temp_jpeg).info.get("exif", b""))
+        raw = exif_dict["0th"][piexif.ImageIFD.XPKeywords]
+        decoded = bytes(raw).decode("utf-16-le").rstrip("\x00")
+        assert decoded == "beach;sunset"  # sorted, semicolon-joined
+
+    def test_png_keywords(self, temp_png):
+        _write_png_metadata(temp_png, None, None, None, ["sunset", "beach"])
+        assert Image.open(temp_png).info.get("Keywords") == "beach, sunset"

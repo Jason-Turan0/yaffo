@@ -185,13 +185,12 @@
 
             <div class="tag-add-section">
                 <h4>Add New Tag</h4>
-                <div class="form-row">
+                <div class="tag-add-row">
                     <input type="text" id="modal-new-tag-name" placeholder="Tag name" class="tag-input">
                     <input type="text" id="modal-new-tag-value" placeholder="Tag value (optional)" class="tag-input">
+                    <button type="button" class="btn btn-secondary"
+                            onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.addTagToList()">+ Add Tag</button>
                 </div>
-                <button type="button" class="btn btn-secondary"
-                        onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.addTagToList()">+ Add Tag
-                </button>
             </div>
         </div>
     {% endmacro %}

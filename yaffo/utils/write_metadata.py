@@ -38,16 +38,46 @@ def _get_existing_person_in_image(photo_path: Path) -> list[str]:
         return []
 
 
-def _merge_people_names(existing: list[str], new_names: list[str]) -> list[str]:
-    """Merge people names case-insensitively, preserving original casing."""
-    existing_lower = {name.lower(): name for name in existing}
+def _merge_unique(existing: list[str], new_values: list[str]) -> list[str]:
+    """Merge two string lists case-insensitively (first casing wins), sorted. Used
+    for both people names and keywords so writing never clobbers existing values."""
+    merged = {value.lower(): value for value in existing}
+    for value in new_values:
+        merged.setdefault(value.lower(), value)
+    return sorted(merged.values(), key=str.lower)
 
-    for name in new_names:
-        name_lower = name.lower()
-        if name_lower not in existing_lower:
-            existing_lower[name_lower] = name
 
-    return sorted(existing_lower.values(), key=str.lower)
+def _get_existing_keywords(photo_path: Path) -> list[str]:
+    """Read existing XMP:Subject (keyword) values from the photo using exiftool."""
+    if not _EXIFTOOL_PATH:
+        return []
+    try:
+        cmd = [str(_EXIFTOOL_PATH), "-json", "-XMP:Subject", str(photo_path)]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            return []
+        data = json.loads(result.stdout)
+        if not data:
+            return []
+        subject = data[0].get("Subject", [])
+        if isinstance(subject, str):
+            return [subject]
+        if isinstance(subject, list):
+            return subject
+        return []
+    except (json.JSONDecodeError, subprocess.SubprocessError, Exception):
+        return []
+
+
+def _append_keyword_args(args: list[str], photo_path: Path, keywords: Optional[list[str]]) -> None:
+    """Add the keyword (labels + custom tags) writes to an exiftool arg list, merged
+    with any existing keywords so nothing is clobbered. Written to both XMP:Subject
+    and IPTC:Keywords — the two standard multi-value keyword fields photo apps read."""
+    if not keywords:
+        return
+    for keyword in _merge_unique(_get_existing_keywords(photo_path), keywords):
+        args.append(f"-XMP:Subject={keyword}")
+        args.append(f"-IPTC:Keywords={keyword}")
 
 
 def _run_exiftool(args: list[str]) -> subprocess.CompletedProcess:
@@ -63,7 +93,8 @@ def write_photo_metadata(
     photo_path: Path,
     date_taken: Optional[str] = None,
     location_name: Optional[str] = None,
-    people_names: Optional[list[str]] = None
+    people_names: Optional[list[str]] = None,
+    keywords: Optional[list[str]] = None
 ) -> tuple[bool, Optional[str]]:
     if not photo_path.exists():
         return False, f"File not found: {photo_path}"
@@ -78,15 +109,20 @@ def write_photo_metadata(
 
     try:
         if ext in (".heic", ".heif"):
-            return _write_heic_metadata(photo_path, date_str, location_name, people_names)
+            return _write_heic_metadata(photo_path, date_str, location_name, people_names, keywords)
         elif ext in (".jpg", ".jpeg"):
-            return _write_jpeg_metadata(photo_path, date_str, location_name, people_names)
+            return _write_jpeg_metadata(photo_path, date_str, location_name, people_names, keywords)
         elif ext == ".png":
-            return _write_png_metadata(photo_path, date_str, location_name, people_names)
+            return _write_png_metadata(photo_path, date_str, location_name, people_names, keywords)
         else:
             return False, f"Unsupported file format: {ext}"
     except subprocess.CalledProcessError as e:
-        return False, f"Tool error: {e}"
+        # e.stderr contains the actual error string outputted by exiftool
+        cli_error = e.stderr.strip() if e.stderr else str(e)
+        # If exiftool prints to stdout instead of stderr on failure, you can fallback:
+        if not e.stderr and getattr(e, 'stdout', None):
+            cli_error = e.stdout.strip()
+        return False, f"Tool error: {cli_error} e: {e}"
     except Exception as e:
         return False, f"Error updating metadata: {e}"
 
@@ -95,7 +131,8 @@ def _write_heic_metadata(
     photo_path: Path,
     date_str: Optional[str],
     location_name: Optional[str],
-    people_names: Optional[list[str]]
+    people_names: Optional[list[str]],
+    keywords: Optional[list[str]] = None
 ) -> tuple[bool, Optional[str]]:
     if _HAS_EXIFTOOL:
         args = ["-overwrite_original"]
@@ -104,11 +141,10 @@ def _write_heic_metadata(
         if location_name:
             args.append(f"-XMP:Location={location_name}")
         if people_names:
-            existing_people = _get_existing_person_in_image(photo_path)
-            merged_people = _merge_people_names(existing_people, people_names)
-            if merged_people and len(merged_people) > 0:
-                for person in merged_people:
-                    args.append(f"-XMP:PersonInImage={person}")
+            merged_people = _merge_unique(_get_existing_person_in_image(photo_path), people_names)
+            for person in merged_people:
+                args.append(f"-XMP:PersonInImage={person}")
+        _append_keyword_args(args, photo_path, keywords)
         args.append(str(photo_path))
         _run_exiftool(args)
         return True, None
@@ -120,7 +156,8 @@ def _write_jpeg_metadata(
     photo_path: Path,
     date_str: Optional[str],
     location_name: Optional[str],
-    people_names: Optional[list[str]]
+    people_names: Optional[list[str]],
+    keywords: Optional[list[str]] = None
 ) -> tuple[bool, Optional[str]]:
     if _HAS_EXIFTOOL:
         args = ["-overwrite_original"]
@@ -130,11 +167,10 @@ def _write_jpeg_metadata(
         if location_name:
             args.append(f"-XMP:Location={location_name}")
         if people_names:
-            existing_people = _get_existing_person_in_image(photo_path)
-            merged_people = _merge_people_names(existing_people, people_names)
-            if merged_people and len(merged_people) > 0:
-                for person in merged_people:
-                    args.append(f"-XMP:PersonInImage={person}")
+            merged_people = _merge_unique(_get_existing_person_in_image(photo_path), people_names)
+            for person in merged_people:
+                args.append(f"-XMP:PersonInImage={person}")
+        _append_keyword_args(args, photo_path, keywords)
         args.append(str(photo_path))
         _run_exiftool(args)
         return True, None
@@ -154,6 +190,11 @@ def _write_jpeg_metadata(
             people_str = ", ".join(sorted(people_names))
             exif_dict["0th"][piexif.ImageIFD.Artist] = people_str.encode()
 
+        if keywords:
+            # XPKeywords is the EXIF keyword field (Windows): UTF-16LE, null-terminated.
+            kw_str = ";".join(sorted(keywords))
+            exif_dict["0th"][piexif.ImageIFD.XPKeywords] = kw_str.encode("utf-16-le") + b"\x00\x00"
+
         exif_bytes = piexif.dump(exif_dict)
         img.save(photo_path, "jpeg", exif=exif_bytes)
         return True, None
@@ -163,14 +204,16 @@ def _write_png_metadata(
     photo_path: Path,
     date_str: Optional[str],
     location_name: Optional[str],
-    people_names: Optional[list[str]]
+    people_names: Optional[list[str]],
+    keywords: Optional[list[str]] = None
 ) -> tuple[bool, Optional[str]]:
     img = Image.open(photo_path)
     png_info = PngImagePlugin.PngInfo()
 
     for k, v in img.info.items():
         if isinstance(k, str) and isinstance(v, (str, bytes)):
-            if not k.startswith("Person_"):
+            # Drop the keys we rewrite below so they don't accumulate stale values.
+            if not k.startswith("Person_") and k != "Keywords":
                 png_info.add_text(k, v if isinstance(v, str) else v.decode())
 
     if date_str:
@@ -180,6 +223,8 @@ def _write_png_metadata(
     if people_names:
         for index, person_name in enumerate(sorted(people_names)):
             png_info.add_text(f"Person_{index}", person_name)
+    if keywords:
+        png_info.add_text("Keywords", ", ".join(sorted(keywords)))
 
     img.save(photo_path, pnginfo=png_info)
     return True, None

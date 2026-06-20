@@ -90,33 +90,46 @@ def _system_automation(session, slug):
 
 def test_record_run_writes_completed_job(session):
     """A system automation's run is recorded as a COMPLETED Job with the work's
-    summary in job_data, discoverable via jobs.automation_id."""
+    summary in job_data, discoverable via jobs.automation_id. record_run hands the
+    work a ProgressReporter bound to the run's Job, and the counts it reports land on
+    the Job."""
     automation = _system_automation(session, "assign_location_name")
-    ran = []
+    reporters = []
 
-    job = record_run(session, automation, lambda: ran.append(True) or "named 3/5 photo(s)")
+    def work(progress_reporter):
+        reporters.append(progress_reporter)
+        progress_reporter.progress_update(5, 3, 0, 0)
+        return "named 3/5 photo(s)"
 
-    assert ran == [True]
+    job = record_run(session, automation, work)
+
+    assert len(reporters) == 1
+    assert reporters[0].job_id == job.id
     assert job.automation_id == automation.id
     assert job.name == automation.slug
     assert job.status == JOB_STATUS_COMPLETED
-    assert job.completed_count == 1
+    assert job.task_count == 5
+    assert job.completed_count == 3
     assert job.started_at is not None and job.completed_at is not None
     assert json.loads(job.job_data)["output"] == "named 3/5 photo(s)"
     assert session.query(Job).filter_by(automation_id=automation.id).count() == 1
 
 
 def test_record_run_captures_work_failure(session):
-    """If the work raises, the run is a FAILED Job (error recorded, not re-raised)."""
+    """If the work raises, the run is a FAILED Job (error recorded, not re-raised).
+    The work is still handed a ProgressReporter bound to the run's Job."""
     automation = _system_automation(session, "export_photo_tag")
+    reporters = []
 
-    def boom() -> str:
+    def boom(progress_reporter) -> str:
+        reporters.append(progress_reporter)
         raise RuntimeError("disk on fire")
 
     job = record_run(session, automation, boom)  # must not raise
 
+    assert len(reporters) == 1
+    assert reporters[0].job_id == job.id
     assert job.status == JOB_STATUS_FAILED
-    assert job.error_count == 1
     assert "disk on fire" in job.error
     assert job.automation_id == automation.id
     assert job.completed_at is not None

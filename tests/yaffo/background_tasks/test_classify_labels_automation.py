@@ -36,7 +36,7 @@ def _patch(monkeypatch, *, labels, label_vectors, image_vectors):
     return written
 
 
-def test_keeps_only_labels_at_or_above_threshold(monkeypatch):
+def test_keeps_only_labels_at_or_above_threshold(monkeypatch, progress_reporter):
     # label 1 ~ photo (cos 1.0), label 2 orthogonal (cos 0.0)
     written = _patch(
         monkeypatch,
@@ -44,12 +44,13 @@ def test_keeps_only_labels_at_or_above_threshold(monkeypatch):
         label_vectors=[[1.0, 0.0], [0.0, 1.0]],
         image_vectors={"/photos/5.jpg": [1.0, 0.0]},
     )
-    labeled = mod._classify_photos(session=None, photo_ids=[5], threshold=0.5, max_labels=5)
+    labeled = mod._classify_photos(None, progress_reporter, photo_ids=[5], threshold=0.5, max_labels=5)
     assert labeled == [5]
     assert written[5] == [(1, pytest.approx(1.0))]
+    assert progress_reporter.run_with_progress_calls == [[5]]
 
 
-def test_caps_at_max_labels_keeping_highest(monkeypatch):
+def test_caps_at_max_labels_keeping_highest(monkeypatch, progress_reporter):
     # three labels all clear the threshold; max_labels=2 keeps the two strongest
     v = lambda a, b: [a, b]
     written = _patch(
@@ -58,30 +59,34 @@ def test_caps_at_max_labels_keeping_highest(monkeypatch):
         label_vectors=[v(1.0, 0.0), v(0.96, 0.28), v(0.92, 0.39)],
         image_vectors={"/photos/1.jpg": v(1.0, 0.0)},
     )
-    mod._classify_photos(session=None, photo_ids=[1], threshold=0.5, max_labels=2)
+    mod._classify_photos(None, progress_reporter, photo_ids=[1], threshold=0.5, max_labels=2)
     kept = [lid for lid, _ in written[1]]
     assert kept == [1, 2]  # highest two cosines, in order
+    assert progress_reporter.run_with_progress_calls == [[1]]
 
 
-def test_no_match_clears_labels(monkeypatch):
+def test_no_match_clears_labels(monkeypatch, progress_reporter):
     written = _patch(
         monkeypatch,
         labels=[(1, "dog")],
         label_vectors=[[1.0, 0.0]],
         image_vectors={"/photos/9.jpg": [0.0, 1.0]},  # orthogonal -> cos 0
     )
-    labeled = mod._classify_photos(session=None, photo_ids=[9], threshold=0.23, max_labels=5)
+    labeled = mod._classify_photos(None, progress_reporter, photo_ids=[9], threshold=0.23, max_labels=5)
     assert labeled == []
     assert written[9] == []  # still replaced (wipes any stale labels)
+    assert progress_reporter.run_with_progress_calls == [[9]]
 
 
-def test_no_enabled_labels_is_noop(monkeypatch):
+def test_no_enabled_labels_is_noop(monkeypatch, progress_reporter):
     written = _patch(monkeypatch, labels=[], label_vectors=[], image_vectors={})
-    assert mod._classify_photos(session=None, photo_ids=[1], threshold=0.23, max_labels=5) == []
+    assert mod._classify_photos(None, progress_reporter, photo_ids=[1], threshold=0.23, max_labels=5) == []
     assert written == {}
+    # No enabled vocabulary — the function returns before reporting any progress.
+    assert progress_reporter.run_with_progress_calls == []
 
 
-def test_unreadable_image_is_skipped(monkeypatch):
+def test_unreadable_image_is_skipped(monkeypatch, progress_reporter):
     written = _patch(
         monkeypatch,
         labels=[(1, "dog")],
@@ -93,8 +98,9 @@ def test_unreadable_image_is_skipped(monkeypatch):
         raise OSError("corrupt")
 
     monkeypatch.setattr(mod, "image_from_path", _boom)
-    assert mod._classify_photos(session=None, photo_ids=[2], threshold=0.5, max_labels=5) == []
+    assert mod._classify_photos(None, progress_reporter, photo_ids=[2], threshold=0.5, max_labels=5) == []
     assert written == {}  # skipped entirely, not replaced
+    assert progress_reporter.run_with_progress_calls == [[2]]
 
 
 def test_handler_enqueues_for_event_photos(monkeypatch):

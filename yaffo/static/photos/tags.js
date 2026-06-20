@@ -22,16 +22,16 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
                            class="tag-input"
                            placeholder="Tag name"
                            value="${tag.tag_name || ''}"
-                           onchange="window.PHOTO_ORGANIZER.photoTags.updateTagName(${tag.tempId}, this.value)">
+                           onchange="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.updateTagName(${tag.tempId}, this.value)">
                     <input type="text"
                            class="tag-input"
                            placeholder="Tag value (optional)"
                            value="${tag.tag_value || ''}"
-                           onchange="window.PHOTO_ORGANIZER.photoTags.updateTagValue(${tag.tempId}, this.value)">
+                           onchange="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.updateTagValue(${tag.tempId}, this.value)">
                 </div>
                 <button type="button"
                         class="btn-icon-delete"
-                        onclick="window.PHOTO_ORGANIZER.photoTags.removeTagFromList(${tag.tempId})"
+                        onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.removeTagFromList(${tag.tempId})"
                         title="Remove">
                     🗑️
                 </button>
@@ -113,65 +113,38 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
     const saveAllChanges = async (event) => {
         event.preventDefault();
 
-        const operations = [];
-
-        for (const tag of tags) {
-            if (tag.markedForDeletion && !tag.isNew) {
-                operations.push({
-                    type: 'delete',
-                    promise: fetch(`/api/photo/tags/${tag.id}`, { method: 'DELETE' })
-                });
-            } else if (tag.isNew) {
-                if (!tag.tag_name) {
-                    notification.error('All tags must have a name');
-                    return;
-                }
-                operations.push({
-                    type: 'create',
-                    promise: fetch(`/api/photo/${photoId}/tags`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            tag_name: tag.tag_name,
-                            tag_value: tag.tag_value
-                        })
-                    })
-                });
-            } else if (tag.modified) {
-                if (!tag.tag_name) {
-                    notification.error('All tags must have a name');
-                    return;
-                }
-                operations.push({
-                    type: 'update',
-                    promise: fetch(`/api/photo/tags/${tag.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            tag_name: tag.tag_name,
-                            tag_value: tag.tag_value
-                        })
-                    })
-                });
-            }
-        }
-
-        if (operations.length === 0) {
+        // Nothing touched -> just close (avoids a needless write + photo_modified event).
+        const hasChanges = tags.some(t => t.isNew || t.modified || t.markedForDeletion);
+        if (!hasChanges) {
             modal.close();
             return;
         }
 
+        // The final tag set is everything not marked for deletion; all must be named.
+        const finalTags = tags.filter(t => !t.markedForDeletion);
+        if (finalTags.some(t => !(t.tag_name || '').trim())) {
+            notification.error('All tags must have a name');
+            return;
+        }
+
+        const payload = finalTags.map(t => ({
+            tag_name: t.tag_name.trim(),
+            tag_value: (t.tag_value || '').trim()
+        }));
+
         try {
-            const results = await Promise.all(operations.map(op => op.promise));
+            const response = await fetch(`/api/photo/${photoId}/tags`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tags: payload })
+            });
 
-            const allSuccessful = results.every(r => r.ok);
-
-            if (allSuccessful) {
-                notification.success('Tags updated successfully');
+            if (response.ok) {
                 modal.close();
+                notification.success('Tags updated successfully');
                 window.location.reload();
             } else {
-                notification.error('Some tag operations failed');
+                notification.error('Failed to update tags');
             }
         } catch (error) {
             notification.error('Error saving tags');
