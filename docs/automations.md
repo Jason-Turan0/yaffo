@@ -248,10 +248,22 @@ automation_sandbox/
   | `data_query(query)` | read | `data_query_repository.resolve_query`; photo rows are enriched with `media_dir_id` + `relative_path` (see *Media dirs*) |
   | `face_similarity(photo_id, person_id)` | read | per-face similarity to a person (`domain/compare_utils`) |
   | `match_people(photo_id)` | read | per-face similarity to all known people |
-  | `tag_photo(photo_id, name, value=None)` | mutating | add a `Tag` |
-  | `rename_file(photo_id, new_name)` | mutating | rename in place (basename only) |
-  | `move_photo(photo_id, media_dir_id, target_path)` | mutating | move into a sub-folder of a media dir (confined to it) |
-  | `assign_face(face_id, person_id)` | mutating | link a face to a person (per-face, not per-photo) |
+  | `tag_photos(tags)` | mutating (batch) | add many `Tag`s in one write — `[{photo_id, name, value?}]` |
+  | `assign_faces(assignments)` | mutating (batch) | link many faces to people in one write — `[{face_id, person_id}]` (skips unknown people / already-assigned) |
+  | `move_photos(moves)` | mutating (batch) | move many photos in one transaction — `[{photo_id, media_dir_id, target_path}]` |
+  | `rename_files(renames)` | mutating (batch) | rename many files in one transaction — `[{photo_id, new_name}]` |
+  | `tag_photo(photo_id, name, value=None)` | mutating (single) | add a `Tag` |
+  | `rename_file(photo_id, new_name)` | mutating (single) | rename in place (basename only) |
+  | `move_photo(photo_id, media_dir_id, target_path)` | mutating (single) | move into a sub-folder of a media dir (confined to it) |
+  | `assign_face(face_id, person_id)` | mutating (single) | link a face to a person (per-face, not per-photo) |
+
+  **Batch writes are the default.** The plural functions take a list and persist the
+  whole set in one commit (`photos_repository.add_tags`,
+  `person_repository.bulk_link_faces_to_people`, and a single commit for the file
+  moves/renames); the single-item forms remain for a genuine one-off. The system
+  prompt's `<batching>` section tells the model to collect its writes and call a batch
+  function once rather than looping a single-item mutator (which commits per call) —
+  short, batched writes keep the SQLite write lock from being taken per item.
 
   The actions live in `automation_actions.py`; the read comparisons in
   `automation_compare.py`; both keep all `session.query/add/commit` in
@@ -335,7 +347,8 @@ package — formerly `page_builder` — that the page and theme builders also us
   request.
 - **Prompts** — `prompt_generator/automation_system_prompt.py` (stable: language
   rules, the `ctx` contract, the host API via `render_host_api()`, data sources via
-  `FIELDS_BY_SOURCE`, the `EVENTS` catalog — all *derived*, none restated) +
+  `FIELDS_BY_SOURCE`, the `EVENTS` catalog — all *derived*, none restated — plus a
+  `<batching>` section requiring batched writes over per-item loops) +
   `automation_user_prompt.py` (volatile: request + current code).
 - **Agent + task** — `agent.create_automation_builder_agent` (data-query +
   write-code + add-trigger tools); `tasks/generate_automation.py::generate_automation_task` runs

@@ -138,6 +138,27 @@ def test_summaries_are_friendly(monkeypatch):
     assert summarize_call(HostCall("data_query", [{"source": "photos"}]), s) == "Looking up photos"
     assert summarize_call(HostCall("face_similarity", [5, 9]), s) == "Compare faces in p5.jpg to Grandma"
     assert summarize_call(HostCall("match_people", [5]), s) == "Match faces in p5.jpg to known people"
+    # batch writes summarize by count
+    assert summarize_call(HostCall("tag_photos", [[{"photo_id": 1, "name": "a"}, {"photo_id": 2, "name": "b"}]]), s) == "Tag 2 photo(s)"
+    assert summarize_call(HostCall("assign_faces", [[{"face_id": 1, "person_id": 2}]]), s) == "Assign 1 face(s)"
+    assert summarize_call(HostCall("move_photos", [[{"photo_id": 1}]]), s) == "Move 1 photo(s)"
+    assert summarize_call(HostCall("rename_files", [[]]), s) == "Rename 0 file(s)"
+
+
+def test_batch_write_is_recorded_not_performed(monkeypatch):
+    """A batch mutating call is recorded for the preview but its impl doesn't run."""
+    performed = []
+    monkeypatch.setattr(
+        "yaffo.background_tasks.automation_sandbox.automation_actions.photos_repository.add_tags",
+        lambda *a, **k: performed.append(a),
+    )
+    functions, calls = build_recording_host_functions(object())
+
+    result = run_starlark("tag_photos([{'photo_id': 1, 'name': 'beach'}])", functions=functions)
+
+    assert result.success is True, result.error
+    assert performed == []
+    assert calls == [HostCall(name="tag_photos", args=[[{"photo_id": 1, "name": "beach"}]])]
 
 
 def test_face_similarity_is_read_only_and_runs_in_preview(monkeypatch):

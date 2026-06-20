@@ -136,6 +136,19 @@ def get_person_by_id(session: Session, person_id: int) -> Person | None:
     return session.get(Person, person_id)
 
 
+def existing_person_ids(session: Session, person_ids: list[int]) -> set[int]:
+    """Which of `person_ids` are real people — one query, for a batch assign to drop
+    unknown ids before linking (the single assign_face checks one at a time)."""
+    if not person_ids:
+        return set()
+    unique = list(set(person_ids))
+    found: set[int] = set()
+    for start in range(0, len(unique), _LINK_CHUNK):
+        chunk = unique[start:start + _LINK_CHUNK]
+        found.update(row[0] for row in session.query(Person.id).filter(Person.id.in_(chunk)).all())
+    return found
+
+
 def get_photo_ids_for_person(session: Session, person_id: int) -> list[int]:
     """Distinct ids of photos that have at least one face linked to this person."""
     rows = (

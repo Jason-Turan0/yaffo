@@ -104,6 +104,27 @@ def _triggers() -> str:
     ])
 
 
+def _batching() -> str:
+    return block("batching", [
+        "Process in batches. When you act on more than one item, collect the work in a",
+        "list as you loop, then make ONE batched write call — do NOT call a single-item",
+        "mutator (tag_photo / assign_face / move_photo / rename_file) inside a loop.",
+        "Each single-item write commits on its own, so a per-item loop is many",
+        "transactions; the batch functions write the whole set in one. Use:",
+        "- tag_photos(tags) instead of tag_photo in a loop",
+        "- assign_faces(assignments) instead of assign_face in a loop",
+        "- move_photos(moves) instead of move_photo in a loop",
+        "- rename_files(renames) instead of rename_file in a loop",
+        "Each takes a list of dicts (see the host API for each one's keys). The",
+        "single-item forms remain only for a genuine one-off write. Reads (data_query,",
+        "match_people, face_similarity) can still run per item in the loop that builds",
+        "the batch.",
+        "Example — tag everything the run touched, in one write:",
+        '  to_tag = [{"photo_id": pid, "name": "reviewed"} for pid in ctx["photo_ids"]]',
+        "  tag_photos(to_tag)",
+    ])
+
+
 def _conventions() -> str:
     return block("conventions", [
         "- Use ctx to scope the work to what triggered the run when it makes sense.",
@@ -124,5 +145,6 @@ def build_automation_builder_system_prompt() -> str:
         _sources(),
         _events(),
         _triggers(),
+        _batching(),
         _conventions(),
     ])

@@ -58,11 +58,26 @@ HOST_API: tuple[HostFunction, ...] = (
         mutating=False,
     ),
     HostFunction(
+        name="tag_photos",
+        signature="tag_photos(tags)",
+        description=(
+            "Add many tags in one batched write (preferred — see <batching>). `tags` is "
+            "a list of {photo_id, name, value?} dicts: `name` is the tag (e.g. "
+            '"beach"), `value` an optional value for name/value tags.'
+        ),
+        returns="Nothing.",
+        example='tag_photos([{"photo_id": pid, "name": "beach"} for pid in ctx["photo_ids"]])',
+        impl=actions.tag_photos,
+        summarize=actions.summarize_tag_photos,
+        mutating=True,
+    ),
+    HostFunction(
         name="tag_photo",
         signature="tag_photo(photo_id, name, value=None)",
         description=(
-            "Add a tag to a photo. `name` is the tag (e.g. \"beach\"); `value` is an "
-            "optional value for name/value tags (e.g. name=\"rating\", value=5)."
+            "Add a tag to a single photo. Prefer tag_photos for more than one (see "
+            "<batching>). `name` is the tag (e.g. \"beach\"); `value` is an optional "
+            "value for name/value tags (e.g. name=\"rating\", value=5)."
         ),
         returns="Nothing.",
         example='tag_photo(photo_id, "beach")',
@@ -71,11 +86,26 @@ HOST_API: tuple[HostFunction, ...] = (
         mutating=True,
     ),
     HostFunction(
+        name="rename_files",
+        signature="rename_files(renames)",
+        description=(
+            "Rename many files in one batched write (preferred — see <batching>). "
+            "`renames` is a list of {photo_id, new_name} dicts; each `new_name` is the "
+            "new filename incl. extension, kept in the same folder."
+        ),
+        returns="Nothing.",
+        example='rename_files([{"photo_id": pid, "new_name": "2024-06-01_beach.jpg"}])',
+        impl=actions.rename_files,
+        summarize=actions.summarize_rename_files,
+        mutating=True,
+    ),
+    HostFunction(
         name="rename_file",
         signature="rename_file(photo_id, new_name)",
         description=(
-            "Rename the photo's file on disk to `new_name` (the new filename incl. "
-            "extension, kept in the same folder) and update its stored path."
+            "Rename one photo's file on disk to `new_name` (kept in the same folder) "
+            "and update its stored path. Prefer rename_files for more than one (see "
+            "<batching>)."
         ),
         returns="Nothing.",
         example='rename_file(photo_id, "2024-06-01_beach.jpg")',
@@ -84,14 +114,31 @@ HOST_API: tuple[HostFunction, ...] = (
         mutating=True,
     ),
     HostFunction(
+        name="move_photos",
+        signature="move_photos(moves)",
+        description=(
+            "Move many photos in one batched write (preferred — see <batching>). "
+            "`moves` is a list of {photo_id, media_dir_id, target_path} dicts: each "
+            "photo moves into `target_path` (a sub-folder of the media dir named by "
+            "`media_dir_id`, created if needed), keeping its file name. Use a photo "
+            "row's media_dir_id (from data_query) to move within its dir, or another "
+            "media dir's id to move between dirs. A target outside the media dir, or an "
+            "unknown media_dir_id, is skipped."
+        ),
+        returns="Nothing.",
+        example='move_photos([{"photo_id": r["id"], "media_dir_id": r["media_dir_id"], "target_path": "2024/06"} for r in rows])',
+        impl=actions.move_photos,
+        summarize=actions.summarize_move_photos,
+        mutating=True,
+    ),
+    HostFunction(
         name="move_photo",
         signature="move_photo(photo_id, media_dir_id, target_path)",
         description=(
-            "Move the photo into `target_path` (a sub-folder of the media dir named "
-            "by `media_dir_id`, created if needed), keeping its file name. Use a "
-            "photo row's media_dir_id (from data_query) to move within its dir, or "
-            "another media dir's id to move between dirs. A target outside the media "
-            "dir, or an unknown media_dir_id, is refused."
+            "Move one photo into `target_path` (a sub-folder of the media dir named "
+            "by `media_dir_id`, created if needed), keeping its file name. Prefer "
+            "move_photos for more than one (see <batching>). A target outside the "
+            "media dir, or an unknown media_dir_id, is refused."
         ),
         returns="Nothing.",
         example='move_photo(photo_id, media_dir_id, "2024/06")',
@@ -100,13 +147,29 @@ HOST_API: tuple[HostFunction, ...] = (
         mutating=True,
     ),
     HostFunction(
+        name="assign_faces",
+        signature="assign_faces(assignments)",
+        description=(
+            "Assign many faces to people in one batched write (preferred — see "
+            "<batching>). `assignments` is a list of {face_id, person_id} dicts (use "
+            "the face_id + person_id from match_people). Faces already assigned, and "
+            "unknown person_ids, are skipped. (Assign per face: a photo can contain "
+            "several different people.)"
+        ),
+        returns="Nothing.",
+        example='assign_faces([{"face_id": fid, "person_id": pid}])',
+        impl=actions.assign_faces,
+        summarize=actions.summarize_assign_faces,
+        mutating=True,
+    ),
+    HostFunction(
         name="assign_face",
         signature="assign_face(face_id, person_id)",
         description=(
             "Assign an existing person (by id) to one detected face -- use the "
-            "face_id + person_id from match_people. A face already assigned to "
-            "someone is left as-is; an unknown person_id is a no-op. (Assign per "
-            "face: a photo can contain several different people.)"
+            "face_id + person_id from match_people. Prefer assign_faces for more than "
+            "one (see <batching>). A face already assigned to someone is left as-is; "
+            "an unknown person_id is a no-op."
         ),
         returns="Nothing.",
         example="assign_face(face_id, person_id)",

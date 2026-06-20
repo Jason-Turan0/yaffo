@@ -44,12 +44,13 @@ def test_resolve_group_photo_ids_empty():
 
 
 def _run_dedupe(groups, rows):
-    """Run the seeded Starlark with ctx.groups + a stub data_query, capturing moves."""
+    """Run the seeded Starlark with ctx.groups + a stub data_query, capturing the one
+    batched move_photos call (flattened to (photo_id, media_dir_id, target_path))."""
     moves = []
     functions = {
         "data_query": lambda query: rows,
-        "move_photo": lambda photo_id, media_dir_id, target_path: moves.append(
-            (photo_id, media_dir_id, target_path)
+        "move_photos": lambda batch: moves.extend(
+            (m["photo_id"], m["media_dir_id"], m["target_path"]) for m in batch
         ),
     }
     result = run_starlark(_DEDUPE_CODE, inputs={"ctx": {"groups": groups}}, functions=functions)

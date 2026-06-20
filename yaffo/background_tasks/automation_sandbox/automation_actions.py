@@ -30,6 +30,21 @@ def summarize_data_query(args: list[Any], session: Session) -> str:
     query = args[0] if args and isinstance(args[0], dict) else {}
     return f"Looking up {query.get('source', 'data')}"
 
+def tag_photos(session: Session, tags: list[dict]) -> None:
+    """Batch-add tags in one write. `tags` is a list of {photo_id, name, value?}."""
+    items = [
+        (tag["photo_id"], tag["name"], tag.get("value"))
+        for tag in tags
+        if tag.get("photo_id") is not None and tag.get("name")
+    ]
+    photos_repository.add_tags(session, items)
+
+
+def summarize_tag_photos(args: list[Any], session: Session) -> str:
+    tags = args[0] if args and isinstance(args[0], list) else []
+    return f"Tag {len(tags)} photo(s)"
+
+
 def tag_photo(session: Session, photo_id: int, name: str, value: Any = None) -> None:
     photos_repository.add_tag(session, photo_id, name, value)
 
@@ -40,6 +55,22 @@ def summarize_tag_photo(args: list[Any], session: Session) -> str:
     value = args[2] if len(args) > 2 and args[2] else None
     label = f"{name}={value}" if value else name
     return f"Tag {photo_label(session, photo_id)} as '{label}'"
+
+
+def rename_files(session: Session, renames: list[dict]) -> None:
+    """Batch-rename files in one transaction. `renames` is a list of
+    {photo_id, new_name}; each file is renamed in place, then all path updates commit
+    once."""
+    for entry in renames:
+        photo_id, new_name = entry.get("photo_id"), entry.get("new_name")
+        if photo_id is not None and new_name:
+            rename_file(session, photo_id, new_name)
+    session.commit()
+
+
+def summarize_rename_files(args: list[Any], session: Session) -> str:
+    renames = args[0] if args and isinstance(args[0], list) else []
+    return f"Rename {len(renames)} file(s)"
 
 
 def rename_file(session: Session, photo_id: int, new_name: str) -> None:
@@ -56,6 +87,24 @@ def summarize_rename_file(args: list[Any], session: Session) -> str:
     photo_id = args[0] if args else None
     new_name = args[1] if len(args) > 1 else "?"
     return f"Rename {photo_label(session, photo_id)} to '{Path(new_name).name}'"
+
+
+def move_photos(session: Session, moves: list[dict]) -> None:
+    """Batch-move photos in one transaction. `moves` is a list of
+    {photo_id, media_dir_id, target_path}; each file is moved into its media dir
+    (confined to it), then all path updates commit once."""
+    for entry in moves:
+        photo_id = entry.get("photo_id")
+        media_dir_id = entry.get("media_dir_id")
+        target_path = entry.get("target_path")
+        if photo_id is not None and media_dir_id is not None and target_path is not None:
+            move_photo(session, photo_id, media_dir_id, target_path)
+    session.commit()
+
+
+def summarize_move_photos(args: list[Any], session: Session) -> str:
+    moves = args[0] if args and isinstance(args[0], list) else []
+    return f"Move {len(moves)} photo(s)"
 
 
 def move_photo(session: Session, photo_id: int, media_dir_id: str, target_path: str) -> None:
@@ -81,6 +130,25 @@ def summarize_move_photo(args: list[Any], session: Session) -> str:
     media_dir = media_dir_by_id(session, media_dir_id) if media_dir_id else None
     where = f"{target_path} in {media_dir.path.name}" if media_dir else target_path
     return f"Move {photo_label(session, photo_id)} to {where}"
+
+
+def assign_faces(session: Session, assignments: list[dict]) -> None:
+    """Batch-assign faces to people in one write. `assignments` is a list of
+    {face_id, person_id}; unknown people and already-assigned faces are skipped."""
+    pairs = [
+        (entry["person_id"], entry["face_id"])
+        for entry in assignments
+        if entry.get("person_id") is not None and entry.get("face_id") is not None
+    ]
+    known = person_repository.existing_person_ids(session, [person_id for person_id, _ in pairs])
+    person_repository.bulk_link_faces_to_people(
+        session, [(person_id, face_id) for person_id, face_id in pairs if person_id in known]
+    )
+
+
+def summarize_assign_faces(args: list[Any], session: Session) -> str:
+    assignments = args[0] if args and isinstance(args[0], list) else []
+    return f"Assign {len(assignments)} face(s)"
 
 
 def assign_face(session: Session, face_id: int, person_id: int) -> None:

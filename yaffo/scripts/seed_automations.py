@@ -35,21 +35,23 @@ from yaffo.db.models import (
 )
 
 # On photo_indexed, move each photo into a Year/Month sub-folder of its media dir.
-# data_query gives each photo's media_dir_id + year/month; move_photo keeps the
-# file name and is confined to that media dir.
+# data_query gives each photo's media_dir_id + year/month; the moves are collected
+# and written in one batched move_photos call (see <batching> in the prompt).
 _ORGANIZE_CODE = """\
 rows = data_query({"source": "photos", "id": {"in": ctx["photo_ids"]}})
+moves = []
 for row in rows:
     if row["year"] and row["month"] and row["media_dir_id"]:
         month = row["month"]
         mm = str(month) if month >= 10 else "0" + str(month)
-        move_photo(row["id"], row["media_dir_id"], str(row["year"]) + "/" + mm)
+        moves.append({"photo_id": row["id"], "media_dir_id": row["media_dir_id"], "target_path": str(row["year"]) + "/" + mm})
+move_photos(moves)
 """
 
 # On duplicates_found, move every duplicate except the keeper into a "_Duplicates"
 # sub-folder of its media dir. ctx["groups"] is a list of duplicate sets, each a list
 # of photo ids ordered earliest-indexed first, so group[0] is the keeper and
-# group[1:] are the copies to move out.
+# group[1:] are the copies to move out. The moves are written in one batched call.
 _DEDUPE_CODE = """\
 to_move = []
 for group in ctx["groups"]:
@@ -59,9 +61,8 @@ for group in ctx["groups"]:
 if to_move:
     print("Moving " + str(len(to_move)) + " duplicate(s) to _Duplicates")
     rows = data_query({"source": "photos", "id": {"in": to_move}})
-    for row in rows:
-        if row["media_dir_id"]:
-            move_photo(row["id"], row["media_dir_id"], "_Duplicates")
+    moves = [{"photo_id": row["id"], "media_dir_id": row["media_dir_id"], "target_path": "_Duplicates"} for row in rows if row["media_dir_id"]]
+    move_photos(moves)
 """
 
 # Always raises, to exercise the error path (a FAILED run in the history).

@@ -2,7 +2,7 @@ import calendar
 import os
 from pathlib import Path
 
-from sqlalchemy import or_
+from sqlalchemy import insert, or_
 from sqlalchemy.orm import Session
 from yaffo.db.models import Face, Photo, Tag, PHOTO_STATUS_INDEXED
 
@@ -58,6 +58,21 @@ def add_tag(session: Session, photo_id: int, name: str, value=None) -> Tag:
     session.add(tag)
     session.commit()
     return tag
+
+
+def add_tags(session: Session, items: list[tuple[int, str, object]]) -> int:
+    """Add many tags in one transaction (one executemany insert + commit). `items` is
+    [(photo_id, name, value), ...]; a blank value is stored as NULL. Returns the count
+    written. Lets a batch job collect its tags and persist them in a single short write
+    rather than committing per photo."""
+    rows = [
+        {"photo_id": photo_id, "tag_name": name, "tag_value": str(value) if value else None}
+        for photo_id, name, value in items
+    ]
+    if rows:
+        session.execute(insert(Tag), rows)
+    session.commit()
+    return len(rows)
 
 
 def get_photo_path(session: Session, photo_id: int) -> str | None:

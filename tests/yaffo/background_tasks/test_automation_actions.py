@@ -54,6 +54,89 @@ def test_move_photo_refuses_escape(monkeypatch, tmp_path):
     assert src.exists() and not saved  # escaping target refused, nothing moved
 
 
+_ACTIONS = "yaffo.background_tasks.automation_sandbox.automation_actions."
+
+
+def test_tag_photos_batches_and_drops_incomplete(monkeypatch):
+    captured = {}
+    _patch(monkeypatch, _ACTIONS + "photos_repository.add_tags",
+           lambda s, items: captured.update(items=items))
+
+    automation_actions.tag_photos(object(), [
+        {"photo_id": 1, "name": "beach"},
+        {"photo_id": 2, "name": "rating", "value": 5},
+        {"name": "no_photo"},   # dropped: no photo_id
+        {"photo_id": 3},        # dropped: no name
+    ])
+
+    assert captured["items"] == [(1, "beach", None), (2, "rating", 5)]
+
+
+def test_assign_faces_filters_unknown_persons(monkeypatch):
+    captured = {}
+    _patch(monkeypatch, _ACTIONS + "person_repository.existing_person_ids", lambda s, ids: {7})
+    _patch(monkeypatch, _ACTIONS + "person_repository.bulk_link_faces_to_people",
+           lambda s, links: captured.update(links=links))
+
+    automation_actions.assign_faces(object(), [
+        {"face_id": 10, "person_id": 7},
+        {"face_id": 11, "person_id": 99},   # dropped: unknown person
+        {"face_id": None, "person_id": 7},  # dropped: no face_id
+    ])
+
+    assert captured["links"] == [(7, 10)]  # (person_id, face_id) for the known person
+
+
+class _CommitCountingSession:
+    def __init__(self):
+        self.commits = 0
+
+    def commit(self):
+        self.commits += 1
+
+
+def test_move_photos_moves_all_and_commits_once(monkeypatch, tmp_path):
+    media_root = tmp_path / "lib"
+    media_root.mkdir(parents=True)
+    srcs = {}
+    for pid, name in ((1, "a.jpg"), (2, "b.jpg")):
+        p = media_root / name
+        p.write_text("x")
+        srcs[pid] = p
+    saved = []
+
+    _patch(monkeypatch, _ACTIONS + "photos_repository.get_photo_path", lambda s, pid: str(srcs[pid]))
+    _patch(monkeypatch, _ACTIONS + "photos_repository.update_photo_path",
+           lambda s, pid, path: saved.append(path))
+    _patch(monkeypatch, _ACTIONS + "media_dir_by_id", lambda s, mid: MediaDir(id=mid, path=media_root))
+
+    session = _CommitCountingSession()
+    automation_actions.move_photos(session, [
+        {"photo_id": 1, "media_dir_id": "G", "target_path": "2024"},
+        {"photo_id": 2, "media_dir_id": "G", "target_path": "2024"},
+    ])
+
+    assert (media_root / "2024" / "a.jpg").exists()
+    assert (media_root / "2024" / "b.jpg").exists()
+    assert session.commits == 1  # one transaction for the whole batch
+
+
+def test_rename_files_renames_all_and_commits_once(monkeypatch, tmp_path):
+    src = tmp_path / "old.jpg"
+    src.write_text("x")
+    saved = []
+
+    _patch(monkeypatch, _ACTIONS + "photos_repository.get_photo_path", lambda s, pid: str(src))
+    _patch(monkeypatch, _ACTIONS + "photos_repository.update_photo_path",
+           lambda s, pid, path: saved.append(path))
+
+    session = _CommitCountingSession()
+    automation_actions.rename_files(session, [{"photo_id": 1, "new_name": "new.jpg"}])
+
+    assert (tmp_path / "new.jpg").exists() and not src.exists()
+    assert session.commits == 1
+
+
 def test_enrich_photo_rows_adds_media_dir_id_and_relative_path(monkeypatch):
     _patch(monkeypatch, "yaffo.background_tasks.automation_sandbox.media_dirs."
            "photos_repository.get_paths_by_ids",
