@@ -12,6 +12,10 @@ from __future__ import annotations
 from yaffo.background_tasks.automation_sandbox.automation_host import render_host_api
 from yaffo.db.models import EVENTS
 from yaffo.db.repositories.data_query_repository import FIELDS_BY_SOURCE
+from yaffo.site_agents.prompt_generator.source_catalog import (
+    calculated_filter_lines,
+    virtual_source_lines,
+)
 from yaffo.site_agents.prompt_generator.xml_helpers import block
 
 
@@ -61,14 +65,17 @@ def _sources() -> str:
         f"{src} ({', '.join(fields)})" for src, fields in FIELDS_BY_SOURCE.items()
     )
     return block("data_sources", [
-        "Sources data_query can read (each a table; a query returns its rows as column",
-        "dicts, or an aggregate). The columns shown are the filterable/queryable columns:",
+        "Table sources data_query can read (a query returns rows as column dicts, or an",
+        "aggregate). The columns shown are the filterable/queryable columns:",
         lines,
         'Filter columns with operators at the top level, e.g. {"source": "photos",',
         '"year": {"eq": 2024}, "id": {"in": [1,2,3]}, "limit": 24}. Operators: eq, ne,',
-        "lt, lte, gt, gte, contains, in.",
-        "Rows may also carry host-derived columns the resolver appends but you can't filter",
-        "on (e.g. a photo's media_dir_id / relative_path, which move_photo addresses by).",
+        "lt, lte, gt, gte, contains, in, prefix (path columns: matches a leading prefix / subtree).",
+        "Some tables also accept host-derived filter columns (disk paths never exposed; a",
+        "photo's media_dir_id / relative_path, which move_photo also addresses by):",
+        *calculated_filter_lines(FIELDS_BY_SOURCE),
+        "Computed (non-table) sources take the params shown (not column filters):",
+        *virtual_source_lines(),
         "Call get_source_schema(source) for a source's full returned-row fields.",
     ])
 

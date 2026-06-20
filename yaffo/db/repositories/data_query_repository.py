@@ -218,6 +218,23 @@ def _queryable_calculated(source: str) -> dict[str, dict]:
     return {n: c for n, c in CALCULATED_BY_SOURCE.get(source, {}).items() if c.get("queryable")}
 
 
+def queryable_calculated_columns(source: str) -> dict[str, dict]:
+    """Calculated columns of `source` that can be *filtered* (each carrying its `ops`
+    and any `requires`), for advertising in prompts/tools. Empty for sources with none."""
+    return _queryable_calculated(source)
+
+
+def virtual_source_specs() -> list[tuple[str, tuple, tuple, tuple]]:
+    """(name, required_params, optional_params, returned_fields) per virtual source —
+    a prompt/tool-facing summary derived from each source's schema + fields."""
+    specs = []
+    for name, vs in _VIRTUAL_SOURCES.items():
+        required = tuple(p for p in vs.schema.get("required", ()) if p != "source")
+        optional = tuple(p for p in vs.schema["properties"] if p not in ("source", *required))
+        specs.append((name, required, optional, tuple(vs.fields)))
+    return specs
+
+
 def _filters_for(source: str, fields: dict[str, dict]) -> dict[str, dict]:
     props = {column: _filter_schema(schema["type"]) for column, schema in fields.items()}
     for name, col_def in _queryable_calculated(source).items():

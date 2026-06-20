@@ -10,6 +10,10 @@ turn so the cache stays valid.
 from __future__ import annotations
 
 from yaffo.db.repositories.data_query_repository import FIELDS_BY_SOURCE
+from yaffo.site_agents.prompt_generator.source_catalog import (
+    calculated_filter_lines,
+    virtual_source_lines,
+)
 from yaffo.site_agents.prompt_generator.xml_helpers import block
 from yaffo.site_agents.widget_api import widget_api_source
 
@@ -43,18 +47,25 @@ def _data_query() -> str:
     # this block can't drift from the resolver. Stable across requests (changes
     # only when the schema changes), so prompt caching still holds.
     sources = block("sources", [
-        "Each source is one table; a query returns its rows as raw column dicts. The",
-        "columns below are the filterable/queryable columns:",
+        "Each table source returns its rows as raw column dicts; the columns below are the",
+        "filterable/queryable columns:",
         *(_source_line(src, fields) for src, fields in FIELDS_BY_SOURCE.items()),
-        "A row may also carry host-derived columns the resolver appends but you can't",
-        "filter on. Call get_source_schema(source) for a source's full returned-row",
-        "fields (name, type, description) before relying on a column.",
+        "Some tables also accept host-derived filter columns (translated server-side; disk",
+        "paths are never exposed):",
+        *calculated_filter_lines(FIELDS_BY_SOURCE),
+        "Beyond the tables, these computed sources take the params shown (not column filters)",
+        "— query them like any source (e.g. to browse photos by their on-disk folders):",
+        *virtual_source_lines(),
+        "A row may also carry host-derived columns you can't filter on. Call",
+        "get_source_schema(source) for a source's full returned-row fields (name, type,",
+        "description) before relying on a column.",
     ])
     filters = block("filters", [
         'Filter a column with operators: { "COLUMN": { "OP": value } }.',
         "- eq, ne            any column",
         "- lt, lte, gt, gte  numbers",
         "- contains          strings (substring match)",
+        "- prefix            path columns (e.g. relative_path); matches a leading prefix / subtree",
         "- in                value is an array; matches any of them",
         '"limit": N caps the number of rows.',
     ])
