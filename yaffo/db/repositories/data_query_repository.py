@@ -26,14 +26,17 @@ from jsonschema import Draft202012Validator
 from sqlalchemy import Select, distinct, func, select
 from sqlalchemy.orm import Session
 
-from yaffo.db.models import Face, Person, PersonFace, Photo, Tag
+from yaffo.db.models import ClassificationLabel, Face, Person, PersonFace, Photo, PhotoLabel, Tag
 from yaffo.db.repositories import media_dir_repository
 
 _DRAFT = "https://json-schema.org/draft/2020-12/schema"
 
 # Single-table sources exposed to widgets. Infra tables (jobs, settings, …) are
 # deliberately absent. Each table's primitive columns become the query surface.
-_EXPOSED_MODELS = [Photo, Tag, Face, Person, PersonFace]
+# classification_labels + photo_labels expose the auto-classifier's labels read-only
+# (data_query is read-only; automations apply their own categorization via tag_photos),
+# joined client-side like people/people_face/faces.
+_EXPOSED_MODELS = [Photo, Tag, Face, Person, PersonFace, ClassificationLabel, PhotoLabel]
 
 # Primitive columns to hide per model. Filesystem paths leak the local disk
 # layout, and images load via the /photos/<id> route, so the path isn't needed.
@@ -222,6 +225,24 @@ def queryable_calculated_columns(source: str) -> dict[str, dict]:
     """Calculated columns of `source` that can be *filtered* (each carrying its `ops`
     and any `requires`), for advertising in prompts/tools. Empty for sources with none."""
     return _queryable_calculated(source)
+
+
+def exposed_relationships() -> list[tuple[str, str, str, str]]:
+    """Foreign-key links among the exposed sources as (source, column, target_source,
+    target_column) — introspected from the models. There are no server-side joins, so
+    this is the key map a client uses to stitch sources together. Derived (not
+    hand-listed), so adding a source/FK updates the prompts' join guidance for free."""
+    rels: list[tuple[str, str, str, str]] = []
+    for model in _EXPOSED_MODELS:
+        deny = _DENY.get(model, set())
+        for column in model.__table__.columns:
+            if column.name in deny:
+                continue
+            for fk in column.foreign_keys:
+                target = fk.column
+                if target.table.name in FIELDS_BY_SOURCE:  # only joins to another exposed source
+                    rels.append((model.__tablename__, column.name, target.table.name, target.name))
+    return rels
 
 
 def virtual_source_specs() -> list[tuple[str, tuple, tuple, tuple]]:

@@ -9,9 +9,20 @@ live here.
 from __future__ import annotations
 
 from yaffo.db.repositories.data_query_repository import (
+    exposed_relationships,
     queryable_calculated_columns,
     virtual_source_specs,
 )
+
+
+def relationship_summary() -> str:
+    """The foreign-key join map both prompts share, e.g.
+    `tags.photo_id -> photos.id, people_face.face_id -> faces.id, …` — derived from the
+    models so the page-builder and automation prompts can't describe it differently."""
+    return ", ".join(
+        f"{source}.{column} -> {target}.{target_column}"
+        for source, column, target, target_column in exposed_relationships()
+    )
 
 
 def calculated_filter_lines(sources) -> list[str]:

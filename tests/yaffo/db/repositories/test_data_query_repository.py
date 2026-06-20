@@ -49,11 +49,16 @@ class TestSchemaDerivation:
     """The query surface is introspected from the exposed models."""
 
     def test_sources_are_the_exposed_tables(self):
-        assert tuple(dq.FIELDS_BY_SOURCE) == ("photos", "tags", "faces", "people", "people_face")
+        assert tuple(dq.FIELDS_BY_SOURCE) == (
+            "photos", "tags", "faces", "people", "people_face", "classification_labels", "photo_labels",
+        )
 
     def test_sources_include_the_virtual_sources(self):
         # Tables first, then the non-table (media-dir / folder-tree) sources.
-        assert dq.SOURCES == ("photos", "tags", "faces", "people", "people_face", "media_dirs", "folders")
+        assert dq.SOURCES == (
+            "photos", "tags", "faces", "people", "people_face", "classification_labels", "photo_labels",
+            "media_dirs", "folders",
+        )
 
     def test_photos_exposes_primitive_columns(self):
         fields = dq.FIELDS_BY_SOURCE["photos"]
@@ -61,6 +66,20 @@ class TestSchemaDerivation:
         assert "year" in fields
         assert "location_name" in fields
         assert "status" in fields
+
+    def test_label_sources_expose_their_columns(self):
+        assert set(dq.FIELDS_BY_SOURCE["photo_labels"]) == {"photo_id", "label_id", "confidence"}
+        assert {"id", "name"} <= set(dq.FIELDS_BY_SOURCE["classification_labels"])
+
+    def test_exposed_relationships_are_derived_from_foreign_keys(self):
+        rels = set(dq.exposed_relationships())
+        # the label join keys (the point of exposing these tables)
+        assert ("photo_labels", "photo_id", "photos", "id") in rels
+        assert ("photo_labels", "label_id", "classification_labels", "id") in rels
+        # and the pre-existing ones still derive
+        assert ("people_face", "face_id", "faces", "id") in rels
+        # every relationship targets an exposed source
+        assert all(target in dq.FIELDS_BY_SOURCE for _, _, target, _ in rels)
 
     def test_column_types_are_mapped(self):
         fields = dq.FIELDS_BY_SOURCE["photos"]

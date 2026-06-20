@@ -12,6 +12,7 @@ from __future__ import annotations
 from yaffo.db.repositories.data_query_repository import FIELDS_BY_SOURCE
 from yaffo.site_agents.prompt_generator.source_catalog import (
     calculated_filter_lines,
+    relationship_summary,
     virtual_source_lines,
 )
 from yaffo.site_agents.prompt_generator.xml_helpers import block
@@ -82,8 +83,7 @@ def _data_query() -> str:
         "Each named query resolves independently and is available as yaffo.data[queryName].",
         'Use descriptive names (e.g. "maine_photos"); declare several and stitch them in code.',
         "There are NO server-side joins — one source per query. To relate sources, run separate",
-        "queries and join them in JS on the id / foreign-key columns (tags.photo_id, faces.photo_id,",
-        "people_face.person_id + people_face.face_id).",
+        f"queries and join them in JS on the foreign-key columns: {relationship_summary()}.",
         sources,
         filters,
         aggregates,

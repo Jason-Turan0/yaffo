@@ -15,6 +15,7 @@ from yaffo.db.models import EVENTS
 from yaffo.db.repositories.data_query_repository import FIELDS_BY_SOURCE
 from yaffo.site_agents.prompt_generator.source_catalog import (
     calculated_filter_lines,
+    relationship_summary,
     virtual_source_lines,
 )
 from yaffo.site_agents.prompt_generator.xml_helpers import block
@@ -102,6 +103,10 @@ def _sources() -> str:
         "Table sources data_query can read (a query returns rows as column dicts, or an",
         "aggregate). The columns shown are the filterable/queryable columns:",
         lines,
+        "There are no joins — run a query per source and stitch the rows together on the",
+        f"foreign-key columns: {relationship_summary()}.",
+        "(photo_labels + classification_labels are the auto-classifier's labels — read-only;",
+        "to categorize photos yourself, write tags with tag_photos.)",
         'Filter columns with operators at the top level, e.g. {"source": "photos",',
         '"year": {"eq": 2024}, "id": {"in": [1,2,3]}, "limit": 24}. Operators: eq, ne,',
         "lt, lte, gt, gte, contains, in, prefix (path columns: matches a leading prefix / subtree).",
