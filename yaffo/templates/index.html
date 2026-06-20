@@ -6,6 +6,7 @@
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='filters/location-autocomplete.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='filters/filter_config.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -14,16 +15,7 @@
     {% from "components/page_header.html" import page_header %}
 
     <div class="main-container-layout">
-        {% macro render_filters() %}
-            {% include "filters/_path.html" %}
-            {% include "filters/_people.html" %}
-            {% include "filters/_gender.html" %}
-            {% include "filters/_labels.html" %}
-            {% include "filters/_tags.html" %}
-            {% include "filters/_locations.html" %}
-            {% include "filters/_device.html" %}
-        {% endmacro %}
-        {{ render_sidebar(url_for('index'), filters, render_filters) }}
+        {{ render_sidebar(url_for('index'), filters, filter_layout=filter_layout) }}
         <div class="main-content photo-gallery">
             {% call page_header('Photo Library') %}
                 {% if photos|length > 0 %}
@@ -125,11 +117,32 @@
             {% endif %}
         </div>
     </div>
+
+    {% from "components/modal.html" import render_modal %}
+    {% macro configure_filters_form() %}
+        <p class="filter-config-hint">Drag to reorder. Uncheck to hide a filter.</p>
+        <div class="filter-config" id="filter-config-list"
+             data-default-keys="{{ filter_default_keys | join(',') }}">
+            {% for entry in filter_layout %}
+            <div class="filter-config-row" draggable="true" data-key="{{ entry.key }}">
+                <span class="filter-config-handle" aria-hidden="true">⠿</span>
+                <label class="filter-config-item">
+                    <input type="checkbox" class="filter-config-toggle" {% if entry.visible %}checked{% endif %}>
+                    <span>{{ entry.label }}</span>
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn btn-secondary" id="filter-config-reset">Reset to defaults</button>
+    {% endmacro %}
+    {{ render_modal("configureFiltersModal", "Configure Filters", "", configure_filters_form, action_text="Save") }}
 {% endblock %}
 
 {% block scripts %}
     <script src="{{ url_for('static', filename='filters/location-autocomplete.js') }}"></script>
+    <script src="{{ url_for('static', filename='filters/filter_config.js') }}"></script>
     <script>
         window.PHOTO_ORGANIZER.initLocationAutocomplete(window.APP_CONFIG);
+        window.PHOTO_ORGANIZER.initFilterConfig(window.APP_CONFIG);
     </script>
 {% endblock %}

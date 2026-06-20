@@ -66,6 +66,8 @@
 {% block content %}
     <div class="main-container-layout">
         {% macro render_filters() %}
+            {% include "filters/_year.html" %}
+            {% include "filters/_month.html" %}
             {% include "filters/_person.html" %}
             <div class="filter-group">
                 <label for="group-by-people">Group by</label>

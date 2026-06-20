@@ -1,4 +1,4 @@
-{% macro render_sidebar(url, filters, render_filters_block, render_actions_block) %}
+{% macro render_sidebar(url, filters, render_filters_block=none, render_actions_block=none, filter_layout=none) %}
 <div class="sidebar-container">
      {% if render_actions_block %}
         <div class="sidebar sidebar-actions">
@@ -7,12 +7,23 @@
         </div>
     {% endif %}
     <div class="sidebar">
-        <h2>Filters</h2>
+        <div class="sidebar-header">
+            <h2>Filters</h2>
+            {% if filter_layout %}
+            <button type="button" class="filter-config-trigger" id="configure-filters-btn"
+                    data-icon="filter-config" aria-label="Configure filters" title="Configure filters"></button>
+            {% endif %}
+        </div>
         <form method="GET" action="{{ url }}" id="filter-form">
-            {% include "filters/_year.html" %}
-            {% include "filters/_month.html" %}
-            {% if render_filters_block %}
-                {{ render_filters_block() }}
+            {% if filter_layout %}
+                {# Order + visibility come from the saved layout (filter_config). #}
+                {% for entry in filter_layout if entry.visible %}
+                    {% include entry.template %}
+                {% endfor %}
+            {% else %}
+                {% if render_filters_block %}
+                    {{ render_filters_block() }}
+                {% endif %}
             {% endif %}
             <button type="submit" class="btn btn-primary filter-btn">Apply Filters</button>
             <button type="button" class="clear-filters"

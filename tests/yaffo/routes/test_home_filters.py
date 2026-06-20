@@ -74,3 +74,46 @@ def test_card_hover_details_split_name_and_folder(client, photo_ids):
     assert ">/media/organized/2021</dd>" in body
     assert ">vacation_beach.png</dd>" in body
     assert ">/media/organized/2020</dd>" in body
+
+
+class TestConfigurableFilterLayout:
+    """The 'Configure' modal + saved layout control which filters render and their
+    order (scoped to this page via the home_filter_layout setting)."""
+
+    def test_index_renders_configure_button_and_modal(self, client):
+        body = client.get("/").data.decode()
+        assert 'id="configure-filters-btn"' in body
+        assert 'id="configureFiltersModal"' in body
+        # every filter is listed in the modal (visible + hidden), even with no data
+        assert 'data-key="year"' in body and 'data-key="device"' in body
+
+    def test_all_filters_visible_by_default(self, client):
+        body = client.get("/").data.decode()
+        # year + device filter controls both present in the sidebar form
+        assert 'id="year-select"' in body
+        assert 'id="device-select"' in body
+
+    def test_saving_hides_a_filter(self, client):
+        resp = client.post("/settings/home-filters", json={"items": [
+            {"key": "year", "visible": False},
+            {"key": "device", "visible": True},
+        ]})
+        assert resp.status_code == 204
+
+        body = client.get("/").data.decode()
+        assert 'id="year-select"' not in body      # hidden -> control not rendered
+        assert 'id="device-select"' in body        # still visible
+        assert 'data-key="year"' in body           # but still listed in the modal
+
+    def test_saving_reorders_filters(self, client):
+        client.post("/settings/home-filters", json={"items": [
+            {"key": "device", "visible": True},
+            {"key": "year", "visible": True},
+        ]})
+        body = client.get("/").data.decode()
+        # device now renders before year in the sidebar
+        assert body.index('id="device-select"') < body.index('id="year-select"')
+
+    def test_save_rejects_non_list_items(self, client):
+        resp = client.post("/settings/home-filters", json={"items": "nope"})
+        assert resp.status_code == 400

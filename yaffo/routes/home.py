@@ -9,6 +9,7 @@ import pydash as _
 from yaffo.db import db
 from yaffo.db.models import Photo, Face, Person, PersonFace, Tag, ClassificationLabel, PhotoLabel
 from yaffo.db.repositories.photos_repository import get_distinct_years, get_distinct_months
+from yaffo.routes import filter_config
 from yaffo.utils.context import context
 
 
@@ -260,7 +261,26 @@ def init_home_routes(app: Flask):
             "page_sizes": [10, 25, 50, 100, 250],
         }
 
-        return render_template("index.html", photos=photos, filters=filters, photo_count=photo_count, pagination=pagination)
+        return render_template(
+            "index.html",
+            photos=photos,
+            filters=filters,
+            photo_count=photo_count,
+            pagination=pagination,
+            filter_layout=filter_config.load_layout(db.session),
+            filter_default_keys=filter_config.default_keys(),
+        )
+
+    @app.route("/settings/home-filters", methods=["POST"])
+    def save_home_filters():
+        """Persist the gallery sidebar's filter layout (order + visibility). Scoped to
+        this page's filter set; body is {"items": [{key, visible}, ...]}."""
+        payload = request.get_json(silent=True) or {}
+        items = payload.get("items")
+        if not isinstance(items, list):
+            return {"error": "items must be a list"}, 400
+        filter_config.save_layout(db.session, items)
+        return "", 204
 
     @app.route("/api/tag-values", methods=["GET"])
     def get_tag_values():
