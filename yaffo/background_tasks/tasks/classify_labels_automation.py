@@ -35,12 +35,21 @@ logger = get_logger(__name__, "background_tasks")
 _FIELDS = {field.key: field for field in AUTOMATION_CONFIG[AUTOMATION_HANDLER_CLASSIFY_LABELS]}
 
 
+# Photos buffered before each bulk write. Inference (the slow part) runs lock-free;
+# results are flushed in chunks of this size so the write lock is taken only in short
+# bursts, partial progress is durable, and labels appear progressively in the UI.
+_FLUSH_SIZE = 200
+
+
 def _classify_photos(session: Session, progress_reporter: ProgressReporter, photo_ids: list[int], threshold: float,
                      max_labels: int) -> list[int]:
     """Label each photo with the vocabulary entries scoring >= threshold (cosine),
     keeping the top `max_labels`. Replaces each photo's prior labels. Returns the ids
-    of the photos that received at least one label. Label embeddings are computed once
-    for the whole batch."""
+    of the photos that received at least one label.
+
+    CLIP inference holds no DB lock: each photo's assignments are computed into an
+    in-memory buffer, then flushed to the DB in bulk every `_FLUSH_SIZE` photos (and
+    once at the end). Label embeddings are computed once for the whole batch."""
     labels = classification_repository.get_enabled_labels(session)
     if not labels:
         return []
@@ -48,7 +57,14 @@ def _classify_photos(session: Session, progress_reporter: ProgressReporter, phot
     paths = photos_repository.get_paths_by_ids(session, photo_ids)
 
     labeled: list[int] = []
-    def photo_processor (photo_id: int):
+    pending: list[tuple[int, list[tuple[int, float]]]] = []
+
+    def flush():
+        if pending:
+            classification_repository.bulk_replace_photo_labels(session, pending)
+            pending.clear()
+
+    def photo_processor(photo_id: int):
         path = paths.get(photo_id)
         if not path:
             return
@@ -64,10 +80,14 @@ def _classify_photos(session: Session, progress_reporter: ProgressReporter, phot
             sims = label_embeddings @ embed_image(image)
         order = np.argsort(-sims)[:max_labels]
         assignments = [(labels[i].id, float(sims[i])) for i in order if sims[i] >= threshold]
-        classification_repository.replace_photo_labels(session, photo_id, assignments)
+        pending.append((photo_id, assignments))
         if assignments:
             labeled.append(photo_id)
+        if len(pending) >= _FLUSH_SIZE:
+            flush()
+
     progress_reporter.run_with_progress(photo_ids, photo_processor)
+    flush()  # remaining tail
     return labeled
 
 
