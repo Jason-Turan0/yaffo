@@ -73,7 +73,8 @@ def init_db():
                 latitude REAL,
                 longitude REAL,
                 location_name TEXT,
-                device TEXT
+                device TEXT,
+                favorite INTEGER
             )
         """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_photos_full_file_path ON photos(full_file_path)")

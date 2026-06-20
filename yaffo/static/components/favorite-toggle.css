@@ -1,0 +1,47 @@
+/*
+ * Favorite heart toggle — a round chip overlaid on the top-right of a photo
+ * (the detail view's image and each home-grid card). The heart itself rides the
+ * shared icon system (data-icon="favorite"): an outline mask in currentColor by
+ * default, swapped to a filled mask + the favorite color when set, so it themes
+ * for free (neobrutalist swaps in its own punchy art — see its skin).
+ *
+ * Place inside a position:relative container.
+ */
+.favorite-toggle {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    border: none;
+    background: color-mix(in srgb, var(--color-backdrop) 70%, transparent);
+    border-radius: var(--radius-pill);
+    width: 40px;
+    height: 40px;
+    color: var(--color-text-inverse);
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.1s ease, opacity 0.2s ease;
+}
+
+/* A touch larger than the default button icon glyph (icons.css ships 15px). */
+.favorite-toggle::before {
+    width: 20px;
+    height: 20px;
+}
+
+.favorite-toggle.is-favorite {
+    color: var(--color-favorite);
+}
+
+.favorite-toggle.is-favorite::before {
+    -webkit-mask-image: url("/static/themes/classic/icon-heart-filled.svg");
+    mask-image: url("/static/themes/classic/icon-heart-filled.svg");
+}
+
+.favorite-toggle:hover {
+    transform: scale(1.1);
+    background: var(--color-backdrop);
+}
+
+.favorite-toggle:disabled {
+    cursor: default;
+    opacity: 0.6;
+}

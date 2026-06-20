@@ -34,14 +34,15 @@ class _FakeSession:
         return _FakeQuery(self._photos)
 
 
-def _photo(tmp_path, *, location, people, labels=(), tags=(), name="p.jpg"):
+def _photo(tmp_path, *, location, people, labels=(), tags=(), favorite=None, name="p.jpg"):
     f = tmp_path / name
     f.write_bytes(b"x")
     faces = [SimpleNamespace(people=[SimpleNamespace(name=n) for n in group]) for group in people]
     label_rows = [SimpleNamespace(label=SimpleNamespace(name=n)) for n in labels]
     tag_rows = [SimpleNamespace(tag_name=tn, tag_value=tv) for tn, tv in tags]
     return SimpleNamespace(
-        full_file_path=str(f), location_name=location, faces=faces, labels=label_rows, tags=tag_rows
+        full_file_path=str(f), location_name=location, faces=faces,
+        labels=label_rows, tags=tag_rows, favorite=favorite,
     )
 
 
@@ -152,6 +153,23 @@ def test_labels_off_means_no_keywords(tmp_path, monkeypatch, progress_reporter):
     # labels/custom-tags toggles default off, so keywords stay None even when present
     assert calls == [("Paris", ["Alice"], None)]
     assert progress_reporter.run_with_progress_calls == [[photo]]
+
+
+def test_exports_favorite_keyword_when_set(tmp_path, monkeypatch, progress_reporter):
+    calls = _patch_writes(monkeypatch)
+    photo = _photo(tmp_path, location=None, people=[], favorite=True)
+    written = mod._export_tags(_FakeSession([photo]), progress_reporter, [1], False, False, export_favorite=True)
+    assert written == 1
+    assert calls == [(None, None, ["Favorite"])]
+
+
+def test_favorite_unset_writes_no_keyword(tmp_path, monkeypatch, progress_reporter):
+    calls = _patch_writes(monkeypatch)
+    # favorite is NULL (default): even with the toggle on, no "Favorite" keyword is
+    # emitted (keywords stay None) — Null does nothing.
+    photo = _photo(tmp_path, location=None, people=[], favorite=None)
+    mod._export_tags(_FakeSession([photo]), progress_reporter, [1], False, False, export_favorite=True)
+    assert calls == [(None, None, None)]
 
 
 def test_handler_enqueues_for_event_photos(monkeypatch):

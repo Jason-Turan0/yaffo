@@ -61,3 +61,23 @@ def test_rejects_non_list_tags(client, photo_id):
 
 def test_missing_photo_is_404(client):
     assert client.put("/api/photo/999999/tags", json={"tags": []}).status_code == 404
+
+
+# --- POST /api/photo/<id>/favorite ----------------------------------------
+
+def test_favorite_toggles_true_then_null(client, photo_id, app):
+    first = client.post(f"/api/photo/{photo_id}/favorite")
+    assert first.status_code == 200 and first.get_json()["favorite"] is True
+    second = client.post(f"/api/photo/{photo_id}/favorite")
+    assert second.get_json()["favorite"] is None  # unset, not False
+    with app.app_context():
+        assert db.session.get(Photo, photo_id).favorite is None
+
+
+def test_favorite_emits_photo_modified(client, photo_id, captured_events):
+    client.post(f"/api/photo/{photo_id}/favorite")
+    assert captured_events == [(EVENT_PHOTO_MODIFIED, {"photo_ids": [photo_id]})]
+
+
+def test_favorite_missing_photo_is_404(client):
+    assert client.post("/api/photo/999999/favorite").status_code == 404

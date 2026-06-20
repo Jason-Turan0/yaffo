@@ -76,6 +76,21 @@ def test_card_hover_details_split_name_and_folder(client, photo_ids):
     assert ">/media/organized/2020</dd>" in body
 
 
+def test_favorite_filter_shows_only_favorites(client, app):
+    with app.app_context():
+        fav = Photo(full_file_path="/media/a.jpg", favorite=True)
+        plain = Photo(full_file_path="/media/b.jpg")  # favorite NULL
+        db.session.add_all([fav, plain])
+        db.session.commit()
+        fav_id, plain_id = fav.id, plain.id
+
+    all_ids = _rendered_ids(client.get("/").data.decode())
+    assert {fav_id, plain_id} <= all_ids
+
+    only_favs = _rendered_ids(client.get("/?favorite=1").data.decode())
+    assert fav_id in only_favs and plain_id not in only_favs
+
+
 class TestConfigurableFilterLayout:
     """The 'Configure' modal + saved layout control which filters render and their
     order (scoped to this page via the home_filter_layout setting)."""

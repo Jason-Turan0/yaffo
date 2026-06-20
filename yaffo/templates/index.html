@@ -31,6 +31,10 @@
                         <div class="photo-card"
                              onclick="window.open('{{ url_for('photo_view', photo_id=photo.id) }}', '_blank')">
                             <div class="photo-thumb">
+                                <button type="button" data-icon="favorite" data-photo-id="{{ photo.id }}"
+                                        class="favorite-toggle {% if photo.favorite %}is-favorite{% endif %}"
+                                        aria-pressed="{{ 'true' if photo.favorite else 'false' }}"
+                                        title="Toggle favorite" aria-label="Toggle favorite"></button>
                                 <img src="{{ url_for('photo', photo_id=photo.id) }}"
                                      data-fallback="{{ url_for('placeholder') }}"
                                      alt="Photo from {{ photo.date_taken | format_date ('date') }}">
@@ -106,7 +110,8 @@
                 'proximity-location': filters.selected_proximity_location,
                 'labels':filters.selected_label_ids,
                 'labels-match-type': filters.selected_labels_match_type,
-                'gender': filters.selected_gender
+                'gender': filters.selected_gender,
+                'favorite': filters.selected_favorite
             }
         ) }}
             {% else %}
@@ -141,8 +146,10 @@
 {% block scripts %}
     <script src="{{ url_for('static', filename='filters/location-autocomplete.js') }}"></script>
     <script src="{{ url_for('static', filename='filters/filter_config.js') }}"></script>
+    <script src="{{ url_for('static', filename='photos/favorite.js') }}"></script>
     <script>
         window.PHOTO_ORGANIZER.initLocationAutocomplete(window.APP_CONFIG);
         window.PHOTO_ORGANIZER.initFilterConfig(window.APP_CONFIG);
+        window.PHOTO_ORGANIZER.initFavoriteToggles(window.APP_CONFIG);
     </script>
 {% endblock %}

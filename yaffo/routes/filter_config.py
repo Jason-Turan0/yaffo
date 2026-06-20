@@ -39,6 +39,7 @@ FILTERS: list[FilterDef] = [
     FilterDef("tags", "Tags", "filters/_tags.html"),
     FilterDef("locations", "Locations", "filters/_locations.html"),
     FilterDef("device", "Device", "filters/_device.html"),
+    FilterDef("favorite", "Favorites", "filters/_favorite.html"),
 ]
 _BY_KEY = {f.key: f for f in FILTERS}
 

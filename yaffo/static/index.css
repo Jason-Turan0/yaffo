@@ -28,6 +28,18 @@
     position: relative;
 }
 
+/* Heart sits above the hover-info overlay; non-favorites reveal on card hover,
+   favorites stay shown so the grid reads at a glance. */
+.photo-card .favorite-toggle {
+    z-index: 2;
+    opacity: 0;
+}
+
+.photo-card:hover .favorite-toggle,
+.photo-card .favorite-toggle.is-favorite {
+    opacity: 1;
+}
+
 .photo-card img {
     width: 100%;
     height: 250px;

@@ -91,6 +91,13 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
             default=False,
             type='bool'
         ),
+        ConfigField(
+            key="export_favorite_enabled",
+            label="Export Favorite",
+            help="Write a \"Favorite\" keyword into the file when the photo is marked a favorite.",
+            default=False,
+            type='bool'
+        ),
     ],
     AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME: [
         ConfigField(

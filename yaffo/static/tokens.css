@@ -82,6 +82,9 @@
     --color-warning-soft-border: #ffeaa7;
     --color-info: #17a2b8;
 
+    /* Favorite (heart toggle when set) */
+    --color-favorite: #e0245e;
+
     /* Neutral action (secondary buttons) */
     --color-neutral: #6c757d;
     --color-neutral-hover: #545b62;

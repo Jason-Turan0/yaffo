@@ -191,6 +191,21 @@ def init_photos_routes(app: Flask):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/api/photo/<int:photo_id>/favorite", methods=["POST"])
+    def toggle_photo_favorite(photo_id: int):
+        """Toggle a photo's favorite flag between True and NULL (NULL = unset, so the
+        export/filter treat it as nothing). Emits photo_modified so the export
+        automation can write the keyword. Returns the new favorite state."""
+        photo = db.session.get(Photo, photo_id)
+        if not photo:
+            return jsonify({"error": "Photo not found"}), 404
+
+        photo.favorite = True if not photo.favorite else None
+        db.session.commit()
+
+        emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": [photo_id]})
+        return jsonify({"favorite": photo.favorite})
+
     @app.route("/api/photo/<int:photo_id>/tags", methods=["PUT"])
     def update_photo_tags(photo_id: int):
         """Replace a photo's full tag set in one request, then emit photo_modified so

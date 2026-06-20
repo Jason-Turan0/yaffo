@@ -5,10 +5,11 @@ file's metadata so the on-disk file stays in sync with the index.
 Independent toggles in the automation's config decide what gets written:
 `export_location_tag_enabled` (the photo's `location_name`), `export_people_tag_enabled`
 (the names of people linked to the photo's faces), `export_labels_enabled` (its
-classification labels), and `export_custom_tags_enabled` (its manual name/value tags).
-Labels and custom tags are written into the file's keyword fields. With none enabled
-the run is a no-op. Fired by the `photo_modified` event with the affected photo ids;
-the actual write reuses `utils.write_metadata`.
+classification labels), `export_custom_tags_enabled` (its manual name/value tags), and
+`export_favorite_enabled` (a "Favorite" keyword, written only when the photo is
+favorited). Labels, custom tags, and the favorite keyword are written into the file's
+keyword fields. With none enabled the run is a no-op. Fired by the `photo_modified`
+event with the affected photo ids; the actual write reuses `utils.write_metadata`.
 """
 from pathlib import Path
 
@@ -34,6 +35,10 @@ _LOCATION_FIELD = _FIELDS["export_location_tag_enabled"]
 _PEOPLE_FIELD = _FIELDS["export_people_tag_enabled"]
 _LABELS_FIELD = _FIELDS["export_labels_enabled"]
 _CUSTOM_TAGS_FIELD = _FIELDS["export_custom_tags_enabled"]
+_FAVORITE_FIELD = _FIELDS["export_favorite_enabled"]
+
+# The keyword written into the file when a photo is favorited.
+FAVORITE_KEYWORD = "Favorite"
 
 
 def _people_names(photo: Photo) -> list[str]:
@@ -70,10 +75,11 @@ def _export_tags(
     export_people: bool,
     export_labels: bool = False,
     export_custom_tags: bool = False,
+    export_favorite: bool = False,
 ) -> int:
     """Write the enabled tag(s) into each photo's file metadata. Returns how many
     files were written. Photos whose file is missing are skipped."""
-    if not photo_ids or not (export_location or export_people or export_labels or export_custom_tags):
+    if not photo_ids or not (export_location or export_people or export_labels or export_custom_tags or export_favorite):
         return 0
     photos = (
         session.query(Photo)
@@ -98,6 +104,8 @@ def _export_tags(
             keywords += _label_names(photo)
         if export_custom_tags:
             keywords += _custom_tag_keywords(photo)
+        if export_favorite and photo.favorite:
+            keywords.append(FAVORITE_KEYWORD)
         success, error = write_photo_metadata(
             photo_path=photo_path,
             location_name=photo.location_name if export_location else None,
@@ -129,15 +137,18 @@ def export_photo_tag_task(automation_id: int, photo_ids: list[int]):
         export_people = bool(config_value(automation, _PEOPLE_FIELD))
         export_labels = bool(config_value(automation, _LABELS_FIELD))
         export_custom_tags = bool(config_value(automation, _CUSTOM_TAGS_FIELD))
+        export_favorite = bool(config_value(automation, _FAVORITE_FIELD))
 
         def work(progress_reporter: ProgressReporter) -> str:
             written = _export_tags(
-                session, progress_reporter, photo_ids, export_location, export_people, export_labels, export_custom_tags
+                session, progress_reporter, photo_ids, export_location, export_people,
+                export_labels, export_custom_tags, export_favorite,
             )
             return (
                 f"wrote metadata to {written}/{len(photo_ids)} file(s) "
                 f"(location={export_location}, people={export_people}, "
-                f"labels={export_labels}, custom_tags={export_custom_tags})"
+                f"labels={export_labels}, custom_tags={export_custom_tags}, "
+                f"favorite={export_favorite})"
             )
 
         record_run(session, automation, work)

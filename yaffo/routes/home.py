@@ -56,6 +56,7 @@ def init_home_routes(app: Flask):
         month = request.args.get("month", type=int)
         device = request.args.get("device", type=str)
         device = device.strip() if device else None
+        favorite = request.args.get("favorite", type=int)
         page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", type=int)
         filter_page_size = page_size if page_size else 25
@@ -78,6 +79,8 @@ def init_home_routes(app: Flask):
             query = query.filter(Photo.month == month)
         if device:
             query = query.filter(Photo.device == device)
+        if favorite:
+            query = query.filter(Photo.favorite.is_(True))
         if person_ids and person_match_type and len(person_ids) > 0:
             if person_match_type == 'all':
                 # AND logic: Photo must contain ALL selected people
@@ -249,6 +252,7 @@ def init_home_routes(app: Flask):
             'selected_year': year,
             'selected_month': month,
             'selected_device': device,
+            'selected_favorite': favorite,
             'selected_gender': gender,
             "page_sizes": [10, 25, 50, 100, 250],
             "page_size": filter_page_size

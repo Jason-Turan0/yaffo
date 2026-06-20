@@ -173,6 +173,10 @@
                          alt="{{ file_name }}"
                          class="photo-main"
                          id="mainPhoto">
+                    <button type="button" data-icon="favorite" data-photo-id="{{ photo.id }}"
+                            class="favorite-toggle {% if photo.favorite %}is-favorite{% endif %}"
+                            aria-pressed="{{ 'true' if photo.favorite else 'false' }}"
+                            title="Toggle favorite" aria-label="Toggle favorite"></button>
                     <canvas id="faceCanvas" class="face-overlay"></canvas>
                 </div>
             </div>
@@ -202,9 +206,12 @@
 {% block scripts %}
     <script src="{{ url_for('static', filename='components/modal.js') }}"></script>
     <script src="{{ url_for('static', filename='photos/view.js') }}"></script>
+    <script src="{{ url_for('static', filename='photos/favorite.js') }}"></script>
     <script src="{{ url_for('static', filename='photos/tags.js') }}"></script>
     <script src="{{ url_for('static', filename='photos/face-reassign.js') }}"></script>
     <script>
+        window.PHOTO_ORGANIZER.initFavoriteToggles(window.APP_CONFIG);
+
         // Initialize photo view modules
         window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView = window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView(
             {{ faces_with_locations | tojson }},
