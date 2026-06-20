@@ -10,6 +10,7 @@ can't drift from what the sandbox and resolver actually provide.
 from __future__ import annotations
 
 from yaffo.background_tasks.automation_sandbox.automation_host import render_host_api
+from yaffo.background_tasks.automation_sandbox.executor import context_globals
 from yaffo.db.models import EVENTS
 from yaffo.db.repositories.data_query_repository import FIELDS_BY_SOURCE
 from yaffo.site_agents.prompt_generator.source_catalog import (
@@ -42,12 +43,28 @@ def _language() -> str:
     ])
 
 
+# Prose for each ctx field. The field *set* is introspected from context_globals (the
+# real ctx shape the sandbox injects), so this can't advertise a field a script won't
+# get, or silently miss a new one — only the wording lives here.
+_CTX_FIELD_DOCS = {
+    "event_type": "the event name for an event run, or None for a schedule.",
+    "job_id": "the id of the job that emitted the event (or None).",
+    "photo_ids": "the photo ids the event concerns (empty for a schedule).",
+    "groups": (
+        "related-photo groupings — one list of photo ids per group (e.g. each "
+        "duplicate set, keeper first); empty for events without groupings."
+    ),
+}
+
+
 def _context() -> str:
+    fields = [
+        f"- ctx['{key}']: {_CTX_FIELD_DOCS.get(key, 'see the events catalog.')}"
+        for key in context_globals(None)
+    ]
     return block("context", [
         "Your script is given a `ctx` dict describing what triggered the run:",
-        "- ctx['event_type']: the event name for an event run, or None for a schedule.",
-        "- ctx['job_id']: the id of the job that emitted the event (or None).",
-        "- ctx['photo_ids']: the photo ids the event concerns (empty for a schedule).",
+        *fields,
         "Read ctx to act on exactly what triggered the run (e.g. the photos just indexed).",
     ])
 
