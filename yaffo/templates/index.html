@@ -21,6 +21,7 @@
             {% include "filters/_labels.html" %}
             {% include "filters/_tags.html" %}
             {% include "filters/_locations.html" %}
+            {% include "filters/_device.html" %}
         {% endmacro %}
         {{ render_sidebar(url_for('index'), filters, render_filters) }}
         <div class="main-content photo-gallery">
@@ -100,6 +101,7 @@
                 'path': filters.selected_path,
                 'year': filters.selected_year,
                 'month': filters.selected_month,
+                'device': filters.selected_device,
                 'person': filters.selected_person_ids,
                 'person-match-type': filters.selected_person_match_type,
                 'tag-name': filters.selected_tag_name,
