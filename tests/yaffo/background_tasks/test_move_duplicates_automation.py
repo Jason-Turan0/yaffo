@@ -11,10 +11,25 @@ import pytest
 
 from yaffo.background_tasks.automation_sandbox.starlark_runner import run_starlark
 from yaffo.background_tasks.tasks.find_duplicates import _resolve_group_photo_ids
-from yaffo.scripts.seed_automations import _DEDUPE_CODE
 
 pytestmark = pytest.mark.unit
 
+# On duplicates_found, move every duplicate except the keeper into a "_Duplicates"
+# sub-folder of its media dir. ctx["groups"] is a list of duplicate sets, each a list
+# of photo ids ordered earliest-indexed first, so group[0] is the keeper and
+# group[1:] are the copies to move out. The moves are written in one batched call.
+_DEDUPE_CODE = """\
+to_move = []
+for group in ctx["groups"]:
+    for photo_id in group[1:]:
+        to_move.append(photo_id)
+
+if to_move:
+    print("Moving " + str(len(to_move)) + " duplicate(s) to _Duplicates")
+    rows = data_query({"source": "photos", "id": {"in": to_move}})
+    moves = [{"photo_id": row["id"], "media_dir_id": row["media_dir_id"], "target_path": "_Duplicates"} for row in rows if row["media_dir_id"]]
+    move_photos(moves)
+"""
 
 class _FakeSession:
     """Resolves Photo.id/full_file_path queries from a path->id dict, ignoring the

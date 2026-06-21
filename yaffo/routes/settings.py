@@ -4,6 +4,7 @@ import yaffo.db.repositories.media_dir_repository
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, Face, ClassificationLabel, AUTOMATION_HANDLER_CLASSIFY_LABELS
 from yaffo.common import DB_PATH, QUEUE_DB_PATH
+from yaffo.version import get_build_info
 from yaffo.site_agents import llm_config
 import json
 import subprocess
@@ -66,6 +67,7 @@ def init_settings_routes(app: Flask):
             thumbnail_count=thumbnail_count,
             thumbnail_size=format_size(thumbnail_size),
             queue_db_path=str(QUEUE_DB_PATH),
+            build_info=get_build_info(),
             llm=llm_config.status(),
             labels=classification_repository.list_labels(db.session),
         )

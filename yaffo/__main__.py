@@ -58,6 +58,33 @@ def _stop_background(procs: list[subprocess.Popen]) -> None:
             proc.terminate()
 
 
+def _run_menubar(procs: list[subprocess.Popen], url: str) -> None:
+    """Run a macOS menu-bar item on the main thread (the AppKit run loop that gives
+    the app a face and keeps it alive). 'Quit' tears down the host/watcher children
+    so nothing is orphaned — the failure mode of the headless, faceless build."""
+    import rumps
+
+    from yaffo.common import RESOURCES_DIR
+
+    icon = RESOURCES_DIR / "branding" / "menubar.png"
+    icon_kwargs = {"icon": str(icon), "template": False} if icon.exists() else {"title": "📷"}
+
+    class YaffoApp(rumps.App):
+        def __init__(self) -> None:
+            super().__init__("Yaffo", quit_button=None, **icon_kwargs)
+            self.menu = [
+                rumps.MenuItem("Open Yaffo", callback=lambda _: webbrowser.open(url)),
+                None,
+                rumps.MenuItem("Quit Yaffo", callback=self._quit),
+            ]
+
+        def _quit(self, _) -> None:
+            _stop_background(procs)
+            rumps.quit_application()
+
+    YaffoApp().run()
+
+
 def _run_web() -> None:
     from waitress import serve
     from yaffo.app import create_app
@@ -72,8 +99,22 @@ def _run_web() -> None:
     app = create_app()
     url = f"http://{HOST}:{PORT}"
     threading.Timer(1.5, lambda: webbrowser.open(url)).start()
-    logger.info(f"serving Yaffo at {url}")
-    serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
+
+    try:
+        import rumps  # noqa: F401  (probe: present in the bundle, absent in plain dev)
+    except Exception:
+        # No menu bar (e.g. Linux / a bare dev run): serve on the main thread.
+        logger.info(f"serving Yaffo at {url} (no menu bar)")
+        serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
+        return
+
+    logger.info(f"serving Yaffo at {url} (menu bar)")
+    threading.Thread(
+        target=serve, args=(app,),
+        kwargs={"host": HOST, "port": PORT, "threads": WEB_THREADS},
+        daemon=True,
+    ).start()
+    _run_menubar(procs, url)
 
 
 def _run_host() -> None:

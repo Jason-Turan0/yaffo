@@ -85,10 +85,22 @@
     {% include "settings/_labels.html" %}
 
     <div class="settings-section">
-        <h2>System Paths</h2>
-        <p class="section-description">These paths are configured in the application and cannot be changed here.</p>
+        <h2>System Information</h2>
+        <p class="section-description">Build details and configured paths (read-only).</p>
 
         <div class="system-paths">
+            <div class="system-path-item">
+                <label>Build Version:</label>
+                <code>{{ build_info.version }}</code>
+                <p class="path-description">The version of Yaffo currently running.</p>
+            </div>
+
+            <div class="system-path-item">
+                <label>Build Timestamp:</label>
+                <code>{{ build_info.build_time or "dev build" }}</code>
+                <p class="path-description">When this build was produced.</p>
+            </div>
+
             <div class="system-path-item">
                 <label>Database Path:</label>
                 <code>{{ db_path }}</code>

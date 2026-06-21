@@ -48,22 +48,7 @@ for row in rows:
 move_photos(moves)
 """
 
-# On duplicates_found, move every duplicate except the keeper into a "_Duplicates"
-# sub-folder of its media dir. ctx["groups"] is a list of duplicate sets, each a list
-# of photo ids ordered earliest-indexed first, so group[0] is the keeper and
-# group[1:] are the copies to move out. The moves are written in one batched call.
-_DEDUPE_CODE = """\
-to_move = []
-for group in ctx["groups"]:
-    for photo_id in group[1:]:
-        to_move.append(photo_id)
 
-if to_move:
-    print("Moving " + str(len(to_move)) + " duplicate(s) to _Duplicates")
-    rows = data_query({"source": "photos", "id": {"in": to_move}})
-    moves = [{"photo_id": row["id"], "media_dir_id": row["media_dir_id"], "target_path": "_Duplicates"} for row in rows if row["media_dir_id"]]
-    move_photos(moves)
-"""
 
 # A library-wide organize for the prompt "Take all my favorite photos of my kids
 # Chase and Nathan and put them in their own folders grouped by year". Context-less
@@ -151,28 +136,6 @@ def seed_automations() -> None:
             )],
         )
 
-        # Seeded DISABLED: it moves files, so the user opts in by enabling it. Once on,
-        # any duplicate scan (the scheduled duplicate_scan automation or the manual
-        # Remove Duplicates tool) fires duplicates_found and this moves the copies out.
-        dedupe_automation = Automation(
-            slug=_DEDUPE_SLUG,
-            name="Move duplicates",
-            description=(
-                "When a duplicate scan finds duplicates, move every copy except the "
-                "keeper into a \"_Duplicates\" sub-folder of its media dir."
-            ),
-            is_system=False,
-            enabled=False,
-            handler=None,
-            published_code=_DEDUPE_CODE,
-            status=AUTOMATION_STATUS_READY,
-            triggers=[AutomationTrigger(
-                trigger_type=TRIGGER_TYPE_EVENT,
-                enabled=True,
-                event_type=EVENT_DUPLICATES_FOUND,
-            )],
-        )
-
         # A library-wide organize, the kind the builder would generate from a natural
         # prompt. No triggers — it queries the whole library, not an event's photos —
         # so it's invoked via Run now on the detail page. Seeded DISABLED since it moves
@@ -209,8 +172,7 @@ def seed_automations() -> None:
                 event_type=EVENT_PHOTO_INDEXED,
             )],
         )
-
-        seeded = [organize_automation, dedupe_automation, file_kids_automation, error_automation]
+        seeded = [organize_automation, file_kids_automation, error_automation]
         db.session.add_all(seeded)
         db.session.commit()
         print("Seeded automations: " + ", ".join(f"'{a.slug}'" for a in seeded) + ".")

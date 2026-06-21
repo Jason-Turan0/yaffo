@@ -67,6 +67,10 @@ resources/*
 # Packaging build artifacts
 *.app
 *.dmg
+packaging/icon.icns  # generated from the app SVG by packaging/make_icons.sh
+
+# Generated build stamp (version + timestamp) written by packaging/bump_version.py
+yaffo/_build_info.py
 node_modules
 
 # Environment files with secrets

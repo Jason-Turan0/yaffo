@@ -17,7 +17,6 @@ PYINSTALLER="pyinstaller"
 [ -x "venv/bin/pyinstaller" ] && PYINSTALLER="venv/bin/pyinstaller"
 
 APP="dist/Yaffo Photo Organizer.app"
-DMG="dist/Yaffo Photo Organizer-0.0.1.dmg"
 
 echo "==> Downloading bundled assets (exiftool, models)"
 "$PYTHON" packaging/download_assets.py
@@ -25,19 +24,37 @@ echo "==> Downloading bundled assets (exiftool, models)"
 echo "==> Staging attribution file into resources/"
 cp THIRD_PARTY_LICENSES.txt resources/THIRD_PARTY_LICENSES.txt
 
+echo "==> Bumping version + stamping build info"
+"$PYTHON" packaging/bump_version.py
+
+# Name the DMG after the just-bumped version.
+DMG="dist/Yaffo Photo Organizer-$(cat VERSION).dmg"
+
+echo "==> Generating app + menu-bar icons"
+./packaging/make_icons.sh
+
 echo "==> PyInstaller freeze"
 "$PYINSTALLER" --noconfirm yaffo.spec
 
 echo "==> Ad-hoc signing (.app + nested binaries)"
 codesign --force --deep --sign - "$APP"
 
-echo "==> Building DMG (with /Applications shortcut)"
+echo "==> Building DMG (/Applications shortcut + volume icon)"
 rm -f "$DMG"
 STAGING="$(mktemp -d)"
 ditto "$APP" "$STAGING/Yaffo Photo Organizer.app"   # ditto preserves the signature
 ln -s /Applications "$STAGING/Applications"
-hdiutil create -volname "Yaffo Photo Organizer" -srcfolder "$STAGING" -ov -format UDZO "$DMG"
-rm -rf "$STAGING"
+[ -f packaging/icon.icns ] && cp packaging/icon.icns "$STAGING/.VolumeIcon.icns"
+
+# Build read-write, set the volume's custom-icon flag, then compress to the final DMG.
+RW="$(mktemp -u).dmg"
+hdiutil create -volname "Yaffo Photo Organizer" -srcfolder "$STAGING" -fs HFS+ -format UDRW -ov "$RW" >/dev/null
+MNT="$(mktemp -d)"
+hdiutil attach "$RW" -mountpoint "$MNT" -nobrowse >/dev/null
+[ -f "$MNT/.VolumeIcon.icns" ] && SetFile -a C "$MNT" || true
+hdiutil detach "$MNT" >/dev/null
+hdiutil convert "$RW" -format UDZO -o "$DMG" >/dev/null
+rm -f "$RW"; rm -rf "$STAGING" "$MNT"
 
 echo
 echo "Done. DMG: $DMG"
