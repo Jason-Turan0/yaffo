@@ -28,7 +28,6 @@ TRASH_DIR = ROOT_DIR / "duplicates"
 MEDIA_DIRS = [
     ROOT_DIR / "organized"
 ]
-THUMBNAIL_DIR = ROOT_DIR / "thumbnails"
 DB_PATH = ROOT_DIR / f"{app_name}.db"
 QUEUE_DB_PATH = ROOT_DIR / f"{app_name}-queue.db"
 

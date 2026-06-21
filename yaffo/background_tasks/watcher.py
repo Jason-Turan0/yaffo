@@ -9,16 +9,17 @@ from watchdog.observers.api import BaseObserver, ObservedWatch
 
 from yaffo.background_tasks.tasks import SessionFactory
 from yaffo.background_tasks.watcher_suppression import should_suppress, sweep_expired
-from yaffo.common import PHOTO_EXTENSIONS, TEMP_DIR, THUMBNAIL_DIR, TRASH_DIR
+from yaffo.common import PHOTO_EXTENSIONS, TEMP_DIR, TRASH_DIR
 from yaffo.db.repositories.photos_repository import move_photo_path
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
 from yaffo.utils.index_photos import delete_photos_by_paths, delete_photos_under_dir
 from yaffo.db.repositories.media_dir_repository import get_media_dirs
+from yaffo.utils.settings import get_thumbnail_dir
+
+from cachetools import cached, TTLCache
 
 logger = get_logger(__name__, 'watcher')
-
-IGNORED_DIRS = (TEMP_DIR, TRASH_DIR, THUMBNAIL_DIR)
 
 SETTLE_SECONDS = 10.0   # a file must be quiet this long before we touch it
 POLL_INTERVAL = 5.0    # how often the flusher checks for settled files
@@ -46,7 +47,11 @@ def _is_indexable(path: Path) -> bool:
         return False
     if path.name.startswith("."):
         return False
-    return not any(ignored in path.parents for ignored in IGNORED_DIRS)
+    ignored_dirs =[]
+    thumbnail_dir = _get_thumbnail_dir()
+    if thumbnail_dir:
+        ignored_dirs.append(thumbnail_dir)
+    return not any(ignored in path.parents for ignored in ignored_dirs)
 
 
 class _DebouncedHandler(FileSystemEventHandler):
@@ -62,6 +67,7 @@ class _DebouncedHandler(FileSystemEventHandler):
         self._pending_dir_ops: dict[Path, tuple[Path | None, float]] = {}
         self._pending_file_moves: dict[Path, tuple[Path, float]] = {}  # dest -> (src, ts)
         self._lock = threading.Lock()
+        self.ignored_dirs: list[Path] = []
 
     def _mark_add(self, raw_path: str) -> None:
         path = Path(raw_path)
@@ -93,7 +99,7 @@ class _DebouncedHandler(FileSystemEventHandler):
         with self._lock:
             self._pending_dir_ops[src] = (dest, time.monotonic())
 
-    def _mark_file_move(self, src_path: str, dest_path: str) -> None:
+    def _mark_file_move(self, src_path: str, dest_path: str, ) -> None:
         """A file rename/move within the watched tree. Recorded as a (src, dest) pair
         so the flusher can update the photo in place (preserving its id/faces/tags)
         rather than deleting the old row and re-indexing the new path from scratch."""
@@ -262,6 +268,24 @@ def _desired_media_dirs() -> set[Path]:
     return desired
 
 
+# maxsize=1 because we only ever cache one directory path. ttl=300 is 5 minutes.
+@cached(cache=TTLCache(maxsize=1, ttl=300))
+def _get_thumbnail_dir() -> Path | None:
+    """Currently-configured thumbnail that exist on disk."""
+    session = SessionFactory()
+    try:
+        thumbnail_dir = get_thumbnail_dir(session)
+    finally:
+        session.close()
+        SessionFactory.remove()
+
+    if not thumbnail_dir.exists():
+        logger.warning(f"Thumbnail dir does not exist, skipping: {thumbnail_dir}")
+        return None
+
+    return thumbnail_dir
+
+
 def _reconcile_watches(
     observer: BaseObserver,
     handler: FileSystemEventHandler,
@@ -286,7 +310,6 @@ def main() -> None:
     if not desired:
         logger.info("No media directories configured yet; waiting for configuration.")
     _reconcile_watches(observer, handler, watches, desired)
-
     observer.start()
     try:
         while True:

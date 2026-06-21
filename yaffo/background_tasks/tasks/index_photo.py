@@ -4,10 +4,9 @@ from yaffo.db.models import Job, Photo, Face, JOB_STATUS_CANCELLED, FACE_STATUS_
     JOB_STATUS_RUNNING, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
 from yaffo.utils.index_photos import index_photo
 from yaffo.domain.compare_utils import serialize_embedding
-from yaffo.common import THUMBNAIL_DIR
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
-from yaffo.background_tasks.utils import SessionFactory, get_job_status
+from yaffo.background_tasks.utils import SessionFactory, get_job_status, get_current_thumbnail_dir
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -23,6 +22,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
     job_status = get_job_status(job_id)
     if job_status == JOB_STATUS_CANCELLED:
         return
+    thumbnail_dir = get_current_thumbnail_dir()
 
     for index, file_path in enumerate(file_path_batch):
         if index > 0 and index % check_cancel_frequency == 0:
@@ -33,7 +33,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                 break
 
         logger.debug(f"Processing photo {file_path}")
-        index_results = index_photo(Path(file_path), THUMBNAIL_DIR)
+        index_results = index_photo(Path(file_path), thumbnail_dir)
         if index_results is None:
             logger.warning(f"Failed to process faces for photo {file_path}")
             error_count += 1

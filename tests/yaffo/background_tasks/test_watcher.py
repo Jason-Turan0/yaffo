@@ -49,7 +49,7 @@ def _touch(path: Path) -> Path:
     return path
 
 
-def _wait_until(predicate, timeout=15.0, interval=0.05) -> bool:
+def _wait_until(predicate, timeout=5.0, interval=0.05) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():

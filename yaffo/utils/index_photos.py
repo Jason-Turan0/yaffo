@@ -16,8 +16,8 @@ from sqlalchemy.orm import Session
 
 from yaffo.logging_config import get_logger
 from yaffo.db.models import Photo, Face, Tag, FACE_STATUS_UNASSIGNED
-from yaffo.common import PHOTO_EXTENSIONS, TEMP_DIR, THUMBNAIL_DIR, ROOT_DIR
-from yaffo.utils.photo_dates import PhotoDateInfo, get_photo_date_info
+from yaffo.common import PHOTO_EXTENSIONS
+from yaffo.utils.photo_dates import get_photo_date_info
 from yaffo.utils.image import image_from_path, image_to_numpy
 from yaffo.utils.face_analysis import detect_faces
 from yaffo.utils.exiftool_path import get_exiftool_path, is_exiftool_available

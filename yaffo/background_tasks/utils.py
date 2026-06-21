@@ -1,4 +1,6 @@
 import time
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -9,6 +11,7 @@ from yaffo.db.models import (
 from yaffo.common import DB_PATH
 from yaffo.logging_config import get_logger
 from yaffo.themes import _setting_name, _theme_from_json
+from yaffo.utils.settings import get_thumbnail_dir
 
 engine = create_engine(
     f"sqlite:///{DB_PATH}",
@@ -26,6 +29,15 @@ def get_job_status(job_id: str) -> str:
     try:
         job = session.query(Job).filter_by(id=job_id).first()
         return job.status if job is not None else JOB_STATUS_CANCELLED
+    finally:
+        session.close()
+        SessionFactory.remove()
+
+def get_current_thumbnail_dir() -> Path | None:
+    """Get the current status of a job."""
+    session = SessionFactory()
+    try:
+       return get_thumbnail_dir(session)
     finally:
         session.close()
         SessionFactory.remove()
