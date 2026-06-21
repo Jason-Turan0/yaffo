@@ -101,13 +101,13 @@ def _run_concurrently(processes):
 
 
 @task
-def start_app(c, host="127.0.0.1", port=5001, debug=True):
+def start_app(c, host="127.0.0.1", port=5002, debug=True):
     """
     Start the Flask web application and open Chrome in incognito mode.
 
     Args:
         host: Host to bind to (default: 127.0.0.1)
-        port: Port to bind to (default: 5001 — 5000 collides with macOS AirPlay Receiver)
+        port: Port to bind to (default: 5002 — 5000 collides with macOS AirPlay Receiver)
         debug: Run in debug mode (default: True)
 
     Example:
@@ -158,7 +158,7 @@ def start_watcher(c):
 
 
 @task
-def app_local(c, host="127.0.0.1", port=5001, debug=True, workers=4, recycle=100):
+def app_local(c, host="127.0.0.1", port=5002, debug=True, workers=4, recycle=100):
     """
     Launch the full local stack at once: the Flask app, the task-queue host, and
     the photo watcher. Output from all three is interleaved with [flask]/[host]/
@@ -166,7 +166,7 @@ def app_local(c, host="127.0.0.1", port=5001, debug=True, workers=4, recycle=100
 
     Args:
         host: Host to bind the Flask app to (default: 127.0.0.1)
-        port: Port to bind the Flask app to (default: 5001 — 5000 collides with macOS AirPlay Receiver)
+        port: Port to bind the Flask app to (default: 5002 — 5000 collides with macOS AirPlay Receiver)
         debug: Run Flask in debug mode (default: True)
         workers: Number of spawn worker processes (default: 4)
         recycle: Recycle each worker after this many tasks (default: 100)
