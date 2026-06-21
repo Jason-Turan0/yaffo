@@ -49,7 +49,7 @@ def dispatch_event_task(event_type: str, payload: dict):
                 continue
             try:
                 if invoke_automation(automation, context):
-                    logger.info(
+                    logger.debug(
                         f"Dispatched automation '{automation.slug}' for event {event_type}"
                     )
             except Exception:

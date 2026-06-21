@@ -1,9 +1,13 @@
 function toggleMultiSelect(header) {
     const wrapper = header.parentElement;
     wrapper.classList.toggle('open');
+    // Drop focus into the search box when opening a searchable dropdown.
+    if (wrapper.classList.contains('open')) {
+        const search = wrapper.querySelector('.multi-select-search');
+        if (search) search.focus();
+    }
 }
 
-//TODO. Nice to add a option to allow for search
 function updateMultiSelectText(checkbox) {
     const wrapper = checkbox.closest('.multi-select-wrapper');
     const header = wrapper.querySelector('.selected-text');
@@ -38,6 +42,40 @@ function updateMultiSelectText(checkbox) {
     }
 }
 
+// Hide options whose label text doesn't contain the search term (case-insensitive).
+function filterMultiSelectOptions(input) {
+    const wrapper = input.closest('.multi-select-wrapper');
+    const term = input.value.trim().toLowerCase();
+    wrapper.querySelectorAll('.multi-select-option').forEach(option => {
+        const text = option.textContent.trim().toLowerCase();
+        option.classList.toggle('multi-select-option--hidden', term !== '' && !text.includes(term));
+    });
+}
+
+// Inject a search box into any wrapper that opted in with data-searchable="true".
+function initSearchableMultiSelects() {
+    document.querySelectorAll('.multi-select-wrapper[data-searchable="true"]').forEach(wrapper => {
+        const options = wrapper.querySelector('.multi-select-options');
+        if (!options || options.querySelector('.multi-select-search')) return;
+
+        const searchWrapper = document.createElement('div');
+        searchWrapper.className = 'multi-select-search-wrapper';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'multi-select-search';
+        input.placeholder = wrapper.dataset.searchPlaceholder || 'Search…';
+        input.addEventListener('input', () => filterMultiSelectOptions(input));
+        // The box lives inside the filter form; Enter would submit it, so swallow it.
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+
+        searchWrapper.append(input);
+        options.prepend(searchWrapper);
+    });
+}
+
 // Close dropdown when clicking outside
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.multi-select-wrapper')) {
@@ -47,8 +85,9 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Initialize text on page load
+// Initialize text and search boxes on page load
 document.addEventListener('DOMContentLoaded', () => {
+    initSearchableMultiSelects();
     document.querySelectorAll('.multi-select-wrapper').forEach(wrapper => {
         const firstCheckbox = wrapper.querySelector('input[type="checkbox"]');
         if (firstCheckbox) {

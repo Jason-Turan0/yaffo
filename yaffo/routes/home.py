@@ -222,7 +222,7 @@ def init_home_routes(app: Flask):
         labels = (
             db.session.query(ClassificationLabel)
             .filter(ClassificationLabel.enabled == True)
-            .order_by(ClassificationLabel.name)
+            .order_by(func.lower(ClassificationLabel.name))
             .all()
         )
 

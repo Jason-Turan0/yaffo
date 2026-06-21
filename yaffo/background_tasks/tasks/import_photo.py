@@ -14,7 +14,7 @@ def import_photo_task(job_id: str, file_path_batch: list[str]):
     Background task to import photos - create photos in database.
     Supports graceful cancellation and crash recovery.
     """
-    logger.info(f"Starting import_photo_task for job {job_id} with {len(file_path_batch)} files")
+    logger.debug(f"Starting import_photo_task for job {job_id} with {len(file_path_batch)} files")
     verified_paths : list[Path] = []
     error_count = 0
     cancel_count = 0
@@ -63,7 +63,7 @@ def import_photo_task(job_id: str, file_path_batch: list[str]):
 
         session.query(Job).filter_by(id=job_id).update(update_job_params)
         session.commit()
-        logger.info(
+        logger.debug(
             f"Completed job {job_id} batch: processed={processed_count}, errors={error_count}, cancelled={cancel_count}")
 
     except Exception as e:

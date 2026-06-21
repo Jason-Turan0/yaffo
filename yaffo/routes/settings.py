@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, make_response
+from flask import Flask, render_template, request, jsonify, make_response, Response, stream_with_context
 
 import yaffo.db.repositories.media_dir_repository
 from yaffo.db import db
@@ -10,7 +10,9 @@ import json
 import subprocess
 import platform
 import shutil
+from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Iterator
 
 from yaffo.background_tasks.tasks.classify_labels_automation import classify_labels_automation_task
 from yaffo.db.repositories import automation_repository, classification_repository, photos_repository
@@ -18,20 +20,60 @@ from yaffo.utils.file_system import show_file_dialog
 from yaffo.utils import settings as media_settings
 
 
+# NDJSON records the thumbnail-stats stream emits (one JSON object per line). Named so
+# the page and the stream route agree on one shape; `type` discriminates them. Mirrors
+# the scan stream in yaffo/routes/utilities/index_photos.py.
+@dataclass
+class ThumbnailStatsProgress:
+    scanned: int
+    type: str = "progress"
+
+
+@dataclass
+class ThumbnailStatsComplete:
+    count: int
+    size: int
+    size_formatted: str
+    type: str = "done"
+
+
+@dataclass
+class ThumbnailStatsError:
+    message: str
+    type: str = "error"
+
+
+def iter_thumbnail_stats(directory: Path | None, progress_every: int = 500) -> Iterator[int | tuple[int, int]]:
+    """Walk the thumbnail dir, yielding the running file count every `progress_every`
+    files (so a caller can drive a live counter), then the final (count, total_size).
+    Mirrors iter_media_scan; the stream route consumes this, get_thumbnail_stats drains
+    it for callers that just want the result."""
+    count = 0
+    total_size = 0
+    if directory is None or not directory.exists():
+        yield (count, total_size)
+        return
+
+    for file_path in directory.rglob("*"):
+        if file_path.is_file():
+            count += 1
+            total_size += file_path.stat().st_size
+            if count % progress_every == 0:
+                yield count
+
+    yield (count, total_size)
+
+
 def init_settings_routes(app: Flask):
     def get_thumbnail_stats(directory: Path| None):
-        """Get count and total size of thumbnails in directory"""
-        if directory is None or not directory.exists():
-            return 0, 0
-
+        """Get count and total size of thumbnails in directory (drains
+        iter_thumbnail_stats for callers that want the result synchronously)."""
         count = 0
         total_size = 0
-
         try:
-            for file_path in directory.rglob("*"):
-                if file_path.is_file():
-                    count += 1
-                    total_size += file_path.stat().st_size
+            for event in iter_thumbnail_stats(directory):
+                if isinstance(event, tuple):
+                    count, total_size = event
         except Exception as e:
             print(f"Error getting thumbnail stats: {e}")
 
@@ -56,16 +98,14 @@ def init_settings_routes(app: Flask):
             current_thumbnail_dir = Path(thumbnail_setting.value)
         else:
             current_thumbnail_dir = None
-        # Get thumbnail stats
-        thumbnail_count, thumbnail_size = get_thumbnail_stats(current_thumbnail_dir)
+        # Thumbnail stats (a slow recursive walk on large libraries) are filled in live
+        # by the streaming endpoint below, so the page no longer blocks on counting them.
 
         return render_template(
             "settings/index.html",
             media_dirs=media_dirs,
             db_path=str(DB_PATH),
             current_thumbnail_dir=str(current_thumbnail_dir) if current_thumbnail_dir else None,
-            thumbnail_count=thumbnail_count,
-            thumbnail_size=format_size(thumbnail_size),
             queue_db_path=str(QUEUE_DB_PATH),
             build_info=get_build_info(),
             llm=llm_config.status(),
@@ -206,6 +246,37 @@ def init_settings_routes(app: Flask):
             "size": size,
             "size_formatted": format_size(size)
         })
+
+    @app.route("/settings/thumbnail-stats/stream", methods=["GET"])
+    def settings_thumbnail_stats_stream():
+        """Stream the thumbnail-dir walk as NDJSON: `progress` records carry the running
+        file count while it walks, then one `done` record with the final count + size.
+        The page renders first and fills these stats live instead of blocking on the
+        walk. Mirrors the scan stream in routes/utilities/index_photos.py."""
+        thumbnail_setting = db.session.query(ApplicationSettings).filter_by(name="thumbnail_dir").first()
+        thumbnail_dir = Path(thumbnail_setting.value) if thumbnail_setting and thumbnail_setting.value else None
+
+        def generate():
+            try:
+                for event in iter_thumbnail_stats(thumbnail_dir):
+                    if isinstance(event, tuple):
+                        count, total_size = event
+                        yield json.dumps(asdict(ThumbnailStatsComplete(
+                            count=count,
+                            size=total_size,
+                            size_formatted=format_size(total_size),
+                        ))) + "\n"
+                    else:
+                        yield json.dumps(asdict(ThumbnailStatsProgress(scanned=event))) + "\n"
+            except Exception as e:
+                yield json.dumps(asdict(ThumbnailStatsError(message=str(e)))) + "\n"
+
+        # no-store: live data, so the browser re-walks every load rather than caching.
+        return Response(
+            stream_with_context(generate()),
+            mimetype="application/x-ndjson",
+            headers={"Cache-Control": "no-store"},
+        )
 
     @app.route("/api/settings/thumbnail-dir", methods=["POST"])
     def update_thumbnail_dir():

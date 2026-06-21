@@ -42,7 +42,7 @@ def worker_main(
     from yaffo.logging_config import get_logger
 
     logger = get_logger(__name__, "background_tasks")
-    logger.info(f"worker {worker_id} started (max_tasks={max_tasks})")
+    logger.debug(f"worker {worker_id} started (max_tasks={max_tasks})")
 
     processed = 0
     while processed < max_tasks:
@@ -62,4 +62,4 @@ def worker_main(
             outbox.put((worker_id, task_id, ERROR, traceback.format_exc()))
         processed += 1
 
-    logger.info(f"worker {worker_id} exiting after {processed} task(s)")
+    logger.debug(f"worker {worker_id} exiting after {processed} task(s)")

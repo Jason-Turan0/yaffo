@@ -151,9 +151,57 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, config) => {
         }
     };
 
+    // Fill the thumbnail stats live from the NDJSON stream so the page doesn't block on
+    // the (slow) recursive walk. `progress` records drive the running file count; the
+    // final `done` record sets the count + formatted size. Mirrors index_photos.js.
+    const handleStatsRecord = (record) => {
+        const countEl = document.getElementById('thumbnail-count');
+        const sizeEl = document.getElementById('thumbnail-size');
+        if (record.type === 'progress') {
+            if (countEl) countEl.textContent = Number(record.scanned).toLocaleString();
+        } else if (record.type === 'done') {
+            if (countEl) countEl.textContent = Number(record.count).toLocaleString();
+            if (sizeEl) sizeEl.textContent = record.size_formatted;
+        } else if (record.type === 'error') {
+            if (sizeEl) sizeEl.textContent = '—';
+            window.notification.error('Failed to count thumbnails: ' + record.message);
+        }
+    };
+
+    const streamThumbnailStats = async () => {
+        if (!document.getElementById('thumbnail-stats')) return;
+        try {
+            const response = await fetch(config.urls.settings_thumbnail_stats_stream);
+            if (!response.ok || !response.body) throw new Error('stats request failed');
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                let newline;
+                while ((newline = buffer.indexOf('\n')) >= 0) {
+                    const line = buffer.slice(0, newline).trim();
+                    buffer = buffer.slice(newline + 1);
+                    if (line) handleStatsRecord(JSON.parse(line));
+                }
+            }
+            const tail = buffer.trim();
+            if (tail) handleStatsRecord(JSON.parse(tail));
+        } catch (error) {
+            const sizeEl = document.getElementById('thumbnail-size');
+            if (sizeEl) sizeEl.textContent = '—';
+            window.notification.error('Failed to count thumbnails.');
+        }
+    };
+
+    streamThumbnailStats();
+
     return {
         addMediaDir,
         removeMediaDir,
-        changeThumbnailDir
+        changeThumbnailDir,
+        streamThumbnailStats
     };
 };

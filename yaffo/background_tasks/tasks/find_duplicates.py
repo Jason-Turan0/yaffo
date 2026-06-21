@@ -35,7 +35,7 @@ def _resolve_group_photo_ids(session, duplicate_groups: list[dict]) -> list[list
 @task_queue.task(context=True)
 def find_duplicates_task(job_id: str, file_paths: list[str], task=None):
     """Background task to find duplicate photos using perceptual hashing."""
-    logger.info(f"Starting find_duplicates_task for job {job_id} with {len(file_paths)} files")
+    logger.debug(f"Starting find_duplicates_task for job {job_id} with {len(file_paths)} files")
 
     check_cancel_frequency = 10
     hashes = defaultdict(list)
@@ -121,7 +121,7 @@ def find_duplicates_task(job_id: str, file_paths: list[str], task=None):
         session.commit()
         if duplicate_groups:
             event_groups = _resolve_group_photo_ids(session, duplicate_groups)
-        logger.info(
+        logger.debug(
             f"Completed job {job_id}: processed={processed_count}, errors={error_count}, "
             f"cancelled={cancel_count}, duplicate_groups={len(duplicate_groups)}"
         )

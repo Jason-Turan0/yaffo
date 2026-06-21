@@ -1,6 +1,9 @@
 import logging
 import sys
+from logging.handlers import RotatingFileHandler
+
 from yaffo.common import ROOT_DIR
+from yaffo.config import get as get_config
 
 LOG_FORMAT = '%(asctime)s - %(name)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s'
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
@@ -8,8 +11,16 @@ DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 BACKGROUND_TASKS_LOG_FILE = ROOT_DIR / "background_tasks.log"
 WEB_LOG_FILE = ROOT_DIR / "yaffo.log"
 
+# Level from config.toml ([logging] level), default INFO. Set DEBUG there + restart
+# to troubleshoot. Unknown names fall back to INFO.
+DEFAULT_LEVEL = getattr(logging, str(get_config("logging", "level", "INFO")).upper(), logging.INFO)
 
-def setup_logger(name: str, log_file: str, level=logging.DEBUG):
+# Cap each log file so it can't grow unbounded over a long-running session.
+_MAX_BYTES = 5 * 1024 * 1024
+_BACKUP_COUNT = 3
+
+
+def setup_logger(name: str, log_file: str, level=DEFAULT_LEVEL):
     """
     Set up a logger with file and console handlers.
 
@@ -30,8 +41,8 @@ def setup_logger(name: str, log_file: str, level=logging.DEBUG):
 
     formatter = logging.Formatter(LOG_FORMAT, DATE_FORMAT)
 
-    # File handler
-    file_handler = logging.FileHandler(log_file)
+    # File handler (rotating, so logs self-cap)
+    file_handler = RotatingFileHandler(log_file, maxBytes=_MAX_BYTES, backupCount=_BACKUP_COUNT)
     file_handler.setLevel(level)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -48,7 +59,7 @@ def setup_logger(name: str, log_file: str, level=logging.DEBUG):
     return logger
 
 
-def get_logger(module_name: str, log_type: str ='webapp', level=logging.DEBUG):
+def get_logger(module_name: str, log_type: str ='webapp', level=DEFAULT_LEVEL):
     """
     Factory method to create a logger for a specific module.
 

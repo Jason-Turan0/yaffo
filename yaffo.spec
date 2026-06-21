@@ -36,11 +36,14 @@ hiddenimports += collect_submodules("sklearn")
 hiddenimports += ["starlark", "keyring.backends.macOS", "waitress",
                   "objc", "Foundation", "AppKit", "PyObjCTools"]
 
-# App data files (kept out of the PYZ so they exist on disk in the bundle).
+# Non-.py data shipped inside the yaffo package. Listed explicitly as source-tree
+# dirs: collect_data_files() silently drops these because yaffo is our own source
+# package (on pathex, not pip-installed), so PyInstaller treats its files as source.
 datas += [
     ("yaffo/templates", "yaffo/templates"),
     ("yaffo/static", "yaffo/static"),
-    ("yaffo/scripts/db/migrations", "yaffo/scripts/db/migrations"),  # loaded by path
+    ("yaffo/utils/clip_tokenizer", "yaffo/utils/clip_tokenizer"),  # vendored CLIP vocab .gz
+    ("yaffo/scripts/db/migrations", "yaffo/scripts/db/migrations"),  # loaded by file path
     ("resources", "resources"),  # exiftool + bundled models + THIRD_PARTY_LICENSES
 ]
 

@@ -48,6 +48,23 @@
     display: block;
 }
 
+.multi-select-search-wrapper {
+    position: sticky;
+    top: 0;
+    padding: 8px;
+    background: var(--color-surface);
+    border-bottom: var(--border-width) solid var(--color-border-strong);
+}
+
+.multi-select-search {
+    width: 100%;
+    padding: 6px 8px;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    font-size: var(--font-size-base);
+}
+
 .multi-select-option {
     display: flex;
     align-items: center;
@@ -67,6 +84,11 @@
 
 .multi-select-option span {
     font-size: var(--font-size-base);
+}
+
+/* After .multi-select-option so it wins the display rule (equal specificity). */
+.multi-select-option--hidden {
+    display: none!important;
 }
 
 .filter-hint {

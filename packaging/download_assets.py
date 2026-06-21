@@ -29,6 +29,10 @@ EXIFTOOL_URLS = [
 # InsightFace expects <root>/models/buffalo_l/*.onnx (root = resources/models/insightface).
 INSIGHTFACE_DIR = RESOURCES / "models" / "insightface" / "models" / "buffalo_l"
 INSIGHTFACE_URL = "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip"
+# Only the models for the modules we load (face_analysis: detection / recognition /
+# genderage). The two landmark models in the pack are unused dead weight (~142MB):
+#   1k3d68.onnx (3D landmarks), 2d106det.onnx (2D landmarks).
+INSIGHTFACE_KEEP = {"det_10g.onnx", "w600k_r50.onnx", "genderage.onnx"}
 
 # CLIP encoders (immich's ONNX export); paths mirror image_classifier._FILES.
 CLIP_DIR = RESOURCES / "models" / "clip" / "ViT-B-32__openai"
@@ -102,9 +106,18 @@ def download_exiftool() -> None:
     print(f"exiftool: installed -> {EXIFTOOL_DIR}")
 
 
+def _prune_insightface() -> None:
+    """Drop the unused landmark models from the pack (idempotent)."""
+    for onnx in INSIGHTFACE_DIR.glob("*.onnx"):
+        if onnx.name not in INSIGHTFACE_KEEP:
+            onnx.unlink()
+            print(f"insightface: pruned unused {onnx.name}")
+
+
 def download_insightface() -> None:
     if any(INSIGHTFACE_DIR.glob("*.onnx")):
         print("insightface: already present")
+        _prune_insightface()
         return
     print("insightface buffalo_l: downloading (~280MB)")
     blob = _fetch(INSIGHTFACE_URL)
@@ -113,7 +126,10 @@ def download_insightface() -> None:
         for name in zf.namelist():
             if name.endswith("/"):
                 continue
-            # the zip may nest under buffalo_l/ — flatten to the model dir
+            # the zip may nest under buffalo_l/ — flatten to the model dir, keeping
+            # only the models we actually load.
+            if Path(name).name not in INSIGHTFACE_KEEP:
+                continue
             target = INSIGHTFACE_DIR / Path(name).name
             target.write_bytes(zf.read(name))
     print(f"insightface: installed -> {INSIGHTFACE_DIR}")

@@ -239,7 +239,7 @@ def _move_in_index(file_moves: list[FileMove], watched: set[Path]) -> tuple[list
         for move in file_moves:
             if _is_indexable(move.dest) and move.dest.exists() and _under_watched(move.dest, watched):
                 if move_photo_path(session, str(move.src), str(move.dest)):
-                    logger.info(f"Moved photo in index: {move.src} -> {move.dest}")
+                    logger.debug(f"Moved photo in index: {move.src} -> {move.dest}")
                 else:
                     paths_to_index.append(move.dest)  # not previously indexed; index fresh
             else:

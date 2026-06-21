@@ -14,7 +14,7 @@ logger = get_logger(__name__, 'background_tasks')
 @task_queue.task()
 def index_photo_task(job_id: str, file_path_batch: list[str]):
     """Background task to index photos - detect faces, extract tags, etc."""
-    logger.info(f"Starting index_photo_task for job {job_id} with {len(file_path_batch)} files")
+    logger.debug(f"Starting index_photo_task for job {job_id} with {len(file_path_batch)} files")
     processed_results = []
     error_count = 0
     cancel_count = 0
@@ -101,7 +101,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             update_job_params['status'] = JOB_STATUS_RUNNING
         session.query(Job).filter_by(id=job_id).update(update_job_params)
         session.commit()
-        logger.info(
+        logger.debug(
             f"Completed job {job_id} batch: processed={processed_count}, errors={error_count}, cancelled={cancel_count}")
 
     except Exception as e:

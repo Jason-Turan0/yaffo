@@ -13,6 +13,7 @@ import os
 from typing import Optional
 
 import keyring
+from cachetools import TTLCache, cached
 from keyring.errors import KeyringError, PasswordDeleteError
 
 from yaffo.db import db
@@ -34,19 +35,35 @@ _MODEL_IDS = {m["id"] for m in AVAILABLE_MODELS}
 
 # ---- API key (keychain) ---------------------------------------------------
 
-def get_api_key() -> Optional[str]:
-    """The only place that reads the key. Env var wins; then the keychain."""
-    env = os.environ.get(_ENV_VAR)
-    if env:
-        return env
+# Reading the keychain pops an OS permission prompt on macOS, so memoize it. maxsize=1
+# (one secret, no args); ttl=300 (5 min) so a key configured/rotated after this process
+# started is picked up without a restart — which is how a background host that came up
+# before the key was set eventually stops its workers prompting. set/clear invalidate
+# it so the change is visible immediately in the process that made it. In-memory only —
+# the secret never touches disk (see the module docstring and the secrets decision).
+_key_cache: TTLCache = TTLCache(maxsize=1, ttl=300)
+
+
+@cached(cache=_key_cache)
+def _read_keychain_key() -> Optional[str]:
     try:
         return keyring.get_password(_SERVICE, _KEY_NAME)
     except KeyringError:
         return None
 
 
+def get_api_key() -> Optional[str]:
+    """The only place that reads the key. Env var wins (this is also how spawned
+    workers inherit it — see prime_subprocess_env); then the cached keychain value."""
+    env = os.environ.get(_ENV_VAR)
+    if env:
+        return env
+    return _read_keychain_key()
+
+
 def set_api_key(key: str) -> None:
     keyring.set_password(_SERVICE, _KEY_NAME, key)
+    _key_cache.clear()
 
 
 def clear_api_key() -> None:
@@ -54,15 +71,23 @@ def clear_api_key() -> None:
         keyring.delete_password(_SERVICE, _KEY_NAME)
     except PasswordDeleteError:
         pass
+    _key_cache.clear()
+
+
+def prime_subprocess_env() -> None:
+    """Publish the key into this process's environment so spawn-started children
+    inherit it via `_ENV_VAR` and never touch the keychain themselves. Called by the
+    task host before spawning workers — keychain prompts then happen only in the
+    interactive web process and (once) the host, never in a background worker."""
+    key = get_api_key()
+    if key:
+        os.environ[_ENV_VAR] = key
 
 
 def _api_key_status() -> dict:
     if os.environ.get(_ENV_VAR):
         return {"configured": True, "source": "environment"}
-    try:
-        stored = keyring.get_password(_SERVICE, _KEY_NAME)
-    except KeyringError:
-        stored = None
+    stored = get_api_key()
     return {"configured": bool(stored), "source": "keychain" if stored else None}
 
 

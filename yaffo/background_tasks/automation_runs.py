@@ -60,7 +60,7 @@ def record_run(session: Session, automation: Automation, work: Callable[[Progres
     job.completed_at = utcnow()
     job.job_data = json.dumps({"output": summary or ""})
     session.commit()
-    logger.info(f"automation '{automation.slug}' run recorded as job {job.id} ({job.status})")
+    logger.debug(f"automation '{automation.slug}' run recorded as job {job.id} ({job.status})")
     return job
 
 
@@ -101,5 +101,5 @@ def run_and_record(session: Session, automation: Automation, context: EventConte
         job.error = result.error
     session.commit()
 
-    logger.info(f"automation '{automation.slug}' run recorded as job {job.id} ({job.status})")
+    logger.debug(f"automation '{automation.slug}' run recorded as job {job.id} ({job.status})")
     return job

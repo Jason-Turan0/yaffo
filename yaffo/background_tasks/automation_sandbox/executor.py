@@ -62,7 +62,7 @@ def run_automation(
         session, automation.published_code, context, progress=progress, filename=f"{automation.slug}.star"
     )
     if result.success:
-        logger.info(f"automation '{automation.slug}' ran; output={result.output}")
+        logger.debug(f"automation '{automation.slug}' ran; output={result.output}")
     else:
         logger.warning(f"automation '{automation.slug}' failed: {result.error}")
     return result

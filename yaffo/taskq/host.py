@@ -29,6 +29,7 @@ from yaffo.taskq.cron import CronSpec
 from yaffo.taskq.store import Store, TaskRow
 from yaffo.taskq.worker import DEFAULT_BOOTSTRAP, DEFAULT_QUEUE_REF, DONE, worker_main
 from yaffo.logging_config import get_logger
+from yaffo.site_agents import llm_config
 
 logger = get_logger(__name__, "background_tasks")
 
@@ -92,6 +93,10 @@ class Host:
         self.running = False
 
     def _spawn(self, worker_id: int) -> None:
+        # Publish the API key into our env first so this spawn child inherits it and
+        # never reads the keychain itself (which would pop an OS prompt in a background
+        # process). A no-op until a key is configured; cheap to retry on every respawn.
+        llm_config.prime_subprocess_env()
         inbox: "mp.Queue" = self.ctx.Queue()
         proc = self.ctx.Process(
             target=worker_main,
@@ -191,7 +196,7 @@ class Host:
             if not free:
                 break
             if row.lock_name and not self.store.try_acquire_lock(row.lock_name, row.id):
-                logger.info(f"lock '{row.lock_name}' held; skipping {row.name}[{row.id}]")
+                logger.debug(f"lock '{row.lock_name}' held; skipping {row.name}[{row.id}]")
                 self.store.mark_skipped(row.id)
                 continue
             w = free.pop()

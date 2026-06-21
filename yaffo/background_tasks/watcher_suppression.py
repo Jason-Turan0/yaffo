@@ -61,7 +61,7 @@ def should_suppress(path: str | Path) -> bool:
         str(Path(path)), signature, SUPPRESSION_TTL_SECONDS
     )
     if suppressed:
-        logger.info(f"watcher: suppressing self-written file (no re-index): {path}")
+        logger.debug(f"watcher: suppressing self-written file (no re-index): {path}")
     return suppressed
 
 
