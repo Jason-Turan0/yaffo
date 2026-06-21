@@ -19,17 +19,20 @@ from yaffo.db.repositories.person_repository import update_person_embedding, get
 from yaffo.db.repositories.photos_repository import get_distinct_years, get_distinct_months
 from yaffo.domain.compare_utils import load_embedding, calculate_similarity, ui_threshold_to_similarity
 from yaffo.utils.context import context
+from yaffo.utils.photo_dates import parse_date_taken
 
 DEFAULT_THRESHOLD = 85  # UI similarity slider 0-100 (0 = least similar, 100 = most)
-DEFAULT_PAGE_SIZE = 50000
+DEFAULT_BATCH_SIZE = 50000  # max unassigned faces pulled + clustered per pass
 DEFAULT_MIN_SAMPLE_SIZE = 3
 DEFAULT_GROUP_BY = 'similarity'
+# Faces rendered as thumbnails per cluster. The whole cluster is still assigned;
+# this only caps how many we paint so a 50k batch stays responsive.
+SAMPLE_SIZE = 50
 
 
 @dataclass
 class FaceViewModel:
     id: int
-    relative_file_path: str
     photo_date: str
     similarity: Optional[float]
 
@@ -41,6 +44,8 @@ class FaceSuggestion:
     suggestion_name: str
     photo_date: str
     faces: list[FaceViewModel]
+    date_start: Optional[str] = None
+    date_end: Optional[str] = None
 
 
 logger = get_logger(__name__, 'webapp')
@@ -78,7 +83,7 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], min_similarity:
         suggestion_name=cluster["label"],
         photo_date=face_dict[cluster["face_ids"][0]].photo.date_taken,
         faces=[
-            FaceViewModel(face_id, face_dict[face_id].full_file_path, face_dict[face_id].photo.date_taken, None)
+            FaceViewModel(face_id, face_dict[face_id].photo.date_taken, None)
             for face_id in cluster["face_ids"]
         ],
     ) for cluster in clusters.values()]
@@ -132,12 +137,12 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
             face_suggestions.append(best_suggestion)
 
         if best_suggestion is not None:
-            best_sim = matching_people[0][2]
+            best_sim = float(matching_people[0][2])
             best_suggestion.faces.append(
-                FaceViewModel(face.id, face.full_file_path, face.photo.date_taken, best_sim))
+                FaceViewModel(face.id, face.photo.date_taken, best_sim))
         else:
             default_suggestion.faces.append(
-                FaceViewModel(face.id, face.full_file_path, face.photo.date_taken, None))
+                FaceViewModel(face.id, face.photo.date_taken, None))
 
     face_suggestions.sort(key=lambda suggestion: (1 if len(suggestion.person_ids) == 1 else 0, len(suggestion.faces)),
                           reverse=True)
@@ -159,8 +164,7 @@ def init_faces_routes(app: Flask):
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
         threshold = request.args.get("threshold", default=DEFAULT_THRESHOLD, type=int)
-        page = request.args.get("page", default=1, type=int)
-        page_size = request.args.get("page-size", default=DEFAULT_PAGE_SIZE, type=int)
+        batch_size = request.args.get("batch_size", default=DEFAULT_BATCH_SIZE, type=int)
         person_id = request.args.get("person", type=int)
         assign_person_id = request.args.get("assign_person", type=int)
         group_by = request.args.get("group_by", type=str, default=DEFAULT_GROUP_BY)
@@ -171,14 +175,11 @@ def init_faces_routes(app: Flask):
             query = query.filter(Photo.month == month)
         query = query.filter(Face.status == FACE_STATUS_UNASSIGNED).order_by(Photo.date_taken)
 
-        # Get total count before pagination
         unassigned_face_count = query.count()
+        # Each pass pulls and clusters up to batch_size unassigned faces. The UI
+        # works through the resulting clusters then reloads for the next pass.
+        unassigned_faces: List[Face] = query.limit(batch_size).all()
 
-        # Apply pagination
-        offset = (page - 1) * page_size
-        unassigned_faces: List[Face] = query.limit(page_size).offset(offset).all()
-
-        # Get people sorted by face count (descending) for keyboard shortcuts
         from sqlalchemy import func
         people = (db.session.query(Person)
                   .outerjoin(PersonFace)
@@ -187,6 +188,18 @@ def init_faces_routes(app: Flask):
                   .order_by(Person.name)
                   .all()
                   )
+
+        # Similarity clusters aren't tied to specific people, so the number-key
+        # shortcuts fall back to the most frequently assigned people (1 = most).
+        top_people = [
+            {"id": p.id, "name": p.name}
+            for p in (db.session.query(Person)
+                      .outerjoin(PersonFace)
+                      .group_by(Person.id)
+                      .order_by(func.count(PersonFace.face_id).desc(), Person.name)
+                      .limit(9)
+                      .all())
+        ]
 
         # Scale the 0-100 slider to a cosine similarity against the live data band.
         min_similarity = ui_threshold_to_similarity(threshold, *get_similarity_bounds(db.session))
@@ -198,6 +211,13 @@ def init_faces_routes(app: Flask):
         for suggestion in face_suggestions:
             suggestion.faces = _.sort_by(suggestion.faces, lambda f: f.similarity if f.similarity is not None else 0,
                                          reverse=True)
+            # Show the cluster's capture-date span. Pick min/max by parsed datetime
+            # (robust to mixed separators) but keep the original strings to format.
+            dated = [(f.photo_date, parse_date_taken(f.photo_date)) for f in suggestion.faces]
+            dated = [(raw, dt) for raw, dt in dated if dt is not None]
+            if dated:
+                suggestion.date_start = min(dated, key=lambda x: x[1])[0]
+                suggestion.date_end = max(dated, key=lambda x: x[1])[0]
         months = get_distinct_months()
         years = get_distinct_years(db.session)
         filters = {
@@ -210,18 +230,14 @@ def init_faces_routes(app: Flask):
             'selected_person_id': person_id,
             'selected_assign_person_id': assign_person_id,
             "selected_group_by": group_by,
-        }
-
-        pagination = {
-            "current_page": page,
-            "total_items": unassigned_face_count,
-            "page_size": page_size,
-            "page_sizes": [25, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 20000, 50000],
+            "selected_batch_size": batch_size,
+            "batch_sizes": [25, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 20000, 50000],
         }
 
         return render_template(
             "faces/index.html", faces=unassigned_faces, people=people, face_suggestions=face_suggestions,
-            filters=filters, unassigned_face_count=unassigned_face_count, pagination=pagination
+            filters=filters, unassigned_face_count=unassigned_face_count,
+            sample_size=SAMPLE_SIZE, top_people=top_people
         )
 
     @app.route("/api/faces/assign", methods=["POST"])

@@ -5,34 +5,42 @@
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='faces/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/pagination.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/tooltip.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/kbd.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='searchable-select.css') }}">
 {% endblock %}
 {% from "_sidebar.html" import render_sidebar %}
 {% from "components/page_header.html" import page_header %}
-{% from "components/pagination.html" import pagination as render_pagination %}
 {% from "components/info_modal.html" import render_info_modal %}
 
 {% macro render_modal_keyboard_help() %}
         <h3 class="modal-section-title">How This Page Works</h3>
+        <p class="help-intro">The job here is to empty the pile of unassigned faces. Faces are detected
+            automatically and grouped for you, so you can accept or reject a whole group at once —
+            assign a group to a person, or ignore the ones you don't want.</p>
         <ul class="help-list">
-            <li>Faces are automatically grouped and selected for bulk assignment</li>
             <li><strong>Group by People:</strong> Matches faces to specific people</li>
             <li><strong>Group by Similarity:</strong> Clusters visually similar faces together</li>
-            <li><strong>Similarity Threshold:</strong> Adjust to create larger groups with acceptable matching quality
-            </li>
+            <li><strong>Similarity Threshold:</strong> Higher values make tighter, cleaner groups;
+                lower values make larger, looser ones</li>
+        </ul>
+
+        <h3 class="modal-section-title">Recommended Workflow</h3>
+        <ul class="help-list">
+            <li><strong>Start broad with Similarity.</strong> Group by Similarity at a high threshold
+                and assign the big, obvious clusters first.</li>
+            <li><strong>Lower the threshold as the groups shrink.</strong> Once the biggest groups get
+                small, drop the threshold to pull looser matches together. The right values vary a lot
+                from batch to batch, so adjust to taste.</li>
+            <li><strong>Then switch to People.</strong> Group by People to catch faces that match
+                someone you've already built up.</li>
+            <li><strong>Ignore what's left.</strong> The remainder is usually low quality — blurry,
+                partial, or odd angles. Select and Ignore it.</li>
         </ul>
 
         <h3 class="modal-section-title">Quick Assignment</h3>
-        <div class="help-shortcuts-list">
-            {% for person in people[:9] %}
-                <div class="help-shortcut-item">
-                    <kbd>{{ loop.index }}</kbd>
-                    <span>{{ person.name }}</span>
-                </div>
-            {% endfor %}
-        </div>
+        <div class="help-shortcuts-list" id="help-shortcut-people"></div>
 
         <h3 class="modal-section-title">Other Shortcuts</h3>
         <div class="help-shortcuts-list">
@@ -57,6 +65,8 @@
         <div class="help-tips">
             <p>
                 <strong>💡 Tips:</strong><br>
+                • Refresh the page between passes — it re-clusters the remaining faces into tighter, higher-quality groups<br>
+                • As your catalog of people grows, a background task assigns matching faces automatically — so this pile should shrink on its own over time<br>
                 • Select faces then press a number key for quick assignment<br>
                 • Hold Shift+Click to select multiple faces at once
             </p>
@@ -91,14 +101,19 @@
                 <div class="threshold-display"><span id="threshold-value">{{ filters.selected_threshold }}</span>%
                 </div>
             </div>
+            <div class="filter-group">
+                <label for="batch-size-select">Faces to analyze</label>
+                <select id="batch-size-select" name="batch_size">
+                    {% for size in filters.batch_sizes %}
+                        <option value="{{ size }}"
+                                {% if filters.selected_batch_size == size %}selected{% endif %}>
+                            {{ "{:,}".format(size) }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
             {% if filters.selected_assign_person_id %}
                 <input type="hidden" name="assign_person" value="{{ filters.selected_assign_person_id }}">
-            {% endif %}
-            {% if pagination.current_page %}
-                <input type="hidden" name="page" value="{{ pagination.current_page }}">
-            {% endif %}
-            {% if pagination.page_size %}
-                <input type="hidden" name="page-size" value="{{ pagination.page_size }}">
             {% endif %}
         {% endmacro %}
         {% macro render_actions() %}
@@ -138,12 +153,7 @@
 
                 <div class="keyboard-shortcuts-list">
                     <div class="shortcuts-label">Keyboard Shortcuts:</div>
-                    {% for person in people[:9] %}
-                        <div class="shortcut-item" data-person-id="{{ person.id }}" data-shortcut="{{ loop.index }}">
-                            <kbd>{{ loop.index }}</kbd>
-                            <span>{{ person.name }}</span>
-                        </div>
-                    {% endfor %}
+                    <div id="sidebar-shortcut-people"></div>
                     <div class="shortcut-item">
                         <kbd>Enter</kbd>
                         <span>Assign to selected person</span>
@@ -166,47 +176,59 @@
                 Showing {{ faces|length }} of {{ unassigned_face_count }} unassigned
                 face{{ 's' if faces|length != 1 else '' }}
             {% endcall %}
-            <form method="POST" action="{{ url_for('faces_assign') }}" id="main-form">
-                <input type="hidden" name="face_status" id="face_status" value="">
-
-                <div class="global-actions">
-                    <a href="#" id="select-all">Select all</a>
-                    <span class="separator">|</span>
-                    <a href="#" id="deselect-all">Clear selection</a>
-                </div>
+            <div id="clusters">
                 {% if face_suggestions | length > 0 %}
                     {% for faceSuggestion in face_suggestions %}
-                        {% set outer_loop = loop %}
-                        <div class="suggestion-group">
-                            <h2>
-                                <input type="checkbox"  {{ 'checked'  if outer_loop.index0 == 0 else '' }}
-                                       class="group-select-checkbox" data-group-index="{{ loop.index0 }}">
-                                <span class="group-select-label">Select all</span>
-                                <span>{{ faceSuggestion.photo_date | format_date ("date") }}</span>
-                                <span style="margin-left: auto;">{{ faceSuggestion.suggestion_name }}</span>
-                            </h2>
-
-                            <div class="group-actions">
-                                {% for person in faceSuggestion.people %}
-                                    <button type="button" class="btn assign-group-btn" data-person-id="{{ person.id }}">
-                                        Assign to {{ person.name }}</button>
-                                {% endfor %}
+                        <div class="suggestion-group"
+                             data-cluster-index="{{ loop.index0 }}"
+                             data-faces='{{ faceSuggestion.faces | tojson }}'
+                             {% if not loop.first %}hidden{% endif %}>
+                            <div class="cluster-identity">
+                                <span class="cluster-name">{{ faceSuggestion.suggestion_name }}</span>
+                                <span class="cluster-meta">{{ "{:,}".format(faceSuggestion.faces | length) }}
+                                    face{{ 's' if faceSuggestion.faces | length != 1 else '' }}</span>
+                                {% if faceSuggestion.date_start %}
+                                    {% set date_start = faceSuggestion.date_start | format_date("date") %}
+                                    {% set date_end = faceSuggestion.date_end | format_date("date") %}
+                                    <span class="cluster-meta cluster-date-range">{{ date_start }}{% if date_end and date_end != date_start %} – {{ date_end }}{% endif %}</span>
+                                {% endif %}
                             </div>
 
-                            <div class="grid">
-                                {% for face in faceSuggestion.faces %}
-                                    <div class="face {{ 'selected' if outer_loop.index0 == 0  else '' }}"
-                                         data-face-id="{{ face.id }}"
-                                         data-similarity="{{ '%.2f' % (face.similarity * 100) if face.similarity is not none else 'N/A' }}"
-                                         data-date="{{ face.photo_date | format_date }}">
-                                        <img src="{{ url_for('face_thumbnail', face_id=face.id) }}"
-                                             data-fallback="{{ url_for('placeholder') }}"
-                                             width="100" height="100">
-                                        <input type="checkbox"
-                                               name="faces" {{ 'checked'  if outer_loop.index0 == 0 else '' }}
-                                               value="{{ face.id }}" style="display:none;">
+                            <div class="cluster-decide">
+                                <label class="cluster-select-all">
+                                    <input type="checkbox" checked class="group-select-checkbox">
+                                    <span class="group-select-label">Select all</span>
+                                </label>
+                                <div class="group-actions">
+                                    <button type="button" class="btn-secondary shuffle-sample-btn" data-icon="shuffle">Shuffle</button>
+                                    {% for person in faceSuggestion.people %}
+                                        <button type="button" class="btn-primary assign-group-btn"
+                                                data-person-id="{{ person.id }}" data-person-name="{{ person.name }}">
+                                            Assign to {{ person.name }}</button>
+                                    {% endfor %}
+                                    <button type="button" class="btn-secondary skip-cluster-btn" data-icon="skip">Skip cluster</button>
+                                </div>
+                            </div>
+
+                            <div class="grid"></div>
+
+                            <div class="pagination-container cluster-pager-footer">
+                                <div class="pagination-info">
+                                    <span class="results-count">
+                                        Showing <span class="sample-range">0</span>
+                                        of {{ "{:,}".format(faceSuggestion.faces | length) }}
+                                        face{{ 's' if faceSuggestion.faces | length != 1 else '' }}
+                                    </span>
+                                </div>
+                                <div class="pagination-controls">
+                                    <div class="page-navigation">
+                                        <button type="button" class="page-btn cluster-first">&laquo; First</button>
+                                        <button type="button" class="page-btn cluster-prev">&lsaquo; Prev</button>
+                                        <span class="page-info cluster-page-label">Page 1 of 1</span>
+                                        <button type="button" class="page-btn cluster-next">Next &rsaquo;</button>
+                                        <button type="button" class="page-btn cluster-last">Last &raquo;</button>
                                     </div>
-                                {% endfor %}
+                                </div>
                             </div>
                         </div>
                     {% endfor %}
@@ -223,23 +245,7 @@
                         <p>Looks like there isn't anything for you to do here.</p>
                     </div>
                 {% endif %}
-            </form>
-
-            {{ render_pagination(
-        pagination.current_page,
-        pagination.total_items,
-        pagination.page_size,
-        pagination.page_sizes,
-        url_for('faces_index'),
-        {
-            'year': filters.selected_year,
-            'month': filters.selected_month,
-            'threshold': filters.selected_threshold,
-            'person': filters.selected_person_id,
-            'assign_person': filters.selected_assign_person_id,
-            'group_by' : filters.selected_group_by
-        }
-    ) }}
+            </div>
         </div>
 
         {{ render_info_modal('keyboardHelpModal', "Help", render_modal_keyboard_help, size_class="modal-lg") }}
@@ -249,4 +255,7 @@
 
 {% block scripts %}
     <script src="{{ url_for('static', filename='faces/index.js') }}"></script>
+    <script>
+        window.PHOTO_ORGANIZER.initFaceAssignment({{ sample_size | tojson }}, {{ top_people | tojson }}, window.APP_CONFIG);
+    </script>
 {% endblock %}

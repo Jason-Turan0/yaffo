@@ -1,3 +1,9 @@
+.help-intro {
+    margin: 0 0 15px 0;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+}
+
 .help-list {
     margin: 0 0 20px 20px;
     line-height: 1.6;
@@ -176,28 +182,6 @@
     font-size: var(--font-size-xl);
 }
 
-.global-actions {
-    margin-bottom: 20px;
-    display: flex;
-    gap: 15px;
-    align-items: center;
-}
-
-.global-actions a {
-    color: var(--color-accent);
-    text-decoration: none;
-    font-size: var(--font-size-base);
-    cursor: pointer;
-}
-
-.global-actions a:hover {
-    text-decoration: underline;
-}
-
-.global-actions .separator {
-    color: var(--color-border);
-}
-
 .suggestion-group {
     margin-bottom: 30px;
     padding: 20px;
@@ -206,13 +190,44 @@
     border-radius: var(--radius-md);
 }
 
-.suggestion-group h2 {
-    margin: 0 0 15px 0;
+/* Zone 1: identity — name + count + date span, separated by a rule. */
+.cluster-identity {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.cluster-name {
     font-size: var(--font-size-lg);
+    font-weight: 600;
     color: var(--color-text);
+}
+
+.cluster-meta {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+/* Zone 2: decide — select-all on the left, assign/skip on the right. */
+.cluster-decide {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
     gap: 10px;
+    margin-bottom: 12px;
+}
+
+.cluster-select-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
 }
 
 .group-select-checkbox {
@@ -223,40 +238,38 @@
 
 .group-select-label {
     font-size: var(--font-size-base);
-    font-weight: normal;
     color: var(--color-text-secondary);
-    cursor: pointer;
-    user-select: none;
 }
 
 .group-actions {
     display: flex;
     gap: 10px;
-    margin-bottom: 15px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
-.group-actions button {
-    padding: 6px 12px;
-    border: var(--border-width) solid var(--color-border-strong);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface);
-    cursor: pointer;
-    font-size: var(--font-size-sm);
+/* Footer reuses the home-screen pagination component (components/pagination.css).
+   With no page-size selector the controls row would left-align, so center it,
+   and let the <button> page controls inherit the app font. */
+.cluster-pager-footer .pagination-controls {
+    justify-content: center;
 }
 
-.group-actions button:hover {
-    background: var(--color-surface-hover);
+.cluster-pager-footer .page-btn {
+    font-family: inherit;
 }
 
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 100px);
+    /* Columns grow to fill the row so the grid stays flush with the right edge
+       instead of leaving ~100px tracks short of it. */
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 10px;
 }
 
 .face {
+    aspect-ratio: 1 / 1;
     border: 2px solid transparent;
     cursor: pointer;
     border-radius: var(--radius-sm);
