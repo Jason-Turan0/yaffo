@@ -13,11 +13,13 @@ detection + recognition sub-models are loaded; gender/age/landmark extras are no
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
 
+from yaffo.common import BUNDLED_MODELS_DIR
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__, "background_tasks")
@@ -29,6 +31,16 @@ EMBEDDING_DIM = 512
 _app = None
 
 
+def _model_root() -> str:
+    """InsightFace loads models from `<root>/models/<name>`. Prefer the copy
+    bundled into the app (no network on first run); otherwise use the default
+    ~/.insightface, which auto-downloads buffalo_l on first use."""
+    bundled = BUNDLED_MODELS_DIR / "insightface"
+    if (bundled / "models" / MODEL_NAME).is_dir():
+        return str(bundled)
+    return os.path.expanduser("~/.insightface")
+
+
 def _get_app():
     global _app
     if _app is None:
@@ -36,6 +48,7 @@ def _get_app():
         logger.info(f"loading InsightFace model '{MODEL_NAME}' (CPU)")
         _app = FaceAnalysis(
             name=MODEL_NAME,
+            root=_model_root(),
             providers=["CPUExecutionProvider"],
             # genderage adds a cheap per-face age estimate, aggregated later into a
             # person's birthdate; landmark modules stay off.

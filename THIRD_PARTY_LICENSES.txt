@@ -1,7 +1,9 @@
 Third-Party Software Licenses
 ===============================
 
-This application includes or may optionally include the following third-party software:
+This application bundles or depends on the following third-party software and
+machine-learning models. Bundled binaries/models are shipped inside the app;
+Python libraries are installed as dependencies.
 
 ---
 
@@ -10,49 +12,98 @@ ExifTool
 Copyright: Phil Harvey
 License: Perl Artistic License / GPL
 Website: https://exiftool.org/
-Purpose: Reading and writing metadata in image files
+Purpose: Reading and writing metadata in image files (EXIF/XMP — GPS, date/time,
+         camera info, person tags, location tags).
+Bundled: yes (resources/Image-ExifTool-13.40)
 
-ExifTool is licensed under the Perl Artistic License and GPL, which permits
-redistribution. Full license text available at:
+ExifTool is licensed under the Perl Artistic License and GPL, which permit
+redistribution. Full license text:
 - Perl Artistic License: https://dev.perl.org/licenses/artistic.html
 - GPL: https://www.gnu.org/licenses/gpl-3.0.en.html
 
-ExifTool is bundled with this application for metadata operations including:
-- Reading EXIF data from photos (GPS, date/time, camera info)
-- Writing person tags and location data to photo metadata
-- Supporting multiple image formats (JPEG, HEIC, PNG)
+---
+
+InsightFace (SCRFD detector + ArcFace recognizer)
+-------------------------------------------------
+Copyright: InsightFace / deepinsight contributors
+Code license: MIT
+Website: https://github.com/deepinsight/insightface
+Purpose: Face detection and 512-d face embeddings.
+
+Bundled model: the "buffalo_l" model pack (detection + recognition + genderage).
+Bundled: yes (resources/models/insightface/models/buffalo_l)
+
+  IMPORTANT — model weights license:
+  The InsightFace *code* is MIT, but the *pretrained models* (including
+  buffalo_l) are made available by the authors FOR NON-COMMERCIAL RESEARCH /
+  PERSONAL USE ONLY. Bundling and using these weights in a personal,
+  non-commercial application is permitted; commercial distribution of the app
+  with these weights is NOT. See the InsightFace model-zoo terms:
+  https://github.com/deepinsight/insightface/tree/master/model_zoo
+
+---
+
+CLIP ViT-B/32 (OpenAI weights), ONNX export
+-------------------------------------------
+Original model: OpenAI CLIP (ViT-B/32)
+Weights license: MIT (https://github.com/openai/CLIP/blob/main/LICENSE)
+ONNX export source: immich-app/ViT-B-32__openai
+  (https://huggingface.co/immich-app/ViT-B-32__openai)
+Purpose: Offline zero-shot image classification / auto-labeling.
+Bundled: yes (resources/models/clip/ViT-B-32__openai)
+
+The underlying CLIP weights are released by OpenAI under the MIT license. The
+bundled files are an ONNX re-export of those weights published by the immich
+project; the tokenizer is vendored separately (yaffo/utils/clip_tokenizer).
+
+---
+
+ONNX Runtime
+------------
+Copyright: Microsoft
+License: MIT
+Website: https://github.com/microsoft/onnxruntime
+Purpose: CPU inference engine for the InsightFace and CLIP ONNX models.
 
 ---
 
 Additional Python Libraries
 ---------------------------
 
-This application uses various Python libraries, each with their own licenses.
-For a complete list of dependencies and their licenses, see:
-- setup.py or pyproject.toml for the list of dependencies
-- Each package's license can be found on PyPI
+This application depends on various Python libraries, each under its own license.
+The authoritative dependency list is in pyproject.toml. Major dependencies:
 
-Major dependencies include:
 - Flask (BSD-3-Clause)
-- face_recognition (MIT)
-- dlib (Boost Software License)
-- Pillow (HPND License)
+- Werkzeug / Jinja2 / MarkupSafe / itsdangerous / click (BSD-3-Clause)
 - SQLAlchemy (MIT)
-- NumPy (BSD)
-- scikit-learn (BSD)
+- NumPy (BSD-3-Clause)
+- SciPy (BSD-3-Clause)
+- scikit-learn (BSD-3-Clause)
+- Pillow (HPND / MIT-CMU) and pillow-heif (BSD-3-Clause)
+- opencv-python (Apache-2.0)
+- ImageHash (BSD-2-Clause) and PyWavelets (MIT)
+- piexif (MIT)
+- insightface (MIT — see model note above re: weights)
+- onnxruntime (MIT)
+- requests (Apache-2.0)
+- watchdog (Apache-2.0)
+- platformdirs (MIT), keyring (MIT), tqdm (MPL-2.0 / MIT)
 
-Run `pip-licenses` to generate a complete license report.
+Run `pip-licenses` to generate a complete, current license report.
 
 ---
 
 License Compliance Notes
 ------------------------
 
-All bundled third-party software is used in accordance with their respective
-licenses. This application is distributed with proper attribution and license
-notices as required by each license.
+All bundled third-party software and models are used in accordance with their
+respective licenses. This application is distributed (or, for a personal build,
+installed) with proper attribution and license notices.
 
-For the complete license of this application itself, see the LICENSE file
-in the root directory.
+This is a personal, non-commercial application. The InsightFace buffalo_l weights
+above carry a non-commercial-use restriction; do not redistribute this app
+commercially with those weights bundled.
 
-Last Updated: 2025
+For the license of this application itself, see the LICENSE file (MIT).
+
+Last Updated: 2026-06-20

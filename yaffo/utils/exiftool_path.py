@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 import platform
 
+from yaffo.common import RESOURCES_DIR
 from yaffo.logging_config import get_logger
 from yaffo.utils.platform_checks import IS_MAC, IS_LINUX, IS_WINDOWS_32, IS_WINDOWS_64, _SYSTEM
 
@@ -10,7 +11,7 @@ logger = get_logger(__name__)
 
 
 def get_exiftool_resource_path() -> Path:
-    return Path(__file__).parent.parent.parent / 'resources' / 'Image-ExifTool-13.40'
+    return RESOURCES_DIR / 'Image-ExifTool-13.40'
 
 
 def get_bundled_exiftool_path() -> Optional[Path]:

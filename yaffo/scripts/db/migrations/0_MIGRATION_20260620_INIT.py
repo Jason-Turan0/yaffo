@@ -1,5 +1,12 @@
+"""Initial schema — the from-scratch baseline. Idempotent (every CREATE is
+IF NOT EXISTS, every seed is INSERT OR IGNORE), so it's safe to apply to a
+pre-existing database created before the migration table existed.
+
+The runner manages the transaction and records this migration; do not open a
+connection or commit here.
+"""
 import sqlite3
-from yaffo.common import DB_PATH
+
 from yaffo.db.models import CLASSIFY_LABELS_DEFAULT_THRESHOLD, CLASSIFY_LABELS_DEFAULT_MAX
 
 # Starter vocabulary for the classify-labels automation — common subjects, scenes,
@@ -59,8 +66,7 @@ DEFAULT_CLASSIFICATION_LABELS = [
 
 
 # @formatter:off
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
+def migrate(conn: sqlite3.Connection) -> None:
     cursor = conn.cursor()
     cursor.execute("""
             CREATE TABLE IF NOT EXISTS photos (
@@ -162,7 +168,7 @@ def init_db():
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
                        job_id TEXT NOT NULL,
                        task_id TEXT NOT NULL,
-                       result_data TEXT,                       
+                       result_data TEXT,
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                        FOREIGN KEY (job_id) REFERENCES job(id) ON DELETE CASCADE
                    )
@@ -472,9 +478,3 @@ def init_db():
                    """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_conversations_version_id ON conversations(version_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_conversations_automation_id ON conversations(automation_id)")
-
-    conn.commit()
-
-
-if __name__ == "__main__":
-    init_db()

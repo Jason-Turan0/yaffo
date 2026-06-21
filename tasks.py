@@ -12,6 +12,14 @@ import time
 VENDOR_DIR = Path("yaffo/static/vendor")
 VENDOR_MANIFEST = VENDOR_DIR / "manifest.json"
 
+# Where the dev photo library + DB live. common.py reads YAFFO_DATA_DIR; we set it
+# explicitly here so every process in the local stack agrees regardless of the shell.
+YAFFO_DATA_DIR = str(Path.home() / "Pictures")
+
+
+def _data_env():
+    return {"YAFFO_DATA_DIR": YAFFO_DATA_DIR}
+
 
 def _flask_command(host, port):
     return f"flask run --host={host} --port={port}"
@@ -22,6 +30,7 @@ def _flask_env(debug):
         "FLASK_APP": "yaffo.app:create_app",
         "FLASK_ENV": "development" if debug else "production",
         "FLASK_DEBUG": "1" if debug else "0",
+        **_data_env(),
     }
 
 
@@ -130,7 +139,7 @@ def start_tasks(c, workers=4, recycle=100):
         inv start-tasks --workers=8 --recycle=200
     """
     print(f"Starting task-queue host with {workers} spawn workers (recycle every {recycle})")
-    c.run(_host_command(workers, recycle), pty=True)
+    c.run(_host_command(workers, recycle), env=_data_env(), pty=True)
 
 
 @task
@@ -145,7 +154,7 @@ def start_watcher(c):
         inv start-watcher
     """
     print("Starting photo watcher...")
-    c.run(_watcher_command(), pty=True)
+    c.run(_watcher_command(), env=_data_env(), pty=True)
 
 
 @task
@@ -170,8 +179,8 @@ def app_local(c, host="127.0.0.1", port=5001, debug=True, workers=4, recycle=100
     _open_chrome(f"http://{host}:{port}")
     _run_concurrently([
         ("flask", _flask_command(host, port), _flask_env(debug)),
-        ("host", _host_command(workers, recycle), None),
-        ("watcher", _watcher_command(), None),
+        ("host", _host_command(workers, recycle), _data_env()),
+        ("watcher", _watcher_command(), _data_env()),
     ])
 
 
@@ -224,69 +233,31 @@ def test(c, verbose=False, coverage=False, path="tests", k=None, failed=False, m
 
 
 @task
-def migrate(c, migration=None):
+def migrate(c):
     """
-    Run database migrations.
+    Apply pending database migrations (creates the DB from scratch on first run).
 
-    Args:
-        migration: Specific migration file to run (default: all pending migrations)
+    Numbered Python migrations live in yaffo/scripts/db/migrations and run in
+    order; already-applied ones are skipped. The DB is backed up first.
 
     Example:
         inv migrate
-        inv migrate --migration=002_add_location_and_tags.sql
     """
-    from pathlib import Path
-    import sqlite3
-    from yaffo.common import DB_PATH
-
-    migrations_dir = Path("migrations")
-
-    if not migrations_dir.exists():
-        print(f"Error: migrations directory not found at {migrations_dir}")
-        return
-
-    if migration:
-        migration_path = migrations_dir / migration
-        if not migration_path.exists():
-            print(f"Error: migration file not found: {migration_path}")
-            return
-        migrations_to_run = [migration_path]
-    else:
-        migrations_to_run = sorted(migrations_dir.glob("*.sql"))
-
-    if not migrations_to_run:
-        print("No migrations to run")
-        return
-
-    print(f"Running migrations on database: {DB_PATH}")
-    conn = sqlite3.connect(DB_PATH)
-
-    for migration_file in migrations_to_run:
-        print(f"Applying migration: {migration_file.name}")
-        with open(migration_file, 'r') as f:
-            sql = f.read()
-
-        try:
-            conn.executescript(sql)
-            print(f"  ✓ {migration_file.name} applied successfully")
-        except sqlite3.Error as e:
-            print(f"  ✗ Error applying {migration_file.name}: {e}")
-
-    conn.close()
-    print("Migration complete")
+    print("Running database migrations...")
+    c.run("python -m yaffo.scripts.db.migrate", env=_data_env(), pty=True)
+    print("Migrations complete")
 
 
 @task
 def init_db(c):
     """
-    Initialize the database with all tables.
+    Initialize the database — alias for `migrate` (the INIT migration builds the
+    full schema from scratch).
 
     Example:
         inv init-db
     """
-    print("Initializing database...")
-    c.run("python -m yaffo.scripts.init_db", pty=True)
-    print("Database initialized")
+    migrate(c)
 
 
 @task

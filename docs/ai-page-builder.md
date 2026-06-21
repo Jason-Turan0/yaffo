@@ -304,7 +304,7 @@ Page tabs are injected into every template via a context processor.
 
 ## API key storage
 
-The app is distributed as a native desktop app (Briefcase) on Mac/Windows, so the
+The app is distributed as a native desktop app (PyInstaller) on Mac/Windows, so the
 API key is kept in the **OS credential vault**, never in the database or a file.
 Use the cross-platform [`keyring`](https://pypi.org/project/keyring/) library:
 

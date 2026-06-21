@@ -16,7 +16,7 @@ from pathlib import Path
 
 import numpy as np
 
-from yaffo.common import MODEL_CACHE_DIR
+from yaffo.common import BUNDLED_MODELS_DIR, MODEL_CACHE_DIR
 from yaffo.logging_config import get_logger
 from yaffo.utils.clip_tokenizer import tokenize
 
@@ -52,6 +52,11 @@ def get_clip_threshold(ui_threshold: int) -> float:
     return CLIP_SIMILARITY_FLOOR + (ui_threshold / 100.0) * range_width
 
 def _model_dir() -> Path:
+    """Prefer the encoders bundled into the app (no network on first run);
+    otherwise use the cache dir, where `_ensure_model` downloads them on demand."""
+    bundled = BUNDLED_MODELS_DIR / "clip" / MODEL_NAME
+    if (bundled / _FILES["visual"]).is_file():
+        return bundled
     return Path(MODEL_CACHE_DIR) / "clip" / MODEL_NAME
 
 
