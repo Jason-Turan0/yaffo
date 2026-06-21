@@ -19,6 +19,7 @@ from yaffo.background_tasks.tasks.dispatcher import dispatch_scheduled_tasks
 from yaffo.background_tasks.tasks.dispatch_event import dispatch_event_task
 from yaffo.background_tasks.tasks.run_automation import run_automation_code_task
 from yaffo.background_tasks.tasks.generate_automation import generate_automation_task
+from yaffo.background_tasks.tasks.assign_faces_to_person import assign_faces_to_person
 
 # Re-export utilities for backward compatibility
 from yaffo.background_tasks.utils import (
@@ -51,6 +52,7 @@ __all__ = [
     'dispatch_event_task',
     'run_automation_code_task',
     'generate_automation_task',
+    'assign_faces_to_person',
     # Utilities (for backward compatibility)
     'get_job_status',
     'get_version_status',

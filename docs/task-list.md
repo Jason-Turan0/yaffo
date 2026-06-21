@@ -1,0 +1,4 @@
+- Offload face assignment to backend. Large assignments of ~3000 faces are causing the frontend to crawl
+- Lazy render faces on face assignment screen. 10k images is pushing limit
+- Possible to parrallize calculations for faces_index route?
+- restart failed jobs instead of rerun

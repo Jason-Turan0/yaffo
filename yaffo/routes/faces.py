@@ -5,13 +5,14 @@ import numpy as np
 from flask import Flask, render_template, request, jsonify
 from sklearn.cluster import DBSCAN
 
+from yaffo.background_tasks.tasks.assign_faces_to_person import assign_faces_to_person
 from yaffo.logging_config import get_logger
-from sqlalchemy.dialects.sqlite import insert
+
 import pydash as _
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
-    FACE_STATUS_ASSIGNED, Photo, PHOTO_STATUS_INDEXED, EVENT_PHOTO_MODIFIED
-from yaffo.background_tasks.events import emit_event
+    FACE_STATUS_ASSIGNED, Photo, PHOTO_STATUS_INDEXED, EVENT_PHOTO_MODIFIED, FACE_STATUS_PROCESSING
+
 from sklearn.metrics.pairwise import cosine_similarity
 
 from yaffo.db.repositories.person_repository import update_person_embedding, get_similarity_bounds
@@ -19,8 +20,8 @@ from yaffo.db.repositories.photos_repository import get_distinct_years, get_dist
 from yaffo.domain.compare_utils import load_embedding, calculate_similarity, ui_threshold_to_similarity
 from yaffo.utils.context import context
 
-DEFAULT_THRESHOLD = 50  # UI similarity slider 0-100 (0 = least similar, 100 = most)
-DEFAULT_PAGE_SIZE = 2000
+DEFAULT_THRESHOLD = 85  # UI similarity slider 0-100 (0 = least similar, 100 = most)
+DEFAULT_PAGE_SIZE = 50000
 DEFAULT_MIN_SAMPLE_SIZE = 3
 DEFAULT_GROUP_BY = 'similarity'
 
@@ -215,7 +216,7 @@ def init_faces_routes(app: Flask):
             "current_page": page,
             "total_items": unassigned_face_count,
             "page_size": page_size,
-            "page_sizes": [25, 50, 100, 250, 500, 1000, 2000, 5000, 10000],
+            "page_sizes": [25, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 20000, 50000],
         }
 
         return render_template(
@@ -250,30 +251,11 @@ def init_faces_routes(app: Flask):
                     logger.warn(error_msg)
                     return jsonify({"success": False, "message": error_msg}), 404
 
-                faces = (Face.query.filter(Face.id.in_(selected_face_ids))).all()
-                similarity_by_face_id = calculate_similarity(person, faces)
-
-                db.session.query(PersonFace).filter(PersonFace.face_id.in_(selected_face_ids)).delete(
-                    synchronize_session=False)
-
-                stmt = insert(PersonFace).values([
-                    {"person_id": person_id, "face_id": fid, "similarity": similarity_by_face_id.get(int(fid))}
-                    for fid in selected_face_ids
-                ])
-                db.session.execute(stmt)
                 db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
-                    {Face.status: face_status}, synchronize_session=False
+                    {Face.status: FACE_STATUS_PROCESSING}, synchronize_session=False
                 )
-
-                # Set photo status back to INDEXED when faces are assigned
-                photo_ids = [face.photo_id for face in faces]
-                db.session.query(Photo).filter(Photo.id.in_(photo_ids)).update(
-                    {Photo.status: PHOTO_STATUS_INDEXED}, synchronize_session=False
-                )
-
                 db.session.commit()
-                update_person_embedding(person_id, db.session)
-                emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": list(set(photo_ids))})
+                assign_faces_to_person(person_id, selected_face_ids)
                 return jsonify({
                     "success": True,
                     "message": f"Successfully assigned {len(selected_face_ids)} face(s) to {person.name}",

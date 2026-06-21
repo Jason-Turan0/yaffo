@@ -85,6 +85,7 @@ class PhotoLabel(db.Model):
     label = db.relationship("ClassificationLabel")
 
 FACE_STATUS_UNASSIGNED = "UNASSIGNED"
+FACE_STATUS_PROCESSING = "PROCESSING"
 FACE_STATUS_ASSIGNED = "ASSIGNED"
 FACE_STATUS_IGNORED = "IGNORED"
 

@@ -1,11 +1,9 @@
+import time
 from typing import Sequence, Callable, TypeVar
-
 from sqlalchemy.orm import Session
-
 from yaffo.db.models import Job
 
 T = TypeVar('T')
-
 
 class ProgressReporter:
     def __init__(self, session: Session, job_id: int):
@@ -28,12 +26,14 @@ class ProgressReporter:
     def run_with_progress(self,
             items: Sequence[T],
             item_processor: Callable[[T], None],
-            percentage=0.05):
+            percentage: float = 0.05,
+            time_interval_seconds: float = 30.0):
         completed = 0
         errors = 0
         processed = 0
         total_tasks = len(items)
         report_interval = max(1, int(total_tasks * percentage))
+        last_report_time = time.monotonic()
         self.progress_update(total_tasks, completed, 0, errors)
         for item in items:
             try:
@@ -42,5 +42,9 @@ class ProgressReporter:
             except Exception:
                 errors += 1
             processed += 1
-            if processed % report_interval == 0 or processed == total_tasks:
+            current_time = time.monotonic()
+            if (processed % report_interval == 0 or
+                processed == total_tasks or
+                (current_time - last_report_time) >= time_interval_seconds):
                 self.progress_update(total_tasks, completed, 0, errors)
+                last_report_time = current_time
