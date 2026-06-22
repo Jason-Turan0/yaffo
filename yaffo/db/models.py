@@ -422,7 +422,7 @@ class AutomationTrigger(db.Model):
         }
 
 
-# PageVersion generation state machine (see docs/ai-page-builder-async-generation.md).
+# PageVersion generation state machine (see docs/ai-page-builder.md).
 # A version is either "working" (IN_PROGRESS/READY/FAILED) or a committed snapshot
 # (ACCEPTED); CANCELLED is transient — cancelled versions are deleted.
 PAGE_VERSION_STATUS_IN_PROGRESS = "IN_PROGRESS"

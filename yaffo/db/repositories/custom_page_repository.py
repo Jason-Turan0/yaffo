@@ -4,7 +4,7 @@ tables.
 Widgets and the conversation are **version-scoped**: a page owns a chain of
 PageVersions, one of which is the live ``published_version`` (what presentation
 renders) and at most one the in-flight ``working_version`` (a chat run generating
-into it). See docs/ai-page-builder-async-generation.md.
+into it). See docs/ai-page-builder.md.
 
 The page-scoped helpers here (get_widget, save_page_widgets, add_message,
 set_widget_state, remove_widget) operate on the page's **published** version — the

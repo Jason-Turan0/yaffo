@@ -1,6 +1,8 @@
 # Task Queue Migration: Huey → roll-your-own (master/child processes)
 
-**Status:** Implemented · **Created:** 2026-06-18 · **Completed:** 2026-06-18
+**Status:** Implemented · **Created:** 2026-06-18 · **Completed:** 2026-06-18 ·
+**Doc reconciled with shipped code:** 2026-06-21 (Section 5 checked off, Section 6
+risks annotated with outcomes).
 
 The replacement lives in `yaffo/taskq/` (`signatures.py` composition primitives,
 `store.py` SQLite queue, `core.py` `TaskQueue`/coordinator, `host.py` host process,
@@ -14,6 +16,16 @@ isolation `tests/yaffo/taskq/test_host_spawn.py`. Huey is removed from
 `pyproject.toml`; the `job_results.huey_task_id` column was renamed to `task_id`.
 
 ## 1. Why
+
+> **Note (2026-06-21): the face stack has since moved off dlib.** Detection +
+> recognition now run on **InsightFace (SCRFD + ArcFace, via `onnxruntime`)** — dlib
+> was both slower *and* less accurate (`benchmarks/face/README.md`: ~20× slower
+> detection, 63% → 85% exact count; recognition AUC 0.848 → 0.993, EER 20% → 5%). The
+> dlib thread-segfault below is the **historical trigger** for this migration; the
+> process-isolation architecture is unchanged and still applies, because `onnxruntime`
+> is likewise CPU-bound native code best run in isolated, crash-contained spawn
+> children. The forward-looking architecture (§2, §4) is written in terms of "native
+> ML inference," which now means InsightFace/onnxruntime.
 
 Huey's process workers are unusable on our target platforms, and thread workers
 crash our workload:
@@ -33,7 +45,7 @@ crash our workload:
     `pysqlite_connection_init`) — macOS fork-without-exec is not safe once native
     libs are loaded.
 
-The root requirement: **run CPU-bound native (dlib) work in parallel, isolated
+The root requirement: **run CPU-bound native ML inference in parallel, isolated
 in separate `spawn`-started processes, with no external broker and working on
 macOS + Windows.** No off-the-shelf embedded queue gives us that today (Huey is
 fork/thread-bound here; Celery/RQ/Dramatiq need a broker; Procrastinate needs
@@ -46,8 +58,8 @@ Postgres). Hence: a small purpose-built queue we control.
   producer and the worker host, surviving restarts.
 - A **master (host) process** that owns the queue + scheduler and supervises a
   pool of **`spawn`-started child worker processes**.
-- True multi-core indexing: N children run dlib concurrently, in isolation; a
-  child segfault kills only that child and is recovered, never the host.
+- True multi-core indexing: N children run native ML inference concurrently, in
+  isolation; a child segfault kills only that child and is recovered, never the host.
 - Preserve the existing task **call sites and semantics** (chords, pipelines,
   periodic dispatch, locks, delayed tasks, cooperative cancellation) so the rest
   of the app changes as little as possible.
@@ -121,17 +133,18 @@ geotag_from_neighbors, dispatcher(dispatch_scheduled_tasks).
         ▼                         │
 ┌──────────── child workers (multiprocessing spawn, N processes) ───────────┐
 │  fresh interpreter → import task registry → run task fn in isolation       │
-│  dlib runs here, one call per process → safe concurrency, crash-isolated   │
+│  native ML runs here → safe concurrency, crash-isolated                    │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
 Key decisions:
 - **Children are `spawn`-started** (`multiprocessing.get_context("spawn")`), the
   same model `index_photos_batch` already uses successfully. No fork → no macOS
-  fork-safety crash. Separate address spaces → concurrent dlib is safe; a segfault
-  is contained and the supervisor respawns.
+  fork-safety crash. Separate address spaces → concurrent native inference is safe; a
+  segfault is contained and the supervisor respawns.
 - **The host does no task work** — it only schedules/dispatches/coordinates. It
-  must never import dlib so a crash there is impossible and respawn is cheap.
+  must never import the native ML stack so a crash there is impossible and respawn is
+  cheap.
 - **SQLite is the durable queue** (WAL mode, `busy_timeout`). Producer and host
   are separate OS processes writing the same file (as today). Task claiming is a
   single atomic `UPDATE ... WHERE status='ready' ... RETURNING` (or guarded
@@ -139,80 +152,134 @@ Key decisions:
 - **Long-lived children** pulling from an in-memory assignment queue (avoid
   per-task spawn cost), recycled after K tasks to cap native memory growth.
 
-## 5. Feature checklist (implementation work)
+## 5. Feature checklist (as built)
+
+All shipped. A few items landed differently than first sketched — annotated inline.
 
 ### A. Core queue + persistence
-- [ ] `queue.db` schema: `task(id, name, args_json, status, eta, lock_name, group_id, pipeline_id, position, result_json, error, created_at, started_at, finished_at, attempts)`.
-- [ ] WAL + `busy_timeout` + a single writer discipline from the host; producers only INSERT.
-- [ ] Atomic claim of the next READY task (`status=ready AND (eta IS NULL OR eta<=now)`), respecting lock availability, ordered by created_at.
-- [ ] Serialization contract for args/results (JSON; document that args must be JSON-serializable — today they're str/int/list, no objects).
-- [ ] Requeue/recover tasks left in `running` by a host crash on startup (at-least-once; document idempotency expectations — tasks already re-read `Job` state).
+- [x] `queue.db` schema — **landed as** `task(id, name, args_json, kwargs_json,
+  status, eta, lock_name, context, group_id, continuation_json, result_json, error,
+  created_at, started_at, finished_at, attempts)` + index on `(status, eta,
+  created_at)`. Diverged from the sketch: **`kwargs_json`** (tasks take kwargs) and a
+  **`context`** flag were added; the planned `pipeline_id, position` columns were
+  **replaced by `continuation_json`** (per-task continuation, see C). Plus four
+  supporting tables: `task_group` (chord barrier state), `task_lock` (named locks),
+  `periodic_state` (single-fire minute claim), and `watcher_suppression` (the file
+  watcher's self-write loop-guard, which rides in the queue DB).
+- [x] WAL + `busy_timeout` (Python `sqlite3 timeout=30`) + host-as-sole-status-mutator;
+  producers only INSERT.
+- [x] Claim of the next READY task (`status=ready AND (eta IS NULL OR eta<=now)`,
+  lock-aware, ordered by `created_at`). **Landed as** a single dispatcher thread doing
+  `fetch_ready` → `mark_running` rather than `UPDATE … RETURNING` — race-free because
+  only the host mutates status, so no atomic-claim SQL is needed.
+- [x] JSON args/results contract, **enforced at the enqueue boundary**
+  (`_assert_json_safe`) and on task return (`assert_json_result` → a non-JSON return
+  is a clean task error, not a host crash).
+- [x] Requeue tasks left `running` by a host crash on startup (`requeue_running`;
+  at-least-once). **Idempotency caveat — see Section 6 #1.**
 
 ### B. Task definition & registration
-- [ ] `@task()` decorator: registers fn in a name→fn registry; calling the fn **enqueues** (INSERT) and returns a lightweight result handle.
-- [ ] `task.s(*args)` signature object (deferred call) for composing chords/pipelines.
-- [ ] `task.schedule(args=, delay=)` → INSERT with `eta = now + delay`.
-- [ ] `context=True`: pass a context object exposing `.id` (our task row id) to the fn — replaces `find_duplicates_task(task=…)`/`JobResult.huey_task_id`.
-- [ ] Registry import module the children load on spawn (equivalent of `main.py` importing all tasks).
+- [x] `@task()` decorator: name→fn registry; calling the fn **enqueues** and returns a
+  lightweight `Result`.
+- [x] `task.s(*args, **kwargs)` signature object for composing chords/pipelines.
+- [x] `task.schedule(args=, delay=)` → INSERT with `eta = now + delay`.
+- [x] `context=True`: passes a `TaskContext` exposing `.id` (the queue row id) —
+  replaced `JobResult.huey_task_id` (renamed to `task_id`).
+- [x] Registry bootstrap module the children import on spawn.
 
-### C. Composition (the hard part)
-- [x] **Group + chord**: enqueue N members with a shared `group_id`; when the last member finishes, enqueue the callback once with the members' results. **Empty group = immediately done** (changed from Huey, which never fired the callback): the callback fires once with an empty results list and the continuation runs, so the app no longer special-cases empty import/index stages (`finalize_job_task` removed; `index_jobs`/`index_stage` use one uniform chord path).
-- [ ] **Pipeline / `.then()`**: on a step finishing, enqueue the next step with `prev_result` appended to its args (matches `start_index_stage(index_job_id, prev_result=None)`).
-- [ ] **chord-then-pipeline**: reproduce `chord(members, cb).then(start_index_stage, index_job_id)` and `finalize_job_task.s(id).then(start_index_stage, id)` from `index_jobs.py`.
-- [ ] `enqueue(pipeline)` entry point that persists a whole composed graph atomically.
-- [ ] Result passing semantics: positional append, and chord callback receives the list of member results (currently ignored, but preserve the signature).
+### C. Composition
+- [x] **Group + chord**: N members share a `group_id`; the last to finish enqueues the
+  callback once with the members' results. **Empty group = immediately done** (changed
+  from Huey, which never fired the callback): the app no longer special-cases empty
+  import/index stages (`finalize_job_task` removed; one uniform chord path).
+- [x] **Pipeline / `.then()`**: on a step finishing, the next step is enqueued with
+  `prev_result` appended (via `continuation_json` on the task/group row), matching
+  `start_index_stage(index_job_id, prev_result=None)`.
+- [x] **chord-then-pipeline**: `chord(members, cb).then(...)` reproduced; `index_stage`
+  uses `chord(members, complete_job_callback.s(index_job_id))`.
+- [x] `enqueue(pipeline)` persists a composed graph.
+- [x] Result passing: positional append; chord callback receives the member-results
+  list (signature preserved; values still ignored downstream).
 
 ### D. Scheduling
-- [ ] `@periodic_task(cron)` registration + a scheduler tick (≤60s) that enqueues due periodic tasks. Only one exists today: `dispatch_scheduled_tasks` every minute — a minimal minute-granular cron evaluator suffices (or special-case "every minute").
-- [ ] Delayed/ETA dispatch: scheduler promotes `eta<=now` tasks to READY.
-- [ ] Single-fire guarantee for periodic tasks (no double-enqueue if a tick is slow).
+- [x] `@periodic_task(cron)` + a per-minute scheduler tick. Only `dispatch_scheduled_tasks`
+  exists; a `CronSpec` (`cron.py`) evaluates minute granularity.
+- [x] Delayed/ETA dispatch: `eta<=now` rows become claimable.
+- [x] Single-fire for periodics via `periodic_state` (claim a `(name, minute)` once, so
+  a slow tick can't double-enqueue).
 
 ### E. Concurrency & process management
-- [ ] `spawn` worker pool of N children (configurable; default = CPU count for indexing).
-- [ ] Assignment IPC (host→child) and result/exception IPC (child→host).
-- [ ] **Crash isolation**: detect child exit (incl. SIGSEGV exit 139) via process exit code; mark the in-flight task failed/requeued; **respawn** the child. (Directly fixes the dlib crash blast radius.)
-- [ ] Worker recycling after K tasks (cap dlib/native memory).
-- [ ] Exception capture: serialize child exceptions back to the host (record on the task row); host logs, never dies.
+- [x] `spawn` worker pool of N children (CLI `-w/--workers`, default CPU count).
+- [x] Assignment IPC (host→child inbox) + result/exception IPC (child→host outbox).
+- [x] **Crash isolation**: dead child (incl. SIGSEGV exit 139) detected by exit code;
+  in-flight task marked errored + composition advanced; child **respawned**. (Covered by
+  `tests/yaffo/taskq/test_host_spawn.py`.)
+- [x] Worker recycling after K tasks (CLI `-r/--recycle`, caps native memory).
+- [x] Exception capture: child exceptions serialized back as `ERROR`; host records on the
+  task row and never dies.
 
 ### F. Locks
-- [ ] `@lock_task(name)` / named locks: a task holding lock `name` causes others with the same lock to **skip** (no-op return), matching Huey's `lock_task` used by `file_sync` (slow scans must not pile up).
+- [x] `@lock_task(name)` named locks: a held lock makes other same-lock tasks **skip**
+  (no-op), via `task_lock` + `try_acquire_lock`/`release_lock` (`file_sync` uses it).
 
 ### G. Producer / app integration
-- [ ] Drop-in `enqueue` so existing call sites (`generate_theme_task(...)`, `emit_event`, `invoke_automation` handlers, `enqueue_index_jobs`) keep working with minimal edits.
-- [ ] Cooperative cancellation unchanged: tasks keep polling `get_job_status(job_id)`; no queue-level revoke needed.
-- [ ] Keep `Job` / `JobResult` writes exactly as today (progress counts, results).
+- [x] Drop-in `enqueue` — all existing call sites kept working with minimal edits.
+- [x] Cooperative cancellation unchanged: tasks poll `get_job_status(job_id)`; no
+  queue-level revoke.
+- [x] `Job` / `JobResult` writes unchanged.
 
 ### H. Test & dev ergonomics
-- [ ] **Immediate mode**: a flag (env or config) that runs `enqueue`/pipelines/chords **synchronously in-process**, so `tests/yaffo/utils/test_index_jobs.py` (which sets `huey.immediate = True` and drives the real pipeline) keeps working with an equivalent switch.
-- [ ] Replace `inv start-tasks` to launch the host process; update `inv app-local` (Flask + host + watcher).
-- [ ] Structured logging to `background_tasks.log` (host + per-child), including registered-task listing on startup (parity with current consumer output).
-- [ ] Graceful shutdown on SIGINT/SIGTERM: stop accepting, drain or requeue in-flight, join children.
+- [x] **Immediate mode** (`task_queue.immediate = True`): runs pipelines/chords
+  synchronously in-process; `tests/yaffo/utils/test_index_jobs.py` drives the real
+  pipeline through it.
+- [x] `inv start-tasks` launches the host; `inv app-local` runs Flask + host + watcher.
+- [x] Structured logging to `background_tasks.log` (host + per-child) + graceful
+  shutdown on SIGINT/SIGTERM (drain inbox sentinel, join, then terminate).
+- [x] Startup logs worker count + recycle interval + periodic-task names.
+  - ~~Registered-task listing on startup (consumer parity)~~ — **dropped, by design.**
+    The host **never imports the task registry** (so it can't load the native ML stack);
+    the *children*
+    hold it. The host therefore has no task list to print. Incompatible with the
+    "host does no task work" rule, so deliberately not implemented.
 
 ### I. Cutover
-- [ ] Implement behind a feature switch; run new host alongside Huey off.
-- [ ] Migrate task decorators module-by-module (registry shim can wrap both).
-- [ ] Verify the full import→index chord pipeline end-to-end (large library) with N spawn workers and no segfaults.
-- [ ] Remove `huey` dependency from `pyproject.toml`, delete `config.py`/`main.py` Huey bits, update `docs/automations.md` references.
+- [x] Migrated module-by-module; full import→index chord pipeline verified end-to-end
+  with N spawn workers, no segfaults.
+- [x] `huey` removed from `pyproject.toml`; Huey `config.py`/`main.py` bits deleted;
+  `job_results.huey_task_id` → `task_id`; `docs/automations.md` updated.
+  - ⚠️ **`docs/deployment/gcp-demo-architecture.md` still referenced "huey" / `yaffo-huey.db`**
+    — missed in the original cutover, corrected 2026-06-21.
 
-## 6. Risks & open questions
+## 6. Risks & open questions — outcomes
 
-- **At-least-once vs at-most-once.** A host/child crash mid-task means the task
-  may re-run on recovery. Tasks are largely idempotent (re-read `Job`/`Photo`
-  state), but confirm import/index/remove-duplicates tolerate replay. Decide the
-  default and document it.
-- **SQLite write contention.** Producer (Flask, possibly multiple threads) +
-  host writing one file. WAL + `busy_timeout` + host-as-sole-mutator-of-status
-  should suffice at our scale; validate.
-- **Composition complexity.** Chords + pipelines + the empty-group special case
-  are the main implementation risk. Strong unit tests required (port
-  `test_index_jobs.py` first as the spec).
-- **Windows.** `spawn` works on Windows, but validate child IPC, signal handling,
-  and SQLite file locking there too (Windows is a stated target).
-- **Args serialization.** Everything enqueued must be JSON-safe. Audit args (today
-  they're ids/paths/lists — fine) and enforce it at `enqueue`.
-- **Scheduler scope.** We only need minute-granular periodic + delayed tasks; do
-  not build a full crontab engine unless a real need appears (`compute_next_run`
-  already handles automation cron expressions at the app layer).
+- **At-least-once vs at-most-once.** ⚠️ **Default is at-least-once and confirmed,
+  but the "confirm tasks tolerate replay" step was deferred past the migration and
+  later found a real bug.** A 2026-06-21 idempotency audit of every task found
+  `index_photo_task` was *not* replay-safe — a requeued task duplicated a photo's
+  faces (face thumbnail paths carry a uuid, so the unique constraint couldn't catch
+  the re-insert) and leaked thumbnails. **Fixed** (delete-then-insert via
+  `clear_faces_for_photos`). `import_photo` (unique `full_file_path`),
+  `find_duplicates` (unique `JobResult.task_id`), and `remove_duplicates`
+  (`exists()` guards) are replay-safe; `duplicate_scan` has a rare, non-corrupting
+  redundant-scan window left as-is. **Policy:** tasks must be idempotent; rely on a
+  unique constraint or delete-then-insert. Lesson: this should have been verified at
+  migration time, not assumed.
+- **SQLite write contention.** ✅ Mitigated as planned — WAL + `busy_timeout` +
+  host-as-sole-status-mutator; producers only INSERT. No contention issues observed
+  at our scale.
+- **Composition complexity.** ✅ Resolved — covered by `test_coordinator.py`
+  (persistent) and `test_index_jobs.py` (immediate-mode spec), including the
+  empty-group special case.
+- **Windows.** ❌ **Unverified.** `spawn` is cross-platform, but child IPC, signal
+  handling, and SQLite file locking were never actually exercised on Windows — all
+  dev and packaging (PyInstaller `.app`/DMG) has been macOS. Concretely, `host.py`
+  installs `SIGTERM`/`SIGINT` handlers (`SIGTERM` is effectively unsupported on
+  Windows) and uses `proc.terminate()`. Still a stated target; treat Windows
+  background-tasks as **untested** until validated.
+- **Args serialization.** ✅ Enforced at the `enqueue` boundary (`_assert_json_safe`)
+  and on return (`assert_json_result`).
+- **Scheduler scope.** ✅ As planned — minute-granular periodic + delayed only; no
+  full crontab engine (automation cron expressions are evaluated at the app layer).
 
 ## 7. References
 

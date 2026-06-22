@@ -4,12 +4,14 @@ A Flask-based photo organization tool that uses EXIF metadata, face recognition,
 
 ## Features
 
-- **Photo Organization**: Automatically organize photos by date using EXIF metadata
-- **Face Detection**: Detect and recognize faces using dlib + face_recognition
-- **Face Tagging**: Tag and group faces by person
+- **Photo Organization**: Automatically organize and index photos by date using EXIF metadata
+- **Face Detection & Recognition**: Detect, group, and tag faces by person using InsightFace (SCRFD detection + ArcFace embeddings, on ONNX Runtime)
 - **Duplicate Detection**: Find duplicate photos using perceptual hashing
 - **EXIF Metadata**: Extract and display photo metadata
-- **Location Support**: Geocoding and location-based photo filtering
+- **Location Support**: Geocoding, reverse-geocoding, and time-correlation geotagging from neighboring photos
+- **Auto-Labeling**: Offline zero-shot classification (CLIP) tags photos against a user vocabulary
+- **Automations**: Scheduled and event-driven background behaviors (system-built and AI-generated)
+- **AI Page Builder**: Build custom pages from AI-generated, sandboxed widgets over your own photo data
 
 ## Prerequisites
 
@@ -41,17 +43,20 @@ pip install -e .
 
 This installs pre-commit hooks that prevent accidental commit of API keys and secrets.
 
-### 3. Configure Data Directory
+### 3. Configure the Data Directory
 
-Edit `yaffo/common.py` to set your photo directory, or set the environment variable:
+`YAFFO_DATA_DIR` is the **root for the app's own state** — the SQLite databases
+(`yaffo.db`, `yaffo-queue.db`), generated thumbnails, logs, and temp/trash. It
+defaults to the OS user-data dir (e.g. `~/Library/Application Support/yaffo` on
+macOS); set it to override:
 
 ```bash
-export YAFFO_DATA_DIR=/path/to/your/photos
+export YAFFO_DATA_DIR=/path/to/data
 ```
 
-The directory should contain:
-- `organized/` - Your photo files
-- `thumbnails/` - Generated thumbnails (created automatically)
+Your actual **photo (media) directories** are configured separately, in the app's
+**Settings** page — they aren't a fixed subfolder. The file sync / watcher scans
+the configured media dirs and indexes what it finds.
 
 ### 4. Run the Application
 
@@ -82,12 +87,13 @@ yaffo/
 │   ├── utils/               # Utility functions
 │   ├── background_tasks/    # Background task definitions
 │   ├── taskq/               # SQLite-backed task queue + spawn worker host
-│   └── scripts/             # CLI tools
+│   ├── site_agents/         # AI page builder: agent, model clients, tools, schemas
+│   └── scripts/             # CLI tools + db/ (init_db, dev migrations)
 ├── tests/                   # Python unit tests
 ├── yaffo_ui_tests/          # Playwright UI tests
 ├── hooks/                   # Git hooks
-├── migrations/              # Database migrations
-└── resources/               # ExifTool binaries
+├── docs/                    # Design references (taskq, automations, page builder, video)
+└── resources/               # ExifTool binaries + bundled face models
 ```
 
 ## Development
@@ -121,8 +127,9 @@ flask run  # Will recreate on startup
 
 Background tasks (photo indexing, face detection, etc.) run on a small
 purpose-built queue (`yaffo/taskq`): a SQLite-durable queue plus a host process
-that supervises a pool of `spawn`-started worker children, so CPU-bound dlib work
-runs in parallel, isolated, and crash-contained. See `docs/task-queue-migration.md`.
+that supervises a pool of `spawn`-started worker children, so CPU-bound native ML
+inference (InsightFace/ONNX Runtime) runs in parallel, isolated, and
+crash-contained. See `docs/task-queue-migration.md`.
 
 ```bash
 # Start the task host with 4 workers, recycling each after 200 tasks
@@ -156,10 +163,10 @@ npm run test:isolated
 
 | Variable | Description | Default                          |
 |----------|-------------|----------------------------------|
-| `YAFFO_DATA_DIR` | Root directory for photos and database | `/Users/{CURRENT_USER}/Pictures` |
+| `YAFFO_DATA_DIR` | Root for app state (DBs, thumbnails, logs, temp) | OS user-data dir (e.g. `~/Library/Application Support/yaffo`); `inv` sets `~/Pictures` for dev |
 | `FLASK_APP` | Flask application module | `yaffo.app:create_app`           |
-| `FLASK_ENV` | Flask environment | `development`                    | 
-| `ANTHROPIC_API_KEY` | API key for AI test generation | (required for test generation)   |
+| `FLASK_ENV` | Flask environment | `development`                    |
+| `ANTHROPIC_API_KEY` | Anthropic API key for the AI Page Builder and AI-generated automations. Optional override — the key is normally stored in the OS keychain (set via Settings); the env var wins when present (headless/CI). | (unset; keychain used) |
 
 ## Git Hooks
 

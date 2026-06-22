@@ -4,45 +4,52 @@
 A Flask-based photo organization tool that uses EXIF metadata, face recognition, and duplicate detection to automatically organize and index photos.
 
 ## Architecture
-- **Flask Web App**: Main interface (photo_organizer/app.py)
-- **Database**: SQLAlchemy with SQLite (photo_organizer/db/)
-- **Routes**: REST API endpoints (photo_organizer/routes/)
-- **Scripts**: CLI tools for batch operations (photo_organizer/scripts/)
+The app package is `yaffo/` (not `photo_organizer/`).
+- **Flask Web App**: Main interface (`yaffo/app.py`)
+- **Database**: SQLAlchemy with SQLite (`yaffo/db/` — models + repositories)
+- **Routes**: REST/HTMX endpoints (`yaffo/routes/`)
+- **Background tasks**: task definitions in `yaffo/background_tasks/tasks/`, run on the
+  `yaffo/taskq` SQLite queue + spawn worker host (see `docs/task-queue-migration.md`)
+- **Automations**: scheduled/event-driven behaviors (`yaffo/background_tasks/`, see
+  `docs/automations.md`)
+- **AI Page Builder**: agent, model clients, tools, schemas in `yaffo/site_agents/`
+  (see `docs/ai-page-builder.md`)
+- **Scripts**: `yaffo/scripts/` — `db/` (init_db + dev migrations), `seed_automations.py`
 
 ## Key Components
 
-### Database Models (photo_organizer/db/models.py)
-- Photo: Main photo entity with EXIF data
-- Face: Detected faces in photos
-- Person: Named individuals linked to faces
-- Tag: Photo tagging system
+### Database Models (`yaffo/db/models.py`)
+- Photo, Face, Person, Tag — core media + people + tagging
+- PhotoLabel / ClassificationLabel — CLIP auto-labeling
+- Automation / AutomationTrigger — automation definitions + run history (via Job)
+- CustomPage / PageVersion / Widget / Conversation — AI page builder
+- Job / JobResult — background-job progress + results
 
-### Scripts
-- `organize_photos.py`: Organize photos by date using EXIF
-- `index_photos.py`: Index photos into database
-- `assign_faces.py`: Detect faces using face_recognition library
-- `group_faces.py`: Cluster similar faces
-- `remove_duplicates.py`: Find duplicate photos using perceptual hashing
+### Face recognition
+InsightFace — **SCRFD** detection + **ArcFace** 512-d embeddings, on ONNX Runtime
+(not dlib/face_recognition; dlib was slower and less accurate — see
+`benchmarks/face/README.md`). Cosine similarity over the embeddings.
 
 ### Routes
-- `/photos`: Photo management endpoints
-- `/faces`: Face detection and management
-- `/people`: Person management
-- `/home`: Main UI routes
+- `/photos`, `/faces`, `/people` — media, faces, people management
+- `/pages` — AI page builder
+- `/utilities/automations`, `/settings`, `/home` — admin + UI
 
 ## Technologies
-- **Face Recognition**: dlib + face_recognition
-- **Image Processing**: Pillow, PIL, opencv-python
+- **Face Recognition**: InsightFace (SCRFD + ArcFace) on `onnxruntime`
+- **Image Processing**: Pillow, opencv-python
 - **Duplicate Detection**: ImageHash (perceptual hashing)
-- **EXIF**: piexif
-- **Database**: SQLAlchemy
-- **Web**: Flask
+- **Auto-Labeling**: CLIP (offline zero-shot)
+- **EXIF**: exiftool (primary) + piexif
+- **Database**: SQLAlchemy + SQLite
+- **Web**: Flask + HTMX
+- **AI**: Anthropic Claude (page builder, automation/theme generation)
 
 ## Development Setup
-- Python 3.13.7
+- Python 3.13
 - Virtual environment in ./venv
 - Activate: `source activate_venv.sh`
-- Install: Listed in setup.py
+- Install: `pip install -e .` (deps in `pyproject.toml`; dev extras under `[project.optional-dependencies] dev`)
 
 ## Code Conventions
 
@@ -101,14 +108,14 @@ contract**, not an ad-hoc dict. Conventions:
   payload schemas differ by audience.
 - **Location: DTOs live with the layer that owns the contract, not under
   `routes/`.** Put feature/domain DTOs in the owning package's `schemas.py`
-  (e.g. `page_builder/schemas.py`) or, for ORM→dict, a `serializers.py` beside
+  (e.g. `site_agents/schemas.py`) or, for ORM→dict, a `serializers.py` beside
   the repository — routes import and serialize. Only a *pure view-model* built
   solely by one route belongs near that route. **Never name a DTO module
   `models`** (that means SQLAlchemy here); use `schemas` / `serializers` / `dto`.
 - **Derive from the model where you can; pin it where you can't.** Python has no
   static `Omit<T, K>`. When a DTO is "the model minus some columns," don't restate
   the field list — assert the relationship with a drift-guard test (see
-  `tests/yaffo/page_builder/test_schemas.py`: `WidgetDraft` == `Widget` columns
+  `tests/yaffo/site_agents/test_schemas.py`: `WidgetDraft` == `Widget` columns
   minus the persistence set), so adding a column forces a deliberate choice.
 - **Standard envelopes.** Errors: `{"error": "message"}` + the HTTP status (don't
   also send a `success` boolean — the status says it). Acks: `204` / a redirect.
@@ -195,87 +202,66 @@ const url = APP_CONFIG.buildUrl('person_update', { person_id: 123 });
 // → "/people/123/update"
 ```
 
-## HTMX Form Patterns (PREFERRED)
+## HTMX vs. JavaScript modules — pick by who owns the state
 
-**CRITICAL: Use HTMX for all interactive forms. Avoid inline JavaScript and CSS.**
+HTMX is the right tool for **server-owned, mostly-stateless swaps**, and the wrong
+tool for **interactions with meaningful in-progress client state**. The split:
 
-### Default Pattern: Server-Side Rendered Form Fragments
+- **Use HTMX** when the server is the source of truth and the browser just
+  re-renders what it sends: progress **polling**, **pagination** / list navigation,
+  and simple **toggle / delete** fragments. There's no uncommitted client state for
+  a swap to destroy.
+- **Use a namespaced JS module** (see *Passing Template Variables to JavaScript*,
+  next) when the interaction has real client state: editable lists, multi-step
+  wizards, drag/drop, maps, live widgets, canvas — anything where re-rendering
+  mid-interaction would lose the user's focus, scroll, or uncommitted input.
 
-See `yaffo/templates/utilities/remove_duplicates_form.html` as the reference implementation.
+Why the split: an HTMX swap (`outerHTML`/`innerHTML`) replaces DOM nodes, so it
+discards focus, scroll, in-flight input, and JS listeners attached to the swapped
+content. That's free when the server owns the state and costly when the client
+does. Simulating client state through `hx-vals` round-trips (the "one route with an
+`action` discriminator" shape) is where most of our HTMX bugs live — prefer a JS
+module there.
 
-**Template Fragment Pattern:**
+### Canonical pattern: a self-polling fragment
+
+`yaffo/templates/fragments/job_status_fragment.html` is the reference. The fragment
+polls itself and swaps itself, with **zero JavaScript** — and **drops its own
+polling attributes once the job is finished**, so it stops polling on its own:
+
 ```html
-<div id="my-form">
-    <form>
-        {% for item in items %}
-        <input type="text" name="item" value="{{ item }}">
-
-        <!-- Action buttons with hx-vals to specify action -->
-        <button type="button"
-                hx-post="{{ url_for('my_form_route') }}"
-                hx-vals='{"action": "remove", "index": {{ loop.index0 }}}'
-                hx-target="#my-form"
-                class="btn-danger">
-            Delete
-        </button>
-        {% endfor %}
-
-        <!-- Add button -->
-        <button type="button"
-                hx-post="{{ url_for('my_form_route') }}"
-                hx-vals='{"action": "create"}'
-                hx-target="#my-form"
-                class="btn-secondary">
-            Add Item
-        </button>
-    </form>
+<div class="job-card" id="job-{{ job.id }}"
+     {% if not is_finished %}
+     hx-get="{{ url_for('job_fragment', job_id=job.id) }}"
+     hx-trigger="every 5s"
+     hx-swap="outerHTML"
+     {% endif %}>
+    <div class="progress-bar" style="width: {{ progress }}%"></div>
+    <div class="progress-text">{{ "%.2f"|format(progress) }}%</div>
+    {% if show_cancel %}
+    <button class="btn btn-danger btn-sm"
+            hx-post="{{ url_for('job_cancel', job_id=job.id) }}"
+            hx-target="#job-{{ job.id }}" hx-swap="outerHTML">Cancel</button>
+    {% endif %}
 </div>
 ```
 
-**Flask Route Pattern:**
-```python
-@app.route("/my-form", methods=["POST"])
-def my_form_route():
-    # Collect items from form (multiple inputs with same name)
-    items = request.form.getlist('item')
-    items = [i.strip() for i in items if i.strip()]
+The route renders the same fragment with fresh `Job` data; the server is the only
+state. (`utilities/automations_runs.html` is the same shape for automation runs;
+`components/htmx_pagination.html` for list navigation.)
 
-    # Check action from hx-vals
-    action = request.form.get('action')
-
-    if action == 'create':
-        items.append('')
-    elif action == 'remove':
-        index = int(request.form.get('index', -1))
-        if 0 <= index < len(items):
-            items.pop(index)
-    elif action == 'browse':
-        # Handle browse action
-        pass
-
-    # Re-render the form fragment with updated data
-    return render_template(
-        'my_form_fragment.html',
-        items=items
-    )
-```
-
-**Key Principles:**
-1. ✅ **No inline JavaScript** - Use HTMX attributes only
-2. ✅ **No inline CSS** - Only class names, styles in CSS files
-3. ✅ **Form fragments** - Extract forms into separate template files for re-rendering
-4. ✅ **Single endpoint** - One route handles all actions via `hx-vals='{"action": "..."}'`
-5. ✅ **Multiple inputs same name** - Use `request.form.getlist('name')` on backend
-6. ✅ **Server-side state** - All form state managed server-side, returned as template variables
-7. ✅ **HTMX targets** - Use `hx-target` to specify which element to replace
-8. ✅ **Complete re-renders** - Return entire form fragment, not partial updates
-
-**What to Avoid:**
-- ❌ Inline JavaScript in templates (`<script>` tags inside form fragments)
-- ❌ Inline CSS or style attributes
-- ❌ Client-side state management
-- ❌ Complex JavaScript initialization functions for forms
-- ❌ Multiple routes for similar actions (use action parameter instead)
+### Guidelines for the HTMX cases
+- **Return a whole fragment**, not a partial — the swap target replaces an element
+  wholesale (`hx-target` + `hx-swap="outerHTML"`).
+- **Self-terminate polling**: gate the `hx-trigger="every Ns"` attrs on a "done"
+  condition (as above) so a finished fragment stops hitting the server.
+- **Beware poll-vs-click races**: on a fragment that both self-polls and has action
+  buttons, a poll can swap the DOM out from under a click — keep such fragments
+  small and their actions idempotent.
+- **No inline JavaScript in templates.** `hx-vals='js:…'` counts as inline JS; if
+  you need computed values, that's a signal the interaction wants a JS module.
+- Styling stays in CSS files (class names only) per the DRY/CSS rules above — not an
+  HTMX-specific rule, but it applies here too.
 
 ## Passing Template Variables to JavaScript
 

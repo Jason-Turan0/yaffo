@@ -8,18 +8,19 @@ environment is wiped on a routine basis.
 
 Yaffo is a stateful, filesystem-bound app:
 
-- The web app and a long-running **huey** background worker both read/write the
-  **same** `ROOT_DIR` — photos, thumbnails, and two SQLite files (`yaffo.db`,
-  `yaffo-huey.db`). SQLite shared across two processes needs real POSIX file
-  locking.
+- The web app and the long-running **task queue host** (`yaffo.taskq`, which
+  supervises a pool of spawn worker children) both read/write the **same**
+  `ROOT_DIR` — photos, thumbnails, and two SQLite files (`yaffo.db`,
+  `yaffo-queue.db`). SQLite shared across processes needs real POSIX file locking.
 - Jobs (face recognition, indexing, clustering) are CPU-heavy and run for
   minutes — they exceed function time/memory limits.
-- Heavy native deps (`dlib`, `face-recognition`, `opencv`) plus the `exiftool`
-  binary make the image large with slow cold starts.
+- Heavy native deps (`insightface` + `onnxruntime`, `opencv`) plus the `exiftool`
+  binary and the bundled face models make the image large with slow cold starts.
 
 Cloud Run / Cloud Functions (GCP's "Fargate-like" serverless options) are a poor
-fit unless SQLite→Postgres and huey→Redis migrations are done first, because
-they can't share a writable local volume and GCS-FUSE mounts lack file locking.
+fit unless SQLite→Postgres and a move off the file-backed `yaffo.taskq` queue to a
+networked broker are done first, because they can't share a writable local volume
+and GCS-FUSE mounts lack file locking.
 So the faithful target is a **container running on a Compute Engine VM**.
 
 ## Chosen architecture: single-container GCE VM
@@ -32,7 +33,7 @@ So the faithful target is a **container running on a Compute Engine VM**.
 │   │ yaffo container (single image)                │        │
 │   │   supervisor / entrypoint runs BOTH:          │        │
 │   │     - gunicorn  yaffo.app:create_app()  :8080 │        │
-│   │     - huey_consumer  (-w 1 for demo)          │        │
+│   │     - python -m yaffo.taskq.host  (-w 2)      │        │
 │   │   runs as non-root, root FS read-only         │        │
 │   └───────────────┬───────────────────────────────┘        │
 │                   │ YAFFO_DATA_DIR=/data                    │
@@ -87,8 +88,9 @@ What matters: escaping the data sandbox, compute abuse, and host/secret leakage.
 
 1. **Setup environment**: GCP project, enable APIs, Artifact Registry repo,
    persistent disk, COS VM.
-2. **Deployment scripts**: Dockerfile (multi-stage; build dlib wheels, slim
-   runtime with `libgl1`, `libglib2.0-0`, `libimage-exiftool-perl`), supervisor
+2. **Deployment scripts**: Dockerfile (slim runtime with `libgl1`,
+   `libglib2.0-0`, `libimage-exiftool-perl`; `onnxruntime` installs as a prebuilt
+   wheel — no source build — and the InsightFace models are bundled), supervisor
    config / entrypoint, `startup.sh` (mount+format disk, create subdirs, docker
    login, run container), `gcloud` build + deploy commands.
 3. **Personal access**: IAP tunnel, no public IP.
