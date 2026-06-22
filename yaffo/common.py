@@ -23,11 +23,7 @@ ROOT_DIR = Path(data_dir)
 # Ensure the DB/log home exists before anything writes into it (logging opens a
 # file here at import time, ahead of any migration step).
 ROOT_DIR.mkdir(parents=True, exist_ok=True)
-TEMP_DIR = ROOT_DIR / "temp"
-TRASH_DIR = ROOT_DIR / "duplicates"
-MEDIA_DIRS = [
-    ROOT_DIR / "organized"
-]
+
 DB_PATH = ROOT_DIR / f"{app_name}.db"
 QUEUE_DB_PATH = ROOT_DIR / f"{app_name}-queue.db"
 

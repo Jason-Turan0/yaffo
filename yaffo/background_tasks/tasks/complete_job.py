@@ -76,7 +76,10 @@ def complete_job_task(job_id: str, max_wait_seconds: int = 30):
             if not job:
                 logger.error(f"Job {job_id} not found in complete_job_task")
                 return
-            if job.status == JOB_STATUS_CANCELLED:
+            # Already terminal: a re-run (e.g. requeued after a host crash) must not
+            # re-mark or re-emit job_completed -- the event would spuriously re-fire
+            # subscribed automations. Mirrors finalize_job's guard.
+            if job.status in (JOB_STATUS_CANCELLED, JOB_STATUS_COMPLETED):
                 return
             total_finished = job.completed_count + job.error_count + job.cancelled_count
 

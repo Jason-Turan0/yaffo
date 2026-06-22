@@ -48,6 +48,11 @@ def bad_return():
 
 @pytest.fixture
 def probe(tmp_path, monkeypatch):
+    # The host primes the API key into env before each spawn, which otherwise
+    # reads the OS keychain and pops a password prompt. Stub it out: this test is
+    # about worker supervision, not key plumbing.
+    monkeypatch.setattr("yaffo.taskq.host.llm_config.prime_subprocess_env", lambda: None)
+
     db = tmp_path / "queue.db"
     out = tmp_path / "out.db"
     import sqlite3

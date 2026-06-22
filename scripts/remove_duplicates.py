@@ -6,7 +6,7 @@ import imagehash
 from tqdm import tqdm
 import shutil
 
-from yaffo.common import PHOTO_EXTENSIONS, TRASH_DIR
+from yaffo.common import PHOTO_EXTENSIONS
 from yaffo.utils.image import convert_heif, image_from_path
 
 

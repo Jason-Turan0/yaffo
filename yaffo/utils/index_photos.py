@@ -460,6 +460,35 @@ def index_photos_batch(
     return not cancelled, indexed_count, error_count
 
 
+def unlink_face_thumbnails(thumbnail_paths: List[str]) -> None:
+    """Best-effort delete of face thumbnail files. Call after the rows that
+    referenced them are committed, so a rollback can't leave live faces pointing
+    at missing crops."""
+    for thumb in thumbnail_paths:
+        try:
+            Path(thumb).unlink(missing_ok=True)
+        except OSError as e:
+            logger.warning(f"Failed to delete face thumbnail {thumb}: {e}")
+
+
+def clear_faces_for_photos(session: Session, photo_ids: List[int]) -> List[str]:
+    """Delete every Face row for the given photos, returning their thumbnail paths
+    so the caller can unlink them once the transaction commits.
+
+    Makes re-indexing idempotent: a face's thumbnail path carries a uuid, so the
+    unique constraint won't catch a re-insert -- replaying an index task would
+    otherwise accumulate duplicate faces. Clearing first replaces a photo's faces
+    instead. Does not commit."""
+    if not photo_ids:
+        return []
+    thumbnails = [
+        row[0] for row in
+        session.query(Face.full_file_path).filter(Face.photo_id.in_(photo_ids)).all()
+    ]
+    session.query(Face).filter(Face.photo_id.in_(photo_ids)).delete(synchronize_session=False)
+    return thumbnails
+
+
 def delete_orphaned_photos(session: Session, photo_ids: List[int]) -> int:
     if not photo_ids:
         return 0
@@ -479,11 +508,7 @@ def delete_orphaned_photos(session: Session, photo_ids: List[int]) -> int:
 
     session.commit()
 
-    for thumb in face_thumbnails:
-        try:
-            Path(thumb).unlink(missing_ok=True)
-        except OSError as e:
-            logger.warning(f"Failed to delete face thumbnail {thumb}: {e}")
+    unlink_face_thumbnails(face_thumbnails)
 
     logger.debug(f"Deleted {deleted_count} photos and {deleted_faces} associated faces")
     return deleted_count

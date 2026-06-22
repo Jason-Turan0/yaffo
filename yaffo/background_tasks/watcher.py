@@ -9,7 +9,7 @@ from watchdog.observers.api import BaseObserver, ObservedWatch
 
 from yaffo.background_tasks.tasks import SessionFactory
 from yaffo.background_tasks.watcher_suppression import should_suppress, sweep_expired
-from yaffo.common import PHOTO_EXTENSIONS, TEMP_DIR, TRASH_DIR
+from yaffo.common import PHOTO_EXTENSIONS
 from yaffo.db.repositories.photos_repository import move_photo_path
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from yaffo.db.models import Job, Photo, Face, JOB_STATUS_CANCELLED, FACE_STATUS_UNASSIGNED, \
     JOB_STATUS_RUNNING, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
-from yaffo.utils.index_photos import index_photo
+from yaffo.utils.index_photos import index_photo, clear_faces_for_photos, unlink_face_thumbnails
 from yaffo.domain.compare_utils import serialize_embedding
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
@@ -52,7 +52,19 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             return
 
         photos_in_batch = session.query(Photo).filter(Photo.full_file_path.in_(file_path_batch)).all()
+        photos_by_path = {photo.full_file_path: photo for photo in photos_in_batch}
         processed_count = 0
+
+        # Replace, never accumulate: a re-run of this task (e.g. requeued after a host
+        # crash) must not double up a photo's faces. Face thumbnail paths carry a uuid,
+        # so the unique constraint won't catch a re-insert -- clear the old faces first
+        # and unlink their thumbnails once the new rows are committed.
+        reindex_photo_ids = [
+            photos_by_path[result["full_file_path"]].id
+            for result in processed_results
+            if result["full_file_path"] in photos_by_path
+        ]
+        stale_thumbnails = clear_faces_for_photos(session, reindex_photo_ids)
 
         for result in processed_results:
             full_file_path = result["full_file_path"]
@@ -61,7 +73,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             latitude = index_results["latitude"]
             longitude = index_results["longitude"]
             location_name = index_results["location_name"]
-            photo = next(photo for photo in photos_in_batch if photo.full_file_path == full_file_path)
+            photo = photos_by_path.get(full_file_path)
             if photo is None:
                 logger.error(f"Failed to find photo in db for {full_file_path}")
                 error_count += 1
@@ -101,6 +113,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             update_job_params['status'] = JOB_STATUS_RUNNING
         session.query(Job).filter_by(id=job_id).update(update_job_params)
         session.commit()
+        unlink_face_thumbnails(stale_thumbnails)
         logger.debug(
             f"Completed job {job_id} batch: processed={processed_count}, errors={error_count}, cancelled={cancel_count}")
 

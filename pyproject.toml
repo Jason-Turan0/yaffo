@@ -66,3 +66,23 @@ dev = [
     "mypy==1.18.2",
     "mypy_extensions==1.1.0",
 ]
+
+[tool.coverage.run]
+source = ["yaffo"]
+branch = true
+omit = [
+    # Operational scripts run by hand (CLI tools, DB migrations, seed data).
+    "yaffo/scripts/*",
+    # Process entry point: YAFFO_ROLE dispatch + rumps menubar launch glue.
+    "yaffo/__main__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+]
