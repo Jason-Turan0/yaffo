@@ -41,7 +41,7 @@ def test_tool_saves_valid_code_to_working_draft(session):
     _automation(session)
     tool = AutomationToolProvider("my-auto", session=session)
 
-    result = tool.call_tool(tool.WRITE, {"code": 'rows = data_query({"source": "photos"})\nprint(len(rows))'})
+    result = tool.call_tool(tool.WRITE, {"code": 'rows = data_query({"source": "media_items"})\nprint(len(rows))'})
 
     assert isinstance(result, ToolResult)
     assert result.host_data["slug"] == "my-auto"

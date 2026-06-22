@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.db import db
 from yaffo.db.models import (
-    Job, Photo,
+    Job, MediaItem,
     JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_CANCELLED,
 )
 from yaffo.background_tasks.config import task_queue
@@ -67,7 +67,7 @@ def test_imports_valid_files_creates_photo_rows(db_for_import, tmp_path):
     import_photo_task("job-1", files)
 
     with Session(engine) as s:
-        photos = s.query(Photo).all()
+        photos = s.query(MediaItem).all()
         assert {p.full_file_path for p in photos} == set(files)
         job = s.query(Job).filter_by(id="job-1").one()
         assert job.completed_count == 3
@@ -84,7 +84,7 @@ def test_missing_files_counted_as_errors_not_imported(db_for_import, tmp_path):
     import_photo_task("job-1", present + missing)
 
     with Session(engine) as s:
-        photos = s.query(Photo).all()
+        photos = s.query(MediaItem).all()
         assert {p.full_file_path for p in photos} == set(present)  # only real files
         job = s.query(Job).filter_by(id="job-1").one()
         assert job.completed_count == 2
@@ -99,7 +99,7 @@ def test_cancelled_job_before_start_imports_nothing(db_for_import, tmp_path):
     import_photo_task("job-1", files)
 
     with Session(engine) as s:
-        assert s.query(Photo).count() == 0
+        assert s.query(MediaItem).count() == 0
         job = s.query(Job).filter_by(id="job-1").one()
         assert job.completed_count == 0  # untouched -- returned before any work
 
@@ -118,7 +118,7 @@ def test_midbatch_cancellation_records_remaining_as_cancelled(db_for_import, tmp
     import_photo_task("job-1", files)
 
     with Session(engine) as s:
-        assert s.query(Photo).count() == 5  # files 0..4 imported before the cancel
+        assert s.query(MediaItem).count() == 5  # files 0..4 imported before the cancel
         job = s.query(Job).filter_by(id="job-1").one()
         assert job.completed_count == 5
         assert job.cancelled_count == 3  # 8 - 5 unreached
@@ -136,7 +136,7 @@ def test_replay_does_not_duplicate_photos(db_for_import, tmp_path):
     import_photo_task("job-1", files)  # replay
 
     with Session(engine) as s:
-        photos = s.query(Photo).all()
+        photos = s.query(MediaItem).all()
         assert len(photos) == 3  # no duplicates -- the constraint held
         job = s.query(Job).filter_by(id="job-1").one()
         assert job.completed_count == 3        # only the first pass's imports
@@ -151,4 +151,4 @@ def test_missing_job_returns_without_creating_photos(db_for_import, tmp_path):
     import_photo_task("does-not-exist", files)
 
     with Session(engine) as s:
-        assert s.query(Photo).count() == 0
+        assert s.query(MediaItem).count() == 0

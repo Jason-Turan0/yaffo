@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.db import db
 from yaffo.db.models import (
-    Photo, Job,
+    MediaItem, Job,
     JOB_STATUS_COMPLETED, PHOTO_STATUS_INDEXED,
 )
 from yaffo.background_tasks.config import task_queue
@@ -96,7 +96,7 @@ def test_full_pipeline_imports_then_indexes(immediate_db, tmp_path):
         result = enqueue_index_jobs(session, files)
 
     with _session(engine) as session:
-        photos = session.query(Photo).all()
+        photos = session.query(MediaItem).all()
         assert {p.full_file_path for p in photos} == set(files)
         # all reached INDEXED -> index ran after import created the rows
         assert all(p.status == PHOTO_STATUS_INDEXED for p in photos)
@@ -119,7 +119,7 @@ def test_empty_import_still_indexes_existing(immediate_db, tmp_path):
     files = _make_files(tmp_path, 2)
     with _session(engine) as session:
         for f in files:
-            session.add(Photo(full_file_path=f))  # pre-existing, un-indexed
+            session.add(MediaItem(full_file_path=f))  # pre-existing, un-indexed
         session.commit()
 
     with _session(engine) as session:
@@ -132,7 +132,7 @@ def test_empty_import_still_indexes_existing(immediate_db, tmp_path):
         assert import_job.status == JOB_STATUS_COMPLETED
         assert index_job.task_count == 2
         assert index_job.status == JOB_STATUS_COMPLETED
-        assert all(p.status == PHOTO_STATUS_INDEXED for p in session.query(Photo).all())
+        assert all(p.status == PHOTO_STATUS_INDEXED for p in session.query(MediaItem).all())
 
     assert completed_events == ["import_photos", "index_photos"]
 
@@ -145,7 +145,7 @@ def test_nothing_to_do_completes_both_jobs(immediate_db, tmp_path):
     files = _make_files(tmp_path, 2)
     with _session(engine) as session:
         for f in files:
-            session.add(Photo(full_file_path=f, status=PHOTO_STATUS_INDEXED))
+            session.add(MediaItem(full_file_path=f, status=PHOTO_STATUS_INDEXED))
         session.commit()
 
     with _session(engine) as session:

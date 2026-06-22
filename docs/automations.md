@@ -157,7 +157,7 @@ The push twin of the schedule dispatcher.
 1. **Emit.** `events.emit_event(event_type, payload)` enqueues one
    `dispatch_event_task`. Emission is wired into `tasks/complete_job.py`: after a
    job is committed `COMPLETED`, `emit_job_completed_event` maps `job.name →
-   event_type` (`JOB_EVENT_MAP`) and emits with the resolved `photo_ids`.
+   event_type` (`JOB_EVENT_MAP`) and emits with the resolved `media_ids`.
    **Granularity is per-job-completion** (one emission point, ~1 event per job) —
    chosen over per-photo to avoid fan-out storms on bulk imports.
 2. **Dispatch.** `tasks/dispatch_event.py::dispatch_event_task(event_type,
@@ -165,8 +165,8 @@ The push twin of the schedule dispatcher.
    automations and calls `invoke_automation` with an `EventContext`.
 
 `EventContext` (`background_tasks/events.py`) is the typed payload handed to a
-run: `event_type`, `job_id`, `photo_ids`, and `groups` (related-photo groupings —
-one list of photo ids per duplicate set for `duplicates_found`, each ordered
+run: `event_type`, `job_id`, `media_ids`, and `groups` (related-media groupings —
+one list of media ids per duplicate set for `duplicates_found`, each ordered
 earliest-indexed first; empty for events without groupings). It threads through to
 the Starlark `ctx` (so a script reads `ctx["groups"]`) via `dispatch_event_task` →
 `invoke_automation`'s serialized payload → `executor.context_globals`.
@@ -178,7 +178,7 @@ Event catalog (fixed, in `models.py`): `photo_imported`, `photo_indexed`,
 is labelled — for the photos that received at least one label. Like
 `assign_location_name` emits its event from inside the run, but **after `record_run`
 commits** (classify's `replace_photo_labels` defers its commit to `record_run`), so a
-subscriber reading `photo_labels` sees the new rows. Fires for both the
+subscriber reading `media_labels` sees the new rows. Fires for both the
 `photo_indexed`-driven run and the Settings "re-classify all" backfill; a run that
 labels nothing emits nothing.
 
@@ -186,14 +186,14 @@ labels nothing emits nothing.
 `JOB_EVENT_MAP`/`complete_job_task`, which a find_duplicates job never reaches): the
 task already holds the duplicate groups as file paths, so it resolves them to photo
 ids (`_resolve_group_photo_ids` — paths stay out of the sandbox) and emits both the
-flattened `photo_ids` and the per-set `groups` with the keeper first. Fires for both
+flattened `media_ids` and the per-set `groups` with the keeper first. Fires for both
 the scheduled `duplicate_scan` and the manual Remove Duplicates tool.
 
 **Not all events come from job completion.** `photo_modified` is emitted
 *synchronously from routes* (not via `JOB_EVENT_MAP`) when a user edits a photo's
 people/location: face assign (`routes/faces.py`), person rename + face removal
 (`routes/people.py`), and location bulk-update (`routes/locations.py`) each call
-`emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": [...]})` after their commit. These
+`emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": [...]})` after their commit. These
 are UI edits, not bulk jobs, so per-edit granularity is fine (no fan-out storm).
 
 ## Tier routing (`background_tasks/automation_dispatch.py`)
@@ -251,7 +251,7 @@ automation_sandbox/
 
   | function | kind | does |
   |---|---|---|
-  | `data_query(query)` | read | `data_query_repository.resolve_query`; photo rows are enriched with `media_dir_id` + `relative_path` (see *Media dirs*). Sources are every exposed table — incl. `classification_labels` + `photo_labels` (the auto-classifier's labels, read-only; stitch to photos client-side on `photo_labels.photo_id` / `.label_id`) |
+  | `data_query(query)` | read | `data_query_repository.resolve_query`; `media_items` rows are enriched with `media_dir_id` + `relative_path` (see *Media dirs*). Sources are every exposed table — incl. `classification_labels` + `media_labels` (the auto-classifier's labels, read-only; stitch to media items client-side on `media_labels.media_item_id` / `.label_id`) |
   | `report_progress(completed, total)` | run control | update this run's Job `task_count`/`completed_count` → live percent + "N of TOTAL processed" in the run history |
   | `face_similarity(photo_id, person_id)` | read | per-face similarity to a person (`domain/compare_utils`) |
   | `match_people(photo_id)` | read | per-face similarity to all known people |
@@ -293,7 +293,7 @@ automation_sandbox/
   (`data_query_tool._json_default`).
 - **`executor.run_automation(session, automation, context)`** — runs
   `automation.published_code` with `inputs={"ctx": …}` (the trigger context:
-  `event_type`/`job_id`/`photo_ids`, empty for a schedule) and
+  `event_type`/`job_id`/`media_ids`, empty for a schedule) and
   `functions=build_host_functions(session)`. Returns the `StarlarkResult`.
 - **`tasks/run_automation.py::run_automation_code_task`** — the registered
   task wrapping the executor (loads the automation, rebuilds the `EventContext`,
@@ -370,7 +370,7 @@ package — formerly `page_builder` — that the page and theme builders also us
   rules, the `ctx` contract, the host API via `render_host_api()`, data sources via
   `FIELDS_BY_SOURCE` (incl. the FK join map from `source_catalog.relationship_summary()`,
   derived from the models), the `EVENTS` catalog — all *derived*, none restated — plus
-  a `<scoping>` section (event runs filter `data_query` to `ctx['photo_ids']`, never
+  a `<scoping>` section (event runs filter `data_query` to `ctx['media_ids']`, never
   sweep the library; library-wide only on a schedule), a `<batching>` section (collect
   writes, call one batch function — no per-item write loops), and a `<progress>`
   section (call `report_progress` while looping)) +
@@ -809,7 +809,7 @@ Watcher suppression (unit, no real observer):
   (`automations_run_now`, independent of triggers/enabled) — an automation whose
   **every trigger is an event** (purely photo-driven) gets **Run on a folder…/file…**
   buttons that pick a path and invoke for real over the indexed photos under it
-  (`get_photo_ids_under_path` → `EventContext(event_type="manual", photo_ids=…)` →
+  (`get_photo_ids_under_path` → `EventContext(event_type="manual", media_ids=…)` →
   `invoke_automation`), the live twin of the test-files dry run; an automation with a
   schedule trigger (or no triggers) gets the plain context-less **Run now** instead.
   The choice is the automation's live trigger config (route `_supports_scoped_run`),

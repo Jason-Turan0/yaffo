@@ -36,7 +36,7 @@ _IMG_FROM_PHOTO = (
 def _photo_grid() -> dict:
     return {
         "title": "Photo grid",
-        "data_query": {"photos": {"source": "photos", "limit": 12}},
+        "data_query": {"photos": {"source": "media_items", "limit": 12}},
         "css": _GRID_CSS,
         "html": "<div class='grid' id='root'></div>",
         "js": (
@@ -49,7 +49,7 @@ def _photo_grid() -> dict:
 def _hero() -> dict:
     return {
         "title": "Hero photo",
-        "data_query": {"featured": {"source": "photos", "limit": 1}},
+        "data_query": {"featured": {"source": "media_items", "limit": 1}},
         "css": (
             "html,body{margin:0;height:100%}"
             ".hero{position:relative;height:100%;min-height:140px;background:#111}"
@@ -70,7 +70,7 @@ def _hero() -> dict:
 def _polaroid() -> dict:
     return {
         "title": "Polaroid wall",
-        "data_query": {"shots": {"source": "photos", "limit": 8}},
+        "data_query": {"shots": {"source": "media_items", "limit": 8}},
         "css": (
             "body{margin:0;padding:8px;background:#f5f3ef;font-family:-apple-system,sans-serif}"
             ".wall{display:flex;flex-wrap:wrap;gap:10px}"
@@ -92,7 +92,7 @@ def _polaroid() -> dict:
 def _filmstrip() -> dict:
     return {
         "title": "Filmstrip",
-        "data_query": {"strip": {"source": "photos", "limit": 15}},
+        "data_query": {"strip": {"source": "media_items", "limit": 15}},
         "css": (
             "body{margin:0;background:#111;height:100vh}"
             ".strip{display:flex;gap:4px;overflow-x:auto;height:100%;align-items:center;padding:8px}"
@@ -111,8 +111,8 @@ def _filterable_gallery() -> dict:
     return {
         "title": "Filterable gallery",
         "data_query": {
-            "all": {"source": "photos", "limit": 40},
-            "years": {"source": "photos", "op": "facet", "field": "year"},
+            "all": {"source": "media_items", "limit": 40},
+            "years": {"source": "media_items", "op": "facet", "field": "year"},
         },
         "css": _GRID_CSS + (
             ".bar{display:flex;gap:8px;align-items:center;padding:6px 2px}"
@@ -135,9 +135,9 @@ def _stats() -> dict:
     return {
         "title": "Library stats",
         "data_query": {
-            "total": {"source": "photos", "op": "count"},
+            "total": {"source": "media_items", "op": "count"},
             "people": {"source": "people", "op": "count"},
-            "years": {"source": "photos", "op": "facet", "field": "year"},
+            "years": {"source": "media_items", "op": "facet", "field": "year"},
         },
         "css": (
             "body{margin:0;font-family:-apple-system,sans-serif;display:flex;height:100vh;align-items:center}"
@@ -164,8 +164,8 @@ def _global_filter() -> dict:
     return {
         "title": "Global filter",
         "data_query": {
-            "years": {"source": "photos", "op": "facet", "field": "year"},
-            "locs": {"source": "photos", "op": "facet", "field": "location_name"},
+            "years": {"source": "media_items", "op": "facet", "field": "year"},
+            "locs": {"source": "media_items", "op": "facet", "field": "location_name"},
         },
         "css": (
             "body{margin:0;font-family:-apple-system,sans-serif}"
@@ -194,13 +194,13 @@ def _linked_gallery() -> dict:
     # Subscribes to 'filter' and re-queries the server live on each change.
     return {
         "title": "Linked gallery",
-        "data_query": {"initial": {"source": "photos", "limit": 12}},
+        "data_query": {"initial": {"source": "media_items", "limit": 12}},
         "css": _GRID_CSS,
         "html": "<div class='grid' id='root'></div>",
         "js": (
             "const grid=document.getElementById('root');const st=yaffo.state||{};"
             "function draw(photos){grid.innerHTML='';(photos||[]).forEach(p=>{" + _IMG_FROM_PHOTO + "grid.appendChild(i);});}"
-            "async function applyFilter(flt){const q={source:'photos',limit:12};"
+            "async function applyFilter(flt){const q={source:'media_items',limit:12};"
             "if(flt.year)q.year={eq:flt.year};if(flt.location)q.location_name={eq:flt.location};"
             "draw(await yaffo.query(q));}"
             "yaffo.subscribe('filter',flt=>{yaffo.saveState({filter:flt});applyFilter(flt);});"

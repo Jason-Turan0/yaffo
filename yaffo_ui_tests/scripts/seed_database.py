@@ -33,7 +33,7 @@ def seed_database() -> int:
 
     from yaffo.app import create_app
     from yaffo.db import db
-    from yaffo.db.models import ApplicationSettings, Photo
+    from yaffo.db.models import ApplicationSettings, MediaItem
     from yaffo.utils.index_photos import index_photo
 
     app = create_app()
@@ -64,7 +64,7 @@ def seed_database() -> int:
             try:
                 result = index_photo(photo_path, thumbnail_dir)
                 if result:
-                    photo = Photo(
+                    photo = MediaItem(
                         full_file_path=str(photo_path),
                         date_taken=result.get("date_taken"),
                         year= result.get("year"),
@@ -79,7 +79,7 @@ def seed_database() -> int:
                     tags = result["tags"]
                     for tag_data in tags:
                         tag = Tag(
-                            photo_id=photo.id,
+                            media_item_id=photo.id,
                             tag_name=tag_data['tag_name'],
                             tag_value=tag_data['tag_value']
                         )
@@ -90,7 +90,7 @@ def seed_database() -> int:
                             embedding=face_data['embedding'].tobytes(),
                             full_file_path=face_data['full_file_path'],
                             status=FACE_STATUS_UNASSIGNED,
-                            photo_id=photo.id,
+                            media_item_id=photo.id,
                             location_top=face_data['location_top'],
                             location_right=face_data['location_right'],
                             location_bottom=face_data['location_bottom'],
@@ -104,7 +104,7 @@ def seed_database() -> int:
                 print(f"  Error indexing {photo_path.name}: {e}")
 
         db.session.commit()
-        total = db.session.query(Photo).count()
+        total = db.session.query(MediaItem).count()
         print(f"  Total photos in database: {total}")
 
         return indexed_count

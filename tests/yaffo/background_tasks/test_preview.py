@@ -37,7 +37,7 @@ def test_preview_records_actions(monkeypatch):
         "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_photo_rows",
         lambda session, rows: rows,  # enrichment tested separately
     )
-    code = "print('hi')\ndata_query({'source': 'photos', 'limit': 5})"
+    code = "print('hi')\ndata_query({'source': 'media_items', 'limit': 5})"
     result = preview_automation(object(), _FakeAutomation(published_code=code), [1, 2])
 
     assert result.success is True, result.error
@@ -45,9 +45,9 @@ def test_preview_records_actions(monkeypatch):
     assert result.context == {"type": "files", "photo_ids": [1, 2]}
     assert result.output == ["hi"]
     assert result.actions == [{
-        "summary": "Looking up photos",
+        "summary": "Looking up media_items",
         "name": "data_query",
-        "args": [{"source": "photos", "limit": 5}],
+        "args": [{"source": "media_items", "limit": 5}],
     }]
     assert result.value == [{"id": 1}]
 

@@ -136,7 +136,7 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
     };
 
     const photoCount = (ctx) => {
-        const n = (ctx.photo_ids || []).length;
+        const n = (ctx.media_ids || []).length;
         return `${n} photo${n === 1 ? '' : 's'}`;
     };
 

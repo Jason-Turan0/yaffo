@@ -125,7 +125,7 @@ def test_handler_enqueues_for_event_photos(monkeypatch):
         lambda automation_id, photo_ids: calls.append((automation_id, photo_ids)),
     )
     automation = SimpleNamespace(id=3)
-    context = SimpleNamespace(photo_ids=[11, 12])
+    context = SimpleNamespace(media_ids=[11, 12])
     mod.enqueue_auto_assign_faces(automation, context)
     assert calls == [(3, [11, 12])]
 
@@ -138,5 +138,5 @@ def test_handler_noop_without_context_or_photos(monkeypatch):
     )
     automation = SimpleNamespace(id=3)
     mod.enqueue_auto_assign_faces(automation, None)
-    mod.enqueue_auto_assign_faces(automation, SimpleNamespace(photo_ids=[]))
+    mod.enqueue_auto_assign_faces(automation, SimpleNamespace(media_ids=[]))
     assert calls == []

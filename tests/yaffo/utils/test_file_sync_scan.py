@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from yaffo.db import db
-from yaffo.db.models import Photo, PHOTO_STATUS_INDEXED
+from yaffo.db.models import MediaItem, PHOTO_STATUS_INDEXED
 from yaffo.utils.file_sync import (
     MediaScan,
     ORPHAN_MISSING,
@@ -48,8 +48,8 @@ def media(tmp_path, session):
     _touch(media_dir / "note.txt")
     gone = media_dir / "gone.jpg"  # never created on disk
 
-    session.add(Photo(full_file_path=str(a), status=PHOTO_STATUS_INDEXED))
-    session.add(Photo(full_file_path=str(gone), status=PHOTO_STATUS_INDEXED))
+    session.add(MediaItem(full_file_path=str(a), status=PHOTO_STATUS_INDEXED))
+    session.add(MediaItem(full_file_path=str(gone), status=PHOTO_STATUS_INDEXED))
     session.commit()
     return media_dir
 
@@ -74,8 +74,8 @@ def test_removed_media_dir_orphans_its_photos_even_when_files_exist(tmp_path, se
     in_kept = _touch(kept / "keep.jpg")
     in_dropped = _touch(dropped / "old.jpg")  # file still on disk
 
-    session.add(Photo(full_file_path=str(in_kept), status=PHOTO_STATUS_INDEXED))
-    session.add(Photo(full_file_path=str(in_dropped), status=PHOTO_STATUS_INDEXED))
+    session.add(MediaItem(full_file_path=str(in_kept), status=PHOTO_STATUS_INDEXED))
+    session.add(MediaItem(full_file_path=str(in_dropped), status=PHOTO_STATUS_INDEXED))
     session.commit()
 
     # 'dropped' is no longer in the configured media dirs.
@@ -92,7 +92,7 @@ def test_unmounted_media_dir_does_not_orphan_its_photos(tmp_path, session):
     missing_dir = tmp_path / "external"  # configured but never exists on disk
     photo_path = missing_dir / "photo.jpg"
 
-    session.add(Photo(full_file_path=str(photo_path), status=PHOTO_STATUS_INDEXED))
+    session.add(MediaItem(full_file_path=str(photo_path), status=PHOTO_STATUS_INDEXED))
     session.commit()
 
     scan = scan_media_dirs(session, [missing_dir], None)

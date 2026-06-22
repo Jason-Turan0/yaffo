@@ -3,7 +3,7 @@ from flask import Flask, render_template, jsonify, request
 from sqlalchemy import func
 
 from yaffo.db import db
-from yaffo.db.models import Photo, PHOTO_STATUS_INDEXED, EVENT_PHOTO_MODIFIED
+from yaffo.db.models import MediaItem, PHOTO_STATUS_INDEXED, EVENT_PHOTO_MODIFIED
 from yaffo.background_tasks.events import emit_event
 from yaffo.utils.reverse_geocode import reverse_geocode
 
@@ -13,14 +13,14 @@ def init_locations_routes(app: Flask):
         """List all locations"""
         locations = (
             db.session.query(
-                Photo.id,
-                Photo.location_name,
-                Photo.latitude,
-                Photo.longitude,
-                Photo.full_file_path
+                MediaItem.id,
+                MediaItem.location_name,
+                MediaItem.latitude,
+                MediaItem.longitude,
+                MediaItem.full_file_path
             )
-            .filter(Photo.latitude.isnot(None))
-            .filter(Photo.longitude.isnot(None))
+            .filter(MediaItem.latitude.isnot(None))
+            .filter(MediaItem.longitude.isnot(None))
             .all()
         )
 
@@ -50,8 +50,8 @@ def init_locations_routes(app: Flask):
 
         try:
             updated_count = (
-                db.session.query(Photo)
-                .filter(Photo.id.in_(photo_ids))
+                db.session.query(MediaItem)
+                .filter(MediaItem.id.in_(photo_ids))
                 .update({
                     'location_name': location_name,
                     'status': PHOTO_STATUS_INDEXED
@@ -59,7 +59,7 @@ def init_locations_routes(app: Flask):
             )
             db.session.commit()
 
-            emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": photo_ids})
+            emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": photo_ids})
             return jsonify({
                 'success': True,
                 'updated_count': updated_count,

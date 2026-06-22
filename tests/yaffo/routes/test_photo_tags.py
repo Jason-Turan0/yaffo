@@ -5,13 +5,13 @@ once per save). emit_event is stubbed so tests don't enqueue a real dispatch tas
 import pytest
 
 from yaffo.db import db
-from yaffo.db.models import EVENT_PHOTO_MODIFIED, Photo, Tag
+from yaffo.db.models import EVENT_PHOTO_MODIFIED, MediaItem, Tag
 
 
 @pytest.fixture
 def photo_id(app):
     with app.app_context():
-        photo = Photo(full_file_path="/lib/a.jpg")
+        photo = MediaItem(full_file_path="/lib/a.jpg")
         photo.tags = [Tag(tag_name="old", tag_value="1")]
         db.session.add(photo)
         db.session.commit()
@@ -40,13 +40,13 @@ def test_put_replaces_the_tag_set(client, photo_id):
 def test_put_clears_previous_tags(client, photo_id, app):
     client.put(f"/api/photo/{photo_id}/tags", json={"tags": [{"tag_name": "new"}]})
     with app.app_context():
-        rows = db.session.query(Tag).filter_by(photo_id=photo_id).all()
+        rows = db.session.query(Tag).filter_by(media_item_id=photo_id).all()
         assert [t.tag_name for t in rows] == ["new"]  # 'old' is gone
 
 
 def test_put_emits_photo_modified(client, photo_id, captured_events):
     client.put(f"/api/photo/{photo_id}/tags", json={"tags": []})
-    assert captured_events == [(EVENT_PHOTO_MODIFIED, {"photo_ids": [photo_id]})]
+    assert captured_events == [(EVENT_PHOTO_MODIFIED, {"media_ids": [photo_id]})]
 
 
 def test_validation_failure_does_not_emit(client, photo_id, captured_events):
@@ -71,12 +71,12 @@ def test_favorite_toggles_true_then_null(client, photo_id, app):
     second = client.post(f"/api/photo/{photo_id}/favorite")
     assert second.get_json()["favorite"] is None  # unset, not False
     with app.app_context():
-        assert db.session.get(Photo, photo_id).favorite is None
+        assert db.session.get(MediaItem, photo_id).favorite is None
 
 
 def test_favorite_emits_photo_modified(client, photo_id, captured_events):
     client.post(f"/api/photo/{photo_id}/favorite")
-    assert captured_events == [(EVENT_PHOTO_MODIFIED, {"photo_ids": [photo_id]})]
+    assert captured_events == [(EVENT_PHOTO_MODIFIED, {"media_ids": [photo_id]})]
 
 
 def test_favorite_missing_photo_is_404(client):

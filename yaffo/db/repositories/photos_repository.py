@@ -4,14 +4,14 @@ from pathlib import Path
 
 from sqlalchemy import insert, or_
 from sqlalchemy.orm import Session
-from yaffo.db.models import Face, PersonFace, Photo, PhotoLabel, Tag, PHOTO_STATUS_INDEXED
+from yaffo.db.models import Face, PersonFace, MediaItem, MediaLabel, Tag, PHOTO_STATUS_INDEXED
 
 # Ids per IN-clause — stay under SQLite's ~999 bound-param cap.
 _DELETE_CHUNK = 500
 
 
 def get_faces_for_photo(session: Session, photo_id: int) -> list[Face]:
-    return session.query(Face).filter_by(photo_id=photo_id).all()
+    return session.query(Face).filter_by(media_item_id=photo_id).all()
 
 
 def get_photo_ids_for_faces(session: Session, face_ids: list[int]) -> list[int]:
@@ -22,8 +22,8 @@ def get_photo_ids_for_faces(session: Session, face_ids: list[int]) -> list[int]:
         chunk = face_ids[start:start + _DELETE_CHUNK]
         photo_ids.update(
             row[0]
-            for row in session.query(Face.photo_id).filter(
-                Face.id.in_(chunk), Face.photo_id.isnot(None)
+            for row in session.query(Face.media_item_id).filter(
+                Face.id.in_(chunk), Face.media_item_id.isnot(None)
             ).all()
         )
     return list(photo_ids)
@@ -34,9 +34,9 @@ def get_photo_ids_under_path(session: Session, path: str) -> list[int]:
     path = path.rstrip("/\\")
     under = f"{path}{os.sep}%"
     rows = (
-        session.query(Photo.id)
-        .filter(or_(Photo.full_file_path == path, Photo.full_file_path.like(under)))
-        .order_by(Photo.id)
+        session.query(MediaItem.id)
+        .filter(or_(MediaItem.full_file_path == path, MediaItem.full_file_path.like(under)))
+        .order_by(MediaItem.id)
         .all()
     )
     return [row[0] for row in rows]
@@ -48,9 +48,9 @@ def get_photo_paths_under_path(session: Session, path: str) -> list[tuple[int, s
     path = path.rstrip("/\\")
     under = f"{path}{os.sep}%"
     rows = (
-        session.query(Photo.id, Photo.full_file_path)
-        .filter(or_(Photo.full_file_path == path, Photo.full_file_path.like(under)))
-        .order_by(Photo.id)
+        session.query(MediaItem.id, MediaItem.full_file_path)
+        .filter(or_(MediaItem.full_file_path == path, MediaItem.full_file_path.like(under)))
+        .order_by(MediaItem.id)
         .all()
     )
     return [(row[0], row[1]) for row in rows]
@@ -65,14 +65,14 @@ def get_photo_filename(session: Session, photo_id: int) -> str | None:
 def get_photo_filename_for_face(session: Session, face_id: int) -> str | None:
     """The file name of the photo a face belongs to, for display."""
     face = session.get(Face, face_id)
-    if face is None or face.photo_id is None:
+    if face is None or face.media_item_id is None:
         return None
-    return get_photo_filename(session, face.photo_id)
+    return get_photo_filename(session, face.media_item_id)
 
 
 def add_tag(session: Session, photo_id: int, name: str, value=None) -> Tag:
     """Tag a photo. `value` is an optional tag value (blank stored as NULL)."""
-    tag = Tag(photo_id=photo_id, tag_name=name, tag_value=str(value) if value else None)
+    tag = Tag(media_item_id=photo_id, tag_name=name, tag_value=str(value) if value else None)
     session.add(tag)
     session.commit()
     return tag
@@ -84,7 +84,7 @@ def add_tags(session: Session, items: list[tuple[int, str, object]]) -> int:
     written. Lets a batch job collect its tags and persist them in a single short write
     rather than committing per photo."""
     rows = [
-        {"photo_id": photo_id, "tag_name": name, "tag_value": str(value) if value else None}
+        {"media_item_id": photo_id, "tag_name": name, "tag_value": str(value) if value else None}
         for photo_id, name, value in items
     ]
     if rows:
@@ -94,20 +94,20 @@ def add_tags(session: Session, items: list[tuple[int, str, object]]) -> int:
 
 
 def get_photo_path(session: Session, photo_id: int) -> str | None:
-    row = session.query(Photo.full_file_path).filter_by(id=photo_id).first()
+    row = session.query(MediaItem.full_file_path).filter_by(id=photo_id).first()
     return row[0] if row else None
 
 
 def get_all_photo_paths(session: Session) -> list[str]:
     """Every indexed photo's stored file path (skipping any null), for batch jobs
     like the scheduled duplicate scan."""
-    rows = session.query(Photo.full_file_path).filter(Photo.full_file_path.isnot(None)).all()
+    rows = session.query(MediaItem.full_file_path).filter(MediaItem.full_file_path.isnot(None)).all()
     return [row[0] for row in rows]
 
 
 def get_paths_by_ids(session: Session, photo_ids: list[int]) -> dict[int, str]:
     return dict(
-        session.query(Photo.id, Photo.full_file_path).filter(Photo.id.in_(photo_ids)).all()
+        session.query(MediaItem.id, MediaItem.full_file_path).filter(MediaItem.id.in_(photo_ids)).all()
     )
 
 
@@ -123,17 +123,17 @@ def delete_photos(session: Session, photo_ids: list[int]) -> list[str]:
     for start in range(0, len(ids), _DELETE_CHUNK):
         chunk = ids[start:start + _DELETE_CHUNK]
         face_rows = (
-            session.query(Face.id, Face.full_file_path).filter(Face.photo_id.in_(chunk)).all()
+            session.query(Face.id, Face.full_file_path).filter(Face.media_item_id.in_(chunk)).all()
         )
         face_ids = [row[0] for row in face_rows]
         thumbnails.extend(row[1] for row in face_rows if row[1])
         for f_start in range(0, len(face_ids), _DELETE_CHUNK):
             f_chunk = face_ids[f_start:f_start + _DELETE_CHUNK]
             session.query(PersonFace).filter(PersonFace.face_id.in_(f_chunk)).delete(synchronize_session=False)
-        session.query(Face).filter(Face.photo_id.in_(chunk)).delete(synchronize_session=False)
-        session.query(PhotoLabel).filter(PhotoLabel.photo_id.in_(chunk)).delete(synchronize_session=False)
-        session.query(Tag).filter(Tag.photo_id.in_(chunk)).delete(synchronize_session=False)
-        session.query(Photo).filter(Photo.id.in_(chunk)).delete(synchronize_session=False)
+        session.query(Face).filter(Face.media_item_id.in_(chunk)).delete(synchronize_session=False)
+        session.query(MediaLabel).filter(MediaLabel.media_item_id.in_(chunk)).delete(synchronize_session=False)
+        session.query(Tag).filter(Tag.media_item_id.in_(chunk)).delete(synchronize_session=False)
+        session.query(MediaItem).filter(MediaItem.id.in_(chunk)).delete(synchronize_session=False)
     session.commit()
     return thumbnails
 
@@ -142,16 +142,16 @@ def get_indexed_photo_ids(session: Session) -> list[int]:
     """Ids of every indexed photo, for whole-library backfills (e.g. re-classifying
     all photos after the label vocabulary changes)."""
     rows = (
-        session.query(Photo.id)
-        .filter(Photo.status == PHOTO_STATUS_INDEXED)
-        .order_by(Photo.id)
+        session.query(MediaItem.id)
+        .filter(MediaItem.status == PHOTO_STATUS_INDEXED)
+        .order_by(MediaItem.id)
         .all()
     )
     return [row[0] for row in rows]
 
 
 def update_photo_path(session: Session, photo_id: int, new_path: str) -> None:
-    session.query(Photo).filter_by(id=photo_id).update({"full_file_path": new_path})
+    session.query(MediaItem).filter_by(id=photo_id).update({"full_file_path": new_path})
 
 
 def move_photo_path(session: Session, old_path: str, new_path: str) -> bool:
@@ -159,8 +159,8 @@ def move_photo_path(session: Session, old_path: str, new_path: str) -> bool:
     row id and its faces/tags (which reference photo_id, not the path). Returns True
     if a photo at old_path existed and was moved, False if there was none."""
     updated = (
-        session.query(Photo)
-        .filter(Photo.full_file_path == old_path)
+        session.query(MediaItem)
+        .filter(MediaItem.full_file_path == old_path)
         .update({"full_file_path": new_path}, synchronize_session=False)
     )
     if updated:
@@ -168,15 +168,15 @@ def move_photo_path(session: Session, old_path: str, new_path: str) -> bool:
     return bool(updated)
 
 
-def get_photos_with_coords(session: Session, photo_ids: list[int]) -> list[Photo]:
+def get_photos_with_coords(session: Session, photo_ids: list[int]) -> list[MediaItem]:
     """The given photos that have both latitude and longitude set."""
     if not photo_ids:
         return []
     return (
-        session.query(Photo)
-        .filter(Photo.id.in_(photo_ids))
-        .filter(Photo.latitude.isnot(None))
-        .filter(Photo.longitude.isnot(None))
+        session.query(MediaItem)
+        .filter(MediaItem.id.in_(photo_ids))
+        .filter(MediaItem.latitude.isnot(None))
+        .filter(MediaItem.longitude.isnot(None))
         .all()
     )
 
@@ -185,26 +185,26 @@ def get_named_coordinates(session: Session) -> list[tuple[float, float, str]]:
     """(latitude, longitude, location_name) for every photo that has all three —
     the candidates the assign-location-name automation reuses names from."""
     rows = (
-        session.query(Photo.latitude, Photo.longitude, Photo.location_name)
-        .filter(Photo.latitude.isnot(None))
-        .filter(Photo.longitude.isnot(None))
-        .filter(Photo.location_name.isnot(None))
-        .filter(Photo.location_name != "")
+        session.query(MediaItem.latitude, MediaItem.longitude, MediaItem.location_name)
+        .filter(MediaItem.latitude.isnot(None))
+        .filter(MediaItem.longitude.isnot(None))
+        .filter(MediaItem.location_name.isnot(None))
+        .filter(MediaItem.location_name != "")
         .all()
     )
     return [(row[0], row[1], row[2]) for row in rows]
 
 
-def get_photos_missing_gps(session: Session, photo_ids: list[int]) -> list[Photo]:
+def get_photos_missing_gps(session: Session, photo_ids: list[int]) -> list[MediaItem]:
     """The given photos that have a capture date but no coordinates — the targets the
     geotag-from-neighbors automation tries to locate."""
     if not photo_ids:
         return []
     return (
-        session.query(Photo)
-        .filter(Photo.id.in_(photo_ids))
-        .filter(Photo.date_taken.isnot(None))
-        .filter(Photo.latitude.is_(None))
+        session.query(MediaItem)
+        .filter(MediaItem.id.in_(photo_ids))
+        .filter(MediaItem.date_taken.isnot(None))
+        .filter(MediaItem.latitude.is_(None))
         .all()
     )
 
@@ -214,10 +214,10 @@ def get_gps_timestamps(session: Session) -> list[tuple[str, float, float, str | 
     date + coordinates — the GPS-tagged photos the geotag-from-neighbors automation
     borrows coordinates (and, when present, the location name) from."""
     rows = (
-        session.query(Photo.date_taken, Photo.latitude, Photo.longitude, Photo.location_name)
-        .filter(Photo.date_taken.isnot(None))
-        .filter(Photo.latitude.isnot(None))
-        .filter(Photo.longitude.isnot(None))
+        session.query(MediaItem.date_taken, MediaItem.latitude, MediaItem.longitude, MediaItem.location_name)
+        .filter(MediaItem.date_taken.isnot(None))
+        .filter(MediaItem.latitude.isnot(None))
+        .filter(MediaItem.longitude.isnot(None))
         .all()
     )
     return [(row[0], row[1], row[2], row[3]) for row in rows]
@@ -226,10 +226,10 @@ def get_gps_timestamps(session: Session) -> list[tuple[str, float, float, str | 
 def get_distinct_years(session: Session) -> list[int]:
     return [row[0] for row in
             (session
-                .query(Photo.year)
-                .filter(Photo.year.isnot(None))
+                .query(MediaItem.year)
+                .filter(MediaItem.year.isnot(None))
                 .distinct()
-                .order_by(Photo.year)
+                .order_by(MediaItem.year)
                 .all())
             ]
 

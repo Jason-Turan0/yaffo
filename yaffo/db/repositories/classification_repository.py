@@ -4,7 +4,7 @@ routes (vocabulary CRUD) and the classify-labels automation task (assignments)."
 from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
-from yaffo.db.models import ClassificationLabel, PhotoLabel
+from yaffo.db.models import ClassificationLabel, MediaLabel
 
 # SQLite caps bound parameters per statement (~999); chunk the IN-list delete so a
 # large re-classify batch never blows that limit.
@@ -68,12 +68,12 @@ def bulk_replace_photo_labels(
     photo_ids = [photo_id for photo_id, _ in results]
     for start in range(0, len(photo_ids), _DELETE_CHUNK):
         chunk = photo_ids[start:start + _DELETE_CHUNK]
-        session.query(PhotoLabel).filter(PhotoLabel.photo_id.in_(chunk)).delete(synchronize_session=False)
+        session.query(MediaLabel).filter(MediaLabel.media_item_id.in_(chunk)).delete(synchronize_session=False)
     rows = [
-        {"photo_id": photo_id, "label_id": label_id, "confidence": confidence}
+        {"media_item_id": photo_id, "label_id": label_id, "confidence": confidence}
         for photo_id, assignments in results
         for label_id, confidence in assignments
     ]
     if rows:
-        session.execute(insert(PhotoLabel), rows)
+        session.execute(insert(MediaLabel), rows)
     session.commit()

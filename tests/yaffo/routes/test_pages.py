@@ -218,7 +218,7 @@ class TestWidgetQuery:
         vid = _reload_page(pid).published_version_id
         # A valid query against a real source; the test DB has no photos, so rows
         # come back empty — the point is the route resolves and returns data.
-        resp = client.post(f"/pages/{pid}/versions/{vid}/widgets/w1/query", json={"query": {"source": "photos", "limit": 5}})
+        resp = client.post(f"/pages/{pid}/versions/{vid}/widgets/w1/query", json={"query": {"source": "media_items", "limit": 5}})
         assert resp.status_code == 200
         assert resp.get_json()["data"] == []
 

@@ -6,8 +6,8 @@ PHOTO_STATUS_IMPORTED = "IMPORTED"
 PHOTO_STATUS_INDEXED = "INDEXED"
 PHOTO_STATUS_SYNCED = "SYNCED"
 
-class Photo(db.Model):
-    __tablename__ = "photos"
+class MediaItem(db.Model):
+    __tablename__ = "media_items"
     id = db.Column(db.Integer, primary_key=True)
     full_file_path = db.Column(db.String, unique=True)
     # The camera's *local wall-clock* capture time (EXIF DateTimeOriginal), stored
@@ -31,27 +31,27 @@ class Photo(db.Model):
     status = db.Column(db.String, default=PHOTO_STATUS_IMPORTED)
     faces = db.relationship(
         "Face",
-        back_populates="photo"
+        back_populates="media_item"
     )
     tags = db.relationship(
         "Tag",
-        back_populates="photo",
+        back_populates="media_item",
         cascade="all, delete-orphan"
     )
     labels = db.relationship(
-        "PhotoLabel",
-        back_populates="photo",
+        "MediaLabel",
+        back_populates="media_item",
         cascade="all, delete-orphan",
-        order_by="PhotoLabel.confidence.desc()",
+        order_by="MediaLabel.confidence.desc()",
     )
 
 class Tag(db.Model):
     __tablename__ = "tags"
     id = db.Column(db.Integer, primary_key=True)
-    photo_id = db.Column(db.Integer, db.ForeignKey("photos.id", ondelete="CASCADE"), nullable=False)
+    media_item_id = db.Column(db.Integer, db.ForeignKey("media_items.id", ondelete="CASCADE"), nullable=False)
     tag_name = db.Column(db.String, nullable=False)
     tag_value = db.Column(db.String)
-    photo = db.relationship("Photo", back_populates="tags")
+    media_item = db.relationship("MediaItem", back_populates="tags")
 
 
 class ClassificationLabel(db.Model):
@@ -72,16 +72,16 @@ class ClassificationLabel(db.Model):
         return (self.prompt or "").strip() or f"a photo of {self.name}"
 
 
-class PhotoLabel(db.Model):
-    """A label the classifier assigned to a photo, with its CLIP cosine confidence.
-    Distinct from Tag (manual, freeform k/v): these are auto-generated, scored, and
-    replaced wholesale on each re-classification of a photo."""
-    __tablename__ = "photo_labels"
-    photo_id = db.Column(db.Integer, db.ForeignKey("photos.id", ondelete="CASCADE"), nullable=False)
+class MediaLabel(db.Model):
+    """A label the classifier assigned to a media item, with its CLIP cosine
+    confidence. Distinct from Tag (manual, freeform k/v): these are auto-generated,
+    scored, and replaced wholesale on each re-classification of a media item."""
+    __tablename__ = "media_labels"
+    media_item_id = db.Column(db.Integer, db.ForeignKey("media_items.id", ondelete="CASCADE"), nullable=False)
     label_id = db.Column(db.Integer, db.ForeignKey("classification_labels.id", ondelete="CASCADE"), nullable=False)
     confidence = db.Column(db.Float)
-    __table_args__ = (PrimaryKeyConstraint("photo_id", "label_id"),)
-    photo = db.relationship("Photo", back_populates="labels")
+    __table_args__ = (PrimaryKeyConstraint("media_item_id", "label_id"),)
+    media_item = db.relationship("MediaItem", back_populates="labels")
     label = db.relationship("ClassificationLabel")
 
 FACE_STATUS_UNASSIGNED = "UNASSIGNED"
@@ -94,7 +94,7 @@ class Face(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     embedding = db.Column(db.LargeBinary)
     full_file_path = db.Column(db.String, unique=True)
-    photo_id = db.Column(db.Integer, db.ForeignKey("photos.id"))
+    media_item_id = db.Column(db.Integer, db.ForeignKey("media_items.id"))
     status = db.Column(db.String)
     # Predicted age at the time the photo was taken (InsightFace genderage); used,
     # aggregated over a person's faces, to estimate their birthdate.
@@ -116,7 +116,7 @@ class Face(db.Model):
         uselist=False,
         cascade="all, delete-orphan"
     )
-    photo = db.relationship("Photo", back_populates="faces")
+    media_item = db.relationship("MediaItem", back_populates="faces")
     people = db.relationship(
         "Person",
         secondary="people_face",

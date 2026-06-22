@@ -105,6 +105,6 @@ def enqueue_auto_assign_faces(automation: Automation, context: EventContext | No
     """Handler for the built-in auto-assign-faces automation: enqueue the task for
     the photos the triggering event concerns. A schedule trigger (no context, no
     photo subjects) has nothing to act on, so it's a no-op."""
-    photo_ids = context.photo_ids if context else []
+    photo_ids = context.media_ids if context else []
     if photo_ids:
         auto_assign_faces_automation_task(automation.id, photo_ids)

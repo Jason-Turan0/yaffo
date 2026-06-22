@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from sqlalchemy.orm import Session
 
 from yaffo.db.models import (
-    Job, Photo,
+    Job, MediaItem,
     EVENT_PHOTO_IMPORTED, EVENT_PHOTO_INDEXED,
 )
 from yaffo.logging_config import get_logger
@@ -17,8 +17,8 @@ logger = get_logger(__name__, 'background_tasks')
 @dataclass(frozen=True)
 class EventContext:
     """What a domain event hands to a subscribed automation's handler. Built by
-    dispatch_event_task from the queued (event_type, payload); `photo_ids` are the
-    subjects the event concerns (empty when an event has no photo subjects).
+    dispatch_event_task from the queued (event_type, payload); `media_ids` are the
+    subjects the event concerns (empty when an event has no media subjects).
 
     `groups` carries related-photo groupings when an event provides them — e.g.
     duplicates_found passes one list of photo ids per duplicate set (each ordered
@@ -30,7 +30,7 @@ class EventContext:
     (see event_chain_scope / the Loop guard section in docs/automations.md)."""
     event_type: str
     job_id: str | None = None
-    photo_ids: list[int] = field(default_factory=list)
+    media_ids: list[int] = field(default_factory=list)
     groups: list[list[int]] = field(default_factory=list)
     origin_automation_ids: list[int] = field(default_factory=list)
 
@@ -59,7 +59,7 @@ def event_chain_scope(origin_automation_ids: list[int] | None, automation_id: in
 
 
 # event_type stamped on the EventContext of a manual "Run now" over a picked
-# file/folder (no domain event fired it). Handlers act on photo_ids regardless;
+# file/folder (no domain event fired it). Handlers act on media_ids regardless;
 # custom scripts can read ctx['event_type'] to tell a manual run from a real event.
 MANUAL_RUN_EVENT_TYPE = "manual"
 
@@ -98,7 +98,7 @@ def _resolve_photo_ids(session: Session, job: Job) -> list[int]:
     files = data.get('files_to_index') or data.get('files_to_import') or []
     if not files:
         return []
-    return [pid for (pid,) in session.query(Photo.id).filter(Photo.full_file_path.in_(files)).all()]
+    return [pid for (pid,) in session.query(MediaItem.id).filter(MediaItem.full_file_path.in_(files)).all()]
 
 
 def emit_job_completed_event(session: Session, job: Job) -> None:
@@ -109,5 +109,5 @@ def emit_job_completed_event(session: Session, job: Job) -> None:
         return
     emit_event(event_type, {
         'job_id': job.id,
-        'photo_ids': _resolve_photo_ids(session, job),
+        'media_ids': _resolve_photo_ids(session, job),
     })

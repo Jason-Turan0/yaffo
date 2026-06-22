@@ -244,13 +244,13 @@ class TestSavePageWidgets:
     def test_creates_widgets_with_layout_and_content(self, session, page):
         repo.save_page_widgets(session, page.id, [
             _widget_item("a", title="Wall", html="<div>", w=4, h=4,
-                         data_query={"q": {"source": "photos"}}),
+                         data_query={"q": {"source": "media_items"}}),
         ])
         widget = repo.get_widget(session, page.id, "a")
         assert widget.title == "Wall"
         assert widget.html == "<div>"
         assert widget.grid_w == 4 and widget.grid_h == 4
-        assert widget.data_query == {"q": {"source": "photos"}}
+        assert widget.data_query == {"q": {"source": "media_items"}}
 
     def test_mints_id_when_absent(self, session, page):
         repo.save_page_widgets(session, page.id, [_widget_item()])  # no id
@@ -319,7 +319,7 @@ def populated_page(session):
     repo.add_message(session, page.id, "user", "make a wall")
     repo.add_message(session, page.id, "assistant", "done")
     repo.save_page_widgets(session, page.id, [
-        _widget_item("a", title="A", html="<p>a</p>", data_query={"q": {"source": "photos"}}),
+        _widget_item("a", title="A", html="<p>a</p>", data_query={"q": {"source": "media_items"}}),
         _widget_item("b", title="B", html="<p>b</p>"),
     ])
     return repo.get_page(session, page.id)
@@ -346,7 +346,7 @@ class TestForkVersion:
             ("a", "A", "<p>a</p>"),
             ("b", "B", "<p>b</p>"),
         ]
-        assert forked.widgets[0].data_query == {"q": {"source": "photos"}}
+        assert forked.widgets[0].data_query == {"q": {"source": "media_items"}}
 
     def test_copies_prior_conversation(self, session, populated_page):
         version = repo.fork_version(session, populated_page.id)

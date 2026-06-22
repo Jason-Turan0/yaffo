@@ -26,7 +26,7 @@ for group in ctx["groups"]:
 
 if to_move:
     print("Moving " + str(len(to_move)) + " duplicate(s) to _Duplicates")
-    rows = data_query({"source": "photos", "id": {"in": to_move}})
+    rows = data_query({"source": "media_items", "id": {"in": to_move}})
     moves = [{"photo_id": row["id"], "media_dir_id": row["media_dir_id"], "target_path": "_Duplicates"} for row in rows if row["media_dir_id"]]
     move_photos(moves)
 """

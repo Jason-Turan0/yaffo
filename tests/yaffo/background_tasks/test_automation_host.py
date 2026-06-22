@@ -63,7 +63,7 @@ def test_data_query_callable_is_invoked_from_starlark(monkeypatch):
     assert "data_query" in functions
 
     result = run_starlark(
-        "data_query({'source': 'photos', 'limit': 5})", functions=functions
+        "data_query({'source': 'media_items', 'limit': 5})", functions=functions
     )
 
     assert result.success is True, result.error
@@ -71,7 +71,7 @@ def test_data_query_callable_is_invoked_from_starlark(monkeypatch):
     assert len(calls) == 1
     called_session, called_query = calls[0]
     assert called_session is session
-    assert called_query == {"source": "photos", "limit": 5}
+    assert called_query == {"source": "media_items", "limit": 5}
     # and its return value flows back as the script's value
     assert result.value == [{"id": 1}, {"id": 2}]
 
@@ -173,7 +173,7 @@ def test_summaries_are_friendly(monkeypatch):
         lambda session, person_id: _P("Grandma") if person_id == 9 else None,
     )
     s = object()
-    assert summarize_call(HostCall("data_query", [{"source": "photos"}]), s) == "Looking up photos"
+    assert summarize_call(HostCall("data_query", [{"source": "media_items"}]), s) == "Looking up media_items"
     assert summarize_call(HostCall("report_progress", [3, 10]), s) == "Report progress: 3/10"
     assert summarize_call(HostCall("face_similarity", [5, 9]), s) == "Compare faces in p5.jpg to Grandma"
     assert summarize_call(HostCall("match_people", [5]), s) == "Match faces in p5.jpg to known people"

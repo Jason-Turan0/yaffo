@@ -173,7 +173,7 @@ def test_handler_enqueues_for_event_photos(monkeypatch):
     )
     mod.enqueue_assign_location_name(
         SimpleNamespace(id=7),
-        SimpleNamespace(photo_ids=[11, 12], origin_automation_ids=[9]),
+        SimpleNamespace(media_ids=[11, 12], origin_automation_ids=[9]),
     )
     assert calls == [(7, [11, 12], [9])]
 
@@ -186,6 +186,6 @@ def test_handler_noop_without_context_or_photos(monkeypatch):
     )
     mod.enqueue_assign_location_name(SimpleNamespace(id=7), None)
     mod.enqueue_assign_location_name(
-        SimpleNamespace(id=7), SimpleNamespace(photo_ids=[], origin_automation_ids=[])
+        SimpleNamespace(id=7), SimpleNamespace(media_ids=[], origin_automation_ids=[])
     )
     assert calls == []

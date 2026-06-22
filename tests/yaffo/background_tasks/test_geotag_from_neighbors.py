@@ -166,7 +166,7 @@ def test_handler_enqueues_for_event_photos(monkeypatch):
         mod, "geotag_from_neighbors_automation_task",
         lambda automation_id, photo_ids: calls.append((automation_id, photo_ids)),
     )
-    mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), SimpleNamespace(photo_ids=[1, 2]))
+    mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), SimpleNamespace(media_ids=[1, 2]))
     assert calls == [(9, [1, 2])]
 
 
@@ -177,5 +177,5 @@ def test_handler_noop_without_context_or_photos(monkeypatch):
         lambda automation_id, photo_ids: calls.append((automation_id, photo_ids)),
     )
     mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), None)
-    mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), SimpleNamespace(photo_ids=[]))
+    mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), SimpleNamespace(media_ids=[]))
     assert calls == []

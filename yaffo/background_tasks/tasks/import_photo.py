@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from yaffo.db.models import Job, Photo, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, JOB_STATUS_PENDING
+from yaffo.db.models import Job, MediaItem, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, JOB_STATUS_PENDING
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory, get_job_status
@@ -47,7 +47,7 @@ def import_photo_task(job_id: str, file_path_batch: list[str]):
             return
 
         for path in verified_paths:
-            photo = Photo(
+            photo = MediaItem(
                 full_file_path=str(path),
             )
             session.add(photo)

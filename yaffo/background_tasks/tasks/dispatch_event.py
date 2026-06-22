@@ -19,7 +19,7 @@ def dispatch_event_task(event_type: str, payload: dict):
     context = EventContext(
         event_type=event_type,
         job_id=payload.get('job_id'),
-        photo_ids=payload.get('photo_ids', []),
+        media_ids=payload.get('media_ids', []),
         groups=payload.get('groups', []),
         origin_automation_ids=payload.get('origin_automation_ids', []),
     )

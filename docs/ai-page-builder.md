@@ -57,7 +57,7 @@ can't leak or break anything.
 
 ```json
 {
-  "maine_photos": { "source": "photos", "location": "Maine", "limit": 9 },
+  "maine_photos": { "source": "media_items", "location": "Maine", "limit": 9 },
   "facets":       { "source": "facets" }
 }
 ```

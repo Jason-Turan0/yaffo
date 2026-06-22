@@ -125,7 +125,7 @@ def classify_labels_automation_task(
             # Emit after record_run so the labels are committed before subscribers run
             # (record_run commits work's writes); fire only when something was labeled.
             if labeled:
-                emit_event(EVENT_PHOTO_LABELED, {"photo_ids": labeled})
+                emit_event(EVENT_PHOTO_LABELED, {"media_ids": labeled})
     finally:
         session.close()
         SessionFactory.remove()
@@ -135,7 +135,7 @@ def classify_labels_automation_task(
 def enqueue_classify_labels(automation: Automation, context: EventContext | None = None) -> None:
     """Handler for the built-in classify-labels automation: enqueue the task for the
     photos the triggering event concerns. A schedule trigger (no context) is a no-op."""
-    photo_ids = context.photo_ids if context else []
+    photo_ids = context.media_ids if context else []
     if photo_ids:
         origin = context.origin_automation_ids if context else []
         classify_labels_automation_task(automation.id, photo_ids, origin)

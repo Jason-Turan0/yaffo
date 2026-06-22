@@ -9,8 +9,8 @@ from yaffo.db import db
 from yaffo.db.models import (
     Automation,
     ClassificationLabel,
-    Photo,
-    PhotoLabel,
+    MediaItem,
+    MediaLabel,
     PHOTO_STATUS_INDEXED,
 )
 
@@ -101,8 +101,8 @@ def test_reclassify_enqueues_over_indexed_photos(app, client, monkeypatch):
     with app.app_context():
         db.session.add(Automation(slug="classify_labels", name="Classify labels",
                                   is_system=True, handler="classify_labels"))
-        db.session.add(Photo(full_file_path="/p/1.jpg", status=PHOTO_STATUS_INDEXED))
-        db.session.add(Photo(full_file_path="/p/2.jpg", status=PHOTO_STATUS_INDEXED))
+        db.session.add(MediaItem(full_file_path="/p/1.jpg", status=PHOTO_STATUS_INDEXED))
+        db.session.add(MediaItem(full_file_path="/p/2.jpg", status=PHOTO_STATUS_INDEXED))
         db.session.commit()
     resp = client.post("/settings/labels/reclassify")
     assert resp.status_code == 204

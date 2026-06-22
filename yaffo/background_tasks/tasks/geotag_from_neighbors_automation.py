@@ -26,7 +26,7 @@ from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
-from yaffo.db.models import Automation, AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS, Photo
+from yaffo.db.models import Automation, AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS, MediaItem
 from yaffo.db.repositories import photos_repository
 from yaffo.utils.photo_dates import parse_date_taken
 
@@ -94,7 +94,7 @@ def _geotag_from_neighbors(session: Session, progress_reporter: ProgressReporter
             session.commit()  # persist the chunk's coordinate updates (dirty ORM photos)
             pending.clear()
 
-    def photo_processor (photo: Photo):
+    def photo_processor (photo: MediaItem):
         target = parse_date_taken(photo.date_taken)
         if target is None:
             return
@@ -141,6 +141,6 @@ def enqueue_geotag_from_neighbors(automation: Automation, context: EventContext 
     """Handler for the built-in geotag-from-neighbors automation: enqueue the geotag
     for the photos the triggering event concerns. A schedule trigger (no context, no
     photo subjects) has nothing to act on, so it's a no-op."""
-    photo_ids = context.photo_ids if context else []
+    photo_ids = context.media_ids if context else []
     if photo_ids:
         geotag_from_neighbors_automation_task(automation.id, photo_ids)

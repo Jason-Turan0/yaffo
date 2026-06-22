@@ -3,7 +3,7 @@ import json
 from collections import defaultdict
 import imagehash
 
-from yaffo.db.models import Job, JobResult, Photo, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, JOB_STATUS_PENDING, \
+from yaffo.db.models import Job, JobResult, MediaItem, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, JOB_STATUS_PENDING, \
     JOB_STATUS_COMPLETED, EVENT_DUPLICATES_FOUND
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
@@ -22,7 +22,7 @@ def _resolve_group_photo_ids(session, duplicate_groups: list[dict]) -> list[list
     all_paths = [p for group in duplicate_groups for p in group.get('paths', [])]
     if not all_paths:
         return []
-    rows = session.query(Photo.id, Photo.full_file_path).filter(Photo.full_file_path.in_(all_paths)).all()
+    rows = session.query(MediaItem.id, MediaItem.full_file_path).filter(MediaItem.full_file_path.in_(all_paths)).all()
     path_to_id = {path: pid for pid, path in rows}
     resolved = []
     for group in duplicate_groups:
@@ -138,4 +138,4 @@ def find_duplicates_task(job_id: str, file_paths: list[str], task=None):
     # structure with the keeper first.
     if event_groups:
         photo_ids = sorted({pid for group in event_groups for pid in group})
-        emit_event(EVENT_DUPLICATES_FOUND, {"job_id": job_id, "photo_ids": photo_ids, "groups": event_groups})
+        emit_event(EVENT_DUPLICATES_FOUND, {"job_id": job_id, "media_ids": photo_ids, "groups": event_groups})

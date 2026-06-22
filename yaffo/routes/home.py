@@ -7,7 +7,7 @@ from sqlalchemy import distinct, func
 from sqlalchemy.orm import joinedload
 import pydash as _
 from yaffo.db import db
-from yaffo.db.models import Photo, Face, Person, PersonFace, Tag, ClassificationLabel, PhotoLabel
+from yaffo.db.models import MediaItem, Face, Person, PersonFace, Tag, ClassificationLabel, MediaLabel
 from yaffo.db.repositories.photos_repository import get_distinct_years, get_distinct_months
 from yaffo.routes import filter_config
 from yaffo.utils.context import context
@@ -62,112 +62,112 @@ def init_home_routes(app: Flask):
         filter_page_size = page_size if page_size else 25
         # Build query with eager loading
         query = (
-            db.session.query(Photo)
-            .options(joinedload(Photo.faces).joinedload(Face.people))
-            .options(joinedload(Photo.labels).joinedload(PhotoLabel.label))
-            .order_by(Photo.date_taken.desc())
+            db.session.query(MediaItem)
+            .options(joinedload(MediaItem.faces).joinedload(Face.people))
+            .options(joinedload(MediaItem.labels).joinedload(MediaLabel.label))
+            .order_by(MediaItem.date_taken.desc())
         )
 
         # Apply filters
         if path:
             # Partial, case-insensitive match on any part of the stored path
             # (folders or file name); autoescape so %/_ in the term stay literal.
-            query = query.filter(Photo.full_file_path.icontains(path, autoescape=True))
+            query = query.filter(MediaItem.full_file_path.icontains(path, autoescape=True))
         if year:
-            query = query.filter(Photo.year == year)
+            query = query.filter(MediaItem.year == year)
         if month:
-            query = query.filter(Photo.month == month)
+            query = query.filter(MediaItem.month == month)
         if device:
-            query = query.filter(Photo.device == device)
+            query = query.filter(MediaItem.device == device)
         if favorite:
-            query = query.filter(Photo.favorite.is_(True))
+            query = query.filter(MediaItem.favorite.is_(True))
         if person_ids and person_match_type and len(person_ids) > 0:
             if person_match_type == 'all':
                 # AND logic: Photo must contain ALL selected people
                 for person_id in person_ids:
                     subquery = (
-                        db.session.query(Photo.id)
-                        .join(Photo.faces)
+                        db.session.query(MediaItem.id)
+                        .join(MediaItem.faces)
                         .join(Face.person_face)
                         .filter(PersonFace.person_id == person_id)
                     )
-                    query = query.filter(Photo.id.in_(subquery))
+                    query = query.filter(MediaItem.id.in_(subquery))
             else:
                 # OR logic: Photo must contain ANY of the selected people
                 subquery = (
-                    db.session.query(Photo.id)
-                    .join(Photo.faces)
+                    db.session.query(MediaItem.id)
+                    .join(MediaItem.faces)
                     .join(Face.person_face)
                     .filter(PersonFace.person_id.in_(person_ids))
                     .distinct()
                 )
-                query = query.filter(Photo.id.in_(subquery))
+                query = query.filter(MediaItem.id.in_(subquery))
 
         if gender is not None:
             ##TODO capture actual gender from user and use that for deterministic instead of approximate filter
             subquery = (
-                db.session.query(Photo.id)
-                .join(Photo.faces)
+                db.session.query(MediaItem.id)
+                .join(MediaItem.faces)
                 .filter(Face.gender == gender)
             )
-            query = query.filter(Photo.id.in_(subquery))
+            query = query.filter(MediaItem.id.in_(subquery))
 
         if labels_ids and labels_match_type and len(labels_ids) > 0:
             if labels_match_type == 'all':
                 for label_id in labels_ids:
                     subquery = (
-                        db.session.query(Photo.id)
-                        .join(Photo.labels)
-                        .filter(PhotoLabel.label_id == label_id)
+                        db.session.query(MediaItem.id)
+                        .join(MediaItem.labels)
+                        .filter(MediaLabel.label_id == label_id)
                     )
-                    query = query.filter(Photo.id.in_(subquery))
+                    query = query.filter(MediaItem.id.in_(subquery))
             else:
                 subquery = (
-                    db.session.query(Photo.id)
-                        .join(Photo.labels)
-                        .filter(PhotoLabel.label_id.in_(labels_ids)))
-                query = query.filter(Photo.id.in_(subquery))
+                    db.session.query(MediaItem.id)
+                        .join(MediaItem.labels)
+                        .filter(MediaLabel.label_id.in_(labels_ids)))
+                query = query.filter(MediaItem.id.in_(subquery))
 
         if tag_name and tag_value:
             # Filter by specific tag name and value
             subquery = (
-                db.session.query(Photo.id)
-                .join(Photo.tags)
+                db.session.query(MediaItem.id)
+                .join(MediaItem.tags)
                 .filter(Tag.tag_name == tag_name)
                 .filter(Tag.tag_value == tag_value)
                 .distinct()
             )
-            query = query.filter(Photo.id.in_(subquery))
+            query = query.filter(MediaItem.id.in_(subquery))
         elif tag_name:
             # Filter by tag name only (any value)
             subquery = (
-                db.session.query(Photo.id)
-                .join(Photo.tags)
+                db.session.query(MediaItem.id)
+                .join(MediaItem.tags)
                 .filter(Tag.tag_name == tag_name)
                 .distinct()
             )
-            query = query.filter(Photo.id.in_(subquery))
+            query = query.filter(MediaItem.id.in_(subquery))
 
         if location_names and location_match_type and len(location_names) > 0:
             if location_match_type == 'all':
                 # For locations, 'all' doesn't make sense (a photo can only have one location)
                 # So we treat it as 'any'
-                query = query.filter(Photo.location_name.in_(location_names))
+                query = query.filter(MediaItem.location_name.in_(location_names))
             else:
                 # OR logic: Photo location must match ANY of the selected locations
-                query = query.filter(Photo.location_name.in_(location_names))
+                query = query.filter(MediaItem.location_name.in_(location_names))
 
         if proximity_lat is not None and proximity_lon is not None and proximity_distance:
             min_lat, max_lat, min_lon, max_lon = calculate_bounding_box(
                 proximity_lat, proximity_lon, proximity_distance
             )
             query = query.filter(
-                Photo.latitude.isnot(None),
-                Photo.longitude.isnot(None),
-                Photo.latitude >= min_lat,
-                Photo.latitude <= max_lat,
-                Photo.longitude >= min_lon,
-                Photo.longitude <= max_lon
+                MediaItem.latitude.isnot(None),
+                MediaItem.longitude.isnot(None),
+                MediaItem.latitude >= min_lat,
+                MediaItem.latitude <= max_lat,
+                MediaItem.longitude >= min_lon,
+                MediaItem.longitude <= max_lon
             )
 
         # Get total count of filtered results
@@ -201,20 +201,20 @@ def init_home_routes(app: Flask):
         tag_names_list = [tag[0] for tag in distinct_tag_names if tag[0]]
 
         distinct_locations = (
-            db.session.query(Photo.location_name)
-            .filter(Photo.location_name.isnot(None))
+            db.session.query(MediaItem.location_name)
+            .filter(MediaItem.location_name.isnot(None))
             .distinct()
-            .order_by(Photo.location_name)
+            .order_by(MediaItem.location_name)
             .all()
         )
         location_names_list = [loc[0] for loc in distinct_locations if loc[0]]
 
         distinct_devices = (
-            db.session.query(Photo.device)
-            .filter(Photo.device.isnot(None))
-            .filter(Photo.device != "")
+            db.session.query(MediaItem.device)
+            .filter(MediaItem.device.isnot(None))
+            .filter(MediaItem.device != "")
             .distinct()
-            .order_by(Photo.device)
+            .order_by(MediaItem.device)
             .all()
         )
         device_list = [d[0] for d in distinct_devices if d[0]]
@@ -324,9 +324,9 @@ def init_home_routes(app: Flask):
         results = []
 
         db_locations = (
-            db.session.query(Photo.location_name, Photo.latitude, Photo.longitude)
-            .filter(Photo.location_name.isnot(None))
-            .filter(Photo.location_name.ilike(f"%{query}%"))
+            db.session.query(MediaItem.location_name, MediaItem.latitude, MediaItem.longitude)
+            .filter(MediaItem.location_name.isnot(None))
+            .filter(MediaItem.location_name.ilike(f"%{query}%"))
             .limit(5)
             .all()
         )

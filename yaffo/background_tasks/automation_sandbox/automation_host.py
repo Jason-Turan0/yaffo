@@ -100,14 +100,14 @@ HOST_API: tuple[HostFunction, ...] = (
             "Read-only access to the app's data through the validated data_query "
             "contract. See the data_query tool for detailed schema. "
             "`query` is a dict naming a source, with optional per-column "
-            'operator filters and a limit, e.g. {"source": "photos", "year": '
+            'operator filters and a limit, e.g. {"source": "media_items", "year": '
             '{"eq": 2024}, "id": {"in": [1, 2, 3]}, "limit": 24}. Operators: eq, ne, '
             "lt, lte, gt, gte, contains, in. You never touch the database directly "
             "-- declare what you want and the server resolves it. Photo rows also "
             "carry `media_dir_id` and `relative_path` (the file's location, never an "
             "absolute path) -- pass media_dir_id to move_photos."
         ),
-        example='recent = data_query({"source": "photos", "limit": 10})',
+        example='recent = data_query({"source": "media_items", "limit": 10})',
         impl=actions.data_query,
         summarize=actions.summarize_data_query,
         mutating=False,
@@ -120,7 +120,7 @@ HOST_API: tuple[HostFunction, ...] = (
             "are done so far and the total. Optional, but do it for any run that loops "
             "over many items."
         ),
-        example='report_progress(done, len(ctx["photo_ids"]))',
+        example='report_progress(done, len(ctx["media_ids"]))',
         impl=actions.report_progress,
         summarize=actions.summarize_report_progress,
         mutating=False,
@@ -132,7 +132,7 @@ HOST_API: tuple[HostFunction, ...] = (
             'value?} dicts: `name` is the tag (e.g. "beach"), `value` an optional value '
             "for name/value tags. Pass the whole set in one call (see <batching>)."
         ),
-        example='tag_photos([{"photo_id": pid, "name": "beach"} for pid in ctx["photo_ids"]])',
+        example='tag_photos([{"photo_id": pid, "name": "beach"} for pid in ctx["media_ids"]])',
         impl=actions.tag_photos,
         summarize=actions.summarize_tag_photos,
         mutating=True,

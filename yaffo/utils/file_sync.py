@@ -5,7 +5,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from yaffo.common import PHOTO_EXTENSIONS
-from yaffo.db.models import Photo, PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED
+from yaffo.db.models import MediaItem, PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
 from yaffo.utils.index_jobs_dto import IndexJobs
@@ -74,7 +74,7 @@ def iter_media_scan(
     The slow part is the recursive walk and the per-row `exists()` check; emitting the
     count incrementally lets the page show progress instead of blocking on the whole
     scan. `scan_media_dirs` consumes this for callers that just want the result."""
-    db_photos = session.query(Photo.id, Photo.full_file_path, Photo.status).all()
+    db_photos = session.query(MediaItem.id, MediaItem.full_file_path, MediaItem.status).all()
     indexed_paths = {
         path for _id, path, status in db_photos
         if status in (PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED)

@@ -109,7 +109,7 @@ def test_only_injected_host_functions_are_reachable():
 
     # A host function that was NOT injected is just an unknown variable — the script
     # can't reach the wider host API, only what this run was given.
-    _assert_contained("data_query({'source': 'photos'})", functions=functions)
+    _assert_contained("data_query({'source': 'media_items'})", functions=functions)
 
 
 def test_a_failed_escape_runs_no_later_statements():

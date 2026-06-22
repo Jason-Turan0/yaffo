@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from yaffo.db.models import Job, Photo, Face, JOB_STATUS_CANCELLED, FACE_STATUS_UNASSIGNED, \
+from yaffo.db.models import Job, MediaItem, Face, JOB_STATUS_CANCELLED, FACE_STATUS_UNASSIGNED, \
     JOB_STATUS_RUNNING, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
 from yaffo.utils.index_photos import index_photo, clear_faces_for_photos, unlink_face_thumbnails
 from yaffo.domain.compare_utils import serialize_embedding
@@ -51,7 +51,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             logger.error(f"Job {job_id} not found")
             return
 
-        photos_in_batch = session.query(Photo).filter(Photo.full_file_path.in_(file_path_batch)).all()
+        photos_in_batch = session.query(MediaItem).filter(MediaItem.full_file_path.in_(file_path_batch)).all()
         photos_by_path = {photo.full_file_path: photo for photo in photos_in_batch}
         processed_count = 0
 
@@ -92,7 +92,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                     embedding=serialize_embedding(face_data['embedding']),
                     full_file_path=face_data['full_file_path'],
                     status=FACE_STATUS_UNASSIGNED,
-                    photo_id=photo.id,
+                    media_item_id=photo.id,
                     location_top=face_data['location_top'],
                     location_right=face_data['location_right'],
                     location_bottom=face_data['location_bottom'],

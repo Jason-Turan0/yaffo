@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from yaffo.db import db
-from yaffo.db.models import Photo
+from yaffo.db.models import MediaItem
 from yaffo.db.repositories import data_query_repository as dq
 from yaffo.db.repositories import media_dir_repository as mdr
 from yaffo.db.repositories.media_dir_repository import add_media_dir
@@ -29,11 +29,11 @@ def ctx(tmp_path):
     with Session(engine) as sess:
         media_dir = add_media_dir(sess, str(root))
         sess.add_all([
-            Photo(id=1, full_file_path=str(root / "top.jpg")),
-            Photo(id=2, full_file_path=str(root / "2024" / "jan" / "a.jpg")),
-            Photo(id=3, full_file_path=str(root / "2024" / "jan" / "b.jpg")),
-            Photo(id=4, full_file_path=str(root / "2024" / "feb" / "c.jpg")),
-            Photo(id=5, full_file_path=str(root / "2023" / "d.jpg")),
+            MediaItem(id=1, full_file_path=str(root / "top.jpg")),
+            MediaItem(id=2, full_file_path=str(root / "2024" / "jan" / "a.jpg")),
+            MediaItem(id=3, full_file_path=str(root / "2024" / "jan" / "b.jpg")),
+            MediaItem(id=4, full_file_path=str(root / "2024" / "feb" / "c.jpg")),
+            MediaItem(id=5, full_file_path=str(root / "2023" / "d.jpg")),
         ])
         sess.commit()
         yield sess, media_dir.id, root
@@ -80,20 +80,20 @@ class TestFoldersSource:
 class TestPathFilters:
     def test_media_dir_id_matches_every_photo_under_it(self, ctx):
         session, media_dir_id, _root = ctx
-        rows = dq.resolve_query(session, {"source": "photos", "media_dir_id": {"eq": media_dir_id}})
+        rows = dq.resolve_query(session, {"source": "media_items", "media_dir_id": {"eq": media_dir_id}})
         assert _ids(rows) == {1, 2, 3, 4, 5}
 
     def test_relative_path_prefix_matches_the_subtree(self, ctx):
         session, media_dir_id, _root = ctx
         rows = dq.resolve_query(session, {
-            "source": "photos", "media_dir_id": {"eq": media_dir_id}, "relative_path": {"prefix": "2024/"}
+            "source": "media_items", "media_dir_id": {"eq": media_dir_id}, "relative_path": {"prefix": "2024/"}
         })
         assert _ids(rows) == {2, 3, 4}
 
     def test_relative_path_prefix_with_count(self, ctx):
         session, media_dir_id, _root = ctx
         n = dq.resolve_query(session, {
-            "source": "photos", "op": "count",
+            "source": "media_items", "op": "count",
             "media_dir_id": {"eq": media_dir_id}, "relative_path": {"prefix": "2024/jan/"}
         })
         assert n == 2
@@ -101,24 +101,24 @@ class TestPathFilters:
     def test_relative_path_eq_matches_one_file(self, ctx):
         session, media_dir_id, _root = ctx
         rows = dq.resolve_query(session, {
-            "source": "photos", "media_dir_id": {"eq": media_dir_id}, "relative_path": {"eq": "2023/d.jpg"}
+            "source": "media_items", "media_dir_id": {"eq": media_dir_id}, "relative_path": {"eq": "2023/d.jpg"}
         })
         assert _ids(rows) == {5}
 
     def test_unknown_media_dir_matches_nothing(self, ctx):
         session, _media_dir_id, _root = ctx
-        rows = dq.resolve_query(session, {"source": "photos", "media_dir_id": {"eq": "nope"}})
+        rows = dq.resolve_query(session, {"source": "media_items", "media_dir_id": {"eq": "nope"}})
         assert rows == []
 
     def test_relative_path_with_multiple_dirs_is_rejected(self, ctx):
         session, media_dir_id, _root = ctx
         with pytest.raises(ValueError, match="single media_dir_id"):
             dq.resolve_query(session, {
-                "source": "photos", "media_dir_id": {"in": [media_dir_id, "other"]},
+                "source": "media_items", "media_dir_id": {"in": [media_dir_id, "other"]},
                 "relative_path": {"prefix": "2024/"}
             })
 
     def test_path_filters_do_not_leak_full_file_path(self, ctx):
         session, media_dir_id, _root = ctx
-        rows = dq.resolve_query(session, {"source": "photos", "media_dir_id": {"eq": media_dir_id}, "limit": 1})
+        rows = dq.resolve_query(session, {"source": "media_items", "media_dir_id": {"eq": media_dir_id}, "limit": 1})
         assert "full_file_path" not in rows[0]

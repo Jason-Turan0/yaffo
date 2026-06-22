@@ -24,7 +24,7 @@ from pathlib import Path
 from sqlalchemy import false, or_
 from sqlalchemy.orm import Session
 
-from yaffo.db.models import Photo, ApplicationSettings
+from yaffo.db.models import MediaItem, ApplicationSettings
 from yaffo.db.repositories import photos_repository
 
 
@@ -36,7 +36,7 @@ def _escape_like(value: str) -> str:
 
 def _under(root: Path):
     """Condition: full_file_path is a file anywhere under `root`."""
-    return Photo.full_file_path.like(_escape_like(str(root) + os.sep) + "%", escape="\\")
+    return MediaItem.full_file_path.like(_escape_like(str(root) + os.sep) + "%", escape="\\")
 
 
 def photo_path_conditions(session: Session, query: dict) -> list:
@@ -60,10 +60,10 @@ def photo_path_conditions(session: Session, query: dict) -> list:
             return [false()]
         root = roots[0]
         if "eq" in rel_filter:
-            return [Photo.full_file_path == str(root / rel_filter["eq"].replace("/", os.sep))]
+            return [MediaItem.full_file_path == str(root / rel_filter["eq"].replace("/", os.sep))]
         # prefix: every photo whose relative path starts with this string (recursive subtree)
         rel = rel_filter["prefix"].replace("/", os.sep).lstrip(os.sep)
-        return [Photo.full_file_path.like(_escape_like(str(root) + os.sep + rel) + "%", escape="\\")]
+        return [MediaItem.full_file_path.like(_escape_like(str(root) + os.sep + rel) + "%", escape="\\")]
 
     if not roots:
         return [false()]

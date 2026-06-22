@@ -7,7 +7,7 @@ assertions check which photo ids the filtered page renders."""
 import pytest
 
 from yaffo.db import db
-from yaffo.db.models import Photo
+from yaffo.db.models import MediaItem
 
 
 @pytest.fixture
@@ -15,9 +15,9 @@ def photo_ids(app):
     """Three photos with distinct paths; returns {label: id}."""
     with app.app_context():
         rows = {
-            "img1234": Photo(full_file_path="/media/organized/2021/IMG_1234.jpg"),
-            "img5678": Photo(full_file_path="/media/organized/2021/IMG_5678.jpg"),
-            "beach": Photo(full_file_path="/media/organized/2020/vacation_beach.png"),
+            "img1234": MediaItem(full_file_path="/media/organized/2021/IMG_1234.jpg"),
+            "img5678": MediaItem(full_file_path="/media/organized/2021/IMG_5678.jpg"),
+            "beach": MediaItem(full_file_path="/media/organized/2020/vacation_beach.png"),
         }
         db.session.add_all(rows.values())
         db.session.commit()
@@ -78,8 +78,8 @@ def test_card_hover_details_split_name_and_folder(client, photo_ids):
 
 def test_favorite_filter_shows_only_favorites(client, app):
     with app.app_context():
-        fav = Photo(full_file_path="/media/a.jpg", favorite=True)
-        plain = Photo(full_file_path="/media/b.jpg")  # favorite NULL
+        fav = MediaItem(full_file_path="/media/a.jpg", favorite=True)
+        plain = MediaItem(full_file_path="/media/b.jpg")  # favorite NULL
         db.session.add_all([fav, plain])
         db.session.commit()
         fav_id, plain_id = fav.id, plain.id

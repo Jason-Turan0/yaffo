@@ -5,7 +5,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from yaffo.common import DB_PATH
-from yaffo.db.models import Photo, Face, Person
+from yaffo.db.models import MediaItem, Face, Person
 from PIL import Image, PngImagePlugin
 import piexif
 import shutil
@@ -17,7 +17,7 @@ def is_exiftool_available():
     return shutil.which("exiftool") is not None
 
 def update_photo_metadata():
-    photos = Photo.query.all()
+    photos = MediaItem.query.all()
     system = platform.system().lower()
     is_mac = system == "darwin"
     use_exiftool = not is_mac and is_exiftool_available()

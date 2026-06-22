@@ -15,7 +15,7 @@ import piexif
 from sqlalchemy.orm import Session
 
 from yaffo.logging_config import get_logger
-from yaffo.db.models import Photo, Face, Tag, FACE_STATUS_UNASSIGNED
+from yaffo.db.models import MediaItem, Face, Tag, FACE_STATUS_UNASSIGNED
 from yaffo.common import PHOTO_EXTENSIONS
 from yaffo.utils.photo_dates import get_photo_date_info
 from yaffo.utils.image import image_from_path, image_to_numpy
@@ -408,7 +408,7 @@ def index_photos_batch(
             try:
                 result = future.result()
                 if result:
-                    photo = Photo(
+                    photo = MediaItem(
                         full_file_path=result["full_file_path"],
                         date_taken=result["date_taken"],
                         year=result.get("year"),
@@ -426,7 +426,7 @@ def index_photos_batch(
                             full_file_path=face_data['full_file_path'],
                             relative_file_path=face_data['relative_file_path'],
                             status=FACE_STATUS_UNASSIGNED,
-                            photo_id=photo.id,
+                            media_item_id=photo.id,
                             location_top=face_data['location_top'],
                             location_right=face_data['location_right'],
                             location_bottom=face_data['location_bottom'],
@@ -436,7 +436,7 @@ def index_photos_batch(
 
                     for tag_data in result.get("tags", []):
                         tag = Tag(
-                            photo_id=photo.id,
+                            media_item_id=photo.id,
                             tag_name=tag_data['tag_name'],
                             tag_value=tag_data['tag_value']
                         )
@@ -483,9 +483,9 @@ def clear_faces_for_photos(session: Session, photo_ids: List[int]) -> List[str]:
         return []
     thumbnails = [
         row[0] for row in
-        session.query(Face.full_file_path).filter(Face.photo_id.in_(photo_ids)).all()
+        session.query(Face.full_file_path).filter(Face.media_item_id.in_(photo_ids)).all()
     ]
-    session.query(Face).filter(Face.photo_id.in_(photo_ids)).delete(synchronize_session=False)
+    session.query(Face).filter(Face.media_item_id.in_(photo_ids)).delete(synchronize_session=False)
     return thumbnails
 
 
@@ -496,15 +496,15 @@ def delete_orphaned_photos(session: Session, photo_ids: List[int]) -> int:
     # Capture each face's thumbnail path before the rows are gone
     face_thumbnails = [
         row[0] for row in
-        session.query(Face.full_file_path).filter(Face.photo_id.in_(photo_ids)).all()
+        session.query(Face.full_file_path).filter(Face.media_item_id.in_(photo_ids)).all()
     ]
 
     # Delete dependents first (SQLite foreign keys may not cascade)
-    session.query(Tag).filter(Tag.photo_id.in_(photo_ids)).delete(synchronize_session=False)
-    deleted_faces = session.query(Face).filter(Face.photo_id.in_(photo_ids)).delete(synchronize_session=False)
+    session.query(Tag).filter(Tag.media_item_id.in_(photo_ids)).delete(synchronize_session=False)
+    deleted_faces = session.query(Face).filter(Face.media_item_id.in_(photo_ids)).delete(synchronize_session=False)
 
     # Bulk delete photos using IN clause
-    deleted_count = session.query(Photo).filter(Photo.id.in_(photo_ids)).delete(synchronize_session=False)
+    deleted_count = session.query(MediaItem).filter(MediaItem.id.in_(photo_ids)).delete(synchronize_session=False)
 
     session.commit()
 
@@ -526,7 +526,7 @@ def delete_photos_by_paths(session: Session, full_file_paths: List[str]) -> int:
 
     photo_ids = [
         row[0] for row in
-        session.query(Photo.id).filter(Photo.full_file_path.in_(full_file_paths)).all()
+        session.query(MediaItem.id).filter(MediaItem.full_file_path.in_(full_file_paths)).all()
     ]
     return delete_orphaned_photos(session, photo_ids)
 
@@ -543,7 +543,7 @@ def delete_photos_under_dir(session: Session, directory: str) -> int:
     directory_path = Path(directory)
     photo_ids = [
         photo_id
-        for photo_id, full_file_path in session.query(Photo.id, Photo.full_file_path).all()
+        for photo_id, full_file_path in session.query(MediaItem.id, MediaItem.full_file_path).all()
         if directory_path in Path(full_file_path).parents
     ]
     return delete_orphaned_photos(session, photo_ids)

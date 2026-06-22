@@ -178,7 +178,7 @@ def test_handler_enqueues_for_event_photos(monkeypatch):
         mod, "export_photo_tag_task",
         lambda automation_id, photo_ids: calls.append((automation_id, photo_ids)),
     )
-    mod.enqueue_export_photo_tag(SimpleNamespace(id=3), SimpleNamespace(photo_ids=[11, 12]))
+    mod.enqueue_export_photo_tag(SimpleNamespace(id=3), SimpleNamespace(media_ids=[11, 12]))
     assert calls == [(3, [11, 12])]
 
 
@@ -189,5 +189,5 @@ def test_handler_noop_without_context_or_photos(monkeypatch):
         lambda automation_id, photo_ids: calls.append((automation_id, photo_ids)),
     )
     mod.enqueue_export_photo_tag(SimpleNamespace(id=3), None)
-    mod.enqueue_export_photo_tag(SimpleNamespace(id=3), SimpleNamespace(photo_ids=[]))
+    mod.enqueue_export_photo_tag(SimpleNamespace(id=3), SimpleNamespace(media_ids=[]))
     assert calls == []

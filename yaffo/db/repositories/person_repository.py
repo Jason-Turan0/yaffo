@@ -100,7 +100,7 @@ _REP_FACES_SQL = text("""
             ) AS rn
         FROM people_face pf
         JOIN faces f       ON f.id = pf.face_id
-        LEFT JOIN photos p ON p.id = f.photo_id
+        LEFT JOIN media_items p ON p.id = f.media_item_id
         WHERE pf.person_id = :person_id
     )
     SELECT face_id, embedding, estimated_age, year
@@ -119,7 +119,7 @@ _MEDIAN_BIRTH_YEAR_SQL = text("""
         SELECT (p.year - f.estimated_age) AS b
         FROM people_face pf
         JOIN faces f  ON f.id = pf.face_id
-        JOIN photos p ON p.id = f.photo_id
+        JOIN media_items p ON p.id = f.media_item_id
         WHERE pf.person_id = :person_id
           AND f.estimated_age IS NOT NULL
           AND p.year IS NOT NULL
@@ -152,9 +152,9 @@ def existing_person_ids(session: Session, person_ids: list[int]) -> set[int]:
 def get_photo_ids_for_person(session: Session, person_id: int) -> list[int]:
     """Distinct ids of photos that have at least one face linked to this person."""
     rows = (
-        session.query(Face.photo_id)
+        session.query(Face.media_item_id)
         .join(PersonFace, PersonFace.face_id == Face.id)
-        .filter(PersonFace.person_id == person_id, Face.photo_id.isnot(None))
+        .filter(PersonFace.person_id == person_id, Face.media_item_id.isnot(None))
         .distinct()
         .all()
     )

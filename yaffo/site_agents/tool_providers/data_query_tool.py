@@ -103,7 +103,7 @@ class DataQueryToolProvider(ToolProvider):
         # (with the precise error) so it can correct the source/filters.
         try:
             rows = resolve_query(self.session, args)
-            if args.get("source") == "photos" and isinstance(rows, list):
+            if args.get("source") == "media_items" and isinstance(rows, list):
                 enrich_photo_rows(self.session, rows)
         except ValueError as exc:
             return f"Invalid query: {exc}"

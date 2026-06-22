@@ -49,7 +49,7 @@ def test_successful_run_writes_completed_job(session, monkeypatch):
     )
     automation = _custom_automation(
         session, "logger",
-        'rows = data_query({"source": "photos", "limit": 2})\n'
+        'rows = data_query({"source": "media_items", "limit": 2})\n'
         'for r in rows:\n    print(r)',
     )
 

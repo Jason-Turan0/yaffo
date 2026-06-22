@@ -154,7 +154,7 @@ def assign_location_name_automation_task(
             )
             if updated:
                 # Let export_photo_tag (photo_modified) write the new name into the file.
-                emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": updated})
+                emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": updated})
             return (
                 f"named {len(updated)}/{len(photo_ids)} photo(s) "
                 f"(reuse={reuse_enabled} radius={radius_m}m geocode={geocode is not None})"
@@ -173,7 +173,7 @@ def enqueue_assign_location_name(automation: Automation, context: EventContext |
     """Handler for the built-in assign-location-name automation: enqueue the naming
     for the photos the triggering event concerns. A schedule trigger (no context,
     no photo subjects) has nothing to act on, so it's a no-op."""
-    photo_ids = context.photo_ids if context else []
+    photo_ids = context.media_ids if context else []
     if photo_ids:
         origin = context.origin_automation_ids if context else []
         assign_location_name_automation_task(automation.id, photo_ids, origin)

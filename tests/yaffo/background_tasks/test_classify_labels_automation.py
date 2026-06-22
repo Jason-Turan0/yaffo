@@ -117,7 +117,7 @@ def test_handler_enqueues_for_event_photos(monkeypatch):
     )
     mod.enqueue_classify_labels(
         SimpleNamespace(id=3),
-        SimpleNamespace(photo_ids=[11, 12], origin_automation_ids=[9]),
+        SimpleNamespace(media_ids=[11, 12], origin_automation_ids=[9]),
     )
     assert calls == [(3, [11, 12], [9])]
 

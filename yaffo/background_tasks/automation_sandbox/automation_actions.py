@@ -35,13 +35,13 @@ def _emit_photo_modified(photo_ids: list[int]) -> None:
     the same automation. No-op for an empty set."""
     ids = list(dict.fromkeys(pid for pid in photo_ids if pid is not None))  # distinct, ordered
     if ids:
-        emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": ids})
+        emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": ids})
 
 def data_query(
     session: Session, query: dict
 ) -> Annotated[Any, "A list of row dicts, or a single number/object for count/range queries."]:
     rows = resolve_query(session, query)
-    if query.get("source") == "photos" and isinstance(rows, list):
+    if query.get("source") == "media_items" and isinstance(rows, list):
         return enrich_photo_rows(session, rows)
     return rows
 

@@ -43,7 +43,7 @@ class TestCalculatedColumns:
         _patch_media_dirs(monkeypatch, {1: "/lib/2024/IMG.jpg"},
                           [MediaDir(id="GUID", path=Path("/lib"))])
 
-        result = provider.call_tool("run_data_query", {"source": "photos"})
+        result = provider.call_tool("run_data_query", {"source": "media_items"})
 
         sample = json.loads(result)["sample"][0]
         assert sample["media_dir_id"] == "GUID"
@@ -54,7 +54,7 @@ class TestCalculatedColumns:
         _patch_media_dirs(monkeypatch, {2: "/elsewhere/x.jpg"},
                           [MediaDir(id="GUID", path=Path("/lib"))])
 
-        sample = json.loads(provider.call_tool("run_data_query", {"source": "photos"}))["sample"][0]
+        sample = json.loads(provider.call_tool("run_data_query", {"source": "media_items"}))["sample"][0]
 
         assert sample["media_dir_id"] is None
         assert sample["relative_path"] is None
@@ -87,18 +87,18 @@ class TestCalculatedColumns:
         # nothing to enrich and the calculated-column path is skipped.
         provider = _provider(monkeypatch, 7)
 
-        payload = json.loads(provider.call_tool("run_data_query", {"source": "photos", "op": "count"}))
+        payload = json.loads(provider.call_tool("run_data_query", {"source": "media_items", "op": "count"}))
 
-        assert payload == {"source": "photos", "data": 7}
+        assert payload == {"source": "media_items", "data": 7}
 
 
 class TestSourceSchema:
     def test_photos_schema_lists_columns_with_calculated_appended(self):
         provider = data_query_tool.DataQueryToolProvider(session=object())
 
-        payload = json.loads(provider.call_tool("get_source_schema", {"source": "photos"}))
+        payload = json.loads(provider.call_tool("get_source_schema", {"source": "media_items"}))
 
-        assert payload["source"] == "photos"
+        assert payload["source"] == "media_items"
         fields = payload["fields"]
         assert fields["id"]["type"] == "integer"
         # Calculated columns are appended after the real columns.

@@ -4,7 +4,7 @@ from itertools import batched
 
 from sqlalchemy.orm import Session
 
-from yaffo.db.models import Photo, Job, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
+from yaffo.db.models import MediaItem, Job, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
 from yaffo.utils.index_jobs_dto import IndexJobs
 from yaffo.logging_config import get_logger
 
@@ -44,7 +44,7 @@ def enqueue_index_jobs(
     existing = {
         full_path: status
         for _id, full_path, status in session.query(
-            Photo.id, Photo.full_file_path, Photo.status
+            MediaItem.id, MediaItem.full_file_path, MediaItem.status
         ).all()
     }
 

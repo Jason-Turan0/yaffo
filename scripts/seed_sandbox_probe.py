@@ -174,7 +174,7 @@ def seed_sandbox_probe() -> None:
         page_repo.save_page_widgets(db.session, page.id, [{
             "id": page_repo.new_widget_id(),
             "title": "Exfiltration probe",
-            "data_query": {"photos": {"source": "photos", "limit": 3}},
+            "data_query": {"photos": {"source": "media_items", "limit": 3}},
             "html": _HTML,
             "css": _CSS,
             "js": _JS,

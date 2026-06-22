@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from yaffo.db import db
-from yaffo.db.models import ClassificationLabel, Photo, PhotoLabel
+from yaffo.db.models import ClassificationLabel, MediaItem, MediaLabel
 from yaffo.db.repositories import classification_repository as repo
 
 pytestmark = pytest.mark.unit
@@ -24,7 +24,7 @@ def session(tmp_path):
 @pytest.fixture
 def seeded(session):
     """Two photos and two labels; returns (photo_ids, label_ids)."""
-    photos = [Photo(full_file_path=f"/p/{i}.jpg") for i in range(2)]
+    photos = [MediaItem(full_file_path=f"/p/{i}.jpg") for i in range(2)]
     labels = [ClassificationLabel(name=n) for n in ("dog", "beach")]
     session.add_all(photos + labels)
     session.commit()
@@ -32,7 +32,7 @@ def seeded(session):
 
 
 def _labels_for(session, photo_id):
-    rows = session.query(PhotoLabel).filter_by(photo_id=photo_id).all()
+    rows = session.query(MediaLabel).filter_by(media_item_id=photo_id).all()
     return {(r.label_id, r.confidence) for r in rows}
 
 

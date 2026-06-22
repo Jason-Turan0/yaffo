@@ -135,7 +135,7 @@ def _templates() -> str:
 def _conventions() -> str:
     return block("conventions", [
         "- Give the widget a short, human title.",
-        "- For filter controls, get the options from a `facet` aggregate (e.g. {source:'photos',",
+        "- For filter controls, get the options from a `facet` aggregate (e.g. {source:'media_items',",
         "  op:'facet', field:'year'}); pre-load a generous row set and filter client-side, or use",
         "  yaffo:query to filter server-side.",
         "- Avoid bare native <select> elements — the browser-drawn dropdown ignores the design",

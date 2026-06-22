@@ -62,7 +62,7 @@ _PHOTO_GRID = WidgetTemplate(
         "A responsive grid of photo thumbnails with rounded corners. Good default for "
         "showing a set of photos. One query over `photos`."
     ),
-    data_query={"photos": {"source": "photos", "limit": 24}},
+    data_query={"photos": {"source": "media_items", "limit": 24}},
     html="<div class='grid' id='root'></div>",
     css="""\
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
@@ -91,9 +91,9 @@ _STATS = WidgetTemplate(
         "Uses aggregate queries (`op: count` and `op: facet`)."
     ),
     data_query={
-        "photos": {"source": "photos", "op": "count"},
+        "photos": {"source": "media_items", "op": "count"},
         "people": {"source": "people", "op": "count"},
-        "years": {"source": "photos", "op": "facet", "field": "year"},
+        "years": {"source": "media_items", "op": "facet", "field": "year"},
     },
     html="<div class='tiles' id='root'></div>",
     css="""\
@@ -129,7 +129,7 @@ _FEATURED = WidgetTemplate(
         "A single full-bleed hero photo with a caption overlay (location · year). "
         "Use for a focal image at the top of a page. One query, limit 1."
     ),
-    data_query={"featured": {"source": "photos", "limit": 1}},
+    data_query={"featured": {"source": "media_items", "limit": 1}},
     html="<div class='hero' id='root'></div>",
     css="""\
 body { padding: 0; }
@@ -169,7 +169,7 @@ _FILTERABLE_GALLERY = WidgetTemplate(
         "options can exceed what's first loaded."
     ),
     data_query={
-        "years": {"source": "photos", "op": "facet", "field": "year"},
+        "years": {"source": "media_items", "op": "facet", "field": "year"},
     },
     html="""\
 <link rel="stylesheet" href="/static/searchable-select.css">
@@ -205,7 +205,7 @@ function draw(rows) {
 }
 async function render() {
   const year = sel.value;
-  const query = { source: 'photos', limit: 60 };
+  const query = { source: 'media_items', limit: 60 };
   if (year) query.year = { eq: Number(year) };  // re-query the server, not a preloaded slice
   draw(await yaffo.query(query));
 }
@@ -258,7 +258,7 @@ _PEOPLE = WidgetTemplate(
   const faceIds = [...new Set(links.map((l) => l.face_id).filter((v) => v != null))];
   const faces = faceIds.length ? ((await yaffo.query({ source: 'faces', id: { in: faceIds }, limit: 5000 })) || []) : [];
   const faceToPhoto = {};
-  faces.forEach((f) => { if (f.photo_id != null) faceToPhoto[f.id] = f.photo_id; });
+  faces.forEach((f) => { if (f.media_item_id != null) faceToPhoto[f.id] = f.media_item_id; });
 
   const photosByPerson = {};  // person_id -> distinct photo ids (insertion order)
   const seen = {};
@@ -296,7 +296,7 @@ _PEOPLE = WidgetTemplate(
     const token = ++reqToken;
     grid.innerHTML = "<div class='yf-empty'>Loading…</div>";
     const ids = (photosByPerson[personId] || []).slice(0, 60);
-    const photos = ids.length ? ((await yaffo.query({ source: 'photos', id: { in: ids }, limit: 60 })) || []) : [];
+    const photos = ids.length ? ((await yaffo.query({ source: 'media_items', id: { in: ids }, limit: 60 })) || []) : [];
     if (token !== reqToken) return;  // a newer selection superseded this one
     grid.innerHTML = '';
     if (!photos.length) { grid.innerHTML = "<div class='yf-empty'>No photos for this person.</div>"; return; }
@@ -324,7 +324,7 @@ _HERO_BANNER = WidgetTemplate(
         "small accent eyebrow, a large title (the photo's location), and a date/location "
         "line. A strong page header in the app's style. One photo (limit 1)."
     ),
-    data_query={"hero_photo": {"source": "photos", "limit": 1}},
+    data_query={"hero_photo": {"source": "media_items", "limit": 1}},
     html="""\
 <div class="hero-wrap">
   <img id="hero-img" src="" alt="" onerror="this.src='/placeholder'" />
@@ -376,7 +376,7 @@ _GALLERY = WidgetTemplate(
         "keys / ESC to navigate). One query over photos (add a filter like location_name "
         "to scope it)."
     ),
-    data_query={"photos": {"source": "photos", "limit": 50}},
+    data_query={"photos": {"source": "media_items", "limit": 50}},
     html="""\
 <div class="gallery-page">
   <div class="gallery-header">
@@ -511,8 +511,8 @@ _FILTER_CONTROLS = WidgetTemplate(
         "same page."
     ),
     data_query={
-        "years": {"source": "photos", "op": "facet", "field": "year"},
-        "locs": {"source": "photos", "op": "facet", "field": "location_name"},
+        "years": {"source": "media_items", "op": "facet", "field": "year"},
+        "locs": {"source": "media_items", "op": "facet", "field": "location_name"},
     },
     html="""\
 <link rel="stylesheet" href="/static/searchable-select.css">
@@ -569,7 +569,7 @@ _LINKED_GALLERY = WidgetTemplate(
         "…) and re-queries on each event with the published year/location. Drop one or "
         "more on a page with a 'Filter controls' widget; several stay in sync."
     ),
-    data_query={"initial": {"source": "photos", "limit": 24}},
+    data_query={"initial": {"source": "media_items", "limit": 24}},
     html="<div class='grid' id='root'></div>",
     css="""\
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
@@ -585,7 +585,7 @@ function draw(photos) {
 }
 async function apply(flt) {
   yaffo.saveState({ filter: flt });
-  const q = { source: 'photos', limit: 24 };
+  const q = { source: 'media_items', limit: 24 };
   if (flt && flt.year) q.year = { eq: flt.year };
   if (flt && flt.location) q.location_name = { eq: flt.location };
   draw(await yaffo.query(q));
@@ -606,7 +606,7 @@ _PHOTO_PICKER = WidgetTemplate(
         "highlights it and yaffo.publish('photo', <the photo row>) so a subscriber can "
         "react. Pair it with a 'Photo spotlight' on the same page."
     ),
-    data_query={"photos": {"source": "photos", "limit": 24}},
+    data_query={"photos": {"source": "media_items", "limit": 24}},
     html="<div class='picker' id='root'></div>",
     css="""\
 .picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
@@ -647,7 +647,7 @@ _PHOTO_SPOTLIGHT = WidgetTemplate(
         "yaffo.subscribe('photo', …) swaps it whenever a 'Photo picker' (or any widget) "
         "publishes a photo. Starts on a recent photo until a selection arrives."
     ),
-    data_query={"featured": {"source": "photos", "limit": 1}},
+    data_query={"featured": {"source": "media_items", "limit": 1}},
     html="""\
 <div class="spot">
   <img id="spot-img" src="" alt="" onerror="this.src='/placeholder'" />
@@ -691,7 +691,7 @@ _PHOTO_MAP = WidgetTemplate(
         "origin is this app; OSM tiles are allowed as images). Use ol.proj.fromLonLat for "
         "coordinates, ol.source.Cluster, and fit the view to the data."
     ),
-    data_query={"photos": {"source": "photos", "limit": 500}},
+    data_query={"photos": {"source": "media_items", "limit": 500}},
     html="""\
 <link rel="stylesheet" href="/static/vendor/ol/10.3.1/ol.css">
 <div id="map"></div>
@@ -951,7 +951,7 @@ _FOLDER_GALLERY = WidgetTemplate(
     description=(
         "PUB/SUB subscriber (topic 'folder'). A photo grid that yaffo.subscribe('folder', …) "
         "and, on each event, re-queries the photos under that folder with "
-        "yaffo.query({source:'photos', media_dir_id:{eq}, relative_path:{prefix}}). No "
+        "yaffo.query({source:'media_items', media_dir_id:{eq}, relative_path:{prefix}}). No "
         "data_query — it shows whatever the paired 'Folder picker' selects (and restores the "
         "last folder from state on reload)."
     ),
@@ -976,7 +976,7 @@ async function show(loc) {
   if (!loc || !loc.mediaDirId) { grid.innerHTML = "<div class='yf-empty'>Pick a folder.</div>"; return; }
   grid.innerHTML = "<div class='yf-empty'>Loading…</div>";
   // Photos anywhere under the selected folder; relative_path needs media_dir_id to pin the root.
-  const q = { source: 'photos', media_dir_id: { eq: loc.mediaDirId }, limit: 500 };
+  const q = { source: 'media_items', media_dir_id: { eq: loc.mediaDirId }, limit: 500 };
   if (loc.path) q.relative_path = { prefix: loc.path + '/' };
   draw(await yaffo.query(q));
 }

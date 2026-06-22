@@ -11,7 +11,7 @@ from yaffo.logging_config import get_logger
 import pydash as _
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
-    FACE_STATUS_ASSIGNED, Photo, PHOTO_STATUS_INDEXED, EVENT_PHOTO_MODIFIED, FACE_STATUS_PROCESSING
+    FACE_STATUS_ASSIGNED, MediaItem, PHOTO_STATUS_INDEXED, EVENT_PHOTO_MODIFIED, FACE_STATUS_PROCESSING
 
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -81,9 +81,9 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], min_similarity:
         person_ids=[],
         people=[],
         suggestion_name=cluster["label"],
-        photo_date=face_dict[cluster["face_ids"][0]].photo.date_taken,
+        photo_date=face_dict[cluster["face_ids"][0]].media_item.date_taken,
         faces=[
-            FaceViewModel(face_id, face_dict[face_id].photo.date_taken, None)
+            FaceViewModel(face_id, face_dict[face_id].media_item.date_taken, None)
             for face_id in cluster["face_ids"]
         ],
     ) for cluster in clusters.values()]
@@ -131,7 +131,7 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
                 person_ids=[pair[0].id for pair in matching_people],
                 people=[pair[0] for pair in matching_people],
                 suggestion_name=" OR ".join([pair[0].name for pair in matching_people]),
-                photo_date=face.photo.date_taken,
+                photo_date=face.media_item.date_taken,
                 faces=[]
             )
             face_suggestions.append(best_suggestion)
@@ -139,10 +139,10 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
         if best_suggestion is not None:
             best_sim = float(matching_people[0][2])
             best_suggestion.faces.append(
-                FaceViewModel(face.id, face.photo.date_taken, best_sim))
+                FaceViewModel(face.id, face.media_item.date_taken, best_sim))
         else:
             default_suggestion.faces.append(
-                FaceViewModel(face.id, face.photo.date_taken, None))
+                FaceViewModel(face.id, face.media_item.date_taken, None))
 
     face_suggestions.sort(key=lambda suggestion: (1 if len(suggestion.person_ids) == 1 else 0, len(suggestion.faces)),
                           reverse=True)
@@ -157,8 +157,8 @@ def init_faces_routes(app: Flask):
     def faces_index():
         query = (
             db.session.query(Face)
-            .join(Face.photo)
-            .options(joinedload(Face.photo))
+            .join(Face.media_item)
+            .options(joinedload(Face.media_item))
             .outerjoin(Face.people)
         )
         year = request.args.get("year", type=int)
@@ -170,10 +170,10 @@ def init_faces_routes(app: Flask):
         group_by = request.args.get("group_by", type=str, default=DEFAULT_GROUP_BY)
 
         if year:
-            query = query.filter(Photo.year == year)
+            query = query.filter(MediaItem.year == year)
         if month:
-            query = query.filter(Photo.month == month)
-        query = query.filter(Face.status == FACE_STATUS_UNASSIGNED).order_by(Photo.date_taken)
+            query = query.filter(MediaItem.month == month)
+        query = query.filter(Face.status == FACE_STATUS_UNASSIGNED).order_by(MediaItem.date_taken)
 
         unassigned_face_count = query.count()
         # Each pass pulls and clusters up to batch_size unassigned faces. The UI

@@ -103,7 +103,7 @@ def test_tag_photos_batches_and_drops_incomplete(monkeypatch, emitted_events):
 
     assert captured["items"] == [(1, "beach", None), (2, "rating", 5)]
     # announces photo_modified for the tagged photos so export_photo_tag reacts
-    assert emitted_events == [("photo_modified", {"photo_ids": [1, 2]})]
+    assert emitted_events == [("photo_modified", {"media_ids": [1, 2]})]
 
 
 def test_tag_photos_with_nothing_to_write_does_not_emit(monkeypatch, emitted_events):
@@ -139,7 +139,7 @@ def test_assign_faces_filters_unknown_persons(monkeypatch, emitted_events):
 
     assert captured["links"] == [(7, 10)]  # (person_id, face_id) for the known person
     # announces photo_modified for the assigned faces' photo
-    assert emitted_events == [("photo_modified", {"photo_ids": [100]})]
+    assert emitted_events == [("photo_modified", {"media_ids": [100]})]
 
 
 def test_assign_faces_emits_nothing_when_no_links_made(monkeypatch, emitted_events):

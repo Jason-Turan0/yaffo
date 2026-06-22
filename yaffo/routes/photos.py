@@ -1,7 +1,7 @@
 from yaffo.utils.image import convert_heif
 from flask import Flask, Response, abort, send_from_directory, send_file, render_template, request, jsonify
 from yaffo.background_tasks.events import emit_event
-from yaffo.db.models import db, Photo, Person, Tag, EVENT_PHOTO_MODIFIED
+from yaffo.db.models import db, MediaItem, Person, Tag, EVENT_PHOTO_MODIFIED
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import Face
 from pathlib import Path
@@ -16,7 +16,7 @@ import platform
 def init_photos_routes(app: Flask):
     @app.route("/photos/<int:photo_id>")
     def photo(photo_id: int):
-        photo = db.session.get(Photo, photo_id)
+        photo = db.session.get(MediaItem, photo_id)
         if not photo:
             return "Photo not found", 404
 
@@ -74,11 +74,11 @@ def init_photos_routes(app: Flask):
     def photo_view(photo_id: int):
 
         # Query the photo from the database
-        photo = (Photo.query
-                 .filter(Photo.id == photo_id)
+        photo = (MediaItem.query
+                 .filter(MediaItem.id == photo_id)
                  .options(
-                     joinedload(Photo.faces).joinedload(Face.people),
-                     joinedload(Photo.tags)
+                     joinedload(MediaItem.faces).joinedload(Face.people),
+                     joinedload(MediaItem.tags)
                  )
                  .first())
 
@@ -196,21 +196,21 @@ def init_photos_routes(app: Flask):
         """Toggle a photo's favorite flag between True and NULL (NULL = unset, so the
         export/filter treat it as nothing). Emits photo_modified so the export
         automation can write the keyword. Returns the new favorite state."""
-        photo = db.session.get(Photo, photo_id)
+        photo = db.session.get(MediaItem, photo_id)
         if not photo:
             return jsonify({"error": "Photo not found"}), 404
 
         photo.favorite = True if not photo.favorite else None
         db.session.commit()
 
-        emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": [photo_id]})
+        emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": [photo_id]})
         return jsonify({"favorite": photo.favorite})
 
     @app.route("/api/photo/<int:photo_id>/tags", methods=["PUT"])
     def update_photo_tags(photo_id: int):
         """Replace a photo's full tag set in one request, then emit photo_modified so
         downstream automations (e.g. export_photo_tag) react once per save."""
-        photo = db.session.get(Photo, photo_id)
+        photo = db.session.get(MediaItem, photo_id)
         if not photo:
             return jsonify({"error": "Photo not found"}), 404
 
@@ -233,7 +233,7 @@ def init_photos_routes(app: Flask):
         photo.tags = [Tag(tag_name=name, tag_value=value) for name, value in normalized]
         db.session.commit()
 
-        emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": [photo_id]})
+        emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": [photo_id]})
 
         return jsonify({
             "success": True,

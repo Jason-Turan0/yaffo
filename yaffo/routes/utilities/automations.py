@@ -357,11 +357,11 @@ def init_automations_routes(app: Flask):
             photo_ids = photos_repository.get_photo_ids_under_path(db.session, path)
             if not photo_ids:
                 return jsonify({"error": "No indexed photos found under that path."}), 400
-            context = EventContext(event_type=MANUAL_RUN_EVENT_TYPE, photo_ids=photo_ids)
+            context = EventContext(event_type=MANUAL_RUN_EVENT_TYPE, media_ids=photo_ids)
 
         if not invoke_automation(automation, context):
             return jsonify({"error": "Nothing to run yet — publish the automation's code first."}), 400
-        return jsonify({"slug": slug, "photo_count": len(context.photo_ids) if context else None}), 202
+        return jsonify({"slug": slug, "photo_count": len(context.media_ids) if context else None}), 202
 
     @app.route("/utilities/automations/validate-cron", methods=["GET"])
     def automations_validate_cron():

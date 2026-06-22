@@ -38,7 +38,7 @@ from yaffo.db.models import (
 # data_query gives each photo's media_dir_id + year/month; the moves are collected
 # and written in one batched move_photos call (see <batching> in the prompt).
 _ORGANIZE_CODE = """\
-rows = data_query({"source": "photos", "id": {"in": ctx["photo_ids"]}})
+rows = data_query({"source": "media_items", "id": {"in": ctx["media_ids"]}})
 moves = []
 for row in rows:
     if row["year"] and row["month"] and row["media_dir_id"]:
@@ -71,13 +71,13 @@ if person_ids:
     if face_ids:
         faces = data_query({"source": "faces", "id": {"in": face_ids}})
         for face in faces:
-            photo_id = face["photo_id"]
+            photo_id = face["media_item_id"]
             if photo_id != None and photo_id not in person_by_photo:
                 person_by_photo[photo_id] = person_by_face[face["id"]]
 
     photo_ids = [pid for pid in person_by_photo]
     if photo_ids:
-        favorites = data_query({"source": "photos", "favorite": {"eq": True}, "id": {"in": photo_ids}})
+        favorites = data_query({"source": "media_items", "favorite": {"eq": True}, "id": {"in": photo_ids}})
         total = len(favorites)
         for i, row in enumerate(favorites):
             if row["year"] and row["media_dir_id"]:

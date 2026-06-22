@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from yaffo.db import db
-from yaffo.db.models import Person, Photo, Face, PersonFace, PersonEmbedding, FACE_STATUS_ASSIGNED
+from yaffo.db.models import Person, MediaItem, Face, PersonFace, PersonEmbedding, FACE_STATUS_ASSIGNED
 from yaffo.domain.compare_utils import serialize_embedding, load_embedding
 from yaffo.db.repositories.person_repository import (
     update_person_embedding,
@@ -38,7 +38,7 @@ def _unit(*vals) -> np.ndarray:
 
 def _add_face(sess, person, photo, vec, age, det_score=None, similarity=None):
     face = Face(
-        embedding=serialize_embedding(vec), photo_id=photo.id, estimated_age=age,
+        embedding=serialize_embedding(vec), media_item_id=photo.id, estimated_age=age,
         status=FACE_STATUS_ASSIGNED, det_score=det_score, location_top=0,
         location_right=10, location_bottom=10, location_left=0,
     )
@@ -51,8 +51,8 @@ def _add_face(sess, person, photo, vec, age, det_score=None, similarity=None):
 
 def test_buckets_faces_into_life_stages_and_estimates_birthdate(session):
     person = Person(name="Kid")
-    p2010 = Photo(year=2010)
-    p2020 = Photo(year=2020)
+    p2010 = MediaItem(year=2010)
+    p2020 = MediaItem(year=2020)
     session.add_all([person, p2010, p2020])
     session.flush()
 
@@ -71,7 +71,7 @@ def test_buckets_faces_into_life_stages_and_estimates_birthdate(session):
 
 def test_actual_birthdate_overrides_estimate_for_bucketing(session):
     person = Person(name="P", birthdate=date(2018, 1, 1))  # actual: makes 2020 photo a toddler
-    p2020 = Photo(year=2020)
+    p2020 = MediaItem(year=2020)
     session.add_all([person, p2020])
     session.flush()
     _add_face(session, person, p2020, _unit(1.0), age=30)  # bogus age; actual birthdate wins
@@ -89,7 +89,7 @@ def test_falls_back_to_estimated_age_when_no_birthdate(session):
     """A photo with no date means no birthdate can be derived, so the face's own
     predicted age buckets it (better than dumping it in 'unknown')."""
     person = Person(name="NoDate")
-    photo = Photo(year=None)  # undated -> birthdate can't be estimated
+    photo = MediaItem(year=None)  # undated -> birthdate can't be estimated
     session.add_all([person, photo])
     session.flush()
     _add_face(session, person, photo, _unit(1.0), age=1)  # predicted baby
@@ -105,7 +105,7 @@ def test_falls_back_to_estimated_age_when_no_birthdate(session):
 
 def test_medoid_is_a_real_stored_embedding(session):
     person = Person(name="Many", birthdate=date(1990, 1, 1))
-    photo = Photo(year=2010)  # all adult
+    photo = MediaItem(year=2010)  # all adult
     session.add_all([person, photo])
     session.flush()
     vecs = [_unit(1.0), _unit(0.9, 0.1), _unit(0.95, 0.05), _unit(-1.0)]
@@ -128,9 +128,9 @@ def test_collapses_same_day_faces_to_highest_score(session):
     (so a burst can't dominate the medoid), while distinct days each stay
     represented."""
     person = Person(name="Burst", birthdate=date(1990, 1, 1))
-    june_a = Photo(year=2010, date_taken="2010-06-01T10:00:00")
-    june_b = Photo(year=2010, date_taken="2010-06-01T10:00:05")  # same day, sharper
-    august = Photo(year=2010, date_taken="2010-08-15T09:00:00")
+    june_a = MediaItem(year=2010, date_taken="2010-06-01T10:00:00")
+    june_b = MediaItem(year=2010, date_taken="2010-06-01T10:00:05")  # same day, sharper
+    august = MediaItem(year=2010, date_taken="2010-08-15T09:00:00")
     session.add_all([person, june_a, june_b, august])
     session.flush()
 
@@ -152,7 +152,7 @@ def test_undated_faces_are_each_kept(session):
     """Faces whose photo has no capture date can't be day-bucketed, so none are
     dropped -- each is its own representative."""
     person = Person(name="NoDates", birthdate=date(1990, 1, 1))
-    photo = Photo(year=2010)  # no date_taken
+    photo = MediaItem(year=2010)  # no date_taken
     session.add_all([person, photo])
     session.flush()
     f1 = _add_face(session, person, photo, _unit(1.0), age=20, det_score=0.4)
@@ -178,7 +178,7 @@ def test_caps_at_max_representative_faces_by_score(session):
     kept_ids = set()
     for i in range(n_days):
         day = date(2010, 1, 1) + timedelta(days=i)
-        photo = Photo(year=2010, date_taken=f"{day.isoformat()}T10:00:00")
+        photo = MediaItem(year=2010, date_taken=f"{day.isoformat()}T10:00:00")
         session.add(photo)
         session.flush()
         # Higher day index -> higher det_score, so the last MAX faces survive.
@@ -200,7 +200,7 @@ def test_similarity_bounds_falls_back_when_too_few_samples(session):
     """Below the sample floor the percentiles are noisy, so the documented defaults
     are used instead."""
     person = Person(name="Sparse")
-    photo = Photo(year=2010)
+    photo = MediaItem(year=2010)
     session.add_all([person, photo])
     session.flush()
     _add_face(session, person, photo, _unit(1.0), age=20, similarity=0.5)
@@ -213,7 +213,7 @@ def test_similarity_bounds_reads_percentiles_from_data(session):
     """With enough assignments the band is the low/high percentiles of the actual
     stored similarities, not the hardcoded defaults."""
     person = Person(name="Busy")
-    photo = Photo(year=2010)
+    photo = MediaItem(year=2010)
     session.add_all([person, photo])
     session.flush()
     # similarities 0.00, 0.01, ... 0.99 -> p5 ~= 0.05, p95 ~= 0.95.

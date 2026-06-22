@@ -23,7 +23,7 @@ from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.background_tasks.watcher_suppression import record_self_write
-from yaffo.db.models import Automation, Face, Photo, PhotoLabel, AUTOMATION_HANDLER_EXPORT_PHOTO_TAG
+from yaffo.db.models import Automation, Face, MediaItem, MediaLabel, AUTOMATION_HANDLER_EXPORT_PHOTO_TAG
 from yaffo.logging_config import get_logger
 from yaffo.utils.write_metadata import write_photo_metadata
 
@@ -45,7 +45,7 @@ FAVORITE_KEYWORD = "Favorite"
 _LOAD_CHUNK = 500
 
 
-def _people_names(photo: Photo) -> list[str]:
+def _people_names(photo: MediaItem) -> list[str]:
     """Distinct names of people linked to any face in the photo."""
     names = {
         person.name
@@ -56,12 +56,12 @@ def _people_names(photo: Photo) -> list[str]:
     return sorted(names)
 
 
-def _label_names(photo: Photo) -> list[str]:
+def _label_names(photo: MediaItem) -> list[str]:
     """Distinct classification-label names assigned to the photo."""
     return sorted({pl.label.name for pl in photo.labels if pl.label and pl.label.name})
 
 
-def _custom_tag_keywords(photo: Photo) -> list[str]:
+def _custom_tag_keywords(photo: MediaItem) -> list[str]:
     """The photo's manual tags as keyword strings — 'name: value', or just 'name'
     when the tag has no value."""
     return sorted({
@@ -93,17 +93,17 @@ def _export_tags(
     for start in range(0, len(photo_ids), _LOAD_CHUNK):
         chunk = photo_ids[start:start + _LOAD_CHUNK]
         photos.extend(
-            session.query(Photo)
+            session.query(MediaItem)
             .options(
-                joinedload(Photo.faces).joinedload(Face.people),
-                joinedload(Photo.labels).joinedload(PhotoLabel.label),
-                joinedload(Photo.tags),
+                joinedload(MediaItem.faces).joinedload(Face.people),
+                joinedload(MediaItem.labels).joinedload(MediaLabel.label),
+                joinedload(MediaItem.tags),
             )
-            .filter(Photo.id.in_(chunk))
+            .filter(MediaItem.id.in_(chunk))
             .all()
         )
     written = 0
-    def photo_processor(photo: Photo):
+    def photo_processor(photo: MediaItem):
         nonlocal written
         photo_path = Path(photo.full_file_path)
         if not photo_path.exists():
@@ -173,6 +173,6 @@ def enqueue_export_photo_tag(automation: Automation, context: EventContext | Non
     """Handler for the built-in export-photo-tag automation: enqueue the write for
     the photos the triggering event concerns. A schedule trigger (no context, no
     photo subjects) has nothing to act on, so it's a no-op."""
-    photo_ids = context.photo_ids if context else []
+    photo_ids = context.media_ids if context else []
     if photo_ids:
         export_photo_tag_task(automation.id, photo_ids)

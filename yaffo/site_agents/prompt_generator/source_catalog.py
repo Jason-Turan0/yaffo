@@ -17,7 +17,7 @@ from yaffo.db.repositories.data_query_repository import (
 
 def relationship_summary() -> str:
     """The foreign-key join map both prompts share, e.g.
-    `tags.photo_id -> photos.id, people_face.face_id -> faces.id, …` — derived from the
+    `tags.media_item_id -> media_items.id, people_face.face_id -> faces.id, …` — derived from the
     models so the page-builder and automation prompts can't describe it differently."""
     return ", ".join(
         f"{source}.{column} -> {target}.{target_column}"

@@ -55,12 +55,12 @@
                         <div class="face-card"
                              data-face-id="{{ face_data.face.id }}"
                              data-similarity="{{ face_data.similarity_pct if face_data.similarity_pct is not none else 'N/A' }}"
-                             data-date="{{ face_data.face.photo.date_taken }}">
+                             data-date="{{ face_data.face.media_item.date_taken }}">
                             <img src="{{ url_for('face_thumbnail', face_id=face_data.face.id) }}"
                                  data-fallback="{{ url_for('placeholder') }}"
                                  alt="Face">
                             <div class="face-info">
-                                <div class="face-date">{{ face_data.face.photo.date_taken | format_date("date") if face_data.face.photo.date_taken else 'Unknown date' }}
+                                <div class="face-date">{{ face_data.face.media_item.date_taken | format_date("date") if face_data.face.media_item.date_taken else 'Unknown date' }}
                                 </div>
                                 <div class="face-similarity">
                                     Similarity:

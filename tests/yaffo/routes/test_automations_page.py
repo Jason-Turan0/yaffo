@@ -222,7 +222,7 @@ def test_run_now_scoped_runs_over_photos_under_path(app, client, monkeypatch):
     assert resp.get_json()["photo_count"] == 3
     (slug, context), = calls
     assert slug == "a1"
-    assert context.photo_ids == [11, 22, 33]
+    assert context.media_ids == [11, 22, 33]
     assert context.event_type == "manual"
 
 
@@ -618,13 +618,13 @@ def test_trigger_missing_id_404(app, client):
 
 
 def test_test_files_runs_against_photos_under_path(app, client):
-    from yaffo.db.models import Photo
-    _add(app, published_code="print(len(ctx['photo_ids']))")
+    from yaffo.db.models import MediaItem
+    _add(app, published_code="print(len(ctx['media_ids']))")
     with app.app_context():
         db.session.add_all([
-            Photo(full_file_path="/media/trip/a.jpg"),
-            Photo(full_file_path="/media/trip/b.jpg"),
-            Photo(full_file_path="/media/other/c.jpg"),
+            MediaItem(full_file_path="/media/trip/a.jpg"),
+            MediaItem(full_file_path="/media/trip/b.jpg"),
+            MediaItem(full_file_path="/media/other/c.jpg"),
         ])
         db.session.commit()
     data = client.post("/utilities/automations/a1/test-files", json={"path": "/media/trip"}).get_json()
@@ -641,10 +641,10 @@ def test_test_files_prefers_working_code(app, client):
 
 
 def test_test_files_records_mutating_action_without_performing(app, client):
-    from yaffo.db.models import Photo, Tag
-    _add(app, published_code="tag_photos([{'photo_id': pid, 'name': 'beach'} for pid in ctx['photo_ids']])")
+    from yaffo.db.models import MediaItem, Tag
+    _add(app, published_code="tag_photos([{'photo_id': pid, 'name': 'beach'} for pid in ctx['media_ids']])")
     with app.app_context():
-        db.session.add(Photo(full_file_path="/media/a.jpg"))
+        db.session.add(MediaItem(full_file_path="/media/a.jpg"))
         db.session.commit()
     data = client.post("/utilities/automations/a1/test-files", json={"path": "/media/a.jpg"}).get_json()
     assert data["success"] is True

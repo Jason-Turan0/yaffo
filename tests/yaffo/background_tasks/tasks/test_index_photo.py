@@ -16,7 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from yaffo.db import db
-from yaffo.db.models import Job, Photo, Face, JOB_STATUS_RUNNING, PHOTO_STATUS_INDEXED
+from yaffo.db.models import Job, MediaItem, Face, JOB_STATUS_RUNNING, PHOTO_STATUS_INDEXED
 from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.utils import SessionFactory, engine as prod_engine
 import yaffo.background_tasks.tasks.index_photo as index_photo_mod
@@ -80,14 +80,14 @@ def test_reindex_replaces_faces_not_duplicates(db_for_index, tmp_path):
 
     with Session(engine) as s:
         s.add(Job(id=job_id, name="index_photos", status=JOB_STATUS_RUNNING, task_count=1))
-        s.add(Photo(full_file_path=str(photo_file)))
+        s.add(MediaItem(full_file_path=str(photo_file)))
         s.commit()
 
     # First index pass.
     index_photo_task(job_id, [str(photo_file)])
 
     with Session(engine) as s:
-        photo = s.query(Photo).one()
+        photo = s.query(MediaItem).one()
         faces = s.query(Face).all()
         assert len(faces) == 1
         assert photo.status == PHOTO_STATUS_INDEXED

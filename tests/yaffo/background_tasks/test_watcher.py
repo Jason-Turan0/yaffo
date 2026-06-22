@@ -365,15 +365,15 @@ class TestMovePhotoPath:
         engine.dispose()
 
     def test_updates_path_in_place_preserving_id(self, session):
-        from yaffo.db.models import Photo
+        from yaffo.db.models import MediaItem
         from yaffo.db.repositories.photos_repository import move_photo_path
-        photo = Photo(full_file_path="/m/old.jpg", status="INDEXED")
+        photo = MediaItem(full_file_path="/m/old.jpg", status="INDEXED")
         session.add(photo)
         session.commit()
         original_id = photo.id
 
         assert move_photo_path(session, "/m/old.jpg", "/m/new.jpg") is True
-        moved = session.query(Photo).filter_by(id=original_id).one()
+        moved = session.query(MediaItem).filter_by(id=original_id).one()
         assert moved.full_file_path == "/m/new.jpg"  # same row, new path
 
     def test_returns_false_when_no_photo_at_old_path(self, session):

@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload, aliased
 
 from yaffo.db import db
-from yaffo.db.models import Person, PersonFace, Face, FACE_STATUS_UNASSIGNED, Photo, EVENT_PHOTO_MODIFIED
+from yaffo.db.models import Person, PersonFace, Face, FACE_STATUS_UNASSIGNED, MediaItem, EVENT_PHOTO_MODIFIED
 from yaffo.db.repositories.person_repository import update_person_embedding, get_photo_ids_for_person, get_similarity_bounds
 from yaffo.db.repositories.photos_repository import get_distinct_months, get_distinct_years
 from yaffo.domain.compare_utils import ui_threshold_to_similarity, similarity_to_ui_percent
@@ -24,7 +24,7 @@ def init_people_routes(app: Flask):
             db.session.query(
                 Person,
                 func.count(func.distinct(PersonFace.face_id)).label('num_faces'),
-                func.count(func.distinct(Face.photo_id)).label('num_photos')
+                func.count(func.distinct(Face.media_item_id)).label('num_photos')
             )
             .outerjoin(PersonFace, Person.id == PersonFace.person_id)
             .outerjoin(Face, PersonFace.face_id == Face.id)
@@ -129,7 +129,7 @@ def init_people_routes(app: Flask):
         if person.birthdate != old_birthdate:
             update_person_embedding(person_id, db.session)
         if photo_ids:
-            emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": photo_ids})
+            emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": photo_ids})
         flash(f"Updated '{name}'" if name == old_name else f"Renamed '{old_name}' to '{name}'", "success")
         return redirect(url_for("people_list"))
 
@@ -183,16 +183,16 @@ def init_people_routes(app: Flask):
             flash("Person not found", "error")
             return redirect(url_for("people_list"))
 
-        photo_alias = aliased(Photo)
+        photo_alias = aliased(MediaItem)
 
         # Build base query for this person
         query = (
             db.session.query(Face)
             .join(PersonFace)
-            .join(photo_alias, Face.photo)
+            .join(photo_alias, Face.media_item)
             .filter(PersonFace.person_id == person_id)
             .options(
-                joinedload(Face.photo),  # eager load photo
+                joinedload(Face.media_item),  # eager load photo
                 joinedload(Face.person_face)  # eager load person_face
             )
         )
@@ -270,8 +270,8 @@ def init_people_routes(app: Flask):
             face_ids = [int(fid) for fid in selected_face_ids]
 
             photo_ids = [
-                pid for (pid,) in db.session.query(Face.photo_id)
-                .filter(Face.id.in_(face_ids), Face.photo_id.isnot(None))
+                pid for (pid,) in db.session.query(Face.media_item_id)
+                .filter(Face.id.in_(face_ids), Face.media_item_id.isnot(None))
                 .distinct()
             ]
 
@@ -285,7 +285,7 @@ def init_people_routes(app: Flask):
             )
             db.session.commit()
             if photo_ids:
-                emit_event(EVENT_PHOTO_MODIFIED, {"photo_ids": photo_ids})
+                emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": photo_ids})
         flash("Person updated", "success")
         update_person_embedding(person_id, db.session)
         return redirect(request.referrer or url_for("faces_index"))

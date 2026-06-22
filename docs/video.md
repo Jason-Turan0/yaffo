@@ -323,13 +323,19 @@ own phase so the core import/playback feature can ship first.
 
 ## Rollout (phasing)
 
-- **Phase 0 — Rename (no behavior change).** `photos` → `media_items` / `Photo` →
-  `MediaItem`, the child FK + `PhotoLabel`→`MediaLabel` renames, and the
-  `photo_ids` → `media_ids` wire-name across events and the Starlark host API. No
-  `media_type`, no video — purely the rename, landed so the full test suite passes
-  unchanged. Doing this first keeps it reviewable in isolation and means every
-  later phase is built on the honest names. (Updates `docs/automations.md` for the
-  new payload key.)
+- **Phase 0 — Rename (no behavior change). ✅ Done (2026-06-22).** `photos` →
+  `media_items` / `Photo` → `MediaItem`, the child FK + `PhotoLabel`→`MediaLabel`
+  renames, and the `photo_ids` → `media_ids` wire-name across events and the
+  Starlark host API. No `media_type`, no video — purely the rename, landed so the
+  full test suite passes unchanged. Migration
+  `1_MIGRATION_20260622_rename_photos_to_media_items.py` renames the tables/columns
+  in place (FK refs rewritten via `legacy_alter_table=OFF`). `docs/automations.md`
+  updated for the new `media_ids` payload key + `media_items`/`media_labels`
+  sources. **Scope note:** the data_query source name (derived from the table) is
+  now `media_items`/`media_labels`, but the host-action *record* keys kept their
+  singular form (`tag_photos([{photo_id, …}])`, `delete_photos(photo_ids)`) — only
+  the plural subject list `ctx['photo_ids']` → `ctx['media_ids']` was renamed, per
+  this plan. Realign the singular host keys in a later pass if desired.
 - **Phase 1 — Catalog & play.** `media_type` + columns; `file_sync` discovers
   video; `index_video` does metadata + poster; gallery shows poster/badge/duration;
   range-enabled playback; detail view. Location automations (GPS is just metadata)

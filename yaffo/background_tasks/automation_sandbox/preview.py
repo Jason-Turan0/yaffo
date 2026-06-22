@@ -63,7 +63,7 @@ def preview_automation(
         code = automation.working_code or automation.published_code
         code_source = "working" if automation.working_code else "published"
     context = EventContext(
-        event_type=_first_event_type(automation), job_id=None, photo_ids=photo_ids
+        event_type=_first_event_type(automation), job_id=None, media_ids=photo_ids
     )
 
     functions, calls = build_recording_host_functions(session)

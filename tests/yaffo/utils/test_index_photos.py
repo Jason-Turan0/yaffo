@@ -456,12 +456,12 @@ class TestDeleteOrphanedPhotos:
         # Setup query to return appropriate mocks (identity, since columns
         # overload == to build SQL clauses rather than booleans)
         def query_side_effect(model):
-            from yaffo.db.models import Face, Photo, Tag
+            from yaffo.db.models import Face, MediaItem, Tag
             if model is Face.full_file_path or model is Face:
                 return mock_face_query
             elif model is Tag:
                 return mock_tag_query
-            elif model is Photo:
+            elif model is MediaItem:
                 return mock_photo_query
 
         mock_db_session.query.side_effect = query_side_effect

@@ -50,9 +50,9 @@ def _language() -> str:
 _CTX_FIELD_DOCS = {
     "event_type": "the event name for an event run, or None for a schedule.",
     "job_id": "the id of the job that emitted the event (or None).",
-    "photo_ids": "the photo ids the event concerns (empty for a schedule).",
+    "media_ids": "the media ids the event concerns (empty for a schedule).",
     "groups": (
-        "related-photo groupings — one list of photo ids per group (e.g. each "
+        "related-media groupings — one list of media ids per group (e.g. each "
         "duplicate set, keeper first); empty for events without groupings."
     ),
 }
@@ -74,15 +74,15 @@ def _context() -> str:
 def _scoping() -> str:
     return block("scoping", [
         "Scope an event run to its photos — never sweep the whole library on an event.",
-        "When ctx['event_type'] is set, the run is about exactly ctx['photo_ids'] (the",
+        "When ctx['event_type'] is set, the run is about exactly ctx['media_ids'] (the",
         "photos that event concerns), so every photos query MUST filter to them:",
-        '  data_query({"source": "photos", "id": {"in": ctx["photo_ids"]}, ...})',
+        '  data_query({"source": "media_items", "id": {"in": ctx["media_ids"]}, ...})',
         "and derive faces/people/labels from that set. Querying photos without an `id`",
         "filter on an event run re-scans the entire library on every event — that is the",
         "wrong behaviour: slow, and it acts on photos the event never mentioned.",
-        "If ctx['photo_ids'] is empty on an event run, there's nothing to do — stop.",
+        "If ctx['media_ids'] is empty on an event run, there's nothing to do — stop.",
         "Operate library-wide ONLY on a schedule run (ctx['event_type'] is None and",
-        "ctx['photo_ids'] is empty) — that's the one case where you query without an id",
+        "ctx['media_ids'] is empty) — that's the one case where you query without an id",
         "filter.",
     ])
 
@@ -107,7 +107,7 @@ def _sources() -> str:
         f"foreign-key columns: {relationship_summary()}.",
         "(photo_labels + classification_labels are the auto-classifier's labels — read-only;",
         "to categorize photos yourself, write tags with tag_photos.)",
-        'Filter columns with operators at the top level, e.g. {"source": "photos",',
+        'Filter columns with operators at the top level, e.g. {"source": "media_items",',
         '"year": {"eq": 2024}, "id": {"in": [1,2,3]}, "limit": 24}. Operators: eq, ne,',
         "lt, lte, gt, gte, contains, in, prefix (path columns: matches a leading prefix / subtree).",
         "Some tables also accept host-derived filter columns (disk paths never exposed; a",
@@ -153,7 +153,7 @@ def _batching() -> str:
         "one's keys). Reads (data_query, match_people, face_similarity) can still run",
         "per item in the loop that builds the batch.",
         "Example — tag everything the run touched, in one write:",
-        '  to_tag = [{"photo_id": pid, "name": "reviewed"} for pid in ctx["photo_ids"]]',
+        '  to_tag = [{"photo_id": pid, "name": "reviewed"} for pid in ctx["media_ids"]]',
         "  tag_photos(to_tag)",
     ])
 
@@ -167,7 +167,7 @@ def _progress() -> str:
         "`done` is how many you've handled so far; a final report_progress(total, total)",
         "marks it complete. Skip it for trivial, near-instant runs.",
         "Example — report while building the batch, then write once:",
-        '  pids = ctx["photo_ids"]',
+        '  pids = ctx["media_ids"]',
         "  to_tag = []",
         "  for i, pid in enumerate(pids):",
         '      to_tag.append({"photo_id": pid, "name": "reviewed"})',
