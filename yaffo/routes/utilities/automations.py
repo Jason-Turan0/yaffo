@@ -35,7 +35,7 @@ from yaffo.db.models import (
     TRIGGER_TYPE_EVENT,
 )
 from yaffo.db.repositories import automation_repository as repo
-from yaffo.db.repositories import photos_repository
+from yaffo.db.repositories import media_repository
 from yaffo.site_agents import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
 
@@ -354,14 +354,14 @@ def init_automations_routes(app: Flask):
         path = ((request.get_json(silent=True) or {}).get("path") or "").strip()
         context = None
         if path:
-            photo_ids = photos_repository.get_photo_ids_under_path(db.session, path)
-            if not photo_ids:
+            media_item_ids = media_repository.get_media_item_ids_under_path(db.session, path)
+            if not media_item_ids:
                 return jsonify({"error": "No indexed photos found under that path."}), 400
-            context = EventContext(event_type=MANUAL_RUN_EVENT_TYPE, media_ids=photo_ids)
+            context = EventContext(event_type=MANUAL_RUN_EVENT_TYPE, media_item_ids=media_item_ids)
 
         if not invoke_automation(automation, context):
             return jsonify({"error": "Nothing to run yet — publish the automation's code first."}), 400
-        return jsonify({"slug": slug, "photo_count": len(context.media_ids) if context else None}), 202
+        return jsonify({"slug": slug, "media_count": len(context.media_item_ids) if context else None}), 202
 
     @app.route("/utilities/automations/validate-cron", methods=["GET"])
     def automations_validate_cron():
@@ -459,7 +459,7 @@ def init_automations_routes(app: Flask):
     def automations_test_files(slug: str):
         """Dry-run the automation against the indexed photos at/under a user-selected
         path (a file or a folder). Records no Job; mutating actions are recorded but
-        not performed, so nothing changes -- the run's photo_ids are the matched
+        not performed, so nothing changes -- the run's media_item_ids are the matched
         photos."""
         automation = repo.get_by_slug(db.session, slug)
         if automation is None:
@@ -471,8 +471,8 @@ def init_automations_routes(app: Flask):
         if not path:
             return jsonify({"error": "No path selected."}), 400
         version = body.get("version")  # which code panel view to test: working | published
-        photo_ids = photos_repository.get_photo_ids_under_path(db.session, path)
-        result = preview_automation(db.session, automation, photo_ids=photo_ids, version=version)
+        media_item_ids = media_repository.get_media_item_ids_under_path(db.session, path)
+        result = preview_automation(db.session, automation, media_item_ids=media_item_ids, version=version)
         return jsonify(result.to_dict())
 
     @app.route("/utilities/automations/<slug>/publish", methods=["POST"])

@@ -59,7 +59,7 @@ def main() -> int:
     parser.add_argument("photo", type=Path, help="Path to the photo file")
     parser.add_argument("--all", action="store_true", help="Dump every tag, not just people/location/date")
     args = parser.parse_args()
-    return print_photo_tags(args.photo, args.all)
+    return print_photo_tags(args.media_item, args.all)
 
 
 if __name__ == "__main__":

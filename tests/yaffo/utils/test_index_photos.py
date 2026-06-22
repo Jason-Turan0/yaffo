@@ -17,9 +17,9 @@ from yaffo.utils.index_photos import (
     get_exif_tags,
     device_from_exif,
     index_photo,
-    delete_orphaned_photos,
-    delete_photos_by_paths,
-    delete_photos_under_dir,
+    delete_orphaned_media_items,
+    delete_media_items_by_paths,
+    delete_media_items_under_dir,
 )
 from yaffo.utils.face_analysis import DetectedFace
 
@@ -441,7 +441,7 @@ class TestRealFileHemispheres:
 
 class TestDeleteOrphanedPhotos:
     def test_delete_orphaned_photos_success(self, mock_db_session):
-        photo_ids = [1, 2, 3]
+        media_item_ids = [1, 2, 3]
 
         # Mock the query chains
         mock_face_query = Mock()
@@ -466,36 +466,36 @@ class TestDeleteOrphanedPhotos:
 
         mock_db_session.query.side_effect = query_side_effect
 
-        deleted = delete_orphaned_photos(mock_db_session, photo_ids)
+        deleted = delete_orphaned_media_items(mock_db_session, media_item_ids)
 
         assert deleted == 3
         mock_db_session.commit.assert_called_once()
 
     def test_delete_orphaned_photos_empty_list(self, mock_db_session):
-        deleted = delete_orphaned_photos(mock_db_session, [])
+        deleted = delete_orphaned_media_items(mock_db_session, [])
 
         assert deleted == 0
         mock_db_session.query.assert_not_called()
 
 
 class TestDeletePhotosByPaths:
-    @patch('yaffo.utils.index_photos.delete_orphaned_photos')
+    @patch('yaffo.utils.index_photos.delete_orphaned_media_items')
     def test_resolves_paths_to_ids(self, mock_delete, mock_db_session):
         mock_db_session.query.return_value.filter.return_value.all.return_value = [(1,), (2,)]
         mock_delete.return_value = 2
 
-        result = delete_photos_by_paths(mock_db_session, ['/m/a.jpg', '/m/b.jpg'])
+        result = delete_media_items_by_paths(mock_db_session, ['/m/a.jpg', '/m/b.jpg'])
 
         mock_delete.assert_called_once_with(mock_db_session, [1, 2])
         assert result == 2
 
     def test_empty_paths_short_circuits(self, mock_db_session):
-        assert delete_photos_by_paths(mock_db_session, []) == 0
+        assert delete_media_items_by_paths(mock_db_session, []) == 0
         mock_db_session.query.assert_not_called()
 
 
 class TestDeletePhotosUnderDir:
-    @patch('yaffo.utils.index_photos.delete_orphaned_photos')
+    @patch('yaffo.utils.index_photos.delete_orphaned_media_items')
     def test_selects_only_photos_under_directory(self, mock_delete, mock_db_session):
         rows = [
             (1, '/media/organized/2020/a.jpg'),
@@ -506,19 +506,19 @@ class TestDeletePhotosUnderDir:
         mock_db_session.query.return_value.all.return_value = rows
         mock_delete.return_value = 2
 
-        result = delete_photos_under_dir(mock_db_session, '/media/organized/2020')
+        result = delete_media_items_under_dir(mock_db_session, '/media/organized/2020')
 
         mock_delete.assert_called_once_with(mock_db_session, [1, 2])
         assert result == 2
 
-    @patch('yaffo.utils.index_photos.delete_orphaned_photos')
+    @patch('yaffo.utils.index_photos.delete_orphaned_media_items')
     def test_no_matches_deletes_nothing(self, mock_delete, mock_db_session):
         mock_db_session.query.return_value.all.return_value = [
             (1, '/media/organized/2021/a.jpg'),
         ]
         mock_delete.return_value = 0
 
-        result = delete_photos_under_dir(mock_db_session, '/media/organized/2020')
+        result = delete_media_items_under_dir(mock_db_session, '/media/organized/2020')
 
         mock_delete.assert_called_once_with(mock_db_session, [])
         assert result == 0

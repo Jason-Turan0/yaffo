@@ -47,10 +47,10 @@ def import_photo_task(job_id: str, file_path_batch: list[str]):
             return
 
         for path in verified_paths:
-            photo = MediaItem(
+            media_item = MediaItem(
                 full_file_path=str(path),
             )
-            session.add(photo)
+            session.add(media_item)
             session.flush()
         processed_count = len(verified_paths)
         update_job_params = {

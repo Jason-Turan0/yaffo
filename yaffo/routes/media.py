@@ -1,7 +1,7 @@
 from yaffo.utils.image import convert_heif
 from flask import Flask, Response, abort, send_from_directory, send_file, render_template, request, jsonify
 from yaffo.background_tasks.events import emit_event
-from yaffo.db.models import db, MediaItem, Person, Tag, EVENT_PHOTO_MODIFIED
+from yaffo.db.models import db, MediaItem, Person, Tag, EVENT_MEDIA_MODIFIED
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import Face
 from pathlib import Path
@@ -13,14 +13,14 @@ import subprocess
 import platform
 
 
-def init_photos_routes(app: Flask):
-    @app.route("/photos/<int:photo_id>")
-    def photo(photo_id: int):
-        photo = db.session.get(MediaItem, photo_id)
-        if not photo:
+def init_media_routes(app: Flask):
+    @app.route("/media/<int:media_item_id>")
+    def media(media_item_id: int):
+        media_item = db.session.get(MediaItem, media_item_id)
+        if not media_item:
             return "Photo not found", 404
 
-        file_path = Path(photo.full_file_path)
+        file_path = Path(media_item.full_file_path)
         if not file_path.exists():
             return "File not found", 404
 
@@ -44,9 +44,9 @@ def init_photos_routes(app: Flask):
             theme = themes.DEFAULT_THEME
         return send_from_directory(f'static/themes/{theme}', 'placeholder.svg')
 
-    @app.route("/photo-by-path")
-    def photo_by_path():
-        file_path = Path(request.args.get("photoPath", type=str))
+    @app.route("/media-by-path")
+    def media_by_path():
+        file_path = Path(request.args.get("mediaPath", type=str))
         if not file_path.exists():
             return "File not found", 404
 
@@ -70,31 +70,31 @@ def init_photos_routes(app: Flask):
 
         return send_file(file_path)
 
-    @app.route("/photo/view/<int:photo_id>")
-    def photo_view(photo_id: int):
+    @app.route("/media/view/<int:media_item_id>")
+    def media_view(media_item_id: int):
 
         # Query the photo from the database
-        photo = (MediaItem.query
-                 .filter(MediaItem.id == photo_id)
+        media_item = (MediaItem.query
+                 .filter(MediaItem.id == media_item_id)
                  .options(
                      joinedload(MediaItem.faces).joinedload(Face.people),
                      joinedload(MediaItem.tags)
                  )
                  .first())
 
-        if not photo:
+        if not media_item:
             abort(404)
 
         # Get unique people assigned to this photo
         people_set = set()
-        for face in photo.faces:
+        for face in media_item.faces:
             for person in face.people:
                 people_set.add(person)
 
         people = sorted(people_set, key=lambda p: p.name)
 
         # Extract folder and filename from absolute path
-        file_path = Path(photo.full_file_path)
+        file_path = Path(media_item.full_file_path)
         folder = str(file_path.parent)
         file_name = file_path.name
 
@@ -104,7 +104,7 @@ def init_photos_routes(app: Flask):
 
         # Prepare face data with locations for JavaScript
         faces_with_locations = []
-        for face in photo.faces:
+        for face in media_item.faces:
             if face.location_top is not None:
                 faces_with_locations.append({
                     'id': face.id,
@@ -124,7 +124,7 @@ def init_photos_routes(app: Flask):
                 'tag_name': tag.tag_name,
                 'tag_value': tag.tag_value
             }
-            for tag in photo.tags
+            for tag in media_item.tags
         ]
 
         all_people = Person.query.order_by(Person.name).all()
@@ -137,8 +137,8 @@ def init_photos_routes(app: Flask):
         ]
 
         return render_template(
-            "photos/view.html",
-            photo=photo,
+            "media/view.html",
+            media_item=media_item,
             people=people,
             folder=folder,
             file_name=file_name,
@@ -191,27 +191,27 @@ def init_photos_routes(app: Flask):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    @app.route("/api/photo/<int:photo_id>/favorite", methods=["POST"])
-    def toggle_photo_favorite(photo_id: int):
+    @app.route("/api/media/<int:media_item_id>/favorite", methods=["POST"])
+    def toggle_media_favorite(media_item_id: int):
         """Toggle a photo's favorite flag between True and NULL (NULL = unset, so the
         export/filter treat it as nothing). Emits photo_modified so the export
         automation can write the keyword. Returns the new favorite state."""
-        photo = db.session.get(MediaItem, photo_id)
-        if not photo:
+        media_item = db.session.get(MediaItem, media_item_id)
+        if not media_item:
             return jsonify({"error": "Photo not found"}), 404
 
-        photo.favorite = True if not photo.favorite else None
+        media_item.favorite = True if not media_item.favorite else None
         db.session.commit()
 
-        emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": [photo_id]})
-        return jsonify({"favorite": photo.favorite})
+        emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": [media_item_id]})
+        return jsonify({"favorite": media_item.favorite})
 
-    @app.route("/api/photo/<int:photo_id>/tags", methods=["PUT"])
-    def update_photo_tags(photo_id: int):
+    @app.route("/api/media/<int:media_item_id>/tags", methods=["PUT"])
+    def update_media_tags(media_item_id: int):
         """Replace a photo's full tag set in one request, then emit photo_modified so
         downstream automations (e.g. export_photo_tag) react once per save."""
-        photo = db.session.get(MediaItem, photo_id)
-        if not photo:
+        media_item = db.session.get(MediaItem, media_item_id)
+        if not media_item:
             return jsonify({"error": "Photo not found"}), 404
 
         data = request.get_json(silent=True) or {}
@@ -230,15 +230,15 @@ def init_photos_routes(app: Flask):
             normalized.append((tag_name, tag_value or None))
 
         # Replace the collection; delete-orphan cascade removes the old rows on flush.
-        photo.tags = [Tag(tag_name=name, tag_value=value) for name, value in normalized]
+        media_item.tags = [Tag(tag_name=name, tag_value=value) for name, value in normalized]
         db.session.commit()
 
-        emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": [photo_id]})
+        emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": [media_item_id]})
 
         return jsonify({
             "success": True,
             "tags": [
                 {"id": tag.id, "tag_name": tag.tag_name, "tag_value": tag.tag_value}
-                for tag in photo.tags
+                for tag in media_item.tags
             ],
         })

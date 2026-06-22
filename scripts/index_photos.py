@@ -14,7 +14,7 @@ def index_photos():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    existing_files = {photo.full_file_path for photo in session.query(MediaItem).all()}
+    existing_files = {media_item.full_file_path for media_item in session.query(MediaItem).all()}
     media_dirs = get_media_dirs()
     files_to_process = []
     for media_dir in media_dirs:

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Iterator
 
 from yaffo.background_tasks.tasks.classify_labels_automation import classify_labels_automation_task
-from yaffo.db.repositories import automation_repository, classification_repository, photos_repository
+from yaffo.db.repositories import automation_repository, classification_repository, media_repository
 from yaffo.utils.file_system import show_file_dialog
 from yaffo.utils import settings as media_settings
 
@@ -161,11 +161,11 @@ def init_settings_routes(app: Flask):
         automation = automation_repository.get_by_slug(db.session, AUTOMATION_HANDLER_CLASSIFY_LABELS)
         if automation is None:
             return _notify("Classify-labels automation is not installed.", "error")
-        photo_ids = photos_repository.get_indexed_photo_ids(db.session)
-        if not photo_ids:
+        media_item_ids = media_repository.get_indexed_media_item_ids(db.session)
+        if not media_item_ids:
             return _notify("No indexed photos to classify yet.", "error")
-        classify_labels_automation_task(automation.id, photo_ids)
-        return _notify(f"Re-classifying {len(photo_ids)} photo(s) in the background…")
+        classify_labels_automation_task(automation.id, media_item_ids)
+        return _notify(f"Re-classifying {len(media_item_ids)} photo(s) in the background…")
 
     @app.route("/settings/llm/model", methods=["POST"])
     def settings_llm_model():

@@ -27,7 +27,7 @@ from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS, MediaItem
-from yaffo.db.repositories import photos_repository
+from yaffo.db.repositories import media_repository
 from yaffo.utils.photo_dates import parse_date_taken
 
 # The handler's lone config field (see automation_config.AUTOMATION_CONFIG).
@@ -63,18 +63,18 @@ def _nearest_match(
     return best
 
 
-def _geotag_from_neighbors(session: Session, progress_reporter: ProgressReporter, photo_ids: list[int], max_minutes: int) -> list[int]:
-    """Give each GPS-less photo in `photo_ids` the coordinates (and location name, if
+def _geotag_from_neighbors(session: Session, progress_reporter: ProgressReporter, media_item_ids: list[int], max_minutes: int) -> list[int]:
+    """Give each GPS-less photo in `media_item_ids` the coordinates (and location name, if
     the source has one) of the closest-in-time GPS-tagged photo within `max_minutes`;
     return the ids actually updated (committed). Candidates are loaded once up front,
     so newly-geotagged photos aren't reused."""
-    targets = photos_repository.get_photos_missing_gps(session, photo_ids)
+    targets = media_repository.get_media_items_missing_gps(session, media_item_ids)
     if not targets:
         progress_reporter.progress_update(1,1,0,0)
         return []
 
     candidates = []
-    for date_str, lat, lon, location_name in photos_repository.get_gps_timestamps(session):
+    for date_str, lat, lon, location_name in media_repository.get_gps_timestamps(session):
         dt = parse_date_taken(date_str)
         if dt is not None:
             candidates.append((dt, lat, lon, location_name))
@@ -94,29 +94,29 @@ def _geotag_from_neighbors(session: Session, progress_reporter: ProgressReporter
             session.commit()  # persist the chunk's coordinate updates (dirty ORM photos)
             pending.clear()
 
-    def photo_processor (photo: MediaItem):
-        target = parse_date_taken(photo.date_taken)
+    def media_item_processor (media_item: MediaItem):
+        target = parse_date_taken(media_item.date_taken)
         if target is None:
             return
         match = _nearest_match(target, times, values, max_delta)
         if match is not None:
             lat, lon, location_name = match
-            photo.latitude = lat
-            photo.longitude = lon
-            if location_name and not (photo.location_name or "").strip():
-                photo.location_name = location_name
-            updated.append(photo.id)
-            pending.append(photo.id)
+            media_item.latitude = lat
+            media_item.longitude = lon
+            if location_name and not (media_item.location_name or "").strip():
+                media_item.location_name = location_name
+            updated.append(media_item.id)
+            pending.append(media_item.id)
             if len(pending) >= _FLUSH_SIZE:
                 flush()
-    progress_reporter.run_with_progress(targets, photo_processor)
+    progress_reporter.run_with_progress(targets, media_item_processor)
     flush()  # remaining tail
     return updated
 
 
 @task_queue.task()
-def geotag_from_neighbors_automation_task(automation_id: int, photo_ids: list[int]):
-    """Geotag the GPS-less photos in `photo_ids` from their temporal neighbours.
+def geotag_from_neighbors_automation_task(automation_id: int, media_item_ids: list[int]):
+    """Geotag the GPS-less photos in `media_item_ids` from their temporal neighbours.
     Enqueued by the geotag_from_neighbors handler on a photo_indexed event; the time
     window is read live from the automation's config. The run is recorded as a Job."""
     session = SessionFactory()
@@ -127,8 +127,8 @@ def geotag_from_neighbors_automation_task(automation_id: int, photo_ids: list[in
         max_minutes = int(config_value(automation, _MINUTES_FIELD))
 
         def work(progress_reporter: ProgressReporter) -> str:
-            updated = _geotag_from_neighbors(session, progress_reporter, photo_ids, max_minutes)
-            return f"geotagged {len(updated)}/{len(photo_ids)} photo(s) within {max_minutes} min"
+            updated = _geotag_from_neighbors(session, progress_reporter, media_item_ids, max_minutes)
+            return f"geotagged {len(updated)}/{len(media_item_ids)} photo(s) within {max_minutes} min"
 
         record_run(session, automation, work)
     finally:
@@ -141,6 +141,6 @@ def enqueue_geotag_from_neighbors(automation: Automation, context: EventContext 
     """Handler for the built-in geotag-from-neighbors automation: enqueue the geotag
     for the photos the triggering event concerns. A schedule trigger (no context, no
     photo subjects) has nothing to act on, so it's a no-op."""
-    photo_ids = context.media_ids if context else []
-    if photo_ids:
-        geotag_from_neighbors_automation_task(automation.id, photo_ids)
+    media_item_ids = context.media_item_ids if context else []
+    if media_item_ids:
+        geotag_from_neighbors_automation_task(automation.id, media_item_ids)

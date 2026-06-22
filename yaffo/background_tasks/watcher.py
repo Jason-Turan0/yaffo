@@ -10,10 +10,10 @@ from watchdog.observers.api import BaseObserver, ObservedWatch
 from yaffo.background_tasks.tasks import SessionFactory
 from yaffo.background_tasks.watcher_suppression import should_suppress, sweep_expired
 from yaffo.common import PHOTO_EXTENSIONS
-from yaffo.db.repositories.photos_repository import move_photo_path
+from yaffo.db.repositories.media_repository import move_media_item_path
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
-from yaffo.utils.index_photos import delete_photos_by_paths, delete_photos_under_dir
+from yaffo.utils.index_photos import delete_media_items_by_paths, delete_media_items_under_dir
 from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.utils.settings import get_thumbnail_dir
 
@@ -177,7 +177,7 @@ def _filter_self_writes(adds: list[Path]) -> list[Path]:
 def _remove(paths: list[Path]) -> None:
     session = SessionFactory()
     try:
-        count = delete_photos_by_paths(session, [str(p) for p in paths])
+        count = delete_media_items_by_paths(session, [str(p) for p in paths])
         if count:
             logger.info(f"Removed {count} deleted photo(s) from the index")
     finally:
@@ -188,7 +188,7 @@ def _remove(paths: list[Path]) -> None:
 def _remove_dir(directory: Path) -> None:
     session = SessionFactory()
     try:
-        count = delete_photos_under_dir(session, str(directory))
+        count = delete_media_items_under_dir(session, str(directory))
         if count:
             logger.info(f"Removed {count} photo(s) under moved/deleted directory {directory}")
     finally:
@@ -200,7 +200,7 @@ def _under_watched(path: Path, watched: set[Path]) -> bool:
     return any(path == media_dir or media_dir in path.parents for media_dir in watched)
 
 
-def _existing_photos_under(directory: Path) -> list[Path]:
+def _existing_media_items_under(directory: Path) -> list[Path]:
     if not directory.exists():
         return []
     return [p for p in directory.rglob("*") if p.is_file() and _is_indexable(p)]
@@ -218,7 +218,7 @@ def _resolve_dir_ops(dir_ops: list[DirOp], watched: set[Path]) -> tuple[list[Pat
     for op in dir_ops:
         dirs_to_remove.append(op.src)
         if op.dest is not None and _under_watched(op.dest, watched):
-            paths_to_index.extend(_existing_photos_under(op.dest))
+            paths_to_index.extend(_existing_media_items_under(op.dest))
     return paths_to_index, dirs_to_remove
 
 
@@ -238,7 +238,7 @@ def _move_in_index(file_moves: list[FileMove], watched: set[Path]) -> tuple[list
     try:
         for move in file_moves:
             if _is_indexable(move.dest) and move.dest.exists() and _under_watched(move.dest, watched):
-                if move_photo_path(session, str(move.src), str(move.dest)):
+                if move_media_item_path(session, str(move.src), str(move.dest)):
                     logger.debug(f"Moved photo in index: {move.src} -> {move.dest}")
                 else:
                     paths_to_index.append(move.dest)  # not previously indexed; index fresh

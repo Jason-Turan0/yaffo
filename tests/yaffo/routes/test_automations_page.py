@@ -209,7 +209,7 @@ def test_run_now_scoped_runs_over_photos_under_path(app, client, monkeypatch):
     the automation fires with (the live twin of the test-files dry run)."""
     _add(app)
     monkeypatch.setattr(
-        "yaffo.routes.utilities.automations.photos_repository.get_photo_ids_under_path",
+        "yaffo.routes.utilities.automations.media_repository.get_media_item_ids_under_path",
         lambda session, path: [11, 22, 33],
     )
     calls = []
@@ -219,17 +219,17 @@ def test_run_now_scoped_runs_over_photos_under_path(app, client, monkeypatch):
     )
     resp = client.post("/utilities/automations/a1/run", json={"path": "/media/2022"})
     assert resp.status_code == 202
-    assert resp.get_json()["photo_count"] == 3
+    assert resp.get_json()["media_count"] == 3
     (slug, context), = calls
     assert slug == "a1"
-    assert context.media_ids == [11, 22, 33]
+    assert context.media_item_ids == [11, 22, 33]
     assert context.event_type == "manual"
 
 
 def test_run_now_scoped_no_photos_under_path_400(app, client, monkeypatch):
     _add(app)
     monkeypatch.setattr(
-        "yaffo.routes.utilities.automations.photos_repository.get_photo_ids_under_path",
+        "yaffo.routes.utilities.automations.media_repository.get_media_item_ids_under_path",
         lambda session, path: [],
     )
     fired = []
@@ -264,7 +264,7 @@ def test_all_event_triggers_show_run_on_folder_file_buttons(app, client):
     """Every trigger an event → the automation is purely photo-driven → folder/file
     pickers, not the plain Run-now button."""
     _add(app)
-    _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="photo_indexed")
+    _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="media_indexed")
     buttons = _run_buttons(client)
     assert buttons["pickers"] and not buttons["plain"]
 
@@ -281,7 +281,7 @@ def test_schedule_trigger_shows_plain_run_now(app, client):
 def test_mixed_triggers_show_plain_run_now(app, client):
     """An event + a schedule trigger → not all events → plain Run-now."""
     _add(app)
-    _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="photo_indexed")
+    _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="media_indexed")
     _add_trigger(app, trigger_type=TRIGGER_TYPE_SCHEDULE, enabled=True, cron="0 9 * * 1")
     buttons = _run_buttons(client)
     assert buttons["plain"] and not buttons["pickers"]
@@ -543,13 +543,13 @@ def test_add_event_trigger(app, client):
     _add(app)
     resp = client.post(
         "/utilities/automations/a1/triggers",
-        data={"action": "add_event", "new_event_type": "photo_indexed"},
+        data={"action": "add_event", "new_event_type": "media_indexed"},
     )
     assert resp.status_code == 200
     triggers = _triggers(app)
     assert len(triggers) == 1
     assert triggers[0].trigger_type == TRIGGER_TYPE_EVENT
-    assert triggers[0].event_type == "photo_indexed"
+    assert triggers[0].event_type == "media_indexed"
 
 
 def test_add_event_rejects_unknown_type(app, client):
@@ -619,7 +619,7 @@ def test_trigger_missing_id_404(app, client):
 
 def test_test_files_runs_against_photos_under_path(app, client):
     from yaffo.db.models import MediaItem
-    _add(app, published_code="print(len(ctx['media_ids']))")
+    _add(app, published_code="print(len(ctx['media_item_ids']))")
     with app.app_context():
         db.session.add_all([
             MediaItem(full_file_path="/media/trip/a.jpg"),
@@ -629,7 +629,7 @@ def test_test_files_runs_against_photos_under_path(app, client):
         db.session.commit()
     data = client.post("/utilities/automations/a1/test-files", json={"path": "/media/trip"}).get_json()
     assert data["context"]["type"] == "files"
-    assert len(data["context"]["photo_ids"]) == 2
+    assert len(data["context"]["media_item_ids"]) == 2
     assert data["output"] == ["2"]
 
 
@@ -642,14 +642,14 @@ def test_test_files_prefers_working_code(app, client):
 
 def test_test_files_records_mutating_action_without_performing(app, client):
     from yaffo.db.models import MediaItem, Tag
-    _add(app, published_code="tag_photos([{'photo_id': pid, 'name': 'beach'} for pid in ctx['media_ids']])")
+    _add(app, published_code="tag_media_items([{'media_item_id': pid, 'name': 'beach'} for pid in ctx['media_item_ids']])")
     with app.app_context():
         db.session.add(MediaItem(full_file_path="/media/a.jpg"))
         db.session.commit()
     data = client.post("/utilities/automations/a1/test-files", json={"path": "/media/a.jpg"}).get_json()
     assert data["success"] is True
     assert data["actions"][0]["summary"] == "Tag 1 photo(s)"
-    assert data["actions"][0]["name"] == "tag_photos"
+    assert data["actions"][0]["name"] == "tag_media_items"
     with app.app_context():
         assert db.session.query(Tag).count() == 0  # dry run performed no tagging
 

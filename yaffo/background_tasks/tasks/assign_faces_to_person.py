@@ -1,8 +1,8 @@
 from sqlalchemy.orm import joinedload
 from yaffo.background_tasks.events import emit_event
 from yaffo.background_tasks.utils import SessionFactory
-from yaffo.db.models import PersonFace, FACE_STATUS_ASSIGNED, Person, Face, EVENT_PHOTO_MODIFIED, MediaItem, \
-    PHOTO_STATUS_INDEXED
+from yaffo.db.models import PersonFace, FACE_STATUS_ASSIGNED, Person, Face, EVENT_MEDIA_MODIFIED, MediaItem, \
+    MEDIA_STATUS_INDEXED
 from yaffo.db.repositories.person_repository import update_person_embedding
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
@@ -38,13 +38,13 @@ def assign_faces_to_person(person_id: int, face_ids: list[int]):
         session.query(Face).filter(Face.id.in_(face_ids)).update({Face.status: FACE_STATUS_ASSIGNED},
                                                                  synchronize_session=False)
         # Set photo status back to INDEXED when faces are assigned
-        photo_ids = [face.media_item_id for face in faces]
-        session.query(MediaItem).filter(MediaItem.id.in_(photo_ids)).update(
-            {MediaItem.status: PHOTO_STATUS_INDEXED}, synchronize_session=False
+        media_item_ids = [face.media_item_id for face in faces]
+        session.query(MediaItem).filter(MediaItem.id.in_(media_item_ids)).update(
+            {MediaItem.status: MEDIA_STATUS_INDEXED}, synchronize_session=False
         )
         session.commit()
         update_person_embedding(person_id, session)
-        emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": list(set(photo_ids))})
+        emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": list(set(media_item_ids))})
         logger.debug(f"Finished assign_faces_to_person_task for person {person_id} with {len(faces)} faces")
     except Exception as e:
         logger.error("Failed to assign faces to person", exc_info=e)

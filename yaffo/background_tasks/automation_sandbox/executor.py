@@ -18,7 +18,7 @@ def context_globals(context) -> dict:
     return {
         "event_type": context.event_type if context else None,
         "job_id": context.job_id if context else None,
-        "media_ids": list(context.media_ids) if context else [],
+        "media_item_ids": list(context.media_item_ids) if context else [],
         "groups": [list(g) for g in context.groups] if context else [],
     }
 

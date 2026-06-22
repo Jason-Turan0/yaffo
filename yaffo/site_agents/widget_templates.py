@@ -5,7 +5,7 @@ scratch (which drifts all over the place). Every template:
 
 - uses the **real data contract** — named `data_query`s over the exposed sources
   (`photos`, `people`, `people_face`, …; see data_query_repository) and the
-  in-iframe `window.yaffo` API (`yaffo.data[name]`, `yaffo.query`, `yaffo.photoUrl`,
+  in-iframe `window.yaffo` API (`yaffo.data[name]`, `yaffo.query`, `yaffo.mediaUrl`,
   `yaffo.publish`/`subscribe`, `yaffo.saveState`);
 - writes only its *specific* CSS, in terms of the **design tokens**: the widget
   frame loads `static/tokens.css` with the active theme stamped on
@@ -74,7 +74,7 @@ const photos = yaffo.data.photos || [];
 if (!photos.length) { root.innerHTML = "<div class='yf-empty'>No photos to show.</div>"; }
 photos.forEach((p) => {
   const img = document.createElement('img');
-  img.src = yaffo.photoUrl(p.id);
+  img.src = yaffo.mediaUrl(p.id);
   img.loading = 'lazy';
   img.alt = p.location_name || '';
   root.appendChild(img);
@@ -146,7 +146,7 @@ const p = (yaffo.data.featured || [])[0];
 if (!p) { root.innerHTML = "<div class='yf-empty'>No photo selected.</div>"; }
 else {
   const img = document.createElement('img');
-  img.src = yaffo.photoUrl(p.id);
+  img.src = yaffo.mediaUrl(p.id);
   const cap = document.createElement('div');
   cap.className = 'cap';
   cap.textContent = [p.location_name, p.year].filter(Boolean).join(' \\u00b7 ');
@@ -201,7 +201,7 @@ if (window.SearchableSelect) SearchableSelect.init(sel);
 function draw(rows) {
   grid.innerHTML = '';
   if (!rows || !rows.length) { grid.innerHTML = "<div class='yf-empty'>No photos to show.</div>"; return; }
-  rows.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.photoUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
+  rows.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.mediaUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
 }
 async function render() {
   const year = sel.value;
@@ -300,7 +300,7 @@ _PEOPLE = WidgetTemplate(
     if (token !== reqToken) return;  // a newer selection superseded this one
     grid.innerHTML = '';
     if (!photos.length) { grid.innerHTML = "<div class='yf-empty'>No photos for this person.</div>"; return; }
-    photos.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.photoUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
+    photos.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.mediaUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
   }
 
   renderPills();
@@ -353,7 +353,7 @@ body, html { height: 100%; padding: 0; overflow: hidden; }
 (function () {
   const photo = (yaffo.data.hero_photo || [])[0];
   if (!photo) return;
-  document.getElementById('hero-img').src = yaffo.photoUrl(photo.id);
+  document.getElementById('hero-img').src = yaffo.mediaUrl(photo.id);
   if (photo.location_name) document.getElementById('hero-title').textContent = photo.location_name;
   const parts = [];
   if (photo.date_taken) {
@@ -446,7 +446,7 @@ body { padding: 0; }
     const item = document.createElement('div');
     item.className = 'gallery-item';
     const img = document.createElement('img');
-    img.src = yaffo.photoUrl(photo.id);
+    img.src = yaffo.mediaUrl(photo.id);
     img.alt = photo.location_name || '';
     img.loading = 'lazy';
     img.onerror = () => { img.src = '/placeholder'; };
@@ -469,7 +469,7 @@ body { padding: 0; }
 
   function showLightboxPhoto() {
     const p = photos[currentIdx];
-    lbImg.src = yaffo.photoUrl(p.id);
+    lbImg.src = yaffo.mediaUrl(p.id);
     const parts = [];
     if (p.date_taken) parts.push(formatDate(p.date_taken));
     if (p.location_name) parts.push('📍 ' + p.location_name);
@@ -581,7 +581,7 @@ const st = yaffo.state || {};
 function draw(photos) {
   grid.innerHTML = '';
   if (!photos || !photos.length) { grid.innerHTML = "<div class='yf-empty'>No photos match.</div>"; return; }
-  photos.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.photoUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
+  photos.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.mediaUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
 }
 async function apply(flt) {
   yaffo.saveState({ filter: flt });
@@ -624,7 +624,7 @@ if (!photos.length) { root.innerHTML = "<div class='yf-empty'>No photos.</div>";
 let activeEl = null;
 photos.forEach((p, idx) => {
   const img = document.createElement('img');
-  img.src = yaffo.photoUrl(p.id);
+  img.src = yaffo.mediaUrl(p.id);
   img.loading = 'lazy';
   img.addEventListener('click', () => {
     if (activeEl) activeEl.classList.remove('active');
@@ -665,7 +665,7 @@ const img = document.getElementById('spot-img');
 const cap = document.getElementById('spot-cap');
 function show(photo) {
   if (!photo) return;
-  img.src = yaffo.photoUrl(photo.id);
+  img.src = yaffo.mediaUrl(photo.id);
   cap.textContent = [photo.location_name, photo.year].filter(Boolean).join(' · ') || ('Photo #' + photo.id);
 }
 yaffo.subscribe('photo', show);
@@ -793,7 +793,7 @@ body { padding: 0; position: relative; }
 
   const caption = (p) => [p.location_name, p.year].filter(Boolean).join(' · ') || ('Photo #' + p.id);
   function showPhoto(p, thumbEl) {
-    mainImg.src = yaffo.photoUrl(p.id);
+    mainImg.src = yaffo.mediaUrl(p.id);
     cap.textContent = caption(p);
     thumbs.querySelectorAll('img').forEach((t) => t.classList.remove('active'));
     if (thumbEl) thumbEl.classList.add('active');
@@ -815,7 +815,7 @@ body { padding: 0; position: relative; }
     thumbs.innerHTML = '';
     pics.slice(0, 30).forEach((p, i) => {
       const t = document.createElement('img');
-      t.src = yaffo.photoUrl(p.id);
+      t.src = yaffo.mediaUrl(p.id);
       t.loading = 'lazy';
       t.addEventListener('click', () => showPhoto(p, t));  // click a thumbnail -> show it large
       thumbs.appendChild(t);
@@ -903,7 +903,7 @@ function drawCrumbs() {
   });
 }
 
-// folders: [{ name, photo_count }] from the `folders` source.
+// folders: [{ name, media_count }] from the `folders` source.
 function drawFolders(folders) {
   foldersEl.innerHTML = '';
   if (!folders.length) { foldersEl.innerHTML = "<div class='yf-empty'>No subfolders here.</div>"; return; }
@@ -912,7 +912,7 @@ function drawFolders(folders) {
     b.className = 'fb-folder';
     const ico = document.createElement('span'); ico.className = 'fb-ico'; ico.textContent = '📁';
     const label = document.createElement('span'); label.textContent = f.name;
-    const count = document.createElement('span'); count.className = 'fb-count'; count.textContent = f.photo_count;
+    const count = document.createElement('span'); count.className = 'fb-count'; count.textContent = f.media_count;
     b.append(ico, label, count);
     b.onclick = () => go(state.path ? state.path + '/' + f.name : f.name);
     foldersEl.appendChild(b);
@@ -968,7 +968,7 @@ const st = yaffo.state || {};
 function draw(rows) {
   grid.innerHTML = '';
   if (!rows || !rows.length) { grid.innerHTML = "<div class='yf-empty'>No photos in this folder.</div>"; return; }
-  rows.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.photoUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
+  rows.forEach((p) => { const img = document.createElement('img'); img.src = yaffo.mediaUrl(p.id); img.loading = 'lazy'; grid.appendChild(img); });
 }
 
 async function show(loc) {

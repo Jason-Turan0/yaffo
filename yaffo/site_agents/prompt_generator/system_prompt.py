@@ -103,8 +103,8 @@ def _widget_contract() -> str:
     return block("widget_contract", [
         "The widget renders in a sandboxed iframe.",
         "- Read query results from yaffo.data[queryName]; read saved state from yaffo.state.",
-        "- Build the DOM from that data. Photos have no image-URL field: use yaffo.photoUrl(id)",
-        "  (or /photos/<id>) for an <img> src, e.g. /photos/123. No other image origin is allowed.",
+        "- Build the DOM from that data. Photos have no image-URL field: use yaffo.mediaUrl(id)",
+        "  (or /media/<id>) for an <img> src, e.g. /media/123. No other image origin is allowed.",
         "- You CANNOT fetch/XHR/WebSocket (connect-src 'none'); use yaffo.query for live data.",
         api,
         "- Keep all CSS/JS inline and scoped to the widget. No external resources except photo",

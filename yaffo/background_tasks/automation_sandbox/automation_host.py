@@ -105,7 +105,7 @@ HOST_API: tuple[HostFunction, ...] = (
             "lt, lte, gt, gte, contains, in. You never touch the database directly "
             "-- declare what you want and the server resolves it. Photo rows also "
             "carry `media_dir_id` and `relative_path` (the file's location, never an "
-            "absolute path) -- pass media_dir_id to move_photos."
+            "absolute path) -- pass media_dir_id to move_media_items."
         ),
         example='recent = data_query({"source": "media_items", "limit": 10})',
         impl=actions.data_query,
@@ -120,7 +120,7 @@ HOST_API: tuple[HostFunction, ...] = (
             "are done so far and the total. Optional, but do it for any run that loops "
             "over many items."
         ),
-        example='report_progress(done, len(ctx["media_ids"]))',
+        example='report_progress(done, len(ctx["media_item_ids"]))',
         impl=actions.report_progress,
         summarize=actions.summarize_report_progress,
         mutating=False,
@@ -128,29 +128,29 @@ HOST_API: tuple[HostFunction, ...] = (
     ),
     HostFunction(
         description=(
-            "Add tags in one batched write. `tags` is a list of {photo_id, name, "
+            "Add tags in one batched write. `tags` is a list of {media_item_id, name, "
             'value?} dicts: `name` is the tag (e.g. "beach"), `value` an optional value '
             "for name/value tags. Pass the whole set in one call (see <batching>)."
         ),
-        example='tag_photos([{"photo_id": pid, "name": "beach"} for pid in ctx["media_ids"]])',
-        impl=actions.tag_photos,
-        summarize=actions.summarize_tag_photos,
+        example='tag_media_items([{"media_item_id": pid, "name": "beach"} for pid in ctx["media_item_ids"]])',
+        impl=actions.tag_media_items,
+        summarize=actions.summarize_tag_media_items,
         mutating=True,
     ),
     HostFunction(
         description=(
-            "Rename files in one batched write. `renames` is a list of {photo_id, "
+            "Rename files in one batched write. `renames` is a list of {media_item_id, "
             "new_name} dicts; each `new_name` is the new filename incl. extension, kept "
             "in the same folder. Pass the whole set in one call (see <batching>)."
         ),
-        example='rename_files([{"photo_id": pid, "new_name": "2024-06-01_beach.jpg"}])',
+        example='rename_files([{"media_item_id": pid, "new_name": "2024-06-01_beach.jpg"}])',
         impl=actions.rename_files,
         summarize=actions.summarize_rename_files,
         mutating=True,
     ),
     HostFunction(
         description=(
-            "Move photos in one batched write. `moves` is a list of {photo_id, "
+            "Move photos in one batched write. `moves` is a list of {media_item_id, "
             "media_dir_id, target_path} dicts: each photo moves into `target_path` (a "
             "sub-folder of the media dir named by `media_dir_id`, created if needed), "
             "keeping its file name. Use a photo row's media_dir_id (from data_query) to "
@@ -158,9 +158,9 @@ HOST_API: tuple[HostFunction, ...] = (
             "target outside the media dir, or an unknown media_dir_id, is skipped. Pass "
             "the whole set in one call (see <batching>)."
         ),
-        example='move_photos([{"photo_id": r["id"], "media_dir_id": r["media_dir_id"], "target_path": "2024/06"} for r in rows])',
-        impl=actions.move_photos,
-        summarize=actions.summarize_move_photos,
+        example='move_media_items([{"media_item_id": r["id"], "media_dir_id": r["media_dir_id"], "target_path": "2024/06"} for r in rows])',
+        impl=actions.move_media_items,
+        summarize=actions.summarize_move_media_items,
         mutating=True,
     ),
     HostFunction(
@@ -178,14 +178,14 @@ HOST_API: tuple[HostFunction, ...] = (
     ),
     HostFunction(
         description=(
-            "Delete photos in one batched write. `photo_ids` is a list of ids; each "
+            "Delete photos in one batched write. `media_item_ids` is a list of ids; each "
             "photo's file is sent to the OS trash (recoverable) and the photo with its "
             "faces/tags/labels is removed from the index. Destructive -- only delete "
             "what the request clearly asks to remove."
         ),
-        example='delete_photos([r["id"] for r in junk])',
-        impl=actions.delete_photos,
-        summarize=actions.summarize_delete_photos,
+        example='delete_media_items([r["id"] for r in junk])',
+        impl=actions.delete_media_items,
+        summarize=actions.summarize_delete_media_items,
         mutating=True,
     ),
     HostFunction(
@@ -193,7 +193,7 @@ HOST_API: tuple[HostFunction, ...] = (
             "How similar each face in the photo is to a known person, by face "
             "embeddings -- use it to decide whether to assign_faces."
         ),
-        example="scores = face_similarity(photo_id, person_id)",
+        example="scores = face_similarity(media_item_id, person_id)",
         impl=compare.face_similarity,
         summarize=compare.summarize_face_similarity,
         mutating=False,
@@ -203,7 +203,7 @@ HOST_API: tuple[HostFunction, ...] = (
             "Score every face in the photo against all known people -- the inverse "
             "of face_similarity, for identifying who is in a photo."
         ),
-        example="matches = match_people(photo_id)",
+        example="matches = match_people(media_item_id)",
         impl=compare.match_people,
         summarize=compare.summarize_match_people,
         mutating=False

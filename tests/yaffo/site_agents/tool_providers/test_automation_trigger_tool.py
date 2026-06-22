@@ -14,7 +14,7 @@ from yaffo.db import db
 from yaffo.db.models import (
     Automation,
     AutomationTrigger,
-    EVENT_PHOTO_INDEXED,
+    EVENT_MEDIA_INDEXED,
     AUTOMATION_STATUS_READY,
     TRIGGER_TYPE_EVENT,
     TRIGGER_TYPE_SCHEDULE,
@@ -70,13 +70,13 @@ def test_adds_schedule_trigger(session, automation):
 def test_adds_event_trigger(session, automation):
     tool = _tool(session)
 
-    result = tool.call_tool(tool.ADD, {"trigger_type": "event", "event_type": EVENT_PHOTO_INDEXED})
+    result = tool.call_tool(tool.ADD, {"trigger_type": "event", "event_type": EVENT_MEDIA_INDEXED})
 
     assert "Added an event trigger" in result
     triggers = _triggers(session)
     assert len(triggers) == 1
     assert triggers[0].trigger_type == TRIGGER_TYPE_EVENT
-    assert triggers[0].event_type == EVENT_PHOTO_INDEXED
+    assert triggers[0].event_type == EVENT_MEDIA_INDEXED
 
 
 def test_rejects_invalid_cron(session, automation):
@@ -127,9 +127,9 @@ def test_duplicate_schedule_is_idempotent(session, automation):
 
 def test_duplicate_event_is_idempotent(session, automation):
     tool = _tool(session)
-    tool.call_tool(tool.ADD, {"trigger_type": "event", "event_type": EVENT_PHOTO_INDEXED})
+    tool.call_tool(tool.ADD, {"trigger_type": "event", "event_type": EVENT_MEDIA_INDEXED})
 
-    result = tool.call_tool(tool.ADD, {"trigger_type": "event", "event_type": EVENT_PHOTO_INDEXED})
+    result = tool.call_tool(tool.ADD, {"trigger_type": "event", "event_type": EVENT_MEDIA_INDEXED})
 
     assert "Already triggers on" in result
     assert len(_triggers(session)) == 1
@@ -156,9 +156,9 @@ def test_removes_schedule_trigger(session, automation):
 
 def test_removes_event_trigger(session, automation):
     tool = _tool(session)
-    tool.call_tool(tool.ADD, {"trigger_type": "event", "event_type": EVENT_PHOTO_INDEXED})
+    tool.call_tool(tool.ADD, {"trigger_type": "event", "event_type": EVENT_MEDIA_INDEXED})
 
-    result = tool.call_tool(tool.REMOVE, {"trigger_type": "event", "event_type": EVENT_PHOTO_INDEXED})
+    result = tool.call_tool(tool.REMOVE, {"trigger_type": "event", "event_type": EVENT_MEDIA_INDEXED})
 
     assert "Removed the event trigger" in result
     assert _triggers(session) == []
@@ -167,7 +167,7 @@ def test_removes_event_trigger(session, automation):
 def test_remove_only_targets_the_match(session, automation):
     tool = _tool(session)
     tool.call_tool(tool.ADD, {"trigger_type": "schedule", "cron": "0 3 * * *"})
-    tool.call_tool(tool.ADD, {"trigger_type": "event", "event_type": EVENT_PHOTO_INDEXED})
+    tool.call_tool(tool.ADD, {"trigger_type": "event", "event_type": EVENT_MEDIA_INDEXED})
 
     tool.call_tool(tool.REMOVE, {"trigger_type": "schedule", "cron": "0 3 * * *"})
 
@@ -187,6 +187,6 @@ def test_remove_nonexistent_schedule_is_reported(session, automation):
 def test_remove_nonexistent_event_is_reported(session, automation):
     tool = _tool(session)
 
-    result = tool.call_tool(tool.REMOVE, {"trigger_type": "event", "event_type": EVENT_PHOTO_INDEXED})
+    result = tool.call_tool(tool.REMOVE, {"trigger_type": "event", "event_type": EVENT_MEDIA_INDEXED})
 
-    assert "No 'photo_indexed' event trigger" in result
+    assert "No 'media_indexed' event trigger" in result

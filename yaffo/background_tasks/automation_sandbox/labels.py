@@ -2,11 +2,11 @@
 file name, a person's name. Fall back to "photo N" / "person N" when missing."""
 from sqlalchemy.orm import Session
 
-from yaffo.db.repositories import person_repository, photos_repository
+from yaffo.db.repositories import person_repository, media_repository
 
 
-def photo_label(session: Session, photo_id) -> str:
-    return photos_repository.get_photo_filename(session, photo_id) or f"photo {photo_id}"
+def media_item_label(session: Session, media_item_id) -> str:
+    return media_repository.get_media_item_filename(session, media_item_id) or f"photo {media_item_id}"
 
 
 def person_label(session: Session, person_id) -> str:
@@ -15,5 +15,5 @@ def person_label(session: Session, person_id) -> str:
 
 
 def face_label(session: Session, face_id) -> str:
-    filename = photos_repository.get_photo_filename_for_face(session, face_id)
+    filename = media_repository.get_media_item_filename_for_face(session, face_id)
     return f"a face in {filename}" if filename else f"face {face_id}"

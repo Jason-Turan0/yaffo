@@ -19,7 +19,7 @@ from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, AUTOMATION_HANDLER_AUTO_ASSIGN_FACES
-from yaffo.db.repositories import person_repository, photos_repository
+from yaffo.db.repositories import person_repository, media_repository
 from yaffo.db.repositories.person_repository import get_similarity_bounds
 from yaffo.domain.compare_utils import calculate_face_similarity, ui_threshold_to_similarity
 
@@ -31,7 +31,7 @@ _THRESHOLD_FIELD = AUTOMATION_CONFIG[AUTOMATION_HANDLER_AUTO_ASSIGN_FACES][0]
 _FLUSH_SIZE = 200
 
 
-def _assign_faces(session: Session, progress_reporter: ProgressReporter, photo_ids: list[int], threshold: float) -> int:
+def _assign_faces(session: Session, progress_reporter: ProgressReporter, media_item_ids: list[int], threshold: float) -> int:
     """For each face in the given photos, assign it to the single person it matches
     at/above `threshold`; skip faces with zero or multiple strong matches. Returns
     how many links were made. People are loaded once for the whole batch.
@@ -53,9 +53,9 @@ def _assign_faces(session: Session, progress_reporter: ProgressReporter, photo_i
             pending.clear()
         photos_in_buffer = 0
 
-    def photo_processor(photo_id: int):
+    def media_item_processor(media_item_id: int):
         nonlocal photos_in_buffer
-        for face in photos_repository.get_faces_for_photo(session, photo_id):
+        for face in media_repository.get_faces_for_media_item(session, media_item_id):
             strong = [
                 person_id
                 for person_id, score in calculate_face_similarity(face, people).items()
@@ -67,14 +67,14 @@ def _assign_faces(session: Session, progress_reporter: ProgressReporter, photo_i
         if photos_in_buffer >= _FLUSH_SIZE:
             flush()
 
-    progress_reporter.run_with_progress(photo_ids, photo_processor)
+    progress_reporter.run_with_progress(media_item_ids, media_item_processor)
     flush()  # remaining tail
     return assigned
 
 
 @task_queue.task()
-def auto_assign_faces_automation_task(automation_id: int, photo_ids: list[int]):
-    """Assign the faces in `photo_ids` to their unique strong match. Enqueued by the
+def auto_assign_faces_automation_task(automation_id: int, media_item_ids: list[int]):
+    """Assign the faces in `media_item_ids` to their unique strong match. Enqueued by the
     auto_assign_faces system handler when a photo_indexed event fires; the threshold
     is read live from the automation's config. The run is recorded as a Job."""
     session = SessionFactory()
@@ -88,9 +88,9 @@ def auto_assign_faces_automation_task(automation_id: int, photo_ids: list[int]):
         threshold = ui_threshold_to_similarity(ui_threshold, *get_similarity_bounds(session))
 
         def work(progress_reporter: ProgressReporter) -> str:
-            assigned = _assign_faces(session, progress_reporter, photo_ids, threshold)
+            assigned = _assign_faces(session, progress_reporter, media_item_ids, threshold)
             return (
-                f"assigned {assigned} face(s) across {len(photo_ids)} "
+                f"assigned {assigned} face(s) across {len(media_item_ids)} "
                 f"photo(s) at threshold {ui_threshold} (cosine {threshold:.3f})"
             )
 
@@ -105,6 +105,6 @@ def enqueue_auto_assign_faces(automation: Automation, context: EventContext | No
     """Handler for the built-in auto-assign-faces automation: enqueue the task for
     the photos the triggering event concerns. A schedule trigger (no context, no
     photo subjects) has nothing to act on, so it's a no-op."""
-    photo_ids = context.media_ids if context else []
-    if photo_ids:
-        auto_assign_faces_automation_task(automation.id, photo_ids)
+    media_item_ids = context.media_item_ids if context else []
+    if media_item_ids:
+        auto_assign_faces_automation_task(automation.id, media_item_ids)

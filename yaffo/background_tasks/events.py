@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.db.models import (
     Job, MediaItem,
-    EVENT_PHOTO_IMPORTED, EVENT_PHOTO_INDEXED,
+    EVENT_MEDIA_IMPORTED, EVENT_MEDIA_INDEXED,
 )
 from yaffo.logging_config import get_logger
 
@@ -17,7 +17,7 @@ logger = get_logger(__name__, 'background_tasks')
 @dataclass(frozen=True)
 class EventContext:
     """What a domain event hands to a subscribed automation's handler. Built by
-    dispatch_event_task from the queued (event_type, payload); `media_ids` are the
+    dispatch_event_task from the queued (event_type, payload); `media_item_ids` are the
     subjects the event concerns (empty when an event has no media subjects).
 
     `groups` carries related-photo groupings when an event provides them — e.g.
@@ -30,7 +30,7 @@ class EventContext:
     (see event_chain_scope / the Loop guard section in docs/automations.md)."""
     event_type: str
     job_id: str | None = None
-    media_ids: list[int] = field(default_factory=list)
+    media_item_ids: list[int] = field(default_factory=list)
     groups: list[list[int]] = field(default_factory=list)
     origin_automation_ids: list[int] = field(default_factory=list)
 
@@ -59,7 +59,7 @@ def event_chain_scope(origin_automation_ids: list[int] | None, automation_id: in
 
 
 # event_type stamped on the EventContext of a manual "Run now" over a picked
-# file/folder (no domain event fired it). Handlers act on media_ids regardless;
+# file/folder (no domain event fired it). Handlers act on media_item_ids regardless;
 # custom scripts can read ctx['event_type'] to tell a manual run from a real event.
 MANUAL_RUN_EVENT_TYPE = "manual"
 
@@ -68,8 +68,8 @@ MANUAL_RUN_EVENT_TYPE = "manual"
 # Jobs not listed emit nothing. (duplicates_found is emitted directly from
 # find_duplicates_task, which carries the duplicate groups, not via this map.)
 JOB_EVENT_MAP: dict[str, str] = {
-    'index_photos': EVENT_PHOTO_INDEXED,
-    'import_photos': EVENT_PHOTO_IMPORTED,
+    'index_photos': EVENT_MEDIA_INDEXED,
+    'import_photos': EVENT_MEDIA_IMPORTED,
 }
 
 
@@ -87,7 +87,7 @@ def emit_event(event_type: str, payload: dict) -> None:
     dispatch_event_task(event_type, payload)
 
 
-def _resolve_photo_ids(session: Session, job: Job) -> list[int]:
+def _resolve_media_item_ids(session: Session, job: Job) -> list[int]:
     """Photo ids a completed import/index job touched, from its job_data files."""
     if not job.job_data:
         return []
@@ -109,5 +109,5 @@ def emit_job_completed_event(session: Session, job: Job) -> None:
         return
     emit_event(event_type, {
         'job_id': job.id,
-        'media_ids': _resolve_photo_ids(session, job),
+        'media_item_ids': _resolve_media_item_ids(session, job),
     })

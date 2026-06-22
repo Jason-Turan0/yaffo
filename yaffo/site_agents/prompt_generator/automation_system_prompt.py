@@ -50,7 +50,7 @@ def _language() -> str:
 _CTX_FIELD_DOCS = {
     "event_type": "the event name for an event run, or None for a schedule.",
     "job_id": "the id of the job that emitted the event (or None).",
-    "media_ids": "the media ids the event concerns (empty for a schedule).",
+    "media_item_ids": "the media ids the event concerns (empty for a schedule).",
     "groups": (
         "related-media groupings — one list of media ids per group (e.g. each "
         "duplicate set, keeper first); empty for events without groupings."
@@ -74,15 +74,15 @@ def _context() -> str:
 def _scoping() -> str:
     return block("scoping", [
         "Scope an event run to its photos — never sweep the whole library on an event.",
-        "When ctx['event_type'] is set, the run is about exactly ctx['media_ids'] (the",
+        "When ctx['event_type'] is set, the run is about exactly ctx['media_item_ids'] (the",
         "photos that event concerns), so every photos query MUST filter to them:",
-        '  data_query({"source": "media_items", "id": {"in": ctx["media_ids"]}, ...})',
+        '  data_query({"source": "media_items", "id": {"in": ctx["media_item_ids"]}, ...})',
         "and derive faces/people/labels from that set. Querying photos without an `id`",
         "filter on an event run re-scans the entire library on every event — that is the",
         "wrong behaviour: slow, and it acts on photos the event never mentioned.",
-        "If ctx['media_ids'] is empty on an event run, there's nothing to do — stop.",
+        "If ctx['media_item_ids'] is empty on an event run, there's nothing to do — stop.",
         "Operate library-wide ONLY on a schedule run (ctx['event_type'] is None and",
-        "ctx['media_ids'] is empty) — that's the one case where you query without an id",
+        "ctx['media_item_ids'] is empty) — that's the one case where you query without an id",
         "filter.",
     ])
 
@@ -106,12 +106,12 @@ def _sources() -> str:
         "There are no joins — run a query per source and stitch the rows together on the",
         f"foreign-key columns: {relationship_summary()}.",
         "(photo_labels + classification_labels are the auto-classifier's labels — read-only;",
-        "to categorize photos yourself, write tags with tag_photos.)",
+        "to categorize photos yourself, write tags with tag_media_items.)",
         'Filter columns with operators at the top level, e.g. {"source": "media_items",',
         '"year": {"eq": 2024}, "id": {"in": [1,2,3]}, "limit": 24}. Operators: eq, ne,',
         "lt, lte, gt, gte, contains, in, prefix (path columns: matches a leading prefix / subtree).",
         "Some tables also accept host-derived filter columns (disk paths never exposed; a",
-        "photo's media_dir_id / relative_path, which move_photo also addresses by):",
+        "photo's media_dir_id / relative_path, which move_media_item also addresses by):",
         *calculated_filter_lines(FIELDS_BY_SOURCE),
         "Computed (non-table) sources take the params shown (not column filters):",
         *virtual_source_lines(),
@@ -145,16 +145,16 @@ def _triggers() -> str:
 
 def _batching() -> str:
     return block("batching", [
-        "Writes are batched. Every mutating host function (tag_photos, assign_faces,",
-        "move_photos, rename_files) takes a LIST and persists the whole set in one",
+        "Writes are batched. Every mutating host function (tag_media_items, assign_faces,",
+        "move_media_items, rename_files) takes a LIST and persists the whole set in one",
         "transaction — there are no single-item write functions. So build the work into",
         "a list as you loop, then make ONE write call with the full list; never call a",
         "write inside a loop. Each takes a list of dicts (see the host API for each",
         "one's keys). Reads (data_query, match_people, face_similarity) can still run",
         "per item in the loop that builds the batch.",
         "Example — tag everything the run touched, in one write:",
-        '  to_tag = [{"photo_id": pid, "name": "reviewed"} for pid in ctx["media_ids"]]',
-        "  tag_photos(to_tag)",
+        '  to_tag = [{"media_item_id": pid, "name": "reviewed"} for pid in ctx["media_item_ids"]]',
+        "  tag_media_items(to_tag)",
     ])
 
 
@@ -167,12 +167,12 @@ def _progress() -> str:
         "`done` is how many you've handled so far; a final report_progress(total, total)",
         "marks it complete. Skip it for trivial, near-instant runs.",
         "Example — report while building the batch, then write once:",
-        '  pids = ctx["media_ids"]',
+        '  pids = ctx["media_item_ids"]',
         "  to_tag = []",
         "  for i, pid in enumerate(pids):",
-        '      to_tag.append({"photo_id": pid, "name": "reviewed"})',
+        '      to_tag.append({"media_item_id": pid, "name": "reviewed"})',
         "      report_progress(i + 1, len(pids))",
-        "  tag_photos(to_tag)",
+        "  tag_media_items(to_tag)",
     ])
 
 

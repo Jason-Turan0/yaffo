@@ -9,7 +9,7 @@ something to exercise end-to-end without the builder UI:
 2. "Log photos each minute" — a SCHEDULE automation on `* * * * *`, and
 3. "Organize by date" — an EVENT automation that moves each indexed photo into a
    Year/Month sub-folder of its media dir (using data_query's media_dir_id +
-   move_photo), demonstrating the read + mutating host API.
+   move_media_item), demonstrating the read + mutating host API.
 
 All are custom (handler=None, code set) and enabled. The first two run a
 data_query and print rows; the sandbox captures the prints and the executor logs
@@ -29,23 +29,23 @@ from yaffo.db.models import (
     AutomationTrigger,
     AUTOMATION_STATUS_READY,
     EVENT_DUPLICATES_FOUND,
-    EVENT_PHOTO_INDEXED,
+    EVENT_MEDIA_INDEXED,
     TRIGGER_TYPE_EVENT,
     TRIGGER_TYPE_SCHEDULE,
 )
 
 # On photo_indexed, move each photo into a Year/Month sub-folder of its media dir.
 # data_query gives each photo's media_dir_id + year/month; the moves are collected
-# and written in one batched move_photos call (see <batching> in the prompt).
+# and written in one batched move_media_items call (see <batching> in the prompt).
 _ORGANIZE_CODE = """\
-rows = data_query({"source": "media_items", "id": {"in": ctx["media_ids"]}})
+rows = data_query({"source": "media_items", "id": {"in": ctx["media_item_ids"]}})
 moves = []
 for row in rows:
     if row["year"] and row["month"] and row["media_dir_id"]:
         month = row["month"]
         mm = str(month) if month >= 10 else "0" + str(month)
-        moves.append({"photo_id": row["id"], "media_dir_id": row["media_dir_id"], "target_path": str(row["year"]) + "/" + mm})
-move_photos(moves)
+        moves.append({"media_item_id": row["id"], "media_dir_id": row["media_dir_id"], "target_path": str(row["year"]) + "/" + mm})
+move_media_items(moves)
 """
 
 
@@ -55,7 +55,7 @@ move_photos(moves)
 # (queries the whole library, not ctx), so it's run via Run now. Walks people ->
 # their faces -> the photos those faces are in, keeps the favorites, and batch-moves
 # each into "<Kid>/<Year>" within its media dir. Exercises the favorite filter,
-# report_progress, and the batched move_photos write.
+# report_progress, and the batched move_media_items write.
 _FILE_KIDS_CODE = """\
 people = data_query({"source": "people", "name": {"in": ["Chase", "Nathan"]}})
 name_by_person = {p["id"]: p["name"] for p in people}
@@ -71,26 +71,26 @@ if person_ids:
     if face_ids:
         faces = data_query({"source": "faces", "id": {"in": face_ids}})
         for face in faces:
-            photo_id = face["media_item_id"]
-            if photo_id != None and photo_id not in person_by_photo:
-                person_by_photo[photo_id] = person_by_face[face["id"]]
+            media_item_id = face["media_item_id"]
+            if media_item_id != None and media_item_id not in person_by_photo:
+                person_by_photo[media_item_id] = person_by_face[face["id"]]
 
-    photo_ids = [pid for pid in person_by_photo]
-    if photo_ids:
-        favorites = data_query({"source": "media_items", "favorite": {"eq": True}, "id": {"in": photo_ids}})
+    media_item_ids = [pid for pid in person_by_photo]
+    if media_item_ids:
+        favorites = data_query({"source": "media_items", "favorite": {"eq": True}, "id": {"in": media_item_ids}})
         total = len(favorites)
         for i, row in enumerate(favorites):
             if row["year"] and row["media_dir_id"]:
                 kid = name_by_person[person_by_photo[row["id"]]]
                 moves.append({
-                    "photo_id": row["id"],
+                    "media_item_id": row["id"],
                     "media_dir_id": row["media_dir_id"],
                     "target_path": kid + "/" + str(row["year"]),
                 })
             report_progress(i + 1, total)
 
 print("Filing " + str(len(moves)) + " favorite photo(s) of Chase & Nathan into <kid>/<year> folders")
-move_photos(moves)
+move_media_items(moves)
 """
 
 # Always raises, to exercise the error path (a FAILED run in the history).
@@ -132,7 +132,7 @@ def seed_automations() -> None:
             triggers=[AutomationTrigger(
                 trigger_type=TRIGGER_TYPE_EVENT,
                 enabled=True,
-                event_type=EVENT_PHOTO_INDEXED,
+                event_type=EVENT_MEDIA_INDEXED,
             )],
         )
 
@@ -169,7 +169,7 @@ def seed_automations() -> None:
             triggers=[AutomationTrigger(
                 trigger_type=TRIGGER_TYPE_EVENT,
                 enabled=True,
-                event_type=EVENT_PHOTO_INDEXED,
+                event_type=EVENT_MEDIA_INDEXED,
             )],
         )
         seeded = [organize_automation, file_kids_automation, error_automation]

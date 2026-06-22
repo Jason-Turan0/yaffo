@@ -14,7 +14,7 @@ from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.tasks.find_duplicates import find_duplicates_task
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import Automation, Job, JOB_STATUS_PENDING, AUTOMATION_HANDLER_DUPLICATE_SCAN
-from yaffo.db.repositories import photos_repository
+from yaffo.db.repositories import media_repository
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__, 'background_tasks')
@@ -24,7 +24,7 @@ def _open_scan_job(session, automation_id: int | None) -> tuple[str, list[str]] 
     """Create a find_duplicates Job over every indexed photo, tagged with
     `automation_id` as the run. Returns (job_id, file_paths), or None when there's
     nothing to scan."""
-    file_paths = photos_repository.get_all_photo_paths(session)
+    file_paths = media_repository.get_all_media_item_paths(session)
     if not file_paths:
         return None
     job_id = str(uuid.uuid4())

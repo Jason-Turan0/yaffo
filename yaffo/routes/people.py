@@ -5,9 +5,9 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload, aliased
 
 from yaffo.db import db
-from yaffo.db.models import Person, PersonFace, Face, FACE_STATUS_UNASSIGNED, MediaItem, EVENT_PHOTO_MODIFIED
-from yaffo.db.repositories.person_repository import update_person_embedding, get_photo_ids_for_person, get_similarity_bounds
-from yaffo.db.repositories.photos_repository import get_distinct_months, get_distinct_years
+from yaffo.db.models import Person, PersonFace, Face, FACE_STATUS_UNASSIGNED, MediaItem, EVENT_MEDIA_MODIFIED
+from yaffo.db.repositories.person_repository import update_person_embedding, get_media_item_ids_for_person, get_similarity_bounds
+from yaffo.db.repositories.media_repository import get_distinct_months, get_distinct_years
 from yaffo.domain.compare_utils import ui_threshold_to_similarity, similarity_to_ui_percent
 from yaffo.background_tasks.events import emit_event
 from yaffo.utils.context import context
@@ -123,13 +123,13 @@ def init_people_routes(app: Flask):
         else:
             person.birthdate = None
 
-        photo_ids = get_photo_ids_for_person(db.session, person_id)
+        media_item_ids = get_media_item_ids_for_person(db.session, person_id)
         db.session.commit()
 
         if person.birthdate != old_birthdate:
             update_person_embedding(person_id, db.session)
-        if photo_ids:
-            emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": photo_ids})
+        if media_item_ids:
+            emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": media_item_ids})
         flash(f"Updated '{name}'" if name == old_name else f"Renamed '{old_name}' to '{name}'", "success")
         return redirect(url_for("people_list"))
 
@@ -269,7 +269,7 @@ def init_people_routes(app: Flask):
             # Convert to ints
             face_ids = [int(fid) for fid in selected_face_ids]
 
-            photo_ids = [
+            media_item_ids = [
                 pid for (pid,) in db.session.query(Face.media_item_id)
                 .filter(Face.id.in_(face_ids), Face.media_item_id.isnot(None))
                 .distinct()
@@ -284,8 +284,8 @@ def init_people_routes(app: Flask):
                 synchronize_session=False
             )
             db.session.commit()
-            if photo_ids:
-                emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": photo_ids})
+            if media_item_ids:
+                emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": media_item_ids})
         flash("Person updated", "success")
         update_person_embedding(person_id, db.session)
         return redirect(request.referrer or url_for("faces_index"))

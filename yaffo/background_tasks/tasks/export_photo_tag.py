@@ -45,28 +45,28 @@ FAVORITE_KEYWORD = "Favorite"
 _LOAD_CHUNK = 500
 
 
-def _people_names(photo: MediaItem) -> list[str]:
+def _people_names(media_item: MediaItem) -> list[str]:
     """Distinct names of people linked to any face in the photo."""
     names = {
         person.name
-        for face in photo.faces
+        for face in media_item.faces
         for person in face.people
         if person.name
     }
     return sorted(names)
 
 
-def _label_names(photo: MediaItem) -> list[str]:
+def _label_names(media_item: MediaItem) -> list[str]:
     """Distinct classification-label names assigned to the photo."""
-    return sorted({pl.label.name for pl in photo.labels if pl.label and pl.label.name})
+    return sorted({pl.label.name for pl in media_item.labels if pl.label and pl.label.name})
 
 
-def _custom_tag_keywords(photo: MediaItem) -> list[str]:
+def _custom_tag_keywords(media_item: MediaItem) -> list[str]:
     """The photo's manual tags as keyword strings — 'name: value', or just 'name'
     when the tag has no value."""
     return sorted({
         f"{tag.tag_name}: {tag.tag_value}" if tag.tag_value else tag.tag_name
-        for tag in photo.tags
+        for tag in media_item.tags
         if tag.tag_name
     })
 
@@ -74,7 +74,7 @@ def _custom_tag_keywords(photo: MediaItem) -> list[str]:
 def _export_tags(
     session: Session,
     progress_reporter: ProgressReporter,
-    photo_ids: list[int],
+    media_item_ids: list[int],
     export_location: bool,
     export_people: bool,
     export_labels: bool = False,
@@ -87,12 +87,12 @@ def _export_tags(
     The work is file I/O (exiftool), not a DB write, so no lock is held while writing;
     the photos are *loaded* in chunks (one IN-clause per chunk) to stay under SQLite's
     bound-param cap and bound the joinedload's memory."""
-    if not photo_ids or not (export_location or export_people or export_labels or export_custom_tags or export_favorite):
+    if not media_item_ids or not (export_location or export_people or export_labels or export_custom_tags or export_favorite):
         return 0
-    photos = []
-    for start in range(0, len(photo_ids), _LOAD_CHUNK):
-        chunk = photo_ids[start:start + _LOAD_CHUNK]
-        photos.extend(
+    media_items = []
+    for start in range(0, len(media_item_ids), _LOAD_CHUNK):
+        chunk = media_item_ids[start:start + _LOAD_CHUNK]
+        media_items.extend(
             session.query(MediaItem)
             .options(
                 joinedload(MediaItem.faces).joinedload(Face.people),
@@ -103,23 +103,23 @@ def _export_tags(
             .all()
         )
     written = 0
-    def photo_processor(photo: MediaItem):
+    def media_item_processor(media_item: MediaItem):
         nonlocal written
-        photo_path = Path(photo.full_file_path)
+        photo_path = Path(media_item.full_file_path)
         if not photo_path.exists():
             logger.warning(f"export_photo_tag: file not found, skipping {photo_path}")
             return
-        people = _people_names(photo) if export_people else None
+        people = _people_names(media_item) if export_people else None
         keywords = []
         if export_labels:
-            keywords += _label_names(photo)
+            keywords += _label_names(media_item)
         if export_custom_tags:
-            keywords += _custom_tag_keywords(photo)
-        if export_favorite and photo.favorite:
+            keywords += _custom_tag_keywords(media_item)
+        if export_favorite and media_item.favorite:
             keywords.append(FAVORITE_KEYWORD)
         success, error = write_photo_metadata(
             photo_path=photo_path,
-            location_name=photo.location_name if export_location else None,
+            location_name=media_item.location_name if export_location else None,
             people_names=people or None,
             keywords=keywords or None,
         )
@@ -130,12 +130,12 @@ def _export_tags(
             record_self_write(photo_path)
         else:
             logger.warning(f"export_photo_tag: failed to write {photo_path}: {error}")
-    progress_reporter.run_with_progress(photos, photo_processor)
+    progress_reporter.run_with_progress(media_items, media_item_processor)
     return written
 
 
 @task_queue.task()
-def export_photo_tag_task(automation_id: int, photo_ids: list[int]):
+def export_photo_tag_task(automation_id: int, media_item_ids: list[int]):
     """Write people/location tags to the given photos' files. Enqueued by the
     export_photo_tag handler on a photo_modified event; which tags to write is read
     live from the automation's config. The run is recorded as a Job."""
@@ -152,11 +152,11 @@ def export_photo_tag_task(automation_id: int, photo_ids: list[int]):
 
         def work(progress_reporter: ProgressReporter) -> str:
             written = _export_tags(
-                session, progress_reporter, photo_ids, export_location, export_people,
+                session, progress_reporter, media_item_ids, export_location, export_people,
                 export_labels, export_custom_tags, export_favorite,
             )
             return (
-                f"wrote metadata to {written}/{len(photo_ids)} file(s) "
+                f"wrote metadata to {written}/{len(media_item_ids)} file(s) "
                 f"(location={export_location}, people={export_people}, "
                 f"labels={export_labels}, custom_tags={export_custom_tags}, "
                 f"favorite={export_favorite})"
@@ -173,6 +173,6 @@ def enqueue_export_photo_tag(automation: Automation, context: EventContext | Non
     """Handler for the built-in export-photo-tag automation: enqueue the write for
     the photos the triggering event concerns. A schedule trigger (no context, no
     photo subjects) has nothing to act on, so it's a no-op."""
-    photo_ids = context.media_ids if context else []
-    if photo_ids:
-        export_photo_tag_task(automation.id, photo_ids)
+    media_item_ids = context.media_item_ids if context else []
+    if media_item_ids:
+        export_photo_tag_task(automation.id, media_item_ids)

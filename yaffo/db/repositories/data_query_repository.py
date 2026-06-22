@@ -34,12 +34,12 @@ _DRAFT = "https://json-schema.org/draft/2020-12/schema"
 # Single-table sources exposed to widgets. Infra tables (jobs, settings, …) are
 # deliberately absent. Each table's primitive columns become the query surface.
 # classification_labels + photo_labels expose the auto-classifier's labels read-only
-# (data_query is read-only; automations apply their own categorization via tag_photos),
+# (data_query is read-only; automations apply their own categorization via tag_media_items),
 # joined client-side like people/people_face/faces.
 _EXPOSED_MODELS = [MediaItem, Tag, Face, Person, PersonFace, ClassificationLabel, MediaLabel]
 
 # Primitive columns to hide per model. Filesystem paths leak the local disk
-# layout, and images load via the /photos/<id> route, so the path isn't needed.
+# layout, and images load via the /media/<id> route, so the path isn't needed.
 _DENY: dict[type, set[str]] = {
     MediaItem: {"full_file_path"},
     Face: {"full_file_path"},
@@ -156,7 +156,7 @@ _VIRTUAL_SOURCES: dict[str, _VirtualSource] = {
         ),
         fields={
             "name": {"type": "string", "description": "Immediate subfolder name."},
-            "photo_count": {"type": "integer", "description": "Photos indexed under that subfolder."},
+            "media_count": {"type": "integer", "description": "Photos indexed under that subfolder."},
         },
         resolve=media_dir_repository.resolve_folders,
     ),
@@ -463,7 +463,7 @@ def resolve_query(session: Session, query: dict) -> Any:
         return _VIRTUAL_SOURCES[source].resolve(session, query)
     # Calculated-column filters (media_dir_id / relative_path) need the media-dir
     # registry, so they're translated here (with the session) and fed into build_query.
-    extra = tuple(media_dir_repository.photo_path_conditions(session, query)) if source == "media_items" else ()
+    extra = tuple(media_dir_repository.media_item_path_conditions(session, query)) if source == "media_items" else ()
     stmt = build_query(query, extra)
     op = query.get("op")
     if op in ("count", "count_distinct"):

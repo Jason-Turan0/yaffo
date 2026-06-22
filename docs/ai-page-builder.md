@@ -133,7 +133,7 @@ connect-src 'none'
   vendored* libraries (e.g. OpenLayers, `/static/vendor/ol`) — our code, not the model's.
   Inline (`'unsafe-inline'`) still works (a host-source doesn't disable it; only a
   nonce/hash would).
-- **`img-src <app-origin> data:` + OSM tile hosts** → photos load from `/photos/<id>`,
+- **`img-src <app-origin> data:` + OSM tile hosts** → photos load from `/media/<id>`,
   and OpenStreetMap basemap tiles load as images (the one third-party origin allowed —
   raster tiles are `<img>`, so `connect-src` stays `'none'`). A widget reaching OSM
   directly is a deliberate, accepted loosening (the alternative, a server-side tile proxy,

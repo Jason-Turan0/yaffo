@@ -8,7 +8,7 @@ window.PHOTO_ORGANIZER.initFavoriteToggles = (config) => {
         const photoId = button.dataset.photoId;
         button.disabled = true;
         try {
-            const response = await fetch(config.buildUrl('toggle_photo_favorite', { photo_id: photoId }), {
+            const response = await fetch(config.buildUrl('toggle_media_favorite', { media_item_id: photoId }), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });

@@ -28,10 +28,10 @@ from yaffo.background_tasks.registry import register_handler
 from yaffo.background_tasks.utils import SessionFactory
 from yaffo.db.models import (
     Automation,
-    EVENT_PHOTO_MODIFIED,
+    EVENT_MEDIA_MODIFIED,
     AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME,
 )
-from yaffo.db.repositories import photos_repository
+from yaffo.db.repositories import media_repository
 from yaffo.utils.geo import haversine_meters
 from yaffo.utils.reverse_geocode import reverse_geocode
 
@@ -66,20 +66,20 @@ def _nearest_name(
 def _assign_location_names(
     session: Session,
     progress_reporter: ProgressReporter,
-    photo_ids: list[int],
+    media_item_ids: list[int],
     *,
     reuse_enabled: bool,
     radius_m: float,
     overwrite: bool,
     geocode: Geocoder,
 ) -> list[int]:
-    """Set location_name on the named-able photos in `photo_ids`; return the ids
+    """Set location_name on the named-able photos in `media_item_ids`; return the ids
     actually updated (committed). A photo named here joins the reuse candidates for
     the remaining photos in the batch."""
-    photos = photos_repository.get_photos_with_coords(session, photo_ids)
-    if not photos:
+    media_items = media_repository.get_media_items_with_coords(session, media_item_ids)
+    if not media_items:
         return []
-    candidates = photos_repository.get_named_coordinates(session) if reuse_enabled else []
+    candidates = media_repository.get_named_coordinates(session) if reuse_enabled else []
 
     updated: list[int] = []
     pending: list[int] = []
@@ -89,21 +89,21 @@ def _assign_location_names(
             session.commit()  # persist the chunk's name updates (dirty ORM photos)
             pending.clear()
 
-    def photo_processor(photo):
-        if not overwrite and (photo.location_name or "").strip():
+    def media_item_processor(media_item):
+        if not overwrite and (media_item.location_name or "").strip():
             return
-        name = _nearest_name(photo.latitude, photo.longitude, candidates, radius_m) if reuse_enabled else None
+        name = _nearest_name(media_item.latitude, media_item.longitude, candidates, radius_m) if reuse_enabled else None
         if name is None and geocode is not None:
-            name = geocode(photo.latitude, photo.longitude)
+            name = geocode(media_item.latitude, media_item.longitude)
         if name:
-            photo.location_name = name
-            candidates.append((photo.latitude, photo.longitude, name))
-            updated.append(photo.id)
-            pending.append(photo.id)
+            media_item.location_name = name
+            candidates.append((media_item.latitude, media_item.longitude, name))
+            updated.append(media_item.id)
+            pending.append(media_item.id)
             if len(pending) >= _FLUSH_SIZE:
                 flush()
 
-    progress_reporter.run_with_progress(photos, photo_processor)
+    progress_reporter.run_with_progress(media_items, media_item_processor)
     flush()  # remaining tail
     return updated
 
@@ -126,7 +126,7 @@ def _throttled_geocoder() -> Callable[[float, float], Optional[str]]:
 
 @task_queue.task()
 def assign_location_name_automation_task(
-    automation_id: int, photo_ids: list[int], origin_automation_ids: list[int] | None = None
+    automation_id: int, media_item_ids: list[int], origin_automation_ids: list[int] | None = None
 ):
     """Assign location names to the given photos. Enqueued by the
     assign_location_name handler on a photo_indexed event; config is read live. The
@@ -146,7 +146,7 @@ def assign_location_name_automation_task(
             updated = _assign_location_names(
                 session,
                 progress_callback,
-                photo_ids,
+                media_item_ids,
                 reuse_enabled=reuse_enabled,
                 radius_m=radius_m,
                 overwrite=overwrite,
@@ -154,9 +154,9 @@ def assign_location_name_automation_task(
             )
             if updated:
                 # Let export_photo_tag (photo_modified) write the new name into the file.
-                emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": updated})
+                emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": updated})
             return (
-                f"named {len(updated)}/{len(photo_ids)} photo(s) "
+                f"named {len(updated)}/{len(media_item_ids)} photo(s) "
                 f"(reuse={reuse_enabled} radius={radius_m}m geocode={geocode is not None})"
             )
 
@@ -173,7 +173,7 @@ def enqueue_assign_location_name(automation: Automation, context: EventContext |
     """Handler for the built-in assign-location-name automation: enqueue the naming
     for the photos the triggering event concerns. A schedule trigger (no context,
     no photo subjects) has nothing to act on, so it's a no-op."""
-    photo_ids = context.media_ids if context else []
-    if photo_ids:
+    media_item_ids = context.media_item_ids if context else []
+    if media_item_ids:
         origin = context.origin_automation_ids if context else []
-        assign_location_name_automation_task(automation.id, photo_ids, origin)
+        assign_location_name_automation_task(automation.id, media_item_ids, origin)

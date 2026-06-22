@@ -150,12 +150,12 @@ def _watching(media: Path):
 
 class TestFileEvents:
     def test_created_photo_is_added(self, tmp_path):
-        photo = _touch(tmp_path / "a.jpg")
+        media_item = _touch(tmp_path / "a.jpg")
         handler = _DebouncedHandler()
 
-        handler.on_created(FileCreatedEvent(str(photo)))
+        handler.on_created(FileCreatedEvent(str(media_item)))
 
-        assert handler.drain_settled() == Drained(adds=[photo], deletes=[], dir_ops=[], file_moves=[])
+        assert handler.drain_settled() == Drained(adds=[media_item], deletes=[], dir_ops=[], file_moves=[])
 
     def test_deleted_photo_is_removed(self, tmp_path):
         gone = tmp_path / "gone.jpg"  # never created on disk
@@ -185,13 +185,13 @@ class TestFileEvents:
         assert handler.drain_settled() == Drained(adds=[], deletes=[gone], dir_ops=[], file_moves=[])
 
     def test_delete_then_recreate_nets_to_add(self, tmp_path):
-        photo = _touch(tmp_path / "a.jpg")
+        media_item = _touch(tmp_path / "a.jpg")
         handler = _DebouncedHandler()
 
-        handler.on_deleted(FileDeletedEvent(str(photo)))
-        handler.on_created(FileCreatedEvent(str(photo)))
+        handler.on_deleted(FileDeletedEvent(str(media_item)))
+        handler.on_created(FileCreatedEvent(str(media_item)))
 
-        assert handler.drain_settled() == Drained(adds=[photo], deletes=[], dir_ops=[], file_moves=[])
+        assert handler.drain_settled() == Drained(adds=[media_item], deletes=[], dir_ops=[], file_moves=[])
 
     def test_file_move_is_recorded_as_a_file_move(self, tmp_path):
         # A moved file is no longer a delete+add: it's a (src, dest) pair so the
@@ -289,11 +289,11 @@ class _DummySessionFactory:
 
 class TestMoveInIndex:
     """_move_in_index turns settled file moves into in-place index updates, with
-    fresh-index / remove fallbacks. move_photo_path + SessionFactory are stubbed."""
+    fresh-index / remove fallbacks. move_media_item_path + SessionFactory are stubbed."""
 
     def _run(self, monkeypatch, moves, watched, *, moved=True):
         calls = []
-        monkeypatch.setattr(watcher, "move_photo_path",
+        monkeypatch.setattr(watcher, "move_media_item_path",
                             lambda s, old, new: calls.append((old, new)) or moved)
         monkeypatch.setattr(watcher, "SessionFactory", _DummySessionFactory())
         adds, removes = watcher._move_in_index(moves, watched)
@@ -351,7 +351,7 @@ class TestMoveInIndex:
 
 
 class TestMovePhotoPath:
-    """move_photo_path updates the row in place (preserving id), against a real DB."""
+    """move_media_item_path updates the row in place (preserving id), against a real DB."""
 
     @pytest.fixture
     def session(self, tmp_path):
@@ -366,19 +366,19 @@ class TestMovePhotoPath:
 
     def test_updates_path_in_place_preserving_id(self, session):
         from yaffo.db.models import MediaItem
-        from yaffo.db.repositories.photos_repository import move_photo_path
-        photo = MediaItem(full_file_path="/m/old.jpg", status="INDEXED")
-        session.add(photo)
+        from yaffo.db.repositories.media_repository import move_media_item_path
+        media_item = MediaItem(full_file_path="/m/old.jpg", status="INDEXED")
+        session.add(media_item)
         session.commit()
-        original_id = photo.id
+        original_id = media_item.id
 
-        assert move_photo_path(session, "/m/old.jpg", "/m/new.jpg") is True
+        assert move_media_item_path(session, "/m/old.jpg", "/m/new.jpg") is True
         moved = session.query(MediaItem).filter_by(id=original_id).one()
         assert moved.full_file_path == "/m/new.jpg"  # same row, new path
 
     def test_returns_false_when_no_photo_at_old_path(self, session):
-        from yaffo.db.repositories.photos_repository import move_photo_path
-        assert move_photo_path(session, "/m/missing.jpg", "/m/new.jpg") is False
+        from yaffo.db.repositories.media_repository import move_media_item_path
+        assert move_media_item_path(session, "/m/missing.jpg", "/m/new.jpg") is False
 
 
 class TestLiveObserver:
@@ -394,15 +394,15 @@ class TestLiveObserver:
     def test_created_photo_is_indexed(self, tmp_path):
         media = tmp_path / "organized"
         with _watching(media) as collector:
-            photo = _touch(media / "a.jpg")
-            assert _eventually(collector, lambda: collector.indexes(photo))
+            media_item = _touch(media / "a.jpg")
+            assert _eventually(collector, lambda: collector.indexes(media_item))
 
     def test_deleted_photo_is_removed(self, tmp_path):
         media = tmp_path / "organized"
-        photo = _touch(media / "a.jpg")  # exists before watching starts
+        media_item = _touch(media / "a.jpg")  # exists before watching starts
         with _watching(media) as collector:
-            photo.unlink()
-            assert _eventually(collector, lambda: collector.removes(photo))
+            media_item.unlink()
+            assert _eventually(collector, lambda: collector.removes(media_item))
 
     def test_non_photo_is_ignored(self, tmp_path):
         media = tmp_path / "organized"
@@ -413,19 +413,19 @@ class TestLiveObserver:
     def test_create_then_delete_is_not_indexed(self, tmp_path):
         media = tmp_path / "organized"
         with _watching(media) as collector:
-            photo = _touch(media / "a.jpg")
-            photo.unlink()
+            media_item = _touch(media / "a.jpg")
+            media_item.unlink()
             # a file that came and went before settling must never be indexed
-            assert _stays_false(collector, lambda: collector.indexes(photo))
+            assert _stays_false(collector, lambda: collector.indexes(media_item))
 
     def test_delete_then_recreate_is_indexed(self, tmp_path):
         media = tmp_path / "organized"
-        photo = _touch(media / "a.jpg")  # exists before watching starts
+        media_item = _touch(media / "a.jpg")  # exists before watching starts
         with _watching(media) as collector:
-            photo.unlink()
-            _touch(photo)
+            media_item.unlink()
+            _touch(media_item)
             # the file exists again at rest, so it must end up indexed
-            assert _eventually(collector, lambda: collector.indexes(photo))
+            assert _eventually(collector, lambda: collector.indexes(media_item))
 
     def test_file_move_removes_source_and_indexes_dest(self, tmp_path):
         media = tmp_path / "organized"

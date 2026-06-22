@@ -5,12 +5,12 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from yaffo.common import PHOTO_EXTENSIONS
-from yaffo.db.models import MediaItem, PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED
+from yaffo.db.models import MediaItem, MEDIA_STATUS_INDEXED, MEDIA_STATUS_SYNCED
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
 from yaffo.utils.index_jobs_dto import IndexJobs
 from yaffo.utils.index_photos import (
-    delete_orphaned_photos,
+    delete_orphaned_media_items,
     delete_orphaned_thumbnails,
     is_system_file,
 )
@@ -41,7 +41,7 @@ class MediaScan:
         return [p['full_path'] for p in self.unindexed]
 
     @property
-    def orphaned_photo_ids(self) -> list[int]:
+    def orphaned_media_item_ids(self) -> list[int]:
         return [o['id'] for o in self.orphaned]
 
 
@@ -77,7 +77,7 @@ def iter_media_scan(
     db_photos = session.query(MediaItem.id, MediaItem.full_file_path, MediaItem.status).all()
     indexed_paths = {
         path for _id, path, status in db_photos
-        if status in (PHOTO_STATUS_INDEXED, PHOTO_STATUS_SYNCED)
+        if status in (MEDIA_STATUS_INDEXED, MEDIA_STATUS_SYNCED)
     }
 
     filesystem_paths: set[str] = set()
@@ -104,10 +104,10 @@ def iter_media_scan(
                 unindexed.append({'filename': photo_file.name, 'full_path': full_path})
 
     orphaned = []
-    for photo_id, path, _status in db_photos:
+    for media_item_id, path, _status in db_photos:
         reason = _orphan_reason(Path(path), media_dirs)
         if reason is not None:
-            orphaned.append({'id': photo_id, 'full_path': path, 'reason': reason})
+            orphaned.append({'id': media_item_id, 'full_path': path, 'reason': reason})
 
     unindexed.sort(key=lambda x: x['full_path'])
     orphaned.sort(key=lambda x: x['full_path'])
@@ -136,7 +136,7 @@ def scan_media_dirs(
 def perform_sync(
     session: Session,
     files_to_index: list[str],
-    orphaned_photo_ids: list[int],
+    orphaned_media_item_ids: list[int],
     thumbnail_dir: Path,
     automation_id: int | None = None,
 ) -> IndexJobs:
@@ -147,7 +147,7 @@ def perform_sync(
     `automation_id` tags those Jobs as a run of that automation (NULL when a user
     triggers the sync by hand).
     """
-    delete_orphaned_photos(session, orphaned_photo_ids)
+    delete_orphaned_media_items(session, orphaned_media_item_ids)
     delete_orphaned_thumbnails(session, thumbnail_dir)
     return enqueue_index_jobs(session, files_to_index, automation_id=automation_id)
 
@@ -180,6 +180,6 @@ def run_file_sync(session: Session, automation_id: int | None = None) -> IndexJo
         f"{len(scan.orphaned)} orphan rows to remove"
     )
     return perform_sync(
-        session, scan.files_to_index, scan.orphaned_photo_ids, thumbnail_dir,
+        session, scan.files_to_index, scan.orphaned_media_item_ids, thumbnail_dir,
         automation_id=automation_id,
     )

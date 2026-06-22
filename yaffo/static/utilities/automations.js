@@ -136,11 +136,11 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
     };
 
     const photoCount = (ctx) => {
-        const n = (ctx.media_ids || []).length;
+        const n = (ctx.media_item_ids || []).length;
         return `${n} photo${n === 1 ? '' : 's'}`;
     };
 
-    // Action name -> a generic label for a grouped run, e.g. "tag_photos" -> "Tag photos".
+    // Action name -> a generic label for a grouped run, e.g. "tag_media_items" -> "Tag media items".
     const humanize = (name) => {
         const words = name.replace(/_/g, ' ');
         return words.charAt(0).toUpperCase() + words.slice(1);

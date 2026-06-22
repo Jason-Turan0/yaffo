@@ -30,7 +30,7 @@ def test_host_returns_are_coerced_to_sandbox_safe_types(monkeypatch):
         lambda session, query: [{"name": "Chase", "birthdate": datetime.date(2015, 6, 1), "score": Decimal("0.5")}],
     )
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_photo_rows",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_media_rows",
         lambda session, rows: rows,
     )
 
@@ -54,7 +54,7 @@ def test_data_query_callable_is_invoked_from_starlark(monkeypatch):
         "yaffo.background_tasks.automation_sandbox.automation_actions.resolve_query", fake_resolve_query
     )
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_photo_rows",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_media_rows",
         lambda session, rows: rows,  # enrichment tested separately
     )
 
@@ -136,33 +136,33 @@ def test_report_progress_noops_without_a_reporter_in_preview():
 def test_recording_run_skips_mutating_impl_but_records_it(monkeypatch):
     performed = []
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_actions.photos_repository.add_tags",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.media_repository.add_tags",
         lambda *a, **k: performed.append(a),
     )
     functions, calls = build_recording_host_functions(object())
 
-    result = run_starlark("tag_photos([{'photo_id': 1, 'name': 'beach'}])", functions=functions)
+    result = run_starlark("tag_media_items([{'media_item_id': 1, 'name': 'beach'}])", functions=functions)
 
     assert result.success is True, result.error
     assert performed == []                       # mutating impl not executed
-    assert calls == [HostCall(name="tag_photos", args=[[{"photo_id": 1, "name": "beach"}]])]  # but recorded
+    assert calls == [HostCall(name="tag_media_items", args=[[{"media_item_id": 1, "name": "beach"}]])]  # but recorded
 
 
 def test_live_run_performs_mutating_impl(monkeypatch):
     performed = []
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_actions.photos_repository.add_tags",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.media_repository.add_tags",
         lambda session, items: performed.extend(items),
     )
-    run_starlark("tag_photos([{'photo_id': 1, 'name': 'beach'}])", functions=build_host_functions(object()))
+    run_starlark("tag_media_items([{'media_item_id': 1, 'name': 'beach'}])", functions=build_host_functions(object()))
     assert performed == [(1, "beach", None)]
 
 
 def test_summaries_are_friendly(monkeypatch):
     # read summaries resolve ids to file names / person names via labels
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.labels.photos_repository.get_photo_filename",
-        lambda session, photo_id: {5: "p5.jpg"}.get(photo_id),
+        "yaffo.background_tasks.automation_sandbox.labels.media_repository.get_media_item_filename",
+        lambda session, media_item_id: {5: "p5.jpg"}.get(media_item_id),
     )
 
     class _P:
@@ -178,27 +178,27 @@ def test_summaries_are_friendly(monkeypatch):
     assert summarize_call(HostCall("face_similarity", [5, 9]), s) == "Compare faces in p5.jpg to Grandma"
     assert summarize_call(HostCall("match_people", [5]), s) == "Match faces in p5.jpg to known people"
     # batch writes summarize by count
-    assert summarize_call(HostCall("tag_photos", [[{"photo_id": 1, "name": "a"}, {"photo_id": 2, "name": "b"}]]), s) == "Tag 2 photo(s)"
+    assert summarize_call(HostCall("tag_media_items", [[{"media_item_id": 1, "name": "a"}, {"media_item_id": 2, "name": "b"}]]), s) == "Tag 2 photo(s)"
     assert summarize_call(HostCall("assign_faces", [[{"face_id": 1, "person_id": 2}]]), s) == "Assign 1 face(s)"
-    assert summarize_call(HostCall("move_photos", [[{"photo_id": 1}]]), s) == "Move 1 photo(s)"
+    assert summarize_call(HostCall("move_media_items", [[{"media_item_id": 1}]]), s) == "Move 1 photo(s)"
     assert summarize_call(HostCall("rename_files", [[]]), s) == "Rename 0 file(s)"
-    assert summarize_call(HostCall("delete_photos", [[1, 2, 3]]), s) == "Delete 3 photo(s)"
+    assert summarize_call(HostCall("delete_media_items", [[1, 2, 3]]), s) == "Delete 3 photo(s)"
 
 
 def test_batch_write_is_recorded_not_performed(monkeypatch):
     """A batch mutating call is recorded for the preview but its impl doesn't run."""
     performed = []
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_actions.photos_repository.add_tags",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.media_repository.add_tags",
         lambda *a, **k: performed.append(a),
     )
     functions, calls = build_recording_host_functions(object())
 
-    result = run_starlark("tag_photos([{'photo_id': 1, 'name': 'beach'}])", functions=functions)
+    result = run_starlark("tag_media_items([{'media_item_id': 1, 'name': 'beach'}])", functions=functions)
 
     assert result.success is True, result.error
     assert performed == []
-    assert calls == [HostCall(name="tag_photos", args=[[{"photo_id": 1, "name": "beach"}]])]
+    assert calls == [HostCall(name="tag_media_items", args=[[{"media_item_id": 1, "name": "beach"}]])]
 
 
 def test_face_similarity_is_read_only_and_runs_in_preview(monkeypatch):

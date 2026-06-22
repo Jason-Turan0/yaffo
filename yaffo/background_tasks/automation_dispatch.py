@@ -24,7 +24,7 @@ def invoke_automation(automation: Automation, context: EventContext | None) -> b
         payload = None if context is None else {
             "event_type": context.event_type,
             "job_id": context.job_id,
-            "media_ids": context.media_ids,
+            "media_item_ids": context.media_item_ids,
             "groups": context.groups,
             "origin_automation_ids": context.origin_automation_ids,
         }

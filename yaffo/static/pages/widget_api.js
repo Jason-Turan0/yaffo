@@ -72,7 +72,7 @@ window.PHOTO_ORGANIZER.initWidgetApi = function (data, state) {
         },
 
         /** The image URL for a photo id (photos carry an id, not a URL). */
-        photoUrl: function (id) { return '/photos/' + id; }
+        mediaUrl: function (id) { return '/media/' + id; }
     };
 
     return api;

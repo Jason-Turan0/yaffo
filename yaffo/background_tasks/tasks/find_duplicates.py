@@ -14,7 +14,7 @@ from yaffo.utils.image import image_from_path
 logger = get_logger(__name__, 'background_tasks')
 
 
-def _resolve_group_photo_ids(session, duplicate_groups: list[dict]) -> list[list[int]]:
+def _resolve_group_media_item_ids(session, duplicate_groups: list[dict]) -> list[list[int]]:
     """Map each duplicate group's file paths to photo ids (dropping any not indexed),
     sorted earliest-indexed first (ascending id) so the keeper is element [0]. Groups
     left with fewer than two indexed photos are dropped. Keeps paths out of the event
@@ -120,7 +120,7 @@ def find_duplicates_task(job_id: str, file_paths: list[str], task=None):
         })
         session.commit()
         if duplicate_groups:
-            event_groups = _resolve_group_photo_ids(session, duplicate_groups)
+            event_groups = _resolve_group_media_item_ids(session, duplicate_groups)
         logger.debug(
             f"Completed job {job_id}: processed={processed_count}, errors={error_count}, "
             f"cancelled={cancel_count}, duplicate_groups={len(duplicate_groups)}"
@@ -134,8 +134,8 @@ def find_duplicates_task(job_id: str, file_paths: list[str], task=None):
         SessionFactory.remove()
 
     # Fire the domain event so subscribed automations (e.g. move-duplicates) can act
-    # on the groups. photo_ids is the flattened set; groups keeps the per-set
+    # on the groups. media_item_ids is the flattened set; groups keeps the per-set
     # structure with the keeper first.
     if event_groups:
-        photo_ids = sorted({pid for group in event_groups for pid in group})
-        emit_event(EVENT_DUPLICATES_FOUND, {"job_id": job_id, "media_ids": photo_ids, "groups": event_groups})
+        media_item_ids = sorted({pid for group in event_groups for pid in group})
+        emit_event(EVENT_DUPLICATES_FOUND, {"job_id": job_id, "media_item_ids": media_item_ids, "groups": event_groups})

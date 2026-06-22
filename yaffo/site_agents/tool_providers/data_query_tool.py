@@ -14,7 +14,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_photo_rows
+from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_media_rows
 from yaffo.db.repositories.data_query_repository import (
     AGGREGATE_OPS,
     SOURCES,
@@ -104,7 +104,7 @@ class DataQueryToolProvider(ToolProvider):
         try:
             rows = resolve_query(self.session, args)
             if args.get("source") == "media_items" and isinstance(rows, list):
-                enrich_photo_rows(self.session, rows)
+                enrich_media_rows(self.session, rows)
         except ValueError as exc:
             return f"Invalid query: {exc}"
         return truncate_tool_result(_preview(args.get("source"), rows))

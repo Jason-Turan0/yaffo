@@ -108,7 +108,7 @@ class TestSchemaDerivation:
         assert "application_settings" not in dq.SOURCES
 
     def test_calculated_columns_are_out_of_the_query_surface(self):
-        # Calculated columns are host-derived (enrich_photo_rows), not real DB
+        # Calculated columns are host-derived (enrich_media_rows), not real DB
         # columns, so they must never reach the filter/select/aggregate surface.
         assert "media_dir_id" not in dq.FIELDS_BY_SOURCE["media_items"]
         assert "relative_path" not in dq.FIELDS_BY_SOURCE["media_items"]
@@ -305,7 +305,7 @@ class TestVirtualSources:
 
     def test_source_schema_describes_virtual_rows(self):
         assert set(dq.source_schema("media_dirs")) == {"id", "name"}
-        assert set(dq.source_schema("folders")) == {"name", "photo_count"}
+        assert set(dq.source_schema("folders")) == {"name", "media_count"}
 
 
 class TestGeneratedSql:

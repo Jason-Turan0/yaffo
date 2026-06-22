@@ -1,7 +1,7 @@
 """Media-dir guid plumbing for the automation host. Scripts work in
 (media_dir_id, relative_path) rather than absolute paths: data_query photo rows are
 enriched with those two fields (derived from full_file_path, which is never
-exposed), and move_photo addresses a destination by media_dir_id.
+exposed), and move_media_item addresses a destination by media_dir_id.
 
 The page-builder side of this (browsing the folder tree, listing media dirs) is now
 served generically through the data-query contract — the `folders` / `media_dirs`
@@ -12,7 +12,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from yaffo.db.repositories import photos_repository
+from yaffo.db.repositories import media_repository
 from yaffo.db.repositories.media_dir_repository import MediaDir, get_media_dir_entries
 
 
@@ -27,14 +27,14 @@ def media_dir_for_path(entries: list[MediaDir], full_path: str) -> MediaDir | No
     return None
 
 
-def enrich_photo_rows(session: Session, rows: list) -> list:
+def enrich_media_rows(session: Session, rows: list) -> list:
     """Add `media_dir_id` + `relative_path` to data_query photo rows, derived from
     each photo's full_file_path (kept server-side). Rows without an id (e.g. facet
     results) are left untouched."""
     ids = [r["id"] for r in rows if isinstance(r, dict) and "id" in r]
     if not ids:
         return rows
-    paths = photos_repository.get_paths_by_ids(session, ids)
+    paths = media_repository.get_paths_by_ids(session, ids)
     entries = get_media_dir_entries(session)
     for row in rows:
         if not (isinstance(row, dict) and "id" in row):

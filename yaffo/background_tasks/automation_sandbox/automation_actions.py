@@ -1,7 +1,7 @@
 """Mutating host capabilities an automation can perform (tag photos, rename their
 files, move them, assign people to faces). The host API exposes these as **batch**
 functions only -- each takes a list and persists the whole set in one transaction;
-`move_photo` / `rename_file` are internal per-item helpers, not host-exposed. Each
+`move_media_item` / `rename_file` are internal per-item helpers, not host-exposed. Each
 takes the run's session first, like the read-only host impls, and delegates DB work
 to db/repositories. These are flagged `mutating` in HOST_API, so a test/preview
 records the call but does NOT execute it (build_recording_host_functions) -- a test
@@ -18,31 +18,31 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.events import emit_event
 from yaffo.background_tasks.progress_reporter import ProgressReporter
-from yaffo.db.models import EVENT_PHOTO_MODIFIED
-from yaffo.db.repositories import person_repository, photos_repository
+from yaffo.db.models import EVENT_MEDIA_MODIFIED
+from yaffo.db.repositories import person_repository, media_repository
 from yaffo.db.repositories.media_dir_repository import media_dir_by_id
-from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_photo_rows
+from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_media_rows
 from yaffo.db.repositories.data_query_repository import resolve_query
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__, "background_tasks")
 
 
-def _emit_photo_modified(photo_ids: list[int]) -> None:
+def _emit_media_modified(media_item_ids: list[int]) -> None:
     """Announce that a script changed these photos' exported data, so subscribers like
     export_photo_tag write the change to the file. Safe inside a run: emit_event stamps
     the run's causal chain (event_chain_scope), so the loop guard skips re-triggering
     the same automation. No-op for an empty set."""
-    ids = list(dict.fromkeys(pid for pid in photo_ids if pid is not None))  # distinct, ordered
+    ids = list(dict.fromkeys(pid for pid in media_item_ids if pid is not None))  # distinct, ordered
     if ids:
-        emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": ids})
+        emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": ids})
 
 def data_query(
     session: Session, query: dict
 ) -> Annotated[Any, "A list of row dicts, or a single number/object for count/range queries."]:
     rows = resolve_query(session, query)
     if query.get("source") == "media_items" and isinstance(rows, list):
-        return enrich_photo_rows(session, rows)
+        return enrich_media_rows(session, rows)
     return rows
 
 def summarize_data_query(args: list[Any], session: Session) -> str:
@@ -63,34 +63,34 @@ def summarize_report_progress(args: list[Any], session: Session) -> str:
     total = args[1] if len(args) > 1 else 0
     return f"Report progress: {completed}/{total}"
 
-def tag_photos(session: Session, tags: list[dict]) -> None:
+def tag_media_items(session: Session, tags: list[dict]) -> None:
     """Batch-add tags in one write, then announce the change (photo_modified) so
     export_photo_tag can write the tags into the files. `tags` is a list of
-    {photo_id, name, value?}."""
+    {media_item_id, name, value?}."""
     items = [
-        (tag["photo_id"], tag["name"], tag.get("value"))
+        (tag["media_item_id"], tag["name"], tag.get("value"))
         for tag in tags
-        if tag.get("photo_id") is not None and tag.get("name")
+        if tag.get("media_item_id") is not None and tag.get("name")
     ]
     if not items:
         return
-    photos_repository.add_tags(session, items)
-    _emit_photo_modified([photo_id for photo_id, _, _ in items])
+    media_repository.add_tags(session, items)
+    _emit_media_modified([media_item_id for media_item_id, _, _ in items])
 
 
-def summarize_tag_photos(args: list[Any], session: Session) -> str:
+def summarize_tag_media_items(args: list[Any], session: Session) -> str:
     tags = args[0] if args and isinstance(args[0], list) else []
     return f"Tag {len(tags)} photo(s)"
 
 
 def rename_files(session: Session, renames: list[dict]) -> None:
     """Batch-rename files in one transaction. `renames` is a list of
-    {photo_id, new_name}; each file is renamed in place, then all path updates commit
+    {media_item_id, new_name}; each file is renamed in place, then all path updates commit
     once."""
     for entry in renames:
-        photo_id, new_name = entry.get("photo_id"), entry.get("new_name")
-        if photo_id is not None and new_name:
-            rename_file(session, photo_id, new_name)
+        media_item_id, new_name = entry.get("media_item_id"), entry.get("new_name")
+        if media_item_id is not None and new_name:
+            rename_file(session, media_item_id, new_name)
     session.commit()
 
 
@@ -99,40 +99,40 @@ def summarize_rename_files(args: list[Any], session: Session) -> str:
     return f"Rename {len(renames)} file(s)"
 
 
-def rename_file(session: Session, photo_id: int, new_name: str) -> None:
+def rename_file(session: Session, media_item_id: int, new_name: str) -> None:
     """Per-item helper for rename_files (not host-exposed; no commit -- the batch
     commits once)."""
-    current = photos_repository.get_photo_path(session, photo_id)
+    current = media_repository.get_media_item_path(session, media_item_id)
     if not current:
         return
     # basename only + in-place, so `new_name` can't escape the photo's folder
     new_path = Path(current).with_name(Path(new_name).name)
     Path(current).rename(new_path)
-    photos_repository.update_photo_path(session, photo_id, str(new_path))
+    media_repository.update_media_item_path(session, media_item_id, str(new_path))
 
 
-def move_photos(session: Session, moves: list[dict]) -> None:
+def move_media_items(session: Session, moves: list[dict]) -> None:
     """Batch-move photos in one transaction. `moves` is a list of
-    {photo_id, media_dir_id, target_path}; each file is moved into its media dir
+    {media_item_id, media_dir_id, target_path}; each file is moved into its media dir
     (confined to it), then all path updates commit once."""
     for entry in moves:
-        photo_id = entry.get("photo_id")
+        media_item_id = entry.get("media_item_id")
         media_dir_id = entry.get("media_dir_id")
         target_path = entry.get("target_path")
-        if photo_id is not None and media_dir_id is not None and target_path is not None:
-            move_photo(session, photo_id, media_dir_id, target_path)
+        if media_item_id is not None and media_dir_id is not None and target_path is not None:
+            move_media_item(session, media_item_id, media_dir_id, target_path)
     session.commit()
 
 
-def summarize_move_photos(args: list[Any], session: Session) -> str:
+def summarize_move_media_items(args: list[Any], session: Session) -> str:
     moves = args[0] if args and isinstance(args[0], list) else []
     return f"Move {len(moves)} photo(s)"
 
 
-def move_photo(session: Session, photo_id: int, media_dir_id: str, target_path: str) -> None:
-    """Per-item helper for move_photos (not host-exposed; no commit -- the batch
+def move_media_item(session: Session, media_item_id: int, media_dir_id: str, target_path: str) -> None:
+    """Per-item helper for move_media_items (not host-exposed; no commit -- the batch
     commits once)."""
-    current = photos_repository.get_photo_path(session, photo_id)
+    current = media_repository.get_media_item_path(session, media_item_id)
     media_dir = media_dir_by_id(session, media_dir_id)
     if not current or media_dir is None:
         return
@@ -146,7 +146,7 @@ def move_photo(session: Session, photo_id: int, media_dir_id: str, target_path: 
         return
     destination.parent.mkdir(parents=True, exist_ok=True)
     Path(current).rename(destination)
-    photos_repository.update_photo_path(session, photo_id, str(destination))
+    media_repository.update_media_item_path(session, media_item_id, str(destination))
 
 
 def assign_faces(session: Session, assignments: list[dict]) -> None:
@@ -165,7 +165,7 @@ def assign_faces(session: Session, assignments: list[dict]) -> None:
         session, [(person_id, face_id) for person_id, face_id in pairs if person_id in known]
     )
     if linked:
-        _emit_photo_modified(photos_repository.get_photo_ids_for_faces(session, face_ids))
+        _emit_media_modified(media_repository.get_media_item_ids_for_faces(session, face_ids))
 
 
 def summarize_assign_faces(args: list[Any], session: Session) -> str:
@@ -173,32 +173,32 @@ def summarize_assign_faces(args: list[Any], session: Session) -> str:
     return f"Assign {len(assignments)} face(s)"
 
 
-def delete_photos(session: Session, photo_ids: list[int]) -> None:
+def delete_media_items(session: Session, media_item_ids: list[int]) -> None:
     """Delete photos: send each file to the OS trash (recoverable), then remove the
-    photo and its faces/tags/labels from the index. `photo_ids` is a list of ids.
+    photo and its faces/tags/labels from the index. `media_item_ids` is a list of ids.
     A photo whose file can't be trashed is left in the index (not half-deleted)."""
-    if not photo_ids:
+    if not media_item_ids:
         return
-    paths = photos_repository.get_paths_by_ids(session, photo_ids)
+    paths = media_repository.get_paths_by_ids(session, media_item_ids)
     removed: list[int] = []
-    for photo_id in photo_ids:
-        path = paths.get(photo_id)
+    for media_item_id in media_item_ids:
+        path = paths.get(media_item_id)
         if not path or not Path(path).exists():
-            removed.append(photo_id)  # no live file -> just drop the index row
+            removed.append(media_item_id)  # no live file -> just drop the index row
             continue
         try:
             send2trash.send2trash(str(Path(path)))
-            removed.append(photo_id)
+            removed.append(media_item_id)
         except Exception as e:
-            logger.warning(f"delete_photos: could not trash {path}: {e}")
-    thumbnails = photos_repository.delete_photos(session, removed)
+            logger.warning(f"delete_media_items: could not trash {path}: {e}")
+    thumbnails = media_repository.delete_media_items(session, removed)
     for thumb in thumbnails:
         try:
             Path(thumb).unlink(missing_ok=True)
         except OSError as e:
-            logger.warning(f"delete_photos: could not remove face thumbnail {thumb}: {e}")
+            logger.warning(f"delete_media_items: could not remove face thumbnail {thumb}: {e}")
 
 
-def summarize_delete_photos(args: list[Any], session: Session) -> str:
-    photo_ids = args[0] if args and isinstance(args[0], list) else []
-    return f"Delete {len(photo_ids)} photo(s)"
+def summarize_delete_media_items(args: list[Any], session: Session) -> str:
+    media_item_ids = args[0] if args and isinstance(args[0], list) else []
+    return f"Delete {len(media_item_ids)} photo(s)"

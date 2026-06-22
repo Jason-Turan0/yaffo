@@ -67,8 +67,8 @@ def test_imports_valid_files_creates_photo_rows(db_for_import, tmp_path):
     import_photo_task("job-1", files)
 
     with Session(engine) as s:
-        photos = s.query(MediaItem).all()
-        assert {p.full_file_path for p in photos} == set(files)
+        media_items = s.query(MediaItem).all()
+        assert {p.full_file_path for p in media_items} == set(files)
         job = s.query(Job).filter_by(id="job-1").one()
         assert job.completed_count == 3
         assert job.error_count == 0
@@ -84,8 +84,8 @@ def test_missing_files_counted_as_errors_not_imported(db_for_import, tmp_path):
     import_photo_task("job-1", present + missing)
 
     with Session(engine) as s:
-        photos = s.query(MediaItem).all()
-        assert {p.full_file_path for p in photos} == set(present)  # only real files
+        media_items = s.query(MediaItem).all()
+        assert {p.full_file_path for p in media_items} == set(present)  # only real files
         job = s.query(Job).filter_by(id="job-1").one()
         assert job.completed_count == 2
         assert job.error_count == 2
@@ -136,8 +136,8 @@ def test_replay_does_not_duplicate_photos(db_for_import, tmp_path):
     import_photo_task("job-1", files)  # replay
 
     with Session(engine) as s:
-        photos = s.query(MediaItem).all()
-        assert len(photos) == 3  # no duplicates -- the constraint held
+        media_items = s.query(MediaItem).all()
+        assert len(media_items) == 3  # no duplicates -- the constraint held
         job = s.query(Job).filter_by(id="job-1").one()
         assert job.completed_count == 3        # only the first pass's imports
         assert job.error_count == len(files)   # replay booked the whole batch as errors

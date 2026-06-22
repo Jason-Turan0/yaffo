@@ -11,7 +11,7 @@ from yaffo.db.models import (
     ClassificationLabel,
     MediaItem,
     MediaLabel,
-    PHOTO_STATUS_INDEXED,
+    MEDIA_STATUS_INDEXED,
 )
 
 pytestmark = pytest.mark.unit
@@ -96,13 +96,13 @@ def test_reclassify_enqueues_over_indexed_photos(app, client, monkeypatch):
     calls = []
     monkeypatch.setattr(
         "yaffo.routes.settings.classify_labels_automation_task",
-        lambda automation_id, photo_ids: calls.append((automation_id, photo_ids)),
+        lambda automation_id, media_item_ids: calls.append((automation_id, media_item_ids)),
     )
     with app.app_context():
         db.session.add(Automation(slug="classify_labels", name="Classify labels",
                                   is_system=True, handler="classify_labels"))
-        db.session.add(MediaItem(full_file_path="/p/1.jpg", status=PHOTO_STATUS_INDEXED))
-        db.session.add(MediaItem(full_file_path="/p/2.jpg", status=PHOTO_STATUS_INDEXED))
+        db.session.add(MediaItem(full_file_path="/p/1.jpg", status=MEDIA_STATUS_INDEXED))
+        db.session.add(MediaItem(full_file_path="/p/2.jpg", status=MEDIA_STATUS_INDEXED))
         db.session.commit()
     resp = client.post("/settings/labels/reclassify")
     assert resp.status_code == 204

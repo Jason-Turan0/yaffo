@@ -60,19 +60,19 @@ def _photo(tmp_path: Path, name: str, content: bytes) -> Path:
 
 
 def test_record_then_suppress_consumes(temp_store, tmp_path):
-    photo = _photo(tmp_path, "x.jpg", b"\xff\xd8\xff")
-    ws.record_self_write(photo)
+    media_item = _photo(tmp_path, "x.jpg", b"\xff\xd8\xff")
+    ws.record_self_write(media_item)
 
-    assert ws.should_suppress(photo) is True   # our own write, ignored
-    assert ws.should_suppress(photo) is False  # entry consumed -> not suppressed again
+    assert ws.should_suppress(media_item) is True   # our own write, ignored
+    assert ws.should_suppress(media_item) is False  # entry consumed -> not suppressed again
 
 
 def test_external_edit_not_suppressed(temp_store, tmp_path):
-    photo = _photo(tmp_path, "x.jpg", b"\xff\xd8\xff")
-    ws.record_self_write(photo)
-    photo.write_bytes(b"\xff\xd8\xff\x00\x11\x22")  # different size -> different signature
+    media_item = _photo(tmp_path, "x.jpg", b"\xff\xd8\xff")
+    ws.record_self_write(media_item)
+    media_item.write_bytes(b"\xff\xd8\xff\x00\x11\x22")  # different size -> different signature
 
-    assert ws.should_suppress(photo) is False  # a real external change still indexes
+    assert ws.should_suppress(media_item) is False  # a real external change still indexes
 
 
 def test_missing_file_is_not_suppressed(temp_store, tmp_path):

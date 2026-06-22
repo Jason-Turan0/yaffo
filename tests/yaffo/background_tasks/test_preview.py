@@ -34,7 +34,7 @@ def _fake_host(monkeypatch, impl):
 def test_preview_records_actions(monkeypatch):
     _fake_host(monkeypatch, lambda session, query: [{"id": 1}])
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_photo_rows",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_media_rows",
         lambda session, rows: rows,  # enrichment tested separately
     )
     code = "print('hi')\ndata_query({'source': 'media_items', 'limit': 5})"
@@ -42,7 +42,7 @@ def test_preview_records_actions(monkeypatch):
 
     assert result.success is True, result.error
     assert result.code_source == "published"
-    assert result.context == {"type": "files", "photo_ids": [1, 2]}
+    assert result.context == {"type": "files", "media_item_ids": [1, 2]}
     assert result.output == ["hi"]
     assert result.actions == [{
         "summary": "Looking up media_items",

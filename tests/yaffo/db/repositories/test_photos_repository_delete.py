@@ -1,4 +1,4 @@
-"""Repository test for photos_repository.delete_photos — it removes a photo and all
+"""Repository test for media_repository.delete_media_items — it removes a photo and all
 its dependents (tags, labels, faces, people_face links) in one transaction, since
 SQLite FK cascade is off, and returns the face thumbnail paths for the caller to unlink."""
 import pytest
@@ -15,7 +15,7 @@ from yaffo.db.models import (
     MediaLabel,
     Tag,
 )
-from yaffo.db.repositories import photos_repository as repo
+from yaffo.db.repositories import media_repository as repo
 
 pytestmark = pytest.mark.unit
 
@@ -30,32 +30,32 @@ def session(tmp_path):
 
 
 def test_delete_photos_removes_photo_and_all_dependents(session):
-    photo = MediaItem(full_file_path="/lib/a.jpg")
+    media_item = MediaItem(full_file_path="/lib/a.jpg")
     keep = MediaItem(full_file_path="/lib/keep.jpg")
     person = Person(name="Alice")
     label = ClassificationLabel(name="beach")
-    session.add_all([photo, keep, person, label])
+    session.add_all([media_item, keep, person, label])
     session.flush()
 
-    face = Face(media_item_id=photo.id, full_file_path="/thumbs/face1.jpg")
+    face = Face(media_item_id=media_item.id, full_file_path="/thumbs/face1.jpg")
     session.add(face)
     session.flush()
     session.add_all([
-        Tag(media_item_id=photo.id, tag_name="trip", tag_value="maui"),
-        MediaLabel(media_item_id=photo.id, label_id=label.id, confidence=0.9),
+        Tag(media_item_id=media_item.id, tag_name="trip", tag_value="maui"),
+        MediaLabel(media_item_id=media_item.id, label_id=label.id, confidence=0.9),
         PersonFace(person_id=person.id, face_id=face.id),
     ])
     session.commit()
     # Capture ids before the bulk delete (the ORM objects expire afterwards).
-    photo_id, keep_id, person_id, label_id, face_id = photo.id, keep.id, person.id, label.id, face.id
+    media_item_id, keep_id, person_id, label_id, face_id = media_item.id, keep.id, person.id, label.id, face.id
 
-    thumbnails = repo.delete_photos(session, [photo_id])
+    thumbnails = repo.delete_media_items(session, [media_item_id])
 
     assert thumbnails == ["/thumbs/face1.jpg"]
-    assert session.get(MediaItem, photo_id) is None
-    assert session.query(Face).filter_by(media_item_id=photo_id).count() == 0
-    assert session.query(Tag).filter_by(media_item_id=photo_id).count() == 0
-    assert session.query(MediaLabel).filter_by(media_item_id=photo_id).count() == 0
+    assert session.get(MediaItem, media_item_id) is None
+    assert session.query(Face).filter_by(media_item_id=media_item_id).count() == 0
+    assert session.query(Tag).filter_by(media_item_id=media_item_id).count() == 0
+    assert session.query(MediaLabel).filter_by(media_item_id=media_item_id).count() == 0
     assert session.query(PersonFace).filter_by(face_id=face_id).count() == 0
     # Untouched: the other photo, and shared rows (person, vocabulary label).
     assert session.get(MediaItem, keep_id) is not None
@@ -64,7 +64,7 @@ def test_delete_photos_removes_photo_and_all_dependents(session):
 
 
 def test_delete_photos_empty_is_noop(session):
-    assert repo.delete_photos(session, []) == []
+    assert repo.delete_media_items(session, []) == []
 
 
 def test_get_photo_ids_for_faces_resolves_distinct_photos(session):
@@ -77,7 +77,7 @@ def test_get_photo_ids_for_faces_resolves_distinct_photos(session):
     session.add_all([f1, f2, f3])
     session.commit()
 
-    ids = repo.get_photo_ids_for_faces(session, [f1.id, f2.id, f3.id])
+    ids = repo.get_media_item_ids_for_faces(session, [f1.id, f2.id, f3.id])
 
     assert set(ids) == {p1.id, p2.id}  # distinct, two faces on p1 collapse to one
-    assert repo.get_photo_ids_for_faces(session, []) == []
+    assert repo.get_media_item_ids_for_faces(session, []) == []

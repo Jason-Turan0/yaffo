@@ -5,7 +5,7 @@ actions are recorded but not performed, so a test changes nothing.
 
 Code source mirrors the builder's published/working split: if a draft is being
 worked on (working_code set) it's tested, otherwise the published code. The run
-context is an event context over the given photo_ids (a user-picked file/folder),
+context is an event context over the given media_item_ids (a user-picked file/folder),
 with the event_type taken from the automation's first event trigger if any.
 """
 from dataclasses import asdict, dataclass, field
@@ -29,7 +29,7 @@ class TestRunResult:
     the trailing value, and any error."""
     success: bool
     code_source: str            # "working" | "published"
-    context: dict               # {"type": "files", "photo_ids": [...]}
+    context: dict               # {"type": "files", "media_item_ids": [...]}
     actions: list[dict] = field(default_factory=list)
     output: list[str] = field(default_factory=list)
     value: Any = None
@@ -48,9 +48,9 @@ def _first_event_type(automation: Automation) -> str | None:
 
 
 def preview_automation(
-    session: Session, automation: Automation, photo_ids: list[int], version: str | None = None
+    session: Session, automation: Automation, media_item_ids: list[int], version: str | None = None
 ) -> TestRunResult:
-    """Run the automation's code against `photo_ids` (the user-selected file/folder),
+    """Run the automation's code against `media_item_ids` (the user-selected file/folder),
     recording host calls. `version` ("working" | "published") selects which code to
     run — the version the user is currently viewing in the code panel — and falls back
     to whichever exists when the requested one is absent. With no `version`, prefers
@@ -63,7 +63,7 @@ def preview_automation(
         code = automation.working_code or automation.published_code
         code_source = "working" if automation.working_code else "published"
     context = EventContext(
-        event_type=_first_event_type(automation), job_id=None, media_ids=photo_ids
+        event_type=_first_event_type(automation), job_id=None, media_item_ids=media_item_ids
     )
 
     functions, calls = build_recording_host_functions(session)
@@ -73,7 +73,7 @@ def preview_automation(
     return TestRunResult(
         success=result.success,
         code_source=code_source,
-        context={"type": "files", "photo_ids": photo_ids},
+        context={"type": "files", "media_item_ids": media_item_ids},
         actions=[
             {"summary": summarize_call(c, session), "name": c.name, "args": c.args}
             for c in calls

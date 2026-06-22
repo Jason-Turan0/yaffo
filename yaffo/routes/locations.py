@@ -3,7 +3,7 @@ from flask import Flask, render_template, jsonify, request
 from sqlalchemy import func
 
 from yaffo.db import db
-from yaffo.db.models import MediaItem, PHOTO_STATUS_INDEXED, EVENT_PHOTO_MODIFIED
+from yaffo.db.models import MediaItem, MEDIA_STATUS_INDEXED, EVENT_MEDIA_MODIFIED
 from yaffo.background_tasks.events import emit_event
 from yaffo.utils.reverse_geocode import reverse_geocode
 
@@ -42,24 +42,24 @@ def init_locations_routes(app: Flask):
     def locations_bulk_update():
         """Bulk update location names for multiple photos"""
         data = request.get_json()
-        photo_ids = data.get('photo_ids', [])
+        media_item_ids = data.get('media_item_ids', [])
         location_name = data.get('location_name', '').strip()
 
-        if not photo_ids or not location_name:
+        if not media_item_ids or not location_name:
             return jsonify({'error': 'Invalid request'}), 400
 
         try:
             updated_count = (
                 db.session.query(MediaItem)
-                .filter(MediaItem.id.in_(photo_ids))
+                .filter(MediaItem.id.in_(media_item_ids))
                 .update({
                     'location_name': location_name,
-                    'status': PHOTO_STATUS_INDEXED
+                    'status': MEDIA_STATUS_INDEXED
                 }, synchronize_session=False)
             )
             db.session.commit()
 
-            emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": photo_ids})
+            emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": media_item_ids})
             return jsonify({
                 'success': True,
                 'updated_count': updated_count,

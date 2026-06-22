@@ -25,7 +25,7 @@ from sqlalchemy import false, or_
 from sqlalchemy.orm import Session
 
 from yaffo.db.models import MediaItem, ApplicationSettings
-from yaffo.db.repositories import photos_repository
+from yaffo.db.repositories import media_repository
 
 
 def _escape_like(value: str) -> str:
@@ -39,7 +39,7 @@ def _under(root: Path):
     return MediaItem.full_file_path.like(_escape_like(str(root) + os.sep) + "%", escape="\\")
 
 
-def photo_path_conditions(session: Session, query: dict) -> list:
+def media_item_path_conditions(session: Session, query: dict) -> list:
     """Translate a photos query's `media_dir_id` / `relative_path` filters into
     full_file_path SQL conditions (empty when neither is present). `relative_path`
     requires a single `media_dir_id` (`eq`); using it with `in` raises ValueError.
@@ -93,13 +93,13 @@ def resolve_folders(session: Session, query: dict) -> list[dict]:
     # lexically — no per-photo .resolve() (and its filesystem syscalls) needed.
     prefix = str(target) + os.sep
     counts: dict[str, int] = {}
-    for _id, full in photos_repository.get_photo_paths_under_path(session, str(target)):
+    for _id, full in media_repository.get_media_item_paths_under_path(session, str(target)):
         if not full.startswith(prefix):
             continue
         subfolder, sep, _rest = full[len(prefix):].partition(os.sep)
         if sep:  # a separator after the subfolder name means the file is nested under it
             counts[subfolder] = counts.get(subfolder, 0) + 1
-    return [{"name": name, "photo_count": counts[name]} for name in sorted(counts)]
+    return [{"name": name, "media_count": counts[name]} for name in sorted(counts)]
 
 
 @dataclass(frozen=True)

@@ -20,9 +20,9 @@ class _FakeSession:
         self.commits += 1
 
 
-def _photo(photo_id, date_taken, lat=None, lon=None, location_name=None):
+def _photo(media_item_id, date_taken, lat=None, lon=None, location_name=None):
     return SimpleNamespace(
-        id=photo_id, date_taken=date_taken, latitude=lat, longitude=lon,
+        id=media_item_id, date_taken=date_taken, latitude=lat, longitude=lon,
         location_name=location_name,
     )
 
@@ -33,8 +33,8 @@ def _gps(date_taken, lat, lon, location_name=None):
 
 
 def _stub(monkeypatch, *, targets, gps):
-    monkeypatch.setattr(mod.photos_repository, "get_photos_missing_gps", lambda s, ids: targets)
-    monkeypatch.setattr(mod.photos_repository, "get_gps_timestamps", lambda s: list(gps))
+    monkeypatch.setattr(mod.media_repository, "get_media_items_missing_gps", lambda s, ids: targets)
+    monkeypatch.setattr(mod.media_repository, "get_gps_timestamps", lambda s: list(gps))
 
 
 def test_borrows_nearest_in_time_coordinates(monkeypatch, progress_reporter):
@@ -164,9 +164,9 @@ def test_handler_enqueues_for_event_photos(monkeypatch):
     calls = []
     monkeypatch.setattr(
         mod, "geotag_from_neighbors_automation_task",
-        lambda automation_id, photo_ids: calls.append((automation_id, photo_ids)),
+        lambda automation_id, media_item_ids: calls.append((automation_id, media_item_ids)),
     )
-    mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), SimpleNamespace(media_ids=[1, 2]))
+    mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), SimpleNamespace(media_item_ids=[1, 2]))
     assert calls == [(9, [1, 2])]
 
 
@@ -174,8 +174,8 @@ def test_handler_noop_without_context_or_photos(monkeypatch):
     calls = []
     monkeypatch.setattr(
         mod, "geotag_from_neighbors_automation_task",
-        lambda automation_id, photo_ids: calls.append((automation_id, photo_ids)),
+        lambda automation_id, media_item_ids: calls.append((automation_id, media_item_ids)),
     )
     mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), None)
-    mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), SimpleNamespace(media_ids=[]))
+    mod.enqueue_geotag_from_neighbors(SimpleNamespace(id=9), SimpleNamespace(media_item_ids=[]))
     assert calls == []

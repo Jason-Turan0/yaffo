@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload
 import pydash as _
 from yaffo.db import db
 from yaffo.db.models import MediaItem, Face, Person, PersonFace, Tag, ClassificationLabel, MediaLabel
-from yaffo.db.repositories.photos_repository import get_distinct_years, get_distinct_months
+from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
 from yaffo.routes import filter_config
 from yaffo.utils.context import context
 
@@ -171,25 +171,25 @@ def init_home_routes(app: Flask):
             )
 
         # Get total count of filtered results
-        photo_count = query.count()
+        media_count = query.count()
 
         # Apply pagination
         offset = (page - 1) * filter_page_size
-        photos = query.limit(filter_page_size).offset(offset).all()
+        media_items = query.limit(filter_page_size).offset(offset).all()
 
 
         # Get unique people from photos (for display in cards)
-        for photo in photos:
+        for media_item in media_items:
             # Create a set of unique people across all faces in the photo
-            photo.people = list({
+            media_item.people = list({
                 person
-                for face in photo.faces
+                for face in media_item.faces
                 for person in face.people
             })
             # Split the stored path into name + folder for the hover details
-            file_path = Path(photo.full_file_path) if photo.full_file_path else None
-            photo.file_name = file_path.name if file_path else ""
-            photo.folder = str(file_path.parent) if file_path else ""
+            file_path = Path(media_item.full_file_path) if media_item.full_file_path else None
+            media_item.file_name = file_path.name if file_path else ""
+            media_item.folder = str(file_path.parent) if file_path else ""
 
         # Get distinct tag names and location names
         distinct_tag_names = (
@@ -260,16 +260,16 @@ def init_home_routes(app: Flask):
 
         pagination = {
             "current_page": page,
-            "total_items": photo_count,
+            "total_items": media_count,
             "page_size": filter_page_size,
             "page_sizes": [10, 25, 50, 100, 250],
         }
 
         return render_template(
             "index.html",
-            photos=photos,
+            media_items=media_items,
             filters=filters,
-            photo_count=photo_count,
+            media_count=media_count,
             pagination=pagination,
             filter_layout=filter_config.load_layout(db.session),
             filter_default_keys=filter_config.default_keys(),
@@ -331,9 +331,9 @@ def init_home_routes(app: Flask):
             .all()
         )
 
-        for photos_by_name in _.group_by(db_locations, lambda photo: photo.location_name).values():
-            lat = _.sum_by(photos_by_name, lambda photo: photo.latitude)/len(photos_by_name)
-            lon = _.sum_by(photos_by_name, lambda photo: photo.longitude)/len(photos_by_name)
+        for photos_by_name in _.group_by(db_locations, lambda media_item: media_item.location_name).values():
+            lat = _.sum_by(photos_by_name, lambda media_item: media_item.latitude)/len(photos_by_name)
+            lon = _.sum_by(photos_by_name, lambda media_item: media_item.longitude)/len(photos_by_name)
             if lat is not None and lon is not None:
                 results.append({
                     "name": photos_by_name[0].location_name,

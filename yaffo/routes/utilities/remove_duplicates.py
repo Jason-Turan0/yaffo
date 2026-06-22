@@ -18,7 +18,7 @@ from yaffo.routes.utilities.common import is_system_file, get_thumbnail_dir, aut
 from yaffo.utils.file_system import show_file_dialog
 
 
-def collect_photo_paths(directory_paths: list[str]) -> list[str]:
+def collect_media_paths(directory_paths: list[str]) -> list[str]:
     found_paths = set()
     thumbnail_dir = get_thumbnail_dir()
 
@@ -40,8 +40,8 @@ def collect_photo_paths(directory_paths: list[str]) -> list[str]:
     return list(found_paths)
 
 
-def count_photos_in_directory(directory_paths: list[str]) -> int:
-    return len(collect_photo_paths(directory_paths))
+def count_media_items_in_directory(directory_paths: list[str]) -> int:
+    return len(collect_media_paths(directory_paths))
 
 
 @dataclass
@@ -101,9 +101,9 @@ def create_duplicate_job_view_model(job_id: str, page: int, page_size: int):
             duplicate_groups.append(view_group)
 
     selected_photos = set(
-        photo.path_id
+        media_item.path_id
         for grp in duplicate_groups
-        for photo_index, photo in enumerate(grp.paths)
+        for photo_index, media_item in enumerate(grp.paths)
         if photo_index != 0
     )
 
@@ -180,7 +180,7 @@ def init_remove_duplicates_routes(app: Flask):
             if selected_folder.success and selected_folder.selected_path is not None:
                 directories[index] = selected_folder.selected_path
 
-        total_photos = count_photos_in_directory(directories)
+        total_photos = count_media_items_in_directory(directories)
 
         return render_template(
             "utilities/remove_duplicates_form.html",
@@ -196,7 +196,7 @@ def init_remove_duplicates_routes(app: Flask):
         if not directories:
             return jsonify({'error': 'At least one directory is required'}), 400
 
-        file_paths = collect_photo_paths(directories)
+        file_paths = collect_media_paths(directories)
 
         if not file_paths:
             return jsonify({'error': 'No photo files found in selected directories'}), 400

@@ -28,7 +28,7 @@ class _FakeSession:
 
 def test_open_scan_job_creates_tagged_job(monkeypatch):
     session = _FakeSession()
-    monkeypatch.setattr(mod.photos_repository, "get_all_photo_paths", lambda s: ["/a.jpg", "/b.jpg"])
+    monkeypatch.setattr(mod.media_repository, "get_all_media_item_paths", lambda s: ["/a.jpg", "/b.jpg"])
 
     opened = mod._open_scan_job(session, automation_id=7)
 
@@ -47,7 +47,7 @@ def test_open_scan_job_creates_tagged_job(monkeypatch):
 
 def test_open_scan_job_noop_when_no_photos(monkeypatch):
     session = _FakeSession()
-    monkeypatch.setattr(mod.photos_repository, "get_all_photo_paths", lambda s: [])
+    monkeypatch.setattr(mod.media_repository, "get_all_media_item_paths", lambda s: [])
 
     assert mod._open_scan_job(session, automation_id=7) is None
     assert session.added == []

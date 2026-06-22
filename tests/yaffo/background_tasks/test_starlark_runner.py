@@ -27,8 +27,8 @@ def test_statement_ending_yields_none_value_but_succeeds():
 
 def test_inputs_are_injected_as_globals():
     result = run_starlark(
-        "ctx['media_ids'][0] + offset",
-        inputs={"ctx": {"media_ids": [10, 20]}, "offset": 5},
+        "ctx['media_item_ids'][0] + offset",
+        inputs={"ctx": {"media_item_ids": [10, 20]}, "offset": 5},
     )
     assert result.success is True
     assert result.value == 15
@@ -37,8 +37,8 @@ def test_inputs_are_injected_as_globals():
 def test_host_functions_are_callable_and_receive_args():
     recorded = []
 
-    def tag_photo(photo_id, name):
-        recorded.append((photo_id, name))
+    def tag_photo(media_item_id, name):
+        recorded.append((media_item_id, name))
         return True
 
     result = run_starlark(

@@ -21,7 +21,7 @@ def test_404_links_the_page_stylesheet(client):
 
 
 def test_viewing_missing_photo_renders_branded_404(client):
-    response = client.get("/photo/view/999999")
+    response = client.get("/media/view/999999")
 
     assert response.status_code == 404
     # routed through the global handler, not the old plain-text "Photo not found"

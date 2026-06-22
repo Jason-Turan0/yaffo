@@ -44,7 +44,7 @@ def calculated_filter_lines(sources) -> list[str]:
 
 def virtual_source_lines() -> list[str]:
     """One line per virtual (non-table) source, e.g.
-    `folders(media_dir_id (required), path) -> name, photo_count`."""
+    `folders(media_dir_id (required), path) -> name, media_count`."""
     lines = []
     for name, required, optional, returns in virtual_source_specs():
         params = ", ".join([*(f"{p} (required)" for p in required), *optional]) or "no params"

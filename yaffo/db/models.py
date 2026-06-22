@@ -2,9 +2,9 @@ from sqlalchemy import PrimaryKeyConstraint
 from yaffo.db import db
 from yaffo.utils.time import utcnow
 
-PHOTO_STATUS_IMPORTED = "IMPORTED"
-PHOTO_STATUS_INDEXED = "INDEXED"
-PHOTO_STATUS_SYNCED = "SYNCED"
+MEDIA_STATUS_IMPORTED = "IMPORTED"
+MEDIA_STATUS_INDEXED = "INDEXED"
+MEDIA_STATUS_SYNCED = "SYNCED"
 
 class MediaItem(db.Model):
     __tablename__ = "media_items"
@@ -28,7 +28,7 @@ class MediaItem(db.Model):
     # Tri-state favorite: NULL = never set (the default; exports/treat as nothing),
     # True = favorited. Toggled from the photo view; exported as a keyword only when set.
     favorite = db.Column(db.Boolean, nullable=True)
-    status = db.Column(db.String, default=PHOTO_STATUS_IMPORTED)
+    status = db.Column(db.String, default=MEDIA_STATUS_IMPORTED)
     faces = db.relationship(
         "Face",
         back_populates="media_item"
@@ -283,17 +283,17 @@ TRIGGER_TYPE_EVENT = "event"         # an emitted domain event (see EVENTS)
 
 # The fixed catalog of events an automation can subscribe to. Emission/dispatch
 # for these is a later step; the constants pin the contract triggers reference.
-EVENT_PHOTO_IMPORTED = "photo_imported"
-EVENT_PHOTO_INDEXED = "photo_indexed"
+EVENT_MEDIA_IMPORTED = "media_imported"
+EVENT_MEDIA_INDEXED = "media_indexed"
 EVENT_DUPLICATES_FOUND = "duplicates_found"
-EVENT_PHOTO_MODIFIED = "photo_modified"
-EVENT_PHOTO_LABELED = "photo_labeled"
+EVENT_MEDIA_MODIFIED = "media_modified"
+EVENT_MEDIA_LABELED = "media_labeled"
 EVENTS = {
-    EVENT_PHOTO_IMPORTED: "Photo imported",
-    EVENT_PHOTO_INDEXED: "Photo indexed",
+    EVENT_MEDIA_IMPORTED: "Media imported",
+    EVENT_MEDIA_INDEXED: "Media indexed",
     EVENT_DUPLICATES_FOUND: "Duplicates found",
-    EVENT_PHOTO_MODIFIED: "Photo modified",
-    EVENT_PHOTO_LABELED: "Photo labeled",
+    EVENT_MEDIA_MODIFIED: "Media modified",
+    EVENT_MEDIA_LABELED: "Media labeled",
 }
 
 # Handler keys for system automations (registry in background_tasks.registry).

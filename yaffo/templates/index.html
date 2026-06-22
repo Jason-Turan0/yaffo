@@ -18,66 +18,66 @@
         {{ render_sidebar(url_for('index'), filters, filter_layout=filter_layout) }}
         <div class="main-content photo-gallery">
             {% call page_header('Photo Library') %}
-                {% if photos|length > 0 %}
-                    Showing {{ photos|length }} of {{ photo_count }} photo{{ 's' if photos|length != 1 else '' }}
+                {% if media_items|length > 0 %}
+                    Showing {{ media_items|length }} of {{ media_count }} photo{{ 's' if media_items|length != 1 else '' }}
                 {% else %}
                     No photos found
                 {% endif %}
             {% endcall %}
 
-            {% if photos|length > 0 %}
+            {% if media_items|length > 0 %}
                 <div class="photo-grid">
-                    {% for photo in photos %}
+                    {% for media_item in media_items %}
                         <div class="photo-card"
-                             onclick="window.open('{{ url_for('photo_view', photo_id=photo.id) }}', '_blank')">
+                             onclick="window.open('{{ url_for('media_view', media_item_id=media_item.id) }}', '_blank')">
                             <div class="photo-thumb">
-                                <button type="button" data-icon="favorite" data-photo-id="{{ photo.id }}"
-                                        class="favorite-toggle {% if photo.favorite %}is-favorite{% endif %}"
-                                        aria-pressed="{{ 'true' if photo.favorite else 'false' }}"
+                                <button type="button" data-icon="favorite" data-photo-id="{{ media_item.id }}"
+                                        class="favorite-toggle {% if media_item.favorite %}is-favorite{% endif %}"
+                                        aria-pressed="{{ 'true' if media_item.favorite else 'false' }}"
                                         title="Toggle favorite" aria-label="Toggle favorite"></button>
-                                <img src="{{ url_for('photo', photo_id=photo.id) }}"
+                                <img src="{{ url_for('media', media_item_id=media_item.id) }}"
                                      data-fallback="{{ url_for('placeholder') }}"
-                                     alt="Photo from {{ photo.date_taken | format_date ('date') }}">
+                                     alt="Photo from {{ media_item.date_taken | format_date ('date') }}">
                                 <dl class="photo-hover">
                                     <div class="photo-hover-row">
                                         <dt>Name</dt>
                                         <dd class="photo-hover-path"
-                                            title="{{ photo.full_file_path }}">{{ photo.file_name }}</dd>
+                                            title="{{ media_item.full_file_path }}">{{ media_item.file_name }}</dd>
                                     </div>
                                     <div class="photo-hover-row">
                                         <dt>Folder</dt>
-                                        <dd class="photo-hover-path" title="{{ photo.folder }}">{{ photo.folder }}</dd>
+                                        <dd class="photo-hover-path" title="{{ media_item.folder }}">{{ media_item.folder }}</dd>
                                     </div>
                                     <div class="photo-hover-row">
                                         <dt>Taken</dt>
-                                        <dd>{{ photo.date_taken | format_date('datetime') if photo.date_taken else 'Unknown date' }}</dd>
+                                        <dd>{{ media_item.date_taken | format_date('datetime') if media_item.date_taken else 'Unknown date' }}</dd>
                                     </div>
-                                    {% if photo.location_name %}
+                                    {% if media_item.location_name %}
                                         <div class="photo-hover-row">
                                             <dt>Location</dt>
-                                            <dd>{{ photo.location_name }}</dd>
+                                            <dd>{{ media_item.location_name }}</dd>
                                         </div>
                                     {% endif %}
-                                    {% if photo.latitude is not none and photo.longitude is not none %}
+                                    {% if media_item.latitude is not none and media_item.longitude is not none %}
                                         <div class="photo-hover-row">
                                             <dt>Coordinates</dt>
-                                            <dd>{{ '%.5f'|format(photo.latitude) }}, {{ '%.5f'|format(photo.longitude) }}</dd>
+                                            <dd>{{ '%.5f'|format(media_item.latitude) }}, {{ '%.5f'|format(media_item.longitude) }}</dd>
                                         </div>
                                     {% endif %}
-                                    {% if photo.labels %}
+                                    {% if media_item.labels %}
                                         <div class="photo-hover-row">
                                             <dt>Labels</dt>
-                                            <dd>{{ photo.labels | map(attribute='label.name') | join(', ') }}</dd>
+                                            <dd>{{ media_item.labels | map(attribute='label.name') | join(', ') }}</dd>
                                         </div>
                                     {% endif %}
 
                                 </dl>
                             </div>
                             <div class="photo-info">
-                                <div class="photo-date">{{ photo.date_taken | format_date ("date")  if photo.date_taken else 'Unknown date' }}</div>
-                                {% if photo.people|length > 0 %}
+                                <div class="photo-date">{{ media_item.date_taken | format_date ("date")  if media_item.date_taken else 'Unknown date' }}</div>
+                                {% if media_item.people|length > 0 %}
                                     <div class="photo-people">
-                                        {% for person in photo.people %}
+                                        {% for person in media_item.people %}
                                             <span class="person-tag">{{ person.name }}</span>
                                         {% endfor %}
                                     </div>
@@ -146,7 +146,7 @@
 {% block scripts %}
     <script src="{{ url_for('static', filename='filters/location-autocomplete.js') }}"></script>
     <script src="{{ url_for('static', filename='filters/filter_config.js') }}"></script>
-    <script src="{{ url_for('static', filename='photos/favorite.js') }}"></script>
+    <script src="{{ url_for('static', filename='media/favorite.js') }}"></script>
     <script>
         window.PHOTO_ORGANIZER.initLocationAutocomplete(window.APP_CONFIG);
         window.PHOTO_ORGANIZER.initFilterConfig(window.APP_CONFIG);

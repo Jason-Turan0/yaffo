@@ -408,7 +408,7 @@ def index_photos_batch(
             try:
                 result = future.result()
                 if result:
-                    photo = MediaItem(
+                    media_item = MediaItem(
                         full_file_path=result["full_file_path"],
                         date_taken=result["date_taken"],
                         year=result.get("year"),
@@ -417,7 +417,7 @@ def index_photos_batch(
                         longitude=result.get("longitude"),
                         location_name=result.get("location_name")
                     )
-                    session.add(photo)
+                    session.add(media_item)
                     session.flush()
 
                     for face_data in result["faces"]:
@@ -426,7 +426,7 @@ def index_photos_batch(
                             full_file_path=face_data['full_file_path'],
                             relative_file_path=face_data['relative_file_path'],
                             status=FACE_STATUS_UNASSIGNED,
-                            media_item_id=photo.id,
+                            media_item_id=media_item.id,
                             location_top=face_data['location_top'],
                             location_right=face_data['location_right'],
                             location_bottom=face_data['location_bottom'],
@@ -436,7 +436,7 @@ def index_photos_batch(
 
                     for tag_data in result.get("tags", []):
                         tag = Tag(
-                            media_item_id=photo.id,
+                            media_item_id=media_item.id,
                             tag_name=tag_data['tag_name'],
                             tag_value=tag_data['tag_value']
                         )
@@ -471,7 +471,7 @@ def unlink_face_thumbnails(thumbnail_paths: List[str]) -> None:
             logger.warning(f"Failed to delete face thumbnail {thumb}: {e}")
 
 
-def clear_faces_for_photos(session: Session, photo_ids: List[int]) -> List[str]:
+def clear_faces_for_media_items(session: Session, media_item_ids: List[int]) -> List[str]:
     """Delete every Face row for the given photos, returning their thumbnail paths
     so the caller can unlink them once the transaction commits.
 
@@ -479,32 +479,32 @@ def clear_faces_for_photos(session: Session, photo_ids: List[int]) -> List[str]:
     unique constraint won't catch a re-insert -- replaying an index task would
     otherwise accumulate duplicate faces. Clearing first replaces a photo's faces
     instead. Does not commit."""
-    if not photo_ids:
+    if not media_item_ids:
         return []
     thumbnails = [
         row[0] for row in
-        session.query(Face.full_file_path).filter(Face.media_item_id.in_(photo_ids)).all()
+        session.query(Face.full_file_path).filter(Face.media_item_id.in_(media_item_ids)).all()
     ]
-    session.query(Face).filter(Face.media_item_id.in_(photo_ids)).delete(synchronize_session=False)
+    session.query(Face).filter(Face.media_item_id.in_(media_item_ids)).delete(synchronize_session=False)
     return thumbnails
 
 
-def delete_orphaned_photos(session: Session, photo_ids: List[int]) -> int:
-    if not photo_ids:
+def delete_orphaned_media_items(session: Session, media_item_ids: List[int]) -> int:
+    if not media_item_ids:
         return 0
 
     # Capture each face's thumbnail path before the rows are gone
     face_thumbnails = [
         row[0] for row in
-        session.query(Face.full_file_path).filter(Face.media_item_id.in_(photo_ids)).all()
+        session.query(Face.full_file_path).filter(Face.media_item_id.in_(media_item_ids)).all()
     ]
 
     # Delete dependents first (SQLite foreign keys may not cascade)
-    session.query(Tag).filter(Tag.media_item_id.in_(photo_ids)).delete(synchronize_session=False)
-    deleted_faces = session.query(Face).filter(Face.media_item_id.in_(photo_ids)).delete(synchronize_session=False)
+    session.query(Tag).filter(Tag.media_item_id.in_(media_item_ids)).delete(synchronize_session=False)
+    deleted_faces = session.query(Face).filter(Face.media_item_id.in_(media_item_ids)).delete(synchronize_session=False)
 
     # Bulk delete photos using IN clause
-    deleted_count = session.query(MediaItem).filter(MediaItem.id.in_(photo_ids)).delete(synchronize_session=False)
+    deleted_count = session.query(MediaItem).filter(MediaItem.id.in_(media_item_ids)).delete(synchronize_session=False)
 
     session.commit()
 
@@ -514,24 +514,24 @@ def delete_orphaned_photos(session: Session, photo_ids: List[int]) -> int:
     return deleted_count
 
 
-def delete_photos_by_paths(session: Session, full_file_paths: List[str]) -> int:
+def delete_media_items_by_paths(session: Session, full_file_paths: List[str]) -> int:
     """Delete photos (and their faces/tags/thumbnails) by file path.
 
-    Resolves paths to ids and reuses delete_orphaned_photos so the row and
+    Resolves paths to ids and reuses delete_orphaned_media_items so the row and
     thumbnail cleanup stays in one place. Used by the file-system watcher when
     a photo is deleted or moved out of a watched directory.
     """
     if not full_file_paths:
         return 0
 
-    photo_ids = [
+    media_item_ids = [
         row[0] for row in
         session.query(MediaItem.id).filter(MediaItem.full_file_path.in_(full_file_paths)).all()
     ]
-    return delete_orphaned_photos(session, photo_ids)
+    return delete_orphaned_media_items(session, media_item_ids)
 
 
-def delete_photos_under_dir(session: Session, directory: str) -> int:
+def delete_media_items_under_dir(session: Session, directory: str) -> int:
     """Delete every photo whose file lives anywhere under `directory`.
 
     Used when a directory is renamed or moved out of a watched tree: the files
@@ -541,12 +541,12 @@ def delete_photos_under_dir(session: Session, directory: str) -> int:
     prefix, so '/m/2020' won't match '/m/2020-backup'.
     """
     directory_path = Path(directory)
-    photo_ids = [
-        photo_id
-        for photo_id, full_file_path in session.query(MediaItem.id, MediaItem.full_file_path).all()
+    media_item_ids = [
+        media_item_id
+        for media_item_id, full_file_path in session.query(MediaItem.id, MediaItem.full_file_path).all()
         if directory_path in Path(full_file_path).parents
     ]
-    return delete_orphaned_photos(session, photo_ids)
+    return delete_orphaned_media_items(session, media_item_ids)
 
 
 def get_orphaned_thumbnails(session: Session, thumbnail_dir: Path) -> List[Path]:

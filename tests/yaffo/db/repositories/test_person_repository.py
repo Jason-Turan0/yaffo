@@ -36,9 +36,9 @@ def _unit(*vals) -> np.ndarray:
     return v / n if n else v
 
 
-def _add_face(sess, person, photo, vec, age, det_score=None, similarity=None):
+def _add_face(sess, person, media_item, vec, age, det_score=None, similarity=None):
     face = Face(
-        embedding=serialize_embedding(vec), media_item_id=photo.id, estimated_age=age,
+        embedding=serialize_embedding(vec), media_item_id=media_item.id, estimated_age=age,
         status=FACE_STATUS_ASSIGNED, det_score=det_score, location_top=0,
         location_right=10, location_bottom=10, location_left=0,
     )
@@ -89,10 +89,10 @@ def test_falls_back_to_estimated_age_when_no_birthdate(session):
     """A photo with no date means no birthdate can be derived, so the face's own
     predicted age buckets it (better than dumping it in 'unknown')."""
     person = Person(name="NoDate")
-    photo = MediaItem(year=None)  # undated -> birthdate can't be estimated
-    session.add_all([person, photo])
+    media_item = MediaItem(year=None)  # undated -> birthdate can't be estimated
+    session.add_all([person, media_item])
     session.flush()
-    _add_face(session, person, photo, _unit(1.0), age=1)  # predicted baby
+    _add_face(session, person, media_item, _unit(1.0), age=1)  # predicted baby
     session.commit()
 
     update_person_embedding(person.id, session)
@@ -105,12 +105,12 @@ def test_falls_back_to_estimated_age_when_no_birthdate(session):
 
 def test_medoid_is_a_real_stored_embedding(session):
     person = Person(name="Many", birthdate=date(1990, 1, 1))
-    photo = MediaItem(year=2010)  # all adult
-    session.add_all([person, photo])
+    media_item = MediaItem(year=2010)  # all adult
+    session.add_all([person, media_item])
     session.flush()
     vecs = [_unit(1.0), _unit(0.9, 0.1), _unit(0.95, 0.05), _unit(-1.0)]
     for v in vecs:
-        _add_face(session, person, photo, v, age=20)
+        _add_face(session, person, media_item, v, age=20)
     session.commit()
 
     update_person_embedding(person.id, session)
@@ -152,11 +152,11 @@ def test_undated_faces_are_each_kept(session):
     """Faces whose photo has no capture date can't be day-bucketed, so none are
     dropped -- each is its own representative."""
     person = Person(name="NoDates", birthdate=date(1990, 1, 1))
-    photo = MediaItem(year=2010)  # no date_taken
-    session.add_all([person, photo])
+    media_item = MediaItem(year=2010)  # no date_taken
+    session.add_all([person, media_item])
     session.flush()
-    f1 = _add_face(session, person, photo, _unit(1.0), age=20, det_score=0.4)
-    f2 = _add_face(session, person, photo, _unit(0.0, 1.0), age=20, det_score=0.9)
+    f1 = _add_face(session, person, media_item, _unit(1.0), age=20, det_score=0.4)
+    f2 = _add_face(session, person, media_item, _unit(0.0, 1.0), age=20, det_score=0.9)
     session.commit()
 
     update_person_embedding(person.id, session)
@@ -178,11 +178,11 @@ def test_caps_at_max_representative_faces_by_score(session):
     kept_ids = set()
     for i in range(n_days):
         day = date(2010, 1, 1) + timedelta(days=i)
-        photo = MediaItem(year=2010, date_taken=f"{day.isoformat()}T10:00:00")
-        session.add(photo)
+        media_item = MediaItem(year=2010, date_taken=f"{day.isoformat()}T10:00:00")
+        session.add(media_item)
         session.flush()
         # Higher day index -> higher det_score, so the last MAX faces survive.
-        face = _add_face(session, person, photo, _unit(1.0), age=20, det_score=i / 1000.0)
+        face = _add_face(session, person, media_item, _unit(1.0), age=20, det_score=i / 1000.0)
         if i >= n_days - MAX_REPRESENTATIVE_FACES:
             kept_ids.add(face.id)
     session.commit()
@@ -200,10 +200,10 @@ def test_similarity_bounds_falls_back_when_too_few_samples(session):
     """Below the sample floor the percentiles are noisy, so the documented defaults
     are used instead."""
     person = Person(name="Sparse")
-    photo = MediaItem(year=2010)
-    session.add_all([person, photo])
+    media_item = MediaItem(year=2010)
+    session.add_all([person, media_item])
     session.flush()
-    _add_face(session, person, photo, _unit(1.0), age=20, similarity=0.5)
+    _add_face(session, person, media_item, _unit(1.0), age=20, similarity=0.5)
     session.commit()
 
     assert get_similarity_bounds(session) == (DEFAULT_SIMILARITY_FLOOR, DEFAULT_SIMILARITY_CEIL)
@@ -213,12 +213,12 @@ def test_similarity_bounds_reads_percentiles_from_data(session):
     """With enough assignments the band is the low/high percentiles of the actual
     stored similarities, not the hardcoded defaults."""
     person = Person(name="Busy")
-    photo = MediaItem(year=2010)
-    session.add_all([person, photo])
+    media_item = MediaItem(year=2010)
+    session.add_all([person, media_item])
     session.flush()
     # similarities 0.00, 0.01, ... 0.99 -> p5 ~= 0.05, p95 ~= 0.95.
     for i in range(100):
-        _add_face(session, person, photo, _unit(1.0, i), age=20, similarity=i / 100.0)
+        _add_face(session, person, media_item, _unit(1.0, i), age=20, similarity=i / 100.0)
     session.commit()
 
     floor, ceil = get_similarity_bounds(session)

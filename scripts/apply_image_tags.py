@@ -17,13 +17,13 @@ def is_exiftool_available():
     return shutil.which("exiftool") is not None
 
 def update_photo_metadata():
-    photos = MediaItem.query.all()
+    media_items = MediaItem.query.all()
     system = platform.system().lower()
     is_mac = system == "darwin"
     use_exiftool = not is_mac and is_exiftool_available()
 
-    for photo in photos:
-        path = Path(photo.full_file_path)
+    for media_item in media_items:
+        path = Path(media_item.full_file_path)
         if not path.exists():
             print(f"File not found: {path}")
             continue
@@ -32,14 +32,14 @@ def update_photo_metadata():
         try:
             # --- Prepare date_taken ---
             date_str = None
-            if photo.date_taken:
-                date_str = photo.date_taken
+            if media_item.date_taken:
+                date_str = media_item.date_taken
                 if len(date_str) == 10:
                     date_str += " 00:00:00"
 
             # --- Collect people names ---
             names = set()
-            for face in photo.faces:
+            for face in media_item.faces:
                 for person in face.people:
                     if person.name:
                         names.add(person.name)

@@ -4,7 +4,7 @@ from itertools import batched
 
 from sqlalchemy.orm import Session
 
-from yaffo.db.models import MediaItem, Job, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
+from yaffo.db.models import MediaItem, Job, JOB_STATUS_PENDING, MEDIA_STATUS_INDEXED
 from yaffo.utils.index_jobs_dto import IndexJobs
 from yaffo.logging_config import get_logger
 
@@ -51,7 +51,7 @@ def enqueue_index_jobs(
     files_to_import = [fp for fp in files_to_index if fp not in existing]
     files_needing_indexing = [
         fp for fp in files_to_index
-        if fp not in existing or existing[fp] != PHOTO_STATUS_INDEXED
+        if fp not in existing or existing[fp] != MEDIA_STATUS_INDEXED
     ]
 
     import_job_id = str(uuid.uuid4())

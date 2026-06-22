@@ -57,15 +57,15 @@ class TestFoldersSource:
         session, media_dir_id, root = ctx
         # top.jpg sits directly in the root, so it isn't a subfolder; 2024 counts all 3.
         assert dq.resolve_query(session, {"source": "folders", "media_dir_id": media_dir_id}) == [
-            {"name": "2023", "photo_count": 1},
-            {"name": "2024", "photo_count": 3},
+            {"name": "2023", "media_count": 1},
+            {"name": "2024", "media_count": 3},
         ]
 
     def test_nested_path_lists_its_subfolders(self, ctx):
         session, media_dir_id, root = ctx
         assert dq.resolve_query(session, {"source": "folders", "media_dir_id": media_dir_id, "path": "2024"}) == [
-            {"name": "feb", "photo_count": 1},
-            {"name": "jan", "photo_count": 2},
+            {"name": "feb", "media_count": 1},
+            {"name": "jan", "media_count": 2},
         ]
 
     def test_unknown_media_dir_is_empty(self, ctx):

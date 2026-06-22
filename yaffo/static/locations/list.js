@@ -149,8 +149,8 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
 
     const showPhotoInPopup = (photoData, coordinate) => {
         debugger
-        const photoUrl = window.APP_CONFIG.buildUrl('photo', { photo_id: photoData.id });
-        const photoViewUrl = window.APP_CONFIG.buildUrl('photo_view', { photo_id: photoData.id });
+        const photoUrl = window.APP_CONFIG.buildUrl('media', { media_item_id: photoData.id });
+        const photoViewUrl = window.APP_CONFIG.buildUrl('media_view', { media_item_id: photoData.id });
 
         popupContent.innerHTML = `
             <div class="popup-photo-container">
@@ -187,8 +187,8 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                 ).join('');
 
                 const firstPhoto = photosData[0];
-                const photoUrl = window.APP_CONFIG.buildUrl('photo', { photo_id: firstPhoto.id });
-                const photoViewUrl = window.APP_CONFIG.buildUrl('photo_view', { photo_id: firstPhoto.id });
+                const photoUrl = window.APP_CONFIG.buildUrl('media', { media_item_id: firstPhoto.id });
+                const photoViewUrl = window.APP_CONFIG.buildUrl('media_view', { media_item_id: firstPhoto.id });
 
                 popupContent.innerHTML = `
                     <div class="popup-select-container">
@@ -212,8 +212,8 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                     const selectedIndex = parseInt(e.target.value);
                     const selectedPhoto = photosData[selectedIndex];
 
-                    const newPhotoUrl = window.APP_CONFIG.buildUrl('photo', { photo_id: selectedPhoto.id });
-                    const newPhotoViewUrl = window.APP_CONFIG.buildUrl('photo_view', { photo_id: selectedPhoto.id });
+                    const newPhotoUrl = window.APP_CONFIG.buildUrl('media', { media_item_id: selectedPhoto.id });
+                    const newPhotoViewUrl = window.APP_CONFIG.buildUrl('media_view', { media_item_id: selectedPhoto.id });
 
                     document.getElementById('photo-img').src = newPhotoUrl;
                     document.getElementById('photo-img').alt = selectedPhoto.name;
@@ -393,7 +393,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        photo_ids: photoIds,
+                        media_item_ids: photoIds,
                         location_name: locationName
                     })
                 });

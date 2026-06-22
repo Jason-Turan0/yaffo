@@ -31,13 +31,13 @@ def test_script_reads_ctx_and_calls_host_api(monkeypatch):
         fake_resolve_query,
     )
     monkeypatch.setattr(
-        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_photo_rows",
+        "yaffo.background_tasks.automation_sandbox.automation_actions.enrich_media_rows",
         lambda session, rows: rows,  # enrichment tested separately
     )
 
     session = object()
-    code = "data_query({'source': 'media_items', 'in_ids': ctx['media_ids']})"
-    context = EventContext(event_type="photo_indexed", job_id="job-1", media_ids=[1, 2])
+    code = "data_query({'source': 'media_items', 'in_ids': ctx['media_item_ids']})"
+    context = EventContext(event_type="media_indexed", job_id="job-1", media_item_ids=[1, 2])
 
     result = run_automation(session, _FakeAutomation(code), context)
 
@@ -57,7 +57,7 @@ def test_schedule_run_has_empty_ctx(monkeypatch):
         lambda session, query: query,
     )
     # context=None (a schedule trigger) -> ctx fields are empty/None
-    code = "data_query({'event': ctx['event_type'], 'ids': ctx['media_ids']})"
+    code = "data_query({'event': ctx['event_type'], 'ids': ctx['media_item_ids']})"
     result = run_automation(object(), _FakeAutomation(code), None)
     assert result.success is True, result.error
     assert result.value == {"event": None, "ids": []}

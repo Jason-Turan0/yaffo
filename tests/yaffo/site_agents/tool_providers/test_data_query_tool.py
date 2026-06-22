@@ -32,7 +32,7 @@ def _provider(monkeypatch, rows):
 
 def _patch_media_dirs(monkeypatch, paths, entries):
     _patch(monkeypatch, "yaffo.background_tasks.automation_sandbox.media_dirs."
-           "photos_repository.get_paths_by_ids", lambda s, ids: paths)
+           "media_repository.get_paths_by_ids", lambda s, ids: paths)
     _patch(monkeypatch, "yaffo.background_tasks.automation_sandbox.media_dirs."
            "get_media_dir_entries", lambda s: entries)
 

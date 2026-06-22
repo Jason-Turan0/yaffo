@@ -59,7 +59,7 @@ flowchart TD
 The dashed red **loop guard** node (and the chain-accumulating feedback edges) breaks
 in-process event cycles; the orange **watcher** path is a *second* loop class the
 in-memory chain can't bound — a write to a watched file re-enters via the OS in a
-separate process, so `photo_indexed` arrives with an empty chain, handled instead by
+separate process, so `media_indexed` arrives with an empty chain, handled instead by
 the watcher self-write suppression. Both are described in *Loop guard* below. The trigger model is fixed at import time only in that
 **action *types*** (system handlers, the event catalog) are code; the
 **schedule/subscription *rows*** are fully runtime-editable with no consumer restart.
@@ -116,15 +116,15 @@ There is **no `automation_runs` table**. A run is a `Job` tagged with
 Both `record_run` and `run_and_record` share `_open_run_job` and, like the custom
 path, **never hand their Jobs to `complete_job_task`** — so an automation run emits
 no job-completion event (and can't feed a trigger loop). Domain events an automation
-*chooses* to emit (e.g. `assign_location_name` emitting `photo_modified` so
+*chooses* to emit (e.g. `assign_location_name` emitting `media_modified` so
 `export_photo_tag` writes the file) are explicit `emit_event` calls inside the work,
 independent of the run's Job.
 
 Schema lives in `yaffo/scripts/init_db.py` (no migrations — edit + reseed; the
 `file_sync` system automation + its hourly schedule trigger, the
-`auto_assign_faces` automation + its `photo_indexed` event trigger, the
+`auto_assign_faces` automation + its `media_indexed` event trigger, the
 `duplicate_scan` automation + its daily schedule trigger, and the
-`export_photo_tag` automation + its `photo_modified` event trigger, are seeded
+`export_photo_tag` automation + its `media_modified` event trigger, are seeded
 there).
 
 ## Schedule path (poll)
@@ -157,7 +157,7 @@ The push twin of the schedule dispatcher.
 1. **Emit.** `events.emit_event(event_type, payload)` enqueues one
    `dispatch_event_task`. Emission is wired into `tasks/complete_job.py`: after a
    job is committed `COMPLETED`, `emit_job_completed_event` maps `job.name →
-   event_type` (`JOB_EVENT_MAP`) and emits with the resolved `media_ids`.
+   event_type` (`JOB_EVENT_MAP`) and emits with the resolved `media_item_ids`.
    **Granularity is per-job-completion** (one emission point, ~1 event per job) —
    chosen over per-photo to avoid fan-out storms on bulk imports.
 2. **Dispatch.** `tasks/dispatch_event.py::dispatch_event_task(event_type,
@@ -165,35 +165,35 @@ The push twin of the schedule dispatcher.
    automations and calls `invoke_automation` with an `EventContext`.
 
 `EventContext` (`background_tasks/events.py`) is the typed payload handed to a
-run: `event_type`, `job_id`, `media_ids`, and `groups` (related-media groupings —
+run: `event_type`, `job_id`, `media_item_ids`, and `groups` (related-media groupings —
 one list of media ids per duplicate set for `duplicates_found`, each ordered
 earliest-indexed first; empty for events without groupings). It threads through to
 the Starlark `ctx` (so a script reads `ctx["groups"]`) via `dispatch_event_task` →
 `invoke_automation`'s serialized payload → `executor.context_globals`.
 
-Event catalog (fixed, in `models.py`): `photo_imported`, `photo_indexed`,
-`duplicates_found`, `photo_modified`, `photo_labeled` (`EVENTS`).
+Event catalog (fixed, in `models.py`): `media_imported`, `media_indexed`,
+`duplicates_found`, `media_modified`, `media_labeled` (`EVENTS`).
 
-**`photo_labeled` is emitted from `classify_labels_automation_task`** after a batch
+**`media_labeled` is emitted from `classify_labels_automation_task`** after a batch
 is labelled — for the photos that received at least one label. Like
 `assign_location_name` emits its event from inside the run, but **after `record_run`
 commits** (classify's `replace_photo_labels` defers its commit to `record_run`), so a
 subscriber reading `media_labels` sees the new rows. Fires for both the
-`photo_indexed`-driven run and the Settings "re-classify all" backfill; a run that
+`media_indexed`-driven run and the Settings "re-classify all" backfill; a run that
 labels nothing emits nothing.
 
 **`duplicates_found` is emitted directly from `find_duplicates_task`** (not via
 `JOB_EVENT_MAP`/`complete_job_task`, which a find_duplicates job never reaches): the
 task already holds the duplicate groups as file paths, so it resolves them to photo
 ids (`_resolve_group_photo_ids` — paths stay out of the sandbox) and emits both the
-flattened `media_ids` and the per-set `groups` with the keeper first. Fires for both
+flattened `media_item_ids` and the per-set `groups` with the keeper first. Fires for both
 the scheduled `duplicate_scan` and the manual Remove Duplicates tool.
 
-**Not all events come from job completion.** `photo_modified` is emitted
+**Not all events come from job completion.** `media_modified` is emitted
 *synchronously from routes* (not via `JOB_EVENT_MAP`) when a user edits a photo's
 people/location: face assign (`routes/faces.py`), person rename + face removal
 (`routes/people.py`), and location bulk-update (`routes/locations.py`) each call
-`emit_event(EVENT_PHOTO_MODIFIED, {"media_ids": [...]})` after their commit. These
+`emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": [...]})` after their commit. These
 are UI edits, not bulk jobs, so per-edit granularity is fine (no fan-out storm).
 
 ## Tier routing (`background_tasks/automation_dispatch.py`)
@@ -253,19 +253,19 @@ automation_sandbox/
   |---|---|---|
   | `data_query(query)` | read | `data_query_repository.resolve_query`; `media_items` rows are enriched with `media_dir_id` + `relative_path` (see *Media dirs*). Sources are every exposed table — incl. `classification_labels` + `media_labels` (the auto-classifier's labels, read-only; stitch to media items client-side on `media_labels.media_item_id` / `.label_id`) |
   | `report_progress(completed, total)` | run control | update this run's Job `task_count`/`completed_count` → live percent + "N of TOTAL processed" in the run history |
-  | `face_similarity(photo_id, person_id)` | read | per-face similarity to a person (`domain/compare_utils`) |
-  | `match_people(photo_id)` | read | per-face similarity to all known people |
-  | `tag_photos(tags)` | mutating (batch) | add `Tag`s in one write — `[{photo_id, name, value?}]` |
+  | `face_similarity(media_item_id, person_id)` | read | per-face similarity to a person (`domain/compare_utils`) |
+  | `match_people(media_item_id)` | read | per-face similarity to all known people |
+  | `tag_media_items(tags)` | mutating (batch) | add `Tag`s in one write — `[{media_item_id, name, value?}]` |
   | `assign_faces(assignments)` | mutating (batch) | link faces to people in one write — `[{face_id, person_id}]` (skips unknown people / already-assigned) |
-  | `move_photos(moves)` | mutating (batch) | move photos in one transaction — `[{photo_id, media_dir_id, target_path}]` |
-  | `rename_files(renames)` | mutating (batch) | rename files in one transaction — `[{photo_id, new_name}]` |
-  | `delete_photos(photo_ids)` | mutating (batch) | trash each file (send2trash) + remove the photo and its faces/tags/labels from the index, in one transaction — `[id, ...]` |
+  | `move_media_items(moves)` | mutating (batch) | move photos in one transaction — `[{media_item_id, media_dir_id, target_path}]` |
+  | `rename_files(renames)` | mutating (batch) | rename files in one transaction — `[{media_item_id, new_name}]` |
+  | `delete_media_items(media_item_ids)` | mutating (batch) | trash each file (send2trash) + remove the photo and its faces/tags/labels from the index, in one transaction — `[id, ...]` |
 
   **Writes are batch-only.** Every mutating host function takes a list and persists the
-  whole set in one commit (`photos_repository.add_tags` / `.delete_photos`,
+  whole set in one commit (`media_repository.add_tags` / `.delete_media_items`,
   `person_repository.bulk_link_faces_to_people`, and a single commit for the file
   moves/renames); there are no single-item write functions (`move_photo` / `rename_file`
-  remain as internal per-item helpers, not host-exposed). `delete_photos` sends each
+  remain as internal per-item helpers, not host-exposed). `delete_media_items` sends each
   file to the OS trash (recoverable) before removing the photo and its faces/tags/labels
   from the index. The system prompt's
   `<batching>` section tells the model to collect its writes into a list and call a
@@ -293,7 +293,7 @@ automation_sandbox/
   (`data_query_tool._json_default`).
 - **`executor.run_automation(session, automation, context)`** — runs
   `automation.published_code` with `inputs={"ctx": …}` (the trigger context:
-  `event_type`/`job_id`/`media_ids`, empty for a schedule) and
+  `event_type`/`job_id`/`media_item_ids`, empty for a schedule) and
   `functions=build_host_functions(session)`. Returns the `StarlarkResult`.
 - **`tasks/run_automation.py::run_automation_code_task`** — the registered
   task wrapping the executor (loads the automation, rebuilds the `EventContext`,
@@ -309,8 +309,8 @@ A **dry run** that shows what a script *would* do without doing it. `Test`
 re-runs the last-selected file/folder; `Test on a folder…` / `Test on a file…`
 open the native picker (`select_folder?mode=folder|file`, see `utils/file_system.py`)
 and run against the indexed photos at/under that path
-(`photos_repository.get_photo_ids_under_path`). The route is `POST
-.../<slug>/test-files` → `preview_automation(session, automation, photo_ids)`.
+(`media_repository.get_media_item_ids_under_path`). The route is `POST
+.../<slug>/test-files` → `preview_automation(session, automation, media_item_ids)`.
 
 - **Nothing changes.** `preview_automation` runs the code with
   `build_recording_host_functions`: every host call is appended to a `HostCall`
@@ -335,7 +335,7 @@ are migrated by `scripts/backfill_media_dir_ids.py`). The automation `data_query
 wrapper enriches photo rows with `media_dir_id` + `relative_path`
 (`automation_sandbox/media_dirs.py::enrich_photo_rows`, derived from
 `full_file_path`, which stays server-side); the shared `resolve_query` (page
-builder) is untouched. `move_photos` addresses each destination by `media_dir_id` +
+builder) is untouched. `move_media_items` addresses each destination by `media_dir_id` +
 `target_path` and **refuses any target that resolves outside that media dir** (and
 no-ops when a photo is already at its target), so a script can organise within or move
 between media dirs but can't write elsewhere.
@@ -370,7 +370,7 @@ package — formerly `page_builder` — that the page and theme builders also us
   rules, the `ctx` contract, the host API via `render_host_api()`, data sources via
   `FIELDS_BY_SOURCE` (incl. the FK join map from `source_catalog.relationship_summary()`,
   derived from the models), the `EVENTS` catalog — all *derived*, none restated — plus
-  a `<scoping>` section (event runs filter `data_query` to `ctx['media_ids']`, never
+  a `<scoping>` section (event runs filter `data_query` to `ctx['media_item_ids']`, never
   sweep the library; library-wide only on a schedule), a `<batching>` section (collect
   writes, call one batch function — no per-item write loops), and a `<progress>`
   section (call `report_progress` while looping)) +
@@ -440,9 +440,9 @@ sync — tagged with `automation_id` as the run history.
 ### `auto_assign_faces`
 
 `tasks/auto_assign_faces_automation.py` — a system automation
-(`handler='auto_assign_faces'`, seeded disabled with a `photo_indexed` **event**
+(`handler='auto_assign_faces'`, seeded disabled with a `media_indexed` **event**
 trigger). On each indexed batch its handler `enqueue_auto_assign_faces` enqueues
-`auto_assign_faces_automation_task(automation_id, photo_ids)`, which for every
+`auto_assign_faces_automation_task(automation_id, media_item_ids)`, which for every
 detected face computes `calculate_face_similarity` against all known people and
 links the face to the **one** person clearing the configured threshold — a face
 with zero or several strong matches is left unassigned. The threshold is the lone
@@ -457,7 +457,7 @@ the old manual "Auto-Assign People" utility page — that page, its route, and i
 `tasks/duplicate_scan.py` — a system automation (`handler='duplicate_scan'`, seeded
 disabled with a **daily** `0 3 * * *` schedule trigger). Its handler
 `enqueue_duplicate_scan` enqueues `duplicate_scan_task`, which opens a
-`find_duplicates` Job over **every indexed photo** (`photos_repository.get_all_photo_paths`),
+`find_duplicates` Job over **every indexed photo** (`media_repository.get_all_media_item_paths`),
 tags it with `automation_id`, and hands it to the existing `find_duplicates_task`
 — the exact perceptual-hash scan the manual **Remove Duplicates** tool runs, so its
 results show up there identically. Same shape as `file_sync`: a lightweight handler
@@ -468,9 +468,9 @@ event subjects.)
 ### `export_photo_tag`
 
 `tasks/export_photo_tag.py` — a system automation (`handler='export_photo_tag'`,
-seeded disabled with a `photo_modified` **event** trigger). When a photo's people
+seeded disabled with a `media_modified` **event** trigger). When a photo's people
 or location change in the UI, its handler `enqueue_export_photo_tag` enqueues
-`export_photo_tag_task(automation_id, photo_ids)`, which writes the photo's tags
+`export_photo_tag_task(automation_id, media_item_ids)`, which writes the photo's tags
 back into the **file's** metadata via `utils.write_metadata.write_photo_metadata`
 (the same writer the old manual "Sync Metadata" utility used). Two independent
 **config** toggles decide what's written: `export_location_tag_enabled` (the
@@ -495,12 +495,12 @@ batch button, the on-disk file stays in sync as you tag.
 ### `assign_location_name`
 
 `tasks/assign_location_name_automation.py` — a system automation
-(`handler='assign_location_name'`, seeded disabled with a `photo_indexed` **event**
+(`handler='assign_location_name'`, seeded disabled with a `media_indexed` **event**
 trigger). On each indexed batch its handler `enqueue_assign_location_name` enqueues
-`assign_location_name_automation_task(automation_id, photo_ids)`, which gives each
+`assign_location_name_automation_task(automation_id, media_item_ids)`, which gives each
 GPS-tagged photo a `location_name` via two strategies tried cheapest-first per
 photo: **(1) reuse** the name of the closest already-named photo within
-`nearby_radius_meters` (`photos_repository.get_named_coordinates` +
+`nearby_radius_meters` (`media_repository.get_named_coordinates` +
 `utils/geo.haversine_meters`), then **(2) reverse-geocode** the coordinates via
 `utils/reverse_geocode.reverse_geocode` (the same Nominatim helper the Locations
 screen uses — extracted from `routes/locations.py` so both share one
@@ -509,19 +509,19 @@ candidates for the rest of the batch, so a cluster of fresh photos costs one onl
 lookup, not one each. Four **config** fields tune it: `reuse_nearby_enabled`,
 `nearby_radius_meters` (default 1000), `reverse_geocode_enabled`, and
 `overwrite_existing` (off → photos that already have a name are left alone).
-Photos without GPS are skipped. After committing, it **emits `photo_modified`** for
+Photos without GPS are skipped. After committing, it **emits `media_modified`** for
 the named photos so `export_photo_tag` can write the new location into the file —
-a deliberate `photo_indexed → assign_location_name → photo_modified →
+a deliberate `media_indexed → assign_location_name → media_modified →
 export_photo_tag` chain (not a loop: export_photo_tag emits nothing).
 `_assign_location_names` is the testable core (the geocoder is injected).
 
 ### `geotag_from_neighbors`
 
 `tasks/geotag_from_neighbors_automation.py` — a system automation
-(`handler='geotag_from_neighbors'`, seeded disabled with a `photo_indexed` **event**
+(`handler='geotag_from_neighbors'`, seeded disabled with a `media_indexed` **event**
 trigger). On each indexed batch its handler enqueues
-`geotag_from_neighbors_automation_task(automation_id, photo_ids)`, which gives each
-GPS-less photo (`photos_repository.get_photos_missing_gps`) the coordinates of the
+`geotag_from_neighbors_automation_task(automation_id, media_item_ids)`, which gives each
+GPS-less photo (`media_repository.get_media_items_missing_gps`) the coordinates of the
 closest-in-time photo that *does* have GPS — time-correlation geotagging, for the
 case of a no-GPS camera shooting alongside a phone on the same outing. Candidates
 (`get_gps_timestamps` — every photo with a date + coordinates) are parsed to
@@ -533,7 +533,7 @@ coordinates aren't copied across a long gap. Candidates are frozen at the start 
 run, so a just-geotagged photo is never reused as a source (inferred coordinates can't
 chain/drift).
 `_geotag_from_neighbors` is the testable core. It writes lat/lon to the **index**
-only (it does not emit `photo_modified`); pairs naturally with `assign_location_name`
+only (it does not emit `media_modified`); pairs naturally with `assign_location_name`
 on a later run. **Depends on consistent `date_taken` clocks across photos** — see the
 timezone note below.
 
@@ -555,12 +555,12 @@ A dev seeder (run `python -m yaffo.scripts.seed_automations`, idempotent) that
 stands in for AI-generated custom automations so the runtime + host API can be
 exercised end-to-end without the builder: `log-photos-on-index` /
 `log-photos-each-minute` (read-only `data_query`), `organize-by-date` (on
-`photo_indexed`, collects each row's `media_dir_id` + `YYYY/MM` and batch-`move_photos`
+`media_indexed`, collects each row's `media_dir_id` + `YYYY/MM` and batch-`move_media_items`
 into Year/Month), `move-duplicates` (on `duplicates_found`, seeded **disabled** since
-it moves files — keeps `ctx["groups"][i][0]` and `move_photos` the rest into a
+it moves files — keeps `ctx["groups"][i][0]` and `move_media_items` the rest into a
 `_Duplicates` sub-folder), and `file-favorite-kid-photos` (a **no-trigger / Run-now**,
 library-wide organize seeded **disabled** — walks people → faces → photos, keeps the
-favorites, batch-`move_photos` each into `<kid>/<year>`; exercises the `favorite`
+favorites, batch-`move_media_items` each into `<kid>/<year>`; exercises the `favorite`
 filter, `report_progress`, and a batched write). (Auto-assign-faces used to be a seed example here; it was promoted
 to the `auto_assign_faces` system built-in above. The seeder still deletes the old
 `auto-assign-faces` slug so re-running it cleans up any stale custom copy.)
@@ -595,19 +595,19 @@ An automation can both **emit** and **subscribe to** events, so a misconfigured
 trigger graph can cycle. Because triggers are runtime-editable on system rows too,
 the cases are concrete:
 
-- `classify_labels` given a `photo_labeled` trigger → it labels, emits
-  `photo_labeled`, re-triggers itself → a **tight infinite loop**, and every hop is a
+- `classify_labels` given a `media_labeled` trigger → it labels, emits
+  `media_labeled`, re-triggers itself → a **tight infinite loop**, and every hop is a
   full CLIP pass over the library (the expensive worst case).
-- `assign_location_name` ↔ `export_photo_tag`-style `A → photo_modified → B → … → A`
+- `assign_location_name` ↔ `export_photo_tag`-style `A → media_modified → B → … → A`
   chains.
 
 **Custom automations are loop participants too — via their host actions, not an
-explicit emit.** The mutating host actions (`tag_photos`, `move_photos`, `assign_faces`,
-`rename_files`, `delete_photos`) are expected to fire `photo_modified` (the same event
+explicit emit.** The mutating host actions (`tag_media_items`, `move_media_items`, `assign_faces`,
+`rename_files`, `delete_media_items`) are expected to fire `media_modified` (the same event
 the routes already emit for those exact edits). That emission happens *inside the host
 action implementation* (`automation_sandbox/automation_actions.py`), which only ever
 receives a `session`/reporter — it has no automation id or triggering context in scope.
-So a custom automation on `photo_modified` that calls `tag_photos` would re-trigger itself,
+So a custom automation on `media_modified` that calls `tag_media_items` would re-trigger itself,
 and the emit site **cannot be handed the chain explicitly** — it comes "from outside",
 below the script.
 
@@ -620,12 +620,12 @@ below the script.
    like `export_photo_tag`) **writes a watched file**; `watcher.py` (a *separate
    process* running watchdog) detects the OS event, debounces, and
    `enqueue_index_jobs`; the index job completes and `complete_job_task` emits
-   **`photo_indexed`** — which re-triggers automations. The causal chain **cannot
+   **`media_indexed`** — which re-triggers automations. The causal chain **cannot
    cross this boundary**: the write leaves the process entirely, comes back as an OS
    event with no metadata, and the re-emit happens in a fresh worker with an empty
    contextvar. Example loop:
-   `photo_indexed → assign_location_name → photo_modified → export_photo_tag →
-   [file write] → watcher → index job → photo_indexed → …`, where every `photo_indexed`
+   `media_indexed → assign_location_name → media_modified → export_photo_tag →
+   [file write] → watcher → index job → media_indexed → …`, where every `media_indexed`
    has `chain=[]`, so the causal-chain guard is blind to it. This class needs the
    **watcher self-write suppression** mechanism below.
 
@@ -663,10 +663,10 @@ def emit_event(event_type, payload):                       # callers unchanged
 Flow for the host-action self-loop, now caught:
 
 ```
-photo_modified (chain=[])                  ← e.g. a UI edit (genuine origin)
+media_modified (chain=[])                  ← e.g. a UI edit (genuine origin)
   └─ custom automation X runs
        run_and_record opens scope → chain=[X]
-       script calls tag_photos() → emit_event(photo_modified)  ← stamped [X] ambiently
+       script calls tag_media_items() → emit_event(media_modified)  ← stamped [X] ambiently
          └─ dispatch: X.id ∈ [X] → SKIP (logged); X never re-runs
 ```
 
@@ -683,7 +683,7 @@ guard. The standard pattern for "an app that watches a directory it also writes 
 
 - **A shared suppression ledger.** When yaffo writes a watched file as part of an
   automation/system action (`export_photo_tag`'s metadata write; any file-writing host
-  action — `move_photos` to a new path, a future content writer), record
+  action — `move_media_items` to a new path, a future content writer), record
   `(path, signature)` in a small **cross-process** store (a DB table, e.g.
   `watcher_suppressions`, since the writer is a worker and the watcher is a separate
   process). `signature` is the post-write `(size, mtime)` (cheap) — or a content hash
@@ -691,7 +691,7 @@ guard. The standard pattern for "an app that watches a directory it also writes 
 - **The watcher consumes it.** In `drain_settled` / before `_enqueue`, the watcher
   looks up each settled add path. If the file's *current* signature matches a recorded
   self-write, it **drops the event and deletes the ledger entry** (no re-index, no
-  `photo_indexed`). A genuine *external* edit (or a user editing the same file right
+  `media_indexed`). A genuine *external* edit (or a user editing the same file right
   after) produces a different signature → not suppressed → indexes normally. So
   suppression is specific to the exact bytes yaffo wrote, not a blanket mute on the
   path.
@@ -699,12 +699,12 @@ guard. The standard pattern for "an app that watches a directory it also writes 
   crash between write and detection can't leave a stale entry that suppresses a later
   real edit.
 
-This breaks the `export_photo_tag → file write → watcher → photo_indexed` re-entry at
+This breaks the `export_photo_tag → file write → watcher → media_indexed` re-entry at
 its source: the write yaffo just made is recognised and not treated as a new external
 change. Pure in-tree moves already avoid re-index (`move_photo_path` updates the row
 in place and emits nothing), so the ledger mainly covers metadata/content writes.
 
-*Lighter alternative considered:* gate `photo_indexed` emission on the indexed content
+*Lighter alternative considered:* gate `media_indexed` emission on the indexed content
 actually changing (skip the emit when an index pass finds the photo's indexed fields
 unchanged). More surgical, no cross-process store — but it makes emission per-photo
 (today it's per-job) and is sensitive to *which* fields the indexer reads vs. what a
@@ -771,7 +771,7 @@ Watcher suppression (unit, no real observer):
 ### Out of scope / known gaps (flag, don't build here)
 
 - **Commit-vs-emit ordering for host actions.** A host mutation commits at
-  `run_and_record`'s end, but a mid-script `tag_photos` emit enqueues immediately. In
+  `run_and_record`'s end, but a mid-script `tag_media_items` emit enqueues immediately. In
   spawn mode the dispatch task runs after the commit (fine); immediate mode needs
   care. This is part of the still-in-flux "how should host actions emit" design; the
   guard doesn't depend on resolving it.
@@ -809,7 +809,7 @@ Watcher suppression (unit, no real observer):
   (`automations_run_now`, independent of triggers/enabled) — an automation whose
   **every trigger is an event** (purely photo-driven) gets **Run on a folder…/file…**
   buttons that pick a path and invoke for real over the indexed photos under it
-  (`get_photo_ids_under_path` → `EventContext(event_type="manual", media_ids=…)` →
+  (`get_media_item_ids_under_path` → `EventContext(event_type="manual", media_item_ids=…)` →
   `invoke_automation`), the live twin of the test-files dry run; an automation with a
   schedule trigger (or no triggers) gets the plain context-less **Run now** instead.
   The choice is the automation's live trigger config (route `_supports_scoped_run`),
@@ -851,8 +851,8 @@ Watcher suppression (unit, no real observer):
 | Built-in auto_assign_faces | `yaffo/background_tasks/tasks/auto_assign_faces_automation.py` |
 | Built-in duplicate_scan | `yaffo/background_tasks/tasks/duplicate_scan.py` |
 | Built-in export_photo_tag | `yaffo/background_tasks/tasks/export_photo_tag.py` (+ emit hooks in `routes/{faces,people,locations}.py`) |
-| Built-in assign_location_name | `yaffo/background_tasks/tasks/assign_location_name_automation.py` (+ `utils/reverse_geocode.py`, `utils/geo.py`, `photos_repository.{get_photos_with_coords,get_named_coordinates}`) |
-| Built-in geotag_from_neighbors | `yaffo/background_tasks/tasks/geotag_from_neighbors_automation.py` (+ `photos_repository.{get_photos_missing_gps,get_gps_timestamps}`) |
+| Built-in assign_location_name | `yaffo/background_tasks/tasks/assign_location_name_automation.py` (+ `utils/reverse_geocode.py`, `utils/geo.py`, `media_repository.{get_media_items_with_coords,get_named_coordinates}`) |
+| Built-in geotag_from_neighbors | `yaffo/background_tasks/tasks/geotag_from_neighbors_automation.py` (+ `media_repository.{get_media_items_missing_gps,get_gps_timestamps}`) |
 | Tag inspector (debug) | `yaffo/scripts/print_photo_tags.py` (`inv tags <path>`) |
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |

@@ -149,7 +149,7 @@ def existing_person_ids(session: Session, person_ids: list[int]) -> set[int]:
     return found
 
 
-def get_photo_ids_for_person(session: Session, person_id: int) -> list[int]:
+def get_media_item_ids_for_person(session: Session, person_id: int) -> list[int]:
     """Distinct ids of photos that have at least one face linked to this person."""
     rows = (
         session.query(Face.media_item_id)
@@ -158,7 +158,7 @@ def get_photo_ids_for_person(session: Session, person_id: int) -> list[int]:
         .distinct()
         .all()
     )
-    return [photo_id for (photo_id,) in rows]
+    return [media_item_id for (media_item_id,) in rows]
 
 
 def get_people_with_embeddings(session: Session) -> list[Person]:

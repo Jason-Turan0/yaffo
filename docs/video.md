@@ -52,7 +52,7 @@ flowchart TD
     idx -->|video| vidx["index_video<br/>exiftool meta · poster frame · sampled-frame faces"]
     pidx --> photo[("media_items · INDEXED")]
     vidx --> photo
-    photo --> events(["photo_indexed event"])
+    photo --> events(["media_indexed event"])
     events --> autos["automations<br/>geotag · classify_labels · auto_assign_faces · ..."]
     photo --> gallery["gallery · interleaved by date_taken<br/>poster + play badge + duration"]
     gallery --> play["/media/&lt;id&gt; · HTTP Range<br/>&lt;video&gt; playback"]
@@ -244,7 +244,7 @@ branches on media type.
 **Chosen: rename `photos` → `media_items` and discriminate with `media_type`.**
 
 - **For:** every downstream feature (faces, tags, labels, automations, gallery,
-  favorite, `file_sync`, export, the `photo_indexed`/`photo_modified` events) is
+  favorite, `file_sync`, export, the `media_indexed`/`media_modified` events) is
   keyed to the one media entity. Reusing it means those features work on video
   with little to no change. A separate `Video` table would force parallel FKs on
   `Face`/`Tag`/`MediaLabel` (or a polymorphic association), duplicate the gallery
@@ -325,17 +325,33 @@ own phase so the core import/playback feature can ship first.
 
 - **Phase 0 — Rename (no behavior change). ✅ Done (2026-06-22).** `photos` →
   `media_items` / `Photo` → `MediaItem`, the child FK + `PhotoLabel`→`MediaLabel`
-  renames, and the `photo_ids` → `media_ids` wire-name across events and the
-  Starlark host API. No `media_type`, no video — purely the rename, landed so the
-  full test suite passes unchanged. Migration
-  `1_MIGRATION_20260622_rename_photos_to_media_items.py` renames the tables/columns
-  in place (FK refs rewritten via `legacy_alter_table=OFF`). `docs/automations.md`
-  updated for the new `media_ids` payload key + `media_items`/`media_labels`
-  sources. **Scope note:** the data_query source name (derived from the table) is
-  now `media_items`/`media_labels`, but the host-action *record* keys kept their
-  singular form (`tag_photos([{photo_id, …}])`, `delete_photos(photo_ids)`) — only
-  the plural subject list `ctx['photo_ids']` → `ctx['media_ids']` was renamed, per
-  this plan. Realign the singular host keys in a later pass if desired.
+  renames. Migration `1_MIGRATION_20260622_rename_photos_to_media_items.py` renames
+  the tables/columns in place (FK refs rewritten via `legacy_alter_table=OFF`).
+  Landed with the full test suite green.
+- **Phase 0b — Full consistency sweep. ✅ Done (2026-06-22).** Carried the rename
+  through everything so the code reads as if `photo` (the entity) never existed,
+  while keeping genuine photo-vs-video distinctions (`PHOTO_EXTENSIONS`, the
+  `index_photo`/`index_photos` pipeline, `photo_dates`, the `"photo"` media_type):
+  - **IDs:** `photo_id` → `media_item_id`, all id lists (incl. the Phase-0 wire key
+    `media_ids`) → `media_item_ids`; `photo_count` → `media_count`.
+  - **Events & status:** `EVENT_PHOTO_*` → `EVENT_MEDIA_*` with values
+    `media_imported`/`media_indexed`/`media_modified`/`media_labeled`;
+    `PHOTO_STATUS_*` → `MEDIA_STATUS_*`. Migration
+    `2_MIGRATION_20260622_rename_events_to_media.py` re-points the seeded
+    `automation_triggers.event_type` rows.
+  - **Functions & host API:** repo/helper fns (`get_photo_*` → `get_media_item_*`,
+    `delete_photos` → `delete_media_items`, …) and the Starlark host API
+    (`tag_photos`→`tag_media_items`, `move_photos`→`move_media_items`,
+    `delete_photos`→`delete_media_items`, record keys `{media_item_id, …}`).
+  - **Routes & files:** `/photos`→`/media`, `/api/photo`→`/api/media`, endpoints
+    (`photo_view`→`media_view`, …); `routes/photos.py`→`routes/media.py`,
+    `photos_repository.py`→`media_repository.py`, `templates/photos/`→`templates/media/`,
+    `static/photos/`→`static/media/`; widget API `yaffo.photoUrl`→`yaffo.mediaUrl`.
+  - **Local vars / templates:** `photo`/`photos` → `media_item`/`media_items`.
+  - **Intentionally kept:** photo-centric *feature* names (the Index-Photos pipeline
+    UI, Remove-Duplicates image dedup) and UI cosmetics (CSS classes like
+    `photo-card`, `data-photo-id`/`dataset.photoId`, JS camelCase locals, prose
+    "photo"). `docs/automations.md` updated for all the above.
 - **Phase 1 — Catalog & play.** `media_type` + columns; `file_sync` discovers
   video; `index_video` does metadata + poster; gallery shows poster/badge/duration;
   range-enabled playback; detail view. Location automations (GPS is just metadata)

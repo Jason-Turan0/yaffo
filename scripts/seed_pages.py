@@ -6,7 +6,7 @@ show without an API key. Modeled on the old stub-store widget catalog, but writt
 against the *current* contract: real sources + operator filters (data_query
 validated by data_query_repository), and the window.yaffo widget API
 (yaffo.data[name], yaffo.query, yaffo.publish/subscribe, yaffo.saveState,
-yaffo.photoUrl) — see yaffo/static/pages/widget_api.js.
+yaffo.mediaUrl) — see yaffo/static/pages/widget_api.js.
 
 Run:
     python -m yaffo.scripts.seed_pages
@@ -28,7 +28,7 @@ _GRID_CSS = (
 
 # Reused in several widgets: turn a photos row into an <img> by its id.
 _IMG_FROM_PHOTO = (
-    "const i=document.createElement('img');i.src=yaffo.photoUrl(p.id);"
+    "const i=document.createElement('img');i.src=yaffo.mediaUrl(p.id);"
     "i.loading='lazy';i.onerror=()=>{i.src='/placeholder';};"
 )
 

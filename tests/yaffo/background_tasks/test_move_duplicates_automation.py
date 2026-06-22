@@ -1,6 +1,6 @@
 """Tests for the duplicates_found → move-duplicates path:
 
-- find_duplicates._resolve_group_photo_ids: turns the JobResult's path groups into
+- find_duplicates._resolve_group_media_item_ids: turns the JobResult's path groups into
   ordered photo-id groups (keeper first), keeping paths out of the event payload.
 - the seeded _DEDUPE_CODE Starlark run through the real sandbox: keeps group[0] and
   moves the rest into "_Duplicates" via the host API.
@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 from yaffo.background_tasks.automation_sandbox.starlark_runner import run_starlark
-from yaffo.background_tasks.tasks.find_duplicates import _resolve_group_photo_ids
+from yaffo.background_tasks.tasks.find_duplicates import _resolve_group_media_item_ids
 
 pytestmark = pytest.mark.unit
 
@@ -21,14 +21,14 @@ pytestmark = pytest.mark.unit
 _DEDUPE_CODE = """\
 to_move = []
 for group in ctx["groups"]:
-    for photo_id in group[1:]:
-        to_move.append(photo_id)
+    for media_item_id in group[1:]:
+        to_move.append(media_item_id)
 
 if to_move:
     print("Moving " + str(len(to_move)) + " duplicate(s) to _Duplicates")
     rows = data_query({"source": "media_items", "id": {"in": to_move}})
-    moves = [{"photo_id": row["id"], "media_dir_id": row["media_dir_id"], "target_path": "_Duplicates"} for row in rows if row["media_dir_id"]]
-    move_photos(moves)
+    moves = [{"media_item_id": row["id"], "media_dir_id": row["media_dir_id"], "target_path": "_Duplicates"} for row in rows if row["media_dir_id"]]
+    move_media_items(moves)
 """
 
 class _FakeSession:
@@ -49,23 +49,23 @@ def test_resolve_group_photo_ids_orders_keeper_first_and_drops_singletons():
     ]
     path_to_id = {"/m/a.jpg": 1, "/m/b.jpg": 2, "/m/c.jpg": 3, "/m/x.jpg": 9}
 
-    resolved = _resolve_group_photo_ids(_FakeSession(path_to_id), groups)
+    resolved = _resolve_group_media_item_ids(_FakeSession(path_to_id), groups)
 
     assert resolved == [[1, 2, 3]]  # keeper (1) first; the single-indexed group dropped
 
 
 def test_resolve_group_photo_ids_empty():
-    assert _resolve_group_photo_ids(_FakeSession({}), []) == []
+    assert _resolve_group_media_item_ids(_FakeSession({}), []) == []
 
 
 def _run_dedupe(groups, rows):
     """Run the seeded Starlark with ctx.groups + a stub data_query, capturing the one
-    batched move_photos call (flattened to (photo_id, media_dir_id, target_path))."""
+    batched move_media_items call (flattened to (media_item_id, media_dir_id, target_path))."""
     moves = []
     functions = {
         "data_query": lambda query: rows,
-        "move_photos": lambda batch: moves.extend(
-            (m["photo_id"], m["media_dir_id"], m["target_path"]) for m in batch
+        "move_media_items": lambda batch: moves.extend(
+            (m["media_item_id"], m["media_dir_id"], m["target_path"]) for m in batch
         ),
     }
     result = run_starlark(_DEDUPE_CODE, inputs={"ctx": {"groups": groups}}, functions=functions)

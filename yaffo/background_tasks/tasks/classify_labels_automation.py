@@ -23,9 +23,9 @@ from yaffo.db.models import (
     Automation,
     AUTOMATION_HANDLER_CLASSIFY_LABELS,
     CLASSIFY_LABELS_DEFAULT_THRESHOLD,
-    EVENT_PHOTO_LABELED,
+    EVENT_MEDIA_LABELED,
 )
-from yaffo.db.repositories import classification_repository, photos_repository
+from yaffo.db.repositories import classification_repository, media_repository
 from yaffo.logging_config import get_logger
 from yaffo.utils.image import image_from_path, image_to_numpy
 from yaffo.utils.image_classifier import embed_image, embed_texts, get_clip_threshold
@@ -41,7 +41,7 @@ _FIELDS = {field.key: field for field in AUTOMATION_CONFIG[AUTOMATION_HANDLER_CL
 _FLUSH_SIZE = 200
 
 
-def _classify_photos(session: Session, progress_reporter: ProgressReporter, photo_ids: list[int], threshold: float,
+def _classify_media_items(session: Session, progress_reporter: ProgressReporter, media_item_ids: list[int], threshold: float,
                      max_labels: int) -> list[int]:
     """Label each photo with the vocabulary entries scoring >= threshold (cosine),
     keeping the top `max_labels`. Replaces each photo's prior labels. Returns the ids
@@ -54,24 +54,24 @@ def _classify_photos(session: Session, progress_reporter: ProgressReporter, phot
     if not labels:
         return []
     label_embeddings = embed_texts([label.effective_prompt for label in labels])
-    paths = photos_repository.get_paths_by_ids(session, photo_ids)
+    paths = media_repository.get_paths_by_ids(session, media_item_ids)
 
     labeled: list[int] = []
     pending: list[tuple[int, list[tuple[int, float]]]] = []
 
     def flush():
         if pending:
-            classification_repository.bulk_replace_photo_labels(session, pending)
+            classification_repository.bulk_replace_media_labels(session, pending)
             pending.clear()
 
-    def photo_processor(photo_id: int):
-        path = paths.get(photo_id)
+    def media_item_processor(media_item_id: int):
+        path = paths.get(media_item_id)
         if not path:
             return
         try:
             image = image_to_numpy(image_from_path(Path(path)))
         except Exception as e:
-            logger.warning(f"classify_labels: could not load photo {photo_id} ({path}): {e}")
+            logger.warning(f"classify_labels: could not load photo {media_item_id} ({path}): {e}")
             return
         # float32 BLAS matmul can emit spurious divide/overflow RuntimeWarnings on
         # some platforms even though the result is finite (verified in the spike);
@@ -80,22 +80,22 @@ def _classify_photos(session: Session, progress_reporter: ProgressReporter, phot
             sims = label_embeddings @ embed_image(image)
         order = np.argsort(-sims)[:max_labels]
         assignments = [(labels[i].id, float(sims[i])) for i in order if sims[i] >= threshold]
-        pending.append((photo_id, assignments))
+        pending.append((media_item_id, assignments))
         if assignments:
-            labeled.append(photo_id)
+            labeled.append(media_item_id)
         if len(pending) >= _FLUSH_SIZE:
             flush()
 
-    progress_reporter.run_with_progress(photo_ids, photo_processor)
+    progress_reporter.run_with_progress(media_item_ids, media_item_processor)
     flush()  # remaining tail
     return labeled
 
 
 @task_queue.task()
 def classify_labels_automation_task(
-        automation_id: int, photo_ids: list[int], origin_automation_ids: list[int] | None = None
+        automation_id: int, media_item_ids: list[int], origin_automation_ids: list[int] | None = None
 ):
-    """Label `photo_ids` against the enabled vocabulary. Enqueued by the handler on a
+    """Label `media_item_ids` against the enabled vocabulary. Enqueued by the handler on a
     photo_indexed event (the new photos) or by the Settings backfill (every indexed
     photo). The run is recorded as a Job. `origin_automation_ids` is the loop guard's
     causal chain threaded from the triggering event."""
@@ -113,9 +113,9 @@ def classify_labels_automation_task(
 
         def work(progress_reporter: ProgressReporter) -> str:
             nonlocal labeled
-            labeled = _classify_photos(session, progress_reporter, photo_ids, threshold, max_labels)
+            labeled = _classify_media_items(session, progress_reporter, media_item_ids, threshold, max_labels)
             return (
-                f"labeled {len(labeled)} of {len(photo_ids)} photo(s) "
+                f"labeled {len(labeled)} of {len(media_item_ids)} photo(s) "
                 f"at threshold {threshold:.2f} (max {max_labels} each)"
             )
 
@@ -125,7 +125,7 @@ def classify_labels_automation_task(
             # Emit after record_run so the labels are committed before subscribers run
             # (record_run commits work's writes); fire only when something was labeled.
             if labeled:
-                emit_event(EVENT_PHOTO_LABELED, {"media_ids": labeled})
+                emit_event(EVENT_MEDIA_LABELED, {"media_item_ids": labeled})
     finally:
         session.close()
         SessionFactory.remove()
@@ -135,7 +135,7 @@ def classify_labels_automation_task(
 def enqueue_classify_labels(automation: Automation, context: EventContext | None = None) -> None:
     """Handler for the built-in classify-labels automation: enqueue the task for the
     photos the triggering event concerns. A schedule trigger (no context) is a no-op."""
-    photo_ids = context.media_ids if context else []
-    if photo_ids:
+    media_item_ids = context.media_item_ids if context else []
+    if media_item_ids:
         origin = context.origin_automation_ids if context else []
-        classify_labels_automation_task(automation.id, photo_ids, origin)
+        classify_labels_automation_task(automation.id, media_item_ids, origin)

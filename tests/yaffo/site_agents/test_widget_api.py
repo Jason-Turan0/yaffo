@@ -11,7 +11,7 @@ from yaffo.site_agents.widget_api import widget_api_source
 pytestmark = pytest.mark.unit
 
 # The public surface widgets (and the model) rely on.
-_API_MEMBERS = ("data:", "state:", "query:", "publish:", "subscribe:", "saveState:", "photoUrl:")
+_API_MEMBERS = ("data:", "state:", "query:", "publish:", "subscribe:", "saveState:", "mediaUrl:")
 
 
 class TestWidgetApiSource:

@@ -23,7 +23,7 @@ from yaffo.db import db
 from yaffo.db.models import (
     Automation,
     AutomationTrigger,
-    EVENT_PHOTO_LABELED,
+    EVENT_MEDIA_LABELED,
     TRIGGER_TYPE_EVENT,
 )
 
@@ -39,7 +39,7 @@ def test_emit_stamps_chain_from_scope(monkeypatch):
         lambda event_type, payload: captured.append(payload),
     )
 
-    emit_event("e", {"photo_ids": [1]})  # no scope -> genuine origin
+    emit_event("e", {"media_item_ids": [1]})  # no scope -> genuine origin
     assert captured[-1]["origin_automation_ids"] == []
 
     with event_chain_scope([], 5):
@@ -90,7 +90,7 @@ def _seed_automation(engine, *, handler=None, enabled=True):
         s.flush()
         s.add(AutomationTrigger(
             automation_id=a.id, trigger_type=TRIGGER_TYPE_EVENT,
-            enabled=True, event_type=EVENT_PHOTO_LABELED,
+            enabled=True, event_type=EVENT_MEDIA_LABELED,
         ))
         s.commit()
         return a.id
@@ -105,7 +105,7 @@ def test_dispatch_skips_automation_already_in_chain(engine, monkeypatch, caplog)
 
     with caplog.at_level(logging.WARNING):
         de.dispatch_event_task.fn(
-            EVENT_PHOTO_LABELED, {"origin_automation_ids": [automation_id]}
+            EVENT_MEDIA_LABELED, {"origin_automation_ids": [automation_id]}
         )
 
     assert calls == []  # the automation in the chain was not invoked
@@ -118,7 +118,7 @@ def test_dispatch_runs_automation_not_in_chain(engine, monkeypatch):
     calls: list = []
     monkeypatch.setattr(de, "invoke_automation", lambda a, c: calls.append(a.id) or True)
 
-    de.dispatch_event_task.fn(EVENT_PHOTO_LABELED, {"origin_automation_ids": [999]})
+    de.dispatch_event_task.fn(EVENT_MEDIA_LABELED, {"origin_automation_ids": [999]})
 
     assert calls == [automation_id]  # a fresh subscriber still runs
 
@@ -138,12 +138,12 @@ def test_self_emitting_automation_fires_once(engine, monkeypatch, caplog):
         runs.append(automation.id)
         # Mirror the real emitters: scope the run so the re-emit carries this automation.
         with event_chain_scope(context.origin_automation_ids, automation.id):
-            emit_event(EVENT_PHOTO_LABELED, {"photo_ids": [1]})
+            emit_event(EVENT_MEDIA_LABELED, {"media_item_ids": [1]})
 
     monkeypatch.setitem(HANDLERS, "loop_test", _emitting_handler)
 
     with caplog.at_level(logging.WARNING):
-        emit_event(EVENT_PHOTO_LABELED, {"photo_ids": [1]})  # genuine origin, empty chain
+        emit_event(EVENT_MEDIA_LABELED, {"media_item_ids": [1]})  # genuine origin, empty chain
 
     assert runs == [automation_id]  # ran once; the self-triggered re-dispatch was skipped
     assert any("loop guard" in r.message for r in caplog.records)

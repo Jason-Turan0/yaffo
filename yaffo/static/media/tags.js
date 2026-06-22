@@ -112,7 +112,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
     const saveAllChanges = async (event) => {
         event.preventDefault();
 
-        // Nothing touched -> just close (avoids a needless write + photo_modified event).
+        // Nothing touched -> just close (avoids a needless write + media_modified event).
         const hasChanges = tags.some(t => t.isNew || t.modified || t.markedForDeletion);
         if (!hasChanges) {
             modal.close();
@@ -132,7 +132,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
         }));
 
         try {
-            const response = await fetch(`/api/photo/${photoId}/tags`, {
+            const response = await fetch(`/api/media/${photoId}/tags`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tags: payload })

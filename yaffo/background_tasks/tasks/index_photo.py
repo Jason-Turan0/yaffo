@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from yaffo.db.models import Job, MediaItem, Face, JOB_STATUS_CANCELLED, FACE_STATUS_UNASSIGNED, \
-    JOB_STATUS_RUNNING, JOB_STATUS_PENDING, PHOTO_STATUS_INDEXED
-from yaffo.utils.index_photos import index_photo, clear_faces_for_photos, unlink_face_thumbnails
+    JOB_STATUS_RUNNING, JOB_STATUS_PENDING, MEDIA_STATUS_INDEXED
+from yaffo.utils.index_photos import index_photo, clear_faces_for_media_items, unlink_face_thumbnails
 from yaffo.domain.compare_utils import serialize_embedding
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
@@ -52,7 +52,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             return
 
         photos_in_batch = session.query(MediaItem).filter(MediaItem.full_file_path.in_(file_path_batch)).all()
-        photos_by_path = {photo.full_file_path: photo for photo in photos_in_batch}
+        photos_by_path = {media_item.full_file_path: media_item for media_item in photos_in_batch}
         processed_count = 0
 
         # Replace, never accumulate: a re-run of this task (e.g. requeued after a host
@@ -64,7 +64,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             for result in processed_results
             if result["full_file_path"] in photos_by_path
         ]
-        stale_thumbnails = clear_faces_for_photos(session, reindex_photo_ids)
+        stale_thumbnails = clear_faces_for_media_items(session, reindex_photo_ids)
 
         for result in processed_results:
             full_file_path = result["full_file_path"]
@@ -73,26 +73,26 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             latitude = index_results["latitude"]
             longitude = index_results["longitude"]
             location_name = index_results["location_name"]
-            photo = photos_by_path.get(full_file_path)
-            if photo is None:
+            media_item = photos_by_path.get(full_file_path)
+            if media_item is None:
                 logger.error(f"Failed to find photo in db for {full_file_path}")
                 error_count += 1
                 continue
-            photo.latitude = latitude
-            photo.longitude = longitude
-            photo.location_name = location_name
-            photo.date_taken = index_results["date_taken"]
-            photo.year = index_results["year"]
-            photo.month = index_results["month"]
-            photo.device = index_results["device"]
-            photo.status = PHOTO_STATUS_INDEXED
+            media_item.latitude = latitude
+            media_item.longitude = longitude
+            media_item.location_name = location_name
+            media_item.date_taken = index_results["date_taken"]
+            media_item.year = index_results["year"]
+            media_item.month = index_results["month"]
+            media_item.device = index_results["device"]
+            media_item.status = MEDIA_STATUS_INDEXED
 
             for face_data in faces_data:
                 face = Face(
                     embedding=serialize_embedding(face_data['embedding']),
                     full_file_path=face_data['full_file_path'],
                     status=FACE_STATUS_UNASSIGNED,
-                    media_item_id=photo.id,
+                    media_item_id=media_item.id,
                     location_top=face_data['location_top'],
                     location_right=face_data['location_right'],
                     location_bottom=face_data['location_bottom'],
