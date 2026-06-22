@@ -52,8 +52,23 @@ def format_date(
     return str(value)
 
 
+def format_duration(seconds: Union[int, float, None]) -> str:
+    """Format a video length in seconds as a compact clock string: "0:42",
+    "3:07", "1:02:09". Returns "" for a missing value."""
+    if seconds is None:
+        return ""
+    total = int(seconds)
+    hours, rem = divmod(total, 3600)
+    minutes, secs = divmod(rem, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
+
+
 def init_template_filters(app):
     """Register custom template filters with the Flask app."""
+
+    app.add_template_filter(format_duration, "format_duration")
 
     @app.template_filter('format_date')
     def format_date_filter(value, format_type='datetime', utc=False):

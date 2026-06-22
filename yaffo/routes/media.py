@@ -30,7 +30,19 @@ def init_media_routes(app: Flask):
             img.save(buffer, format="JPEG")
             buffer.seek(0)
             return send_file(buffer, mimetype="image/jpeg")
-        return send_file(file_path)
+        # send_file emits Accept-Ranges and honours the Range header (conditional=True
+        # by default), so <video> seeking works against the original file directly.
+        return send_file(file_path, conditional=True)
+
+    @app.route("/media/<int:media_item_id>/poster")
+    def media_poster(media_item_id: int):
+        media_item = db.session.get(MediaItem, media_item_id)
+        if not media_item or not media_item.poster_path:
+            return "Poster not found", 404
+        poster_path = Path(media_item.poster_path)
+        if not poster_path.exists():
+            return "Poster not found", 404
+        return send_file(poster_path)
 
     @app.route("/placeholder")
     def placeholder():

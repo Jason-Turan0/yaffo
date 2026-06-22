@@ -38,6 +38,26 @@
                             <span class="detail-value">{{ media_item.device }}</span>
                         </div>
                     {% endif %}
+                    {% if media_item.media_type == 'video' %}
+                        {% if media_item.duration_seconds %}
+                            <div class="detail-item">
+                                <label>Duration:</label>
+                                <span class="detail-value">{{ media_item.duration_seconds | format_duration }}</span>
+                            </div>
+                        {% endif %}
+                        {% if media_item.width and media_item.height %}
+                            <div class="detail-item">
+                                <label>Resolution:</label>
+                                <span class="detail-value">{{ media_item.width }} × {{ media_item.height }}</span>
+                            </div>
+                        {% endif %}
+                        {% if media_item.video_codec %}
+                            <div class="detail-item">
+                                <label>Codec:</label>
+                                <span class="detail-value">{{ media_item.video_codec }}</span>
+                            </div>
+                        {% endif %}
+                    {% endif %}
                     <div class="detail-actions">
                         <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFile('{{ absolute_file_path }}')"
                                 class="action-button">
@@ -168,16 +188,25 @@
         <div class="photo-container">
             <div class="photo-wrapper">
                 <div class="photo-image-container">
-                    <img src="{{ url_for('media', media_item_id=media_item.id) }}"
-                         data-fallback="{{ url_for('placeholder') }}"
-                         alt="{{ file_name }}"
-                         class="photo-main"
-                         id="mainPhoto">
+                    {% if media_item.media_type == 'video' %}
+                        <video src="{{ url_for('media', media_item_id=media_item.id) }}"
+                               class="photo-main video-main"
+                               id="mainVideo"
+                               controls preload="metadata"></video>
+                    {% else %}
+                        <img src="{{ url_for('media', media_item_id=media_item.id) }}"
+                             data-fallback="{{ url_for('placeholder') }}"
+                             alt="{{ file_name }}"
+                             class="photo-main"
+                             id="mainPhoto">
+                    {% endif %}
                     <button type="button" data-icon="favorite" data-photo-id="{{ media_item.id }}"
                             class="favorite-toggle {% if media_item.favorite %}is-favorite{% endif %}"
                             aria-pressed="{{ 'true' if media_item.favorite else 'false' }}"
                             title="Toggle favorite" aria-label="Toggle favorite"></button>
-                    <canvas id="faceCanvas" class="face-overlay"></canvas>
+                    {% if media_item.media_type != 'video' %}
+                        <canvas id="faceCanvas" class="face-overlay"></canvas>
+                    {% endif %}
                 </div>
             </div>
         </div>

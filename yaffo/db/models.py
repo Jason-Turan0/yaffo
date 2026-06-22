@@ -6,10 +6,23 @@ MEDIA_STATUS_IMPORTED = "IMPORTED"
 MEDIA_STATUS_INDEXED = "INDEXED"
 MEDIA_STATUS_SYNCED = "SYNCED"
 
+MEDIA_TYPE_PHOTO = "photo"
+MEDIA_TYPE_VIDEO = "video"
+
 class MediaItem(db.Model):
     __tablename__ = "media_items"
     id = db.Column(db.Integer, primary_key=True)
     full_file_path = db.Column(db.String, unique=True)
+    # Discriminates a photo row from a video row. Every shared column below
+    # (date_taken, location, faces, tags, labels, favorite, status) applies to
+    # both; the video-only columns that follow are NULL for photos.
+    media_type = db.Column(db.String, nullable=False, default=MEDIA_TYPE_PHOTO)
+    # Video-only metadata (see docs/video.md). NULL on photo rows.
+    poster_path = db.Column(db.String, nullable=True)
+    duration_seconds = db.Column(db.Float, nullable=True)
+    width = db.Column(db.Integer, nullable=True)
+    height = db.Column(db.Integer, nullable=True)
+    video_codec = db.Column(db.String, nullable=True)
     # The camera's *local wall-clock* capture time (EXIF DateTimeOriginal), stored
     # naive ISO-8601 — never UTC. EXIF carries no timezone, so there is no UTC
     # instant to recover; converting only some photos (e.g. phones that record an

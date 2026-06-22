@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from yaffo.common import media_type_for_path
 from yaffo.db.models import Job, MediaItem, JOB_STATUS_CANCELLED, JOB_STATUS_RUNNING, JOB_STATUS_PENDING
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
@@ -49,6 +50,7 @@ def import_photo_task(job_id: str, file_path_batch: list[str]):
         for path in verified_paths:
             media_item = MediaItem(
                 full_file_path=str(path),
+                media_type=media_type_for_path(path),
             )
             session.add(media_item)
             session.flush()

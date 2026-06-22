@@ -1,8 +1,10 @@
 from pathlib import Path
 
+from yaffo.common import MEDIA_TYPE_VIDEO, media_type_for_path
 from yaffo.db.models import Job, MediaItem, Face, JOB_STATUS_CANCELLED, FACE_STATUS_UNASSIGNED, \
     JOB_STATUS_RUNNING, JOB_STATUS_PENDING, MEDIA_STATUS_INDEXED
 from yaffo.utils.index_photos import index_photo, clear_faces_for_media_items, unlink_face_thumbnails
+from yaffo.utils.index_video import index_video
 from yaffo.domain.compare_utils import serialize_embedding
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
@@ -32,8 +34,12 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                 cancel_count = len(file_path_batch) - index
                 break
 
-        logger.debug(f"Processing photo {file_path}")
-        index_results = index_photo(Path(file_path), thumbnail_dir)
+        logger.debug(f"Processing media {file_path}")
+        path = Path(file_path)
+        if media_type_for_path(path) == MEDIA_TYPE_VIDEO:
+            index_results = index_video(path, thumbnail_dir)
+        else:
+            index_results = index_photo(path, thumbnail_dir)
         if index_results is None:
             logger.warning(f"Failed to process faces for photo {file_path}")
             error_count += 1
@@ -85,6 +91,11 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             media_item.year = index_results["year"]
             media_item.month = index_results["month"]
             media_item.device = index_results["device"]
+            if index_results.get("media_type") == MEDIA_TYPE_VIDEO:
+                media_item.duration_seconds = index_results.get("duration_seconds")
+                media_item.width = index_results.get("width")
+                media_item.height = index_results.get("height")
+                media_item.video_codec = index_results.get("video_codec")
             media_item.status = MEDIA_STATUS_INDEXED
 
             for face_data in faces_data:

@@ -181,22 +181,32 @@
 
 .photo-wrapper {
     flex: 1;
-    overflow: auto;
+    min-height: 0;          /* let the pane shrink below its content so contain works */
+    overflow: hidden;       /* fit-to-pane, no scrollbars */
     display: flex;
-    align-items: flex-start;
+    align-items: flex-start; /* top-align media with the sidebar, no gap */
     justify-content: center;
-    padding: 20px;
+    padding: 0 20px 20px;
 }
 
 .photo-image-container {
     position: relative;
+    /* Shrink-wraps the media so the absolutely-positioned face-overlay canvas lines
+       up with it; the media itself is capped to the pane below. */
     display: inline-block;
+    max-width: 100%;
     line-height: 0; /* Prevents extra space below image */
 }
 
 .photo-main {
+    /* Fit within the viewer pane (height = .photo-viewer minus the header + the
+       wrapper padding) so neither a tall photo nor a full-res video overflows and
+       scrolls. width:auto keeps the aspect ratio. */
     max-width: 100%;
+    max-height: calc(100vh - 150px);
+    width: auto;
     height: auto;
+    object-fit: contain;
     box-shadow: var(--shadow-xl);
     display: block;
     vertical-align: top;
@@ -466,6 +476,10 @@
 
     .photo-container {
         height: 60vh;
+    }
+
+    .photo-main {
+        max-height: calc(60vh - 80px);
     }
 }
 /* Classification labels (read-only chips) */

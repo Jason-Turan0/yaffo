@@ -4,7 +4,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from yaffo.common import PHOTO_EXTENSIONS
+from yaffo.common import MEDIA_EXTENSIONS
 from yaffo.db.models import MediaItem, MEDIA_STATUS_INDEXED, MEDIA_STATUS_SYNCED
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
@@ -92,7 +92,7 @@ def iter_media_scan(
                 yield len(filesystem_paths)
             if not photo_file.is_file():
                 continue
-            if photo_file.suffix.lower() not in PHOTO_EXTENSIONS:
+            if photo_file.suffix.lower() not in MEDIA_EXTENSIONS:
                 continue
             if is_system_file(photo_file.name):
                 continue

@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from yaffo.template_filters import DateFormat, format_date
+from yaffo.template_filters import DateFormat, format_date, format_duration
 
 pytestmark = pytest.mark.unit
 
@@ -48,3 +48,20 @@ def test_utc_true_handles_aware_value(tz_new_york):
 
 def test_none_returns_empty():
     assert format_date(None, utc=True) == ""
+
+
+class TestFormatDuration:
+    def test_none_returns_empty(self):
+        assert format_duration(None) == ""
+
+    def test_seconds_only(self):
+        assert format_duration(42) == "0:42"
+
+    def test_minutes_zero_pads_seconds(self):
+        assert format_duration(187) == "3:07"
+
+    def test_hours(self):
+        assert format_duration(3729) == "1:02:09"
+
+    def test_truncates_fractional_seconds(self):
+        assert format_duration(42.9) == "0:42"

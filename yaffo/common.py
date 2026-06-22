@@ -3,12 +3,25 @@ from pathlib import Path
 from platformdirs import user_cache_dir, user_data_dir
 import os
 
+from yaffo.db.models import MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO
+
 app_author = "Jason Turan"
 version = "0.0.1"
 app_name = "yaffo"
 
-VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".hevc"}
+# Pruned to the containers that play inline in the browser (H.264/HEVC in MP4/MOV)
+# and that exiftool probes for metadata. Other containers (avi/mkv/wmv/flv) are
+# left out for v1 — see docs/video.md Open Question #2.
+VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v"}
 PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic"}
+MEDIA_EXTENSIONS = PHOTO_EXTENSIONS | VIDEO_EXTENSIONS
+
+
+def media_type_for_path(path: Path) -> str:
+    """The MEDIA_TYPE_* a file belongs to, from its suffix. Defaults to photo for
+    anything that isn't a known video extension (the import path only ever sees
+    files already filtered to MEDIA_EXTENSIONS)."""
+    return MEDIA_TYPE_VIDEO if path.suffix.lower() in VIDEO_EXTENSIONS else MEDIA_TYPE_PHOTO
 
 # Where the DB, thumbnails, temp/trash, and logs live. Set YAFFO_DATA_DIR to
 # override (invoke sets it to ~/Pictures for dev). Otherwise default to the OS

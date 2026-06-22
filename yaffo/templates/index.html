@@ -35,9 +35,21 @@
                                         class="favorite-toggle {% if media_item.favorite %}is-favorite{% endif %}"
                                         aria-pressed="{{ 'true' if media_item.favorite else 'false' }}"
                                         title="Toggle favorite" aria-label="Toggle favorite"></button>
-                                <img src="{{ url_for('media', media_item_id=media_item.id) }}"
-                                     data-fallback="{{ url_for('placeholder') }}"
-                                     alt="Photo from {{ media_item.date_taken | format_date ('date') }}">
+                                {% if media_item.media_type == 'video' %}
+                                    <img src="{{ media_item.poster_path and url_for('media_poster', media_item_id=media_item.id) or url_for('static', filename='video_placeholder.svg') }}"
+                                         data-fallback="{{ url_for('static', filename='video_placeholder.svg') }}"
+                                         alt="Video from {{ media_item.date_taken | format_date ('date') }}">
+                                    <button type="button" class="video-play-badge"
+                                            data-photo-id="{{ media_item.id }}"
+                                            title="Play video" aria-label="Play video"></button>
+                                    {% if media_item.duration_seconds %}
+                                        <span class="video-duration">{{ media_item.duration_seconds | format_duration }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <img src="{{ url_for('media', media_item_id=media_item.id) }}"
+                                         data-fallback="{{ url_for('placeholder') }}"
+                                         alt="Photo from {{ media_item.date_taken | format_date ('date') }}">
+                                {% endif %}
                                 <dl class="photo-hover">
                                     <div class="photo-hover-row">
                                         <dt>Name</dt>
@@ -147,9 +159,11 @@
     <script src="{{ url_for('static', filename='filters/location-autocomplete.js') }}"></script>
     <script src="{{ url_for('static', filename='filters/filter_config.js') }}"></script>
     <script src="{{ url_for('static', filename='media/favorite.js') }}"></script>
+    <script src="{{ url_for('static', filename='media/gallery_video.js') }}"></script>
     <script>
         window.PHOTO_ORGANIZER.initLocationAutocomplete(window.APP_CONFIG);
         window.PHOTO_ORGANIZER.initFilterConfig(window.APP_CONFIG);
         window.PHOTO_ORGANIZER.initFavoriteToggles(window.APP_CONFIG);
+        window.PHOTO_ORGANIZER.initGalleryVideos(window.APP_CONFIG);
     </script>
 {% endblock %}

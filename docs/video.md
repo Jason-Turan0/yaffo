@@ -352,24 +352,34 @@ own phase so the core import/playback feature can ship first.
     UI, Remove-Duplicates image dedup) and UI cosmetics (CSS classes like
     `photo-card`, `data-photo-id`/`dataset.photoId`, JS camelCase locals, prose
     "photo"). `docs/automations.md` updated for all the above.
-- **Phase 1 — Catalog & play.** `media_type` + columns; `file_sync` discovers
-  video; `index_video` does metadata + poster; gallery shows poster/badge/duration;
-  range-enabled playback; detail view. Location automations (GPS is just metadata)
-  come along for free. **No faces, no labels, no dedup.**
+- **Phase 1 — Catalog & play. ✅ Done (2026-06-22).** `media_type` + video columns
+  (migration `3_MIGRATION_20260622_add_video_columns.py`, backfilled `"photo"`);
+  `VIDEO_EXTENSIONS` pruned to `{.mp4,.mov,.m4v}` + `media_type_for_path`;
+  `file_sync` discovers video (`MEDIA_EXTENSIONS`); `import_photo_task` stamps
+  `media_type`; new `index_video` (exiftool-only metadata — duration/dimensions/
+  codec/date/GPS, no faces) branched into `index_photo_task`; gallery shows a
+  **static placeholder** poster + play badge + duration overlay; range-enabled
+  playback via `send_file(conditional=True)`; detail view renders `<video>` + a
+  video-metadata block. Location automations come along for free. **No real poster
+  frame (deferred to Phase 3), no faces, no labels, no dedup.**
 - **Phase 2 — Understand.** CLIP labels on the poster; sampled-frame face
   detection; metadata write-back for video containers.
-- **Phase 3 — Polish.** Duplicate detection on posters; optional "videos only"
-  gallery filter; transcoding decision for non-playable codecs.
+- **Phase 3 — Polish.** **Real poster-frame extraction** (the decoder fork in Open
+  Question #1 — deferred here, static placeholder stands in until then); duplicate
+  detection on posters; optional "videos only" gallery filter; transcoding decision
+  for non-playable codecs.
 
 ## Open questions
 
-1. **Decoder strategy (gates Phase 1).** **OS-native decode** (macOS
-   AVFoundation/VideoToolbox + `exiftool` for metadata — no bundled binary, dodges
-   codec-patent exposure, but a platform-specific frame path) vs. **bundle ffmpeg**
-   (one codepath, LGPL license is trivial via subprocess, but codec-patent exposure
-   on H.264/HEVC + ~70–100 MB). See *Design decisions: Frame extraction & codecs*
-   for the license-vs-patent breakdown. *(Leaning: OS-native for v1; bundle ffmpeg
-   only if/when transcoding lands.)*
+1. **Decoder strategy (deferred to Phase 3).** Settled for now: **Phase 1 ships a
+   static placeholder poster and extracts no frame**, so the decoder choice no
+   longer gates the catalog/play feature. When real posters land in Phase 3 the
+   fork is **OS-native decode** (macOS AVFoundation/VideoToolbox — no bundled
+   binary, dodges codec-patent exposure, platform-specific frame path) vs. **bundle
+   ffmpeg** (one codepath, LGPL trivial via subprocess, but codec-patent exposure on
+   H.264/HEVC + ~70–100 MB). See *Design decisions: Frame extraction & codecs*.
+   *(Leaning: OS-native; bundle ffmpeg only if/when transcoding lands.)* `exiftool`
+   already covers all the metadata, so Phase 1 needs no decoder at all.
 2. **Supported formats.** `VIDEO_EXTENSIONS` lists 7 containers, but only some are
    browser-playable inline (MP4/MOV/H.264). Do we (a) only catalog playable
    formats, (b) catalog all but only play the playable ones, or (c) transcode?

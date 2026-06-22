@@ -47,6 +47,80 @@
     display: block;
 }
 
+/* Play badge centered over a video's poster/placeholder. A real button: clicking
+   it plays the clip inline in the card (gallery_video.js) instead of navigating. */
+.video-play-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-backdrop);
+    cursor: pointer;
+    z-index: 1;
+}
+
+.video-play-badge:hover {
+    background: var(--color-surface-inverse);
+}
+
+.video-play-badge::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 54%;
+    transform: translate(-50%, -50%);
+    border-style: solid;
+    border-width: 11px 0 11px 18px;
+    border-color: transparent transparent transparent var(--color-text-inverse);
+}
+
+/* Duration pill in the bottom-right corner of a video thumb. */
+.video-duration {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--color-surface-inverse);
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-xs);
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.video-main {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* Inline player that replaces the still when the play badge is clicked. Keeps the
+   photo thumb's fixed 250px so the grid lines up, but letterboxes (contain, not
+   cover) so the frame — and the native control bar at its bottom — fits inside the
+   box instead of being cropped. */
+.photo-thumb .video-inline {
+    width: 100%;
+    height: 250px;
+    object-fit: contain;
+    display: block;
+    background: var(--color-surface-inverse);
+    position: relative;
+    z-index: 1;
+}
+
+/* The hover-info overlay is absolutely positioned, so it paints above the
+   non-positioned <video> and swallows the mouse-over the native controls need to
+   un-hide. Drop it while a clip is previewing. */
+.photo-thumb.is-playing .photo-hover {
+    display: none;
+}
+
 .photo-hover {
     position: absolute;
     inset: 0;
