@@ -207,6 +207,19 @@ def _codec(exif_data: dict) -> Optional[str]:
     return None
 
 
+def _display_dimensions(exif_data: dict) -> tuple[Optional[int], Optional[int]]:
+    """The video's *displayed* width/height. exiftool reports the raw stored frame
+    size; a phone clip is usually stored landscape with a Rotation flag, so for a
+    90°/270° rotation we swap the axes to match how it actually plays (and how the
+    ffmpeg poster, which honours rotation, looks)."""
+    width = _to_int(_exif_field(exif_data, "ImageWidth"))
+    height = _to_int(_exif_field(exif_data, "ImageHeight"))
+    rotation = _to_int(_exif_field(exif_data, "Rotation"))
+    if rotation in (90, 270) and width is not None and height is not None:
+        return height, width
+    return width, height
+
+
 def _parse_video_date(exif_data: dict) -> Optional[datetime]:
     for tag in _DATE_TAGS:
         raw = _exif_field(exif_data, tag)
@@ -254,6 +267,7 @@ def index_video(video_path: Path, thumbnail_dir: Path) -> Optional[dict]:
             year, month, date_taken = date.year, date.month, date.isoformat()
 
         codec = _codec(exif_data)
+        width, height = _display_dimensions(exif_data)
         duration = _to_float(_exif_field(exif_data, "Duration"))
 
         poster = extract_poster(video_path, thumbnail_dir, duration)
@@ -271,8 +285,8 @@ def index_video(video_path: Path, thumbnail_dir: Path) -> Optional[dict]:
             "device": device_from_exif(exif_data),
             "faces_data": faces_data,
             "duration_seconds": duration,
-            "width": _to_int(_exif_field(exif_data, "ImageWidth")),
-            "height": _to_int(_exif_field(exif_data, "ImageHeight")),
+            "width": width,
+            "height": height,
             "video_codec": codec,
             "poster_path": str(poster) if poster else None,
         }
