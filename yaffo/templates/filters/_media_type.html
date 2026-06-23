@@ -1,0 +1,8 @@
+<div class="filter-group">
+    <label for="media-type-select">Media Type</label>
+    <select name="media-type" id="media-type-select" class="searchable-select" data-search-disabled>
+        <option value="">All Media</option>
+        <option value="photo" {% if filters.selected_media_type == 'photo' %}selected{% endif %}>Photos Only</option>
+        <option value="video" {% if filters.selected_media_type == 'video' %}selected{% endif %}>Videos Only</option>
+    </select>
+</div>

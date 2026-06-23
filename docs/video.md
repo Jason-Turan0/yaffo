@@ -362,30 +362,65 @@ own phase so the core import/playback feature can ship first.
   playback via `send_file(conditional=True)`; detail view renders `<video>` + a
   video-metadata block. Location automations come along for free. **No real poster
   frame (deferred to Phase 3), no faces, no labels, no dedup.**
-- **Phase 2 — Understand.** CLIP labels on the poster; sampled-frame face
-  detection; metadata write-back for video containers.
-- **Phase 3 — Polish.** **Real poster-frame extraction** (the decoder fork in Open
-  Question #1 — deferred here, static placeholder stands in until then); duplicate
-  detection on posters; optional "videos only" gallery filter; transcoding decision
-  for non-playable codecs.
+- **Phase 2 — Understand.** **Sampled-frame face detection ✅ Done (2026-06-22)** —
+  `index_video.detect_video_faces` samples frames (one per ~3s, capped at 20; ffmpeg
+  fast-seek), runs the existing InsightFace `detect_faces` on each, and dedups the
+  same person across frames (greedy clustering on the L2-normalized embeddings,
+  cosine ≥ 0.5, keeping the highest-`det_score` crop). It emits `faces_data` in the
+  same shape as photos, so `index_photo_task` persists the `Face` rows (and clears
+  them on re-index) with no change.
+
+  **CLIP labels ✅ Done (2026-06-22)** — `classify_labels` branches on media type:
+  for a video it samples the same frames (shared `index_video.extract_sample_frames`
+  via `iter_video_frame_arrays`), runs CLIP per frame, and aggregates per-label
+  scores with an element-wise **max** across frames (a concept in any frame counts),
+  then applies the existing threshold/top-K. A video with no extractable frames
+  (ffmpeg missing) is skipped without clearing prior labels. Repo helper
+  `get_label_inputs_by_ids` supplies (path, media_type, duration).
+
+  **Metadata write-back ✅ Done (2026-06-22)** — `write_metadata._write_video_metadata`
+  handles MP4/MOV/M4V (routed via `VIDEO_EXTENSIONS`): writes the same XMP keywords
+  photos get (labels + custom tags + the favorite marker, merged with existing) plus
+  XMP:Location, via exiftool. People (PersonInImage) are intentionally **not** written
+  — QuickTime person-tag support is unreliable. Fails cleanly (`(False, reason)`, never
+  raises) so the export degrades per-file. Round-trip verified on a real clip.
+
+  **Phase 2 complete.**
+- **Phase 3 — Polish.** **Real poster-frame extraction ✅ Done (2026-06-22)** — see
+  below. Still open: duplicate detection on posters; optional "videos only" gallery
+  filter; transcoding decision for non-playable codecs (HEVC won't play in
+  Chrome/Firefox).
+
+  *Poster extraction (done):* bundle **ffmpeg** (`packaging/download_assets.py`
+  fetches the `eugeneware/ffmpeg-static` binary for the current platform/arch into
+  `resources/ffmpeg/`; resolved at runtime by `yaffo/utils/ffmpeg_path.py`,
+  bundled-first then system fallback). `index_video.extract_poster` grabs the
+  **middle frame** (`-ss duration/2`, falls back to 1s when duration is unknown) to
+  a deterministic `poster_<sha1(path)>.jpg` in `thumbnail_dir`, so a re-index
+  overwrites in place. `get_orphaned_thumbnails` now treats `MediaItem.poster_path`
+  as referenced so cleanup doesn't sweep posters. If ffmpeg is unavailable or fails,
+  `poster_path` stays NULL and the static placeholder still stands in. License: the
+  static build is GPL, invoked only as a subprocess (mere aggregation) — license +
+  source attribution in `THIRD_PARTY_LICENSES.txt`; `codesign --deep` signs the
+  nested binary.
 
 ## Open questions
 
-1. **Decoder strategy (deferred to Phase 3).** Settled for now: **Phase 1 ships a
-   static placeholder poster and extracts no frame**, so the decoder choice no
-   longer gates the catalog/play feature. When real posters land in Phase 3 the
-   fork is **OS-native decode** (macOS AVFoundation/VideoToolbox — no bundled
-   binary, dodges codec-patent exposure, platform-specific frame path) vs. **bundle
-   ffmpeg** (one codepath, LGPL trivial via subprocess, but codec-patent exposure on
-   H.264/HEVC + ~70–100 MB). See *Design decisions: Frame extraction & codecs*.
-   *(Leaning: OS-native; bundle ffmpeg only if/when transcoding lands.)* `exiftool`
-   already covers all the metadata, so Phase 1 needs no decoder at all.
+1. **Decoder strategy — RESOLVED (2026-06-22): bundle ffmpeg.** Phase 1 shipped a
+   static placeholder; Phase 3 added real posters by **bundling the ffmpeg-static
+   binary** and invoking it as a subprocess (the one-codepath option from the fork).
+   The rejected alternative was OS-native decode (AVFoundation/Media Foundation —
+   no bundle, but a platform-specific frame path per OS). Trade-off accepted: the
+   static build is GPL (fine via subprocess = mere aggregation) and carries
+   H.264/HEVC codec-patent exposure, in exchange for one cross-platform code path
+   that also sets up future transcoding. See *Design decisions: Frame extraction &
+   codecs* and the Phase 3 note above.
 2. **Supported formats.** `VIDEO_EXTENSIONS` lists 7 containers, but only some are
    browser-playable inline (MP4/MOV/H.264). Do we (a) only catalog playable
    formats, (b) catalog all but only play the playable ones, or (c) transcode?
    *(Leaning: (b) for v1; transcoding is Phase 3+.)*
-3. **Poster frame choice.** Fixed offset (e.g. 1s in), middle frame, or a
-   "most representative" heuristic? *(Leaning: middle frame, simplest.)*
+3. **Poster frame choice — RESOLVED: middle frame** (`-ss duration/2`, falling back
+   to 1s when duration is unknown).
 4. **Range serving correctness.** Verify `send_file` handles partial/range
    requests for large files acceptably, or add an explicit range handler.
 5. **Metadata write-back.** Which video containers does the exiftool-based writer

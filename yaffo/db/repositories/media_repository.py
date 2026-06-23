@@ -111,6 +111,18 @@ def get_paths_by_ids(session: Session, media_item_ids: list[int]) -> dict[int, s
     )
 
 
+def get_label_inputs_by_ids(
+    session: Session, media_item_ids: list[int]
+) -> dict[int, tuple[str, str, float | None]]:
+    """For classification: (full_file_path, media_type, duration_seconds) per id. A
+    video is labeled from sampled frames rather than its (un-openable) container, so
+    the labeler needs the type and duration, not just the path."""
+    rows = session.query(
+        MediaItem.id, MediaItem.full_file_path, MediaItem.media_type, MediaItem.duration_seconds
+    ).filter(MediaItem.id.in_(media_item_ids)).all()
+    return {row[0]: (row[1], row[2], row[3]) for row in rows}
+
+
 def delete_media_items(session: Session, media_item_ids: list[int]) -> list[str]:
     """Remove photos from the index in one transaction: their tags, labels, faces
     (and the people_face links + the face thumbnail files), then the photo rows.

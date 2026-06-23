@@ -666,3 +666,38 @@ class TestDSCN0010RealFile:
 
         # Make/Model promoted to a single device string (Make + Model, not repeated)
         assert result['device'] == 'NIKON COOLPIX P6000'
+
+class TestOrphanedThumbnailsKeepPosters:
+    """get_orphaned_thumbnails must treat video poster frames as referenced (they
+    live in thumbnail_dir but aren't tied to any Face), or cleanup would delete them."""
+
+    def _session(self):
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import Session
+        from yaffo.db import db
+        engine = create_engine("sqlite:///:memory:")
+        db.metadata.create_all(engine)
+        return Session(engine)
+
+    def test_poster_is_not_orphaned_but_stray_file_is(self, tmp_path):
+        from yaffo.db.models import MediaItem, Face, MEDIA_TYPE_VIDEO
+        from yaffo.utils.index_photos import get_orphaned_thumbnails
+
+        poster = tmp_path / "poster_abc.jpg"
+        poster.write_bytes(b"\xff\xd8\xff")
+        face_crop = tmp_path / "face_x_0_1234.jpg"
+        face_crop.write_bytes(b"\xff\xd8\xff")
+        stray = tmp_path / "stray.jpg"
+        stray.write_bytes(b"\xff\xd8\xff")
+
+        session = self._session()
+        session.add(MediaItem(full_file_path="/lib/clip.mov",
+                              media_type=MEDIA_TYPE_VIDEO, poster_path=str(poster)))
+        session.add(Face(full_file_path=str(face_crop)))
+        session.commit()
+
+        orphaned = get_orphaned_thumbnails(session, tmp_path)
+
+        assert poster not in orphaned
+        assert face_crop not in orphaned
+        assert stray in orphaned

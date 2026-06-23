@@ -1,13 +1,13 @@
 from sqlalchemy import PrimaryKeyConstraint
 from yaffo.db import db
 from yaffo.utils.time import utcnow
+# Re-exported from common (the leaf that owns them) so existing
+# `from yaffo.db.models import MEDIA_TYPE_*` imports keep working.
+from yaffo.common import MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO
 
 MEDIA_STATUS_IMPORTED = "IMPORTED"
 MEDIA_STATUS_INDEXED = "INDEXED"
 MEDIA_STATUS_SYNCED = "SYNCED"
-
-MEDIA_TYPE_PHOTO = "photo"
-MEDIA_TYPE_VIDEO = "video"
 
 class MediaItem(db.Model):
     __tablename__ = "media_items"

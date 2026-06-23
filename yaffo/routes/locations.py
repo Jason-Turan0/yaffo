@@ -17,7 +17,8 @@ def init_locations_routes(app: Flask):
                 MediaItem.location_name,
                 MediaItem.latitude,
                 MediaItem.longitude,
-                MediaItem.full_file_path
+                MediaItem.full_file_path,
+                MediaItem.media_type
             )
             .filter(MediaItem.latitude.isnot(None))
             .filter(MediaItem.longitude.isnot(None))
@@ -31,7 +32,10 @@ def init_locations_routes(app: Flask):
                 'lat': float(loc.latitude),
                 'lon': float(loc.longitude),
                 'photo_path': loc.full_file_path,
-                'filename': os.path.basename(loc.full_file_path)
+                'filename': os.path.basename(loc.full_file_path),
+                # The map popup renders this as an <img>; a video's /media/<id> is the
+                # raw clip, so the client must use the poster route instead.
+                'media_type': loc.media_type
             }
             for loc in locations
         ]

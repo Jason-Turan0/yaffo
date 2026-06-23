@@ -225,11 +225,18 @@ def main() -> None:
     import os
     from yaffo.background_tasks.periodic import PERIODIC_TASKS
     from yaffo.common import QUEUE_DB_PATH
+    from yaffo.config import get_int as get_config_int
 
+    # Defaults from config.toml ([tasks] workers / recycle); a CLI flag still wins
+    # over the config value, which wins over the built-in fallback.
     parser = argparse.ArgumentParser(description="Run the yaffo task queue host")
-    parser.add_argument("-w", "--workers", type=int, default=os.cpu_count() or 4)
     parser.add_argument(
-        "-r", "--recycle", type=int, default=100,
+        "-w", "--workers", type=int,
+        default=get_config_int("tasks", "workers", os.cpu_count() or 4),
+    )
+    parser.add_argument(
+        "-r", "--recycle", type=int,
+        default=get_config_int("tasks", "recycle", 100),
         help="recycle each worker after this many tasks (caps native memory)",
     )
     args = parser.parse_args()

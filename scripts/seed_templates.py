@@ -6,7 +6,7 @@ the consistent, app-styled designs can be reviewed in the browser. Same catalog 
 agent's template tool serves, so what you see here is what the model is shown.
 
 Run:
-    python -m yaffo.scripts.seed_templates
+    python -m scripts.seed_templates
 
 Idempotent: re-running replaces the existing 'Widget Templates' page.
 """

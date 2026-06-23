@@ -14,6 +14,7 @@ from yaffo.utils.write_metadata import (
     _write_heic_metadata,
     _write_jpeg_metadata,
     _write_png_metadata,
+    _write_video_metadata,
     _run_exiftool
 )
 
@@ -536,3 +537,60 @@ class TestWriteKeywords:
     def test_png_keywords(self, temp_png):
         _write_png_metadata(temp_png, None, None, None, ["sunset", "beach"])
         assert Image.open(temp_png).info.get("Keywords") == "beach, sunset"
+
+
+class TestWriteVideoMetadata:
+    """Video write-back: XMP keywords (labels/tags/favorite) + location into MP4/MOV
+    containers; people are intentionally not written (docs/video.md)."""
+
+    @pytest.fixture
+    def temp_mov(self):
+        d = Path(tempfile.mkdtemp())
+        f = d / "clip.mov"
+        f.write_bytes(b"\x00\x00\x00\x18ftypqt  ")  # just needs to exist
+        yield f
+        shutil.rmtree(d, ignore_errors=True)
+
+    @patch('yaffo.utils.write_metadata._HAS_EXIFTOOL', True)
+    @patch('yaffo.utils.write_metadata._get_existing_keywords', return_value=[])
+    @patch('yaffo.utils.write_metadata._run_exiftool')
+    def test_dispatch_routes_mov_to_video_writer(self, mock_exiftool, _kw, temp_mov):
+        success, error = write_photo_metadata(temp_mov, keywords=["barbecue", "favorite"])
+        assert success is True and error is None
+        args = mock_exiftool.call_args[0][0]
+        assert "-XMP:Subject=barbecue" in args
+        assert "-XMP:Subject=favorite" in args
+
+    @patch('yaffo.utils.write_metadata._HAS_EXIFTOOL', True)
+    @patch('yaffo.utils.write_metadata._get_existing_keywords', return_value=[])
+    @patch('yaffo.utils.write_metadata._run_exiftool')
+    def test_writes_keywords_and_location_not_people(self, mock_exiftool, _kw, temp_mov):
+        _write_video_metadata(temp_mov, "2024:01:15 10:30:00", "Backyard", ["summer"])
+        args = mock_exiftool.call_args[0][0]
+        assert "-XMP:Location=Backyard" in args
+        assert "-XMP:Subject=summer" in args
+        assert "-XMP:DateTimeOriginal=2024:01:15 10:30:00" in args
+        # people are never written to video containers
+        assert not any("PersonInImage" in a for a in args)
+
+    @patch('yaffo.utils.write_metadata._HAS_EXIFTOOL', True)
+    @patch('yaffo.utils.write_metadata._get_existing_keywords', return_value=["barbecue"])
+    @patch('yaffo.utils.write_metadata._run_exiftool')
+    def test_merges_with_existing_keywords(self, mock_exiftool, _kw, temp_mov):
+        _write_video_metadata(temp_mov, None, None, ["picnic", "barbecue"])
+        subjects = [a for a in mock_exiftool.call_args[0][0] if a.startswith("-XMP:Subject=")]
+        # existing 'barbecue' kept, 'picnic' added, no duplicate
+        assert sorted(subjects) == ["-XMP:Subject=barbecue", "-XMP:Subject=picnic"]
+
+    @patch('yaffo.utils.write_metadata._HAS_EXIFTOOL', True)
+    @patch('yaffo.utils.write_metadata._run_exiftool')
+    def test_nothing_applicable_is_noop_success(self, mock_exiftool, temp_mov):
+        # only people would apply (which video skips) -> no exiftool call, still ok
+        success, error = _write_video_metadata(temp_mov, None, None, None)
+        assert success is True and error is None
+        mock_exiftool.assert_not_called()
+
+    @patch('yaffo.utils.write_metadata._HAS_EXIFTOOL', False)
+    def test_no_exiftool_returns_failure(self, temp_mov):
+        success, error = _write_video_metadata(temp_mov, None, None, ["x"])
+        assert success is False

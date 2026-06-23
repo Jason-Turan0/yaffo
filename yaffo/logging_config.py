@@ -3,7 +3,7 @@ import sys
 from logging.handlers import RotatingFileHandler
 
 from yaffo.common import ROOT_DIR
-from yaffo.config import get as get_config
+from yaffo.config import get as get_config, get_int as get_config_int
 
 LOG_FORMAT = '%(asctime)s - %(name)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s'
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
@@ -16,8 +16,9 @@ WEB_LOG_FILE = ROOT_DIR / "yaffo.log"
 DEFAULT_LEVEL = getattr(logging, str(get_config("logging", "level", "INFO")).upper(), logging.INFO)
 
 # Cap each log file so it can't grow unbounded over a long-running session.
-_MAX_BYTES = 5 * 1024 * 1024
-_BACKUP_COUNT = 3
+# Sizes from config.toml ([logging] max_file_mb / backup_count), with defaults.
+_MAX_BYTES = get_config_int("logging", "max_file_mb", 5) * 1024 * 1024
+_BACKUP_COUNT = get_config_int("logging", "backup_count", 3, minimum=0)
 
 
 def setup_logger(name: str, log_file: str, level=DEFAULT_LEVEL):

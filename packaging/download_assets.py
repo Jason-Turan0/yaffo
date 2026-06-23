@@ -1,14 +1,17 @@
 """Download the binary assets the app bundles but that aren't in source control:
-ExifTool, the InsightFace `buffalo_l` face models, and the CLIP ONNX encoders.
+ExifTool, the InsightFace `buffalo_l` face models, the CLIP ONNX encoders, and the
+ffmpeg binary (video poster frames).
 
 Run before the PyInstaller build (the build script does this for you). Idempotent:
 each asset is skipped if it's already in place. Targets match where the loaders
-look at runtime (yaffo.utils.exiftool_path / face_analysis / image_classifier).
+look at runtime (yaffo.utils.exiftool_path / face_analysis / image_classifier /
+ffmpeg_path).
 """
 from __future__ import annotations
 
 import io
 import os
+import platform
 import shutil
 import sys
 import tarfile
@@ -38,6 +41,23 @@ INSIGHTFACE_KEEP = {"det_10g.onnx", "w600k_r50.onnx", "genderage.onnx"}
 CLIP_DIR = RESOURCES / "models" / "clip" / "ViT-B-32__openai"
 CLIP_BASE = "https://huggingface.co/immich-app/ViT-B-32__openai/resolve/main"
 CLIP_FILES = ["visual/model.onnx", "textual/model.onnx"]
+
+# ffmpeg static binary for poster-frame extraction (yaffo.utils.ffmpeg_path looks
+# here). One binary for the current platform/arch — the build runs on the machine
+# it targets. These are GPL builds; invoked only as a subprocess (mere aggregation),
+# so the copyleft doesn't reach the app, but the license ships beside it (see
+# THIRD_PARTY_LICENSES.txt) and the source is at github.com/eugeneware/ffmpeg-static.
+FFMPEG_DIR = RESOURCES / "ffmpeg"
+FFMPEG_RELEASE = "b6.1.1"
+FFMPEG_BASE = f"https://github.com/eugeneware/ffmpeg-static/releases/download/{FFMPEG_RELEASE}"
+# (system, machine) -> ffmpeg-static asset slug for that platform/arch.
+FFMPEG_ASSETS = {
+    ("darwin", "arm64"): "darwin-arm64",
+    ("darwin", "x86_64"): "darwin-x64",
+    ("windows", "amd64"): "win32-x64",
+    ("linux", "x86_64"): "linux-x64",
+    ("linux", "aarch64"): "linux-arm64",
+}
 
 
 def _fetch(url: str) -> bytes:
@@ -147,10 +167,33 @@ def download_clip() -> None:
         print(f"clip {rel}: installed -> {target}")
 
 
+def download_ffmpeg() -> None:
+    is_windows = platform.system().lower() == "windows"
+    target = FFMPEG_DIR / ("ffmpeg.exe" if is_windows else "ffmpeg")
+    if target.exists():
+        print("ffmpeg: already present")
+        return
+
+    key = (platform.system().lower(), platform.machine().lower())
+    slug = FFMPEG_ASSETS.get(key)
+    if slug is None:
+        print(f"ffmpeg: no static build mapped for {key}; skipping (poster frames disabled)")
+        return
+
+    print(f"ffmpeg: downloading ({slug})")
+    FFMPEG_DIR.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(_fetch(f"{FFMPEG_BASE}/ffmpeg-{slug}"))
+    target.chmod(0o755)
+    # Ship the build's license text beside the binary (GPL redistribution duty).
+    (FFMPEG_DIR / "ffmpeg.LICENSE").write_bytes(_fetch(f"{FFMPEG_BASE}/{slug}.LICENSE"))
+    print(f"ffmpeg: installed -> {target}")
+
+
 def main() -> int:
     download_exiftool()
     download_insightface()
     download_clip()
+    download_ffmpeg()
     print("\nAll build assets present.")
     return 0
 

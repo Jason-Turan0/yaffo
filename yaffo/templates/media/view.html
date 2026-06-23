@@ -188,7 +188,12 @@
         <div class="photo-container">
             <div class="photo-wrapper">
                 <div class="photo-image-container">
-                    {% if media_item.media_type == 'video' %}
+                    {% if media_item.media_type == 'video' and not file_exists %}
+                        <div class="media-missing">
+                            <p>This video is no longer available on disk.</p>
+                            <p class="media-missing-name">{{ file_name }}</p>
+                        </div>
+                    {% elif media_item.media_type == 'video' %}
                         <video src="{{ url_for('media', media_item_id=media_item.id) }}"
                                class="photo-main video-main"
                                id="mainVideo"

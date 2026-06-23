@@ -5,7 +5,7 @@ Older DBs stored media_dirs as a list of path strings; this assigns a stable uui
 to each so the automation host can address media dirs by guid (and scripts can move
 files between them). Idempotent: entries already in {id, path} form are left as-is.
 
-Run:  python -m yaffo.scripts.backfill_media_dir_ids
+Run:  python -m scripts.backfill_media_dir_ids
 """
 import json
 import uuid

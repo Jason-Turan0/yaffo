@@ -36,7 +36,12 @@ from yaffo.site_agents.tool_providers import (
     WidgetToolProvider,
     to_anthropic_tools,
 )
-from pathlib import Path
+from yaffo.config import get_int as get_config_int
+
+# Default cap on the agent's tool-use loop per generation, from config.toml
+# ([ai] max_iterations) — bounds cost/runtime if the model keeps calling tools.
+_MAX_ITERATIONS = get_config_int("ai", "max_iterations", 25)
+
 
 @dataclass
 class AgentResult:
@@ -73,7 +78,7 @@ class Agent:
         self,
         client: ModelClient,
         tool_providers: list[ToolProvider],
-        max_iterations: int = 25,
+        max_iterations: int = _MAX_ITERATIONS,
     ):
         self.client = client
         self.tool_providers = tool_providers
@@ -192,7 +197,7 @@ def create_page_builder_agent(
     model: ModelAlias,
     api_key: str,
     session: Session,
-    max_iterations: int = 25,
+    max_iterations: int = _MAX_ITERATIONS,
 ) -> Agent:
     """Wire the agent for a working version: data-query + widget tools, the stable
     system prompt, and an Anthropic client. The widget tool persists directly into
@@ -211,7 +216,6 @@ def create_page_builder_agent(
         system_prompt=build_system_prompt(),
         tools=to_anthropic_tools(providers),
         api_key=api_key,
-        log_dir= Path.cwd() / "model_logs",
     )
     return Agent(client, providers, max_iterations=max_iterations)
 
@@ -221,7 +225,7 @@ def create_theme_builder_agent(
     model: ModelAlias,
     api_key: str,
     session: Session,
-    max_iterations: int = 25,
+    max_iterations: int = _MAX_ITERATIONS,
 ) -> Agent:
     """Wire the agent for a custom theme: the write_theme tool (scoped to `slug`, which
     persists the working draft via `session`) and the stable theme-builder system
@@ -236,7 +240,6 @@ def create_theme_builder_agent(
         system_prompt=build_template_builder_system_prompt(),
         tools=to_anthropic_tools(providers),
         api_key=api_key,
-        log_dir=Path.cwd() / "model_logs",
     )
     return Agent(client, providers, max_iterations=max_iterations)
 
@@ -246,7 +249,7 @@ def create_automation_builder_agent(
     model: ModelAlias,
     api_key: str,
     session: Session,
-    max_iterations: int = 25,
+    max_iterations: int = _MAX_ITERATIONS,
 ) -> Agent:
     """Wire the agent for a custom automation: the write_automation_code tool (scoped
     to `slug`, which persists the working draft via `session`) plus the data-query
@@ -264,6 +267,5 @@ def create_automation_builder_agent(
         system_prompt=build_automation_builder_system_prompt(),
         tools=to_anthropic_tools(providers),
         api_key=api_key,
-        log_dir=Path.cwd() / "model_logs",
     )
     return Agent(client, providers, max_iterations=max_iterations)

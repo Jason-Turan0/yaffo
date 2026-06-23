@@ -18,7 +18,7 @@ PYINSTALLER="pyinstaller"
 
 APP="dist/Yaffo Photo Organizer.app"
 
-echo "==> Downloading bundled assets (exiftool, models)"
+echo "==> Downloading bundled assets (exiftool, ffmpeg, models)"
 "$PYTHON" packaging/download_assets.py
 
 echo "==> Staging attribution file into resources/"

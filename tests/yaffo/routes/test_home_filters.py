@@ -132,3 +132,44 @@ class TestConfigurableFilterLayout:
     def test_save_rejects_non_list_items(self, client):
         resp = client.post("/settings/home-filters", json={"items": "nope"})
         assert resp.status_code == 400
+
+
+@pytest.fixture
+def mixed_media_ids(app):
+    """One photo + one video; returns {label: id}."""
+    from yaffo.db.models import MEDIA_TYPE_VIDEO
+    with app.app_context():
+        rows = {
+            "photo": MediaItem(full_file_path="/media/organized/2021/IMG_1.jpg"),
+            "video": MediaItem(full_file_path="/media/organized/2021/CLIP.mp4",
+                               media_type=MEDIA_TYPE_VIDEO),
+        }
+        db.session.add_all(rows.values())
+        db.session.commit()
+        return {label: m.id for label, m in rows.items()}
+
+
+def test_media_type_filter_videos_only(client, mixed_media_ids):
+    response = client.get("/?media-type=video")
+    assert response.status_code == 200
+    body = response.data.decode()
+    assert _rendered_ids(body) == {mixed_media_ids["video"]}
+    # The pager (page-size selector + nav links) must carry the active filter so
+    # paging/resizing doesn't drop it.
+    assert "media-type=video" in body
+
+
+def test_media_type_filter_photos_only(client, mixed_media_ids):
+    response = client.get("/?media-type=photo")
+    assert _rendered_ids(response.data.decode()) == {mixed_media_ids["photo"]}
+
+
+def test_media_type_filter_blank_shows_all(client, mixed_media_ids):
+    response = client.get("/?media-type=")
+    assert _rendered_ids(response.data.decode()) == set(mixed_media_ids.values())
+
+
+def test_media_type_filter_ignores_garbage(client, mixed_media_ids):
+    # An unknown value is treated as no filter, not an empty result.
+    response = client.get("/?media-type=bogus")
+    assert _rendered_ids(response.data.decode()) == set(mixed_media_ids.values())

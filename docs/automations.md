@@ -488,7 +488,7 @@ batch button, the on-disk file stays in sync as you tag.
 - **Format is dispatched by file *extension*** (`write_metadata.py`), so a WebP
   file mislabeled `.jpg` takes the JPEG path. exiftool usually copes, but
   detecting the real format (magic bytes / exiftool) would be more robust.
-- **Verify with** `inv tags <path>` (or `python -m yaffo.scripts.print_photo_tags
+- **Verify with** `inv tags <path>` (or `python -m scripts.print_photo_tags
   [--all] <path>`) — prints the `XMP:PersonInImage` / `XMP:Location` the handler
   writes, via the bundled exiftool.
 
@@ -843,7 +843,7 @@ Watcher suppression (unit, no real observer):
 | Sandbox runner + executor | `yaffo/background_tasks/automation_sandbox/{starlark_runner,executor}.py` |
 | Host API (registry + docs) | `yaffo/background_tasks/automation_sandbox/automation_host.py` |
 | Host actions / comparisons / labels | `yaffo/background_tasks/automation_sandbox/{automation_actions,automation_compare,labels}.py` |
-| Media-dir guids + row enrichment | `yaffo/utils/settings.py`, `yaffo/background_tasks/automation_sandbox/media_dirs.py`, `yaffo/scripts/backfill_media_dir_ids.py` |
+| Media-dir guids + row enrichment | `yaffo/utils/settings.py`, `yaffo/background_tasks/automation_sandbox/media_dirs.py`, `scripts/backfill_media_dir_ids.py` |
 | Test / preview harness | `yaffo/background_tasks/automation_sandbox/preview.py` (+ `routes` `test-files`, `utils/file_system.py` picker) |
 | Executor task | `yaffo/background_tasks/tasks/run_automation.py` |
 | Run → Job recording (system `record_run` + custom `run_and_record`) | `yaffo/background_tasks/automation_runs.py` |
@@ -853,7 +853,7 @@ Watcher suppression (unit, no real observer):
 | Built-in export_photo_tag | `yaffo/background_tasks/tasks/export_photo_tag.py` (+ emit hooks in `routes/{faces,people,locations}.py`) |
 | Built-in assign_location_name | `yaffo/background_tasks/tasks/assign_location_name_automation.py` (+ `utils/reverse_geocode.py`, `utils/geo.py`, `media_repository.{get_media_items_with_coords,get_named_coordinates}`) |
 | Built-in geotag_from_neighbors | `yaffo/background_tasks/tasks/geotag_from_neighbors_automation.py` (+ `media_repository.{get_media_items_missing_gps,get_gps_timestamps}`) |
-| Tag inspector (debug) | `yaffo/scripts/print_photo_tags.py` (`inv tags <path>`) |
+| Tag inspector (debug) | `scripts/print_photo_tags.py` (`inv tags <path>`) |
 | System-automation config schema | `yaffo/background_tasks/automation_config.py` |
 | Seed examples | `yaffo/scripts/seed_automations.py` |
 | Builder persistence (publish/chat) | `yaffo/db/repositories/automation_repository.py` |

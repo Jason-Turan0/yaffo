@@ -3,11 +3,15 @@ from pathlib import Path
 from platformdirs import user_cache_dir, user_data_dir
 import os
 
-from yaffo.db.models import MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO
-
 app_author = "Jason Turan"
 version = "0.0.1"
 app_name = "yaffo"
+
+# Media-type discriminator values. Defined here (a dependency-free leaf module) so
+# both yaffo.common and yaffo.db.models can expose them without an import cycle;
+# models re-exports these, so `from yaffo.db.models import MEDIA_TYPE_*` still works.
+MEDIA_TYPE_PHOTO = "photo"
+MEDIA_TYPE_VIDEO = "video"
 
 # Pruned to the containers that play inline in the browser (H.264/HEVC in MP4/MOV)
 # and that exiftool probes for metadata. Other containers (avi/mkv/wmv/flv) are

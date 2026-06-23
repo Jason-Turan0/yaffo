@@ -563,7 +563,13 @@ def get_orphaned_thumbnails(session: Session, thumbnail_dir: Path) -> List[Path]
     if not thumbnail_dir or not thumbnail_dir.exists():
         return []
 
-    db_thumbnail_paths = {face.full_file_path for face in session.query(Face.full_file_path).all()}
+    # Both kinds of file living in thumbnail_dir are "referenced": face crops
+    # (Face.full_file_path) and video poster frames (MediaItem.poster_path). A poster
+    # is not tied to any Face, so it must be kept explicitly or it reads as orphaned.
+    referenced_paths = {face.full_file_path for face in session.query(Face.full_file_path).all()}
+    referenced_paths.update(
+        poster for (poster,) in session.query(MediaItem.poster_path).filter(MediaItem.poster_path.isnot(None))
+    )
 
     filesystem_thumbnails = [
         f for f in thumbnail_dir.iterdir()
@@ -572,7 +578,7 @@ def get_orphaned_thumbnails(session: Session, thumbnail_dir: Path) -> List[Path]
 
     orphaned = [
         thumb for thumb in filesystem_thumbnails
-        if str(thumb) not in db_thumbnail_paths
+        if str(thumb) not in referenced_paths
     ]
 
     return orphaned

@@ -12,7 +12,7 @@ what-if: batching exiftool (one call for all files) vs the current per-file
 subprocess -- now a larger relative share since detection got ~20x faster.
 
 Usage:
-    python -m yaffo.scripts.profile_index_stages "<dir>" [--limit N] [--no-experiments]
+    python -m scripts.profile_index_stages "<dir>" [--limit N] [--no-experiments]
 """
 import argparse
 import subprocess

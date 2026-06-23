@@ -27,8 +27,8 @@ def _patch(monkeypatch, *, labels, label_vectors, image_vectors):
     monkeypatch.setattr(mod.classification_repository, "get_enabled_labels", lambda session: label_objs)
     monkeypatch.setattr(mod, "embed_texts", lambda prompts: np.asarray(label_vectors, dtype=np.float32))
     monkeypatch.setattr(
-        mod.media_repository, "get_paths_by_ids",
-        lambda session, media_item_ids: {pid: f"/photos/{pid}.jpg" for pid in media_item_ids},
+        mod.media_repository, "get_label_inputs_by_ids",
+        lambda session, media_item_ids: {pid: (f"/photos/{pid}.jpg", "photo", None) for pid in media_item_ids},
     )
     monkeypatch.setattr(mod, "image_from_path", lambda path: path)
     monkeypatch.setattr(mod, "image_to_numpy", lambda image: image)
@@ -54,6 +54,44 @@ def test_keeps_only_labels_at_or_above_threshold(monkeypatch, progress_reporter)
     assert labeled == [5]
     assert written[5] == [(1, pytest.approx(1.0))]
     assert progress_reporter.run_with_progress_calls == [[5]]
+
+
+def test_video_labels_aggregate_max_across_frames(monkeypatch, progress_reporter):
+    # A video is labeled from its sampled frames: frame A matches label 1, frame B
+    # matches label 2; the element-wise max means both labels pass.
+    written = _patch(
+        monkeypatch,
+        labels=[(1, "cat"), (2, "dog")],
+        label_vectors=[[1.0, 0.0], [0.0, 1.0]],
+        image_vectors={"frameA": [1.0, 0.0], "frameB": [0.0, 1.0]},
+    )
+    monkeypatch.setattr(
+        mod.media_repository, "get_label_inputs_by_ids",
+        lambda session, ids: {10: ("/v/clip.mov", "video", 6.0)},
+    )
+    monkeypatch.setattr(mod, "iter_video_frame_arrays", lambda path, duration: iter(["frameA", "frameB"]))
+
+    labeled = mod._classify_media_items(_session(), progress_reporter, media_item_ids=[10], threshold=0.5, max_labels=5)
+    assert labeled == [10]
+    assert {lid for lid, _ in written[10]} == {1, 2}
+
+
+def test_video_with_no_extractable_frames_is_skipped(monkeypatch, progress_reporter):
+    written = _patch(
+        monkeypatch,
+        labels=[(1, "cat")],
+        label_vectors=[[1.0, 0.0]],
+        image_vectors={},
+    )
+    monkeypatch.setattr(
+        mod.media_repository, "get_label_inputs_by_ids",
+        lambda session, ids: {10: ("/v/clip.mov", "video", 6.0)},
+    )
+    monkeypatch.setattr(mod, "iter_video_frame_arrays", lambda path, duration: iter([]))  # ffmpeg unavailable
+
+    labeled = mod._classify_media_items(_session(), progress_reporter, media_item_ids=[10], threshold=0.5, max_labels=5)
+    assert labeled == []
+    assert 10 not in written  # nothing written, not even an empty assignment
 
 
 def test_caps_at_max_labels_keeping_highest(monkeypatch, progress_reporter):

@@ -154,6 +154,7 @@ def init_media_routes(app: Flask):
             people=people,
             folder=folder,
             file_name=file_name,
+            file_exists=file_path.exists(),
             absolute_file_path=absolute_file_path,
             absolute_folder_path=absolute_folder_path,
             faces_with_locations=faces_with_locations,

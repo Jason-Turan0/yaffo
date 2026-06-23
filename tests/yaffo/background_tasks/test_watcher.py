@@ -273,8 +273,13 @@ class TestHelpers:
 
     def test_is_indexable(self):
         assert _is_indexable(Path("/photos/a.JPG"))
+        # Video files are watched too (mp4/mov/m4v), case-insensitively.
+        assert _is_indexable(Path("/photos/clip.mp4"))
+        assert _is_indexable(Path("/photos/clip.MOV"))
+        assert _is_indexable(Path("/photos/clip.m4v"))
         assert not _is_indexable(Path("/photos/.hidden.jpg"))
         assert not _is_indexable(Path("/photos/a.txt"))
+        assert not _is_indexable(Path("/photos/clip.avi"))  # not in the supported set
 
 
 class _DummySessionFactory:

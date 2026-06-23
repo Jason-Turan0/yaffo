@@ -221,6 +221,29 @@
     aspect-ratio: 4 / 3;
 }
 
+/* Shown in the player area when a video's source file is gone from disk. */
+.media-missing {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    width: min(420px, 100%);
+    aspect-ratio: 4 / 3;
+    background: var(--color-surface-sunken);
+    color: var(--color-text-muted);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
+.media-missing-name {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-faint);
+    word-break: break-all;
+}
+
 .face-overlay {
     position: absolute;
     top: 0;

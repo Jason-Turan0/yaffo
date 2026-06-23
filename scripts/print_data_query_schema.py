@@ -2,8 +2,8 @@
 page-builder validates the model's queries against.
 
 Usage:
-    python -m yaffo.scripts.print_data_query_schema          # full schema + summary
-    python -m yaffo.scripts.print_data_query_schema --summary  # summary only
+    python -m scripts.print_data_query_schema          # full schema + summary
+    python -m scripts.print_data_query_schema --summary  # summary only
 """
 import json
 import sys

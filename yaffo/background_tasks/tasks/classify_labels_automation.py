@@ -24,11 +24,13 @@ from yaffo.db.models import (
     AUTOMATION_HANDLER_CLASSIFY_LABELS,
     CLASSIFY_LABELS_DEFAULT_THRESHOLD,
     EVENT_MEDIA_LABELED,
+    MEDIA_TYPE_VIDEO,
 )
 from yaffo.db.repositories import classification_repository, media_repository
 from yaffo.logging_config import get_logger
 from yaffo.utils.image import image_from_path, image_to_numpy
 from yaffo.utils.image_classifier import embed_image, embed_texts, get_clip_threshold
+from yaffo.utils.index_video import iter_video_frame_arrays
 
 logger = get_logger(__name__, "background_tasks")
 
@@ -54,7 +56,17 @@ def _classify_media_items(session: Session, progress_reporter: ProgressReporter,
     if not labels:
         return []
     label_embeddings = embed_texts([label.effective_prompt for label in labels])
-    paths = media_repository.get_paths_by_ids(session, media_item_ids)
+    targets = media_repository.get_label_inputs_by_ids(session, media_item_ids)
+
+    def _video_label_sims(path: str, duration):
+        """Per-label scores for a video: the element-wise max over its sampled
+        frames, so a concept appearing in any frame counts. None if no frame was
+        extractable (e.g. ffmpeg unavailable)."""
+        agg = None
+        for frame in iter_video_frame_arrays(Path(path), duration):
+            sims = label_embeddings @ embed_image(frame)
+            agg = sims if agg is None else np.maximum(agg, sims)
+        return agg
 
     labeled: list[int] = []
     pending: list[tuple[int, list[tuple[int, float]]]] = []
@@ -65,19 +77,25 @@ def _classify_media_items(session: Session, progress_reporter: ProgressReporter,
             pending.clear()
 
     def media_item_processor(media_item_id: int):
-        path = paths.get(media_item_id)
-        if not path:
+        target = targets.get(media_item_id)
+        if not target:
             return
-        try:
-            image = image_to_numpy(image_from_path(Path(path)))
-        except Exception as e:
-            logger.warning(f"classify_labels: could not load photo {media_item_id} ({path}): {e}")
-            return
+        path, media_type, duration = target
         # float32 BLAS matmul can emit spurious divide/overflow RuntimeWarnings on
         # some platforms even though the result is finite (verified in the spike);
         # the inputs are guarded for finiteness upstream, so silence the noise.
-        with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
-            sims = label_embeddings @ embed_image(image)
+        try:
+            with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+                if media_type == MEDIA_TYPE_VIDEO:
+                    # Label a video from sampled frames (poster + others), aggregated.
+                    sims = _video_label_sims(path, duration)
+                else:
+                    sims = label_embeddings @ embed_image(image_to_numpy(image_from_path(Path(path))))
+        except Exception as e:
+            logger.warning(f"classify_labels: could not load media {media_item_id} ({path}): {e}")
+            return
+        if sims is None:
+            return  # video with no extractable frames (e.g. ffmpeg unavailable)
         order = np.argsort(-sims)[:max_labels]
         assignments = [(labels[i].id, float(sims[i])) for i in order if sims[i] >= threshold]
         pending.append((media_item_id, assignments))

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 import time
 from datetime import datetime
 from pathlib import Path
@@ -24,6 +25,7 @@ from typing import Any, Optional
 import anthropic
 
 from yaffo.common import ROOT_DIR
+from yaffo.config import get_int as get_config_int
 from yaffo.logging_config import get_logger
 from yaffo.site_agents.model_clients.model_client_types import (
     ModelAlias,
@@ -45,6 +47,17 @@ _PRICING = {
 }
 _CACHE_WRITE_MULT = 1.25  # 5-minute TTL write premium
 _CACHE_READ_MULT = 0.10
+
+# Each agent run writes one timestamped sub-dir of per-call JSON under log_dir. Keep
+# only the most recent runs so model_logs can't grow unbounded (the .log files are
+# capped by RotatingFileHandler; this is the equivalent for the per-run dumps).
+# Count from config.toml ([logging] max_model_log_runs), default 50.
+_MAX_LOG_RUNS = get_config_int("logging", "max_model_log_runs", 50)
+
+# Default output-token budget per model call, from config.toml ([ai] max_output_tokens).
+# Floored well above zero — this is shared with the thinking budget, so a tiny value
+# would cut off every generation (stop_reason=max_tokens). See the max_tokens note below.
+_MAX_OUTPUT_TOKENS = get_config_int("ai", "max_output_tokens", 64000, minimum=1024)
 
 logger = get_logger(__name__)
 
@@ -93,7 +106,8 @@ class AnthropicModelClient(ModelClient):
         # at 8192 the model could spend the whole budget thinking and get cut off
         # (stop_reason=max_tokens) before emitting a widget. The streaming path
         # (call_model_api) avoids HTTP timeouts at this size. Opus 4.8 allows 128K.
-        max_tokens: int = 64000,
+        # Default from config.toml ([ai] max_output_tokens).
+        max_tokens: int = _MAX_OUTPUT_TOKENS,
         log_dir: Optional[Path] = None,
         api_key: str,
     ):
@@ -107,6 +121,20 @@ class AnthropicModelClient(ModelClient):
         self.log_dir = Path(log_dir) if log_dir else (ROOT_DIR / "model_logs")
         self._call_count = 0
         self.task_start = datetime.now()
+        self._prune_old_runs()
+
+    def _prune_old_runs(self) -> None:
+        """Keep only the newest _MAX_LOG_RUNS run sub-dirs under log_dir; delete the
+        rest. Run dirs are named by start timestamp, so a lexical sort is chronological.
+        Best-effort — a filesystem error here must never break a model call."""
+        try:
+            if not self.log_dir.exists():
+                return
+            run_dirs = sorted((d for d in self.log_dir.iterdir() if d.is_dir()))
+            for stale in run_dirs[:-_MAX_LOG_RUNS]:
+                shutil.rmtree(stale, ignore_errors=True)
+        except OSError:
+            pass
 
     @classmethod
     def from_config(cls, config: ModelClientConfig, **kwargs: Any) -> "AnthropicModelClient":

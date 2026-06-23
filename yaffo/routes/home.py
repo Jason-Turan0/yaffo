@@ -7,7 +7,8 @@ from sqlalchemy import distinct, func
 from sqlalchemy.orm import joinedload
 import pydash as _
 from yaffo.db import db
-from yaffo.db.models import MediaItem, Face, Person, PersonFace, Tag, ClassificationLabel, MediaLabel
+from yaffo.db.models import MediaItem, Face, Person, PersonFace, Tag, ClassificationLabel, MediaLabel, \
+    MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO
 from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
 from yaffo.routes import filter_config
 from yaffo.utils.context import context
@@ -57,6 +58,9 @@ def init_home_routes(app: Flask):
         device = request.args.get("device", type=str)
         device = device.strip() if device else None
         favorite = request.args.get("favorite", type=int)
+        media_type = request.args.get("media-type", type=str)
+        if media_type not in (MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO):
+            media_type = None
         page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", type=int)
         filter_page_size = page_size if page_size else 25
@@ -81,6 +85,8 @@ def init_home_routes(app: Flask):
             query = query.filter(MediaItem.device == device)
         if favorite:
             query = query.filter(MediaItem.favorite.is_(True))
+        if media_type:
+            query = query.filter(MediaItem.media_type == media_type)
         if person_ids and person_match_type and len(person_ids) > 0:
             if person_match_type == 'all':
                 # AND logic: Photo must contain ALL selected people
@@ -253,6 +259,7 @@ def init_home_routes(app: Flask):
             'selected_month': month,
             'selected_device': device,
             'selected_favorite': favorite,
+            'selected_media_type': media_type,
             'selected_gender': gender,
             "page_sizes": [10, 25, 50, 100, 250],
             "page_size": filter_page_size

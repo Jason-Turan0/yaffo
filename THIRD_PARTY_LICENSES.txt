@@ -67,6 +67,25 @@ Purpose: CPU inference engine for the InsightFace and CLIP ONNX models.
 
 ---
 
+FFmpeg
+------
+Copyright: The FFmpeg developers
+License: GPL (this static build includes GPL-licensed components)
+Build source: https://github.com/eugeneware/ffmpeg-static (release b6.1.1)
+Upstream: https://ffmpeg.org/
+Purpose: Extracting a poster/still frame from video files during indexing.
+Bundled: yes (resources/ffmpeg/ffmpeg[.exe]; build license in resources/ffmpeg/ffmpeg.LICENSE)
+
+FFmpeg is invoked only as a separate command-line subprocess (never linked into
+the application), so this is "mere aggregation": the GPL copyleft does not extend
+to the application's own code. The obligations we honor for the bundled binary are
+to ship its license text (resources/ffmpeg/ffmpeg.LICENSE) and to identify the
+exact source build (the ffmpeg-static release above; corresponding FFmpeg source:
+https://ffmpeg.org/download.html). Note: the GPL grants no patent rights — the
+H.264/HEVC codecs decoded by this build are patent-encumbered.
+
+---
+
 Additional Python Libraries
 ---------------------------
 
@@ -106,4 +125,4 @@ commercially with those weights bundled.
 
 For the license of this application itself, see the LICENSE file (MIT).
 
-Last Updated: 2026-06-20
+Last Updated: 2026-06-22

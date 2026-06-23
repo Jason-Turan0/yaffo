@@ -11,7 +11,7 @@ Nothing actually leaves the machine: the payload is a benign marker (not real ph
 data), and the destination uses the reserved `.invalid` TLD, which never resolves.
 
 NOT a curated template (the agent should never build these). Run:
-    python -m yaffo.scripts.seed_sandbox_probe
+    python -m scripts.seed_sandbox_probe
 
 Idempotent: re-running replaces the 'Sandbox probe' page.
 """

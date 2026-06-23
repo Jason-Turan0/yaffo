@@ -96,6 +96,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
                 media_item.width = index_results.get("width")
                 media_item.height = index_results.get("height")
                 media_item.video_codec = index_results.get("video_codec")
+                media_item.poster_path = index_results.get("poster_path")
             media_item.status = MEDIA_STATUS_INDEXED
 
             for face_data in faces_data:

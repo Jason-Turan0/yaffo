@@ -9,7 +9,7 @@ validated by data_query_repository), and the window.yaffo widget API
 yaffo.mediaUrl) — see yaffo/static/pages/widget_api.js.
 
 Run:
-    python -m yaffo.scripts.seed_pages
+    python -m scripts.seed_pages
 
 Idempotent: re-running replaces any seeded page with the same title.
 """

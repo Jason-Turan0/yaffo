@@ -29,7 +29,8 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
             name: location.name,
             id: location.id,
             photo_path: location.photo_path,
-            filename: location.filename
+            filename: location.filename,
+            media_type: location.media_type
         });
     });
 
@@ -147,20 +148,28 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
         return false;
     };
 
+    // A video's /media/<id> is the raw clip, not an image — so the popup thumbnail
+    // points at its poster frame (falling back to the placeholder when there's no
+    // poster, via data-fallback + initImageFallbacks). Photos use /media directly.
+    const thumbUrl = (item) => item.media_type === 'video'
+        ? window.APP_CONFIG.buildUrl('media_poster', { media_item_id: item.id })
+        : window.APP_CONFIG.buildUrl('media', { media_item_id: item.id });
+
+    const fallbackUrl = window.APP_CONFIG.urls.placeholder;
+
     const showPhotoInPopup = (photoData, coordinate) => {
-        debugger
-        const photoUrl = window.APP_CONFIG.buildUrl('media', { media_item_id: photoData.id });
         const photoViewUrl = window.APP_CONFIG.buildUrl('media_view', { media_item_id: photoData.id });
 
         popupContent.innerHTML = `
             <div class="popup-photo-container">
                 <a href="${photoViewUrl}" target="_blank">
-                    <img src="${photoUrl}" alt="${photoData.name}" class="popup-photo">
+                    <img src="${thumbUrl(photoData)}" data-fallback="${fallbackUrl}" alt="${photoData.name}" class="popup-photo">
                 </a>
             </div>
             <h3>${photoData.name}</h3>
             <p class="photo-location">${photoData.location || 'Unknown Location'}</p>
         `;
+        window.PHOTO_ORGANIZER.utils.initImageFallbacks();
         overlay.setPosition(coordinate);
     };
 
@@ -178,7 +187,8 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                     name: f.get('filename'),
                     location: f.get('name'),
                     id: f.get('id'),
-                    photo_path: f.get('photo_path')
+                    photo_path: f.get('photo_path'),
+                    media_type: f.get('media_type')
                 }));
 
                 const selectId = 'photo-select-' + Date.now();
@@ -187,7 +197,6 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                 ).join('');
 
                 const firstPhoto = photosData[0];
-                const photoUrl = window.APP_CONFIG.buildUrl('media', { media_item_id: firstPhoto.id });
                 const photoViewUrl = window.APP_CONFIG.buildUrl('media_view', { media_item_id: firstPhoto.id });
 
                 popupContent.innerHTML = `
@@ -199,12 +208,13 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                     </div>
                     <div class="popup-photo-container">
                         <a id="photo-link" href="${photoViewUrl}" target="_blank">
-                            <img id="photo-img" src="${photoUrl}" alt="${firstPhoto.name}" class="popup-photo">
+                            <img id="photo-img" src="${thumbUrl(firstPhoto)}" data-fallback="${fallbackUrl}" alt="${firstPhoto.name}" class="popup-photo">
                         </a>
                     </div>
                     <h3 id="photo-name">${firstPhoto.name}</h3>
                     <p class="photo-location">${firstPhoto.location || 'Unknown Location'}</p>
                 `;
+                window.PHOTO_ORGANIZER.utils.initImageFallbacks();
 
                 const selectElement = document.getElementById(selectId);
                 window.SearchableSelect.init(selectElement);
@@ -212,14 +222,16 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                     const selectedIndex = parseInt(e.target.value);
                     const selectedPhoto = photosData[selectedIndex];
 
-                    const newPhotoUrl = window.APP_CONFIG.buildUrl('media', { media_item_id: selectedPhoto.id });
                     const newPhotoViewUrl = window.APP_CONFIG.buildUrl('media_view', { media_item_id: selectedPhoto.id });
 
-                    document.getElementById('photo-img').src = newPhotoUrl;
-                    document.getElementById('photo-img').alt = selectedPhoto.name;
+                    const img = document.getElementById('photo-img');
+                    img.src = thumbUrl(selectedPhoto);
+                    img.alt = selectedPhoto.name;
                     document.getElementById('photo-link').href = newPhotoViewUrl;
                     document.getElementById('photo-name').textContent = selectedPhoto.name;
                     document.querySelector('.photo-location').textContent = selectedPhoto.location || 'Unknown Location';
+                    // Re-arm the fallback for the swapped src (the handler is once-only).
+                    window.PHOTO_ORGANIZER.utils.initImageFallbacks();
                 });
 
                 overlay.setPosition(coordinate);
@@ -229,7 +241,8 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                     name: singleFeature.get('filename'),
                     location: singleFeature.get('name'),
                     id: singleFeature.get('id'),
-                    photo_path: singleFeature.get('photo_path')
+                    photo_path: singleFeature.get('photo_path'),
+                    media_type: singleFeature.get('media_type')
                 };
                 showPhotoInPopup(photoData, coordinate);
             }

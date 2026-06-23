@@ -9,7 +9,7 @@ from watchdog.observers.api import BaseObserver, ObservedWatch
 
 from yaffo.background_tasks.tasks import SessionFactory
 from yaffo.background_tasks.watcher_suppression import should_suppress, sweep_expired
-from yaffo.common import PHOTO_EXTENSIONS
+from yaffo.common import MEDIA_EXTENSIONS
 from yaffo.db.repositories.media_repository import move_media_item_path
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
@@ -43,7 +43,7 @@ class Drained(NamedTuple):
 
 
 def _is_indexable(path: Path) -> bool:
-    if path.suffix.lower() not in PHOTO_EXTENSIONS:
+    if path.suffix.lower() not in MEDIA_EXTENSIONS:
         return False
     if path.name.startswith("."):
         return False
@@ -314,24 +314,32 @@ def main() -> None:
     try:
         while True:
             time.sleep(POLL_INTERVAL)
-            sweep_expired()  # drop stale self-write suppressions (loop guard, Mechanism 2)
+            # A transient failure in one poll — e.g. a SQLite "disk I/O error" when the
+            # disk briefly stalls (system sleep during a long idle wait) — must not kill
+            # the watcher process, because the supervisor treats a child exit as a
+            # signal to shut the whole app down. Sessions are per-call (closed in their
+            # own finally), so the next tick recovers with a fresh session.
+            try:
+                sweep_expired()  # drop stale self-write suppressions (loop guard, Mechanism 2)
 
-            desired = _desired_media_dirs()
-            if desired != set(watches):
-                _reconcile_watches(observer, handler, watches, desired)
+                desired = _desired_media_dirs()
+                if desired != set(watches):
+                    _reconcile_watches(observer, handler, watches, desired)
 
-            result = handler.drain_settled()
-            to_index, dirs_to_remove = _resolve_dir_ops(result.dir_ops, set(watches))
-            move_adds, move_removes = _move_in_index(result.file_moves, set(watches))
+                result = handler.drain_settled()
+                to_index, dirs_to_remove = _resolve_dir_ops(result.dir_ops, set(watches))
+                move_adds, move_removes = _move_in_index(result.file_moves, set(watches))
 
-            adds = _filter_self_writes(list(dict.fromkeys(result.adds + to_index + move_adds)))
-            if adds:
-                _enqueue(adds)
-            deletes = list(dict.fromkeys(result.deletes + move_removes))
-            if deletes:
-                _remove(deletes)
-            for directory in dirs_to_remove:
-                _remove_dir(directory)
+                adds = _filter_self_writes(list(dict.fromkeys(result.adds + to_index + move_adds)))
+                if adds:
+                    _enqueue(adds)
+                deletes = list(dict.fromkeys(result.deletes + move_removes))
+                if deletes:
+                    _remove(deletes)
+                for directory in dirs_to_remove:
+                    _remove_dir(directory)
+            except Exception:
+                logger.error("watcher poll failed; retrying next tick", exc_info=True)
     except KeyboardInterrupt:
         logger.info("Watcher shutting down")
     finally:

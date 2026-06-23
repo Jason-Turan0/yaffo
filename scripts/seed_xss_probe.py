@@ -16,7 +16,7 @@ A defensive security test, companion to seed_sandbox_probe. It covers:
 
 Nothing here is malicious: payloads only set document.title to a marker, so a failure
 is loud but harmless. NOT a curated template. Run:
-    python -m yaffo.scripts.seed_xss_probe
+    python -m scripts.seed_xss_probe
 
 Idempotent: re-running replaces the 'XSS probe' page.
 """

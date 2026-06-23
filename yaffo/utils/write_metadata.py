@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional
 from PIL import Image, PngImagePlugin
 import piexif
+from yaffo.common import VIDEO_EXTENSIONS
 from yaffo.utils.exiftool_path import get_exiftool_path, is_exiftool_available
 
 
@@ -114,6 +115,8 @@ def write_photo_metadata(
             return _write_jpeg_metadata(photo_path, date_str, location_name, people_names, keywords)
         elif ext == ".png":
             return _write_png_metadata(photo_path, date_str, location_name, people_names, keywords)
+        elif ext in VIDEO_EXTENSIONS:
+            return _write_video_metadata(photo_path, date_str, location_name, keywords)
         else:
             return False, f"Unsupported file format: {ext}"
     except subprocess.CalledProcessError as e:
@@ -198,6 +201,40 @@ def _write_jpeg_metadata(
         exif_bytes = piexif.dump(exif_dict)
         img.save(photo_path, "jpeg", exif=exif_bytes)
         return True, None
+
+
+def _write_video_metadata(
+    video_path: Path,
+    date_str: Optional[str],
+    location_name: Optional[str],
+    keywords: Optional[list[str]] = None,
+) -> tuple[bool, Optional[str]]:
+    """Write XMP keywords/location into an MP4/MOV/M4V container via exiftool.
+
+    XMP is the portable container-level tag (QuickTime-native keyword and person
+    fields are inconsistently read across players), so we write XMP:Subject keywords
+    (labels + custom tags + the favorite marker) merged with any existing ones, plus
+    XMP:Location. People (PersonInImage) are intentionally not written to video — see
+    docs/video.md. Returns (True, None) with nothing to do when no applicable field
+    is set, so an export that only requested people doesn't error per clip."""
+    if not _HAS_EXIFTOOL:
+        return False, "No tool available"
+
+    args = ["-overwrite_original"]
+    if date_str:
+        args.append(f"-XMP:DateTimeOriginal={date_str}")
+    if location_name:
+        args.append(f"-XMP:Location={location_name}")
+    if keywords:
+        for keyword in _merge_unique(_get_existing_keywords(video_path), keywords):
+            args.append(f"-XMP:Subject={keyword}")
+
+    if len(args) == 1:  # only -overwrite_original: nothing applicable to write
+        return True, None
+
+    args.append(str(video_path))
+    _run_exiftool(args)
+    return True, None
 
 
 def _write_png_metadata(

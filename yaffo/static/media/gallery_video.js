@@ -33,6 +33,19 @@ window.PHOTO_ORGANIZER.initGalleryVideos = (config) => {
         // Drops the hover-info overlay so it stops intercepting the mouse-over the
         // native control bar needs (see .is-playing in index.css).
         thumb.classList.add('is-playing');
+
+        // If the source can't load (unplayable codec — e.g. HEVC in Chrome — or the
+        // file was moved/deleted), restore the card to its poster + badge instead of
+        // leaving a broken player.
+        video.addEventListener('error', () => {
+            video.remove();
+            if (still) still.style.display = '';
+            if (duration) duration.style.display = '';
+            badge.style.display = '';
+            thumb.classList.remove('is-playing');
+            notification.error("This video can't be played — the format may be unsupported in this browser, or the file was moved or deleted.");
+        });
+
         thumb.appendChild(video);
     };
 

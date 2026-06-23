@@ -54,7 +54,6 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, config) => {
 
         applyBtn.disabled = true;
         applyBtn.textContent = 'Applying...';
-        debugger
 
         try {
             const response = await fetch(config.urls.faces_assign, {
