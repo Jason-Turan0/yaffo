@@ -244,6 +244,24 @@
     word-break: break-all;
 }
 
+/* "Can't play in the browser" notice + open-externally action, overlaid on the
+   bottom of a non-playable video's poster (which renders as a normal .photo-main,
+   so the favorite heart still sits on the poster's corner). */
+.video-unplayable {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    background: var(--color-surface-inverse);
+    color: var(--color-text-inverse);
+    text-align: center;
+}
+
 .face-overlay {
     position: absolute;
     top: 0;

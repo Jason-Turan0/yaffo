@@ -13,10 +13,12 @@ app_name = "yaffo"
 MEDIA_TYPE_PHOTO = "photo"
 MEDIA_TYPE_VIDEO = "video"
 
-# Pruned to the containers that play inline in the browser (H.264/HEVC in MP4/MOV)
-# and that exiftool probes for metadata. Other containers (avi/mkv/wmv/flv) are
-# left out for v1 — see docs/video.md Open Question #2.
-VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v"}
+# Containers that play inline in the browser's <video> (H.264/HEVC in MP4/MOV/M4V).
+PLAYABLE_VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v"}
+# All cataloged video. The non-playable containers (avi/mkv/wmv/flv) are still
+# indexed for metadata + poster + faces (exiftool/ffmpeg handle them); the detail
+# view offers "open externally" instead of an inline player. See docs/video.md.
+VIDEO_EXTENSIONS = PLAYABLE_VIDEO_EXTENSIONS | {".avi", ".mkv", ".wmv", ".flv"}
 PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic"}
 MEDIA_EXTENSIONS = PHOTO_EXTENSIONS | VIDEO_EXTENSIONS
 
@@ -26,6 +28,12 @@ def media_type_for_path(path: Path) -> str:
     anything that isn't a known video extension (the import path only ever sees
     files already filtered to MEDIA_EXTENSIONS)."""
     return MEDIA_TYPE_VIDEO if path.suffix.lower() in VIDEO_EXTENSIONS else MEDIA_TYPE_PHOTO
+
+
+def is_browser_playable_video(path: "Path | str") -> bool:
+    """Whether a video plays inline in an HTML5 <video> (a container-level check).
+    Non-playable containers are cataloged but opened in an external player."""
+    return Path(path).suffix.lower() in PLAYABLE_VIDEO_EXTENSIONS
 
 # Where the DB, thumbnails, temp/trash, and logs live. Set YAFFO_DATA_DIR to
 # override (invoke sets it to ~/Pictures for dev). Otherwise default to the OS

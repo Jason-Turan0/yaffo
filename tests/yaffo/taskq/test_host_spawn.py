@@ -134,18 +134,26 @@ def test_worker_crash_is_isolated_and_recovered(probe):
     assert len([w for w in host.workers.values()]) == 2
 
 
-def test_non_json_return_is_a_clean_failure(probe):
+def _task_status(db, task_id):
     import sqlite3
+    conn = sqlite3.connect(db)
+    try:
+        row = conn.execute("SELECT status FROM task WHERE id=?", (task_id,)).fetchone()
+        return row[0] if row else None
+    finally:
+        conn.close()
+
+
+def test_non_json_return_is_a_clean_failure(probe):
     mod, db, out = probe
     res = mod.bad_return()   # worker rejects the non-JSON return -> task error
     mod.marker("after")
 
     host = _host(db)
-    ok = _run_until(host, lambda: _recorded(out) >= {"after"})
-    assert ok, _recorded(out)
+    # Wait until the failure is actually recorded -- "after" (run by the other worker)
+    # can land before bad_return is marked error, so the predicate must check both.
+    ok = _run_until(host, lambda: _recorded(out) >= {"after"} and _task_status(db, res.id) == "error")
+    assert ok, (_recorded(out), _task_status(db, res.id))
 
-    conn = sqlite3.connect(db)
-    status = conn.execute("SELECT status FROM task WHERE id=?", (res.id,)).fetchone()[0]
-    conn.close()
-    assert status == "error"          # reported as a failure, not a host crash
-    assert len(host.workers) == 2     # host survived, pool intact
+    assert _task_status(db, res.id) == "error"  # reported as a failure, not a host crash
+    assert len(host.workers) == 2               # host survived, pool intact

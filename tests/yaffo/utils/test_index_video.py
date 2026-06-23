@@ -187,3 +187,14 @@ class TestDetectVideoFaces:
         assert f["det_score"] == 0.9
         assert f["full_file_path"].endswith("thumb_0.jpg")
         assert f["location_right"] == 10 and f["estimated_age"] == 30.0
+
+
+class TestCodecExtraction:
+    def test_picks_container_specific_codec_field(self):
+        from yaffo.utils.index_video import _codec
+        assert _codec({"Track1:CompressorID": "hvc1"}) == "hevc"   # mp4/mov
+        assert _codec({"Matroska:VideoCodecID": "V_MPEG4/ISO/AVC"}) == "V_MPEG4/ISO/AVC"  # mkv (raw)
+        assert _codec({"RIFF:VideoCodec": "XVID"}) == "XVID"        # avi
+        assert _codec({"ASF:VideoCodecName": "WMV3"}) == "WMV3"     # wmv
+        assert _codec({"Flash:VideoEncoding": "On2 VP6"}) == "On2 VP6"  # flv
+        assert _codec({}) is None

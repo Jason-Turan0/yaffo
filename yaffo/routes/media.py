@@ -1,4 +1,5 @@
 from yaffo.utils.image import convert_heif
+from yaffo.common import is_browser_playable_video
 from flask import Flask, Response, abort, send_from_directory, send_file, render_template, request, jsonify
 from yaffo.background_tasks.events import emit_event
 from yaffo.db.models import db, MediaItem, Person, Tag, EVENT_MEDIA_MODIFIED
@@ -155,6 +156,7 @@ def init_media_routes(app: Flask):
             folder=folder,
             file_name=file_name,
             file_exists=file_path.exists(),
+            playable=is_browser_playable_video(file_path),
             absolute_file_path=absolute_file_path,
             absolute_folder_path=absolute_folder_path,
             faces_with_locations=faces_with_locations,

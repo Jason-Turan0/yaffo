@@ -279,7 +279,9 @@ class TestHelpers:
         assert _is_indexable(Path("/photos/clip.m4v"))
         assert not _is_indexable(Path("/photos/.hidden.jpg"))
         assert not _is_indexable(Path("/photos/a.txt"))
-        assert not _is_indexable(Path("/photos/clip.avi"))  # not in the supported set
+        assert _is_indexable(Path("/photos/clip.avi"))  # cataloged (not inline-playable)
+        assert _is_indexable(Path("/photos/clip.mkv"))
+        assert not _is_indexable(Path("/photos/clip.webm"))  # genuinely unsupported
 
 
 class _DummySessionFactory:

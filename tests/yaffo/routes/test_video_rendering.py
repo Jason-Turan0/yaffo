@@ -88,3 +88,29 @@ def test_locations_payload_includes_media_type_for_videos(client, app):
         db.session.commit()
     body = client.get("/locations").data.decode()
     assert '"media_type": "video"' in body
+
+
+@pytest.fixture
+def unplayable_video_id(app, tmp_path):
+    clip = tmp_path / "clip.mkv"  # cataloged but not browser-playable
+    clip.write_bytes(b"\x1aE\xdf\xa3")  # EBML magic; just needs to exist
+    with app.app_context():
+        v = MediaItem(full_file_path=str(clip), media_type=MEDIA_TYPE_VIDEO, duration_seconds=12)
+        db.session.add(v)
+        db.session.commit()
+        return v.id
+
+
+def test_detail_view_offers_open_externally_for_unplayable_format(client, unplayable_video_id):
+    body = client.get(f"/media/view/{unplayable_video_id}").data.decode()
+    assert "can't play in the browser" in body
+    assert "Open in default player" in body
+    assert "<video" not in body  # no inline player attempted
+
+
+def test_gallery_unplayable_video_has_no_play_badge(client, unplayable_video_id):
+    body = client.get("/").data.decode()
+    # No play overlay at all for a non-playable video (the only media item here);
+    # its poster still renders and the card click opens the detail view.
+    assert "video-play-badge" not in body
+    assert "video_placeholder.svg" in body or "media_poster" in body

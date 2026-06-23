@@ -39,9 +39,14 @@
                                     <img src="{{ media_item.poster_path and url_for('media_poster', media_item_id=media_item.id) or url_for('static', filename='video_placeholder.svg') }}"
                                          data-fallback="{{ url_for('static', filename='video_placeholder.svg') }}"
                                          alt="Video from {{ media_item.date_taken | format_date ('date') }}">
-                                    <button type="button" class="video-play-badge"
-                                            data-photo-id="{{ media_item.id }}"
-                                            title="Play video" aria-label="Play video"></button>
+                                    {# Play badge only on browser-playable videos (it triggers inline
+                                       play). Non-playable videos show just the poster; the card click
+                                       opens the detail view, which offers "open externally". #}
+                                    {% if is_browser_playable_video(media_item.full_file_path) %}
+                                        <button type="button" class="video-play-badge"
+                                                data-photo-id="{{ media_item.id }}"
+                                                title="Play video" aria-label="Play video"></button>
+                                    {% endif %}
                                     {% if media_item.duration_seconds %}
                                         <span class="video-duration">{{ media_item.duration_seconds | format_duration }}</span>
                                     {% endif %}

@@ -415,10 +415,16 @@ own phase so the core import/playback feature can ship first.
    H.264/HEVC codec-patent exposure, in exchange for one cross-platform code path
    that also sets up future transcoding. See *Design decisions: Frame extraction &
    codecs* and the Phase 3 note above.
-2. **Supported formats.** `VIDEO_EXTENSIONS` lists 7 containers, but only some are
-   browser-playable inline (MP4/MOV/H.264). Do we (a) only catalog playable
-   formats, (b) catalog all but only play the playable ones, or (c) transcode?
-   *(Leaning: (b) for v1; transcoding is Phase 3+.)*
+2. **Supported formats — RESOLVED (2026-06-22): option (b), catalog all.**
+   `VIDEO_EXTENSIONS = {.mp4,.mov,.m4v,.avi,.mkv,.wmv,.flv}`; a separate
+   `PLAYABLE_VIDEO_EXTENSIONS = {.mp4,.mov,.m4v}` gates inline playback.
+   Non-playable containers (avi/mkv/wmv/flv) are still fully indexed — exiftool reads
+   their metadata (`index_video._codec` tries the container-specific codec fields) and
+   ffmpeg extracts a poster + sampled-frame faces — but the gallery shows the poster
+   with **no play overlay** (only browser-playable videos get the ▶ inline-play badge);
+   clicking opens the detail view, which offers **"Open in default player"**
+   (`is_browser_playable_video()` drives both). Transcoding for inline playback is
+   still Phase 3+.
 3. **Poster frame choice — RESOLVED: middle frame** (`-ss duration/2`, falling back
    to 1s when duration is unknown).
 4. **Range serving correctness.** Verify `send_file` handles partial/range

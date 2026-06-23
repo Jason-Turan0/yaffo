@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Union, Optional
 
+from yaffo.common import is_browser_playable_video
+
 
 class DateFormat(Enum):
     DATE = "%b %d, %Y"
@@ -89,3 +91,7 @@ def init_template_filters(app):
 
     # Also make DateFormat enum available in templates
     app.jinja_env.globals['DateFormat'] = DateFormat
+
+    # Whether a video plays inline in the browser (vs. opens externally). Templates
+    # branch the gallery badge and the detail-view player on this.
+    app.jinja_env.globals['is_browser_playable_video'] = is_browser_playable_video

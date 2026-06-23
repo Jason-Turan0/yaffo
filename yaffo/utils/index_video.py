@@ -182,10 +182,29 @@ def detect_video_faces(video_path: Path, thumbnail_dir: Path, duration_seconds: 
 
 # exiftool date tags to try, in order of preference. QuickTime CreateDate is UTC by
 # spec, but for v1 we keep it naive wall-clock like photo date_taken (docs/video.md);
-# DateTimeOriginal (when a camera writes it) is already local.
-_DATE_TAGS = ("DateTimeOriginal", "CreationDate", "CreateDate", "MediaCreateDate", "TrackCreateDate")
-# Container CompressorID (avc1/hvc1/...) normalized to the human codec name.
+# DateTimeOriginal (when a camera writes it) is already local. The later tags cover
+# the non-MP4 containers (Matroska DateUTC, ASF/WMV CreationDate/CreationTime).
+_DATE_TAGS = (
+    "DateTimeOriginal", "CreationDate", "CreateDate", "MediaCreateDate",
+    "TrackCreateDate", "DateUTC", "CreationTime",
+)
+# exiftool's codec field is container-specific: QuickTime/MP4 -> CompressorID,
+# Matroska -> VideoCodecID, AVI -> VideoCodec/Compression, ASF/WMV -> VideoCodecName,
+# FLV -> VideoEncoding. Try them in order and keep the first present.
+_CODEC_TAGS = (
+    "CompressorID", "VideoCodecID", "VideoCodec", "VideoCodecName",
+    "VideoEncoding", "Compression",
+)
+# Known codec ids normalized to a human name; anything else is stored as-is.
 _CODEC_NAMES = {"avc1": "h264", "hvc1": "hevc", "hev1": "hevc", "mp4v": "mpeg4"}
+
+
+def _codec(exif_data: dict) -> Optional[str]:
+    for tag in _CODEC_TAGS:
+        raw = _exif_field(exif_data, tag)
+        if raw:
+            return _CODEC_NAMES.get(raw.lower(), raw)
+    return None
 
 
 def _parse_video_date(exif_data: dict) -> Optional[datetime]:
@@ -234,8 +253,7 @@ def index_video(video_path: Path, thumbnail_dir: Path) -> Optional[dict]:
         else:
             year, month, date_taken = date.year, date.month, date.isoformat()
 
-        codec_raw = _exif_field(exif_data, "CompressorID")
-        codec = _CODEC_NAMES.get((codec_raw or "").lower(), codec_raw)
+        codec = _codec(exif_data)
         duration = _to_float(_exif_field(exif_data, "Duration"))
 
         poster = extract_poster(video_path, thumbnail_dir, duration)

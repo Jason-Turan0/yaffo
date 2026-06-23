@@ -193,6 +193,18 @@
                             <p>This video is no longer available on disk.</p>
                             <p class="media-missing-name">{{ file_name }}</p>
                         </div>
+                    {% elif media_item.media_type == 'video' and not playable %}
+                        {# Poster rendered like a photo so the container hugs it and the
+                           favorite heart lands on its corner; the "can't play" notice +
+                           open-externally action overlay the bottom of the poster. #}
+                        <img src="{{ media_item.poster_path and url_for('media_poster', media_item_id=media_item.id) or url_for('static', filename='video_placeholder.svg') }}"
+                             data-fallback="{{ url_for('static', filename='video_placeholder.svg') }}"
+                             alt="{{ file_name }}" class="photo-main">
+                        <div class="video-unplayable">
+                            <span>This format can't play in the browser.</span>
+                            <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFile('{{ absolute_file_path }}')"
+                                    class="action-button">Open in default player</button>
+                        </div>
                     {% elif media_item.media_type == 'video' %}
                         <video src="{{ url_for('media', media_item_id=media_item.id) }}"
                                class="photo-main video-main"

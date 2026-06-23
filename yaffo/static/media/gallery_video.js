@@ -49,7 +49,10 @@ window.PHOTO_ORGANIZER.initGalleryVideos = (config) => {
         thumb.appendChild(video);
     };
 
-    document.querySelectorAll('.video-play-badge').forEach((badge) => {
+    // Only the interactive <button> badges (playable videos) get inline play; the
+    // static span badge on non-playable formats falls through to the card's
+    // open-the-detail-view click.
+    document.querySelectorAll('button.video-play-badge').forEach((badge) => {
         badge.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
