@@ -121,13 +121,17 @@ class TestExtractPoster:
         assert a == b and a != c
 
 
-def _face(embedding, det_score=0.9, top=0):
+def _face(embedding, det_score=0.9, top=0, size=100):
     from yaffo.utils.face_analysis import DetectedFace
     return DetectedFace(
-        location_top=top, location_right=10, location_bottom=10, location_left=0,
+        location_top=top, location_right=size, location_bottom=top + size, location_left=0,
         embedding=np.asarray(embedding, dtype=np.float32),
         age=30.0, gender=1, det_score=det_score,
     )
+
+
+def _sampled(embedding, quality, frame="/f", det_score=0.9):
+    return iv._SampledFace(face=_face(embedding, det_score=det_score), frame=Path(frame), quality=quality)
 
 
 class TestSampleOffsets:
@@ -147,16 +151,16 @@ class TestSampleOffsets:
 
 class TestDedupFaces:
     def test_collapses_same_person_keeps_best_crop(self):
-        a_low = _face([1, 0, 0], det_score=0.5)
-        a_high = _face([1, 0, 0], det_score=0.95)
-        b = _face([0, 1, 0], det_score=0.8)
-        out = iv._dedup_faces([(a_low, Path("/f0.jpg")), (a_high, Path("/f1.jpg")), (b, Path("/f2.jpg"))])
+        a_low = _sampled([1, 0, 0], quality=1.0, det_score=0.5)
+        a_high = _sampled([1, 0, 0], quality=10.0, det_score=0.95)
+        b = _sampled([0, 1, 0], quality=5.0, det_score=0.8)
+        out = iv._dedup_faces([a_low, a_high, b])
         assert len(out) == 2  # two distinct people
-        a_cluster = [f for f, _ in out if f.embedding[0] == 1][0]
-        assert a_cluster.det_score == 0.95  # kept the higher-confidence crop
+        a_cluster = [sf.face for sf in out if sf.face.embedding[0] == 1][0]
+        assert a_cluster.det_score == 0.95  # kept the higher-quality crop
 
     def test_distinct_people_not_merged(self):
-        out = iv._dedup_faces([(_face([1, 0, 0]), Path("/a")), (_face([0, 1, 0]), Path("/b"))])
+        out = iv._dedup_faces([_sampled([1, 0, 0], quality=1.0), _sampled([0, 1, 0], quality=1.0)])
         assert len(out) == 2
 
 
@@ -175,7 +179,7 @@ class TestDetectVideoFaces:
         with patch("yaffo.utils.index_video.get_ffmpeg_path", return_value=Path("/bin/ffmpeg")), \
              patch("yaffo.utils.index_video._grab_frame", side_effect=fake_grab), \
              patch("yaffo.utils.index_video.image_from_path", return_value=object()), \
-             patch("yaffo.utils.index_video.image_to_numpy", return_value=np.zeros((4, 4, 3))), \
+             patch("yaffo.utils.index_video.image_to_numpy", return_value=np.zeros((4, 4, 3), dtype=np.uint8)), \
              patch("yaffo.utils.index_video.detect_faces", return_value=[face]), \
              patch("yaffo.utils.index_video.save_face_thumbnail",
                    side_effect=lambda f, i, d, loc: tmp_path / f"thumb_{i}.jpg"):
@@ -186,7 +190,21 @@ class TestDetectVideoFaces:
         f = faces[0]
         assert f["det_score"] == 0.9
         assert f["full_file_path"].endswith("thumb_0.jpg")
-        assert f["location_right"] == 10 and f["estimated_age"] == 30.0
+        assert f["location_right"] == 100 and f["estimated_age"] == 30.0
+
+    def test_drops_faces_below_min_size(self, tmp_path):
+        tiny = _face([1, 0, 0], size=iv._FACE_MIN_SIZE_PX - 1)
+
+        def fake_grab(ffmpeg, video, offset, out):
+            Path(out).write_bytes(b"png")
+            return True
+
+        with patch("yaffo.utils.index_video.get_ffmpeg_path", return_value=Path("/bin/ffmpeg")), \
+             patch("yaffo.utils.index_video._grab_frame", side_effect=fake_grab), \
+             patch("yaffo.utils.index_video.image_from_path", return_value=object()), \
+             patch("yaffo.utils.index_video.image_to_numpy", return_value=np.zeros((4, 4, 3), dtype=np.uint8)), \
+             patch("yaffo.utils.index_video.detect_faces", return_value=[tiny]):
+            assert iv.detect_video_faces(Path("/clip.mov"), tmp_path, 6.0) == []
 
 
 class TestCodecExtraction:

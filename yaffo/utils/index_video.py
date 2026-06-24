@@ -1,10 +1,12 @@
 import hashlib
 import subprocess
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import cv2
 import numpy as np
 
 from yaffo.db.models import MEDIA_TYPE_VIDEO
@@ -37,6 +39,11 @@ _FACE_SAMPLE_MAX_FRAMES = 20
 # sits well below the same-person median (~0.66) yet above cross-person scores, so it
 # collapses duplicates without merging two different people. (compare_utils band.)
 _FACE_DEDUP_SIMILARITY = 0.5
+# Reject faces whose smaller bbox side is below this (px). Below ~ArcFace's 112px
+# input the crop is mostly interpolation, so the embedding is unreliable — common in
+# video, where anyone not in close-up is tiny in the frame. Dropping these keeps junk
+# detections out of people clustering rather than relying on dedup to bury them.
+_FACE_MIN_SIZE_PX = 50
 
 
 def _poster_path_for(video_path: Path, thumbnail_dir: Path) -> Path:
@@ -95,25 +102,53 @@ def _sample_offsets(duration_seconds: Optional[float]) -> list[float]:
     return [duration_seconds * (i + 1) / (n + 1) for i in range(n)]
 
 
-def _dedup_faces(detected: list[tuple[DetectedFace, Path]]) -> list[tuple[DetectedFace, Path]]:
+@dataclass
+class _SampledFace:
+    """A face detected in one sampled frame, with the precomputed quality score used to
+    pick the representative crop when the same person appears across several frames."""
+    face: DetectedFace
+    frame: Path
+    quality: float
+
+
+def _face_min_side(face: DetectedFace) -> int:
+    """The shorter side of the (clamped) face box, in px."""
+    return min(face.location_right - face.location_left, face.location_bottom - face.location_top)
+
+
+def _face_quality(image_rgb: np.ndarray, face: DetectedFace) -> float:
+    """Heuristic crop-quality score for choosing the best frame of a person across a
+    clip. Higher is better. Combines (multiplicatively, so any near-zero factor tanks
+    the crop): detector confidence, face size, and sharpness (variance of the
+    Laplacian on the grayscale crop — low for the motion/compression blur that's rife
+    in video). Used only for ranking within a person, so absolute scale is irrelevant."""
+    crop = image_rgb[face.location_top:face.location_bottom, face.location_left:face.location_right]
+    if crop.size == 0:
+        return 0.0
+    gray = cv2.cvtColor(crop, cv2.COLOR_RGB2GRAY)
+    sharpness = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+    return (face.det_score or 0.0) * _face_min_side(face) * sharpness
+
+
+def _dedup_faces(detected: list[_SampledFace]) -> list[_SampledFace]:
     """Collapse the same person seen across multiple frames into one face, keeping the
-    highest-confidence crop. Greedy single-link clustering on the L2-normalized
-    ArcFace embeddings (dot product == cosine); a face joins the first cluster it's
-    within _FACE_DEDUP_SIMILARITY of."""
-    reps: list[dict] = []
-    for face, frame in detected:
+    highest-quality crop (size + sharpness + confidence, not confidence alone — a
+    blurry close-up can out-score a sharp one on det_score). Greedy single-link
+    clustering on the L2-normalized ArcFace embeddings (dot product == cosine); a face
+    joins the first cluster it's within _FACE_DEDUP_SIMILARITY of."""
+    reps: list[_SampledFace] = []
+    for sampled in detected:
         best_idx, best_sim = -1, -1.0
         for idx, rep in enumerate(reps):
-            sim = float(np.dot(face.embedding, rep["embedding"]))
+            sim = float(np.dot(sampled.face.embedding, rep.face.embedding))
             if sim > best_sim:
                 best_sim, best_idx = sim, idx
         if best_idx >= 0 and best_sim >= _FACE_DEDUP_SIMILARITY:
-            rep = reps[best_idx]
-            if (face.det_score or 0) > (rep["face"].det_score or 0):
-                rep.update(face=face, frame=frame, embedding=face.embedding)
+            if sampled.quality > reps[best_idx].quality:
+                reps[best_idx] = sampled
         else:
-            reps.append({"embedding": face.embedding, "face": face, "frame": frame})
-    return [(rep["face"], rep["frame"]) for rep in reps]
+            reps.append(sampled)
+    return reps
 
 
 def extract_sample_frames(video_path: Path, out_dir: Path, duration_seconds: Optional[float]) -> list[Path]:
@@ -127,7 +162,10 @@ def extract_sample_frames(video_path: Path, out_dir: Path, duration_seconds: Opt
     out_dir.mkdir(parents=True, exist_ok=True)
     frames = []
     for idx, offset in enumerate(_sample_offsets(duration_seconds)):
-        frame_path = out_dir / f"{video_path.stem}_f{idx}.jpg"
+        # Lossless PNG (not JPEG): faces are detected and embedded straight from these,
+        # so re-compressing an already-compressed video frame would only add artifacts
+        # for ArcFace to see. The poster (display-only) stays JPEG.
+        frame_path = out_dir / f"{video_path.stem}_f{idx}.png"
         if _grab_frame(ffmpeg, video_path, offset, frame_path):
             frames.append(frame_path)
     return frames
@@ -153,18 +191,22 @@ def detect_video_faces(video_path: Path, thumbnail_dir: Path, duration_seconds: 
         return []
 
     thumbnail_dir.mkdir(parents=True, exist_ok=True)
-    detected: list[tuple[DetectedFace, Path]] = []
+    detected: list[_SampledFace] = []
     with tempfile.TemporaryDirectory(prefix="yaffo_frames_") as tmp:
         for frame_path in extract_sample_frames(video_path, Path(tmp), duration_seconds):
             image_numpy = image_to_numpy(image_from_path(frame_path))
             for face in detect_faces(image_numpy):
-                detected.append((face, frame_path))
+                if _face_min_side(face) < _FACE_MIN_SIZE_PX:
+                    continue
+                quality = _face_quality(image_numpy, face)
+                detected.append(_SampledFace(face=face, frame=frame_path, quality=quality))
 
         # Thumbnails must be cropped from the frame files before the temp dir is
         # cleaned up (save_face_thumbnail re-reads the source); they're written to the
         # persistent thumbnail_dir.
         faces_data = []
-        for i, (face, frame_path) in enumerate(_dedup_faces(detected)):
+        for i, sampled in enumerate(_dedup_faces(detected)):
+            face, frame_path = sampled.face, sampled.frame
             loc = (face.location_top, face.location_right, face.location_bottom, face.location_left)
             thumb_path = save_face_thumbnail(frame_path, i, thumbnail_dir, loc)
             faces_data.append({
