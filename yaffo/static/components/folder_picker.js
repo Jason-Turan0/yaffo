@@ -27,6 +27,9 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
         let parentPath = null;
 
         title.textContent = mode === 'file' ? 'Select a file' : 'Select a folder';
+        upBtn.dataset.icon = 'arrow-up';
+        upBtn.textContent = 'Up';
+        selectBtn.dataset.icon = 'folder';
         // "Select this folder" only makes sense in folder mode; files resolve on click.
         selectBtn.style.display = mode === 'file' ? 'none' : '';
 
@@ -58,6 +61,7 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
                 const chip = document.createElement('button');
                 chip.type = 'button';
                 chip.className = 'folder-picker-root';
+                chip.dataset.icon = 'folder';
                 chip.textContent = r.name;
                 chip.addEventListener('click', () => navigate(r.path));
                 rootsBox.appendChild(chip);
@@ -76,14 +80,19 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
             entries.forEach((entry) => {
                 const item = document.createElement('li');
                 item.className = `folder-picker-item ${entry.is_dir ? 'is-dir' : 'is-file'}`;
-                item.textContent = entry.name;
-                item.addEventListener('click', () => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'folder-picker-entry';
+                button.dataset.icon = entry.is_dir ? 'folder' : 'file';
+                button.textContent = entry.name;
+                button.addEventListener('click', () => {
                     if (entry.is_dir) {
                         navigate(entry.path);
                     } else {
                         settle(entry.path);  // file mode: a file click is the selection
                     }
                 });
+                item.appendChild(button);
                 list.appendChild(item);
             });
         };
