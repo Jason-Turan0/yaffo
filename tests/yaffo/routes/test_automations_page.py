@@ -251,7 +251,7 @@ def _run_buttons(client, slug="a1"):
     body = client.get(f"/utilities/automations/{slug}").get_data(as_text=True)
     collapsed = "".join(body.split())  # whitespace-insensitive for the JS init args
     return {
-        "pickers": 'js-run-files" data-mode="folder"' in body and 'js-run-files" data-mode="file"' in body,
+        "picker": 'js-run-files" data-mode="any"' in body,
         "plain": 'id="run-automation-button"' in body,
         # 3rd arg of initAutomationRunNow — the hasTriggers flag the click handler
         # uses to warn before running a trigger-less automation.
@@ -260,21 +260,21 @@ def _run_buttons(client, slug="a1"):
     }
 
 
-def test_all_event_triggers_show_run_on_folder_file_buttons(app, client):
-    """Every trigger an event → the automation is purely photo-driven → folder/file
-    pickers, not the plain Run-now button."""
+def test_all_event_triggers_show_scoped_run_button(app, client):
+    """Every trigger an event → the automation is purely photo-driven → path picker,
+    not the plain Run-now button."""
     _add(app)
     _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="media_indexed")
     buttons = _run_buttons(client)
-    assert buttons["pickers"] and not buttons["plain"]
+    assert buttons["picker"] and not buttons["plain"]
 
 
 def test_schedule_trigger_shows_plain_run_now(app, client):
-    """A schedule trigger → whole-library context-less Run-now, no pickers, no warning."""
+    """A schedule trigger → whole-library context-less Run-now, no path picker, no warning."""
     _add(app)
     _add_trigger(app, trigger_type=TRIGGER_TYPE_SCHEDULE, enabled=True, cron="0 9 * * 1")
     buttons = _run_buttons(client)
-    assert buttons["plain"] and not buttons["pickers"]
+    assert buttons["plain"] and not buttons["picker"]
     assert buttons["has_triggers_flag"]  # has a trigger → no click warning
 
 
@@ -284,7 +284,7 @@ def test_mixed_triggers_show_plain_run_now(app, client):
     _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="media_indexed")
     _add_trigger(app, trigger_type=TRIGGER_TYPE_SCHEDULE, enabled=True, cron="0 9 * * 1")
     buttons = _run_buttons(client)
-    assert buttons["plain"] and not buttons["pickers"]
+    assert buttons["plain"] and not buttons["picker"]
 
 
 def test_no_triggers_show_plain_run_now_with_warning_flag(app, client):
@@ -292,7 +292,7 @@ def test_no_triggers_show_plain_run_now_with_warning_flag(app, client):
     click handler warns the automation won't run on its own."""
     _add(app)
     buttons = _run_buttons(client)
-    assert buttons["plain"] and not buttons["pickers"]
+    assert buttons["plain"] and not buttons["picker"]
     assert buttons["no_triggers_flag"]
 
 

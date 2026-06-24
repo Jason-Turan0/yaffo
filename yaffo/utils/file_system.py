@@ -26,7 +26,7 @@ class DirEntry:
 class DirListing:
     path: str                         # the absolute directory being listed
     parent: Optional[str]             # parent dir, or None at a filesystem root
-    entries: list[DirEntry]           # sub-folders (+ files when mode="file")
+    entries: list[DirEntry]           # sub-folders (+ files when mode allows files)
     roots: list[DirEntry] = field(default_factory=list)  # quick shortcuts (home, drives)
     error: str = ""
 
@@ -60,10 +60,10 @@ def _resolve_start(path: Optional[str]) -> Path:
 
 def list_directory(path: Optional[str] = None, mode: str = "folder") -> DirListing:
     """List `path` (or the home dir if it's missing/not a directory) for the picker.
-    Always returns sub-folders; in "file" mode also returns files. Hidden entries
-    (dot-prefixed) are skipped. Never raises — permission/IO problems come back in
-    `error` with whatever could still be listed."""
-    if mode not in ("folder", "file"):
+    Always returns sub-folders; in "file" and "any" modes also returns files.
+    Hidden entries (dot-prefixed) are skipped. Never raises — permission/IO
+    problems come back in `error` with whatever could still be listed."""
+    if mode not in ("folder", "file", "any"):
         mode = "folder"
     directory = _resolve_start(path)
     parent = str(directory.parent) if directory.parent != directory else None
@@ -78,7 +78,7 @@ def list_directory(path: Optional[str] = None, mode: str = "folder") -> DirListi
                 is_dir = child.is_dir()
             except OSError:
                 continue  # broken symlink / unreadable — skip it
-            if is_dir or mode == "file":
+            if is_dir or mode in ("file", "any"):
                 entries.append(DirEntry(name=child.name, path=str(child), is_dir=is_dir))
     except PermissionError:
         error = f"Permission denied: {directory}"

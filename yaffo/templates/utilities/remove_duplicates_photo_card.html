@@ -5,5 +5,11 @@
      hx-target="#photo-{{ path.path_id }}"
      hx-swap="outerHTML"
      hx-include="closest form">
+    {% if path.is_video and path.browser_playable %}
+    <video src="{{ url_for('media_by_path', mediaPath=path.path) }}" preload="metadata" muted aria-label="Duplicate video"></video>
+    {% elif path.is_video %}
+    <img src="{{ url_for('static', filename='video_placeholder.svg') }}" alt="Duplicate video">
+    {% else %}
     <img src="{{ url_for('media_by_path', mediaPath=path.path) }}" data-fallback="{{ url_for('placeholder') }}" alt="Duplicate photo">
+    {% endif %}
 </div>

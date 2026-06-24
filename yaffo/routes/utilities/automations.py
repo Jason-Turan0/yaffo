@@ -141,7 +141,7 @@ def init_automations_routes(app: Flask):
 
         Driven by the automation's configured triggers: when **every** trigger is an
         event (so the automation is purely photo-driven), running it manually means
-        "run it over these photos" — show the file/folder pickers. If any trigger is a
+        "run it over these photos" — show the path picker. If any trigger is a
         schedule, or there are no triggers, it gets the whole-library Run-now instead."""
         triggers = automation.triggers
         return bool(triggers) and all(t.trigger_type == TRIGGER_TYPE_EVENT for t in triggers)

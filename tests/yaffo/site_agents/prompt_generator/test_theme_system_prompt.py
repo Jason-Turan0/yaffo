@@ -53,4 +53,4 @@ def test_prompt_documents_icon_override_with_neobrutalist_example():
     assert "mask-image: none" in prompt            # the unset-mask step for custom art
     assert "%23" in prompt                         # the # -> %23 encoding note
     assert "get_theme('neobrutalist')" in prompt   # the worked example
-    assert "add, delete" in prompt                 # the derived icon-name list
+    assert "  " + ", ".join(_icon_names()) in prompt  # the derived icon-name list

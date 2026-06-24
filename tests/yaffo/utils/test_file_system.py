@@ -31,6 +31,13 @@ def test_file_mode_includes_visible_files_too(tmp_path):
     assert file_entry.is_dir is False
 
 
+def test_any_mode_includes_visible_files_too(tmp_path):
+    _make_tree(tmp_path)
+    listing = list_directory(str(tmp_path), "any")
+    names = [e.name for e in listing.entries]
+    assert names == ["alpha", "beta", "note.txt"]
+
+
 def test_parent_points_up_and_path_echoes(tmp_path):
     child = tmp_path / "child"
     child.mkdir()

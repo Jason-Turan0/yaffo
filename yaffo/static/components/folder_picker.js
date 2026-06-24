@@ -9,7 +9,8 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
  *   if (path) { ... }   // null when cancelled
  *
  * mode: 'folder' (default) shows folders + a "Select this folder" action; 'file'
- * also lists files and resolves when one is clicked.
+ * also lists files and resolves when one is clicked; 'any' lists files and folders
+ * and also allows selecting the current folder.
  */
 window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {}) => {
     return new Promise((resolve) => {
@@ -26,12 +27,17 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
         let currentPath = startPath;
         let parentPath = null;
 
-        title.textContent = mode === 'file' ? 'Select a file' : 'Select a folder';
+        const isFileMode = mode === 'file';
+        const isAnyMode = mode === 'any';
+
+        title.textContent = isAnyMode
+            ? 'Select a file or folder'
+            : (isFileMode ? 'Select a file' : 'Select a folder');
         upBtn.dataset.icon = 'arrow-up';
         upBtn.textContent = 'Up';
         selectBtn.dataset.icon = 'folder';
-        // "Select this folder" only makes sense in folder mode; files resolve on click.
-        selectBtn.style.display = mode === 'file' ? 'none' : '';
+        // "Select this folder" is hidden only for file-only selection; files resolve on click.
+        selectBtn.style.display = isFileMode ? 'none' : '';
 
         const settle = (value) => {
             cleanup();
@@ -73,7 +79,9 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
             if (entries.length === 0) {
                 const empty = document.createElement('li');
                 empty.className = 'folder-picker-empty';
-                empty.textContent = mode === 'file' ? 'No files or folders here.' : 'No sub-folders here.';
+                empty.textContent = isFileMode || isAnyMode
+                    ? 'No files or folders here.'
+                    : 'No sub-folders here.';
                 list.appendChild(empty);
                 return;
             }
@@ -89,7 +97,7 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
                     if (entry.is_dir) {
                         navigate(entry.path);
                     } else {
-                        settle(entry.path);  // file mode: a file click is the selection
+                        settle(entry.path);
                     }
                 });
                 item.appendChild(button);

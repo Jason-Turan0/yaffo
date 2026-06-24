@@ -24,7 +24,8 @@
     box-shadow: var(--shadow-lg);
 }
 
-.photo-card img {
+.photo-card img,
+.photo-card video {
     width: 100%;
     height: 250px;
     object-fit: cover;

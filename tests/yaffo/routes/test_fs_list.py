@@ -33,6 +33,18 @@ def test_fs_list_file_mode_includes_files(client, tmp_path):
     assert names == ["f.txt", "sub"]
 
 
+def test_fs_list_any_mode_includes_files(client, tmp_path):
+    tree = tmp_path / "tree"
+    tree.mkdir()
+    (tree / "sub").mkdir()
+    (tree / "f.txt").write_text("x")
+
+    resp = client.get("/api/fs/list", query_string={"path": str(tree), "mode": "any"})
+
+    names = [e["name"] for e in resp.get_json()["entries"]]
+    assert names == ["f.txt", "sub"]
+
+
 def test_fs_list_defaults_to_home_without_path(client):
     from pathlib import Path
     resp = client.get("/api/fs/list")

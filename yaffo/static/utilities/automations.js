@@ -1,6 +1,6 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
-// Open the in-app folder/file picker in the chosen mode (folder|file); returns the
+// Open the in-app path picker in the chosen mode (folder|file|any); returns the
 // selected path or null. Shared by the Test and Run controls, which both scope an
 // action to a user-picked file/folder. Opens at `defaultPath` (the first configured
 // media dir) when given, so the user starts in their library rather than at home.
@@ -37,8 +37,8 @@ window.PHOTO_ORGANIZER.initAutomationDetails = () => {
     button.addEventListener('click', modal.open);
 };
 
-// Wire "Run now". An automation whose triggers are all events has "Run on a
-// folder…/file…" buttons that pick a path and run over the photos under it; anything
+// Wire "Run now". An automation whose triggers are all events has a scoped Run
+// button that picks a file or folder and runs over the photos under it; anything
 // else has a plain button that fires context-less. A trigger-less automation still
 // shows the plain button, but clicking it only warns (add a trigger first) and does
 // not run. Otherwise the run is enqueued async and shows up in Run history.
@@ -77,7 +77,7 @@ window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl, config, hasTriggers, defa
 
     document.querySelectorAll('.js-run-files').forEach((button) => {
         button.addEventListener('click', async () => {
-            const path = await pickAutomationPath(config, button.dataset.mode, defaultPath);
+            const path = await pickAutomationPath(config, button.dataset.mode || 'any', defaultPath);
             if (path) post(button, { path });
         });
     });
@@ -115,11 +115,10 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config, defaultPath = null) =
     });
 
     const button = document.getElementById('automation-test-button');
-    const filesButtons = document.querySelectorAll('.js-test-files');
     const resultEl = document.getElementById('automation-test-result');
     if (!button || !resultEl) return;
 
-    // The last file/folder picked; Test is disabled until one exists and reruns it.
+    // The last file/folder picked, displayed with the dry-run output.
     let selection = null;
 
     const el = (tag, className, text) => {
@@ -238,23 +237,15 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config, defaultPath = null) =
 
     const setSelection = (path, mode) => {
         selection = { path, mode };
-        button.disabled = false;
     };
 
-    // Test reruns the remembered selection (disabled until one is picked).
-    button.addEventListener('click', () => {
-        if (selection) runFiles(button, selection.path);
-    });
-
     // Pick a file/folder, remember it, and run against it.
-    filesButtons.forEach((filesButton) => {
-        filesButton.addEventListener('click', async () => {
-            const mode = filesButton.dataset.mode;
-            const path = await pickAutomationPath(config, mode, defaultPath);
-            if (!path) return;
-            setSelection(path, mode);
-            runFiles(filesButton, path);
-        });
+    button.addEventListener('click', async () => {
+        const mode = button.dataset.mode || 'any';
+        const path = await pickAutomationPath(config, mode, defaultPath);
+        if (!path) return;
+        setSelection(path, 'path');
+        runFiles(button, path);
     });
 };
 

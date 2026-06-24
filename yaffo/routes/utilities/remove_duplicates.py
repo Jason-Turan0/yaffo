@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from flask import render_template, Flask, request, jsonify, redirect, url_for
 from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED
-from yaffo.common import PHOTO_EXTENSIONS
+from yaffo.common import MEDIA_EXTENSIONS, media_type_for_path, MEDIA_TYPE_VIDEO, is_browser_playable_video
 from yaffo.background_tasks.tasks import find_duplicates_task, remove_duplicates_task, schedule_job_completion
 from pathlib import Path
 from sqlalchemy.orm import joinedload
@@ -26,7 +26,7 @@ def collect_media_paths(directory_paths: list[str]) -> list[str]:
         if not dir_path.exists() or not dir_path.is_dir() or dir_path == '':
             continue
         for p in dir_path.rglob("*"):
-            if not (p.suffix.lower() in PHOTO_EXTENSIONS and not p.name.startswith(".") and p.is_file()):
+            if not (p.suffix.lower() in MEDIA_EXTENSIONS and not p.name.startswith(".") and p.is_file()):
                 continue
             if thumbnail_dir and p.is_relative_to(thumbnail_dir):
                 continue
@@ -55,6 +55,8 @@ class Pagination:
 class PathViewModel:
     path: str
     path_id: int
+    is_video: bool
+    browser_playable: bool
 
 
 @dataclass
@@ -95,7 +97,8 @@ def create_duplicate_job_view_model(job_id: str, page: int, page_size: int):
                 paths.append(PathViewModel(
                     path=path,
                     path_id=current_path_id,
-
+                    is_video=media_type_for_path(Path(path)) == MEDIA_TYPE_VIDEO,
+                    browser_playable=is_browser_playable_video(path),
                 ))
             duplicate_groups.append(view_group)
 
@@ -191,7 +194,7 @@ def init_remove_duplicates_routes(app: Flask):
         file_paths = collect_media_paths(directories)
 
         if not file_paths:
-            return jsonify({'error': 'No photo files found in selected directories'}), 400
+            return jsonify({'error': 'No photo or video files found in selected directories'}), 400
 
         job_id = str(uuid.uuid4())
         job = Job(
@@ -199,7 +202,7 @@ def init_remove_duplicates_routes(app: Flask):
             name='find_duplicates',
             status=JOB_STATUS_PENDING,
             task_count=len(file_paths),
-            message='Processed {totalCount}/{taskCount} photos',
+            message='Processed {totalCount}/{taskCount} media items',
             completed_count=0,
             error_count=0,
             cancelled_count=0,

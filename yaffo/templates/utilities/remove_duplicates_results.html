@@ -10,13 +10,13 @@
 
 {% block utility_content %}
 <div class="utility-page">
-    {{ page_header('Duplicate Photos Found', 'Review and manage duplicate photos') }}
+    {{ page_header('Duplicate Media Found', 'Review and manage duplicate photos and videos') }}
     {% if view_model.duplicate_group_count > 0 %}
     {% include "utilities/remove_duplicates_results_form.html" %}
     {% else %}
     <div class="empty-state">
         <h2>No Duplicates Found</h2>
-        <p>All photos in the scanned directories appear to be unique.</p>
+        <p>All media in the scanned directories appear to be unique.</p>
     </div>
     {% endif %}
 </div>

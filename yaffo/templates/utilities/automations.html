@@ -62,8 +62,7 @@
             hx-swap="none">{{ 'Disable' if selected.enabled else 'Enable' }}
     </button>
     {% if scoped_run %}
-        <button type="button" class="btn-secondary js-run-files" data-mode="folder">Run on a folder…</button>
-        <button type="button" class="btn-secondary js-run-files" data-mode="file">Run on a file…</button>
+        <button type="button" class="btn-secondary js-run-files" data-mode="any">Run…</button>
     {% else %}
         <button type="button" id="run-automation-button" class="btn-secondary">Run now</button>
     {% endif %}
@@ -139,11 +138,7 @@
             {% if selected.published_code or selected.working_code %}
                 <div class="automation-test">
                     <div class="automation-test-controls">
-                        <button type="button" class="btn-secondary" id="automation-test-button" disabled>Test</button>
-                        <button type="button" class="btn-secondary js-test-files" data-mode="folder">Test on a folder…
-                        </button>
-                        <button type="button" class="btn-secondary js-test-files" data-mode="file">Test on a file…
-                        </button>
+                        <button type="button" class="btn-secondary" id="automation-test-button" data-mode="any">Test…</button>
                         {% if selected_has_draft %}
                         <button type="button" class="btn-primary"
                                 hx-post="{{ url_for('automations_publish', slug=selected.slug) }}"

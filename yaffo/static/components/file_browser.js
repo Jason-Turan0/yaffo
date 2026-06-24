@@ -7,9 +7,10 @@ window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
  * click listener so it also covers inputs added later by HTMX swaps (e.g. the
  * remove-duplicates form) with no re-initialization.
  *
- * Set `data-mode="file"` on any ancestor to pick a file instead of a folder. On
- * selection the input's value is set and a bubbling `change` event is dispatched, so
- * HTMX triggers (hx-trigger="change") on the input fire as if the user typed the path.
+ * Set `data-mode="file"` or `data-mode="any"` on any ancestor to pick a file or a
+ * file/folder path. On selection the input's value is set and a bubbling `change`
+ * event is dispatched, so HTMX triggers (hx-trigger="change") on the input fire as
+ * if the user typed the path.
  */
 window.PHOTO_ORGANIZER.COMPONENTS.fileBrowser = {
     init: () => {

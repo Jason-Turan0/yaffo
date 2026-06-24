@@ -34,7 +34,7 @@ def init_base_routes(app: Flask):
     @app.route('/api/fs/list', methods=["GET"])
     def fs_list():
         """Browse the local filesystem for the in-app folder/file picker. `path` is the
-        directory to list (defaults to home); `mode` is "folder" or "file"."""
+        directory to list (defaults to home); `mode` is "folder", "file", or "any"."""
         listing = list_directory(request.args.get('path'), request.args.get('mode', 'folder'))
         return jsonify(listing_to_dict(listing))
 

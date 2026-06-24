@@ -1,4 +1,4 @@
-"""System automation `duplicate_scan`: on a schedule, scan all indexed photos for
+"""System automation `duplicate_scan`: on a schedule, scan all indexed media for
 perceptual-hash duplicates. The handler enqueues `duplicate_scan_task`, which
 creates a `find_duplicates` Job (tagged with `automation_id` as the run, like
 file_sync) and hands it to `find_duplicates_task` -- the exact scan the manual
@@ -21,7 +21,7 @@ logger = get_logger(__name__, 'background_tasks')
 
 
 def _open_scan_job(session, automation_id: int | None) -> tuple[str, list[str]] | None:
-    """Create a find_duplicates Job over every indexed photo, tagged with
+    """Create a find_duplicates Job over every indexed media item, tagged with
     `automation_id` as the run. Returns (job_id, file_paths), or None when there's
     nothing to scan."""
     file_paths = media_repository.get_all_media_item_paths(session)
@@ -33,7 +33,7 @@ def _open_scan_job(session, automation_id: int | None) -> tuple[str, list[str]] 
         name='find_duplicates',
         status=JOB_STATUS_PENDING,
         task_count=len(file_paths),
-        message='Processed {totalCount}/{taskCount} photos',
+        message='Processed {totalCount}/{taskCount} media items',
         completed_count=0,
         error_count=0,
         cancelled_count=0,
@@ -46,9 +46,9 @@ def _open_scan_job(session, automation_id: int | None) -> tuple[str, list[str]] 
 
 @task_queue.task()
 def duplicate_scan_task(automation_id: int | None = None):
-    """Open a find_duplicates Job over every indexed photo and enqueue the scan.
+    """Open a find_duplicates Job over every indexed media item and enqueue the scan.
     `automation_id` tags the Job as that automation's run. No-op when there are no
-    indexed photos."""
+    indexed media items."""
     session = SessionFactory()
     try:
         opened = _open_scan_job(session, automation_id)
@@ -57,7 +57,7 @@ def duplicate_scan_task(automation_id: int | None = None):
         SessionFactory.remove()
 
     if opened is None:
-        logger.info("duplicate_scan: no indexed photos to scan")
+        logger.info("duplicate_scan: no indexed media to scan")
         return
     job_id, file_paths = opened
     find_duplicates_task(job_id=job_id, file_paths=file_paths)
