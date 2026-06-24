@@ -141,6 +141,9 @@ class Person(db.Model):
     __tablename__ = "people"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
+    # User-specified gender: 0 = female, 1 = male. When NULL, filters fall back
+    # to the InsightFace estimate stored on each associated Face.
+    gender = db.Column(db.Integer, nullable=True)
     avg_embedding = db.Column(db.LargeBinary)
     # User-entered actual birthdate (wins for life-stage bucketing) and the
     # birthdate estimated from the person's faces' predicted ages.

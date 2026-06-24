@@ -21,6 +21,7 @@
             <thead>
             <tr>
                 <th>Name</th>
+                <th>Gender</th>
                 <th>Born</th>
                 <th>Faces</th>
                 <th>Photos</th>
@@ -33,6 +34,11 @@
                 <td>
                     <a href="{{ url_for('person_faces', person_id=person.id) }}"
                        class="person-name row-link">{{ person.name or "Unnamed" }}</a>
+                </td>
+                <td>
+                    {% if person.gender == 1 %}Male
+                    {% elif person.gender == 0 %}Female
+                    {% else %}—{% endif %}
                 </td>
                 <td>
                     {% if person.birthdate %}{{ person.birthdate.isoformat() }}
@@ -48,7 +54,7 @@
                 <td>
                     <div class="actions">
                         <a href="#" class="action-link"
-                           onclick="window.PHOTO_ORGANIZER.peopleList.openEditModal({{ person.id }}, '{{ person.name }}', '{{ person.birthdate.isoformat() if person.birthdate else '' }}'); return false;">Edit</a>
+                           onclick="window.PHOTO_ORGANIZER.peopleList.openEditModal({{ person.id }}, '{{ person.name }}', '{{ person.birthdate.isoformat() if person.birthdate else '' }}', {{ person.gender if person.gender is not none else 'null' }}); return false;">Edit</a>
                         <a href="#" class="action-link delete"
                            onclick="window.PHOTO_ORGANIZER.peopleList.confirmDelete({{ person.id }}, '{{ person.name }}'); return false;">Delete</a>
                     </div>
@@ -68,17 +74,28 @@
 {% endif %}
 
 {% from "components/modal.html" import render_modal  %}
-{% macro render_modal_add_person_form() %}
+{% macro render_modal_person_form(id_prefix) %}
 <div class="form-group">
-    <label for="personName">Name</label>
-    <input type="text" id="personName" name="name" required autofocus>
+    <label for="{{ id_prefix }}PersonName">Name</label>
+    <input type="text" id="{{ id_prefix }}PersonName" name="name" required autofocus>
 </div>
 <div class="form-group">
-    <label for="personBirthdate">Birthdate</label>
-    <input type="date" id="personBirthdate" name="birthdate">
+    <label for="{{ id_prefix }}PersonGender">Gender</label>
+    <select id="{{ id_prefix }}PersonGender" name="gender">
+        <option value="">Not specified</option>
+        <option value="1">Male</option>
+        <option value="0">Female</option>
+    </select>
+    <p class="hint-text">Choose “Not specified” to clear the saved gender.</p>
+</div>
+<div class="form-group">
+    <label for="{{ id_prefix }}PersonBirthdate">Birthdate</label>
+    <input type="date" id="{{ id_prefix }}PersonBirthdate" name="birthdate">
     <p class="hint-text">Used to improve the performance of the facial recognition algorithms.</p>
 </div>
 {% endmacro %}
+{% macro render_modal_add_person_form() %}{{ render_modal_person_form('add') }}{% endmacro %}
+{% macro render_modal_edit_person_form() %}{{ render_modal_person_form('edit') }}{% endmacro %}
 {% macro render_modal_delete_person_form() %}
 <div class="form-group">
     <p>Are you sure you want to delete <strong id="deletePersonName"></strong>?</p>
@@ -87,7 +104,7 @@
 {% endmacro %}
 
 {{ render_modal('addModal', "Add Person",  url_for("people_create") , render_modal_add_person_form) }}
-{{ render_modal('editModal', "Edit Person", url_for("people_create") , render_modal_add_person_form) }}
+{{ render_modal('editModal', "Edit Person", url_for("people_create") , render_modal_edit_person_form) }}
 {{ render_modal('deleteModal', "Delete Person",  url_for("people_create") , render_modal_delete_person_form, "Delete", "btn-danger") }}
 
 {% endblock %}

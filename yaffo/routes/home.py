@@ -110,11 +110,12 @@ def init_home_routes(app: Flask):
                 query = query.filter(MediaItem.id.in_(subquery))
 
         if gender is not None:
-            ##TODO capture actual gender from user and use that for deterministic instead of approximate filter
             subquery = (
                 db.session.query(MediaItem.id)
                 .join(MediaItem.faces)
-                .filter(Face.gender == gender)
+                .outerjoin(Face.person_face)
+                .outerjoin(PersonFace.person)
+                .filter(func.coalesce(Person.gender, Face.gender) == gender)
             )
             query = query.filter(MediaItem.id.in_(subquery))
 
@@ -376,5 +377,4 @@ def init_home_routes(app: Flask):
             pass
 
         return jsonify({"results": results})
-
 

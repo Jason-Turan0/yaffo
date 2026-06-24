@@ -14,6 +14,17 @@ from yaffo.utils.context import context
 
 DEFAULT_THRESHOLD = 0.95  # configurable similarity threshold
 FACE_LOAD_LIMIT = 250
+
+
+def _parse_optional_gender(raw_gender: str | None) -> int | None:
+    value = (raw_gender or "").strip()
+    if not value:
+        return None
+    if value not in {"0", "1"}:
+        raise ValueError("Gender must be male, female, or not specified")
+    return int(value)
+
+
 @context("yaffo-face_assignment")
 def init_people_routes(app: Flask):
     @app.route("/people", methods=["GET"])
@@ -56,7 +67,13 @@ def init_people_routes(app: Flask):
             flash(f"Person '{name}' already exists", "error")
             return redirect(url_for("people_list"))
 
-        person = Person(name=name)
+        try:
+            gender = _parse_optional_gender(request.form.get("gender"))
+        except ValueError as error:
+            flash(str(error), "error")
+            return redirect(url_for("people_list"))
+
+        person = Person(name=name, gender=gender)
         db.session.add(person)
         db.session.commit()
 
@@ -108,8 +125,15 @@ def init_people_routes(app: Flask):
             flash(f"Person '{name}' already exists", "error")
             return redirect(url_for("people_list"))
 
+        try:
+            gender = _parse_optional_gender(request.form.get("gender"))
+        except ValueError as error:
+            flash(str(error), "error")
+            return redirect(url_for("people_list"))
+
         old_name = person.name
         person.name = name
+        person.gender = gender
 
         # Birthdate drives life-stage bucketing; a change re-buckets the gallery.
         raw_birthdate = (request.form.get("birthdate") or "").strip()

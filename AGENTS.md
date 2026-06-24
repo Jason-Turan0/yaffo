@@ -51,6 +51,20 @@ InsightFace — **SCRFD** detection + **ArcFace** 512-d embeddings, on ONNX Runt
 - Activate: `source activate_venv.sh`
 - Install: `pip install -e .` (deps in `pyproject.toml`; dev extras under `[project.optional-dependencies] dev`)
 
+## Database Migrations
+
+- Add schema changes as the next numbered module in `yaffo/scripts/db/migrations/`;
+  keep migrations additive when possible and never commit inside `migrate(conn)`.
+- Also update `000_MIGRATION_20260620_INIT.py` so a fresh database receives the
+  current schema directly.
+- After creating a migration, automatically run the standard migration runner
+  against the development database used by the Invoke tasks (`tasks.py` sets
+  `YAFFO_DATA_DIR=~/Pictures`):
+  `YAFFO_DATA_DIR="$HOME/Pictures" ./venv/bin/python -m yaffo.scripts.db.migrate`.
+- Verify the new migration is recorded in `schema_migrations` and that its schema
+  change exists in `~/Pictures/yaffo.db`. Do not omit `YAFFO_DATA_DIR` or
+  substitute a temporary directory for this required development-database run.
+
 ## Code Conventions
 
 - Don't use code comments as a way of describing what you did. Only include comments for very complicated or unconventional code. Use the chat interface to explain what you did and why. Refer to the file and line if necessary.

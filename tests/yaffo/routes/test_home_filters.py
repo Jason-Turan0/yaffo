@@ -7,7 +7,7 @@ assertions check which photo ids the filtered page renders."""
 import pytest
 
 from yaffo.db import db
-from yaffo.db.models import MediaItem
+from yaffo.db.models import Face, MediaItem, Person, PersonFace
 
 
 @pytest.fixture
@@ -89,6 +89,43 @@ def test_favorite_filter_shows_only_favorites(client, app):
 
     only_favs = _rendered_ids(client.get("/?favorite=1").data.decode())
     assert fav_id in only_favs and plain_id not in only_favs
+
+
+def test_gender_filter_prefers_person_gender_and_falls_back_to_face_estimate(client, app):
+    with app.app_context():
+        person_override_match = Person(name="Override match", gender=1)
+        person_override_exclude = Person(name="Override exclude", gender=0)
+        person_fallback = Person(name="Fallback", gender=None)
+        db.session.add_all([person_override_match, person_override_exclude, person_fallback])
+        db.session.flush()
+
+        override_match = MediaItem(full_file_path="/media/override-match.jpg")
+        override_exclude = MediaItem(full_file_path="/media/override-exclude.jpg")
+        fallback = MediaItem(full_file_path="/media/fallback.jpg")
+        unassigned = MediaItem(full_file_path="/media/unassigned.jpg")
+        db.session.add_all([override_match, override_exclude, fallback, unassigned])
+        db.session.flush()
+
+        faces = [
+            Face(full_file_path="/faces/override-match.jpg", media_item_id=override_match.id, gender=0),
+            Face(full_file_path="/faces/override-exclude.jpg", media_item_id=override_exclude.id, gender=1),
+            Face(full_file_path="/faces/fallback.jpg", media_item_id=fallback.id, gender=1),
+            Face(full_file_path="/faces/unassigned.jpg", media_item_id=unassigned.id, gender=1),
+        ]
+        db.session.add_all(faces)
+        db.session.flush()
+        db.session.add_all([
+            PersonFace(person_id=person_override_match.id, face_id=faces[0].id),
+            PersonFace(person_id=person_override_exclude.id, face_id=faces[1].id),
+            PersonFace(person_id=person_fallback.id, face_id=faces[2].id),
+        ])
+        db.session.commit()
+        expected_ids = {override_match.id, fallback.id, unassigned.id}
+
+    response = client.get("/?gender=1")
+
+    assert response.status_code == 200
+    assert _rendered_ids(response.data.decode()) == expected_ids
 
 
 class TestConfigurableFilterLayout:

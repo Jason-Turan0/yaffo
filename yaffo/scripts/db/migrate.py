@@ -57,14 +57,19 @@ def _load_migration(path: Path):
     return module
 
 
-def _applied(conn: sqlite3.Connection) -> set[str]:
+def _applied_numbers(conn: sqlite3.Connection) -> set[int]:
     conn.execute(
         "CREATE TABLE IF NOT EXISTS schema_migrations ("
         "  name TEXT PRIMARY KEY,"
         "  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
     )
     conn.commit()
-    return {row[0] for row in conn.execute("SELECT name FROM schema_migrations")}
+    applied = set()
+    for name, in conn.execute("SELECT name FROM schema_migrations"):
+        match = _NAME_RE.match(f"{name}.py")
+        if match:
+            applied.add(int(match.group(1)))
+    return applied
 
 
 def _backup() -> Path:
@@ -84,8 +89,8 @@ def run_migrations() -> None:
     # inside one transaction we commit on success or roll back on failure.
     conn = sqlite3.connect(DB_PATH, autocommit=False)
     try:
-        applied = _applied(conn)
-        pending = [(n, path) for n, path in _discover() if path.stem not in applied]
+        applied_numbers = _applied_numbers(conn)
+        pending = [(number, path) for number, path in _discover() if number not in applied_numbers]
         if not pending:
             logger.info("database schema up to date")
             return

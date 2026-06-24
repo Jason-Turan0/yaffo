@@ -111,6 +111,7 @@ def migrate(conn: sqlite3.Connection) -> None:
            CREATE TABLE IF NOT EXISTS people (
                id INTEGER PRIMARY KEY,
                name TEXT,
+               gender INTEGER,
                avg_embedding BLOB,
                birthdate DATE,
                estimated_birthdate DATE
