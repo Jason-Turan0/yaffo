@@ -2,12 +2,14 @@
 
 At build time `packaging/bump_version.py` bumps the committed `VERSION` file and
 writes the generated, gitignored `yaffo/_build_info.py`. In a dev checkout that
-generated module is absent, so we fall back to the `VERSION` file with no build
-timestamp ("dev build").
+generated module is absent, so we fall back to the `VERSION` file (live, at repo
+root); in a pip/PyPI install neither is present, so we fall back to the installed
+package metadata. Both report no build timestamp ("dev build").
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
 from pathlib import Path
 
 _VERSION_FILE = Path(__file__).resolve().parents[1] / "VERSION"
@@ -24,6 +26,10 @@ def _dev_version() -> str:
     try:
         return _VERSION_FILE.read_text().strip()
     except OSError:
+        pass
+    try:
+        return _pkg_version("yaffo")
+    except PackageNotFoundError:
         return "0.0.0"
 
 

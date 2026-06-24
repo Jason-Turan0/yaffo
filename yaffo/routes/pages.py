@@ -215,8 +215,8 @@ def init_pages_routes(app: Flask):
         message = (payload.get("message") or "").strip()
         if not message:
             return {"error": "Message is required."}, 400
-        if llm_config.get_api_key() is None:
-            return {"error": "No API key configured. Add your Anthropic API key in Settings → AI Generation."}, 400
+        if llm_config.selected_key_missing():
+            return {"error": f"No API key configured. Add your {llm_config.selected_provider_label()} API key in Settings → AI Generation."}, 400
 
         # Runtime errors collected client-side, fed back so the model can repair code
         # that threw. `widgets` is the client's current set (layout + any draft

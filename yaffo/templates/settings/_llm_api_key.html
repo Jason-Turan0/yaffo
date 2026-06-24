@@ -1,0 +1,30 @@
+<div class="llm-api-key" id="llm-api-key">
+    {% if provider %}
+    <div class="api-key-status">
+        <strong>{{ provider.label }} API key:</strong>
+        {% if provider.source == 'environment' %}
+        ✓ configured via <code>{{ provider.env_var }}</code> (environment; takes precedence)
+        {% elif provider.configured %}✓ stored in keychain{% else %}Not set{% endif %}
+    </div>
+    {% if provider.source != 'environment' %}
+    <form hx-post="{{ url_for('settings_llm_api_key') }}"
+          hx-target="#llm-api-key" hx-swap="outerHTML" class="api-key-form">
+        <input type="hidden" name="provider" value="{{ provider.id }}">
+        <div class="form-group inline">
+            <label for="llm-api-key-input">{{ "Replace key" if provider.configured else "Set key" }}</label>
+            <input type="password" id="llm-api-key-input" name="api_key"
+                   placeholder="API key" autocomplete="off" required>
+        </div>
+        <div class="api-key-actions">
+            <button type="submit" class="btn-primary">Save</button>
+            {% if provider.configured %}
+            <button type="button" class="btn-danger"
+                    hx-post="{{ url_for('settings_llm_api_key_clear') }}"
+                    hx-vals='{"provider": "{{ provider.id }}"}'
+                    hx-target="#llm-api-key" hx-swap="outerHTML">Clear</button>
+            {% endif %}
+        </div>
+    </form>
+    {% endif %}
+    {% endif %}
+</div>

@@ -133,7 +133,7 @@ def with_key_and_task(monkeypatch):
     """Configure an API key and capture the enqueued generation task instead of
     handing it to the task queue, so the route's record-prompt + enqueue is exercised without
     a worker. Returns the list of (args, kwargs) the task was called with."""
-    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda: "test-key")
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: "test-key")
     calls = []
     monkeypatch.setattr("yaffo.routes.themes_page.generate_theme_task",
                         lambda *a, **k: calls.append((a, k)))

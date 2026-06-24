@@ -1,0 +1,56 @@
+site_name: Yaffo
+site_description: A photo organization tool with EXIF, face recognition, and duplicate detection.
+site_url: https://jason-turan0.github.io/yaffo/
+repo_url: https://github.com/Jason-Turan0/yaffo
+repo_name: Jason-Turan0/yaffo
+docs_dir: docs
+copyright: Copyright &copy; Jason Turan
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+
+nav:
+  - Home: index.md
+  - User Guide:
+      - Getting Started: guide/getting-started.md
+      - Organizing Photos: guide/organizing-photos.md
+      - Faces & People: guide/faces-and-people.md
+      - Finding Duplicates: guide/duplicates.md
+      - Custom Pages: guide/custom-pages.md
+      - Settings Reference: guide/settings.md
+  - Developer:
+      - Distribution & Packaging: distribution.md
+      - AI Page Builder: ai-page-builder.md
+      - Automations: automations.md
+      - Task Queue Migration: task-queue-migration.md
+      - Video: video.md
+      - Icons: icons.md
+      - Deployment (GCP demo): deployment/gcp-demo-architecture.md

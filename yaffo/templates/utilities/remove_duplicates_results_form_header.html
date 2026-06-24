@@ -46,14 +46,13 @@
                        name="destination_folder"
                        placeholder="Select destination folder"
                        class="form-control file-browser-input"
+                       hx-post="{{ url_for('utilities_remove_duplicates_action_change', job_id=job_id) }}"
+                       hx-trigger="change"
+                       hx-target="#duplicates-header"
+                       hx-swap="outerHTML"
+                       hx-include="closest form"
                        value="{{ destination_folder or '' }}">
-                <button type="button"
-                        hx-post="{{ url_for('utilities_remove_duplicates_action_change', job_id=job_id) }}"
-                        hx-vals='{"action": "browse"}'
-                        hx-target="#duplicates-header"
-                        hx-swap="outerHTML"
-                        hx-include="closest form"
-                        class="btn-secondary">
+                <button type="button" class="btn-secondary file-browser-btn">
                     Browse
                 </button>
             </div>

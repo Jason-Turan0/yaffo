@@ -70,13 +70,13 @@ def run_generation(
 
     # Resolve the model + key here (the worker has no app context, so the agent and
     # client take them explicitly rather than reaching for db.session / a global).
-    api_key = llm_config.get_api_key()
+    model = llm_config.get_model(session)
+    api_key = llm_config.get_api_key(llm_config.selected_model_provider(session))
     if not api_key:
-        message_text = "No API key configured. Add your Anthropic API key in Settings → AI Generation."
+        message_text = f"No API key configured. Add your {llm_config.selected_provider_label(session)} API key in Settings → AI Generation."
         page_repo.add_version_message(session, version_id, CONVERSATION_TYPE_ERROR, message_text)
         page_repo.set_version_status(session, version_id, PAGE_VERSION_STATUS_FAILED, error=message_text, completed=True)
         return
-    model = llm_config.get_model(session)
 
     current_widgets = [widget_draft(w) for w in version.widgets]
     user_message = build_user_message(

@@ -15,7 +15,6 @@ import os
 import shutil
 
 from yaffo.routes.utilities.common import is_system_file, get_thumbnail_dir, automations_sidebar_context
-from yaffo.utils.file_system import show_file_dialog
 
 
 def collect_media_paths(directory_paths: list[str]) -> list[str]:
@@ -166,19 +165,12 @@ def init_remove_duplicates_routes(app: Flask):
         index = request.form.get("index", type=int)
 
         if action == "create":
-            selected_folder = show_file_dialog()
-            if selected_folder.success and selected_folder.selected_path is not None:
-                directories.append(selected_folder.selected_path)
-            else:
-                directories.append('')
+            # Add an empty row; the user picks its path with the in-app folder browser
+            # (client-side), which then triggers a rescan to refresh the count.
+            directories.append('')
 
         if action == "remove":
             directories.remove(directories[index])
-
-        if action == "browse":
-            selected_folder = show_file_dialog()
-            if selected_folder.success and selected_folder.selected_path is not None:
-                directories[index] = selected_folder.selected_path
 
         total_photos = count_media_items_in_directory(directories)
 
@@ -255,13 +247,8 @@ def init_remove_duplicates_routes(app: Flask):
         selected_photos: set[int] = set(request.form.getlist('selected_photo', type=int))
         action_type = request.form.get('action_type', 'trash')
         destination_folder = request.form.get('destination_folder', '')
-        action = request.form.get('action')
-
-        # Handle browse button click
-        if action == 'browse':
-            selected_folder = show_file_dialog()
-            if selected_folder.success and selected_folder.selected_path is not None:
-                destination_folder = selected_folder.selected_path
+        # destination_folder is set client-side by the folder browser and posted here;
+        # the header re-renders with whatever the form carries.
 
         # Build view model for rendering
         view_model = type('ViewModel', (), {

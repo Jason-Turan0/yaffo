@@ -64,13 +64,13 @@ def run_automation_generation(
         logger.warning(f"generate_automation: automation {slug!r} not found")
         return
 
-    api_key = llm_config.get_api_key()
+    model = llm_config.get_model(session)
+    api_key = llm_config.get_api_key(llm_config.selected_model_provider(session))
     if not api_key:
-        text = "No API key configured. Add your Anthropic API key in Settings → AI Generation."
+        text = f"No API key configured. Add your {llm_config.selected_provider_label(session)} API key in Settings → AI Generation."
         repo.add_message(session, automation.id, CONVERSATION_TYPE_ERROR, text)
         repo.set_status(session, slug, AUTOMATION_STATUS_FAILED)
         return
-    model = llm_config.get_model(session)
 
     automation_id = automation.id
     user_message = build_automation_user_message(

@@ -6,6 +6,7 @@ from yaffo.site_agents.tool_providers.tool_provider_types import (
     ToolProvider,
     ToolResult,
     to_anthropic_tools,
+    to_openai_tools,
 )
 from yaffo.site_agents.tool_providers.utils import truncate_tool_result
 from yaffo.site_agents.tool_providers.data_query_tool import DataQueryToolProvider
@@ -23,6 +24,7 @@ __all__ = [
     "ToolProvider",
     "ToolResult",
     "to_anthropic_tools",
+    "to_openai_tools",
     "truncate_tool_result",
     "DataQueryToolProvider",
     "WidgetToolProvider",

@@ -1,102 +1,105 @@
-import platform
-import subprocess
-from dataclasses import dataclass
+"""Server-side directory listing for the in-app folder/file picker.
+
+Yaffo is a local desktop app (the Flask server and the browser run on the same
+machine), so the picker browses the *server's* filesystem — which is the user's own
+disk. Unlike a native OS dialog this works identically on macOS, Windows, and Linux
+(and even headless), with no external dependency. The browser-side modal
+(static/components/folder_picker.js) calls `/api/fs/list` to walk directories and
+returns the chosen absolute path.
+"""
+from __future__ import annotations
+
+import string
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
 
 
 @dataclass
-class ShowFileDialogResult:
-    selected_path: Optional[str]
-    error: str
-    success: bool
-    status_code: int
+class DirEntry:
+    name: str
+    path: str
+    is_dir: bool
 
 
-_MACOS_SCRIPT = {
-    "folder": 'choose folder with prompt "Select a folder"',
-    "file": 'choose file with prompt "Select a file"',
-}
-_WINDOWS_DIALOG = {
-    "folder": (
-        '$dialog = New-Object System.Windows.Forms.FolderBrowserDialog;'
-        ' $dialog.Description = "Select a folder";'
-        ' if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK)'
-        ' { Write-Output $dialog.SelectedPath }'
-    ),
-    "file": (
-        '$dialog = New-Object System.Windows.Forms.OpenFileDialog;'
-        ' $dialog.Title = "Select a file";'
-        ' if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK)'
-        ' { Write-Output $dialog.FileName }'
-    ),
-}
+@dataclass
+class DirListing:
+    path: str                         # the absolute directory being listed
+    parent: Optional[str]             # parent dir, or None at a filesystem root
+    entries: list[DirEntry]           # sub-folders (+ files when mode="file")
+    roots: list[DirEntry] = field(default_factory=list)  # quick shortcuts (home, drives)
+    error: str = ""
 
 
-def show_file_dialog(mode: str = "folder") -> ShowFileDialogResult:
-    """Open a native picker and return the chosen path. `mode` is "folder" or "file"
-    (no single native dialog portably selects either, so they're separate modes)."""
+def _drive_roots() -> list[DirEntry]:
+    """Windows drive letters that currently exist (C:\\, D:\\, ...). Empty elsewhere."""
+    roots: list[DirEntry] = []
+    for letter in string.ascii_uppercase:
+        drive = Path(f"{letter}:\\")
+        if drive.exists():
+            roots.append(DirEntry(name=f"{letter}:", path=str(drive), is_dir=True))
+    return roots
+
+
+def _shortcuts() -> list[DirEntry]:
+    """Sensible starting points: the user's home, plus any Windows drives."""
+    home = Path.home()
+    shortcuts = [DirEntry(name="Home", path=str(home), is_dir=True)]
+    shortcuts.extend(_drive_roots())
+    return shortcuts
+
+
+def _resolve_start(path: Optional[str]) -> Path:
+    """The directory to list: the requested path if it's an existing dir, else home."""
+    if path:
+        candidate = Path(path).expanduser()
+        if candidate.is_dir():
+            return candidate
+    return Path.home()
+
+
+def list_directory(path: Optional[str] = None, mode: str = "folder") -> DirListing:
+    """List `path` (or the home dir if it's missing/not a directory) for the picker.
+    Always returns sub-folders; in "file" mode also returns files. Hidden entries
+    (dot-prefixed) are skipped. Never raises — permission/IO problems come back in
+    `error` with whatever could still be listed."""
     if mode not in ("folder", "file"):
         mode = "folder"
-    selected_path = None
-    status_code = 500
-    success = False
+    directory = _resolve_start(path)
+    parent = str(directory.parent) if directory.parent != directory else None
+
+    entries: list[DirEntry] = []
     error = ""
-
     try:
-        system = platform.system()
-        if system == "Darwin":  # macOS
-            script = (
-                'tell application "System Events"\n'
-                "    activate\n"
-                f"    set chosen to {_MACOS_SCRIPT[mode]}\n"
-                "    return POSIX path of chosen\n"
-                "end tell"
-            )
-            result = subprocess.run(
-                ['osascript', '-e', script],
-                capture_output=True,
-                text=True,
-                timeout=300  # 5 minute timeout for user to select
-            )
-            if result.returncode == 0:
-                selected_path = result.stdout.strip()
-                # Remove trailing slash if present
-                if selected_path.endswith('/'):
-                    selected_path = selected_path[:-1]
-        elif system == "Windows":
-            script = (
-                "Add-Type -AssemblyName System.Windows.Forms; " + _WINDOWS_DIALOG[mode]
-            )
-            result = subprocess.run(
-                ['powershell', '-Command', script],
-                capture_output=True,
-                text=True,
-                timeout=300
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                selected_path = result.stdout.strip()
-        else:
-            error = f"File browser not available on Linux. Please enter the {mode} path manually."
+        for child in sorted(directory.iterdir(), key=lambda p: p.name.lower()):
+            if child.name.startswith("."):
+                continue
+            try:
+                is_dir = child.is_dir()
+            except OSError:
+                continue  # broken symlink / unreadable — skip it
+            if is_dir or mode == "file":
+                entries.append(DirEntry(name=child.name, path=str(child), is_dir=is_dir))
+    except PermissionError:
+        error = f"Permission denied: {directory}"
+    except OSError as e:
+        error = f"Could not read {directory}: {e}"
 
-        if selected_path:
-            success = True
-            status_code = 200
-        else:
-            success = False
-            status_code = 404
-
-    except subprocess.TimeoutExpired:
-        success = False
-        status_code = 500
-        error = "Selection timed out"
-    except Exception as e:
-        success = False
-        status_code = 500
-        error = str(e)
-
-    return ShowFileDialogResult(
-        selected_path=selected_path,
+    return DirListing(
+        path=str(directory),
+        parent=parent,
+        entries=entries,
+        roots=_shortcuts(),
         error=error,
-        success=success,
-        status_code=status_code,
     )
+
+
+def listing_to_dict(listing: DirListing) -> dict:
+    """Wire shape for `/api/fs/list` (the browser-facing JSON contract)."""
+    return {
+        "path": listing.path,
+        "parent": listing.parent,
+        "error": listing.error,
+        "entries": [{"name": e.name, "path": e.path, "is_dir": e.is_dir} for e in listing.entries],
+        "roots": [{"name": e.name, "path": e.path, "is_dir": e.is_dir} for e in listing.roots],
+    }

@@ -151,6 +151,28 @@
     {% block content %}{% endblock %}
 </div>
 
+<!-- Global Folder/File Picker -->
+<div id="folder-picker-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="folder-picker-title">Select a folder</h2>
+        </div>
+        <div class="modal-body thin-scrollbar">
+            <div class="folder-picker-bar">
+                <button type="button" id="folder-picker-up" class="btn btn-secondary btn-sm">↑ Up</button>
+                <span id="folder-picker-path" class="folder-picker-path"></span>
+            </div>
+            <div id="folder-picker-roots" class="folder-picker-roots"></div>
+            <p id="folder-picker-error" class="folder-picker-error"></p>
+            <ul id="folder-picker-list" class="folder-picker-list"></ul>
+        </div>
+        <div class="modal-actions">
+            <button type="button" id="folder-picker-cancel" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="folder-picker-select" class="btn btn-primary">Select this folder</button>
+        </div>
+    </div>
+</div>
+
 <!-- Global Confirm Dialog -->
 <div id="global-confirm-dialog" class="modal">
     <div class="modal-content">
@@ -176,6 +198,7 @@
 <script src="{{ url_for('static', filename='components/chat_dialog.js') }}"></script>
 <script src="{{ url_for('static', filename='filters/tags.js') }}"></script>
 <script src="{{ url_for('static', filename='components/percentage_slider.js') }}"></script>
+<script src="{{ url_for('static', filename='components/folder_picker.js') }}"></script>
 <script src="{{ url_for('static', filename='components/file_browser.js') }}"></script>
 <script src="{{ url_for('static', filename='utils.js') }}"></script>
 <script>

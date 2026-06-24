@@ -16,7 +16,6 @@ from typing import Iterator
 
 from yaffo.background_tasks.tasks.classify_labels_automation import classify_labels_automation_task
 from yaffo.db.repositories import automation_repository, classification_repository, media_repository
-from yaffo.utils.file_system import show_file_dialog
 from yaffo.utils import settings as media_settings
 
 
@@ -167,24 +166,36 @@ def init_settings_routes(app: Flask):
         classify_labels_automation_task(automation.id, media_item_ids)
         return _notify(f"Re-classifying {len(media_item_ids)} photo(s) in the background…")
 
+    def _render_api_key(provider_id: str):
+        return render_template(
+            "settings/_llm_api_key.html", provider=llm_config.provider_status(provider_id))
+
     @app.route("/settings/llm/model", methods=["POST"])
     def settings_llm_model():
-        # Persist only the model and confirm via a toast — no section re-render, so an
-        # in-progress (unsaved) API key the user is typing isn't wiped.
+        # Persist the model and swap the single key box to that model's provider, with a
+        # toast for confirmation. Only the key fragment is swapped (not the whole
+        # section), so the model <select> keeps its state.
         llm_config.set_model((request.form.get("model") or "").strip())
-        return _notify("AI model updated.")
+        response = make_response(_render_api_key(llm_config.selected_model_provider()))
+        response.headers["HX-Trigger"] = json.dumps({
+            "showNotification": {"message": "AI model updated.", "type": "success"}
+        })
+        return response
 
     @app.route("/settings/llm/api-key", methods=["POST"])
     def settings_llm_api_key():
+        provider = (request.form.get("provider") or "").strip()
         key = (request.form.get("api_key") or "").strip()
-        if key:
-            llm_config.set_api_key(key)
-        return render_template("settings/_llm.html", llm=llm_config.status())
+        if provider and key:
+            llm_config.set_api_key(provider, key)
+        return _render_api_key(provider)
 
     @app.route("/settings/llm/api-key/clear", methods=["POST"])
     def settings_llm_api_key_clear():
-        llm_config.clear_api_key()
-        return render_template("settings/_llm.html", llm=llm_config.status())
+        provider = (request.form.get("provider") or "").strip()
+        if provider:
+            llm_config.clear_api_key(provider)
+        return _render_api_key(provider)
 
     @app.route("/api/settings/media-dirs", methods=["POST"])
     def add_media_dir():
@@ -216,15 +227,6 @@ def init_settings_routes(app: Flask):
             "removed": removed,
             "media_dirs": yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session),
         })
-
-    @app.route("/api/settings/select-folder", methods=["GET"])
-    def select_folder():
-        result = show_file_dialog(request.args.get("mode", "folder"))
-        return jsonify({
-            'success': result.success,
-            'path': result.selected_path,
-            'error': result.error
-        }), result.status_code
 
     @app.route("/api/settings/thumbnail-stats", methods=["GET"])
     def get_thumbnail_stats_api():

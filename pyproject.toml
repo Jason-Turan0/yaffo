@@ -1,6 +1,9 @@
 [tool.setuptools]
 packages = ["yaffo"]
 
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
+
 # Build configuration
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -8,14 +11,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yaffo"
-version = "0.0.1"
+dynamic = ["version"]
 description = "An app to organize photos"
+readme = "README.md"
 authors = [{name = "Jason Turan"}]
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = "~=3.13.0"
 dependencies = [
     "anthropic",
+    "openai",
     "blinker==1.9.0",
     "click==8.3.0",
     "croniter==6.2.2",
@@ -66,6 +71,14 @@ dev = [
     "mypy==1.18.2",
     "mypy_extensions==1.1.0",
 ]
+docs = [
+    "mkdocs-material==9.6.21",
+]
+
+[project.urls]
+Homepage = "https://github.com/Jason-Turan0/yaffo"
+Documentation = "https://jason-turan0.github.io/yaffo/"
+Repository = "https://github.com/Jason-Turan0/yaffo"
 
 [tool.coverage.run]
 source = ["yaffo"]

@@ -279,3 +279,9 @@
 .form-success {
     color: var(--color-success);
 }
+
+/* Single API-key box for the selected model's provider; it swaps to follow the
+   model dropdown. */
+.llm-api-key {
+    margin-top: 16px;
+}

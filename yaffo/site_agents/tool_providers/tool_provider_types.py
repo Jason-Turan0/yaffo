@@ -25,6 +25,18 @@ class RawToolDefinition:
             "input_schema": self.input_schema,
         }
 
+    def to_openai_tool(self) -> dict:
+        """OpenAI Chat Completions tool shape (shared by every OpenAI-compatible
+        vendor): the JSON Schema moves under function.parameters."""
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.input_schema,
+            },
+        }
+
 
 @dataclass
 class ContentBlock:
@@ -60,3 +72,8 @@ class ToolProvider(ABC):
 def to_anthropic_tools(providers: list[ToolProvider]) -> list[dict]:
     """Flatten providers' tool definitions into the Anthropic `tools` list."""
     return [tool.to_anthropic_tool() for provider in providers for tool in provider.get_tools()]
+
+
+def to_openai_tools(providers: list[ToolProvider]) -> list[dict]:
+    """Flatten providers' tool definitions into the OpenAI `tools` list."""
+    return [tool.to_openai_tool() for provider in providers for tool in provider.get_tools()]

@@ -14,11 +14,11 @@ from typing import Callable, Iterator, Optional
 from sqlalchemy.orm import Session
 
 from yaffo.site_agents.model_clients import (
-    AnthropicModelClient,
     ModelAlias,
     ModelClient,
     ToolCall,
     ToolCallResult,
+    create_model_client,
 )
 from yaffo.site_agents.prompt_generator import build_system_prompt
 from yaffo.site_agents.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
@@ -34,7 +34,6 @@ from yaffo.site_agents.tool_providers import (
     ToolResult,
     WidgetTemplateToolProvider,
     WidgetToolProvider,
-    to_anthropic_tools,
 )
 from yaffo.config import get_int as get_config_int
 
@@ -211,10 +210,10 @@ def create_page_builder_agent(
         WidgetTemplateToolProvider(),
         WidgetToolProvider(version_id, session=session),
     ]
-    client = AnthropicModelClient(
+    client = create_model_client(
         model=model,
         system_prompt=build_system_prompt(),
-        tools=to_anthropic_tools(providers),
+        providers=providers,
         api_key=api_key,
     )
     return Agent(client, providers, max_iterations=max_iterations)
@@ -235,10 +234,10 @@ def create_theme_builder_agent(
         ThemeToolProvider(slug, session=session),
         ThemeCatalogToolProvider(session=session),
     ]
-    client = AnthropicModelClient(
+    client = create_model_client(
         model=model,
         system_prompt=build_template_builder_system_prompt(),
-        tools=to_anthropic_tools(providers),
+        providers=providers,
         api_key=api_key,
     )
     return Agent(client, providers, max_iterations=max_iterations)
@@ -262,10 +261,10 @@ def create_automation_builder_agent(
         AutomationToolProvider(slug, session=session),
         AutomationTriggerToolProvider(slug, session=session),
     ]
-    client = AnthropicModelClient(
+    client = create_model_client(
         model=model,
         system_prompt=build_automation_builder_system_prompt(),
-        tools=to_anthropic_tools(providers),
+        providers=providers,
         api_key=api_key,
     )
     return Agent(client, providers, max_iterations=max_iterations)

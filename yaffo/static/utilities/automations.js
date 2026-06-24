@@ -1,17 +1,11 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
-// Open the native server-side picker in the chosen mode (folder|file); returns the
-// selected path or null (surfacing any picker error). Shared by the Test and Run
-// controls, which both scope an action to a user-picked file/folder.
-const pickAutomationPath = async (config, mode) => {
-    try {
-        const picked = await (await fetch(`${config.urls.select_folder}?mode=${mode}`)).json();
-        if (picked.success && picked.path) return picked.path;
-        if (picked.error) window.notification.error(picked.error);
-    } catch {
-        window.notification.error('Failed to open the picker.');
-    }
-    return null;
+// Open the in-app folder/file picker in the chosen mode (folder|file); returns the
+// selected path or null. Shared by the Test and Run controls, which both scope an
+// action to a user-picked file/folder. Opens at `defaultPath` (the first configured
+// media dir) when given, so the user starts in their library rather than at home.
+const pickAutomationPath = async (config, mode, defaultPath = null) => {
+    return window.PHOTO_ORGANIZER.pickFolder({ mode, startPath: defaultPath });
 };
 
 // Confirm + submit the hidden delete form for the selected automation. (The "New
@@ -48,7 +42,7 @@ window.PHOTO_ORGANIZER.initAutomationDetails = () => {
 // else has a plain button that fires context-less. A trigger-less automation still
 // shows the plain button, but clicking it only warns (add a trigger first) and does
 // not run. Otherwise the run is enqueued async and shows up in Run history.
-window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl, config, hasTriggers) => {
+window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl, config, hasTriggers, defaultPath = null) => {
     const post = async (button, body) => {
         button.disabled = true;
         try {
@@ -83,7 +77,7 @@ window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl, config, hasTriggers) => {
 
     document.querySelectorAll('.js-run-files').forEach((button) => {
         button.addEventListener('click', async () => {
-            const path = await pickAutomationPath(config, button.dataset.mode);
+            const path = await pickAutomationPath(config, button.dataset.mode, defaultPath);
             if (path) post(button, { path });
         });
     });
@@ -103,7 +97,7 @@ window.PHOTO_ORGANIZER.initAutomationConfigure = () => {
 // Run the automation's code in a sandbox dry-run and render what it did: the host-API
 // actions intercepted during the run, the captured output, and any error. Changes
 // nothing (no Job recorded; the host surface is read-only).
-window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
+window.PHOTO_ORGANIZER.initAutomationTest = (slug, config, defaultPath = null) => {
     // Code-version toggle (working draft vs active/published). The visible view is the
     // version a Test runs against. The toggle is only rendered when there's an
     // unpublished draft; otherwise there's a single (published) view.
@@ -256,7 +250,7 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config) => {
     filesButtons.forEach((filesButton) => {
         filesButton.addEventListener('click', async () => {
             const mode = filesButton.dataset.mode;
-            const path = await pickAutomationPath(config, mode);
+            const path = await pickAutomationPath(config, mode, defaultPath);
             if (!path) return;
             setSelection(path, mode);
             runFiles(filesButton, path);

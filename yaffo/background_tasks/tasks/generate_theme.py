@@ -68,13 +68,13 @@ def run_theme_generation(
 
     # Resolve the model + key here (the worker has no app context, so the agent and
     # client take them explicitly rather than reaching for db.session / a global).
-    api_key = llm_config.get_api_key()
+    model = llm_config.get_model(session)
+    api_key = llm_config.get_api_key(llm_config.selected_model_provider(session))
     if not api_key:
-        message_text = "No API key configured. Add your Anthropic API key in Settings → AI Generation."
+        message_text = f"No API key configured. Add your {llm_config.selected_provider_label(session)} API key in Settings → AI Generation."
         themes.add_theme_message(slug, CONVERSATION_TYPE_ERROR, message_text, session)
         themes.set_theme_status(slug, PAGE_VERSION_STATUS_FAILED, session)
         return
-    model = llm_config.get_model(session)
 
     # Edit with sight of the current CSS: the working draft if a generation already
     # produced one, else the published theme (empty for a brand-new theme).

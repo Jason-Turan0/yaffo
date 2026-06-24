@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from yaffo.site_agents.model_clients.model_client import AnthropicModelClient, _MAX_LOG_RUNS
+from yaffo.site_agents.model_clients.model_client import AnthropicModelClient
+from yaffo.site_agents.model_clients.call_log import _MAX_LOG_RUNS
 
 pytestmark = pytest.mark.unit
 

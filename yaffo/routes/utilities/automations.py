@@ -35,6 +35,7 @@ from yaffo.db.models import (
     TRIGGER_TYPE_EVENT,
 )
 from yaffo.db.repositories import automation_repository as repo
+from yaffo.db.repositories import media_dir_repository
 from yaffo.db.repositories import media_repository
 from yaffo.site_agents import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
@@ -147,10 +148,14 @@ def init_automations_routes(app: Flask):
 
     def _render_page(selected_slug: str | None):
         selected = repo.get_by_slug(db.session, selected_slug) if selected_slug else None
+        media_dirs = media_dir_repository.list_media_dirs(db.session)
         return render_template(
             "utilities/automations.html",
             selected=selected,
             selected_slug=selected_slug,
+            # Default the file/folder picker to the user's first media dir (their library)
+            # rather than home; None when none is configured.
+            default_media_dir=(media_dirs[0]["path"] if media_dirs else None),
             selected_status=selected.status if selected else None,
             selected_has_draft=(
                 selected is not None
@@ -433,8 +438,8 @@ def init_automations_routes(app: Flask):
         message = (request.get_json(silent=True) or {}).get("message", "").strip()
         if not message:
             return jsonify({"error": "Message is required."}), 400
-        if llm_config.get_api_key() is None:
-            return jsonify({"error": "No API key configured. Add your Anthropic API key in Settings → AI Generation."}), 400
+        if llm_config.selected_key_missing():
+            return jsonify({"error": f"No API key configured. Add your {llm_config.selected_provider_label()} API key in Settings → AI Generation."}), 400
 
         repo.add_message(db.session, automation.id, CONVERSATION_TYPE_USER, message)
         repo.set_status(db.session, slug, AUTOMATION_STATUS_IN_PROGRESS)

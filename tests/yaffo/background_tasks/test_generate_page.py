@@ -26,7 +26,7 @@ pytestmark = pytest.mark.unit
 def api_key(monkeypatch):
     """A configured key by default; the agent is stubbed so it's never used to call
     a model, but run_generation now resolves it up front (and fails closed without)."""
-    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda: "test-key")
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: "test-key")
 
 
 @pytest.fixture
@@ -121,7 +121,7 @@ class TestFailure:
         assert ("error", "hit the output token limit") in [(m.type, m.content) for m in fetched.messages]
 
     def test_missing_api_key_fails_closed(self, session, version, monkeypatch):
-        monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda: None)
+        monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: None)
         # the agent must never be built without a key.
         monkeypatch.setattr(task, "create_page_builder_agent",
                             lambda *a, **k: pytest.fail("agent built without a key"))

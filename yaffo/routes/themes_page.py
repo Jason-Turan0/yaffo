@@ -203,8 +203,8 @@ def init_themes_page_routes(app: Flask):
         message = (payload.get("message") or "").strip()
         if not message:
             return {"error": "Message is required."}, 400
-        if llm_config.get_api_key() is None:
-            return {"error": "No API key configured. Add your Anthropic API key in Settings → AI Generation."}, 400
+        if llm_config.selected_key_missing():
+            return {"error": f"No API key configured. Add your {llm_config.selected_provider_label()} API key in Settings → AI Generation."}, 400
 
         themes.add_theme_message(slug, CONVERSATION_TYPE_USER, message)
         themes.set_theme_status(slug, PAGE_VERSION_STATUS_IN_PROGRESS)

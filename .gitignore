@@ -93,3 +93,5 @@ crash.*.log
 yaffo_ui_tests/reports/
 yaffo_ui_tests/.playwright/
 model_logs
+# MkDocs build output
+site/

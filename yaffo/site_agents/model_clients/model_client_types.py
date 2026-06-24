@@ -1,23 +1,20 @@
 """Generic model-client types (ported from the TS model_client.interface).
 
 Provider-agnostic shapes so the page-builder agent can be written against an
-interface rather than the Anthropic SDK directly. Only Anthropic models are
-listed in `ModelAlias` for now.
+interface rather than a specific SDK. The valid model/provider ids live in the
+`model_clients.providers` registry (Anthropic + the OpenAI-compatible vendors).
 """
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
-# Only Anthropic models for now (keep in sync with llm_config.AVAILABLE_MODELS).
-ModelAlias = Literal[
-    "claude-opus-4-8",
-    "claude-sonnet-4-6",
-    "claude-haiku-4-5-20251001",
-]
-
-ModelProvider = Literal["anthropic"]
+# A model id / provider id from the registry (model_clients.providers). Kept as plain
+# str — the registry is the single source of truth for the valid set, so we don't
+# duplicate it here as a Literal that would drift each time a vendor/model is added.
+ModelAlias = str
+ModelProvider = str
 
 
 @dataclass

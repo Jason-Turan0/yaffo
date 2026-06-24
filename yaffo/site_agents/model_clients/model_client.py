@@ -14,9 +14,6 @@ the assistant turn, inspect `response.tool_calls`, then feed results back with
 """
 from __future__ import annotations
 
-import json
-import logging
-import shutil
 import time
 from datetime import datetime
 from pathlib import Path
@@ -24,9 +21,10 @@ from typing import Any, Optional
 
 import anthropic
 
-from yaffo.common import ROOT_DIR
 from yaffo.config import get_int as get_config_int
 from yaffo.logging_config import get_logger
+from yaffo.site_agents.model_clients.call_log import CallLogger
+from yaffo.site_agents.model_clients.providers import pricing_for
 from yaffo.site_agents.model_clients.model_client_types import (
     ModelAlias,
     ModelClient,
@@ -39,20 +37,7 @@ from yaffo.site_agents.model_clients.model_client_types import (
     to_tool_result_part,
 )
 
-# Per-1M-token pricing (input, output), keyed by the model IDs we offer.
-_PRICING = {
-    "claude-opus-4-8": (5.0, 25.0),
-    "claude-sonnet-4-6": (3.0, 15.0),
-    "claude-haiku-4-5-20251001": (1.0, 5.0),
-}
-_CACHE_WRITE_MULT = 1.25  # 5-minute TTL write premium
-_CACHE_READ_MULT = 0.10
-
-# Each agent run writes one timestamped sub-dir of per-call JSON under log_dir. Keep
-# only the most recent runs so model_logs can't grow unbounded (the .log files are
-# capped by RotatingFileHandler; this is the equivalent for the per-run dumps).
-# Count from config.toml ([logging] max_model_log_runs), default 50.
-_MAX_LOG_RUNS = get_config_int("logging", "max_model_log_runs", 50)
+_CACHE_WRITE_MULT = 1.25  # 5-minute TTL write premium (Anthropic-specific; the read rate is the registry's cached_input)
 
 # Default output-token budget per model call, from config.toml ([ai] max_output_tokens).
 # Floored well above zero — this is shared with the thinking budget, so a tiny value
@@ -64,12 +49,6 @@ logger = get_logger(__name__)
 
 def _supports_adaptive_thinking(model: str) -> bool:
     return model.startswith("claude-opus-4") or model.startswith("claude-sonnet-4-6")
-
-
-def _jsonable(obj: Any) -> Any:
-    if hasattr(obj, "model_dump"):
-        return obj.model_dump()
-    return str(obj)
 
 
 def _error_payload(error: anthropic.APIError) -> dict:
@@ -118,23 +97,7 @@ class AnthropicModelClient(ModelClient):
         self.max_tokens = max_tokens
         self.messages: list[dict] = []
         self._client = anthropic.Anthropic(api_key=api_key)
-        self.log_dir = Path(log_dir) if log_dir else (ROOT_DIR / "model_logs")
-        self._call_count = 0
-        self.task_start = datetime.now()
-        self._prune_old_runs()
-
-    def _prune_old_runs(self) -> None:
-        """Keep only the newest _MAX_LOG_RUNS run sub-dirs under log_dir; delete the
-        rest. Run dirs are named by start timestamp, so a lexical sort is chronological.
-        Best-effort — a filesystem error here must never break a model call."""
-        try:
-            if not self.log_dir.exists():
-                return
-            run_dirs = sorted((d for d in self.log_dir.iterdir() if d.is_dir()))
-            for stale in run_dirs[:-_MAX_LOG_RUNS]:
-                shutil.rmtree(stale, ignore_errors=True)
-        except OSError:
-            pass
+        self._log = CallLogger(log_dir)
 
     @classmethod
     def from_config(cls, config: ModelClientConfig, **kwargs: Any) -> "AnthropicModelClient":
@@ -251,15 +214,17 @@ class AnthropicModelClient(ModelClient):
         )
 
     def _estimate_cost(self, usage: Usage) -> Optional[dict]:
-        price = _PRICING.get(self.model)
-        if price is None:
+        pricing = pricing_for(self.model)
+        if pricing is None:
             return None
-        in_rate, out_rate = (p / 1_000_000 for p in price)
+        in_rate = pricing.input / 1_000_000
+        out_rate = pricing.output / 1_000_000
+        cached_rate = pricing.cached_input / 1_000_000
         total = (
             usage.input_tokens * in_rate
             + usage.output_tokens * out_rate
             + usage.cache_write_tokens * in_rate * _CACHE_WRITE_MULT
-            + usage.cache_read_tokens * in_rate * _CACHE_READ_MULT
+            + usage.cache_read_tokens * cached_rate
         )
         return {
             "input_tokens": usage.input_tokens,
@@ -277,9 +242,6 @@ class AnthropicModelClient(ModelClient):
         message: Any,
         error: Optional[anthropic.APIError] = None,
     ) -> None:
-        if logger.getEffectiveLevel() > logging.DEBUG:
-            return
-        self._call_count += 1
         usage = self._usage(message.usage) if message is not None else None
         if message is not None:
             response: Any = message.model_dump()
@@ -287,20 +249,12 @@ class AnthropicModelClient(ModelClient):
             response = _error_payload(error)
         else:
             response = None
-        record = {
-            "timestamp": timestamp.isoformat(timespec="seconds"),
-            "call": self._call_count,
-            "model": self.model,
-            "duration_ms": round(duration_ms),
-            "success": message is not None,
-            "request": params,
-            "response": response,
-            "cost": self._estimate_cost(usage) if usage is not None else None,
-        }
-        request_log_dir =self.log_dir / f"{self.task_start:%Y%m%d-%H%M%S}"
-        file_path = request_log_dir / f"{self._call_count:03d}.json"
-        try:
-            request_log_dir.mkdir(parents=True, exist_ok=True)
-            file_path.write_text(json.dumps(record, indent=2, default=_jsonable))
-        except OSError:
-            pass
+        self._log.write(
+            model=self.model,
+            timestamp=timestamp,
+            duration_ms=duration_ms,
+            success=message is not None,
+            request=params,
+            response=response,
+            cost=self._estimate_cost(usage) if usage is not None else None,
+        )

@@ -1,40 +1,36 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
+/**
+ * Wires every "Browse" button (`.file-browser-btn`, sat next to a `.file-browser-input`
+ * inside a `.file-browser-input-group`) to the in-app folder picker. Uses one delegated
+ * click listener so it also covers inputs added later by HTMX swaps (e.g. the
+ * remove-duplicates form) with no re-initialization.
+ *
+ * Set `data-mode="file"` on any ancestor to pick a file instead of a folder. On
+ * selection the input's value is set and a bubbling `change` event is dispatched, so
+ * HTMX triggers (hx-trigger="change") on the input fire as if the user typed the path.
+ */
 window.PHOTO_ORGANIZER.COMPONENTS.fileBrowser = {
-    init: (fileBrowserDom) => {
-        const input = fileBrowserDom.querySelector('.file-browser-input');
-        const browseBtn = fileBrowserDom.querySelector('.file-browser-btn');
+    init: () => {
+        document.addEventListener('click', async (event) => {
+            const btn = event.target.closest('.file-browser-btn');
+            if (!btn) return;
+            const group = btn.closest('.file-browser-input-group') || btn.closest('.file-browser-group');
+            const input = group && group.querySelector('.file-browser-input');
+            if (!input) return;
 
-        if (!browseBtn || !input) {
-            return;
-        }
-
-        browseBtn.addEventListener('click', async () => {
-            try {
-                const response = await fetch(window.APP_CONFIG.urls.select_folder);
-                const data = await response.json();
-
-                if (data.success && data.path) {
-                    input.value = data.path;
-                    input.dispatchEvent(new Event('change', { bubbles: true }));
-                } else if (data.error) {
-                    window.notification.error(data.error);
-                }
-            } catch (error) {
-                console.error('Error opening folder dialog:', error);
-                window.notification.error('Failed to open folder dialog');
+            const modeEl = btn.closest('[data-mode]');
+            const mode = (modeEl && modeEl.dataset.mode) || 'folder';
+            const path = await window.PHOTO_ORGANIZER.pickFolder({ mode, startPath: input.value || null });
+            if (path) {
+                input.value = path;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
             }
         });
     },
-
-    initAll: () => {
-        document.querySelectorAll('.file-browser-group').forEach(fileBrowser => {
-            window.PHOTO_ORGANIZER.COMPONENTS.fileBrowser.init(fileBrowser);
-        });
-    }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    window.PHOTO_ORGANIZER.COMPONENTS.fileBrowser.initAll();
+    window.PHOTO_ORGANIZER.COMPONENTS.fileBrowser.init();
 });

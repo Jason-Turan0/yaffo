@@ -1,6 +1,7 @@
-from flask import Flask, Response, abort, render_template, request, send_from_directory
+from flask import Flask, Response, abort, jsonify, render_template, request, send_from_directory
 
 from yaffo import themes
+from yaffo.utils.file_system import list_directory, listing_to_dict
 
 
 def _css_response(css: str) -> Response:
@@ -29,6 +30,13 @@ def init_base_routes(app: Flask):
     @app.errorhandler(500)
     def internal_server_error(error):
         return render_template('500.html'), 500
+
+    @app.route('/api/fs/list', methods=["GET"])
+    def fs_list():
+        """Browse the local filesystem for the in-app folder/file picker. `path` is the
+        directory to list (defaults to home); `mode` is "folder" or "file"."""
+        listing = list_directory(request.args.get('path'), request.args.get('mode', 'folder'))
+        return jsonify(listing_to_dict(listing))
 
     @app.route('/favicon.ico', methods=["GET"])
     def favicon():

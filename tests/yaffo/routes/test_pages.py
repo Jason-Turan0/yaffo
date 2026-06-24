@@ -271,7 +271,7 @@ def with_key_and_task(monkeypatch):
     """Configure an API key and capture enqueued generation tasks instead of
     handing them to the task queue, so the route's fork + enqueue is exercised without a
     worker. Returns the list of (args, kwargs) the task was called with."""
-    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda: "test-key")
+    monkeypatch.setattr("yaffo.site_agents.llm_config.get_api_key", lambda *a, **k: "test-key")
     calls = []
     monkeypatch.setattr("yaffo.routes.pages.generate_page_task",
                         lambda *a, **k: calls.append((a, k)))
