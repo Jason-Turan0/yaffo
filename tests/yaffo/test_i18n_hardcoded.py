@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from yaffo.scripts.i18n_hardcoded import (
+from scripts.i18n_hardcoded import (
     BASELINE_PATH,
     HardcodedText,
     new_findings,

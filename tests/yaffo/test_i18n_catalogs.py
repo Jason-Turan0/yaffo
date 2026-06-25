@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 
 from yaffo.i18n import normalize_locale, text_direction
-from yaffo.scripts import i18n_catalogs
-from yaffo.scripts.i18n_catalogs import (
+import scripts.i18n_catalogs as i18n_catalogs
+from scripts.i18n_catalogs import (
     BROWSER_LOCALES_DIR,
     I18NEXT_PLACEHOLDER_RE,
     TranslationEntry,
