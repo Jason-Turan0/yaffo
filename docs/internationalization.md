@@ -508,7 +508,7 @@ Status as of June 25, 2026:
 - [x] Phase 3: shared shell, filters, reusable components, and their JavaScript
   modules.
 - [x] Phase 4.1: home gallery and media details vertical slice.
-- [x] Phase 4.2: faces inbox and assignment workflow.
+- [x] Phase 4.2: faces and people workflows.
 - [ ] Phase 4.3–4.9: remaining feature screens and LLM prompt behavior.
 - [ ] Phase 5: translation and release-readiness work.
 
@@ -530,6 +530,16 @@ The completed faces inbox slice includes:
 - localized assignment API responses with plural forms and stable error codes;
 - corrected Babel extraction signatures for Python plural/context functions;
 - German rendering and API pluralization tests.
+
+The completed people slice includes:
+
+- the people list, add/edit/delete forms, localized birthdates, and route
+  validation/flash messages;
+- the person face gallery, similarity filters, selection controls, tooltips, and
+  removal workflow;
+- delegated browser actions, standard select controls, and global confirmation
+  dialogs instead of inline handlers or native alerts;
+- German rendering, API, flash, pluralization, and removal-validation tests.
 
 Current verification covers catalog key/placeholder parity, compiled gettext
 catalogs, JavaScript and Python syntax, non-English rendering, and the
@@ -585,7 +595,7 @@ Migrate one vertical slice at a time, including templates, routes, JavaScript,
 and tests:
 
 - [x] Home gallery and media details.
-- [ ] Faces and people.
+- [x] Faces and people.
 - [ ] Locations.
 - [ ] Settings.
 - [ ] Indexing and duplicate utilities.
@@ -611,9 +621,9 @@ route modules and browser-facing errors are part of the same checklist item.
 
 - [x] Faces inbox and assignment workflow:
   `templates/faces/index.html`, `static/faces/index.js`, and `routes/faces.py`.
-- [ ] People list:
+- [x] People list:
   `templates/people/list.html`, `static/people/list.js`, and `routes/people.py`.
-- [ ] Person face gallery and reassignment/removal workflow:
+- [x] Person face gallery and reassignment/removal workflow:
   `templates/people/faces.html` and `static/people/faces.js`.
 - [ ] Locations map/list:
   `templates/locations/list.html`, `static/locations/list.js`, and

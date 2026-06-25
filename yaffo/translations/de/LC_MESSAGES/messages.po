@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 06:52-0500\n"
+"POT-Creation-Date: 2026-06-25 07:04-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -34,7 +34,9 @@ msgid_plural "Successfully ignored %(count)s faces"
 msgstr[0] "%(count)s Gesicht wurde erfolgreich ignoriert"
 msgstr[1] "%(count)s Gesichter wurden erfolgreich ignoriert"
 
-#: yaffo/routes/faces.py:277
+#: yaffo/routes/faces.py:277 yaffo/routes/people.py:119
+#: yaffo/routes/people.py:178 yaffo/routes/people.py:220
+#: yaffo/routes/people.py:298
 msgid "Person not found"
 msgstr "Person nicht gefunden"
 
@@ -53,11 +55,13 @@ msgstr "Gesichter, Person und Gesichtsstatus sind erforderlich"
 msgid "Could not process faces"
 msgstr "Gesichter konnten nicht verarbeitet werden"
 
-#: yaffo/routes/home.py:257
+#: yaffo/routes/home.py:257 yaffo/templates/people/list.html:39
+#: yaffo/templates/people/list.html:92
 msgid "Male"
 msgstr "Männlich"
 
-#: yaffo/routes/home.py:258
+#: yaffo/routes/home.py:258 yaffo/templates/people/list.html:40
+#: yaffo/templates/people/list.html:93
 msgid "Female"
 msgstr "Weiblich"
 
@@ -110,10 +114,56 @@ msgstr "Jeder Tag muss ein Objekt sein"
 msgid "Tag name is required"
 msgstr "Ein Tag-Name ist erforderlich"
 
-#: yaffo/templates/_sidebar.html:5
-#, fuzzy
+#: yaffo/routes/people.py:25
+msgid "Gender must be male, female, or not specified"
+msgstr "Geschlecht muss männlich, weiblich oder nicht angegeben sein"
+
+#: yaffo/routes/people.py:62 yaffo/routes/people.py:93
+#: yaffo/routes/people.py:124
+msgid "Name is required"
+msgstr "Name ist erforderlich"
+
+#: yaffo/routes/people.py:68 yaffo/routes/people.py:100
+#: yaffo/routes/people.py:133
+#, python-format
+msgid "Person '%(name)s' already exists"
+msgstr "Person „%(name)s“ ist bereits vorhanden"
+
+#: yaffo/routes/people.py:81
+#, python-format
+msgid "Added %(name)s"
+msgstr "%(name)s wurde hinzugefügt"
+
+#: yaffo/routes/people.py:153
+msgid "Birthdate must be YYYY-MM-DD"
+msgstr "Das Geburtsdatum muss im Format JJJJ-MM-TT angegeben werden"
+
+#: yaffo/routes/people.py:166
+#, python-format
+msgid "Updated '%(name)s'"
+msgstr "„%(name)s“ wurde aktualisiert"
+
+#: yaffo/routes/people.py:168
+#, python-format
+msgid "Renamed '%(old_name)s' to '%(name)s'"
+msgstr "„%(old_name)s“ wurde in „%(name)s“ umbenannt"
+
+#: yaffo/routes/people.py:204
+#, python-format
+msgid "Deleted %(name)s"
+msgstr "%(name)s wurde gelöscht"
+
+#: yaffo/routes/people.py:302
+msgid "No faces selected"
+msgstr "Keine Gesichter ausgewählt"
+
+#: yaffo/routes/people.py:326
+msgid "Person updated"
+msgstr "Person wurde aktualisiert"
+
+#: yaffo/templates/_sidebar.html:5 yaffo/templates/people/list.html:28
 msgid "Actions"
-msgstr "Orte"
+msgstr "Aktionen"
 
 #: yaffo/templates/_sidebar.html:11
 msgid "Filters"
@@ -148,12 +198,12 @@ msgstr "Auswählen…"
 msgid "Home"
 msgstr "Startseite"
 
-#: yaffo/templates/base.html:97
+#: yaffo/templates/base.html:97 yaffo/templates/people/list.html:26
 msgid "Faces"
 msgstr "Gesichter"
 
 #: yaffo/templates/base.html:100 yaffo/templates/faces/index.html:80
-#: yaffo/templates/filters/_people.html:4
+#: yaffo/templates/filters/_people.html:4 yaffo/templates/people/list.html:16
 msgid "People"
 msgstr "Personen"
 
@@ -251,7 +301,8 @@ msgstr "Video abspielen"
 msgid "Photo from %(date)s"
 msgstr "Foto vom %(date)s"
 
-#: yaffo/templates/index.html:64
+#: yaffo/templates/index.html:64 yaffo/templates/people/list.html:23
+#: yaffo/templates/people/list.html:85
 msgid "Name"
 msgstr "Name"
 
@@ -264,6 +315,7 @@ msgid "Taken"
 msgstr "Aufgenommen"
 
 #: yaffo/templates/index.html:74 yaffo/templates/index.html:98
+#: yaffo/templates/people/faces.html:67
 msgid "Unknown date"
 msgstr "Unbekanntes Datum"
 
@@ -591,7 +643,7 @@ msgid_plural "%(formatted_count)s faces"
 msgstr[0] "%(formatted_count)s Gesicht"
 msgstr[1] "%(formatted_count)s Gesichter"
 
-#: yaffo/templates/faces/index.html:192
+#: yaffo/templates/faces/index.html:192 yaffo/templates/people/faces.html:52
 msgid "Select all"
 msgstr "Alle auswählen"
 
@@ -659,7 +711,8 @@ msgstr "Alle Fotos"
 msgid "Favorites Only"
 msgstr "Nur Favoriten"
 
-#: yaffo/templates/filters/_gender.html:2
+#: yaffo/templates/filters/_gender.html:2 yaffo/templates/people/list.html:24
+#: yaffo/templates/people/list.html:89
 #, fuzzy
 msgid "Gender"
 msgstr "Senden"
@@ -819,6 +872,7 @@ msgid "Show Results"
 msgstr "Ergebnisse anzeigen"
 
 #: yaffo/templates/fragments/job_status_fragment.html:28
+#: yaffo/templates/people/list.html:65
 msgid "Delete"
 msgstr "Löschen"
 
@@ -896,7 +950,7 @@ msgid_plural "Faces (%(count)s)"
 msgstr[0] "Gesicht (%(count)s)"
 msgstr[1] "Gesichter (%(count)s)"
 
-#: yaffo/templates/media/view.html:130
+#: yaffo/templates/media/view.html:130 yaffo/templates/people/faces.html:65
 msgid "Face"
 msgstr "Gesicht"
 
@@ -967,6 +1021,32 @@ msgstr "Tag hinzufügen"
 msgid "Save Changes"
 msgstr "Änderungen speichern"
 
+#: yaffo/templates/people/faces.html:3
+#, python-format
+msgid "%(person)s's Faces - Yaffo"
+msgstr "Gesichter von %(person)s - Yaffo"
+
+#: yaffo/templates/people/faces.html:18
+msgid "Min Similarity"
+msgstr "Minimale Ähnlichkeit"
+
+#: yaffo/templates/people/faces.html:19
+msgid "Max Similarity"
+msgstr "Maximale Ähnlichkeit"
+
+#: yaffo/templates/people/faces.html:25
+msgid "Remove Selected"
+msgstr "Auswahl entfernen"
+
+#: yaffo/templates/people/faces.html:33
+msgid "Back to People"
+msgstr "Zurück zu Personen"
+
+#: yaffo/templates/people/faces.html:35
+#, python-format
+msgid "%(person)s's Faces"
+msgstr "Gesichter von %(person)s"
+
 #: yaffo/templates/people/faces.html:37
 #, python-format
 msgid "Showing %(total)s face"
@@ -978,9 +1058,87 @@ msgstr[1] "%(total)s Gesichter werden angezeigt"
 msgid "(filtered)"
 msgstr "(gefiltert)"
 
-#: yaffo/templates/people/faces.html:46
+#: yaffo/templates/people/faces.html:46 yaffo/templates/people/faces.html:101
 msgid "No faces found"
 msgstr "Keine Gesichter gefunden"
+
+#: yaffo/templates/people/faces.html:54
+msgid "Clear selection"
+msgstr "Auswahl aufheben"
+
+#: yaffo/templates/people/faces.html:70
+msgid "Similarity:"
+msgstr "Ähnlichkeit:"
+
+#: yaffo/templates/people/faces.html:77
+msgid "N/A"
+msgstr "k. A."
+
+#: yaffo/templates/people/faces.html:103
+msgid "Try adjusting your filters."
+msgstr "Passen Sie die Filter an."
+
+#: yaffo/templates/people/faces.html:105
+#, python-format
+msgid "No faces have been assigned to %(person)s yet."
+msgstr "%(person)s wurden noch keine Gesichter zugewiesen."
+
+#: yaffo/templates/people/list.html:5
+msgid "People - Yaffo"
+msgstr "Personen - Yaffo"
+
+#: yaffo/templates/people/list.html:14 yaffo/templates/people/list.html:78
+#: yaffo/templates/people/list.html:106
+msgid "Add Person"
+msgstr "Person hinzufügen"
+
+#: yaffo/templates/people/list.html:25
+msgid "Born"
+msgstr "Geboren"
+
+#: yaffo/templates/people/list.html:27
+msgid "Photos"
+msgstr "Fotos"
+
+#: yaffo/templates/people/list.html:36
+msgid "Unnamed"
+msgstr "Unbenannt"
+
+#: yaffo/templates/people/list.html:45
+msgid "Estimated"
+msgstr "Geschätzt"
+
+#: yaffo/templates/people/list.html:61
+msgid "Edit"
+msgstr "Bearbeiten"
+
+#: yaffo/templates/people/list.html:76
+msgid "No people yet"
+msgstr "Noch keine Personen"
+
+#: yaffo/templates/people/list.html:77
+msgid "Add your first person to start organizing photos."
+msgstr "Fügen Sie Ihre erste Person hinzu, um Fotos zu organisieren."
+
+#: yaffo/templates/people/list.html:91
+msgid "Not specified"
+msgstr "Nicht angegeben"
+
+#: yaffo/templates/people/list.html:95
+msgid "Choose “Not specified” to clear the saved gender."
+msgstr "Wählen Sie „Nicht angegeben“, um das gespeicherte Geschlecht zu entfernen."
+
+#: yaffo/templates/people/list.html:98
+msgid "Birthdate"
+msgstr "Geburtsdatum"
+
+#: yaffo/templates/people/list.html:100
+msgid "Used to improve facial recognition accuracy."
+msgstr "Wird verwendet, um die Genauigkeit der Gesichtserkennung zu verbessern."
+
+#: yaffo/templates/people/list.html:107
+msgid "Edit Person"
+msgstr "Person bearbeiten"
 
 #: yaffo/templates/settings/index.html:16
 msgid "Language"

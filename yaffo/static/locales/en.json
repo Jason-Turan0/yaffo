@@ -138,6 +138,19 @@
       "valueOptional": "Tag value (optional)"
     }
   },
+  "people": {
+    "delete": {
+      "message": "Delete {{name}}? This will unassign all their faces but won't delete the photos.",
+      "title": "Delete Person"
+    },
+    "faces": {
+      "removeConfirm": "Remove",
+      "removeMessage_one": "Remove the selected face from this person?",
+      "removeMessage_other": "Remove the {{count}} selected faces from this person?",
+      "removeTitle": "Remove Faces",
+      "selectRequired": "Please select at least one face to remove"
+    }
+  },
   "settings": {
     "applicationLanguage": "Application language",
     "language": "Language",

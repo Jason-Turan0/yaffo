@@ -187,6 +187,12 @@ class SearchableSelect {
             e.stopPropagation();
         });
 
+        this.select.addEventListener('change', () => {
+            this.updateOptions();
+            this.updateDisplayText();
+            this.renderOptions(this.searchInput.value);
+        });
+
         // Close on outside click
         document.addEventListener('click', (e) => {
             if (!this.wrapper.contains(e.target)) {

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from enum import Enum
 from numbers import Number
 from typing import Union
@@ -21,7 +21,7 @@ class DateFormat(Enum):
     TIME = "time"
 
 
-DateValue = Union[datetime, str, None]
+DateValue = Union[date, datetime, str, None]
 NumericValue = Union[Number, str, None]
 
 
@@ -47,6 +47,8 @@ def format_date(
     parsed = _parse_datetime(value)
     if parsed is None:
         return ""
+    if isinstance(parsed, date) and not isinstance(parsed, datetime):
+        return babel_format_date(parsed, format="medium", locale=_locale())
     if not isinstance(parsed, datetime):
         return str(parsed)
 

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ person.name }}'s Faces - Yaffo{% endblock %}
+{% block title %}{{ _("%(person)s's Faces - Yaffo", person=person.name) }}{% endblock %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='people/faces.css') }}">
@@ -15,14 +15,14 @@
 {% block content %}
     <div class="main-container-layout">
         {% macro render_filters() %}
-            {{ similarity_filter('min_similarity', 'Min Similarity', filters) }}
-            {{ similarity_filter('max_similarity', 'Max Similarity', filters) }}
+            {{ similarity_filter('min_similarity', _("Min Similarity"), filters) }}
+            {{ similarity_filter('max_similarity', _("Max Similarity"), filters) }}
         {% endmacro %}
         {% macro render_actions() %}
             <form method="POST" action="{{ url_for('person_faces_remove', person_id=person.id) }}" id="remove-form">
                 <div id="selected-faces-container"></div>
-                <button type="button" class="btn btn-danger btn-block" data-icon="delete" onclick="removeSelectedFaces()">
-                    Remove Selected
+                <button type="button" class="btn btn-danger btn-block" data-icon="delete" id="remove-selected-faces">
+                    {{ _("Remove Selected") }}
                 </button>
             </form>
         {% endmacro %}
@@ -30,9 +30,9 @@
         {{ render_sidebar(url_for('person_faces', person_id=person.id), filters, render_filters, render_actions) }}
         <div class="main-content">
             {% set header_actions %}
-                <a href="{{ url_for('people_list') }}" class="action-link">← Back to People</a>
+                <a href="{{ url_for('people_list') }}" class="action-link">← {{ _("Back to People") }}</a>
             {% endset %}
-            {% call page_header(person.name ~ "'s Faces", actions=header_actions) %}
+            {% call page_header(_("%(person)s's Faces", person=person.name), actions=header_actions) %}
                 {% if faces|length > 0 %}
                     {% trans trimmed count=faces|length, total=faces|length|format_integer %}
                         Showing {{ total }} face
@@ -49,32 +49,32 @@
 
             {% if faces|length > 0 %}
                 <div class="selection-controls">
-                    <a href="#" id="select-all" class="action-link">Select all</a>
+                    <a href="#" id="select-all" class="action-link">{{ _("Select all") }}</a>
                     <span class="separator">|</span>
-                    <a href="#" id="deselect-all" class="action-link">Clear selection</a>
+                    <a href="#" id="deselect-all" class="action-link">{{ _("Clear selection") }}</a>
                 </div>
 
                 <div class="faces-grid">
                     {% for face_data in faces %}
                         <div class="face-card"
                              data-face-id="{{ face_data.face.id }}"
-                             data-similarity="{{ face_data.similarity_pct if face_data.similarity_pct is not none else 'N/A' }}"
+                             data-similarity="{{ face_data.similarity_pct if face_data.similarity_pct is not none else '' }}"
                              data-date="{{ face_data.face.media_item.date_taken }}">
                             <img src="{{ url_for('face_thumbnail', face_id=face_data.face.id) }}"
                                  data-fallback="{{ url_for('placeholder') }}"
-                                 alt="Face">
+                                 alt="{{ _('Face') }}">
                             <div class="face-info">
-                                <div class="face-date">{{ face_data.face.media_item.date_taken | format_date("date") if face_data.face.media_item.date_taken else 'Unknown date' }}
+                                <div class="face-date">{{ face_data.face.media_item.date_taken | format_date("date") if face_data.face.media_item.date_taken else _("Unknown date") }}
                                 </div>
                                 <div class="face-similarity">
-                                    Similarity:
+                                    {{ _("Similarity:") }}
                                     {% if face_data.similarity_pct is not none %}
                                         {% set sim_pct = face_data.similarity_pct %}
                                         <span class="{% if sim_pct >= 80 %}similarity-high{% elif sim_pct >= 50 %}similarity-medium{% else %}similarity-low{% endif %}">
                                 {{ (sim_pct / 100) | format_percent }}
                             </span>
                                     {% else %}
-                                        <span>N/A</span>
+                                        <span>{{ _("N/A") }}</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -98,11 +98,11 @@
         ) }}
             {% else %}
                 <div class="empty-state">
-                    <h2>No faces found</h2>
-                    <p>{% if filters.selected_year or filters.selected_month or filters.selected_similarity %}
-                        Try adjusting your filters.
+                    <h2>{{ _("No faces found") }}</h2>
+                    <p>{% if filters.selected_year or filters.selected_month or filters.min_similarity or filters.max_similarity %}
+                        {{ _("Try adjusting your filters.") }}
                     {% else %}
-                        No faces have been assigned to {{ person.name }} yet.
+                        {{ _("No faces have been assigned to %(person)s yet.", person=person.name) }}
                     {% endif %}</p>
                 </div>
             {% endif %}
@@ -112,4 +112,9 @@
 
 {% block scripts %}
     <script src="{{ url_for('static', filename='people/faces.js') }}"></script>
+    <script>
+        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+            window.PHOTO_ORGANIZER.initPersonFaces(i18n, window.APP_CONFIG);
+        });
+    </script>
 {% endblock %}

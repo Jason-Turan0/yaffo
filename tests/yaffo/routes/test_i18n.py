@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 
 from yaffo.db import db
@@ -7,6 +9,8 @@ from yaffo.db.models import (
     ApplicationSettings,
     Face,
     MediaItem,
+    Person,
+    PersonFace,
 )
 from yaffo.i18n import LOCALE_SETTING
 
@@ -164,6 +168,127 @@ def test_saved_locale_translates_face_assignment_validation_error(client):
         "message": "Gesichter, Person und Gesichtsstatus sind erforderlich",
         "code": "assignment_fields_required",
     }
+
+
+def test_saved_locale_translates_empty_people_list(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    body = client.get("/people").get_data(as_text=True)
+
+    assert "<title>Personen - Yaffo</title>" in body
+    assert "Noch keine Personen" in body
+    assert "Fügen Sie Ihre erste Person hinzu, um Fotos zu organisieren." in body
+    assert "Person hinzufügen" in body
+    assert "Nicht angegeben" in body
+    assert "Geburtsdatum" in body
+
+
+def test_saved_locale_translates_people_table_and_formats_birthdate(client, app):
+    with app.app_context():
+        db.session.add(Person(name="Alex", gender=1, birthdate=date(1990, 1, 2)))
+        db.session.commit()
+
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get("/people").get_data(as_text=True)
+
+    assert ">Geboren</th>" in body
+    assert ">Gesichter</th>" in body
+    assert ">Fotos</th>" in body
+    assert ">Aktionen</th>" in body
+    assert ">Männlich" in body
+    assert "02.01.1990" in body
+    assert ">Bearbeiten</a>" in body
+    assert ">Löschen</a>" in body
+
+
+def test_saved_locale_translates_people_api_error(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    response = client.post("/api/people/create", json={"name": ""})
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "Name ist erforderlich",
+        "code": "name_required",
+    }
+
+
+def test_saved_locale_translates_people_flash(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    body = client.post(
+        "/people/create",
+        data={"name": "Alex", "gender": ""},
+        follow_redirects=True,
+    ).get_data(as_text=True)
+
+    assert "Alex wurde hinzugefügt" in body
+
+
+def test_saved_locale_translates_empty_person_face_gallery(client, app):
+    with app.app_context():
+        person = Person(name="Alex")
+        db.session.add(person)
+        db.session.commit()
+        person_id = person.id
+
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get(f"/people/{person_id}/faces").get_data(as_text=True)
+
+    assert "<title>Gesichter von Alex - Yaffo</title>" in body
+    assert "Gesichter von Alex" in body
+    assert "Zurück zu Personen" in body
+    assert "Minimale Ähnlichkeit" in body
+    assert "Maximale Ähnlichkeit" in body
+    assert "Keine Gesichter gefunden" in body
+    assert "Alex wurden noch keine Gesichter zugewiesen." in body
+    assert "Auswahl entfernen" in body
+
+
+def test_saved_locale_translates_person_face_gallery_details(client, app):
+    with app.app_context():
+        person = Person(name="Alex")
+        media_item = MediaItem(full_file_path="/library/example.jpg", date_taken="2026-06-25T10:30:00")
+        db.session.add_all([person, media_item])
+        db.session.flush()
+        face = Face(
+            full_file_path="/faces/example.jpg",
+            media_item_id=media_item.id,
+            status="ASSIGNED",
+        )
+        db.session.add(face)
+        db.session.flush()
+        db.session.add(PersonFace(person_id=person.id, face_id=face.id, similarity=0.9))
+        db.session.commit()
+        person_id = person.id
+
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get(f"/people/{person_id}/faces").get_data(as_text=True)
+
+    assert "1 Gesicht wird angezeigt" in body
+    assert 'alt="Gesicht"' in body
+    assert "25.06.2026" in body
+    assert "Ähnlichkeit:" in body
+    assert "Alle auswählen" in body
+    assert "Auswahl aufheben" in body
+
+
+def test_saved_locale_translates_person_face_removal_validation(client, app):
+    with app.app_context():
+        person = Person(name="Alex")
+        db.session.add(person)
+        db.session.commit()
+        person_id = person.id
+
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.post(
+        f"/people/{person_id}/faces/remove",
+        data={},
+        headers={"Referer": f"/people/{person_id}/faces"},
+        follow_redirects=True,
+    ).get_data(as_text=True)
+
+    assert "Keine Gesichter ausgewählt" in body
 
 
 def test_settings_locale_rejects_unsupported_locale(client):

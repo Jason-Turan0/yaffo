@@ -13,6 +13,7 @@ def test_people_page_renders_clearable_gender_dropdowns(client):
     body = response.data.decode()
     assert 'id="addPersonGender"' in body
     assert 'id="editPersonGender"' in body
+    assert body.count('name="gender" class="searchable-select" data-search-disabled') == 2
     assert body.count('<option value="">Not specified</option>') == 2
     assert "Choose “Not specified” to clear the saved gender." in body
 

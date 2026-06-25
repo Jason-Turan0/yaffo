@@ -1,6 +1,7 @@
 from datetime import date
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask_babel import gettext
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload, aliased
 
@@ -21,7 +22,7 @@ def _parse_optional_gender(raw_gender: str | None) -> int | None:
     if not value:
         return None
     if value not in {"0", "1"}:
-        raise ValueError("Gender must be male, female, or not specified")
+        raise ValueError(gettext("Gender must be male, female, or not specified"))
     return int(value)
 
 
@@ -58,13 +59,13 @@ def init_people_routes(app: Flask):
         """Create a new person"""
         name = request.form.get("name", "").strip()
         if not name:
-            flash("Name is required", "error")
+            flash(gettext("Name is required"), "error")
             return redirect(url_for("people_list"))
 
         # Check if person already exists
         existing = Person.query.filter(Person.name == name).first()
         if existing:
-            flash(f"Person '{name}' already exists", "error")
+            flash(gettext("Person '%(name)s' already exists", name=name), "error")
             return redirect(url_for("people_list"))
 
         try:
@@ -77,21 +78,28 @@ def init_people_routes(app: Flask):
         db.session.add(person)
         db.session.commit()
 
-        flash(f"Added {name}", "success")
+        flash(gettext("Added %(name)s", name=name), "success")
         return redirect(url_for("people_list"))
 
     @app.route("/api/people/create", methods=["POST"])
     def api_people_create():
         """Create a new person via JSON API"""
-        data = request.get_json()
-        name = data.get("name", "").strip()
+        data = request.get_json(silent=True) or {}
+        raw_name = data.get("name")
+        name = raw_name.strip() if isinstance(raw_name, str) else ""
 
         if not name:
-            return jsonify({"error": "Name is required"}), 400
+            return jsonify({
+                "error": gettext("Name is required"),
+                "code": "name_required",
+            }), 400
 
         existing = Person.query.filter(Person.name == name).first()
         if existing:
-            return jsonify({"error": f"Person '{name}' already exists"}), 400
+            return jsonify({
+                "error": gettext("Person '%(name)s' already exists", name=name),
+                "code": "person_already_exists",
+            }), 400
 
         person = Person(name=name)
         db.session.add(person)
@@ -108,12 +116,12 @@ def init_people_routes(app: Flask):
         """Update a person's name"""
         person = db.session.get(Person, person_id)
         if not person:
-            flash("Person not found", "error")
+            flash(gettext("Person not found"), "error")
             return redirect(url_for("people_list"))
 
         name = request.form.get("name", "").strip()
         if not name:
-            flash("Name is required", "error")
+            flash(gettext("Name is required"), "error")
             return redirect(url_for("people_list"))
 
         # Check if new name conflicts with another person
@@ -122,7 +130,7 @@ def init_people_routes(app: Flask):
             Person.id != person_id
         ).first()
         if existing:
-            flash(f"Person '{name}' already exists", "error")
+            flash(gettext("Person '%(name)s' already exists", name=name), "error")
             return redirect(url_for("people_list"))
 
         try:
@@ -142,7 +150,7 @@ def init_people_routes(app: Flask):
             try:
                 person.birthdate = date.fromisoformat(raw_birthdate)
             except ValueError:
-                flash("Birthdate must be YYYY-MM-DD", "error")
+                flash(gettext("Birthdate must be YYYY-MM-DD"), "error")
                 return redirect(url_for("people_list"))
         else:
             person.birthdate = None
@@ -154,7 +162,12 @@ def init_people_routes(app: Flask):
             update_person_embedding(person_id, db.session)
         if media_item_ids:
             emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": media_item_ids})
-        flash(f"Updated '{name}'" if name == old_name else f"Renamed '{old_name}' to '{name}'", "success")
+        flash(
+            gettext("Updated '%(name)s'", name=name)
+            if name == old_name
+            else gettext("Renamed '%(old_name)s' to '%(name)s'", old_name=old_name, name=name),
+            "success",
+        )
         return redirect(url_for("people_list"))
 
     @app.route("/people/<int:person_id>/delete", methods=["POST"])
@@ -162,7 +175,7 @@ def init_people_routes(app: Flask):
         """Delete a person and unassign all their faces"""
         person = db.session.get(Person, person_id)
         if not person:
-            flash("Person not found", "error")
+            flash(gettext("Person not found"), "error")
             return redirect(url_for("people_list"))
 
         name = person.name
@@ -188,7 +201,7 @@ def init_people_routes(app: Flask):
         db.session.delete(person)
         db.session.commit()
 
-        flash(f"Deleted {name}", "success")
+        flash(gettext("Deleted %(name)s", name=name), "success")
         return redirect(url_for("people_list"))
 
     @app.route("/people/<int:person_id>/faces", methods=["GET"])
@@ -204,7 +217,7 @@ def init_people_routes(app: Flask):
         filter_face_page_size = page_size if page_size else FACE_LOAD_LIMIT
 
         if not person:
-            flash("Person not found", "error")
+            flash(gettext("Person not found"), "error")
             return redirect(url_for("people_list"))
 
         photo_alias = aliased(MediaItem)
@@ -282,11 +295,11 @@ def init_people_routes(app: Flask):
     def person_faces_remove(person_id):
         person = db.session.get(Person, person_id)
         if not person:
-            flash("Person not found", "error")
+            flash(gettext("Person not found"), "error")
             return redirect(request.referrer or url_for("faces_index"))
         selected_face_ids = request.form.getlist("faces")
         if not selected_face_ids or len(selected_face_ids) == 0:
-            flash("No faces selected", "error")
+            flash(gettext("No faces selected"), "error")
             return redirect(request.referrer or url_for("faces_index"))
 
         if selected_face_ids:
@@ -310,6 +323,6 @@ def init_people_routes(app: Flask):
             db.session.commit()
             if media_item_ids:
                 emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": media_item_ids})
-        flash("Person updated", "success")
+        flash(gettext("Person updated"), "success")
         update_person_embedding(person_id, db.session)
         return redirect(request.referrer or url_for("faces_index"))

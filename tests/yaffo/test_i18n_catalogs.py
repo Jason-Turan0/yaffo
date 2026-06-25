@@ -169,3 +169,30 @@ def test_faces_javascript_uses_catalog_keys_and_receives_i18n_service():
     assert "faces:people.nameRequired" in source
     assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
     assert "ngettext:1,2" in babel_config
+
+
+def test_people_list_uses_catalog_keys_and_delegated_actions():
+    source = Path("yaffo/static/people/list.js").read_text(encoding="utf-8")
+    select_source = Path("yaffo/static/searchable-select.js").read_text(encoding="utf-8")
+    template = Path("yaffo/templates/people/list.html").read_text(encoding="utf-8")
+
+    assert "people:delete.message" in source
+    assert "window.PHOTO_ORGANIZER.confirmDialog" in source
+    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+    assert 'data-action="edit"' in template
+    assert 'data-action="delete"' in template
+    assert "onclick=" not in template
+    assert "this.select.addEventListener('change'" in select_source
+
+
+def test_person_faces_uses_catalog_keys_and_page_initializer():
+    source = Path("yaffo/static/people/faces.js").read_text(encoding="utf-8")
+    template = Path("yaffo/templates/people/faces.html").read_text(encoding="utf-8")
+
+    assert "window.PHOTO_ORGANIZER.initPersonFaces" in source
+    assert "people:faces.selectRequired" in source
+    assert "people:faces.removeMessage" in source
+    assert "window.PHOTO_ORGANIZER.confirmDialog" in source
+    assert "alert(" not in source
+    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+    assert "onclick=" not in template

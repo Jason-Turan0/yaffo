@@ -2,7 +2,7 @@
 {% extends "base.html" %}
 {% from "components/page_header.html" import page_header %}
 
-{% block title %}People - Yaffo{% endblock %}
+{% block title %}{{ _("People - Yaffo") }}{% endblock %}
 
 {% block extra_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='people/list.css') }}">
@@ -11,21 +11,21 @@
 {% block content %}
 <div class="main-content">
     {% set header_actions %}
-        <button class="btn-primary" data-icon="add" onclick="window.PHOTO_ORGANIZER.peopleList.openAddModal()">Add Person</button>
+        <button type="button" class="btn-primary js-add-person" data-icon="add">{{ _("Add Person") }}</button>
     {% endset %}
-    {{ page_header('People', actions=header_actions) }}
+    {{ page_header(_("People"), actions=header_actions) }}
 
     {% if people|length > 0 %}
     <div class="people-table">
         <table>
             <thead>
             <tr>
-                <th>Name</th>
-                <th>Gender</th>
-                <th>Born</th>
-                <th>Faces</th>
-                <th>Photos</th>
-                <th>Actions</th>
+                <th>{{ _("Name") }}</th>
+                <th>{{ _("Gender") }}</th>
+                <th>{{ _("Born") }}</th>
+                <th>{{ _("Faces") }}</th>
+                <th>{{ _("Photos") }}</th>
+                <th>{{ _("Actions") }}</th>
             </tr>
             </thead>
             <tbody>
@@ -33,16 +33,16 @@
             <tr>
                 <td>
                     <a href="{{ url_for('person_faces', person_id=person.id) }}"
-                       class="person-name row-link">{{ person.name or "Unnamed" }}</a>
+                       class="person-name row-link">{{ person.name or _("Unnamed") }}</a>
                 </td>
                 <td>
-                    {% if person.gender == 1 %}Male
-                    {% elif person.gender == 0 %}Female
+                    {% if person.gender == 1 %}{{ _("Male") }}
+                    {% elif person.gender == 0 %}{{ _("Female") }}
                     {% else %}—{% endif %}
                 </td>
                 <td>
-                    {% if person.birthdate %}{{ person.birthdate.isoformat() }}
-                    {% elif person.estimated_birthdate %}<span class="hint-text" title="estimated">~{{ person.estimated_birthdate.year }}</span>
+                    {% if person.birthdate %}{{ person.birthdate | format_date("date") }}
+                    {% elif person.estimated_birthdate %}<span class="hint-text" title="{{ _('Estimated') }}">~{{ person.estimated_birthdate.year | format_integer }}</span>
                     {% else %}—{% endif %}
                 </td>
                 <td>
@@ -54,9 +54,15 @@
                 <td>
                     <div class="actions">
                         <a href="#" class="action-link"
-                           onclick="window.PHOTO_ORGANIZER.peopleList.openEditModal({{ person.id }}, '{{ person.name }}', '{{ person.birthdate.isoformat() if person.birthdate else '' }}', {{ person.gender if person.gender is not none else 'null' }}); return false;">Edit</a>
+                           data-action="edit"
+                           data-person-id="{{ person.id }}"
+                           data-person-name="{{ person.name or '' }}"
+                           data-person-birthdate="{{ person.birthdate.isoformat() if person.birthdate else '' }}"
+                           data-person-gender="{{ person.gender if person.gender is not none else '' }}">{{ _("Edit") }}</a>
                         <a href="#" class="action-link delete"
-                           onclick="window.PHOTO_ORGANIZER.peopleList.confirmDelete({{ person.id }}, '{{ person.name }}'); return false;">Delete</a>
+                           data-action="delete"
+                           data-person-id="{{ person.id }}"
+                           data-person-name="{{ person.name or '' }}">{{ _("Delete") }}</a>
                     </div>
                 </td>
             </tr>
@@ -67,51 +73,46 @@
 </div>
 {% else %}
 <div class="empty-state">
-    <h2>No people yet</h2>
-    <p>Add your first person to start organizing photos.</p>
-    <button class="btn-primary btn-add" data-icon="add" onclick="window.PHOTO_ORGANIZER.peopleList.openAddModal()">Add Person</button>
+    <h2>{{ _("No people yet") }}</h2>
+    <p>{{ _("Add your first person to start organizing photos.") }}</p>
+    <button type="button" class="btn-primary btn-add js-add-person" data-icon="add">{{ _("Add Person") }}</button>
 </div>
 {% endif %}
 
 {% from "components/modal.html" import render_modal  %}
 {% macro render_modal_person_form(id_prefix) %}
 <div class="form-group">
-    <label for="{{ id_prefix }}PersonName">Name</label>
+    <label for="{{ id_prefix }}PersonName">{{ _("Name") }}</label>
     <input type="text" id="{{ id_prefix }}PersonName" name="name" required autofocus>
 </div>
 <div class="form-group">
-    <label for="{{ id_prefix }}PersonGender">Gender</label>
-    <select id="{{ id_prefix }}PersonGender" name="gender">
-        <option value="">Not specified</option>
-        <option value="1">Male</option>
-        <option value="0">Female</option>
+    <label for="{{ id_prefix }}PersonGender">{{ _("Gender") }}</label>
+    <select id="{{ id_prefix }}PersonGender" name="gender" class="searchable-select" data-search-disabled>
+        <option value="">{{ _("Not specified") }}</option>
+        <option value="1">{{ _("Male") }}</option>
+        <option value="0">{{ _("Female") }}</option>
     </select>
-    <p class="hint-text">Choose “Not specified” to clear the saved gender.</p>
+    <p class="hint-text">{{ _("Choose “Not specified” to clear the saved gender.") }}</p>
 </div>
 <div class="form-group">
-    <label for="{{ id_prefix }}PersonBirthdate">Birthdate</label>
+    <label for="{{ id_prefix }}PersonBirthdate">{{ _("Birthdate") }}</label>
     <input type="date" id="{{ id_prefix }}PersonBirthdate" name="birthdate">
-    <p class="hint-text">Used to improve the performance of the facial recognition algorithms.</p>
+    <p class="hint-text">{{ _("Used to improve facial recognition accuracy.") }}</p>
 </div>
 {% endmacro %}
 {% macro render_modal_add_person_form() %}{{ render_modal_person_form('add') }}{% endmacro %}
 {% macro render_modal_edit_person_form() %}{{ render_modal_person_form('edit') }}{% endmacro %}
-{% macro render_modal_delete_person_form() %}
-<div class="form-group">
-    <p>Are you sure you want to delete <strong id="deletePersonName"></strong>?</p>
-    <p class="hint-text">This will unassign all their faces but won't delete the photos.</p>
-</div>
-{% endmacro %}
 
-{{ render_modal('addModal', "Add Person",  url_for("people_create") , render_modal_add_person_form) }}
-{{ render_modal('editModal', "Edit Person", url_for("people_create") , render_modal_edit_person_form) }}
-{{ render_modal('deleteModal', "Delete Person",  url_for("people_create") , render_modal_delete_person_form, "Delete", "btn-danger") }}
+{{ render_modal('addModal', _("Add Person"), url_for("people_create"), render_modal_add_person_form) }}
+{{ render_modal('editModal', _("Edit Person"), url_for("people_create"), render_modal_edit_person_form) }}
 
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='people/list.js') }}"></script>
 <script>
-    window.PHOTO_ORGANIZER.peopleList = window.PHOTO_ORGANIZER.initPeopleList(window.APP_CONFIG);
+    window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+        window.PHOTO_ORGANIZER.peopleList = window.PHOTO_ORGANIZER.initPeopleList(i18n, window.APP_CONFIG);
+    });
 </script>
 {% endblock %}

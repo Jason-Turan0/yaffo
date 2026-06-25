@@ -138,6 +138,19 @@
       "valueOptional": "Tag-Wert (optional)"
     }
   },
+  "people": {
+    "delete": {
+      "message": "{{name}} löschen? Dadurch werden alle zugewiesenen Gesichter entfernt, die Fotos jedoch nicht gelöscht.",
+      "title": "Person löschen"
+    },
+    "faces": {
+      "removeConfirm": "Entfernen",
+      "removeMessage_one": "Das ausgewählte Gesicht von dieser Person entfernen?",
+      "removeMessage_other": "Die {{count}} ausgewählten Gesichter von dieser Person entfernen?",
+      "removeTitle": "Gesichter entfernen",
+      "selectRequired": "Wählen Sie mindestens ein zu entfernendes Gesicht aus"
+    }
+  },
   "settings": {
     "applicationLanguage": "Anwendungssprache",
     "language": "Sprache",
