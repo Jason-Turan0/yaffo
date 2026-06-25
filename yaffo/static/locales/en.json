@@ -138,6 +138,34 @@
       "valueOptional": "Tag value (optional)"
     }
   },
+  "locations": {
+    "popup": {
+      "selectPhoto_one": "Select photo ({{total}} total):",
+      "selectPhoto_other": "Select photo ({{total}} total):"
+    },
+    "selection": {
+      "assignAll": "Assign to All",
+      "clearSelection": "Clear Selection",
+      "customLocation": "Or enter custom location",
+      "massAssignment": "Mass Assignment",
+      "photoCount_one": "{{formattedCount}} photo",
+      "photoCount_other": "{{formattedCount}} photos",
+      "quickAssign": "Quick assign:",
+      "recommended": "Recommended:",
+      "selectedClusters": "Selected clusters:",
+      "summaryOneOne": "{{photos}} photo in {{clusters}} cluster",
+      "summaryOneOther": "{{photos}} photo in {{clusters}} clusters",
+      "summaryOtherOne": "{{photos}} photos in {{clusters}} cluster",
+      "summaryOtherOther": "{{photos}} photos in {{clusters}} clusters"
+    },
+    "unknownLocation": "Unknown Location",
+    "update": {
+      "failed": "Failed to update locations",
+      "nameRequired": "Please enter a location name",
+      "succeeded_one": "Updated {{count}} photo to \"{{location}}\"",
+      "succeeded_other": "Updated {{count}} photos to \"{{location}}\""
+    }
+  },
   "people": {
     "delete": {
       "message": "Delete {{name}}? This will unassign all their faces but won't delete the photos.",

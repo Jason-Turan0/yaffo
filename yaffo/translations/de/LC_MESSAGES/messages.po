@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 07:04-0500\n"
+"POT-Creation-Date: 2026-06-25 07:12-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -72,6 +72,22 @@ msgstr "Elemente müssen als Liste angegeben werden"
 #: yaffo/routes/home.py:323
 msgid "The tag_name parameter is required"
 msgstr "Der Parameter tag_name ist erforderlich"
+
+#: yaffo/routes/locations.py:56
+msgid "Media item IDs and location name are required"
+msgstr "Medienelement-IDs und Ortsname sind erforderlich"
+
+#: yaffo/routes/locations.py:80
+msgid "Could not update locations"
+msgstr "Orte konnten nicht aktualisiert werden"
+
+#: yaffo/routes/locations.py:93
+msgid "Latitude and longitude are required"
+msgstr "Breiten- und Längengrad sind erforderlich"
+
+#: yaffo/routes/locations.py:100
+msgid "Could not determine a location name"
+msgstr "Es konnte kein Ortsname ermittelt werden"
 
 #: yaffo/routes/media.py:24 yaffo/routes/media.py:231 yaffo/routes/media.py:248
 msgid "Photo not found"
@@ -238,6 +254,7 @@ msgstr "Neue Seite"
 #: yaffo/templates/base.html:152 yaffo/templates/components/info_modal.html:6
 #: yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
+#: yaffo/templates/locations/list.html:34
 msgid "Close"
 msgstr "Schließen"
 
@@ -875,6 +892,24 @@ msgstr "Ergebnisse anzeigen"
 #: yaffo/templates/people/list.html:65
 msgid "Delete"
 msgstr "Löschen"
+
+#: yaffo/templates/locations/list.html:3
+msgid "Locations - Yaffo"
+msgstr "Orte - Yaffo"
+
+#: yaffo/templates/locations/list.html:18
+msgid "Only show photos without location names"
+msgstr "Nur Fotos ohne Ortsnamen anzeigen"
+
+#: yaffo/templates/locations/list.html:21
+msgid "Photo Locations"
+msgstr "Fotoorte"
+
+#: yaffo/templates/locations/list.html:22
+msgid "Hold <kbd>Shift</kbd> and drag to select multiple clusters"
+msgstr ""
+"Halten Sie <kbd>Umschalt</kbd> gedrückt und ziehen Sie, um mehrere Gruppen "
+"auszuwählen"
 
 #: yaffo/templates/media/view.html:15
 msgid "Photo Details"

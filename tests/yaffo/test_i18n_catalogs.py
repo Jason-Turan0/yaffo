@@ -196,3 +196,17 @@ def test_person_faces_uses_catalog_keys_and_page_initializer():
     assert "alert(" not in source
     assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
     assert "onclick=" not in template
+
+
+def test_locations_map_uses_catalog_keys_and_application_config():
+    source = Path("yaffo/static/locations/list.js").read_text(encoding="utf-8")
+    template = Path("yaffo/templates/locations/list.html").read_text(encoding="utf-8")
+
+    assert "locations:selection.massAssignment" in source
+    assert "locations:update.succeeded" in source
+    assert "locations:unknownLocation" in source
+    assert "config.urls.locations_bulk_update" in source
+    assert "config.urls.reverse_geocode_route" in source
+    assert "window.APP_CONFIG.buildUrl" not in source
+    assert "fetch('/locations/" not in source
+    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template

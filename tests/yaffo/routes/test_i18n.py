@@ -291,6 +291,53 @@ def test_saved_locale_translates_person_face_removal_validation(client, app):
     assert "Keine Gesichter ausgewählt" in body
 
 
+def test_saved_locale_translates_locations_page(client, app):
+    with app.app_context():
+        db.session.add(
+            MediaItem(
+                full_file_path="/library/example.jpg",
+                latitude=52.52,
+                longitude=13.405,
+                location_name="Berlin",
+            )
+        )
+        db.session.commit()
+
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get("/locations").get_data(as_text=True)
+
+    assert "<title>Orte - Yaffo</title>" in body
+    assert "Fotoorte" in body
+    assert "Nur Fotos ohne Ortsnamen anzeigen" in body
+    assert "<kbd>Umschalt</kbd>" in body
+    assert 'aria-label="Schließen"' in body
+    assert '"name": "Berlin"' in body
+
+
+def test_saved_locale_translates_locations_bulk_update_validation(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    response = client.post("/locations/bulk-update", json={})
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "Medienelement-IDs und Ortsname sind erforderlich",
+        "code": "location_fields_required",
+    }
+
+
+def test_saved_locale_translates_reverse_geocode_validation(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    response = client.post("/locations/reverse-geocode", json={})
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "Breiten- und Längengrad sind erforderlich",
+        "code": "coordinates_required",
+    }
+
+
 def test_settings_locale_rejects_unsupported_locale(client):
     response = client.post("/settings/locale", data={"locale": "fr"})
 

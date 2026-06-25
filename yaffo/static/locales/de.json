@@ -138,6 +138,34 @@
       "valueOptional": "Tag-Wert (optional)"
     }
   },
+  "locations": {
+    "popup": {
+      "selectPhoto_one": "Foto auswählen (insgesamt {{total}}):",
+      "selectPhoto_other": "Foto auswählen (insgesamt {{total}}):"
+    },
+    "selection": {
+      "assignAll": "Allen zuweisen",
+      "clearSelection": "Auswahl aufheben",
+      "customLocation": "Oder einen benutzerdefinierten Ort eingeben",
+      "massAssignment": "Massenzuweisung",
+      "photoCount_one": "{{formattedCount}} Foto",
+      "photoCount_other": "{{formattedCount}} Fotos",
+      "quickAssign": "Schnell zuweisen:",
+      "recommended": "Empfohlen:",
+      "selectedClusters": "Ausgewählte Gruppen:",
+      "summaryOneOne": "{{photos}} Foto in {{clusters}} Gruppe",
+      "summaryOneOther": "{{photos}} Foto in {{clusters}} Gruppen",
+      "summaryOtherOne": "{{photos}} Fotos in {{clusters}} Gruppe",
+      "summaryOtherOther": "{{photos}} Fotos in {{clusters}} Gruppen"
+    },
+    "unknownLocation": "Unbekannter Ort",
+    "update": {
+      "failed": "Orte konnten nicht aktualisiert werden",
+      "nameRequired": "Bitte geben Sie einen Ortsnamen ein",
+      "succeeded_one": "{{count}} Foto wurde auf „{{location}}“ aktualisiert",
+      "succeeded_other": "{{count}} Fotos wurden auf „{{location}}“ aktualisiert"
+    }
+  },
   "people": {
     "delete": {
       "message": "{{name}} löschen? Dadurch werden alle zugewiesenen Gesichter entfernt, die Fotos jedoch nicht gelöscht.",

@@ -1,6 +1,17 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
-window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
+window.PHOTO_ORGANIZER.initLocationsMap = (locations, i18n, config) => {
+    const escapeHtml = (value) => String(value ?? '').replace(
+        /[&<>"']/g,
+        (character) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        })[character],
+    );
+    const unknownLocation = i18n.t('locations:unknownLocation');
     const tokens = getComputedStyle(document.documentElement);
     const markerColors = {
         base: tokens.getPropertyValue('--color-accent').trim(),
@@ -67,7 +78,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                             })
                         }),
                         text: new ol.style.Text({
-                            text: size.toString(),
+                            text: i18n.number(size),
                             fill: new ol.style.Fill({ color: markerColors.contrast }),
                             font: 'bold 12px sans-serif'
                         })
@@ -142,32 +153,33 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
 
     map.addOverlay(overlay);
 
-    popupCloser.onclick = function() {
+    popupCloser.addEventListener('click', (event) => {
+        event.preventDefault();
         overlay.setPosition(undefined);
         popupCloser.blur();
-        return false;
-    };
+    });
 
-    // A video's /media/<id> is the raw clip, not an image — so the popup thumbnail
+    // A video's media route returns the raw clip, so the popup thumbnail
     // points at its poster frame (falling back to the placeholder when there's no
     // poster, via data-fallback + initImageFallbacks). Photos use /media directly.
     const thumbUrl = (item) => item.media_type === 'video'
-        ? window.APP_CONFIG.buildUrl('media_poster', { media_item_id: item.id })
-        : window.APP_CONFIG.buildUrl('media', { media_item_id: item.id });
+        ? config.buildUrl('media_poster', { media_item_id: item.id })
+        : config.buildUrl('media', { media_item_id: item.id });
 
-    const fallbackUrl = window.APP_CONFIG.urls.placeholder;
+    const fallbackUrl = config.urls.placeholder;
 
     const showPhotoInPopup = (photoData, coordinate) => {
-        const photoViewUrl = window.APP_CONFIG.buildUrl('media_view', { media_item_id: photoData.id });
+        const photoViewUrl = config.buildUrl('media_view', { media_item_id: photoData.id });
+        const safeName = escapeHtml(photoData.name);
 
         popupContent.innerHTML = `
             <div class="popup-photo-container">
                 <a href="${photoViewUrl}" target="_blank">
-                    <img src="${thumbUrl(photoData)}" data-fallback="${fallbackUrl}" alt="${photoData.name}" class="popup-photo">
+                    <img src="${thumbUrl(photoData)}" data-fallback="${fallbackUrl}" alt="${safeName}" class="popup-photo">
                 </a>
             </div>
-            <h3>${photoData.name}</h3>
-            <p class="photo-location">${photoData.location || 'Unknown Location'}</p>
+            <h3>${safeName}</h3>
+            <p class="photo-location">${escapeHtml(photoData.location || unknownLocation)}</p>
         `;
         window.PHOTO_ORGANIZER.utils.initImageFallbacks();
         overlay.setPosition(coordinate);
@@ -193,26 +205,30 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
 
                 const selectId = 'photo-select-' + Date.now();
                 const selectOptions = photosData.map((photo, idx) =>
-                    `<option value="${idx}">${photo.name}</option>`
+                    `<option value="${idx}">${escapeHtml(photo.name)}</option>`
                 ).join('');
 
                 const firstPhoto = photosData[0];
-                const photoViewUrl = window.APP_CONFIG.buildUrl('media_view', { media_item_id: firstPhoto.id });
+                const photoViewUrl = config.buildUrl('media_view', { media_item_id: firstPhoto.id });
+                const safeFirstName = escapeHtml(firstPhoto.name);
 
                 popupContent.innerHTML = `
                     <div class="popup-select-container">
-                        <label for="${selectId}">Select Photo (${photosData.length} total):</label>
+                        <label for="${selectId}">${escapeHtml(i18n.t('locations:popup.selectPhoto', {
+                            count: photosData.length,
+                            total: i18n.number(photosData.length),
+                        }))}</label>
                         <select id="${selectId}" class="photo-select searchable-select">
                             ${selectOptions}
                         </select>
                     </div>
                     <div class="popup-photo-container">
                         <a id="photo-link" href="${photoViewUrl}" target="_blank">
-                            <img id="photo-img" src="${thumbUrl(firstPhoto)}" data-fallback="${fallbackUrl}" alt="${firstPhoto.name}" class="popup-photo">
+                            <img id="photo-img" src="${thumbUrl(firstPhoto)}" data-fallback="${fallbackUrl}" alt="${safeFirstName}" class="popup-photo">
                         </a>
                     </div>
-                    <h3 id="photo-name">${firstPhoto.name}</h3>
-                    <p class="photo-location">${firstPhoto.location || 'Unknown Location'}</p>
+                    <h3 id="photo-name">${safeFirstName}</h3>
+                    <p class="photo-location">${escapeHtml(firstPhoto.location || unknownLocation)}</p>
                 `;
                 window.PHOTO_ORGANIZER.utils.initImageFallbacks();
 
@@ -222,14 +238,15 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                     const selectedIndex = parseInt(e.target.value);
                     const selectedPhoto = photosData[selectedIndex];
 
-                    const newPhotoViewUrl = window.APP_CONFIG.buildUrl('media_view', { media_item_id: selectedPhoto.id });
+                    const newPhotoViewUrl = config.buildUrl('media_view', { media_item_id: selectedPhoto.id });
 
                     const img = document.getElementById('photo-img');
                     img.src = thumbUrl(selectedPhoto);
                     img.alt = selectedPhoto.name;
                     document.getElementById('photo-link').href = newPhotoViewUrl;
                     document.getElementById('photo-name').textContent = selectedPhoto.name;
-                    document.querySelector('.photo-location').textContent = selectedPhoto.location || 'Unknown Location';
+                    document.querySelector('.photo-location').textContent =
+                        selectedPhoto.location || unknownLocation;
                     // Re-arm the fallback for the swapped src (the handler is once-only).
                     window.PHOTO_ORGANIZER.utils.initImageFallbacks();
                 });
@@ -278,7 +295,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
 
     const getRecommendedLocation = async (lat, lon) => {
         try {
-            const response = await fetch('/locations/reverse-geocode', {
+            const response = await fetch(config.urls.reverse_geocode_route, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -311,13 +328,13 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
 
             const locationCounts = {};
             features.forEach(f => {
-                const locationName = f.get('name') || 'Unknown Location';
+                const locationName = f.get('name') || unknownLocation;
                 locationCounts[locationName] = (locationCounts[locationName] || 0) + 1;
             });
 
             const locationBreakdown = Object.entries(locationCounts)
                 .sort((a, b) => b[1] - a[1])
-                .map(([name, count]) => `${count} ${name}`)
+                .map(([name, count]) => `${i18n.number(count)} ${name}`)
                 .join(', ');
 
             const centroid = calculateCentroid(features);
@@ -339,7 +356,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
         const allLocationCounts = {};
         selectedClusters.forEach(cluster => {
             Object.entries(cluster.locationCounts).forEach(([name, count]) => {
-                if (name !== 'Unknown Location') {
+                if (name !== unknownLocation) {
                     allLocationCounts[name] = (allLocationCounts[name] || 0) + count;
                 }
             });
@@ -348,23 +365,28 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
         const sortedLocations = Object.entries(allLocationCounts)
             .sort((a, b) => b[1] - a[1]);
 
+        const summaryKey = `locations:selection.summary${
+            totalPhotos === 1 ? 'One' : 'Other'
+        }${selectedClusters.length === 1 ? 'One' : 'Other'}`;
         panelContent.innerHTML = `
-            <h3>Mass Assignment</h3>
+            <h3>${escapeHtml(i18n.t('locations:selection.massAssignment'))}</h3>
             <div class="mass-assignment-info">
-                <strong>${totalPhotos} photo${totalPhotos > 1 ? 's' : ''}</strong> in
-                <strong>${selectedClusters.length} cluster${selectedClusters.length > 1 ? 's' : ''}</strong>
+                ${escapeHtml(i18n.t(summaryKey, {
+                    photos: i18n.number(totalPhotos),
+                    clusters: i18n.number(selectedClusters.length),
+                }))}
             </div>
 
             ${sortedLocations.length > 0 ? `
                 <div class="quick-actions">
-                    <div class="quick-action-label">Quick assign:</div>
+                    <div class="quick-action-label">${escapeHtml(i18n.t('locations:selection.quickAssign'))}</div>
                     <div class="quick-actions-buttons">
                         ${sortedLocations.map(([name, count]) => `
                             <button class="btn-quick-assign"
                                     data-photo-ids="${allPhotoIds.join(',')}"
-                                    data-location-name="${name}"
-                                    title="${name} (${count})">
-                                ${name} (${count})
+                                    data-location-name="${escapeHtml(name)}"
+                                    title="${escapeHtml(name)} (${i18n.number(count)})">
+                                ${escapeHtml(name)} (${i18n.number(count)})
                             </button>
                         `).join('')}
                     </div>
@@ -374,33 +396,36 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
             <div class="cluster-assign">
                 <input type="text"
                        class="location-input"
-                       placeholder="Or enter custom location"
+                       placeholder="${escapeHtml(i18n.t('locations:selection.customLocation'))}"
                        id="mass-location-input">
                 <button class="btn btn-primary btn-assign"
                         data-photo-ids="${allPhotoIds.join(',')}"
                         id="mass-assign-btn">
-                    Assign to All
+                    ${escapeHtml(i18n.t('locations:selection.assignAll'))}
                 </button>
             </div>
 
             <div class="clusters-summary">
-                <div class="summary-label">Selected clusters:</div>
+                <div class="summary-label">${escapeHtml(i18n.t('locations:selection.selectedClusters'))}</div>
                 <div class="clusters-list">
                     ${selectedClusters.map(cluster => `
                         <div class="cluster-summary-item">
-                            <strong>${cluster.photoCount} photo${cluster.photoCount > 1 ? 's' : ''}</strong>
-                            <span class="current-location">${cluster.locationBreakdown}</span>
+                            <strong>${escapeHtml(i18n.t('locations:selection.photoCount', {
+                                count: cluster.photoCount,
+                                formattedCount: i18n.number(cluster.photoCount),
+                            }))}</strong>
+                            <span class="current-location">${escapeHtml(cluster.locationBreakdown)}</span>
                         </div>
                     `).join('')}
                 </div>
             </div>
 
-            <button class="btn btn-secondary btn-block btn-clear-selection">Clear Selection</button>
+            <button class="btn btn-secondary btn-block btn-clear-selection">${escapeHtml(i18n.t('locations:selection.clearSelection'))}</button>
         `;
 
         const assignLocation = async (photoIds, locationName) => {
             try {
-                const response = await fetch('/locations/bulk-update', {
+                const response = await fetch(config.urls.locations_bulk_update, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -412,7 +437,10 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                 });
 
                 if (response.ok) {
-                    window.notification.success(`Updated ${photoIds.length} photo(s) to "${locationName}"`);
+                    window.notification.success(i18n.t('locations:update.succeeded', {
+                        count: photoIds.length,
+                        location: locationName,
+                    }));
 
                     allFeatures.forEach(feature => {
                         const featureId = feature.get('id');
@@ -434,11 +462,14 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
 
                     return true;
                 } else {
-                    window.notification.error('Failed to update locations');
+                    const data = await response.json().catch(() => ({}));
+                    window.notification.error(
+                        data.error || i18n.t('locations:update.failed'),
+                    );
                     return false;
                 }
             } catch (error) {
-                window.notification.error('Error updating locations');
+                window.notification.error(i18n.t('locations:update.failed'));
                 console.error(error);
                 return false;
             }
@@ -460,7 +491,7 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                 const newLocationName = input.value.trim();
 
                 if (!newLocationName) {
-                    window.notification.error('Please enter a location name');
+                    window.notification.error(i18n.t('locations:update.nameRequired'));
                     return;
                 }
 
@@ -488,12 +519,12 @@ window.PHOTO_ORGANIZER.initLocationsMap = (locations) => {
                     const recommendedSection = document.createElement('div');
                     recommendedSection.className = 'quick-actions';
                     recommendedSection.innerHTML = `
-                        <div class="quick-action-label">Recommended:</div>
+                        <div class="quick-action-label">${escapeHtml(i18n.t('locations:selection.recommended'))}</div>
                         <button class="btn-quick-assign btn-recommended"
                                 data-photo-ids="${allPhotoIds.join(',')}"
-                                data-location-name="${recommendedLocation}"
-                                title="${recommendedLocation}">
-                            ${recommendedLocation}
+                                data-location-name="${escapeHtml(recommendedLocation)}"
+                                title="${escapeHtml(recommendedLocation)}">
+                            ${escapeHtml(recommendedLocation)}
                         </button>
                     `;
 

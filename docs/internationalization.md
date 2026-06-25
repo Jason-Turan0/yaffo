@@ -509,7 +509,8 @@ Status as of June 25, 2026:
   modules.
 - [x] Phase 4.1: home gallery and media details vertical slice.
 - [x] Phase 4.2: faces and people workflows.
-- [ ] Phase 4.3–4.9: remaining feature screens and LLM prompt behavior.
+- [x] Phase 4.3: locations map/list.
+- [ ] Phase 4.4–4.9: remaining feature screens and LLM prompt behavior.
 - [ ] Phase 5: translation and release-readiness work.
 
 The completed home/media slice includes:
@@ -596,7 +597,7 @@ and tests:
 
 - [x] Home gallery and media details.
 - [x] Faces and people.
-- [ ] Locations.
+- [x] Locations.
 - [ ] Settings.
 - [ ] Indexing and duplicate utilities.
 - [ ] Automations.
@@ -625,7 +626,7 @@ route modules and browser-facing errors are part of the same checklist item.
   `templates/people/list.html`, `static/people/list.js`, and `routes/people.py`.
 - [x] Person face gallery and reassignment/removal workflow:
   `templates/people/faces.html` and `static/people/faces.js`.
-- [ ] Locations map/list:
+- [x] Locations map/list:
   `templates/locations/list.html`, `static/locations/list.js`, and
   `routes/locations.py`.
 - [ ] Settings media-directory controls:

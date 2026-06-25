@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 07:04-0500\n"
+"POT-Creation-Date: 2026-06-25 07:12-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -70,6 +70,22 @@ msgstr ""
 
 #: yaffo/routes/home.py:323
 msgid "The tag_name parameter is required"
+msgstr ""
+
+#: yaffo/routes/locations.py:56
+msgid "Media item IDs and location name are required"
+msgstr ""
+
+#: yaffo/routes/locations.py:80
+msgid "Could not update locations"
+msgstr ""
+
+#: yaffo/routes/locations.py:93
+msgid "Latitude and longitude are required"
+msgstr ""
+
+#: yaffo/routes/locations.py:100
+msgid "Could not determine a location name"
 msgstr ""
 
 #: yaffo/routes/media.py:24 yaffo/routes/media.py:231 yaffo/routes/media.py:248
@@ -237,6 +253,7 @@ msgstr ""
 #: yaffo/templates/base.html:152 yaffo/templates/components/info_modal.html:6
 #: yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
+#: yaffo/templates/locations/list.html:34
 msgid "Close"
 msgstr ""
 
@@ -839,6 +856,22 @@ msgstr ""
 #: yaffo/templates/fragments/job_status_fragment.html:28
 #: yaffo/templates/people/list.html:65
 msgid "Delete"
+msgstr ""
+
+#: yaffo/templates/locations/list.html:3
+msgid "Locations - Yaffo"
+msgstr ""
+
+#: yaffo/templates/locations/list.html:18
+msgid "Only show photos without location names"
+msgstr ""
+
+#: yaffo/templates/locations/list.html:21
+msgid "Photo Locations"
+msgstr ""
+
+#: yaffo/templates/locations/list.html:22
+msgid "Hold <kbd>Shift</kbd> and drag to select multiple clusters"
 msgstr ""
 
 #: yaffo/templates/media/view.html:15

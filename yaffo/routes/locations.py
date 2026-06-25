@@ -1,5 +1,6 @@
 import os
 from flask import Flask, render_template, jsonify, request
+from flask_babel import gettext
 from sqlalchemy import func
 
 from yaffo.db import db
@@ -45,12 +46,16 @@ def init_locations_routes(app: Flask):
     @app.route("/locations/bulk-update", methods=["POST"])
     def locations_bulk_update():
         """Bulk update location names for multiple photos"""
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         media_item_ids = data.get('media_item_ids', [])
-        location_name = data.get('location_name', '').strip()
+        raw_location_name = data.get('location_name')
+        location_name = raw_location_name.strip() if isinstance(raw_location_name, str) else ""
 
         if not media_item_ids or not location_name:
-            return jsonify({'error': 'Invalid request'}), 400
+            return jsonify({
+                'error': gettext("Media item IDs and location name are required"),
+                'code': 'location_fields_required',
+            }), 400
 
         try:
             updated_count = (
@@ -69,23 +74,32 @@ def init_locations_routes(app: Flask):
                 'updated_count': updated_count,
                 'location_name': location_name
             })
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({
+                'error': gettext("Could not update locations"),
+                'code': 'location_update_failed',
+            }), 500
 
     @app.route("/locations/reverse-geocode", methods=["POST"])
     def reverse_geocode_route():
         """Reverse geocode a lat/lon coordinate using OpenStreetMap Nominatim"""
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         lat = data.get('lat')
         lon = data.get('lon')
 
         if lat is None or lon is None:
-            return jsonify({'error': 'Invalid request'}), 400
+            return jsonify({
+                'error': gettext("Latitude and longitude are required"),
+                'code': 'coordinates_required',
+            }), 400
 
         location_name = reverse_geocode(lat, lon)
         if location_name is None:
-            return jsonify({'error': 'Geocoding failed'}), 500
+            return jsonify({
+                'error': gettext("Could not determine a location name"),
+                'code': 'reverse_geocode_failed',
+            }), 500
 
         return jsonify({
             'success': True,
