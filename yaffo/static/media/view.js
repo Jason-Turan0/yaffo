@@ -1,6 +1,12 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
-window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (faceData, absoluteFilePath, absoluteFolderPath, config) => {
+window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
+    faceData,
+    absoluteFilePath,
+    absoluteFolderPath,
+    i18n,
+    config
+) => {
     let canvas, ctx, mainPhoto;
 
     const initializeFaceHighlighting = () => {
@@ -93,13 +99,13 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (faceData, absoluteFilePath, a
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                notification.error('Failed to open file: ' + data.error);
+                notification.error(i18n.t('media:actions.openFileFailedWithReason', { reason: data.error }));
             } else {
-                notification.success('Opening file in default application');
+                notification.success(i18n.t('media:actions.openingFile'));
             }
         })
         .catch(error => {
-            notification.error('Failed to open file');
+            notification.error(i18n.t('media:actions.openFileFailed'));
             console.error('Error:', error);
         });
     };
@@ -115,13 +121,13 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (faceData, absoluteFilePath, a
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                notification.error('Failed to open folder: ' + data.error);
+                notification.error(i18n.t('media:actions.openFolderFailedWithReason', { reason: data.error }));
             } else {
-                notification.success('Opening folder in file manager');
+                notification.success(i18n.t('media:actions.openingFolder'));
             }
         })
         .catch(error => {
-            notification.error('Failed to open folder');
+            notification.error(i18n.t('media:actions.openFolderFailed'));
             console.error('Error:', error);
         });
     };

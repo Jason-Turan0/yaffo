@@ -2,7 +2,7 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
 // Configure-filters modal: drag-and-drop reorder, show/hide checkboxes, reset to
 // defaults, and save (POST the layout, then reload so the sidebar re-renders).
-window.PHOTO_ORGANIZER.initFilterConfig = (config) => {
+window.PHOTO_ORGANIZER.initFilterConfig = (i18n, config) => {
     const trigger = document.getElementById('configure-filters-btn');
     const list = document.getElementById('filter-config-list');
     if (!trigger || !list) return;  // sidebar without the configurable layout
@@ -68,7 +68,7 @@ window.PHOTO_ORGANIZER.initFilterConfig = (config) => {
             if (!res.ok) throw new Error('save failed');
             window.location.reload();
         } catch (err) {
-            notification.error('Could not save filter settings');
+            notification.error(i18n.t('media:filters.saveFailed'));
         }
     });
 };

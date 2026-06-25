@@ -3,7 +3,7 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 // Wires every favorite heart on the page: the detail view's single toggle and each
 // home-grid card's. Buttons carry .favorite-toggle + data-photo-id; the click is
 // stopped from bubbling so a card's open-photo handler doesn't also fire.
-window.PHOTO_ORGANIZER.initFavoriteToggles = (config) => {
+window.PHOTO_ORGANIZER.initFavoriteToggles = (i18n, config) => {
     const toggle = async (button) => {
         const photoId = button.dataset.photoId;
         button.disabled = true;
@@ -17,7 +17,7 @@ window.PHOTO_ORGANIZER.initFavoriteToggles = (config) => {
             button.classList.toggle('is-favorite', !!data.favorite);
             button.setAttribute('aria-pressed', data.favorite ? 'true' : 'false');
         } catch (error) {
-            notification.error('Failed to update favorite');
+            notification.error(i18n.t('media:favorite.updateFailed'));
             console.error('Error:', error);
         } finally {
             button.disabled = false;

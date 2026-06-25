@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 00:07-0500\n"
+"POT-Creation-Date: 2026-06-25 00:28-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,63 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+#: yaffo/routes/home.py:257
+msgid "Male"
+msgstr ""
+
+#: yaffo/routes/home.py:258
+msgid "Female"
+msgstr ""
+
+#: yaffo/routes/home.py:308
+msgid "Items must be a list"
+msgstr ""
+
+#: yaffo/routes/home.py:323
+msgid "The tag_name parameter is required"
+msgstr ""
+
+#: yaffo/routes/media.py:24 yaffo/routes/media.py:231 yaffo/routes/media.py:248
+msgid "Photo not found"
+msgstr ""
+
+#: yaffo/routes/media.py:28 yaffo/routes/media.py:66 yaffo/routes/media.py:84
+#: yaffo/routes/media.py:176
+msgid "File not found"
+msgstr ""
+
+#: yaffo/routes/media.py:44 yaffo/routes/media.py:47
+msgid "Poster not found"
+msgstr ""
+
+#: yaffo/routes/media.py:80
+msgid "Face not found"
+msgstr ""
+
+#: yaffo/routes/media.py:192
+msgid "Could not open file"
+msgstr ""
+
+#: yaffo/routes/media.py:203
+msgid "Folder not found"
+msgstr ""
+
+#: yaffo/routes/media.py:219
+msgid "Could not open folder"
+msgstr ""
+
+#: yaffo/routes/media.py:256
+msgid "Tags must be a list"
+msgstr ""
+
+#: yaffo/routes/media.py:264
+msgid "Each tag must be an object"
+msgstr ""
+
+#: yaffo/routes/media.py:271
+msgid "Tag name is required"
+msgstr ""
 
 #: yaffo/templates/_sidebar.html:5
 msgid "Actions"
@@ -118,6 +175,14 @@ msgstr ""
 msgid "Confirm"
 msgstr ""
 
+#: yaffo/templates/index.html:4
+msgid "Home - Yaffo"
+msgstr ""
+
+#: yaffo/templates/index.html:20
+msgid "Photo Library"
+msgstr ""
+
 #: yaffo/templates/index.html:22
 #, python-format
 msgid "Showing %(shown)s of %(total)s photo"
@@ -125,8 +190,75 @@ msgid_plural "Showing %(shown)s of %(total)s photos"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/templates/index.html:28
+#: yaffo/templates/index.html:28 yaffo/templates/index.html:141
 msgid "No photos found"
+msgstr ""
+
+#: yaffo/templates/index.html:41 yaffo/templates/media/view.html:223
+msgid "Toggle favorite"
+msgstr ""
+
+#: yaffo/templates/index.html:45
+#, python-format
+msgid "Video from %(date)s"
+msgstr ""
+
+#: yaffo/templates/index.html:52
+msgid "Play video"
+msgstr ""
+
+#: yaffo/templates/index.html:60
+#, python-format
+msgid "Photo from %(date)s"
+msgstr ""
+
+#: yaffo/templates/index.html:64
+msgid "Name"
+msgstr ""
+
+#: yaffo/templates/index.html:69
+msgid "Folder"
+msgstr ""
+
+#: yaffo/templates/index.html:73
+msgid "Taken"
+msgstr ""
+
+#: yaffo/templates/index.html:74 yaffo/templates/index.html:98
+msgid "Unknown date"
+msgstr ""
+
+#: yaffo/templates/index.html:78 yaffo/templates/media/view.html:74
+msgid "Location"
+msgstr ""
+
+#: yaffo/templates/index.html:84
+msgid "Coordinates"
+msgstr ""
+
+#: yaffo/templates/index.html:90
+msgid "Labels"
+msgstr ""
+
+#: yaffo/templates/index.html:142
+msgid "Try adjusting your filters or check back later."
+msgstr ""
+
+#: yaffo/templates/index.html:150
+msgid "Drag to reorder. Uncheck to hide a filter."
+msgstr ""
+
+#: yaffo/templates/index.html:163
+msgid "Reset to defaults"
+msgstr ""
+
+#: yaffo/templates/index.html:165
+msgid "Configure Filters"
+msgstr ""
+
+#: yaffo/templates/components/modal.html:17 yaffo/templates/index.html:165
+#: yaffo/templates/settings/index.html:29
+msgid "Save"
 msgstr ""
 
 #: yaffo/templates/components/chat_dialog.html:28
@@ -197,11 +329,6 @@ msgstr ""
 
 #: yaffo/templates/components/job_section.html:5
 msgid "Processing in Progress"
-msgstr ""
-
-#: yaffo/templates/components/modal.html:17
-#: yaffo/templates/settings/index.html:29
-msgid "Save"
 msgstr ""
 
 #: yaffo/templates/filters/_device.html:2
@@ -346,15 +473,15 @@ msgstr ""
 msgid "Tag Name"
 msgstr ""
 
-#: yaffo/templates/filters/_tags.html:4
+#: yaffo/templates/filters/_tags.html:5
 msgid "All"
 msgstr ""
 
-#: yaffo/templates/filters/_tags.html:13
+#: yaffo/templates/filters/_tags.html:14
 msgid "Tag Value"
 msgstr ""
 
-#: yaffo/templates/filters/_tags.html:15
+#: yaffo/templates/filters/_tags.html:16
 msgid "Select a tag name first"
 msgstr ""
 
@@ -377,6 +504,151 @@ msgstr ""
 
 #: yaffo/templates/fragments/job_status_fragment.html:28
 msgid "Delete"
+msgstr ""
+
+#: yaffo/templates/media/view.html:15
+msgid "Photo Details"
+msgstr ""
+
+#: yaffo/templates/media/view.html:20
+msgid "File Information"
+msgstr ""
+
+#: yaffo/templates/media/view.html:22 yaffo/templates/media/view.html:79
+msgid "Name:"
+msgstr ""
+
+#: yaffo/templates/media/view.html:26
+msgid "Folder:"
+msgstr ""
+
+#: yaffo/templates/media/view.html:31
+msgid "Date Taken:"
+msgstr ""
+
+#: yaffo/templates/media/view.html:37
+msgid "Device:"
+msgstr ""
+
+#: yaffo/templates/media/view.html:44
+msgid "Duration:"
+msgstr ""
+
+#: yaffo/templates/media/view.html:50
+msgid "Resolution:"
+msgstr ""
+
+#: yaffo/templates/media/view.html:56
+msgid "Codec:"
+msgstr ""
+
+#: yaffo/templates/media/view.html:64
+msgid "Open File"
+msgstr ""
+
+#: yaffo/templates/media/view.html:68
+msgid "Open Folder"
+msgstr ""
+
+#: yaffo/templates/media/view.html:85
+msgid "Coordinates:"
+msgstr ""
+
+#: yaffo/templates/media/view.html:94
+msgid "View on Map"
+msgstr ""
+
+#: yaffo/templates/media/view.html:100
+msgid "No location information"
+msgstr ""
+
+#: yaffo/templates/media/view.html:105
+#, python-format
+msgid "Person (%(count)s)"
+msgid_plural "People (%(count)s)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/media/view.html:115
+msgid "No people assigned to this photo"
+msgstr ""
+
+#: yaffo/templates/media/view.html:120
+#, python-format
+msgid "Face (%(count)s)"
+msgid_plural "Faces (%(count)s)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/media/view.html:130
+msgid "Face"
+msgstr ""
+
+#: yaffo/templates/media/view.html:142
+msgid "No faces detected"
+msgstr ""
+
+#: yaffo/templates/media/view.html:147
+#, python-format
+msgid "Label (%(count)s)"
+msgid_plural "Labels (%(count)s)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/media/view.html:151
+#, python-format
+msgid "Confidence: %(value)s"
+msgstr ""
+
+#: yaffo/templates/media/view.html:157
+msgid "No labels"
+msgstr ""
+
+#: yaffo/templates/media/view.html:162
+#, python-format
+msgid "Tag (%(count)s)"
+msgid_plural "Tags (%(count)s)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/media/view.html:176
+msgid "No tags"
+msgstr ""
+
+#: yaffo/templates/media/view.html:181 yaffo/templates/media/view.html:248
+msgid "Edit Tags"
+msgstr ""
+
+#: yaffo/templates/media/view.html:193
+msgid "This video is no longer available on disk."
+msgstr ""
+
+#: yaffo/templates/media/view.html:204
+msgid "This format can't play in the browser."
+msgstr ""
+
+#: yaffo/templates/media/view.html:206
+msgid "Open in default player"
+msgstr ""
+
+#: yaffo/templates/media/view.html:237
+msgid "Add New Tag"
+msgstr ""
+
+#: yaffo/templates/media/view.html:239
+msgid "Tag name"
+msgstr ""
+
+#: yaffo/templates/media/view.html:240
+msgid "Tag value (optional)"
+msgstr ""
+
+#: yaffo/templates/media/view.html:242
+msgid "Add Tag"
+msgstr ""
+
+#: yaffo/templates/media/view.html:248
+msgid "Save Changes"
 msgstr ""
 
 #: yaffo/templates/people/faces.html:37

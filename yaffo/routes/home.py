@@ -1,14 +1,25 @@
 import math
 from pathlib import Path
 
+import pydash as py_
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, jsonify, render_template, request
+from flask_babel import gettext
 from sqlalchemy import distinct, func
 from sqlalchemy.orm import joinedload
-import pydash as _
+
 from yaffo.db import db
-from yaffo.db.models import MediaItem, Face, Person, PersonFace, Tag, ClassificationLabel, MediaLabel, \
-    MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO
+from yaffo.db.models import (
+    MEDIA_TYPE_PHOTO,
+    MEDIA_TYPE_VIDEO,
+    ClassificationLabel,
+    Face,
+    MediaItem,
+    MediaLabel,
+    Person,
+    PersonFace,
+    Tag,
+)
 from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
 from yaffo.routes import filter_config
 from yaffo.utils.context import context
@@ -242,7 +253,10 @@ def init_home_routes(app: Flask):
             'location_names': location_names_list,
             'devices': device_list,
             'labels': labels,
-            'genders': [{'name': "Male", 'value': 1},{'name': "Female", 'value': 0}],
+            'genders': [
+                {'name': gettext("Male"), 'value': 1},
+                {'name': gettext("Female"), 'value': 0},
+            ],
             'selected_path': path,
             'selected_person_ids': person_ids,
             'selected_person_match_type': person_match_type,
@@ -290,7 +304,10 @@ def init_home_routes(app: Flask):
         payload = request.get_json(silent=True) or {}
         items = payload.get("items")
         if not isinstance(items, list):
-            return {"error": "items must be a list"}, 400
+            return {
+                "error": gettext("Items must be a list"),
+                "code": "items_must_be_list",
+            }, 400
         filter_config.save_layout(db.session, items)
         return "", 204
 
@@ -302,7 +319,10 @@ def init_home_routes(app: Flask):
         """
         tag_name = request.args.get("tag_name")
         if not tag_name:
-            return jsonify({"error": "tag_name parameter is required"}), 400
+            return jsonify({
+                "error": gettext("The tag_name parameter is required"),
+                "code": "tag_name_required",
+            }), 400
 
         distinct_values = (
             db.session.query(Tag.tag_value)
@@ -339,9 +359,18 @@ def init_home_routes(app: Flask):
             .all()
         )
 
-        for photos_by_name in _.group_by(db_locations, lambda media_item: media_item.location_name).values():
-            lat = _.sum_by(photos_by_name, lambda media_item: media_item.latitude)/len(photos_by_name)
-            lon = _.sum_by(photos_by_name, lambda media_item: media_item.longitude)/len(photos_by_name)
+        for photos_by_name in py_.group_by(
+            db_locations,
+            lambda media_item: media_item.location_name,
+        ).values():
+            lat = py_.sum_by(
+                photos_by_name,
+                lambda media_item: media_item.latitude,
+            ) / len(photos_by_name)
+            lon = py_.sum_by(
+                photos_by_name,
+                lambda media_item: media_item.longitude,
+            ) / len(photos_by_name)
             if lat is not None and lon is not None:
                 results.append({
                     "name": photos_by_name[0].location_name,
@@ -377,4 +406,3 @@ def init_home_routes(app: Flask):
             pass
 
         return jsonify({"results": results})
-

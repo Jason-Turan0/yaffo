@@ -1,22 +1,22 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
-window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, config) => {
+window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) => {
     const createReassignOverlay = (faceThumbnail, faceId) => {
         const overlayContent = `
-            <div class="face-reassign-header">Reassign Face</div>
+            <div class="face-reassign-header">${i18n.t('media:faces.reassign')}</div>
             <div class="face-reassign-controls">
                 <select id="reassign-person-select-${faceId}" class="searchable-select face-reassign-select">
-                    <option value="">Select a person...</option>
+                    <option value="">${i18n.t('media:faces.selectPerson')}</option>
                     ${allPeople.map(person =>
             `<option value="${person.id}">${person.name}</option>`
         ).join('')}
                 </select>
                 <div class="face-reassign-actions">
                     <button class="btn btn-secondary btn-sm" data-action="cancel">
-                        Cancel
+                        ${i18n.t('common:cancel')}
                     </button>
                     <button class="btn btn-primary btn-sm" data-action="apply">
-                        Apply
+                        ${i18n.t('common:apply')}
                     </button>
                 </div>
             </div>
@@ -48,12 +48,12 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, config) => {
 
     const reassignFace = async (faceId, personId, applyBtn) => {
         if (!personId) {
-            window.notification.warning('Please select a person');
+            window.notification.warning(i18n.t('media:faces.selectPersonRequired'));
             return;
         }
 
         applyBtn.disabled = true;
-        applyBtn.textContent = 'Applying...';
+        applyBtn.textContent = i18n.t('media:faces.applying');
 
         try {
             const response = await fetch(config.urls.faces_assign, {
@@ -72,20 +72,20 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, config) => {
             const data = await response.json();
 
             if (response.ok && data.success) {
-                window.notification.success(data.message || 'Face reassigned successfully');
+                window.notification.success(data.message || i18n.t('media:faces.reassignSucceeded'));
                 setTimeout(() => {
                     window.location.reload();
                 }, 500);
             } else {
-                window.notification.error(data.message || 'Failed to reassign face');
+                window.notification.error(data.message || i18n.t('media:faces.reassignFailed'));
                 applyBtn.disabled = false;
-                applyBtn.textContent = 'Apply';
+                applyBtn.textContent = i18n.t('common:apply');
             }
         } catch (error) {
             console.error('Error reassigning face:', error);
-            window.notification.error('An error occurred while reassigning the face');
+            window.notification.error(i18n.t('media:faces.reassignError'));
             applyBtn.disabled = false;
-            applyBtn.textContent = 'Apply';
+            applyBtn.textContent = i18n.t('common:apply');
         }
     };
 

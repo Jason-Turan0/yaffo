@@ -12,48 +12,48 @@
     <div class="photo-viewer">
         <div class="photo-sidebar">
             <div class="sidebar-header">
-                <h2>Photo Details</h2>
+                <h2>{{ _("Photo Details") }}</h2>
             </div>
 
             <div class="sidebar-content thin-scrollbar">
                 <div class="detail-section">
-                    <h3>File Information</h3>
+                    <h3>{{ _("File Information") }}</h3>
                     <div class="detail-item">
-                        <label>Name:</label>
+                        <label>{{ _("Name:") }}</label>
                         <span class="detail-value">{{ file_name }}</span>
                     </div>
                     <div class="detail-item">
-                        <label>Folder:</label>
+                        <label>{{ _("Folder:") }}</label>
                         <span class="detail-value">{{ absolute_folder_path if absolute_folder_path else '/' }}</span>
                     </div>
                     {% if media_item.date_taken %}
                         <div class="detail-item">
-                            <label>Date Taken:</label>
+                            <label>{{ _("Date Taken:") }}</label>
                             <span class="detail-value">{{ media_item.date_taken | format_date ("datetime") }}</span>
                         </div>
                     {% endif %}
                     {% if media_item.device %}
                         <div class="detail-item">
-                            <label>Device:</label>
+                            <label>{{ _("Device:") }}</label>
                             <span class="detail-value">{{ media_item.device }}</span>
                         </div>
                     {% endif %}
                     {% if media_item.media_type == 'video' %}
                         {% if media_item.duration_seconds %}
                             <div class="detail-item">
-                                <label>Duration:</label>
+                                <label>{{ _("Duration:") }}</label>
                                 <span class="detail-value">{{ media_item.duration_seconds | format_duration }}</span>
                             </div>
                         {% endif %}
                         {% if media_item.width and media_item.height %}
                             <div class="detail-item">
-                                <label>Resolution:</label>
+                                <label>{{ _("Resolution:") }}</label>
                                 <span class="detail-value">{{ media_item.width }} × {{ media_item.height }}</span>
                             </div>
                         {% endif %}
                         {% if media_item.video_codec %}
                             <div class="detail-item">
-                                <label>Codec:</label>
+                                <label>{{ _("Codec:") }}</label>
                                 <span class="detail-value">{{ media_item.video_codec }}</span>
                             </div>
                         {% endif %}
@@ -61,28 +61,28 @@
                     <div class="detail-actions">
                         <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFile('{{ absolute_file_path }}')"
                                 class="action-button">
-                            Open File
+                            {{ _("Open File") }}
                         </button>
                         <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFolder('{{ absolute_folder_path }}')"
                                 class="action-button">
-                            Open Folder
+                            {{ _("Open Folder") }}
                         </button>
                     </div>
                 </div>
 
                 <div class="detail-section">
-                    <h3>Location</h3>
+                    <h3>{{ _("Location") }}</h3>
                     {% if media_item.location_name or media_item.latitude is not none or media_item.longitude is not none %}
                         <div class="location-details">
                             {% if media_item.location_name %}
                                 <div class="detail-item">
-                                    <label>Name:</label>
+                                    <label>{{ _("Name:") }}</label>
                                     <span class="detail-value">{{ media_item.location_name }}</span>
                                 </div>
                             {% endif %}
                             {% if media_item.latitude is not none and media_item.longitude is not none %}
                                 <div class="detail-item">
-                                    <label>Coordinates:</label>
+                                    <label>{{ _("Coordinates:") }}</label>
                                     <span class="detail-value">
                             {{ media_item.latitude | format_coordinate }}, {{ media_item.longitude | format_coordinate }}
                         </span>
@@ -91,18 +91,18 @@
                                     <a href="https://www.google.com/maps?q={{ media_item.latitude }},{{ media_item.longitude }}"
                                        target="_blank"
                                        class="action-button">
-                                        View on Map
+                                        {{ _("View on Map") }}
                                     </a>
                                 </div>
                             {% endif %}
                         </div>
                     {% else %}
-                        <p class="no-data">No location information</p>
+                        <p class="no-data">{{ _("No location information") }}</p>
                     {% endif %}
                 </div>
 
                 <div class="detail-section">
-                    <h3>People ({{ people|length }})</h3>
+                    <h3>{% trans trimmed count=people|length %}Person ({{ count }}){% pluralize %}People ({{ count }}){% endtrans %}</h3>
                     {% if people %}
                         <div class="people-list">
                             {% for person in people %}
@@ -112,12 +112,12 @@
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="no-data">No people assigned to this photo</p>
+                        <p class="no-data">{{ _("No people assigned to this photo") }}</p>
                     {% endif %}
                 </div>
 
                 <div class="detail-section">
-                    <h3>Faces ({{ media_item.faces|length }})</h3>
+                    <h3>{% trans trimmed count=media_item.faces|length %}Face ({{ count }}){% pluralize %}Faces ({{ count }}){% endtrans %}</h3>
                     {% if media_item.faces %}
                         <div class="faces-grid">
                             {% for face in media_item.faces %}
@@ -127,7 +127,7 @@
                                      onmouseenter="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.highlightFace({{ face.id }})"
                                      onmouseleave="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.clearHighlights()">
                                     <img src="{{ url_for('face_thumbnail', face_id=face.id) }}"
-                                         data-fallback="{{ url_for('placeholder') }}" alt="Face">
+                                         data-fallback="{{ url_for('placeholder') }}" alt="{{ _('Face') }}">
                                     {% if face.people %}
                                         <div class="face-label">
                                             {% for person in face.people %}
@@ -139,27 +139,27 @@
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="no-data">No faces detected</p>
+                        <p class="no-data">{{ _("No faces detected") }}</p>
                     {% endif %}
                 </div>
 
                 <div class="detail-section">
-                    <h3>Labels ({{ media_item.labels|length }})</h3>
+                    <h3>{% trans trimmed count=media_item.labels|length %}Label ({{ count }}){% pluralize %}Labels ({{ count }}){% endtrans %}</h3>
                     {% if media_item.labels %}
                         <div class="labels-chips">
                             {% for media_label in media_item.labels %}
-                                <span class="label-chip" title="confidence {{ media_label.confidence | format_percent(2) }}">
+                                <span class="label-chip" title="{{ _('Confidence: %(value)s', value=media_label.confidence | format_percent(2)) }}">
                                     {{ media_label.label.name }}
                                 </span>
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="no-data">No labels</p>
+                        <p class="no-data">{{ _("No labels") }}</p>
                     {% endif %}
                 </div>
 
                 <div class="detail-section">
-                    <h3>Tags ({{ media_item.tags|length }})</h3>
+                    <h3>{% trans trimmed count=media_item.tags|length %}Tag ({{ count }}){% pluralize %}Tags ({{ count }}){% endtrans %}</h3>
                     {% if media_item.tags %}
                         <div class="tags-list">
                             {% for tag in media_item.tags %}
@@ -173,12 +173,12 @@
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="no-data">No tags</p>
+                        <p class="no-data">{{ _("No tags") }}</p>
                     {% endif %}
                     <div class="detail-actions">
                         <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.openEditModal()"
                                 class="action-button">
-                            Edit Tags
+                            {{ _("Edit Tags") }}
                         </button>
                     </div>
                 </div>
@@ -190,7 +190,7 @@
                 <div class="photo-image-container">
                     {% if media_item.media_type == 'video' and not file_exists %}
                         <div class="media-missing">
-                            <p>This video is no longer available on disk.</p>
+                            <p>{{ _("This video is no longer available on disk.") }}</p>
                             <p class="media-missing-name">{{ file_name }}</p>
                         </div>
                     {% elif media_item.media_type == 'video' and not playable %}
@@ -201,9 +201,9 @@
                              data-fallback="{{ url_for('static', filename='video_placeholder.svg') }}"
                              alt="{{ file_name }}" class="photo-main">
                         <div class="video-unplayable">
-                            <span>This format can't play in the browser.</span>
+                            <span>{{ _("This format can't play in the browser.") }}</span>
                             <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.openFile('{{ absolute_file_path }}')"
-                                    class="action-button">Open in default player</button>
+                                    class="action-button">{{ _("Open in default player") }}</button>
                         </div>
                     {% elif media_item.media_type == 'video' %}
                         <video src="{{ url_for('media', media_item_id=media_item.id) }}"
@@ -220,7 +220,7 @@
                     <button type="button" data-icon="favorite" data-photo-id="{{ media_item.id }}"
                             class="favorite-toggle {% if media_item.favorite %}is-favorite{% endif %}"
                             aria-pressed="{{ 'true' if media_item.favorite else 'false' }}"
-                            title="Toggle favorite" aria-label="Toggle favorite"></button>
+                            title="{{ _('Toggle favorite') }}" aria-label="{{ _('Toggle favorite') }}"></button>
                     {% if media_item.media_type != 'video' %}
                         <canvas id="faceCanvas" class="face-overlay"></canvas>
                     {% endif %}
@@ -234,18 +234,18 @@
             <div id="tags-editor-list" class="thin-scrollbar"></div>
 
             <div class="tag-add-section">
-                <h4>Add New Tag</h4>
+                <h4>{{ _("Add New Tag") }}</h4>
                 <div class="tag-add-row">
-                    <input type="text" id="modal-new-tag-name" placeholder="Tag name" class="tag-input">
-                    <input type="text" id="modal-new-tag-value" placeholder="Tag value (optional)" class="tag-input">
+                    <input type="text" id="modal-new-tag-name" placeholder="{{ _('Tag name') }}" class="tag-input">
+                    <input type="text" id="modal-new-tag-value" placeholder="{{ _('Tag value (optional)') }}" class="tag-input">
                     <button type="button" class="btn btn-secondary"
-                            onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.addTagToList()">+ Add Tag</button>
+                            onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.addTagToList()">+ {{ _("Add Tag") }}</button>
                 </div>
             </div>
         </div>
     {% endmacro %}
 
-    {{ render_modal('tagsModal', "Edit Tags", "", render_modal_edit_tags_form, "Save Changes", "btn-primary", size_class="modal-lg", posts=false) }}
+    {{ render_modal('tagsModal', _("Edit Tags"), "", render_modal_edit_tags_form, _("Save Changes"), "btn-primary", size_class="modal-lg", posts=false) }}
 
 {% endblock %}
 
@@ -256,25 +256,26 @@
     <script src="{{ url_for('static', filename='media/tags.js') }}"></script>
     <script src="{{ url_for('static', filename='media/face-reassign.js') }}"></script>
     <script>
-        window.PHOTO_ORGANIZER.initFavoriteToggles(window.APP_CONFIG);
-
-        // Initialize photo view modules
-        window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView = window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView(
-            {{ faces_with_locations | tojson }},
-            '{{ absolute_file_path }}',
-            '{{ absolute_folder_path }}',
-            window.APP_CONFIG
-        );
-
-        window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags = window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags(
-            {{ media_item.id }},
-            {{ tags_data | tojson }},
-            window.APP_CONFIG
-        );
-
-        window.PHOTO_ORGANIZER.VIEW_PHOTO.faceReassign = window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign(
-            {{ all_people | tojson }},
-            window.APP_CONFIG
-        );
+        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+            window.PHOTO_ORGANIZER.initFavoriteToggles(i18n, window.APP_CONFIG);
+            window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView = window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView(
+                {{ faces_with_locations | tojson }},
+                {{ absolute_file_path | tojson }},
+                {{ absolute_folder_path | tojson }},
+                i18n,
+                window.APP_CONFIG
+            );
+            window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags = window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags(
+                {{ media_item.id }},
+                {{ tags_data | tojson }},
+                i18n,
+                window.APP_CONFIG
+            );
+            window.PHOTO_ORGANIZER.VIEW_PHOTO.faceReassign = window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign(
+                {{ all_people | tojson }},
+                i18n,
+                window.APP_CONFIG
+            );
+        });
     </script>
 {% endblock %}

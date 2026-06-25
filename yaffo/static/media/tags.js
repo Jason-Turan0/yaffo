@@ -1,6 +1,6 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
-window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config) => {
+window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, config) => {
     const modal = window.PHOTO_ORGANIZER.COMPONENTS.modal.init('tagsModal');
 
     let tags = [];
@@ -11,7 +11,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
         const visibleTags = tags.filter(tag => !tag.markedForDeletion);
 
         if (visibleTags.length === 0) {
-            container.innerHTML = '<p class="no-data">No tags. Add one below.</p>';
+            container.innerHTML = `<p class="no-data">${i18n.t('media:tags.noneAddBelow')}</p>`;
             return;
         }
 
@@ -20,12 +20,12 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
                 <div class="tag-editor-inputs">
                     <input type="text"
                            class="tag-input"
-                           placeholder="Tag name"
+                           placeholder="${i18n.t('media:tags.name')}"
                            value="${tag.tag_name || ''}"
                            onchange="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.updateTagName(${tag.tempId}, this.value)">
                     <input type="text"
                            class="tag-input"
-                           placeholder="Tag value (optional)"
+                           placeholder="${i18n.t('media:tags.valueOptional')}"
                            value="${tag.tag_value || ''}"
                            onchange="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.updateTagValue(${tag.tempId}, this.value)">
                 </div>
@@ -33,7 +33,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
                         class="btn-icon-delete"
                         data-icon="delete"
                         onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags.removeTagFromList(${tag.tempId})"
-                        title="Remove" aria-label="Remove"></button>
+                        title="${i18n.t('media:tags.remove')}" aria-label="${i18n.t('media:tags.remove')}"></button>
             </div>
         `).join('');
     };
@@ -62,7 +62,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
         const tagValue = valueInput.value.trim();
 
         if (!tagName) {
-            notification.error('Tag name is required');
+            notification.error(i18n.t('media:tags.nameRequired'));
             return;
         }
 
@@ -122,7 +122,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
         // The final tag set is everything not marked for deletion; all must be named.
         const finalTags = tags.filter(t => !t.markedForDeletion);
         if (finalTags.some(t => !(t.tag_name || '').trim())) {
-            notification.error('All tags must have a name');
+            notification.error(i18n.t('media:tags.allNeedName'));
             return;
         }
 
@@ -132,7 +132,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
         }));
 
         try {
-            const response = await fetch(`/api/media/${photoId}/tags`, {
+            const response = await fetch(config.buildUrl('update_media_tags', { media_item_id: photoId }), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tags: payload })
@@ -141,13 +141,14 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, config)
             if (response.ok) {
                 modal.close();
                 // Queue the confirmation so it survives the reload below.
-                notification.flash('Tags updated successfully');
+                notification.flash(i18n.t('media:tags.updateSucceeded'));
                 window.location.reload();
             } else {
-                notification.error('Failed to update tags');
+                const data = await response.json().catch(() => ({}));
+                notification.error(data.error || i18n.t('media:tags.updateFailed'));
             }
         } catch (error) {
-            notification.error('Error saving tags');
+            notification.error(i18n.t('media:tags.saveFailed'));
             console.error(error);
         }
     };

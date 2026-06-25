@@ -80,6 +80,52 @@
       "typeToSearch": "Type to search…"
     }
   },
+  "media": {
+    "actions": {
+      "openFileFailed": "Failed to open file",
+      "openFileFailedWithReason": "Failed to open file: {{reason}}",
+      "openFolderFailed": "Failed to open folder",
+      "openFolderFailedWithReason": "Failed to open folder: {{reason}}",
+      "openingFile": "Opening file in default application",
+      "openingFolder": "Opening folder in file manager"
+    },
+    "faces": {
+      "applying": "Applying…",
+      "reassign": "Reassign Face",
+      "reassignError": "An error occurred while reassigning the face",
+      "reassignFailed": "Failed to reassign face",
+      "reassignSucceeded": "Face reassigned successfully",
+      "selectPerson": "Select a person…",
+      "selectPersonRequired": "Please select a person"
+    },
+    "favorite": {
+      "updateFailed": "Failed to update favorite"
+    },
+    "filters": {
+      "allValues": "All values",
+      "loading": "Loading…",
+      "loadValuesError": "Error loading values",
+      "loadValuesFailed": "Failed to load tag values",
+      "locationFromOpenStreetMap": "(OpenStreetMap)",
+      "locationFromPhotos": "(from photos)",
+      "saveFailed": "Could not save filter settings",
+      "selectTagNameFirst": "Select a tag name first"
+    },
+    "gallery": {
+      "videoPlaybackFailed": "This video can't be played — the format may be unsupported in this browser, or the file was moved or deleted."
+    },
+    "tags": {
+      "allNeedName": "All tags must have a name",
+      "name": "Tag name",
+      "nameRequired": "Tag name is required",
+      "noneAddBelow": "No tags. Add one below.",
+      "remove": "Remove",
+      "saveFailed": "Error saving tags",
+      "updateFailed": "Failed to update tags",
+      "updateSucceeded": "Tags updated successfully",
+      "valueOptional": "Tag value (optional)"
+    }
+  },
   "settings": {
     "applicationLanguage": "Application language",
     "language": "Language",

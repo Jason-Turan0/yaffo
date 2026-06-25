@@ -134,3 +134,26 @@ def test_trigger_editor_waits_for_localized_cron_builder():
     assert "COMPONENTS.cronBuilderReady =" in builder_source
     assert "return api;" in builder_source
     assert "await cronBuilderReady" in automation_source
+
+
+def test_media_javascript_uses_catalog_keys_and_receives_i18n_service():
+    media_sources = [
+        Path("yaffo/static/filters/filter_config.js"),
+        Path("yaffo/static/filters/location-autocomplete.js"),
+        Path("yaffo/static/filters/tags.js"),
+        Path("yaffo/static/media/face-reassign.js"),
+        Path("yaffo/static/media/favorite.js"),
+        Path("yaffo/static/media/gallery_video.js"),
+        Path("yaffo/static/media/tags.js"),
+        Path("yaffo/static/media/view.js"),
+    ]
+    source = "\n".join(path.read_text(encoding="utf-8") for path in media_sources)
+    gallery_template = Path("yaffo/templates/index.html").read_text(encoding="utf-8")
+    detail_template = Path("yaffo/templates/media/view.html").read_text(encoding="utf-8")
+
+    assert "media:favorite.updateFailed" in source
+    assert "media:gallery.videoPlaybackFailed" in source
+    assert "media:tags.updateSucceeded" in source
+    assert "media:faces.reassign" in source
+    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in gallery_template
+    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in detail_template

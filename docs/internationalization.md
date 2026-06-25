@@ -497,64 +497,92 @@ keys, and placeholder differences in the assertion message.
 
 ## Work breakdown
 
-### Phase 1: infrastructure
+### Implementation status
 
-1. Add and configure Flask-Babel.
-2. Add `locale` to application settings and a Settings-page selector.
-3. Implement locale resolution, `current_locale`, and text direction.
-4. Add gettext extraction configuration and Invoke tasks.
-5. Vendor i18next and initialize it from the selected locale's packaged JSON
+Status as of June 25, 2026:
+
+- [x] Phase 1: Flask-Babel/i18next infrastructure, locale persistence,
+  extraction/compile tasks, translation tooling, and catalog validation.
+- [x] Phase 2: locale-aware server/browser formatting foundation, including the
+  UTC timestamp versus camera-local capture-date distinction.
+- [x] Phase 3: shared shell, filters, reusable components, and their JavaScript
+  modules.
+- [x] Phase 4.1: home gallery and media details vertical slice.
+- [ ] Phase 4.2–4.9: remaining feature screens and LLM prompt behavior.
+- [ ] Phase 5: translation and release-readiness work.
+
+The completed home/media slice includes:
+
+- `templates/index.html`, `templates/media/view.html`, and the tag filter;
+- `routes/home.py` and `routes/media.py` browser-facing messages;
+- favorites, inline video, location autocomplete, filter configuration, media
+  actions, tag editing, and face-reassignment JavaScript;
+- gettext and i18next English/German catalog entries;
+- localized JSON error text with stable error codes;
+- German rendering tests for the gallery, media details, and API errors.
+
+Current verification covers catalog key/placeholder parity, compiled gettext
+catalogs, JavaScript and Python syntax, non-English rendering, and the
+hard-coded user-facing text baseline.
+
+### Phase 1: infrastructure — complete
+
+- [x] Add and configure Flask-Babel.
+- [x] Add `locale` to application settings and a Settings-page selector.
+- [x] Implement locale resolution, `current_locale`, and text direction.
+- [x] Add gettext extraction configuration and Invoke tasks.
+- [x] Vendor i18next and initialize it from the selected locale's packaged JSON
    resource.
-6. Render the selected locale and resource URL into the base template, then
+- [x] Render the selected locale and resource URL into the base template, then
    block page-module initialization until i18next loads the catalog.
-7. Add English server and browser catalogs.
-8. Add locale-aware wrappers under `window.PHOTO_ORGANIZER.i18n`.
-9. Add `inv i18n-translate --locale=<locale>` to detect and automatically
+- [x] Add English server and browser catalogs.
+- [x] Add locale-aware wrappers under `window.PHOTO_ORGANIZER.i18n`.
+- [x] Add `inv i18n-translate --locale=<locale>` to detect and automatically
    translate missing PO messages and browser JSON keys from their English
    source text, with dry-run, placeholder validation, and review markers.
-10. Add unit tests for locale selection, both translation runtimes, catalog key
+- [x] Add unit tests for locale selection, both translation runtimes, catalog key
    parity, and placeholder parity.
 
-### Phase 2: formatting foundation
+### Phase 2: formatting foundation — complete
 
-1. Replace the fixed `strftime` template filter with Babel-backed date helpers.
-2. Preserve separate UTC-timestamp and camera-local-date code paths.
-3. Add server filters/helpers for integers, decimals, percentages, and
+- [x] Replace the fixed `strftime` template filter with Babel-backed date helpers.
+- [x] Preserve separate UTC-timestamp and camera-local-date code paths.
+- [x] Add server filters/helpers for integers, decimals, percentages, and
    coordinates.
-4. Update `static/utils.js` to use the application locale.
-5. Remove `en-US` from generated widget templates and pass host locale helpers.
-6. Migrate pagination, progress, similarity, confidence, scan counts, and
+- [x] Update `static/utils.js` to use the application locale.
+- [x] Remove `en-US` from generated widget templates and pass host locale helpers.
+- [x] Migrate pagination, progress, similarity, confidence, scan counts, and
    duplicate totals.
-7. Add locale/timezone regression tests.
+- [x] Add locale/timezone regression tests.
 
-### Phase 3: shared shell and components
+### Phase 3: shared shell and components — complete
 
 Migrate the highest-reuse UI first:
 
-1. `base.html` navigation, page strip, flash close controls, folder picker, and
+- [x] `base.html` navigation, page strip, flash close controls, folder picker, and
    confirm dialog.
-2. Modal, info-modal, pagination, page-header, file-browser, notification,
+- [x] Modal, info-modal, pagination, page-header, file-browser, notification,
    searchable-select, multi-select, chat-dialog, and cron-builder components.
-3. Shared filters and empty/error states.
-4. Corresponding JavaScript modules and default messages.
+- [x] Shared filters and empty/error states.
+- [x] Corresponding JavaScript modules and default messages.
 
 Completing this phase removes a large percentage of repeated English copy and
 establishes examples for feature work.
 
-### Phase 4: feature-by-feature migration
+### Phase 4: feature-by-feature migration — in progress
 
 Migrate one vertical slice at a time, including templates, routes, JavaScript,
 and tests:
 
-1. home gallery and media details;
-2. faces and people;
-3. locations;
-4. settings;
-5. indexing and duplicate utilities;
-6. automations;
-7. themes;
-8. custom pages and page-builder UI;
-9. LLM-backed page, automation, and theme generation prompts: pass the selected
+- [x] Home gallery and media details.
+- [ ] Faces and people.
+- [ ] Locations.
+- [ ] Settings.
+- [ ] Indexing and duplicate utilities.
+- [ ] Automations.
+- [ ] Themes.
+- [ ] Custom pages and page-builder UI.
+- [ ] LLM-backed page, automation, and theme generation prompts: pass the selected
    locale and require replies in the latest user-message language, falling back
    to the application locale when ambiguous.
 
@@ -566,16 +594,75 @@ For each slice:
 - add one non-English rendering test;
 - verify keyboard labels, placeholders, tooltips, and error paths.
 
-### Phase 5: translation and release readiness
+#### Remaining screen checklist
 
-1. Complete the first non-English catalog.
-2. Run a pseudo-locale that expands text and adds visible delimiters.
-3. Audit layout overflow, tables, modals, and narrow controls.
-4. Add RTL metadata and layout testing before publishing an RTL locale.
-5. Verify PyInstaller includes `.mo`, JSON locale resources, and vendored
+Each item includes its templates and primary browser module. The corresponding
+route modules and browser-facing errors are part of the same checklist item.
+
+- [ ] Faces inbox and assignment workflow:
+  `templates/faces/index.html`, `static/faces/index.js`, and `routes/faces.py`.
+- [ ] People list:
+  `templates/people/list.html`, `static/people/list.js`, and `routes/people.py`.
+- [ ] Person face gallery and reassignment/removal workflow:
+  `templates/people/faces.html` and `static/people/faces.js`.
+- [ ] Locations map/list:
+  `templates/locations/list.html`, `static/locations/list.js`, and
+  `routes/locations.py`.
+- [ ] Settings media-directory controls:
+  `templates/settings/index.html`, `static/settings/index.js`, and the related
+  endpoints in `routes/settings.py`. The language selector itself is complete.
+- [ ] Settings label management:
+  `templates/settings/_labels.html` and `static/settings/labels.js`.
+- [ ] Settings LLM provider and API-key forms:
+  `templates/settings/_llm.html`,
+  `templates/settings/_llm_api_key.html`, and their settings routes.
+- [ ] Utilities landing/navigation:
+  `templates/utilities/_base.html` and `static/utilities/_base.js`.
+- [ ] Photo/video indexing:
+  `templates/utilities/index_photos.html`,
+  `static/utilities/index_photos.js`, and
+  `routes/utilities/index_photos.py`.
+- [ ] Duplicate detection form, results, photo cards, counts, and actions:
+  all `templates/utilities/remove_duplicates*.html` templates and
+  `routes/utilities/remove_duplicates.py`.
+- [ ] Automation list/editor:
+  `templates/utilities/automations.html`,
+  `static/utilities/automations.js`, and
+  `routes/utilities/automations.py`.
+- [ ] Automation run history:
+  `templates/utilities/automations_runs.html`.
+- [ ] Automation trigger list and trigger editor:
+  `templates/utilities/automations_triggers.html` and
+  `templates/utilities/automations_triggers_edit.html`.
+- [ ] Theme gallery, generation, preview, and publishing:
+  `templates/themes_page/index.html`, `static/themes_page/index.js`, and
+  `routes/themes_page.py`.
+- [ ] Custom page presentation and widget grid:
+  `templates/pages/presentation.html`, `templates/pages/_grid.html`,
+  `templates/pages/_widget.html`, `static/pages/detail.js`, and
+  `static/pages/grid.js`.
+- [ ] Page designer and chat-driven generation:
+  `templates/pages/design.html`, page-builder JavaScript, and
+  `routes/pages.py`.
+- [ ] Widget frame/runtime messages and host formatting:
+  `templates/pages/widget_frame.html`, `static/pages/widget_api.js`, and
+  `static/pages/widget_broker.js`.
+- [ ] LLM prompts for page, automation, and theme generation:
+  `site_agents/prompt_generator/` and the generation task entry points.
+- [ ] Final error-page review:
+  `templates/404.html`, `templates/500.html`, and any remaining route/HTMX
+  error fragments not covered by a feature slice.
+
+### Phase 5: translation and release readiness — not started
+
+- [ ] Complete and review the first non-English catalog.
+- [ ] Run a pseudo-locale that expands text and adds visible delimiters.
+- [ ] Audit layout overflow, tables, modals, and narrow controls.
+- [ ] Add RTL metadata and layout testing before publishing an RTL locale.
+- [ ] Verify PyInstaller includes `.mo`, JSON locale resources, and vendored
    i18next assets.
-6. Add contributor documentation for adding and updating locales.
-7. Add CI catalog validation and an untranslated-string review checklist.
+- [ ] Add contributor documentation for adding and updating locales.
+- [ ] Add CI catalog validation and an untranslated-string review checklist.
 
 ## Non-goals for the initial migration
 

@@ -1,6 +1,7 @@
 <div class="filter-group">
     <label for="tag-name-select">{{ _("Tag Name") }}</label>
-    <select name="tag-name" id="tag-name-select" class="searchable-select" onchange="loadTagValues(this.value)">
+    <select name="tag-name" id="tag-name-select" class="searchable-select"
+            onchange="window.PHOTO_ORGANIZER.tagFilters.loadTagValues(this.value)">
         <option value="">— {{ _("All") }} —</option>
         {% for tag_name in filters.tag_names %}
         <option value="{{ tag_name }}" {% if tag_name == filters.selected_tag_name %}selected{% endif %}>

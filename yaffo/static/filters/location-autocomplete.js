@@ -1,6 +1,6 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
-window.PHOTO_ORGANIZER.initLocationAutocomplete = (appConfig) => {
+window.PHOTO_ORGANIZER.initLocationAutocomplete = (i18n, appConfig) => {
     const searchInput = document.getElementById('location-search');
     const suggestionsContainer = document.getElementById('location-suggestions');
     const latInput = document.getElementById('proximity-lat');
@@ -48,7 +48,7 @@ window.PHOTO_ORGANIZER.initLocationAutocomplete = (appConfig) => {
         if (results.length === 0) {
             const noResults = document.createElement('div');
             noResults.className = 'location-suggestion-item loading';
-            noResults.textContent = 'No results found';
+            noResults.textContent = i18n.t('components:select.noResults');
             suggestionsContainer.appendChild(noResults);
             suggestionsContainer.classList.add('active');
             return;
@@ -64,7 +64,9 @@ window.PHOTO_ORGANIZER.initLocationAutocomplete = (appConfig) => {
 
             const sourceSpan = document.createElement('span');
             sourceSpan.className = 'suggestion-source';
-            sourceSpan.textContent = result.source === 'photos' ? '(from photos)' : '(OpenStreetMap)';
+            sourceSpan.textContent = result.source === 'photos'
+                ? i18n.t('media:filters.locationFromPhotos')
+                : i18n.t('media:filters.locationFromOpenStreetMap');
 
             item.appendChild(nameSpan);
             item.appendChild(sourceSpan);
@@ -97,7 +99,7 @@ window.PHOTO_ORGANIZER.initLocationAutocomplete = (appConfig) => {
         const controller = new AbortController();
         currentRequest = controller;
 
-        suggestionsContainer.innerHTML = '<div class="location-suggestion-item loading">Loading...</div>';
+        suggestionsContainer.innerHTML = `<div class="location-suggestion-item loading">${i18n.t('media:filters.loading')}</div>`;
         suggestionsContainer.classList.add('active');
 
         try {

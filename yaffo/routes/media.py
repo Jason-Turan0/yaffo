@@ -1,17 +1,19 @@
-from yaffo.utils.image import convert_heif
-from yaffo.common import is_browser_playable_video
-from flask import Flask, Response, abort, send_from_directory, send_file, render_template, request, jsonify
-from yaffo.background_tasks.events import emit_event
-from yaffo.db.models import db, MediaItem, Person, Tag, EVENT_MEDIA_MODIFIED
-from sqlalchemy.orm import joinedload
-from yaffo.db.models import Face
-from pathlib import Path
-from yaffo import themes
-from yaffo.themes import get_theme
 import io
 import os
-import subprocess
 import platform
+import subprocess
+from pathlib import Path
+
+from flask import Flask, Response, abort, jsonify, render_template, request, send_file, send_from_directory
+from flask_babel import gettext
+from sqlalchemy.orm import joinedload
+
+from yaffo import themes
+from yaffo.background_tasks.events import emit_event
+from yaffo.common import is_browser_playable_video
+from yaffo.db.models import EVENT_MEDIA_MODIFIED, Face, MediaItem, Person, Tag, db
+from yaffo.themes import get_theme
+from yaffo.utils.image import convert_heif
 
 
 def init_media_routes(app: Flask):
@@ -19,11 +21,11 @@ def init_media_routes(app: Flask):
     def media(media_item_id: int):
         media_item = db.session.get(MediaItem, media_item_id)
         if not media_item:
-            return "Photo not found", 404
+            return gettext("Photo not found"), 404
 
         file_path = Path(media_item.full_file_path)
         if not file_path.exists():
-            return "File not found", 404
+            return gettext("File not found"), 404
 
         if file_path.suffix.lower() == ".heic":
             img = convert_heif(file_path)
@@ -39,10 +41,10 @@ def init_media_routes(app: Flask):
     def media_poster(media_item_id: int):
         media_item = db.session.get(MediaItem, media_item_id)
         if not media_item or not media_item.poster_path:
-            return "Poster not found", 404
+            return gettext("Poster not found"), 404
         poster_path = Path(media_item.poster_path)
         if not poster_path.exists():
-            return "Poster not found", 404
+            return gettext("Poster not found"), 404
         return send_file(poster_path)
 
     @app.route("/placeholder")
@@ -61,7 +63,7 @@ def init_media_routes(app: Flask):
     def media_by_path():
         file_path = Path(request.args.get("mediaPath", type=str))
         if not file_path.exists():
-            return "File not found", 404
+            return gettext("File not found"), 404
 
         if file_path.suffix.lower() == ".heic":
             img = convert_heif(file_path)
@@ -75,11 +77,11 @@ def init_media_routes(app: Flask):
     def face_thumbnail(face_id: int):
         face = db.session.get(Face, face_id)
         if not face:
-            return "Face not found", 404
+            return gettext("Face not found"), 404
 
         file_path = Path(face.full_file_path)
         if not file_path.exists():
-            return "File not found", 404
+            return gettext("File not found"), 404
 
         return send_file(file_path)
 
@@ -166,11 +168,14 @@ def init_media_routes(app: Flask):
 
     @app.route("/api/open-file", methods=["POST"])
     def open_file():
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         file_path = data.get('path')
 
         if not file_path or not os.path.exists(file_path):
-            return jsonify({"error": "File not found"}), 404
+            return jsonify({
+                "error": gettext("File not found"),
+                "code": "file_not_found",
+            }), 404
 
         try:
             system = platform.system()
@@ -182,16 +187,22 @@ def init_media_routes(app: Flask):
                 subprocess.run(["xdg-open", file_path], check=True)
 
             return jsonify({"success": True})
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+        except (OSError, subprocess.SubprocessError):
+            return jsonify({
+                "error": gettext("Could not open file"),
+                "code": "open_file_failed",
+            }), 500
 
     @app.route("/api/open-folder", methods=["POST"])
     def open_folder():
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         folder_path = data.get('path')
 
         if not folder_path or not os.path.exists(folder_path):
-            return jsonify({"error": "Folder not found"}), 404
+            return jsonify({
+                "error": gettext("Folder not found"),
+                "code": "folder_not_found",
+            }), 404
 
         try:
             system = platform.system()
@@ -203,8 +214,11 @@ def init_media_routes(app: Flask):
                 subprocess.run(["xdg-open", folder_path], check=True)
 
             return jsonify({"success": True})
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+        except (OSError, subprocess.SubprocessError):
+            return jsonify({
+                "error": gettext("Could not open folder"),
+                "code": "open_folder_failed",
+            }), 500
 
     @app.route("/api/media/<int:media_item_id>/favorite", methods=["POST"])
     def toggle_media_favorite(media_item_id: int):
@@ -213,7 +227,10 @@ def init_media_routes(app: Flask):
         automation can write the keyword. Returns the new favorite state."""
         media_item = db.session.get(MediaItem, media_item_id)
         if not media_item:
-            return jsonify({"error": "Photo not found"}), 404
+            return jsonify({
+                "error": gettext("Photo not found"),
+                "code": "photo_not_found",
+            }), 404
 
         media_item.favorite = True if not media_item.favorite else None
         db.session.commit()
@@ -227,21 +244,33 @@ def init_media_routes(app: Flask):
         downstream automations (e.g. export_photo_tag) react once per save."""
         media_item = db.session.get(MediaItem, media_item_id)
         if not media_item:
-            return jsonify({"error": "Photo not found"}), 404
+            return jsonify({
+                "error": gettext("Photo not found"),
+                "code": "photo_not_found",
+            }), 404
 
         data = request.get_json(silent=True) or {}
         incoming = data.get("tags", [])
         if not isinstance(incoming, list):
-            return jsonify({"error": "tags must be a list"}), 400
+            return jsonify({
+                "error": gettext("Tags must be a list"),
+                "code": "tags_must_be_list",
+            }), 400
 
         normalized = []
         for item in incoming:
             if not isinstance(item, dict):
-                return jsonify({"error": "each tag must be an object"}), 400
+                return jsonify({
+                    "error": gettext("Each tag must be an object"),
+                    "code": "tag_must_be_object",
+                }), 400
             tag_name = (item.get("tag_name") or "").strip()
             tag_value = (item.get("tag_value") or "").strip()
             if not tag_name:
-                return jsonify({"error": "Tag name is required"}), 400
+                return jsonify({
+                    "error": gettext("Tag name is required"),
+                    "code": "tag_name_required",
+                }), 400
             normalized.append((tag_name, tag_value or None))
 
         # Replace the collection; delete-orphan cascade removes the old rows on flush.

@@ -80,6 +80,52 @@
       "typeToSearch": "Zum Suchen eingeben…"
     }
   },
+  "media": {
+    "actions": {
+      "openFileFailed": "Datei konnte nicht geöffnet werden",
+      "openFileFailedWithReason": "Datei konnte nicht geöffnet werden: {{reason}}",
+      "openFolderFailed": "Ordner konnte nicht geöffnet werden",
+      "openFolderFailedWithReason": "Ordner konnte nicht geöffnet werden: {{reason}}",
+      "openingFile": "Datei wird in der Standardanwendung geöffnet",
+      "openingFolder": "Ordner wird im Dateimanager geöffnet"
+    },
+    "faces": {
+      "applying": "Wird angewendet…",
+      "reassign": "Gesicht neu zuweisen",
+      "reassignError": "Beim Neuzuweisen des Gesichts ist ein Fehler aufgetreten",
+      "reassignFailed": "Gesicht konnte nicht neu zugewiesen werden",
+      "reassignSucceeded": "Gesicht wurde erfolgreich neu zugewiesen",
+      "selectPerson": "Person auswählen…",
+      "selectPersonRequired": "Bitte wählen Sie eine Person aus"
+    },
+    "favorite": {
+      "updateFailed": "Favorit konnte nicht aktualisiert werden"
+    },
+    "filters": {
+      "allValues": "Alle Werte",
+      "loading": "Wird geladen…",
+      "loadValuesError": "Fehler beim Laden der Werte",
+      "loadValuesFailed": "Tag-Werte konnten nicht geladen werden",
+      "locationFromOpenStreetMap": "(OpenStreetMap)",
+      "locationFromPhotos": "(aus Fotos)",
+      "saveFailed": "Filtereinstellungen konnten nicht gespeichert werden",
+      "selectTagNameFirst": "Zuerst einen Tag-Namen auswählen"
+    },
+    "gallery": {
+      "videoPlaybackFailed": "Dieses Video kann nicht wiedergegeben werden — das Format wird möglicherweise von diesem Browser nicht unterstützt oder die Datei wurde verschoben oder gelöscht."
+    },
+    "tags": {
+      "allNeedName": "Alle Tags müssen einen Namen haben",
+      "name": "Tag-Name",
+      "nameRequired": "Ein Tag-Name ist erforderlich",
+      "noneAddBelow": "Keine Tags. Fügen Sie unten einen hinzu.",
+      "remove": "Entfernen",
+      "saveFailed": "Fehler beim Speichern der Tags",
+      "updateFailed": "Tags konnten nicht aktualisiert werden",
+      "updateSucceeded": "Tags wurden erfolgreich aktualisiert",
+      "valueOptional": "Tag-Wert (optional)"
+    }
+  },
   "settings": {
     "applicationLanguage": "Anwendungssprache",
     "language": "Sprache",

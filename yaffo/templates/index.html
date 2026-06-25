@@ -1,7 +1,7 @@
 {# @context yaffo-gallery #}
 {% extends "base.html" %}
 
-{% block title %}Home - Yaffo{% endblock %}
+{% block title %}{{ _("Home - Yaffo") }}{% endblock %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
@@ -17,7 +17,7 @@
     <div class="main-container-layout">
         {{ render_sidebar(url_for('index'), filters, filter_layout=filter_layout) }}
         <div class="main-content photo-gallery">
-            {% call page_header('Photo Library') %}
+            {% call page_header(_("Photo Library")) %}
                 {% if media_items|length > 0 %}
                     {% trans trimmed count=media_items|length, shown=media_items|length|format_integer, total=media_count|format_integer %}
                         Showing {{ shown }} of {{ total }} photo
@@ -38,18 +38,18 @@
                                 <button type="button" data-icon="favorite" data-photo-id="{{ media_item.id }}"
                                         class="favorite-toggle {% if media_item.favorite %}is-favorite{% endif %}"
                                         aria-pressed="{{ 'true' if media_item.favorite else 'false' }}"
-                                        title="Toggle favorite" aria-label="Toggle favorite"></button>
+                                        title="{{ _('Toggle favorite') }}" aria-label="{{ _('Toggle favorite') }}"></button>
                                 {% if media_item.media_type == 'video' %}
                                     <img src="{{ media_item.poster_path and url_for('media_poster', media_item_id=media_item.id) or url_for('static', filename='video_placeholder.svg') }}"
                                          data-fallback="{{ url_for('static', filename='video_placeholder.svg') }}"
-                                         alt="Video from {{ media_item.date_taken | format_date ('date') }}">
+                                         alt="{{ _('Video from %(date)s', date=media_item.date_taken | format_date('date')) }}">
                                     {# Play badge only on browser-playable videos (it triggers inline
                                        play). Non-playable videos show just the poster; the card click
                                        opens the detail view, which offers "open externally". #}
                                     {% if is_browser_playable_video(media_item.full_file_path) %}
                                         <button type="button" class="video-play-badge"
                                                 data-photo-id="{{ media_item.id }}"
-                                                title="Play video" aria-label="Play video"></button>
+                                                title="{{ _('Play video') }}" aria-label="{{ _('Play video') }}"></button>
                                     {% endif %}
                                     {% if media_item.duration_seconds %}
                                         <span class="video-duration">{{ media_item.duration_seconds | format_duration }}</span>
@@ -57,37 +57,37 @@
                                 {% else %}
                                     <img src="{{ url_for('media', media_item_id=media_item.id) }}"
                                          data-fallback="{{ url_for('placeholder') }}"
-                                         alt="Photo from {{ media_item.date_taken | format_date ('date') }}">
+                                         alt="{{ _('Photo from %(date)s', date=media_item.date_taken | format_date('date')) }}">
                                 {% endif %}
                                 <dl class="photo-hover">
                                     <div class="photo-hover-row">
-                                        <dt>Name</dt>
+                                        <dt>{{ _("Name") }}</dt>
                                         <dd class="photo-hover-path"
                                             title="{{ media_item.full_file_path }}">{{ media_item.file_name }}</dd>
                                     </div>
                                     <div class="photo-hover-row">
-                                        <dt>Folder</dt>
+                                        <dt>{{ _("Folder") }}</dt>
                                         <dd class="photo-hover-path" title="{{ media_item.folder }}">{{ media_item.folder }}</dd>
                                     </div>
                                     <div class="photo-hover-row">
-                                        <dt>Taken</dt>
-                                        <dd>{{ media_item.date_taken | format_date('datetime') if media_item.date_taken else 'Unknown date' }}</dd>
+                                        <dt>{{ _("Taken") }}</dt>
+                                        <dd>{{ media_item.date_taken | format_date('datetime') if media_item.date_taken else _("Unknown date") }}</dd>
                                     </div>
                                     {% if media_item.location_name %}
                                         <div class="photo-hover-row">
-                                            <dt>Location</dt>
+                                            <dt>{{ _("Location") }}</dt>
                                             <dd>{{ media_item.location_name }}</dd>
                                         </div>
                                     {% endif %}
                                     {% if media_item.latitude is not none and media_item.longitude is not none %}
                                         <div class="photo-hover-row">
-                                            <dt>Coordinates</dt>
+                                            <dt>{{ _("Coordinates") }}</dt>
                                             <dd>{{ media_item.latitude | format_coordinate(5) }}, {{ media_item.longitude | format_coordinate(5) }}</dd>
                                         </div>
                                     {% endif %}
                                     {% if media_item.labels %}
                                         <div class="photo-hover-row">
-                                            <dt>Labels</dt>
+                                            <dt>{{ _("Labels") }}</dt>
                                             <dd>{{ media_item.labels | map(attribute='label.name') | join(', ') }}</dd>
                                         </div>
                                     {% endif %}
@@ -95,7 +95,7 @@
                                 </dl>
                             </div>
                             <div class="photo-info">
-                                <div class="photo-date">{{ media_item.date_taken | format_date ("date")  if media_item.date_taken else 'Unknown date' }}</div>
+                                <div class="photo-date">{{ media_item.date_taken | format_date("date") if media_item.date_taken else _("Unknown date") }}</div>
                                 {% if media_item.people|length > 0 %}
                                     <div class="photo-people">
                                         {% for person in media_item.people %}
@@ -138,8 +138,8 @@
         ) }}
             {% else %}
                 <div class="empty-state">
-                    <h2>No photos found</h2>
-                    <p>Try adjusting your filters or check back later.</p>
+                    <h2>{{ _("No photos found") }}</h2>
+                    <p>{{ _("Try adjusting your filters or check back later.") }}</p>
                 </div>
             {% endif %}
         </div>
@@ -147,7 +147,7 @@
 
     {% from "components/modal.html" import render_modal %}
     {% macro configure_filters_form() %}
-        <p class="filter-config-hint">Drag to reorder. Uncheck to hide a filter.</p>
+        <p class="filter-config-hint">{{ _("Drag to reorder. Uncheck to hide a filter.") }}</p>
         <div class="filter-config" id="filter-config-list"
              data-default-keys="{{ filter_default_keys | join(',') }}">
             {% for entry in filter_layout %}
@@ -155,14 +155,14 @@
                 <span class="filter-config-handle" aria-hidden="true">⠿</span>
                 <label class="filter-config-item">
                     <input type="checkbox" class="filter-config-toggle" {% if entry.visible %}checked{% endif %}>
-                    <span>{{ entry.label }}</span>
+                    <span>{{ _(entry.label) }}</span>
                 </label>
             </div>
             {% endfor %}
         </div>
-        <button type="button" class="btn btn-secondary" id="filter-config-reset">Reset to defaults</button>
+        <button type="button" class="btn btn-secondary" id="filter-config-reset">{{ _("Reset to defaults") }}</button>
     {% endmacro %}
-    {{ render_modal("configureFiltersModal", "Configure Filters", "", configure_filters_form, action_text="Save") }}
+    {{ render_modal("configureFiltersModal", _("Configure Filters"), "", configure_filters_form, action_text=_("Save")) }}
 {% endblock %}
 
 {% block scripts %}
@@ -171,9 +171,12 @@
     <script src="{{ url_for('static', filename='media/favorite.js') }}"></script>
     <script src="{{ url_for('static', filename='media/gallery_video.js') }}"></script>
     <script>
-        window.PHOTO_ORGANIZER.initLocationAutocomplete(window.APP_CONFIG);
-        window.PHOTO_ORGANIZER.initFilterConfig(window.APP_CONFIG);
-        window.PHOTO_ORGANIZER.initFavoriteToggles(window.APP_CONFIG);
-        window.PHOTO_ORGANIZER.initGalleryVideos(window.APP_CONFIG);
+        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+            window.PHOTO_ORGANIZER.initTagFilters(i18n, window.APP_CONFIG);
+            window.PHOTO_ORGANIZER.initLocationAutocomplete(i18n, window.APP_CONFIG);
+            window.PHOTO_ORGANIZER.initFilterConfig(i18n, window.APP_CONFIG);
+            window.PHOTO_ORGANIZER.initFavoriteToggles(i18n, window.APP_CONFIG);
+            window.PHOTO_ORGANIZER.initGalleryVideos(i18n, window.APP_CONFIG);
+        });
     </script>
 {% endblock %}

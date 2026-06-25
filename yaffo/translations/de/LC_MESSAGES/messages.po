@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 00:07-0500\n"
+"POT-Creation-Date: 2026-06-25 00:28-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -18,15 +18,71 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
+#: yaffo/routes/home.py:257
+msgid "Male"
+msgstr "Männlich"
+
+#: yaffo/routes/home.py:258
+msgid "Female"
+msgstr "Weiblich"
+
+#: yaffo/routes/home.py:308
+msgid "Items must be a list"
+msgstr "Elemente müssen als Liste angegeben werden"
+
+#: yaffo/routes/home.py:323
+msgid "The tag_name parameter is required"
+msgstr "Der Parameter tag_name ist erforderlich"
+
+#: yaffo/routes/media.py:24 yaffo/routes/media.py:231 yaffo/routes/media.py:248
+msgid "Photo not found"
+msgstr "Foto nicht gefunden"
+
+#: yaffo/routes/media.py:28 yaffo/routes/media.py:66 yaffo/routes/media.py:84
+#: yaffo/routes/media.py:176
+msgid "File not found"
+msgstr "Datei nicht gefunden"
+
+#: yaffo/routes/media.py:44 yaffo/routes/media.py:47
+msgid "Poster not found"
+msgstr "Vorschaubild nicht gefunden"
+
+#: yaffo/routes/media.py:80
+msgid "Face not found"
+msgstr "Gesicht nicht gefunden"
+
+#: yaffo/routes/media.py:192
+msgid "Could not open file"
+msgstr "Datei konnte nicht geöffnet werden"
+
+#: yaffo/routes/media.py:203
+msgid "Folder not found"
+msgstr "Ordner nicht gefunden"
+
+#: yaffo/routes/media.py:219
+msgid "Could not open folder"
+msgstr "Ordner konnte nicht geöffnet werden"
+
+#: yaffo/routes/media.py:256
+msgid "Tags must be a list"
+msgstr "Tags müssen als Liste angegeben werden"
+
+#: yaffo/routes/media.py:264
+msgid "Each tag must be an object"
+msgstr "Jeder Tag muss ein Objekt sein"
+
+#: yaffo/routes/media.py:271
+msgid "Tag name is required"
+msgstr "Ein Tag-Name ist erforderlich"
+
 #: yaffo/templates/_sidebar.html:5
 #, fuzzy
 msgid "Actions"
 msgstr "Orte"
 
 #: yaffo/templates/_sidebar.html:11
-#, fuzzy
 msgid "Filters"
-msgstr "(gefiltert)"
+msgstr "Filter"
 
 #: yaffo/templates/_sidebar.html:14
 msgid "Configure filters"
@@ -121,6 +177,14 @@ msgstr "Diesen Ordner auswählen"
 msgid "Confirm"
 msgstr "Bestätigen"
 
+#: yaffo/templates/index.html:4
+msgid "Home - Yaffo"
+msgstr "Startseite - Yaffo"
+
+#: yaffo/templates/index.html:20
+msgid "Photo Library"
+msgstr "Fotobibliothek"
+
 #: yaffo/templates/index.html:22
 #, python-format
 msgid "Showing %(shown)s of %(total)s photo"
@@ -128,9 +192,76 @@ msgid_plural "Showing %(shown)s of %(total)s photos"
 msgstr[0] "%(shown)s von %(total)s Foto wird angezeigt"
 msgstr[1] "%(shown)s von %(total)s Fotos werden angezeigt"
 
-#: yaffo/templates/index.html:28
+#: yaffo/templates/index.html:28 yaffo/templates/index.html:141
 msgid "No photos found"
 msgstr "Keine Fotos gefunden"
+
+#: yaffo/templates/index.html:41 yaffo/templates/media/view.html:223
+msgid "Toggle favorite"
+msgstr "Favoritenstatus umschalten"
+
+#: yaffo/templates/index.html:45
+#, python-format
+msgid "Video from %(date)s"
+msgstr "Video vom %(date)s"
+
+#: yaffo/templates/index.html:52
+msgid "Play video"
+msgstr "Video abspielen"
+
+#: yaffo/templates/index.html:60
+#, python-format
+msgid "Photo from %(date)s"
+msgstr "Foto vom %(date)s"
+
+#: yaffo/templates/index.html:64
+msgid "Name"
+msgstr "Name"
+
+#: yaffo/templates/index.html:69
+msgid "Folder"
+msgstr "Ordner"
+
+#: yaffo/templates/index.html:73
+msgid "Taken"
+msgstr "Aufgenommen"
+
+#: yaffo/templates/index.html:74 yaffo/templates/index.html:98
+msgid "Unknown date"
+msgstr "Unbekanntes Datum"
+
+#: yaffo/templates/index.html:78 yaffo/templates/media/view.html:74
+msgid "Location"
+msgstr "Ort"
+
+#: yaffo/templates/index.html:84
+msgid "Coordinates"
+msgstr "Koordinaten"
+
+#: yaffo/templates/index.html:90
+msgid "Labels"
+msgstr "Labels"
+
+#: yaffo/templates/index.html:142
+msgid "Try adjusting your filters or check back later."
+msgstr "Passen Sie die Filter an oder versuchen Sie es später erneut."
+
+#: yaffo/templates/index.html:150
+msgid "Drag to reorder. Uncheck to hide a filter."
+msgstr "Zum Sortieren ziehen. Häkchen entfernen, um einen Filter auszublenden."
+
+#: yaffo/templates/index.html:163
+msgid "Reset to defaults"
+msgstr "Auf Standardwerte zurücksetzen"
+
+#: yaffo/templates/index.html:165
+msgid "Configure Filters"
+msgstr "Filter konfigurieren"
+
+#: yaffo/templates/components/modal.html:17 yaffo/templates/index.html:165
+#: yaffo/templates/settings/index.html:29
+msgid "Save"
+msgstr "Speichern"
 
 #: yaffo/templates/components/chat_dialog.html:28
 msgid "Generating…"
@@ -201,11 +332,6 @@ msgstr "Letzte"
 #: yaffo/templates/components/job_section.html:5
 msgid "Processing in Progress"
 msgstr "Verarbeitung läuft"
-
-#: yaffo/templates/components/modal.html:17
-#: yaffo/templates/settings/index.html:29
-msgid "Save"
-msgstr "Speichern"
 
 #: yaffo/templates/filters/_device.html:2
 msgid "Device"
@@ -357,15 +483,15 @@ msgstr "Beliebige Person"
 msgid "Tag Name"
 msgstr "Tag-Name"
 
-#: yaffo/templates/filters/_tags.html:4
+#: yaffo/templates/filters/_tags.html:5
 msgid "All"
 msgstr "Alle"
 
-#: yaffo/templates/filters/_tags.html:13
+#: yaffo/templates/filters/_tags.html:14
 msgid "Tag Value"
 msgstr "Tag-Wert"
 
-#: yaffo/templates/filters/_tags.html:15
+#: yaffo/templates/filters/_tags.html:16
 msgid "Select a tag name first"
 msgstr "Zuerst einen Tag-Namen auswählen"
 
@@ -389,6 +515,151 @@ msgstr "Ergebnisse anzeigen"
 #: yaffo/templates/fragments/job_status_fragment.html:28
 msgid "Delete"
 msgstr "Löschen"
+
+#: yaffo/templates/media/view.html:15
+msgid "Photo Details"
+msgstr "Fotodetails"
+
+#: yaffo/templates/media/view.html:20
+msgid "File Information"
+msgstr "Dateiinformationen"
+
+#: yaffo/templates/media/view.html:22 yaffo/templates/media/view.html:79
+msgid "Name:"
+msgstr "Name:"
+
+#: yaffo/templates/media/view.html:26
+msgid "Folder:"
+msgstr "Ordner:"
+
+#: yaffo/templates/media/view.html:31
+msgid "Date Taken:"
+msgstr "Aufnahmedatum:"
+
+#: yaffo/templates/media/view.html:37
+msgid "Device:"
+msgstr "Gerät:"
+
+#: yaffo/templates/media/view.html:44
+msgid "Duration:"
+msgstr "Dauer:"
+
+#: yaffo/templates/media/view.html:50
+msgid "Resolution:"
+msgstr "Auflösung:"
+
+#: yaffo/templates/media/view.html:56
+msgid "Codec:"
+msgstr "Codec:"
+
+#: yaffo/templates/media/view.html:64
+msgid "Open File"
+msgstr "Datei öffnen"
+
+#: yaffo/templates/media/view.html:68
+msgid "Open Folder"
+msgstr "Ordner öffnen"
+
+#: yaffo/templates/media/view.html:85
+msgid "Coordinates:"
+msgstr "Koordinaten:"
+
+#: yaffo/templates/media/view.html:94
+msgid "View on Map"
+msgstr "Auf Karte anzeigen"
+
+#: yaffo/templates/media/view.html:100
+msgid "No location information"
+msgstr "Keine Ortsinformationen"
+
+#: yaffo/templates/media/view.html:105
+#, python-format
+msgid "Person (%(count)s)"
+msgid_plural "People (%(count)s)"
+msgstr[0] "Person (%(count)s)"
+msgstr[1] "Personen (%(count)s)"
+
+#: yaffo/templates/media/view.html:115
+msgid "No people assigned to this photo"
+msgstr "Diesem Foto sind keine Personen zugewiesen"
+
+#: yaffo/templates/media/view.html:120
+#, python-format
+msgid "Face (%(count)s)"
+msgid_plural "Faces (%(count)s)"
+msgstr[0] "Gesicht (%(count)s)"
+msgstr[1] "Gesichter (%(count)s)"
+
+#: yaffo/templates/media/view.html:130
+msgid "Face"
+msgstr "Gesicht"
+
+#: yaffo/templates/media/view.html:142
+msgid "No faces detected"
+msgstr "Keine Gesichter erkannt"
+
+#: yaffo/templates/media/view.html:147
+#, python-format
+msgid "Label (%(count)s)"
+msgid_plural "Labels (%(count)s)"
+msgstr[0] "Label (%(count)s)"
+msgstr[1] "Labels (%(count)s)"
+
+#: yaffo/templates/media/view.html:151
+#, python-format
+msgid "Confidence: %(value)s"
+msgstr "Konfidenz: %(value)s"
+
+#: yaffo/templates/media/view.html:157
+msgid "No labels"
+msgstr "Keine Labels"
+
+#: yaffo/templates/media/view.html:162
+#, python-format
+msgid "Tag (%(count)s)"
+msgid_plural "Tags (%(count)s)"
+msgstr[0] "Tag (%(count)s)"
+msgstr[1] "Tags (%(count)s)"
+
+#: yaffo/templates/media/view.html:176
+msgid "No tags"
+msgstr "Keine Tags"
+
+#: yaffo/templates/media/view.html:181 yaffo/templates/media/view.html:248
+msgid "Edit Tags"
+msgstr "Tags bearbeiten"
+
+#: yaffo/templates/media/view.html:193
+msgid "This video is no longer available on disk."
+msgstr "Dieses Video ist nicht mehr auf dem Datenträger verfügbar."
+
+#: yaffo/templates/media/view.html:204
+msgid "This format can't play in the browser."
+msgstr "Dieses Format kann im Browser nicht wiedergegeben werden."
+
+#: yaffo/templates/media/view.html:206
+msgid "Open in default player"
+msgstr "Im Standardplayer öffnen"
+
+#: yaffo/templates/media/view.html:237
+msgid "Add New Tag"
+msgstr "Neuen Tag hinzufügen"
+
+#: yaffo/templates/media/view.html:239
+msgid "Tag name"
+msgstr "Tag-Name"
+
+#: yaffo/templates/media/view.html:240
+msgid "Tag value (optional)"
+msgstr "Tag-Wert (optional)"
+
+#: yaffo/templates/media/view.html:242
+msgid "Add Tag"
+msgstr "Tag hinzufügen"
+
+#: yaffo/templates/media/view.html:248
+msgid "Save Changes"
+msgstr "Änderungen speichern"
 
 #: yaffo/templates/people/faces.html:37
 #, python-format
