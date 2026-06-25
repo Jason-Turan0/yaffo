@@ -4,6 +4,7 @@ from urllib.request import urlopen
 import json
 import os
 import platform
+import shlex
 import subprocess
 import threading
 import time
@@ -258,6 +259,61 @@ def init_db(c):
         inv init-db
     """
     migrate(c)
+
+
+@task
+def i18n_extract(c):
+    """Extract Python/Jinja source strings into messages.pot."""
+    c.run("pybabel extract -F babel.cfg -o messages.pot .", pty=True)
+
+
+@task
+def i18n_init(c, locale):
+    """Create gettext and browser catalogs for a new locale."""
+    safe_locale = shlex.quote(locale)
+    c.run(f"pybabel init -i messages.pot -d yaffo/translations -l {safe_locale}", pty=True)
+    c.run(f"python -m scripts.i18n_catalogs sync --locale {safe_locale}", pty=True)
+
+
+@task
+def i18n_update(c):
+    """Merge extracted gettext strings and synchronize browser catalog keys."""
+    c.run("pybabel update -i messages.pot -d yaffo/translations", pty=True)
+    for locale_path in sorted(Path("yaffo/static/locales").glob("*.json")):
+        if locale_path.stem == "en" or locale_path.stem.endswith(".review"):
+            continue
+        c.run(
+            f"python -m scripts.i18n_catalogs sync --locale {locale_path.stem}",
+            pty=True,
+        )
+
+
+@task
+def i18n_translate(c, locale, dry_run=False, keys_only=False, overwrite=False, batch_size=20):
+    """Translate missing entries from English with Yaffo's configured LLM."""
+    options = [f"--locale {shlex.quote(locale)}", f"--batch-size {int(batch_size)}"]
+    if dry_run:
+        options.append("--dry-run")
+    if keys_only:
+        options.append("--keys-only")
+    if overwrite:
+        options.append("--overwrite")
+    c.run(f"python -m scripts.i18n_catalogs translate {' '.join(options)}", env=_data_env(), pty=True)
+
+
+@task
+def i18n_compile(c):
+    """Validate catalogs and compile gettext .po files."""
+    c.run("python -m scripts.i18n_catalogs check", pty=True)
+    c.run("pybabel compile -d yaffo/translations", pty=True)
+
+
+@task
+def i18n_check(c, require_translated=False):
+    """Validate catalogs and prevent new hard-coded UI text."""
+    option = " --require-translated" if require_translated else ""
+    c.run(f"python -m scripts.i18n_catalogs check{option}", pty=True)
+    c.run("python -m scripts.i18n_hardcoded", pty=True)
 
 
 @task

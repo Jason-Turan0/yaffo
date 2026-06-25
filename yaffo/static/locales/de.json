@@ -1,0 +1,16 @@
+{
+  "common": {
+    "apply": "Anwenden",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "confirm": "Bestätigen",
+    "delete": "Löschen",
+    "notAvailable": "k. A.",
+    "save": "Speichern"
+  },
+  "settings": {
+    "applicationLanguage": "Anwendungssprache",
+    "language": "Sprache",
+    "languageHelp": "Legt die von Yaffo verwendete Sprache fest. Die Seite wird nach dem Speichern neu geladen."
+  }
+}

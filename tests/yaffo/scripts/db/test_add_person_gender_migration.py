@@ -22,3 +22,17 @@ def test_migration_adds_nullable_person_gender_column():
     }
     assert columns["gender"][3] == 0
     assert connection.execute("SELECT gender FROM people").fetchone() == (None,)
+
+
+def test_migration_is_safe_when_initial_schema_already_has_gender():
+    migration = importlib.import_module(
+        "yaffo.scripts.db.migrations.004_MIGRATION_20260624_add_person_gender"
+    )
+    connection = sqlite3.connect(":memory:")
+    connection.execute(
+        "CREATE TABLE people (id INTEGER PRIMARY KEY, name TEXT, gender INTEGER)"
+    )
+
+    migration.migrate(connection)
+
+    assert [row[1] for row in connection.execute("PRAGMA table_info(people)")].count("gender") == 1

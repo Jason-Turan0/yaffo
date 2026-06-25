@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ theme }}">
+<html lang="{{ current_locale }}" dir="{{ text_direction }}" data-theme="{{ theme }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -72,6 +72,11 @@
                     url = url.replace(new RegExp(`(?:<|&lt;)(?:\\w+:)?${key}(?:>|&gt;)`, 'g'), value);
                 }
                 return url;
+            },
+            i18n: {
+                locale: {{ current_locale | tojson }},
+                fallbackLocale: "en",
+                resourceUrl: {{ url_for('static', filename='locales/__lng__.json') | tojson }}
             }
         };
     </script>
@@ -189,6 +194,8 @@
     </div>
 </div>
 
+<script src="{{ url_for('static', filename='vendor/i18next/25.7.4/i18next.min.js') }}"></script>
+<script src="{{ url_for('static', filename='i18n.js') }}"></script>
 <script src="{{ url_for('static', filename='notification.js') }}"></script>
 <script src="{{ url_for('static', filename='multi-select.js') }}"></script>
 <script src="{{ url_for('static', filename='searchable-select.js') }}"></script>

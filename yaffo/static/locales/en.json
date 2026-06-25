@@ -1,0 +1,16 @@
+{
+  "common": {
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "notAvailable": "N/A",
+    "save": "Save"
+  },
+  "settings": {
+    "applicationLanguage": "Application language",
+    "language": "Language",
+    "languageHelp": "Controls the language used by Yaffo. The page reloads after saving."
+  }
+}

@@ -18,5 +18,11 @@
             "gridstack-all.js": "https://cdn.jsdelivr.net/npm/gridstack@{version}/dist/gridstack-all.js",
             "gridstack.min.css": "https://cdn.jsdelivr.net/npm/gridstack@{version}/dist/gridstack.min.css"
         }
+    },
+    "i18next": {
+        "version": "25.7.4",
+        "files": {
+            "i18next.min.js": "https://cdn.jsdelivr.net/npm/i18next@{version}/dist/umd/i18next.min.js"
+        }
     }
 }

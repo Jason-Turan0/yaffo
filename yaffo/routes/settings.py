@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, jsonify, make_response, Response, stream_with_context
+from flask import Flask, render_template, request, jsonify, make_response, Response, stream_with_context, redirect, url_for
 
 import yaffo.db.repositories.media_dir_repository
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, Face, ClassificationLabel, AUTOMATION_HANDLER_CLASSIFY_LABELS
 from yaffo.common import DB_PATH, QUEUE_DB_PATH
+from yaffo.i18n import get_saved_locale, set_locale
 from yaffo.version import get_build_info
 from yaffo.site_agents import llm_config
 import json
@@ -109,7 +110,14 @@ def init_settings_routes(app: Flask):
             build_info=get_build_info(),
             llm=llm_config.status(),
             labels=classification_repository.list_labels(db.session),
+            selected_locale=get_saved_locale() or app.config["BABEL_DEFAULT_LOCALE"],
         )
+
+    @app.route("/settings/locale", methods=["POST"])
+    def settings_locale():
+        if not set_locale(request.form.get("locale", "")):
+            return jsonify({"error": "Unsupported locale"}), 400
+        return redirect(url_for("settings_index"))
 
     def _render_labels():
         return render_template(

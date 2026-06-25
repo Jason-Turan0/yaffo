@@ -11,4 +11,6 @@ import sqlite3
 
 
 def migrate(conn: sqlite3.Connection) -> None:
-    conn.execute("ALTER TABLE people ADD COLUMN gender INTEGER")
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(people)")}
+    if "gender" not in columns:
+        conn.execute("ALTER TABLE people ADD COLUMN gender INTEGER")

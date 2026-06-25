@@ -7,6 +7,7 @@ from flask import Flask
 from yaffo import themes
 from yaffo.db import db
 from yaffo.common import DB_PATH
+from yaffo.i18n import init_i18n, select_locale, supported_locale_options, text_direction
 from yaffo.logging_config import get_logger
 from yaffo.template_filters import init_template_filters
 from yaffo.routes.init_routes import init_routes
@@ -42,6 +43,7 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None):
         app.config.update(config)
 
     db.init_app(app)
+    init_i18n(app)
 
     # Make url_map available in all templates
     @app.context_processor
@@ -51,6 +53,15 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None):
     @app.context_processor
     def inject_theme():
         return {'theme': themes.get_theme()}
+
+    @app.context_processor
+    def inject_i18n():
+        locale = select_locale()
+        return {
+            "current_locale": locale,
+            "supported_locales": supported_locale_options(),
+            "text_direction": text_direction(locale),
+        }
 
     # Register template filters
 

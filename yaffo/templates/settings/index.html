@@ -13,6 +13,24 @@
     {{ page_header('Settings', 'Configure application settings') }}
 
     <div class="settings-section">
+        <h2>{{ _("Language") }}</h2>
+        <form method="POST" action="{{ url_for('settings_locale') }}">
+            <div class="form-group">
+                <label for="application-locale">{{ _("Application language") }}</label>
+                <select id="application-locale" name="locale" class="searchable-select" data-search-disabled>
+                    {% for locale in supported_locales %}
+                    <option value="{{ locale.code }}" {% if locale.code == selected_locale %}selected{% endif %}>
+                        {{ locale.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="hint-text">{{ _("Controls the language used by Yaffo. The page reloads after saving.") }}</p>
+            </div>
+            <button type="submit" class="btn-primary">{{ _("Save") }}</button>
+        </form>
+    </div>
+
+    <div class="settings-section">
         <h2>Media Directories</h2>
         <p class="section-description">Add directories where your photos are stored. The application will scan these directories for photos to index.</p>
 
