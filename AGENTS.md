@@ -70,6 +70,7 @@ InsightFace — **SCRFD** detection + **ArcFace** 512-d embeddings, on ONNX Runt
 - Don't use code comments as a way of describing what you did. Only include comments for very complicated or unconventional code. Use the chat interface to explain what you did and why. Refer to the file and line if necessary.
 - Use type hints for any code generated
 - Target platform is windows and mac so do all path manipulations server side with os neutral Path lib.
+- scripts used for developer or build automation should be stored in /scripts. /yaffo/scripts should be saved for scripts needed at runtime and are packaged with the application
 - **Import Style**: Always place imports at the top of the file. Never use local imports inside functions or methods. 
 
 ### DRY Principle (Don't Repeat Yourself)
