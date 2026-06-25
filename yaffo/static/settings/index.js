@@ -3,12 +3,32 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
     let mediaDirs = [...initialMediaDirs];
 
+    const escapeHtml = (value) => {
+        const element = document.createElement('div');
+        element.textContent = String(value);
+        return element.innerHTML;
+    };
+
+    const formatBytes = (bytes) => {
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let value = Number(bytes);
+        let unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.length - 1) {
+            value /= 1024;
+            unitIndex += 1;
+        }
+        return i18n.t('settings:thumbnail.size', {
+            value: i18n.number(value, { maximumFractionDigits: 2 }),
+            unit: units[unitIndex]
+        });
+    };
+
     const addMediaDir = async () => {
         const input = document.getElementById('new-media-dir');
         const directory = input.value.trim();
 
         if (!directory) {
-            window.notification.error('Please enter a directory path');
+            window.notification.error(i18n.t('settings:directory.pathRequired'));
             return;
         }
 
@@ -27,21 +47,25 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
                 mediaDirs = data.media_dirs;
                 renderMediaDirs();
                 input.value = '';
-                window.notification.success('Media directory added successfully');
+                window.notification.success(i18n.t('settings:media.addSucceeded'));
             } else {
-                window.notification.error(data.error || 'Failed to add directory');
+                window.notification.error(data.error || i18n.t('settings:media.addFailed'));
             }
         } catch (error) {
             console.error('Error adding media directory:', error);
-            window.notification.error('Failed to add directory');
+            window.notification.error(i18n.t('settings:media.addFailed'));
         }
     };
 
     const removeMediaDir = async (index) => {
+        const directory = mediaDirs[index];
+        if (!directory) {
+            return;
+        }
         const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
-            title: 'Remove Media Directory',
-            message: `Remove directory: ${mediaDirs[index]}?`,
-            confirmText: 'Remove',
+            title: i18n.t('settings:media.removeTitle'),
+            message: i18n.t('settings:media.removeMessage', { directory: directory.path }),
+            confirmText: i18n.t('settings:media.removeConfirm'),
             confirmClass: 'btn-danger'
         });
 
@@ -60,13 +84,15 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
             if (response.ok) {
                 mediaDirs = data.media_dirs;
                 renderMediaDirs();
-                window.notification.success(`Removed: ${data.removed}`);
+                window.notification.success(i18n.t('settings:media.removeSucceeded', {
+                    directory: data.removed
+                }));
             } else {
-                window.notification.error(data.error || 'Failed to remove directory');
+                window.notification.error(data.error || i18n.t('settings:media.removeFailed'));
             }
         } catch (error) {
             console.error('Error removing media directory:', error);
-            window.notification.error('Failed to remove directory');
+            window.notification.error(i18n.t('settings:media.removeFailed'));
         }
     };
 
@@ -74,14 +100,17 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
         const container = document.getElementById('media-dirs-list');
 
         if (mediaDirs.length === 0) {
-            container.innerHTML = '<p class="no-data">No media directories configured</p>';
+            container.innerHTML = `<p class="no-data">${i18n.t('settings:media.noneConfigured')}</p>`;
             return;
         }
 
         container.innerHTML = mediaDirs.map((dir, index) => `
             <div class="media-dir-item" data-index="${index}">
-                <span class="media-dir-path">${dir.path}</span>
-                <button type="button" class="btn btn-danger btn-sm" onclick="window.PHOTO_ORGANIZER.settings.removeMediaDir(${index})">Remove</button>
+                <span class="media-dir-path">${escapeHtml(dir.path)}</span>
+                <button type="button" class="btn btn-danger btn-sm"
+                        data-action="remove-media-dir" data-index="${index}">
+                    ${i18n.t('settings:media.removeConfirm')}
+                </button>
             </div>
         `).join('');
     };
@@ -91,7 +120,7 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
         const directory = input.value.trim();
 
         if (!directory) {
-            window.notification.error('Please enter a directory path');
+            window.notification.error(i18n.t('settings:directory.pathRequired'));
             return;
         }
 
@@ -101,20 +130,22 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
             const stats = await statsResponse.json();
 
             if (!statsResponse.ok) {
-                window.notification.error('Failed to get thumbnail stats');
+                window.notification.error(stats.error || i18n.t('settings:thumbnail.statsFailed'));
                 return;
             }
 
-            // Show confirmation dialog
-            const message = `Are you sure you want to move the thumbnail directory?\n\n` +
-                           `Current location: ${stats.directory}\n` +
-                           `New location: ${directory}\n\n` +
-                           `This will move ${stats.count} files (${stats.size_formatted})`;
+            const message = i18n.t('settings:thumbnail.moveMessage', {
+                currentDirectory: stats.directory,
+                newDirectory: directory,
+                count: stats.count,
+                formattedCount: i18n.number(stats.count),
+                size: formatBytes(stats.size)
+            });
 
             const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
-                title: 'Move Thumbnail Directory',
+                title: i18n.t('settings:thumbnail.moveTitle'),
                 message: message,
-                confirmText: 'Move',
+                confirmText: i18n.t('settings:thumbnail.moveConfirm'),
                 confirmClass: 'btn-primary'
             });
 
@@ -134,20 +165,32 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
             const data = await response.json();
 
             if (response.ok) {
-                window.notification.success(`Moved ${data.files_moved} files (${data.size_moved}) to ${data.new_directory}`);
+                window.notification.success(i18n.t('settings:thumbnail.moveSucceeded', {
+                    count: data.files_moved,
+                    formattedCount: i18n.number(data.files_moved),
+                    size: formatBytes(data.size_moved),
+                    directory: data.new_directory
+                }));
 
-                // Update UI
-                document.getElementById('current-thumbnail-dir').textContent = data.new_directory;
-                document.getElementById('thumbnail-stats').innerHTML =
-                    `<span class="stat-item">Files: <strong>${data.files_moved}</strong></span>
-                     <span class="stat-item">Total Size: <strong>${data.size_moved}</strong></span>`;
+                const currentDirectory = document.getElementById('current-thumbnail-dir');
+                if (currentDirectory) {
+                    currentDirectory.textContent = data.new_directory;
+                }
+                const countElement = document.getElementById('thumbnail-count');
+                const sizeElement = document.getElementById('thumbnail-size');
+                if (countElement) {
+                    countElement.textContent = i18n.number(data.files_moved);
+                }
+                if (sizeElement) {
+                    sizeElement.textContent = formatBytes(data.size_moved);
+                }
                 input.value = '';
             } else {
-                window.notification.error(data.error || 'Failed to move thumbnails');
+                window.notification.error(data.error || i18n.t('settings:thumbnail.moveFailed'));
             }
         } catch (error) {
             console.error('Error changing thumbnail directory:', error);
-            window.notification.error('Failed to change thumbnail directory');
+            window.notification.error(i18n.t('settings:thumbnail.moveFailed'));
         }
     };
 
@@ -161,10 +204,10 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
             if (countEl) countEl.textContent = i18n.number(Number(record.scanned));
         } else if (record.type === 'done') {
             if (countEl) countEl.textContent = i18n.number(Number(record.count));
-            if (sizeEl) sizeEl.textContent = record.size_formatted;
+            if (sizeEl) sizeEl.textContent = formatBytes(record.size);
         } else if (record.type === 'error') {
             if (sizeEl) sizeEl.textContent = '—';
-            window.notification.error('Failed to count thumbnails: ' + record.message);
+            window.notification.error(record.message || i18n.t('settings:thumbnail.countFailed'));
         }
     };
 
@@ -172,7 +215,7 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
         if (!document.getElementById('thumbnail-stats')) return;
         try {
             const response = await fetch(config.urls.settings_thumbnail_stats_stream);
-            if (!response.ok || !response.body) throw new Error('stats request failed');
+            if (!response.ok || !response.body) throw new Error('Thumbnail stats request failed');
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -192,9 +235,23 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
         } catch (error) {
             const sizeEl = document.getElementById('thumbnail-size');
             if (sizeEl) sizeEl.textContent = '—';
-            window.notification.error('Failed to count thumbnails.');
+            window.notification.error(i18n.t('settings:thumbnail.countFailed'));
         }
     };
+
+    document.querySelector('.main-content')?.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-action]');
+        if (!button) {
+            return;
+        }
+        if (button.dataset.action === 'add-media-dir') {
+            addMediaDir();
+        } else if (button.dataset.action === 'remove-media-dir') {
+            removeMediaDir(Number(button.dataset.index));
+        } else if (button.dataset.action === 'change-thumbnail-dir') {
+            changeThumbnailDir();
+        }
+    });
 
     streamThumbnailStats();
 

@@ -109,3 +109,38 @@ def test_reclassify_enqueues_over_indexed_photos(app, client, monkeypatch):
     message, type_ = _notification(resp)
     assert "Re-classifying 2 photo" in message and type_ == "success"
     assert len(calls) == 1 and len(calls[0][1]) == 2
+
+
+def test_reclassify_notification_uses_saved_locale_and_plural(
+    app,
+    client,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "yaffo.routes.settings.classify_labels_automation_task",
+        lambda automation_id, media_item_ids: None,
+    )
+    with app.app_context():
+        db.session.add(Automation(
+            slug="classify_labels",
+            name="Classify labels",
+            is_system=True,
+            handler="classify_labels",
+        ))
+        db.session.add(MediaItem(
+            full_file_path="/p/1.jpg",
+            status=MEDIA_STATUS_INDEXED,
+        ))
+        db.session.add(MediaItem(
+            full_file_path="/p/2.jpg",
+            status=MEDIA_STATUS_INDEXED,
+        ))
+        db.session.commit()
+
+    client.post("/settings/locale", data={"locale": "de"})
+    response = client.post("/settings/labels/reclassify")
+
+    assert _notification(response) == (
+        "2 Fotos werden im Hintergrund neu klassifiziert…",
+        "success",
+    )

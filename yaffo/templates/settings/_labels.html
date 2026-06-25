@@ -1,14 +1,12 @@
 <div class="settings-section" id="labels-section">
-    <h2>Photo labels</h2>
+    <h2>{{ _("Photo labels") }}</h2>
     <p class="section-description">
-        The vocabulary the <strong>Classify labels</strong> automation scores photos against (offline image
-        recognition). Enable the labels you want detected, or add your own. A custom prompt fine-tunes how a
-        label is matched — e.g. label <em>swimming</em> with prompt <em>people swimming in water</em>.
+        {% trans %}The vocabulary used by the <strong>Classify labels</strong> automation for offline image recognition. Enable the labels you want detected or add your own. A custom prompt fine-tunes how a label is matched.{% endtrans %}
     </p>
 
     {% if labels %}
-    <input type="text" id="label-filter" class="label-filter" placeholder="Filter labels…"
-           aria-label="Filter labels" autocomplete="off">
+    <input type="text" id="label-filter" class="label-filter" placeholder="{{ _('Filter labels…') }}"
+           aria-label="{{ _('Filter labels') }}" autocomplete="off">
     <ul class="labels-list">
         {% for label in labels %}
         <li class="label-row">
@@ -20,36 +18,33 @@
             </label>
             <span class="label-name">{{ label.name }}</span>
             {% if label.prompt %}<span class="label-prompt">{{ label.prompt }}</span>{% endif %}
-            {% if label.is_default %}<span class="label-badge">default</span>{% endif %}
+            {% if label.is_default %}<span class="label-badge">{{ _("default") }}</span>{% endif %}
             <button type="button" class="btn-danger btn-sm" data-icon="delete"
                     hx-post="{{ url_for('settings_labels') }}"
                     hx-vals='{"action": "delete", "label_id": {{ label.id }}}'
-                    hx-target="#labels-section" hx-swap="outerHTML">Remove</button>
+                    hx-target="#labels-section" hx-swap="outerHTML">{{ _("Remove") }}</button>
         </li>
         {% endfor %}
     </ul>
-    <p class="no-data label-filter-empty" hidden>No labels match your filter.</p>
+    <p class="no-data label-filter-empty" hidden>{{ _("No labels match your filter.") }}</p>
     {% else %}
-    <p class="no-data">No labels yet</p>
+    <p class="no-data">{{ _("No labels yet") }}</p>
     {% endif %}
 
     <form class="add-label-form" hx-post="{{ url_for('settings_labels') }}"
           hx-vals='{"action": "create"}' hx-target="#labels-section" hx-swap="outerHTML">
-        <input type="text" name="name" placeholder="Label name (e.g. dog)" required>
-        <input type="text" name="prompt" placeholder="Optional prompt (e.g. people swimming in water)">
-        <button type="submit" class="btn-primary" data-icon="add">Add label</button>
+        <input type="text" name="name" placeholder="{{ _('Label name (for example, dog)') }}" required>
+        <input type="text" name="prompt" placeholder="{{ _('Optional prompt (for example, people swimming in water)') }}">
+        <button type="submit" class="btn-primary" data-icon="add">{{ _("Add label") }}</button>
     </form>
     <p class="hint-text">
-        The <strong>name</strong> is the tag shown on photos. The optional <strong>prompt</strong> is the
-        phrase the recognizer actually matches against — leave it blank to use
-        “a&nbsp;photo&nbsp;of&nbsp;&lt;name&gt;”. Plain objects (dog, beach) work blank; activities and events
-        match better with a fuller phrase, e.g. <em>swimming</em> → <em>people swimming in water</em>.
+        {% trans %}The <strong>name</strong> is the tag shown on photos. The optional <strong>prompt</strong> is the phrase the recognizer matches against. Leave it blank for simple objects; activities and events work better with a fuller phrase.{% endtrans %}
     </p>
 
     <div class="labels-reclassify">
         <button type="button" class="btn-secondary"
                 hx-post="{{ url_for('settings_labels_reclassify') }}"
-                hx-swap="none">Re-classify all photos</button>
-        <p class="hint-text">Run the classifier over your whole library to apply vocabulary changes.</p>
+                hx-swap="none">{{ _("Re-classify all photos") }}</button>
+        <p class="hint-text">{{ _("Run the classifier over your whole library to apply vocabulary changes.") }}</p>
     </div>
 </div>

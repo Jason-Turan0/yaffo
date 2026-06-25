@@ -181,8 +181,33 @@
   },
   "settings": {
     "applicationLanguage": "Application language",
+    "directory": {
+      "pathRequired": "Please enter a directory path"
+    },
     "language": "Language",
-    "languageHelp": "Controls the language used by Yaffo. The page reloads after saving."
+    "languageHelp": "Controls the language used by Yaffo. The page reloads after saving.",
+    "media": {
+      "addFailed": "Failed to add directory",
+      "addSucceeded": "Media directory added successfully",
+      "noneConfigured": "No media directories configured",
+      "removeConfirm": "Remove",
+      "removeFailed": "Failed to remove directory",
+      "removeMessage": "Remove directory: {{directory}}?",
+      "removeSucceeded": "Removed: {{directory}}",
+      "removeTitle": "Remove Media Directory"
+    },
+    "thumbnail": {
+      "countFailed": "Failed to count thumbnails",
+      "moveConfirm": "Move",
+      "moveFailed": "Failed to move thumbnails",
+      "moveMessage_one": "Are you sure you want to move the thumbnail directory?\n\nCurrent location: {{currentDirectory}}\nNew location: {{newDirectory}}\n\nThis will move {{formattedCount}} file ({{size}}).",
+      "moveMessage_other": "Are you sure you want to move the thumbnail directory?\n\nCurrent location: {{currentDirectory}}\nNew location: {{newDirectory}}\n\nThis will move {{formattedCount}} files ({{size}}).",
+      "moveSucceeded_one": "Moved {{formattedCount}} file ({{size}}) to {{directory}}",
+      "moveSucceeded_other": "Moved {{formattedCount}} files ({{size}}) to {{directory}}",
+      "moveTitle": "Move Thumbnail Directory",
+      "size": "{{value}} {{unit}}",
+      "statsFailed": "Failed to get thumbnail statistics"
+    }
   },
   "utilities": {
     "indexPhotos": {

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 07:12-0500\n"
+"POT-Creation-Date: 2026-06-25 07:29-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -176,6 +176,58 @@ msgstr ""
 msgid "Person updated"
 msgstr ""
 
+#: yaffo/routes/settings.py:145
+msgid "Label name is required."
+msgstr ""
+
+#: yaffo/routes/settings.py:148
+#, python-format
+msgid "Label '%(name)s' already exists."
+msgstr ""
+
+#: yaffo/routes/settings.py:164
+msgid "Classify-labels automation is not installed."
+msgstr ""
+
+#: yaffo/routes/settings.py:170
+msgid "No indexed photos to classify yet."
+msgstr ""
+
+#: yaffo/routes/settings.py:176
+#, python-format
+msgid "Re-classifying %(count)s photo in the background…"
+msgid_plural "Re-classifying %(count)s photos in the background…"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/routes/settings.py:221 yaffo/routes/settings.py:316
+msgid "Directory path is required"
+msgstr ""
+
+#: yaffo/routes/settings.py:229
+msgid "Could not create the directory"
+msgstr ""
+
+#: yaffo/routes/settings.py:235
+msgid "Directory is already configured"
+msgstr ""
+
+#: yaffo/routes/settings.py:249
+msgid "Media directory not found"
+msgstr ""
+
+#: yaffo/routes/settings.py:298
+msgid "Could not count thumbnail files"
+msgstr ""
+
+#: yaffo/routes/settings.py:333
+msgid "The new directory is the same as the current directory"
+msgstr ""
+
+#: yaffo/routes/settings.py:392
+msgid "Could not move thumbnail files"
+msgstr ""
+
 #: yaffo/templates/_sidebar.html:5 yaffo/templates/people/list.html:28
 msgid "Actions"
 msgstr ""
@@ -234,7 +286,7 @@ msgstr ""
 msgid "Themes"
 msgstr ""
 
-#: yaffo/templates/base.html:108
+#: yaffo/templates/base.html:108 yaffo/templates/settings/index.html:13
 msgid "Settings"
 msgstr ""
 
@@ -1138,6 +1190,78 @@ msgstr ""
 msgid "Edit Person"
 msgstr ""
 
+#: yaffo/templates/settings/_labels.html:2
+msgid "Photo labels"
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:4
+msgid ""
+"The vocabulary used by the <strong>Classify labels</strong> automation "
+"for offline image recognition. Enable the labels you want detected or add"
+" your own. A custom prompt fine-tunes how a label is matched."
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:8
+msgid "Filter labels…"
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:9
+msgid "Filter labels"
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:21
+msgid "default"
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:25
+#: yaffo/templates/settings/index.html:43
+msgid "Remove"
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:29
+msgid "No labels match your filter."
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:31
+msgid "No labels yet"
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:36
+msgid "Label name (for example, dog)"
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:37
+msgid "Optional prompt (for example, people swimming in water)"
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:38
+msgid "Add label"
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:41
+msgid ""
+"The <strong>name</strong> is the tag shown on photos. The optional "
+"<strong>prompt</strong> is the phrase the recognizer matches against. "
+"Leave it blank for simple objects; activities and events work better with"
+" a fuller phrase."
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:47
+msgid "Re-classify all photos"
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:48
+msgid "Run the classifier over your whole library to apply vocabulary changes."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:5
+msgid "Settings - Yaffo"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:13
+msgid "Configure application settings"
+msgstr ""
+
 #: yaffo/templates/settings/index.html:16
 msgid "Language"
 msgstr ""
@@ -1148,5 +1272,121 @@ msgstr ""
 
 #: yaffo/templates/settings/index.html:27
 msgid "Controls the language used by Yaffo. The page reloads after saving."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:34
+msgid "Media Directories"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:35
+msgid ""
+"Add directories where your photos are stored. Yaffo scans these "
+"directories for photos and videos to index."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:47
+msgid "No media directories configured"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:54
+msgid "Enter directory path (for example, /Volumes/Photos or C:\\Photos)"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:58
+msgid "Add Directory"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:63
+msgid "Thumbnail Directory"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:64
+msgid ""
+"Configure where cropped thumbnails of detected faces are stored for quick"
+" loading."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:69
+msgid "Current Thumbnail Directory:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:74
+msgid "Files:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:75
+msgid "Total Size:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:75
+msgid "Counting…"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:82
+msgid "Enter new thumbnail directory path"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:86
+msgid "Change Directory"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:90
+msgid ""
+"No thumbnail directory configured. Set a directory to enable face "
+"thumbnail generation."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:96
+msgid "Enter thumbnail directory path"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:100
+msgid "Set Directory"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:110
+msgid "System Information"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:111
+msgid "Build details and configured paths (read-only)."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:115
+msgid "Build Version:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:117
+msgid "The version of Yaffo currently running."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:121
+msgid "Build Timestamp:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:122
+msgid "development build"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:123
+msgid "When this build was produced."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:127
+msgid "Database Path:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:129
+msgid ""
+"Location of the SQLite database containing photo metadata, faces, and "
+"people information."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:133
+msgid "Task Queue Database Path:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:135
+msgid "Database used by the background task queue to process jobs."
 msgstr ""
 

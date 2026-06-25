@@ -542,6 +542,23 @@ The completed people slice includes:
   dialogs instead of inline handlers or native alerts;
 - German rendering, API, flash, pluralization, and removal-validation tests.
 
+The completed settings media-directory slice includes:
+
+- media and thumbnail-directory controls, current-path statistics, and system
+  path information;
+- delegated browser actions, locale-aware counts and byte sizes, and escaped
+  directory paths in dynamic markup;
+- localized API and stream failures with stable error codes;
+- German rendering and API validation tests.
+
+The completed settings label-management slice includes:
+
+- the label vocabulary description, filter, empty states, form fields, default
+  badges, and reclassification controls;
+- localized HTMX validation and task notifications, including pluralized
+  reclassification counts;
+- German fragment, validation, and pluralization tests.
+
 Current verification covers catalog key/placeholder parity, compiled gettext
 catalogs, JavaScript and Python syntax, non-English rendering, and the
 hard-coded user-facing text baseline.
@@ -629,10 +646,10 @@ route modules and browser-facing errors are part of the same checklist item.
 - [x] Locations map/list:
   `templates/locations/list.html`, `static/locations/list.js`, and
   `routes/locations.py`.
-- [ ] Settings media-directory controls:
+- [x] Settings media-directory controls:
   `templates/settings/index.html`, `static/settings/index.js`, and the related
   endpoints in `routes/settings.py`. The language selector itself is complete.
-- [ ] Settings label management:
+- [x] Settings label management:
   `templates/settings/_labels.html` and `static/settings/labels.js`.
 - [ ] Settings LLM provider and API-key forms:
   `templates/settings/_llm.html`,

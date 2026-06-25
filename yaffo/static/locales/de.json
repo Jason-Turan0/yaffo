@@ -181,8 +181,33 @@
   },
   "settings": {
     "applicationLanguage": "Anwendungssprache",
+    "directory": {
+      "pathRequired": "Bitte geben Sie einen Verzeichnispfad ein"
+    },
     "language": "Sprache",
-    "languageHelp": "Legt die von Yaffo verwendete Sprache fest. Die Seite wird nach dem Speichern neu geladen."
+    "languageHelp": "Legt die von Yaffo verwendete Sprache fest. Die Seite wird nach dem Speichern neu geladen.",
+    "media": {
+      "addFailed": "Verzeichnis konnte nicht hinzugefügt werden",
+      "addSucceeded": "Medienverzeichnis wurde hinzugefügt",
+      "noneConfigured": "Keine Medienverzeichnisse konfiguriert",
+      "removeConfirm": "Entfernen",
+      "removeFailed": "Verzeichnis konnte nicht entfernt werden",
+      "removeMessage": "Verzeichnis entfernen: {{directory}}?",
+      "removeSucceeded": "Entfernt: {{directory}}",
+      "removeTitle": "Medienverzeichnis entfernen"
+    },
+    "thumbnail": {
+      "countFailed": "Miniaturansichten konnten nicht gezählt werden",
+      "moveConfirm": "Verschieben",
+      "moveFailed": "Miniaturansichten konnten nicht verschoben werden",
+      "moveMessage_one": "Möchten Sie das Verzeichnis für Miniaturansichten wirklich verschieben?\n\nAktueller Speicherort: {{currentDirectory}}\nNeuer Speicherort: {{newDirectory}}\n\nDabei wird {{formattedCount}} Datei ({{size}}) verschoben.",
+      "moveMessage_other": "Möchten Sie das Verzeichnis für Miniaturansichten wirklich verschieben?\n\nAktueller Speicherort: {{currentDirectory}}\nNeuer Speicherort: {{newDirectory}}\n\nDabei werden {{formattedCount}} Dateien ({{size}}) verschoben.",
+      "moveSucceeded_one": "{{formattedCount}} Datei ({{size}}) wurde nach {{directory}} verschoben",
+      "moveSucceeded_other": "{{formattedCount}} Dateien ({{size}}) wurden nach {{directory}} verschoben",
+      "moveTitle": "Verzeichnis für Miniaturansichten verschieben",
+      "size": "{{value}} {{unit}}",
+      "statsFailed": "Miniaturansichtsstatistik konnte nicht abgerufen werden"
+    }
   },
   "utilities": {
     "indexPhotos": {

@@ -1,3 +1,4 @@
+import json
 from datetime import date
 
 import pytest
@@ -7,6 +8,7 @@ from yaffo.db.models import (
     FACE_STATUS_IGNORED,
     FACE_STATUS_UNASSIGNED,
     ApplicationSettings,
+    ClassificationLabel,
     Face,
     MediaItem,
     Person,
@@ -47,6 +49,80 @@ def test_settings_locale_persists_and_renders_gettext(client, app):
     assert "<h2>Sprache</h2>" in body
     assert "Anwendungssprache" in body
     assert ">Speichern</button>" in body
+
+
+def test_saved_locale_translates_settings_media_directory_controls(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    body = client.get("/settings").get_data(as_text=True)
+
+    assert "<title>Einstellungen - Yaffo</title>" in body
+    assert "Anwendungseinstellungen konfigurieren" in body
+    assert "Medienverzeichnisse" in body
+    assert "Keine Medienverzeichnisse konfiguriert" in body
+    assert "Miniaturansichtsverzeichnis" in body
+    assert "Kein Miniaturansichtsverzeichnis konfiguriert" in body
+    assert "Systeminformationen" in body
+    assert 'data-action="add-media-dir"' in body
+    assert 'data-action="change-thumbnail-dir"' in body
+    assert "onclick=" not in body
+
+
+def test_saved_locale_translates_settings_label_management(app, client):
+    with app.app_context():
+        db.session.add(ClassificationLabel(name="Hund", is_default=True))
+        db.session.commit()
+
+    client.post("/settings/locale", data={"locale": "de"})
+
+    body = client.get("/settings").get_data(as_text=True)
+
+    assert "Fotolabels" in body
+    assert "Labels filtern…" in body
+    assert "Labelname (zum Beispiel Hund)" in body
+    assert "Label hinzufügen" in body
+    assert "Alle Fotos neu klassifizieren" in body
+    assert "Änderungen am Vokabular anzuwenden" in body
+
+
+def test_saved_locale_translates_settings_label_validation(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    response = client.post(
+        "/settings/labels",
+        data={"action": "create", "name": "  "},
+    )
+    notification = json.loads(response.headers["HX-Trigger"])["showNotification"]
+
+    assert response.status_code == 204
+    assert notification == {
+        "message": "Ein Labelname ist erforderlich.",
+        "type": "error",
+    }
+
+
+def test_saved_locale_translates_settings_media_directory_api_errors(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    add_response = client.post("/api/settings/media-dirs", json={})
+    remove_response = client.delete("/api/settings/media-dirs/999")
+    thumbnail_response = client.post("/api/settings/thumbnail-dir", json={})
+
+    assert add_response.status_code == 400
+    assert add_response.get_json() == {
+        "error": "Verzeichnispfad ist erforderlich",
+        "code": "directory_path_required",
+    }
+    assert remove_response.status_code == 404
+    assert remove_response.get_json() == {
+        "error": "Medienverzeichnis nicht gefunden",
+        "code": "media_directory_not_found",
+    }
+    assert thumbnail_response.status_code == 400
+    assert thumbnail_response.get_json() == {
+        "error": "Verzeichnispfad ist erforderlich",
+        "code": "directory_path_required",
+    }
 
 
 def test_saved_locale_translates_shared_shell_and_components(client):

@@ -210,3 +210,32 @@ def test_locations_map_uses_catalog_keys_and_application_config():
     assert "window.APP_CONFIG.buildUrl" not in source
     assert "fetch('/locations/" not in source
     assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+
+
+def test_settings_media_controls_use_catalog_keys_and_delegated_actions():
+    source = Path("yaffo/static/settings/index.js").read_text(encoding="utf-8")
+    template = Path("yaffo/templates/settings/index.html").read_text(encoding="utf-8")
+
+    assert "settings:media.addSucceeded" in source
+    assert "settings:media.removeMessage" in source
+    assert "settings:thumbnail.moveMessage" in source
+    assert "settings:thumbnail.moveSucceeded" in source
+    assert "config.urls.add_media_dir" in source
+    assert "config.urls.update_thumbnail_dir" in source
+    assert "escapeHtml(dir.path)" in source
+    assert 'data-action="remove-media-dir"' in template
+    assert "onclick=" not in template
+    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+
+
+def test_settings_label_management_uses_gettext_and_delegated_filtering():
+    source = Path("yaffo/static/settings/labels.js").read_text(encoding="utf-8")
+    template = Path("yaffo/templates/settings/_labels.html").read_text(encoding="utf-8")
+    routes = Path("yaffo/routes/settings.py").read_text(encoding="utf-8")
+
+    assert '{{ _("Photo labels") }}' in template
+    assert "_('Filter labels…')" in template
+    assert '{{ _("Re-classify all photos") }}' in template
+    assert "document.addEventListener('input'" in source
+    assert "ngettext(" in routes
+    assert "photo(s)" not in routes

@@ -1,23 +1,21 @@
-from flask import Flask, render_template, request, jsonify, make_response, Response, stream_with_context, redirect, url_for
-
-import yaffo.db.repositories.media_dir_repository
-from yaffo.db import db
-from yaffo.db.models import ApplicationSettings, Face, ClassificationLabel, AUTOMATION_HANDLER_CLASSIFY_LABELS
-from yaffo.common import DB_PATH, QUEUE_DB_PATH
-from yaffo.i18n import get_saved_locale, set_locale
-from yaffo.version import get_build_info
-from yaffo.site_agents import llm_config
 import json
-import subprocess
-import platform
 import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterator
 
+from flask import Flask, Response, jsonify, make_response, redirect, render_template, request, stream_with_context, url_for
+from flask_babel import gettext, ngettext
+
+import yaffo.db.repositories.media_dir_repository
 from yaffo.background_tasks.tasks.classify_labels_automation import classify_labels_automation_task
+from yaffo.common import DB_PATH, QUEUE_DB_PATH
+from yaffo.db import db
+from yaffo.db.models import AUTOMATION_HANDLER_CLASSIFY_LABELS, ApplicationSettings, ClassificationLabel, Face
 from yaffo.db.repositories import automation_repository, classification_repository, media_repository
-from yaffo.utils import settings as media_settings
+from yaffo.i18n import get_saved_locale, set_locale
+from yaffo.site_agents import llm_config
+from yaffo.version import get_build_info
 
 
 # NDJSON records the thumbnail-stats stream emits (one JSON object per line). Named so
@@ -33,13 +31,13 @@ class ThumbnailStatsProgress:
 class ThumbnailStatsComplete:
     count: int
     size: int
-    size_formatted: str
     type: str = "done"
 
 
 @dataclass
 class ThumbnailStatsError:
     message: str
+    code: str = "thumbnail_stats_failed"
     type: str = "error"
 
 
@@ -78,14 +76,6 @@ def init_settings_routes(app: Flask):
             print(f"Error getting thumbnail stats: {e}")
 
         return count, total_size
-
-    def format_size(bytes_size: int) -> str:
-        """Format bytes to human readable size"""
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if bytes_size < 1024.0:
-                return f"{bytes_size:.2f} {unit}"
-            bytes_size /= 1024.0
-        return f"{bytes_size:.2f} TB"
 
     @app.route("/settings", methods=["GET"])
     def settings_index():
@@ -152,9 +142,12 @@ def init_settings_routes(app: Flask):
             name = (request.form.get("name") or "").strip()
             prompt = (request.form.get("prompt") or "").strip()
             if not name:
-                return _notify("Label name is required.", "error")
+                return _notify(gettext("Label name is required."), "error")
             if classification_repository.get_label_by_name(db.session, name):
-                return _notify(f"Label '{name}' already exists.", "error")
+                return _notify(
+                    gettext("Label '%(name)s' already exists.", name=name),
+                    "error",
+                )
             classification_repository.create_label(db.session, name, prompt or None)
         elif action == "delete":
             classification_repository.delete_label(db.session, int(request.form["label_id"]))
@@ -167,12 +160,24 @@ def init_settings_routes(app: Flask):
         Feedback is a toast (no section re-render)."""
         automation = automation_repository.get_by_slug(db.session, AUTOMATION_HANDLER_CLASSIFY_LABELS)
         if automation is None:
-            return _notify("Classify-labels automation is not installed.", "error")
+            return _notify(
+                gettext("Classify-labels automation is not installed."),
+                "error",
+            )
         media_item_ids = media_repository.get_indexed_media_item_ids(db.session)
         if not media_item_ids:
-            return _notify("No indexed photos to classify yet.", "error")
+            return _notify(
+                gettext("No indexed photos to classify yet."),
+                "error",
+            )
         classify_labels_automation_task(automation.id, media_item_ids)
-        return _notify(f"Re-classifying {len(media_item_ids)} photo(s) in the background…")
+        count = len(media_item_ids)
+        return _notify(ngettext(
+            "Re-classifying %(count)s photo in the background…",
+            "Re-classifying %(count)s photos in the background…",
+            count,
+            count=count,
+        ))
 
     def _render_api_key(provider_id: str):
         return render_template(
@@ -208,30 +213,43 @@ def init_settings_routes(app: Flask):
     @app.route("/api/settings/media-dirs", methods=["POST"])
     def add_media_dir():
         """Add a new media directory"""
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         new_dir = data.get("directory", "").strip()
 
         if not new_dir:
-            return jsonify({"error": "Directory path is required"}), 400
+            return jsonify({
+                "error": gettext("Directory path is required"),
+                "code": "directory_path_required",
+            }), 400
 
         try:
             Path(new_dir).mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            return jsonify({"error": f"Failed to create directory: {str(e)}"}), 400
+        except OSError:
+            return jsonify({
+                "error": gettext("Could not create the directory"),
+                "code": "directory_create_failed",
+            }), 400
 
         if yaffo.db.repositories.media_dir_repository.add_media_dir(db.session, new_dir) is None:
-            return jsonify({"error": "Directory already exists"}), 400
+            return jsonify({
+                "error": gettext("Directory is already configured"),
+                "code": "directory_already_configured",
+            }), 400
 
-        return jsonify({"success": True, "media_dirs": yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session)})
+        return jsonify({
+            "media_dirs": yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session)
+        })
 
     @app.route("/api/settings/media-dirs/<int:index>", methods=["DELETE"])
     def remove_media_dir(index: int):
         """Remove a media directory by index"""
         removed = yaffo.db.repositories.media_dir_repository.remove_media_dir(db.session, index)
         if removed is None:
-            return jsonify({"error": "Invalid index"}), 400
+            return jsonify({
+                "error": gettext("Media directory not found"),
+                "code": "media_directory_not_found",
+            }), 404
         return jsonify({
-            "success": True,
             "removed": removed,
             "media_dirs": yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session),
         })
@@ -250,11 +268,9 @@ def init_settings_routes(app: Flask):
         count, size = get_thumbnail_stats(thumbnail_dir)
 
         return jsonify({
-            "success": True,
             "directory": str(thumbnail_dir),
             "count": count,
             "size": size,
-            "size_formatted": format_size(size)
         })
 
     @app.route("/settings/thumbnail-stats/stream", methods=["GET"])
@@ -274,12 +290,13 @@ def init_settings_routes(app: Flask):
                         yield json.dumps(asdict(ThumbnailStatsComplete(
                             count=count,
                             size=total_size,
-                            size_formatted=format_size(total_size),
                         ))) + "\n"
                     else:
                         yield json.dumps(asdict(ThumbnailStatsProgress(scanned=event))) + "\n"
-            except Exception as e:
-                yield json.dumps(asdict(ThumbnailStatsError(message=str(e)))) + "\n"
+            except OSError:
+                yield json.dumps(asdict(ThumbnailStatsError(
+                    message=gettext("Could not count thumbnail files"),
+                ))) + "\n"
 
         # no-store: live data, so the browser re-walks every load rather than caching.
         return Response(
@@ -291,11 +308,14 @@ def init_settings_routes(app: Flask):
     @app.route("/api/settings/thumbnail-dir", methods=["POST"])
     def update_thumbnail_dir():
         """Update thumbnail directory and move files"""
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         new_dir = data.get("directory", "").strip()
 
         if not new_dir:
-            return jsonify({"error": "Directory path is required"}), 400
+            return jsonify({
+                "error": gettext("Directory path is required"),
+                "code": "directory_path_required",
+            }), 400
 
         new_dir_path = Path(new_dir)
 
@@ -309,7 +329,10 @@ def init_settings_routes(app: Flask):
 
         # Check if new directory is the same as current
         if current_dir and new_dir_path.resolve() == current_dir.resolve():
-            return jsonify({"error": "New directory is the same as current directory"}), 400
+            return jsonify({
+                "error": gettext("The new directory is the same as the current directory"),
+                "code": "thumbnail_directory_unchanged",
+            }), 400
 
         try:
             # Create new directory if it doesn't exist
@@ -357,15 +380,15 @@ def init_settings_routes(app: Flask):
             db.session.commit()
 
             return jsonify({
-                "success": True,
                 "new_directory": str(new_dir_path),
                 "files_moved": file_count,
                 "faces_updated": faces_updated,
-                "size_moved": format_size(total_size)
+                "size_moved": total_size,
             })
 
-        except Exception as e:
+        except OSError:
             db.session.rollback()
             return jsonify({
-                "error": f"Failed to move thumbnails: {str(e)}"
+                "error": gettext("Could not move thumbnail files"),
+                "code": "thumbnail_move_failed",
             }), 500

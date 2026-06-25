@@ -2,7 +2,7 @@
 {% from "components/file_browser.html" import file_browser %}
 {% from "components/page_header.html" import page_header %}
 
-{% block title %}Settings - Yaffo{% endblock %}
+{% block title %}{{ _("Settings - Yaffo") }}{% endblock %}
 
 {% block extra_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='settings/index.css') }}">
@@ -10,7 +10,7 @@
 
 {% block content %}
 <div class="main-content">
-    {{ page_header('Settings', 'Configure application settings') }}
+    {{ page_header(_('Settings'), _('Configure application settings')) }}
 
     <div class="settings-section">
         <h2>{{ _("Language") }}</h2>
@@ -31,69 +31,73 @@
     </div>
 
     <div class="settings-section">
-        <h2>Media Directories</h2>
-        <p class="section-description">Add directories where your photos are stored. The application will scan these directories for photos to index.</p>
+        <h2>{{ _("Media Directories") }}</h2>
+        <p class="section-description">{{ _("Add directories where your photos are stored. Yaffo scans these directories for photos and videos to index.") }}</p>
 
         <div class="media-dirs-list" id="media-dirs-list">
             {% if media_dirs|length > 0 %}
                 {% for dir in media_dirs %}
                 <div class="media-dir-item" data-index="{{ loop.index0 }}">
                     <span class="media-dir-path">{{ dir.path }}</span>
-                    <button type="button" class="btn-danger btn-sm" data-icon="delete" onclick="window.PHOTO_ORGANIZER.settings.removeMediaDir({{ loop.index0 }})">Remove</button>
+                    <button type="button" class="btn-danger btn-sm" data-icon="delete"
+                            data-action="remove-media-dir" data-index="{{ loop.index0 }}">{{ _("Remove") }}</button>
                 </div>
                 {% endfor %}
             {% else %}
-                <p class="no-data">No media directories configured</p>
+                <p class="no-data">{{ _("No media directories configured") }}</p>
             {% endif %}
         </div>
 
         <div class="add-media-dir-form">
             {{ file_browser(
                 'new-media-dir',
-                placeholder='Enter directory path (e.g., /Volumes/Photos or C:\\Photos)',
+                placeholder=_('Enter directory path (for example, /Volumes/Photos or C:\\Photos)'),
                 show_label=False
             ) }}
-            <button type="button" class="btn-primary" data-icon="add" onclick="window.PHOTO_ORGANIZER.settings.addMediaDir()">Add Directory</button>
+            <button type="button" class="btn-primary" data-icon="add"
+                    data-action="add-media-dir">{{ _("Add Directory") }}</button>
         </div>
     </div>
 
     <div class="settings-section">
-        <h2>Thumbnail Directory</h2>
-        <p class="section-description">Configure where face thumbnails are stored. Thumbnails are automatically generated cropped images of detected faces for quick loading.</p>
+        <h2>{{ _("Thumbnail Directory") }}</h2>
+        <p class="section-description">{{ _("Configure where cropped thumbnails of detected faces are stored for quick loading.") }}</p>
 
         {% if current_thumbnail_dir and current_thumbnail_dir != "None" %}
         <div class="thumbnail-dir-info">
             <div class="current-path-item">
-                <label>Current Thumbnail Directory:</label>
+                <label>{{ _("Current Thumbnail Directory:") }}</label>
                 <code id="current-thumbnail-dir">{{ current_thumbnail_dir }}</code>
             </div>
 
             <div class="thumbnail-stats" id="thumbnail-stats">
-                <span class="stat-item">Files: <strong id="thumbnail-count">…</strong></span>
-                <span class="stat-item">Total Size: <strong id="thumbnail-size">Counting…</strong></span>
+                <span class="stat-item">{{ _("Files:") }} <strong id="thumbnail-count">…</strong></span>
+                <span class="stat-item">{{ _("Total Size:") }} <strong id="thumbnail-size">{{ _("Counting…") }}</strong></span>
             </div>
         </div>
 
         <div class="change-thumbnail-dir-form">
             {{ file_browser(
                 'new-thumbnail-dir',
-                placeholder='Enter new thumbnail directory path',
+                placeholder=_('Enter new thumbnail directory path'),
                 show_label=False
             ) }}
-            <button type="button" class="btn-primary" onclick="window.PHOTO_ORGANIZER.settings.changeThumbnailDir()">Change Directory</button>
+            <button type="button" class="btn-primary"
+                    data-action="change-thumbnail-dir">{{ _("Change Directory") }}</button>
         </div>
         {% else %}
         <div class="no-thumbnail-dir">
-            <p class="no-data">No thumbnail directory configured. Please set a directory to enable face thumbnail generation.</p>
+            <p class="no-data">{{ _("No thumbnail directory configured. Set a directory to enable face thumbnail generation.") }}</p>
         </div>
 
         <div class="change-thumbnail-dir-form">
             {{ file_browser(
                 'new-thumbnail-dir',
-                placeholder='Enter thumbnail directory path',
+                placeholder=_('Enter thumbnail directory path'),
                 show_label=False
             ) }}
-            <button type="button" class="btn-primary" onclick="window.PHOTO_ORGANIZER.settings.changeThumbnailDir()">Set Directory</button>
+            <button type="button" class="btn-primary"
+                    data-action="change-thumbnail-dir">{{ _("Set Directory") }}</button>
         </div>
         {% endif %}
     </div>
@@ -103,32 +107,32 @@
     {% include "settings/_labels.html" %}
 
     <div class="settings-section">
-        <h2>System Information</h2>
-        <p class="section-description">Build details and configured paths (read-only).</p>
+        <h2>{{ _("System Information") }}</h2>
+        <p class="section-description">{{ _("Build details and configured paths (read-only).") }}</p>
 
         <div class="system-paths">
             <div class="system-path-item">
-                <label>Build Version:</label>
+                <label>{{ _("Build Version:") }}</label>
                 <code>{{ build_info.version }}</code>
-                <p class="path-description">The version of Yaffo currently running.</p>
+                <p class="path-description">{{ _("The version of Yaffo currently running.") }}</p>
             </div>
 
             <div class="system-path-item">
-                <label>Build Timestamp:</label>
-                <code>{{ build_info.build_time or "dev build" }}</code>
-                <p class="path-description">When this build was produced.</p>
+                <label>{{ _("Build Timestamp:") }}</label>
+                <code>{{ build_info.build_time or _("development build") }}</code>
+                <p class="path-description">{{ _("When this build was produced.") }}</p>
             </div>
 
             <div class="system-path-item">
-                <label>Database Path:</label>
+                <label>{{ _("Database Path:") }}</label>
                 <code>{{ db_path }}</code>
-                <p class="path-description">Location of the SQLite database containing all photo metadata, faces, and people information.</p>
+                <p class="path-description">{{ _("Location of the SQLite database containing photo metadata, faces, and people information.") }}</p>
             </div>
 
             <div class="system-path-item">
-                <label>Task Queue Database Path:</label>
+                <label>{{ _("Task Queue Database Path:") }}</label>
                 <code>{{ queue_db_path }}</code>
-                <p class="path-description">Database used by the background task queue system for processing jobs.</p>
+                <p class="path-description">{{ _("Database used by the background task queue to process jobs.") }}</p>
             </div>
         </div>
     </div>

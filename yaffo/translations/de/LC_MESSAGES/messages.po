@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 07:12-0500\n"
+"POT-Creation-Date: 2026-06-25 07:29-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -177,6 +177,58 @@ msgstr "Keine Gesichter ausgewählt"
 msgid "Person updated"
 msgstr "Person wurde aktualisiert"
 
+#: yaffo/routes/settings.py:145
+msgid "Label name is required."
+msgstr "Ein Labelname ist erforderlich."
+
+#: yaffo/routes/settings.py:148
+#, python-format
+msgid "Label '%(name)s' already exists."
+msgstr "Das Label „%(name)s“ ist bereits vorhanden."
+
+#: yaffo/routes/settings.py:164
+msgid "Classify-labels automation is not installed."
+msgstr "Die Automatisierung zur Labelklassifizierung ist nicht installiert."
+
+#: yaffo/routes/settings.py:170
+msgid "No indexed photos to classify yet."
+msgstr "Es sind noch keine indizierten Fotos zum Klassifizieren vorhanden."
+
+#: yaffo/routes/settings.py:176
+#, python-format
+msgid "Re-classifying %(count)s photo in the background…"
+msgid_plural "Re-classifying %(count)s photos in the background…"
+msgstr[0] "%(count)s Foto wird im Hintergrund neu klassifiziert…"
+msgstr[1] "%(count)s Fotos werden im Hintergrund neu klassifiziert…"
+
+#: yaffo/routes/settings.py:221 yaffo/routes/settings.py:316
+msgid "Directory path is required"
+msgstr "Verzeichnispfad ist erforderlich"
+
+#: yaffo/routes/settings.py:229
+msgid "Could not create the directory"
+msgstr "Das Verzeichnis konnte nicht erstellt werden"
+
+#: yaffo/routes/settings.py:235
+msgid "Directory is already configured"
+msgstr "Das Verzeichnis ist bereits konfiguriert"
+
+#: yaffo/routes/settings.py:249
+msgid "Media directory not found"
+msgstr "Medienverzeichnis nicht gefunden"
+
+#: yaffo/routes/settings.py:298
+msgid "Could not count thumbnail files"
+msgstr "Miniaturansichtsdateien konnten nicht gezählt werden"
+
+#: yaffo/routes/settings.py:333
+msgid "The new directory is the same as the current directory"
+msgstr "Das neue Verzeichnis entspricht dem aktuellen Verzeichnis"
+
+#: yaffo/routes/settings.py:392
+msgid "Could not move thumbnail files"
+msgstr "Miniaturansichtsdateien konnten nicht verschoben werden"
+
 #: yaffo/templates/_sidebar.html:5 yaffo/templates/people/list.html:28
 msgid "Actions"
 msgstr "Aktionen"
@@ -235,7 +287,7 @@ msgstr "Werkzeuge"
 msgid "Themes"
 msgstr "Designs"
 
-#: yaffo/templates/base.html:108
+#: yaffo/templates/base.html:108 yaffo/templates/settings/index.html:13
 msgid "Settings"
 msgstr "Einstellungen"
 
@@ -730,9 +782,8 @@ msgstr "Nur Favoriten"
 
 #: yaffo/templates/filters/_gender.html:2 yaffo/templates/people/list.html:24
 #: yaffo/templates/people/list.html:89
-#, fuzzy
 msgid "Gender"
-msgstr "Senden"
+msgstr "Geschlecht"
 
 #: yaffo/templates/filters/_gender.html:4
 msgid "All Genders"
@@ -758,9 +809,8 @@ msgstr "Labels suchen…"
 
 #: yaffo/templates/filters/_locations.html:8
 #: yaffo/templates/filters/_locations.html:16
-#, fuzzy
 msgid "All Locations"
-msgstr "Orte"
+msgstr "Alle Orte"
 
 #: yaffo/templates/filters/_locations.html:10
 #, python-brace-format
@@ -768,9 +818,8 @@ msgid "{count} locations selected"
 msgstr "{count} Orte ausgewählt"
 
 #: yaffo/templates/filters/_locations.html:13
-#, fuzzy
 msgid "Search locations…"
-msgstr "Orte"
+msgstr "Orte suchen…"
 
 #: yaffo/templates/filters/_locations.html:35
 msgid "Proximity Search"
@@ -793,18 +842,16 @@ msgid "All of these"
 msgstr "Alle"
 
 #: yaffo/templates/filters/_media_type.html:2
-#, fuzzy
 msgid "Media Type"
-msgstr "Seite bearbeiten"
+msgstr "Medientyp"
 
 #: yaffo/templates/filters/_media_type.html:4
 msgid "All Media"
 msgstr "Alle Medien"
 
 #: yaffo/templates/filters/_media_type.html:5
-#, fuzzy
 msgid "Photos Only"
-msgstr "Keine Fotos gefunden"
+msgstr "Nur Fotos"
 
 #: yaffo/templates/filters/_media_type.html:6
 msgid "Videos Only"
@@ -819,9 +866,8 @@ msgid "All Months"
 msgstr "Alle Monate"
 
 #: yaffo/templates/filters/_pageSize.html:2
-#, fuzzy
 msgid "Page Size"
-msgstr "Seiten"
+msgstr "Seitengröße"
 
 #: yaffo/templates/filters/_path.html:2
 msgid "File"
@@ -833,9 +879,8 @@ msgstr "Datei- oder Ordnernamen suchen…"
 
 #: yaffo/templates/filters/_people.html:8
 #: yaffo/templates/filters/_people.html:16
-#, fuzzy
 msgid "All People"
-msgstr "Personen"
+msgstr "Alle Personen"
 
 #: yaffo/templates/filters/_people.html:10
 #, python-brace-format
@@ -843,9 +888,8 @@ msgid "{count} people selected"
 msgstr "{count} Personen ausgewählt"
 
 #: yaffo/templates/filters/_people.html:13
-#, fuzzy
 msgid "Search people…"
-msgstr "Personen"
+msgstr "Personen suchen…"
 
 #: yaffo/templates/filters/_person.html:2
 msgid "Person"
@@ -908,8 +952,8 @@ msgstr "Fotoorte"
 #: yaffo/templates/locations/list.html:22
 msgid "Hold <kbd>Shift</kbd> and drag to select multiple clusters"
 msgstr ""
-"Halten Sie <kbd>Umschalt</kbd> gedrückt und ziehen Sie, um mehrere Gruppen "
-"auszuwählen"
+"Halten Sie <kbd>Umschalt</kbd> gedrückt und ziehen Sie, um mehrere "
+"Gruppen auszuwählen"
 
 #: yaffo/templates/media/view.html:15
 msgid "Photo Details"
@@ -1175,6 +1219,88 @@ msgstr "Wird verwendet, um die Genauigkeit der Gesichtserkennung zu verbessern."
 msgid "Edit Person"
 msgstr "Person bearbeiten"
 
+#: yaffo/templates/settings/_labels.html:2
+msgid "Photo labels"
+msgstr "Fotolabels"
+
+#: yaffo/templates/settings/_labels.html:4
+msgid ""
+"The vocabulary used by the <strong>Classify labels</strong> automation "
+"for offline image recognition. Enable the labels you want detected or add"
+" your own. A custom prompt fine-tunes how a label is matched."
+msgstr ""
+"Das von der Automatisierung <strong>Labels klassifizieren</strong> für die "
+"Offline-Bilderkennung verwendete Vokabular. Aktivieren Sie die Labels, die "
+"erkannt werden sollen, oder fügen Sie eigene hinzu. Eine benutzerdefinierte "
+"Beschreibung verfeinert die Zuordnung eines Labels."
+
+#: yaffo/templates/settings/_labels.html:8
+msgid "Filter labels…"
+msgstr "Labels filtern…"
+
+#: yaffo/templates/settings/_labels.html:9
+msgid "Filter labels"
+msgstr "Labels filtern"
+
+#: yaffo/templates/settings/_labels.html:21
+msgid "default"
+msgstr "Standard"
+
+#: yaffo/templates/settings/_labels.html:25
+#: yaffo/templates/settings/index.html:43
+msgid "Remove"
+msgstr "Entfernen"
+
+#: yaffo/templates/settings/_labels.html:29
+msgid "No labels match your filter."
+msgstr "Keine Labels entsprechen Ihrem Filter."
+
+#: yaffo/templates/settings/_labels.html:31
+msgid "No labels yet"
+msgstr "Noch keine Labels"
+
+#: yaffo/templates/settings/_labels.html:36
+msgid "Label name (for example, dog)"
+msgstr "Labelname (zum Beispiel Hund)"
+
+#: yaffo/templates/settings/_labels.html:37
+msgid "Optional prompt (for example, people swimming in water)"
+msgstr "Optionale Beschreibung (zum Beispiel Menschen, die im Wasser schwimmen)"
+
+#: yaffo/templates/settings/_labels.html:38
+msgid "Add label"
+msgstr "Label hinzufügen"
+
+#: yaffo/templates/settings/_labels.html:41
+msgid ""
+"The <strong>name</strong> is the tag shown on photos. The optional "
+"<strong>prompt</strong> is the phrase the recognizer matches against. "
+"Leave it blank for simple objects; activities and events work better with"
+" a fuller phrase."
+msgstr ""
+"Der <strong>Name</strong> ist das auf Fotos angezeigte Tag. Die optionale "
+"<strong>Beschreibung</strong> ist der Ausdruck, mit dem die Erkennung "
+"abgleicht. Lassen Sie sie für einfache Objekte leer; Aktivitäten und "
+"Ereignisse funktionieren mit einem ausführlicheren Ausdruck besser."
+
+#: yaffo/templates/settings/_labels.html:47
+msgid "Re-classify all photos"
+msgstr "Alle Fotos neu klassifizieren"
+
+#: yaffo/templates/settings/_labels.html:48
+msgid "Run the classifier over your whole library to apply vocabulary changes."
+msgstr ""
+"Führen Sie die Klassifizierung für die gesamte Bibliothek aus, um Änderungen "
+"am Vokabular anzuwenden."
+
+#: yaffo/templates/settings/index.html:5
+msgid "Settings - Yaffo"
+msgstr "Einstellungen - Yaffo"
+
+#: yaffo/templates/settings/index.html:13
+msgid "Configure application settings"
+msgstr "Anwendungseinstellungen konfigurieren"
+
 #: yaffo/templates/settings/index.html:16
 msgid "Language"
 msgstr "Sprache"
@@ -1188,6 +1314,133 @@ msgid "Controls the language used by Yaffo. The page reloads after saving."
 msgstr ""
 "Legt die von Yaffo verwendete Sprache fest. Die Seite wird nach dem "
 "Speichern neu geladen."
+
+#: yaffo/templates/settings/index.html:34
+msgid "Media Directories"
+msgstr "Medienverzeichnisse"
+
+#: yaffo/templates/settings/index.html:35
+msgid ""
+"Add directories where your photos are stored. Yaffo scans these "
+"directories for photos and videos to index."
+msgstr ""
+"Fügen Sie Verzeichnisse hinzu, in denen Ihre Fotos gespeichert sind. "
+"Yaffo durchsucht diese Verzeichnisse nach zu indizierenden Fotos und "
+"Videos."
+
+#: yaffo/templates/settings/index.html:47
+msgid "No media directories configured"
+msgstr "Keine Medienverzeichnisse konfiguriert"
+
+#: yaffo/templates/settings/index.html:54
+msgid "Enter directory path (for example, /Volumes/Photos or C:\\Photos)"
+msgstr "Verzeichnispfad eingeben (zum Beispiel /Volumes/Photos oder C:\\Photos)"
+
+#: yaffo/templates/settings/index.html:58
+msgid "Add Directory"
+msgstr "Verzeichnis hinzufügen"
+
+#: yaffo/templates/settings/index.html:63
+msgid "Thumbnail Directory"
+msgstr "Miniaturansichtsverzeichnis"
+
+#: yaffo/templates/settings/index.html:64
+msgid ""
+"Configure where cropped thumbnails of detected faces are stored for quick"
+" loading."
+msgstr ""
+"Legen Sie fest, wo zugeschnittene Miniaturansichten erkannter Gesichter "
+"für schnelles Laden gespeichert werden."
+
+#: yaffo/templates/settings/index.html:69
+msgid "Current Thumbnail Directory:"
+msgstr "Aktuelles Miniaturansichtsverzeichnis:"
+
+#: yaffo/templates/settings/index.html:74
+msgid "Files:"
+msgstr "Dateien:"
+
+#: yaffo/templates/settings/index.html:75
+msgid "Total Size:"
+msgstr "Gesamtgröße:"
+
+#: yaffo/templates/settings/index.html:75
+msgid "Counting…"
+msgstr "Wird gezählt…"
+
+#: yaffo/templates/settings/index.html:82
+msgid "Enter new thumbnail directory path"
+msgstr "Neuen Pfad für das Miniaturansichtsverzeichnis eingeben"
+
+#: yaffo/templates/settings/index.html:86
+msgid "Change Directory"
+msgstr "Verzeichnis ändern"
+
+#: yaffo/templates/settings/index.html:90
+msgid ""
+"No thumbnail directory configured. Set a directory to enable face "
+"thumbnail generation."
+msgstr ""
+"Kein Miniaturansichtsverzeichnis konfiguriert. Legen Sie ein Verzeichnis "
+"fest, um die Erstellung von Gesichtsminiaturansichten zu aktivieren."
+
+#: yaffo/templates/settings/index.html:96
+msgid "Enter thumbnail directory path"
+msgstr "Pfad für das Miniaturansichtsverzeichnis eingeben"
+
+#: yaffo/templates/settings/index.html:100
+msgid "Set Directory"
+msgstr "Verzeichnis festlegen"
+
+#: yaffo/templates/settings/index.html:110
+msgid "System Information"
+msgstr "Systeminformationen"
+
+#: yaffo/templates/settings/index.html:111
+msgid "Build details and configured paths (read-only)."
+msgstr "Build-Details und konfigurierte Pfade (schreibgeschützt)."
+
+#: yaffo/templates/settings/index.html:115
+msgid "Build Version:"
+msgstr "Build-Version:"
+
+#: yaffo/templates/settings/index.html:117
+msgid "The version of Yaffo currently running."
+msgstr "Die aktuell ausgeführte Yaffo-Version."
+
+#: yaffo/templates/settings/index.html:121
+msgid "Build Timestamp:"
+msgstr "Build-Zeitstempel:"
+
+#: yaffo/templates/settings/index.html:122
+msgid "development build"
+msgstr "Entwicklungs-Build"
+
+#: yaffo/templates/settings/index.html:123
+msgid "When this build was produced."
+msgstr "Zeitpunkt, zu dem dieser Build erstellt wurde."
+
+#: yaffo/templates/settings/index.html:127
+msgid "Database Path:"
+msgstr "Datenbankpfad:"
+
+#: yaffo/templates/settings/index.html:129
+msgid ""
+"Location of the SQLite database containing photo metadata, faces, and "
+"people information."
+msgstr ""
+"Speicherort der SQLite-Datenbank mit Fotometadaten, Gesichtern und "
+"Personeninformationen."
+
+#: yaffo/templates/settings/index.html:133
+msgid "Task Queue Database Path:"
+msgstr "Datenbankpfad der Aufgabenwarteschlange:"
+
+#: yaffo/templates/settings/index.html:135
+msgid "Database used by the background task queue to process jobs."
+msgstr ""
+"Datenbank, die von der Hintergrundwarteschlange zur Verarbeitung von "
+"Aufgaben verwendet wird."
 
 #~ msgid ""
 #~ "\n"

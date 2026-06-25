@@ -32,7 +32,7 @@ def _save_ready_draft(slug="draft-me", working_accent="#abcdef") -> str:
 def test_default_theme_on_html_element(client):
     response = client.get("/themes", follow_redirects=True)
     assert response.status_code == 200
-    assert b'<html lang="en" dir="ltr" data-theme="classic">' in response.data
+    assert b'<html lang="en" dir="ltr" data-theme="classic"' in response.data
 
 
 def test_index_redirects_to_default_theme_panel(client):
@@ -47,7 +47,7 @@ def test_set_default_persists_and_renders(client):
     assert response.headers["HX-Refresh"] == "true"
 
     page = client.get("/themes/neobrutalist")
-    assert b'<html lang="en" dir="ltr" data-theme="neobrutalist">' in page.data
+    assert b'<html lang="en" dir="ltr" data-theme="neobrutalist"' in page.data
 
 
 def test_set_default_rejects_unknown_slug(client):
