@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 07:29-0500\n"
+"POT-Creation-Date: 2026-06-25 07:35-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -177,55 +177,71 @@ msgstr "Keine Gesichter ausgewählt"
 msgid "Person updated"
 msgstr "Person wurde aktualisiert"
 
-#: yaffo/routes/settings.py:145
+#: yaffo/routes/settings.py:85
+msgid "Claude Opus 4.8 — most capable"
+msgstr "Claude Opus 4.8 — leistungsfähigstes Modell"
+
+#: yaffo/routes/settings.py:86
+msgid "Claude Sonnet 4.6 — balanced"
+msgstr "Claude Sonnet 4.6 — ausgewogen"
+
+#: yaffo/routes/settings.py:87
+msgid "Claude Haiku 4.5 — fastest"
+msgstr "Claude Haiku 4.5 — schnellstes Modell"
+
+#: yaffo/routes/settings.py:158
 msgid "Label name is required."
 msgstr "Ein Labelname ist erforderlich."
 
-#: yaffo/routes/settings.py:148
+#: yaffo/routes/settings.py:161
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr "Das Label „%(name)s“ ist bereits vorhanden."
 
-#: yaffo/routes/settings.py:164
+#: yaffo/routes/settings.py:177
 msgid "Classify-labels automation is not installed."
 msgstr "Die Automatisierung zur Labelklassifizierung ist nicht installiert."
 
-#: yaffo/routes/settings.py:170
+#: yaffo/routes/settings.py:183
 msgid "No indexed photos to classify yet."
 msgstr "Es sind noch keine indizierten Fotos zum Klassifizieren vorhanden."
 
-#: yaffo/routes/settings.py:176
+#: yaffo/routes/settings.py:189
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] "%(count)s Foto wird im Hintergrund neu klassifiziert…"
 msgstr[1] "%(count)s Fotos werden im Hintergrund neu klassifiziert…"
 
-#: yaffo/routes/settings.py:221 yaffo/routes/settings.py:316
+#: yaffo/routes/settings.py:208
+msgid "AI model updated."
+msgstr "KI-Modell wurde aktualisiert."
+
+#: yaffo/routes/settings.py:237 yaffo/routes/settings.py:332
 msgid "Directory path is required"
 msgstr "Verzeichnispfad ist erforderlich"
 
-#: yaffo/routes/settings.py:229
+#: yaffo/routes/settings.py:245
 msgid "Could not create the directory"
 msgstr "Das Verzeichnis konnte nicht erstellt werden"
 
-#: yaffo/routes/settings.py:235
+#: yaffo/routes/settings.py:251
 msgid "Directory is already configured"
 msgstr "Das Verzeichnis ist bereits konfiguriert"
 
-#: yaffo/routes/settings.py:249
+#: yaffo/routes/settings.py:265
 msgid "Media directory not found"
 msgstr "Medienverzeichnis nicht gefunden"
 
-#: yaffo/routes/settings.py:298
+#: yaffo/routes/settings.py:314
 msgid "Could not count thumbnail files"
 msgstr "Miniaturansichtsdateien konnten nicht gezählt werden"
 
-#: yaffo/routes/settings.py:333
+#: yaffo/routes/settings.py:349
 msgid "The new directory is the same as the current directory"
 msgstr "Das neue Verzeichnis entspricht dem aktuellen Verzeichnis"
 
-#: yaffo/routes/settings.py:392
+#: yaffo/routes/settings.py:408
 msgid "Could not move thumbnail files"
 msgstr "Miniaturansichtsdateien konnten nicht verschoben werden"
 
@@ -417,6 +433,7 @@ msgid "Configure Filters"
 msgstr "Filter konfigurieren"
 
 #: yaffo/templates/components/modal.html:17 yaffo/templates/index.html:165
+#: yaffo/templates/settings/_llm_api_key.html:19
 #: yaffo/templates/settings/index.html:29
 msgid "Save"
 msgstr "Speichern"
@@ -1229,10 +1246,10 @@ msgid ""
 "for offline image recognition. Enable the labels you want detected or add"
 " your own. A custom prompt fine-tunes how a label is matched."
 msgstr ""
-"Das von der Automatisierung <strong>Labels klassifizieren</strong> für die "
-"Offline-Bilderkennung verwendete Vokabular. Aktivieren Sie die Labels, die "
-"erkannt werden sollen, oder fügen Sie eigene hinzu. Eine benutzerdefinierte "
-"Beschreibung verfeinert die Zuordnung eines Labels."
+"Das von der Automatisierung <strong>Labels klassifizieren</strong> für "
+"die Offline-Bilderkennung verwendete Vokabular. Aktivieren Sie die "
+"Labels, die erkannt werden sollen, oder fügen Sie eigene hinzu. Eine "
+"benutzerdefinierte Beschreibung verfeinert die Zuordnung eines Labels."
 
 #: yaffo/templates/settings/_labels.html:8
 msgid "Filter labels…"
@@ -1278,8 +1295,8 @@ msgid ""
 "Leave it blank for simple objects; activities and events work better with"
 " a fuller phrase."
 msgstr ""
-"Der <strong>Name</strong> ist das auf Fotos angezeigte Tag. Die optionale "
-"<strong>Beschreibung</strong> ist der Ausdruck, mit dem die Erkennung "
+"Der <strong>Name</strong> ist das auf Fotos angezeigte Tag. Die optionale"
+" <strong>Beschreibung</strong> ist der Ausdruck, mit dem die Erkennung "
 "abgleicht. Lassen Sie sie für einfache Objekte leer; Aktivitäten und "
 "Ereignisse funktionieren mit einem ausführlicheren Ausdruck besser."
 
@@ -1290,8 +1307,62 @@ msgstr "Alle Fotos neu klassifizieren"
 #: yaffo/templates/settings/_labels.html:48
 msgid "Run the classifier over your whole library to apply vocabulary changes."
 msgstr ""
-"Führen Sie die Klassifizierung für die gesamte Bibliothek aus, um Änderungen "
-"am Vokabular anzuwenden."
+"Führen Sie die Klassifizierung für die gesamte Bibliothek aus, um "
+"Änderungen am Vokabular anzuwenden."
+
+#: yaffo/templates/settings/_llm.html:2
+msgid "AI Generation"
+msgstr "KI-Generierung"
+
+#: yaffo/templates/settings/_llm.html:4
+msgid ""
+"Powers AI customization features. The API key for the selected model's "
+"provider is stored securely in the operating system's credential store."
+msgstr ""
+"Ermöglicht KI-gestützte Anpassungsfunktionen. Der API-Schlüssel des "
+"Anbieters des ausgewählten Modells wird sicher im Anmeldedatenspeicher des "
+"Betriebssystems gespeichert."
+
+#: yaffo/templates/settings/_llm.html:8
+msgid "Model"
+msgstr "Modell"
+
+#: yaffo/templates/settings/_llm_api_key.html:4
+#, python-format
+msgid "%(provider)s API key:"
+msgstr "%(provider)s-API-Schlüssel:"
+
+#: yaffo/templates/settings/_llm_api_key.html:6
+msgid "✓ configured via"
+msgstr "✓ konfiguriert über"
+
+#: yaffo/templates/settings/_llm_api_key.html:6
+msgid "(environment; takes precedence)"
+msgstr "(Umgebungsvariable; hat Vorrang)"
+
+#: yaffo/templates/settings/_llm_api_key.html:7
+msgid "✓ stored in keychain"
+msgstr "✓ im Schlüsselbund gespeichert"
+
+#: yaffo/templates/settings/_llm_api_key.html:7
+msgid "Not set"
+msgstr "Nicht festgelegt"
+
+#: yaffo/templates/settings/_llm_api_key.html:14
+msgid "Replace key"
+msgstr "Schlüssel ersetzen"
+
+#: yaffo/templates/settings/_llm_api_key.html:14
+msgid "Set key"
+msgstr "Schlüssel festlegen"
+
+#: yaffo/templates/settings/_llm_api_key.html:16
+msgid "API key"
+msgstr "API-Schlüssel"
+
+#: yaffo/templates/settings/_llm_api_key.html:24
+msgid "Clear"
+msgstr "Löschen"
 
 #: yaffo/templates/settings/index.html:5
 msgid "Settings - Yaffo"

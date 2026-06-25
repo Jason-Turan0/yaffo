@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 07:29-0500\n"
+"POT-Creation-Date: 2026-06-25 07:35-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -176,55 +176,71 @@ msgstr ""
 msgid "Person updated"
 msgstr ""
 
-#: yaffo/routes/settings.py:145
+#: yaffo/routes/settings.py:85
+msgid "Claude Opus 4.8 — most capable"
+msgstr ""
+
+#: yaffo/routes/settings.py:86
+msgid "Claude Sonnet 4.6 — balanced"
+msgstr ""
+
+#: yaffo/routes/settings.py:87
+msgid "Claude Haiku 4.5 — fastest"
+msgstr ""
+
+#: yaffo/routes/settings.py:158
 msgid "Label name is required."
 msgstr ""
 
-#: yaffo/routes/settings.py:148
+#: yaffo/routes/settings.py:161
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr ""
 
-#: yaffo/routes/settings.py:164
+#: yaffo/routes/settings.py:177
 msgid "Classify-labels automation is not installed."
 msgstr ""
 
-#: yaffo/routes/settings.py:170
+#: yaffo/routes/settings.py:183
 msgid "No indexed photos to classify yet."
 msgstr ""
 
-#: yaffo/routes/settings.py:176
+#: yaffo/routes/settings.py:189
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/settings.py:221 yaffo/routes/settings.py:316
+#: yaffo/routes/settings.py:208
+msgid "AI model updated."
+msgstr ""
+
+#: yaffo/routes/settings.py:237 yaffo/routes/settings.py:332
 msgid "Directory path is required"
 msgstr ""
 
-#: yaffo/routes/settings.py:229
+#: yaffo/routes/settings.py:245
 msgid "Could not create the directory"
 msgstr ""
 
-#: yaffo/routes/settings.py:235
+#: yaffo/routes/settings.py:251
 msgid "Directory is already configured"
 msgstr ""
 
-#: yaffo/routes/settings.py:249
+#: yaffo/routes/settings.py:265
 msgid "Media directory not found"
 msgstr ""
 
-#: yaffo/routes/settings.py:298
+#: yaffo/routes/settings.py:314
 msgid "Could not count thumbnail files"
 msgstr ""
 
-#: yaffo/routes/settings.py:333
+#: yaffo/routes/settings.py:349
 msgid "The new directory is the same as the current directory"
 msgstr ""
 
-#: yaffo/routes/settings.py:392
+#: yaffo/routes/settings.py:408
 msgid "Could not move thumbnail files"
 msgstr ""
 
@@ -416,6 +432,7 @@ msgid "Configure Filters"
 msgstr ""
 
 #: yaffo/templates/components/modal.html:17 yaffo/templates/index.html:165
+#: yaffo/templates/settings/_llm_api_key.html:19
 #: yaffo/templates/settings/index.html:29
 msgid "Save"
 msgstr ""
@@ -1252,6 +1269,57 @@ msgstr ""
 
 #: yaffo/templates/settings/_labels.html:48
 msgid "Run the classifier over your whole library to apply vocabulary changes."
+msgstr ""
+
+#: yaffo/templates/settings/_llm.html:2
+msgid "AI Generation"
+msgstr ""
+
+#: yaffo/templates/settings/_llm.html:4
+msgid ""
+"Powers AI customization features. The API key for the selected model's "
+"provider is stored securely in the operating system's credential store."
+msgstr ""
+
+#: yaffo/templates/settings/_llm.html:8
+msgid "Model"
+msgstr ""
+
+#: yaffo/templates/settings/_llm_api_key.html:4
+#, python-format
+msgid "%(provider)s API key:"
+msgstr ""
+
+#: yaffo/templates/settings/_llm_api_key.html:6
+msgid "✓ configured via"
+msgstr ""
+
+#: yaffo/templates/settings/_llm_api_key.html:6
+msgid "(environment; takes precedence)"
+msgstr ""
+
+#: yaffo/templates/settings/_llm_api_key.html:7
+msgid "✓ stored in keychain"
+msgstr ""
+
+#: yaffo/templates/settings/_llm_api_key.html:7
+msgid "Not set"
+msgstr ""
+
+#: yaffo/templates/settings/_llm_api_key.html:14
+msgid "Replace key"
+msgstr ""
+
+#: yaffo/templates/settings/_llm_api_key.html:14
+msgid "Set key"
+msgstr ""
+
+#: yaffo/templates/settings/_llm_api_key.html:16
+msgid "API key"
+msgstr ""
+
+#: yaffo/templates/settings/_llm_api_key.html:24
+msgid "Clear"
 msgstr ""
 
 #: yaffo/templates/settings/index.html:5

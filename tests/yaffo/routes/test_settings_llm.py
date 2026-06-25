@@ -43,3 +43,17 @@ def test_unknown_model_is_ignored(app, client):
     assert resp.status_code == 200
     with app.app_context():
         assert llm_config.get_model() == before  # invalid id rejected by set_model
+
+
+def test_localized_model_labels_do_not_mutate_shared_status(app, client):
+    client.post("/settings/locale", data={"locale": "de"})
+    german = client.get("/settings").get_data(as_text=True)
+
+    assert "Claude Sonnet 4.6 — ausgewogen" in german
+    with app.app_context():
+        sonnet = next(
+            model
+            for model in llm_config.status()["models"]
+            if model["id"] == "claude-sonnet-4-6"
+        )
+    assert sonnet["label"] == "Claude Sonnet 4.6 — balanced"

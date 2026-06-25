@@ -1,11 +1,11 @@
 <div class="settings-section" id="llm-section">
-    <h2>AI Generation</h2>
+    <h2>{{ _("AI Generation") }}</h2>
     <p class="section-description">
-        Powers AI Customization Features for the site. The API key for the selected model's provider is stored securely using the operating system's credential store.
+        {{ _("Powers AI customization features. The API key for the selected model's provider is stored securely in the operating system's credential store.") }}
     </p>
 
     <div class="form-group">
-        <label for="llm-model">Model</label>
+        <label for="llm-model">{{ _("Model") }}</label>
         <select id="llm-model" name="model" class="searchable-select" data-search-disabled
                 hx-post="{{ url_for('settings_llm_model') }}"
                 hx-target="#llm-api-key" hx-swap="outerHTML">

@@ -101,6 +101,40 @@ def test_saved_locale_translates_settings_label_validation(client):
     }
 
 
+def test_saved_locale_translates_settings_llm_forms(client, monkeypatch):
+    monkeypatch.setattr(
+        "yaffo.site_agents.llm_config.get_api_key",
+        lambda provider_id: None,
+    )
+    client.post("/settings/locale", data={"locale": "de"})
+
+    body = client.get("/settings").get_data(as_text=True)
+
+    assert "KI-Generierung" in body
+    assert "KI-gestützte Anpassungsfunktionen" in body
+    assert ">Modell</label>" in body
+    assert "Claude Sonnet 4.6 — ausgewogen" in body
+    assert "Anthropic-API-Schlüssel:" in body
+    assert "Nicht festgelegt" in body
+    assert "Schlüssel festlegen" in body
+    assert 'placeholder="API-Schlüssel"' in body
+
+
+def test_saved_locale_translates_settings_llm_model_notification(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    response = client.post(
+        "/settings/llm/model",
+        data={"model": "claude-opus-4-8"},
+    )
+    notification = json.loads(response.headers["HX-Trigger"])["showNotification"]
+
+    assert notification == {
+        "message": "KI-Modell wurde aktualisiert.",
+        "type": "success",
+    }
+
+
 def test_saved_locale_translates_settings_media_directory_api_errors(client):
     client.post("/settings/locale", data={"locale": "de"})
 

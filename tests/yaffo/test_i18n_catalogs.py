@@ -239,3 +239,16 @@ def test_settings_label_management_uses_gettext_and_delegated_filtering():
     assert "document.addEventListener('input'" in source
     assert "ngettext(" in routes
     assert "photo(s)" not in routes
+
+
+def test_settings_llm_forms_use_gettext_and_localized_notifications():
+    llm_template = Path("yaffo/templates/settings/_llm.html").read_text(encoding="utf-8")
+    key_template = Path("yaffo/templates/settings/_llm_api_key.html").read_text(encoding="utf-8")
+    routes = Path("yaffo/routes/settings.py").read_text(encoding="utf-8")
+
+    assert '{{ _("AI Generation") }}' in llm_template
+    assert '{{ _("Model") }}' in llm_template
+    assert '_("%(provider)s API key:"' in key_template
+    assert "_('API key')" in key_template
+    assert 'gettext("AI model updated.")' in routes
+    assert '"claude-sonnet-4-6": gettext(' in routes

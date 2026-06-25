@@ -510,7 +510,8 @@ Status as of June 25, 2026:
 - [x] Phase 4.1: home gallery and media details vertical slice.
 - [x] Phase 4.2: faces and people workflows.
 - [x] Phase 4.3: locations map/list.
-- [ ] Phase 4.4–4.9: remaining feature screens and LLM prompt behavior.
+- [x] Phase 4.4: settings.
+- [ ] Phase 4.5–4.9: remaining feature screens and LLM prompt behavior.
 - [ ] Phase 5: translation and release-readiness work.
 
 The completed home/media slice includes:
@@ -558,6 +559,14 @@ The completed settings label-management slice includes:
 - localized HTMX validation and task notifications, including pluralized
   reclassification counts;
 - German fragment, validation, and pluralization tests.
+
+The completed settings LLM slice includes:
+
+- the AI generation description, model selector, provider key status, key forms,
+  and environment/keychain state labels;
+- localized Anthropic model descriptors and model-update notifications;
+- German rendering and response tests, including a guard against mutating shared
+  model metadata between locale requests.
 
 Current verification covers catalog key/placeholder parity, compiled gettext
 catalogs, JavaScript and Python syntax, non-English rendering, and the
@@ -615,7 +624,7 @@ and tests:
 - [x] Home gallery and media details.
 - [x] Faces and people.
 - [x] Locations.
-- [ ] Settings.
+- [x] Settings.
 - [ ] Indexing and duplicate utilities.
 - [ ] Automations.
 - [ ] Themes.
@@ -651,7 +660,7 @@ route modules and browser-facing errors are part of the same checklist item.
   endpoints in `routes/settings.py`. The language selector itself is complete.
 - [x] Settings label management:
   `templates/settings/_labels.html` and `static/settings/labels.js`.
-- [ ] Settings LLM provider and API-key forms:
+- [x] Settings LLM provider and API-key forms:
   `templates/settings/_llm.html`,
   `templates/settings/_llm_api_key.html`, and their settings routes.
 - [ ] Utilities landing/navigation:
