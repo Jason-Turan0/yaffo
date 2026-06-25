@@ -1,19 +1,19 @@
 {% from "filters/_matchType.html" import render_match_type  %}
 
 <div class="filter-group">
-    <label>Label</label>
+    <label>{{ _("Label") }}</label>
     {{ render_match_type("labels-match-type", filters.selected_labels_match_type)}}
 
     <div class="multi-select-wrapper"
-         data-placeholder="All Labels"
+         data-placeholder="{{ _('All Labels') }}"
          data-single-format="{name}"
-         data-multi-format="{count} labels selected"
+         data-multi-format="{{ _('{count} labels selected') }}"
          data-match-type-id="labels-match-type"
          data-searchable="true"
-         data-search-placeholder="Search labels…"
+         data-search-placeholder="{{ _('Search labels…') }}"
         >
         <div class="multi-select-header" onclick="toggleMultiSelect(this)">
-            <span class="selected-text">All Labels</span>
+            <span class="selected-text">{{ _("All Labels") }}</span>
             <span class="arrow">▼</span>
         </div>
         <div class="multi-select-options">

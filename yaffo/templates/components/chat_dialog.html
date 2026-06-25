@@ -25,7 +25,7 @@
     </div>
     <div class="chat-status chat-status-bar" id="{{ id }}-status" hidden>
         <span class="chat-spinner"></span>
-        <span class="chat-status-text">Generating…</span>
+        <span class="chat-status-text">{{ _("Generating…") }}</span>
         <span class="chat-elapsed" id="{{ id }}-elapsed">0:00</span>
     </div>
     {% if not disabled %}
@@ -35,8 +35,8 @@
                       placeholder="{{ placeholder }}"></textarea>
         </div>
         <div class="chat-dialog-actions">
-            <button type="submit" class="btn-primary">Send</button>
-            <button type="button" id="{{ id }}-cancel" class="btn-danger">Cancel</button>
+            <button type="submit" class="btn-primary">{{ _("Send") }}</button>
+            <button type="button" id="{{ id }}-cancel" class="btn-danger">{{ _("Cancel") }}</button>
         </div>
     </form>
     {% endif %}

@@ -14,6 +14,7 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
  */
 window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {}) => {
     return new Promise((resolve) => {
+        const i18n = window.PHOTO_ORGANIZER.i18n;
         const modal = document.getElementById('folder-picker-modal');
         const title = document.getElementById('folder-picker-title');
         const pathLabel = document.getElementById('folder-picker-path');
@@ -31,10 +32,12 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
         const isAnyMode = mode === 'any';
 
         title.textContent = isAnyMode
-            ? 'Select a file or folder'
-            : (isFileMode ? 'Select a file' : 'Select a folder');
+            ? i18n.t('components:folderPicker.selectFileOrFolder')
+            : (isFileMode
+                ? i18n.t('components:folderPicker.selectFile')
+                : i18n.t('components:folderPicker.selectFolder'));
         upBtn.dataset.icon = 'arrow-up';
-        upBtn.textContent = 'Up';
+        upBtn.textContent = i18n.t('components:folderPicker.up');
         selectBtn.dataset.icon = 'folder';
         // "Select this folder" is hidden only for file-only selection; files resolve on click.
         selectBtn.style.display = isFileMode ? 'none' : '';
@@ -80,8 +83,8 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
                 const empty = document.createElement('li');
                 empty.className = 'folder-picker-empty';
                 empty.textContent = isFileMode || isAnyMode
-                    ? 'No files or folders here.'
-                    : 'No sub-folders here.';
+                    ? i18n.t('components:folderPicker.noFilesOrFolders')
+                    : i18n.t('components:folderPicker.noSubfolders');
                 list.appendChild(empty);
                 return;
             }
@@ -112,7 +115,7 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
             try {
                 data = await (await fetch(`${window.APP_CONFIG.urls.fs_list}?${params}`)).json();
             } catch {
-                errorBox.textContent = 'Failed to read the filesystem.';
+                errorBox.textContent = i18n.t('components:folderPicker.readFailed');
                 return;
             }
             currentPath = data.path;

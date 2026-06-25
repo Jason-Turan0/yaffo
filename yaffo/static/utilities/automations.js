@@ -256,13 +256,15 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config, defaultPath = null) =
 // document so it survives the #automation-triggers HTMX re-renders. Save/Add-event
 // are plain HTMX (edit_trigger_id tells the server add vs update for a schedule).
 window.PHOTO_ORGANIZER.initTriggerEditor = () => {
-    const cronBuilder = window.PHOTO_ORGANIZER.COMPONENTS.cronBuilder;
+    const cronBuilderReady = window.PHOTO_ORGANIZER.COMPONENTS.cronBuilderReady;
     const areaFor = (el) => el.closest('#automation-triggers').querySelector('.automation-trigger-add');
 
-    const openSchedule = (area, { cron, triggerId, title }) => {
+    const openSchedule = async (area, { cron, triggerId, title }) => {
+        const cronBuilder = await cronBuilderReady;
         area.querySelector('[name="edit_trigger_id"]').value = triggerId || '';
         area.querySelector('.schedule-editor-title').textContent = title;
         const mount = area.querySelector('[data-cron-builder]');
+        cronBuilder.initAll(mount);
         if (cron) cronBuilder.setCron(mount, cron); else cronBuilder.reset(mount);
         area.classList.remove('adding-event');
         area.classList.add('adding-schedule');
@@ -312,15 +314,15 @@ window.PHOTO_ORGANIZER.initTriggerEditor = () => {
         else { clearTimeout(validateTimer); applyValidity(area, { valid: true, showError: false }); }
     });
 
-    document.addEventListener('click', (event) => {
+    document.addEventListener('click', async (event) => {
         const add = event.target.closest('.js-add-schedule');
         const edit = event.target.closest('.js-edit-schedule');
         const addEvent = event.target.closest('.js-add-event');
         const cancel = event.target.closest('.js-cancel');
         if (add) {
-            openSchedule(areaFor(add), { title: 'Add a schedule' });
+            await openSchedule(areaFor(add), { title: 'Add a schedule' });
         } else if (edit) {
-            openSchedule(areaFor(edit), {
+            await openSchedule(areaFor(edit), {
                 cron: edit.dataset.cronValue,
                 triggerId: edit.dataset.triggerId,
                 title: 'Edit schedule',

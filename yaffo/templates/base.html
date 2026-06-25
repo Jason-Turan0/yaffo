@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html lang="{{ current_locale }}" dir="{{ text_direction }}" data-theme="{{ theme }}">
+<html lang="{{ current_locale }}" dir="{{ text_direction }}" data-theme="{{ theme }}"
+      data-select-search="{{ _('Type to search…') }}"
+      data-select-no-results="{{ _('No results found') }}"
+      data-select-placeholder="{{ _('Select…') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -88,26 +91,26 @@
             YAFFO!
         </a>
         <ul class="navbar-nav">
-            <li><a href="{{ url_for('index') }}" data-icon="library" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Home</a>
+            <li><a href="{{ url_for('index') }}" data-icon="library" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">{{ _("Home") }}</a>
             </li>
             <li><a href="{{ url_for('faces_index') }}" data-icon="faces"
-                   class="nav-link {% if request.endpoint == 'faces_index' or request.endpoint == 'faces_assign' or request.endpoint == 'faces_remove' %}active{% endif %}">Faces</a>
+                   class="nav-link {% if request.endpoint == 'faces_index' or request.endpoint == 'faces_assign' or request.endpoint == 'faces_remove' %}active{% endif %}">{{ _("Faces") }}</a>
             </li>
             <li><a href="{{ url_for('people_list') }}" data-icon="people"
-                   class="nav-link {% if request.endpoint and 'people' in request.endpoint %}active{% endif %}">People</a></li>
+                   class="nav-link {% if request.endpoint and 'people' in request.endpoint %}active{% endif %}">{{ _("People") }}</a></li>
             <li><a href="{{ url_for('locations_list') }}" data-icon="locations"
-                   class="nav-link {% if request.endpoint and 'locations' in request.endpoint %}active{% endif %}">Locations</a></li>
+                   class="nav-link {% if request.endpoint and 'locations' in request.endpoint %}active{% endif %}">{{ _("Locations") }}</a></li>
             <li><a href="{{ url_for('utilities_index') }}" data-icon="utilities"
-                   class="nav-link {% if request.endpoint and 'utilities' in request.endpoint %}active{% endif %}">Utilities</a></li>
+                   class="nav-link {% if request.endpoint and 'utilities' in request.endpoint %}active{% endif %}">{{ _("Utilities") }}</a></li>
             <li><a href="{{ url_for('themes_index') }}" data-icon="themes"
-                   class="nav-link {% if request.endpoint in ['themes_index', 'themes_show'] %}active{% endif %}">Themes</a></li>
+                   class="nav-link {% if request.endpoint in ['themes_index', 'themes_show'] %}active{% endif %}">{{ _("Themes") }}</a></li>
             <li><a href="{{ url_for('settings_index') }}" data-icon="settings"
-                   class="nav-link {% if request.endpoint and 'settings' in request.endpoint %}active{% endif %}">Settings</a></li>
+                   class="nav-link {% if request.endpoint and 'settings' in request.endpoint %}active{% endif %}">{{ _("Settings") }}</a></li>
 
         </ul>
         <button type="button" id="nav-pages-toggle" class="nav-link nav-pages-toggle"
                 aria-expanded="true" aria-controls="navbar-pages-bar">
-            Pages <span class="nav-pages-toggle-arrow" aria-hidden="true">▾</span>
+            {{ _("Pages") }} <span class="nav-pages-toggle-arrow" aria-hidden="true">▾</span>
         </button>
     </div>
     {# Custom pages live on their own bookmarks-style strip; the toggle above
@@ -123,14 +126,14 @@
                        class="nav-link nav-page-tab {% if is_active %}active{% endif %}">{{ nav_page.title }}</a>
                     {% if is_active and request.endpoint == 'pages_detail' %}
                     <a href="{{ url_for('pages_design', page_id=nav_page.id) }}" data-icon="edit"
-                       class="nav-page-edit" title="Edit page" aria-label="Edit page"><span class="nav-page-edit-glyph">✎</span></a>
+                       class="nav-page-edit" title="{{ _('Edit page') }}" aria-label="{{ _('Edit page') }}"><span class="nav-page-edit-glyph">✎</span></a>
                     {% endif %}
                 </li>
                 {% endfor %}
             </ul>
             {% endif %}
             <form method="POST" action="{{ url_for('pages_create') }}" class="nav-new-page-form">
-                <button type="submit" class="nav-link nav-new-page" title="New page" aria-label="New page">＋ New page</button>
+                <button type="submit" class="nav-link nav-new-page" title="{{ _('New page') }}" aria-label="{{ _('New page') }}">＋ {{ _("New page") }}</button>
             </form>
         </div>
     </div>
@@ -146,7 +149,7 @@
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }}">
                         <span class="alert-message">{{ message }}</span>
-                        <button class="alert-close" onclick="closeAlert(this)">&times;</button>
+                        <button class="alert-close" onclick="closeAlert(this)" aria-label="{{ _('Close') }}">&times;</button>
                     </div>
                 {% endfor %}
             </div>
@@ -160,11 +163,11 @@
 <div id="folder-picker-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="folder-picker-title">Select a folder</h2>
+            <h2 id="folder-picker-title">{{ _("Select a folder") }}</h2>
         </div>
         <div class="modal-body thin-scrollbar">
             <div class="folder-picker-bar">
-                <button type="button" id="folder-picker-up" class="btn btn-secondary btn-sm">↑ Up</button>
+                <button type="button" id="folder-picker-up" class="btn btn-secondary btn-sm">↑ {{ _("Up") }}</button>
                 <span id="folder-picker-path" class="folder-picker-path"></span>
             </div>
             <div id="folder-picker-roots" class="folder-picker-roots"></div>
@@ -172,8 +175,8 @@
             <ul id="folder-picker-list" class="folder-picker-list"></ul>
         </div>
         <div class="modal-actions">
-            <button type="button" id="folder-picker-cancel" class="btn btn-secondary">Cancel</button>
-            <button type="button" id="folder-picker-select" class="btn btn-primary">Select this folder</button>
+            <button type="button" id="folder-picker-cancel" class="btn btn-secondary">{{ _("Cancel") }}</button>
+            <button type="button" id="folder-picker-select" class="btn btn-primary">{{ _("Select this folder") }}</button>
         </div>
     </div>
 </div>
@@ -182,14 +185,14 @@
 <div id="global-confirm-dialog" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="confirm-dialog-title">Confirm</h2>
+            <h2 id="confirm-dialog-title">{{ _("Confirm") }}</h2>
         </div>
         <div class="modal-body">
             <p id="confirm-dialog-message" class="modal-message"></p>
         </div>
         <div class="modal-actions">
-            <button type="button" id="confirm-dialog-cancel" class="btn btn-secondary">Cancel</button>
-            <button type="button" id="confirm-dialog-confirm" class="btn btn-primary">Confirm</button>
+            <button type="button" id="confirm-dialog-cancel" class="btn btn-secondary">{{ _("Cancel") }}</button>
+            <button type="button" id="confirm-dialog-confirm" class="btn btn-primary">{{ _("Confirm") }}</button>
         </div>
     </div>
 </div>

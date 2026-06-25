@@ -12,29 +12,36 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
-(() => {
+window.PHOTO_ORGANIZER.COMPONENTS.cronBuilderReady =
+window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+    const t = (key, options = {}) => i18n.t(`components:cron.${key}`, options);
     const PRESETS = [
-        { cron: "*/15 * * * *", label: "Every 15 minutes" },
-        { cron: "0 * * * *", label: "Every hour" },
-        { cron: "0 */6 * * *", label: "Every 6 hours" },
-        { cron: "0 0 * * *", label: "Daily at midnight" },
-        { cron: "0 9 * * *", label: "Daily at 9:00 AM" },
-        { cron: "0 9 * * 1", label: "Weekly on Monday at 9:00 AM" },
+        { cron: "*/15 * * * *", label: t("everyMinutes", { count: 15 }) },
+        { cron: "0 * * * *", label: t("everyHour") },
+        { cron: "0 */6 * * *", label: t("everyHours", { count: 6 }) },
+        { cron: "0 0 * * *", label: t("dailyAtMidnight") },
+        { cron: "0 9 * * *", label: t("dailyAt", { time: "9:00 AM" }) },
+        { cron: "0 9 * * 1", label: t("weeklyOnAt", { day: t("monday"), time: "9:00 AM" }) },
     ];
     const WEEKDAYS = [
-        [1, "Monday"], [2, "Tuesday"], [3, "Wednesday"], [4, "Thursday"],
-        [5, "Friday"], [6, "Saturday"], [0, "Sunday"],
+        [1, t("monday")], [2, t("tuesday")], [3, t("wednesday")],
+        [4, t("thursday")], [5, t("friday")], [6, t("saturday")], [0, t("sunday")],
     ];
-    const WEEKDAY_LABEL = { 0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday",
-        4: "Thursday", 5: "Friday", 6: "Saturday", 7: "Sunday" };
+    const WEEKDAY_LABEL = {
+        0: t("sunday"), 1: t("monday"), 2: t("tuesday"), 3: t("wednesday"),
+        4: t("thursday"), 5: t("friday"), 6: t("saturday"), 7: t("sunday"),
+    };
     const CADENCES = [
-        ["hourly", "Hourly"], ["daily", "Daily"], ["weekly", "Weekly"],
-        ["monthly", "Monthly"], ["advanced", "Advanced (cron)"],
+        ["hourly", t("hourly")], ["daily", t("daily")], ["weekly", t("weekly")],
+        ["monthly", t("monthly")], ["advanced", t("advanced")],
     ];
 
     const pad = (n) => String(n).padStart(2, "0");
     const isInt = (s) => /^\d+$/.test(s);
-    const fmtTime = (h, m) => `${(h % 12) || 12}:${pad(m)} ${h < 12 ? "AM" : "PM"}`;
+    const fmtTime = (h, m) => i18n.date(
+        new Date(Date.UTC(2000, 0, 1, h, m)),
+        { hour: "numeric", minute: "2-digit", timeZone: "UTC" }
+    );
 
     // cron -> friendly text, covering the shapes the presets/builder produce and
     // falling back to the raw expression for anything richer.
@@ -46,22 +53,25 @@ window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
         const stepMin = /^\*\/(\d+)$/.exec(minute);
         if (stepMin && hour === "*" && dom === "*" && month === "*" && dow === "*")
-            return `Every ${stepMin[1]} minutes`;
+            return t("everyMinutes", { count: Number(stepMin[1]) });
         const stepHour = /^\*\/(\d+)$/.exec(hour);
         if (minute === "0" && stepHour && dom === "*" && month === "*" && dow === "*")
-            return `Every ${stepHour[1]} hours`;
+            return t("everyHours", { count: Number(stepHour[1]) });
 
         if (month !== "*" || !isInt(minute)) return cron;
         const m = parseInt(minute, 10);
         if (hour === "*" && dom === "*" && dow === "*")
-            return m === 0 ? "Every hour" : `Every hour at :${pad(m)}`;
+            return m === 0 ? t("everyHour") : t("everyHourAtMinute", { minute: pad(m) });
         if (!isInt(hour)) return cron;
         const when = fmtTime(parseInt(hour, 10), m);
-        if (dom === "*" && dow === "*") return `Daily at ${when}`;
+        if (dom === "*" && dow === "*") return t("dailyAt", { time: when });
         if (dom === "*" && isInt(dow))
-            return `Weekly on ${WEEKDAY_LABEL[parseInt(dow, 10)] || dow} at ${when}`;
+            return t("weeklyOnAt", {
+                day: WEEKDAY_LABEL[parseInt(dow, 10)] || dow,
+                time: when,
+            });
         if (dow === "*" && isInt(dom))
-            return `Monthly on day ${parseInt(dom, 10)} at ${when}`;
+            return t("monthlyOnDayAt", { day: parseInt(dom, 10), time: when });
         return cron;
     };
 
@@ -77,57 +87,57 @@ window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
     const TEMPLATE = (name) => `
         <input type="hidden" name="${name}" class="cron-value">
         <div class="form-row">
-            <label class="form-row-label">Schedule</label>
-            <select class="form-control cron-mode" aria-label="Schedule type">
-                <option value="preset">Common schedules</option>
-                <option value="custom">Custom schedule…</option>
+            <label class="form-row-label">${t("schedule")}</label>
+            <select class="form-control cron-mode" aria-label="${t("scheduleType")}">
+                <option value="preset">${t("commonSchedules")}</option>
+                <option value="custom">${t("customSchedule")}</option>
             </select>
         </div>
         <div class="form-row cron-block-preset">
             <span class="form-row-label"></span>
-            <select class="form-control cron-preset" aria-label="Preset schedule">
+            <select class="form-control cron-preset" aria-label="${t("presetSchedule")}">
                 ${options(PRESETS.map((p) => [p.cron, p.label]), "0 * * * *")}
             </select>
         </div>
         <div class="form-row cron-block-custom">
-            <label class="form-row-label">Repeat</label>
-            <select class="form-control cron-cadence" aria-label="Repeat">
+            <label class="form-row-label">${t("repeat")}</label>
+            <select class="form-control cron-cadence" aria-label="${t("repeat")}">
                 ${options(CADENCES, "daily")}
             </select>
             <span class="cron-fields-row">
                 <span class="cron-field cron-field-weekday">
-                    <label class="cron-label">on</label>
-                    <select class="form-control cron-weekday" aria-label="Day of week">
+                    <label class="cron-label">${t("on")}</label>
+                    <select class="form-control cron-weekday" aria-label="${t("dayOfWeek")}">
                         ${options(WEEKDAYS, 1)}
                     </select>
                 </span>
                 <span class="cron-field cron-field-dom">
-                    <label class="cron-label">on day</label>
-                    <select class="form-control cron-dom" aria-label="Day of month">
+                    <label class="cron-label">${t("onDay")}</label>
+                    <select class="form-control cron-dom" aria-label="${t("dayOfMonth")}">
                         ${numOptions(1, 31, 1, 1)}
                     </select>
                 </span>
                 <span class="cron-field cron-field-time">
-                    <label class="cron-label">at</label>
-                    <select class="form-control cron-hour" aria-label="Hour">
+                    <label class="cron-label">${t("at")}</label>
+                    <select class="form-control cron-hour" aria-label="${t("hour")}">
                         ${numOptions(0, 23, 1, 9)}
                     </select>
                     <span class="cron-colon">:</span>
                 </span>
                 <span class="cron-field cron-field-minute">
-                    <label class="cron-label cron-label-minute">at minute</label>
-                    <select class="form-control cron-minute" aria-label="Minute">
+                    <label class="cron-label cron-label-minute">${t("atMinute")}</label>
+                    <select class="form-control cron-minute" aria-label="${t("minute")}">
                         ${numOptions(0, 55, 5, 0)}
                     </select>
                 </span>
             </span>
             <span class="cron-block-advanced">
-                <input type="text" class="form-control cron-raw" placeholder="*/30 * * * *" aria-label="Cron expression">
-                <span class="cron-hint">minute hour day month weekday</span>
+                <input type="text" class="form-control cron-raw" placeholder="*/30 * * * *" aria-label="${t("cronExpression")}">
+                <span class="cron-hint">${t("cronHint")}</span>
             </span>
         </div>
         <div class="form-row cron-preview-row">
-            <span class="form-row-label">Runs:</span>
+            <span class="form-row-label">${t("runs")}</span>
             <span class="cron-preview" aria-live="polite"></span>
         </div>`;
 
@@ -218,7 +228,7 @@ window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
             const cron = buildCron(els);
             els.hidden.value = cron;
-            els.preview.textContent = cron ? describeCron(cron) : "Enter a cron expression";
+            els.preview.textContent = cron ? describeCron(cron) : t("enterExpression");
 
             // Preset/builder output is valid by construction (true); only the raw
             // Advanced field can be wrong, so report it as unknown (null) for the host
@@ -272,5 +282,7 @@ window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
     const reset = (root) => root && root._cron && root._cron.reset();
     const setCron = (root, cron) => root && root._cron && root._cron.setCron(cron);
 
-    window.PHOTO_ORGANIZER.COMPONENTS.cronBuilder = { initAll, describeCron, reset, setCron };
-})();
+    const api = { initAll, describeCron, reset, setCron };
+    window.PHOTO_ORGANIZER.COMPONENTS.cronBuilder = api;
+    return api;
+});

@@ -1,19 +1,19 @@
 {% from "filters/_matchType.html" import render_match_type  %}
 
 <div class="filter-group">
-    <label>People</label>
+    <label>{{ _("People") }}</label>
     {{ render_match_type("person-match-type", filters.selected_person_match_type)}}
 
     <div class="multi-select-wrapper"
-         data-placeholder="All People"
+         data-placeholder="{{ _('All People') }}"
          data-single-format="{name}"
-         data-multi-format="{count} people selected"
+         data-multi-format="{{ _('{count} people selected') }}"
          data-match-type-id="person-match-type"
          data-searchable="true"
-         data-search-placeholder="Search people…"
+         data-search-placeholder="{{ _('Search people…') }}"
         >
         <div class="multi-select-header" onclick="toggleMultiSelect(this)">
-            <span class="selected-text">All People</span>
+            <span class="selected-text">{{ _("All People") }}</span>
             <span class="arrow">▼</span>
         </div>
         <div class="multi-select-options">

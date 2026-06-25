@@ -1,15 +1,15 @@
-{% macro render_info_modal(id, title, render_modal_body, action_text = "Close", size_class = "") %}
+{% macro render_info_modal(id, title, render_modal_body, action_text = none, size_class = "") %}
     <div id="{{id}}" class="modal">
     <div class="modal-content {{size_class}}">
         <div class="modal-header">
             <h2 id="{{id}}Title">{{title}}</h2>
-            <button type="button" class="modal-close" name="cancel" aria-label="Close">&times;</button>
+            <button type="button" class="modal-close" name="cancel" aria-label="{{ _('Close') }}">&times;</button>
         </div>
         <div class="modal-body thin-scrollbar">
             {{ render_modal_body() }}
         </div>
         <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" name="cancel">{{action_text}}</button>
+            <button type="button" class="btn btn-secondary" name="cancel">{{ action_text or _("Close") }}</button>
         </div>
     </div>
     </div>

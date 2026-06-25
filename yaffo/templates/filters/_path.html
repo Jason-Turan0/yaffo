@@ -1,10 +1,10 @@
 <div class="filter-group">
-    <label for="path-filter">File</label>
+    <label for="path-filter">{{ _("File") }}</label>
     <input type="text"
            name="path"
            id="path-filter"
            class="filter-text-input"
-           placeholder="Search file or folder name…"
+           placeholder="{{ _('Search file or folder name…') }}"
            value="{{ filters.selected_path or '' }}"
            autocomplete="off">
 </div>

@@ -28,6 +28,7 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 //   runningStatus   the status meaning "a run is active" (default 'IN_PROGRESS').
 //   cancelConfirm   { title, message, confirmText } for the cancel confirm dialog.
 window.PHOTO_ORGANIZER.initChatDialog = (id, options) => {
+    const i18n = window.PHOTO_ORGANIZER.i18n;
     const {
         startStatus,
         statusUrl,
@@ -38,9 +39,9 @@ window.PHOTO_ORGANIZER.initChatDialog = (id, options) => {
         onPhase,
         runningStatus = 'IN_PROGRESS',
         cancelConfirm = {
-            title: 'Cancel generation',
-            message: 'Discard this generation?',
-            confirmText: 'Cancel generation',
+            title: i18n.t('components:chat.cancelGeneration'),
+            message: i18n.t('components:chat.discardGeneration'),
+            confirmText: i18n.t('components:chat.cancelGeneration'),
         },
         pollIntervalMs = 1500,
         pollRetryMs = 3000,
@@ -156,13 +157,15 @@ window.PHOTO_ORGANIZER.initChatDialog = (id, options) => {
         try {
             const result = await onSend(message);
             if (!result || !result.ok) {
-                window.notification.error((result && result.error) || 'Could not start generation.');
+                window.notification.error(
+                    (result && result.error) || i18n.t('components:chat.startFailed')
+                );
                 messageInput.value = message;  // let the user retry
                 return;
             }
             enterRunning();
         } catch (error) {
-            window.notification.error('Could not start generation.');
+            window.notification.error(i18n.t('components:chat.startFailed'));
             messageInput.value = message;
         }
     };

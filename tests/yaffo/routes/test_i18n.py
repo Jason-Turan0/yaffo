@@ -39,6 +39,22 @@ def test_settings_locale_persists_and_renders_gettext(client, app):
     assert ">Speichern</button>" in body
 
 
+def test_saved_locale_translates_shared_shell_and_components(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    body = client.get("/").get_data(as_text=True)
+
+    assert ">Startseite</a>" in body
+    assert ">Gesichter</a>" in body
+    assert ">Einstellungen</a>" in body
+    assert "Ordner auswählen" in body
+    assert "Diesen Ordner auswählen" in body
+    assert 'aria-label="Schließen"' in body
+    assert "Filter anwenden" in body
+    assert "Filter zurücksetzen" in body
+    assert "Datei- oder Ordnernamen suchen…" in body
+
+
 def test_settings_locale_rejects_unsupported_locale(client):
     response = client.post("/settings/locale", data={"locale": "fr"})
 

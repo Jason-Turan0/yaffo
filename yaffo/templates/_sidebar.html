@@ -2,16 +2,16 @@
 <div class="sidebar-container">
      {% if render_actions_block %}
         <div class="sidebar sidebar-actions">
-            <h2>Actions</h2>
+            <h2>{{ _("Actions") }}</h2>
             {{ render_actions_block() }}
         </div>
     {% endif %}
     <div class="sidebar">
         <div class="sidebar-header">
-            <h2>Filters</h2>
+            <h2>{{ _("Filters") }}</h2>
             {% if filter_layout %}
             <button type="button" class="filter-config-trigger" id="configure-filters-btn"
-                    data-icon="filter-config" aria-label="Configure filters" title="Configure filters"></button>
+                    data-icon="filter-config" aria-label="{{ _('Configure filters') }}" title="{{ _('Configure filters') }}"></button>
             {% endif %}
         </div>
         <form method="GET" action="{{ url }}" id="filter-form">
@@ -25,10 +25,10 @@
                     {{ render_filters_block() }}
                 {% endif %}
             {% endif %}
-            <button type="submit" class="btn btn-primary filter-btn">Apply Filters</button>
+            <button type="submit" class="btn btn-primary filter-btn">{{ _("Apply Filters") }}</button>
             <button type="button" class="clear-filters"
                     onclick="window.location.href='{{ url }}'">
-                Clear Filters
+                {{ _("Clear Filters") }}
             </button>
         </form>
     </div>

@@ -9,14 +9,17 @@ function toggleMultiSelect(header) {
 }
 
 function updateMultiSelectText(checkbox) {
+    const i18n = window.PHOTO_ORGANIZER.i18n;
     const wrapper = checkbox.closest('.multi-select-wrapper');
     const header = wrapper.querySelector('.selected-text');
     const checkboxes = wrapper.querySelectorAll('input[type="checkbox"]:checked');
 
     // Get data attributes using dataset
-    const placeholder = wrapper.dataset.placeholder || 'All';
+    const placeholder = wrapper.dataset.placeholder || i18n.t('common:all');
     const singleFormat = wrapper.dataset.singleFormat || '{name}';
-    const multiFormat = wrapper.dataset.multiFormat || '{count} selected';
+    const multiFormat = wrapper.dataset.multiFormat || i18n.t('components:multiSelect.selected', {
+        count: '{count}',
+    });
 
     if (checkboxes.length === 0) {
         header.textContent = placeholder;
@@ -64,7 +67,8 @@ function initSearchableMultiSelects() {
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'multi-select-search';
-        input.placeholder = wrapper.dataset.searchPlaceholder || 'Search…';
+        input.placeholder = wrapper.dataset.searchPlaceholder
+            || window.PHOTO_ORGANIZER.i18n.t('common:search');
         input.addEventListener('input', () => filterMultiSelectOptions(input));
         // The box lives inside the filter form; Enter would submit it, so swallow it.
         input.addEventListener('keydown', (e) => {
@@ -86,7 +90,7 @@ document.addEventListener('click', (e) => {
 });
 
 // Initialize text and search boxes on page load
-document.addEventListener('DOMContentLoaded', () => {
+window.PHOTO_ORGANIZER.i18nReady.then(() => {
     initSearchableMultiSelects();
     document.querySelectorAll('.multi-select-wrapper').forEach(wrapper => {
         const firstCheckbox = wrapper.querySelector('input[type="checkbox"]');

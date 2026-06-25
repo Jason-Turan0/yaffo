@@ -1,7 +1,7 @@
 <div class="filter-group">
-    <label for="gender-select">Gender</label>
+    <label for="gender-select">{{ _("Gender") }}</label>
     <select name="gender" id="gender-select" class="searchable-select" data-search-disabled>
-        <option value="">All Genders</option>
+        <option value="">{{ _("All Genders") }}</option>
         {% for gender in filters.genders %}
         <option value="{{ gender.value }}" {% if filters.selected_gender== gender.value %}selected{% endif %}>{{ gender.name }}
         </option>

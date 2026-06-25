@@ -1,7 +1,7 @@
 <div class="filter-group">
-    <label for="favorite-select">Favorites</label>
+    <label for="favorite-select">{{ _("Favorites") }}</label>
     <select name="favorite" id="favorite-select" class="searchable-select" data-search-disabled>
-        <option value="">All Photos</option>
-        <option value="1" {% if filters.selected_favorite %}selected{% endif %}>Favorites Only</option>
+        <option value="">{{ _("All Photos") }}</option>
+        <option value="1" {% if filters.selected_favorite %}selected{% endif %}>{{ _("Favorites Only") }}</option>
     </select>
 </div>

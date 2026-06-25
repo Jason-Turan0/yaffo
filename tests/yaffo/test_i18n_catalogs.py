@@ -108,3 +108,29 @@ def test_i18next_bootstrap_treats_top_level_catalog_objects_as_namespaces():
     source = Path("yaffo/static/i18n.js").read_text(encoding="utf-8")
     assert "[locale]: catalog" in source
     assert "defaultNS: 'common'" in source
+
+
+def test_shared_javascript_components_use_catalog_keys():
+    component_sources = [
+        Path("yaffo/static/components/chat_dialog.js"),
+        Path("yaffo/static/components/confirm-dialog.js"),
+        Path("yaffo/static/components/cron_builder.js"),
+        Path("yaffo/static/components/folder_picker.js"),
+        Path("yaffo/static/multi-select.js"),
+        Path("yaffo/static/searchable-select.js"),
+    ]
+    source = "\n".join(path.read_text(encoding="utf-8") for path in component_sources)
+
+    assert "components:chat.startFailed" in source
+    assert "components:folderPicker.selectFolder" in source
+    assert "components:select.noResults" in source
+    assert "components:cron." in source
+
+
+def test_trigger_editor_waits_for_localized_cron_builder():
+    builder_source = Path("yaffo/static/components/cron_builder.js").read_text(encoding="utf-8")
+    automation_source = Path("yaffo/static/utilities/automations.js").read_text(encoding="utf-8")
+
+    assert "COMPONENTS.cronBuilderReady =" in builder_source
+    assert "return api;" in builder_source
+    assert "await cronBuilderReady" in automation_source

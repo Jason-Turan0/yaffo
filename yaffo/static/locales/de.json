@@ -1,6 +1,8 @@
 {
   "common": {
+    "all": "Alle",
     "apply": "Anwenden",
+    "areYouSure": "Sind Sie sicher?",
     "cancel": "Abbrechen",
     "close": "Schließen",
     "confirm": "Bestätigen",
@@ -9,7 +11,74 @@
     "notAvailable": "k. A.",
     "pageOf": "Seite {{page}} von {{total}}",
     "save": "Speichern",
+    "search": "Suchen…",
     "similarityValue": "Ähnlichkeit: {{value}}"
+  },
+  "components": {
+    "chat": {
+      "cancelGeneration": "Generierung abbrechen",
+      "discardGeneration": "Diese Generierung verwerfen?",
+      "startFailed": "Die Generierung konnte nicht gestartet werden."
+    },
+    "cron": {
+      "advanced": "Erweitert (Cron)",
+      "at": "um",
+      "atMinute": "bei Minute",
+      "commonSchedules": "Häufige Zeitpläne",
+      "cronExpression": "Cron-Ausdruck",
+      "cronHint": "Minute Stunde Tag Monat Wochentag",
+      "customSchedule": "Benutzerdefinierter Zeitplan…",
+      "daily": "Täglich",
+      "dailyAt": "Täglich um {{time}}",
+      "dailyAtMidnight": "Täglich um Mitternacht",
+      "dayOfMonth": "Tag des Monats",
+      "dayOfWeek": "Wochentag",
+      "enterExpression": "Cron-Ausdruck eingeben",
+      "everyHour": "Jede Stunde",
+      "everyHourAtMinute": "Jede Stunde bei Minute {{minute}}",
+      "everyHours_one": "Jede {{count}} Stunde",
+      "everyHours_other": "Alle {{count}} Stunden",
+      "everyMinutes_one": "Jede {{count}} Minute",
+      "everyMinutes_other": "Alle {{count}} Minuten",
+      "friday": "Freitag",
+      "hour": "Stunde",
+      "hourly": "Stündlich",
+      "minute": "Minute",
+      "monday": "Montag",
+      "monthly": "Monatlich",
+      "monthlyOnDayAt": "Monatlich am {{day}}. um {{time}}",
+      "on": "am",
+      "onDay": "am Tag",
+      "presetSchedule": "Voreingestellter Zeitplan",
+      "repeat": "Wiederholen",
+      "runs": "Ausführung:",
+      "saturday": "Samstag",
+      "schedule": "Zeitplan",
+      "scheduleType": "Zeitplantyp",
+      "sunday": "Sonntag",
+      "thursday": "Donnerstag",
+      "tuesday": "Dienstag",
+      "wednesday": "Mittwoch",
+      "weekly": "Wöchentlich",
+      "weeklyOnAt": "Wöchentlich am {{day}} um {{time}}"
+    },
+    "folderPicker": {
+      "noFilesOrFolders": "Hier sind keine Dateien oder Ordner.",
+      "noSubfolders": "Hier sind keine Unterordner.",
+      "readFailed": "Das Dateisystem konnte nicht gelesen werden.",
+      "selectFile": "Datei auswählen",
+      "selectFileOrFolder": "Datei oder Ordner auswählen",
+      "selectFolder": "Ordner auswählen",
+      "up": "Nach oben"
+    },
+    "multiSelect": {
+      "selected": "{{count}} ausgewählt"
+    },
+    "select": {
+      "noResults": "Keine Ergebnisse gefunden",
+      "select": "Auswählen…",
+      "typeToSearch": "Zum Suchen eingeben…"
+    }
   },
   "settings": {
     "applicationLanguage": "Anwendungssprache",

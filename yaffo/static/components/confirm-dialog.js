@@ -13,6 +13,7 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
  */
 window.PHOTO_ORGANIZER.confirmDialog = (options) => {
     return new Promise((resolve) => {
+        const i18n = window.PHOTO_ORGANIZER.i18n;
         const modal = document.getElementById('global-confirm-dialog');
         const title = document.getElementById('confirm-dialog-title');
         const message = document.getElementById('confirm-dialog-message');
@@ -20,10 +21,10 @@ window.PHOTO_ORGANIZER.confirmDialog = (options) => {
         const cancelBtn = document.getElementById('confirm-dialog-cancel');
 
         // Set content
-        title.textContent = options.title || 'Confirm';
-        message.textContent = options.message || 'Are you sure?';
-        confirmBtn.textContent = options.confirmText || 'Confirm';
-        cancelBtn.textContent = options.cancelText || 'Cancel';
+        title.textContent = options.title || i18n.t('common:confirm');
+        message.textContent = options.message || i18n.t('common:areYouSure');
+        confirmBtn.textContent = options.confirmText || i18n.t('common:confirm');
+        cancelBtn.textContent = options.cancelText || i18n.t('common:cancel');
 
         // Set button class
         confirmBtn.className = `btn ${options.confirmClass || 'btn-primary'}`;

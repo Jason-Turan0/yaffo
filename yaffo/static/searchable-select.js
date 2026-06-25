@@ -70,7 +70,7 @@ class SearchableSelect {
         this.searchInput = document.createElement('input');
         this.searchInput.type = 'text';
         this.searchInput.className = 'searchable-select-search';
-        this.searchInput.placeholder = 'Type to search...';
+        this.searchInput.placeholder = SearchableSelect.i18n.t('components:select.typeToSearch');
 
         // Create options list
         this.optionsList = document.createElement('div');
@@ -110,7 +110,7 @@ class SearchableSelect {
         if (filteredOptions.length === 0) {
             const noResults = document.createElement('div');
             noResults.className = 'searchable-select-no-results';
-            noResults.textContent = 'No results found';
+            noResults.textContent = SearchableSelect.i18n.t('components:select.noResults');
             this.optionsList.appendChild(noResults);
             return;
         }
@@ -275,7 +275,9 @@ class SearchableSelect {
 
     getSelectedText() {
         const selectedOption = this.select.options[this.select.selectedIndex];
-        return selectedOption ? selectedOption.textContent : 'Select...';
+        return selectedOption
+            ? selectedOption.textContent
+            : SearchableSelect.i18n.t('components:select.select');
     }
 
     // Static method to initialize all searchable selects on the page
@@ -294,15 +296,24 @@ class SearchableSelect {
     }
 }
 
+SearchableSelect.i18n = {
+    t: (key) => ({
+        'components:select.typeToSearch': document.documentElement.dataset.selectSearch,
+        'components:select.noResults': document.documentElement.dataset.selectNoResults,
+        'components:select.select': document.documentElement.dataset.selectPlaceholder,
+    })[key] || key,
+};
+
 // Auto-initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
+if (window.PHOTO_ORGANIZER?.i18nReady) window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+    SearchableSelect.i18n = i18n;
     SearchableSelect.initAll();
-});
+}); else SearchableSelect.initAll();
 
 // Re-initialize selects arriving in htmx-swapped fragments (initAll skips
 // anything already initialized via data-searchable-initialized)
 document.addEventListener('htmx:afterSwap', () => {
-    SearchableSelect.initAll();
+    if (SearchableSelect.i18n) SearchableSelect.initAll();
 });
 
 // Export for use in other scripts

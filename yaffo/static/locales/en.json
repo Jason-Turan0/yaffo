@@ -1,6 +1,8 @@
 {
   "common": {
+    "all": "All",
     "apply": "Apply",
+    "areYouSure": "Are you sure?",
     "cancel": "Cancel",
     "close": "Close",
     "confirm": "Confirm",
@@ -9,7 +11,74 @@
     "notAvailable": "N/A",
     "pageOf": "Page {{page}} of {{total}}",
     "save": "Save",
+    "search": "Search…",
     "similarityValue": "Similarity: {{value}}"
+  },
+  "components": {
+    "chat": {
+      "cancelGeneration": "Cancel generation",
+      "discardGeneration": "Discard this generation?",
+      "startFailed": "Could not start generation."
+    },
+    "cron": {
+      "advanced": "Advanced (cron)",
+      "at": "at",
+      "atMinute": "at minute",
+      "commonSchedules": "Common schedules",
+      "cronExpression": "Cron expression",
+      "cronHint": "minute hour day month weekday",
+      "customSchedule": "Custom schedule…",
+      "daily": "Daily",
+      "dailyAt": "Daily at {{time}}",
+      "dailyAtMidnight": "Daily at midnight",
+      "dayOfMonth": "Day of month",
+      "dayOfWeek": "Day of week",
+      "enterExpression": "Enter a cron expression",
+      "everyHour": "Every hour",
+      "everyHourAtMinute": "Every hour at :{{minute}}",
+      "everyHours_one": "Every {{count}} hour",
+      "everyHours_other": "Every {{count}} hours",
+      "everyMinutes_one": "Every {{count}} minute",
+      "everyMinutes_other": "Every {{count}} minutes",
+      "friday": "Friday",
+      "hour": "Hour",
+      "hourly": "Hourly",
+      "minute": "Minute",
+      "monday": "Monday",
+      "monthly": "Monthly",
+      "monthlyOnDayAt": "Monthly on day {{day}} at {{time}}",
+      "on": "on",
+      "onDay": "on day",
+      "presetSchedule": "Preset schedule",
+      "repeat": "Repeat",
+      "runs": "Runs:",
+      "saturday": "Saturday",
+      "schedule": "Schedule",
+      "scheduleType": "Schedule type",
+      "sunday": "Sunday",
+      "thursday": "Thursday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "weekly": "Weekly",
+      "weeklyOnAt": "Weekly on {{day}} at {{time}}"
+    },
+    "folderPicker": {
+      "noFilesOrFolders": "No files or folders here.",
+      "noSubfolders": "No sub-folders here.",
+      "readFailed": "Failed to read the filesystem.",
+      "selectFile": "Select a file",
+      "selectFileOrFolder": "Select a file or folder",
+      "selectFolder": "Select a folder",
+      "up": "Up"
+    },
+    "multiSelect": {
+      "selected": "{{count}} selected"
+    },
+    "select": {
+      "noResults": "No results found",
+      "select": "Select…",
+      "typeToSearch": "Type to search…"
+    }
   },
   "settings": {
     "applicationLanguage": "Application language",

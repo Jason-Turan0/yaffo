@@ -1,15 +1,17 @@
-{% macro file_browser(input_id, placeholder="Enter directory path", show_label=True, label_text="Directory") %}
+{% macro file_browser(input_id, placeholder=none, show_label=True, label_text=none) %}
+{% set resolved_placeholder = placeholder or _("Enter directory path") %}
+{% set resolved_label = label_text or _("Directory") %}
 <div class="file-browser-group">
     {% if show_label %}
-    <label for="{{ input_id }}">{{ label_text }}</label>
+    <label for="{{ input_id }}">{{ resolved_label }}</label>
     {% endif %}
     <div class="file-browser-input-group">
         <input type="text"
                id="{{ input_id }}"
-               placeholder="{{ placeholder }}"
+               placeholder="{{ resolved_placeholder }}"
                class="form-control file-browser-input">
         <button type="button" class="btn-secondary file-browser-btn" data-icon="folder">
-            Browse...
+            {{ _("Browse…") }}
         </button>
     </div>
 </div>

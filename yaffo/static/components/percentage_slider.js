@@ -6,7 +6,9 @@ window.PHOTO_ORGANIZER.COMPONENTS.percentageSlider = {
         const percentageDisplay = document.querySelector('.percentage-slider-display span');
         const updateSimilarityDisplay = () => {
             if (percentageDisplay) {
-                percentageDisplay.textContent = parseFloat(percentageSlider.value * 100) + " %";
+                percentageDisplay.textContent = window.PHOTO_ORGANIZER.i18n.percent(
+                    Number(percentageSlider.value)
+                );
             }
         };
         percentageSlider.addEventListener('input', updateSimilarityDisplay);
@@ -18,6 +20,6 @@ window.PHOTO_ORGANIZER.COMPONENTS.percentageSlider = {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+window.PHOTO_ORGANIZER.i18nReady.then(() => {
     window.PHOTO_ORGANIZER.COMPONENTS.percentageSlider.initAll();
 });

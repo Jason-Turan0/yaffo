@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-24 23:47-0500\n"
+"POT-Creation-Date: 2026-06-25 00:07-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,107 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+#: yaffo/templates/_sidebar.html:5
+msgid "Actions"
+msgstr ""
+
+#: yaffo/templates/_sidebar.html:11
+msgid "Filters"
+msgstr ""
+
+#: yaffo/templates/_sidebar.html:14
+msgid "Configure filters"
+msgstr ""
+
+#: yaffo/templates/_sidebar.html:28
+msgid "Apply Filters"
+msgstr ""
+
+#: yaffo/templates/_sidebar.html:31
+msgid "Clear Filters"
+msgstr ""
+
+#: yaffo/templates/base.html:3 yaffo/templates/pages/widget_frame.html:3
+msgid "Type to search…"
+msgstr ""
+
+#: yaffo/templates/base.html:4 yaffo/templates/pages/widget_frame.html:4
+msgid "No results found"
+msgstr ""
+
+#: yaffo/templates/base.html:5 yaffo/templates/pages/widget_frame.html:5
+msgid "Select…"
+msgstr ""
+
+#: yaffo/templates/base.html:94
+msgid "Home"
+msgstr ""
+
+#: yaffo/templates/base.html:97
+msgid "Faces"
+msgstr ""
+
+#: yaffo/templates/base.html:100 yaffo/templates/filters/_people.html:4
+msgid "People"
+msgstr ""
+
+#: yaffo/templates/base.html:102 yaffo/templates/filters/_locations.html:4
+msgid "Locations"
+msgstr ""
+
+#: yaffo/templates/base.html:104
+msgid "Utilities"
+msgstr ""
+
+#: yaffo/templates/base.html:106
+msgid "Themes"
+msgstr ""
+
+#: yaffo/templates/base.html:108
+msgid "Settings"
+msgstr ""
+
+#: yaffo/templates/base.html:113
+msgid "Pages"
+msgstr ""
+
+#: yaffo/templates/base.html:129
+msgid "Edit page"
+msgstr ""
+
+#: yaffo/templates/base.html:136
+msgid "New page"
+msgstr ""
+
+#: yaffo/templates/base.html:152 yaffo/templates/components/info_modal.html:6
+#: yaffo/templates/components/info_modal.html:12
+#: yaffo/templates/components/modal.html:9
+msgid "Close"
+msgstr ""
+
+#: yaffo/templates/base.html:166
+msgid "Select a folder"
+msgstr ""
+
+#: yaffo/templates/base.html:170
+msgid "Up"
+msgstr ""
+
+#: yaffo/templates/base.html:178 yaffo/templates/base.html:194
+#: yaffo/templates/components/chat_dialog.html:39
+#: yaffo/templates/components/modal.html:16
+#: yaffo/templates/fragments/job_status_fragment.html:28
+msgid "Cancel"
+msgstr ""
+
+#: yaffo/templates/base.html:179
+msgid "Select this folder"
+msgstr ""
+
+#: yaffo/templates/base.html:188 yaffo/templates/base.html:195
+msgid "Confirm"
+msgstr ""
 
 #: yaffo/templates/index.html:22
 #, python-format
@@ -28,16 +129,254 @@ msgstr[1] ""
 msgid "No photos found"
 msgstr ""
 
+#: yaffo/templates/components/chat_dialog.html:28
+msgid "Generating…"
+msgstr ""
+
+#: yaffo/templates/components/chat_dialog.html:38
+msgid "Send"
+msgstr ""
+
+#: yaffo/templates/components/error_screen.html:13
+#, python-format
+msgid "Error %(code)s"
+msgstr ""
+
+#: yaffo/templates/components/error_screen.html:16
+msgid "Back to your library"
+msgstr ""
+
+#: yaffo/templates/components/file_browser.html:2
+msgid "Enter directory path"
+msgstr ""
+
+#: yaffo/templates/components/file_browser.html:3
+msgid "Directory"
+msgstr ""
+
+#: yaffo/templates/components/file_browser.html:14
+msgid "Browse…"
+msgstr ""
+
 #: yaffo/templates/components/htmx_pagination.html:16
 #: yaffo/templates/components/pagination.html:29
 #, python-format
 msgid "Showing %(start)s–%(end)s of %(total)s results"
 msgstr ""
 
+#: yaffo/templates/components/htmx_pagination.html:24
+#: yaffo/templates/components/pagination.html:37
+msgid "Items per page:"
+msgstr ""
+
+#: yaffo/templates/components/htmx_pagination.html:52
+#: yaffo/templates/components/pagination.html:53
+msgid "First"
+msgstr ""
+
+#: yaffo/templates/components/htmx_pagination.html:63
+#: yaffo/templates/components/pagination.html:59
+msgid "Previous"
+msgstr ""
+
 #: yaffo/templates/components/htmx_pagination.html:67
 #: yaffo/templates/components/pagination.html:63
 #, python-format
 msgid "Page %(page)s of %(total)s"
+msgstr ""
+
+#: yaffo/templates/components/htmx_pagination.html:80
+#: yaffo/templates/components/pagination.html:71
+msgid "Next"
+msgstr ""
+
+#: yaffo/templates/components/htmx_pagination.html:91
+#: yaffo/templates/components/pagination.html:77
+msgid "Last"
+msgstr ""
+
+#: yaffo/templates/components/job_section.html:5
+msgid "Processing in Progress"
+msgstr ""
+
+#: yaffo/templates/components/modal.html:17
+#: yaffo/templates/settings/index.html:29
+msgid "Save"
+msgstr ""
+
+#: yaffo/templates/filters/_device.html:2
+msgid "Device"
+msgstr ""
+
+#: yaffo/templates/filters/_device.html:4
+msgid "All Devices"
+msgstr ""
+
+#: yaffo/templates/filters/_favorite.html:2
+msgid "Favorites"
+msgstr ""
+
+#: yaffo/templates/filters/_favorite.html:4
+msgid "All Photos"
+msgstr ""
+
+#: yaffo/templates/filters/_favorite.html:5
+msgid "Favorites Only"
+msgstr ""
+
+#: yaffo/templates/filters/_gender.html:2
+msgid "Gender"
+msgstr ""
+
+#: yaffo/templates/filters/_gender.html:4
+msgid "All Genders"
+msgstr ""
+
+#: yaffo/templates/filters/_labels.html:4
+msgid "Label"
+msgstr ""
+
+#: yaffo/templates/filters/_labels.html:8
+#: yaffo/templates/filters/_labels.html:16
+msgid "All Labels"
+msgstr ""
+
+#: yaffo/templates/filters/_labels.html:10
+#, python-brace-format
+msgid "{count} labels selected"
+msgstr ""
+
+#: yaffo/templates/filters/_labels.html:13
+msgid "Search labels…"
+msgstr ""
+
+#: yaffo/templates/filters/_locations.html:8
+#: yaffo/templates/filters/_locations.html:16
+msgid "All Locations"
+msgstr ""
+
+#: yaffo/templates/filters/_locations.html:10
+#, python-brace-format
+msgid "{count} locations selected"
+msgstr ""
+
+#: yaffo/templates/filters/_locations.html:13
+msgid "Search locations…"
+msgstr ""
+
+#: yaffo/templates/filters/_locations.html:35
+msgid "Proximity Search"
+msgstr ""
+
+#: yaffo/templates/filters/_locations.html:40
+msgid "Search for a location…"
+msgstr ""
+
+#: yaffo/templates/filters/_locations.html:46
+msgid "Within (miles):"
+msgstr ""
+
+#: yaffo/templates/filters/_matchType.html:5
+msgid "Any of these"
+msgstr ""
+
+#: yaffo/templates/filters/_matchType.html:9
+msgid "All of these"
+msgstr ""
+
+#: yaffo/templates/filters/_media_type.html:2
+msgid "Media Type"
+msgstr ""
+
+#: yaffo/templates/filters/_media_type.html:4
+msgid "All Media"
+msgstr ""
+
+#: yaffo/templates/filters/_media_type.html:5
+msgid "Photos Only"
+msgstr ""
+
+#: yaffo/templates/filters/_media_type.html:6
+msgid "Videos Only"
+msgstr ""
+
+#: yaffo/templates/filters/_month.html:2
+msgid "Month"
+msgstr ""
+
+#: yaffo/templates/filters/_month.html:4
+msgid "All Months"
+msgstr ""
+
+#: yaffo/templates/filters/_pageSize.html:2
+msgid "Page Size"
+msgstr ""
+
+#: yaffo/templates/filters/_path.html:2
+msgid "File"
+msgstr ""
+
+#: yaffo/templates/filters/_path.html:7
+msgid "Search file or folder name…"
+msgstr ""
+
+#: yaffo/templates/filters/_people.html:8
+#: yaffo/templates/filters/_people.html:16
+msgid "All People"
+msgstr ""
+
+#: yaffo/templates/filters/_people.html:10
+#, python-brace-format
+msgid "{count} people selected"
+msgstr ""
+
+#: yaffo/templates/filters/_people.html:13
+msgid "Search people…"
+msgstr ""
+
+#: yaffo/templates/filters/_person.html:2
+msgid "Person"
+msgstr ""
+
+#: yaffo/templates/filters/_person.html:4
+msgid "Any Person"
+msgstr ""
+
+#: yaffo/templates/filters/_tags.html:2
+msgid "Tag Name"
+msgstr ""
+
+#: yaffo/templates/filters/_tags.html:4
+msgid "All"
+msgstr ""
+
+#: yaffo/templates/filters/_tags.html:13
+msgid "Tag Value"
+msgstr ""
+
+#: yaffo/templates/filters/_tags.html:15
+msgid "Select a tag name first"
+msgstr ""
+
+#: yaffo/templates/filters/_year.html:2
+msgid "Year"
+msgstr ""
+
+#: yaffo/templates/filters/_year.html:4
+msgid "All Years"
+msgstr ""
+
+#: yaffo/templates/fragments/job_status_fragment.html:12
+#, python-format
+msgid "Started: %(started)s"
+msgstr ""
+
+#: yaffo/templates/fragments/job_status_fragment.html:18
+msgid "Show Results"
+msgstr ""
+
+#: yaffo/templates/fragments/job_status_fragment.html:28
+msgid "Delete"
 msgstr ""
 
 #: yaffo/templates/people/faces.html:37
@@ -65,9 +404,5 @@ msgstr ""
 
 #: yaffo/templates/settings/index.html:27
 msgid "Controls the language used by Yaffo. The page reloads after saving."
-msgstr ""
-
-#: yaffo/templates/settings/index.html:29
-msgid "Save"
 msgstr ""
 

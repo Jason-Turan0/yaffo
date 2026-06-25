@@ -34,7 +34,7 @@
 
     <div class="pagination-controls">
         <div class="page-size-selector">
-            <label for="page-size">Items per page:</label>
+            <label for="page-size">{{ _("Items per page:") }}</label>
             <select id="page-size" name="page-size" class="searchable-select" data-search-disabled
                     onchange="window.location.href = this.value">
                 {% for size in page_sizes %}
@@ -50,13 +50,13 @@
             <a href="{{ base_url }}?page=1&page-size={{ page_size }}{{ extra_query }}"
                class="page-btn {% if current_page == 1 %}disabled{% endif %}"
                {% if current_page == 1 %}onclick="return false;"{% endif %}>
-                &laquo; First
+                &laquo; {{ _("First") }}
             </a>
 
             <a href="{{ base_url }}?page={{ current_page - 1 }}&page-size={{ page_size }}{{ extra_query }}"
                class="page-btn {% if current_page == 1 %}disabled{% endif %}"
                {% if current_page == 1 %}onclick="return false;"{% endif %}>
-                &lsaquo; Prev
+                &lsaquo; {{ _("Previous") }}
             </a>
 
             <span class="page-info">
@@ -68,13 +68,13 @@
             <a href="{{ base_url }}?page={{ current_page + 1 }}&page-size={{ page_size }}{{ extra_query }}"
                class="page-btn {% if current_page >= total_pages %}disabled{% endif %}"
                {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
-                Next &rsaquo;
+                {{ _("Next") }} &rsaquo;
             </a>
 
             <a href="{{ base_url }}?page={{ total_pages }}&page-size={{ page_size }}{{ extra_query }}"
                class="page-btn {% if current_page >= total_pages %}disabled{% endif %}"
                {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
-                Last &raquo;
+                {{ _("Last") }} &raquo;
             </a>
         </div>
     </div>

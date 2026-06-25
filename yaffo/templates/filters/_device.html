@@ -1,7 +1,7 @@
 <div class="filter-group">
-    <label for="device-select">Device</label>
+    <label for="device-select">{{ _("Device") }}</label>
     <select name="device" id="device-select" class="searchable-select">
-        <option value="">All Devices</option>
+        <option value="">{{ _("All Devices") }}</option>
         {% for device in filters.devices %}
         <option value="{{ device }}" {% if filters.selected_device == device %}selected{% endif %}>{{ device }}</option>
         {% endfor %}

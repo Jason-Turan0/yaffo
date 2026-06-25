@@ -5,7 +5,7 @@
     <input type="range" id="{{ key_name }}-range" name="{{ key_name }}" min="0" max="100" step="1"
            value="{{ filters.get(key_name) or 0 }}">
     <div class="similarity-display"><span
-            id="{{ key_name }}-value">{{ (filters.get(key_name) or 0)|int }}%</span>
+            id="{{ key_name }}-value">{{ ((filters.get(key_name) or 0) / 100) | format_percent }}</span>
     </div>
 </div>
 {% endmacro %}
