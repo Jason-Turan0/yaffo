@@ -8,7 +8,7 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 // of paths is slow and not useful. Sync still acts on the full lists held in memory.
 const MAX_DISPLAY_ROWS = 200;
 
-window.PHOTO_ORGANIZER.initIndexPhotos = (config, opts) => {
+window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
     const { canScan, canSync, hasActiveJobs, mediaDirs } = opts;
     let unindexed = [];
     let orphaned = [];
@@ -22,7 +22,7 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (config, opts) => {
 
     const setStat = (id, value) => {
         const node = document.getElementById(id);
-        if (node) node.textContent = Number(value).toLocaleString();
+        if (node) node.textContent = i18n.number(Number(value));
     };
 
     const statusEl = document.getElementById('scan-status');
@@ -60,8 +60,14 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (config, opts) => {
         return wrapper;
     };
 
-    const truncationNote = (total) => el('p', 'section-description scan-truncation',
-        `Showing the first ${MAX_DISPLAY_ROWS.toLocaleString()} of ${total.toLocaleString()}. Sync processes all of them.`);
+    const truncationNote = (total) => el(
+        'p',
+        'section-description scan-truncation',
+        i18n.t('utilities:indexPhotos.truncation', {
+            shown: i18n.number(MAX_DISPLAY_ROWS),
+            total: i18n.number(total),
+        })
+    );
 
     const buildUnindexedSection = () => {
         const section = el('div', 'section');

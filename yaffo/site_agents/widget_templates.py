@@ -357,8 +357,7 @@ body, html { height: 100%; padding: 0; overflow: hidden; }
   if (photo.location_name) document.getElementById('hero-title').textContent = photo.location_name;
   const parts = [];
   if (photo.date_taken) {
-    const d = new Date(photo.date_taken);
-    parts.push(d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+    parts.push(yaffo.date(photo.date_taken, { year: 'numeric', month: 'long', day: 'numeric' }));
   }
   if (photo.location_name) parts.push('📍 ' + photo.location_name);
   document.getElementById('hero-meta').textContent = parts.join('  •  ');
@@ -434,12 +433,12 @@ body { padding: 0; }
     js="""\
 (function () {
   const photos = (yaffo.data.photos || []);
-  document.getElementById('photo-count').textContent = photos.length + ' photo' + (photos.length !== 1 ? 's' : '');
+  document.getElementById('photo-count').textContent = yaffo.number(photos.length);
   const grid = document.getElementById('gallery-grid');
 
   function formatDate(dt) {
     if (!dt) return '';
-    return new Date(dt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return yaffo.date(dt, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
   photos.forEach((photo, idx) => {
@@ -1010,4 +1009,3 @@ TEMPLATES: list[WidgetTemplate] = [
 ]
 
 TEMPLATES_BY_NAME: dict[str, WidgetTemplate] = {t.name: t for t in TEMPLATES}
- 

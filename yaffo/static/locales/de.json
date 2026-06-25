@@ -4,13 +4,21 @@
     "cancel": "Abbrechen",
     "close": "Schließen",
     "confirm": "Bestätigen",
+    "dateValue": "Datum: {{value}}",
     "delete": "Löschen",
     "notAvailable": "k. A.",
-    "save": "Speichern"
+    "pageOf": "Seite {{page}} von {{total}}",
+    "save": "Speichern",
+    "similarityValue": "Ähnlichkeit: {{value}}"
   },
   "settings": {
     "applicationLanguage": "Anwendungssprache",
     "language": "Sprache",
     "languageHelp": "Legt die von Yaffo verwendete Sprache fest. Die Seite wird nach dem Speichern neu geladen."
+  },
+  "utilities": {
+    "indexPhotos": {
+      "truncation": "Die ersten {{shown}} von {{total}} werden angezeigt. Die Synchronisierung verarbeitet alle."
+    }
   }
 }

@@ -26,7 +26,9 @@
 <div class="pagination-container">
     <div class="pagination-info">
         <span class="results-count">
-            Showing {{ start_item }}-{{ end_item }} of {{ total_items }} results
+            {% trans trimmed start=start_item|format_integer, end=end_item|format_integer, total=total_items|format_integer %}
+                Showing {{ start }}–{{ end }} of {{ total }} results
+            {% endtrans %}
         </span>
     </div>
 
@@ -38,7 +40,7 @@
                 {% for size in page_sizes %}
                 <option value="{{ base_url }}?page=1&page-size={{ size }}{{ extra_query }}"
                         {% if size == page_size %}selected{% endif %}>
-                    {{ size }}
+                    {{ size | format_integer }}
                 </option>
                 {% endfor %}
             </select>
@@ -58,7 +60,9 @@
             </a>
 
             <span class="page-info">
-                Page {{ current_page }} of {{ total_pages }}
+                {% trans trimmed page=current_page|format_integer, total=total_pages|format_integer %}
+                    Page {{ page }} of {{ total }}
+                {% endtrans %}
             </span>
 
             <a href="{{ base_url }}?page={{ current_page + 1 }}&page-size={{ page_size }}{{ extra_query }}"

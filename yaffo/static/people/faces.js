@@ -1,4 +1,5 @@
- // Create tooltip element
+window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+// Create tooltip element
  const tooltip = document.createElement('div');
 tooltip.className = 'tooltip';
 document.body.appendChild(tooltip);
@@ -8,7 +9,7 @@ const minSimilarityRange = document.getElementById('min_similarity-range');
 const minSimilarityValue = document.getElementById('min_similarity-value');
 if (minSimilarityRange) {
     minSimilarityRange.addEventListener('input', (e) => {
-        minSimilarityValue.textContent = Math.round(e.target.value) + '%';
+        minSimilarityValue.textContent = i18n.percent(Number(e.target.value) / 100);
     });
 }
 
@@ -16,7 +17,7 @@ const maxSimilarityRange = document.getElementById('max_similarity-range');
 const maxSimilarityValue = document.getElementById('max_similarity-value');
 if (maxSimilarityRange) {
     maxSimilarityRange.addEventListener('input', (e) => {
-        maxSimilarityValue.textContent = Math.round(e.target.value) + '%';
+        maxSimilarityValue.textContent = i18n.percent(Number(e.target.value) / 100);
     });
 }
 
@@ -30,9 +31,16 @@ document.querySelectorAll('.face-card').forEach(card => {
 
     // Tooltip on hover
     card.addEventListener('mouseenter', (e) => {
-        const similarity = card.dataset.similarity;
+        const similarity = Number(card.dataset.similarity);
         const date = PHOTO_ORGANIZER.utils.date.format(card.dataset.date);
-        tooltip.innerHTML = `Date: ${date}<br>Similarity: ${similarity}%`;
+        const similarityText = Number.isFinite(similarity)
+            ? i18n.percent(similarity / 100)
+            : i18n.t('common:notAvailable');
+        tooltip.replaceChildren(
+            document.createTextNode(i18n.t('common:dateValue', { value: date })),
+            document.createElement('br'),
+            document.createTextNode(i18n.t('common:similarityValue', { value: similarityText }))
+        );
         tooltip.classList.add('visible');
     });
 
@@ -87,3 +95,4 @@ function removeSelectedFaces() {
 
     document.getElementById('remove-form').submit();
 }
+});

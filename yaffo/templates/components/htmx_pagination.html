@@ -3,7 +3,7 @@
     {% set total_items = pagination.total_items %}
     {% set page_size = pagination.page_size %}
     {% set page_sizes = pagination.page_sizes %}
-    {% set total_pages = ((total_items) // page_size + 1) if total_items > 0 else 1 %}
+    {% set total_pages = ((total_items - 1) // page_size + 1) if total_items > 0 else 1 %}
     {% set start_item = (current_page) * page_size + 1 %}
     {% set end_item = [(current_page + 1) * page_size, total_items] | min %}
     {% set is_post = method.upper() == 'POST' %}
@@ -13,7 +13,9 @@
     <div class="pagination-container">
         <div class="pagination-info">
         <span class="results-count">
-            Showing {{ start_item }}-{{ end_item }} of {{ total_items }} results
+            {% trans trimmed start=start_item|format_integer, end=end_item|format_integer, total=total_items|format_integer %}
+                Showing {{ start }}–{{ end }} of {{ total }} results
+            {% endtrans %}
         </span>
         </div>
 
@@ -32,7 +34,7 @@
                     {% for size in page_sizes %}
                         <option value="{{ size }}"
                                 {% if size == page_size %}selected{% endif %}>
-                            {{ size }}
+                            {{ size | format_integer }}
                         </option>
                     {% endfor %}
                 </select>
@@ -62,7 +64,9 @@
                 </button>
 
                 <span class="page-info">
-                Page {{ current_page + 1 }} of {{ total_pages }}
+                {% trans trimmed page=(current_page + 1)|format_integer, total=total_pages|format_integer %}
+                    Page {{ page }} of {{ total }}
+                {% endtrans %}
             </span>
 
                 <button type="button"

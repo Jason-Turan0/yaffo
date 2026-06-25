@@ -107,7 +107,7 @@
                     {% for size in filters.batch_sizes %}
                         <option value="{{ size }}"
                                 {% if filters.selected_batch_size == size %}selected{% endif %}>
-                            {{ "{:,}".format(size) }}
+                            {{ size | format_integer }}
                         </option>
                     {% endfor %}
                 </select>
@@ -173,7 +173,7 @@
         {{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions) }}
         <div class="main-content" data-unassigned-count="{{ unassigned_face_count }}">
             {% call page_header('Unassigned Faces') %}
-                Showing {{ faces|length }} of {{ unassigned_face_count }} unassigned
+                Showing {{ faces|length | format_integer }} of {{ unassigned_face_count | format_integer }} unassigned
                 face{{ 's' if faces|length != 1 else '' }}
             {% endcall %}
             <div id="clusters">
@@ -185,7 +185,7 @@
                              {% if not loop.first %}hidden{% endif %}>
                             <div class="cluster-identity">
                                 <span class="cluster-name">{{ faceSuggestion.suggestion_name }}</span>
-                                <span class="cluster-meta">{{ "{:,}".format(faceSuggestion.faces | length) }}
+                                <span class="cluster-meta">{{ faceSuggestion.faces | length | format_integer }}
                                     face{{ 's' if faceSuggestion.faces | length != 1 else '' }}</span>
                                 {% if faceSuggestion.date_start %}
                                     {% set date_start = faceSuggestion.date_start | format_date("date") %}
@@ -216,7 +216,7 @@
                                 <div class="pagination-info">
                                     <span class="results-count">
                                         Showing <span class="sample-range">0</span>
-                                        of {{ "{:,}".format(faceSuggestion.faces | length) }}
+                                        of {{ faceSuggestion.faces | length | format_integer }}
                                         face{{ 's' if faceSuggestion.faces | length != 1 else '' }}
                                     </span>
                                 </div>
@@ -256,6 +256,13 @@
 {% block scripts %}
     <script src="{{ url_for('static', filename='faces/index.js') }}"></script>
     <script>
-        window.PHOTO_ORGANIZER.initFaceAssignment({{ sample_size | tojson }}, {{ top_people | tojson }}, window.APP_CONFIG);
+        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+            window.PHOTO_ORGANIZER.initFaceAssignment(
+                {{ sample_size | tojson }},
+                {{ top_people | tojson }},
+                i18n,
+                window.APP_CONFIG
+            );
+        });
     </script>
 {% endblock %}

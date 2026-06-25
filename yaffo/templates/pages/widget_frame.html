@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ theme }}">
+<html lang="{{ current_locale }}" dir="{{ text_direction }}" data-theme="{{ theme }}">
 <head>
     <meta charset="UTF-8">
     {# Carried in the document itself so it also protects srcdoc-rendered draft
@@ -53,7 +53,11 @@
 <script>
     // The template hands the server-resolved data + saved state to the init
     // function (project convention); the widget then reads them via window.yaffo.
-    window.yaffo = window.PHOTO_ORGANIZER.initWidgetApi({{ data | tojson }}, {{ widget.state | tojson }});
+    window.yaffo = window.PHOTO_ORGANIZER.initWidgetApi(
+        {{ data | tojson }},
+        {{ widget.state | tojson }},
+        {{ current_locale | tojson }}
+    );
 </script>
 <script>
     // Error boundary: a widget's bug (sync, async, or rejected promise) shows a

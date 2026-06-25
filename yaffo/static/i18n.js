@@ -35,6 +35,8 @@ window.PHOTO_ORGANIZER.initI18n = async (config) => {
         locale,
         t: (key, options = {}) => window.i18next.t(key, options),
         number: (value, options = {}) => new Intl.NumberFormat(locale, options).format(value),
+        percent: (value, options = {}) =>
+            new Intl.NumberFormat(locale, { style: 'percent', ...options }).format(value),
         date: (value, options = {}) => new Intl.DateTimeFormat(locale, options).format(new Date(value)),
         relativeTime: (value, unit, options = {}) =>
             new Intl.RelativeTimeFormat(locale, options).format(value, unit),

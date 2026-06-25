@@ -84,7 +84,7 @@
                                 <div class="detail-item">
                                     <label>Coordinates:</label>
                                     <span class="detail-value">
-                            {{ "%.6f"|format(media_item.latitude | abs) }}° {{ 'N' if media_item.latitude >= 0 else 'S' }}, {{ "%.6f"|format(media_item.longitude | abs) }}° {{ 'E' if media_item.longitude >= 0 else 'W' }}
+                            {{ media_item.latitude | format_coordinate }}, {{ media_item.longitude | format_coordinate }}
                         </span>
                                 </div>
                                 <div class="detail-actions">
@@ -148,7 +148,7 @@
                     {% if media_item.labels %}
                         <div class="labels-chips">
                             {% for media_label in media_item.labels %}
-                                <span class="label-chip" title="confidence {{ '%.2f'|format(media_label.confidence) }}">
+                                <span class="label-chip" title="confidence {{ media_label.confidence | format_percent(2) }}">
                                     {{ media_label.label.name }}
                                 </span>
                             {% endfor %}

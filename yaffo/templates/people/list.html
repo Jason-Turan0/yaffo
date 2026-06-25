@@ -46,10 +46,10 @@
                     {% else %}—{% endif %}
                 </td>
                 <td>
-                    <span class="stat-number">{{ person.num_faces }}</span>
+                    <span class="stat-number">{{ person.num_faces | format_integer }}</span>
                 </td>
                 <td>
-                    <span class="stat-number">{{ person.num_photos }}</span>
+                    <span class="stat-number">{{ person.num_photos | format_integer }}</span>
                 </td>
                 <td>
                     <div class="actions">

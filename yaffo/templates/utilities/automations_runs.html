@@ -12,7 +12,7 @@
             {% for run in recent_runs %}
             <li class="automation-run-row{% if run.is_error %} is-error{% endif %}">
                 <span class="automation-run-status status-{{ run.status | lower }}">{{ run.status | capitalize }}</span>
-                {% if not run.is_finished %}<span class="automation-run-progress">{{ run.progress }}%</span>{% endif %}
+                {% if not run.is_finished %}<span class="automation-run-progress">{{ (run.progress / 100) | format_percent }}</span>{% endif %}
                 <span class="automation-run-summary">{{ run.summary }}</span>
                 <span class="automation-run-spacer"></span>
                 <span class="automation-run-time">{{ (run.finished_at or run.started_at) | format_date(utc=True) }}</span>

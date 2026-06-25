@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-24 18:49-0500\n"
+"POT-Creation-Date: 2026-06-24 23:47-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,44 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+#: yaffo/templates/index.html:22
+#, python-format
+msgid "Showing %(shown)s of %(total)s photo"
+msgid_plural "Showing %(shown)s of %(total)s photos"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/index.html:28
+msgid "No photos found"
+msgstr ""
+
+#: yaffo/templates/components/htmx_pagination.html:16
+#: yaffo/templates/components/pagination.html:29
+#, python-format
+msgid "Showing %(start)s–%(end)s of %(total)s results"
+msgstr ""
+
+#: yaffo/templates/components/htmx_pagination.html:67
+#: yaffo/templates/components/pagination.html:63
+#, python-format
+msgid "Page %(page)s of %(total)s"
+msgstr ""
+
+#: yaffo/templates/people/faces.html:37
+#, python-format
+msgid "Showing %(total)s face"
+msgid_plural "Showing %(total)s faces"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/people/faces.html:43
+msgid "(filtered)"
+msgstr ""
+
+#: yaffo/templates/people/faces.html:46
+msgid "No faces found"
+msgstr ""
 
 #: yaffo/templates/settings/index.html:16
 msgid "Language"

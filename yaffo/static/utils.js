@@ -1,5 +1,6 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.utils = window.PHOTO_ORGANIZER.utils || {};
+window.PHOTO_ORGANIZER.utils.locale = window.APP_CONFIG.i18n.locale;
 
 window.PHOTO_ORGANIZER.utils.initImageFallbacks = () => {
     document.querySelectorAll('img[data-fallback]').forEach((img) => {
@@ -22,7 +23,7 @@ window.PHOTO_ORGANIZER.utils.initImageFallbacks = () => {
 
 window.PHOTO_ORGANIZER.utils.date = {
     /**
-     * Format an ISO date string based on the user's browser locale settings
+     * Format an ISO date string using the selected application locale.
      * @param {string} isoDate - ISO date string (e.g., "2024-03-15T10:30:00Z")
      * @param {object} options - Optional Intl.DateTimeFormat options override
      * @returns {string} - Formatted date string
@@ -37,11 +38,14 @@ window.PHOTO_ORGANIZER.utils.date = {
             month: 'short',
             day: 'numeric'
         };
-        return new Intl.DateTimeFormat(undefined, { ...defaultOptions, ...options }).format(date);
+        return new Intl.DateTimeFormat(
+            window.PHOTO_ORGANIZER.utils.locale,
+            { ...defaultOptions, ...options }
+        ).format(date);
     },
 
     /**
-     * Format an ISO date string with time based on user's browser locale
+     * Format an ISO date string with time using the selected application locale.
      * @param {string} isoDate - ISO date string
      * @param {object} options - Optional Intl.DateTimeFormat options override
      * @returns {string} - Formatted date/time string
@@ -58,7 +62,10 @@ window.PHOTO_ORGANIZER.utils.date = {
             hour: 'numeric',
             minute: '2-digit'
         };
-        return new Intl.DateTimeFormat(undefined, { ...defaultOptions, ...options }).format(date);
+        return new Intl.DateTimeFormat(
+            window.PHOTO_ORGANIZER.utils.locale,
+            { ...defaultOptions, ...options }
+        ).format(date);
     },
 
     /**
@@ -78,7 +85,10 @@ window.PHOTO_ORGANIZER.utils.date = {
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
 
-        const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+        const rtf = new Intl.RelativeTimeFormat(
+            window.PHOTO_ORGANIZER.utils.locale,
+            { numeric: 'auto' }
+        );
 
         if (diffDays > 30) {
             return window.PHOTO_ORGANIZER.utils.date.format(isoDate);

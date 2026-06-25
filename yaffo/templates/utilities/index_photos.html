@@ -70,11 +70,13 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='utilities/index_photos.js') }}"></script>
 <script>
-window.PHOTO_ORGANIZER.initIndexPhotos(window.APP_CONFIG, {
-    canScan: {{ can_scan | tojson }},
-    canSync: {{ can_sync | tojson }},
-    hasActiveJobs: {{ has_active_jobs | tojson }},
-    mediaDirs: {{ media_dirs | tojson }},
+window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+    window.PHOTO_ORGANIZER.initIndexPhotos({
+        canScan: {{ can_scan | tojson }},
+        canSync: {{ can_sync | tojson }},
+        hasActiveJobs: {{ has_active_jobs | tojson }},
+        mediaDirs: {{ media_dirs | tojson }},
+    }, i18n, window.APP_CONFIG);
 });
 </script>
 {% endblock %}

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-24 18:49-0500\n"
+"POT-Creation-Date: 2026-06-24 23:47-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -17,6 +17,44 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+#: yaffo/templates/index.html:22
+#, python-format
+msgid "Showing %(shown)s of %(total)s photo"
+msgid_plural "Showing %(shown)s of %(total)s photos"
+msgstr[0] "%(shown)s von %(total)s Foto wird angezeigt"
+msgstr[1] "%(shown)s von %(total)s Fotos werden angezeigt"
+
+#: yaffo/templates/index.html:28
+msgid "No photos found"
+msgstr "Keine Fotos gefunden"
+
+#: yaffo/templates/components/htmx_pagination.html:16
+#: yaffo/templates/components/pagination.html:29
+#, python-format
+msgid "Showing %(start)s–%(end)s of %(total)s results"
+msgstr "%(start)s–%(end)s von %(total)s Ergebnissen werden angezeigt"
+
+#: yaffo/templates/components/htmx_pagination.html:67
+#: yaffo/templates/components/pagination.html:63
+#, python-format
+msgid "Page %(page)s of %(total)s"
+msgstr "Seite %(page)s von %(total)s"
+
+#: yaffo/templates/people/faces.html:37
+#, python-format
+msgid "Showing %(total)s face"
+msgid_plural "Showing %(total)s faces"
+msgstr[0] "%(total)s Gesicht wird angezeigt"
+msgstr[1] "%(total)s Gesichter werden angezeigt"
+
+#: yaffo/templates/people/faces.html:43
+msgid "(filtered)"
+msgstr "(gefiltert)"
+
+#: yaffo/templates/people/faces.html:46
+msgid "No faces found"
+msgstr "Keine Gesichter gefunden"
 
 #: yaffo/templates/settings/index.html:16
 msgid "Language"
@@ -28,8 +66,22 @@ msgstr "Anwendungssprache"
 
 #: yaffo/templates/settings/index.html:27
 msgid "Controls the language used by Yaffo. The page reloads after saving."
-msgstr "Legt die von Yaffo verwendete Sprache fest. Die Seite wird nach dem Speichern neu geladen."
+msgstr ""
+"Legt die von Yaffo verwendete Sprache fest. Die Seite wird nach dem "
+"Speichern neu geladen."
 
 #: yaffo/templates/settings/index.html:29
 msgid "Save"
 msgstr "Speichern"
+
+#~ msgid ""
+#~ "\n"
+#~ "                Showing %(start)s–%(end)s of %(total)s results\n"
+#~ "            "
+#~ msgstr ""
+
+#~ msgid ""
+#~ "\n"
+#~ "                    Page %(page)s of %(total)s\n"
+#~ "                "
+#~ msgstr ""

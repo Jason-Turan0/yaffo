@@ -1,6 +1,6 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
-window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, config) => {
+window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
     let mediaDirs = [...initialMediaDirs];
 
     const addMediaDir = async () => {
@@ -158,9 +158,9 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, config) => {
         const countEl = document.getElementById('thumbnail-count');
         const sizeEl = document.getElementById('thumbnail-size');
         if (record.type === 'progress') {
-            if (countEl) countEl.textContent = Number(record.scanned).toLocaleString();
+            if (countEl) countEl.textContent = i18n.number(Number(record.scanned));
         } else if (record.type === 'done') {
-            if (countEl) countEl.textContent = Number(record.count).toLocaleString();
+            if (countEl) countEl.textContent = i18n.number(Number(record.count));
             if (sizeEl) sizeEl.textContent = record.size_formatted;
         } else if (record.type === 'error') {
             if (sizeEl) sizeEl.textContent = '—';

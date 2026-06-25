@@ -1,7 +1,7 @@
 /**
  * Yaffo widget API.
  *
- * The widget frame calls window.PHOTO_ORGANIZER.initWidgetApi(data, state) with
+ * The widget frame calls window.PHOTO_ORGANIZER.initWidgetApi(data, state, locale) with
  * the host-injected data and assigns the result to window.yaffo, BEFORE your code
  * runs. In your widget code you just use window.yaffo — never call init yourself.
  *
@@ -11,7 +11,7 @@
  */
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
-window.PHOTO_ORGANIZER.initWidgetApi = function (data, state) {
+window.PHOTO_ORGANIZER.initWidgetApi = function (data, state, locale) {
     var pending = {};       // requestId -> resolve fn, awaiting a yaffo:result
     var subscribers = {};   // topic -> [handler]
     var nextRequestId = 0;
@@ -45,6 +45,29 @@ window.PHOTO_ORGANIZER.initWidgetApi = function (data, state) {
 
         /** This widget's persisted state from the last saveState() (re-injected each render). */
         state: state || {},
+
+        /** The application locale selected by the host. */
+        locale: locale || 'en',
+
+        /** Locale-aware display formatters. Camera-local dates are not timezone-rebased. */
+        number: function (value, options) {
+            return new Intl.NumberFormat(api.locale, options || {}).format(value);
+        },
+        percent: function (value, options) {
+            return new Intl.NumberFormat(
+                api.locale,
+                Object.assign({ style: 'percent' }, options || {})
+            ).format(value);
+        },
+        date: function (value, options) {
+            return new Intl.DateTimeFormat(api.locale, options || {}).format(new Date(value));
+        },
+        relativeTime: function (value, unit, options) {
+            return new Intl.RelativeTimeFormat(api.locale, options || {}).format(value, unit);
+        },
+        list: function (values, options) {
+            return new Intl.ListFormat(api.locale, options || {}).format(values);
+        },
 
         /**
          * Run one server query on demand; resolves to its rows (or null on error).

@@ -34,12 +34,16 @@
             {% endset %}
             {% call page_header(person.name ~ "'s Faces", actions=header_actions) %}
                 {% if faces|length > 0 %}
-                    Showing {{ faces|length }} face{{ 's' if faces|length != 1 else '' }}
+                    {% trans trimmed count=faces|length, total=faces|length|format_integer %}
+                        Showing {{ total }} face
+                    {% pluralize %}
+                        Showing {{ total }} faces
+                    {% endtrans %}
                     {% if filters.selected_year or filters.selected_month or filters.min_similarity or filters.max_similarity %}
-                        (filtered)
+                        {{ _("(filtered)") }}
                     {% endif %}
                 {% else %}
-                    No faces found
+                    {{ _("No faces found") }}
                 {% endif %}
             {% endcall %}
 
@@ -67,7 +71,7 @@
                                     {% if face_data.similarity_pct is not none %}
                                         {% set sim_pct = face_data.similarity_pct %}
                                         <span class="{% if sim_pct >= 80 %}similarity-high{% elif sim_pct >= 50 %}similarity-medium{% else %}similarity-low{% endif %}">
-                                {{ sim_pct }}%
+                                {{ (sim_pct / 100) | format_percent }}
                             </span>
                                     {% else %}
                                         <span>N/A</span>

@@ -5,7 +5,7 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 // DOM), but selection/assignment span the WHOLE cluster: `selectedIds` starts as
 // every face id and clicking a visible face just removes it. Assigning advances
 // to the next cluster; when none remain we reload to pull the next batch.
-window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, config) => {
+window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, i18n, config) => {
     const tooltip = document.createElement('div');
     tooltip.className = 'tooltip';
     document.body.appendChild(tooltip);
@@ -41,7 +41,10 @@ window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, config) => {
     };
 
     const updatePager = () => {
-        activeGroup.querySelector('.cluster-page-label').textContent = `Page ${page + 1} of ${pageCount}`;
+        activeGroup.querySelector('.cluster-page-label').textContent = i18n.t('common:pageOf', {
+            page: i18n.number(page + 1),
+            total: i18n.number(pageCount),
+        });
         const atFirst = page === 0;
         const atLast = page >= pageCount - 1;
         // `.disabled` matches the home pager's look; the `disabled` attribute
@@ -63,7 +66,7 @@ window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, config) => {
         const start = page * sampleSize;
         const shown = order.slice(start, start + sampleSize);
         grid.innerHTML = shown.map(face => {
-            const similarity = face.similarity != null ? (face.similarity * 100).toFixed(2) : 'N/A';
+            const similarity = face.similarity != null ? face.similarity : '';
             const selected = selectedIds.has(face.id) ? ' selected' : '';
             return `<div class="face${selected}" data-face-id="${face.id}"`
                 + ` data-similarity="${similarity}" data-date="${face.photo_date || ''}">`
@@ -72,7 +75,9 @@ window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, config) => {
         }).join('');
         window.PHOTO_ORGANIZER.utils.initImageFallbacks();
         activeGroup.querySelector('.sample-range').textContent =
-            shown.length ? `${start + 1}–${start + shown.length}` : '0';
+            shown.length
+                ? i18n.number(start + 1) + '–' + i18n.number(start + shown.length)
+                : i18n.number(0);
         updatePager();
         lastClickedId = null;
     };
@@ -233,10 +238,21 @@ window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, config) => {
     clusters.addEventListener('mouseover', (e) => {
         const faceEl = e.target.closest('.face');
         if (!faceEl) return;
-        const similarity = faceEl.dataset.similarity;
+        const similarity = Number(faceEl.dataset.similarity);
         const date = PHOTO_ORGANIZER.utils.date.format(faceEl.dataset.date);
-        const hasSimilarity = !isNaN(Number(similarity));
-        tooltip.innerHTML = hasSimilarity ? `Similarity: ${similarity}%<br>Date: ${date}` : `Date: ${date}`;
+        const hasSimilarity = Number.isFinite(similarity);
+        const similarityText = hasSimilarity
+            ? i18n.percent(similarity, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : '';
+        const tooltipParts = [];
+        if (hasSimilarity) {
+            tooltipParts.push(document.createTextNode(
+                i18n.t('common:similarityValue', { value: similarityText })
+            ));
+            tooltipParts.push(document.createElement('br'));
+        }
+        tooltipParts.push(document.createTextNode(i18n.t('common:dateValue', { value: date })));
+        tooltip.replaceChildren(...tooltipParts);
         tooltip.classList.add('visible');
         const rect = faceEl.getBoundingClientRect();
         tooltip.style.left = rect.left + rect.width / 2 + 'px';

@@ -8,15 +8,15 @@
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-label">Total Photos Processed</div>
-            <div class="stat-value">{{ view_model.processed_photo_count }}</div>
+            <div class="stat-value">{{ view_model.processed_photo_count | format_integer }}</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Duplicate Groups Found</div>
-            <div class="stat-value">{{ view_model.duplicate_group_count }}</div>
+            <div class="stat-value">{{ view_model.duplicate_group_count | format_integer }}</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Duplicates Selected</div>
-            <div class="stat-value">{{ view_model.duplicates_selected_count }}</div>
+            <div class="stat-value">{{ view_model.duplicates_selected_count | format_integer }}</div>
         </div>
     </div>
     <div class="section">

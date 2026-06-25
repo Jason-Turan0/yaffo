@@ -37,5 +37,5 @@
         <div class="progress-bar" style="width: {{ progress }}%"></div>
     </div>
 
-    <div class="progress-text">{{ "%.2f"|format(progress) }}%</div>
+    <div class="progress-text">{{ (progress / 100) | format_percent(2) }}</div>
 </div>

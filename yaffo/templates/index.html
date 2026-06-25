@@ -19,9 +19,13 @@
         <div class="main-content photo-gallery">
             {% call page_header('Photo Library') %}
                 {% if media_items|length > 0 %}
-                    Showing {{ media_items|length }} of {{ media_count }} photo{{ 's' if media_items|length != 1 else '' }}
+                    {% trans trimmed count=media_items|length, shown=media_items|length|format_integer, total=media_count|format_integer %}
+                        Showing {{ shown }} of {{ total }} photo
+                    {% pluralize %}
+                        Showing {{ shown }} of {{ total }} photos
+                    {% endtrans %}
                 {% else %}
-                    No photos found
+                    {{ _("No photos found") }}
                 {% endif %}
             {% endcall %}
 
@@ -78,7 +82,7 @@
                                     {% if media_item.latitude is not none and media_item.longitude is not none %}
                                         <div class="photo-hover-row">
                                             <dt>Coordinates</dt>
-                                            <dd>{{ '%.5f'|format(media_item.latitude) }}, {{ '%.5f'|format(media_item.longitude) }}</dd>
+                                            <dd>{{ media_item.latitude | format_coordinate(5) }}, {{ media_item.longitude | format_coordinate(5) }}</dd>
                                         </div>
                                     {% endif %}
                                     {% if media_item.labels %}

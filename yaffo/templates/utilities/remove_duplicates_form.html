@@ -6,11 +6,11 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">Total Media</div>
-                    <div class="stat-value">{{ total_photos }}</div>
+                    <div class="stat-value">{{ total_photos | format_integer }}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Directories</div>
-                    <div class="stat-value">{{ directories | length }}</div>
+                    <div class="stat-value">{{ directories | length | format_integer }}</div>
                 </div>
             </div>
         </div>

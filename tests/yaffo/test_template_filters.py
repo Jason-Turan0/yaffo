@@ -7,8 +7,18 @@ import time
 from datetime import datetime, timezone
 
 import pytest
+from flask import Flask
+from flask_babel import Babel
 
-from yaffo.template_filters import DateFormat, format_date, format_duration
+from yaffo.template_filters import (
+    DateFormat,
+    format_coordinate,
+    format_date,
+    format_decimal,
+    format_duration,
+    format_integer,
+    format_percent,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -31,19 +41,19 @@ def tz_new_york():
 def test_utc_false_formats_naive_value_as_is(tz_new_york):
     # date_taken is local wall-clock; no shift regardless of the process timezone.
     dt = datetime(2022, 7, 3, 17, 28, 22)
-    assert format_date(dt, DateFormat.DATETIME, utc=False) == "Jul 03, 2022, 05:28 PM"
+    assert format_date(dt, DateFormat.DATETIME, utc=False) == "Jul 3, 2022, 5:28:22\u202fPM"
 
 
 def test_utc_true_converts_to_local(tz_new_york):
     # A naive UTC timestamp shown in local time: 17:28 UTC → 13:28 EDT (UTC-4 in July).
     dt = datetime(2022, 7, 3, 17, 28, 22)
-    assert format_date(dt, DateFormat.DATETIME, utc=True) == "Jul 03, 2022, 01:28 PM"
+    assert format_date(dt, DateFormat.DATETIME, utc=True) == "Jul 3, 2022, 1:28:22\u202fPM"
 
 
 def test_utc_true_handles_aware_value(tz_new_york):
     # An already-aware UTC datetime is converted to local too.
     dt = datetime(2022, 7, 3, 17, 28, 22, tzinfo=timezone.utc)
-    assert format_date(dt, DateFormat.DATETIME, utc=True) == "Jul 03, 2022, 01:28 PM"
+    assert format_date(dt, DateFormat.DATETIME, utc=True) == "Jul 3, 2022, 1:28:22\u202fPM"
 
 
 def test_none_returns_empty():
@@ -65,3 +75,24 @@ class TestFormatDuration:
 
     def test_truncates_fractional_seconds(self):
         assert format_duration(42.9) == "0:42"
+
+
+def test_number_filters_use_active_locale():
+    app = Flask(__name__)
+    app.config["BABEL_DEFAULT_LOCALE"] = "de"
+    Babel(app)
+
+    with app.app_context():
+        assert format_integer(1234567) == "1.234.567"
+        assert format_decimal(1234.567, 2) == "1.234,57"
+        assert format_percent(0.956, 2) == "95,60%"
+        assert format_coordinate(-90.482583) == "-90,482583°"
+
+
+def test_named_date_width_uses_active_locale():
+    app = Flask(__name__)
+    app.config["BABEL_DEFAULT_LOCALE"] = "de"
+    Babel(app)
+
+    with app.app_context():
+        assert format_date(datetime(2022, 7, 3), DateFormat.DATE) == "03.07.2022"

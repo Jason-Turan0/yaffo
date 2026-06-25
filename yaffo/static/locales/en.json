@@ -4,13 +4,21 @@
     "cancel": "Cancel",
     "close": "Close",
     "confirm": "Confirm",
+    "dateValue": "Date: {{value}}",
     "delete": "Delete",
     "notAvailable": "N/A",
-    "save": "Save"
+    "pageOf": "Page {{page}} of {{total}}",
+    "save": "Save",
+    "similarityValue": "Similarity: {{value}}"
   },
   "settings": {
     "applicationLanguage": "Application language",
     "language": "Language",
     "languageHelp": "Controls the language used by Yaffo. The page reloads after saving."
+  },
+  "utilities": {
+    "indexPhotos": {
+      "truncation": "Showing the first {{shown}} of {{total}}. Sync processes all of them."
+    }
   }
 }
