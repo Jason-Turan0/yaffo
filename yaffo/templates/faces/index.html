@@ -1,7 +1,7 @@
 {# @context yaffo-face_assignment #}
 {% extends "base.html" %}
 
-{% block title %}Faces - Yaffo{% endblock %}
+{% block title %}{{ _("Faces - Yaffo") }}{% endblock %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='faces/index.css') }}">
@@ -15,60 +15,52 @@
 {% from "components/info_modal.html" import render_info_modal %}
 
 {% macro render_modal_keyboard_help() %}
-        <h3 class="modal-section-title">How This Page Works</h3>
-        <p class="help-intro">The job here is to empty the pile of unassigned faces. Faces are detected
-            automatically and grouped for you, so you can accept or reject a whole group at once —
-            assign a group to a person, or ignore the ones you don't want.</p>
+        <h3 class="modal-section-title">{{ _("How This Page Works") }}</h3>
+        <p class="help-intro">{{ _("The job here is to empty the pile of unassigned faces. Faces are detected automatically and grouped for you, so you can accept or reject a whole group at once — assign a group to a person, or ignore the ones you don't want.") }}</p>
         <ul class="help-list">
-            <li><strong>Group by People:</strong> Matches faces to specific people</li>
-            <li><strong>Group by Similarity:</strong> Clusters visually similar faces together</li>
-            <li><strong>Similarity Threshold:</strong> Higher values make tighter, cleaner groups;
-                lower values make larger, looser ones</li>
+            <li><strong>{{ _("Group by People:") }}</strong> {{ _("Matches faces to specific people") }}</li>
+            <li><strong>{{ _("Group by Similarity:") }}</strong> {{ _("Clusters visually similar faces together") }}</li>
+            <li><strong>{{ _("Similarity Threshold:") }}</strong> {{ _("Higher values make tighter, cleaner groups; lower values make larger, looser ones") }}</li>
         </ul>
 
-        <h3 class="modal-section-title">Recommended Workflow</h3>
+        <h3 class="modal-section-title">{{ _("Recommended Workflow") }}</h3>
         <ul class="help-list">
-            <li><strong>Start broad with Similarity.</strong> Group by Similarity at a high threshold
-                and assign the big, obvious clusters first.</li>
-            <li><strong>Lower the threshold as the groups shrink.</strong> Once the biggest groups get
-                small, drop the threshold to pull looser matches together. The right values vary a lot
-                from batch to batch, so adjust to taste.</li>
-            <li><strong>Then switch to People.</strong> Group by People to catch faces that match
-                someone you've already built up.</li>
-            <li><strong>Ignore what's left.</strong> The remainder is usually low quality — blurry,
-                partial, or odd angles. Select and Ignore it.</li>
+            <li><strong>{{ _("Start broad with Similarity.") }}</strong> {{ _("Group by Similarity at a high threshold and assign the big, obvious clusters first.") }}</li>
+            <li><strong>{{ _("Lower the threshold as the groups shrink.") }}</strong> {{ _("Once the biggest groups get small, drop the threshold to pull looser matches together. The right values vary a lot from batch to batch, so adjust to taste.") }}</li>
+            <li><strong>{{ _("Then switch to People.") }}</strong> {{ _("Group by People to catch faces that match someone you've already built up.") }}</li>
+            <li><strong>{{ _("Ignore what's left.") }}</strong> {{ _("The remainder is usually low quality — blurry, partial, or odd angles. Select and Ignore it.") }}</li>
         </ul>
 
-        <h3 class="modal-section-title">Quick Assignment</h3>
+        <h3 class="modal-section-title">{{ _("Quick Assignment") }}</h3>
         <div class="help-shortcuts-list" id="help-shortcut-people"></div>
 
-        <h3 class="modal-section-title">Other Shortcuts</h3>
+        <h3 class="modal-section-title">{{ _("Other Shortcuts") }}</h3>
         <div class="help-shortcuts-list">
             <div class="help-shortcut-item">
                 <kbd>Shift</kbd> + <kbd>Click</kbd>
-                <span>Select range of faces</span>
+                <span>{{ _("Select range of faces") }}</span>
             </div>
             <div class="help-shortcut-item">
                 <kbd>Enter</kbd>
-                <span>Assign to selected person</span>
+                <span>{{ _("Assign to selected person") }}</span>
             </div>
             <div class="help-shortcut-item">
                 <kbd>i</kbd> or <kbd>0</kbd>
-                <span>Ignore selected faces</span>
+                <span>{{ _("Ignore selected faces") }}</span>
             </div>
             <div class="help-shortcut-item">
                 <kbd>?</kbd>
-                <span>Show this help</span>
+                <span>{{ _("Show this help") }}</span>
             </div>
         </div>
 
         <div class="help-tips">
             <p>
-                <strong>💡 Tips:</strong><br>
-                • Refresh the page between passes — it re-clusters the remaining faces into tighter, higher-quality groups<br>
-                • As your catalog of people grows, a background task assigns matching faces automatically — so this pile should shrink on its own over time<br>
-                • Select faces then press a number key for quick assignment<br>
-                • Hold Shift+Click to select multiple faces at once
+                <strong>💡 {{ _("Tips:") }}</strong><br>
+                • {{ _("Refresh the page between passes — it re-clusters the remaining faces into tighter, higher-quality groups") }}<br>
+                • {{ _("As your catalog of people grows, a background task assigns matching faces automatically — so this pile should shrink on its own over time") }}<br>
+                • {{ _("Select faces then press a number key for quick assignment") }}<br>
+                • {{ _("Hold Shift+Click to select multiple faces at once") }}
             </p>
         </div>
 {% endmacro %}
@@ -80,29 +72,29 @@
             {% include "filters/_month.html" %}
             {% include "filters/_person.html" %}
             <div class="filter-group">
-                <label for="group-by-people">Group by</label>
+                <label for="group-by-people">{{ _("Group by") }}</label>
                 <div class="radio-group">
                     <label class="radio-label">
                         <input type="radio" id="group-by-people" name="group_by" value="people"
                                {% if not filters.selected_group_by or filters.selected_group_by == 'people' %}checked{% endif %}>
-                        <span>People</span>
+                        <span>{{ _("People") }}</span>
                     </label>
                     <label class="radio-label">
                         <input type="radio" id="group-by-similarity" name="group_by" value="similarity"
                                {% if filters.selected_group_by == 'similarity' %}checked{% endif %}>
-                        <span>Similarity</span>
+                        <span>{{ _("Similarity") }}</span>
                     </label>
                 </div>
             </div>
             <div class="filter-group">
-                <label for="threshold-range">Similarity Threshold</label>
+                <label for="threshold-range">{{ _("Similarity Threshold") }}</label>
                 <input type="range" id="threshold-range" name="threshold" min="0" max="100" step="1"
                        value="{{ filters.selected_threshold }}">
                 <div class="threshold-display"><span id="threshold-value">{{ filters.selected_threshold }}</span>%
                 </div>
             </div>
             <div class="filter-group">
-                <label for="batch-size-select">Faces to analyze</label>
+                <label for="batch-size-select">{{ _("Faces to analyze") }}</label>
                 <select id="batch-size-select" name="batch_size">
                     {% for size in filters.batch_sizes %}
                         <option value="{{ size }}"
@@ -122,18 +114,18 @@
 
 
                 <div class="person-assign-select">
-                    <label for="sidebar-person-select">Assign to Person</label>
+                    <label for="sidebar-person-select">{{ _("Assign to Person") }}</label>
                     <select name="person" id="sidebar-person-select" class="searchable-select">
-                        <option value="">-- Select person --</option>
+                        <option value="">-- {{ _("Select person") }} --</option>
                         {% for person in people %}
                             <option value="{{ person.id }}"
                                     {% if filters.selected_assign_person_id == person.id %}selected{% endif %}>{{ person.name }}</option>
                         {% endfor %}
                     </select>
                     <button type="button" class="btn-primary" id="sidebar-assign-selected-btn"
-                            style="width: 100%; margin-top: 10px;">Assign Selected
+                            style="width: 100%; margin-top: 10px;">{{ _("Assign Selected") }}
                     </button>
-                    <button type="button" class="btn sidebar-btn btn-danger" id="sidebar-ignore-btn">Ignore Selected
+                    <button type="button" class="btn sidebar-btn btn-danger" id="sidebar-ignore-btn">{{ _("Ignore Selected") }}
                     </button>
                 </div>
 
@@ -145,36 +137,35 @@
                                    id="create-person-name"
                                    class="form-control new-person-name">
                             <button type="button" id="create-person-btn" class="btn btn-success btn-create-person">
-                                Create Person
+                                {{ _("Create Person") }}
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <div class="keyboard-shortcuts-list">
-                    <div class="shortcuts-label">Keyboard Shortcuts:</div>
+                    <div class="shortcuts-label">{{ _("Keyboard Shortcuts:") }}</div>
                     <div id="sidebar-shortcut-people"></div>
                     <div class="shortcut-item">
                         <kbd>Enter</kbd>
-                        <span>Assign to selected person</span>
+                        <span>{{ _("Assign to selected person") }}</span>
                     </div>
                     <div class="shortcut-item">
                         <kbd>i</kbd> or <kbd>0</kbd>
-                        <span>Ignore selected faces</span>
+                        <span>{{ _("Ignore selected faces") }}</span>
                     </div>
                 </div>
 
                 <div class="keyboard-help">
-                    <small>Press <kbd>?</kbd> for help</small>
+                    <small>{% trans %}Press <kbd>?</kbd> for help{% endtrans %}</small>
                 </div>
                 <div id="sidebar-face-checkboxes"></div>
             </form>
         {% endmacro %}
         {{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions) }}
         <div class="main-content" data-unassigned-count="{{ unassigned_face_count }}">
-            {% call page_header('Unassigned Faces') %}
-                Showing {{ faces|length | format_integer }} of {{ unassigned_face_count | format_integer }} unassigned
-                face{{ 's' if faces|length != 1 else '' }}
+            {% call page_header(_("Unassigned Faces")) %}
+                {% trans count=faces|length, shown=faces|length|format_integer, total=unassigned_face_count|format_integer %}Showing {{ shown }} of {{ total }} unassigned face{% pluralize %}Showing {{ shown }} of {{ total }} unassigned faces{% endtrans %}
             {% endcall %}
             <div id="clusters">
                 {% if face_suggestions | length > 0 %}
@@ -185,8 +176,9 @@
                              {% if not loop.first %}hidden{% endif %}>
                             <div class="cluster-identity">
                                 <span class="cluster-name">{{ faceSuggestion.suggestion_name }}</span>
-                                <span class="cluster-meta">{{ faceSuggestion.faces | length | format_integer }}
-                                    face{{ 's' if faceSuggestion.faces | length != 1 else '' }}</span>
+                                <span class="cluster-meta">
+                                    {% trans count=faceSuggestion.faces|length, formatted_count=faceSuggestion.faces|length|format_integer %}{{ formatted_count }} face{% pluralize %}{{ formatted_count }} faces{% endtrans %}
+                                </span>
                                 {% if faceSuggestion.date_start %}
                                     {% set date_start = faceSuggestion.date_start | format_date("date") %}
                                     {% set date_end = faceSuggestion.date_end | format_date("date") %}
@@ -197,16 +189,16 @@
                             <div class="cluster-decide">
                                 <label class="cluster-select-all">
                                     <input type="checkbox" checked class="group-select-checkbox">
-                                    <span class="group-select-label">Select all</span>
+                                    <span class="group-select-label">{{ _("Select all") }}</span>
                                 </label>
                                 <div class="group-actions">
-                                    <button type="button" class="btn-secondary shuffle-sample-btn" data-icon="shuffle">Shuffle</button>
+                                    <button type="button" class="btn-secondary shuffle-sample-btn" data-icon="shuffle">{{ _("Shuffle") }}</button>
                                     {% for person in faceSuggestion.people %}
                                         <button type="button" class="btn-primary assign-group-btn"
                                                 data-person-id="{{ person.id }}" data-person-name="{{ person.name }}">
-                                            Assign to {{ person.name }}</button>
+                                            {{ _("Assign to %(person)s", person=person.name) }}</button>
                                     {% endfor %}
-                                    <button type="button" class="btn-secondary skip-cluster-btn" data-icon="skip">Skip cluster</button>
+                                    <button type="button" class="btn-secondary skip-cluster-btn" data-icon="skip">{{ _("Skip cluster") }}</button>
                                 </div>
                             </div>
 
@@ -215,18 +207,16 @@
                             <div class="pagination-container cluster-pager-footer">
                                 <div class="pagination-info">
                                     <span class="results-count">
-                                        Showing <span class="sample-range">0</span>
-                                        of {{ faceSuggestion.faces | length | format_integer }}
-                                        face{{ 's' if faceSuggestion.faces | length != 1 else '' }}
+                                        {% trans count=faceSuggestion.faces|length, total=faceSuggestion.faces|length|format_integer %}Showing <span class="sample-range">0</span> of {{ total }} face{% pluralize %}Showing <span class="sample-range">0</span> of {{ total }} faces{% endtrans %}
                                     </span>
                                 </div>
                                 <div class="pagination-controls">
                                     <div class="page-navigation">
-                                        <button type="button" class="page-btn cluster-first">&laquo; First</button>
-                                        <button type="button" class="page-btn cluster-prev">&lsaquo; Prev</button>
-                                        <span class="page-info cluster-page-label">Page 1 of 1</span>
-                                        <button type="button" class="page-btn cluster-next">Next &rsaquo;</button>
-                                        <button type="button" class="page-btn cluster-last">Last &raquo;</button>
+                                        <button type="button" class="page-btn cluster-first">&laquo; {{ _("First") }}</button>
+                                        <button type="button" class="page-btn cluster-prev">&lsaquo; {{ _("Previous") }}</button>
+                                        <span class="page-info cluster-page-label">{{ _("Page 1 of 1") }}</span>
+                                        <button type="button" class="page-btn cluster-next">{{ _("Next") }} &rsaquo;</button>
+                                        <button type="button" class="page-btn cluster-last">{{ _("Last") }} &raquo;</button>
                                     </div>
                                 </div>
                             </div>
@@ -235,20 +225,20 @@
                 {% endif %}
                 {% if face_suggestions | length == 0 and unassigned_face_count > 0 %}
                     <div class="empty-state">
-                        <h2>No results found</h2>
-                        <p>Doublecheck the filters applied or decrease the similarity threshold.</p>
+                        <h2>{{ _("No results found") }}</h2>
+                        <p>{{ _("Double-check the applied filters or decrease the similarity threshold.") }}</p>
                     </div>
                 {% endif %}
                 {% if unassigned_face_count == 0 %}
                     <div class="empty-state">
-                        <h2>All Faces Assigned!</h2>
-                        <p>Looks like there isn't anything for you to do here.</p>
+                        <h2>{{ _("All Faces Assigned!") }}</h2>
+                        <p>{{ _("There isn't anything for you to do here.") }}</p>
                     </div>
                 {% endif %}
             </div>
         </div>
 
-        {{ render_info_modal('keyboardHelpModal', "Help", render_modal_keyboard_help, size_class="modal-lg") }}
+        {{ render_info_modal('keyboardHelpModal', _("Help"), render_modal_keyboard_help, size_class="modal-lg") }}
 
     </div>
 {% endblock %}

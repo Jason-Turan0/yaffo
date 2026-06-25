@@ -80,6 +80,18 @@
       "typeToSearch": "Zum Suchen eingeben…"
     }
   },
+  "faces": {
+    "assignment": {
+      "clusterSkipped": "Gruppe übersprungen",
+      "noneSelected": "Übersprungen — keine Gesichter ausgewählt",
+      "requestFailed": "Fehler: {{reason}}",
+      "selectPersonFirst": "Bitte wählen Sie zuerst eine Person aus"
+    },
+    "people": {
+      "created": "\"{{name}}\" wurde erstellt",
+      "nameRequired": "Bitte geben Sie einen Personennamen ein"
+    }
+  },
   "media": {
     "actions": {
       "openFileFailed": "Datei konnte nicht geöffnet werden",

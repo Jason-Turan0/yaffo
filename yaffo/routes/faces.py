@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, List
 import numpy as np
 from flask import Flask, render_template, request, jsonify
+from flask_babel import gettext, ngettext
 from sklearn.cluster import DBSCAN
 
 from yaffo.background_tasks.tasks.assign_faces_to_person import assign_faces_to_person
@@ -72,7 +73,7 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], min_similarity:
     for face_id, label in zip(face_ids, clustering.labels_):
         if label == -1:  # skip noise faces
             continue
-        label = f"Cluster {label}"
+        label = gettext("Cluster %(number)s", number=label)
         cluster = clusters[label] if label in clusters else {'label': label, 'face_ids': []}
         clusters[label] = cluster
         cluster["face_ids"].append(face_id)
@@ -97,7 +98,7 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
     default_suggestion = FaceSuggestion(
         person_ids=[],
         people=[],
-        suggestion_name='Unknown',
+        suggestion_name=gettext("Unknown"),
         photo_date='',
         faces=[]
     )
@@ -242,7 +243,7 @@ def init_faces_routes(app: Flask):
 
     @app.route("/api/faces/assign", methods=["POST"])
     def faces_assign():
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         selected_face_ids = data.get("faces", [])
         person_id = data.get("person")
         face_status = data.get("faceStatus")
@@ -254,7 +255,13 @@ def init_faces_routes(app: Flask):
                 db.session.commit()
                 return jsonify({
                     "success": True,
-                    "message": f"Successfully ignored {len(selected_face_ids)} face(s)",
+                    "message": ngettext(
+                        "Successfully ignored %(count)s face",
+                        "Successfully ignored %(count)s faces",
+                        len(selected_face_ids),
+                        count=len(selected_face_ids),
+                    ),
+                    "code": "faces_ignored",
                     "face_ids": selected_face_ids
                 })
 
@@ -265,7 +272,11 @@ def init_faces_routes(app: Flask):
                 if person is None:
                     error_msg = f'Person {person_id} not found'
                     logger.warn(error_msg)
-                    return jsonify({"success": False, "message": error_msg}), 404
+                    return jsonify({
+                        "success": False,
+                        "message": gettext("Person not found"),
+                        "code": "person_not_found",
+                    }), 404
 
                 db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
                     {Face.status: FACE_STATUS_PROCESSING}, synchronize_session=False
@@ -274,16 +285,28 @@ def init_faces_routes(app: Flask):
                 assign_faces_to_person(person_id, selected_face_ids)
                 return jsonify({
                     "success": True,
-                    "message": f"Successfully assigned {len(selected_face_ids)} face(s) to {person.name}",
+                    "message": ngettext(
+                        "Successfully assigned %(count)s face to %(person)s",
+                        "Successfully assigned %(count)s faces to %(person)s",
+                        len(selected_face_ids),
+                        count=len(selected_face_ids),
+                        person=person.name,
+                    ),
+                    "code": "faces_assigned",
                     "face_ids": selected_face_ids
                 })
             else:
                 return jsonify({
                     "success": False,
-                    "message": f"Invalid request faces, person, and face_status are required",
+                    "message": gettext("Faces, person, and face status are required"),
+                    "code": "assignment_fields_required",
                 }), 400
         except Exception as e:
             db.session.rollback()
             error_msg = f"Error processing faces: {str(e)}"
             logger.error(error_msg)
-            return jsonify({"success": False, "message": error_msg}), 500
+            return jsonify({
+                "success": False,
+                "message": gettext("Could not process faces"),
+                "code": "face_processing_failed",
+            }), 500

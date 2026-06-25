@@ -1,7 +1,13 @@
 import pytest
 
 from yaffo.db import db
-from yaffo.db.models import ApplicationSettings, MediaItem
+from yaffo.db.models import (
+    FACE_STATUS_IGNORED,
+    FACE_STATUS_UNASSIGNED,
+    ApplicationSettings,
+    Face,
+    MediaItem,
+)
 from yaffo.i18n import LOCALE_SETTING
 
 pytestmark = pytest.mark.unit
@@ -96,6 +102,67 @@ def test_saved_locale_translates_media_api_errors(client):
     assert response.get_json() == {
         "error": "Foto nicht gefunden",
         "code": "photo_not_found",
+    }
+
+
+def test_saved_locale_translates_faces_inbox(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    body = client.get("/faces").get_data(as_text=True)
+
+    assert "<title>Gesichter - Yaffo</title>" in body
+    assert "Nicht zugewiesene Gesichter" in body
+    assert "Alle Gesichter zugewiesen!" in body
+    assert "Gruppieren nach" in body
+    assert "Ähnlichkeitsschwellenwert" in body
+    assert "Auswahl zuweisen" in body
+    assert "Auswahl ignorieren" in body
+    assert "Empfohlener Ablauf" in body
+
+
+@pytest.mark.parametrize(
+    ("face_count", "expected_message"),
+    [
+        (0, "0 Gesichter wurden erfolgreich ignoriert"),
+        (1, "1 Gesicht wurde erfolgreich ignoriert"),
+        (2, "2 Gesichter wurden erfolgreich ignoriert"),
+    ],
+)
+def test_saved_locale_translates_face_assignment_plural(client, app, face_count, expected_message):
+    with app.app_context():
+        faces = [
+            Face(full_file_path=f"/faces/{index}.jpg", status=FACE_STATUS_UNASSIGNED)
+            for index in range(face_count)
+        ]
+        db.session.add_all(faces)
+        db.session.commit()
+        face_ids = [face.id for face in faces]
+
+    client.post("/settings/locale", data={"locale": "de"})
+    response = client.post(
+        "/api/faces/assign",
+        json={"faces": face_ids, "person": None, "faceStatus": FACE_STATUS_IGNORED},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "success": True,
+        "message": expected_message,
+        "code": "faces_ignored",
+        "face_ids": face_ids,
+    }
+
+
+def test_saved_locale_translates_face_assignment_validation_error(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    response = client.post("/api/faces/assign", json={})
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "success": False,
+        "message": "Gesichter, Person und Gesichtsstatus sind erforderlich",
+        "code": "assignment_fields_required",
     }
 
 

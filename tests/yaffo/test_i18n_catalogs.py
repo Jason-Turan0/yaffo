@@ -157,3 +157,15 @@ def test_media_javascript_uses_catalog_keys_and_receives_i18n_service():
     assert "media:faces.reassign" in source
     assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in gallery_template
     assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in detail_template
+
+
+def test_faces_javascript_uses_catalog_keys_and_receives_i18n_service():
+    source = Path("yaffo/static/faces/index.js").read_text(encoding="utf-8")
+    template = Path("yaffo/templates/faces/index.html").read_text(encoding="utf-8")
+    babel_config = Path("babel.cfg").read_text(encoding="utf-8")
+
+    assert "faces:assignment.noneSelected" in source
+    assert "faces:assignment.clusterSkipped" in source
+    assert "faces:people.nameRequired" in source
+    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+    assert "ngettext:1,2" in babel_config

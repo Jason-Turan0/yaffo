@@ -80,6 +80,18 @@
       "typeToSearch": "Type to search…"
     }
   },
+  "faces": {
+    "assignment": {
+      "clusterSkipped": "Cluster skipped",
+      "noneSelected": "Skipped — no faces selected",
+      "requestFailed": "Error: {{reason}}",
+      "selectPersonFirst": "Please select a person first"
+    },
+    "people": {
+      "created": "Created \"{{name}}\"",
+      "nameRequired": "Please enter a person name"
+    }
+  },
   "media": {
     "actions": {
       "openFileFailed": "Failed to open file",

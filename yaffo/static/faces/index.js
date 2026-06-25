@@ -132,7 +132,7 @@ window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, i18n, config
         // Nothing selected: treat the cluster as skipped. The faces stay
         // unassigned (they'll resurface in a later batch) and we move on.
         if (faceIds.length === 0) {
-            showNotification('Skipped — no faces selected', 'info');
+            notification.info(i18n.t('faces:assignment.noneSelected'));
             advanceCluster();
             return;
         }
@@ -150,7 +150,7 @@ window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, i18n, config
                 showNotification(result.message, 'error');
             }
         } catch (error) {
-            showNotification(`Error: ${error.message}`, 'error');
+            notification.error(i18n.t('faces:assignment.requestFailed', { reason: error.message }));
             console.error('Error submitting faces:', error);
         }
     };
@@ -198,7 +198,7 @@ window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, i18n, config
 
         if (e.target.closest('.skip-cluster-btn')) {
             e.preventDefault();
-            showNotification('Cluster skipped', 'info');
+            notification.info(i18n.t('faces:assignment.clusterSkipped'));
             advanceCluster();
             return;
         }
@@ -282,7 +282,7 @@ window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, i18n, config
             e.preventDefault();
             const personId = sidebarPersonSelect.value;
             if (!personId) {
-                showNotification('Please select a person first', 'error');
+                notification.error(i18n.t('faces:assignment.selectPersonFirst'));
                 return;
             }
             submitFaces(personId, 'ASSIGNED');
@@ -314,7 +314,7 @@ window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, i18n, config
             const inputElement = document.getElementById('create-person-name');
             const personName = inputElement.value;
             if (!personName || !personName.trim()) {
-                notification.error('Please enter a person name');
+                notification.error(i18n.t('faces:people.nameRequired'));
                 return;
             }
             createPersonBtn.disabled = true;
@@ -325,7 +325,7 @@ window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, i18n, config
                     body: JSON.stringify({ name: personName.trim() })
                 });
                 if (createResponse.ok) {
-                    notification.success(`Created "${personName}"`);
+                    notification.success(i18n.t('faces:people.created', { name: personName }));
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
                     const error = await createResponse.json();

@@ -508,7 +508,8 @@ Status as of June 25, 2026:
 - [x] Phase 3: shared shell, filters, reusable components, and their JavaScript
   modules.
 - [x] Phase 4.1: home gallery and media details vertical slice.
-- [ ] Phase 4.2–4.9: remaining feature screens and LLM prompt behavior.
+- [x] Phase 4.2: faces inbox and assignment workflow.
+- [ ] Phase 4.3–4.9: remaining feature screens and LLM prompt behavior.
 - [ ] Phase 5: translation and release-readiness work.
 
 The completed home/media slice includes:
@@ -520,6 +521,15 @@ The completed home/media slice includes:
 - gettext and i18next English/German catalog entries;
 - localized JSON error text with stable error codes;
 - German rendering tests for the gallery, media details, and API errors.
+
+The completed faces inbox slice includes:
+
+- the assignment workflow template, help content, filters, pagination, and empty
+  states;
+- browser notifications for skipping, validation, and person creation;
+- localized assignment API responses with plural forms and stable error codes;
+- corrected Babel extraction signatures for Python plural/context functions;
+- German rendering and API pluralization tests.
 
 Current verification covers catalog key/placeholder parity, compiled gettext
 catalogs, JavaScript and Python syntax, non-English rendering, and the
@@ -599,7 +609,7 @@ For each slice:
 Each item includes its templates and primary browser module. The corresponding
 route modules and browser-facing errors are part of the same checklist item.
 
-- [ ] Faces inbox and assignment workflow:
+- [x] Faces inbox and assignment workflow:
   `templates/faces/index.html`, `static/faces/index.js`, and `routes/faces.py`.
 - [ ] People list:
   `templates/people/list.html`, `static/people/list.js`, and `routes/people.py`.
