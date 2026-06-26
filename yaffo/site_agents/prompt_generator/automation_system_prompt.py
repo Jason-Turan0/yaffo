@@ -18,6 +18,7 @@ from yaffo.site_agents.prompt_generator.source_catalog import (
     relationship_summary,
     virtual_source_lines,
 )
+from yaffo.site_agents.prompt_generator.response_language import response_language_block
 from yaffo.site_agents.prompt_generator.xml_helpers import block
 
 
@@ -201,4 +202,5 @@ def build_automation_builder_system_prompt() -> str:
         _batching(),
         _progress(),
         _conventions(),
+        response_language_block(),
     ])

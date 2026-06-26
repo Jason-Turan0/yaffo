@@ -33,6 +33,7 @@ from yaffo.db.models import (
     PAGE_VERSION_STATUS_IN_PROGRESS,
     PAGE_VERSION_STATUS_READY,
 )
+from yaffo.i18n import DEFAULT_LOCALE, get_saved_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents import llm_config
 from yaffo.site_agents.agent import create_theme_builder_agent
@@ -82,6 +83,7 @@ def run_theme_generation(
     user_message = build_theme_user_message(
         message,
         slug=slug,
+        locale=get_saved_locale(session) or DEFAULT_LOCALE,
         label=theme.label,
         tokens_css=current.tokens_css if current else "",
         skin_css=current.skin_css if current else "",

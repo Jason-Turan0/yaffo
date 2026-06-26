@@ -13,12 +13,14 @@ from __future__ import annotations
 import json
 from typing import Optional
 
+from yaffo.site_agents.prompt_generator.response_language import application_locale_el
 from yaffo.site_agents.prompt_generator.xml_helpers import block, el
 
 
 def build_user_message(
     request: str,
     *,
+    locale: str = "en",
     page_title: str = "",
     page_subtitle: str = "",
     widgets: Optional[list[dict]] = None,
@@ -28,6 +30,8 @@ def build_user_message(
 
     Args:
         request: what the user asked for (the chat message).
+        locale: the selected application locale — the fallback the response-language
+            rule points at when the request's language is ambiguous.
         page_title / page_description: page-level context.
         widgets: existing widgets on the page, each {id, title} plus its current
             {layout, data_query, html, css, js} so the model edits with full sight
@@ -38,7 +42,10 @@ def build_user_message(
     widgets = widgets or []
     widget_errors = widget_errors or {}
     # Request is free-form natural language; keep it raw for fidelity.
-    parts: list[str] = [block("request", (request.strip() or "").splitlines() or [""])]
+    parts: list[str] = [
+        block("request", (request.strip() or "").splitlines() or [""]),
+        application_locale_el(locale),
+    ]
 
     page_children = []
     if page_title:

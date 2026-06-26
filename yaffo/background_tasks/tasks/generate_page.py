@@ -28,6 +28,7 @@ from yaffo.db.models import (
     PAGE_VERSION_STATUS_READY,
 )
 from yaffo.db.repositories import custom_page_repository as page_repo
+from yaffo.i18n import DEFAULT_LOCALE, get_saved_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents import llm_config
 from yaffo.site_agents.agent import create_theme_builder_agent, create_page_builder_agent
@@ -81,6 +82,7 @@ def run_generation(
     current_widgets = [widget_draft(w) for w in version.widgets]
     user_message = build_user_message(
         message,
+        locale=get_saved_locale(session) or DEFAULT_LOCALE,
         page_title=page.title,
         page_subtitle=page.subtitle,
         widgets=current_widgets,

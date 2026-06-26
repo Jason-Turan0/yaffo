@@ -15,6 +15,7 @@ from yaffo.site_agents.prompt_generator.source_catalog import (
     relationship_summary,
     virtual_source_lines,
 )
+from yaffo.site_agents.prompt_generator.response_language import response_language_block
 from yaffo.site_agents.prompt_generator.xml_helpers import block
 from yaffo.site_agents.widget_api import widget_api_source
 
@@ -160,4 +161,5 @@ def build_system_prompt() -> str:
         _widget_contract(),
         _templates(),
         _conventions(),
+        response_language_block(),
     ])

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from yaffo.site_agents.prompt_generator.response_language import application_locale_el
 from yaffo.site_agents.prompt_generator.xml_helpers import block, el
 
 
@@ -20,6 +21,7 @@ def build_theme_user_message(
     request: str,
     *,
     slug: str,
+    locale: str = "en",
     label: str = "",
     tokens_css: str = "",
     skin_css: str = "",
@@ -29,13 +31,18 @@ def build_theme_user_message(
     Args:
         request: what the user asked for (the chat message).
         slug: the theme's slug — the model wraps its tokens in `[data-theme="<slug>"]`.
+        locale: the selected application locale — the fallback the response-language
+            rule points at when the request's language is ambiguous.
         label: the theme's display name, for context.
         tokens_css / skin_css: the theme's current CSS (its working draft if a
             generation is mid-flight, else the published theme). Empty for a brand-new
             theme; present on a follow-up so the model revises rather than restarts.
     """
     selector = f'[data-theme="{slug}"]'
-    parts: list[str] = [block("request", (request.strip() or "").splitlines() or [""])]
+    parts: list[str] = [
+        block("request", (request.strip() or "").splitlines() or [""]),
+        application_locale_el(locale),
+    ]
 
     theme_children = [el("slug", slug), el("selector", selector)]
     if label:

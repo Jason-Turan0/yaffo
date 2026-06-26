@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from yaffo.site_agents.prompt_generator.response_language import response_language_block
 from yaffo.site_agents.prompt_generator.xml_helpers import block
 
 # yaffo/site_agents/prompt_generator/theme_system_prompt.py -> yaffo/static/...
@@ -151,4 +152,5 @@ def build_template_builder_system_prompt() -> str:
         _icons(),
         _references(),
         _conventions(),
+        response_language_block(),
     ])

@@ -7,6 +7,7 @@ across generations.
 """
 from __future__ import annotations
 
+from yaffo.site_agents.prompt_generator.response_language import application_locale_el
 from yaffo.site_agents.prompt_generator.xml_helpers import block, el
 
 
@@ -14,6 +15,7 @@ def build_automation_user_message(
     request: str,
     *,
     slug: str,
+    locale: str = "en",
     name: str = "",
     current_code: str = "",
 ) -> str:
@@ -22,12 +24,17 @@ def build_automation_user_message(
     Args:
         request: the chat message.
         slug: the automation's slug (passed to write_automation_code via the tool).
+        locale: the selected application locale — the fallback the response-language
+            rule points at when the request's language is ambiguous.
         name: the automation's display name, for context.
         current_code: the automation's current code (working draft if mid-flight,
             else published). Empty for a brand-new automation; present on a follow-up
             so the model revises rather than restarts.
     """
-    parts: list[str] = [block("request", (request.strip() or "").splitlines() or [""])]
+    parts: list[str] = [
+        block("request", (request.strip() or "").splitlines() or [""]),
+        application_locale_el(locale),
+    ]
 
     automation_children = [el("slug", slug)]
     if name:

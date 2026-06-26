@@ -16,6 +16,7 @@ from yaffo.db.models import (
     PAGE_VERSION_STATUS_IN_PROGRESS,
     PAGE_VERSION_STATUS_READY,
 )
+from yaffo.db.models import ApplicationSettings
 from yaffo.db.repositories import custom_page_repository as repo
 from yaffo.site_agents.agent import AgentEvent
 
@@ -161,6 +162,34 @@ class TestMissingVersion:
     def test_missing_version_is_a_noop(self, session, monkeypatch):
         _use_agent(monkeypatch, [AgentEvent("done")])
         task.run_generation(session, 9999, "go", should_cancel=_no_cancel)  # does not raise
+
+class TestLocale:
+    """The worker has no request context, so the task resolves the saved application
+    locale itself and feeds it to the user turn as the response-language fallback."""
+
+    def _capture_user_message(self, monkeypatch):
+        captured = {}
+
+        class _CapturingAgent:
+            def run_events(self, user_message, should_cancel=None):
+                captured["msg"] = user_message
+                yield AgentEvent("done")
+
+        monkeypatch.setattr(task, "create_page_builder_agent", lambda *a, **k: _CapturingAgent())
+        return captured
+
+    def test_saved_locale_rides_in_the_user_turn(self, session, version, monkeypatch):
+        session.add(ApplicationSettings(name="locale", type="string", value="de"))
+        session.commit()
+        captured = self._capture_user_message(monkeypatch)
+        task.run_generation(session, version.id, "go", should_cancel=_no_cancel)
+        assert "<application_locale>de</application_locale>" in captured["msg"]
+
+    def test_defaults_to_english_without_a_saved_locale(self, session, version, monkeypatch):
+        captured = self._capture_user_message(monkeypatch)
+        task.run_generation(session, version.id, "go", should_cancel=_no_cancel)
+        assert "<application_locale>en</application_locale>" in captured["msg"]
+
 
 class TestProgressLabelsCoverAgentTools:
     """The conversation feed shows a friendly status line per tool the agent calls

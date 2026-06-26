@@ -29,6 +29,7 @@ from yaffo.db.models import (
     CONVERSATION_TYPE_STATUS,
 )
 from yaffo.db.repositories import automation_repository as repo
+from yaffo.i18n import DEFAULT_LOCALE, get_saved_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents import llm_config
 from yaffo.site_agents.agent import create_automation_builder_agent
@@ -76,6 +77,7 @@ def run_automation_generation(
     user_message = build_automation_user_message(
         message,
         slug=slug,
+        locale=get_saved_locale(session) or DEFAULT_LOCALE,
         name=automation.name,
         current_code=automation.working_code or automation.published_code or "",
     )
