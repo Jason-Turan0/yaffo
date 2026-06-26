@@ -51,6 +51,7 @@ nav:
       - AI Page Builder: ai-page-builder.md
       - Automations: automations.md
       - Task Queue Migration: task-queue-migration.md
+      - Frontend Testing & TypeScript: frontend-testing-and-typescript.md
       - Video: video.md
       - Icons: icons.md
       - Deployment (GCP demo): deployment/gcp-demo-architecture.md

@@ -8,10 +8,10 @@
     {% include "utilities/remove_duplicates_results_form_header.html" %}
 
     <div class="section">
-        <h2>Duplicate Groups</h2>
+        <h2>{{ _("Duplicate Groups") }}</h2>
         {% for group in view_model.group_page %}
             <div class="duplicate-group">
-                <h3>Group {{ group.group_id + 1 }}</h3>
+                <h3>{% trans number=(group.group_id + 1)|format_integer %}Group {{ number }}{% endtrans %}</h3>
                 <div class="photo-grid">
                     {% for path in group.paths %}
                         {% include "utilities/remove_duplicates_photo_card.html" with context %}

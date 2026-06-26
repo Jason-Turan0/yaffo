@@ -1,19 +1,27 @@
-from dataclasses import dataclass
-
-from flask import render_template, Flask, request, jsonify, redirect, url_for
-from yaffo.db import db
-from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, JOB_STATUS_COMPLETED
-from yaffo.common import MEDIA_EXTENSIONS, media_type_for_path, MEDIA_TYPE_VIDEO, is_browser_playable_video
-from yaffo.background_tasks.tasks import find_duplicates_task, remove_duplicates_task, schedule_job_completion
-from pathlib import Path
-from sqlalchemy.orm import joinedload
-from sqlalchemy import or_, and_
-import uuid
 import json
-import send2trash
-import os
-import shutil
+import uuid
+from dataclasses import asdict, dataclass
+from pathlib import Path
 
+from flask import Flask, jsonify, render_template, request, url_for
+from flask_babel import gettext, ngettext
+from sqlalchemy import and_, or_
+from sqlalchemy.orm import joinedload
+
+from yaffo.background_tasks.tasks import find_duplicates_task, remove_duplicates_task
+from yaffo.common import (
+    MEDIA_EXTENSIONS,
+    MEDIA_TYPE_VIDEO,
+    is_browser_playable_video,
+    media_type_for_path,
+)
+from yaffo.db import db
+from yaffo.db.models import (
+    JOB_STATUS_COMPLETED,
+    JOB_STATUS_PENDING,
+    JOB_STATUS_RUNNING,
+    Job,
+)
 from yaffo.routes.utilities.common import is_system_file, get_thumbnail_dir, automations_sidebar_context
 
 
@@ -75,6 +83,20 @@ class DuplicateJobViewModel:
     selected_photos: set[int]
     group_page: list[DuplicateGroupViewModel]
     pagination: Pagination
+
+
+@dataclass
+class DuplicateHeaderViewModel:
+    processed_photo_count: int
+    duplicate_group_count: int
+    duplicate_photo_count: int
+    duplicates_selected_count: int
+    selected_photos: set[int]
+
+
+@dataclass
+class JobStarted:
+    job_id: str
 
 
 def create_duplicate_job_view_model(job_id: str, page: int, page_size: int):
@@ -173,7 +195,8 @@ def init_remove_duplicates_routes(app: Flask):
             directories.append('')
 
         if action == "remove":
-            directories.remove(directories[index])
+            if index is not None and 0 <= index < len(directories):
+                directories.pop(index)
 
         total_photos = count_media_items_in_directory(directories)
 
@@ -189,12 +212,18 @@ def init_remove_duplicates_routes(app: Flask):
         directories = [d.strip() for d in directories if d.strip()]
 
         if not directories:
-            return jsonify({'error': 'At least one directory is required'}), 400
+            return jsonify({
+                "error": gettext("At least one directory is required"),
+                "code": "directory_required",
+            }), 400
 
         file_paths = collect_media_paths(directories)
 
         if not file_paths:
-            return jsonify({'error': 'No photo or video files found in selected directories'}), 400
+            return jsonify({
+                "error": gettext("No photo or video files found in selected directories"),
+                "code": "media_files_not_found",
+            }), 400
 
         job_id = str(uuid.uuid4())
         job = Job(
@@ -202,7 +231,7 @@ def init_remove_duplicates_routes(app: Flask):
             name='find_duplicates',
             status=JOB_STATUS_PENDING,
             task_count=len(file_paths),
-            message='Processed {totalCount}/{taskCount} media items',
+            message=gettext("Processed {totalCount}/{taskCount} media items"),
             completed_count=0,
             error_count=0,
             cancelled_count=0,
@@ -216,7 +245,7 @@ def init_remove_duplicates_routes(app: Flask):
 
         find_duplicates_task(job_id=job_id, file_paths=file_paths)
 
-        return jsonify({'job_id': job_id}), 202
+        return jsonify(asdict(JobStarted(job_id=job_id))), 202
 
     @app.route("/utilities/remove-duplicates/results/<job_id>", methods=["GET"])
     def utilities_remove_duplicates_results(job_id: str):
@@ -254,13 +283,13 @@ def init_remove_duplicates_routes(app: Flask):
         # the header re-renders with whatever the form carries.
 
         # Build view model for rendering
-        view_model = type('ViewModel', (), {
-            'selected_photos': selected_photos,
-            'duplicates_selected_count': len(selected_photos),
-            'processed_photo_count': request.form.get('processed_photo_count', type=int, default=0),
-            'duplicate_group_count': request.form.get('duplicate_group_count', type=int, default=0),
-            'duplicate_photo_count': request.form.get('duplicate_photo_count', type=int, default=0),
-        })()
+        view_model = DuplicateHeaderViewModel(
+            selected_photos=selected_photos,
+            duplicates_selected_count=len(selected_photos),
+            processed_photo_count=request.form.get('processed_photo_count', type=int, default=0),
+            duplicate_group_count=request.form.get('duplicate_group_count', type=int, default=0),
+            duplicate_photo_count=request.form.get('duplicate_photo_count', type=int, default=0),
+        )
 
         # Render header with updated action type and destination folder
         return render_template(
@@ -281,13 +310,13 @@ def init_remove_duplicates_routes(app: Flask):
         selected_photos ^= {target_path_id}
 
         # Build view model for rendering
-        view_model = type('ViewModel', (), {
-            'selected_photos': selected_photos,
-            'duplicates_selected_count': len(selected_photos),
-            'processed_photo_count': request.form.get('processed_photo_count', type=int, default=0),
-            'duplicate_group_count': request.form.get('duplicate_group_count', type=int, default=0),
-            'duplicate_photo_count': request.form.get('duplicate_photo_count', type=int, default=0),
-        })()
+        view_model = DuplicateHeaderViewModel(
+            selected_photos=selected_photos,
+            duplicates_selected_count=len(selected_photos),
+            processed_photo_count=request.form.get('processed_photo_count', type=int, default=0),
+            duplicate_group_count=request.form.get('duplicate_group_count', type=int, default=0),
+            duplicate_photo_count=request.form.get('duplicate_photo_count', type=int, default=0),
+        )
 
         # Render photo card (main response)
         photo_card = render_template(
@@ -316,18 +345,21 @@ def init_remove_duplicates_routes(app: Flask):
         destination_folder = request.form.get('destination_folder', '')
 
         if not selected_photo_ids:
-            response = jsonify({'error': 'No files selected'})
+            message = gettext("No files selected")
+            response = jsonify({"error": message, "code": "files_required"})
             response.status_code = 400
             response.headers['HX-Trigger'] = json.dumps({
-                'showNotification': {'message': 'No files selected', 'type': 'error'}
+                'showNotification': {'message': message, 'type': 'error'}
             })
             return response
 
         if action_type == 'moveFolder' and not destination_folder:
-            response = jsonify({'error': 'Destination folder is required'})
+            error = gettext("Destination folder is required")
+            message = gettext("Please select a destination folder")
+            response = jsonify({"error": error, "code": "destination_folder_required"})
             response.status_code = 400
             response.headers['HX-Trigger'] = json.dumps({
-                'showNotification': {'message': 'Please select a destination folder', 'type': 'error'}
+                'showNotification': {'message': message, 'type': 'error'}
             })
             return response
 
@@ -342,18 +374,22 @@ def init_remove_duplicates_routes(app: Flask):
         selected_files = [path_map[pid] for pid in selected_photo_ids if pid in path_map]
 
         if not selected_files:
-            response = jsonify({'error': 'No valid files found'})
+            message = gettext("No valid files found")
+            response = jsonify({"error": message, "code": "valid_files_not_found"})
             response.status_code = 400
             response.headers['HX-Trigger'] = json.dumps({
-                'showNotification': {'message': 'No valid files found', 'type': 'error'}
+                'showNotification': {'message': message, 'type': 'error'}
             })
             return response
 
         # Create background job for removing duplicates
         action_names = {
-            'trash': 'Moving to trash',
-            'delete': 'Permanently deleting',
-            'moveFolder': f'Moving to {destination_folder}'
+            'trash': gettext("Moving to trash"),
+            'delete': gettext("Permanently deleting"),
+            'moveFolder': gettext(
+                "Moving to %(destination)s",
+                destination=destination_folder,
+            ),
         }
 
         execution_job_id = str(uuid.uuid4())
@@ -362,7 +398,10 @@ def init_remove_duplicates_routes(app: Flask):
             name='remove_duplicates',
             status=JOB_STATUS_PENDING,
             task_count=len(selected_files),
-            message=f'{action_names.get(action_type, "Processing")} {{totalCount}}/{{taskCount}} files',
+            message=gettext(
+                "%(action)s {totalCount}/{taskCount} files",
+                action=action_names.get(action_type, gettext("Processing")),
+            ),
             completed_count=0,
             error_count=0,
             cancelled_count=0,
@@ -389,9 +428,15 @@ def init_remove_duplicates_routes(app: Flask):
             destination_folder=destination_folder
         )
 
-        response = jsonify({'success': True, 'job_id': execution_job_id})
+        message = ngettext(
+            "Started removing %(count)s duplicate",
+            "Started removing %(count)s duplicates",
+            len(selected_files),
+            count=len(selected_files),
+        )
+        response = jsonify(asdict(JobStarted(job_id=execution_job_id)))
         response.headers['HX-Trigger'] = json.dumps({
-            'showNotification': {'message': f'Started removing {len(selected_files)} duplicate(s)', 'type': 'success'}
+            'showNotification': {'message': message, 'type': 'success'}
         })
         response.headers['HX-Redirect'] = url_for('utilities_remove_duplicates')
         return response

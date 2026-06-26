@@ -5,31 +5,31 @@
         <div class="scan-stats">
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-label">Total Media</div>
+                    <div class="stat-label">{{ _("Total Media") }}</div>
                     <div class="stat-value">{{ total_photos | format_integer }}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Directories</div>
+                    <div class="stat-label">{{ _("Directories") }}</div>
                     <div class="stat-value">{{ directories | length | format_integer }}</div>
                 </div>
             </div>
         </div>
         <div class="section">
-            <h2>Configuration</h2>
+            <h2>{{ _("Configuration") }}</h2>
             <p class="section-description">
-                Select one or more directories to scan for duplicate photos and videos.
+                {{ _("Select one or more directories to scan for duplicate photos and videos.") }}
             </p>
             <div class="config-form">
                 <div id="directories-container">
                     {% for directory in directories %}
                         <div class="directory-row" id="directory-row-0">
                             <div class="file-browser-group">
-                                <label for="directory">Directory</label>
+                                <label for="directory">{{ _("Directory") }}</label>
                                 <div class="file-browser-input-group">
                                     <input type="text"
                                            id="directory"
                                            name="directory"
-                                           placeholder="Select directory to scan for duplicates"
+                                           placeholder="{{ _('Select directory to scan for duplicates') }}"
                                            class="form-control file-browser-input"
                                            hx-post="{{ url_for('utilities_remove_duplicates_form') }}"
                                            hx-vals='{"action": "rescan"}'
@@ -37,7 +37,7 @@
                                            hx-trigger="change"
                                            value="{{ directory }}">
                                     <button type="button" class="btn-secondary file-browser-btn" data-icon="folder">
-                                        Browse
+                                        {{ _("Browse") }}
                                     </button>
                                     <button
                                             type="button"
@@ -46,14 +46,14 @@
                                             hx-vals='{"action": "remove", "index": {{ loop.index0 }}}'
                                             hx-target="#remove-duplicates-form"
                                     >
-                                        Delete
+                                        {{ _("Delete") }}
                                     </button>
                                 </div>
                             </div>
                         </div>
                     {% endfor %}
                     {% if directories| length ==0 %}
-                        <p>No directory selected</p>
+                        <p>{{ _("No directory selected") }}</p>
                     {% endif %}
                 </div>
                 <button
@@ -64,7 +64,7 @@
                         hx-vals='{"action": "rescan"}'
                         hx-target="#remove-duplicates-form"
                 >
-                    Rescan Directories
+                    {{ _("Rescan Directories") }}
                 </button>
 
                 <button
@@ -75,7 +75,7 @@
                         hx-vals='{"action": "create"}'
                         hx-target="#remove-duplicates-form"
                 >
-                    + Add Another Directory
+                    {{ _("+ Add Another Directory") }}
                 </button>
 
                 <button type="button"
@@ -83,9 +83,8 @@
                         id="find-duplicates-button"
                         hx-post="{{ url_for('utilities_remove_duplicates_start') }}"
                         hx-swap="none"
-                        hx-on::after-request="if(event.detail.successful) window.location.reload()"
                         {{ 'disabled' if directories | length == 0 }}>
-                    Find Duplicates
+                    {{ _("Find Duplicates") }}
                 </button>
             </div>
         </div>

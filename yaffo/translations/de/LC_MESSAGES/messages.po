@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 07:35-0500\n"
+"POT-Creation-Date: 2026-06-25 19:23-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -245,6 +245,108 @@ msgstr "Das neue Verzeichnis entspricht dem aktuellen Verzeichnis"
 msgid "Could not move thumbnail files"
 msgstr "Miniaturansichtsdateien konnten nicht verschoben werden"
 
+#: yaffo/routes/utilities/index_photos.py:68
+msgid ""
+"No media directories configured. Please configure media directories in "
+"Settings before syncing."
+msgstr ""
+"Keine Medienverzeichnisse konfiguriert. Konfigurieren Sie vor der "
+"Synchronisierung Medienverzeichnisse in den Einstellungen."
+
+#: yaffo/routes/utilities/index_photos.py:77
+#, python-format
+msgid "The following media directories do not exist: %(directories)s"
+msgstr "Die folgenden Medienverzeichnisse sind nicht vorhanden: %(directories)s"
+
+#: yaffo/routes/utilities/index_photos.py:86
+msgid ""
+"No thumbnail directory configured. Please configure thumbnail directory "
+"in Settings before syncing."
+msgstr ""
+"Kein Miniaturansichtsverzeichnis konfiguriert. Konfigurieren Sie vor der "
+"Synchronisierung ein Miniaturansichtsverzeichnis in den Einstellungen."
+
+#: yaffo/routes/utilities/index_photos.py:93
+#, python-format
+msgid ""
+"Thumbnail directory does not exist: %(directory)s. It will be created "
+"automatically during indexing."
+msgstr ""
+"Miniaturansichtsverzeichnis ist nicht vorhanden: %(directory)s. Es wird "
+"beim Indizieren automatisch erstellt."
+
+#: yaffo/routes/utilities/index_photos.py:134
+msgid "Could not scan the filesystem"
+msgstr "Das Dateisystem konnte nicht durchsucht werden"
+
+#: yaffo/routes/utilities/index_photos.py:157
+#: yaffo/templates/settings/index.html:47
+msgid "No media directories configured"
+msgstr "Keine Medienverzeichnisse konfiguriert"
+
+#: yaffo/routes/utilities/index_photos.py:165
+#, python-format
+msgid "Media directories do not exist: %(directories)s"
+msgstr "Medienverzeichnisse sind nicht vorhanden: %(directories)s"
+
+#: yaffo/routes/utilities/index_photos.py:173
+msgid "No thumbnail directory configured"
+msgstr "Kein Miniaturansichtsverzeichnis konfiguriert"
+
+#: yaffo/routes/utilities/remove_duplicates.py:216
+msgid "At least one directory is required"
+msgstr "Mindestens ein Verzeichnis ist erforderlich"
+
+#: yaffo/routes/utilities/remove_duplicates.py:224
+msgid "No photo or video files found in selected directories"
+msgstr "In den ausgewählten Verzeichnissen wurden keine Foto- oder Videodateien gefunden"
+
+#: yaffo/routes/utilities/remove_duplicates.py:234
+#, python-brace-format
+msgid "Processed {totalCount}/{taskCount} media items"
+msgstr "{totalCount}/{taskCount} Medienelemente verarbeitet"
+
+#: yaffo/routes/utilities/remove_duplicates.py:348
+msgid "No files selected"
+msgstr "Keine Dateien ausgewählt"
+
+#: yaffo/routes/utilities/remove_duplicates.py:357
+msgid "Destination folder is required"
+msgstr "Ein Zielordner ist erforderlich"
+
+#: yaffo/routes/utilities/remove_duplicates.py:358
+msgid "Please select a destination folder"
+msgstr "Bitte wählen Sie einen Zielordner aus"
+
+#: yaffo/routes/utilities/remove_duplicates.py:377
+msgid "No valid files found"
+msgstr "Keine gültigen Dateien gefunden"
+
+#: yaffo/routes/utilities/remove_duplicates.py:387
+msgid "Moving to trash"
+msgstr "Wird in den Papierkorb verschoben"
+
+#: yaffo/routes/utilities/remove_duplicates.py:388
+msgid "Permanently deleting"
+msgstr "Wird dauerhaft gelöscht"
+
+#: yaffo/routes/utilities/remove_duplicates.py:390
+#, python-format
+msgid "Moving to %(destination)s"
+msgstr "Wird nach %(destination)s verschoben"
+
+#: yaffo/routes/utilities/remove_duplicates.py:402
+#, python-brace-format, python-format
+msgid "%(action)s {totalCount}/{taskCount} files"
+msgstr "%(action)s: {totalCount}/{taskCount} Dateien"
+
+#: yaffo/routes/utilities/remove_duplicates.py:432
+#, python-format
+msgid "Started removing %(count)s duplicate"
+msgid_plural "Started removing %(count)s duplicates"
+msgstr[0] "Entfernen von %(count)s Duplikat wurde gestartet"
+msgstr[1] "Entfernen von %(count)s Duplikaten wurde gestartet"
+
 #: yaffo/templates/_sidebar.html:5 yaffo/templates/people/list.html:28
 msgid "Actions"
 msgstr "Aktionen"
@@ -295,7 +397,7 @@ msgstr "Personen"
 msgid "Locations"
 msgstr "Orte"
 
-#: yaffo/templates/base.html:104
+#: yaffo/templates/base.html:104 yaffo/templates/utilities/_base.html:36
 msgid "Utilities"
 msgstr "Werkzeuge"
 
@@ -387,7 +489,7 @@ msgid "Photo from %(date)s"
 msgstr "Foto vom %(date)s"
 
 #: yaffo/templates/index.html:64 yaffo/templates/people/list.html:23
-#: yaffo/templates/people/list.html:85
+#: yaffo/templates/people/list.html:85 yaffo/templates/utilities/_base.html:11
 msgid "Name"
 msgstr "Name"
 
@@ -460,6 +562,7 @@ msgid "Enter directory path"
 msgstr "Verzeichnispfad eingeben"
 
 #: yaffo/templates/components/file_browser.html:3
+#: yaffo/templates/utilities/remove_duplicates_form.html:27
 msgid "Directory"
 msgstr "Verzeichnis"
 
@@ -951,6 +1054,7 @@ msgstr "Ergebnisse anzeigen"
 
 #: yaffo/templates/fragments/job_status_fragment.html:28
 #: yaffo/templates/people/list.html:65
+#: yaffo/templates/utilities/remove_duplicates_form.html:49
 msgid "Delete"
 msgstr "Löschen"
 
@@ -1320,8 +1424,8 @@ msgid ""
 "provider is stored securely in the operating system's credential store."
 msgstr ""
 "Ermöglicht KI-gestützte Anpassungsfunktionen. Der API-Schlüssel des "
-"Anbieters des ausgewählten Modells wird sicher im Anmeldedatenspeicher des "
-"Betriebssystems gespeichert."
+"Anbieters des ausgewählten Modells wird sicher im Anmeldedatenspeicher "
+"des Betriebssystems gespeichert."
 
 #: yaffo/templates/settings/_llm.html:8
 msgid "Model"
@@ -1398,10 +1502,6 @@ msgstr ""
 "Fügen Sie Verzeichnisse hinzu, in denen Ihre Fotos gespeichert sind. "
 "Yaffo durchsucht diese Verzeichnisse nach zu indizierenden Fotos und "
 "Videos."
-
-#: yaffo/templates/settings/index.html:47
-msgid "No media directories configured"
-msgstr "Keine Medienverzeichnisse konfiguriert"
 
 #: yaffo/templates/settings/index.html:54
 msgid "Enter directory path (for example, /Volumes/Photos or C:\\Photos)"
@@ -1512,6 +1612,246 @@ msgid "Database used by the background task queue to process jobs."
 msgstr ""
 "Datenbank, die von der Hintergrundwarteschlange zur Verarbeitung von "
 "Aufgaben verwendet wird."
+
+#: yaffo/templates/utilities/_base.html:13
+msgid "e.g. Tag beach photos, Weekly cleanup"
+msgstr "z. B. Strandfotos taggen, Wöchentliche Bereinigung"
+
+#: yaffo/templates/utilities/_base.html:14
+msgid "Starts empty — build it through a conversation, then publish."
+msgstr ""
+"Beginnt leer — erstellen Sie die Automatisierung im Gespräch und "
+"veröffentlichen Sie sie anschließend."
+
+#: yaffo/templates/utilities/_base.html:25
+msgid "On"
+msgstr "An"
+
+#: yaffo/templates/utilities/_base.html:41
+#: yaffo/templates/utilities/index_photos.html:14
+msgid "Index Photos"
+msgstr "Fotos indizieren"
+
+#: yaffo/templates/utilities/_base.html:47
+#: yaffo/templates/utilities/remove_duplicates.html:9
+msgid "Remove Duplicates"
+msgstr "Duplikate entfernen"
+
+#: yaffo/templates/utilities/_base.html:53
+msgid "Automations"
+msgstr "Automatisierungen"
+
+#: yaffo/templates/utilities/_base.html:54
+msgid "System"
+msgstr "System"
+
+#: yaffo/templates/utilities/_base.html:58
+msgid "None"
+msgstr "Keine"
+
+#: yaffo/templates/utilities/_base.html:61
+msgid "Custom"
+msgstr "Benutzerdefiniert"
+
+#: yaffo/templates/utilities/_base.html:65
+msgid "No custom automations yet"
+msgstr "Noch keine benutzerdefinierten Automatisierungen"
+
+#: yaffo/templates/utilities/_base.html:69
+msgid "New automation"
+msgstr "Neue Automatisierung"
+
+#: yaffo/templates/utilities/_base.html:82
+msgid "New Automation"
+msgstr "Neue Automatisierung"
+
+#: yaffo/templates/utilities/_base.html:85
+msgid "Create"
+msgstr "Erstellen"
+
+#: yaffo/templates/utilities/index_photos.html:5
+msgid "Index Photos - Utilities - Yaffo"
+msgstr "Fotos indizieren - Werkzeuge - Yaffo"
+
+#: yaffo/templates/utilities/index_photos.html:11
+msgid "Sync Database"
+msgstr "Datenbank synchronisieren"
+
+#: yaffo/templates/utilities/index_photos.html:15
+msgid "Compare photos on the file system with the database"
+msgstr "Fotos im Dateisystem mit der Datenbank vergleichen"
+
+#: yaffo/templates/utilities/index_photos.html:25
+msgid "Go to Settings"
+msgstr "Zu den Einstellungen"
+
+#: yaffo/templates/utilities/index_photos.html:37
+msgid "Total on Filesystem"
+msgstr "Gesamtzahl im Dateisystem"
+
+#: yaffo/templates/utilities/index_photos.html:41
+msgid "Imported in Database"
+msgstr "In die Datenbank importiert"
+
+#: yaffo/templates/utilities/index_photos.html:45
+msgid "Indexed in Database"
+msgstr "In der Datenbank indiziert"
+
+#: yaffo/templates/utilities/index_photos.html:49
+msgid "Not Indexed"
+msgstr "Nicht indiziert"
+
+#: yaffo/templates/utilities/index_photos.html:53
+msgid "Orphaned in DB"
+msgstr "Verwaist in der Datenbank"
+
+#: yaffo/templates/utilities/index_photos.html:67
+msgid "No Media Directories Configured"
+msgstr "Keine Medienverzeichnisse konfiguriert"
+
+#: yaffo/templates/utilities/index_photos.html:69
+#, python-format
+msgid ""
+"\n"
+"                Please configure media directories in <a "
+"href=\"%(settings_url)s\">Settings</a> to start indexing photos.\n"
+"            "
+msgstr ""
+"\n"
+"                Konfigurieren Sie unter <a "
+"href=\"%(settings_url)s\">Einstellungen</a> Medienverzeichnisse, um mit "
+"dem Indizieren von Fotos zu beginnen.\n"
+"            "
+
+#: yaffo/templates/utilities/remove_duplicates.html:4
+msgid "Remove Duplicates - Utilities - Yaffo"
+msgstr "Duplikate entfernen - Werkzeuge - Yaffo"
+
+#: yaffo/templates/utilities/remove_duplicates.html:10
+msgid "Find and remove duplicate photos and videos"
+msgstr "Doppelte Fotos und Videos finden und entfernen"
+
+#: yaffo/templates/utilities/remove_duplicates_form.html:8
+msgid "Total Media"
+msgstr "Medien insgesamt"
+
+#: yaffo/templates/utilities/remove_duplicates_form.html:12
+msgid "Directories"
+msgstr "Verzeichnisse"
+
+#: yaffo/templates/utilities/remove_duplicates_form.html:18
+msgid "Configuration"
+msgstr "Konfiguration"
+
+#: yaffo/templates/utilities/remove_duplicates_form.html:20
+msgid "Select one or more directories to scan for duplicate photos and videos."
+msgstr ""
+"Wählen Sie ein oder mehrere Verzeichnisse aus, die nach doppelten Fotos und "
+"Videos durchsucht werden sollen."
+
+#: yaffo/templates/utilities/remove_duplicates_form.html:32
+msgid "Select directory to scan for duplicates"
+msgstr "Verzeichnis zum Durchsuchen nach Duplikaten auswählen"
+
+#: yaffo/templates/utilities/remove_duplicates_form.html:40
+#: yaffo/templates/utilities/remove_duplicates_results_form_header.html:56
+msgid "Browse"
+msgstr "Durchsuchen"
+
+#: yaffo/templates/utilities/remove_duplicates_form.html:56
+msgid "No directory selected"
+msgstr "Kein Verzeichnis ausgewählt"
+
+#: yaffo/templates/utilities/remove_duplicates_form.html:67
+msgid "Rescan Directories"
+msgstr "Verzeichnisse erneut durchsuchen"
+
+#: yaffo/templates/utilities/remove_duplicates_form.html:78
+msgid "+ Add Another Directory"
+msgstr "+ Weiteres Verzeichnis hinzufügen"
+
+#: yaffo/templates/utilities/remove_duplicates_form.html:87
+msgid "Find Duplicates"
+msgstr "Duplikate finden"
+
+#: yaffo/templates/utilities/remove_duplicates_photo_card.html:9
+#: yaffo/templates/utilities/remove_duplicates_photo_card.html:11
+msgid "Duplicate video"
+msgstr "Doppeltes Video"
+
+#: yaffo/templates/utilities/remove_duplicates_photo_card.html:13
+msgid "Duplicate photo"
+msgstr "Doppeltes Foto"
+
+#: yaffo/templates/utilities/remove_duplicates_results.html:4
+msgid "Duplicate Results - Utilities - Yaffo"
+msgstr "Duplikatergebnisse - Werkzeuge - Yaffo"
+
+#: yaffo/templates/utilities/remove_duplicates_results.html:14
+msgid "Duplicate Media Found"
+msgstr "Doppelte Medien gefunden"
+
+#: yaffo/templates/utilities/remove_duplicates_results.html:15
+msgid "Review and manage duplicate photos and videos"
+msgstr "Doppelte Fotos und Videos prüfen und verwalten"
+
+#: yaffo/templates/utilities/remove_duplicates_results.html:21
+msgid "No Duplicates Found"
+msgstr "Keine Duplikate gefunden"
+
+#: yaffo/templates/utilities/remove_duplicates_results.html:22
+msgid "All media in the scanned directories appear to be unique."
+msgstr "Alle Medien in den durchsuchten Verzeichnissen scheinen eindeutig zu sein."
+
+#: yaffo/templates/utilities/remove_duplicates_results_form.html:11
+msgid "Duplicate Groups"
+msgstr "Duplikatgruppen"
+
+#: yaffo/templates/utilities/remove_duplicates_results_form.html:14
+#, python-format
+msgid "Group %(number)s"
+msgstr "Gruppe %(number)s"
+
+#: yaffo/templates/utilities/remove_duplicates_results_form_header.html:10
+msgid "Total Media Processed"
+msgstr "Medien insgesamt verarbeitet"
+
+#: yaffo/templates/utilities/remove_duplicates_results_form_header.html:14
+msgid "Duplicate Groups Found"
+msgstr "Duplikatgruppen gefunden"
+
+#: yaffo/templates/utilities/remove_duplicates_results_form_header.html:18
+#, python-brace-format
+msgid "Duplicates Selected"
+msgstr "Duplikate ausgewählt"
+
+#: yaffo/templates/utilities/remove_duplicates_results_form_header.html:24
+msgid "Action:"
+msgstr "Aktion:"
+
+#: yaffo/templates/utilities/remove_duplicates_results_form_header.html:34
+msgid "Move to Trash"
+msgstr "In den Papierkorb verschieben"
+
+#: yaffo/templates/utilities/remove_duplicates_results_form_header.html:35
+msgid "Move to Folder"
+msgstr "In Ordner verschieben"
+
+#: yaffo/templates/utilities/remove_duplicates_results_form_header.html:36
+msgid "Permanently Delete"
+msgstr "Dauerhaft löschen"
+
+#: yaffo/templates/utilities/remove_duplicates_results_form_header.html:42
+msgid "Destination Folder:"
+msgstr "Zielordner:"
+
+#: yaffo/templates/utilities/remove_duplicates_results_form_header.html:47
+msgid "Select destination folder"
+msgstr "Zielordner auswählen"
+
+#: yaffo/templates/utilities/remove_duplicates_results_form_header.html:68
+msgid "Remove Selected Duplicates"
+msgstr "Ausgewählte Duplikate entfernen"
 
 #~ msgid ""
 #~ "\n"

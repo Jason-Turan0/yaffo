@@ -1,12 +1,13 @@
 import json
 from dataclasses import asdict, dataclass
 
-from flask import render_template, Flask, request, jsonify, Response, stream_with_context
+from flask import Flask, Response, jsonify, render_template, request, stream_with_context
+from flask_babel import gettext
+
 from yaffo.db import db
 from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING
-
-from yaffo.utils.file_sync import MediaScan, iter_media_scan, perform_sync
 from yaffo.routes.utilities.common import get_media_dirs, get_thumbnail_dir, automations_sidebar_context
+from yaffo.utils.file_sync import MediaScan, iter_media_scan, perform_sync
 
 
 # NDJSON records the scan stream emits (one JSON object per line). Named so the page
@@ -40,7 +41,13 @@ class ScanComplete:
 @dataclass
 class ScanError:
     message: str
+    code: str
     type: str = "error"
+
+
+@dataclass
+class SyncStarted:
+    job_id: str
 
 
 def init_index_photos_routes(app: Flask):
@@ -57,25 +64,35 @@ def init_index_photos_routes(app: Flask):
         if not media_dirs or len(media_dirs) == 0:
             warnings.append({
                 'type': 'error',
-                'message': 'No media directories configured. Please configure media directories in Settings before syncing.'
+                'message': gettext(
+                    "No media directories configured. Please configure media directories in Settings before syncing."
+                ),
             })
         else:
             missing_media_dirs = [str(d) for d in media_dirs if not d.exists()]
             if missing_media_dirs:
                 warnings.append({
                     'type': 'warning',
-                    'message': f'The following media directories do not exist: {", ".join(missing_media_dirs)}'
+                    'message': gettext(
+                        "The following media directories do not exist: %(directories)s",
+                        directories=", ".join(missing_media_dirs),
+                    ),
                 })
 
         if thumbnail_dir is None:
             warnings.append({
                 'type': 'error',
-                'message': 'No thumbnail directory configured. Please configure thumbnail directory in Settings before syncing.'
+                'message': gettext(
+                    "No thumbnail directory configured. Please configure thumbnail directory in Settings before syncing."
+                ),
             })
         elif not thumbnail_dir.exists():
             warnings.append({
                 'type': 'warning',
-                'message': f'Thumbnail directory does not exist: {thumbnail_dir}. It will be created automatically during indexing.'
+                'message': gettext(
+                    "Thumbnail directory does not exist: %(directory)s. It will be created automatically during indexing.",
+                    directory=thumbnail_dir,
+                ),
             })
 
         can_sync = len(media_dirs) > 0 and all(d.exists() for d in media_dirs) and thumbnail_dir is not None
@@ -112,8 +129,11 @@ def init_index_photos_routes(app: Flask):
                         yield json.dumps(asdict(ScanComplete.from_scan(event))) + "\n"
                     else:
                         yield json.dumps(asdict(ScanProgress(scanned=event))) + "\n"
-            except Exception as e:
-                yield json.dumps(asdict(ScanError(message=str(e)))) + "\n"
+            except Exception:
+                yield json.dumps(asdict(ScanError(
+                    message=gettext("Could not scan the filesystem"),
+                    code="filesystem_scan_failed",
+                ))) + "\n"
 
         # no-store: the scan is live data, so the browser must re-run it every load
         # rather than serving a stale cached result.
@@ -125,7 +145,7 @@ def init_index_photos_routes(app: Flask):
 
     @app.route("/utilities/index-photos/sync", methods=["POST"])
     def utilities_sync_photos():
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         files_to_index = data.get('files_to_index', [])
         files_to_delete = data.get('files_to_delete', [])
 
@@ -133,16 +153,28 @@ def init_index_photos_routes(app: Flask):
         thumbnail_dir = get_thumbnail_dir()
 
         if not media_dirs or len(media_dirs) == 0:
-            return jsonify({'error': 'No media directories configured'}), 400
+            return jsonify({
+                "error": gettext("No media directories configured"),
+                "code": "media_directories_not_configured",
+            }), 400
 
         missing_dirs = [str(d) for d in media_dirs if not d.exists()]
         if missing_dirs:
-            return jsonify({'error': f'Media directories do not exist: {", ".join(missing_dirs)}'}), 400
+            return jsonify({
+                "error": gettext(
+                    "Media directories do not exist: %(directories)s",
+                    directories=", ".join(missing_dirs),
+                ),
+                "code": "media_directories_missing",
+            }), 400
 
         if thumbnail_dir is None:
-            return jsonify({'error': 'No thumbnail directory configured'}), 400
+            return jsonify({
+                "error": gettext("No thumbnail directory configured"),
+                "code": "thumbnail_directory_not_configured",
+            }), 400
 
         thumbnail_dir.mkdir(parents=True, exist_ok=True)
 
         jobs = perform_sync(db.session, files_to_index, files_to_delete, thumbnail_dir)
-        return jsonify({'job_id': jobs.import_job_id}), 202
+        return jsonify(asdict(SyncStarted(job_id=jobs.import_job_id))), 202

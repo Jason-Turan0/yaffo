@@ -71,13 +71,13 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
 
     const buildUnindexedSection = () => {
         const section = el('div', 'section');
-        section.append(el('h2', null, 'Unindexed Photos'));
+        section.append(el('h2', null, i18n.t('utilities:indexPhotos.unindexed.title')));
         const desc = el('p', 'section-description');
         desc.append(document.createTextNode(
-            'The following photos exist in the configured media directories but are not in the database.'));
+            i18n.t('utilities:indexPhotos.unindexed.description')));
         if (mediaDirs.length > 0) {
             desc.append(el('br'));
-            desc.append(document.createTextNode('Media directories: '));
+            desc.append(document.createTextNode(i18n.t('utilities:indexPhotos.mediaDirectories')));
             mediaDirs.forEach((dir, i) => {
                 desc.append(el('code', null, dir));
                 if (i < mediaDirs.length - 1) desc.append(document.createTextNode(', '));
@@ -85,27 +85,38 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
         }
         section.append(desc);
         const rows = unindexed.slice(0, MAX_DISPLAY_ROWS).map((p) => [p.filename, p.full_path]);
-        section.append(buildTable(['Filename', 'Location'], rows));
+        section.append(buildTable([
+            i18n.t('utilities:indexPhotos.filename'),
+            i18n.t('utilities:indexPhotos.location'),
+        ], rows));
         if (unindexed.length > MAX_DISPLAY_ROWS) section.append(truncationNote(unindexed.length));
         return section;
     };
 
     // Keep these labels in sync with ORPHAN_* in yaffo/utils/file_sync.py.
     const ORPHAN_REASON_LABELS = {
-        missing: 'File deleted from disk',
-        unconfigured: 'Media directory no longer configured',
+        missing: 'utilities:indexPhotos.orphanReasons.missing',
+        unconfigured: 'utilities:indexPhotos.orphanReasons.unconfigured',
     };
 
     const buildOrphanedSection = () => {
         const section = el('div', 'section');
-        section.append(el('h2', null, 'Orphaned Database Entries'));
+        section.append(el('h2', null, i18n.t('utilities:indexPhotos.orphaned.title')));
         section.append(el('p', 'section-description',
-            'The following photos are in the database but no longer have a file under the '
-            + 'configured media directories — either the file was deleted, or its media '
-            + 'directory was removed from Settings. Syncing removes these entries.'));
+            i18n.t('utilities:indexPhotos.orphaned.description')));
         const rows = orphaned.slice(0, MAX_DISPLAY_ROWS).map(
-            (p) => [String(p.id), ORPHAN_REASON_LABELS[p.reason] || p.reason || '—', p.full_path]);
-        section.append(buildTable(['Photo ID', 'Reason', 'Location'], rows));
+            (p) => [
+                i18n.number(p.id),
+                ORPHAN_REASON_LABELS[p.reason]
+                    ? i18n.t(ORPHAN_REASON_LABELS[p.reason])
+                    : p.reason || '—',
+                p.full_path,
+            ]);
+        section.append(buildTable([
+            i18n.t('utilities:indexPhotos.photoId'),
+            i18n.t('utilities:indexPhotos.reason'),
+            i18n.t('utilities:indexPhotos.location'),
+        ], rows));
         if (orphaned.length > MAX_DISPLAY_ROWS) section.append(truncationNote(orphaned.length));
         return section;
     };
@@ -117,9 +128,9 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
 
         if (unindexed.length === 0 && orphaned.length === 0) {
             const empty = el('div', 'empty-state');
-            empty.append(el('h2', null, 'Everything is in sync'));
+            empty.append(el('h2', null, i18n.t('utilities:indexPhotos.inSync.title')));
             empty.append(el('p', null,
-                'All photos on the filesystem are indexed, and all database entries have corresponding files.'));
+                i18n.t('utilities:indexPhotos.inSync.description')));
             container.append(empty);
             return;
         }
@@ -140,7 +151,7 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
     const startSync = async () => {
         if (!syncButton) return;
         syncButton.disabled = true;
-        syncButton.textContent = 'Starting Sync...';
+        syncButton.textContent = i18n.t('utilities:indexPhotos.sync.starting');
         try {
             const response = await fetch(config.urls.utilities_sync_photos, {
                 method: 'POST',
@@ -151,17 +162,21 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
                 }),
             });
             if (response.ok) {
-                notification.success('Sync job started');
+                notification.success(i18n.t('utilities:indexPhotos.sync.started'));
                 window.location.reload();
             } else {
-                notification.error('Failed to start sync job');
+                const data = await response.json().catch(() => ({}));
+                notification.error(
+                    data.error || i18n.t('utilities:indexPhotos.sync.startFailed'));
                 syncButton.disabled = false;
-                syncButton.textContent = 'Sync Database';
+                syncButton.textContent = i18n.t('utilities:indexPhotos.sync.button');
             }
         } catch (error) {
-            notification.error('Error starting sync: ' + error.message);
+            notification.error(i18n.t('utilities:indexPhotos.sync.error', {
+                reason: error.message,
+            }));
             syncButton.disabled = false;
-            syncButton.textContent = 'Sync Database';
+            syncButton.textContent = i18n.t('utilities:indexPhotos.sync.button');
         }
     };
 
@@ -181,15 +196,19 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
             revealSyncIfWork();
         } else if (record.type === 'error') {
             setStatus('');
-            notification.error('Scan error: ' + record.message);
+            notification.error(i18n.t('utilities:indexPhotos.scan.error', {
+                reason: record.message,
+            }));
         }
     };
 
     const runScan = async () => {
-        setStatus('Scanning the filesystem…');
+        setStatus(i18n.t('utilities:indexPhotos.scan.scanning'));
         try {
             const response = await fetch(config.urls.utilities_index_photos_scan);
-            if (!response.ok || !response.body) throw new Error('scan request failed');
+            if (!response.ok || !response.body) {
+                throw new Error(i18n.t('utilities:indexPhotos.scan.requestFailed'));
+            }
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -208,7 +227,7 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
             if (tail) handleRecord(JSON.parse(tail));
         } catch (error) {
             setStatus('');
-            notification.error('Failed to scan the filesystem.');
+            notification.error(i18n.t('utilities:indexPhotos.scan.failed'));
         }
     };
 

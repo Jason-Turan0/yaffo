@@ -8,10 +8,10 @@
 
 {% macro render_new_automation_form() %}
     <div class="form-group">
-        <label for="new-automation-name">Name</label>
+        <label for="new-automation-name">{{ _("Name") }}</label>
         <input type="text" id="new-automation-name" name="name" required
-               placeholder="e.g. Tag beach photos, Weekly cleanup">
-        <p class="hint-text">Starts empty — build it through a conversation, then publish.</p>
+               placeholder="{{ _('e.g. Tag beach photos, Weekly cleanup') }}">
+        <p class="hint-text">{{ _("Starts empty — build it through a conversation, then publish.") }}</p>
     </div>
 {% endmacro %}
 
@@ -22,7 +22,7 @@
                 <a href="{{ url_for('automations_show', slug=automation.slug) }}"
                    class="{% if automation.slug == selected_slug %}active{% endif %}">
                     <span class="panel-nav-label">{{ automation.name }}</span>
-                    {% if automation.enabled %}<span class="automation-nav-badge">on</span>{% endif %}
+                    {% if automation.enabled %}<span class="automation-nav-badge">{{ _("On") }}</span>{% endif %}
                 </a>
             </li>
         {% endfor %}
@@ -33,40 +33,40 @@
     <div class="utilities-container">
         <div class="utilities-sidebars">
             <nav class="sidebar utilities-sidebar">
-                <h2>Utilities</h2>
+                <h2>{{ _("Utilities") }}</h2>
                 <ul class="panel-nav">
                     <li>
                         <a href="{{ url_for('utilities_index_photos') }}"
                            class="{% if request.endpoint == 'utilities_index_photos' %}active{% endif %}">
-                            Index Photos
+                            {{ _("Index Photos") }}
                         </a>
                     </li>
                     <li>
                         <a href="{{ url_for('utilities_remove_duplicates') }}"
                            class="{% if request.endpoint in ['utilities_remove_duplicates', 'utilities_remove_duplicates_results'] %}active{% endif %}">
-                            Remove Duplicates
+                            {{ _("Remove Duplicates") }}
                         </a>
                     </li>
                 </ul>
             </nav>
             <nav class="sidebar utilities-sidebar">
-                <h2>Automations</h2>
-                <h3 class="automations-nav-heading">System</h3>
+                <h2>{{ _("Automations") }}</h2>
+                <h3 class="automations-nav-heading">{{ _("System") }}</h3>
                 {% if system_automations %}
                     {{ automation_nav_list(system_automations) }}
                 {% else %}
-                    <p class="no-data">None</p>
+                    <p class="no-data">{{ _("None") }}</p>
                 {% endif %}
 
-                <h3 class="automations-nav-heading">Custom</h3>
+                <h3 class="automations-nav-heading">{{ _("Custom") }}</h3>
                 {% if custom_automations %}
                     {{ automation_nav_list(custom_automations) }}
                 {% else %}
-                    <p class="no-data">No custom automations yet</p>
+                    <p class="no-data">{{ _("No custom automations yet") }}</p>
                 {% endif %}
 
                 <button type="button" id="new-automation-button" class="btn-secondary new-automation-button"
-                        data-icon="add">New automation
+                        data-icon="add">{{ _("New automation") }}
                 </button>
             </nav>
         </div>
@@ -77,6 +77,12 @@
     </div>
 
     {# Shared across every utilities page so the sidebar's "New automation" works anywhere. #}
-    {{ render_modal('newAutomationModal', 'New Automation', url_for('automations_create'), render_new_automation_form, 'Create') }}
+    {{ render_modal(
+        'newAutomationModal',
+        _('New Automation'),
+        url_for('automations_create'),
+        render_new_automation_form,
+        _('Create'),
+    ) }}
     <script src="{{ url_for('static', filename='utilities/_base.js') }}"></script>
 {% endblock %}

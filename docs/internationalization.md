@@ -663,13 +663,13 @@ route modules and browser-facing errors are part of the same checklist item.
 - [x] Settings LLM provider and API-key forms:
   `templates/settings/_llm.html`,
   `templates/settings/_llm_api_key.html`, and their settings routes.
-- [ ] Utilities landing/navigation:
+- [x] Utilities landing/navigation:
   `templates/utilities/_base.html` and `static/utilities/_base.js`.
-- [ ] Photo/video indexing:
+- [x] Photo/video indexing:
   `templates/utilities/index_photos.html`,
   `static/utilities/index_photos.js`, and
   `routes/utilities/index_photos.py`.
-- [ ] Duplicate detection form, results, photo cards, counts, and actions:
+- [x] Duplicate detection form, results, photo cards, counts, and actions:
   all `templates/utilities/remove_duplicates*.html` templates and
   `routes/utilities/remove_duplicates.py`.
 - [ ] Automation list/editor:

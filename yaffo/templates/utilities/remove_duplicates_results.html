@@ -1,7 +1,7 @@
 {% extends "utilities/_base.html" %}
 {% from "components/page_header.html" import page_header %}
 
-{% block title %}Duplicate Results - Utilities - Yaffo{% endblock %}
+{% block title %}{{ _("Duplicate Results - Utilities - Yaffo") }}{% endblock %}
 
 {% block utility_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='utilities/remove_duplicate_results.css') }}">
@@ -10,13 +10,16 @@
 
 {% block utility_content %}
 <div class="utility-page">
-    {{ page_header('Duplicate Media Found', 'Review and manage duplicate photos and videos') }}
+    {{ page_header(
+        _('Duplicate Media Found'),
+        _('Review and manage duplicate photos and videos'),
+    ) }}
     {% if view_model.duplicate_group_count > 0 %}
     {% include "utilities/remove_duplicates_results_form.html" %}
     {% else %}
     <div class="empty-state">
-        <h2>No Duplicates Found</h2>
-        <p>All media in the scanned directories appear to be unique.</p>
+        <h2>{{ _("No Duplicates Found") }}</h2>
+        <p>{{ _("All media in the scanned directories appear to be unique.") }}</p>
     </div>
     {% endif %}
 </div>

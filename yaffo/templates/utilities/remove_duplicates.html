@@ -1,13 +1,23 @@
 {% extends "utilities/_base.html" %}
 {% from "components/job_section.html" import job_section %}
 {% from "components/page_header.html" import page_header %}
-{% block title %}Remove Duplicates - Utilities - Yaffo{% endblock %}
+{% block title %}{{ _("Remove Duplicates - Utilities - Yaffo") }}{% endblock %}
 
 {% block utility_content %}
     <div class="utility-page">
-        {{ page_header('Remove Duplicates', 'Find and remove duplicate photos and videos') }}
+        {{ page_header(
+            _('Remove Duplicates'),
+            _('Find and remove duplicate photos and videos'),
+        ) }}
 
         {{ job_section(active_jobs, show_cancel=true) }}
         {% include "utilities/remove_duplicates_form.html" %}
     </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='utilities/remove_duplicates.js') }}"></script>
+<script>
+window.PHOTO_ORGANIZER.initRemoveDuplicates(window.PHOTO_ORGANIZER.i18n, window.APP_CONFIG);
+</script>
 {% endblock %}

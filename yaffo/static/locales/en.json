@@ -211,6 +211,40 @@
   },
   "utilities": {
     "indexPhotos": {
+      "filename": "Filename",
+      "inSync": {
+        "description": "All photos on the filesystem are indexed, and all database entries have corresponding files.",
+        "title": "Everything is in sync"
+      },
+      "location": "Location",
+      "mediaDirectories": "Media directories: ",
+      "orphanReasons": {
+        "missing": "File deleted from disk",
+        "unconfigured": "Media directory no longer configured"
+      },
+      "orphaned": {
+        "description": "The following photos are in the database but no longer have a file under the configured media directories — either the file was deleted, or its media directory was removed from Settings. Syncing removes these entries.",
+        "title": "Orphaned Database Entries"
+      },
+      "photoId": "Photo ID",
+      "reason": "Reason",
+      "scan": {
+        "error": "Scan error: {{reason}}",
+        "failed": "Failed to scan the filesystem.",
+        "requestFailed": "Scan request failed",
+        "scanning": "Scanning the filesystem…"
+      },
+      "sync": {
+        "button": "Sync Database",
+        "error": "Error starting sync: {{reason}}",
+        "startFailed": "Failed to start sync job",
+        "started": "Sync job started",
+        "starting": "Starting sync…"
+      },
+      "unindexed": {
+        "description": "The following photos exist in the configured media directories but are not in the database.",
+        "title": "Unindexed Photos"
+      },
       "truncation": "Showing the first {{shown}} of {{total}}. Sync processes all of them."
     }
   }

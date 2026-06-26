@@ -2,15 +2,19 @@
 {% from "components/job_section.html" import job_section %}
 {% from "components/page_header.html" import page_header %}
 
-{% block title %}Index Photos - Utilities - Yaffo{% endblock %}
+{% block title %}{{ _("Index Photos - Utilities - Yaffo") }}{% endblock %}
 
 {% block utility_content %}
 <div class="utility-page">
     {% set header_actions %}
         {# Shown by JS once the scan finds work to do. #}
-        <button class="btn btn-primary" id="sync-button" data-icon="sync" hidden>Sync Database</button>
+        <button class="btn btn-primary" id="sync-button" data-icon="sync" hidden>{{ _("Sync Database") }}</button>
     {% endset %}
-    {{ page_header('Index Photos', 'Compare photos on the file system with the database', actions=header_actions) }}
+    {{ page_header(
+        _('Index Photos'),
+        _('Compare photos on the file system with the database'),
+        actions=header_actions,
+    ) }}
 
     {% if warnings|length > 0 %}
     <div class="warnings-section">
@@ -18,7 +22,7 @@
         <div class="alert alert-{{ warning.type }}">
             {{ warning.message }}
             {% if warning.type == 'error' %}
-            <a href="{{ url_for('settings_index') }}" class="alert-link">Go to Settings</a>
+            <a href="{{ url_for('settings_index') }}" class="alert-link">{{ _("Go to Settings") }}</a>
             {% endif %}
         </div>
         {% endfor %}
@@ -30,23 +34,23 @@
     {% if media_dirs|length > 0 %}
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-label">Total on Filesystem</div>
+            <div class="stat-label">{{ _("Total on Filesystem") }}</div>
             <div class="stat-value" id="stat-total-filesystem">—</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Imported in Database</div>
+            <div class="stat-label">{{ _("Imported in Database") }}</div>
             <div class="stat-value" id="stat-total-imported">—</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Indexed in Database</div>
+            <div class="stat-label">{{ _("Indexed in Database") }}</div>
             <div class="stat-value" id="stat-total-indexed">—</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Not Indexed</div>
+            <div class="stat-label">{{ _("Not Indexed") }}</div>
             <div class="stat-value" id="stat-unindexed">—</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Orphaned in DB</div>
+            <div class="stat-label">{{ _("Orphaned in DB") }}</div>
             <div class="stat-value" id="stat-orphaned">—</div>
         </div>
     </div>
@@ -60,8 +64,12 @@
 
     {% if media_dirs|length == 0 %}
     <div class="empty-state">
-        <h2>No Media Directories Configured</h2>
-        <p>Please configure media directories in <a href="{{ url_for('settings_index') }}">Settings</a> to start indexing photos.</p>
+        <h2>{{ _("No Media Directories Configured") }}</h2>
+        <p>
+            {% trans settings_url=url_for('settings_index') %}
+                Please configure media directories in <a href="{{ settings_url }}">Settings</a> to start indexing photos.
+            {% endtrans %}
+        </p>
     </div>
     {% endif %}
 </div>

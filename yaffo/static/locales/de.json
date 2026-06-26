@@ -211,6 +211,40 @@
   },
   "utilities": {
     "indexPhotos": {
+      "filename": "Dateiname",
+      "inSync": {
+        "description": "Alle Fotos im Dateisystem sind indiziert und alle Datenbankeinträge haben entsprechende Dateien.",
+        "title": "Alles ist synchronisiert"
+      },
+      "location": "Speicherort",
+      "mediaDirectories": "Medienverzeichnisse: ",
+      "orphanReasons": {
+        "missing": "Datei wurde vom Datenträger gelöscht",
+        "unconfigured": "Medienverzeichnis ist nicht mehr konfiguriert"
+      },
+      "orphaned": {
+        "description": "Die folgenden Fotos befinden sich in der Datenbank, haben aber keine Datei mehr in den konfigurierten Medienverzeichnissen — entweder wurde die Datei gelöscht oder ihr Medienverzeichnis aus den Einstellungen entfernt. Beim Synchronisieren werden diese Einträge entfernt.",
+        "title": "Verwaiste Datenbankeinträge"
+      },
+      "photoId": "Foto-ID",
+      "reason": "Grund",
+      "scan": {
+        "error": "Scanfehler: {{reason}}",
+        "failed": "Das Dateisystem konnte nicht durchsucht werden.",
+        "requestFailed": "Scananfrage fehlgeschlagen",
+        "scanning": "Dateisystem wird durchsucht…"
+      },
+      "sync": {
+        "button": "Datenbank synchronisieren",
+        "error": "Fehler beim Starten der Synchronisierung: {{reason}}",
+        "startFailed": "Synchronisierungsauftrag konnte nicht gestartet werden",
+        "started": "Synchronisierungsauftrag wurde gestartet",
+        "starting": "Synchronisierung wird gestartet…"
+      },
+      "unindexed": {
+        "description": "Die folgenden Fotos befinden sich in den konfigurierten Medienverzeichnissen, aber nicht in der Datenbank.",
+        "title": "Nicht indizierte Fotos"
+      },
       "truncation": "Die ersten {{shown}} von {{total}} werden angezeigt. Die Synchronisierung verarbeitet alle."
     }
   }

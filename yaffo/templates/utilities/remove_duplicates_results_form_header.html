@@ -7,21 +7,21 @@
     <input type="hidden" name="duplicate_photo_count" value="{{ view_model.duplicate_photo_count }}">
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-label">Total Photos Processed</div>
+            <div class="stat-label">{{ _("Total Media Processed") }}</div>
             <div class="stat-value">{{ view_model.processed_photo_count | format_integer }}</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Duplicate Groups Found</div>
+            <div class="stat-label">{{ _("Duplicate Groups Found") }}</div>
             <div class="stat-value">{{ view_model.duplicate_group_count | format_integer }}</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Duplicates Selected</div>
+            <div class="stat-label">{{ _("Duplicates Selected") }}</div>
             <div class="stat-value">{{ view_model.duplicates_selected_count | format_integer }}</div>
         </div>
     </div>
     <div class="section">
         <div class="form-group">
-            <label for="action-type">Action:</label>
+            <label for="action-type">{{ _("Action:") }}</label>
             <select id="action-type"
                     name="action_type"
                     class="form-control searchable-select"
@@ -31,20 +31,20 @@
                     hx-target="#duplicates-header"
                     hx-swap="outerHTML"
                     hx-include="closest form">
-                <option value="trash" {% if action_type == 'trash' %}selected{% endif %}>Move to Trash</option>
-                <option value="moveFolder" {% if action_type == 'moveFolder' %}selected{% endif %}>Move to Folder</option>
-                <option value="delete" {% if action_type == 'delete' %}selected{% endif %}>Permanently Delete</option>
+                <option value="trash" {% if action_type == 'trash' %}selected{% endif %}>{{ _("Move to Trash") }}</option>
+                <option value="moveFolder" {% if action_type == 'moveFolder' %}selected{% endif %}>{{ _("Move to Folder") }}</option>
+                <option value="delete" {% if action_type == 'delete' %}selected{% endif %}>{{ _("Permanently Delete") }}</option>
             </select>
         </div>
 
         {% if action_type == 'moveFolder' %}
         <div class="form-group">
-            <label for="destination-folder">Destination Folder:</label>
+            <label for="destination-folder">{{ _("Destination Folder:") }}</label>
             <div class="file-browser-input-group">
                 <input type="text"
                        id="destination-folder"
                        name="destination_folder"
-                       placeholder="Select destination folder"
+                       placeholder="{{ _('Select destination folder') }}"
                        class="form-control file-browser-input"
                        hx-post="{{ url_for('utilities_remove_duplicates_action_change', job_id=job_id) }}"
                        hx-trigger="change"
@@ -53,7 +53,7 @@
                        hx-include="closest form"
                        value="{{ destination_folder or '' }}">
                 <button type="button" class="btn-secondary file-browser-btn" data-icon="folder">
-                    Browse
+                    {{ _("Browse") }}
                 </button>
             </div>
         </div>
@@ -65,7 +65,7 @@
                 hx-swap="none"
                 hx-include="[name='selected_photo'], [name='action_type'], [name='destination_folder']"
                 {{ 'disabled' if view_model.duplicates_selected_count == 0 else '' }}>
-            Remove Selected Duplicates
+            {{ _("Remove Selected Duplicates") }}
         </button>
     </div>
 </div>
