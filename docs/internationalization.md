@@ -688,7 +688,7 @@ route modules and browser-facing errors are part of the same checklist item.
   `templates/pages/presentation.html`, `templates/pages/_grid.html`,
   `templates/pages/_widget.html`, `static/pages/detail.js`, and
   `static/pages/grid.js`.
-- [ ] Page designer and chat-driven generation:
+- [x] Page designer and chat-driven generation:
   `templates/pages/design.html`, page-builder JavaScript, and
   `routes/pages.py`.
 - [ ] Widget frame/runtime messages and host formatting:

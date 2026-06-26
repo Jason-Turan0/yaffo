@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 19:54-0500\n"
+"POT-Creation-Date: 2026-06-25 19:58-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -129,8 +129,31 @@ msgstr ""
 msgid "Tag name is required"
 msgstr ""
 
-#: yaffo/routes/pages.py:81 yaffo/routes/pages.py:107
+#: yaffo/routes/pages.py:105 yaffo/routes/pages.py:131
+#: yaffo/templates/pages/design.html:18
 msgid "Untitled Page"
+msgstr ""
+
+#: yaffo/routes/pages.py:242 yaffo/routes/themes_page.py:239
+#: yaffo/routes/utilities/automations.py:628
+msgid "Message is required."
+msgstr ""
+
+#: yaffo/routes/pages.py:246 yaffo/routes/themes_page.py:243
+#: yaffo/routes/utilities/automations.py:632
+#, python-format
+msgid ""
+"No API key configured. Add your %(provider)s API key in Settings → AI "
+"Generation."
+msgstr ""
+
+#: yaffo/routes/pages.py:260 yaffo/routes/themes_page.py:235
+#: yaffo/routes/utilities/automations.py:625
+msgid "A generation is already running."
+msgstr ""
+
+#: yaffo/routes/pages.py:302
+msgid "Version is not ready to publish."
 msgstr ""
 
 #: yaffo/routes/people.py:25
@@ -271,21 +294,6 @@ msgstr ""
 
 #: yaffo/routes/themes_page.py:230
 msgid "System themes cannot be generated."
-msgstr ""
-
-#: yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:625
-msgid "A generation is already running."
-msgstr ""
-
-#: yaffo/routes/themes_page.py:239 yaffo/routes/utilities/automations.py:628
-msgid "Message is required."
-msgstr ""
-
-#: yaffo/routes/themes_page.py:243 yaffo/routes/utilities/automations.py:632
-#, python-format
-msgid ""
-"No API key configured. Add your %(provider)s API key in Settings → AI "
-"Generation."
 msgstr ""
 
 #: yaffo/routes/utilities/automations.py:112
@@ -817,6 +825,7 @@ msgid "Configure Filters"
 msgstr ""
 
 #: yaffo/templates/components/modal.html:17 yaffo/templates/index.html:165
+#: yaffo/templates/pages/design.html:38
 #: yaffo/templates/settings/_llm_api_key.html:19
 #: yaffo/templates/settings/index.html:29
 #: yaffo/templates/themes_page/index.html:134
@@ -1496,6 +1505,48 @@ msgstr ""
 #: yaffo/templates/pages/_widget.html:17
 #, python-format
 msgid "%(title)s preview"
+msgstr ""
+
+#: yaffo/templates/pages/design.html:17
+msgid "Title"
+msgstr ""
+
+#: yaffo/templates/pages/design.html:21
+msgid "Subtitle"
+msgstr ""
+
+#: yaffo/templates/pages/design.html:26
+msgid "Tab order"
+msgstr ""
+
+#: yaffo/templates/pages/design.html:33
+msgid "Display title?"
+msgstr ""
+
+#: yaffo/templates/pages/design.html:37
+msgid "Add widget"
+msgstr ""
+
+#: yaffo/templates/pages/design.html:39
+msgid "Delete Page"
+msgstr ""
+
+#: yaffo/templates/pages/design.html:46
+msgid "Assistant"
+msgstr ""
+
+#: yaffo/templates/pages/design.html:47
+msgid "Collaborate to build your page."
+msgstr ""
+
+#: yaffo/templates/pages/design.html:48
+msgid "Describe what you want…"
+msgstr ""
+
+#: yaffo/templates/pages/design.html:50
+msgid ""
+"Describe what you want and I'll add widgets — e.g. “a map of Maine” or "
+"“our beach photos from 2023”."
 msgstr ""
 
 #: yaffo/templates/people/faces.html:3

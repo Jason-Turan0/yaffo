@@ -1,5 +1,9 @@
+from dataclasses import asdict, dataclass
+from typing import Any
+
 from flask import (
     Flask,
+    jsonify,
     render_template,
     request,
     redirect,
@@ -35,6 +39,26 @@ logger = get_logger(__name__)
 # tiles as images. Generated inline JS still has no fetch/XHR/WebSocket
 # (connect-src 'none'), so there's no channel to exfiltrate the injected photo data.
 _OSM_TILES = "https://tile.openstreetmap.org https://*.tile.openstreetmap.org"
+
+
+@dataclass(frozen=True)
+class RouteError:
+    error: str
+    code: str
+
+
+@dataclass(frozen=True)
+class WidgetQueryPayload:
+    data: Any
+
+
+@dataclass(frozen=True)
+class PageChatStarted:
+    version_id: int
+
+
+def _error(message: str, code: str, status: int):
+    return jsonify(asdict(RouteError(error=message, code=code))), status
 
 
 def _widget_frame_csp(origin: str) -> str:
@@ -186,9 +210,9 @@ def init_pages_routes(app: Flask):
         # AI-influenced, so it runs the same validation; fail closed to null data on
         # an invalid query rather than erroring the widget.
         try:
-            return {"data": resolve_query(db.session, payload.get("query", {}))}
+            return jsonify(asdict(WidgetQueryPayload(data=resolve_query(db.session, payload.get("query", {})))))
         except ValueError:
-            return {"data": None}
+            return jsonify(asdict(WidgetQueryPayload(data=None)))
 
     @app.route("/pages/<int:page_id>/versions/<int:version_id>/widgets/<widget_id>/state", methods=["POST"])
     def pages_version_widget_state(page_id: int, version_id: int, widget_id: str):
@@ -215,9 +239,16 @@ def init_pages_routes(app: Flask):
         payload = request.get_json(silent=True) or {}
         message = (payload.get("message") or "").strip()
         if not message:
-            return {"error": "Message is required."}, 400
+            return _error(gettext("Message is required."), "message_required", 400)
         if llm_config.selected_key_missing():
-            return {"error": f"No API key configured. Add your {llm_config.selected_provider_label()} API key in Settings → AI Generation."}, 400
+            return _error(
+                gettext(
+                    "No API key configured. Add your %(provider)s API key in Settings → AI Generation.",
+                    provider=llm_config.selected_provider_label(),
+                ),
+                "api_key_missing",
+                400,
+            )
 
         # Runtime errors collected client-side, fed back so the model can repair code
         # that threw. `widgets` is the client's current set (layout + any draft
@@ -226,7 +257,7 @@ def init_pages_routes(app: Flask):
         widgets = payload.get("widgets")
         working = page.working_version
         if working is not None and working.status == PAGE_VERSION_STATUS_IN_PROGRESS:
-            return {"error": "A generation is already running."}, 409
+            return _error(gettext("A generation is already running."), "generation_already_running", 409)
         if working is not None:
             # Follow-up on the existing working draft: capture manual edits, then re-run.
             if widgets is not None:
@@ -237,7 +268,7 @@ def init_pages_routes(app: Flask):
             version = page_repo.fork_version(db.session, page_id, widgets=widgets)
         page_repo.add_version_message(db.session, version.id, "user", message)
         generate_page_task(version.id, message, widget_errors)
-        return {"version_id": version.id}, 202
+        return jsonify(asdict(PageChatStarted(version_id=version.id))), 202
 
     def _version_on_page(page_id: int, version_id: int):
         version = page_repo.get_version(db.session, version_id)
@@ -268,7 +299,7 @@ def init_pages_routes(app: Flask):
         live page. Enabled only when the version is READY."""
         version = _version_on_page(page_id, version_id)
         if version.status != PAGE_VERSION_STATUS_READY:
-            return {"error": "Version is not ready to publish."}, 409
+            return _error(gettext("Version is not ready to publish."), "version_not_ready", 409)
         widgets = (request.get_json(silent=True) or {}).get("widgets")
         if widgets is not None:
             page_repo.save_version_widgets(db.session, version_id, widgets)

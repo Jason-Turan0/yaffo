@@ -14,41 +14,40 @@
         <aside class="editor-panel">
             <div class="editor-card">
                 <div class="form-group">
-                    <label for="page-title">Title</label>
-                    <input type="text" id="page-title" name="title" value="{{ page.title }}" placeholder="Untitled Page">
+                    <label for="page-title">{{ _("Title") }}</label>
+                    <input type="text" id="page-title" name="title" value="{{ page.title }}" placeholder="{{ _('Untitled Page') }}">
                 </div>
                 <div class="form-group">
-                    <label for="page-subtitle">Subtitle</label>
+                    <label for="page-subtitle">{{ _("Subtitle") }}</label>
                     <textarea id="page-subtitle" name="page_subtitle" rows="2" class="form-control"
                               >{{ page.subtitle }}</textarea>
                 </div>
                 <div class="form-group">
-                    <label for="page-tab-order">Tab order</label>
+                    <label for="page-tab-order">{{ _("Tab order") }}</label>
                     <input type="number" id="page-tab-order" name="tab_order" step="1"
                            value="{{ page.tab_order }}" class="form-control">
                 </div>
                 <div class="form-group">
                     <label class="checkbox-label inline">
                         <input type="checkbox" id="page-show-title" {% if page.show_title %}checked{% endif %}>
-                        Display title?
+                        {{ _("Display title?") }}
                     </label>
                 </div>
                 <div class="editor-actions">
-                    <button type="button" id="add-widget-button" class="btn-secondary" data-icon="add">Add widget</button>
-                    <button type="button" id="save-page-button" class="btn-primary">Save</button>
-                    <button type="button" class="btn-danger" data-icon="delete"
-                            onclick="window.PHOTO_ORGANIZER.pageDetail.confirmDelete()">Delete Page</button>
+                    <button type="button" id="add-widget-button" class="btn-secondary" data-icon="add">{{ _("Add widget") }}</button>
+                    <button type="button" id="save-page-button" class="btn-primary">{{ _("Save") }}</button>
+                    <button type="button" id="delete-page-button" class="btn-danger" data-icon="delete">{{ _("Delete Page") }}</button>
                 </div>
             </div>
 
             <div class="chat-card">
                 {{ chat_dialog(
                     'conversation',
-                    'Assistant',
-                    'Collaborate to build your page.',
-                    'Describe what you want…',
+                    _('Assistant'),
+                    _('Collaborate to build your page.'),
+                    _('Describe what you want…'),
                     messages=page.messages,
-                    empty_text="Describe what you want and I'll add widgets — e.g. “a map of Maine” or “our beach photos from 2023”."
+                    empty_text=_("Describe what you want and I'll add widgets — e.g. “a map of Maine” or “our beach photos from 2023”.")
                 ) }}
             </div>
         </aside>

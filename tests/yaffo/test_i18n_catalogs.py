@@ -284,3 +284,21 @@ def test_custom_page_grid_uses_gettext_and_localized_javascript():
     assert "pages:widgets.deleteMessage" in grid_source
     assert "pages:chat.cancelMessage" in grid_source
     assert 'gettext("Untitled Page")' in routes
+
+
+def test_page_designer_uses_gettext_localized_javascript_and_named_payloads():
+    detail_source = Path("yaffo/static/pages/detail.js").read_text(encoding="utf-8")
+    design_template = Path("yaffo/templates/pages/design.html").read_text(encoding="utf-8")
+    routes = Path("yaffo/routes/pages.py").read_text(encoding="utf-8")
+
+    assert '{{ _("Title") }}' in design_template
+    assert "{{ _('Untitled Page') }}" in design_template
+    assert '{{ _("Add widget") }}' in design_template
+    assert "_('Assistant')" in design_template
+    assert "onclick=" not in design_template
+    assert "delete-page-button" in detail_source
+    assert 'gettext("Message is required.")' in routes
+    assert 'gettext("A generation is already running.")' in routes
+    assert 'gettext("Version is not ready to publish.")' in routes
+    assert "RouteError" in routes
+    assert "PageChatStarted" in routes

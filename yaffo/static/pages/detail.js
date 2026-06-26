@@ -14,6 +14,9 @@ window.PHOTO_ORGANIZER.initPageDetail = (pageTitle, i18n) => {
         }
     };
 
+    const deleteButton = document.getElementById('delete-page-button');
+    if (deleteButton) deleteButton.addEventListener('click', confirmDelete);
+
     return {
         confirmDelete
     };

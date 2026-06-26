@@ -84,11 +84,22 @@ class TestDetail:
         resp = client.get(f"/pages/{pid}/design")
 
         body = resp.get_data(as_text=True)
+        assert ">Titel<" in body
+        assert ">Untertitel<" in body
+        assert ">Tab-Reihenfolge<" in body
+        assert "Titel anzeigen?" in body
+        assert ">Widget hinzufügen<" in body
+        assert ">Speichern<" in body
+        assert ">Seite löschen<" in body
+        assert "Assistent" in body
+        assert "Gemeinsam Ihre Seite erstellen." in body
+        assert "Beschreiben Sie, was Sie möchten…" in body
         assert 'aria-label="Widget-Titel"' in body
         assert 'aria-label="Titel bearbeiten"' in body
         assert 'aria-label="Widget löschen"' in body
         assert 'title="Karte Vorschau"' in body
         assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in body
+        assert "onclick=" not in body
 
     def test_unknown_page_404(self, client):
         assert client.get("/pages/999").status_code == 404
@@ -136,6 +147,12 @@ class TestUpdate:
         pid = _make_page(title="Original")
         client.post(f"/pages/{pid}/update", json={"title": "  ", "widgets": []})
         assert _reload_page(pid).title == "Untitled Page"
+
+    def test_blank_title_default_uses_saved_locale(self, client):
+        pid = _make_page(title="Original")
+        client.post("/settings/locale", data={"locale": "de"})
+        client.post(f"/pages/{pid}/update", json={"title": "  ", "widgets": []})
+        assert _reload_page(pid).title == "Unbenannte Seite"
 
     def test_unknown_page_404(self, client):
         assert client.post("/pages/999/update", json={"title": "x"}).status_code == 404
@@ -303,7 +320,15 @@ class TestChatGuards:
         pid = _make_page()
         resp = client.post(f"/pages/{pid}/chat", json={"message": "  "})
         assert resp.status_code == 400
-        assert "error" in resp.get_json()
+        assert resp.get_json() == {"error": "Message is required.", "code": "message_required"}
+        assert _reload_page(pid).working_version_id is None
+
+    def test_empty_message_uses_saved_locale_and_error_code(self, client):
+        pid = _make_page()
+        client.post("/settings/locale", data={"locale": "de"})
+        resp = client.post(f"/pages/{pid}/chat", json={"message": "  "})
+        assert resp.status_code == 400
+        assert resp.get_json() == {"error": "Nachricht ist erforderlich.", "code": "message_required"}
         assert _reload_page(pid).working_version_id is None
 
     def test_no_api_key_is_400_and_does_not_fork(self, client):
@@ -312,6 +337,7 @@ class TestChatGuards:
         resp = client.post(f"/pages/{pid}/chat", json={"message": "build a gallery"})
         assert resp.status_code == 400
         assert "API key" in resp.get_json()["error"]
+        assert resp.get_json()["code"] == "api_key_missing"
         assert _reload_page(pid).working_version_id is None
 
     def test_unknown_page_404(self, client):
@@ -368,6 +394,7 @@ class TestChatEnqueue:
         client.post(f"/pages/{pid}/chat", json={"message": "build", "widgets": []})  # leaves it IN_PROGRESS
         resp = client.post(f"/pages/{pid}/chat", json={"message": "again"})
         assert resp.status_code == 409
+        assert resp.get_json() == {"error": "A generation is already running.", "code": "generation_already_running"}
 
     def test_follow_up_commits_client_widget_moves(self, client, with_key_and_task):
         pid = _make_page()
@@ -448,6 +475,16 @@ class TestVersionPublish:
         vid = page_repo.fork_version(db.session, pid).id  # still IN_PROGRESS
         resp = client.post(f"/pages/{pid}/versions/{vid}/publish")
         assert resp.status_code == 409
+        assert resp.get_json() == {"error": "Version is not ready to publish.", "code": "version_not_ready"}
+        assert _reload_page(pid).published_version_id != vid
+
+    def test_not_ready_error_uses_saved_locale_and_error_code(self, client):
+        pid = _make_page()
+        vid = page_repo.fork_version(db.session, pid).id
+        client.post("/settings/locale", data={"locale": "de"})
+        resp = client.post(f"/pages/{pid}/versions/{vid}/publish")
+        assert resp.status_code == 409
+        assert resp.get_json() == {"error": "Version ist noch nicht bereit zur Veröffentlichung.", "code": "version_not_ready"}
         assert _reload_page(pid).published_version_id != vid
 
     def test_commits_client_widget_moves_before_publishing(self, client):

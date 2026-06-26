@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 19:54-0500\n"
+"POT-Creation-Date: 2026-06-25 19:58-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -130,9 +130,34 @@ msgstr "Jeder Tag muss ein Objekt sein"
 msgid "Tag name is required"
 msgstr "Ein Tag-Name ist erforderlich"
 
-#: yaffo/routes/pages.py:81 yaffo/routes/pages.py:107
+#: yaffo/routes/pages.py:105 yaffo/routes/pages.py:131
+#: yaffo/templates/pages/design.html:18
 msgid "Untitled Page"
 msgstr "Unbenannte Seite"
+
+#: yaffo/routes/pages.py:242 yaffo/routes/themes_page.py:239
+#: yaffo/routes/utilities/automations.py:628
+msgid "Message is required."
+msgstr "Nachricht ist erforderlich."
+
+#: yaffo/routes/pages.py:246 yaffo/routes/themes_page.py:243
+#: yaffo/routes/utilities/automations.py:632
+#, python-format
+msgid ""
+"No API key configured. Add your %(provider)s API key in Settings → AI "
+"Generation."
+msgstr ""
+"Kein API-Schlüssel konfiguriert. Fügen Sie Ihren %(provider)s-API-"
+"Schlüssel unter Einstellungen → KI-Generierung hinzu."
+
+#: yaffo/routes/pages.py:260 yaffo/routes/themes_page.py:235
+#: yaffo/routes/utilities/automations.py:625
+msgid "A generation is already running."
+msgstr "Eine Generierung läuft bereits."
+
+#: yaffo/routes/pages.py:302
+msgid "Version is not ready to publish."
+msgstr "Version ist noch nicht bereit zur Veröffentlichung."
 
 #: yaffo/routes/people.py:25
 msgid "Gender must be male, female, or not specified"
@@ -273,23 +298,6 @@ msgstr "Systemdesigns können nicht gelöscht werden"
 #: yaffo/routes/themes_page.py:230
 msgid "System themes cannot be generated."
 msgstr "Systemdesigns können nicht generiert werden."
-
-#: yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:625
-msgid "A generation is already running."
-msgstr "Eine Generierung läuft bereits."
-
-#: yaffo/routes/themes_page.py:239 yaffo/routes/utilities/automations.py:628
-msgid "Message is required."
-msgstr "Nachricht ist erforderlich."
-
-#: yaffo/routes/themes_page.py:243 yaffo/routes/utilities/automations.py:632
-#, python-format
-msgid ""
-"No API key configured. Add your %(provider)s API key in Settings → AI "
-"Generation."
-msgstr ""
-"Kein API-Schlüssel konfiguriert. Fügen Sie Ihren %(provider)s-API-"
-"Schlüssel unter Einstellungen → KI-Generierung hinzu."
 
 #: yaffo/routes/utilities/automations.py:112
 #, python-format
@@ -861,6 +869,7 @@ msgid "Configure Filters"
 msgstr "Filter konfigurieren"
 
 #: yaffo/templates/components/modal.html:17 yaffo/templates/index.html:165
+#: yaffo/templates/pages/design.html:38
 #: yaffo/templates/settings/_llm_api_key.html:19
 #: yaffo/templates/settings/index.html:29
 #: yaffo/templates/themes_page/index.html:134
@@ -1569,6 +1578,50 @@ msgstr "Widget löschen"
 #, python-format
 msgid "%(title)s preview"
 msgstr "%(title)s Vorschau"
+
+#: yaffo/templates/pages/design.html:17
+msgid "Title"
+msgstr "Titel"
+
+#: yaffo/templates/pages/design.html:21
+msgid "Subtitle"
+msgstr "Untertitel"
+
+#: yaffo/templates/pages/design.html:26
+msgid "Tab order"
+msgstr "Tab-Reihenfolge"
+
+#: yaffo/templates/pages/design.html:33
+msgid "Display title?"
+msgstr "Titel anzeigen?"
+
+#: yaffo/templates/pages/design.html:37
+msgid "Add widget"
+msgstr "Widget hinzufügen"
+
+#: yaffo/templates/pages/design.html:39
+msgid "Delete Page"
+msgstr "Seite löschen"
+
+#: yaffo/templates/pages/design.html:46
+msgid "Assistant"
+msgstr "Assistent"
+
+#: yaffo/templates/pages/design.html:47
+msgid "Collaborate to build your page."
+msgstr "Gemeinsam Ihre Seite erstellen."
+
+#: yaffo/templates/pages/design.html:48
+msgid "Describe what you want…"
+msgstr "Beschreiben Sie, was Sie möchten…"
+
+#: yaffo/templates/pages/design.html:50
+msgid ""
+"Describe what you want and I'll add widgets — e.g. “a map of Maine” or "
+"“our beach photos from 2023”."
+msgstr ""
+"Beschreiben Sie, was Sie möchten, und ich füge Widgets hinzu — z. B. „eine "
+"Karte von Maine“ oder „unsere Strandfotos von 2023“."
 
 #: yaffo/templates/people/faces.html:3
 #, python-format
