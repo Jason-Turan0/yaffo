@@ -1,3 +1,4 @@
+from flask_babel import lazy_gettext
 from sqlalchemy import PrimaryKeyConstraint
 from yaffo.db import db
 from yaffo.utils.time import utcnow
@@ -346,6 +347,66 @@ CLASSIFY_LABELS_DEFAULT_THRESHOLD = 50
 CLASSIFY_LABELS_DEFAULT_MAX = 4
 
 
+# Localized display name + description for each built-in (system) automation, keyed by
+# slug. The DB still stores the English name/description the migration seeded (the
+# stable English source), but the UI shows these lazy_gettext strings so a system
+# automation's name/description localizes per request. The source strings mirror the
+# seeded English exactly, so the `en` locale renders identically. Custom (AI-authored)
+# automations are not in here — their names are user data and are shown verbatim.
+# Outside an app context a lazy string resolves to its English source.
+SYSTEM_AUTOMATION_TEXT: dict[str, tuple] = {
+    AUTOMATION_HANDLER_FILE_SYNC: (
+        lazy_gettext("File sync"),
+        lazy_gettext("Reconcile the photo index with the files on disk."),
+    ),
+    AUTOMATION_HANDLER_AUTO_ASSIGN_FACES: (
+        lazy_gettext("Auto-assign faces"),
+        lazy_gettext(
+            "When a photo is indexed, assign each detected face to the one person it "
+            "matches above the threshold — a face matching several people is left "
+            "unassigned."
+        ),
+    ),
+    AUTOMATION_HANDLER_EXPORT_PHOTO_TAG: (
+        lazy_gettext("Export photo tag"),
+        lazy_gettext(
+            "When a photo is modified, write its people and/or location tags back into "
+            "the photo file."
+        ),
+    ),
+    AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME: (
+        lazy_gettext("Assign location name"),
+        lazy_gettext(
+            "When a photo is indexed, name its location from GPS — reuse a nearby named "
+            "photo's name, then fall back to an OpenStreetMap lookup."
+        ),
+    ),
+    AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS: (
+        lazy_gettext("Geotag from neighbors"),
+        lazy_gettext(
+            "When a photo is indexed, give a GPS-less photo the coordinates of the "
+            "closest-in-time photo that has GPS (e.g. a camera shot taken alongside "
+            "phone shots)."
+        ),
+    ),
+    AUTOMATION_HANDLER_CLASSIFY_LABELS: (
+        lazy_gettext("Classify labels"),
+        lazy_gettext(
+            "When a photo is indexed, label it with the subjects, scenes, and "
+            "activities it matches from your label vocabulary (offline CLIP image "
+            "recognition)."
+        ),
+    ),
+    AUTOMATION_HANDLER_DUPLICATE_SCAN: (
+        lazy_gettext("Duplicate scan"),
+        lazy_gettext(
+            "Scan your indexed photos for duplicates on a schedule — results appear in "
+            "the Remove Duplicates tool."
+        ),
+    ),
+}
+
+
 class Automation(db.Model):
     """A schedulable / event-driven unit of functionality (the definition).
 
@@ -383,6 +444,20 @@ class Automation(db.Model):
         cascade="all, delete-orphan",
         order_by="Conversation.id",
     )
+
+    @property
+    def display_name(self) -> str:
+        """The name to show in the UI: the localized text for a built-in automation,
+        else the stored (user/AI-authored) name verbatim."""
+        text = SYSTEM_AUTOMATION_TEXT.get(self.slug) if self.is_system else None
+        return str(text[0]) if text else self.name
+
+    @property
+    def display_description(self) -> str | None:
+        """The description to show in the UI: the localized text for a built-in
+        automation, else the stored description verbatim."""
+        text = SYSTEM_AUTOMATION_TEXT.get(self.slug) if self.is_system else None
+        return str(text[1]) if text else self.description
 
     def to_dict(self):
         return {

@@ -3,6 +3,11 @@
     <p class="section-description">
         {% trans %}The vocabulary used by the <strong>Classify labels</strong> automation for offline image recognition. Enable the labels you want detected or add your own. A custom prompt fine-tunes how a label is matched.{% endtrans %}
     </p>
+    {% if current_locale != 'en' %}
+    <p class="hint-text label-english-note">
+        {{ _("Label names and prompts must be written in English — the offline image recognition model only understands English text.") }}
+    </p>
+    {% endif %}
 
     {% if labels %}
     <input type="text" id="label-filter" class="label-filter" placeholder="{{ _('Filter labels…') }}"

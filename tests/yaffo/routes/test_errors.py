@@ -43,6 +43,31 @@ def test_500_renders_branded_error(app):
     assert 'data-theme="classic"' in body
 
 
+def test_saved_locale_translates_the_404(client):
+    client.post("/settings/locale", data={"locale": "de"})
+
+    body = client.get("/this/route/does/not/exist").data.decode()
+
+    assert 'lang="de"' in body
+    assert "Diese Seite wurde nicht entwickelt" in body
+    assert "Dunkelkammer geschafft" in body
+    assert "This page didn’t develop" not in body
+
+
+def test_saved_locale_translates_the_500(app, client):
+    @app.route("/_boom_500_de")
+    def boom_de():
+        from flask import abort
+        abort(500)
+
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get("/_boom_500_de").data.decode()
+
+    assert 'lang="de"' in body
+    assert "In der Dunkelkammer ist etwas schiefgelaufen" in body
+    assert "Something went wrong in the darkroom" not in body
+
+
 def test_error_screen_uses_inline_tokenized_icon(client):
     body = client.get("/nope").data.decode()
 

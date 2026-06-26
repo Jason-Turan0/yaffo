@@ -1,7 +1,7 @@
 {% extends "utilities/_base.html" %}
 {% from "components/page_header.html" import page_header %}
 
-{% block title %}{{ _("Triggers · %(name)s - Yaffo", name=selected.name) }}{% endblock %}
+{% block title %}{{ _("Triggers · %(name)s - Yaffo", name=selected.display_name) }}{% endblock %}
 
 {% block utility_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='components/cron_builder.css') }}">
@@ -12,7 +12,7 @@
     {% set header_actions %}
     <a href="{{ url_for('automations_show', slug=selected.slug) }}" class="btn-secondary">← {{ _("Back to automation") }}</a>
     {% endset %}
-    {% call page_header(_('Triggers · %(name)s', name=selected.name), actions=header_actions) %}
+    {% call page_header(_('Triggers · %(name)s', name=selected.display_name), actions=header_actions) %}
         {{ _("Add, edit, enable, or remove the triggers that decide when this automation runs.") }}
     {% endcall %}
 

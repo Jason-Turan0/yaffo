@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 20:19-0500\n"
+"POT-Creation-Date: 2026-06-25 22:36-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -17,6 +17,117 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+#: yaffo/themes.py:51
+msgid "Classic"
+msgstr "Klassisch"
+
+#: yaffo/themes.py:52
+msgid "Darkroom"
+msgstr "Dunkelkammer"
+
+#: yaffo/themes.py:53
+msgid "Neo-Brutalist"
+msgstr "Neo-Brutalismus"
+
+#: yaffo/themes.py:54
+msgid "Scrapbook"
+msgstr "Sammelalbum"
+
+#: yaffo/themes.py:55
+msgid "Photos App"
+msgstr "Fotos-App"
+
+#: yaffo/themes.py:56
+msgid "Memphis"
+msgstr "Memphis"
+
+#: yaffo/db/models.py:359
+msgid "File sync"
+msgstr "Dateisynchronisierung"
+
+#: yaffo/db/models.py:360
+msgid "Reconcile the photo index with the files on disk."
+msgstr "Den Fotoindex mit den Dateien auf der Festplatte abgleichen."
+
+#: yaffo/db/models.py:363
+msgid "Auto-assign faces"
+msgstr "Gesichter automatisch zuweisen"
+
+#: yaffo/db/models.py:365
+msgid ""
+"When a photo is indexed, assign each detected face to the one person it "
+"matches above the threshold — a face matching several people is left "
+"unassigned."
+msgstr ""
+"Wenn ein Foto indiziert wird, jedes erkannte Gesicht der einen Person "
+"zuweisen, mit der es oberhalb des Schwellenwerts übereinstimmt — ein "
+"Gesicht, das zu mehreren Personen passt, bleibt nicht zugewiesen."
+
+#: yaffo/db/models.py:371
+msgid "Export photo tag"
+msgstr "Foto-Tag exportieren"
+
+#: yaffo/db/models.py:373
+msgid ""
+"When a photo is modified, write its people and/or location tags back into"
+" the photo file."
+msgstr ""
+"Wenn ein Foto geändert wird, seine Personen- und/oder Orts-Tags zurück in"
+" die Fotodatei schreiben."
+
+#: yaffo/db/models.py:378
+msgid "Assign location name"
+msgstr "Ortsnamen zuweisen"
+
+#: yaffo/db/models.py:380
+msgid ""
+"When a photo is indexed, name its location from GPS — reuse a nearby "
+"named photo's name, then fall back to an OpenStreetMap lookup."
+msgstr ""
+"Wenn ein Foto indiziert wird, seinen Ort anhand der GPS-Daten benennen — "
+"den Namen eines nahegelegenen benannten Fotos wiederverwenden und sonst "
+"auf eine OpenStreetMap-Suche zurückgreifen."
+
+#: yaffo/db/models.py:385
+msgid "Geotag from neighbors"
+msgstr "Geotag von Nachbarn"
+
+#: yaffo/db/models.py:387
+msgid ""
+"When a photo is indexed, give a GPS-less photo the coordinates of the "
+"closest-in-time photo that has GPS (e.g. a camera shot taken alongside "
+"phone shots)."
+msgstr ""
+"Wenn ein Foto indiziert wird, einem Foto ohne GPS die Koordinaten des "
+"zeitlich nächstgelegenen Fotos mit GPS geben (z. B. eine Kameraaufnahme, "
+"die zusammen mit Handyaufnahmen gemacht wurde)."
+
+#: yaffo/db/models.py:393
+msgid "Classify labels"
+msgstr "Labels klassifizieren"
+
+#: yaffo/db/models.py:395
+msgid ""
+"When a photo is indexed, label it with the subjects, scenes, and "
+"activities it matches from your label vocabulary (offline CLIP image "
+"recognition)."
+msgstr ""
+"Wenn ein Foto indiziert wird, es mit den Motiven, Szenen und Aktivitäten "
+"aus Ihrem Label-Vokabular versehen, mit denen es übereinstimmt (Offline-"
+"CLIP-Bilderkennung)."
+
+#: yaffo/db/models.py:401
+msgid "Duplicate scan"
+msgstr "Duplikatsuche"
+
+#: yaffo/db/models.py:403
+msgid ""
+"Scan your indexed photos for duplicates on a schedule — results appear in"
+" the Remove Duplicates tool."
+msgstr ""
+"Ihre indizierten Fotos planmäßig auf Duplikate durchsuchen — die "
+"Ergebnisse erscheinen im Werkzeug „Duplikate entfernen“."
 
 #: yaffo/routes/faces.py:76
 #, python-format
@@ -674,6 +785,40 @@ msgid "Started removing %(count)s duplicate"
 msgid_plural "Started removing %(count)s duplicates"
 msgstr[0] "Entfernen von %(count)s Duplikat wurde gestartet"
 msgstr[1] "Entfernen von %(count)s Duplikaten wurde gestartet"
+
+#: yaffo/templates/404.html:3
+msgid "Page not found - Yaffo"
+msgstr "Seite nicht gefunden - Yaffo"
+
+#: yaffo/templates/404.html:13
+msgid "This page didn’t develop"
+msgstr "Diese Seite wurde nicht entwickelt"
+
+#: yaffo/templates/404.html:14
+msgid ""
+"We searched every album and contact sheet, but this one never made it out"
+" of the darkroom. The link may be broken or the page may have moved."
+msgstr ""
+"Wir haben jedes Album und jeden Kontaktabzug durchsucht, aber diese Seite"
+" hat es nie aus der Dunkelkammer geschafft. Der Link ist möglicherweise "
+"defekt oder die Seite wurde verschoben."
+
+#: yaffo/templates/500.html:3
+msgid "Something went wrong - Yaffo"
+msgstr "Etwas ist schiefgelaufen - Yaffo"
+
+#: yaffo/templates/500.html:13
+msgid "Something went wrong in the darkroom"
+msgstr "In der Dunkelkammer ist etwas schiefgelaufen"
+
+#: yaffo/templates/500.html:14
+msgid ""
+"A processing error stopped this page from loading. Give it another moment"
+" — if it keeps happening, the trouble is on our end, not yours."
+msgstr ""
+"Ein Verarbeitungsfehler hat das Laden dieser Seite verhindert. Versuchen "
+"Sie es gleich noch einmal — wenn es weiterhin auftritt, liegt das Problem"
+" bei uns, nicht bei Ihnen."
 
 #: yaffo/templates/_sidebar.html:5 yaffo/templates/people/list.html:28
 msgid "Actions"
@@ -1763,45 +1908,53 @@ msgstr ""
 "benutzerdefinierte Beschreibung verfeinert die Zuordnung eines Labels."
 
 #: yaffo/templates/settings/_labels.html:8
+msgid ""
+"Label names and prompts must be written in English — the offline image "
+"recognition model only understands English text."
+msgstr ""
+"Label-Namen und Prompts müssen auf Englisch verfasst sein — das Offline-"
+"Modell zur Bilderkennung versteht nur englischen Text."
+
+#: yaffo/templates/settings/_labels.html:13
 msgid "Filter labels…"
 msgstr "Labels filtern…"
 
-#: yaffo/templates/settings/_labels.html:9
+#: yaffo/templates/settings/_labels.html:14
 msgid "Filter labels"
 msgstr "Labels filtern"
 
-#: yaffo/templates/settings/_labels.html:21
+#: yaffo/templates/settings/_labels.html:26
 #: yaffo/templates/themes_page/index.html:24
 #: yaffo/templates/themes_page/index.html:38
 msgid "default"
 msgstr "Standard"
 
-#: yaffo/templates/settings/_labels.html:25
+#: yaffo/templates/settings/_labels.html:30
 #: yaffo/templates/settings/index.html:43
 msgid "Remove"
 msgstr "Entfernen"
 
-#: yaffo/templates/settings/_labels.html:29
+#: yaffo/templates/settings/_labels.html:34
 msgid "No labels match your filter."
 msgstr "Keine Labels entsprechen Ihrem Filter."
 
-#: yaffo/templates/settings/_labels.html:31
+#: yaffo/templates/settings/_labels.html:36
 msgid "No labels yet"
 msgstr "Noch keine Labels"
 
-#: yaffo/templates/settings/_labels.html:36
+#: yaffo/templates/settings/_labels.html:41
 msgid "Label name (for example, dog)"
 msgstr "Labelname (zum Beispiel Hund)"
 
-#: yaffo/templates/settings/_labels.html:37
+#: yaffo/templates/settings/_labels.html:42
 msgid "Optional prompt (for example, people swimming in water)"
 msgstr "Optionale Beschreibung (zum Beispiel Menschen, die im Wasser schwimmen)"
 
-#: yaffo/templates/settings/_labels.html:38
+#: yaffo/templates/settings/_labels.html:43
 msgid "Add label"
 msgstr "Label hinzufügen"
 
-#: yaffo/templates/settings/_labels.html:41
+#: yaffo/templates/settings/_labels.html:46
 msgid ""
 "The <strong>name</strong> is the tag shown on photos. The optional "
 "<strong>prompt</strong> is the phrase the recognizer matches against. "
@@ -1813,11 +1966,11 @@ msgstr ""
 "abgleicht. Lassen Sie sie für einfache Objekte leer; Aktivitäten und "
 "Ereignisse funktionieren mit einem ausführlicheren Ausdruck besser."
 
-#: yaffo/templates/settings/_labels.html:47
+#: yaffo/templates/settings/_labels.html:52
 msgid "Re-classify all photos"
 msgstr "Alle Fotos neu klassifizieren"
 
-#: yaffo/templates/settings/_labels.html:48
+#: yaffo/templates/settings/_labels.html:53
 msgid "Run the classifier over your whole library to apply vocabulary changes."
 msgstr ""
 "Führen Sie die Klassifizierung für die gesamte Bibliothek aus, um "
@@ -2581,5 +2734,8 @@ msgstr "Ausgewählte Duplikate entfernen"
 #~ "\n"
 #~ "                    Page %(page)s of %(total)s\n"
 #~ "                "
+#~ msgstr ""
+
+#~ msgid "Something went wrong"
 #~ msgstr ""
 

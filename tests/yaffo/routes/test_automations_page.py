@@ -139,6 +139,30 @@ def test_saved_locale_translates_automation_detail_page(app, client):
     assert "Arbeitscode" in body
 
 
+def test_saved_locale_translates_system_automation_name_and_description(app, client):
+    # System automations carry their English name/description in the DB, but the UI
+    # shows the slug-keyed localized text (header + sidebar nav) instead.
+    _add(app, slug="classify_labels", name="Classify labels",
+         description="When a photo is indexed, label it.", is_system=True,
+         handler="classify_labels")
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get("/utilities/automations/classify_labels").get_data(as_text=True)
+
+    assert "Labels klassifizieren" in body          # localized name (header + sidebar)
+    assert "Offline-CLIP-Bilderkennung" in body     # localized description
+    assert "Classify labels" not in body            # the English DB value is not shown
+
+
+def test_custom_automation_name_is_not_translated(app, client):
+    # Custom automation names are user data — shown verbatim regardless of locale.
+    _add(app, slug="my-thing", name="Classify labels", is_system=False)
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get("/utilities/automations/my-thing").get_data(as_text=True)
+
+    assert "Classify labels" in body                # verbatim (not the system slug)
+    assert "Labels klassifizieren" not in body
+
+
 def test_create_adds_custom_automation(app, client):
     resp = client.post("/utilities/automations/create", data={"name": "Tag beaches"})
     assert resp.status_code == 302

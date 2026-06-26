@@ -70,7 +70,8 @@ def test_page_lists_system_and_custom_themes(client):
     page = client.get("/themes/classic").data.decode()
     for slug, label in themes.THEMES.items():
         assert f'/themes/{slug}"' in page
-        assert label in page
+        # Built-in labels are lazy_gettext (localized at render); compare resolved text.
+        assert str(label) in page
     for theme in themes.list_custom_themes():
         assert f'/themes/{theme.slug}"' in page
         assert theme.label in page
@@ -88,6 +89,11 @@ def test_saved_locale_translates_themes_page(client):
     assert "Umbenennen" in page
     assert "Eine benutzerdefinierte Designvorlage" in page
     assert "Gespräch" in page
+    # Built-in theme names are localized (not the English source from the registry).
+    assert "Klassisch" in page
+    assert "Dunkelkammer" in page
+    assert "Classic" not in page
+    assert "Darkroom" not in page
 
 
 def test_create_custom_theme(client):

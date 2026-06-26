@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 20:19-0500\n"
+"POT-Creation-Date: 2026-06-25 22:36-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,101 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+#: yaffo/themes.py:51
+msgid "Classic"
+msgstr ""
+
+#: yaffo/themes.py:52
+msgid "Darkroom"
+msgstr ""
+
+#: yaffo/themes.py:53
+msgid "Neo-Brutalist"
+msgstr ""
+
+#: yaffo/themes.py:54
+msgid "Scrapbook"
+msgstr ""
+
+#: yaffo/themes.py:55
+msgid "Photos App"
+msgstr ""
+
+#: yaffo/themes.py:56
+msgid "Memphis"
+msgstr ""
+
+#: yaffo/db/models.py:359
+msgid "File sync"
+msgstr ""
+
+#: yaffo/db/models.py:360
+msgid "Reconcile the photo index with the files on disk."
+msgstr ""
+
+#: yaffo/db/models.py:363
+msgid "Auto-assign faces"
+msgstr ""
+
+#: yaffo/db/models.py:365
+msgid ""
+"When a photo is indexed, assign each detected face to the one person it "
+"matches above the threshold — a face matching several people is left "
+"unassigned."
+msgstr ""
+
+#: yaffo/db/models.py:371
+msgid "Export photo tag"
+msgstr ""
+
+#: yaffo/db/models.py:373
+msgid ""
+"When a photo is modified, write its people and/or location tags back into"
+" the photo file."
+msgstr ""
+
+#: yaffo/db/models.py:378
+msgid "Assign location name"
+msgstr ""
+
+#: yaffo/db/models.py:380
+msgid ""
+"When a photo is indexed, name its location from GPS — reuse a nearby "
+"named photo's name, then fall back to an OpenStreetMap lookup."
+msgstr ""
+
+#: yaffo/db/models.py:385
+msgid "Geotag from neighbors"
+msgstr ""
+
+#: yaffo/db/models.py:387
+msgid ""
+"When a photo is indexed, give a GPS-less photo the coordinates of the "
+"closest-in-time photo that has GPS (e.g. a camera shot taken alongside "
+"phone shots)."
+msgstr ""
+
+#: yaffo/db/models.py:393
+msgid "Classify labels"
+msgstr ""
+
+#: yaffo/db/models.py:395
+msgid ""
+"When a photo is indexed, label it with the subjects, scenes, and "
+"activities it matches from your label vocabulary (offline CLIP image "
+"recognition)."
+msgstr ""
+
+#: yaffo/db/models.py:401
+msgid "Duplicate scan"
+msgstr ""
+
+#: yaffo/db/models.py:403
+msgid ""
+"Scan your indexed photos for duplicates on a schedule — results appear in"
+" the Remove Duplicates tool."
+msgstr ""
 
 #: yaffo/routes/faces.py:76
 #, python-format
@@ -630,6 +725,34 @@ msgid "Started removing %(count)s duplicate"
 msgid_plural "Started removing %(count)s duplicates"
 msgstr[0] ""
 msgstr[1] ""
+
+#: yaffo/templates/404.html:3
+msgid "Page not found - Yaffo"
+msgstr ""
+
+#: yaffo/templates/404.html:13
+msgid "This page didn’t develop"
+msgstr ""
+
+#: yaffo/templates/404.html:14
+msgid ""
+"We searched every album and contact sheet, but this one never made it out"
+" of the darkroom. The link may be broken or the page may have moved."
+msgstr ""
+
+#: yaffo/templates/500.html:3
+msgid "Something went wrong - Yaffo"
+msgstr ""
+
+#: yaffo/templates/500.html:13
+msgid "Something went wrong in the darkroom"
+msgstr ""
+
+#: yaffo/templates/500.html:14
+msgid ""
+"A processing error stopped this page from loading. Give it another moment"
+" — if it keeps happening, the trouble is on our end, not yours."
+msgstr ""
 
 #: yaffo/templates/_sidebar.html:5 yaffo/templates/people/list.html:28
 msgid "Actions"
@@ -1685,45 +1808,51 @@ msgid ""
 msgstr ""
 
 #: yaffo/templates/settings/_labels.html:8
+msgid ""
+"Label names and prompts must be written in English — the offline image "
+"recognition model only understands English text."
+msgstr ""
+
+#: yaffo/templates/settings/_labels.html:13
 msgid "Filter labels…"
 msgstr ""
 
-#: yaffo/templates/settings/_labels.html:9
+#: yaffo/templates/settings/_labels.html:14
 msgid "Filter labels"
 msgstr ""
 
-#: yaffo/templates/settings/_labels.html:21
+#: yaffo/templates/settings/_labels.html:26
 #: yaffo/templates/themes_page/index.html:24
 #: yaffo/templates/themes_page/index.html:38
 msgid "default"
 msgstr ""
 
-#: yaffo/templates/settings/_labels.html:25
+#: yaffo/templates/settings/_labels.html:30
 #: yaffo/templates/settings/index.html:43
 msgid "Remove"
 msgstr ""
 
-#: yaffo/templates/settings/_labels.html:29
+#: yaffo/templates/settings/_labels.html:34
 msgid "No labels match your filter."
 msgstr ""
 
-#: yaffo/templates/settings/_labels.html:31
+#: yaffo/templates/settings/_labels.html:36
 msgid "No labels yet"
 msgstr ""
 
-#: yaffo/templates/settings/_labels.html:36
+#: yaffo/templates/settings/_labels.html:41
 msgid "Label name (for example, dog)"
 msgstr ""
 
-#: yaffo/templates/settings/_labels.html:37
+#: yaffo/templates/settings/_labels.html:42
 msgid "Optional prompt (for example, people swimming in water)"
 msgstr ""
 
-#: yaffo/templates/settings/_labels.html:38
+#: yaffo/templates/settings/_labels.html:43
 msgid "Add label"
 msgstr ""
 
-#: yaffo/templates/settings/_labels.html:41
+#: yaffo/templates/settings/_labels.html:46
 msgid ""
 "The <strong>name</strong> is the tag shown on photos. The optional "
 "<strong>prompt</strong> is the phrase the recognizer matches against. "
@@ -1731,11 +1860,11 @@ msgid ""
 " a fuller phrase."
 msgstr ""
 
-#: yaffo/templates/settings/_labels.html:47
+#: yaffo/templates/settings/_labels.html:52
 msgid "Re-classify all photos"
 msgstr ""
 
-#: yaffo/templates/settings/_labels.html:48
+#: yaffo/templates/settings/_labels.html:53
 msgid "Run the classifier over your whole library to apply vocabulary changes."
 msgstr ""
 

@@ -511,7 +511,7 @@ Status as of June 25, 2026:
 - [x] Phase 4.2: faces and people workflows.
 - [x] Phase 4.3: locations map/list.
 - [x] Phase 4.4: settings.
-- [ ] Phase 4.5–4.9: remaining feature screens and LLM prompt behavior.
+- [x] Phase 4.5–4.9: remaining feature screens and LLM prompt behavior.
 - [ ] Phase 5: translation and release-readiness work.
 
 The completed home/media slice includes:
@@ -616,7 +616,7 @@ Migrate the highest-reuse UI first:
 Completing this phase removes a large percentage of repeated English copy and
 establishes examples for feature work.
 
-### Phase 4: feature-by-feature migration — in progress
+### Phase 4: feature-by-feature migration — complete
 
 Migrate one vertical slice at a time, including templates, routes, JavaScript,
 and tests:
@@ -625,11 +625,11 @@ and tests:
 - [x] Faces and people.
 - [x] Locations.
 - [x] Settings.
-- [ ] Indexing and duplicate utilities.
-- [ ] Automations.
-- [ ] Themes.
-- [ ] Custom pages and page-builder UI.
-- [ ] LLM-backed page, automation, and theme generation prompts: pass the selected
+- [x] Indexing and duplicate utilities.
+- [x] Automations.
+- [x] Themes.
+- [x] Custom pages and page-builder UI.
+- [x] LLM-backed page, automation, and theme generation prompts: pass the selected
    locale and require replies in the latest user-message language, falling back
    to the application locale when ambiguous.
 
@@ -694,9 +694,9 @@ route modules and browser-facing errors are part of the same checklist item.
 - [x] Widget frame/runtime messages and host formatting:
   `templates/pages/widget_frame.html`, `static/pages/widget_api.js`, and
   `static/pages/widget_broker.js`.
-- [ ] LLM prompts for page, automation, and theme generation:
+- [x] LLM prompts for page, automation, and theme generation:
   `site_agents/prompt_generator/` and the generation task entry points.
-- [ ] Final error-page review:
+- [x] Final error-page review:
   `templates/404.html`, `templates/500.html`, and any remaining route/HTMX
   error fragments not covered by a feature slice.
 

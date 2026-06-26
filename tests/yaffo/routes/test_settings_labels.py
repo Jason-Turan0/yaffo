@@ -144,3 +144,16 @@ def test_reclassify_notification_uses_saved_locale_and_plural(
         "2 Fotos werden im Hintergrund neu klassifiziert…",
         "success",
     )
+
+
+def test_english_only_note_hidden_for_english(app, client):
+    body = client.get("/settings").get_data(as_text=True)
+    assert "must be written in English" not in body
+
+
+def test_english_only_note_shown_for_non_english(app, client):
+    # CLIP only matches English, so non-English users get a note that labels/prompts
+    # must stay in English — shown only when the UI is not already English.
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get("/settings").get_data(as_text=True)
+    assert "müssen auf Englisch verfasst sein" in body

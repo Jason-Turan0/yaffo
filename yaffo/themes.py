@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from flask_babel import lazy_gettext
 from sqlalchemy.orm import Session
 
 from yaffo.db import db
@@ -42,14 +43,17 @@ _SLUG_RE = re.compile(r"^[a-z][a-z0-9-]{1,40}$")
 
 # slug -> display label; every non-default slug must ship its
 # [data-theme="slug"] block in static/themes/<slug>/tokens.css (enforced by
-# tests/yaffo/test_design_tokens.py).
+# tests/yaffo/test_design_tokens.py). Labels are lazy_gettext so they localize per
+# request at render time — the slug stays the stable identifier (selectors, URLs,
+# the AI catalog tool). Outside an app context (the background worker) a lazy label
+# resolves to its English source, so model-facing uses stay stable.
 THEMES: dict[str, str] = {
-    "classic": "Classic",
-    "darkroom": "Darkroom",
-    "neobrutalist": "Neo-Brutalist",
-    "scrapbook": "Scrapbook",
-    "photos-app": "Photos App",
-    "memphis": "Memphis",
+    "classic": lazy_gettext("Classic"),
+    "darkroom": lazy_gettext("Darkroom"),
+    "neobrutalist": lazy_gettext("Neo-Brutalist"),
+    "scrapbook": lazy_gettext("Scrapbook"),
+    "photos-app": lazy_gettext("Photos App"),
+    "memphis": lazy_gettext("Memphis"),
 }
 
 @dataclass

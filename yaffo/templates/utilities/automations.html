@@ -81,11 +81,11 @@
     {% endif %}
 </div>
 {% endset %}
-{% call page_header(selected.name, actions=header_actions) %}
+{% call page_header(selected.display_name, actions=header_actions) %}
     {% if selected.is_system %}
-        {{ selected.description or _("A built-in automation that ships with Yaffo. System automations cannot be edited or deleted.") }}
+        {{ selected.display_description or _("A built-in automation that ships with Yaffo. System automations cannot be edited or deleted.") }}
     {% else %}
-        {{ selected.description or _("No description yet — use “Edit details” to add one.") }}
+        {{ selected.display_description or _("No description yet — use “Edit details” to add one.") }}
     {% endif %}
 {% endcall %}
 
@@ -180,7 +180,7 @@
         <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
         <script>
             window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-                window.PHOTO_ORGANIZER.initAutomationDelete({{ selected.name | tojson }}, i18n);
+                window.PHOTO_ORGANIZER.initAutomationDelete({{ selected.display_name | tojson }}, i18n);
                 window.PHOTO_ORGANIZER.initAutomationRunNow(
                     {{ url_for('automations_run_now', slug=selected.slug) | tojson }},
                     window.APP_CONFIG,
