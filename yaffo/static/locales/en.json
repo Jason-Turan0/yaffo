@@ -179,6 +179,21 @@
       "selectRequired": "Please select at least one face to remove"
     }
   },
+  "pages": {
+    "chat": {
+      "cancelMessage": "Discard this generation and return to the current page?"
+    },
+    "delete": {
+      "message": "Delete \"{{name}}\"? This cannot be undone.",
+      "title": "Delete Page"
+    },
+    "widgets": {
+      "deleteMessage": "Remove this widget?",
+      "deleteTitle": "Delete Widget",
+      "new": "New Widget",
+      "untitled": "Untitled widget"
+    }
+  },
   "settings": {
     "applicationLanguage": "Application language",
     "directory": {

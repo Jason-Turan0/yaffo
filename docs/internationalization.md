@@ -684,7 +684,7 @@ route modules and browser-facing errors are part of the same checklist item.
 - [x] Theme gallery, generation, preview, and publishing:
   `templates/themes_page/index.html`, `static/themes_page/index.js`, and
   `routes/themes_page.py`.
-- [ ] Custom page presentation and widget grid:
+- [x] Custom page presentation and widget grid:
   `templates/pages/presentation.html`, `templates/pages/_grid.html`,
   `templates/pages/_widget.html`, `static/pages/detail.js`, and
   `static/pages/grid.js`.

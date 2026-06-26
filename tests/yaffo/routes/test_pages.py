@@ -53,6 +53,12 @@ class TestCreatePage:
         page_id = int(resp.headers["Location"].rstrip("/").split("/")[-1])
         assert _reload_page(page_id).title == "Untitled Page"
 
+    def test_blank_title_default_uses_saved_locale(self, client):
+        client.post("/settings/locale", data={"locale": "de"})
+        resp = client.post("/pages", data={"title": "   "})
+        page_id = int(resp.headers["Location"].rstrip("/").split("/")[-1])
+        assert _reload_page(page_id).title == "Unbenannte Seite"
+
 
 # --- GET /pages/<id> -------------------------------------------------------
 
@@ -69,6 +75,20 @@ class TestDetail:
         resp = client.get(f"/pages/{pid}")
         assert resp.status_code == 200
         assert "Shown" in resp.get_data(as_text=True)
+
+    def test_saved_locale_translates_widget_grid_chrome(self, client):
+        pid = _make_page(title="Shown")
+        _save_widget(pid, title="Karte")
+        client.post("/settings/locale", data={"locale": "de"})
+
+        resp = client.get(f"/pages/{pid}/design")
+
+        body = resp.get_data(as_text=True)
+        assert 'aria-label="Widget-Titel"' in body
+        assert 'aria-label="Titel bearbeiten"' in body
+        assert 'aria-label="Widget löschen"' in body
+        assert 'title="Karte Vorschau"' in body
+        assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in body
 
     def test_unknown_page_404(self, client):
         assert client.get("/pages/999").status_code == 404

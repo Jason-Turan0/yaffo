@@ -179,6 +179,21 @@
       "selectRequired": "Wählen Sie mindestens ein zu entfernendes Gesicht aus"
     }
   },
+  "pages": {
+    "chat": {
+      "cancelMessage": "Diese Generierung verwerfen und zur aktuellen Seite zurückkehren?"
+    },
+    "delete": {
+      "message": "\"{{name}}\" löschen? Dies kann nicht rückgängig gemacht werden.",
+      "title": "Seite löschen"
+    },
+    "widgets": {
+      "deleteMessage": "Dieses Widget entfernen?",
+      "deleteTitle": "Widget löschen",
+      "new": "Neues Widget",
+      "untitled": "Unbenanntes Widget"
+    }
+  },
   "settings": {
     "applicationLanguage": "Anwendungssprache",
     "directory": {

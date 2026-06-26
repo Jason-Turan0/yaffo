@@ -39,7 +39,8 @@ window.PHOTO_ORGANIZER.initPresentationGrid = () => {
 // IN_PROGRESS/READY/FAILED mean it's a working draft (poll + review). A new draft is
 // forked on the first chat message, and `generation.versionId` then tracks it.
 // See docs/ai-page-builder-async-generation.md.
-window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, config) => {
+window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, config, i18n) => {
+    const t = (key, options = {}) => i18n.t(key, options);
     const grid = GridStack.init({ ...BASE_GRID_OPTS, handle: '.widget-header' });
 
     // Generated/edited widget content the client holds but hasn't saved (manual
@@ -103,7 +104,7 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, con
         const editButton = el.querySelector('.widget-edit');
         if (titleSpan && titleInput && editButton) {
             const endEdit = () => {
-                titleSpan.textContent = titleInput.value.trim() || 'Untitled widget';
+                titleSpan.textContent = titleInput.value.trim() || t('pages:widgets.untitled');
                 titleInput.hidden = true;
                 titleSpan.hidden = false;
                 editButton.hidden = false;
@@ -131,9 +132,9 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, con
             deleteButton.addEventListener('click', async (event) => {
                 event.stopPropagation();
                 const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
-                    title: 'Delete Widget',
-                    message: 'Remove this widget?',
-                    confirmText: 'Delete',
+                    title: t('pages:widgets.deleteTitle'),
+                    message: t('pages:widgets.deleteMessage'),
+                    confirmText: t('common:delete'),
                     confirmClass: 'btn-danger'
                 });
                 if (!confirmed) return;
@@ -172,7 +173,7 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, con
     // Manual add: an empty client-side draft — nothing is persisted until Save.
     const addWidget = () => addDraftWidget({
         id: newWidgetId(),
-        title: 'New Widget',
+        title: t('pages:widgets.new'),
         data_query: {},
         html: '',
         css: '',
@@ -356,9 +357,9 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, con
 
     const cancelGeneration = async () => {
         const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
-            title: 'Cancel generation',
-            message: 'Discard this generation and return to the current page?',
-            confirmText: 'Cancel generation',
+            title: t('components:chat.cancelGeneration'),
+            message: t('pages:chat.cancelMessage'),
+            confirmText: t('components:chat.cancelGeneration'),
             confirmClass: 'btn-danger'
         });
         if (!confirmed) return;
@@ -398,14 +399,14 @@ window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, con
             });
             if (!response.ok) {
                 const body = await response.json().catch(() => ({}));
-                window.notification.error(body.error || 'Could not start generation.');
+                window.notification.error(body.error || t('components:chat.startFailed'));
                 messageInput.value = message;  // let the user retry
                 return;
             }
             const { version_id } = await response.json();
             enterRunning(version_id);
         } catch (error) {
-            window.notification.error('Could not start generation.');
+            window.notification.error(t('components:chat.startFailed'));
             messageInput.value = message;
         }
     };

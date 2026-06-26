@@ -250,13 +250,109 @@ backfill all at once.
 - Keep DOM lookups behind the existing `el()`/`getElementById` helpers so fixtures
   stay simple.
 
-### 3.7 CI
+### 3.7 Running the tests (CLI) & coverage
 
-Add a `frontend` job to a (new) GitHub Actions workflow: `npm ci` + `vitest run
---coverage`, gating PRs. Start with **no coverage threshold**; once Phase 1 lands,
-set a floor (e.g. 60% on the tested files, not the whole tree) and ratchet up.
-This is the first JS gate in CI — pair it with `eslint` (config already exists in
-`yaffo_ui_tests`).
+Vitest is a **CLI tool driven through npm scripts** — the same workflow the
+existing `yaffo_ui_tests` already uses for Jest/Playwright. `package.json`:
+
+```json
+{
+  "scripts": {
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:cov": "vitest run --coverage"
+  }
+}
+```
+
+| Command | Purpose |
+|---|---|
+| `npm run test:unit` | one-shot, exits non-zero on failure — **the CI form** |
+| `npm run test:unit:watch` (or bare `npx vitest`) | watch mode, re-runs only affected tests — the dev loop |
+| `npx vitest run path/to/file.test.js` | a single file |
+| `npx vitest run -t "handleRecord"` | tests matching a name |
+| `npx vitest --ui` | optional browser results UI |
+
+Gotcha: bare `vitest` defaults to **watch**; CI must use `vitest run` or it hangs
+waiting for file changes.
+
+**Coverage is first-class** — no extra framework, just one dev dependency
+(`@vitest/coverage-v8`, the fast V8 provider; `istanbul` is the alternative) and
+the `--coverage` flag. Config in `vitest.config.js`:
+
+```js
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./tests_js/support/setup.js'],   // the global fakes from §3.3
+    coverage: {
+      provider: 'v8',
+      include: ['yaffo/static/**/*.js'],
+      exclude: ['yaffo/static/vendor/**'],           // skip htmx/OpenLayers/gridstack/i18next
+      reporter: ['text', 'html', 'lcov'],            // terminal table + browsable HTML + lcov for CI
+      // thresholds: { lines: 60 },                   // add after Phase 1 (see below)
+    },
+  },
+});
+```
+
+That yields a per-run terminal table, a browsable `coverage/index.html`, and an
+`lcov` file CI can ingest.
+
+**CI gate.** Add a `frontend` job to a (new) GitHub Actions workflow: `npm ci` +
+`npm run test:unit:cov`, gating PRs. Start with **no threshold**; once Phase 1
+lands, set a floor (e.g. `thresholds: { lines: 60 }`) **scoped to the tested
+files, not the whole tree**, so it fails the build if coverage drops rather than
+reporting a vanity number. This is the first JS gate in CI — pair it with `eslint`
+(config already exists in `yaffo_ui_tests`) and `tsc --noEmit` (D1).
+
+### 3.8 Test fixtures vs. Flask templates — avoiding drift
+
+A unit test needs DOM to operate on. Hand-writing that HTML in each test
+**duplicates the Jinja markup** and silently rots when a template changes. Two
+facts make this manageable here:
+
+**Most modules build their own DOM — minimal fixtures, low drift risk.** Modules
+like `index_photos.js` create tables via `document.createElement`; the server only
+provides empty containers (`#scan-results`, `#sync-button`, the stat `<span>`s).
+The fixture is just those few hollow elements — there's almost nothing to drift.
+Keep these fixtures tiny and inline.
+
+**The drift risk is real only for *enhancement* modules** — ones that query
+server-rendered markup (`multi-select.js` reading `.multi-select-wrapper[data-*]`,
+`searchable-select.js`, component macros). For these, **render the actual Jinja
+fragment and use its output as the fixture** so the template stays the single
+source of truth:
+
+- **Yes, Flask templates can render test components.** A small pytest renders the
+  real macro/fragment in isolation (Jinja can render a single
+  `{% macro %}` / `{% include %}` without a full page) and writes the HTML to a
+  committed fixtures dir the JS tests load via jsdom:
+
+  ```python
+  # tests/yaffo/frontend_fixtures/test_render_fixtures.py
+  def test_render_multi_select_fixture(app):
+      html = render_template("components/multi_select.html", options=SAMPLE)
+      (FIXTURES / "multi_select.html").write_text(html)
+  ```
+  ```js
+  // tests_js/multi-select.test.js
+  document.body.innerHTML = readFileSync('tests_js/fixtures/multi_select.html', 'utf8');
+  ```
+
+- **Drift guard:** run that renderer in CI and `git diff --exit-code` the fixtures
+  dir — if a template changes without the fixture being regenerated, CI fails.
+  Same shape as the backend's existing schema drift-guard tests.
+
+- **Don't reimplement Jinja in JS.** Jinja is Python; JS look-alikes (nunjucks)
+  are *not* faithful to its macro/filter semantics. Render with real Jinja
+  (option above) or keep the fixture hollow — never maintain a parallel JS
+  template.
+
+Rule of thumb: **generate DOM in JS → hollow inline fixture; enhance server DOM →
+rendered-from-template fixture with a CI drift guard.** This is decision **D5**.
 
 ---
 
@@ -310,9 +406,10 @@ Author `.ts` under `yaffo/static_src/`, compile with `esbuild`/`tsc` to
 **Option 3 — Status quo (plain JS, no types).** Keep as-is; rely on tests only.
 Lowest effort, no type safety. Viable if the team doesn't value static types.
 
-### 4.3 Recommendation
+### 4.3 Recommendation → Decision D1/D3
 
-**Adopt Option 1 now; treat Option 2 as an optional later graduation.**
+**Adopt Option 1 now; treat Option 2 as an optional later graduation.** (Recorded
+as **D1** and **D3** in §0.)
 
 Rationale: the no-build-step property is genuinely valuable here (simple dev loop,
 clean PyInstaller packaging — see the packaging notes about the fragility of the

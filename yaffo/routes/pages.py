@@ -7,6 +7,7 @@ from flask import (
     abort,
     make_response,
 )
+from flask_babel import gettext
 
 from yaffo.background_tasks.tasks import generate_page_task
 from yaffo.db import db
@@ -77,7 +78,7 @@ def init_pages_routes(app: Flask):
 
     @app.route("/pages", methods=["POST"])
     def pages_create():
-        title = (request.form.get("title") or "").strip() or "Untitled Page"
+        title = (request.form.get("title") or "").strip() or gettext("Untitled Page")
         page_subtitle = (request.form.get("page_subtitle") or "").strip()
         page = page_repo.create_page(db.session, title=title, subtitle=page_subtitle)
         return redirect(url_for("pages_detail", page_id=page.id))
@@ -103,7 +104,7 @@ def init_pages_routes(app: Flask):
         if page_repo.get_page(db.session, page_id) is None:
             abort(404)
         payload = request.get_json(silent=True) or {}
-        title = (payload.get("title") or "").strip() or "Untitled Page"
+        title = (payload.get("title") or "").strip() or gettext("Untitled Page")
         subtitle = (payload.get("subtitle") or "").strip()
         show_title = bool(payload.get("show_title", True))
         tab_order = payload.get("tab_order")

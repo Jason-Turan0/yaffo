@@ -266,3 +266,21 @@ def test_themes_page_uses_gettext_and_localized_javascript():
     assert "themes:chat.cancelMessage" in source
     assert "gettext(\"Theme name is required\")" in routes
     assert "RouteError" in routes
+
+
+def test_custom_page_grid_uses_gettext_and_localized_javascript():
+    detail_source = Path("yaffo/static/pages/detail.js").read_text(encoding="utf-8")
+    grid_source = Path("yaffo/static/pages/grid.js").read_text(encoding="utf-8")
+    presentation_template = Path("yaffo/templates/pages/presentation.html").read_text(encoding="utf-8")
+    design_template = Path("yaffo/templates/pages/design.html").read_text(encoding="utf-8")
+    widget_template = Path("yaffo/templates/pages/_widget.html").read_text(encoding="utf-8")
+    routes = Path("yaffo/routes/pages.py").read_text(encoding="utf-8")
+
+    assert "{{ _('Widget title') }}" in widget_template
+    assert "_('%(title)s preview'" in widget_template
+    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in presentation_template
+    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in design_template
+    assert "pages:delete.message" in detail_source
+    assert "pages:widgets.deleteMessage" in grid_source
+    assert "pages:chat.cancelMessage" in grid_source
+    assert 'gettext("Untitled Page")' in routes

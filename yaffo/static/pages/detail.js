@@ -1,10 +1,12 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.initPageDetail = (pageTitle) => {
+window.PHOTO_ORGANIZER.initPageDetail = (pageTitle, i18n) => {
+    const t = (key, options = {}) => i18n.t(key, options);
+
     const confirmDelete = async () => {
         const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
-            title: 'Delete Page',
-            message: `Delete "${pageTitle}"? This cannot be undone.`,
-            confirmText: 'Delete',
+            title: t('pages:delete.title'),
+            message: t('pages:delete.message', { name: pageTitle }),
+            confirmText: t('common:delete'),
             confirmClass: 'btn-danger'
         });
         if (confirmed) {

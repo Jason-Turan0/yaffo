@@ -69,15 +69,17 @@
 <script src="{{ url_for('static', filename='pages/grid.js') }}"></script>
 <script src="{{ url_for('static', filename='pages/detail.js') }}"></script>
 <script>
-    // The single version the design page edits: the working draft if one exists,
-    // else the published version. Its id + status are passed in so every edit
-    // targets it unambiguously (no published-vs-working guessing server-side).
-    {% set edit_version = page.working_version or page.published_version %}
-    window.PHOTO_ORGANIZER.pageDetail = window.PHOTO_ORGANIZER.initPageDetail({{ page.title | tojson }});
-    window.PHOTO_ORGANIZER.pageGrid = window.PHOTO_ORGANIZER.initDesignGrid(
-        {{ page.id }}, {{ edit_version.id }}, '{{ edit_version.status }}', window.APP_CONFIG);
-    // The broker targets whichever version the grid is currently editing.
-    window.PHOTO_ORGANIZER.initWidgetBroker(
-        {{ page.id }}, window.PHOTO_ORGANIZER.pageGrid.getVersionId, window.APP_CONFIG);
+    window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+        // The single version the design page edits: the working draft if one exists,
+        // else the published version. Its id + status are passed in so every edit
+        // targets it unambiguously (no published-vs-working guessing server-side).
+        {% set edit_version = page.working_version or page.published_version %}
+        window.PHOTO_ORGANIZER.pageDetail = window.PHOTO_ORGANIZER.initPageDetail({{ page.title | tojson }}, i18n);
+        window.PHOTO_ORGANIZER.pageGrid = window.PHOTO_ORGANIZER.initDesignGrid(
+            {{ page.id }}, {{ edit_version.id }}, '{{ edit_version.status }}', window.APP_CONFIG, i18n);
+        // The broker targets whichever version the grid is currently editing.
+        window.PHOTO_ORGANIZER.initWidgetBroker(
+            {{ page.id }}, window.PHOTO_ORGANIZER.pageGrid.getVersionId, window.APP_CONFIG);
+    });
 </script>
 {% endblock %}

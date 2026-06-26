@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 19:48-0500\n"
+"POT-Creation-Date: 2026-06-25 19:54-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -129,6 +129,10 @@ msgstr "Jeder Tag muss ein Objekt sein"
 #: yaffo/routes/media.py:271
 msgid "Tag name is required"
 msgstr "Ein Tag-Name ist erforderlich"
+
+#: yaffo/routes/pages.py:81 yaffo/routes/pages.py:107
+msgid "Untitled Page"
+msgstr "Unbenannte Seite"
 
 #: yaffo/routes/people.py:25
 msgid "Gender must be male, female, or not specified"
@@ -284,8 +288,8 @@ msgid ""
 "No API key configured. Add your %(provider)s API key in Settings → AI "
 "Generation."
 msgstr ""
-"Kein API-Schlüssel konfiguriert. Fügen Sie Ihren %(provider)s-API-Schlüssel "
-"unter Einstellungen → KI-Generierung hinzu."
+"Kein API-Schlüssel konfiguriert. Fügen Sie Ihren %(provider)s-API-"
+"Schlüssel unter Einstellungen → KI-Generierung hinzu."
 
 #: yaffo/routes/utilities/automations.py:112
 #, python-format
@@ -1549,6 +1553,23 @@ msgstr "Tag hinzufügen"
 msgid "Save Changes"
 msgstr "Änderungen speichern"
 
+#: yaffo/templates/pages/_widget.html:7
+msgid "Widget title"
+msgstr "Widget-Titel"
+
+#: yaffo/templates/pages/_widget.html:8
+msgid "Edit title"
+msgstr "Titel bearbeiten"
+
+#: yaffo/templates/pages/_widget.html:9
+msgid "Delete widget"
+msgstr "Widget löschen"
+
+#: yaffo/templates/pages/_widget.html:17
+#, python-format
+msgid "%(title)s preview"
+msgstr "%(title)s Vorschau"
+
 #: yaffo/templates/people/faces.html:3
 #, python-format
 msgid "%(person)s's Faces - Yaffo"
@@ -1976,19 +1997,24 @@ msgstr "Umbenennen"
 
 #: yaffo/templates/themes_page/index.html:72
 msgid "A built-in theme that ships with Yaffo. System themes cannot be deleted."
-msgstr "Ein integriertes Design, das mit Yaffo geliefert wird. Systemdesigns können nicht gelöscht werden."
+msgstr ""
+"Ein integriertes Design, das mit Yaffo geliefert wird. Systemdesigns "
+"können nicht gelöscht werden."
 
 #: yaffo/templates/themes_page/index.html:72
 msgid "A custom theme stored in the application database."
-msgstr "Eine benutzerdefinierte Designvorlage, die in der Anwendungsdatenbank gespeichert ist."
+msgstr ""
+"Eine benutzerdefinierte Designvorlage, die in der Anwendungsdatenbank "
+"gespeichert ist."
 
 #: yaffo/templates/themes_page/index.html:81
 msgid ""
 "The assistant has an unpublished design for this theme. Save it to make "
 "it live, or discard the draft."
 msgstr ""
-"Der Assistent hat ein unveröffentlichtes Design für dieses Design erstellt. "
-"Speichern Sie es, um es live zu schalten, oder verwerfen Sie den Entwurf."
+"Der Assistent hat ein unveröffentlichtes Design für dieses Design "
+"erstellt. Speichern Sie es, um es live zu schalten, oder verwerfen Sie "
+"den Entwurf."
 
 #: yaffo/templates/themes_page/index.html:86
 msgid "Save draft"
@@ -2006,7 +2032,9 @@ msgstr "Gespräch"
 
 #: yaffo/templates/themes_page/index.html:98
 msgid "Describe how this theme should look and the assistant will design it."
-msgstr "Beschreiben Sie, wie dieses Design aussehen soll, und der Assistent gestaltet es."
+msgstr ""
+"Beschreiben Sie, wie dieses Design aussehen soll, und der Assistent "
+"gestaltet es."
 
 #: yaffo/templates/themes_page/index.html:99
 msgid "Describe how this theme should look…"
@@ -2030,7 +2058,9 @@ msgstr "z. B. Mitternacht, Pastell, Wald"
 
 #: yaffo/templates/themes_page/index.html:118
 msgid "Starts from the classic look — design it through a conversation later."
-msgstr "Beginnt mit dem klassischen Aussehen — gestalten Sie es später im Gespräch."
+msgstr ""
+"Beginnt mit dem klassischen Aussehen — gestalten Sie es später im "
+"Gespräch."
 
 #: yaffo/templates/themes_page/index.html:122
 msgid "New Theme"
@@ -2043,7 +2073,9 @@ msgstr "Erstellen"
 
 #: yaffo/templates/themes_page/index.html:130
 msgid "Renaming updates the theme's web address (slug) to match."
-msgstr "Beim Umbenennen wird die Webadresse (Slug) des Designs passend aktualisiert."
+msgstr ""
+"Beim Umbenennen wird die Webadresse (Slug) des Designs passend "
+"aktualisiert."
 
 #: yaffo/templates/themes_page/index.html:134
 msgid "Rename Theme"

@@ -4,9 +4,9 @@
         <div class="widget-header">
             <span class="widget-title">{{ widget.title }}</span>
             {% if editable %}
-            <input type="text" class="widget-title-input" value="{{ widget.title }}" aria-label="Widget title" hidden>
-            <button type="button" class="widget-edit" aria-label="Edit title">✎</button>
-            <button type="button" class="widget-delete" data-widget-id="{{ widget.id }}" aria-label="Delete widget">×</button>
+            <input type="text" class="widget-title-input" value="{{ widget.title }}" aria-label="{{ _('Widget title') }}" hidden>
+            <button type="button" class="widget-edit" aria-label="{{ _('Edit title') }}">✎</button>
+            <button type="button" class="widget-delete" data-widget-id="{{ widget.id }}" aria-label="{{ _('Delete widget') }}">×</button>
             {% endif %}
         </div>
         <div class="widget-body">
@@ -14,7 +14,7 @@
                saved widgets load it by id from the frame route. #}
             <iframe class="widget-frame" data-widget-id="{{ widget.id }}"
                     {% if frame_srcdoc is defined %}srcdoc="{{ frame_srcdoc }}"{% else %}src="{{ url_for('pages_widget_frame', page_id=page.id, widget_id=widget.id) }}"{% endif %}
-                    sandbox="allow-scripts" title="{{ widget.title }} preview"></iframe>
+                    sandbox="allow-scripts" title="{{ _('%(title)s preview', title=widget.title) }}"></iframe>
         </div>
     </div>
 </div>

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 19:48-0500\n"
+"POT-Creation-Date: 2026-06-25 19:54-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -127,6 +127,10 @@ msgstr ""
 
 #: yaffo/routes/media.py:271
 msgid "Tag name is required"
+msgstr ""
+
+#: yaffo/routes/pages.py:81 yaffo/routes/pages.py:107
+msgid "Untitled Page"
 msgstr ""
 
 #: yaffo/routes/people.py:25
@@ -1475,6 +1479,23 @@ msgstr ""
 
 #: yaffo/templates/media/view.html:248
 msgid "Save Changes"
+msgstr ""
+
+#: yaffo/templates/pages/_widget.html:7
+msgid "Widget title"
+msgstr ""
+
+#: yaffo/templates/pages/_widget.html:8
+msgid "Edit title"
+msgstr ""
+
+#: yaffo/templates/pages/_widget.html:9
+msgid "Delete widget"
+msgstr ""
+
+#: yaffo/templates/pages/_widget.html:17
+#, python-format
+msgid "%(title)s preview"
 msgstr ""
 
 #: yaffo/templates/people/faces.html:3
