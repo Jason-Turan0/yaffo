@@ -46,7 +46,7 @@
 <body>
 {{ widget.html | safe }}
 <div id="__yaffo_error__">
-    <div>⚠ This widget couldn't render</div>
+    <div>⚠ {{ _("This widget couldn't render") }}</div>
     <div class="msg" id="__yaffo_error_msg__"></div>
 </div>
 {# The widget runtime API (window.yaffo). Inlined, not <script src>, because the

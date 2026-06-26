@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 19:58-0500\n"
+"POT-Creation-Date: 2026-06-25 20:19-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1547,6 +1547,10 @@ msgstr ""
 msgid ""
 "Describe what you want and I'll add widgets — e.g. “a map of Maine” or "
 "“our beach photos from 2023”."
+msgstr ""
+
+#: yaffo/templates/pages/widget_frame.html:49
+msgid "This widget couldn't render"
 msgstr ""
 
 #: yaffo/templates/people/faces.html:3

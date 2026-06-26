@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 19:58-0500\n"
+"POT-Creation-Date: 2026-06-25 20:19-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -1620,8 +1620,12 @@ msgid ""
 "Describe what you want and I'll add widgets — e.g. “a map of Maine” or "
 "“our beach photos from 2023”."
 msgstr ""
-"Beschreiben Sie, was Sie möchten, und ich füge Widgets hinzu — z. B. „eine "
-"Karte von Maine“ oder „unsere Strandfotos von 2023“."
+"Beschreiben Sie, was Sie möchten, und ich füge Widgets hinzu — z. B. "
+"„eine Karte von Maine“ oder „unsere Strandfotos von 2023“."
+
+#: yaffo/templates/pages/widget_frame.html:49
+msgid "This widget couldn't render"
+msgstr "Dieses Widget konnte nicht dargestellt werden"
 
 #: yaffo/templates/people/faces.html:3
 #, python-format
@@ -2578,3 +2582,4 @@ msgstr "Ausgewählte Duplikate entfernen"
 #~ "                    Page %(page)s of %(total)s\n"
 #~ "                "
 #~ msgstr ""
+

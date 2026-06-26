@@ -187,6 +187,16 @@ class TestWidgetFrame:
     def test_unknown_page_404(self, client):
         assert client.get("/pages/999/widgets/w1/frame").status_code == 404
 
+    def test_saved_locale_translates_runtime_error_label(self, client):
+        pid = _make_page()
+        _save_widget(pid)
+        client.post("/settings/locale", data={"locale": "de"})
+        resp = client.get(f"/pages/{pid}/widgets/w1/frame")
+        body = resp.get_data(as_text=True)
+        assert 'lang="de"' in body
+        assert "Dieses Widget konnte nicht dargestellt werden" in body
+        assert "This widget couldn't render" not in body
+
 
 # --- POST /pages/<id>/widgets/preview --------------------------------------
 

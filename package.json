@@ -1,0 +1,17 @@
+{
+  "name": "yaffo-frontend-tests",
+  "version": "0.1.0",
+  "description": "Unit tests for Yaffo browser-side JavaScript (yaffo/static/**).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:cov": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.8",
+    "jsdom": "^25.0.1",
+    "vitest": "^2.1.8"
+  }
+}

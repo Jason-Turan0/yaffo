@@ -691,7 +691,7 @@ route modules and browser-facing errors are part of the same checklist item.
 - [x] Page designer and chat-driven generation:
   `templates/pages/design.html`, page-builder JavaScript, and
   `routes/pages.py`.
-- [ ] Widget frame/runtime messages and host formatting:
+- [x] Widget frame/runtime messages and host formatting:
   `templates/pages/widget_frame.html`, `static/pages/widget_api.js`, and
   `static/pages/widget_broker.js`.
 - [ ] LLM prompts for page, automation, and theme generation:
