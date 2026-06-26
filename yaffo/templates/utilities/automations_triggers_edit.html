@@ -1,7 +1,7 @@
 {% extends "utilities/_base.html" %}
 {% from "components/page_header.html" import page_header %}
 
-{% block title %}Triggers · {{ selected.name }} - Yaffo{% endblock %}
+{% block title %}{{ _("Triggers · %(name)s - Yaffo", name=selected.name) }}{% endblock %}
 
 {% block utility_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='components/cron_builder.css') }}">
@@ -10,10 +10,10 @@
 
 {% block utility_content %}
     {% set header_actions %}
-    <a href="{{ url_for('automations_show', slug=selected.slug) }}" class="btn-secondary">← Back to automation</a>
+    <a href="{{ url_for('automations_show', slug=selected.slug) }}" class="btn-secondary">← {{ _("Back to automation") }}</a>
     {% endset %}
-    {% call page_header('Triggers · ' ~ selected.name, actions=header_actions) %}
-        Add, edit, enable, or remove the triggers that decide when this automation runs.
+    {% call page_header(_('Triggers · %(name)s', name=selected.name), actions=header_actions) %}
+        {{ _("Add, edit, enable, or remove the triggers that decide when this automation runs.") }}
     {% endcall %}
 
     {% include "utilities/automations_triggers.html" %}
@@ -23,6 +23,8 @@
     <script src="{{ url_for('static', filename='components/cron_builder.js') }}"></script>
     <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
     <script>
-        window.PHOTO_ORGANIZER.initTriggerEditor();
+        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+            window.PHOTO_ORGANIZER.initTriggerEditor(i18n);
+        });
     </script>
 {% endblock %}

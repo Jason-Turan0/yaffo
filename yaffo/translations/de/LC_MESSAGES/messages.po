@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 19:23-0500\n"
+"POT-Creation-Date: 2026-06-25 19:48-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -245,6 +245,320 @@ msgstr "Das neue Verzeichnis entspricht dem aktuellen Verzeichnis"
 msgid "Could not move thumbnail files"
 msgstr "Miniaturansichtsdateien konnten nicht verschoben werden"
 
+#: yaffo/routes/themes_page.py:137
+#, python-format
+msgid "Unknown theme: %(slug)s"
+msgstr "Unbekanntes Design: %(slug)s"
+
+#: yaffo/routes/themes_page.py:149
+msgid "No theme draft to publish."
+msgstr "Kein Designentwurf zum Veröffentlichen vorhanden."
+
+#: yaffo/routes/themes_page.py:166 yaffo/routes/themes_page.py:193
+msgid "Theme name is required"
+msgstr "Designname ist erforderlich"
+
+#: yaffo/routes/themes_page.py:188
+msgid "System themes cannot be renamed"
+msgstr "Systemdesigns können nicht umbenannt werden"
+
+#: yaffo/routes/themes_page.py:201
+msgid "System themes cannot be deleted"
+msgstr "Systemdesigns können nicht gelöscht werden"
+
+#: yaffo/routes/themes_page.py:230
+msgid "System themes cannot be generated."
+msgstr "Systemdesigns können nicht generiert werden."
+
+#: yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:625
+msgid "A generation is already running."
+msgstr "Eine Generierung läuft bereits."
+
+#: yaffo/routes/themes_page.py:239 yaffo/routes/utilities/automations.py:628
+msgid "Message is required."
+msgstr "Nachricht ist erforderlich."
+
+#: yaffo/routes/themes_page.py:243 yaffo/routes/utilities/automations.py:632
+#, python-format
+msgid ""
+"No API key configured. Add your %(provider)s API key in Settings → AI "
+"Generation."
+msgstr ""
+"Kein API-Schlüssel konfiguriert. Fügen Sie Ihren %(provider)s-API-Schlüssel "
+"unter Einstellungen → KI-Generierung hinzu."
+
+#: yaffo/routes/utilities/automations.py:112
+#, python-format
+msgid "%(completed)s of %(total)s processed"
+msgstr "%(completed)s von %(total)s verarbeitet"
+
+#: yaffo/routes/utilities/automations.py:118
+#, python-format
+msgid "%(count)s error"
+msgid_plural "%(count)s errors"
+msgstr[0] "%(count)s Fehler"
+msgstr[1] "%(count)s Fehler"
+
+#: yaffo/routes/utilities/automations.py:125
+#, python-format
+msgid "%(count)s cancelled"
+msgid_plural "%(count)s cancelled"
+msgstr[0] "%(count)s abgebrochen"
+msgstr[1] "%(count)s abgebrochen"
+
+#: yaffo/routes/utilities/automations.py:136
+msgid "Pending"
+msgstr "Ausstehend"
+
+#: yaffo/routes/utilities/automations.py:137
+msgid "Running"
+msgstr "Läuft"
+
+#: yaffo/routes/utilities/automations.py:138
+msgid "Completed"
+msgstr "Abgeschlossen"
+
+#: yaffo/routes/utilities/automations.py:139
+msgid "Cancelled"
+msgstr "Abgebrochen"
+
+#: yaffo/routes/utilities/automations.py:140
+msgid "Failed"
+msgstr "Fehlgeschlagen"
+
+#: yaffo/routes/utilities/automations.py:186
+msgid "Match threshold"
+msgstr "Übereinstimmungsschwelle"
+
+#: yaffo/routes/utilities/automations.py:187
+msgid "Export Location Tags"
+msgstr "Orts-Tags exportieren"
+
+#: yaffo/routes/utilities/automations.py:188
+msgid "Export People Tags"
+msgstr "Personen-Tags exportieren"
+
+#: yaffo/routes/utilities/automations.py:189
+msgid "Export Labels"
+msgstr "Labels exportieren"
+
+#: yaffo/routes/utilities/automations.py:190
+msgid "Export Custom Tags"
+msgstr "Benutzerdefinierte Tags exportieren"
+
+#: yaffo/routes/utilities/automations.py:191
+msgid "Export Favorite"
+msgstr "Favorit exportieren"
+
+#: yaffo/routes/utilities/automations.py:192
+msgid "Reuse a nearby photo's name"
+msgstr "Namen eines Fotos in der Nähe wiederverwenden"
+
+#: yaffo/routes/utilities/automations.py:193
+msgid "Nearby radius (metres)"
+msgstr "Radius in der Nähe (Meter)"
+
+#: yaffo/routes/utilities/automations.py:194
+msgid "Look up name online (OpenStreetMap)"
+msgstr "Namen online nachschlagen (OpenStreetMap)"
+
+#: yaffo/routes/utilities/automations.py:195
+msgid "Overwrite existing location names"
+msgstr "Vorhandene Ortsnamen überschreiben"
+
+#: yaffo/routes/utilities/automations.py:196
+msgid "Time window (minutes)"
+msgstr "Zeitfenster (Minuten)"
+
+#: yaffo/routes/utilities/automations.py:197
+msgid "Confidence threshold"
+msgstr "Konfidenzschwelle"
+
+#: yaffo/routes/utilities/automations.py:198
+msgid "Max labels per photo"
+msgstr "Maximale Labels pro Foto"
+
+#: yaffo/routes/utilities/automations.py:210
+msgid ""
+"A detected face is assigned only when exactly one person matches at or "
+"above this similarity (0 = least similar, 100 = most similar) Higher is "
+"stricter: fewer, more confident assignments."
+msgstr ""
+"Ein erkanntes Gesicht wird nur zugewiesen, wenn genau eine Person mit "
+"dieser Ähnlichkeit oder höher übereinstimmt (0 = am wenigsten ähnlich, "
+"100 = am ähnlichsten). Höher ist strenger: weniger, aber zuverlässigere "
+"Zuweisungen."
+
+#: yaffo/routes/utilities/automations.py:215
+msgid "Write the photo's classification labels into the file's keywords."
+msgstr ""
+"Schreibt die Klassifizierungslabels des Fotos in die Schlüsselwörter der "
+"Datei."
+
+#: yaffo/routes/utilities/automations.py:218
+msgid ""
+"Write the photo's manual tags (name, or name: value) into the file's "
+"keywords."
+msgstr ""
+"Schreibt die manuellen Tags des Fotos (Name oder Name: Wert) in die "
+"Schlüsselwörter der Datei."
+
+#: yaffo/routes/utilities/automations.py:221
+msgid ""
+"Write a \"Favorite\" keyword into the file when the photo is marked a "
+"favorite."
+msgstr ""
+"Schreibt ein „Favorite“-Schlüsselwort in die Datei, wenn das Foto als "
+"Favorit markiert ist."
+
+#: yaffo/routes/utilities/automations.py:227
+msgid ""
+"Copy the location name of the closest already-named photo within the "
+"radius below. Free, offline, and keeps your own naming."
+msgstr ""
+"Kopiert den Ortsnamen des nächstgelegenen bereits benannten Fotos "
+"innerhalb des unten angegebenen Radius. Kostenlos, offline und mit Ihren "
+"eigenen Benennungen."
+
+#: yaffo/routes/utilities/automations.py:234
+msgid ""
+"How close an already-named photo must be to copy its name. Larger values "
+"reuse names more aggressively and make fewer online lookups."
+msgstr ""
+"Legt fest, wie nah ein bereits benanntes Foto sein muss, damit sein Name "
+"kopiert wird. Größere Werte verwenden Namen aggressiver wieder und führen"
+" zu weniger Online-Abfragen."
+
+#: yaffo/routes/utilities/automations.py:241
+msgid ""
+"When no nearby photo is named, reverse-geocode the coordinates via "
+"OpenStreetMap Nominatim (throttled to ~1 request/second)."
+msgstr ""
+"Wenn kein Foto in der Nähe benannt ist, werden die Koordinaten über "
+"OpenStreetMap Nominatim rückwärts geokodiert (gedrosselt auf ca. 1 "
+"Anfrage/Sekunde)."
+
+#: yaffo/routes/utilities/automations.py:245
+msgid "When off, photos that already have a location name are left untouched."
+msgstr ""
+"Wenn deaktiviert, bleiben Fotos mit bereits vorhandenem Ortsnamen "
+"unverändert."
+
+#: yaffo/routes/utilities/automations.py:252
+msgid ""
+"A photo with no GPS borrows the coordinates of the closest-in-time GPS-"
+"tagged photo, but only if it was taken within this many minutes (so "
+"coordinates aren't copied across a long gap / a different place)."
+msgstr ""
+"Ein Foto ohne GPS übernimmt die Koordinaten des zeitlich nächstgelegenen "
+"GPS-getaggten Fotos, aber nur, wenn es innerhalb so vieler Minuten "
+"aufgenommen wurde (damit Koordinaten nicht über eine lange Lücke oder an "
+"einen anderen Ort kopiert werden)."
+
+#: yaffo/routes/utilities/automations.py:260
+msgid ""
+"A photo gets a label only when the CLIP image–text similarity is at or "
+"above this confidence (0 = least similar, 100 = most similar) Higher is "
+"stricter: fewer, more confident labels."
+msgstr ""
+"Ein Foto erhält nur dann ein Label, wenn die CLIP-Bild-Text-Ähnlichkeit "
+"diese Konfidenz erreicht oder überschreitet (0 = am wenigsten ähnlich, "
+"100 = am ähnlichsten). Höher ist strenger: weniger, aber zuverlässigere "
+"Labels."
+
+#: yaffo/routes/utilities/automations.py:264
+msgid "At most this many labels are kept per photo (the highest-scoring ones)."
+msgstr ""
+"Pro Foto werden höchstens so viele Labels behalten (die mit der höchsten "
+"Bewertung)."
+
+#: yaffo/routes/utilities/automations.py:271
+msgid "Media imported"
+msgstr "Medien importiert"
+
+#: yaffo/routes/utilities/automations.py:272
+msgid "Media indexed"
+msgstr "Medien indiziert"
+
+#: yaffo/routes/utilities/automations.py:273
+msgid "Duplicates found"
+msgstr "Duplikate gefunden"
+
+#: yaffo/routes/utilities/automations.py:274
+msgid "Media modified"
+msgstr "Medien geändert"
+
+#: yaffo/routes/utilities/automations.py:275
+msgid "Media labeled"
+msgstr "Medien gelabelt"
+
+#: yaffo/routes/utilities/automations.py:388
+#: yaffo/routes/utilities/automations.py:424
+msgid "Automation name is required"
+msgstr "Automatisierungsname ist erforderlich"
+
+#: yaffo/routes/utilities/automations.py:421
+#: yaffo/routes/utilities/automations.py:623
+msgid "System automations cannot be edited."
+msgstr "Systemautomatisierungen können nicht bearbeitet werden."
+
+#: yaffo/routes/utilities/automations.py:443
+msgid "This automation has no configurable settings."
+msgstr "Diese Automatisierung hat keine konfigurierbaren Einstellungen."
+
+#: yaffo/routes/utilities/automations.py:457
+#, python-format
+msgid "%(label)s must be a number."
+msgstr "%(label)s muss eine Zahl sein."
+
+#: yaffo/routes/utilities/automations.py:465
+#, python-format
+msgid "%(label)s must be between %(min)s and %(max)s."
+msgstr "%(label)s muss zwischen %(min)s und %(max)s liegen."
+
+#: yaffo/routes/utilities/automations.py:476
+#, python-format
+msgid "%(label)s is required."
+msgstr "%(label)s ist erforderlich."
+
+#: yaffo/routes/utilities/automations.py:494
+msgid "System automations cannot be deleted"
+msgstr "Systemautomatisierungen können nicht gelöscht werden"
+
+#: yaffo/routes/utilities/automations.py:542
+msgid "No indexed photos found under that path."
+msgstr "Unter diesem Pfad wurden keine indizierten Fotos gefunden."
+
+#: yaffo/routes/utilities/automations.py:550
+msgid "Nothing to run yet — publish the automation's code first."
+msgstr ""
+"Noch nichts auszuführen — veröffentlichen Sie zuerst den Code der "
+"Automatisierung."
+
+#: yaffo/routes/utilities/automations.py:590
+msgid "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
+msgstr "Geben Sie einen gültigen 5-Feld-Cron-Ausdruck ein (z. B. */30 * * * *)."
+
+#: yaffo/routes/utilities/automations.py:600
+msgid "Choose an event type."
+msgstr "Wählen Sie einen Ereignistyp aus."
+
+#: yaffo/routes/utilities/automations.py:613
+msgid "Unknown trigger action."
+msgstr "Unbekannte Auslöseraktion."
+
+#: yaffo/routes/utilities/automations.py:668
+msgid "No code to test yet."
+msgstr "Noch kein Code zum Testen vorhanden."
+
+#: yaffo/routes/utilities/automations.py:672
+msgid "No path selected."
+msgstr "Kein Pfad ausgewählt."
+
+#: yaffo/routes/utilities/automations.py:683
+msgid "No draft to publish."
+msgstr "Kein Entwurf zum Veröffentlichen vorhanden."
+
 #: yaffo/routes/utilities/index_photos.py:68
 msgid ""
 "No media directories configured. Please configure media directories in "
@@ -299,7 +613,9 @@ msgstr "Mindestens ein Verzeichnis ist erforderlich"
 
 #: yaffo/routes/utilities/remove_duplicates.py:224
 msgid "No photo or video files found in selected directories"
-msgstr "In den ausgewählten Verzeichnissen wurden keine Foto- oder Videodateien gefunden"
+msgstr ""
+"In den ausgewählten Verzeichnissen wurden keine Foto- oder Videodateien "
+"gefunden"
 
 #: yaffo/routes/utilities/remove_duplicates.py:234
 #, python-brace-format
@@ -401,7 +717,7 @@ msgstr "Orte"
 msgid "Utilities"
 msgstr "Werkzeuge"
 
-#: yaffo/templates/base.html:106
+#: yaffo/templates/base.html:106 yaffo/templates/themes_page/index.html:15
 msgid "Themes"
 msgstr "Designs"
 
@@ -440,6 +756,8 @@ msgstr "Nach oben"
 #: yaffo/templates/components/chat_dialog.html:39
 #: yaffo/templates/components/modal.html:16
 #: yaffo/templates/fragments/job_status_fragment.html:28
+#: yaffo/templates/utilities/automations_triggers.html:65
+#: yaffo/templates/utilities/automations_triggers.html:85
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -489,7 +807,11 @@ msgid "Photo from %(date)s"
 msgstr "Foto vom %(date)s"
 
 #: yaffo/templates/index.html:64 yaffo/templates/people/list.html:23
-#: yaffo/templates/people/list.html:85 yaffo/templates/utilities/_base.html:11
+#: yaffo/templates/people/list.html:85
+#: yaffo/templates/themes_page/index.html:115
+#: yaffo/templates/themes_page/index.html:127
+#: yaffo/templates/utilities/_base.html:11
+#: yaffo/templates/utilities/automations.html:8
 msgid "Name"
 msgstr "Name"
 
@@ -537,6 +859,9 @@ msgstr "Filter konfigurieren"
 #: yaffo/templates/components/modal.html:17 yaffo/templates/index.html:165
 #: yaffo/templates/settings/_llm_api_key.html:19
 #: yaffo/templates/settings/index.html:29
+#: yaffo/templates/themes_page/index.html:134
+#: yaffo/templates/utilities/automations.html:168
+#: yaffo/templates/utilities/automations.html:173
 msgid "Save"
 msgstr "Speichern"
 
@@ -1054,6 +1379,9 @@ msgstr "Ergebnisse anzeigen"
 
 #: yaffo/templates/fragments/job_status_fragment.html:28
 #: yaffo/templates/people/list.html:65
+#: yaffo/templates/themes_page/index.html:66
+#: yaffo/templates/utilities/automations.html:79
+#: yaffo/templates/utilities/automations_triggers.html:37
 #: yaffo/templates/utilities/remove_duplicates_form.html:49
 msgid "Delete"
 msgstr "Löschen"
@@ -1309,6 +1637,7 @@ msgid "Estimated"
 msgstr "Geschätzt"
 
 #: yaffo/templates/people/list.html:61
+#: yaffo/templates/utilities/automations_triggers.html:28
 msgid "Edit"
 msgstr "Bearbeiten"
 
@@ -1364,6 +1693,8 @@ msgid "Filter labels"
 msgstr "Labels filtern"
 
 #: yaffo/templates/settings/_labels.html:21
+#: yaffo/templates/themes_page/index.html:24
+#: yaffo/templates/themes_page/index.html:38
 msgid "default"
 msgstr "Standard"
 
@@ -1613,6 +1944,111 @@ msgstr ""
 "Datenbank, die von der Hintergrundwarteschlange zur Verarbeitung von "
 "Aufgaben verwendet wird."
 
+#: yaffo/templates/themes_page/index.html:6
+msgid "Themes - Yaffo"
+msgstr "Designs - Yaffo"
+
+#: yaffo/templates/themes_page/index.html:17
+#: yaffo/templates/utilities/_base.html:54
+msgid "System"
+msgstr "System"
+
+#: yaffo/templates/themes_page/index.html:30
+#: yaffo/templates/utilities/_base.html:61
+msgid "Custom"
+msgstr "Benutzerdefiniert"
+
+#: yaffo/templates/themes_page/index.html:44
+msgid "No custom themes yet"
+msgstr "Noch keine benutzerdefinierten Designs"
+
+#: yaffo/templates/themes_page/index.html:48
+msgid "New theme"
+msgstr "Neues Design"
+
+#: yaffo/templates/themes_page/index.html:58
+msgid "Make default"
+msgstr "Standard festlegen"
+
+#: yaffo/templates/themes_page/index.html:63
+msgid "Rename"
+msgstr "Umbenennen"
+
+#: yaffo/templates/themes_page/index.html:72
+msgid "A built-in theme that ships with Yaffo. System themes cannot be deleted."
+msgstr "Ein integriertes Design, das mit Yaffo geliefert wird. Systemdesigns können nicht gelöscht werden."
+
+#: yaffo/templates/themes_page/index.html:72
+msgid "A custom theme stored in the application database."
+msgstr "Eine benutzerdefinierte Designvorlage, die in der Anwendungsdatenbank gespeichert ist."
+
+#: yaffo/templates/themes_page/index.html:81
+msgid ""
+"The assistant has an unpublished design for this theme. Save it to make "
+"it live, or discard the draft."
+msgstr ""
+"Der Assistent hat ein unveröffentlichtes Design für dieses Design erstellt. "
+"Speichern Sie es, um es live zu schalten, oder verwerfen Sie den Entwurf."
+
+#: yaffo/templates/themes_page/index.html:86
+msgid "Save draft"
+msgstr "Entwurf speichern"
+
+#: yaffo/templates/themes_page/index.html:90
+#: yaffo/templates/utilities/automations.html:149
+msgid "Discard"
+msgstr "Verwerfen"
+
+#: yaffo/templates/themes_page/index.html:97
+#: yaffo/templates/utilities/automations.html:101
+msgid "Conversation"
+msgstr "Gespräch"
+
+#: yaffo/templates/themes_page/index.html:98
+msgid "Describe how this theme should look and the assistant will design it."
+msgstr "Beschreiben Sie, wie dieses Design aussehen soll, und der Assistent gestaltet es."
+
+#: yaffo/templates/themes_page/index.html:99
+msgid "Describe how this theme should look…"
+msgstr "Beschreiben Sie, wie dieses Design aussehen soll…"
+
+#: yaffo/templates/themes_page/index.html:101
+msgid "System themes are hand-crafted and have no conversation."
+msgstr "Systemdesigns sind handgefertigt und haben kein Gespräch."
+
+#: yaffo/templates/themes_page/index.html:103
+msgid ""
+"No conversation yet — describe the look you want and the assistant will "
+"build it."
+msgstr ""
+"Noch kein Gespräch — beschreiben Sie das gewünschte Aussehen, und der "
+"Assistent erstellt es."
+
+#: yaffo/templates/themes_page/index.html:117
+msgid "e.g. Midnight, Pastel, Forest"
+msgstr "z. B. Mitternacht, Pastell, Wald"
+
+#: yaffo/templates/themes_page/index.html:118
+msgid "Starts from the classic look — design it through a conversation later."
+msgstr "Beginnt mit dem klassischen Aussehen — gestalten Sie es später im Gespräch."
+
+#: yaffo/templates/themes_page/index.html:122
+msgid "New Theme"
+msgstr "Neues Design"
+
+#: yaffo/templates/themes_page/index.html:122
+#: yaffo/templates/utilities/_base.html:85
+msgid "Create"
+msgstr "Erstellen"
+
+#: yaffo/templates/themes_page/index.html:130
+msgid "Renaming updates the theme's web address (slug) to match."
+msgstr "Beim Umbenennen wird die Webadresse (Slug) des Designs passend aktualisiert."
+
+#: yaffo/templates/themes_page/index.html:134
+msgid "Rename Theme"
+msgstr "Design umbenennen"
+
 #: yaffo/templates/utilities/_base.html:13
 msgid "e.g. Tag beach photos, Weekly cleanup"
 msgstr "z. B. Strandfotos taggen, Wöchentliche Bereinigung"
@@ -1641,17 +2077,9 @@ msgstr "Duplikate entfernen"
 msgid "Automations"
 msgstr "Automatisierungen"
 
-#: yaffo/templates/utilities/_base.html:54
-msgid "System"
-msgstr "System"
-
 #: yaffo/templates/utilities/_base.html:58
 msgid "None"
 msgstr "Keine"
-
-#: yaffo/templates/utilities/_base.html:61
-msgid "Custom"
-msgstr "Benutzerdefiniert"
 
 #: yaffo/templates/utilities/_base.html:65
 msgid "No custom automations yet"
@@ -1665,9 +2093,211 @@ msgstr "Neue Automatisierung"
 msgid "New Automation"
 msgstr "Neue Automatisierung"
 
-#: yaffo/templates/utilities/_base.html:85
-msgid "Create"
-msgstr "Erstellen"
+#: yaffo/templates/utilities/automations.html:12
+msgid "Description"
+msgstr "Beschreibung"
+
+#: yaffo/templates/utilities/automations.html:14
+msgid "What does this automation do?"
+msgstr "Was macht diese Automatisierung?"
+
+#: yaffo/templates/utilities/automations.html:44
+msgid "Automations - Yaffo"
+msgstr "Automatisierungen - Yaffo"
+
+#: yaffo/templates/utilities/automations.html:54
+msgid "No automation selected"
+msgstr "Keine Automatisierung ausgewählt"
+
+#: yaffo/templates/utilities/automations.html:55
+msgid "Pick one from the sidebar, or create one with “New automation”."
+msgstr ""
+"Wählen Sie eine aus der Seitenleiste aus oder erstellen Sie eine mit "
+"„Neue Automatisierung“."
+
+#: yaffo/templates/utilities/automations.html:62
+#: yaffo/templates/utilities/automations_triggers.html:33
+msgid "Disable"
+msgstr "Deaktivieren"
+
+#: yaffo/templates/utilities/automations.html:62
+#: yaffo/templates/utilities/automations_triggers.html:33
+msgid "Enable"
+msgstr "Aktivieren"
+
+#: yaffo/templates/utilities/automations.html:65
+msgid "Run…"
+msgstr "Ausführen…"
+
+#: yaffo/templates/utilities/automations.html:67
+msgid "Run now"
+msgstr "Jetzt ausführen"
+
+#: yaffo/templates/utilities/automations.html:70
+msgid "Edit triggers"
+msgstr "Auslöser bearbeiten"
+
+#: yaffo/templates/utilities/automations.html:72
+msgid "Configure"
+msgstr "Konfigurieren"
+
+#: yaffo/templates/utilities/automations.html:76
+msgid "Edit details"
+msgstr "Details bearbeiten"
+
+#: yaffo/templates/utilities/automations.html:86
+msgid ""
+"A built-in automation that ships with Yaffo. System automations cannot be"
+" edited or deleted."
+msgstr ""
+"Eine integrierte Automatisierung, die mit Yaffo geliefert wird. "
+"Systemautomatisierungen können nicht bearbeitet oder gelöscht werden."
+
+#: yaffo/templates/utilities/automations.html:88
+msgid "No description yet — use “Edit details” to add one."
+msgstr ""
+"Noch keine Beschreibung — verwenden Sie „Details bearbeiten“, um eine "
+"hinzuzufügen."
+
+#: yaffo/templates/utilities/automations.html:102
+msgid "Describe what this automation should do and the assistant will write it."
+msgstr ""
+"Beschreiben Sie, was diese Automatisierung tun soll, und der Assistent "
+"schreibt sie."
+
+#: yaffo/templates/utilities/automations.html:103
+msgid "Describe what this automation should do…"
+msgstr "Beschreiben Sie, was diese Automatisierung tun soll…"
+
+#: yaffo/templates/utilities/automations.html:105
+msgid "System automations are built-in and have no conversation."
+msgstr "Systemautomatisierungen sind integriert und haben kein Gespräch."
+
+#: yaffo/templates/utilities/automations.html:107
+msgid ""
+"No conversation yet — describe what you want and the assistant will build"
+" it."
+msgstr ""
+"Noch kein Gespräch — beschreiben Sie, was Sie möchten, und der Assistent "
+"erstellt es."
+
+#: yaffo/templates/utilities/automations.html:114
+msgid "Code"
+msgstr "Code"
+
+#: yaffo/templates/utilities/automations.html:118
+msgid "Code version"
+msgstr "Codeversion"
+
+#: yaffo/templates/utilities/automations.html:119
+msgid "Working code"
+msgstr "Arbeitscode"
+
+#: yaffo/templates/utilities/automations.html:120
+msgid "Active code"
+msgstr "Aktiver Code"
+
+#: yaffo/templates/utilities/automations.html:130
+msgid "No active code yet — this draft hasn’t been published."
+msgstr "Noch kein aktiver Code — dieser Entwurf wurde noch nicht veröffentlicht."
+
+#: yaffo/templates/utilities/automations.html:135
+msgid "No published code yet."
+msgstr "Noch kein veröffentlichter Code."
+
+#: yaffo/templates/utilities/automations.html:141
+msgid "Test…"
+msgstr "Testen…"
+
+#: yaffo/templates/utilities/automations.html:145
+msgid "Publish draft"
+msgstr "Entwurf veröffentlichen"
+
+#: yaffo/templates/utilities/automations.html:166
+msgid "Edit automation"
+msgstr "Automatisierung bearbeiten"
+
+#: yaffo/templates/utilities/automations.html:171
+msgid "Configure automation"
+msgstr "Automatisierung konfigurieren"
+
+#: yaffo/templates/utilities/automations_runs.html:9
+msgid "Run history"
+msgstr "Ausführungsverlauf"
+
+#: yaffo/templates/utilities/automations_runs.html:26
+msgid "No runs yet."
+msgstr "Noch keine Ausführungen."
+
+#: yaffo/templates/utilities/automations_runs.html:28
+msgid "No runs yet — this automation is disabled."
+msgstr "Noch keine Ausführungen — diese Automatisierung ist deaktiviert."
+
+#: yaffo/templates/utilities/automations_triggers.html:19
+msgid "Schedule"
+msgstr "Zeitplan"
+
+#: yaffo/templates/utilities/automations_triggers.html:22
+#: yaffo/templates/utilities/automations_triggers.html:73
+msgid "Event"
+msgstr "Ereignis"
+
+#: yaffo/templates/utilities/automations_triggers.html:42
+msgid "No triggers — this automation won't run until one is added."
+msgstr ""
+"Keine Auslöser — diese Automatisierung wird erst ausgeführt, wenn einer "
+"hinzugefügt wurde."
+
+#: yaffo/templates/utilities/automations_triggers.html:53
+#: yaffo/templates/utilities/automations_triggers.html:58
+msgid "Add a schedule"
+msgstr "Zeitplan hinzufügen"
+
+#: yaffo/templates/utilities/automations_triggers.html:54
+msgid "Add an event"
+msgstr "Ereignis hinzufügen"
+
+#: yaffo/templates/utilities/automations_triggers.html:64
+msgid "Save schedule"
+msgstr "Zeitplan speichern"
+
+#: yaffo/templates/utilities/automations_triggers.html:66
+msgid "Not a valid cron expression"
+msgstr "Kein gültiger Cron-Ausdruck"
+
+#: yaffo/templates/utilities/automations_triggers.html:71
+msgid "Add an event trigger"
+msgstr "Ereignisauslöser hinzufügen"
+
+#: yaffo/templates/utilities/automations_triggers.html:74
+msgid "Event type"
+msgstr "Ereignistyp"
+
+#: yaffo/templates/utilities/automations_triggers.html:84
+msgid "Add event"
+msgstr "Ereignis hinzufügen"
+
+#: yaffo/templates/utilities/automations_triggers_edit.html:4
+#, python-format
+msgid "Triggers · %(name)s - Yaffo"
+msgstr "Auslöser · %(name)s - Yaffo"
+
+#: yaffo/templates/utilities/automations_triggers_edit.html:13
+msgid "Back to automation"
+msgstr "Zurück zur Automatisierung"
+
+#: yaffo/templates/utilities/automations_triggers_edit.html:15
+#, python-format
+msgid "Triggers · %(name)s"
+msgstr "Auslöser · %(name)s"
+
+#: yaffo/templates/utilities/automations_triggers_edit.html:16
+msgid ""
+"Add, edit, enable, or remove the triggers that decide when this "
+"automation runs."
+msgstr ""
+"Fügen Sie die Auslöser hinzu, bearbeiten, aktivieren oder entfernen Sie "
+"sie, die bestimmen, wann diese Automatisierung ausgeführt wird."
 
 #: yaffo/templates/utilities/index_photos.html:5
 msgid "Index Photos - Utilities - Yaffo"
@@ -1746,8 +2376,8 @@ msgstr "Konfiguration"
 #: yaffo/templates/utilities/remove_duplicates_form.html:20
 msgid "Select one or more directories to scan for duplicate photos and videos."
 msgstr ""
-"Wählen Sie ein oder mehrere Verzeichnisse aus, die nach doppelten Fotos und "
-"Videos durchsucht werden sollen."
+"Wählen Sie ein oder mehrere Verzeichnisse aus, die nach doppelten Fotos "
+"und Videos durchsucht werden sollen."
 
 #: yaffo/templates/utilities/remove_duplicates_form.html:32
 msgid "Select directory to scan for duplicates"
@@ -1821,7 +2451,6 @@ msgid "Duplicate Groups Found"
 msgstr "Duplikatgruppen gefunden"
 
 #: yaffo/templates/utilities/remove_duplicates_results_form_header.html:18
-#, python-brace-format
 msgid "Duplicates Selected"
 msgstr "Duplikate ausgewählt"
 

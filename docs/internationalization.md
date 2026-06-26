@@ -672,16 +672,16 @@ route modules and browser-facing errors are part of the same checklist item.
 - [x] Duplicate detection form, results, photo cards, counts, and actions:
   all `templates/utilities/remove_duplicates*.html` templates and
   `routes/utilities/remove_duplicates.py`.
-- [ ] Automation list/editor:
+- [x] Automation list/editor:
   `templates/utilities/automations.html`,
   `static/utilities/automations.js`, and
   `routes/utilities/automations.py`.
-- [ ] Automation run history:
+- [x] Automation run history:
   `templates/utilities/automations_runs.html`.
-- [ ] Automation trigger list and trigger editor:
+- [x] Automation trigger list and trigger editor:
   `templates/utilities/automations_triggers.html` and
   `templates/utilities/automations_triggers_edit.html`.
-- [ ] Theme gallery, generation, preview, and publishing:
+- [x] Theme gallery, generation, preview, and publishing:
   `templates/themes_page/index.html`, `static/themes_page/index.js`, and
   `routes/themes_page.py`.
 - [ ] Custom page presentation and widget grid:

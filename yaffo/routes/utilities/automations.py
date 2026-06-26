@@ -8,10 +8,11 @@ generate_automation_task; the run lives on the automation, so the browser polls
 code-backed built-ins: read-only chat, can't be deleted.
 """
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
+from flask_babel import gettext, ngettext
 
 from yaffo.background_tasks.automation_config import config_fields_for, config_value
 from yaffo.background_tasks.automation_dispatch import invoke_automation
@@ -32,6 +33,8 @@ from yaffo.db.models import (
     JOB_STATUS_CANCELLED,
     JOB_STATUS_COMPLETED,
     JOB_STATUS_FAILED,
+    JOB_STATUS_PENDING,
+    JOB_STATUS_RUNNING,
     TRIGGER_TYPE_EVENT,
 )
 from yaffo.db.repositories import automation_repository as repo
@@ -51,6 +54,7 @@ class AutomationRunView:
     Built from a Job (runs reuse the Job table) so the template stays dumb and the
     per-run-kind display logic lives in one tested place."""
     status: str
+    status_label: str
     is_finished: bool
     is_error: bool
     progress: int          # 0–100; shown for in-progress runs
@@ -58,6 +62,34 @@ class AutomationRunView:
     finished_at: datetime | None
     summary: str
     error: str | None
+
+
+@dataclass(frozen=True)
+class RouteError:
+    error: str
+    code: str
+
+
+@dataclass(frozen=True)
+class AutomationMessagePayload:
+    type: str
+    content: str
+
+
+@dataclass(frozen=True)
+class AutomationStatusPayload:
+    slug: str
+    status: str
+    started_at: str | None
+    working_code: str | None
+    published_code: str | None
+    messages: list[AutomationMessagePayload]
+
+
+@dataclass(frozen=True)
+class AutomationRunStarted:
+    slug: str
+    media_count: int | None
 
 
 def _run_progress(job: Job) -> int:
@@ -76,18 +108,43 @@ def _run_summary(job: Job) -> str:
     errors = job.error_count or 0
     cancelled = job.cancelled_count or 0
     if job.task_count and job.task_count > 1:
-        summary = f"{completed} of {job.task_count} processed"
+        summary = gettext(
+            "%(completed)s of %(total)s processed",
+            completed=completed,
+            total=job.task_count,
+        )
         if errors:
-            summary += f", {errors} error{'s' if errors != 1 else ''}"
+            summary += ", " + ngettext(
+                "%(count)s error",
+                "%(count)s errors",
+                errors,
+                count=errors,
+            )
         if cancelled:
-            summary += f", {cancelled} cancelled"
+            summary += ", " + ngettext(
+                "%(count)s cancelled",
+                "%(count)s cancelled",
+                cancelled,
+                count=cancelled,
+            )
         return summary
     return job.message or job.name
+
+
+def _run_status_label(status: str) -> str:
+    return {
+        JOB_STATUS_PENDING: gettext("Pending"),
+        JOB_STATUS_RUNNING: gettext("Running"),
+        JOB_STATUS_COMPLETED: gettext("Completed"),
+        JOB_STATUS_CANCELLED: gettext("Cancelled"),
+        JOB_STATUS_FAILED: gettext("Failed"),
+    }.get(status, status.capitalize())
 
 
 def _run_view(job: Job) -> AutomationRunView:
     return AutomationRunView(
         status=job.status,
+        status_label=_run_status_label(job.status),
         is_finished=job.status in _RUN_FINISHED_STATUSES,
         is_error=job.status == JOB_STATUS_FAILED or bool(job.error_count),
         progress=_run_progress(job),
@@ -121,13 +178,113 @@ def _unique_slug(name: str) -> str:
 
 
 def init_automations_routes(app: Flask):
+    def _error(message: str, code: str, status: int):
+        return jsonify(asdict(RouteError(error=message, code=code))), status
+
+    def _localized_config_label(label: str) -> str:
+        return {
+            "Match threshold": gettext("Match threshold"),
+            "Export Location Tags": gettext("Export Location Tags"),
+            "Export People Tags": gettext("Export People Tags"),
+            "Export Labels": gettext("Export Labels"),
+            "Export Custom Tags": gettext("Export Custom Tags"),
+            "Export Favorite": gettext("Export Favorite"),
+            "Reuse a nearby photo's name": gettext("Reuse a nearby photo's name"),
+            "Nearby radius (metres)": gettext("Nearby radius (metres)"),
+            "Look up name online (OpenStreetMap)": gettext("Look up name online (OpenStreetMap)"),
+            "Overwrite existing location names": gettext("Overwrite existing location names"),
+            "Time window (minutes)": gettext("Time window (minutes)"),
+            "Confidence threshold": gettext("Confidence threshold"),
+            "Max labels per photo": gettext("Max labels per photo"),
+        }.get(label, label)
+
+    def _localized_config_help(help_text: str | None) -> str | None:
+        if help_text is None:
+            return None
+        return {
+            (
+                "A detected face is assigned only when exactly one person matches at "
+                "or above this similarity (0 = least similar, 100 = most similar) "
+                "Higher is stricter: fewer, more confident assignments."
+            ): gettext(
+                "A detected face is assigned only when exactly one person matches at "
+                "or above this similarity (0 = least similar, 100 = most similar) "
+                "Higher is stricter: fewer, more confident assignments."
+            ),
+            "Write the photo's classification labels into the file's keywords.": gettext(
+                "Write the photo's classification labels into the file's keywords."
+            ),
+            "Write the photo's manual tags (name, or name: value) into the file's keywords.": gettext(
+                "Write the photo's manual tags (name, or name: value) into the file's keywords."
+            ),
+            "Write a \"Favorite\" keyword into the file when the photo is marked a favorite.": gettext(
+                "Write a \"Favorite\" keyword into the file when the photo is marked a favorite."
+            ),
+            (
+                "Copy the location name of the closest already-named photo within "
+                "the radius below. Free, offline, and keeps your own naming."
+            ): gettext(
+                "Copy the location name of the closest already-named photo within "
+                "the radius below. Free, offline, and keeps your own naming."
+            ),
+            (
+                "How close an already-named photo must be to copy its name. Larger "
+                "values reuse names more aggressively and make fewer online lookups."
+            ): gettext(
+                "How close an already-named photo must be to copy its name. Larger "
+                "values reuse names more aggressively and make fewer online lookups."
+            ),
+            (
+                "When no nearby photo is named, reverse-geocode the coordinates via "
+                "OpenStreetMap Nominatim (throttled to ~1 request/second)."
+            ): gettext(
+                "When no nearby photo is named, reverse-geocode the coordinates via "
+                "OpenStreetMap Nominatim (throttled to ~1 request/second)."
+            ),
+            "When off, photos that already have a location name are left untouched.": gettext(
+                "When off, photos that already have a location name are left untouched."
+            ),
+            (
+                "A photo with no GPS borrows the coordinates of the closest-in-time "
+                "GPS-tagged photo, but only if it was taken within this many minutes "
+                "(so coordinates aren't copied across a long gap / a different place)."
+            ): gettext(
+                "A photo with no GPS borrows the coordinates of the closest-in-time "
+                "GPS-tagged photo, but only if it was taken within this many minutes "
+                "(so coordinates aren't copied across a long gap / a different place)."
+            ),
+            (
+                "A photo gets a label only when the CLIP image–text similarity is at or above this confidence "
+                "(0 = least similar, 100 = most similar) Higher is stricter: fewer, more confident labels."
+            ): gettext(
+                "A photo gets a label only when the CLIP image–text similarity is at or above this confidence "
+                "(0 = least similar, 100 = most similar) Higher is stricter: fewer, more confident labels."
+            ),
+            "At most this many labels are kept per photo (the highest-scoring ones).": gettext(
+                "At most this many labels are kept per photo (the highest-scoring ones)."
+            ),
+        }.get(help_text, help_text)
+
+    def _localized_event_labels() -> dict[str, str]:
+        return {
+            event_type: {
+                "Media imported": gettext("Media imported"),
+                "Media indexed": gettext("Media indexed"),
+                "Duplicates found": gettext("Duplicates found"),
+                "Media modified": gettext("Media modified"),
+                "Media labeled": gettext("Media labeled"),
+            }.get(label, label)
+            for event_type, label in EVENTS.items()
+        }
+
     def _config_fields(automation: Automation | None) -> list[dict]:
         """The Configure-modal context: each declared field plus its live value."""
         if automation is None:
             return []
         return [
             {
-                "key": f.key, "label": f.label, "help": f.help,
+                "key": f.key, "label": _localized_config_label(f.label),
+                "help": _localized_config_help(f.help),
                 "min": f.min, "max": f.max, "step": f.step, "type": f.type,
                 "required": f.required,
                 "value": config_value(automation, f)
@@ -172,7 +329,7 @@ def init_automations_routes(app: Flask):
         return {
             "triggers": sorted(automation.triggers, key=lambda t: t.id),
             "slug": automation.slug,
-            "events": EVENTS,
+            "events": _localized_event_labels(),
             "error": error,
         }
 
@@ -198,17 +355,18 @@ def init_automations_routes(app: Flask):
             (m.created_at for m in reversed(automation.messages) if m.type == CONVERSATION_TYPE_USER),
             None,
         )
-        return {
-            "slug": automation.slug,
-            "status": automation.status,
+        payload = AutomationStatusPayload(
+            slug=automation.slug,
+            status=automation.status,
             # created_at is naive UTC (datetime.utcnow); stamp it so the browser's
             # Date parser reads it as UTC, not local — the chat's elapsed counter
             # subtracts it from Date.now(). (Mirrors site_agents serializers._utc_iso.)
-            "started_at": started_at.replace(tzinfo=timezone.utc).isoformat() if started_at else None,
-            "working_code": automation.working_code,
-            "published_code": automation.published_code,
-            "messages": [{"type": m.type, "content": m.content} for m in automation.messages],
-        }
+            started_at=started_at.replace(tzinfo=timezone.utc).isoformat() if started_at else None,
+            working_code=automation.working_code,
+            published_code=automation.published_code,
+            messages=[AutomationMessagePayload(type=m.type, content=m.content) for m in automation.messages],
+        )
+        return asdict(payload)
 
     @app.route("/utilities/automations", methods=["GET"])
     def automations_index():
@@ -227,7 +385,7 @@ def init_automations_routes(app: Flask):
     def automations_create():
         name = (request.form.get("name") or "").strip()
         if not name:
-            return jsonify({"error": "Automation name is required"}), 400
+            return _error(gettext("Automation name is required"), "automation_name_required", 400)
         slug = _unique_slug(name)
         db.session.add(Automation(
             slug=slug, name=name, is_system=False, enabled=False,
@@ -260,10 +418,10 @@ def init_automations_routes(app: Flask):
         if automation is None:
             abort(404)
         if automation.is_system:
-            return jsonify({"error": "System automations cannot be edited."}), 400
+            return _error(gettext("System automations cannot be edited."), "system_automation_locked", 400)
         name = (request.form.get("name") or "").strip()
         if not name:
-            return jsonify({"error": "Automation name is required"}), 400
+            return _error(gettext("Automation name is required"), "automation_name_required", 400)
         automation.name = name
         automation.description = (request.form.get("description") or "").strip() or None
         db.session.commit()
@@ -281,7 +439,11 @@ def init_automations_routes(app: Flask):
             abort(404)
         fields = config_fields_for(automation)
         if not fields:
-            return jsonify({"error": "This automation has no configurable settings."}), 400
+            return _error(
+                gettext("This automation has no configurable settings."),
+                "automation_not_configurable",
+                400,
+            )
         config = dict(automation.config or {})
         for field in fields:
             raw = (request.form.get(field.key) or "").strip()
@@ -291,15 +453,30 @@ def init_automations_routes(app: Flask):
                 try:
                     value = float(raw) if field.type == "float" else int(raw)
                 except ValueError:
-                    return jsonify({"error": f"{field.label} must be a number."}), 400
+                    return _error(
+                        gettext("%(label)s must be a number.", label=_localized_config_label(field.label)),
+                        "config_value_not_numeric",
+                        400,
+                    )
                 if (field.min is not None and value < field.min) or \
                         (field.max is not None and value > field.max):
-                    return jsonify(
-                        {"error": f"{field.label} must be between {field.min} and {field.max}."}
-                    ), 400
+                    return _error(
+                        gettext(
+                            "%(label)s must be between %(min)s and %(max)s.",
+                            label=_localized_config_label(field.label),
+                            min=field.min,
+                            max=field.max,
+                        ),
+                        "config_value_out_of_range",
+                        400,
+                    )
             elif field.type == "string":
                 if field.required and not raw:
-                    return jsonify({"error": f"{field.label} is required."}), 400
+                    return _error(
+                        gettext("%(label)s is required.", label=_localized_config_label(field.label)),
+                        "config_value_required",
+                        400,
+                    )
                 value = raw
             else:
                 raise NotImplementedError(field.type)
@@ -314,7 +491,7 @@ def init_automations_routes(app: Flask):
         if automation is None:
             abort(404)
         if automation.is_system:
-            return jsonify({"error": "System automations cannot be deleted"}), 400
+            return _error(gettext("System automations cannot be deleted"), "system_automation_locked", 400)
         db.session.delete(automation)
         db.session.commit()
         return redirect(url_for("automations_index"))
@@ -361,12 +538,23 @@ def init_automations_routes(app: Flask):
         if path:
             media_item_ids = media_repository.get_media_item_ids_under_path(db.session, path)
             if not media_item_ids:
-                return jsonify({"error": "No indexed photos found under that path."}), 400
+                return _error(
+                    gettext("No indexed photos found under that path."),
+                    "indexed_photos_not_found",
+                    400,
+                )
             context = EventContext(event_type=MANUAL_RUN_EVENT_TYPE, media_item_ids=media_item_ids)
 
         if not invoke_automation(automation, context):
-            return jsonify({"error": "Nothing to run yet — publish the automation's code first."}), 400
-        return jsonify({"slug": slug, "media_count": len(context.media_item_ids) if context else None}), 202
+            return _error(
+                gettext("Nothing to run yet — publish the automation's code first."),
+                "automation_not_runnable",
+                400,
+            )
+        return jsonify(asdict(AutomationRunStarted(
+            slug=slug,
+            media_count=len(context.media_item_ids) if context else None,
+        ))), 202
 
     @app.route("/utilities/automations/validate-cron", methods=["GET"])
     def automations_validate_cron():
@@ -399,7 +587,7 @@ def init_automations_routes(app: Flask):
             if edit_id and trigger is None:
                 abort(404)
             if not is_valid_cron(cron):
-                error = "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
+                error = gettext("Enter a valid 5-field cron expression (e.g. */30 * * * *).")
             elif trigger is not None:
                 trigger.cron = cron
                 trigger.next_run_at = None
@@ -409,7 +597,7 @@ def init_automations_routes(app: Flask):
         elif action == "add_event":
             event_type = (request.form.get("new_event_type") or "").strip()
             if event_type not in EVENTS:
-                error = "Choose an event type."
+                error = gettext("Choose an event type.")
             else:
                 repo.add_event_trigger(db.session, slug, event_type)
         elif action in ("remove", "toggle"):
@@ -422,7 +610,7 @@ def init_automations_routes(app: Flask):
                 trigger.enabled = not trigger.enabled
             db.session.commit()
         else:
-            return jsonify({"error": "Unknown trigger action."}), 400
+            return _error(gettext("Unknown trigger action."), "unknown_trigger_action", 400)
 
         return _render_triggers(automation, error)
 
@@ -432,14 +620,21 @@ def init_automations_routes(app: Flask):
         if automation is None:
             abort(404)
         if automation.is_system:
-            return jsonify({"error": "System automations cannot be edited."}), 400
+            return _error(gettext("System automations cannot be edited."), "system_automation_locked", 400)
         if automation.status == AUTOMATION_STATUS_IN_PROGRESS:
-            return jsonify({"error": "A generation is already running."}), 409
+            return _error(gettext("A generation is already running."), "generation_already_running", 409)
         message = (request.get_json(silent=True) or {}).get("message", "").strip()
         if not message:
-            return jsonify({"error": "Message is required."}), 400
+            return _error(gettext("Message is required."), "message_required", 400)
         if llm_config.selected_key_missing():
-            return jsonify({"error": f"No API key configured. Add your {llm_config.selected_provider_label()} API key in Settings → AI Generation."}), 400
+            return _error(
+                gettext(
+                    "No API key configured. Add your %(provider)s API key in Settings → AI Generation.",
+                    provider=llm_config.selected_provider_label(),
+                ),
+                "api_key_missing",
+                400,
+            )
 
         repo.add_message(db.session, automation.id, CONVERSATION_TYPE_USER, message)
         repo.set_status(db.session, slug, AUTOMATION_STATUS_IN_PROGRESS)
@@ -470,11 +665,11 @@ def init_automations_routes(app: Flask):
         if automation is None:
             abort(404)
         if not (automation.working_code or automation.published_code):
-            return jsonify({"error": "No code to test yet."}), 400
+            return _error(gettext("No code to test yet."), "automation_code_missing", 400)
         body = request.get_json(silent=True) or {}
         path = (body.get("path") or "").strip()
         if not path:
-            return jsonify({"error": "No path selected."}), 400
+            return _error(gettext("No path selected."), "path_required", 400)
         version = body.get("version")  # which code panel view to test: working | published
         media_item_ids = media_repository.get_media_item_ids_under_path(db.session, path)
         result = preview_automation(db.session, automation, media_item_ids=media_item_ids, version=version)
@@ -485,7 +680,7 @@ def init_automations_routes(app: Flask):
         if repo.get_by_slug(db.session, slug) is None:
             abort(404)
         if not repo.publish(db.session, slug):
-            return jsonify({"error": "No draft to publish."}), 409
+            return _error(gettext("No draft to publish."), "draft_missing", 409)
         return _hx_refresh()
 
     @app.route("/utilities/automations/<slug>/discard", methods=["POST"])

@@ -209,7 +209,50 @@
       "statsFailed": "Miniaturansichtsstatistik konnte nicht abgerufen werden"
     }
   },
+  "themes": {
+    "chat": {
+      "cancelMessage": "Diese Generierung verwerfen und das aktuelle Design behalten?"
+    },
+    "delete": {
+      "message": "\"{{name}}\" löschen?\nDies kann nicht rückgängig gemacht werden.",
+      "title": "Design löschen"
+    }
+  },
   "utilities": {
+    "automations": {
+      "chat": {
+        "cancelMessage": "Diese Generierung verwerfen und die aktuelle Automatisierung behalten?"
+      },
+      "delete": {
+        "message": "\"{{name}}\" löschen?\nDies kann nicht rückgängig gemacht werden.",
+        "title": "Automatisierung löschen"
+      },
+      "run": {
+        "noTriggers": "Diese Automatisierung hat keine Auslöser — fügen Sie unter „Auslöser bearbeiten“ einen hinzu, bevor Sie sie ausführen.",
+        "started": "Ausführung wurde gestartet — sie erscheint im Ausführungsverlauf, wenn sie abgeschlossen ist.",
+        "startFailed": "Die Ausführung konnte nicht gestartet werden."
+      },
+      "test": {
+        "actionNames": {
+          "tag_media_items": "Medienelemente taggen"
+        },
+        "actions": "Aktionen ({{formattedCount}})",
+        "failed": "Test fehlgeschlagen.",
+        "noActions": "Keine Aktionen ausgeführt.",
+        "photoCount_one": "{{formattedCount}} Foto",
+        "photoCount_other": "{{formattedCount}} Fotos",
+        "ranCode": "{{source}}-Code ausgeführt · {{photoCount}}",
+        "result": "Ergebnis",
+        "runFailed": "Der Test konnte nicht ausgeführt werden.",
+        "running": "Wird ausgeführt…",
+        "showDetails": "Details anzeigen",
+        "testingOn": "Test auf {{mode}}: {{path}}"
+      },
+      "triggers": {
+        "addSchedule": "Zeitplan hinzufügen",
+        "editSchedule": "Zeitplan bearbeiten"
+      }
+    },
     "indexPhotos": {
       "filename": "Dateiname",
       "inSync": {

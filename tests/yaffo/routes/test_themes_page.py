@@ -53,7 +53,10 @@ def test_set_default_persists_and_renders(client):
 def test_set_default_rejects_unknown_slug(client):
     response = client.post("/themes/vaporwave/default")
     assert response.status_code == 400
-    assert response.get_json() == {"error": "Unknown theme: vaporwave"}
+    assert response.get_json() == {
+        "error": "Unknown theme: vaporwave",
+        "code": "theme_unknown",
+    }
 
     page = client.get("/themes/classic")
     assert b'data-theme="classic"' in page.data
@@ -71,6 +74,20 @@ def test_page_lists_system_and_custom_themes(client):
     for theme in themes.list_custom_themes():
         assert f'/themes/{theme.slug}"' in page
         assert theme.label in page
+
+
+def test_saved_locale_translates_themes_page(client):
+    client.post("/themes/create", data={"label": "Vapor Wave"})
+    client.post("/settings/locale", data={"locale": "de"})
+    page = client.get("/themes/vapor-wave").data.decode()
+
+    assert "Designs" in page
+    assert "System" in page
+    assert "Benutzerdefiniert" in page
+    assert "Standard festlegen" in page
+    assert "Umbenennen" in page
+    assert "Eine benutzerdefinierte Designvorlage" in page
+    assert "Gespräch" in page
 
 
 def test_create_custom_theme(client):
@@ -100,6 +117,17 @@ def test_create_requires_label(client):
     assert response.status_code == 400
 
 
+def test_create_validation_uses_saved_locale_and_error_code(client):
+    client.post("/settings/locale", data={"locale": "de"})
+    response = client.post("/themes/create", data={"label": "  "})
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "Designname ist erforderlich",
+        "code": "theme_name_required",
+    }
+
+
 def test_delete_custom_theme(client):
     client.post("/themes/create", data={"label": "Vapor Wave"})
     response = client.post("/themes/vapor-wave/delete")
@@ -117,6 +145,7 @@ def test_delete_active_custom_theme_falls_back_to_default(client):
 def test_delete_system_theme_rejected(client):
     response = client.post("/themes/classic/delete")
     assert response.status_code == 400
+    assert response.get_json()["code"] == "system_theme_locked"
     assert themes.theme_exists("classic")
 
 
@@ -161,6 +190,19 @@ def test_chat_requires_message(client, with_key_and_task):
     assert with_key_and_task == []
 
 
+def test_chat_validation_uses_saved_locale_and_error_code(client, with_key_and_task):
+    client.post("/themes/create", data={"label": "Vapor Wave"})
+    client.post("/settings/locale", data={"locale": "de"})
+    response = client.post("/themes/vapor-wave/chat", json={"message": "  "})
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "Nachricht ist erforderlich.",
+        "code": "message_required",
+    }
+    assert with_key_and_task == []
+
+
 def test_chat_without_api_key_is_400(client):
     # The autouse no_api_key fixture leaves generation disabled.
     client.post("/themes/create", data={"label": "Vapor Wave"})
@@ -180,6 +222,7 @@ def test_chat_rejects_concurrent_run(client, with_key_and_task):
 def test_chat_on_builtin_theme_rejected(client, with_key_and_task):
     response = client.post("/themes/classic/chat", json={"message": "hi"})
     assert response.status_code == 400
+    assert response.get_json()["code"] == "system_theme_locked"
     assert with_key_and_task == []
 
 
@@ -240,6 +283,18 @@ def test_publish_without_draft_is_409(client):
     client.post("/themes/create", data={"label": "No Draft"})  # ACCEPTED, no working draft
     response = client.post("/themes/no-draft/publish")
     assert response.status_code == 409
+
+
+def test_publish_validation_uses_saved_locale_and_error_code(client):
+    client.post("/themes/create", data={"label": "No Draft"})
+    client.post("/settings/locale", data={"locale": "de"})
+    response = client.post("/themes/no-draft/publish")
+
+    assert response.status_code == 409
+    assert response.get_json() == {
+        "error": "Kein Designentwurf zum Veröffentlichen vorhanden.",
+        "code": "theme_draft_missing",
+    }
 
 
 def test_publish_unknown_theme_404s(client):

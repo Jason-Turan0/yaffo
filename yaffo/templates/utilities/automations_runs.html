@@ -6,12 +6,12 @@
          hx-get="{{ url_for('automations_runs', slug=selected.slug) }}"
          hx-trigger="every 5s"
          hx-swap="outerHTML">
-    <h3 class="automation-section-title">Run history</h3>
+    <h3 class="automation-section-title">{{ _("Run history") }}</h3>
     {% if recent_runs %}
         <ul class="automation-run-list">
             {% for run in recent_runs %}
             <li class="automation-run-row{% if run.is_error %} is-error{% endif %}">
-                <span class="automation-run-status status-{{ run.status | lower }}">{{ run.status | capitalize }}</span>
+                <span class="automation-run-status status-{{ run.status | lower }}">{{ run.status_label }}</span>
                 {% if not run.is_finished %}<span class="automation-run-progress">{{ (run.progress / 100) | format_percent }}</span>{% endif %}
                 <span class="automation-run-summary">{{ run.summary }}</span>
                 <span class="automation-run-spacer"></span>
@@ -21,6 +21,12 @@
             {% endfor %}
         </ul>
     {% else %}
-        <p class="no-data">No runs yet{% if not selected.enabled %} — this automation is disabled{% endif %}.</p>
+        <p class="no-data">
+            {% if selected.enabled %}
+                {{ _("No runs yet.") }}
+            {% else %}
+                {{ _("No runs yet — this automation is disabled.") }}
+            {% endif %}
+        </p>
     {% endif %}
 </section>

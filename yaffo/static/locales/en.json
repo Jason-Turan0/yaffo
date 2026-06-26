@@ -209,7 +209,50 @@
       "statsFailed": "Failed to get thumbnail statistics"
     }
   },
+  "themes": {
+    "chat": {
+      "cancelMessage": "Discard this generation and keep the current theme?"
+    },
+    "delete": {
+      "message": "Delete \"{{name}}\"?\nThis cannot be undone.",
+      "title": "Delete Theme"
+    }
+  },
   "utilities": {
+    "automations": {
+      "chat": {
+        "cancelMessage": "Discard this generation and keep the current automation?"
+      },
+      "delete": {
+        "message": "Delete \"{{name}}\"?\nThis cannot be undone.",
+        "title": "Delete Automation"
+      },
+      "run": {
+        "noTriggers": "This automation has no triggers — add one under Edit triggers before running it.",
+        "started": "Run started — it will appear in Run history when it finishes.",
+        "startFailed": "Could not start the run."
+      },
+      "test": {
+        "actionNames": {
+          "tag_media_items": "Tag media items"
+        },
+        "actions": "Actions ({{formattedCount}})",
+        "failed": "Test failed.",
+        "noActions": "No actions performed.",
+        "photoCount_one": "{{formattedCount}} photo",
+        "photoCount_other": "{{formattedCount}} photos",
+        "ranCode": "Ran {{source}} code · {{photoCount}}",
+        "result": "Result",
+        "runFailed": "Failed to run the test.",
+        "running": "Running…",
+        "showDetails": "Show details",
+        "testingOn": "Testing on {{mode}}: {{path}}"
+      },
+      "triggers": {
+        "addSchedule": "Add a schedule",
+        "editSchedule": "Edit schedule"
+      }
+    },
     "indexPhotos": {
       "filename": "Filename",
       "inSync": {

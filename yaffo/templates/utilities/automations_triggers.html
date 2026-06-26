@@ -16,30 +16,30 @@
                 {% for trigger in triggers %}
                     <li class="automation-trigger-row{{ ' is-off' if not trigger.enabled }}">
                         {% if trigger.trigger_type == 'schedule' %}
-                            <span class="automation-trigger-kind">Schedule</span>
+                            <span class="automation-trigger-kind">{{ _("Schedule") }}</span>
                             <span class="automation-trigger-desc" data-cron="{{ trigger.cron }}">{{ trigger.cron }}</span>
                         {% else %}
-                            <span class="automation-trigger-kind">Event</span>
+                            <span class="automation-trigger-kind">{{ _("Event") }}</span>
                             <code class="automation-trigger-event">{{ events.get(trigger.event_type, trigger.event_type) }}</code>
                         {% endif %}
                         <span class="automation-trigger-spacer"></span>
                         {% if trigger.trigger_type == 'schedule' %}
                             <button type="button" class="btn-secondary js-edit-schedule"
-                                    data-cron-value="{{ trigger.cron }}" data-trigger-id="{{ trigger.id }}">Edit</button>
+                                    data-cron-value="{{ trigger.cron }}" data-trigger-id="{{ trigger.id }}">{{ _("Edit") }}</button>
                         {% endif %}
                         <button type="button" class="btn-secondary"
                                 hx-post="{{ url_for('automations_triggers', slug=slug) }}"
                                 hx-vals='{"action": "toggle", "trigger_id": {{ trigger.id }}}'
-                                hx-target="#automation-triggers">{{ 'Disable' if trigger.enabled else 'Enable' }}</button>
+                                hx-target="#automation-triggers">{{ _("Disable") if trigger.enabled else _("Enable") }}</button>
                         <button type="button" class="btn-danger"
                                 hx-post="{{ url_for('automations_triggers', slug=slug) }}"
                                 hx-vals='{"action": "remove", "trigger_id": {{ trigger.id }}}'
-                                hx-target="#automation-triggers">Delete</button>
+                                hx-target="#automation-triggers">{{ _("Delete") }}</button>
                     </li>
                 {% endfor %}
             </ul>
         {% else %}
-            <p class="no-data">No triggers — this automation won't run until one is added.</p>
+            <p class="no-data">{{ _("No triggers — this automation won't run until one is added.") }}</p>
         {% endif %}
 
         {# Two entry points; each reveals its own panel (one at a time). automations.js
@@ -50,28 +50,28 @@
             <input type="hidden" name="edit_trigger_id" value="">
 
             <div class="automation-add-actions">
-                <button type="button" class="btn-secondary js-add-schedule">Add a schedule</button>
-                <button type="button" class="btn-secondary js-add-event">Add an event</button>
+                <button type="button" class="btn-secondary js-add-schedule">{{ _("Add a schedule") }}</button>
+                <button type="button" class="btn-secondary js-add-event">{{ _("Add an event") }}</button>
             </div>
 
             <div class="schedule-editor">
-                <h4 class="automation-add-title schedule-editor-title">Add a schedule</h4>
+                <h4 class="automation-add-title schedule-editor-title">{{ _("Add a schedule") }}</h4>
                 <div data-cron-builder data-cron-name="cron"></div>
                 <div class="automation-trigger-add-row">
                     <button type="button" class="btn-primary js-save-schedule"
                             hx-post="{{ url_for('automations_triggers', slug=slug) }}"
                             hx-vals='{"action": "save_schedule"}'
-                            hx-target="#automation-triggers">Save schedule</button>
-                    <button type="button" class="btn-secondary js-cancel">Cancel</button>
-                    <span class="schedule-editor-error" hidden>Not a valid cron expression</span>
+                            hx-target="#automation-triggers">{{ _("Save schedule") }}</button>
+                    <button type="button" class="btn-secondary js-cancel">{{ _("Cancel") }}</button>
+                    <span class="schedule-editor-error" hidden>{{ _("Not a valid cron expression") }}</span>
                 </div>
             </div>
 
             <div class="event-editor">
-                <h4 class="automation-add-title">Add an event trigger</h4>
+                <h4 class="automation-add-title">{{ _("Add an event trigger") }}</h4>
                 <div class="form-row">
-                    <label class="form-row-label" for="new-event-type">Event</label>
-                    <select id="new-event-type" name="new_event_type" class="form-control" aria-label="Event type">
+                    <label class="form-row-label" for="new-event-type">{{ _("Event") }}</label>
+                    <select id="new-event-type" name="new_event_type" class="form-control" aria-label="{{ _('Event type') }}">
                         {% for value, label in events.items() %}
                             <option value="{{ value }}">{{ label }}</option>
                         {% endfor %}
@@ -81,8 +81,8 @@
                     <button type="button" class="btn-primary"
                             hx-post="{{ url_for('automations_triggers', slug=slug) }}"
                             hx-vals='{"action": "add_event"}'
-                            hx-target="#automation-triggers">Add event</button>
-                    <button type="button" class="btn-secondary js-cancel">Cancel</button>
+                            hx-target="#automation-triggers">{{ _("Add event") }}</button>
+                    <button type="button" class="btn-secondary js-cancel">{{ _("Cancel") }}</button>
                 </div>
             </div>
         </div>

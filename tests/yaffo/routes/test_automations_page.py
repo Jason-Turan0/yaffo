@@ -128,6 +128,17 @@ def test_show_renders(app, client):
     assert "Renders" in resp.get_data(as_text=True)
 
 
+def test_saved_locale_translates_automation_detail_page(app, client):
+    _add(app, name="Automatisierung", description=None, working_code="print('draft')")
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get("/utilities/automations/a1").get_data(as_text=True)
+
+    assert "Auslöser bearbeiten" in body
+    assert "Gespräch" in body
+    assert "Noch keine Beschreibung" in body
+    assert "Arbeitscode" in body
+
+
 def test_create_adds_custom_automation(app, client):
     resp = client.post("/utilities/automations/create", data={"name": "Tag beaches"})
     assert resp.status_code == 302
@@ -138,6 +149,17 @@ def test_create_adds_custom_automation(app, client):
 
 def test_create_requires_name(app, client):
     assert client.post("/utilities/automations/create", data={"name": "  "}).status_code == 400
+
+
+def test_create_validation_uses_saved_locale_and_error_code(client):
+    client.post("/settings/locale", data={"locale": "de"})
+    resp = client.post("/utilities/automations/create", data={"name": "  "})
+
+    assert resp.status_code == 400
+    assert resp.get_json() == {
+        "error": "Automatisierungsname ist erforderlich",
+        "code": "automation_name_required",
+    }
 
 
 def test_update_details_renames_and_describes(app, client):
@@ -202,6 +224,22 @@ def test_run_now_nothing_to_run_400(app, client, monkeypatch):
     resp = client.post("/utilities/automations/a1/run")
     assert resp.status_code == 400
     assert "Nothing to run" in resp.get_json()["error"]
+
+
+def test_run_now_validation_uses_saved_locale_and_error_code(app, client, monkeypatch):
+    _add(app)
+    client.post("/settings/locale", data={"locale": "de"})
+    monkeypatch.setattr(
+        "yaffo.routes.utilities.automations.invoke_automation",
+        lambda automation, context: False,
+    )
+    resp = client.post("/utilities/automations/a1/run")
+
+    assert resp.status_code == 400
+    assert resp.get_json() == {
+        "error": "Noch nichts auszuführen — veröffentlichen Sie zuerst den Code der Automatisierung.",
+        "code": "automation_not_runnable",
+    }
 
 
 def test_run_now_scoped_runs_over_photos_under_path(app, client, monkeypatch):
@@ -373,6 +411,25 @@ def test_detail_page_run_history_empty_state(app, client):
     assert "No runs yet" in body
 
 
+def test_saved_locale_translates_run_history(app, client):
+    _add(app, enabled=False)
+    _add_job(app, id="running", status="RUNNING", task_count=50, completed_count=10)
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get("/utilities/automations/a1/runs").get_data(as_text=True)
+
+    assert "Ausführungsverlauf" in body
+    assert "Läuft" in body
+    assert "10 von 50 verarbeitet" in body
+
+
+def test_saved_locale_translates_run_history_empty_state(app, client):
+    _add(app, enabled=False)
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get("/utilities/automations/a1/runs").get_data(as_text=True)
+
+    assert "Noch keine Ausführungen — diese Automatisierung ist deaktiviert." in body
+
+
 def test_recent_jobs_newest_first_and_scoped(app, client):
     from datetime import datetime
     from yaffo.db.repositories import automation_repository as repo
@@ -426,6 +483,20 @@ def test_config_rejects_non_numeric(app, client):
     assert resp.status_code == 400
 
 
+def test_config_validation_uses_saved_locale_and_error_code(app, client):
+    _add_system_assign_faces(app)
+    client.post("/settings/locale", data={"locale": "de"})
+    resp = client.post(
+        "/utilities/automations/auto_assign_faces/config", data={"threshold": "high"}
+    )
+
+    assert resp.status_code == 400
+    assert resp.get_json() == {
+        "error": "Übereinstimmungsschwelle muss eine Zahl sein.",
+        "code": "config_value_not_numeric",
+    }
+
+
 def test_config_rejected_for_non_configurable(app, client):
     _add(app)  # a plain custom automation declares no config fields
     assert client.post("/utilities/automations/a1/config", data={"threshold": "0.8"}).status_code == 400
@@ -473,6 +544,21 @@ def test_edit_triggers_page_renders(app, client):
     assert "data-cron-builder" in body  # the full editor is present on this screen
 
 
+def test_saved_locale_translates_trigger_editor(app, client):
+    _add(app, name="Automatisierung")
+    _add_trigger(app, trigger_type=TRIGGER_TYPE_SCHEDULE, enabled=True, cron="0 9 * * 1")
+    _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="media_indexed")
+    client.post("/settings/locale", data={"locale": "de"})
+    body = client.get("/utilities/automations/a1/triggers/edit").get_data(as_text=True)
+
+    assert "Auslöser · Automatisierung" in body
+    assert "Zurück zur Automatisierung" in body
+    assert "Zeitplan" in body
+    assert "Ereignis" in body
+    assert "Medien indiziert" in body
+    assert "Zeitplan speichern" in body
+
+
 def test_edit_triggers_unknown_404(app, client):
     assert client.get("/utilities/automations/nope/triggers/edit").status_code == 404
 
@@ -510,6 +596,18 @@ def test_save_schedule_rejects_bad_cron(app, client):
     assert resp.status_code == 200
     assert "valid 5-field cron" in resp.get_data(as_text=True)
     assert _triggers(app) == []
+
+
+def test_save_schedule_validation_uses_saved_locale(app, client):
+    _add(app)
+    client.post("/settings/locale", data={"locale": "de"})
+    resp = client.post(
+        "/utilities/automations/a1/triggers",
+        data={"action": "save_schedule", "cron": "not a cron"},
+    )
+
+    assert resp.status_code == 200
+    assert "Geben Sie einen gültigen 5-Feld-Cron-Ausdruck ein" in resp.get_data(as_text=True)
 
 
 def test_save_schedule_edits_existing(app, client):
@@ -560,6 +658,18 @@ def test_add_event_rejects_unknown_type(app, client):
     )
     assert resp.status_code == 200
     assert _triggers(app) == []
+
+
+def test_add_event_validation_uses_saved_locale(app, client):
+    _add(app)
+    client.post("/settings/locale", data={"locale": "de"})
+    resp = client.post(
+        "/utilities/automations/a1/triggers",
+        data={"action": "add_event", "new_event_type": "made_up"},
+    )
+
+    assert resp.status_code == 200
+    assert "Wählen Sie einen Ereignistyp aus." in resp.get_data(as_text=True)
 
 
 def test_remove_trigger(app, client):

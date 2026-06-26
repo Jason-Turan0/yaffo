@@ -3,7 +3,7 @@
 {% from "components/modal.html" import render_modal %}
 {% from "components/page_header.html" import page_header %}
 
-{% block title %}Themes - Yaffo{% endblock %}
+{% block title %}{{ _("Themes - Yaffo") }}{% endblock %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='themes_page/index.css') }}">
@@ -12,22 +12,22 @@
 {% block content %}
 <div class="themes-container">
     <nav class="sidebar themes-sidebar">
-        <h2>Themes</h2>
+        <h2>{{ _("Themes") }}</h2>
 
-        <h3 class="themes-nav-heading">System</h3>
+        <h3 class="themes-nav-heading">{{ _("System") }}</h3>
         <ul class="panel-nav">
             {% for theme in system_themes %}
                 <li>
                     <a href="{{ url_for('themes_show', slug=theme.slug) }}"
                        class="{% if theme.slug == selected_slug %}active{% endif %}">
                         {{ theme.label }}
-                        {% if theme.slug == default_slug %}<span class="theme-nav-default">default</span>{% endif %}
+                        {% if theme.slug == default_slug %}<span class="theme-nav-default">{{ _("default") }}</span>{% endif %}
                     </a>
                 </li>
             {% endfor %}
         </ul>
 
-        <h3 class="themes-nav-heading">Custom</h3>
+        <h3 class="themes-nav-heading">{{ _("Custom") }}</h3>
         {% if custom_themes %}
             <ul class="panel-nav">
                 {% for theme in custom_themes %}
@@ -35,17 +35,17 @@
                         <a href="{{ url_for('themes_show', slug=theme.slug) }}"
                            class="{% if theme.slug == selected_slug %}active{% endif %}">
                             {{ theme.label }}
-                            {% if theme.slug == default_slug %}<span class="theme-nav-default">default</span>{% endif %}
+                            {% if theme.slug == default_slug %}<span class="theme-nav-default">{{ _("default") }}</span>{% endif %}
                         </a>
                     </li>
                 {% endfor %}
             </ul>
         {% else %}
-            <p class="no-data">No custom themes yet</p>
+            <p class="no-data">{{ _("No custom themes yet") }}</p>
         {% endif %}
 
         <button type="button" id="new-theme-button" class="btn-secondary new-theme-button"
-                data-icon="add">New theme
+                data-icon="add">{{ _("New theme") }}
         </button>
     </nav>
 
@@ -55,21 +55,21 @@
             {% if selected_slug != default_slug %}
                 <button type="button" class="btn-primary"
                         hx-post="{{ url_for('themes_set_default', slug=selected_slug) }}"
-                        hx-swap="none">Make default
+                        hx-swap="none">{{ _("Make default") }}
                 </button>
             {% endif %}
             {% if not selected_is_builtin %}
                 <button type="button" id="rename-theme-button" class="btn-secondary"
-                        data-icon="edit">Rename
+                        data-icon="edit">{{ _("Rename") }}
                 </button>
                 <button type="button" id="delete-theme-button" class="btn-danger"
-                        data-icon="delete">Delete
+                        data-icon="delete">{{ _("Delete") }}
                 </button>
             {% endif %}
         </div>
         {% endset %}
         {% call page_header(selected_label, none, header_actions) %}
-            {{ 'A built-in theme that ships with Yaffo. System themes cannot be deleted.' if selected_is_builtin else 'A custom theme stored in the application database.' }}
+            {{ _("A built-in theme that ships with Yaffo. System themes cannot be deleted.") if selected_is_builtin else _("A custom theme stored in the application database.") }}
         {% endcall %}
         {# Built-in themes are hand-crafted (no AI builder), so the conversation
            panel is hidden for them. #}
@@ -77,29 +77,30 @@
         <div class="chat-card theme-conversation">
             {% if selected_has_draft %}
                 <div class="theme-draft">
-                    <p class="theme-draft-text">The assistant has an unpublished design for this theme. Save it to make
-                        it live, or discard the draft.</p>
+                    <p class="theme-draft-text">
+                        {{ _("The assistant has an unpublished design for this theme. Save it to make it live, or discard the draft.") }}
+                    </p>
                     <div class="theme-draft-actions">
                         <button type="button" class="btn-primary"
                                 hx-post="{{ url_for('themes_publish', slug=selected_slug) }}"
-                                hx-swap="none">Save draft
+                                hx-swap="none">{{ _("Save draft") }}
                         </button>
                         <button type="button" class="btn-secondary"
                                 hx-post="{{ url_for('themes_discard', slug=selected_slug) }}"
-                                hx-swap="none">Discard
+                                hx-swap="none">{{ _("Discard") }}
                         </button>
                     </div>
                 </div>
             {% endif %}
             {{ chat_dialog(
                 'theme-chat',
-                'Conversation',
-                'Describe how this theme should look and the assistant will design it.',
-                'Describe how this theme should look…',
+                _('Conversation'),
+                _('Describe how this theme should look and the assistant will design it.'),
+                _('Describe how this theme should look…'),
                 messages=selected_conversations,
-                empty_text=('System themes are hand-crafted and have no conversation.'
+                empty_text=(_('System themes are hand-crafted and have no conversation.')
                             if selected_is_builtin
-                            else 'No conversation yet — describe the look you want and the assistant will build it.'),
+                            else _('No conversation yet — describe the look you want and the assistant will build it.')),
                 disabled=selected_is_builtin
             ) }}
 
@@ -111,26 +112,26 @@
 
 {% macro render_new_theme_form() %}
     <div class="form-group">
-        <label for="new-theme-label">Name</label>
+        <label for="new-theme-label">{{ _("Name") }}</label>
         <input type="text" id="new-theme-label" name="label" required
-               placeholder="e.g. Midnight, Pastel, Forest">
-        <p class="hint-text">Starts from the classic look — design it through a conversation later.</p>
+               placeholder="{{ _('e.g. Midnight, Pastel, Forest') }}">
+        <p class="hint-text">{{ _("Starts from the classic look — design it through a conversation later.") }}</p>
     </div>
 {% endmacro %}
 
-{{ render_modal('newThemeModal', 'New Theme', url_for('themes_create'), render_new_theme_form, 'Create') }}
+{{ render_modal('newThemeModal', _('New Theme'), url_for('themes_create'), render_new_theme_form, _('Create')) }}
 
 {% if not selected_is_builtin %}
 {% macro render_rename_theme_form() %}
     <div class="form-group">
-        <label for="rename-theme-label">Name</label>
+        <label for="rename-theme-label">{{ _("Name") }}</label>
         <input type="text" id="rename-theme-label" name="label" required
                value="{{ selected_label }}">
-        <p class="hint-text">Renaming updates the theme's web address (slug) to match.</p>
+        <p class="hint-text">{{ _("Renaming updates the theme's web address (slug) to match.") }}</p>
     </div>
 {% endmacro %}
 
-{{ render_modal('renameThemeModal', 'Rename Theme', url_for('themes_rename', slug=selected_slug), render_rename_theme_form, 'Save') }}
+{{ render_modal('renameThemeModal', _('Rename Theme'), url_for('themes_rename', slug=selected_slug), render_rename_theme_form, _('Save')) }}
 {% endif %}
 
 <form id="delete-theme-form" method="POST"
@@ -140,16 +141,20 @@
 {% block scripts %}
     <script src="{{ url_for('static', filename='themes_page/index.js') }}"></script>
     <script>
-        window.PHOTO_ORGANIZER.themesPage = window.PHOTO_ORGANIZER.initThemesPage(
-            {{ selected_label | tojson }},
-            window.APP_CONFIG
-        );
-        {% if not selected_is_builtin %}
-        window.PHOTO_ORGANIZER.themeChat = window.PHOTO_ORGANIZER.initThemeChat(
-            {{ selected_slug | tojson }},
-            {{ selected_status | tojson }},
-            window.APP_CONFIG
-        );
-        {% endif %}
+        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+            window.PHOTO_ORGANIZER.themesPage = window.PHOTO_ORGANIZER.initThemesPage(
+                {{ selected_label | tojson }},
+                window.APP_CONFIG,
+                i18n
+            );
+            {% if not selected_is_builtin %}
+            window.PHOTO_ORGANIZER.themeChat = window.PHOTO_ORGANIZER.initThemeChat(
+                {{ selected_slug | tojson }},
+                {{ selected_status | tojson }},
+                window.APP_CONFIG,
+                i18n
+            );
+            {% endif %}
+        });
     </script>
 {% endblock %}

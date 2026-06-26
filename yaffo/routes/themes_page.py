@@ -7,8 +7,11 @@ on each panel is the prepared UI for that). One theme is the default — the
 active theme stamped on <html data-theme>.
 """
 import re
+from dataclasses import asdict, dataclass
+from datetime import datetime
 
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
+from flask_babel import gettext
 
 from yaffo import themes
 from yaffo.background_tasks.tasks.generate_theme import generate_theme_task
@@ -25,6 +28,31 @@ from yaffo.themes import CustomTheme, ThemeAssets
 # save_custom_theme caps slugs at 41 chars; leave room for a "-N" uniqueness
 # suffix when two labels slugify identically.
 _MAX_BASE_SLUG_LENGTH = 30
+
+
+@dataclass(frozen=True)
+class RouteError:
+    error: str
+    code: str
+
+
+@dataclass(frozen=True)
+class ThemeMessagePayload:
+    type: str
+    content: str
+
+
+@dataclass(frozen=True)
+class ThemeStatusPayload:
+    slug: str
+    status: str
+    started_at: datetime | None
+    messages: list[ThemeMessagePayload]
+
+
+@dataclass(frozen=True)
+class ThemeChatStarted:
+    slug: str
 
 
 def _slugify(label: str) -> str:
@@ -45,6 +73,9 @@ def _unique_slug(label: str, exclude: str | None = None) -> str:
 
 
 def init_themes_page_routes(app: Flask):
+    def _error(message: str, code: str, status: int):
+        return jsonify(asdict(RouteError(error=message, code=code))), status
+
     def _render_page(selected_slug: str):
         # Built-in themes are hand-crafted and have no conversation; custom themes
         # carry the transcript that designed them (and the in-flight status that
@@ -103,7 +134,7 @@ def init_themes_page_routes(app: Flask):
     @app.route("/themes/<slug>/default", methods=["POST"])
     def themes_set_default(slug: str):
         if not themes.theme_exists(slug):
-            return jsonify({"error": f"Unknown theme: {slug}"}), 400
+            return _error(gettext("Unknown theme: %(slug)s", slug=slug), "theme_unknown", 400)
         themes.set_theme(slug)
         return _hx_refresh()
 
@@ -115,7 +146,7 @@ def init_themes_page_routes(app: Flask):
         if theme is None:
             abort(404)
         if theme.status != PAGE_VERSION_STATUS_READY or theme.working_theme is None:
-            return jsonify({"error": "No theme draft to publish."}), 409
+            return _error(gettext("No theme draft to publish."), "theme_draft_missing", 409)
         themes.publish_theme(slug)
         return _hx_refresh()
 
@@ -132,7 +163,7 @@ def init_themes_page_routes(app: Flask):
     def themes_create():
         label = (request.form.get("label") or "").strip()
         if not label:
-            return jsonify({"error": "Theme name is required"}), 400
+            return _error(gettext("Theme name is required"), "theme_name_required", 400)
         slug = _unique_slug(label)
         # A new theme starts published as an empty token override (the classic
         # look) with no conversation yet; the chat with the generator agent fills
@@ -154,12 +185,12 @@ def init_themes_page_routes(app: Flask):
         """Rename a custom theme. The slug is re-derived from the new label and the
         theme moves to it, so the response redirects to the new URL."""
         if themes.is_builtin(slug):
-            return jsonify({"error": "System themes cannot be renamed"}), 400
+            return _error(gettext("System themes cannot be renamed"), "system_theme_locked", 400)
         if themes.get_custom_theme(slug) is None:
             abort(404)
         label = (request.form.get("label") or "").strip()
         if not label:
-            return jsonify({"error": "Theme name is required"}), 400
+            return _error(gettext("Theme name is required"), "theme_name_required", 400)
         new_slug = _unique_slug(label, exclude=slug)
         themes.rename_custom_theme(slug, new_slug, label)
         return redirect(url_for("themes_show", slug=new_slug))
@@ -167,7 +198,7 @@ def init_themes_page_routes(app: Flask):
     @app.route("/themes/<slug>/delete", methods=["POST"])
     def themes_delete(slug: str):
         if themes.is_builtin(slug):
-            return jsonify({"error": "System themes cannot be deleted"}), 400
+            return _error(gettext("System themes cannot be deleted"), "system_theme_locked", 400)
         themes.delete_custom_theme(slug)
         return redirect(url_for("themes_index"))
 
@@ -180,12 +211,15 @@ def init_themes_page_routes(app: Flask):
              if entry.type == CONVERSATION_TYPE_USER),
             None,
         )
-        return {
-            "slug": theme.slug,
-            "status": theme.status,
-            "started_at": started_at,
-            "messages": [{"type": entry.type, "content": entry.content} for entry in theme.conversations],
-        }
+        return asdict(ThemeStatusPayload(
+            slug=theme.slug,
+            status=theme.status,
+            started_at=started_at,
+            messages=[
+                ThemeMessagePayload(type=entry.type, content=entry.content)
+                for entry in theme.conversations
+            ],
+        ))
 
     @app.route("/themes/<slug>/chat", methods=["POST"])
     def themes_chat(slug: str):
@@ -193,23 +227,30 @@ def init_themes_page_routes(app: Flask):
         lives on the theme (status + transcript), not this request, so it survives tab
         close / reload. A generation already running is rejected."""
         if themes.is_builtin(slug):
-            return {"error": "System themes cannot be generated."}, 400
+            return _error(gettext("System themes cannot be generated."), "system_theme_locked", 400)
         theme = themes.get_custom_theme(slug)
         if theme is None:
             abort(404)
         if theme.status == PAGE_VERSION_STATUS_IN_PROGRESS:
-            return {"error": "A generation is already running."}, 409
+            return _error(gettext("A generation is already running."), "generation_already_running", 409)
         payload = request.get_json(silent=True) or {}
         message = (payload.get("message") or "").strip()
         if not message:
-            return {"error": "Message is required."}, 400
+            return _error(gettext("Message is required."), "message_required", 400)
         if llm_config.selected_key_missing():
-            return {"error": f"No API key configured. Add your {llm_config.selected_provider_label()} API key in Settings → AI Generation."}, 400
+            return _error(
+                gettext(
+                    "No API key configured. Add your %(provider)s API key in Settings → AI Generation.",
+                    provider=llm_config.selected_provider_label(),
+                ),
+                "api_key_missing",
+                400,
+            )
 
         themes.add_theme_message(slug, CONVERSATION_TYPE_USER, message)
         themes.set_theme_status(slug, PAGE_VERSION_STATUS_IN_PROGRESS)
         generate_theme_task(slug, message)
-        return {"slug": slug}, 202
+        return jsonify(asdict(ThemeChatStarted(slug=slug))), 202
 
     @app.route("/themes/<slug>/status", methods=["GET"])
     def themes_status(slug: str):
@@ -228,4 +269,3 @@ def init_themes_page_routes(app: Flask):
             abort(404)
         themes.set_theme_status(slug, PAGE_VERSION_STATUS_CANCELLED)
         return "", 204
-

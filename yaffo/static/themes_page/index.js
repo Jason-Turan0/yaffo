@@ -1,5 +1,5 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.initThemesPage = (selectedLabel, config) => {
+window.PHOTO_ORGANIZER.initThemesPage = (selectedLabel, config, i18n) => {
     const newThemeModal = window.PHOTO_ORGANIZER.COMPONENTS.modal.init('newThemeModal');
 
     const newThemeButton = document.getElementById('new-theme-button');
@@ -15,9 +15,9 @@ window.PHOTO_ORGANIZER.initThemesPage = (selectedLabel, config) => {
 
     const confirmDelete = async () => {
         const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
-            title: 'Delete Theme',
-            message: `Delete "${selectedLabel}"?\nThis cannot be undone.`,
-            confirmText: 'Delete',
+            title: i18n.t('themes:delete.title'),
+            message: i18n.t('themes:delete.message', { name: selectedLabel }),
+            confirmText: i18n.t('common:delete'),
             confirmClass: 'btn-danger'
         });
         if (confirmed) {
@@ -40,7 +40,7 @@ window.PHOTO_ORGANIZER.initThemesPage = (selectedLabel, config) => {
 // cancelled) generation reloads so the regenerated CSS and server-rendered transcript
 // take effect, while a FAILED run stays open for a follow-up. Built-in themes render a
 // read-only transcript (no form), so initChatDialog returns null and this is inert.
-window.PHOTO_ORGANIZER.initThemeChat = (slug, startStatus, config) => {
+window.PHOTO_ORGANIZER.initThemeChat = (slug, startStatus, config, i18n) => {
     return window.PHOTO_ORGANIZER.initChatDialog('theme-chat', {
         startStatus,
         statusUrl: () => config.buildUrl('themes_status', { slug }),
@@ -59,9 +59,9 @@ window.PHOTO_ORGANIZER.initThemeChat = (slug, startStatus, config) => {
             if (body.status !== 'FAILED') window.location.reload();
         },
         cancelConfirm: {
-            title: 'Cancel generation',
-            message: 'Discard this generation and keep the current theme?',
-            confirmText: 'Cancel generation',
+            title: i18n.t('components:chat.cancelGeneration'),
+            message: i18n.t('themes:chat.cancelMessage'),
+            confirmText: i18n.t('components:chat.cancelGeneration'),
         },
     });
 };

@@ -252,3 +252,17 @@ def test_settings_llm_forms_use_gettext_and_localized_notifications():
     assert "_('API key')" in key_template
     assert 'gettext("AI model updated.")' in routes
     assert '"claude-sonnet-4-6": gettext(' in routes
+
+
+def test_themes_page_uses_gettext_and_localized_javascript():
+    source = Path("yaffo/static/themes_page/index.js").read_text(encoding="utf-8")
+    template = Path("yaffo/templates/themes_page/index.html").read_text(encoding="utf-8")
+    routes = Path("yaffo/routes/themes_page.py").read_text(encoding="utf-8")
+
+    assert '{{ _("Themes - Yaffo") }}' in template
+    assert '{{ _("New theme") }}' in template
+    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+    assert "themes:delete.message" in source
+    assert "themes:chat.cancelMessage" in source
+    assert "gettext(\"Theme name is required\")" in routes
+    assert "RouteError" in routes

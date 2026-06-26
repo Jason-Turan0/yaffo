@@ -1,0 +1,447 @@
+# Frontend JavaScript: Unit Testing & TypeScript Proposal
+
+Status: **Proposal (with decisions recorded — §0)** · Author: analysis pass · Scope: `yaffo/static/**/*.js`
+
+This document analyzes the browser-side JavaScript in Yaffo, proposes a pragmatic
+way to introduce **unit tests**, and assesses the **feasibility of migrating to
+TypeScript**. It is intentionally incremental — nothing here requires a big-bang
+rewrite or a new build step on day one.
+
+---
+
+## 0. Decisions
+
+Settled choices (the rest of the doc is the supporting analysis). Date: 2026-06-25.
+
+| # | Decision | Rationale | Detail |
+|---|----------|-----------|--------|
+| D1 | **Types: JSDoc + `checkJs`, type-check only — no build step.** Author types as JSDoc on the existing `.js`; run `tsc --noEmit`. Same files ship. | Preserves the zero-build, served-verbatim model (clean PyInstaller packaging); ~80% of TS's day-to-day benefit at ~5% of the cost; fully reversible. | §4.2 Option 1, §4.3 |
+| D2 | **JSDoc comments ship in `dist` as-is (inert).** No stripping. | Stripping *is* a build step, which would forfeit D1's whole point. Comments are inert and tiny next to vendored bundles. | §4.5 note |
+| D3 | **Full TypeScript (`.ts` + bundler) is deferred, not rejected.** Revisit only if JSDoc verbosity (e.g. index signatures) becomes the bottleneck. `allowJs` keeps the path open for gradual `.js`→`.ts`. | A mandatory build touches dev loop + CI + packaging; not worth it yet. | §4.2 Option 2 |
+| D4 | **Unit tests run from the CLI via npm scripts; coverage is included** (`vitest run --coverage`, v8 provider, scoped to `yaffo/static/**` excluding `vendor/`). | Mirrors the existing `yaffo_ui_tests` npm-script workflow; coverage is first-class, no extra framework. | §3.7 |
+| D5 | **DOM fixtures come from the real Jinja templates, not hand-written HTML** — rendered to committed fixture files by a generation step, drift-guarded in CI. | Keeps the template as the single source of truth; prevents test/markup duplication. | §3.8 |
+
+Open items still to decide before Step 1 of the roadmap: **runner** (Vitest vs. reuse `yaffo_ui_tests` Jest) and **where `package.json` lives** (new root vs. `yaffo_ui_tests/`) — see §6.
+
+---
+
+## 1. Current JavaScript landscape
+
+### 1.1 Inventory
+
+~3,000 lines of first-party JS across **37 files** (vendored libraries excluded):
+
+| Area | Files | Notable modules |
+|------|-------|-----------------|
+| Page modules | `utilities/`, `settings/`, `pages/`, `people/`, `locations/`, `faces/`, `themes_page/`, `media/`, `filters/` | `pages/grid.js` (434), `locations/list.js` (581), `faces/index.js` (416), `utilities/automations.js` (367) |
+| Shared components | `components/` | `cron_builder.js` (288), `chat_dialog.js`, `modal.js`, `overlay.js`, `folder_picker.js`, `confirm-dialog.js` |
+| Global services | root | `searchable-select.js` (326), `settings/index.js` (264), `i18n.js`, `notification.js`, `utils.js`, `multi-select.js` |
+| Vendored (excluded) | `vendor/` | htmx 2.0.4, OpenLayers 10.3.1, gridstack 10.3.1, i18next 25.7.4 |
+
+Loading model: plain `<script src>` tags in `templates/base.html` plus a
+per-page `{% block scripts %}`. **No bundler, no transpile, no `package.json`** in
+the app itself — files are served verbatim from `yaffo/static/`. Modern syntax is
+used directly (arrow functions, `async/await`, `fetch`, template literals,
+`TextDecoder`/streams, `Intl`).
+
+### 1.2 The dominant pattern is already test-friendly
+
+35 of 37 files follow the convention documented in `CLAUDE.md`: a namespaced
+factory attached to a single global, taking its dependencies as parameters and
+returning a public API. From `utilities/index_photos.js`:
+
+```js
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
+    // ... closure-scoped helpers ...
+    return { runScan, startSync };   // public API, ideal seam for tests
+};
+```
+
+This is close to ideal for unit testing:
+
+- **Dependency injection** — `i18n` and `config` (and `opts`) arrive as
+  arguments, so a test passes fakes instead of standing up i18next or Flask.
+- **Pure-ish helpers in closure scope** — e.g. `index_photos.js`'s record
+  handling, `utils.js` date formatting, `multi-select.js` label formatting.
+- **Returned public API** — `{ runScan, startSync }` gives tests a handle without
+  reaching into internals.
+
+### 1.3 What stands in the way of testing today
+
+1. **No module exports.** Files attach to `window.PHOTO_ORGANIZER` as a side
+   effect of evaluation; there is no `export`. A test runner can't `import` them —
+   it must evaluate the file against a global and read the namespace back off it.
+2. **DOM coupling.** Most modules call `document.getElementById` / `createElement`
+   directly, so tests need a DOM (`jsdom`), not pure Node.
+3. **Implicit globals.** Modules assume `window.notification`,
+   `window.APP_CONFIG`, `window.i18next`, and `window.PHOTO_ORGANIZER.i18n` exist
+   (set up elsewhere in `base.html`). Tests must provide these.
+4. **One legacy outlier.** `multi-select.js` uses bare top-level
+   `function` declarations wired through inline `onclick=` attributes — it does
+   not follow the factory pattern and is the least testable file.
+
+None of these are blockers; they shape the harness choice (§3).
+
+### 1.4 Existing tooling we can build on
+
+`yaffo_ui_tests/` is a **git-tracked, already-installed** AI-augmented
+**Playwright + MCP** end-to-end framework (TypeScript 5.7, Jest 30 via `ts-jest`
+ESM, ESLint 9, `tsx`). Important nuances:
+
+- It tests the app **through a real browser** (`generated_tests/**/*.spec.ts`) and
+  contains unit tests **of its own `lib/` framework** (`jest` `testMatch:
+  **/__tests__/**/*.test.ts`, `testEnvironment: node`).
+- It does **not** unit-test any code in `yaffo/static/`. There is currently **zero
+  unit-test coverage of first-party frontend logic.**
+
+So the toolchain (Node, TS, Jest, ESLint config) is already proven in-repo — we
+are adding a *new target* (the app's browser modules), not bootstrapping Node
+tooling from scratch.
+
+### 1.5 Backend reference points (for parity)
+
+Python is tested with `pytest` + `pytest-cov` and type-checked with `mypy`, under
+`tests/` mirroring the package tree. CI today (`.github/workflows/`) only builds
+docs and releases — **there is no JS or test CI gate at all.** The frontend
+proposal below mirrors the backend's "mirror-the-tree + a CI gate" shape.
+
+---
+
+## 2. Goals
+
+1. Make the **logic-heavy, bug-prone** frontend modules unit-testable and tested:
+   NDJSON stream parsing (`index_photos.js`), date/relative-time formatting
+   (`utils.js`), i18n service shape (`i18n.js`), multi-select label formatting,
+   cron builder, searchable-select filtering.
+2. Keep the **zero-build, served-verbatim** model for production for as long as
+   possible — testing must not force a bundler on the app.
+3. Lay a path to **type safety** that can start *today* without a build step and
+   graduate to full TypeScript only if/when the team wants it.
+4. Add a **CI gate** so regressions are caught.
+
+Non-goals: replacing the Playwright E2E suite (complementary — E2E covers
+integration/DOM-in-browser; units cover logic fast and deterministically), and
+testing vendored libraries.
+
+---
+
+## 3. Part A — Unit testing proposal
+
+### 3.1 Recommended harness: Vitest + jsdom
+
+**Recommendation: add a small `vitest` setup at repo root (or under a new
+`tests_js/`), using the `jsdom` environment.**
+
+Why Vitest over reusing the `yaffo_ui_tests` Jest:
+
+| Factor | Vitest + jsdom | Reuse `yaffo_ui_tests` Jest |
+|--------|----------------|------------------------------|
+| DOM env | `jsdom` first-class, one-line config | Jest `testEnvironment` is `node`; needs `jest-environment-jsdom` added |
+| Loading raw `window.*` global modules | trivial — `import './file.js'` runs side effects, or `vi.stubGlobal` | works, but ESM/`ts-jest` config is tuned for the framework's `.ts`, not the app's plain `.js` |
+| Speed / DX | fast watch mode, esbuild-based | fine, heavier config |
+| Coupling | app tests independent of the E2E framework's lifecycle | mixes two very different test targets in one package |
+
+Either works; Vitest is the lower-friction choice for plain browser `.js`. If the
+team prefers a single Node toolchain, Jest + `jest-environment-jsdom` in
+`yaffo_ui_tests` is an acceptable alternative — the test *authoring* below is
+nearly identical.
+
+### 3.2 The loading shim (the one real piece of glue)
+
+Because modules attach to a global instead of exporting, a tiny helper evaluates a
+module against fresh globals and hands back the namespace:
+
+```js
+// tests_js/support/load_module.js
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+
+/** Evaluate a yaffo/static module against a provided window-like global. */
+export function loadModule(relPath, globals = {}) {
+  const code = readFileSync(new URL(`../../yaffo/static/${relPath}`, import.meta.url), 'utf8');
+  const sandbox = { window: {}, document, console, fetch, TextDecoder, ...globals };
+  sandbox.window = sandbox.window ?? {};
+  vm.runInNewContext(code, { ...sandbox, globalThis: sandbox });
+  return sandbox.window.PHOTO_ORGANIZER;
+}
+```
+
+(With Vitest's `jsdom` env, `document`/`window` already exist on the global, so the
+shim can be even smaller — just set `window.APP_CONFIG` etc. before importing.)
+
+### 3.3 Fakes for the implicit globals
+
+A shared setup provides the three things modules assume exist:
+
+- `window.APP_CONFIG` — `{ urls: {...}, buildUrl, i18n: { locale: 'en' } }`
+- `window.notification` — `{ success: vi.fn(), error: vi.fn(), ... }`
+- an `i18n` fake — `{ t: (k, o) => k, number: (n) => String(n), ... }` (modules
+  already receive this as a *parameter*, so most tests inject it directly).
+
+### 3.4 Worked example
+
+```js
+// tests_js/utilities/index_photos.test.js
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { loadModule } from '../support/load_module.js';
+
+describe('initIndexPhotos.handleRecord', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <span id="stat-total-filesystem"></span>
+      <button id="sync-button" hidden></button>
+      <div id="scan-results"></div>`;
+    window.notification = { success: vi.fn(), error: vi.fn() };
+  });
+
+  it('updates the filesystem counter on progress records', () => {
+    const PO = loadModule('utilities/index_photos.js');
+    const i18n = { t: (k) => k, number: (n) => `#${n}` };
+    const api = PO.initIndexPhotos(
+      { canScan: false, canSync: true, hasActiveJobs: false, mediaDirs: [] },
+      i18n,
+      { urls: {} },
+    );
+    // drive the public surface / dispatch a record (expose handleRecord or call runScan with a stubbed fetch)
+    expect(document.getElementById('stat-total-filesystem').textContent).toBe('');
+  });
+});
+```
+
+The richest near-term target is `index_photos.js`'s `handleRecord` /
+`runScan` NDJSON loop — pure data-in, DOM-out logic with three record types and a
+buffer-splitting reader that is exactly the kind of thing that breaks silently.
+(Consider returning `handleRecord` from the factory's public API to test it
+directly.)
+
+### 3.5 Phased rollout
+
+**Phase 0 — harness (½ day).** Add `tests_js/` + `vitest.config.js` + the loading
+shim + shared fakes. One smoke test green.
+
+**Phase 1 — pure logic, highest ROI (1–2 days).** Target modules with real branch
+logic and minimal DOM:
+- `utils.js` — `date.format`, `formatWithTime`, `formatRelative` (boundary cases:
+  empty, invalid, the day/hour/minute/30-day cutoffs).
+- `index_photos.js` — record handling + the NDJSON buffer split (partial lines,
+  trailing record without newline).
+- `multi-select.js` — `updateMultiSelectText` formatting (0/1/N selected,
+  custom formats) and `filterMultiSelectOptions`. *Refactor this file into the
+  factory pattern first* (see §3.6) — it pays for itself here.
+- `i18n.js` — the returned service shape (`number`/`percent`/`date`/`list`
+  delegate to `Intl` with the right locale).
+
+**Phase 2 — components (2–4 days).** `cron_builder.js`, `searchable-select.js`,
+`modal.js`, `folder_picker.js` — DOM-building components testable with jsdom
+fixtures.
+
+**Phase 3 — page modules, as touched.** Add tests opportunistically when editing
+`pages/grid.js`, `locations/list.js`, `faces/index.js`, `automations.js`. Don't
+backfill all at once.
+
+### 3.6 Small refactors that unlock testing
+
+- **Convert `multi-select.js`** to the `initMultiSelect(...)` factory and drop the
+  inline `onclick=` handlers (replace with `addEventListener` wiring). Brings the
+  last outlier in line with `CLAUDE.md` and makes it testable.
+- **Expose pure helpers** on the returned API where a test wants them (e.g.
+  `handleRecord` in `index_photos.js`) rather than reaching into closures.
+- Keep DOM lookups behind the existing `el()`/`getElementById` helpers so fixtures
+  stay simple.
+
+### 3.7 CI
+
+Add a `frontend` job to a (new) GitHub Actions workflow: `npm ci` + `vitest run
+--coverage`, gating PRs. Start with **no coverage threshold**; once Phase 1 lands,
+set a floor (e.g. 60% on the tested files, not the whole tree) and ratchet up.
+This is the first JS gate in CI — pair it with `eslint` (config already exists in
+`yaffo_ui_tests`).
+
+---
+
+## 4. Part B — TypeScript feasibility
+
+### 4.1 The core tension
+
+The app ships JS **without a build step** — `yaffo/static/*.js` is served as-is and
+bundled into the PyInstaller app verbatim (see `docs/distribution.md` /
+packaging notes). Full TypeScript requires a **compile step** that emits the JS
+Flask serves, which touches dev workflow, the static-file pipeline, and packaging.
+That cost — not the language — is the real decision.
+
+The good news: the codebase is **already structured like typed code** (small
+factories, explicit parameter objects, JSDoc in places like `utils.js`), and the
+TS toolchain already exists in `yaffo_ui_tests`. So the *language* migration is
+low-risk; the *build/packaging* integration is the part to be deliberate about.
+
+### 4.2 Three options
+
+**Option 1 — JSDoc + `checkJs`, type-check only (no build). ⭐ Recommended first.**
+
+Add a root `tsconfig.json` with `allowJs: true`, `checkJs: true`,
+`noEmit: true`, and type the existing `.js` via JSDoc comments (already started in
+`utils.js`). Run `tsc --noEmit` in CI for type errors. **Zero runtime change** —
+the same `.js` ships; nothing is transpiled or bundled.
+
+- *Pros:* immediate type safety on the real files, no build step, no packaging
+  impact, reversible, incremental file-by-file (`// @ts-check` per file or global).
+  Editors get autocomplete/inline errors today.
+- *Cons:* JSDoc is more verbose than TS syntax; no enums/interfaces-as-syntax
+  (use `@typedef`). Can't use TS-only features.
+- *Effort:* ½ day setup; ongoing per-file typing. Pairs perfectly with the test
+  rollout — type the file when you write its first test.
+
+**Option 2 — Full TypeScript with a build step.**
+
+Author `.ts` under `yaffo/static_src/`, compile with `esbuild`/`tsc` to
+`yaffo/static/` (or a `dist/`), and serve the output.
+
+- *Pros:* full TS ergonomics (interfaces, enums, stricter inference), shareable
+  types with `yaffo_ui_tests`.
+- *Cons:* introduces a **mandatory build** for every static change (dev watch +
+  CI + **PyInstaller packaging must run it** before bundling); source maps needed
+  for debugging; a new failure mode (stale build). Meaningful workflow change for a
+  solo/small project that currently has none.
+- *Effort:* 2–3 days to wire build + packaging + source maps, then incremental
+  per-file conversion. Best done **module-by-module** since `allowJs` lets `.ts`
+  and `.js` coexist during migration.
+
+**Option 3 — Status quo (plain JS, no types).** Keep as-is; rely on tests only.
+Lowest effort, no type safety. Viable if the team doesn't value static types.
+
+### 4.3 Recommendation
+
+**Adopt Option 1 now; treat Option 2 as an optional later graduation.**
+
+Rationale: the no-build-step property is genuinely valuable here (simple dev loop,
+clean PyInstaller packaging — see the packaging notes about the fragility of the
+build/launch glue). `checkJs` + JSDoc captures ~80% of TypeScript's day-to-day
+benefit (catching shape/null/typo bugs, editor intel) at ~5% of the integration
+cost and with full reversibility. If, after living with typed JSDoc, the verbosity
+becomes the bottleneck, Option 2 is a clean follow-on because `allowJs` permits a
+gradual `.js`→`.ts` migration with both coexisting.
+
+### 4.4 Migration mechanics (whichever option)
+
+- The `init*(opts, i18n, config)` factories map cleanly to typed signatures:
+  define `interface AppConfig`, `interface I18nService`, and per-page `opts`
+  types once (shareable with `yaffo_ui_tests`).
+- The `window.PHOTO_ORGANIZER` global wants an ambient declaration
+  (`declare global { interface Window { PHOTO_ORGANIZER: ... } }`) so every file
+  sees a typed namespace.
+- Start with leaf utilities (`utils.js`, `i18n.js`) — few dependencies, high reuse
+  — then components, then pages, same order as the test rollout. Type a file when
+  you add its first test.
+
+### 4.5 Worked example — typing `pages/widget_api.js` with JSDoc (named structs)
+
+JSDoc is not limited to one-off `@param`/`@returns` tags (already present in
+`utils.js`). It supports **named struct types** (`@typedef` + `@property`),
+**function types** (`@callback`), **generics** (`@template`), and **cross-file
+type imports** — enough to fully type a module with *no build step*, checked by
+`tsc --noEmit`.
+
+`widget_api.js` is the ideal case: it returns a structured `api` object (a
+contract other widget code depends on) and consumes loosely-typed `postMessage`
+data. Today it's untyped ES5 (`var`/`function`). Typed:
+
+```js
+/**
+ * @typedef {Object} WidgetQuery
+ * @property {string} source   - Data source name (e.g. "photos").
+ * @property {number} [limit]  - Optional row cap.
+ *   Additional `key: value` entries are treated as filters (see §note below).
+ *
+ * @callback EventHandler
+ * @param {any} payload
+ * @returns {void}
+ *
+ * @typedef {Object} YaffoApi                 // the returned struct — the key type
+ * @property {Object<string, any[]>} data     - data_query results, keyed by query name.
+ * @property {Object<string, any>}  state     - Persisted state from the last saveState().
+ * @property {string} locale
+ * @property {(value: number, options?: Intl.NumberFormatOptions) => string} number
+ * @property {(value: number, options?: Intl.NumberFormatOptions) => string} percent
+ * @property {(value: string|number|Date, options?: Intl.DateTimeFormatOptions) => string} date
+ * @property {(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions) => string} relativeTime
+ * @property {(values: Iterable<string>, options?: Intl.ListFormatOptions) => string} list
+ * @property {(query: WidgetQuery) => Promise<any[]|null>} query
+ * @property {(topic: string, payload: any) => void} publish
+ * @property {(topic: string, handler: EventHandler) => void} subscribe
+ * @property {(newState: Object<string, any>) => void} saveState
+ * @property {(id: number) => string} mediaUrl
+ */
+
+/**
+ * @param {Object<string, any[]>} data   - host-injected data_query results.
+ * @param {Object<string, any>}  state   - previously persisted widget state.
+ * @param {string} [locale]
+ * @returns {YaffoApi}
+ */
+window.PHOTO_ORGANIZER.initWidgetApi = function (data, state, locale) {
+    /** @type {Object<number, (data: any) => void>} */
+    var pending = {};               // requestId -> resolve fn
+    /** @type {Object<string, EventHandler[]>} */
+    var subscribers = {};           // topic -> handlers
+
+    /** @type {YaffoApi} */
+    var api = { /* ...existing object literal, now shape-checked against YaffoApi... */ };
+    return api;
+};
+```
+
+What this buys, concretely:
+
+- **`/** @type {YaffoApi} *\/ var api = {…}`** is the payoff for a returned
+  struct: `checkJs` errors if the literal drops a property, has a typo, or a
+  method signature drifts from the typedef. The struct is the single source of
+  truth for the widget contract.
+- **Cross-file reuse without importing code.** A widget consuming the global
+  imports just the *type*:
+  ```js
+  /** @type {import('./widget_api.js').YaffoApi} */
+  const yaffo = window.yaffo;
+  ```
+  and the global itself is declared ambiently in a check-only `globals.d.ts`
+  (read by `tsc`, never shipped): `interface Window { yaffo: import('./pages/widget_api.js').YaffoApi }`.
+- **Generics** are available where needed via `@template T` (e.g. a typed
+  `request<T>(...) => Promise<T>`).
+
+**The one rough edge (§note):** JSDoc can't cleanly express an *index signature* —
+"`WidgetQuery` has a known `source` plus arbitrary filter keys." You fall back to
+`Object<string, any>` or document it in prose. Accumulating cases like this are the
+practical signal to graduate from JSDoc (Option 1) to real `.ts` (Option 2).
+
+---
+
+## 5. Recommended roadmap
+
+| Step | Effort | Outcome |
+|------|--------|---------|
+| 1. Vitest + jsdom harness, loading shim, fakes (§3.2–3.3) | ½ day | first JS unit test green |
+| 2. Root `tsconfig.json`, `checkJs`/`noEmit`, type `utils.js`+`i18n.js` (Option 1) | ½ day | type-checking with no build |
+| 3. Refactor `multi-select.js` to factory pattern (§3.6) | ½ day | last outlier conformant + testable |
+| 4. Phase-1 unit tests (`utils`, `index_photos`, `multi-select`, `i18n`) | 1–2 days | core logic covered |
+| 5. CI workflow: `vitest run` + `tsc --noEmit` + `eslint` gate | ½ day | regressions caught on PRs |
+| 6. Phase-2 component tests + type files as touched | ongoing | coverage ratchets up |
+| 7. *(optional, later)* evaluate Option 2 full-TS build | 2–3 days | only if JSDoc verbosity bites |
+
+---
+
+## 6. Risks & open questions
+
+- **Reuse vs. new toolchain.** Adding Vitest means a second JS test runner
+  alongside the `yaffo_ui_tests` Jest. Acceptable (different targets), but if the
+  team wants one runner, standardize on Jest + `jest-environment-jsdom` instead —
+  decide before Step 1.
+- **The loading shim is glue.** It depends on modules being side-effect-evaluable
+  against a global. Converting modules to real ESM `export`s later would remove the
+  shim but is a larger change touching every `<script>` tag in templates.
+- **Packaging (Option 2 only).** A TS build must be inserted *before* PyInstaller
+  bundles `yaffo/static/`; given prior packaging fragility, this needs care. Option
+  1 sidesteps it entirely.
+- **Coverage targets.** Start with none; set per-file floors after Phase 1 to avoid
+  a vanity whole-tree percentage that punishes untested vendored/page glue.
+</content>
+</invoke>
