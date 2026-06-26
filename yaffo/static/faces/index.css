@@ -294,14 +294,20 @@
     object-fit: cover;
 }
 
-.new-person-controls,
+/* Stacked: the input gets its own full-width line above the button, so a long
+   localized button label (e.g. German under neobrutalist) can't squash it. */
+.new-person-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 .existing-person-controls {
     display: flex;
     gap: 0.5rem;
     align-items: center;
 }
 
-.new-person-controls input,
 .existing-person-controls select {
     flex: 1;
 }

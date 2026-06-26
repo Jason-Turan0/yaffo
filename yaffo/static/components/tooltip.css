@@ -27,3 +27,57 @@
     background: var(--color-surface-inverse);
     transform: translateX(-50%) rotate(45deg);
 }
+
+/* Pure-CSS hover/focus tooltip: put data-tooltip="text" on any positioned element
+   (no JS, unlike .tooltip above). The text wraps, so it suits longer help copy. */
+[data-tooltip] {
+    position: relative;
+}
+
+[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 260px;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    background: var(--color-surface-inverse);
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    font-style: normal;
+    line-height: 1.4;
+    white-space: normal;
+    text-align: left;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    z-index: 1000;
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+    opacity: 1;
+}
+
+/* A bare icon button (data-icon="info") that only surfaces a data-tooltip — the
+   "more info" affordance. The glyph comes from the icon system (components/icons.css),
+   so it themes like every other icon; this just strips the button chrome. */
+.help-tip {
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: help;
+    vertical-align: middle;
+}
+
+/* A caution variant of the affordance (data-icon="warning") — tinted so it reads as
+   a warning rather than neutral help. */
+.help-tip-warning {
+    color: var(--color-warning-soft-text);
+}

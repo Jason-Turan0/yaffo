@@ -11,11 +11,11 @@ window.PHOTO_ORGANIZER.initLabelFilter = () => {
 
         const query = event.target.value.trim().toLowerCase();
         let anyVisible = false;
-        section.querySelectorAll('.label-row').forEach((row) => {
-            const name = (row.querySelector('.label-name')?.textContent || '').toLowerCase();
-            const prompt = (row.querySelector('.label-prompt')?.textContent || '').toLowerCase();
+        section.querySelectorAll('.label-chip').forEach((chip) => {
+            const name = (chip.querySelector('.label-chip-name')?.textContent || '').toLowerCase();
+            const prompt = (chip.querySelector('.label-chip-info')?.dataset.tooltip || '').toLowerCase();
             const match = !query || name.includes(query) || prompt.includes(query);
-            row.hidden = !match;
+            chip.hidden = !match;
             if (match) anyVisible = true;
         });
 

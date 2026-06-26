@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-25 22:36-0500\n"
+"POT-Creation-Date: 2026-06-25 23:25-0500\n"
 "PO-Revision-Date: 2026-06-24 18:49-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -844,7 +844,7 @@ msgstr "Filter zurücksetzen"
 msgid "Type to search…"
 msgstr "Zum Suchen eingeben…"
 
-#: yaffo/templates/base.html:4 yaffo/templates/faces/index.html:228
+#: yaffo/templates/base.html:4 yaffo/templates/faces/index.html:227
 #: yaffo/templates/pages/widget_frame.html:4
 msgid "No results found"
 msgstr "Keine Ergebnisse gefunden"
@@ -853,63 +853,63 @@ msgstr "Keine Ergebnisse gefunden"
 msgid "Select…"
 msgstr "Auswählen…"
 
-#: yaffo/templates/base.html:94
+#: yaffo/templates/base.html:95
 msgid "Home"
 msgstr "Startseite"
 
-#: yaffo/templates/base.html:97 yaffo/templates/people/list.html:26
+#: yaffo/templates/base.html:98 yaffo/templates/people/list.html:26
 msgid "Faces"
 msgstr "Gesichter"
 
-#: yaffo/templates/base.html:100 yaffo/templates/faces/index.html:80
+#: yaffo/templates/base.html:101 yaffo/templates/faces/index.html:79
 #: yaffo/templates/filters/_people.html:4 yaffo/templates/people/list.html:16
 msgid "People"
 msgstr "Personen"
 
-#: yaffo/templates/base.html:102 yaffo/templates/filters/_locations.html:4
+#: yaffo/templates/base.html:103 yaffo/templates/filters/_locations.html:4
 msgid "Locations"
 msgstr "Orte"
 
-#: yaffo/templates/base.html:104 yaffo/templates/utilities/_base.html:36
+#: yaffo/templates/base.html:105 yaffo/templates/utilities/_base.html:36
 msgid "Utilities"
 msgstr "Werkzeuge"
 
-#: yaffo/templates/base.html:106 yaffo/templates/themes_page/index.html:15
+#: yaffo/templates/base.html:107 yaffo/templates/themes_page/index.html:15
 msgid "Themes"
 msgstr "Designs"
 
-#: yaffo/templates/base.html:108 yaffo/templates/settings/index.html:13
+#: yaffo/templates/base.html:109 yaffo/templates/settings/index.html:13
 msgid "Settings"
 msgstr "Einstellungen"
 
-#: yaffo/templates/base.html:113
+#: yaffo/templates/base.html:114
 msgid "Pages"
 msgstr "Seiten"
 
-#: yaffo/templates/base.html:129
+#: yaffo/templates/base.html:130
 msgid "Edit page"
 msgstr "Seite bearbeiten"
 
-#: yaffo/templates/base.html:136
+#: yaffo/templates/base.html:137
 msgid "New page"
 msgstr "Neue Seite"
 
-#: yaffo/templates/base.html:152 yaffo/templates/components/info_modal.html:6
+#: yaffo/templates/base.html:153 yaffo/templates/components/info_modal.html:6
 #: yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
 #: yaffo/templates/locations/list.html:34
 msgid "Close"
 msgstr "Schließen"
 
-#: yaffo/templates/base.html:166
+#: yaffo/templates/base.html:167
 msgid "Select a folder"
 msgstr "Ordner auswählen"
 
-#: yaffo/templates/base.html:170
+#: yaffo/templates/base.html:171
 msgid "Up"
 msgstr "Nach oben"
 
-#: yaffo/templates/base.html:178 yaffo/templates/base.html:194
+#: yaffo/templates/base.html:179 yaffo/templates/base.html:195
 #: yaffo/templates/components/chat_dialog.html:39
 #: yaffo/templates/components/modal.html:16
 #: yaffo/templates/fragments/job_status_fragment.html:28
@@ -918,11 +918,11 @@ msgstr "Nach oben"
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: yaffo/templates/base.html:179
+#: yaffo/templates/base.html:180
 msgid "Select this folder"
 msgstr "Diesen Ordner auswählen"
 
-#: yaffo/templates/base.html:188 yaffo/templates/base.html:195
+#: yaffo/templates/base.html:189 yaffo/templates/base.html:196
 msgid "Confirm"
 msgstr "Bestätigen"
 
@@ -981,7 +981,7 @@ msgid "Taken"
 msgstr "Aufgenommen"
 
 #: yaffo/templates/index.html:74 yaffo/templates/index.html:98
-#: yaffo/templates/people/faces.html:67
+#: yaffo/templates/people/faces.html:66
 msgid "Unknown date"
 msgstr "Unbekanntes Datum"
 
@@ -1066,13 +1066,13 @@ msgstr "Einträge pro Seite:"
 
 #: yaffo/templates/components/htmx_pagination.html:52
 #: yaffo/templates/components/pagination.html:53
-#: yaffo/templates/faces/index.html:215
+#: yaffo/templates/faces/index.html:214
 msgid "First"
 msgstr "Erste"
 
 #: yaffo/templates/components/htmx_pagination.html:63
 #: yaffo/templates/components/pagination.html:59
-#: yaffo/templates/faces/index.html:216
+#: yaffo/templates/faces/index.html:215
 msgid "Previous"
 msgstr "Zurück"
 
@@ -1084,13 +1084,13 @@ msgstr "Seite %(page)s von %(total)s"
 
 #: yaffo/templates/components/htmx_pagination.html:80
 #: yaffo/templates/components/pagination.html:71
-#: yaffo/templates/faces/index.html:218
+#: yaffo/templates/faces/index.html:217
 msgid "Next"
 msgstr "Weiter"
 
 #: yaffo/templates/components/htmx_pagination.html:91
 #: yaffo/templates/components/pagination.html:77
-#: yaffo/templates/faces/index.html:219
+#: yaffo/templates/faces/index.html:218
 msgid "Last"
 msgstr "Letzte"
 
@@ -1102,11 +1102,11 @@ msgstr "Verarbeitung läuft"
 msgid "Faces - Yaffo"
 msgstr "Gesichter - Yaffo"
 
-#: yaffo/templates/faces/index.html:18
+#: yaffo/templates/faces/index.html:17
 msgid "How This Page Works"
 msgstr "So funktioniert diese Seite"
 
-#: yaffo/templates/faces/index.html:19
+#: yaffo/templates/faces/index.html:18
 msgid ""
 "The job here is to empty the pile of unassigned faces. Faces are detected"
 " automatically and grouped for you, so you can accept or reject a whole "
@@ -1118,27 +1118,27 @@ msgstr ""
 " Gruppe auf einmal annehmen oder ablehnen können — weisen Sie eine Gruppe"
 " einer Person zu oder ignorieren Sie unerwünschte Gesichter."
 
-#: yaffo/templates/faces/index.html:21
+#: yaffo/templates/faces/index.html:20
 msgid "Group by People:"
 msgstr "Nach Personen gruppieren:"
 
-#: yaffo/templates/faces/index.html:21
+#: yaffo/templates/faces/index.html:20
 msgid "Matches faces to specific people"
 msgstr "Ordnet Gesichter bestimmten Personen zu"
 
-#: yaffo/templates/faces/index.html:22
+#: yaffo/templates/faces/index.html:21
 msgid "Group by Similarity:"
 msgstr "Nach Ähnlichkeit gruppieren:"
 
-#: yaffo/templates/faces/index.html:22
+#: yaffo/templates/faces/index.html:21
 msgid "Clusters visually similar faces together"
 msgstr "Gruppiert optisch ähnliche Gesichter"
 
-#: yaffo/templates/faces/index.html:23
+#: yaffo/templates/faces/index.html:22
 msgid "Similarity Threshold:"
 msgstr "Ähnlichkeitsschwellenwert:"
 
-#: yaffo/templates/faces/index.html:23
+#: yaffo/templates/faces/index.html:22
 msgid ""
 "Higher values make tighter, cleaner groups; lower values make larger, "
 "looser ones"
@@ -1146,15 +1146,15 @@ msgstr ""
 "Höhere Werte erzeugen engere, eindeutigere Gruppen; niedrigere Werte "
 "erzeugen größere, lockerere Gruppen"
 
-#: yaffo/templates/faces/index.html:26
+#: yaffo/templates/faces/index.html:25
 msgid "Recommended Workflow"
 msgstr "Empfohlener Ablauf"
 
-#: yaffo/templates/faces/index.html:28
+#: yaffo/templates/faces/index.html:27
 msgid "Start broad with Similarity."
 msgstr "Beginnen Sie breit mit Ähnlichkeit."
 
-#: yaffo/templates/faces/index.html:28
+#: yaffo/templates/faces/index.html:27
 msgid ""
 "Group by Similarity at a high threshold and assign the big, obvious "
 "clusters first."
@@ -1162,11 +1162,11 @@ msgstr ""
 "Gruppieren Sie bei einem hohen Schwellenwert nach Ähnlichkeit und weisen "
 "Sie zuerst die großen, eindeutigen Gruppen zu."
 
-#: yaffo/templates/faces/index.html:29
+#: yaffo/templates/faces/index.html:28
 msgid "Lower the threshold as the groups shrink."
 msgstr "Senken Sie den Schwellenwert, wenn die Gruppen kleiner werden."
 
-#: yaffo/templates/faces/index.html:29
+#: yaffo/templates/faces/index.html:28
 msgid ""
 "Once the biggest groups get small, drop the threshold to pull looser "
 "matches together. The right values vary a lot from batch to batch, so "
@@ -1176,21 +1176,21 @@ msgstr ""
 " lockerere Treffer zusammenzuführen. Die passenden Werte unterscheiden "
 "sich je nach Durchlauf deutlich, passen Sie sie daher nach Bedarf an."
 
-#: yaffo/templates/faces/index.html:30
+#: yaffo/templates/faces/index.html:29
 msgid "Then switch to People."
 msgstr "Wechseln Sie anschließend zu Personen."
 
-#: yaffo/templates/faces/index.html:30
+#: yaffo/templates/faces/index.html:29
 msgid "Group by People to catch faces that match someone you've already built up."
 msgstr ""
 "Gruppieren Sie nach Personen, um Gesichter zu finden, die zu einer "
 "bereits angelegten Person passen."
 
-#: yaffo/templates/faces/index.html:31
+#: yaffo/templates/faces/index.html:30
 msgid "Ignore what's left."
 msgstr "Ignorieren Sie den Rest."
 
-#: yaffo/templates/faces/index.html:31
+#: yaffo/templates/faces/index.html:30
 msgid ""
 "The remainder is usually low quality — blurry, partial, or odd angles. "
 "Select and Ignore it."
@@ -1198,35 +1198,43 @@ msgstr ""
 "Der Rest ist meist von geringer Qualität — unscharf, unvollständig oder "
 "aus ungewöhnlichen Winkeln. Wählen Sie ihn aus und ignorieren Sie ihn."
 
-#: yaffo/templates/faces/index.html:34
+#: yaffo/templates/faces/index.html:33
 msgid "Quick Assignment"
 msgstr "Schnellzuweisung"
 
-#: yaffo/templates/faces/index.html:37
+#: yaffo/templates/faces/index.html:36
 msgid "Other Shortcuts"
 msgstr "Weitere Tastenkürzel"
 
-#: yaffo/templates/faces/index.html:41
+#: yaffo/templates/faces/index.html:39
+msgid "Click"
+msgstr "Klick"
+
+#: yaffo/templates/faces/index.html:40
 msgid "Select range of faces"
 msgstr "Gesichtsbereich auswählen"
 
-#: yaffo/templates/faces/index.html:45 yaffo/templates/faces/index.html:151
+#: yaffo/templates/faces/index.html:44 yaffo/templates/faces/index.html:150
 msgid "Assign to selected person"
 msgstr "Der ausgewählten Person zuweisen"
 
-#: yaffo/templates/faces/index.html:49 yaffo/templates/faces/index.html:155
+#: yaffo/templates/faces/index.html:47 yaffo/templates/faces/index.html:153
+msgid "or"
+msgstr "oder"
+
+#: yaffo/templates/faces/index.html:48 yaffo/templates/faces/index.html:154
 msgid "Ignore selected faces"
 msgstr "Ausgewählte Gesichter ignorieren"
 
-#: yaffo/templates/faces/index.html:53
+#: yaffo/templates/faces/index.html:52
 msgid "Show this help"
 msgstr "Diese Hilfe anzeigen"
 
-#: yaffo/templates/faces/index.html:59
+#: yaffo/templates/faces/index.html:58
 msgid "Tips:"
 msgstr "Tipps:"
 
-#: yaffo/templates/faces/index.html:60
+#: yaffo/templates/faces/index.html:59
 msgid ""
 "Refresh the page between passes — it re-clusters the remaining faces into"
 " tighter, higher-quality groups"
@@ -1234,7 +1242,7 @@ msgstr ""
 "Aktualisieren Sie die Seite zwischen den Durchläufen — dadurch werden die"
 " verbleibenden Gesichter in engere, hochwertigere Gruppen neu gruppiert"
 
-#: yaffo/templates/faces/index.html:61
+#: yaffo/templates/faces/index.html:60
 msgid ""
 "As your catalog of people grows, a background task assigns matching faces"
 " automatically — so this pile should shrink on its own over time"
@@ -1243,96 +1251,96 @@ msgstr ""
 "passende Gesichter automatisch zu — dadurch sollte dieser Stapel mit der "
 "Zeit von selbst kleiner werden"
 
-#: yaffo/templates/faces/index.html:62
+#: yaffo/templates/faces/index.html:61
 msgid "Select faces then press a number key for quick assignment"
 msgstr ""
 "Wählen Sie Gesichter aus und drücken Sie zur Schnellzuweisung eine "
 "Zifferntaste"
 
-#: yaffo/templates/faces/index.html:63
+#: yaffo/templates/faces/index.html:62
 msgid "Hold Shift+Click to select multiple faces at once"
 msgstr "Halten Sie Umschalt+Klick gedrückt, um mehrere Gesichter auszuwählen"
 
-#: yaffo/templates/faces/index.html:75
+#: yaffo/templates/faces/index.html:74
 msgid "Group by"
 msgstr "Gruppieren nach"
 
-#: yaffo/templates/faces/index.html:85
+#: yaffo/templates/faces/index.html:84
 msgid "Similarity"
 msgstr "Ähnlichkeit"
 
-#: yaffo/templates/faces/index.html:90
+#: yaffo/templates/faces/index.html:89
 msgid "Similarity Threshold"
 msgstr "Ähnlichkeitsschwellenwert"
 
-#: yaffo/templates/faces/index.html:97
+#: yaffo/templates/faces/index.html:96
 msgid "Faces to analyze"
 msgstr "Zu analysierende Gesichter"
 
-#: yaffo/templates/faces/index.html:117
+#: yaffo/templates/faces/index.html:116
 msgid "Assign to Person"
 msgstr "Person zuweisen"
 
-#: yaffo/templates/faces/index.html:119
+#: yaffo/templates/faces/index.html:118
 msgid "Select person"
 msgstr "Person auswählen"
 
-#: yaffo/templates/faces/index.html:126
+#: yaffo/templates/faces/index.html:125
 msgid "Assign Selected"
 msgstr "Auswahl zuweisen"
 
-#: yaffo/templates/faces/index.html:128
+#: yaffo/templates/faces/index.html:127
 msgid "Ignore Selected"
 msgstr "Auswahl ignorieren"
 
-#: yaffo/templates/faces/index.html:140
+#: yaffo/templates/faces/index.html:139
 msgid "Create Person"
 msgstr "Person erstellen"
 
-#: yaffo/templates/faces/index.html:147
+#: yaffo/templates/faces/index.html:146
 msgid "Keyboard Shortcuts:"
 msgstr "Tastenkürzel:"
 
-#: yaffo/templates/faces/index.html:160
+#: yaffo/templates/faces/index.html:159
 msgid "Press <kbd>?</kbd> for help"
 msgstr "Drücken Sie <kbd>?</kbd> für Hilfe"
 
-#: yaffo/templates/faces/index.html:167
+#: yaffo/templates/faces/index.html:166
 msgid "Unassigned Faces"
 msgstr "Nicht zugewiesene Gesichter"
 
-#: yaffo/templates/faces/index.html:168
+#: yaffo/templates/faces/index.html:167
 #, python-format
 msgid "Showing %(shown)s of %(total)s unassigned face"
 msgid_plural "Showing %(shown)s of %(total)s unassigned faces"
 msgstr[0] "%(shown)s von %(total)s nicht zugewiesenem Gesicht wird angezeigt"
 msgstr[1] "%(shown)s von %(total)s nicht zugewiesenen Gesichtern werden angezeigt"
 
-#: yaffo/templates/faces/index.html:180
+#: yaffo/templates/faces/index.html:179
 #, python-format
 msgid "%(formatted_count)s face"
 msgid_plural "%(formatted_count)s faces"
 msgstr[0] "%(formatted_count)s Gesicht"
 msgstr[1] "%(formatted_count)s Gesichter"
 
-#: yaffo/templates/faces/index.html:192 yaffo/templates/people/faces.html:52
+#: yaffo/templates/faces/index.html:191 yaffo/templates/people/faces.html:51
 msgid "Select all"
 msgstr "Alle auswählen"
 
-#: yaffo/templates/faces/index.html:195
+#: yaffo/templates/faces/index.html:194
 msgid "Shuffle"
 msgstr "Mischen"
 
-#: yaffo/templates/faces/index.html:199
+#: yaffo/templates/faces/index.html:198
 #, python-format
 msgid "Assign to %(person)s"
 msgstr "%(person)s zuweisen"
 
-#: yaffo/templates/faces/index.html:201
+#: yaffo/templates/faces/index.html:200
 msgid "Skip cluster"
 msgstr "Gruppe überspringen"
 
-#: yaffo/templates/faces/index.html:210
+#: yaffo/templates/faces/index.html:209
 #, python-format
 msgid "Showing <span class=\"sample-range\">0</span> of %(total)s face"
 msgid_plural "Showing <span class=\"sample-range\">0</span> of %(total)s faces"
@@ -1341,25 +1349,25 @@ msgstr[1] ""
 "<span class=\"sample-range\">0</span> von %(total)s Gesichtern werden "
 "angezeigt"
 
-#: yaffo/templates/faces/index.html:217
+#: yaffo/templates/faces/index.html:216
 msgid "Page 1 of 1"
 msgstr "Seite 1 von 1"
 
-#: yaffo/templates/faces/index.html:229
+#: yaffo/templates/faces/index.html:228
 msgid "Double-check the applied filters or decrease the similarity threshold."
 msgstr ""
 "Prüfen Sie die angewendeten Filter oder senken Sie den "
 "Ähnlichkeitsschwellenwert."
 
-#: yaffo/templates/faces/index.html:234
+#: yaffo/templates/faces/index.html:233
 msgid "All Faces Assigned!"
 msgstr "Alle Gesichter zugewiesen!"
 
-#: yaffo/templates/faces/index.html:235
+#: yaffo/templates/faces/index.html:234
 msgid "There isn't anything for you to do here."
 msgstr "Hier gibt es nichts für Sie zu erledigen."
 
-#: yaffo/templates/faces/index.html:241
+#: yaffo/templates/faces/index.html:240
 msgid "Help"
 msgstr "Hilfe"
 
@@ -1636,7 +1644,7 @@ msgid_plural "Faces (%(count)s)"
 msgstr[0] "Gesicht (%(count)s)"
 msgstr[1] "Gesichter (%(count)s)"
 
-#: yaffo/templates/media/view.html:130 yaffo/templates/people/faces.html:65
+#: yaffo/templates/media/view.html:130 yaffo/templates/people/faces.html:64
 msgid "Face"
 msgstr "Gesicht"
 
@@ -1777,59 +1785,59 @@ msgstr "Dieses Widget konnte nicht dargestellt werden"
 msgid "%(person)s's Faces - Yaffo"
 msgstr "Gesichter von %(person)s - Yaffo"
 
-#: yaffo/templates/people/faces.html:18
+#: yaffo/templates/people/faces.html:17
 msgid "Min Similarity"
 msgstr "Minimale Ähnlichkeit"
 
-#: yaffo/templates/people/faces.html:19
+#: yaffo/templates/people/faces.html:18
 msgid "Max Similarity"
 msgstr "Maximale Ähnlichkeit"
 
-#: yaffo/templates/people/faces.html:25
+#: yaffo/templates/people/faces.html:24
 msgid "Remove Selected"
 msgstr "Auswahl entfernen"
 
-#: yaffo/templates/people/faces.html:33
+#: yaffo/templates/people/faces.html:32
 msgid "Back to People"
 msgstr "Zurück zu Personen"
 
-#: yaffo/templates/people/faces.html:35
+#: yaffo/templates/people/faces.html:34
 #, python-format
 msgid "%(person)s's Faces"
 msgstr "Gesichter von %(person)s"
 
-#: yaffo/templates/people/faces.html:37
+#: yaffo/templates/people/faces.html:36
 #, python-format
 msgid "Showing %(total)s face"
 msgid_plural "Showing %(total)s faces"
 msgstr[0] "%(total)s Gesicht wird angezeigt"
 msgstr[1] "%(total)s Gesichter werden angezeigt"
 
-#: yaffo/templates/people/faces.html:43
+#: yaffo/templates/people/faces.html:42
 msgid "(filtered)"
 msgstr "(gefiltert)"
 
-#: yaffo/templates/people/faces.html:46 yaffo/templates/people/faces.html:101
+#: yaffo/templates/people/faces.html:45 yaffo/templates/people/faces.html:100
 msgid "No faces found"
 msgstr "Keine Gesichter gefunden"
 
-#: yaffo/templates/people/faces.html:54
+#: yaffo/templates/people/faces.html:53
 msgid "Clear selection"
 msgstr "Auswahl aufheben"
 
-#: yaffo/templates/people/faces.html:70
+#: yaffo/templates/people/faces.html:69
 msgid "Similarity:"
 msgstr "Ähnlichkeit:"
 
-#: yaffo/templates/people/faces.html:77
+#: yaffo/templates/people/faces.html:76
 msgid "N/A"
 msgstr "k. A."
 
-#: yaffo/templates/people/faces.html:103
+#: yaffo/templates/people/faces.html:102
 msgid "Try adjusting your filters."
 msgstr "Passen Sie die Filter an."
 
-#: yaffo/templates/people/faces.html:105
+#: yaffo/templates/people/faces.html:104
 #, python-format
 msgid "No faces have been assigned to %(person)s yet."
 msgstr "%(person)s wurden noch keine Gesichter zugewiesen."
@@ -1893,19 +1901,20 @@ msgid "Edit Person"
 msgstr "Person bearbeiten"
 
 #: yaffo/templates/settings/_labels.html:2
-msgid "Photo labels"
-msgstr "Fotolabels"
+msgid ""
+"A label’s name is the tag shown on photos. Its optional prompt is the "
+"phrase the recognizer matches against — leave it blank for simple objects"
+" like “dog”, and use a fuller phrase for activities, e.g. “people "
+"swimming in water”."
+msgstr ""
+"Der Name eines Labels ist das auf Fotos angezeigte Tag. Sein optionaler "
+"Prompt ist der Ausdruck, mit dem die Erkennung abgleicht — für einfache "
+"Objekte wie „dog“ leer lassen, für Aktivitäten einen ausführlicheren "
+"Ausdruck verwenden, z. B. „people swimming in water“."
 
 #: yaffo/templates/settings/_labels.html:4
-msgid ""
-"The vocabulary used by the <strong>Classify labels</strong> automation "
-"for offline image recognition. Enable the labels you want detected or add"
-" your own. A custom prompt fine-tunes how a label is matched."
-msgstr ""
-"Das von der Automatisierung <strong>Labels klassifizieren</strong> für "
-"die Offline-Bilderkennung verwendete Vokabular. Aktivieren Sie die "
-"Labels, die erkannt werden sollen, oder fügen Sie eigene hinzu. Eine "
-"benutzerdefinierte Beschreibung verfeinert die Zuordnung eines Labels."
+msgid "Photo labels"
+msgstr "Fotolabels"
 
 #: yaffo/templates/settings/_labels.html:8
 msgid ""
@@ -1915,66 +1924,56 @@ msgstr ""
 "Label-Namen und Prompts müssen auf Englisch verfasst sein — das Offline-"
 "Modell zur Bilderkennung versteht nur englischen Text."
 
-#: yaffo/templates/settings/_labels.html:13
+#: yaffo/templates/settings/_labels.html:14
+msgid ""
+"Enable the labels the <strong>Classify labels</strong> automation should "
+"detect in your photos, or add your own."
+msgstr ""
+"Aktivieren Sie die Labels, die die Automatisierung <strong>Labels "
+"klassifizieren</strong> in Ihren Fotos erkennen soll, oder fügen Sie "
+"eigene hinzu."
+
+#: yaffo/templates/settings/_labels.html:18
 msgid "Filter labels…"
 msgstr "Labels filtern…"
 
-#: yaffo/templates/settings/_labels.html:14
+#: yaffo/templates/settings/_labels.html:19
 msgid "Filter labels"
 msgstr "Labels filtern"
 
-#: yaffo/templates/settings/_labels.html:26
-#: yaffo/templates/themes_page/index.html:24
-#: yaffo/templates/themes_page/index.html:38
-msgid "default"
-msgstr "Standard"
+#: yaffo/templates/settings/_labels.html:32
+#, python-format
+msgid "Prompt: %(prompt)s"
+msgstr "Prompt: %(prompt)s"
 
-#: yaffo/templates/settings/_labels.html:30
-#: yaffo/templates/settings/index.html:43
-msgid "Remove"
-msgstr "Entfernen"
+#: yaffo/templates/settings/_labels.html:36
+#, python-format
+msgid "Remove %(name)s"
+msgstr "%(name)s entfernen"
 
-#: yaffo/templates/settings/_labels.html:34
+#: yaffo/templates/settings/_labels.html:43
 msgid "No labels match your filter."
 msgstr "Keine Labels entsprechen Ihrem Filter."
 
-#: yaffo/templates/settings/_labels.html:36
+#: yaffo/templates/settings/_labels.html:45
 msgid "No labels yet"
 msgstr "Noch keine Labels"
 
-#: yaffo/templates/settings/_labels.html:41
+#: yaffo/templates/settings/_labels.html:50
 msgid "Label name (for example, dog)"
 msgstr "Labelname (zum Beispiel Hund)"
 
-#: yaffo/templates/settings/_labels.html:42
+#: yaffo/templates/settings/_labels.html:51
 msgid "Optional prompt (for example, people swimming in water)"
 msgstr "Optionale Beschreibung (zum Beispiel Menschen, die im Wasser schwimmen)"
 
-#: yaffo/templates/settings/_labels.html:43
+#: yaffo/templates/settings/_labels.html:52
 msgid "Add label"
 msgstr "Label hinzufügen"
 
-#: yaffo/templates/settings/_labels.html:46
-msgid ""
-"The <strong>name</strong> is the tag shown on photos. The optional "
-"<strong>prompt</strong> is the phrase the recognizer matches against. "
-"Leave it blank for simple objects; activities and events work better with"
-" a fuller phrase."
-msgstr ""
-"Der <strong>Name</strong> ist das auf Fotos angezeigte Tag. Die optionale"
-" <strong>Beschreibung</strong> ist der Ausdruck, mit dem die Erkennung "
-"abgleicht. Lassen Sie sie für einfache Objekte leer; Aktivitäten und "
-"Ereignisse funktionieren mit einem ausführlicheren Ausdruck besser."
-
-#: yaffo/templates/settings/_labels.html:52
+#: yaffo/templates/settings/_labels.html:58
 msgid "Re-classify all photos"
 msgstr "Alle Fotos neu klassifizieren"
-
-#: yaffo/templates/settings/_labels.html:53
-msgid "Run the classifier over your whole library to apply vocabulary changes."
-msgstr ""
-"Führen Sie die Klassifizierung für die gesamte Bibliothek aus, um "
-"Änderungen am Vokabular anzuwenden."
 
 #: yaffo/templates/settings/_llm.html:2
 msgid "AI Generation"
@@ -2064,6 +2063,10 @@ msgstr ""
 "Fügen Sie Verzeichnisse hinzu, in denen Ihre Fotos gespeichert sind. "
 "Yaffo durchsucht diese Verzeichnisse nach zu indizierenden Fotos und "
 "Videos."
+
+#: yaffo/templates/settings/index.html:43
+msgid "Remove"
+msgstr "Entfernen"
 
 #: yaffo/templates/settings/index.html:54
 msgid "Enter directory path (for example, /Volumes/Photos or C:\\Photos)"
@@ -2183,6 +2186,11 @@ msgstr "Designs - Yaffo"
 #: yaffo/templates/utilities/_base.html:54
 msgid "System"
 msgstr "System"
+
+#: yaffo/templates/themes_page/index.html:24
+#: yaffo/templates/themes_page/index.html:38
+msgid "default"
+msgstr "Standard"
 
 #: yaffo/templates/themes_page/index.html:30
 #: yaffo/templates/utilities/_base.html:61
@@ -2738,4 +2746,26 @@ msgstr "Ausgewählte Duplikate entfernen"
 
 #~ msgid "Something went wrong"
 #~ msgstr ""
+
+#~ msgid ""
+#~ "The vocabulary used by the "
+#~ "<strong>Classify labels</strong> automation for "
+#~ "offline image recognition. Enable the "
+#~ "labels you want detected or add "
+#~ "your own. A custom prompt fine-"
+#~ "tunes how a label is matched."
+#~ msgstr ""
+#~ "Das von der Automatisierung <strong>Labels "
+#~ "klassifizieren</strong> für die Offline-"
+#~ "Bilderkennung verwendete Vokabular. Aktivieren "
+#~ "Sie die Labels, die erkannt werden "
+#~ "sollen, oder fügen Sie eigene hinzu. "
+#~ "Eine benutzerdefinierte Beschreibung verfeinert "
+#~ "die Zuordnung eines Labels."
+
+#~ msgid "Run the classifier over your whole library to apply vocabulary changes."
+#~ msgstr ""
+#~ "Führen Sie die Klassifizierung für die"
+#~ " gesamte Bibliothek aus, um Änderungen "
+#~ "am Vokabular anzuwenden."
 

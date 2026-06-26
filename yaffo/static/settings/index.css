@@ -182,51 +182,81 @@
     margin: 0 0 15px;
     padding: 0;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 320px;
-    overflow-y: auto;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.label-row {
-    display: flex;
+/* A label is a pill: click the name to enable/disable (a hidden checkbox holds the
+   state and persists via HTMX), ⓘ reveals its prompt, × removes it. Enabled pills
+   fill with the accent; disabled ones are muted outlines. */
+.label-chip {
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    background: var(--color-surface-sunken);
-    border-radius: var(--radius-sm);
+    gap: 4px;
+    padding: 3px 6px 3px 12px;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
 }
 
-/* Filtered-out rows (the [hidden] attr alone can't beat .label-row's display:flex). */
-.label-row[hidden] {
+/* Filtered-out chips (the [hidden] attr alone can't beat display:inline-flex). */
+.label-chip[hidden] {
     display: none;
 }
 
-.label-row .checkbox-label {
-    margin: 0;
-}
-
-.label-name {
-    font-weight: 600;
+.label-chip:has(.label-chip-input:checked) {
+    background: var(--color-accent-soft);
+    border-color: var(--color-accent);
     color: var(--color-text);
 }
 
-.label-prompt {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-muted);
-    font-style: italic;
+.label-chip:has(.label-chip-input:focus-visible) {
+    outline: none;
+    box-shadow: var(--focus-ring);
 }
 
-.label-badge {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-    background: var(--color-accent-soft);
-    padding: 1px 8px;
-    border-radius: var(--radius-sm);
+.label-chip-toggle {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    cursor: pointer;
 }
 
-.label-row .btn-sm {
-    margin-left: auto;
+/* Visually hidden but still focusable, so the pill itself shows the on/off state. */
+.label-chip-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.label-chip-name {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+}
+
+/* The ⓘ prompt marker (data-icon="info") sits flush in the pill, faintly tinted. */
+.label-chip-info {
+    color: var(--color-text-faint);
+}
+
+/* The × remove control is the shared delete icon (data-icon="delete"); reddens on hover. */
+.label-chip-remove {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--color-text-faint);
+    cursor: pointer;
+}
+
+.label-chip-remove:hover {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
 }
 
 .add-label-form {
@@ -256,13 +286,8 @@
     box-shadow: var(--focus-ring);
 }
 
-/* More breathing room below the add-label helper before the reclassify divider. */
-.add-label-form + .hint-text {
-    margin-bottom: 24px;
-}
-
 .labels-reclassify {
-    margin-top: 15px;
+    margin-top: 24px;
     padding-top: 15px;
     border-top: 1px solid var(--color-border-subtle);
 }

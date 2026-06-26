@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from flask import request
+from flask import has_request_context, request
 from flask_babel import Babel
 from sqlalchemy.exc import OperationalError
 
@@ -52,8 +52,12 @@ def select_locale() -> str:
     saved = get_saved_locale()
     if saved:
         return saved
-    accepted = request.accept_languages.best_match(list(SUPPORTED_LOCALES))
-    return normalize_locale(accepted) or DEFAULT_LOCALE
+    # A lazy_gettext string (e.g. a built-in theme/automation label) can resolve in an
+    # app context with no request — Accept-Language only applies when a request exists.
+    if has_request_context():
+        accepted = request.accept_languages.best_match(list(SUPPORTED_LOCALES))
+        return normalize_locale(accepted) or DEFAULT_LOCALE
+    return DEFAULT_LOCALE
 
 
 def set_locale(locale: str) -> bool:

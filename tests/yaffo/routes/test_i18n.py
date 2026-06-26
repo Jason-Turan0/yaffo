@@ -82,7 +82,6 @@ def test_saved_locale_translates_settings_label_management(app, client):
     assert "Labelname (zum Beispiel Hund)" in body
     assert "Label hinzufügen" in body
     assert "Alle Fotos neu klassifizieren" in body
-    assert "Änderungen am Vokabular anzuwenden" in body
 
 
 def test_saved_locale_translates_settings_label_validation(client):

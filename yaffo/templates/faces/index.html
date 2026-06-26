@@ -6,7 +6,6 @@
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='faces/index.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/pagination.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='components/tooltip.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/kbd.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='searchable-select.css') }}">
 {% endblock %}
@@ -37,7 +36,7 @@
         <h3 class="modal-section-title">{{ _("Other Shortcuts") }}</h3>
         <div class="help-shortcuts-list">
             <div class="help-shortcut-item">
-                <kbd>Shift</kbd> + <kbd>Click</kbd>
+                <kbd>Shift</kbd> + <kbd>{{ _("Click") }}</kbd>
                 <span>{{ _("Select range of faces") }}</span>
             </div>
             <div class="help-shortcut-item">
@@ -45,7 +44,7 @@
                 <span>{{ _("Assign to selected person") }}</span>
             </div>
             <div class="help-shortcut-item">
-                <kbd>i</kbd> or <kbd>0</kbd>
+                <kbd>i</kbd> {{ _("or") }} <kbd>0</kbd>
                 <span>{{ _("Ignore selected faces") }}</span>
             </div>
             <div class="help-shortcut-item">
@@ -151,7 +150,7 @@
                         <span>{{ _("Assign to selected person") }}</span>
                     </div>
                     <div class="shortcut-item">
-                        <kbd>i</kbd> or <kbd>0</kbd>
+                        <kbd>i</kbd> {{ _("or") }} <kbd>0</kbd>
                         <span>{{ _("Ignore selected faces") }}</span>
                     </div>
                 </div>
