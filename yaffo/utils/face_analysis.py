@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -31,6 +32,12 @@ EMBEDDING_DIM = 512
 _app = None
 
 
+@dataclass(frozen=True)
+class ModelLocation:
+    path: Path | None
+    source: str
+
+
 def _model_root() -> str:
     """InsightFace loads models from `<root>/models/<name>`. Prefer the copy
     bundled into the app (no network on first run); otherwise use the default
@@ -39,6 +46,18 @@ def _model_root() -> str:
     if (bundled / "models" / MODEL_NAME).is_dir():
         return str(bundled)
     return os.path.expanduser("~/.insightface")
+
+
+def get_model_location() -> ModelLocation:
+    bundled = BUNDLED_MODELS_DIR / "insightface" / "models" / MODEL_NAME
+    if bundled.is_dir():
+        return ModelLocation(path=bundled, source="bundled")
+
+    downloaded = Path.home() / ".insightface" / "models" / MODEL_NAME
+    if downloaded.is_dir():
+        return ModelLocation(path=downloaded, source="downloaded")
+
+    return ModelLocation(path=None, source="pending")
 
 
 def _get_app():

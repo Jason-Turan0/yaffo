@@ -58,31 +58,36 @@ def _stop_background(procs: list[subprocess.Popen]) -> None:
             proc.terminate()
 
 
-def _run_menubar(procs: list[subprocess.Popen], url: str) -> None:
-    """Run a macOS menu-bar item on the main thread (the AppKit run loop that gives
-    the app a face and keeps it alive). 'Quit' tears down the host/watcher children
-    so nothing is orphaned — the failure mode of the headless, faceless build."""
-    import rumps
-
+def _create_tray_icon(procs: list[subprocess.Popen], url: str):
+    """Create a cross-platform system tray icon. The icon run loop is started later,
+    after the web server is listening in a background thread."""
+    import pystray
+    from PIL import Image
     from yaffo.common import RESOURCES_DIR
 
-    icon = RESOURCES_DIR / "branding" / "menubar.png"
-    icon_kwargs = {"icon": str(icon), "template": False} if icon.exists() else {"title": "📷"}
+    icon_path = RESOURCES_DIR / "branding" / "menubar.png"
+    image = (
+        Image.open(icon_path).convert("RGBA")
+        if icon_path.exists()
+        else Image.new("RGBA", (44, 44), (0, 0, 0, 0))
+    )
 
-    class YaffoApp(rumps.App):
-        def __init__(self) -> None:
-            super().__init__("Yaffo", quit_button=None, **icon_kwargs)
-            self.menu = [
-                rumps.MenuItem("Open Yaffo", callback=lambda _: webbrowser.open(url)),
-                None,
-                rumps.MenuItem("Quit Yaffo", callback=self._quit),
-            ]
+    def open_yaffo(icon, item) -> None:
+        webbrowser.open(url)
 
-        def _quit(self, _) -> None:
-            _stop_background(procs)
-            rumps.quit_application()
+    def quit_yaffo(icon, item) -> None:
+        _stop_background(procs)
+        icon.stop()
 
-    YaffoApp().run()
+    return pystray.Icon(
+        "yaffo",
+        image,
+        "Yaffo",
+        menu=pystray.Menu(
+            pystray.MenuItem("Open Yaffo", open_yaffo, default=True),
+            pystray.MenuItem("Quit Yaffo", quit_yaffo),
+        ),
+    )
 
 
 def _run_web() -> None:
@@ -100,26 +105,20 @@ def _run_web() -> None:
     url = f"http://{HOST}:{PORT}"
     threading.Timer(1.5, lambda: webbrowser.open(url)).start()
 
-    if sys.platform != "darwin":
-        logger.info(f"serving Yaffo at {url} (no menu bar)")
-        serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
-        return
-
     try:
-        import rumps  # noqa: F401  (probe: present in the bundle, absent in plain dev)
+        tray_icon = _create_tray_icon(procs, url)
     except Exception:
-        # No menu bar in a bare macOS dev run: serve on the main thread.
-        logger.info(f"serving Yaffo at {url} (no menu bar)")
+        logger.info(f"serving Yaffo at {url} (no system tray)")
         serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
         return
 
-    logger.info(f"serving Yaffo at {url} (menu bar)")
+    logger.info(f"serving Yaffo at {url} (system tray)")
     threading.Thread(
         target=serve, args=(app,),
         kwargs={"host": HOST, "port": PORT, "threads": WEB_THREADS},
         daemon=True,
     ).start()
-    _run_menubar(procs, url)
+    tray_icon.run()
 
 
 def _run_host() -> None:

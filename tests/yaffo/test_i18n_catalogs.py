@@ -8,6 +8,7 @@ import scripts.i18n_catalogs as i18n_catalogs
 from scripts.i18n_catalogs import (
     BROWSER_LOCALES_DIR,
     I18NEXT_PLACEHOLDER_RE,
+    POT_PATH,
     TranslationEntry,
     flatten_json,
     validate_browser_catalog,
@@ -50,6 +51,54 @@ def test_browser_catalogs_have_identical_keys_and_placeholders():
 def test_gettext_catalogs_have_identical_messages_and_placeholders():
     for locale in ("de", "zh", "hi", "es", "ar", "fr"):
         assert validate_gettext_catalog(locale, require_translated=True) == []
+
+
+def test_no_missing_translations_against_english_baselines():
+    english_browser = flatten_json(json.loads((BROWSER_LOCALES_DIR / "en.json").read_text(encoding="utf-8")))
+    english_gettext = {
+        (message.context, message.id): message
+        for message in i18n_catalogs._read_catalog(POT_PATH)
+        if message.id
+    }
+    failures = []
+
+    for path in sorted(BROWSER_LOCALES_DIR.glob("*.json")):
+        if path.stem == "en" or path.stem.endswith(".review"):
+            continue
+
+        translated_browser = flatten_json(json.loads(path.read_text(encoding="utf-8")))
+        missing_browser = sorted(set(english_browser) - set(translated_browser))
+        empty_browser = sorted(
+            key
+            for key in set(english_browser) & set(translated_browser)
+            if not translated_browser[key].strip()
+        )
+        if missing_browser:
+            failures.append(f"{path.stem}: missing JavaScript keys: {', '.join(missing_browser)}")
+        if empty_browser:
+            failures.append(f"{path.stem}: empty JavaScript translations: {', '.join(empty_browser)}")
+
+        translated_gettext = {
+            (message.context, message.id): message
+            for message in i18n_catalogs._read_catalog(i18n_catalogs._catalog_path(path.stem), path.stem)
+            if message.id
+        }
+        missing_gettext = sorted(set(english_gettext) - set(translated_gettext), key=str)
+        empty_gettext = []
+        for key in sorted(set(english_gettext) & set(translated_gettext), key=str):
+            translated = translated_gettext[key]
+            parts = translated.string if isinstance(translated.string, tuple) else (translated.string,)
+            if not all((part or "").strip() for part in parts):
+                empty_gettext.append(str(key[1]))
+        if missing_gettext:
+            failures.append(
+                f"{path.stem}: missing Babel messages: "
+                + ", ".join(str(message_id) for _, message_id in missing_gettext)
+            )
+        if empty_gettext:
+            failures.append(f"{path.stem}: empty Babel translations: {', '.join(empty_gettext)}")
+
+    assert failures == []
 
 
 def test_i18next_vendor_asset_is_packaged():

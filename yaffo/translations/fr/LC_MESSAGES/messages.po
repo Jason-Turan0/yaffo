@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-27 16:31-0500\n"
+"POT-Creation-Date: 2026-06-27 18:26-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -438,75 +438,75 @@ msgstr "Aucun visage sélectionné"
 msgid "Person updated"
 msgstr "Personne mise à jour"
 
-#: yaffo/routes/settings.py:87
+#: yaffo/routes/settings.py:96
 msgid "Claude Opus 4.8 — most capable"
 msgstr "Claude Opus 4.8 — le plus performant"
 
-#: yaffo/routes/settings.py:88
+#: yaffo/routes/settings.py:97
 msgid "Claude Sonnet 4.6 — balanced"
 msgstr "Claude Sonnet 4.6 — équilibré"
 
-#: yaffo/routes/settings.py:89
+#: yaffo/routes/settings.py:98
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "Claude Haiku 4.5 — le plus rapide"
 
-#: yaffo/routes/settings.py:135 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:144 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr "Unité de distance non prise en charge"
 
-#: yaffo/routes/settings.py:171
+#: yaffo/routes/settings.py:180
 msgid "Label name is required."
 msgstr "Le nom de l’étiquette est obligatoire."
 
-#: yaffo/routes/settings.py:174
+#: yaffo/routes/settings.py:183
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr "Étiquette '%(name)s'existe déjà."
 
-#: yaffo/routes/settings.py:190
+#: yaffo/routes/settings.py:199
 msgid "Classify-labels automation is not installed."
 msgstr "L’automatisation des étiquettes de classification n’est pas installée."
 
-#: yaffo/routes/settings.py:196
+#: yaffo/routes/settings.py:205
 msgid "No indexed photos to classify yet."
 msgstr "Aucune photo indexée à classer pour l'instant."
 
-#: yaffo/routes/settings.py:202
+#: yaffo/routes/settings.py:211
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] "Reclassement %(count)s photo en arrière-plan…"
 msgstr[1] "Reclassement %(count)s photos en arrière-plan…"
 
-#: yaffo/routes/settings.py:221
+#: yaffo/routes/settings.py:230
 msgid "AI model updated."
 msgstr "Modèle d'IA mis à jour."
 
-#: yaffo/routes/settings.py:250 yaffo/routes/settings.py:345
+#: yaffo/routes/settings.py:259 yaffo/routes/settings.py:354
 msgid "Directory path is required"
 msgstr "Le chemin du répertoire est requis"
 
-#: yaffo/routes/settings.py:258
+#: yaffo/routes/settings.py:267
 msgid "Could not create the directory"
 msgstr "Impossible de créer le répertoire"
 
-#: yaffo/routes/settings.py:264
+#: yaffo/routes/settings.py:273
 msgid "Directory is already configured"
 msgstr "Le répertoire est déjà configuré"
 
-#: yaffo/routes/settings.py:278
+#: yaffo/routes/settings.py:287
 msgid "Media directory not found"
 msgstr "Répertoire multimédia introuvable"
 
-#: yaffo/routes/settings.py:327
+#: yaffo/routes/settings.py:336
 msgid "Could not count thumbnail files"
 msgstr "Impossible de compter les fichiers miniatures"
 
-#: yaffo/routes/settings.py:362
+#: yaffo/routes/settings.py:371
 msgid "The new directory is the same as the current directory"
 msgstr "Le nouveau répertoire est le même que le répertoire actuel"
 
-#: yaffo/routes/settings.py:421
+#: yaffo/routes/settings.py:430
 msgid "Could not move thumbnail files"
 msgstr "Impossible de déplacer les fichiers miniatures"
 
@@ -2132,22 +2132,32 @@ msgid "ExifTool executable used for reading and writing media metadata."
 msgstr "Exécutable ExifTool utilisé pour lire et écrire des métadonnées multimédias."
 
 #: yaffo/templates/settings/index.html:163
-msgid "Downloaded Model Cache:"
-msgstr "Cache de modèle téléchargé :"
+msgid "Image Classification Model:"
+msgstr "Modèle de classification d'images :"
 
-#: yaffo/templates/settings/index.html:165
-msgid "Writable cache where Yaffo stores downloaded ML models such as CLIP encoders."
-msgstr "Cache inscriptible où Yaffo stocke les modèles ML téléchargés tels que les encodeurs CLIP."
+#: yaffo/templates/settings/index.html:166 yaffo/templates/settings/index.html:178
+msgid "Bundled with this app."
+msgstr "Livré avec cette application."
 
-#: yaffo/templates/settings/index.html:169
-msgid "Bundled Models Directory:"
-msgstr "Répertoire des modèles groupés :"
+#: yaffo/templates/settings/index.html:168
+msgid "Downloaded model cache used for image classification."
+msgstr "Cache de modèle téléchargé utilisé pour la classification des images."
 
-#: yaffo/templates/settings/index.html:171
-msgid "Read-only model directory included with a bundled app build, when available."
-msgstr ""
-"Répertoire de modèles en lecture seule inclus avec une version d'application groupée, lorsqu'elle"
-" est disponible."
+#: yaffo/templates/settings/index.html:170
+msgid "Will be downloaded on first image-classification run."
+msgstr "Sera téléchargé lors de la première exécution de classification d’image."
+
+#: yaffo/templates/settings/index.html:175
+msgid "Face Recognition Model:"
+msgstr "Modèle de reconnaissance faciale :"
+
+#: yaffo/templates/settings/index.html:180
+msgid "Downloaded model cache used for face recognition."
+msgstr "Cache de modèle téléchargé utilisé pour la reconnaissance faciale."
+
+#: yaffo/templates/settings/index.html:182
+msgid "Will be downloaded on first face-recognition run."
+msgstr "Sera téléchargé lors de la première exécution de reconnaissance faciale."
 
 #: yaffo/templates/themes_page/index.html:6
 msgid "Themes - Yaffo"

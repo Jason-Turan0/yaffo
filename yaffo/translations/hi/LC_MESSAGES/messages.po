@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-27 16:31-0500\n"
+"POT-Creation-Date: 2026-06-27 18:26-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: hi\n"
@@ -437,75 +437,75 @@ msgstr "कोई चेहरा चयनित नहीं"
 msgid "Person updated"
 msgstr "व्यक्ति अद्यतन किया गया"
 
-#: yaffo/routes/settings.py:87
+#: yaffo/routes/settings.py:96
 msgid "Claude Opus 4.8 — most capable"
 msgstr "क्लाउड ओपस 4.8 - सबसे सक्षम"
 
-#: yaffo/routes/settings.py:88
+#: yaffo/routes/settings.py:97
 msgid "Claude Sonnet 4.6 — balanced"
 msgstr "क्लाउड सॉनेट 4.6 - संतुलित"
 
-#: yaffo/routes/settings.py:89
+#: yaffo/routes/settings.py:98
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "क्लाउड हाइकु 4.5 — सबसे तेज़"
 
-#: yaffo/routes/settings.py:135 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:144 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr "असमर्थित दूरी इकाई"
 
-#: yaffo/routes/settings.py:171
+#: yaffo/routes/settings.py:180
 msgid "Label name is required."
 msgstr "लेबल नाम आवश्यक है."
 
-#: yaffo/routes/settings.py:174
+#: yaffo/routes/settings.py:183
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr "लेबल '%(name)s' पहले से ही मौजूद है।"
 
-#: yaffo/routes/settings.py:190
+#: yaffo/routes/settings.py:199
 msgid "Classify-labels automation is not installed."
 msgstr "वर्गीकृत-लेबल स्वचालन स्थापित नहीं है."
 
-#: yaffo/routes/settings.py:196
+#: yaffo/routes/settings.py:205
 msgid "No indexed photos to classify yet."
 msgstr "वर्गीकृत करने के लिए अभी तक कोई अनुक्रमित फ़ोटो नहीं।"
 
-#: yaffo/routes/settings.py:202
+#: yaffo/routes/settings.py:211
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] "फिर से वर्गीकृत करने %(count)s पृष्ठभूमि में फोटो..."
 msgstr[1] "फिर से वर्गीकृत करने %(count)s पृष्ठभूमि में तस्वीरें..."
 
-#: yaffo/routes/settings.py:221
+#: yaffo/routes/settings.py:230
 msgid "AI model updated."
 msgstr "एआई मॉडल अपडेट किया गया।"
 
-#: yaffo/routes/settings.py:250 yaffo/routes/settings.py:345
+#: yaffo/routes/settings.py:259 yaffo/routes/settings.py:354
 msgid "Directory path is required"
 msgstr "निर्देशिका पथ आवश्यक है"
 
-#: yaffo/routes/settings.py:258
+#: yaffo/routes/settings.py:267
 msgid "Could not create the directory"
 msgstr "निर्देशिका नहीं बनाई जा सकी"
 
-#: yaffo/routes/settings.py:264
+#: yaffo/routes/settings.py:273
 msgid "Directory is already configured"
 msgstr "निर्देशिका पहले से ही कॉन्फ़िगर है"
 
-#: yaffo/routes/settings.py:278
+#: yaffo/routes/settings.py:287
 msgid "Media directory not found"
 msgstr "मीडिया निर्देशिका नहीं मिली"
 
-#: yaffo/routes/settings.py:327
+#: yaffo/routes/settings.py:336
 msgid "Could not count thumbnail files"
 msgstr "थंबनेल फ़ाइलों की गिनती नहीं की जा सकी"
 
-#: yaffo/routes/settings.py:362
+#: yaffo/routes/settings.py:371
 msgid "The new directory is the same as the current directory"
 msgstr "नई निर्देशिका वर्तमान निर्देशिका के समान ही है"
 
-#: yaffo/routes/settings.py:421
+#: yaffo/routes/settings.py:430
 msgid "Could not move thumbnail files"
 msgstr "थंबनेल फ़ाइलें स्थानांतरित नहीं की जा सकीं"
 
@@ -2117,20 +2117,32 @@ msgid "ExifTool executable used for reading and writing media metadata."
 msgstr "ExifTool निष्पादन योग्य का उपयोग मीडिया मेटाडेटा को पढ़ने और लिखने के लिए किया जाता है।"
 
 #: yaffo/templates/settings/index.html:163
-msgid "Downloaded Model Cache:"
-msgstr "डाउनलोड किया गया मॉडल कैश:"
+msgid "Image Classification Model:"
+msgstr "छवि वर्गीकरण मॉडल:"
 
-#: yaffo/templates/settings/index.html:165
-msgid "Writable cache where Yaffo stores downloaded ML models such as CLIP encoders."
-msgstr "लिखने योग्य कैश जहां याफ़ो स्टोर्स ने सीएलआईपी एनकोडर जैसे एमएल मॉडल डाउनलोड किए।"
+#: yaffo/templates/settings/index.html:166 yaffo/templates/settings/index.html:178
+msgid "Bundled with this app."
+msgstr "इस ऐप के साथ बंडल किया गया।"
 
-#: yaffo/templates/settings/index.html:169
-msgid "Bundled Models Directory:"
-msgstr "बंडल मॉडल निर्देशिका:"
+#: yaffo/templates/settings/index.html:168
+msgid "Downloaded model cache used for image classification."
+msgstr "डाउनलोड किया गया मॉडल कैश छवि वर्गीकरण के लिए उपयोग किया जाता है।"
 
-#: yaffo/templates/settings/index.html:171
-msgid "Read-only model directory included with a bundled app build, when available."
-msgstr "उपलब्ध होने पर बंडल्ड ऐप बिल्ड के साथ रीड-ओनली मॉडल निर्देशिका शामिल है।"
+#: yaffo/templates/settings/index.html:170
+msgid "Will be downloaded on first image-classification run."
+msgstr "पहली छवि-वर्गीकरण चलाने पर डाउनलोड किया जाएगा।"
+
+#: yaffo/templates/settings/index.html:175
+msgid "Face Recognition Model:"
+msgstr "चेहरा पहचान मॉडल:"
+
+#: yaffo/templates/settings/index.html:180
+msgid "Downloaded model cache used for face recognition."
+msgstr "डाउनलोड किया गया मॉडल कैश चेहरे की पहचान के लिए उपयोग किया जाता है।"
+
+#: yaffo/templates/settings/index.html:182
+msgid "Will be downloaded on first face-recognition run."
+msgstr "प्रथम चेहरा-पहचान रन पर डाउनलोड किया जाएगा।"
 
 #: yaffo/templates/themes_page/index.html:6
 msgid "Themes - Yaffo"

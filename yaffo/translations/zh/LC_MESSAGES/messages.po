@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-27 16:31-0500\n"
+"POT-Creation-Date: 2026-06-27 18:26-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: zh\n"
@@ -407,74 +407,74 @@ msgstr "未选择面"
 msgid "Person updated"
 msgstr "人员已更新"
 
-#: yaffo/routes/settings.py:87
+#: yaffo/routes/settings.py:96
 msgid "Claude Opus 4.8 — most capable"
 msgstr "Claude Opus 4.8——最有能力的"
 
-#: yaffo/routes/settings.py:88
+#: yaffo/routes/settings.py:97
 msgid "Claude Sonnet 4.6 — balanced"
 msgstr "克劳德十四行诗 4.6 — 平衡"
 
-#: yaffo/routes/settings.py:89
+#: yaffo/routes/settings.py:98
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "克劳德俳句 4.5 — 最快"
 
-#: yaffo/routes/settings.py:135 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:144 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr "不支持的距离单位"
 
-#: yaffo/routes/settings.py:171
+#: yaffo/routes/settings.py:180
 msgid "Label name is required."
 msgstr "标签名称为必填项。"
 
-#: yaffo/routes/settings.py:174
+#: yaffo/routes/settings.py:183
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr "标签 '%(name)s' 已经存在。"
 
-#: yaffo/routes/settings.py:190
+#: yaffo/routes/settings.py:199
 msgid "Classify-labels automation is not installed."
 msgstr "未安装分类标签自动化。"
 
-#: yaffo/routes/settings.py:196
+#: yaffo/routes/settings.py:205
 msgid "No indexed photos to classify yet."
 msgstr "尚无可分类的索引照片。"
 
-#: yaffo/routes/settings.py:202
+#: yaffo/routes/settings.py:211
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] "重新分类 %(count)s 照片在背景中…"
 
-#: yaffo/routes/settings.py:221
+#: yaffo/routes/settings.py:230
 msgid "AI model updated."
 msgstr "AI模型更新。"
 
-#: yaffo/routes/settings.py:250 yaffo/routes/settings.py:345
+#: yaffo/routes/settings.py:259 yaffo/routes/settings.py:354
 msgid "Directory path is required"
 msgstr "目录路径为必填项"
 
-#: yaffo/routes/settings.py:258
+#: yaffo/routes/settings.py:267
 msgid "Could not create the directory"
 msgstr "无法创建目录"
 
-#: yaffo/routes/settings.py:264
+#: yaffo/routes/settings.py:273
 msgid "Directory is already configured"
 msgstr "目录已配置"
 
-#: yaffo/routes/settings.py:278
+#: yaffo/routes/settings.py:287
 msgid "Media directory not found"
 msgstr "找不到媒体目录"
 
-#: yaffo/routes/settings.py:327
+#: yaffo/routes/settings.py:336
 msgid "Could not count thumbnail files"
 msgstr "无法计算缩略图文件数"
 
-#: yaffo/routes/settings.py:362
+#: yaffo/routes/settings.py:371
 msgid "The new directory is the same as the current directory"
 msgstr "新目录与当前目录相同"
 
-#: yaffo/routes/settings.py:421
+#: yaffo/routes/settings.py:430
 msgid "Could not move thumbnail files"
 msgstr "无法移动缩略图文件"
 
@@ -2040,20 +2040,32 @@ msgid "ExifTool executable used for reading and writing media metadata."
 msgstr "ExifTool 可执行文件用于读取和写入媒体元数据。"
 
 #: yaffo/templates/settings/index.html:163
-msgid "Downloaded Model Cache:"
-msgstr "下载的模型缓存："
+msgid "Image Classification Model:"
+msgstr "图像分类模型："
 
-#: yaffo/templates/settings/index.html:165
-msgid "Writable cache where Yaffo stores downloaded ML models such as CLIP encoders."
-msgstr "可写缓存，Yaffo 存储下载的 ML 模型，例如 CLIP 编码器。"
+#: yaffo/templates/settings/index.html:166 yaffo/templates/settings/index.html:178
+msgid "Bundled with this app."
+msgstr "与此应用程序捆绑在一起。"
 
-#: yaffo/templates/settings/index.html:169
-msgid "Bundled Models Directory:"
-msgstr "捆绑模型目录："
+#: yaffo/templates/settings/index.html:168
+msgid "Downloaded model cache used for image classification."
+msgstr "下载的模型缓存用于图像分类。"
 
-#: yaffo/templates/settings/index.html:171
-msgid "Read-only model directory included with a bundled app build, when available."
-msgstr "捆绑应用程序构建中包含的只读模型目录（如果可用）。"
+#: yaffo/templates/settings/index.html:170
+msgid "Will be downloaded on first image-classification run."
+msgstr "将在第一次图像分类运行时下载。"
+
+#: yaffo/templates/settings/index.html:175
+msgid "Face Recognition Model:"
+msgstr "人脸识别模型："
+
+#: yaffo/templates/settings/index.html:180
+msgid "Downloaded model cache used for face recognition."
+msgstr "下载的模型缓存用于人脸识别。"
+
+#: yaffo/templates/settings/index.html:182
+msgid "Will be downloaded on first face-recognition run."
+msgstr "将在第一次面部识别运行时下载。"
 
 #: yaffo/templates/themes_page/index.html:6
 msgid "Themes - Yaffo"

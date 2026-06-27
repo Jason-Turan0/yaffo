@@ -12,6 +12,7 @@ The encoders come from immich's pinned ONNX export of open_clip ViT-B-32__openai
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -34,6 +35,13 @@ _FILES = {"visual": "visual/model.onnx", "textual": "textual/model.onnx"}
 
 _visual = None
 _textual = None
+
+
+@dataclass(frozen=True)
+class ModelLocation:
+    path: Path | None
+    source: str
+
 
 # The practical range for OpenAI CLIP ViT-B/32 cosine similarity scores, mapped onto
 # the 0-100 strictness slider. 0.18 is the noise floor (slider 0, high recall); 0.298
@@ -58,6 +66,18 @@ def _model_dir() -> Path:
     if (bundled / _FILES["visual"]).is_file():
         return bundled
     return Path(MODEL_CACHE_DIR) / "clip" / MODEL_NAME
+
+
+def get_model_location() -> ModelLocation:
+    bundled = BUNDLED_MODELS_DIR / "clip" / MODEL_NAME
+    if (bundled / _FILES["visual"]).is_file():
+        return ModelLocation(path=bundled, source="bundled")
+
+    downloaded = Path(MODEL_CACHE_DIR) / "clip" / MODEL_NAME
+    if any((downloaded / model_file).is_file() for model_file in _FILES.values()):
+        return ModelLocation(path=downloaded, source="downloaded")
+
+    return ModelLocation(path=None, source="pending")
 
 
 def _ensure_model(kind: str) -> Path:

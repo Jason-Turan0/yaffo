@@ -57,7 +57,7 @@ dependencies = [
     "pydash",
     "PyWavelets==1.9.0",
     "requests==2.32.3",
-    "rumps==0.4.0",
+    "pystray==0.19.5",
     "scikit-learn==1.7.2",
     "scipy==1.16.2",
     "send2trash==1.8.3",
@@ -100,7 +100,7 @@ branch = true
 omit = [
     # Operational scripts run by hand (CLI tools, DB migrations, seed data).
     "yaffo/scripts/*",
-    # Process entry point: YAFFO_ROLE dispatch + rumps menubar launch glue.
+    # Process entry point: YAFFO_ROLE dispatch + pystray launch glue.
     "yaffo/__main__.py",
 ]
 

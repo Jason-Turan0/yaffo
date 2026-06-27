@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-27 16:31-0500\n"
+"POT-Creation-Date: 2026-06-27 18:26-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -431,75 +431,75 @@ msgstr ""
 msgid "Person updated"
 msgstr ""
 
-#: yaffo/routes/settings.py:87
+#: yaffo/routes/settings.py:96
 msgid "Claude Opus 4.8 — most capable"
 msgstr ""
 
-#: yaffo/routes/settings.py:88
+#: yaffo/routes/settings.py:97
 msgid "Claude Sonnet 4.6 — balanced"
 msgstr ""
 
-#: yaffo/routes/settings.py:89
+#: yaffo/routes/settings.py:98
 msgid "Claude Haiku 4.5 — fastest"
 msgstr ""
 
-#: yaffo/routes/settings.py:135 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:144 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr ""
 
-#: yaffo/routes/settings.py:171
+#: yaffo/routes/settings.py:180
 msgid "Label name is required."
 msgstr ""
 
-#: yaffo/routes/settings.py:174
+#: yaffo/routes/settings.py:183
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr ""
 
-#: yaffo/routes/settings.py:190
+#: yaffo/routes/settings.py:199
 msgid "Classify-labels automation is not installed."
 msgstr ""
 
-#: yaffo/routes/settings.py:196
+#: yaffo/routes/settings.py:205
 msgid "No indexed photos to classify yet."
 msgstr ""
 
-#: yaffo/routes/settings.py:202
+#: yaffo/routes/settings.py:211
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/settings.py:221
+#: yaffo/routes/settings.py:230
 msgid "AI model updated."
 msgstr ""
 
-#: yaffo/routes/settings.py:250 yaffo/routes/settings.py:345
+#: yaffo/routes/settings.py:259 yaffo/routes/settings.py:354
 msgid "Directory path is required"
 msgstr ""
 
-#: yaffo/routes/settings.py:258
+#: yaffo/routes/settings.py:267
 msgid "Could not create the directory"
 msgstr ""
 
-#: yaffo/routes/settings.py:264
+#: yaffo/routes/settings.py:273
 msgid "Directory is already configured"
 msgstr ""
 
-#: yaffo/routes/settings.py:278
+#: yaffo/routes/settings.py:287
 msgid "Media directory not found"
 msgstr ""
 
-#: yaffo/routes/settings.py:327
+#: yaffo/routes/settings.py:336
 msgid "Could not count thumbnail files"
 msgstr ""
 
-#: yaffo/routes/settings.py:362
+#: yaffo/routes/settings.py:371
 msgid "The new directory is the same as the current directory"
 msgstr ""
 
-#: yaffo/routes/settings.py:421
+#: yaffo/routes/settings.py:430
 msgid "Could not move thumbnail files"
 msgstr ""
 
@@ -2123,23 +2123,32 @@ msgid "ExifTool executable used for reading and writing media metadata."
 msgstr ""
 
 #: yaffo/templates/settings/index.html:163
-msgid "Downloaded Model Cache:"
+msgid "Image Classification Model:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:165
-msgid ""
-"Writable cache where Yaffo stores downloaded ML models such as CLIP "
-"encoders."
+#: yaffo/templates/settings/index.html:166
+#: yaffo/templates/settings/index.html:178
+msgid "Bundled with this app."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:169
-msgid "Bundled Models Directory:"
+#: yaffo/templates/settings/index.html:168
+msgid "Downloaded model cache used for image classification."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:171
-msgid ""
-"Read-only model directory included with a bundled app build, when "
-"available."
+#: yaffo/templates/settings/index.html:170
+msgid "Will be downloaded on first image-classification run."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:175
+msgid "Face Recognition Model:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:180
+msgid "Downloaded model cache used for face recognition."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:182
+msgid "Will be downloaded on first face-recognition run."
 msgstr ""
 
 #: yaffo/templates/themes_page/index.html:6

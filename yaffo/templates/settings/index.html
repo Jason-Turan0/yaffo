@@ -160,15 +160,27 @@
             </div>
 
             <div class="system-path-item">
-                <label>{{ _("CLIP Model Cache:") }}</label>
-                <code>{{ clip_model_cache_dir }}</code>
-                <p class="path-description">{{ _("Path to image classification model.") }}</p>
+                <label>{{ _("Image Classification Model:") }}</label>
+                <code>{{ classification_model.path }}</code>
+                {% if classification_model.source == "bundled" %}
+                    <p class="path-description">{{ _("Bundled with this app.") }}</p>
+                {% elif classification_model.source == "downloaded" %}
+                    <p class="path-description">{{ _("Downloaded model cache used for image classification.") }}</p>
+                {% else %}
+                    <p class="path-description">{{ _("Will be downloaded on first image-classification run.") }}</p>
+                {% endif %}
             </div>
 
             <div class="system-path-item">
-                <label>{{ _("InsightFace Model Cache:") }}</label>
-                <code>{{ insightface_model_cache_dir }}</code>
-                <p class="path-description">{{ _("Path to face recognition model.") }}</p>
+                <label>{{ _("Face Recognition Model:") }}</label>
+                <code>{{ face_model.path }}</code>
+                {% if face_model.source == "bundled" %}
+                    <p class="path-description">{{ _("Bundled with this app.") }}</p>
+                {% elif face_model.source == "downloaded" %}
+                    <p class="path-description">{{ _("Downloaded model cache used for face recognition.") }}</p>
+                {% else %}
+                    <p class="path-description">{{ _("Will be downloaded on first face-recognition run.") }}</p>
+                {% endif %}
             </div>
         </div>
     </div>
