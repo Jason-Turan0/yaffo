@@ -9,8 +9,12 @@ from pathlib import Path
 
 from babel.messages.catalog import Catalog, Message
 from babel.messages.pofile import read_po, write_po
+from deep_translator.exceptions import TranslationNotFound
+from tqdm import tqdm
 
 from yaffo.common import BUNDLE_ROOT
+from yaffo.logging_config import get_logger
+logger = get_logger(__name__)
 
 ROOT = BUNDLE_ROOT
 POT_PATH = ROOT / "messages.pot"
@@ -20,6 +24,22 @@ ENGLISH_BROWSER_PATH = BROWSER_LOCALES_DIR / "en.json"
 LOCALE_RE = re.compile(r"^[a-z]{2}(?:-[A-Z]{2})?$")
 I18NEXT_PLACEHOLDER_RE = re.compile(r"{{\s*([\w.-]+)\s*}}")
 GETTEXT_PLACEHOLDER_RE = re.compile(r"%\(([\w.-]+)\)[#0 +\-]?\d*(?:\.\d+)?[a-zA-Z]")
+HTML_TAG_RE = re.compile(r"</?[^>]+>")
+BRACE_PLACEHOLDER_RE = re.compile(r"\{[\w.-]+\}")
+DEEP_TRANSLATOR_TARGETS = {
+    "ar": "ar",
+    "de": "de",
+    "es": "es",
+    "fr": "fr",
+    "hi": "hi",
+    "zh": "zh-CN",
+}
+PROTECTED_TEXT_RE = re.compile("|".join([
+    I18NEXT_PLACEHOLDER_RE.pattern,
+    GETTEXT_PLACEHOLDER_RE.pattern,
+    HTML_TAG_RE.pattern,
+    BRACE_PLACEHOLDER_RE.pattern,
+]))
 
 
 @dataclass(frozen=True)
@@ -118,7 +138,12 @@ def _read_catalog(path: Path, locale: str | None = None) -> Catalog:
         return read_po(handle, locale=locale)
 
 
-def validate_gettext_catalog(locale: str, require_translated: bool = False) -> list[str]:
+def validate_gettext_catalog(
+    locale: str,
+    require_translated: bool = False,
+    *,
+    show_progress: bool = False,
+) -> list[str]:
     locale = _validate_locale(locale)
     source = _read_catalog(POT_PATH)
     translated = _read_catalog(_catalog_path(locale), locale)
@@ -139,7 +164,14 @@ def validate_gettext_catalog(locale: str, require_translated: bool = False) -> l
         errors.append(f"{locale}: missing gettext message {context!r}:{message_id!r}")
     for context, message_id in sorted(extra, key=str):
         errors.append(f"{locale}: unexpected gettext message {context!r}:{message_id!r}")
-    for key in source_messages.keys() & translated_messages.keys():
+    common_keys = sorted(source_messages.keys() & translated_messages.keys(), key=str)
+    progress = tqdm(
+        common_keys,
+        desc=f"Validating gettext {locale}",
+        unit="msg",
+        leave=False,
+    )
+    for key in progress:
         source_message = source_messages[key]
         target_message = translated_messages[key]
         source_parts = source_message.id if isinstance(source_message.id, tuple) else (source_message.id,)
@@ -156,7 +188,7 @@ def validate_gettext_catalog(locale: str, require_translated: bool = False) -> l
     return errors
 
 
-def check_catalogs(require_translated: bool = False) -> None:
+def check_catalogs(require_translated: bool = False, *, show_progress: bool = False) -> None:
     errors = []
     for path in sorted(BROWSER_LOCALES_DIR.glob("*.json")):
         if path.stem == "en" or path.stem.endswith(".review"):
@@ -164,7 +196,11 @@ def check_catalogs(require_translated: bool = False) -> None:
         errors.extend(validate_browser_catalog(path.stem, require_translated))
         po_path = _catalog_path(path.stem)
         if po_path.exists():
-            errors.extend(validate_gettext_catalog(path.stem, require_translated))
+            errors.extend(validate_gettext_catalog(
+                path.stem,
+                require_translated,
+                show_progress=show_progress,
+            ))
     if errors:
         raise ValueError("\n".join(errors))
 
@@ -179,22 +215,44 @@ def _missing_browser_entries(locale: str) -> list[TranslationEntry]:
     ]
 
 
-def _missing_gettext_entries(locale: str) -> list[TranslationEntry]:
+def _browser_entries(locale: str, *, overwrite: bool = False) -> list[TranslationEntry]:
+    english = flatten_json(_read_json(ENGLISH_BROWSER_PATH))
+    target = flatten_json(_read_json(BROWSER_LOCALES_DIR / f"{locale}.json"))
+    return [
+        TranslationEntry(id=f"browser:{key}", source=english[key], context=key)
+        for key in sorted(english)
+        if overwrite or not target.get(key, "").strip()
+    ]
+
+
+def _gettext_source_parts(message: Message, catalog: Catalog) -> str | list[str]:
+    if not isinstance(message.id, tuple):
+        return message.id
+    singular, plural = message.id
+    if catalog.num_plurals <= 1:
+        return [singular]
+    return [singular, plural, *([plural] * (catalog.num_plurals - 2))]
+
+
+def _gettext_entries(locale: str, *, overwrite: bool = False) -> list[TranslationEntry]:
     catalog = _read_catalog(_catalog_path(locale), locale)
     entries = []
     for index, message in enumerate(message for message in catalog if message.id):
         strings = message.string if isinstance(message.string, tuple) else (message.string,)
-        if all((string or "").strip() for string in strings):
+        if not overwrite and all((string or "").strip() for string in strings):
             continue
-        source = list(message.id) if isinstance(message.id, tuple) else message.id
         entries.append(
             TranslationEntry(
                 id=f"gettext:{index}",
-                source=source,
+                source=_gettext_source_parts(message, catalog),
                 context=message.context or "",
             )
         )
     return entries
+
+
+def _missing_gettext_entries(locale: str) -> list[TranslationEntry]:
+    return _gettext_entries(locale)
 
 
 def _extract_json(text: str) -> dict:
@@ -204,7 +262,98 @@ def _extract_json(text: str) -> dict:
     return json.loads(stripped)
 
 
+def _mask_protected_text(value: str, pattern: re.Pattern[str]) -> tuple[str, dict[str, str]]:
+    protected: dict[str, str] = {}
+    token_index = 0
+    token_re = re.compile("|".join([
+        pattern.pattern,
+        HTML_TAG_RE.pattern,
+        BRACE_PLACEHOLDER_RE.pattern,
+    ]))
+
+    def replace(match: re.Match[str]) -> str:
+        nonlocal token_index
+        token = f"YAFFOTOKEN{token_index}"
+        protected[token] = match.group(0)
+        token_index += 1
+        return token
+
+    return token_re.sub(replace, value), protected
+
+
+def _unmask_protected_text(value: str, protected: dict[str, str]) -> str:
+    restored = value
+    for token, original in protected.items():
+        restored = restored.replace(token, original)
+    return restored
+
+
+def _translate_text_with_deep_translator(value: str, translator, pattern: re.Pattern[str]) -> str:
+    if not value.strip():
+        return value
+    parts = []
+    cursor = 0
+    for match in PROTECTED_TEXT_RE.finditer(value):
+        if match.start() > cursor:
+            parts.append(_translate_plain_text(value[cursor:match.start()], translator))
+        parts.append(match.group(0))
+        cursor = match.end()
+    if cursor < len(value):
+        parts.append(_translate_plain_text(value[cursor:], translator))
+    return "".join(parts)
+
+
+def _translate_plain_text(value: str, translator) -> str:
+    if not value.strip() or not re.search(r"[A-Za-z]", value):
+        return value
+    leading = value[:len(value) - len(value.lstrip())]
+    trailing = value[len(value.rstrip()):]
+    core = value.strip()
+    try:
+        return f"{leading}{translator.translate(core)}{trailing}"
+    except TranslationNotFound:
+        logger.error(f"Could not translate {value!r} to {translator.translate(core)!r}")
+        return value
+
+
+
+def _deep_translator(locale: str):
+    from deep_translator import GoogleTranslator
+
+    target = DEEP_TRANSLATOR_TARGETS.get(locale, locale)
+    return GoogleTranslator(source="en", target=target)
+
+
+def _translate_batch_with_deep_translator(
+    entries: list[TranslationEntry], locale: str
+) -> dict[str, str | list[str]]:
+    translated: dict[str, str | list[str]] = {}
+    translator = _deep_translator(locale)
+    for entry in entries:
+        pattern = GETTEXT_PLACEHOLDER_RE if entry.id.startswith("gettext:") else I18NEXT_PLACEHOLDER_RE
+        if isinstance(entry.source, list):
+            translated[entry.id] = [
+                _translate_text_with_deep_translator(part, translator, pattern)
+                for part in entry.source
+            ]
+        else:
+            translated[entry.id] = _translate_text_with_deep_translator(entry.source, translator, pattern)
+    return translated
+
+
 def _translate_batch(entries: list[TranslationEntry], locale: str) -> dict[str, str | list[str]]:
+    return _translate_batch_with_engine(entries, locale, engine="auto")
+
+
+def _translate_batch_with_engine(
+    entries: list[TranslationEntry],
+    locale: str,
+    *,
+    engine: str,
+) -> dict[str, str | list[str]]:
+    if engine == "deep-translator":
+        return _translate_batch_with_deep_translator(entries, locale)
+
     create_app = importlib.import_module("yaffo.app").create_app
     llm_config = importlib.import_module("yaffo.site_agents.llm_config")
     create_model_client = importlib.import_module(
@@ -215,7 +364,9 @@ def _translate_batch(entries: list[TranslationEntry], locale: str) -> dict[str, 
         model = llm_config.get_model()
         api_key = llm_config.get_api_key_for_selected_model()
         if not api_key:
-            raise ValueError("No API key configured for the selected model")
+            if engine == "llm":
+                raise ValueError("No API key configured for the selected model")
+            return _translate_batch_with_deep_translator(entries, locale)
         client = create_model_client(
             model=model,
             system_prompt=(
@@ -263,19 +414,25 @@ def translate_missing(
     keys_only: bool = False,
     overwrite: bool = False,
     batch_size: int = 20,
+    engine: str = "auto",
 ) -> list[str]:
     locale = _validate_locale(locale)
     sync_browser_locale(locale)
     entries = _missing_browser_entries(locale) + _missing_gettext_entries(locale)
     if overwrite:
-        raise ValueError("--overwrite is reserved for a future reviewed-translation workflow")
+        entries = _browser_entries(locale, overwrite=True) + _gettext_entries(locale, overwrite=True)
     if keys_only or not entries:
         return [entry.id for entry in entries]
 
     translated_values: dict[str, str | list[str]] = {}
-    for start in range(0, len(entries), batch_size):
-        batch = entries[start:start + batch_size]
-        batch_values = _translate_batch(batch, locale)
+    batches = [entries[i: i + batch_size] for i in range(0, len(entries), batch_size)]
+    for batch in tqdm(batches,
+            desc=f"Translating {locale}",
+            unit="batch",
+            leave=False,
+            total=len(entries)
+        ):
+        batch_values = _translate_batch_with_engine(batch, locale, engine=engine)
         for entry in batch:
             if entry.id not in batch_values:
                 raise ValueError(f"Model response omitted {entry.id}")
@@ -301,7 +458,7 @@ def translate_missing(
             index = int(entry.id.removeprefix("gettext:"))
             message = gettext_messages[index]
             message.string = tuple(translated) if isinstance(translated, list) else translated
-            message.flags.add("fuzzy")
+            message.flags.discard("fuzzy")
     _write_json(BROWSER_LOCALES_DIR / f"{locale}.json", browser)
     _write_json(BROWSER_LOCALES_DIR / f"{locale}.review.json", {"generated": review_keys})
     if catalog is not None:
@@ -323,13 +480,18 @@ def main() -> None:
     translate_parser.add_argument("--keys-only", action="store_true")
     translate_parser.add_argument("--overwrite", action="store_true")
     translate_parser.add_argument("--batch-size", type=int, default=20)
+    translate_parser.add_argument(
+        "--engine",
+        choices=("auto", "llm", "deep-translator"),
+        default="auto",
+    )
     args = parser.parse_args()
 
     if args.command == "sync":
         missing = sync_browser_locale(args.locale)
         print("\n".join(missing) if missing else "Browser catalog is up to date")
     elif args.command == "check":
-        check_catalogs(args.require_translated)
+        check_catalogs(args.require_translated, show_progress=True)
         print("Catalogs are valid")
     else:
         result = translate_missing(
@@ -338,6 +500,7 @@ def main() -> None:
             keys_only=args.keys_only,
             overwrite=args.overwrite,
             batch_size=args.batch_size,
+            engine=args.engine,
         )
         print("\n".join(result) if result else "No missing translations")
 

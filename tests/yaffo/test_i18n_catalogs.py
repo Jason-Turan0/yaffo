@@ -20,7 +20,12 @@ pytestmark = pytest.mark.unit
 def test_normalize_locale_accepts_supported_language_variants():
     assert normalize_locale("de-DE") == "de"
     assert normalize_locale("en_US") == "en"
-    assert normalize_locale("fr") is None
+    assert normalize_locale("zh-CN") == "zh"
+    assert normalize_locale("hi-IN") == "hi"
+    assert normalize_locale("es-MX") == "es"
+    assert normalize_locale("ar-SA") == "ar"
+    assert normalize_locale("fr-CA") == "fr"
+    assert normalize_locale("pt-BR") is None
 
 
 def test_text_direction_supports_rtl_languages():
@@ -43,7 +48,8 @@ def test_browser_catalogs_have_identical_keys_and_placeholders():
 
 
 def test_gettext_catalogs_have_identical_messages_and_placeholders():
-    assert validate_gettext_catalog("de", require_translated=True) == []
+    for locale in ("de", "zh", "hi", "es", "ar", "fr"):
+        assert validate_gettext_catalog(locale, require_translated=True) == []
 
 
 def test_i18next_vendor_asset_is_packaged():
@@ -73,8 +79,8 @@ def test_translate_missing_populates_browser_keys_and_marks_them_for_review(
     monkeypatch.setattr(i18n_catalogs, "_missing_gettext_entries", lambda locale: [])
     monkeypatch.setattr(
         i18n_catalogs,
-        "_translate_batch",
-        lambda entries, locale: {
+        "_translate_batch_with_engine",
+        lambda entries, locale, engine: {
             "browser:common.greeting": "Hallo {{name}}",
         },
     )
@@ -93,6 +99,41 @@ def test_translate_missing_populates_browser_keys_and_marks_them_for_review(
     assert review == {"generated": ["common.greeting"]}
 
 
+def test_translate_missing_overwrite_regenerates_existing_browser_entries(
+    monkeypatch,
+    tmp_path,
+):
+    locales_dir = tmp_path / "locales"
+    locales_dir.mkdir()
+    english_path = locales_dir / "en.json"
+    english_path.write_text(
+        json.dumps({"common": {"greeting": "Hello {{name}}", "save": "Save"}}),
+        encoding="utf-8",
+    )
+    (locales_dir / "es.json").write_text(
+        json.dumps({"common": {"greeting": "Hello {{name}}", "save": "Save"}}),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(i18n_catalogs, "BROWSER_LOCALES_DIR", locales_dir)
+    monkeypatch.setattr(i18n_catalogs, "ENGLISH_BROWSER_PATH", english_path)
+    monkeypatch.setattr(i18n_catalogs, "_gettext_entries", lambda locale, overwrite=False: [])
+    monkeypatch.setattr(
+        i18n_catalogs,
+        "_translate_batch_with_engine",
+        lambda entries, locale, engine: {
+            "browser:common.greeting": "Hola {{name}}",
+            "browser:common.save": "Guardar",
+        },
+    )
+
+    translated = i18n_catalogs.translate_missing("es", overwrite=True)
+
+    assert translated == ["browser:common.greeting", "browser:common.save"]
+    catalog = json.loads((locales_dir / "es.json").read_text(encoding="utf-8"))
+    assert catalog == {"common": {"greeting": "Hola {{name}}", "save": "Guardar"}}
+
+
 def test_generated_translation_must_preserve_placeholders():
     entry = TranslationEntry(
         id="browser:common.greeting",
@@ -102,6 +143,29 @@ def test_generated_translation_must_preserve_placeholders():
 
     with pytest.raises(ValueError, match="placeholders differ"):
         i18n_catalogs._validate_translation(entry, "Hallo")
+
+
+def test_deep_translator_backend_preserves_placeholders_and_html(monkeypatch):
+    class FakeTranslator:
+        def translate(self, value):
+            return value.replace("Delete", "Eliminar").replace("from", "de")
+
+    monkeypatch.setattr(i18n_catalogs, "_deep_translator", lambda locale: FakeTranslator())
+
+    translated = i18n_catalogs._translate_batch_with_deep_translator(
+        [
+            TranslationEntry(
+                id="browser:people.delete.message",
+                source='Delete <strong>{{name}}</strong> from {totalCount}',
+                context="people.delete.message",
+            )
+        ],
+        "es",
+    )
+
+    assert translated == {
+        "browser:people.delete.message": 'Eliminar <strong>{{name}}</strong> de {totalCount}'
+    }
 
 
 def test_i18next_bootstrap_treats_top_level_catalog_objects_as_namespaces():

@@ -67,6 +67,7 @@ dependencies = [
 dev = [
     "pytest==8.3.4",
     "pytest-cov==6.0.0",
+    "deep-translator==1.11.4",
     "snakeviz",
     "pyinstaller==6.11.1",
     "mypy==1.18.2",

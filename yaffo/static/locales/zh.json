@@ -1,0 +1,312 @@
+{
+  "common": {
+    "all": "全部",
+    "apply": "申请",
+    "areYouSure": "你确定吗？",
+    "cancel": "取消",
+    "close": "关闭",
+    "confirm": "确认",
+    "dateValue": "日期： {{value}}",
+    "delete": "删除",
+    "notAvailable": "不适用",
+    "pageOf": "页 {{page}} 的 {{total}}",
+    "save": "节省",
+    "search": "搜索…",
+    "similarityValue": "相似： {{value}}"
+  },
+  "components": {
+    "chat": {
+      "cancelGeneration": "取消生成",
+      "discardGeneration": "抛弃这一代？",
+      "startFailed": "无法开始生成。"
+    },
+    "dateInput": {
+      "invalidDate": "输入有效日期。"
+    },
+    "cron": {
+      "advanced": "高级（cron）",
+      "at": "在",
+      "atMinute": "每分钟",
+      "commonSchedules": "常用时间表",
+      "cronExpression": "克朗表达式",
+      "cronHint": "分钟 小时 日 月 工作日",
+      "customSchedule": "定制时间表...",
+      "daily": "日常的",
+      "dailyAt": "每日于 {{time}}",
+      "dailyAtMidnight": "每天午夜",
+      "dayOfMonth": "一个月中的哪一天",
+      "dayOfWeek": "星期几",
+      "enterExpression": "输入 cron 表达式",
+      "everyHour": "每小时",
+      "everyHourAtMinute": "每小时：{{minute}}",
+      "everyHours_one": "每一个 {{count}} 小时",
+      "everyHours_other": "每一个 {{count}} 小时",
+      "everyMinutes_one": "每一个 {{count}} 分钟",
+      "everyMinutes_other": "每一个 {{count}} 分钟",
+      "friday": "星期五",
+      "hour": "小时",
+      "hourly": "每小时",
+      "minute": "分钟",
+      "monday": "周一",
+      "monthly": "每月",
+      "monthlyOnDayAt": "每月的某一天 {{day}} 在 {{time}}",
+      "on": "在",
+      "onDay": "当天",
+      "presetSchedule": "预设时间表",
+      "repeat": "重复",
+      "runs": "运行：",
+      "saturday": "周六",
+      "schedule": "日程",
+      "scheduleType": "时间表类型",
+      "sunday": "星期日",
+      "thursday": "周四",
+      "tuesday": "周二",
+      "wednesday": "周三",
+      "weekly": "每周",
+      "weeklyOnAt": "每周一次 {{day}} 在 {{time}}"
+    },
+    "folderPicker": {
+      "noFilesOrFolders": "这里没有文件或文件夹。",
+      "noSubfolders": "这里没有子文件夹。",
+      "readFailed": "无法读取文件系统。",
+      "selectFile": "选择一个文件",
+      "selectFileOrFolder": "选择文件或文件夹",
+      "selectFolder": "选择一个文件夹",
+      "up": "向上"
+    },
+    "multiSelect": {
+      "selected": "{{count}} 已选择"
+    },
+    "select": {
+      "noResults": "没有找到结果",
+      "select": "选择…",
+      "typeToSearch": "输入搜索..."
+    }
+  },
+  "faces": {
+    "assignment": {
+      "clusterSkipped": "集群已跳过",
+      "noneSelected": "已跳过 — 未选择面",
+      "requestFailed": "错误： {{reason}}",
+      "selectPersonFirst": "请先选择一个人"
+    },
+    "people": {
+      "created": "创建了“{{name}}\"",
+      "nameRequired": "请输入人名"
+    }
+  },
+  "media": {
+    "actions": {
+      "openFileFailed": "无法打开文件",
+      "openFileFailedWithReason": "无法打开文件： {{reason}}",
+      "openFolderFailed": "无法打开文件夹",
+      "openFolderFailedWithReason": "无法打开文件夹： {{reason}}",
+      "openingFile": "在默认应用程序中打开文件",
+      "openingFolder": "在文件管理器中打开文件夹"
+    },
+    "faces": {
+      "applying": "正在申请…",
+      "reassign": "重新分配脸部",
+      "reassignError": "重新分配脸部时发生错误",
+      "reassignFailed": "重新分配脸部失败",
+      "reassignSucceeded": "面部重新分配成功",
+      "selectPerson": "选择一个人...",
+      "selectPersonRequired": "请选择一个人"
+    },
+    "favorite": {
+      "updateFailed": "收藏夹更新失败"
+    },
+    "filters": {
+      "allValues": "所有值",
+      "loading": "加载中…",
+      "loadValuesError": "加载值时出错",
+      "loadValuesFailed": "无法加载标签值",
+      "locationFromOpenStreetMap": "（开放街道地图）",
+      "locationFromPhotos": "（来自照片）",
+      "saveFailed": "无法保存过滤器设置",
+      "selectTagNameFirst": "首先选择一个标签名称"
+    },
+    "gallery": {
+      "videoPlaybackFailed": "该视频无法播放 - 该浏览器可能不支持该格式，或者文件已被移动或删除。"
+    },
+    "tags": {
+      "allNeedName": "所有标签都必须有名称",
+      "name": "标签名称",
+      "nameRequired": "标签名称为必填项",
+      "noneAddBelow": "没有标签。下面添加一个。",
+      "remove": "消除",
+      "saveFailed": "保存标签时出错",
+      "updateFailed": "更新标签失败",
+      "updateSucceeded": "标签更新成功",
+      "valueOptional": "标签值（可选）"
+    }
+  },
+  "locations": {
+    "popup": {
+      "selectPhoto_one": "选择照片（{{total}} 全部的）：",
+      "selectPhoto_other": "选择照片（{{total}} 全部的）："
+    },
+    "selection": {
+      "assignAll": "分配给全部",
+      "clearSelection": "清除选择",
+      "customLocation": "或输入自定义位置",
+      "massAssignment": "批量分配",
+      "photoCount_one": "{{formattedCount}} 照片",
+      "photoCount_other": "{{formattedCount}} 照片",
+      "quickAssign": "快速分配：",
+      "recommended": "受到推崇的：",
+      "selectedClusters": "选定的集群：",
+      "summaryOneOne": "{{photos}} 照片输入 {{clusters}} 簇",
+      "summaryOneOther": "{{photos}} 照片输入 {{clusters}} 集群",
+      "summaryOtherOne": "{{photos}} 照片在 {{clusters}} 簇",
+      "summaryOtherOther": "{{photos}} 照片在 {{clusters}} 集群"
+    },
+    "unknownLocation": "未知地点",
+    "update": {
+      "failed": "无法更新位置",
+      "nameRequired": "请输入地点名称",
+      "succeeded_one": "已更新 {{count}} 照片到“{{location}}\"",
+      "succeeded_other": "已更新 {{count}} 照片到“{{location}}\""
+    }
+  },
+  "people": {
+    "delete": {
+      "message": "删除 {{name}}？这将取消分配他们的所有面孔，但不会删除照片。",
+      "title": "删除人员"
+    },
+    "faces": {
+      "removeConfirm": "消除",
+      "removeMessage_one": "删除此人选定的面孔？",
+      "removeMessage_other": "删除 {{count}} 从这个人中选择面孔？",
+      "removeTitle": "删除面孔",
+      "selectRequired": "请至少选择一张要删除的面孔"
+    }
+  },
+  "pages": {
+    "chat": {
+      "cancelMessage": "放弃这一代并返回当前页面？"
+    },
+    "delete": {
+      "message": "删除 ”{{name}}“？这无法撤销。",
+      "title": "删除页面"
+    },
+    "widgets": {
+      "deleteMessage": "删除这个小部件？",
+      "deleteTitle": "删除小部件",
+      "new": "新小工具",
+      "untitled": "无标题小部件"
+    }
+  },
+  "settings": {
+    "applicationLanguage": "应用语言",
+    "directory": {
+      "pathRequired": "请输入目录路径"
+    },
+    "language": "语言",
+    "languageHelp": "控制 Yaffo 使用的语言。保存后页面会重新加载。",
+    "media": {
+      "addFailed": "添加目录失败",
+      "addSucceeded": "媒体目录添加成功",
+      "noneConfigured": "未配置媒体目录",
+      "removeConfirm": "消除",
+      "removeFailed": "删除目录失败",
+      "removeMessage": "删除目录： {{directory}}?",
+      "removeSucceeded": "删除： {{directory}}",
+      "removeTitle": "删除媒体目录"
+    },
+    "thumbnail": {
+      "countFailed": "缩略图计数失败",
+      "moveConfirm": "移动",
+      "moveFailed": "无法移动缩略图",
+      "moveMessage_one": "您确定要移动缩略图目录吗？\n\n当前位置： {{currentDirectory}}\n新地点： {{newDirectory}}\n\n这会动 {{formattedCount}} 文件 （{{size}}).",
+      "moveMessage_other": "您确定要移动缩略图目录吗？\n\n当前位置： {{currentDirectory}}\n新地点： {{newDirectory}}\n\n这会动 {{formattedCount}} 文件（{{size}}).",
+      "moveSucceeded_one": "搬家了 {{formattedCount}} 文件 （{{size}}） 到 {{directory}}",
+      "moveSucceeded_other": "搬家了 {{formattedCount}} 文件（{{size}}） 到 {{directory}}",
+      "moveTitle": "移动缩略图目录",
+      "size": "{{value}} {{unit}}",
+      "statsFailed": "获取缩略图统计失败"
+    }
+  },
+  "themes": {
+    "chat": {
+      "cancelMessage": "放弃这一代并保留当前主题？"
+    },
+    "delete": {
+      "message": "删除 ”{{name}}“？\n此操作无法撤消。",
+      "title": "删除主题"
+    }
+  },
+  "utilities": {
+    "automations": {
+      "chat": {
+        "cancelMessage": "放弃这一代并保留当前的自动化？"
+      },
+      "delete": {
+        "message": "删除 ”{{name}}“？\n此操作无法撤消。",
+        "title": "删除自动化"
+      },
+      "run": {
+        "noTriggers": "此自动化没有触发器 - 在运行之前在“编辑触发器”下添加一个触发器。",
+        "started": "运行已开始 - 完成后它将出现在运行历史记录中。",
+        "startFailed": "无法开始运行。"
+      },
+      "test": {
+        "actionNames": {
+          "tag_media_items": "标记媒体项目"
+        },
+        "actions": "行动（{{formattedCount}})",
+        "failed": "测试失败。",
+        "noActions": "没有执行任何操作。",
+        "photoCount_one": "{{formattedCount}} 照片",
+        "photoCount_other": "{{formattedCount}} 照片",
+        "ranCode": "然 {{source}} 代码 · {{photoCount}}",
+        "result": "结果",
+        "runFailed": "无法运行测试。",
+        "running": "跑步…",
+        "showDetails": "显示详情",
+        "testingOn": "测试于 {{mode}}: {{path}}"
+      },
+      "triggers": {
+        "addSchedule": "添加时间表",
+        "editSchedule": "编辑日程"
+      }
+    },
+    "indexPhotos": {
+      "filename": "文件名",
+      "inSync": {
+        "description": "文件系统上的所有照片都有索引，所有数据库条目都有相应的文件。",
+        "title": "一切都同步进行"
+      },
+      "location": "地点",
+      "mediaDirectories": "媒体目录： ",
+      "orphanReasons": {
+        "missing": "文件从磁盘中删除",
+        "unconfigured": "不再配置媒体目录"
+      },
+      "orphaned": {
+        "description": "以下照片位于数据库中，但在配置的媒体目录下不再有文件 - 文件已被删除，或其媒体目录已从“设置”中删除。同步会删除这些条目。",
+        "title": "孤立的数据库条目"
+      },
+      "photoId": "带照片的身份证件",
+      "reason": "原因",
+      "scan": {
+        "error": "扫描错误： {{reason}}",
+        "failed": "扫描文件系统失败。",
+        "requestFailed": "扫描请求失败",
+        "scanning": "扫描文件系统..."
+      },
+      "sync": {
+        "button": "同步数据库",
+        "error": "启动同步时出错： {{reason}}",
+        "startFailed": "无法启动同步作业",
+        "started": "同步作业已开始",
+        "starting": "开始同步..."
+      },
+      "unindexed": {
+        "description": "以下照片存在于配置的媒体目录中，但不在数据库中。",
+        "title": "未索引的照片"
+      },
+      "truncation": "显示第一个 {{shown}} 的 {{total}}。同步处理所有这些。"
+    }
+  }
+}

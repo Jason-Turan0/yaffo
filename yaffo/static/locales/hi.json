@@ -1,0 +1,312 @@
+{
+  "common": {
+    "all": "सभी",
+    "apply": "आवेदन करना",
+    "areYouSure": "क्या आपको यकीन है?",
+    "cancel": "रद्द करना",
+    "close": "बंद करना",
+    "confirm": "पुष्टि करना",
+    "dateValue": "तारीख: {{value}}",
+    "delete": "मिटाना",
+    "notAvailable": "एन/ए",
+    "pageOf": "पेज {{page}} का {{total}}",
+    "save": "बचाना",
+    "search": "खोजना…",
+    "similarityValue": "समानता: {{value}}"
+  },
+  "components": {
+    "chat": {
+      "cancelGeneration": "पीढ़ी रद्द करें",
+      "discardGeneration": "इस पीढ़ी को त्यागें?",
+      "startFailed": "पीढ़ी प्रारंभ नहीं हो सकी."
+    },
+    "dateInput": {
+      "invalidDate": "एक वैध तिथि दर्ज करें."
+    },
+    "cron": {
+      "advanced": "उन्नत (क्रोन)",
+      "at": "पर",
+      "atMinute": "मिनट पर",
+      "commonSchedules": "सामान्य कार्यक्रम",
+      "cronExpression": "क्रोन अभिव्यक्ति",
+      "cronHint": "मिनट घंटा दिन महीना कार्यदिवस",
+      "customSchedule": "कस्टम शेड्यूल…",
+      "daily": "दैनिक",
+      "dailyAt": "प्रतिदिन पर {{time}}",
+      "dailyAtMidnight": "रोजाना आधी रात को",
+      "dayOfMonth": "महीने का दिन",
+      "dayOfWeek": "सप्ताह का दिन",
+      "enterExpression": "क्रॉन अभिव्यक्ति दर्ज करें",
+      "everyHour": "हर घंटे",
+      "everyHourAtMinute": "हर घंटे पर:{{minute}}",
+      "everyHours_one": "प्रत्येक {{count}} घंटा",
+      "everyHours_other": "प्रत्येक {{count}} घंटे",
+      "everyMinutes_one": "प्रत्येक {{count}} मिनट",
+      "everyMinutes_other": "प्रत्येक {{count}} मिनट",
+      "friday": "शुक्रवार",
+      "hour": "घंटा",
+      "hourly": "प्रति घंटा",
+      "minute": "मिनट",
+      "monday": "सोमवार",
+      "monthly": "महीने के",
+      "monthlyOnDayAt": "मासिक दिन पर {{day}} पर {{time}}",
+      "on": "पर",
+      "onDay": "दिन पर",
+      "presetSchedule": "पूर्व निर्धारित कार्यक्रम",
+      "repeat": "दोहराना",
+      "runs": "चलता है:",
+      "saturday": "शनिवार",
+      "schedule": "अनुसूची",
+      "scheduleType": "अनुसूची प्रकार",
+      "sunday": "रविवार",
+      "thursday": "गुरुवार",
+      "tuesday": "मंगलवार",
+      "wednesday": "बुधवार",
+      "weekly": "साप्ताहिक",
+      "weeklyOnAt": "साप्ताहिक चालू {{day}} पर {{time}}"
+    },
+    "folderPicker": {
+      "noFilesOrFolders": "यहां कोई फ़ाइल या फ़ोल्डर नहीं है.",
+      "noSubfolders": "यहां कोई उप-फ़ोल्डर नहीं है.",
+      "readFailed": "फ़ाइल सिस्टम को पढ़ने में विफल.",
+      "selectFile": "किसी फाइल का चयन करें",
+      "selectFileOrFolder": "कोई फ़ाइल या फ़ोल्डर चुनें",
+      "selectFolder": "एक फ़ोल्डर चुनें",
+      "up": "ऊपर"
+    },
+    "multiSelect": {
+      "selected": "{{count}} चयनित"
+    },
+    "select": {
+      "noResults": "कोई परिणाम नहीं मिला",
+      "select": "चुनना…",
+      "typeToSearch": "खोजने के लिए टाइप करें..."
+    }
+  },
+  "faces": {
+    "assignment": {
+      "clusterSkipped": "क्लस्टर छोड़ दिया गया",
+      "noneSelected": "छोड़ दिया गया - कोई चेहरा चयनित नहीं",
+      "requestFailed": "गलती: {{reason}}",
+      "selectPersonFirst": "कृपया पहले एक व्यक्ति का चयन करें"
+    },
+    "people": {
+      "created": "बनाया था \"{{name}}\"",
+      "nameRequired": "कृपया एक व्यक्ति का नाम दर्ज करें"
+    }
+  },
+  "media": {
+    "actions": {
+      "openFileFailed": "फ़ाइल खोलने में विफल",
+      "openFileFailedWithReason": "फ़ाइल खोलने में विफल: {{reason}}",
+      "openFolderFailed": "फ़ोल्डर खोलने में विफल",
+      "openFolderFailedWithReason": "फ़ोल्डर खोलने में विफल: {{reason}}",
+      "openingFile": "डिफ़ॉल्ट एप्लिकेशन में फ़ाइल खोलना",
+      "openingFolder": "फ़ाइल प्रबंधक में फ़ोल्डर खुल रहा है"
+    },
+    "faces": {
+      "applying": "लागू किया जा रहा है...",
+      "reassign": "चेहरा पुन: असाइन करें",
+      "reassignError": "चेहरा पुनः निर्दिष्ट करते समय एक त्रुटि उत्पन्न हुई",
+      "reassignFailed": "चेहरा पुनः निर्दिष्ट करने में विफल",
+      "reassignSucceeded": "चेहरा सफलतापूर्वक पुन: असाइन किया गया",
+      "selectPerson": "एक व्यक्ति का चयन करें...",
+      "selectPersonRequired": "कृपया एक व्यक्ति का चयन करें"
+    },
+    "favorite": {
+      "updateFailed": "पसंदीदा अपडेट करने में विफल"
+    },
+    "filters": {
+      "allValues": "सभी मूल्य",
+      "loading": "लोड हो रहा है...",
+      "loadValuesError": "मान लोड करने में त्रुटि",
+      "loadValuesFailed": "टैग मान लोड करने में विफल",
+      "locationFromOpenStreetMap": "(ओपनस्ट्रीटमैप)",
+      "locationFromPhotos": "(तस्वीरों से)",
+      "saveFailed": "फ़िल्टर सेटिंग्स सहेजी नहीं जा सकीं",
+      "selectTagNameFirst": "पहले एक टैग नाम चुनें"
+    },
+    "gallery": {
+      "videoPlaybackFailed": "यह वीडियो चलाया नहीं जा सकता - इस ब्राउज़र में प्रारूप असमर्थित हो सकता है, या फ़ाइल को स्थानांतरित या हटा दिया गया है।"
+    },
+    "tags": {
+      "allNeedName": "सभी टैग का एक नाम होना चाहिए",
+      "name": "टैग नाम",
+      "nameRequired": "टैग नाम आवश्यक है",
+      "noneAddBelow": "कोई टैग नहीं. नीचे एक जोड़ें.",
+      "remove": "निकालना",
+      "saveFailed": "टैग सहेजने में त्रुटि",
+      "updateFailed": "टैग अपडेट करने में विफल",
+      "updateSucceeded": "टैग सफलतापूर्वक अपडेट किए गए",
+      "valueOptional": "टैग मान (वैकल्पिक)"
+    }
+  },
+  "locations": {
+    "popup": {
+      "selectPhoto_one": "Select photo ({{total}} कुल):",
+      "selectPhoto_other": "फ़ोटो चुनें ({{total}} कुल):"
+    },
+    "selection": {
+      "assignAll": "सभी को सौंपें",
+      "clearSelection": "स्पष्ट चयन",
+      "customLocation": "या कस्टम स्थान दर्ज करें",
+      "massAssignment": "मास असाइनमेंट",
+      "photoCount_one": "{{formattedCount}} तस्वीर",
+      "photoCount_other": "{{formattedCount}} तस्वीरें",
+      "quickAssign": "त्वरित असाइनमेंट:",
+      "recommended": "अनुशंसित:",
+      "selectedClusters": "चयनित क्लस्टर:",
+      "summaryOneOne": "{{photos}} फोटो इन {{clusters}} झुंड",
+      "summaryOneOther": "{{photos}} फोटो इन {{clusters}} कलस्टरों",
+      "summaryOtherOne": "{{photos}} फ़ोटो में {{clusters}} झुंड",
+      "summaryOtherOther": "{{photos}} फ़ोटो में {{clusters}} कलस्टरों"
+    },
+    "unknownLocation": "अज्ञात स्थान",
+    "update": {
+      "failed": "स्थान अपडेट करने में विफल",
+      "nameRequired": "कृपया स्थान का नाम दर्ज करें",
+      "succeeded_one": "अद्यतन {{count}} फ़ोटो को \"{{location}}\"",
+      "succeeded_other": "अद्यतन {{count}} फ़ोटो को \"{{location}}\""
+    }
+  },
+  "people": {
+    "delete": {
+      "message": "मिटाना {{name}}? इससे उनके सभी चेहरे अनअसाइन हो जाएंगे लेकिन फ़ोटो नहीं हटेंगी।",
+      "title": "व्यक्ति हटाएं"
+    },
+    "faces": {
+      "removeConfirm": "निकालना",
+      "removeMessage_one": "इस व्यक्ति से चयनित चेहरा हटाएं?",
+      "removeMessage_other": "हटाना {{count}} इस व्यक्ति से चयनित चेहरे?",
+      "removeTitle": "चेहरे हटाएँ",
+      "selectRequired": "कृपया हटाने के लिए कम से कम एक चेहरा चुनें"
+    }
+  },
+  "pages": {
+    "chat": {
+      "cancelMessage": "इस पीढ़ी को त्यागें और वर्तमान पृष्ठ पर वापस लौटें?"
+    },
+    "delete": {
+      "message": "मिटाना \"{{name}}\"? इसे असंपादित नहीं किया जा सकता है।",
+      "title": "पृष्ठ हटाएँ"
+    },
+    "widgets": {
+      "deleteMessage": "यह विजेट हटाएं?",
+      "deleteTitle": "विजेट हटाएँ",
+      "new": "नया विजेट",
+      "untitled": "शीर्षक रहित विजेट"
+    }
+  },
+  "settings": {
+    "applicationLanguage": "अनुप्रयोग भाषा",
+    "directory": {
+      "pathRequired": "कृपया एक निर्देशिका पथ दर्ज करें"
+    },
+    "language": "भाषा",
+    "languageHelp": "याफ़ो द्वारा प्रयुक्त भाषा को नियंत्रित करता है। सहेजने के बाद पृष्ठ पुनः लोड होता है.",
+    "media": {
+      "addFailed": "निर्देशिका जोड़ने में विफल",
+      "addSucceeded": "मीडिया निर्देशिका सफलतापूर्वक जोड़ी गई",
+      "noneConfigured": "कोई मीडिया निर्देशिका कॉन्फ़िगर नहीं की गई",
+      "removeConfirm": "निकालना",
+      "removeFailed": "निर्देशिका हटाने में विफल",
+      "removeMessage": "निर्देशिका हटाएँ: {{directory}}?",
+      "removeSucceeded": "निकाला गया: {{directory}}",
+      "removeTitle": "मीडिया निर्देशिका हटाएँ"
+    },
+    "thumbnail": {
+      "countFailed": "थंबनेल गिनने में विफल",
+      "moveConfirm": "कदम",
+      "moveFailed": "थंबनेल स्थानांतरित करने में विफल",
+      "moveMessage_one": "क्या आप वाकई थंबनेल निर्देशिका को स्थानांतरित करना चाहते हैं?\n\nवर्तमान स्थान: {{currentDirectory}}\nनया स्थान: {{newDirectory}}\n\nये चलेगा {{formattedCount}} फ़ाइल ({{size}}).",
+      "moveMessage_other": "क्या आप वाकई थंबनेल निर्देशिका को स्थानांतरित करना चाहते हैं?\n\nवर्तमान स्थान: {{currentDirectory}}\nनया स्थान: {{newDirectory}}\n\nये चलेगा {{formattedCount}} फ़ाइलें ({{size}}).",
+      "moveSucceeded_one": "ले जाया गया {{formattedCount}} फ़ाइल ({{size}}) को {{directory}}",
+      "moveSucceeded_other": "ले जाया गया {{formattedCount}} फ़ाइलें ({{size}}) को {{directory}}",
+      "moveTitle": "थंबनेल निर्देशिका ले जाएँ",
+      "size": "{{value}} {{unit}}",
+      "statsFailed": "थंबनेल आँकड़े प्राप्त करने में विफल"
+    }
+  },
+  "themes": {
+    "chat": {
+      "cancelMessage": "इस पीढ़ी को त्यागें और वर्तमान थीम को बरकरार रखें?"
+    },
+    "delete": {
+      "message": "मिटाना \"{{name}}\"?\nइसे असंपादित नहीं किया जा सकता है।",
+      "title": "थीम हटाएँ"
+    }
+  },
+  "utilities": {
+    "automations": {
+      "chat": {
+        "cancelMessage": "इस पीढ़ी को त्यागें और वर्तमान स्वचालन को जारी रखें?"
+      },
+      "delete": {
+        "message": "मिटाना \"{{name}}\"?\nइसे असंपादित नहीं किया जा सकता है।",
+        "title": "स्वचालन हटाएँ"
+      },
+      "run": {
+        "noTriggers": "इस स्वचालन में कोई ट्रिगर नहीं है - इसे चलाने से पहले संपादन ट्रिगर के अंतर्गत एक जोड़ें।",
+        "started": "रन प्रारंभ हुआ - समाप्त होने पर यह रन इतिहास में दिखाई देगा।",
+        "startFailed": "रन प्रारंभ नहीं हो सका."
+      },
+      "test": {
+        "actionNames": {
+          "tag_media_items": "मीडिया आइटम टैग करें"
+        },
+        "actions": "क्रियाएँ ({{formattedCount}})",
+        "failed": "परीक्षण विफल रहा.",
+        "noActions": "कोई कार्रवाई नहीं की गई.",
+        "photoCount_one": "{{formattedCount}} तस्वीर",
+        "photoCount_other": "{{formattedCount}} तस्वीरें",
+        "ranCode": "दौड़ा {{source}} कोड · {{photoCount}}",
+        "result": "परिणाम",
+        "runFailed": "परीक्षण चलाने में विफल.",
+        "running": "दौड़ना…",
+        "showDetails": "प्रदर्शन का विवरण",
+        "testingOn": "परीक्षण जारी है {{mode}}: {{path}}"
+      },
+      "triggers": {
+        "addSchedule": "एक शेड्यूल जोड़ें",
+        "editSchedule": "शेड्यूल संपादित करें"
+      }
+    },
+    "indexPhotos": {
+      "filename": "फ़ाइलनाम",
+      "inSync": {
+        "description": "फ़ाइल सिस्टम पर सभी फ़ोटो अनुक्रमित हैं, और सभी डेटाबेस प्रविष्टियों में संबंधित फ़ाइलें हैं।",
+        "title": "सब कुछ तालमेल में है"
+      },
+      "location": "जगह",
+      "mediaDirectories": "मीडिया निर्देशिकाएँ: ",
+      "orphanReasons": {
+        "missing": "फ़ाइल डिस्क से हटा दी गई",
+        "unconfigured": "मीडिया निर्देशिका अब कॉन्फ़िगर नहीं है"
+      },
+      "orphaned": {
+        "description": "निम्नलिखित तस्वीरें डेटाबेस में हैं लेकिन अब कॉन्फ़िगर मीडिया निर्देशिकाओं के अंतर्गत कोई फ़ाइल नहीं है - या तो फ़ाइल हटा दी गई थी, या इसकी मीडिया निर्देशिका सेटिंग्स से हटा दी गई थी। सिंक करने से ये प्रविष्टियाँ हट जाती हैं।",
+        "title": "अनाथ डेटाबेस प्रविष्टियाँ"
+      },
+      "photoId": "फोटो पहचान पत्र",
+      "reason": "कारण",
+      "scan": {
+        "error": "स्कैन त्रुटि: {{reason}}",
+        "failed": "फ़ाइल सिस्टम को स्कैन करने में विफल.",
+        "requestFailed": "स्कैन अनुरोध विफल रहा",
+        "scanning": "फ़ाइल सिस्टम को स्कैन किया जा रहा है..."
+      },
+      "sync": {
+        "button": "डेटाबेस सिंक करें",
+        "error": "समन्वयन प्रारंभ करने में त्रुटि: {{reason}}",
+        "startFailed": "समन्वयन कार्य प्रारंभ करने में विफल",
+        "started": "सिंक कार्य प्रारंभ हुआ",
+        "starting": "सिंक शुरू हो रहा है..."
+      },
+      "unindexed": {
+        "description": "निम्नलिखित तस्वीरें कॉन्फ़िगर की गई मीडिया निर्देशिकाओं में मौजूद हैं लेकिन डेटाबेस में नहीं हैं।",
+        "title": "अनअनुक्रमित तस्वीरें"
+      },
+      "truncation": "पहला दिखा रहा हूँ {{shown}} का {{total}}. सिंक उन सभी को प्रोसेस करता है।"
+    }
+  }
+}

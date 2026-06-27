@@ -289,9 +289,13 @@ def i18n_update(c):
 
 
 @task
-def i18n_translate(c, locale, dry_run=False, keys_only=False, overwrite=False, batch_size=20):
-    """Translate missing entries from English with Yaffo's configured LLM."""
-    options = [f"--locale {shlex.quote(locale)}", f"--batch-size {int(batch_size)}"]
+def i18n_translate(c, locale, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="auto"):
+    """Translate entries from English with the configured LLM or deep-translator."""
+    options = [
+        f"--locale {shlex.quote(locale)}",
+        f"--batch-size {int(batch_size)}",
+        f"--engine {shlex.quote(engine)}",
+    ]
     if dry_run:
         options.append("--dry-run")
     if keys_only:

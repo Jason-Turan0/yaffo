@@ -1,0 +1,312 @@
+{
+  "common": {
+    "all": "Todo",
+    "apply": "Aplicar",
+    "areYouSure": "¿Está seguro?",
+    "cancel": "Cancelar",
+    "close": "Cerca",
+    "confirm": "Confirmar",
+    "dateValue": "Fecha: {{value}}",
+    "delete": "Borrar",
+    "notAvailable": "N / A",
+    "pageOf": "Página {{page}} de {{total}}",
+    "save": "Ahorrar",
+    "search": "Buscar…",
+    "similarityValue": "Similitud: {{value}}"
+  },
+  "components": {
+    "chat": {
+      "cancelGeneration": "Cancelar generación",
+      "discardGeneration": "¿Descartar esta generación?",
+      "startFailed": "No se pudo iniciar la generación."
+    },
+    "dateInput": {
+      "invalidDate": "Introduzca una fecha válida."
+    },
+    "cron": {
+      "advanced": "Avanzado (cron)",
+      "at": "en",
+      "atMinute": "al minuto",
+      "commonSchedules": "Horarios comunes",
+      "cronExpression": "expresión cron",
+      "cronHint": "minuto hora día mes día laborable",
+      "customSchedule": "Horario personalizado…",
+      "daily": "A diario",
+      "dailyAt": "Diariamente en {{time}}",
+      "dailyAtMidnight": "Diariamente a medianoche",
+      "dayOfMonth": "Día del mes",
+      "dayOfWeek": "dia de la semana",
+      "enterExpression": "Introduzca una expresión cron",
+      "everyHour": "Cada hora",
+      "everyHourAtMinute": "Cada hora en :{{minute}}",
+      "everyHours_one": "Cada hora {{count}}",
+      "everyHours_other": "Cada {{count}} horas",
+      "everyMinutes_one": "Cada {{count}} minuto",
+      "everyMinutes_other": "Cada {{count}} minutos",
+      "friday": "Viernes",
+      "hour": "Hora",
+      "hourly": "Cada hora",
+      "minute": "Minuto",
+      "monday": "Lunes",
+      "monthly": "Mensual",
+      "monthlyOnDayAt": "Mensualmente el día {{day}} en {{time}}",
+      "on": "en",
+      "onDay": "el dia",
+      "presetSchedule": "Horario preestablecido",
+      "repeat": "Repetir",
+      "runs": "Carreras:",
+      "saturday": "Sábado",
+      "schedule": "Cronograma",
+      "scheduleType": "Tipo de horario",
+      "sunday": "Domingo",
+      "thursday": "Jueves",
+      "tuesday": "Martes",
+      "wednesday": "Miércoles",
+      "weekly": "Semanalmente",
+      "weeklyOnAt": "Semanalmente en {{day}} en {{time}}"
+    },
+    "folderPicker": {
+      "noFilesOrFolders": "No hay archivos ni carpetas aquí.",
+      "noSubfolders": "No hay subcarpetas aquí.",
+      "readFailed": "No se pudo leer el sistema de archivos.",
+      "selectFile": "Seleccione un archivo",
+      "selectFileOrFolder": "Seleccione un archivo o carpeta",
+      "selectFolder": "Seleccione una carpeta",
+      "up": "Arriba"
+    },
+    "multiSelect": {
+      "selected": "{{count}} seleccionado"
+    },
+    "select": {
+      "noResults": "No se encontraron resultados",
+      "select": "Seleccionar…",
+      "typeToSearch": "Escribe para buscar…"
+    }
+  },
+  "faces": {
+    "assignment": {
+      "clusterSkipped": "Clúster omitido",
+      "noneSelected": "Omitido: no hay caras seleccionadas",
+      "requestFailed": "Error: {{reason}}",
+      "selectPersonFirst": "Por favor seleccione una persona primero"
+    },
+    "people": {
+      "created": "Creado \"{{name}}\"",
+      "nameRequired": "Por favor ingresa el nombre de una persona"
+    }
+  },
+  "media": {
+    "actions": {
+      "openFileFailed": "No se pudo abrir el archivo",
+      "openFileFailedWithReason": "No se pudo abrir el archivo: {{reason}}",
+      "openFolderFailed": "No se pudo abrir la carpeta",
+      "openFolderFailedWithReason": "No se pudo abrir la carpeta: {{reason}}",
+      "openingFile": "Abrir archivo en la aplicación predeterminada",
+      "openingFolder": "Abrir carpeta en el administrador de archivos"
+    },
+    "faces": {
+      "applying": "Aplicando…",
+      "reassign": "Reasignar cara",
+      "reassignError": "Se produjo un error al reasignar la cara.",
+      "reassignFailed": "No se pudo reasignar la cara",
+      "reassignSucceeded": "Cara reasignada exitosamente",
+      "selectPerson": "Seleccione una persona...",
+      "selectPersonRequired": "Por favor seleccione una persona"
+    },
+    "favorite": {
+      "updateFailed": "No se pudo actualizar el favorito"
+    },
+    "filters": {
+      "allValues": "Todos los valores",
+      "loading": "Cargando…",
+      "loadValuesError": "Error al cargar valores",
+      "loadValuesFailed": "No se pudieron cargar los valores de las etiquetas",
+      "locationFromOpenStreetMap": "(OpenStreetMap)",
+      "locationFromPhotos": "(de fotos)",
+      "saveFailed": "No se pudo guardar la configuración del filtro",
+      "selectTagNameFirst": "Seleccione un nombre de etiqueta primero"
+    },
+    "gallery": {
+      "videoPlaybackFailed": "Este video no se puede reproducir; es posible que el formato no sea compatible con este navegador o que el archivo se haya movido o eliminado."
+    },
+    "tags": {
+      "allNeedName": "Todas las etiquetas deben tener un nombre.",
+      "name": "Nombre de etiqueta",
+      "nameRequired": "El nombre de la etiqueta es obligatorio",
+      "noneAddBelow": "Sin etiquetas. Agregue uno a continuación.",
+      "remove": "Eliminar",
+      "saveFailed": "Error al guardar etiquetas",
+      "updateFailed": "No se pudieron actualizar las etiquetas",
+      "updateSucceeded": "Etiquetas actualizadas correctamente",
+      "valueOptional": "Valor de etiqueta (opcional)"
+    }
+  },
+  "locations": {
+    "popup": {
+      "selectPhoto_one": "Seleccionar foto ({{total}} total):",
+      "selectPhoto_other": "Seleccionar foto ({{total}} total):"
+    },
+    "selection": {
+      "assignAll": "Asignar a todos",
+      "clearSelection": "Borrar selección",
+      "customLocation": "O ingrese una ubicación personalizada",
+      "massAssignment": "Asignación masiva",
+      "photoCount_one": "{{formattedCount}} foto",
+      "photoCount_other": "{{formattedCount}} fotos",
+      "quickAssign": "Asignación rápida:",
+      "recommended": "Recomendado:",
+      "selectedClusters": "Clústeres seleccionados:",
+      "summaryOneOne": "Foto {{photos}} en el grupo {{clusters}}",
+      "summaryOneOther": "Foto {{photos}} en grupos {{clusters}}",
+      "summaryOtherOne": "Fotos {{photos}} en el grupo {{clusters}}",
+      "summaryOtherOther": "Fotos {{photos}} en grupos {{clusters}}"
+    },
+    "unknownLocation": "Ubicación desconocida",
+    "update": {
+      "failed": "No se pudieron actualizar las ubicaciones",
+      "nameRequired": "Por favor ingresa un nombre de ubicación",
+      "succeeded_one": "Foto {{count}} actualizada a \"{{location}}\"",
+      "succeeded_other": "Fotos {{count}} actualizadas a \"{{location}}\""
+    }
+  },
+  "people": {
+    "delete": {
+      "message": "¿Eliminar {{name}}? Esto desasignará todas sus caras pero no eliminará las fotos.",
+      "title": "Eliminar persona"
+    },
+    "faces": {
+      "removeConfirm": "Eliminar",
+      "removeMessage_one": "¿Eliminar la cara seleccionada de esta persona?",
+      "removeMessage_other": "¿Eliminar las caras seleccionadas {{count}} de esta persona?",
+      "removeTitle": "Quitar caras",
+      "selectRequired": "Por favor seleccione al menos una cara para eliminar"
+    }
+  },
+  "pages": {
+    "chat": {
+      "cancelMessage": "¿Descartar esta generación y volver a la página actual?"
+    },
+    "delete": {
+      "message": "¿Eliminar \"{{name}}\"? Esto no se puede deshacer.",
+      "title": "Eliminar página"
+    },
+    "widgets": {
+      "deleteMessage": "¿Eliminar este widget?",
+      "deleteTitle": "Eliminar widget",
+      "new": "Nuevo widget",
+      "untitled": "Widget sin título"
+    }
+  },
+  "settings": {
+    "applicationLanguage": "Idioma de la aplicación",
+    "directory": {
+      "pathRequired": "Por favor ingrese una ruta de directorio"
+    },
+    "language": "Idioma",
+    "languageHelp": "Controla el idioma utilizado por Yaffo. La página se recarga después de guardar.",
+    "media": {
+      "addFailed": "No se pudo agregar el directorio",
+      "addSucceeded": "Directorio de medios agregado exitosamente",
+      "noneConfigured": "No hay directorios de medios configurados",
+      "removeConfirm": "Eliminar",
+      "removeFailed": "No se pudo eliminar el directorio",
+      "removeMessage": "Eliminar directorio: {{directory}}?",
+      "removeSucceeded": "Eliminado: {{directory}}",
+      "removeTitle": "Eliminar directorio de medios"
+    },
+    "thumbnail": {
+      "countFailed": "No se pudieron contar las miniaturas",
+      "moveConfirm": "Mover",
+      "moveFailed": "No se pudieron mover las miniaturas",
+      "moveMessage_one": "¿Está seguro de que desea mover el directorio de miniaturas?\n\nUbicación actual: {{currentDirectory}}\nNueva ubicación: {{newDirectory}}\n\nEsto moverá el archivo {{formattedCount}} ({{size}}).",
+      "moveMessage_other": "¿Está seguro de que desea mover el directorio de miniaturas?\n\nUbicación actual: {{currentDirectory}}\nNueva ubicación: {{newDirectory}}\n\nEsto moverá los archivos {{formattedCount}} ({{size}}).",
+      "moveSucceeded_one": "Se movió el archivo {{formattedCount}} ({{size}}) a {{directory}}",
+      "moveSucceeded_other": "Se movieron archivos {{formattedCount}} ({{size}}) a {{directory}}",
+      "moveTitle": "Mover directorio de miniaturas",
+      "size": "{{value}} {{unit}}",
+      "statsFailed": "No se pudieron obtener estadísticas en miniatura"
+    }
+  },
+  "themes": {
+    "chat": {
+      "cancelMessage": "¿Descartar esta generación y mantener el tema actual?"
+    },
+    "delete": {
+      "message": "¿Eliminar \"{{name}}\"?\nEsto no se puede deshacer.",
+      "title": "Eliminar tema"
+    }
+  },
+  "utilities": {
+    "automations": {
+      "chat": {
+        "cancelMessage": "¿Descartar esta generación y mantener la automatización actual?"
+      },
+      "delete": {
+        "message": "¿Eliminar \"{{name}}\"?\nEsto no se puede deshacer.",
+        "title": "Eliminar automatización"
+      },
+      "run": {
+        "noTriggers": "Esta automatización no tiene activadores: agregue uno en Editar activadores antes de ejecutarla.",
+        "started": "Ejecución iniciada: aparecerá en el historial de ejecución cuando finalice.",
+        "startFailed": "No se pudo iniciar la carrera."
+      },
+      "test": {
+        "actionNames": {
+          "tag_media_items": "Etiquetar elementos multimedia"
+        },
+        "actions": "Acciones ({{formattedCount}})",
+        "failed": "La prueba falló.",
+        "noActions": "No se realizaron acciones.",
+        "photoCount_one": "{{formattedCount}} foto",
+        "photoCount_other": "{{formattedCount}} fotos",
+        "ranCode": "Ejecuté el código {{source}} · {{photoCount}}",
+        "result": "Resultado",
+        "runFailed": "No se pudo ejecutar la prueba.",
+        "running": "Correr…",
+        "showDetails": "Mostrar detalles",
+        "testingOn": "Pruebas en {{mode}}: {{path}}"
+      },
+      "triggers": {
+        "addSchedule": "Agregar un horario",
+        "editSchedule": "Editar horario"
+      }
+    },
+    "indexPhotos": {
+      "filename": "Nombre del archivo",
+      "inSync": {
+        "description": "Todas las fotografías del sistema de archivos están indexadas y todas las entradas de la base de datos tienen sus archivos correspondientes.",
+        "title": "Todo está sincronizado"
+      },
+      "location": "Ubicación",
+      "mediaDirectories": "Directorios de medios:",
+      "orphanReasons": {
+        "missing": "Archivo eliminado del disco",
+        "unconfigured": "El directorio de medios ya no está configurado"
+      },
+      "orphaned": {
+        "description": "Las siguientes fotos están en la base de datos pero ya no tienen un archivo en los directorios de medios configurados; o el archivo se eliminó o su directorio de medios se eliminó de Configuración. La sincronización elimina estas entradas.",
+        "title": "Entradas de bases de datos huérfanas"
+      },
+      "photoId": "Identificación con foto",
+      "reason": "Razón",
+      "scan": {
+        "error": "Error de escaneo: {{reason}}",
+        "failed": "No se pudo escanear el sistema de archivos.",
+        "requestFailed": "La solicitud de escaneo falló",
+        "scanning": "Escaneando el sistema de archivos..."
+      },
+      "sync": {
+        "button": "Sincronizar base de datos",
+        "error": "Error al iniciar la sincronización: {{reason}}",
+        "startFailed": "No se pudo iniciar el trabajo de sincronización",
+        "started": "Trabajo de sincronización iniciado",
+        "starting": "Iniciando sincronización…"
+      },
+      "unindexed": {
+        "description": "Las siguientes fotografías existen en los directorios de medios configurados pero no están en la base de datos.",
+        "title": "Fotos no indexadas"
+      },
+      "truncation": "Mostrando el primer {{shown}} de {{total}}. La sincronización los procesa todos."
+    }
+  }
+}

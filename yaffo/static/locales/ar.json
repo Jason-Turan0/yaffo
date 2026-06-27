@@ -1,0 +1,312 @@
+{
+  "common": {
+    "all": "الجميع",
+    "apply": "يتقدم",
+    "areYouSure": "هل أنت متأكد؟",
+    "cancel": "يلغي",
+    "close": "يغلق",
+    "confirm": "يتأكد",
+    "dateValue": "تاريخ: {{value}}",
+    "delete": "يمسح",
+    "notAvailable": "لا يوجد",
+    "pageOf": "صفحة {{page}} ل {{total}}",
+    "save": "يحفظ",
+    "search": "يبحث…",
+    "similarityValue": "تشابه: {{value}}"
+  },
+  "components": {
+    "chat": {
+      "cancelGeneration": "إلغاء الجيل",
+      "discardGeneration": "نبذ هذا الجيل؟",
+      "startFailed": "لا يمكن بدء الجيل."
+    },
+    "dateInput": {
+      "invalidDate": "أدخل تاريخًا صالحًا."
+    },
+    "cron": {
+      "advanced": "متقدم (كرون)",
+      "at": "في",
+      "atMinute": "في الدقيقة",
+      "commonSchedules": "جداول مشتركة",
+      "cronExpression": "تعبير كرون",
+      "cronHint": "دقيقة ساعة يوم شهر يوم من أيام الأسبوع",
+      "customSchedule": "جدول مخصص…",
+      "daily": "يوميًا",
+      "dailyAt": "يوميا في {{time}}",
+      "dailyAtMidnight": "يومياً عند منتصف الليل",
+      "dayOfMonth": "يوم من الشهر",
+      "dayOfWeek": "يوم من الأسبوع",
+      "enterExpression": "أدخل تعبير كرون",
+      "everyHour": "كل ساعة",
+      "everyHourAtMinute": "كل ساعة في:{{minute}}",
+      "everyHours_one": "كل {{count}} ساعة",
+      "everyHours_other": "كل {{count}} ساعات",
+      "everyMinutes_one": "كل {{count}} دقيقة",
+      "everyMinutes_other": "كل {{count}} دقائق",
+      "friday": "جمعة",
+      "hour": "ساعة",
+      "hourly": "كل ساعة",
+      "minute": "دقيقة",
+      "monday": "الاثنين",
+      "monthly": "شهريا",
+      "monthlyOnDayAt": "شهريا في اليوم {{day}} في {{time}}",
+      "on": "على",
+      "onDay": "في اليوم",
+      "presetSchedule": "جدول زمني محدد مسبقا",
+      "repeat": "يكرر",
+      "runs": "أشواط:",
+      "saturday": "السبت",
+      "schedule": "جدول",
+      "scheduleType": "نوع الجدول الزمني",
+      "sunday": "الأحد",
+      "thursday": "يوم الخميس",
+      "tuesday": "يوم الثلاثاء",
+      "wednesday": "الأربعاء",
+      "weekly": "أسبوعي",
+      "weeklyOnAt": "اسبوعيا على {{day}} في {{time}}"
+    },
+    "folderPicker": {
+      "noFilesOrFolders": "لا توجد ملفات أو مجلدات هنا.",
+      "noSubfolders": "لا توجد مجلدات فرعية هنا.",
+      "readFailed": "فشل في قراءة نظام الملفات.",
+      "selectFile": "حدد ملفًا",
+      "selectFileOrFolder": "حدد ملفًا أو مجلدًا",
+      "selectFolder": "حدد مجلدًا",
+      "up": "أعلى"
+    },
+    "multiSelect": {
+      "selected": "{{count}} مختارة"
+    },
+    "select": {
+      "noResults": "لم يتم العثور على نتائج",
+      "select": "يختار…",
+      "typeToSearch": "اكتب للبحث..."
+    }
+  },
+  "faces": {
+    "assignment": {
+      "clusterSkipped": "تم تخطي الكتلة",
+      "noneSelected": "تم التخطي — لم يتم تحديد أي وجوه",
+      "requestFailed": "خطأ: {{reason}}",
+      "selectPersonFirst": "الرجاء اختيار شخص أولا"
+    },
+    "people": {
+      "created": "مخلوق \"{{name}}\"",
+      "nameRequired": "الرجاء إدخال اسم الشخص"
+    }
+  },
+  "media": {
+    "actions": {
+      "openFileFailed": "فشل في فتح الملف",
+      "openFileFailedWithReason": "فشل في فتح الملف: {{reason}}",
+      "openFolderFailed": "فشل في فتح المجلد",
+      "openFolderFailedWithReason": "فشل في فتح المجلد: {{reason}}",
+      "openingFile": "فتح الملف في التطبيق الافتراضي",
+      "openingFolder": "فتح المجلد في مدير الملفات"
+    },
+    "faces": {
+      "applying": "جارٍ التقديم…",
+      "reassign": "إعادة تعيين الوجه",
+      "reassignError": "حدث خطأ أثناء إعادة تعيين الوجه",
+      "reassignFailed": "فشلت إعادة تعيين الوجه",
+      "reassignSucceeded": "تمت إعادة تعيين الوجه بنجاح",
+      "selectPerson": "حدد شخصًا…",
+      "selectPersonRequired": "الرجاء اختيار شخص"
+    },
+    "favorite": {
+      "updateFailed": "فشل في تحديث المفضلة"
+    },
+    "filters": {
+      "allValues": "كل القيم",
+      "loading": "تحميل…",
+      "loadValuesError": "حدث خطأ أثناء تحميل القيم",
+      "loadValuesFailed": "فشل تحميل قيم العلامة",
+      "locationFromOpenStreetMap": "(خريطة الشارع المفتوحة)",
+      "locationFromPhotos": "(من الصور)",
+      "saveFailed": "لا يمكن حفظ إعدادات التصفية",
+      "selectTagNameFirst": "حدد اسم العلامة أولاً"
+    },
+    "gallery": {
+      "videoPlaybackFailed": "لا يمكن تشغيل هذا الفيديو — قد يكون التنسيق غير مدعوم في هذا المتصفح، أو قد تم نقل الملف أو حذفه."
+    },
+    "tags": {
+      "allNeedName": "يجب أن يكون لجميع العلامات اسم",
+      "name": "اسم العلامة",
+      "nameRequired": "اسم العلامة مطلوب",
+      "noneAddBelow": "لا توجد علامات. أضف واحدة أدناه.",
+      "remove": "يزيل",
+      "saveFailed": "حدث خطأ أثناء حفظ العلامات",
+      "updateFailed": "فشل تحديث العلامات",
+      "updateSucceeded": "تم تحديث العلامات بنجاح",
+      "valueOptional": "قيمة العلامة (اختياري)"
+    }
+  },
+  "locations": {
+    "popup": {
+      "selectPhoto_one": "حدد الصورة ({{total}} المجموع):",
+      "selectPhoto_other": "حدد الصورة ({{total}} المجموع):"
+    },
+    "selection": {
+      "assignAll": "تعيين للجميع",
+      "clearSelection": "مسح التحديد",
+      "customLocation": "أو أدخل الموقع المخصص",
+      "massAssignment": "التكليف الجماعي",
+      "photoCount_one": "{{formattedCount}} صورة",
+      "photoCount_other": "{{formattedCount}} صور",
+      "quickAssign": "التعيين السريع:",
+      "recommended": "مُستَحسَن:",
+      "selectedClusters": "المجموعات المختارة:",
+      "summaryOneOne": "{{photos}} الصورة في {{clusters}} تَجَمَّع",
+      "summaryOneOther": "{{photos}} الصورة في {{clusters}} مجموعات",
+      "summaryOtherOne": "{{photos}} الصور في {{clusters}} تَجَمَّع",
+      "summaryOtherOther": "{{photos}} الصور في {{clusters}} مجموعات"
+    },
+    "unknownLocation": "موقع غير معروف",
+    "update": {
+      "failed": "فشل تحديث المواقع",
+      "nameRequired": "الرجاء إدخال اسم الموقع",
+      "succeeded_one": "تم التحديث {{count}} الصورة إلى \"{{location}}\"",
+      "succeeded_other": "تم التحديث {{count}} صور ل\"{{location}}\""
+    }
+  },
+  "people": {
+    "delete": {
+      "message": "يمسح {{name}}؟ سيؤدي هذا إلى إلغاء تعيين جميع وجوههم ولكن لن يحذف الصور.",
+      "title": "حذف الشخص"
+    },
+    "faces": {
+      "removeConfirm": "يزيل",
+      "removeMessage_one": "هل تريد إزالة الوجه المحدد من هذا الشخص؟",
+      "removeMessage_other": "إزالة {{count}} وجوه مختارة من هذا الشخص؟",
+      "removeTitle": "إزالة الوجوه",
+      "selectRequired": "الرجاء تحديد وجه واحد على الأقل لإزالته"
+    }
+  },
+  "pages": {
+    "chat": {
+      "cancelMessage": "هل تريد تجاهل هذا الجيل والعودة إلى الصفحة الحالية؟"
+    },
+    "delete": {
+      "message": "يمسح \"{{name}}\"؟ لا يمكن التراجع عن هذا.",
+      "title": "حذف الصفحة"
+    },
+    "widgets": {
+      "deleteMessage": "هل تريد إزالة هذه الأداة؟",
+      "deleteTitle": "حذف القطعة",
+      "new": "القطعة الجديدة",
+      "untitled": "القطعة بلا عنوان"
+    }
+  },
+  "settings": {
+    "applicationLanguage": "لغة التطبيق",
+    "directory": {
+      "pathRequired": "الرجاء إدخال مسار الدليل"
+    },
+    "language": "لغة",
+    "languageHelp": "يتحكم في اللغة المستخدمة من قبل يافو. يتم إعادة تحميل الصفحة بعد الحفظ.",
+    "media": {
+      "addFailed": "فشلت إضافة الدليل",
+      "addSucceeded": "تمت إضافة دليل الوسائط بنجاح",
+      "noneConfigured": "لم يتم تكوين أدلة الوسائط",
+      "removeConfirm": "يزيل",
+      "removeFailed": "فشل في إزالة الدليل",
+      "removeMessage": "إزالة الدليل: {{directory}}?",
+      "removeSucceeded": "تمت الإزالة: {{directory}}",
+      "removeTitle": "إزالة دليل الوسائط"
+    },
+    "thumbnail": {
+      "countFailed": "فشل في حساب الصور المصغرة",
+      "moveConfirm": "يتحرك",
+      "moveFailed": "فشل في نقل الصور المصغرة",
+      "moveMessage_one": "هل أنت متأكد أنك تريد نقل الدليل المصغر؟\n\nالموقع الحالي: {{currentDirectory}}\nالموقع الجديد: {{newDirectory}}\n\nهذا سوف يتحرك {{formattedCount}} ملف ({{size}}).",
+      "moveMessage_other": "هل أنت متأكد أنك تريد نقل الدليل المصغر؟\n\nالموقع الحالي: {{currentDirectory}}\nالموقع الجديد: {{newDirectory}}\n\nهذا سوف يتحرك {{formattedCount}} ملفات ({{size}}).",
+      "moveSucceeded_one": "انتقل {{formattedCount}} ملف ({{size}}) ل {{directory}}",
+      "moveSucceeded_other": "انتقل {{formattedCount}} ملفات ({{size}}) ل {{directory}}",
+      "moveTitle": "نقل دليل الصور المصغرة",
+      "size": "{{value}} {{unit}}",
+      "statsFailed": "فشل في الحصول على إحصائيات الصورة المصغرة"
+    }
+  },
+  "themes": {
+    "chat": {
+      "cancelMessage": "هل تريد تجاهل هذا الجيل والاحتفاظ بالموضوع الحالي؟"
+    },
+    "delete": {
+      "message": "يمسح \"{{name}}\"؟\nلا يمكن التراجع عن هذا.",
+      "title": "حذف الموضوع"
+    }
+  },
+  "utilities": {
+    "automations": {
+      "chat": {
+        "cancelMessage": "هل تريد التخلص من هذا الجيل والاحتفاظ بالأتمتة الحالية؟"
+      },
+      "delete": {
+        "message": "يمسح \"{{name}}\"؟\nلا يمكن التراجع عن هذا.",
+        "title": "حذف الأتمتة"
+      },
+      "run": {
+        "noTriggers": "لا تحتوي هذه الأتمتة على أي مشغلات — قم بإضافة مشغل ضمن تحرير المشغلات قبل تشغيلها.",
+        "started": "بدأ التشغيل - سيظهر في سجل التشغيل عند انتهائه.",
+        "startFailed": "لا يمكن بدء التشغيل."
+      },
+      "test": {
+        "actionNames": {
+          "tag_media_items": "وضع علامة على عناصر الوسائط"
+        },
+        "actions": "الإجراءات ({{formattedCount}})",
+        "failed": "فشل الاختبار.",
+        "noActions": "لم يتم تنفيذ أي إجراءات.",
+        "photoCount_one": "{{formattedCount}} صورة",
+        "photoCount_other": "{{formattedCount}} صور",
+        "ranCode": "ركض {{source}} شفرة · {{photoCount}}",
+        "result": "نتيجة",
+        "runFailed": "فشل في تشغيل الاختبار.",
+        "running": "جري…",
+        "showDetails": "إظهار التفاصيل",
+        "testingOn": "الاختبار على {{mode}}: {{path}}"
+      },
+      "triggers": {
+        "addSchedule": "إضافة جدول زمني",
+        "editSchedule": "تعديل الجدول الزمني"
+      }
+    },
+    "indexPhotos": {
+      "filename": "اسم الملف",
+      "inSync": {
+        "description": "تتم فهرسة جميع الصور الموجودة على نظام الملفات، وتحتوي جميع إدخالات قاعدة البيانات على ملفات مقابلة.",
+        "title": "كل شيء متزامن"
+      },
+      "location": "موقع",
+      "mediaDirectories": "أدلة الوسائط: ",
+      "orphanReasons": {
+        "missing": "تم حذف الملف من القرص",
+        "unconfigured": "لم يعد تم تكوين دليل الوسائط"
+      },
+      "orphaned": {
+        "description": "الصور التالية موجودة في قاعدة البيانات ولكن لم يعد بها ملف ضمن دلائل الوسائط التي تم تكوينها - إما أنه تم حذف الملف، أو تمت إزالة دليل الوسائط الخاص به من الإعدادات. تؤدي المزامنة إلى إزالة هذه الإدخالات.",
+        "title": "إدخالات قاعدة البيانات المعزولة"
+      },
+      "photoId": "معرف الصورة",
+      "reason": "سبب",
+      "scan": {
+        "error": "خطأ في المسح: {{reason}}",
+        "failed": "فشل في فحص نظام الملفات.",
+        "requestFailed": "فشل طلب المسح",
+        "scanning": "جارٍ فحص نظام الملفات..."
+      },
+      "sync": {
+        "button": "مزامنة قاعدة البيانات",
+        "error": "خطأ في بدء المزامنة: {{reason}}",
+        "startFailed": "فشل في بدء مهمة المزامنة",
+        "started": "بدأت مهمة المزامنة",
+        "starting": "جارٍ بدء المزامنة…"
+      },
+      "unindexed": {
+        "description": "الصور التالية موجودة في أدلة الوسائط التي تم تكوينها ولكنها ليست في قاعدة البيانات.",
+        "title": "صور غير مفهرسة"
+      },
+      "truncation": "عرض الأول {{shown}} ل {{total}}. تقوم المزامنة بمعالجة كل منهم."
+    }
+  }
+}

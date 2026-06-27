@@ -465,7 +465,15 @@ def test_saved_locale_translates_reverse_geocode_validation(client):
 
 
 def test_settings_locale_rejects_unsupported_locale(client):
-    response = client.post("/settings/locale", data={"locale": "fr"})
+    response = client.post("/settings/locale", data={"locale": "pt"})
 
     assert response.status_code == 400
     assert response.get_json() == {"error": "Unsupported locale"}
+
+
+def test_arabic_locale_renders_rtl_document(client):
+    response = client.post("/settings/locale", data={"locale": "ar"})
+
+    assert response.status_code == 302
+    body = client.get("/settings").get_data(as_text=True)
+    assert '<html lang="ar" dir="rtl"' in body

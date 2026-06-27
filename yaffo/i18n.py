@@ -16,6 +16,11 @@ LOCALE_SETTING = "locale"
 SUPPORTED_LOCALES = {
     "en": "English",
     "de": "Deutsch",
+    "zh": "中文",
+    "hi": "हिन्दी",
+    "es": "Español",
+    "ar": "العربية",
+    "fr": "Français",
 }
 TRANSLATIONS_DIR = BUNDLE_ROOT / "yaffo" / "translations"
 
