@@ -298,7 +298,7 @@ def i18n_init(c, locale):
 @task
 def i18n_update(c):
     """Merge extracted gettext strings and synchronize browser catalog keys."""
-    c.run("pybabel update -i messages.pot -d yaffo/translations", pty=True)
+    c.run("pybabel update -N --ignore-obsolete -i messages.pot -d yaffo/translations", pty=True)
     for locale_path in sorted(Path("yaffo/static/locales").glob("*.json")):
         if locale_path.stem == "en" or locale_path.stem.endswith(".review"):
             continue
@@ -337,7 +337,7 @@ def _translation_locales():
 def i18n_translate_all(c, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="auto"):
     """Extract, update, translate all configured locales, then compile catalogs."""
     c.run("pybabel extract -F babel.cfg -o messages.pot .", pty=True)
-    c.run("pybabel update -i messages.pot -d yaffo/translations", pty=True)
+    c.run("pybabel update -N --ignore-obsolete -i messages.pot -d yaffo/translations", pty=True)
     for locale_path in sorted(Path("yaffo/static/locales").glob("*.json")):
         if locale_path.stem == "en" or locale_path.stem.endswith(".review"):
             continue

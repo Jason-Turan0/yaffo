@@ -426,18 +426,15 @@ def translate_missing(
 
     translated_values: dict[str, str | list[str]] = {}
     batches = [entries[i: i + batch_size] for i in range(0, len(entries), batch_size)]
-    for batch in tqdm(batches,
-            desc=f"Translating {locale}",
-            unit="batch",
-            leave=False,
-            total=len(entries)
-        ):
+    logger.info(f"Translating {len(batches)} batches for {locale}")
+    for batch in batches:
         batch_values = _translate_batch_with_engine(batch, locale, engine=engine)
         for entry in batch:
             if entry.id not in batch_values:
                 raise ValueError(f"Model response omitted {entry.id}")
             _validate_translation(entry, batch_values[entry.id])
             translated_values[entry.id] = batch_values[entry.id]
+        logger.info(f"Translated {len(batch)} entries")
     if dry_run:
         return [f"{entry.id} = {translated_values[entry.id]}" for entry in entries]
 
@@ -447,20 +444,17 @@ def translate_missing(
     gettext_messages: list[Message] = (
         [message for message in catalog if message.id] if catalog is not None else []
     )
-    review_keys = []
     for entry in entries:
         translated = translated_values[entry.id]
         if entry.id.startswith("browser:"):
             key = entry.id.removeprefix("browser:")
             _set_json_path(browser, key, str(translated))
-            review_keys.append(key)
         else:
             index = int(entry.id.removeprefix("gettext:"))
             message = gettext_messages[index]
             message.string = tuple(translated) if isinstance(translated, list) else translated
             message.flags.discard("fuzzy")
     _write_json(BROWSER_LOCALES_DIR / f"{locale}.json", browser)
-    _write_json(BROWSER_LOCALES_DIR / f"{locale}.review.json", {"generated": review_keys})
     if catalog is not None:
         with _catalog_path(locale).open("wb") as handle:
             write_po(handle, catalog, width=100)

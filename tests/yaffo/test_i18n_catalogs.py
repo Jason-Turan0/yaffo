@@ -58,7 +58,7 @@ def test_i18next_vendor_asset_is_packaged():
     assert "i18next" in asset.read_text(encoding="utf-8")[:500]
 
 
-def test_translate_missing_populates_browser_keys_and_marks_them_for_review(
+def test_translate_missing_populates_browser_keys(
     monkeypatch,
     tmp_path,
 ):
@@ -95,8 +95,7 @@ def test_translate_missing_populates_browser_keys_and_marks_them_for_review(
             "save": "Speichern",
         }
     }
-    review = json.loads((locales_dir / "de.review.json").read_text(encoding="utf-8"))
-    assert review == {"generated": ["common.greeting"]}
+    assert not (locales_dir / "de.review.json").exists()
 
 
 def test_translate_missing_overwrite_regenerates_existing_browser_entries(
