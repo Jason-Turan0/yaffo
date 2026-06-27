@@ -541,7 +541,7 @@ class TestWriteKeywords:
 
 class TestWriteVideoMetadata:
     """Video write-back: XMP keywords (labels/tags/favorite) + location into MP4/MOV
-    containers; people are intentionally not written (docs/video.md)."""
+    containers; people are intentionally not written (docs/development/video.md)."""
 
     @pytest.fixture
     def temp_mov(self):

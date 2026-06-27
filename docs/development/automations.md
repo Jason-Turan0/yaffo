@@ -1,24 +1,5 @@
 # Automations — Scheduled & Event-Driven Background Behavior (Architecture)
 
-> **Status (2026-06-16):** runtime + builder + management UI + host action API +
-> a test/preview harness, all built and unit-tested. An **Automation** is a named
-> unit of functionality that runs on a **schedule** (cron) or in response to a
-> **domain event** (e.g. photos indexed). Two tiers, mirroring the theme registry:
-> **system** automations ship with the app and are code-backed; **custom**
-> automations are AI-generated and run sandboxed Starlark against a curated host
-> API (read `data_query` + face-similarity + `report_progress`; mutating **batch**
-> writes — tag / rename / move / assign-face / delete). The AI builder chat + publish flow, full trigger-editing UI (cron
-> builder), name/description editing, and a no-op **Test** harness (preview the
-> actions a script would take) are live under the **Utilities** page
-> (`/utilities/automations`). This doc is the reference for the data model, the two
-> dispatch paths, the sandbox + host API, the builder, the test harness, and the
-> design decisions behind them.
->
-> **Not yet built:** a hard Starlark CPU/time limit (recursion + large bounded loops
-> still run). See *Deferred* at the bottom. (The **loop guard** — in-process causal
-> chain + watcher self-write suppression — and per-automation **run history** on the
-> detail page are now built; see *Loop guard* / *Deferred*.)
-
 ## Overview
 
 ```mermaid

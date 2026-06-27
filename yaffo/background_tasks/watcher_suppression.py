@@ -12,7 +12,7 @@ Suppression is keyed on a `(path, signature)` where `signature` is the file's
 signature and is therefore never suppressed; matching is to the exact bytes yaffo
 wrote, not a blanket mute on the path. Entries live in the queue DB (shared across the
 worker that writes and the watcher process) and expire after `SUPPRESSION_TTL_SECONDS`.
-See docs/automations.md (Loop guard → Mechanism 2).
+See docs/development/automations.md (Loop guard → Mechanism 2).
 """
 from __future__ import annotations
 

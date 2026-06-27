@@ -361,7 +361,7 @@ rendered-from-template fixture with a CI drift guard.** This is decision **D5**.
 ### 4.1 The core tension
 
 The app ships JS **without a build step** — `yaffo/static/*.js` is served as-is and
-bundled into the PyInstaller app verbatim (see `docs/distribution.md` /
+bundled into the PyInstaller app verbatim (see `docs/development/distribution.md` /
 packaging notes). Full TypeScript requires a **compile step** that emits the JS
 Flask serves, which touches dev workflow, the static-file pipeline, and packaging.
 That cost — not the language — is the real decision.

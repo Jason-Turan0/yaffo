@@ -1,5 +1,5 @@
 """Rename the photo-entity domain events to media events (consistency pass for the
-media_item rename, docs/video.md).
+media_item rename, docs/development/video.md).
 
 The events describe the media entity and fire for videos too, so `photo_*` →
 `media_*`: `photo_imported`→`media_imported`, `photo_indexed`→`media_indexed`,

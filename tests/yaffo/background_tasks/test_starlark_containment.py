@@ -9,7 +9,7 @@ Complements the happy-path + basic-escape cases in test_starlark_runner.py.
 
 Not asserted: this binding does NOT block recursion or bound CPU/time (a large bounded
 loop or recursion still runs) — that's the documented "Deferred: hard CPU/time limit"
-gap in docs/automations.md, so the only true hardening is a subprocess/resource limit.
+gap in docs/development/automations.md, so the only true hardening is a subprocess/resource limit.
 """
 import pytest
 

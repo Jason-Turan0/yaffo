@@ -145,31 +145,13 @@ just a `Face` row on a video `MediaItem` — but the rename ripples through name
   every automation handler, the Starlark host API, and **any existing AI-generated
   custom automation that references `photo_ids`** — those scripts break. Accepted
   for consistency (breaking is cheap here); the rename must be reflected in
-  `docs/automations.md` and the host-API reference so script authors see the new
+  `docs/development/automations.md` and the host-API reference so script authors see the new
   name.
 - This is a **codebase-wide find/replace**, not a localized change: `Photo`,
   `photo_id`, `photos`, `photo_ids` appear across models, repositories,
   serializers/DTOs, routes, templates, the automations system, and tests. Doing it
   as one mechanical sweep (then fixing what the type checker/tests flag) is the
   sane path.
-
-### Migration
-
-Per the project's schema convention (no prod/CI): edit the committed `init_db.py`
-to define the `media_items` table (renamed, with the new columns) and the
-`MEDIA_TYPE_*` constants, **and** write a gitignored `scripts/db/migrations/dev/`
-script for the existing dev DB. A one-shot dev script; no prod data to preserve.
-Ordered steps:
-
-1. **The rename, first and on its own.** `ALTER TABLE photos RENAME TO
-   media_items`, then rename the child FK columns (`photo_labels` → `media_labels`,
-   `*.photo_id` → `media_item_id`) — which for SQLite's limited `ALTER TABLE` means
-   recreate-and-copy for those child tables. Land this as a **pure rename with no
-   behavior change** (schema + codebase sweep + the `photo_ids` → `media_ids`
-   wire-name) so it's reviewable in isolation and the test suite proves nothing
-   broke before any video logic exists. See Rollout **Phase 0**.
-2. **Then the additive columns.** `ADD COLUMN` `media_type` (backfill `"photo"`),
-   `poster_path`, `duration_seconds`, `width`, `height`, `video_codec`.
 
 ## Indexing pipeline
 
@@ -320,116 +302,3 @@ Photo face detection runs once per image. Video needs to sample frames, which is
 heavier, noisier, and raises dedup-across-frames questions. It reuses the same
 InsightFace path and `Face` schema, so it's additive — but it's deferred to its
 own phase so the core import/playback feature can ship first.
-
-## Rollout (phasing)
-
-- **Phase 0 — Rename (no behavior change). ✅ Done (2026-06-22).** `photos` →
-  `media_items` / `Photo` → `MediaItem`, the child FK + `PhotoLabel`→`MediaLabel`
-  renames. Migration `1_MIGRATION_20260622_rename_photos_to_media_items.py` renames
-  the tables/columns in place (FK refs rewritten via `legacy_alter_table=OFF`).
-  Landed with the full test suite green.
-- **Phase 0b — Full consistency sweep. ✅ Done (2026-06-22).** Carried the rename
-  through everything so the code reads as if `photo` (the entity) never existed,
-  while keeping genuine photo-vs-video distinctions (`PHOTO_EXTENSIONS`, the
-  `index_photo`/`index_photos` pipeline, `photo_dates`, the `"photo"` media_type):
-  - **IDs:** `photo_id` → `media_item_id`, all id lists (incl. the Phase-0 wire key
-    `media_ids`) → `media_item_ids`; `photo_count` → `media_count`.
-  - **Events & status:** `EVENT_PHOTO_*` → `EVENT_MEDIA_*` with values
-    `media_imported`/`media_indexed`/`media_modified`/`media_labeled`;
-    `PHOTO_STATUS_*` → `MEDIA_STATUS_*`. Migration
-    `2_MIGRATION_20260622_rename_events_to_media.py` re-points the seeded
-    `automation_triggers.event_type` rows.
-  - **Functions & host API:** repo/helper fns (`get_photo_*` → `get_media_item_*`,
-    `delete_photos` → `delete_media_items`, …) and the Starlark host API
-    (`tag_photos`→`tag_media_items`, `move_photos`→`move_media_items`,
-    `delete_photos`→`delete_media_items`, record keys `{media_item_id, …}`).
-  - **Routes & files:** `/photos`→`/media`, `/api/photo`→`/api/media`, endpoints
-    (`photo_view`→`media_view`, …); `routes/photos.py`→`routes/media.py`,
-    `photos_repository.py`→`media_repository.py`, `templates/photos/`→`templates/media/`,
-    `static/photos/`→`static/media/`; widget API `yaffo.photoUrl`→`yaffo.mediaUrl`.
-  - **Local vars / templates:** `photo`/`photos` → `media_item`/`media_items`.
-  - **Intentionally kept:** photo-centric *feature* names (the Index-Photos pipeline
-    UI, Remove-Duplicates image dedup) and UI cosmetics (CSS classes like
-    `photo-card`, `data-photo-id`/`dataset.photoId`, JS camelCase locals, prose
-    "photo"). `docs/automations.md` updated for all the above.
-- **Phase 1 — Catalog & play. ✅ Done (2026-06-22).** `media_type` + video columns
-  (migration `3_MIGRATION_20260622_add_video_columns.py`, backfilled `"photo"`);
-  `VIDEO_EXTENSIONS` pruned to `{.mp4,.mov,.m4v}` + `media_type_for_path`;
-  `file_sync` discovers video (`MEDIA_EXTENSIONS`); `import_photo_task` stamps
-  `media_type`; new `index_video` (exiftool-only metadata — duration/dimensions/
-  codec/date/GPS, no faces) branched into `index_photo_task`; gallery shows a
-  **static placeholder** poster + play badge + duration overlay; range-enabled
-  playback via `send_file(conditional=True)`; detail view renders `<video>` + a
-  video-metadata block. Location automations come along for free. **No real poster
-  frame (deferred to Phase 3), no faces, no labels, no dedup.**
-- **Phase 2 — Understand.** **Sampled-frame face detection ✅ Done (2026-06-22)** —
-  `index_video.detect_video_faces` samples frames (one per ~3s, capped at 20; ffmpeg
-  fast-seek), runs the existing InsightFace `detect_faces` on each, and dedups the
-  same person across frames (greedy clustering on the L2-normalized embeddings,
-  cosine ≥ 0.5, keeping the highest-`det_score` crop). It emits `faces_data` in the
-  same shape as photos, so `index_photo_task` persists the `Face` rows (and clears
-  them on re-index) with no change.
-
-  **CLIP labels ✅ Done (2026-06-22)** — `classify_labels` branches on media type:
-  for a video it samples the same frames (shared `index_video.extract_sample_frames`
-  via `iter_video_frame_arrays`), runs CLIP per frame, and aggregates per-label
-  scores with an element-wise **max** across frames (a concept in any frame counts),
-  then applies the existing threshold/top-K. A video with no extractable frames
-  (ffmpeg missing) is skipped without clearing prior labels. Repo helper
-  `get_label_inputs_by_ids` supplies (path, media_type, duration).
-
-  **Metadata write-back ✅ Done (2026-06-22)** — `write_metadata._write_video_metadata`
-  handles MP4/MOV/M4V (routed via `VIDEO_EXTENSIONS`): writes the same XMP keywords
-  photos get (labels + custom tags + the favorite marker, merged with existing) plus
-  XMP:Location, via exiftool. People (PersonInImage) are intentionally **not** written
-  — QuickTime person-tag support is unreliable. Fails cleanly (`(False, reason)`, never
-  raises) so the export degrades per-file. Round-trip verified on a real clip.
-
-  **Phase 2 complete.**
-- **Phase 3 — Polish.** **Real poster-frame extraction ✅ Done (2026-06-22)** — see
-  below. Still open: duplicate detection on posters; optional "videos only" gallery
-  filter; transcoding decision for non-playable codecs (HEVC won't play in
-  Chrome/Firefox).
-
-  *Poster extraction (done):* bundle **ffmpeg** (`packaging/download_assets.py`
-  fetches the `eugeneware/ffmpeg-static` binary for the current platform/arch into
-  `resources/ffmpeg/`; resolved at runtime by `yaffo/utils/ffmpeg_path.py`,
-  bundled-first then system fallback). `index_video.extract_poster` grabs the
-  **middle frame** (`-ss duration/2`, falls back to 1s when duration is unknown) to
-  a deterministic `poster_<sha1(path)>.jpg` in `thumbnail_dir`, so a re-index
-  overwrites in place. `get_orphaned_thumbnails` now treats `MediaItem.poster_path`
-  as referenced so cleanup doesn't sweep posters. If ffmpeg is unavailable or fails,
-  `poster_path` stays NULL and the static placeholder still stands in. License: the
-  static build is GPL, invoked only as a subprocess (mere aggregation) — license +
-  source attribution in `THIRD_PARTY_LICENSES.txt`; `codesign --deep` signs the
-  nested binary.
-
-## Open questions
-
-1. **Decoder strategy — RESOLVED (2026-06-22): bundle ffmpeg.** Phase 1 shipped a
-   static placeholder; Phase 3 added real posters by **bundling the ffmpeg-static
-   binary** and invoking it as a subprocess (the one-codepath option from the fork).
-   The rejected alternative was OS-native decode (AVFoundation/Media Foundation —
-   no bundle, but a platform-specific frame path per OS). Trade-off accepted: the
-   static build is GPL (fine via subprocess = mere aggregation) and carries
-   H.264/HEVC codec-patent exposure, in exchange for one cross-platform code path
-   that also sets up future transcoding. See *Design decisions: Frame extraction &
-   codecs* and the Phase 3 note above.
-2. **Supported formats — RESOLVED (2026-06-22): option (b), catalog all.**
-   `VIDEO_EXTENSIONS = {.mp4,.mov,.m4v,.avi,.mkv,.wmv,.flv}`; a separate
-   `PLAYABLE_VIDEO_EXTENSIONS = {.mp4,.mov,.m4v}` gates inline playback.
-   Non-playable containers (avi/mkv/wmv/flv) are still fully indexed — exiftool reads
-   their metadata (`index_video._codec` tries the container-specific codec fields) and
-   ffmpeg extracts a poster + sampled-frame faces — but the gallery shows the poster
-   with **no play overlay** (only browser-playable videos get the ▶ inline-play badge);
-   clicking opens the detail view, which offers **"Open in default player"**
-   (`is_browser_playable_video()` drives both). Transcoding for inline playback is
-   still Phase 3+.
-3. **Poster frame choice — RESOLVED: middle frame** (`-ss duration/2`, falling back
-   to 1s when duration is unknown).
-4. **Range serving correctness.** Verify `send_file` handles partial/range
-   requests for large files acceptably, or add an explicit range handler.
-5. **Metadata write-back.** Which video containers does the exiftool-based writer
-   safely support for favorites/keywords? Skip unsupported ones rather than risk
-   corrupting a file.
-```

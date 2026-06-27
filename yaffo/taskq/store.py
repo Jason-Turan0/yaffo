@@ -264,7 +264,7 @@ class Store:
         self._conn().execute("DELETE FROM task_lock WHERE name=?", (name,))
 
     # ---- watcher self-write suppression ---------------------------------
-    # Loop-guard companion (Mechanism 2, see docs/automations.md): when yaffo writes a
+    # Loop-guard companion (Mechanism 2, see docs/development/automations.md): when yaffo writes a
     # file it also watches, it records the write here so the watcher ignores the OS
     # event it caused — breaking a write -> reindex -> photo_indexed -> automation loop
     # the in-memory causal chain can't see (the write re-enters via a separate process).

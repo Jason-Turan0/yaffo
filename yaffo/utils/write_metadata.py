@@ -215,7 +215,7 @@ def _write_video_metadata(
     fields are inconsistently read across players), so we write XMP:Subject keywords
     (labels + custom tags + the favorite marker) merged with any existing ones, plus
     XMP:Location. People (PersonInImage) are intentionally not written to video — see
-    docs/video.md. Returns (True, None) with nothing to do when no applicable field
+    docs/development/video.md. Returns (True, None) with nothing to do when no applicable field
     is set, so an export that only requested people doesn't error per clip."""
     if not _HAS_EXIFTOOL:
         return False, "No tool available"

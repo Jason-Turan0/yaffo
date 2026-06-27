@@ -40,7 +40,7 @@ def dispatch_event_task(event_type: str, payload: dict):
             automation = trigger.automation
             # Loop guard: this automation already fired earlier in the chain of events
             # that led here, so firing it again would be (the start of) a cycle. Skip
-            # it — other subscribers not in the chain still run. See docs/automations.md.
+            # it — other subscribers not in the chain still run. See docs/development/automations.md.
             if automation.id in context.origin_automation_ids:
                 logger.warning(
                     f"loop guard: skipping '{automation.slug}' for event {event_type} "

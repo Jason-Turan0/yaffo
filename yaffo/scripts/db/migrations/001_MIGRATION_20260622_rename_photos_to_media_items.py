@@ -1,4 +1,4 @@
-"""Rename the photo entity to media_item (Phase 0 of video support, docs/video.md).
+"""Rename the photo entity to media_item (Phase 0 of video support, docs/development/video.md).
 
 A pure rename, no behaviour change: the `photos` table becomes `media_items` and
 `photo_labels` becomes `media_labels`; the child foreign-key columns

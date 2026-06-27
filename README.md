@@ -129,7 +129,7 @@ Background tasks (photo indexing, face detection, etc.) run on a small
 purpose-built queue (`yaffo/taskq`): a SQLite-durable queue plus a host process
 that supervises a pool of `spawn`-started worker children, so CPU-bound native ML
 inference (InsightFace/ONNX Runtime) runs in parallel, isolated, and
-crash-contained. See `docs/task-queue-migration.md`.
+crash-contained. See `docs/development/task-queue.md`.
 
 ```bash
 # Start the task host with 4 workers, recycling each after 200 tasks
@@ -182,6 +182,7 @@ The pre-commit hook scans for:
 - OpenAI API keys (`sk-...`)
 - Generic API key patterns
 
-## License
+## Licenses
 
-[Add license information]
+- [LICENSE](LICENSE)
+- [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES.txt)

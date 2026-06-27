@@ -6,15 +6,6 @@ user describes what they want ("a polaroid wall of our Maine trip in summer
 drag-and-drop grid. Widgets render free-form HTML/CSS/JS, but the photo data they
 show is always resolved server-side.
 
-> **Status (2026-06-21): built and working.** Real persistence (SQLAlchemy —
-> `CustomPage` / `PageVersion` / `Widget` / `Conversation`), a real data-query
-> engine (`data_query_repository` + serializers), and real Claude generation
-> (`yaffo/site_agents/`) are all in place; the old in-memory stub store is gone.
-> Generation runs **asynchronously** as a durable `PageVersion` on a background
-> task (`yaffo/taskq`), with the browser polling for progress — see *Async
-> generation via PageVersion*. This doc consolidates the original feature reference
-> and the async-generation design (now shipped) into one.
-
 ## Core principle: presentation is free, data is constrained
 
 The single idea the whole design rests on:
@@ -447,29 +438,3 @@ returns `400`).
 Shows **presence only** — "Key configured ✓ / Not set" with **Set / Replace /
 Clear**. The value is never sent to the browser. It deliberately does **not** go in
 `ApplicationSettings`, which holds only non-sensitive paths and renders verbatim.
-
-## Open questions / future
-
-- **Version retention / revert.** Cancelled versions are deleted; the superseded
-  published version is dropped on publish too. Keeping prior accepted versions for
-  a user-facing revert is left open — `parent_version_id` leaves the door open
-  without touching the state machine. (Versioning UI stays hidden either way.)
-- **Responsive mid-call cancel.** Today cancel only lands between agent
-  iterations; aborting the streamed model response per chunk would make Cancel
-  responsive during a long single call. Not built.
-- **Poll vs. SSE.** Polling matches the existing jobs pattern and is robust; SSE
-  would be snappier. Polling for now; SSE later if the latency annoys.
-- **Per-viewer vs. authored state.** `state` is currently per-widget (single
-  user). Sharing would need to split authored defaults from per-viewer state.
-- **Sharing / export.** Single-user/self-hosted keeps the threat model gentle. If
-  pages are shared or exported, the sandbox CSP and "whose photos can a query
-  touch" rules get much stricter. Out of scope until sharing is a requirement.
-- **Declared pub/sub contract.** Topics a widget publishes/subscribes are
-  currently implicit in its JS. Declaring them on the widget would let the model
-  wire widgets together intentionally and allow validation.
-- ✅ **Map tiles** — *resolved.* The widget frame loads vendored **OpenLayers**
-  with an **OpenStreetMap** basemap (OSM tile hosts whitelisted in `img-src`). See
-  the `Photo map` widget template. A server-side tile proxy (keeping widgets
-  network-free) is the tighter alternative if the direct-to-OSM loosening ever
-  needs reversing.
-```

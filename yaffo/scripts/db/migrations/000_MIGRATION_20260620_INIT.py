@@ -416,7 +416,7 @@ def migrate(conn: sqlite3.Connection) -> None:
 
     # The page builder is versioned: a page points at its live (published) version
     # and at most one in-flight (working) version; widgets + the conversation are
-    # version-scoped. See docs/ai-page-builder.md.
+    # version-scoped. See docs/development/ai-page-builder.md.
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS custom_pages (
                        id INTEGER PRIMARY KEY AUTOINCREMENT,

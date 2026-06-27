@@ -7,7 +7,7 @@ selected model.
 - Selected model is non-sensitive config, stored in `ApplicationSettings` alongside
   the app's other settings; the registry maps it to its provider.
 
-See docs/ai-page-builder.md.
+See docs/development/ai-page-builder.md.
 """
 from __future__ import annotations
 

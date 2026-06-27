@@ -30,7 +30,7 @@ logger = get_logger(__name__)
 _POSTER_FALLBACK_OFFSET = 1.0
 _FRAME_TIMEOUT_SECONDS = 60
 
-# Face sampling (docs/video.md Phase 2). A clip is mostly near-duplicate frames, so
+# Face sampling (docs/development/video.md Phase 2). A clip is mostly near-duplicate frames, so
 # sample sparsely and bound the cost: one frame every _FACE_SAMPLE_INTERVAL seconds,
 # capped at _FACE_SAMPLE_MAX_FRAMES. Each sampled frame costs ~one photo's detection.
 _FACE_SAMPLE_INTERVAL = 3.0
@@ -223,7 +223,7 @@ def detect_video_faces(video_path: Path, thumbnail_dir: Path, duration_seconds: 
     return faces_data
 
 # exiftool date tags to try, in order of preference. QuickTime CreateDate is UTC by
-# spec, but for v1 we keep it naive wall-clock like photo date_taken (docs/video.md);
+# spec, but for v1 we keep it naive wall-clock like photo date_taken (docs/development/video.md);
 # DateTimeOriginal (when a camera writes it) is already local. The later tags cover
 # the non-MP4 containers (Matroska DateUTC, ASF/WMV CreationDate/CreationTime).
 _DATE_TAGS = (

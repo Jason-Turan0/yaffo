@@ -18,7 +18,7 @@ class MediaItem(db.Model):
     # (date_taken, location, faces, tags, labels, favorite, status) applies to
     # both; the video-only columns that follow are NULL for photos.
     media_type = db.Column(db.String, nullable=False, default=MEDIA_TYPE_PHOTO)
-    # Video-only metadata (see docs/video.md). NULL on photo rows.
+    # Video-only metadata (see docs/development/video.md). NULL on photo rows.
     poster_path = db.Column(db.String, nullable=True)
     duration_seconds = db.Column(db.Float, nullable=True)
     width = db.Column(db.Integer, nullable=True)
@@ -509,7 +509,7 @@ class AutomationTrigger(db.Model):
         }
 
 
-# PageVersion generation state machine (see docs/ai-page-builder.md).
+# PageVersion generation state machine (see docs/development/ai-page-builder.md).
 # A version is either "working" (IN_PROGRESS/READY/FAILED) or a committed snapshot
 # (ACCEPTED); CANCELLED is transient — cancelled versions are deleted.
 PAGE_VERSION_STATUS_IN_PROGRESS = "IN_PROGRESS"

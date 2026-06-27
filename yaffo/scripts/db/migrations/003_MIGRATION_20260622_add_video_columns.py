@@ -1,4 +1,4 @@
-"""Add video columns to media_items (Phase 1 of video support, docs/video.md).
+"""Add video columns to media_items (Phase 1 of video support, docs/development/video.md).
 
 Additive only: a `media_type` discriminator (backfilled to "photo" for every
 existing row) plus the nullable video-only columns. No data is rewritten beyond

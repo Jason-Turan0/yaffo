@@ -27,7 +27,7 @@ class EventContext:
     `origin_automation_ids` is the loop guard's **causal chain**: the automations that
     have already fired in the chain of events leading to this one. dispatch_event_task
     skips any automation already in it, so an automation fires at most once per chain
-    (see event_chain_scope / the Loop guard section in docs/automations.md)."""
+    (see event_chain_scope / the Loop guard section in docs/development/automations.md)."""
     event_type: str
     job_id: str | None = None
     media_item_ids: list[int] = field(default_factory=list)

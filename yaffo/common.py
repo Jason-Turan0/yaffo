@@ -17,7 +17,7 @@ MEDIA_TYPE_VIDEO = "video"
 PLAYABLE_VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v"}
 # All cataloged video. The non-playable containers (avi/mkv/wmv/flv) are still
 # indexed for metadata + poster + faces (exiftool/ffmpeg handle them); the detail
-# view offers "open externally" instead of an inline player. See docs/video.md.
+# view offers "open externally" instead of an inline player. See docs/development/video.md.
 VIDEO_EXTENSIONS = PLAYABLE_VIDEO_EXTENSIONS | {".avi", ".mkv", ".wmv", ".flv"}
 PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic"}
 MEDIA_EXTENSIONS = PHOTO_EXTENSIONS | VIDEO_EXTENSIONS
