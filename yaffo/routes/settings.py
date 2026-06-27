@@ -17,6 +17,8 @@ from yaffo.distance_units import get_saved_distance_unit, set_distance_unit
 from yaffo.i18n import get_saved_locale, set_locale
 from yaffo.site_agents import llm_config
 from yaffo.utils.exiftool_path import get_exiftool_path
+from yaffo.utils.face_analysis import _model_root
+from yaffo.utils.image_classifier import _model_dir
 from yaffo.version import get_build_info
 
 
@@ -114,9 +116,8 @@ def init_settings_routes(app: Flask):
             current_thumbnail_dir=str(current_thumbnail_dir) if current_thumbnail_dir else None,
             queue_db_path=str(QUEUE_DB_PATH),
             exiftool_path=str(exiftool_path) if exiftool_path else None,
-            clip_model_cache_dir=str(MODEL_CACHE_DIR / "clip"),
-            insightface_model_cache_dir=str(Path.home() / ".insightface"),
-            bundled_models_dir=str(BUNDLED_MODELS_DIR),
+            clip_model_cache_dir=str(_model_dir()),
+            insightface_model_cache_dir=str(_model_root()),
             build_info=get_build_info(),
             llm=llm_status,
             labels=classification_repository.list_labels(db.session),

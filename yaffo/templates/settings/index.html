@@ -162,19 +162,13 @@
             <div class="system-path-item">
                 <label>{{ _("CLIP Model Cache:") }}</label>
                 <code>{{ clip_model_cache_dir }}</code>
-                <p class="path-description">{{ _("Writable cache where Yaffo stores downloaded CLIP encoders for image classification.") }}</p>
+                <p class="path-description">{{ _("Path to image classification model.") }}</p>
             </div>
 
             <div class="system-path-item">
                 <label>{{ _("InsightFace Model Cache:") }}</label>
                 <code>{{ insightface_model_cache_dir }}</code>
-                <p class="path-description">{{ _("Writable cache where InsightFace stores downloaded face detection and recognition models.") }}</p>
-            </div>
-
-            <div class="system-path-item">
-                <label>{{ _("Bundled Models Directory:") }}</label>
-                <code>{{ bundled_models_dir }}</code>
-                <p class="path-description">{{ _("Read-only model directory included with a bundled app build, when available.") }}</p>
+                <p class="path-description">{{ _("Path to face recognition model.") }}</p>
             </div>
         </div>
     </div>
