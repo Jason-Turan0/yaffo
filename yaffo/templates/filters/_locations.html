@@ -43,7 +43,7 @@
             <div id="location-suggestions" class="location-suggestions"></div>
         </div>
         <div class="distance-input-wrapper">
-            <label for="proximity-distance">{{ _("Within (miles):") }}</label>
+            <label for="proximity-distance">{{ _("Within (%(unit)s):", unit=filters.selected_distance_unit_label) }}</label>
             <input type="number"
                    id="proximity-distance"
                    name="proximity-distance"

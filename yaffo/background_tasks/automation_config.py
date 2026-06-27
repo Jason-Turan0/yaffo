@@ -20,7 +20,6 @@ from yaffo.db.models import (
     AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD,
     AUTOMATION_HANDLER_EXPORT_PHOTO_TAG,
     AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME,
-    ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M,
     AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS,
     GEOTAG_FROM_NEIGHBORS_DEFAULT_MINUTES,
     AUTOMATION_HANDLER_CLASSIFY_LABELS,
@@ -35,7 +34,8 @@ class ConfigField:
 
     `type` drives both the input rendered in the Configure modal and the coercion
     applied on save: 'float'/'int' -> number input, 'string' -> text input,
-    'bool' -> checkbox. min/max/step apply to the numeric types only."""
+    'bool' -> checkbox, 'distance' -> numeric input plus mi/km unit selector.
+    min/max/step apply to the numeric types only."""
     key: str
     label: str
     type: str
@@ -45,6 +45,7 @@ class ConfigField:
     max: Optional[float] = None
     step: Optional[float] = None
     required: bool = True
+    unit_key: str | None = None
 
 
 AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
@@ -111,17 +112,18 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
             type='bool',
         ),
         ConfigField(
-            key="nearby_radius_meters",
-            label="Nearby radius (metres)",
+            key="nearby_radius",
+            label="Nearby radius",
             help=(
                 "How close an already-named photo must be to copy its name. Larger "
                 "values reuse names more aggressively and make fewer online lookups."
             ),
-            min=10,
-            max=50000,
-            step=10,
-            default=ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M,
-            type='int',
+            min=0.01,
+            max=50,
+            step=0.1,
+            default=10,
+            type='distance',
+            unit_key="nearby_radius_unit",
         ),
         ConfigField(
             key="reverse_geocode_enabled",

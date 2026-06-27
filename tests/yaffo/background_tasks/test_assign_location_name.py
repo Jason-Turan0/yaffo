@@ -46,7 +46,7 @@ def test_reuses_nearby_name_without_geocoding(monkeypatch, progress_reporter):
     geocode = _counting_geocoder()
 
     updated = mod._assign_location_names(
-        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
+        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_km=1, overwrite=False, geocode=geocode
     )
 
     assert updated == [1]
@@ -62,7 +62,7 @@ def test_geocodes_when_no_named_photo_in_radius(monkeypatch, progress_reporter):
     geocode = _counting_geocoder("Nominatim Name")
 
     updated = mod._assign_location_names(
-        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
+        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_km=1, overwrite=False, geocode=geocode
     )
 
     assert updated == [1]
@@ -77,7 +77,7 @@ def test_skips_already_named_unless_overwrite(monkeypatch, progress_reporter):
     geocode = _counting_geocoder()
 
     updated = mod._assign_location_names(
-        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
+        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_km=1, overwrite=False, geocode=geocode
     )
 
     assert updated == []
@@ -92,7 +92,7 @@ def test_overwrite_renames_already_named(monkeypatch, progress_reporter):
     geocode = _counting_geocoder("New")
 
     updated = mod._assign_location_names(
-        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_m=1000, overwrite=True, geocode=geocode
+        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_km=1, overwrite=True, geocode=geocode
     )
 
     assert updated == [1]
@@ -108,7 +108,7 @@ def test_within_batch_reuse_geocodes_once_per_cluster(monkeypatch, progress_repo
     geocode = _counting_geocoder("Cluster City")
 
     updated = mod._assign_location_names(
-        _FakeSession(), progress_reporter, [1, 2], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=geocode
+        _FakeSession(), progress_reporter, [1, 2], reuse_enabled=True, radius_km=1, overwrite=False, geocode=geocode
     )
 
     assert updated == [1, 2]
@@ -122,7 +122,7 @@ def test_no_geocoder_leaves_unmatched_photo_unnamed(monkeypatch, progress_report
     _stub_repo(monkeypatch, batch=[media_item], named=[])
 
     updated = mod._assign_location_names(
-        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=None
+        _FakeSession(), progress_reporter, [1], reuse_enabled=True, radius_km=1, overwrite=False, geocode=None
     )
 
     assert updated == []
@@ -142,7 +142,7 @@ def test_reuse_disabled_goes_straight_to_geocode(monkeypatch, progress_reporter)
     geocode = _counting_geocoder("Geo")
 
     updated = mod._assign_location_names(
-        _FakeSession(), progress_reporter, [1], reuse_enabled=False, radius_m=1000, overwrite=False, geocode=geocode
+        _FakeSession(), progress_reporter, [1], reuse_enabled=False, radius_km=1, overwrite=False, geocode=geocode
     )
 
     assert updated == [1]
@@ -156,7 +156,7 @@ def test_no_photos_with_coords_is_noop(monkeypatch, progress_reporter):
     session = _FakeSession()
 
     updated = mod._assign_location_names(
-        session, progress_reporter, [1, 2], reuse_enabled=True, radius_m=1000, overwrite=False, geocode=_counting_geocoder()
+        session, progress_reporter, [1, 2], reuse_enabled=True, radius_km=1, overwrite=False, geocode=_counting_geocoder()
     )
 
     assert updated == []

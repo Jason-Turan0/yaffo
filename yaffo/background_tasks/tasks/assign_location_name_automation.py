@@ -32,6 +32,7 @@ from yaffo.db.models import (
     AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME,
 )
 from yaffo.db.repositories import media_repository
+from yaffo.distance_units import DEFAULT_DISTANCE_UNIT, distance_to_kilometers, normalize_distance_unit
 from yaffo.utils.geo import haversine_meters
 from yaffo.utils.reverse_geocode import reverse_geocode
 
@@ -50,13 +51,13 @@ _FLUSH_SIZE = 200
 
 
 def _nearest_name(
-    lat: float, lon: float, candidates: list[tuple[float, float, str]], radius_m: float
+    lat: float, lon: float, candidates: list[tuple[float, float, str]], radius_km: float
 ) -> Optional[str]:
-    """Name of the closest candidate within `radius_m` metres, or None."""
+    """Name of the closest candidate within `radius_km` kilometers, or None."""
     best_name = None
-    best_distance = radius_m
+    best_distance = radius_km
     for clat, clon, name in candidates:
-        distance = haversine_meters(lat, lon, clat, clon)
+        distance = haversine_meters(lat, lon, clat, clon) / 1000.0
         if distance <= best_distance:
             best_distance = distance
             best_name = name
@@ -69,7 +70,7 @@ def _assign_location_names(
     media_item_ids: list[int],
     *,
     reuse_enabled: bool,
-    radius_m: float,
+    radius_km: float,
     overwrite: bool,
     geocode: Geocoder,
 ) -> list[int]:
@@ -92,7 +93,7 @@ def _assign_location_names(
     def media_item_processor(media_item):
         if not overwrite and (media_item.location_name or "").strip():
             return
-        name = _nearest_name(media_item.latitude, media_item.longitude, candidates, radius_m) if reuse_enabled else None
+        name = _nearest_name(media_item.latitude, media_item.longitude, candidates, radius_km) if reuse_enabled else None
         if name is None and geocode is not None:
             name = geocode(media_item.latitude, media_item.longitude)
         if name:
@@ -138,7 +139,16 @@ def assign_location_name_automation_task(
         if automation is None:
             return
         reuse_enabled = bool(config_value(automation, _FIELDS["reuse_nearby_enabled"]))
-        radius_m = float(config_value(automation, _FIELDS["nearby_radius_meters"]))
+        config = automation.config or {}
+        radius_unit = normalize_distance_unit(config.get("nearby_radius_unit")) or DEFAULT_DISTANCE_UNIT
+        if isinstance(config.get("nearby_radius_kilometers"), (int, float)):
+            radius_km = float(config["nearby_radius_kilometers"])
+        elif isinstance(config.get("nearby_radius"), (int, float)):
+            radius_km = distance_to_kilometers(float(config["nearby_radius"]), radius_unit)
+        elif isinstance(config.get("nearby_radius_meters"), (int, float)):
+            radius_km = float(config["nearby_radius_meters"]) / 1000.0
+        else:
+            radius_km = float(config_value(automation, _FIELDS["nearby_radius"]))
         overwrite = bool(config_value(automation, _FIELDS["overwrite_existing"]))
         geocode = _throttled_geocoder() if bool(config_value(automation, _FIELDS["reverse_geocode_enabled"])) else None
 
@@ -148,7 +158,7 @@ def assign_location_name_automation_task(
                 progress_callback,
                 media_item_ids,
                 reuse_enabled=reuse_enabled,
-                radius_m=radius_m,
+                radius_km=radius_km,
                 overwrite=overwrite,
                 geocode=geocode,
             )
@@ -157,7 +167,7 @@ def assign_location_name_automation_task(
                 emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": updated})
             return (
                 f"named {len(updated)}/{len(media_item_ids)} photo(s) "
-                f"(reuse={reuse_enabled} radius={radius_m}m geocode={geocode is not None})"
+                f"(reuse={reuse_enabled} radius={radius_km}km geocode={geocode is not None})"
             )
 
         # Scope the run so the photo_modified it emits carries this automation (loop guard).

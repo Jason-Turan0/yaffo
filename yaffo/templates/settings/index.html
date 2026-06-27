@@ -31,6 +31,24 @@
     </div>
 
     <div class="settings-section">
+        <h2>{{ _("Units") }}</h2>
+        <form method="POST" action="{{ url_for('settings_distance_unit') }}">
+            <div class="form-group">
+                <label for="distance-unit">{{ _("Preferred distance unit") }}</label>
+                <select id="distance-unit" name="distance_unit" class="searchable-select" data-search-disabled>
+                    {% for unit in distance_unit_options %}
+                    <option value="{{ unit.code }}" {% if unit.code == selected_distance_unit %}selected{% endif %}>
+                        {{ unit.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="hint-text">{{ _("Used for distance filters and automation settings.") }}</p>
+            </div>
+            <button type="submit" class="btn-primary">{{ _("Save") }}</button>
+        </form>
+    </div>
+
+    <div class="settings-section">
         <h2>{{ _("Media Directories") }}</h2>
         <p class="section-description">{{ _("Add directories where your photos are stored. Yaffo scans these directories for photos and videos to index.") }}</p>
 

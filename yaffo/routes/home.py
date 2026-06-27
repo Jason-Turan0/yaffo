@@ -21,20 +21,21 @@ from yaffo.db.models import (
     Tag,
 )
 from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
+from yaffo.distance_units import DISTANCE_UNIT_KILOMETERS, distance_to_kilometers, get_saved_distance_unit
 from yaffo.routes import filter_config
 from yaffo.utils.context import context
 
 
-def calculate_bounding_box(lat: float, lon: float, distance_miles: float) -> tuple[float, float, float, float]:
+def calculate_bounding_box(lat: float, lon: float, distance_kilometers: float) -> tuple[float, float, float, float]:
     """
     Calculate bounding box coordinates for a given center point and distance.
     Returns (min_lat, max_lat, min_lon, max_lon)
     """
-    lat_degree_miles = 69.0
-    lon_degree_miles = abs(math.cos(math.radians(lat)) * 69.0)
+    lat_degree_kilometers = 111.0
+    lon_degree_kilometers = abs(math.cos(math.radians(lat)) * 111.0)
 
-    lat_offset = distance_miles / lat_degree_miles
-    lon_offset = distance_miles / lon_degree_miles
+    lat_offset = distance_kilometers / lat_degree_kilometers
+    lon_offset = distance_kilometers / lon_degree_kilometers
 
     min_lat = lat - lat_offset
     max_lat = lat + lat_offset
@@ -64,6 +65,7 @@ def init_home_routes(app: Flask):
         proximity_lon = request.args.get("proximity-lon", type=float)
         proximity_distance = request.args.get("proximity-distance", type=float)
         proximity_location = request.args.get("proximity-location", type=str)
+        distance_unit = get_saved_distance_unit(db.session)
         year = request.args.get("year", type=int)
         month = request.args.get("month", type=int)
         device = request.args.get("device", type=str)
@@ -177,7 +179,7 @@ def init_home_routes(app: Flask):
 
         if proximity_lat is not None and proximity_lon is not None and proximity_distance:
             min_lat, max_lat, min_lon, max_lon = calculate_bounding_box(
-                proximity_lat, proximity_lon, proximity_distance
+                proximity_lat, proximity_lon, distance_to_kilometers(proximity_distance, distance_unit)
             )
             query = query.filter(
                 MediaItem.latitude.isnot(None),
@@ -269,6 +271,8 @@ def init_home_routes(app: Flask):
             'selected_proximity_lat': proximity_lat,
             'selected_proximity_lon': proximity_lon,
             'selected_proximity_distance': proximity_distance,
+            'selected_distance_unit': distance_unit,
+            'selected_distance_unit_label': gettext("Kilometers") if distance_unit == DISTANCE_UNIT_KILOMETERS else gettext("Miles"),
             'selected_proximity_location': proximity_location,
             'selected_year': year,
             'selected_month': month,

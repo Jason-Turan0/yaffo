@@ -496,6 +496,17 @@ def _add_system_assign_faces(app):
     )
 
 
+def _add_system_assign_location_name(app, config=None):
+    _add(
+        app,
+        slug="assign_location_name",
+        name="Assign location name",
+        is_system=True,
+        handler="assign_location_name",
+        config=config or {},
+    )
+
+
 def test_config_saves_valid_threshold(app, client):
     _add_system_assign_faces(app)
     resp = client.post(
@@ -538,6 +549,42 @@ def test_config_validation_uses_saved_locale_and_error_code(app, client):
         "error": "Übereinstimmungsschwelle muss eine Zahl sein.",
         "code": "config_value_not_numeric",
     }
+
+
+def test_config_renders_distance_input_for_assign_location_name(app, client):
+    _add_system_assign_location_name(app, config={"nearby_radius_meters": 10000})
+    client.post("/settings/distance-unit", data={"distance_unit": "km"})
+
+    body = client.get("/utilities/automations/assign_location_name").get_data(as_text=True)
+
+    assert "distance-input" in body
+    assert "Nearby radius" in body
+    assert 'name="nearby_radius_unit"' in body
+    assert 'value="km" selected' in body
+    assert 'value="10.0"' in body or 'value="10"' in body
+    assert "metres" not in body
+
+
+def test_config_saves_distance_value_and_unit(app, client):
+    _add_system_assign_location_name(app)
+
+    resp = client.post(
+        "/utilities/automations/assign_location_name/config",
+        data={
+            "reuse_nearby_enabled": "on",
+            "nearby_radius": "2.5",
+            "nearby_radius_unit": "km",
+            "reverse_geocode_enabled": "",
+            "overwrite_existing": "",
+        },
+    )
+
+    assert resp.status_code == 302
+    with app.app_context():
+        automation = db.session.query(Automation).filter_by(slug="assign_location_name").one()
+        assert automation.config["nearby_radius"] == 2.5
+        assert automation.config["nearby_radius_unit"] == "km"
+        assert automation.config["nearby_radius_kilometers"] == 2.5
 
 
 def test_config_rejected_for_non_configurable(app, client):

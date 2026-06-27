@@ -7,6 +7,7 @@ from flask import Flask
 from yaffo import themes
 from yaffo.db import db
 from yaffo.common import DB_PATH
+from yaffo.distance_units import supported_distance_unit_options
 from yaffo.i18n import init_i18n, select_locale, supported_locale_options, text_direction
 from yaffo.logging_config import get_logger
 from yaffo.template_filters import init_template_filters
@@ -59,6 +60,7 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None):
         locale = select_locale()
         return {
             "current_locale": locale,
+            "distance_unit_options": supported_distance_unit_options(),
             "supported_locales": supported_locale_options(),
             "text_direction": text_direction(locale),
         }

@@ -13,6 +13,7 @@ from yaffo.common import DB_PATH, QUEUE_DB_PATH
 from yaffo.db import db
 from yaffo.db.models import AUTOMATION_HANDLER_CLASSIFY_LABELS, ApplicationSettings, ClassificationLabel, Face
 from yaffo.db.repositories import automation_repository, classification_repository, media_repository
+from yaffo.distance_units import get_saved_distance_unit, set_distance_unit
 from yaffo.i18n import get_saved_locale, set_locale
 from yaffo.site_agents import llm_config
 from yaffo.version import get_build_info
@@ -113,6 +114,7 @@ def init_settings_routes(app: Flask):
             build_info=get_build_info(),
             llm=llm_status,
             labels=classification_repository.list_labels(db.session),
+            selected_distance_unit=get_saved_distance_unit(db.session),
             selected_locale=get_saved_locale() or app.config["BABEL_DEFAULT_LOCALE"],
         )
 
@@ -120,6 +122,12 @@ def init_settings_routes(app: Flask):
     def settings_locale():
         if not set_locale(request.form.get("locale", "")):
             return jsonify({"error": "Unsupported locale"}), 400
+        return redirect(url_for("settings_index"))
+
+    @app.route("/settings/distance-unit", methods=["POST"])
+    def settings_distance_unit():
+        if not set_distance_unit(request.form.get("distance_unit", "")):
+            return jsonify({"error": gettext("Unsupported distance unit")}), 400
         return redirect(url_for("settings_index"))
 
     def _render_labels():

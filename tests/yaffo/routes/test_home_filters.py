@@ -7,7 +7,8 @@ assertions check which photo ids the filtered page renders."""
 import pytest
 
 from yaffo.db import db
-from yaffo.db.models import Face, MediaItem, Person, PersonFace
+from yaffo.db.models import ApplicationSettings, Face, MediaItem, Person, PersonFace
+from yaffo.distance_units import DISTANCE_UNIT_SETTING
 
 
 @pytest.fixture
@@ -89,6 +90,27 @@ def test_favorite_filter_shows_only_favorites(client, app):
 
     only_favs = _rendered_ids(client.get("/?favorite=1").data.decode())
     assert fav_id in only_favs and plain_id not in only_favs
+
+
+def test_proximity_filter_uses_saved_kilometers(client, app):
+    with app.app_context():
+        near = MediaItem(full_file_path="/media/near.jpg", latitude=38.6005, longitude=-90.2000)
+        far = MediaItem(full_file_path="/media/far.jpg", latitude=38.6200, longitude=-90.2000)
+        db.session.add_all([
+            near,
+            far,
+            ApplicationSettings(name=DISTANCE_UNIT_SETTING, type="string", value="km"),
+        ])
+        db.session.commit()
+        near_id, far_id = near.id, far.id
+
+    body = client.get(
+        "/?proximity-lat=38.6000&proximity-lon=-90.2000&proximity-distance=1"
+    ).data.decode()
+
+    assert "Within (Kilometers):" in body
+    assert near_id in _rendered_ids(body)
+    assert far_id not in _rendered_ids(body)
 
 
 def test_gender_filter_prefers_person_gender_and_falls_back_to_face_estimate(client, app):

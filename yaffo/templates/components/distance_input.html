@@ -1,0 +1,17 @@
+{% macro distance_input(id, name, value, unit_name, unit, units, min=0, max=none, step=0.1, required=true) %}
+<div class="distance-input">
+    <input type="number"
+           id="{{ id }}"
+           name="{{ name }}"
+           min="{{ min }}"
+           {% if max is not none %}max="{{ max }}"{% endif %}
+           step="{{ step }}"
+           value="{{ value if value is not none else '' }}"
+           {% if required %}required{% endif %}>
+    <select name="{{ unit_name }}" class="searchable-select" data-search-disabled aria-label="{{ _('Distance unit') }}">
+        {% for option in units %}
+            <option value="{{ option.code }}" {% if option.code == unit %}selected{% endif %}>{{ option.label }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endmacro %}

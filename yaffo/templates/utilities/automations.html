@@ -1,5 +1,6 @@
 {% extends "utilities/_base.html" %}
 {% from "components/chat_dialog.html" import chat_dialog %}
+{% from "components/distance_input.html" import distance_input %}
 {% from "components/page_header.html" import page_header %}
 {% from "components/modal.html" import render_modal %}
 
@@ -29,6 +30,21 @@
             {% if field.type == 'string' %}
                 <label for="config-{{ field.key }}">{{ field.label }}</label>
                 <input type="text" id="config-{{ field.key }}" name="{{ field.key }}" {{ "required" if field.required }} value="{{ field.value }}">
+            {% endif %}
+            {% if field.type == 'distance' %}
+                <label for="config-{{ field.key }}">{{ field.label }}</label>
+                {{ distance_input(
+                    'config-' ~ field.key,
+                    field.key,
+                    field.value,
+                    field.unit_key,
+                    field.unit,
+                    field.units,
+                    min=field.min,
+                    max=field.max,
+                    step=field.step,
+                    required=field.required
+                ) }}
             {% endif %}
             {% if field.type == 'bool' %}
                 <label class="checkbox-label" for="config-{{ field.key }}">

@@ -40,6 +40,13 @@ from yaffo.db.models import (
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.db.repositories import media_dir_repository
 from yaffo.db.repositories import media_repository
+from yaffo.distance_units import (
+    distance_to_kilometers,
+    get_saved_distance_unit,
+    kilometers_to_distance,
+    normalize_distance_unit,
+    supported_distance_unit_options,
+)
 from yaffo.site_agents import llm_config
 from yaffo.routes.utilities.common import automations_sidebar_context
 
@@ -204,13 +211,28 @@ def init_automations_routes(app: Flask):
             "Export Custom Tags": gettext("Export Custom Tags"),
             "Export Favorite": gettext("Export Favorite"),
             "Reuse a nearby photo's name": gettext("Reuse a nearby photo's name"),
-            "Nearby radius (metres)": gettext("Nearby radius (metres)"),
+            "Nearby radius": gettext("Nearby radius"),
             "Look up name online (OpenStreetMap)": gettext("Look up name online (OpenStreetMap)"),
             "Overwrite existing location names": gettext("Overwrite existing location names"),
             "Time window (minutes)": gettext("Time window (minutes)"),
             "Confidence threshold": gettext("Confidence threshold"),
             "Max labels per photo": gettext("Max labels per photo"),
         }.get(label, label)
+
+    def _distance_config_value(automation: Automation, field) -> tuple[float, str]:
+        config = automation.config or {}
+        preferred_unit = get_saved_distance_unit(db.session)
+        unit = normalize_distance_unit(config.get(field.unit_key or "")) or preferred_unit
+        raw_value = config.get(field.key)
+        if isinstance(raw_value, (int, float)):
+            return raw_value, unit
+        stored_kilometers = config.get(f"{field.key}_kilometers")
+        if isinstance(stored_kilometers, (int, float)):
+            return round(kilometers_to_distance(float(stored_kilometers), unit), 2), unit
+        legacy_meters = config.get("nearby_radius_meters")
+        if isinstance(legacy_meters, (int, float)):
+            return round(kilometers_to_distance(float(legacy_meters) / 1000.0, unit), 2), unit
+        return field.default, unit
 
     def _localized_config_help(help_text: str | None) -> str | None:
         if help_text is None:
@@ -295,16 +317,25 @@ def init_automations_routes(app: Flask):
         """The Configure-modal context: each declared field plus its live value."""
         if automation is None:
             return []
-        return [
-            {
+        fields = []
+        for f in config_fields_for(automation):
+            field = {
                 "key": f.key, "label": _localized_config_label(f.label),
                 "help": _localized_config_help(f.help),
                 "min": f.min, "max": f.max, "step": f.step, "type": f.type,
                 "required": f.required,
                 "value": config_value(automation, f)
             }
-            for f in config_fields_for(automation)
-        ]
+            if f.type == "distance":
+                value, unit = _distance_config_value(automation, f)
+                field.update({
+                    "unit": unit,
+                    "unit_key": f.unit_key,
+                    "units": supported_distance_unit_options(),
+                    "value": value,
+                })
+            fields.append(field)
+        return fields
 
     def _supports_scoped_run(automation: Automation) -> bool:
         """Whether Run-now scopes to a user-picked file/folder (the "Run on a
@@ -463,6 +494,38 @@ def init_automations_routes(app: Flask):
             raw = (request.form.get(field.key) or "").strip()
             if field.type == "bool":
                 value = raw in ("on", "true", "True")
+            elif field.type == "distance":
+                if field.unit_key is None:
+                    raise NotImplementedError("distance fields require unit_key")
+                try:
+                    value = float(raw)
+                except ValueError:
+                    return _error(
+                        gettext("%(label)s must be a number.", label=_localized_config_label(field.label)),
+                        "config_value_not_numeric",
+                        400,
+                    )
+                if (field.min is not None and value < field.min) or \
+                        (field.max is not None and value > field.max):
+                    return _error(
+                        gettext(
+                            "%(label)s must be between %(min)s and %(max)s.",
+                            label=_localized_config_label(field.label),
+                            min=field.min,
+                            max=field.max,
+                        ),
+                        "config_value_out_of_range",
+                        400,
+                    )
+                unit = normalize_distance_unit(request.form.get(field.unit_key))
+                if unit is None:
+                    return _error(
+                        gettext("Unsupported distance unit"),
+                        "unsupported_distance_unit",
+                        400,
+                    )
+                config[field.unit_key] = unit
+                config[f"{field.key}_kilometers"] = distance_to_kilometers(value, unit)
             elif field.type in ("float", "int"):
                 try:
                     value = float(raw) if field.type == "float" else int(raw)

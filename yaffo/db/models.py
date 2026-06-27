@@ -329,10 +329,6 @@ AUTOMATION_HANDLER_CLASSIFY_LABELS = "classify_labels"
 # 50 is the neutral midpoint, matching the assignment screen's default.
 AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD = 80
 
-# Default radius (metres) within which the assign-location-name automation reuses a
-# nearby photo's location_name (overridable via config["nearby_radius_meters"]).
-ASSIGN_LOCATION_NAME_DEFAULT_RADIUS_M = 10000
-
 # Default window (minutes) within which the geotag-from-neighbors automation borrows
 # a GPS-tagged photo's coordinates (overridable via config["max_minutes"]).
 GEOTAG_FROM_NEIGHBORS_DEFAULT_MINUTES = 30

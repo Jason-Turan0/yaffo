@@ -14,6 +14,7 @@ from yaffo.db.models import (
     Person,
     PersonFace,
 )
+from yaffo.distance_units import DISTANCE_UNIT_SETTING
 from yaffo.i18n import LOCALE_SETTING
 
 pytestmark = pytest.mark.unit
@@ -51,6 +52,18 @@ def test_settings_locale_persists_and_renders_gettext(client, app):
     assert ">Speichern</button>" in body
 
 
+def test_settings_distance_unit_persists(client, app):
+    response = client.post("/settings/distance-unit", data={"distance_unit": "km"})
+
+    assert response.status_code == 302
+    with app.app_context():
+        assert db.session.query(ApplicationSettings).filter_by(name=DISTANCE_UNIT_SETTING).one().value == "km"
+
+    body = client.get("/settings").get_data(as_text=True)
+    assert "<h2>Units</h2>" in body
+    assert 'value="km" selected' in body
+
+
 def test_saved_locale_translates_settings_media_directory_controls(client):
     client.post("/settings/locale", data={"locale": "de"})
 
@@ -62,6 +75,8 @@ def test_saved_locale_translates_settings_media_directory_controls(client):
     assert "Keine Medienverzeichnisse konfiguriert" in body
     assert "Miniaturansichtsverzeichnis" in body
     assert "Kein Miniaturansichtsverzeichnis konfiguriert" in body
+    assert "Einheiten" in body
+    assert "Bevorzugte Entfernungseinheit" in body
     assert "Systeminformationen" in body
     assert 'data-action="add-media-dir"' in body
     assert 'data-action="change-thumbnail-dir"' in body
