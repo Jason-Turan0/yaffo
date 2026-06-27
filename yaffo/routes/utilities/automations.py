@@ -229,9 +229,6 @@ def init_automations_routes(app: Flask):
         stored_kilometers = config.get(f"{field.key}_kilometers")
         if isinstance(stored_kilometers, (int, float)):
             return round(kilometers_to_distance(float(stored_kilometers), unit), 2), unit
-        legacy_meters = config.get("nearby_radius_meters")
-        if isinstance(legacy_meters, (int, float)):
-            return round(kilometers_to_distance(float(legacy_meters) / 1000.0, unit), 2), unit
         return field.default, unit
 
     def _localized_config_help(help_text: str | None) -> str | None:

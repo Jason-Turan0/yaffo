@@ -32,7 +32,6 @@ from yaffo.db.models import (
     AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME,
 )
 from yaffo.db.repositories import media_repository
-from yaffo.distance_units import DEFAULT_DISTANCE_UNIT, distance_to_kilometers, normalize_distance_unit
 from yaffo.utils.geo import haversine_meters
 from yaffo.utils.reverse_geocode import reverse_geocode
 
@@ -140,15 +139,7 @@ def assign_location_name_automation_task(
             return
         reuse_enabled = bool(config_value(automation, _FIELDS["reuse_nearby_enabled"]))
         config = automation.config or {}
-        radius_unit = normalize_distance_unit(config.get("nearby_radius_unit")) or DEFAULT_DISTANCE_UNIT
-        if isinstance(config.get("nearby_radius_kilometers"), (int, float)):
-            radius_km = float(config["nearby_radius_kilometers"])
-        elif isinstance(config.get("nearby_radius"), (int, float)):
-            radius_km = distance_to_kilometers(float(config["nearby_radius"]), radius_unit)
-        elif isinstance(config.get("nearby_radius_meters"), (int, float)):
-            radius_km = float(config["nearby_radius_meters"]) / 1000.0
-        else:
-            radius_km = float(config_value(automation, _FIELDS["nearby_radius"]))
+        radius_km = float(config.get("nearby_radius_kilometers", config_value(automation, _FIELDS["nearby_radius"])))
         overwrite = bool(config_value(automation, _FIELDS["overwrite_existing"]))
         geocode = _throttled_geocoder() if bool(config_value(automation, _FIELDS["reverse_geocode_enabled"])) else None
 

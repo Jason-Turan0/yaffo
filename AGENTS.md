@@ -55,6 +55,9 @@ InsightFace — **SCRFD** detection + **ArcFace** 512-d embeddings, on ONNX Runt
 
 - Add schema changes as the next numbered module in `yaffo/scripts/db/migrations/`;
   keep migrations additive when possible and never commit inside `migrate(conn)`.
+- Prefer normalizing existing data in migrations over adding runtime compatibility
+  branches for old persisted shapes. Application code should target the current
+  schema/config shape after migrations have run.
 - Also update `000_MIGRATION_20260620_INIT.py` so a fresh database receives the
   current schema directly.
 - After creating a migration, automatically run the standard migration runner

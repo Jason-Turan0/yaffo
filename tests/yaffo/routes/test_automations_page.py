@@ -552,7 +552,10 @@ def test_config_validation_uses_saved_locale_and_error_code(app, client):
 
 
 def test_config_renders_distance_input_for_assign_location_name(app, client):
-    _add_system_assign_location_name(app, config={"nearby_radius_meters": 10000})
+    _add_system_assign_location_name(
+        app,
+        config={"nearby_radius": 10, "nearby_radius_unit": "km", "nearby_radius_kilometers": 10},
+    )
     client.post("/settings/distance-unit", data={"distance_unit": "km"})
 
     body = client.get("/utilities/automations/assign_location_name").get_data(as_text=True)
