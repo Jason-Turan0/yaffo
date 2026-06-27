@@ -290,6 +290,8 @@ def test_saved_locale_translates_empty_people_list(client):
     assert "Person hinzufügen" in body
     assert "Nicht angegeben" in body
     assert "Geburtsdatum" in body
+    assert "intl-date-input-control" in body
+    assert 'type="date"' not in body
 
 
 def test_saved_locale_translates_people_table_and_formats_birthdate(client, app):

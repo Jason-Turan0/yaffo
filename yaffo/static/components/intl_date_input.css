@@ -1,0 +1,7 @@
+.intl-date-input {
+    font-variant-numeric: tabular-nums;
+}
+
+.intl-date-input.is-invalid {
+    border-color: var(--color-error);
+}

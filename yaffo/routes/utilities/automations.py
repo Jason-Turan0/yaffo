@@ -101,6 +101,20 @@ def _run_progress(job: Job) -> int:
     return min(100, int(processed / job.task_count * 100))
 
 
+def _run_label(job: Job) -> str:
+    if job.automation is not None and job.automation.is_system:
+        return job.automation.display_name
+    label = job.message or job.name
+    return {
+        "Imported {totalCount}/{taskCount} photos": gettext("Import photos"),
+        "Indexed {totalCount}/{taskCount} photos": gettext("Index photos"),
+        "Processed {totalCount}/{taskCount} media items": gettext("Find duplicates"),
+        "import_photos": gettext("Import photos"),
+        "index_photos": gettext("Index photos"),
+        "find_duplicates": gettext("Find duplicates"),
+    }.get(label, label)
+
+
 def _run_summary(job: Job) -> str:
     """One-line result for a run: progress counts for batch jobs (find_duplicates /
     index), else the job's message (custom runs carry the automation name)."""
@@ -128,7 +142,7 @@ def _run_summary(job: Job) -> str:
                 count=cancelled,
             )
         return summary
-    return job.message or job.name
+    return _run_label(job)
 
 
 def _run_status_label(status: str) -> str:

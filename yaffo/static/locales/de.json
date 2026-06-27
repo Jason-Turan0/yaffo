@@ -20,6 +20,9 @@
       "discardGeneration": "Diese Generierung verwerfen?",
       "startFailed": "Die Generierung konnte nicht gestartet werden."
     },
+    "dateInput": {
+      "invalidDate": "Geben Sie ein gültiges Datum ein."
+    },
     "cron": {
       "advanced": "Erweitert (Cron)",
       "at": "um",

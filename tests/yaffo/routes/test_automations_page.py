@@ -446,6 +446,25 @@ def test_saved_locale_translates_run_history(app, client):
     assert "10 von 50 verarbeitet" in body
 
 
+@pytest.mark.parametrize(
+    ("slug", "name", "expected"),
+    [
+        ("classify_labels", "Classify labels", "Labels klassifizieren"),
+        ("file_sync", "File sync", "Dateisynchronisierung"),
+        ("export_photo_tag", "Export photo tag", "Foto-Tag exportieren"),
+    ],
+)
+def test_saved_locale_translates_system_run_history_job_labels(app, client, slug, name, expected):
+    _add(app, slug=slug, name=name, is_system=True, handler=slug)
+    _add_job(app, slug=slug, id=f"{slug}-run", task_count=1, completed_count=1, message=name)
+    client.post("/settings/locale", data={"locale": "de"})
+
+    body = client.get(f"/utilities/automations/{slug}/runs").get_data(as_text=True)
+
+    assert expected in body
+    assert f'<span class="automation-run-summary">{name}</span>' not in body
+
+
 def test_saved_locale_translates_run_history_empty_state(app, client):
     _add(app, enabled=False)
     client.post("/settings/locale", data={"locale": "de"})

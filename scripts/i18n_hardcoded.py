@@ -30,6 +30,21 @@ WHITESPACE_RE = re.compile(r"\s+")
 
 JS_LITERAL = r"""(?P<quote>["'`])(?P<value>(?:\\.|(?!\1).)*?)(?P=quote)"""
 JS_HTML_TEMPLATE_RE = re.compile(r"`(?P<value>(?:\\.|[^`])*<[^`]+)`", re.DOTALL)
+
+# String/template literals and comments, matched in ONE pass so a `//` or `/*`
+# sitting inside a literal (e.g. a URL) is consumed as the literal and never seen as
+# a comment. Only the comment groups are blanked (see _mask_js_comments); literals are
+# kept verbatim. Regex literals aren't tokenized — a rare, accepted heuristic gap.
+JS_STRING_OR_COMMENT_RE = re.compile(
+    r"""
+      "(?:\\.|[^"\\])*"            # double-quoted string
+    | '(?:\\.|[^'\\])*'            # single-quoted string
+    | `(?:\\.|[^`\\])*`            # template literal
+    | (?P<block>/\*[\s\S]*?\*/)    # /* … */ block comment (incl. /** JSDoc */)
+    | (?P<line>//[^\n]*)           # // line comment
+    """,
+    re.VERBOSE,
+)
 JS_PATTERNS = (
     (
         "javascript-notification",
@@ -105,6 +120,18 @@ def _mask_match(match: re.Match[str]) -> str:
     return re.sub(r"[^\n]", " ", match.group())
 
 
+def _mask_js_comments(source: str) -> str:
+    """Blank out JS line/block comments (including JSDoc) while leaving string and
+    template literals intact, so example snippets and `@param` docs written in comments
+    aren't mistaken for hard-coded UI text. Length and newlines are preserved so
+    reported line numbers stay accurate."""
+    def replace(match: re.Match[str]) -> str:
+        if match.lastgroup in ("block", "line"):
+            return _mask_match(match)
+        return match.group()
+    return JS_STRING_OR_COMMENT_RE.sub(replace, source)
+
+
 def scan_jinja(path: Path, root: Path = ROOT) -> list[HardcodedText]:
     source = path.read_text(encoding="utf-8")
     masked = JINJA_COMMENT_RE.sub(_mask_match, source)
@@ -148,7 +175,7 @@ def scan_jinja(path: Path, root: Path = ROOT) -> list[HardcodedText]:
 
 
 def scan_javascript(path: Path, root: Path = ROOT) -> list[HardcodedText]:
-    source = path.read_text(encoding="utf-8")
+    source = _mask_js_comments(path.read_text(encoding="utf-8"))
     relative_path = path.relative_to(root).as_posix()
     findings: list[HardcodedText] = []
     seen: set[tuple[int, str, str]] = set()

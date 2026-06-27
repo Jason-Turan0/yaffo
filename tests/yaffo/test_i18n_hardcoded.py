@@ -62,6 +62,32 @@ def test_javascript_scanner_finds_user_interface_sinks(tmp_path):
     }
 
 
+def test_javascript_scanner_ignores_comments(tmp_path):
+    # JSDoc/line/block comments (incl. usage examples and @param docs) are not UI text,
+    # but a `//` or `/*` inside a real string must still be scanned, not skipped.
+    script = tmp_path / "page.js"
+    script.write_text(
+        """
+        /**
+         * Show a dialog.
+         * @example confirmDialog({ title: 'Confirm Action', confirmText: 'Yes' });
+         */
+        // button.textContent = 'Commented out';
+        notification.error('Real error');  // title: 'Not this one'
+        const url = 'https://example.com/x'; // a URL's // is not a comment
+        notification.info('After URL');
+        """,
+        encoding="utf-8",
+    )
+
+    findings = scan_javascript(script, tmp_path)
+
+    assert {(finding.kind, finding.text) for finding in findings} == {
+        ("javascript-notification", "Real error"),
+        ("javascript-notification", "After URL"),
+    }
+
+
 def test_baseline_tracks_duplicate_occurrences():
     finding = HardcodedText(
         path="yaffo/static/example.js",

@@ -1,0 +1,11 @@
+{% macro intl_date_input(id, name, value='', required=false) %}
+<span class="intl-date-input-control" data-name="{{ name }}">
+    <input type="text"
+           id="{{ id }}"
+           class="intl-date-input"
+           inputmode="numeric"
+           autocomplete="bday"
+           {% if required %}required{% endif %}>
+    <input type="hidden" name="{{ name }}" value="{{ value or '' }}">
+</span>
+{% endmacro %}

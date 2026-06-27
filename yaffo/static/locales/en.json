@@ -20,6 +20,9 @@
       "discardGeneration": "Discard this generation?",
       "startFailed": "Could not start generation."
     },
+    "dateInput": {
+      "invalidDate": "Enter a valid date."
+    },
     "cron": {
       "advanced": "Advanced (cron)",
       "at": "at",
