@@ -49,8 +49,125 @@ Two distribution philosophies, pick per audience:
 - **Version is single-sourced from the `VERSION` file.** `pyproject.toml` reads it via
   `[tool.setuptools.dynamic] version = {file = "VERSION"}` (no more static-version drift),
   and `yaffo/version.py` falls back VERSION-file → installed metadata → `0.0.0`. To cut a
-  release: ensure `VERSION` is correct, commit, then `git tag vX.Y.Z && git push --tags`
-  (the workflow guards that the tag matches `VERSION`).
+  release, run the `Release` workflow manually: it bumps `VERSION`, commits `Release vX.Y.Z`,
+  creates/pushes the `vX.Y.Z` tag, builds Python artifacts and the macOS DMG, attaches them
+  to a GitHub Release, then publishes PyPI. A direct `v*` tag push is still supported, but
+  the workflow guards that the tag matches the committed `VERSION`.
+
+### Install from PyPI and run
+
+`pip install yaffo` installs the Python package and exposes a `yaffo` command via
+`[project.scripts]`. The command starts `python -m yaffo` in the background, then
+returns the shell to the user. The background process migrates the app database,
+starts the web server on `127.0.0.1:5001`, starts the task-queue host and filesystem
+watcher children, and opens the browser.
+
+```shell
+python3.13 -m venv ~/.venvs/yaffo
+source ~/.venvs/yaffo/bin/activate
+python -m pip install --upgrade pip
+python -m pip install yaffo
+
+yaffo
+```
+
+Foreground/debug fallback if the console script is unavailable:
+
+```shell
+python -m yaffo
+```
+
+Data lives in the OS user-data directory by default, for example
+`~/Library/Application Support/yaffo` on macOS. Override it when testing or when
+you want an explicit app-state directory:
+
+```shell
+YAFFO_DATA_DIR="$HOME/Pictures/Yaffo State" yaffo
+```
+
+### Test a PyPI build locally without publishing
+
+Build the same wheel artifact that GitHub Actions uploads, then install that wheel into a
+clean environment. This catches missing subpackages, templates, static files, migrations,
+and entry points before publishing.
+
+```shell
+rm -rf dist build *.egg-info
+python -m pip install --upgrade build
+python -m build
+
+python3.13 -m venv /tmp/yaffo-wheel-test
+source /tmp/yaffo-wheel-test/bin/activate
+python -m pip install --upgrade pip
+python -m pip install dist/yaffo-*.whl
+
+python -c "import yaffo.routes, yaffo.taskq.host, yaffo.scripts.db.migrate"
+YAFFO_DATA_DIR=/tmp/yaffo-wheel-state yaffo
+```
+
+Then open `http://127.0.0.1:5001`. For a CLI-only smoke test, run:
+
+```shell
+YAFFO_DATA_DIR=/tmp/yaffo-wheel-state python -m yaffo
+```
+
+For the isolated-app workflow Linux users will actually use, test with `pipx`:
+
+```shell
+pipx install --python python3.13 --force dist/yaffo-*.whl
+pipx runpip yaffo show yaffo
+yaffo
+```
+
+### Test the native bundled app locally
+
+The PyPI wheel is not the same artifact as the PyInstaller app bundle. To test the
+native macOS bundle before attaching it to a GitHub Release:
+
+```shell
+./packaging/build_dmg.sh
+open dist/
+```
+
+Run the generated `.app` or mount the generated `.dmg` and launch the app from there.
+The native bundle should embed its own Python runtime and bundled tools; the PyPI wheel
+intentionally does not.
+
+In CI, `release.yml` builds the same DMG on `macos-latest` with
+`YAFFO_SKIP_VERSION_BUMP=1`, so the DMG version matches the release tag instead of
+being incremented a second time by `build_dmg.sh`.
+
+### Install ExifTool
+
+ExifTool is an external prerequisite for PyPI / pipx installs. Verify it with
+`exiftool -ver` after installation.
+
+```shell
+# macOS Homebrew
+brew install exiftool
+
+# macOS MacPorts
+sudo port install p5-image-exiftool
+
+# Debian / Ubuntu
+sudo apt update
+sudo apt install libimage-exiftool-perl
+
+# Fedora
+sudo dnf install perl-Image-ExifTool
+
+# Arch Linux
+sudo pacman -S perl-image-exiftool
+
+# Windows winget
+winget install OliverBetz.ExifTool
+
+# Windows Chocolatey
+choco install exiftool
+
+# Windows Scoop
+scoop install exiftool
+```
 
 ### One-time PyPI Trusted Publisher setup (manual)
 

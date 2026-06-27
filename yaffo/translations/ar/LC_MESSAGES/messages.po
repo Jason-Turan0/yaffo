@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-27 15:10-0500\n"
+"POT-Creation-Date: 2026-06-27 16:31-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ar\n"
@@ -306,11 +306,11 @@ msgstr "الوجوه والشخص وحالة الوجه مطلوبة"
 msgid "Could not process faces"
 msgstr "لا يمكن معالجة الوجوه"
 
-#: yaffo/routes/home.py:259 yaffo/templates/people/list.html:40 yaffo/templates/people/list.html:93
+#: yaffo/routes/home.py:259 yaffo/templates/people/list.html:40 yaffo/templates/people/list.html:92
 msgid "Male"
 msgstr "ذكر"
 
-#: yaffo/routes/home.py:260 yaffo/templates/people/list.html:41 yaffo/templates/people/list.html:94
+#: yaffo/routes/home.py:260 yaffo/templates/people/list.html:41 yaffo/templates/people/list.html:93
 msgid "Female"
 msgstr "أنثى"
 
@@ -444,40 +444,40 @@ msgstr "لم يتم تحديد أي وجوه"
 msgid "Person updated"
 msgstr "تم تحديث الشخص"
 
-#: yaffo/routes/settings.py:86
+#: yaffo/routes/settings.py:87
 msgid "Claude Opus 4.8 — most capable"
 msgstr "كلود أوبوس 4.8 – الأكثر قدرة"
 
-#: yaffo/routes/settings.py:87
+#: yaffo/routes/settings.py:88
 msgid "Claude Sonnet 4.6 — balanced"
 msgstr "كلود سونيت 4.6 – متوازن"
 
-#: yaffo/routes/settings.py:88
+#: yaffo/routes/settings.py:89
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "كلود هايكو 4.5 – الأسرع"
 
-#: yaffo/routes/settings.py:130 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:135 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr "وحدة مسافة غير مدعومة"
 
-#: yaffo/routes/settings.py:166
+#: yaffo/routes/settings.py:171
 msgid "Label name is required."
 msgstr "اسم التصنيف مطلوب."
 
-#: yaffo/routes/settings.py:169
+#: yaffo/routes/settings.py:174
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr "ملصق '%(name)s\"موجود بالفعل."
 
-#: yaffo/routes/settings.py:185
+#: yaffo/routes/settings.py:190
 msgid "Classify-labels automation is not installed."
 msgstr "لم يتم تثبيت أتمتة التصنيفات."
 
-#: yaffo/routes/settings.py:191
+#: yaffo/routes/settings.py:196
 msgid "No indexed photos to classify yet."
 msgstr "لا توجد صور مفهرسة لتصنيفها حتى الآن."
 
-#: yaffo/routes/settings.py:197
+#: yaffo/routes/settings.py:202
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
@@ -488,35 +488,35 @@ msgstr[3] "إعادة التصنيف %(count)s الصور في الخلفية…
 msgstr[4] "إعادة التصنيف %(count)s الصور في الخلفية…"
 msgstr[5] "إعادة التصنيف %(count)s الصور في الخلفية…"
 
-#: yaffo/routes/settings.py:216
+#: yaffo/routes/settings.py:221
 msgid "AI model updated."
 msgstr "تم تحديث نموذج الذكاء الاصطناعي."
 
-#: yaffo/routes/settings.py:245 yaffo/routes/settings.py:340
+#: yaffo/routes/settings.py:250 yaffo/routes/settings.py:345
 msgid "Directory path is required"
 msgstr "مسار الدليل مطلوب"
 
-#: yaffo/routes/settings.py:253
+#: yaffo/routes/settings.py:258
 msgid "Could not create the directory"
 msgstr "لا يمكن إنشاء الدليل"
 
-#: yaffo/routes/settings.py:259
+#: yaffo/routes/settings.py:264
 msgid "Directory is already configured"
 msgstr "تم تكوين الدليل بالفعل"
 
-#: yaffo/routes/settings.py:273
+#: yaffo/routes/settings.py:278
 msgid "Media directory not found"
 msgstr "لم يتم العثور على دليل الوسائط"
 
-#: yaffo/routes/settings.py:322
+#: yaffo/routes/settings.py:327
 msgid "Could not count thumbnail files"
 msgstr "لا يمكن حساب الملفات المصغرة"
 
-#: yaffo/routes/settings.py:357
+#: yaffo/routes/settings.py:362
 msgid "The new directory is the same as the current directory"
 msgstr "الدليل الجديد هو نفس الدليل الحالي"
 
-#: yaffo/routes/settings.py:416
+#: yaffo/routes/settings.py:421
 msgid "Could not move thumbnail files"
 msgstr "لا يمكن نقل الملفات المصغرة"
 
@@ -962,7 +962,7 @@ msgid "Photo from %(date)s"
 msgstr "صورة من %(date)s"
 
 #: yaffo/templates/index.html:64 yaffo/templates/people/list.html:24
-#: yaffo/templates/people/list.html:86 yaffo/templates/themes_page/index.html:115
+#: yaffo/templates/people/list.html:85 yaffo/templates/themes_page/index.html:115
 #: yaffo/templates/themes_page/index.html:127 yaffo/templates/utilities/_base.html:11
 #: yaffo/templates/utilities/automations.html:9
 msgid "Name"
@@ -1367,7 +1367,7 @@ msgid "Favorites Only"
 msgstr "المفضلة فقط"
 
 #: yaffo/templates/filters/_gender.html:2 yaffo/templates/people/list.html:25
-#: yaffo/templates/people/list.html:90
+#: yaffo/templates/people/list.html:89
 msgid "Gender"
 msgstr "جنس"
 
@@ -1516,7 +1516,7 @@ msgstr "بدأت: %(started)s"
 msgid "Show Results"
 msgstr "عرض النتائج"
 
-#: yaffo/templates/fragments/job_status_fragment.html:28 yaffo/templates/people/list.html:66
+#: yaffo/templates/fragments/job_status_fragment.html:28 yaffo/templates/people/list.html:65
 #: yaffo/templates/themes_page/index.html:66 yaffo/templates/utilities/automations.html:95
 #: yaffo/templates/utilities/automations_triggers.html:37
 #: yaffo/templates/utilities/remove_duplicates_form.html:49
@@ -1835,8 +1835,8 @@ msgstr "لم يتم تعيين أي وجوه ل %(person)s حتى الآن."
 msgid "People - Yaffo"
 msgstr "الناس - يافا"
 
-#: yaffo/templates/people/list.html:15 yaffo/templates/people/list.html:79
-#: yaffo/templates/people/list.html:107
+#: yaffo/templates/people/list.html:15 yaffo/templates/people/list.html:78
+#: yaffo/templates/people/list.html:106
 msgid "Add Person"
 msgstr "إضافة شخص"
 
@@ -1852,39 +1852,35 @@ msgstr "صور"
 msgid "Unnamed"
 msgstr "لم يذكر اسمه"
 
-#: yaffo/templates/people/list.html:46
-msgid "Estimated"
-msgstr "مُقدَّر"
-
-#: yaffo/templates/people/list.html:62 yaffo/templates/utilities/automations_triggers.html:28
+#: yaffo/templates/people/list.html:61 yaffo/templates/utilities/automations_triggers.html:28
 msgid "Edit"
 msgstr "يحرر"
 
-#: yaffo/templates/people/list.html:77
+#: yaffo/templates/people/list.html:76
 msgid "No people yet"
 msgstr "لا يوجد أشخاص بعد"
 
-#: yaffo/templates/people/list.html:78
+#: yaffo/templates/people/list.html:77
 msgid "Add your first person to start organizing photos."
 msgstr "أضف أول شخص لك لبدء تنظيم الصور."
 
-#: yaffo/templates/people/list.html:92
+#: yaffo/templates/people/list.html:91
 msgid "Not specified"
 msgstr "غير محدد"
 
-#: yaffo/templates/people/list.html:96
+#: yaffo/templates/people/list.html:95
 msgid "Choose “Not specified” to clear the saved gender."
 msgstr "اختر \"غير محدد\" لمسح الجنس المحفوظ."
 
-#: yaffo/templates/people/list.html:99
+#: yaffo/templates/people/list.html:98
 msgid "Birthdate"
 msgstr "تاريخ الميلاد"
 
-#: yaffo/templates/people/list.html:101
+#: yaffo/templates/people/list.html:100
 msgid "Used to improve facial recognition accuracy."
 msgstr "يستخدم لتحسين دقة التعرف على الوجه."
 
-#: yaffo/templates/people/list.html:108
+#: yaffo/templates/people/list.html:107
 msgid "Edit Person"
 msgstr "تحرير الشخص"
 
@@ -2154,6 +2150,36 @@ msgstr "مسار قاعدة بيانات قائمة انتظار المهام:"
 #: yaffo/templates/settings/index.html:153
 msgid "Database used by the background task queue to process jobs."
 msgstr "قاعدة البيانات المستخدمة بواسطة قائمة انتظار المهام في الخلفية لمعالجة المهام."
+
+#: yaffo/templates/settings/index.html:157
+msgid "ExifTool Path:"
+msgstr "مسار ExifTool:"
+
+#: yaffo/templates/settings/index.html:158
+msgid "not found"
+msgstr "لم يتم العثور عليه"
+
+#: yaffo/templates/settings/index.html:159
+msgid "ExifTool executable used for reading and writing media metadata."
+msgstr "ExifTool قابل للتنفيذ يستخدم لقراءة وكتابة البيانات التعريفية للوسائط."
+
+#: yaffo/templates/settings/index.html:163
+msgid "Downloaded Model Cache:"
+msgstr "ذاكرة التخزين المؤقت للنموذج الذي تم تنزيله:"
+
+#: yaffo/templates/settings/index.html:165
+msgid "Writable cache where Yaffo stores downloaded ML models such as CLIP encoders."
+msgstr ""
+"ذاكرة تخزين مؤقت قابلة للكتابة حيث يقوم Yaffo بتخزين نماذج ML التي تم تنزيلها مثل برامج تشفير "
+"CLIP."
+
+#: yaffo/templates/settings/index.html:169
+msgid "Bundled Models Directory:"
+msgstr "دليل النماذج المجمعة:"
+
+#: yaffo/templates/settings/index.html:171
+msgid "Read-only model directory included with a bundled app build, when available."
+msgstr "دليل نموذج للقراءة فقط متضمن مع إصدار التطبيق المجمع، عندما يكون متاحًا."
 
 #: yaffo/templates/themes_page/index.html:6
 msgid "Themes - Yaffo"

@@ -1,32 +1,129 @@
-name: Release to PyPI
+name: Release
 
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version part to increment when version is not set."
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      version:
+        description: "Exact X.Y.Z version to release. Overrides bump when set."
+        required: false
+        type: string
+      publish_pypi:
+        description: "Publish the Python artifacts to PyPI."
+        required: true
+        default: true
+        type: boolean
 
 jobs:
-  build:
+  release-context:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag_name: ${{ steps.context.outputs.tag_name }}
+      version: ${{ steps.context.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      # Guard: when triggered by a tag, it must match the VERSION file (the single
-      # source of truth that pyproject reads dynamically). Stops a vX.Y.Z tag from
-      # publishing a differently-versioned artifact.
+      - name: Bump VERSION and create release tag
+        id: manual
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          BUMP_PART: ${{ inputs.bump }}
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$VERSION_INPUT" ]; then
+            python packaging/bump_version.py --version "$VERSION_INPUT"
+          else
+            python packaging/bump_version.py --part "$BUMP_PART"
+          fi
+
+          version="$(cat VERSION)"
+          tag_name="v$version"
+
+          if git rev-parse -q --verify "refs/tags/$tag_name" >/dev/null; then
+            echo "::error::Tag $tag_name already exists"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add VERSION
+          git commit -m "Release $tag_name"
+          git tag "$tag_name"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "$tag_name"
+
+          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Verify tag matches VERSION
+        id: tagged
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
+          set -euo pipefail
+
           file_version="$(cat VERSION)"
           tag_version="${GITHUB_REF_NAME#v}"
           if [ "$file_version" != "$tag_version" ]; then
             echo "::error::Tag $GITHUB_REF_NAME (=$tag_version) != VERSION file ($file_version)"
             exit 1
           fi
+
+          echo "tag_name=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$file_version" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release context
+        id: context
+        env:
+          MANUAL_TAG: ${{ steps.manual.outputs.tag_name }}
+          MANUAL_VERSION: ${{ steps.manual.outputs.version }}
+          TAGGED_TAG: ${{ steps.tagged.outputs.tag_name }}
+          TAGGED_VERSION: ${{ steps.tagged.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          tag_name="${MANUAL_TAG:-$TAGGED_TAG}"
+          version="${MANUAL_VERSION:-$TAGGED_VERSION}"
+
+          if [ -z "$tag_name" ] || [ -z "$version" ]; then
+            echo "::error::Unable to determine release version/tag"
+            exit 1
+          fi
+
+          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build-python:
+    needs: release-context
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-context.outputs.tag_name }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
 
       - name: Build sdist and wheel
         run: |
@@ -36,12 +133,68 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: python-dist
           path: dist/
 
-  publish:
-    needs: build
+  build-macos-dmg:
+    needs: release-context
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-context.outputs.tag_name }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev]'
+
+      - name: Build macOS DMG
+        run: ./packaging/build_dmg.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: dist/*.dmg
+
+  github-release:
+    needs:
+      - release-context
+      - build-python
+      - build-macos-dmg
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: release-dist/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg
+          path: release-dist/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release-context.outputs.tag_name }}
+          name: Yaffo ${{ needs.release-context.outputs.version }}
+          generate_release_notes: true
+          files: release-dist/*
+
+  publish-pypi:
+    needs:
+      - release-context
+      - build-python
+      - github-release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || inputs.publish_pypi
     # Trusted Publishing (OIDC) — no PyPI token stored in the repo. Requires a
     # matching "pending publisher" configured on PyPI (see docs/distribution.md).
     environment:
@@ -52,6 +205,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: python-dist
           path: dist/
+
       - uses: pypa/gh-action-pypi-publish@release/v1

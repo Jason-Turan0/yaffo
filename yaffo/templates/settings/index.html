@@ -152,6 +152,30 @@
                 <code>{{ queue_db_path }}</code>
                 <p class="path-description">{{ _("Database used by the background task queue to process jobs.") }}</p>
             </div>
+
+            <div class="system-path-item">
+                <label>{{ _("ExifTool Path:") }}</label>
+                <code>{{ exiftool_path or _("not found") }}</code>
+                <p class="path-description">{{ _("ExifTool executable used for reading and writing media metadata.") }}</p>
+            </div>
+
+            <div class="system-path-item">
+                <label>{{ _("CLIP Model Cache:") }}</label>
+                <code>{{ clip_model_cache_dir }}</code>
+                <p class="path-description">{{ _("Writable cache where Yaffo stores downloaded CLIP encoders for image classification.") }}</p>
+            </div>
+
+            <div class="system-path-item">
+                <label>{{ _("InsightFace Model Cache:") }}</label>
+                <code>{{ insightface_model_cache_dir }}</code>
+                <p class="path-description">{{ _("Writable cache where InsightFace stores downloaded face detection and recognition models.") }}</p>
+            </div>
+
+            <div class="system-path-item">
+                <label>{{ _("Bundled Models Directory:") }}</label>
+                <code>{{ bundled_models_dir }}</code>
+                <p class="path-description">{{ _("Read-only model directory included with a bundled app build, when available.") }}</p>
+            </div>
         </div>
     </div>
 </div>

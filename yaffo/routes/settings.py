@@ -9,13 +9,14 @@ from flask_babel import gettext, ngettext
 
 import yaffo.db.repositories.media_dir_repository
 from yaffo.background_tasks.tasks.classify_labels_automation import classify_labels_automation_task
-from yaffo.common import DB_PATH, QUEUE_DB_PATH
+from yaffo.common import BUNDLED_MODELS_DIR, DB_PATH, MODEL_CACHE_DIR, QUEUE_DB_PATH
 from yaffo.db import db
 from yaffo.db.models import AUTOMATION_HANDLER_CLASSIFY_LABELS, ApplicationSettings, ClassificationLabel, Face
 from yaffo.db.repositories import automation_repository, classification_repository, media_repository
 from yaffo.distance_units import get_saved_distance_unit, set_distance_unit
 from yaffo.i18n import get_saved_locale, set_locale
 from yaffo.site_agents import llm_config
+from yaffo.utils.exiftool_path import get_exiftool_path
 from yaffo.version import get_build_info
 
 
@@ -104,6 +105,7 @@ def init_settings_routes(app: Flask):
             current_thumbnail_dir = None
         # Thumbnail stats (a slow recursive walk on large libraries) are filled in live
         # by the streaming endpoint below, so the page no longer blocks on counting them.
+        exiftool_path = get_exiftool_path()
 
         return render_template(
             "settings/index.html",
@@ -111,6 +113,10 @@ def init_settings_routes(app: Flask):
             db_path=str(DB_PATH),
             current_thumbnail_dir=str(current_thumbnail_dir) if current_thumbnail_dir else None,
             queue_db_path=str(QUEUE_DB_PATH),
+            exiftool_path=str(exiftool_path) if exiftool_path else None,
+            clip_model_cache_dir=str(MODEL_CACHE_DIR / "clip"),
+            insightface_model_cache_dir=str(Path.home() / ".insightface"),
+            bundled_models_dir=str(BUNDLED_MODELS_DIR),
             build_info=get_build_info(),
             llm=llm_status,
             labels=classification_repository.list_labels(db.session),

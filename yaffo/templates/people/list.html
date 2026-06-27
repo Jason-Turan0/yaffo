@@ -43,7 +43,6 @@
                 </td>
                 <td>
                     {% if person.birthdate %}{{ person.birthdate | format_date("date") }}
-                    {% elif person.estimated_birthdate %}<span class="hint-text" title="{{ _('Estimated') }}">~{{ person.estimated_birthdate.year | format_integer }}</span>
                     {% else %}—{% endif %}
                 </td>
                 <td>

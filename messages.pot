@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-27 15:10-0500\n"
+"POT-Creation-Date: 2026-06-27 16:31-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -283,12 +283,12 @@ msgid "Could not process faces"
 msgstr ""
 
 #: yaffo/routes/home.py:259 yaffo/templates/people/list.html:40
-#: yaffo/templates/people/list.html:93
+#: yaffo/templates/people/list.html:92
 msgid "Male"
 msgstr ""
 
 #: yaffo/routes/home.py:260 yaffo/templates/people/list.html:41
-#: yaffo/templates/people/list.html:94
+#: yaffo/templates/people/list.html:93
 msgid "Female"
 msgstr ""
 
@@ -431,75 +431,75 @@ msgstr ""
 msgid "Person updated"
 msgstr ""
 
-#: yaffo/routes/settings.py:86
+#: yaffo/routes/settings.py:87
 msgid "Claude Opus 4.8 — most capable"
 msgstr ""
 
-#: yaffo/routes/settings.py:87
+#: yaffo/routes/settings.py:88
 msgid "Claude Sonnet 4.6 — balanced"
 msgstr ""
 
-#: yaffo/routes/settings.py:88
+#: yaffo/routes/settings.py:89
 msgid "Claude Haiku 4.5 — fastest"
 msgstr ""
 
-#: yaffo/routes/settings.py:130 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:135 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr ""
 
-#: yaffo/routes/settings.py:166
+#: yaffo/routes/settings.py:171
 msgid "Label name is required."
 msgstr ""
 
-#: yaffo/routes/settings.py:169
+#: yaffo/routes/settings.py:174
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr ""
 
-#: yaffo/routes/settings.py:185
+#: yaffo/routes/settings.py:190
 msgid "Classify-labels automation is not installed."
 msgstr ""
 
-#: yaffo/routes/settings.py:191
+#: yaffo/routes/settings.py:196
 msgid "No indexed photos to classify yet."
 msgstr ""
 
-#: yaffo/routes/settings.py:197
+#: yaffo/routes/settings.py:202
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/settings.py:216
+#: yaffo/routes/settings.py:221
 msgid "AI model updated."
 msgstr ""
 
-#: yaffo/routes/settings.py:245 yaffo/routes/settings.py:340
+#: yaffo/routes/settings.py:250 yaffo/routes/settings.py:345
 msgid "Directory path is required"
 msgstr ""
 
-#: yaffo/routes/settings.py:253
+#: yaffo/routes/settings.py:258
 msgid "Could not create the directory"
 msgstr ""
 
-#: yaffo/routes/settings.py:259
+#: yaffo/routes/settings.py:264
 msgid "Directory is already configured"
 msgstr ""
 
-#: yaffo/routes/settings.py:273
+#: yaffo/routes/settings.py:278
 msgid "Media directory not found"
 msgstr ""
 
-#: yaffo/routes/settings.py:322
+#: yaffo/routes/settings.py:327
 msgid "Could not count thumbnail files"
 msgstr ""
 
-#: yaffo/routes/settings.py:357
+#: yaffo/routes/settings.py:362
 msgid "The new directory is the same as the current directory"
 msgstr ""
 
-#: yaffo/routes/settings.py:416
+#: yaffo/routes/settings.py:421
 msgid "Could not move thumbnail files"
 msgstr ""
 
@@ -937,7 +937,7 @@ msgid "Photo from %(date)s"
 msgstr ""
 
 #: yaffo/templates/index.html:64 yaffo/templates/people/list.html:24
-#: yaffo/templates/people/list.html:86
+#: yaffo/templates/people/list.html:85
 #: yaffo/templates/themes_page/index.html:115
 #: yaffo/templates/themes_page/index.html:127
 #: yaffo/templates/utilities/_base.html:11
@@ -1344,7 +1344,7 @@ msgid "Favorites Only"
 msgstr ""
 
 #: yaffo/templates/filters/_gender.html:2 yaffo/templates/people/list.html:25
-#: yaffo/templates/people/list.html:90
+#: yaffo/templates/people/list.html:89
 msgid "Gender"
 msgstr ""
 
@@ -1497,7 +1497,7 @@ msgid "Show Results"
 msgstr ""
 
 #: yaffo/templates/fragments/job_status_fragment.html:28
-#: yaffo/templates/people/list.html:66
+#: yaffo/templates/people/list.html:65
 #: yaffo/templates/themes_page/index.html:66
 #: yaffo/templates/utilities/automations.html:95
 #: yaffo/templates/utilities/automations_triggers.html:37
@@ -1795,8 +1795,8 @@ msgstr ""
 msgid "People - Yaffo"
 msgstr ""
 
-#: yaffo/templates/people/list.html:15 yaffo/templates/people/list.html:79
-#: yaffo/templates/people/list.html:107
+#: yaffo/templates/people/list.html:15 yaffo/templates/people/list.html:78
+#: yaffo/templates/people/list.html:106
 msgid "Add Person"
 msgstr ""
 
@@ -1812,40 +1812,36 @@ msgstr ""
 msgid "Unnamed"
 msgstr ""
 
-#: yaffo/templates/people/list.html:46
-msgid "Estimated"
-msgstr ""
-
-#: yaffo/templates/people/list.html:62
+#: yaffo/templates/people/list.html:61
 #: yaffo/templates/utilities/automations_triggers.html:28
 msgid "Edit"
 msgstr ""
 
-#: yaffo/templates/people/list.html:77
+#: yaffo/templates/people/list.html:76
 msgid "No people yet"
 msgstr ""
 
-#: yaffo/templates/people/list.html:78
+#: yaffo/templates/people/list.html:77
 msgid "Add your first person to start organizing photos."
 msgstr ""
 
-#: yaffo/templates/people/list.html:92
+#: yaffo/templates/people/list.html:91
 msgid "Not specified"
 msgstr ""
 
-#: yaffo/templates/people/list.html:96
+#: yaffo/templates/people/list.html:95
 msgid "Choose “Not specified” to clear the saved gender."
 msgstr ""
 
-#: yaffo/templates/people/list.html:99
+#: yaffo/templates/people/list.html:98
 msgid "Birthdate"
 msgstr ""
 
-#: yaffo/templates/people/list.html:101
+#: yaffo/templates/people/list.html:100
 msgid "Used to improve facial recognition accuracy."
 msgstr ""
 
-#: yaffo/templates/people/list.html:108
+#: yaffo/templates/people/list.html:107
 msgid "Edit Person"
 msgstr ""
 
@@ -2112,6 +2108,38 @@ msgstr ""
 
 #: yaffo/templates/settings/index.html:153
 msgid "Database used by the background task queue to process jobs."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:157
+msgid "ExifTool Path:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:158
+msgid "not found"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:159
+msgid "ExifTool executable used for reading and writing media metadata."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:163
+msgid "Downloaded Model Cache:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:165
+msgid ""
+"Writable cache where Yaffo stores downloaded ML models such as CLIP "
+"encoders."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:169
+msgid "Bundled Models Directory:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:171
+msgid ""
+"Read-only model directory included with a bundled app build, when "
+"available."
 msgstr ""
 
 #: yaffo/templates/themes_page/index.html:6

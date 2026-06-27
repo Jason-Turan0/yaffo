@@ -24,9 +24,6 @@ echo "==> Downloading bundled assets (exiftool, ffmpeg, models)"
 echo "==> Staging attribution file into resources/"
 cp THIRD_PARTY_LICENSES.txt resources/THIRD_PARTY_LICENSES.txt
 
-echo "==> Bumping version + stamping build info"
-"$PYTHON" packaging/bump_version.py
-
 # Name the DMG after the just-bumped version.
 DMG="dist/Yaffo Photo Organizer-$(cat VERSION).dmg"
 

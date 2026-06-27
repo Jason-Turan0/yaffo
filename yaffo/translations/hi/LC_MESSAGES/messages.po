@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-27 15:10-0500\n"
+"POT-Creation-Date: 2026-06-27 16:31-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: hi\n"
@@ -297,11 +297,11 @@ msgstr "चेहरे, व्यक्ति और चेहरे की स
 msgid "Could not process faces"
 msgstr "चेहरों को संसाधित नहीं किया जा सका"
 
-#: yaffo/routes/home.py:259 yaffo/templates/people/list.html:40 yaffo/templates/people/list.html:93
+#: yaffo/routes/home.py:259 yaffo/templates/people/list.html:40 yaffo/templates/people/list.html:92
 msgid "Male"
 msgstr "पुरुष"
 
-#: yaffo/routes/home.py:260 yaffo/templates/people/list.html:41 yaffo/templates/people/list.html:94
+#: yaffo/routes/home.py:260 yaffo/templates/people/list.html:41 yaffo/templates/people/list.html:93
 msgid "Female"
 msgstr "महिला"
 
@@ -437,75 +437,75 @@ msgstr "कोई चेहरा चयनित नहीं"
 msgid "Person updated"
 msgstr "व्यक्ति अद्यतन किया गया"
 
-#: yaffo/routes/settings.py:86
+#: yaffo/routes/settings.py:87
 msgid "Claude Opus 4.8 — most capable"
 msgstr "क्लाउड ओपस 4.8 - सबसे सक्षम"
 
-#: yaffo/routes/settings.py:87
+#: yaffo/routes/settings.py:88
 msgid "Claude Sonnet 4.6 — balanced"
 msgstr "क्लाउड सॉनेट 4.6 - संतुलित"
 
-#: yaffo/routes/settings.py:88
+#: yaffo/routes/settings.py:89
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "क्लाउड हाइकु 4.5 — सबसे तेज़"
 
-#: yaffo/routes/settings.py:130 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:135 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr "असमर्थित दूरी इकाई"
 
-#: yaffo/routes/settings.py:166
+#: yaffo/routes/settings.py:171
 msgid "Label name is required."
 msgstr "लेबल नाम आवश्यक है."
 
-#: yaffo/routes/settings.py:169
+#: yaffo/routes/settings.py:174
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr "लेबल '%(name)s' पहले से ही मौजूद है।"
 
-#: yaffo/routes/settings.py:185
+#: yaffo/routes/settings.py:190
 msgid "Classify-labels automation is not installed."
 msgstr "वर्गीकृत-लेबल स्वचालन स्थापित नहीं है."
 
-#: yaffo/routes/settings.py:191
+#: yaffo/routes/settings.py:196
 msgid "No indexed photos to classify yet."
 msgstr "वर्गीकृत करने के लिए अभी तक कोई अनुक्रमित फ़ोटो नहीं।"
 
-#: yaffo/routes/settings.py:197
+#: yaffo/routes/settings.py:202
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] "फिर से वर्गीकृत करने %(count)s पृष्ठभूमि में फोटो..."
 msgstr[1] "फिर से वर्गीकृत करने %(count)s पृष्ठभूमि में तस्वीरें..."
 
-#: yaffo/routes/settings.py:216
+#: yaffo/routes/settings.py:221
 msgid "AI model updated."
 msgstr "एआई मॉडल अपडेट किया गया।"
 
-#: yaffo/routes/settings.py:245 yaffo/routes/settings.py:340
+#: yaffo/routes/settings.py:250 yaffo/routes/settings.py:345
 msgid "Directory path is required"
 msgstr "निर्देशिका पथ आवश्यक है"
 
-#: yaffo/routes/settings.py:253
+#: yaffo/routes/settings.py:258
 msgid "Could not create the directory"
 msgstr "निर्देशिका नहीं बनाई जा सकी"
 
-#: yaffo/routes/settings.py:259
+#: yaffo/routes/settings.py:264
 msgid "Directory is already configured"
 msgstr "निर्देशिका पहले से ही कॉन्फ़िगर है"
 
-#: yaffo/routes/settings.py:273
+#: yaffo/routes/settings.py:278
 msgid "Media directory not found"
 msgstr "मीडिया निर्देशिका नहीं मिली"
 
-#: yaffo/routes/settings.py:322
+#: yaffo/routes/settings.py:327
 msgid "Could not count thumbnail files"
 msgstr "थंबनेल फ़ाइलों की गिनती नहीं की जा सकी"
 
-#: yaffo/routes/settings.py:357
+#: yaffo/routes/settings.py:362
 msgid "The new directory is the same as the current directory"
 msgstr "नई निर्देशिका वर्तमान निर्देशिका के समान ही है"
 
-#: yaffo/routes/settings.py:416
+#: yaffo/routes/settings.py:421
 msgid "Could not move thumbnail files"
 msgstr "थंबनेल फ़ाइलें स्थानांतरित नहीं की जा सकीं"
 
@@ -939,7 +939,7 @@ msgid "Photo from %(date)s"
 msgstr "फोटो से %(date)s"
 
 #: yaffo/templates/index.html:64 yaffo/templates/people/list.html:24
-#: yaffo/templates/people/list.html:86 yaffo/templates/themes_page/index.html:115
+#: yaffo/templates/people/list.html:85 yaffo/templates/themes_page/index.html:115
 #: yaffo/templates/themes_page/index.html:127 yaffo/templates/utilities/_base.html:11
 #: yaffo/templates/utilities/automations.html:9
 msgid "Name"
@@ -1336,7 +1336,7 @@ msgid "Favorites Only"
 msgstr "केवल पसंदीदा"
 
 #: yaffo/templates/filters/_gender.html:2 yaffo/templates/people/list.html:25
-#: yaffo/templates/people/list.html:90
+#: yaffo/templates/people/list.html:89
 msgid "Gender"
 msgstr "लिंग"
 
@@ -1485,7 +1485,7 @@ msgstr "शुरू कर दिया: %(started)s"
 msgid "Show Results"
 msgstr "परिणाम दिखाएं"
 
-#: yaffo/templates/fragments/job_status_fragment.html:28 yaffo/templates/people/list.html:66
+#: yaffo/templates/fragments/job_status_fragment.html:28 yaffo/templates/people/list.html:65
 #: yaffo/templates/themes_page/index.html:66 yaffo/templates/utilities/automations.html:95
 #: yaffo/templates/utilities/automations_triggers.html:37
 #: yaffo/templates/utilities/remove_duplicates_form.html:49
@@ -1784,8 +1784,8 @@ msgstr "कोई चेहरा नहीं सौंपा गया है 
 msgid "People - Yaffo"
 msgstr "लोग - याफ़ो"
 
-#: yaffo/templates/people/list.html:15 yaffo/templates/people/list.html:79
-#: yaffo/templates/people/list.html:107
+#: yaffo/templates/people/list.html:15 yaffo/templates/people/list.html:78
+#: yaffo/templates/people/list.html:106
 msgid "Add Person"
 msgstr "व्यक्ति जोड़ें"
 
@@ -1801,39 +1801,35 @@ msgstr "तस्वीरें"
 msgid "Unnamed"
 msgstr "अज्ञात"
 
-#: yaffo/templates/people/list.html:46
-msgid "Estimated"
-msgstr "अनुमानित"
-
-#: yaffo/templates/people/list.html:62 yaffo/templates/utilities/automations_triggers.html:28
+#: yaffo/templates/people/list.html:61 yaffo/templates/utilities/automations_triggers.html:28
 msgid "Edit"
 msgstr "संपादन करना"
 
-#: yaffo/templates/people/list.html:77
+#: yaffo/templates/people/list.html:76
 msgid "No people yet"
 msgstr "अभी तक कोई लोग नहीं"
 
-#: yaffo/templates/people/list.html:78
+#: yaffo/templates/people/list.html:77
 msgid "Add your first person to start organizing photos."
 msgstr "फ़ोटो व्यवस्थित करना शुरू करने के लिए अपना पहला व्यक्ति जोड़ें।"
 
-#: yaffo/templates/people/list.html:92
+#: yaffo/templates/people/list.html:91
 msgid "Not specified"
 msgstr "निर्दिष्ट नहीं है"
 
-#: yaffo/templates/people/list.html:96
+#: yaffo/templates/people/list.html:95
 msgid "Choose “Not specified” to clear the saved gender."
 msgstr "सहेजे गए लिंग को साफ़ करने के लिए \"निर्दिष्ट नहीं\" चुनें।"
 
-#: yaffo/templates/people/list.html:99
+#: yaffo/templates/people/list.html:98
 msgid "Birthdate"
 msgstr "जन्म तिथि"
 
-#: yaffo/templates/people/list.html:101
+#: yaffo/templates/people/list.html:100
 msgid "Used to improve facial recognition accuracy."
 msgstr "चेहरे की पहचान सटीकता में सुधार करने के लिए उपयोग किया जाता है।"
 
-#: yaffo/templates/people/list.html:108
+#: yaffo/templates/people/list.html:107
 msgid "Edit Person"
 msgstr "व्यक्ति संपादित करें"
 
@@ -2107,6 +2103,34 @@ msgstr "कार्य कतार डेटाबेस पथ:"
 #: yaffo/templates/settings/index.html:153
 msgid "Database used by the background task queue to process jobs."
 msgstr "नौकरियों को संसाधित करने के लिए पृष्ठभूमि कार्य कतार द्वारा उपयोग किया जाने वाला डेटाबेस।"
+
+#: yaffo/templates/settings/index.html:157
+msgid "ExifTool Path:"
+msgstr "एक्सिफ़टूल पथ:"
+
+#: yaffo/templates/settings/index.html:158
+msgid "not found"
+msgstr "नहीं मिला"
+
+#: yaffo/templates/settings/index.html:159
+msgid "ExifTool executable used for reading and writing media metadata."
+msgstr "ExifTool निष्पादन योग्य का उपयोग मीडिया मेटाडेटा को पढ़ने और लिखने के लिए किया जाता है।"
+
+#: yaffo/templates/settings/index.html:163
+msgid "Downloaded Model Cache:"
+msgstr "डाउनलोड किया गया मॉडल कैश:"
+
+#: yaffo/templates/settings/index.html:165
+msgid "Writable cache where Yaffo stores downloaded ML models such as CLIP encoders."
+msgstr "लिखने योग्य कैश जहां याफ़ो स्टोर्स ने सीएलआईपी एनकोडर जैसे एमएल मॉडल डाउनलोड किए।"
+
+#: yaffo/templates/settings/index.html:169
+msgid "Bundled Models Directory:"
+msgstr "बंडल मॉडल निर्देशिका:"
+
+#: yaffo/templates/settings/index.html:171
+msgid "Read-only model directory included with a bundled app build, when available."
+msgstr "उपलब्ध होने पर बंडल्ड ऐप बिल्ड के साथ रीड-ओनली मॉडल निर्देशिका शामिल है।"
 
 #: yaffo/templates/themes_page/index.html:6
 msgid "Themes - Yaffo"

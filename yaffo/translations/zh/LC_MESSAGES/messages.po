@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-27 15:10-0500\n"
+"POT-Creation-Date: 2026-06-27 16:31-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: zh\n"
@@ -269,11 +269,11 @@ msgstr "需要面孔、人物和面孔状态"
 msgid "Could not process faces"
 msgstr "无法处理人脸"
 
-#: yaffo/routes/home.py:259 yaffo/templates/people/list.html:40 yaffo/templates/people/list.html:93
+#: yaffo/routes/home.py:259 yaffo/templates/people/list.html:40 yaffo/templates/people/list.html:92
 msgid "Male"
 msgstr "男性"
 
-#: yaffo/routes/home.py:260 yaffo/templates/people/list.html:41 yaffo/templates/people/list.html:94
+#: yaffo/routes/home.py:260 yaffo/templates/people/list.html:41 yaffo/templates/people/list.html:93
 msgid "Female"
 msgstr "女性"
 
@@ -407,74 +407,74 @@ msgstr "未选择面"
 msgid "Person updated"
 msgstr "人员已更新"
 
-#: yaffo/routes/settings.py:86
+#: yaffo/routes/settings.py:87
 msgid "Claude Opus 4.8 — most capable"
 msgstr "Claude Opus 4.8——最有能力的"
 
-#: yaffo/routes/settings.py:87
+#: yaffo/routes/settings.py:88
 msgid "Claude Sonnet 4.6 — balanced"
 msgstr "克劳德十四行诗 4.6 — 平衡"
 
-#: yaffo/routes/settings.py:88
+#: yaffo/routes/settings.py:89
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "克劳德俳句 4.5 — 最快"
 
-#: yaffo/routes/settings.py:130 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:135 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr "不支持的距离单位"
 
-#: yaffo/routes/settings.py:166
+#: yaffo/routes/settings.py:171
 msgid "Label name is required."
 msgstr "标签名称为必填项。"
 
-#: yaffo/routes/settings.py:169
+#: yaffo/routes/settings.py:174
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr "标签 '%(name)s' 已经存在。"
 
-#: yaffo/routes/settings.py:185
+#: yaffo/routes/settings.py:190
 msgid "Classify-labels automation is not installed."
 msgstr "未安装分类标签自动化。"
 
-#: yaffo/routes/settings.py:191
+#: yaffo/routes/settings.py:196
 msgid "No indexed photos to classify yet."
 msgstr "尚无可分类的索引照片。"
 
-#: yaffo/routes/settings.py:197
+#: yaffo/routes/settings.py:202
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] "重新分类 %(count)s 照片在背景中…"
 
-#: yaffo/routes/settings.py:216
+#: yaffo/routes/settings.py:221
 msgid "AI model updated."
 msgstr "AI模型更新。"
 
-#: yaffo/routes/settings.py:245 yaffo/routes/settings.py:340
+#: yaffo/routes/settings.py:250 yaffo/routes/settings.py:345
 msgid "Directory path is required"
 msgstr "目录路径为必填项"
 
-#: yaffo/routes/settings.py:253
+#: yaffo/routes/settings.py:258
 msgid "Could not create the directory"
 msgstr "无法创建目录"
 
-#: yaffo/routes/settings.py:259
+#: yaffo/routes/settings.py:264
 msgid "Directory is already configured"
 msgstr "目录已配置"
 
-#: yaffo/routes/settings.py:273
+#: yaffo/routes/settings.py:278
 msgid "Media directory not found"
 msgstr "找不到媒体目录"
 
-#: yaffo/routes/settings.py:322
+#: yaffo/routes/settings.py:327
 msgid "Could not count thumbnail files"
 msgstr "无法计算缩略图文件数"
 
-#: yaffo/routes/settings.py:357
+#: yaffo/routes/settings.py:362
 msgid "The new directory is the same as the current directory"
 msgstr "新目录与当前目录相同"
 
-#: yaffo/routes/settings.py:416
+#: yaffo/routes/settings.py:421
 msgid "Could not move thumbnail files"
 msgstr "无法移动缩略图文件"
 
@@ -896,7 +896,7 @@ msgid "Photo from %(date)s"
 msgstr "照片来自 %(date)s"
 
 #: yaffo/templates/index.html:64 yaffo/templates/people/list.html:24
-#: yaffo/templates/people/list.html:86 yaffo/templates/themes_page/index.html:115
+#: yaffo/templates/people/list.html:85 yaffo/templates/themes_page/index.html:115
 #: yaffo/templates/themes_page/index.html:127 yaffo/templates/utilities/_base.html:11
 #: yaffo/templates/utilities/automations.html:9
 msgid "Name"
@@ -1279,7 +1279,7 @@ msgid "Favorites Only"
 msgstr "仅限收藏夹"
 
 #: yaffo/templates/filters/_gender.html:2 yaffo/templates/people/list.html:25
-#: yaffo/templates/people/list.html:90
+#: yaffo/templates/people/list.html:89
 msgid "Gender"
 msgstr "性别"
 
@@ -1428,7 +1428,7 @@ msgstr "开始： %(started)s"
 msgid "Show Results"
 msgstr "显示结果"
 
-#: yaffo/templates/fragments/job_status_fragment.html:28 yaffo/templates/people/list.html:66
+#: yaffo/templates/fragments/job_status_fragment.html:28 yaffo/templates/people/list.html:65
 #: yaffo/templates/themes_page/index.html:66 yaffo/templates/utilities/automations.html:95
 #: yaffo/templates/utilities/automations_triggers.html:37
 #: yaffo/templates/utilities/remove_duplicates_form.html:49
@@ -1720,8 +1720,8 @@ msgstr "尚未分配任何面孔 %(person)s 然而。"
 msgid "People - Yaffo"
 msgstr "人物 - 雅福"
 
-#: yaffo/templates/people/list.html:15 yaffo/templates/people/list.html:79
-#: yaffo/templates/people/list.html:107
+#: yaffo/templates/people/list.html:15 yaffo/templates/people/list.html:78
+#: yaffo/templates/people/list.html:106
 msgid "Add Person"
 msgstr "添加人员"
 
@@ -1737,39 +1737,35 @@ msgstr "照片"
 msgid "Unnamed"
 msgstr "未命名"
 
-#: yaffo/templates/people/list.html:46
-msgid "Estimated"
-msgstr "估计的"
-
-#: yaffo/templates/people/list.html:62 yaffo/templates/utilities/automations_triggers.html:28
+#: yaffo/templates/people/list.html:61 yaffo/templates/utilities/automations_triggers.html:28
 msgid "Edit"
 msgstr "编辑"
 
-#: yaffo/templates/people/list.html:77
+#: yaffo/templates/people/list.html:76
 msgid "No people yet"
 msgstr "还没有人"
 
-#: yaffo/templates/people/list.html:78
+#: yaffo/templates/people/list.html:77
 msgid "Add your first person to start organizing photos."
 msgstr "添加您的第一个人以开始整理照片。"
 
-#: yaffo/templates/people/list.html:92
+#: yaffo/templates/people/list.html:91
 msgid "Not specified"
 msgstr "未指定"
 
-#: yaffo/templates/people/list.html:96
+#: yaffo/templates/people/list.html:95
 msgid "Choose “Not specified” to clear the saved gender."
 msgstr "选择“未指定”可清除已保存的性别。"
 
-#: yaffo/templates/people/list.html:99
+#: yaffo/templates/people/list.html:98
 msgid "Birthdate"
 msgstr "出生日期"
 
-#: yaffo/templates/people/list.html:101
+#: yaffo/templates/people/list.html:100
 msgid "Used to improve facial recognition accuracy."
 msgstr "用于提高面部识别准确率。"
 
-#: yaffo/templates/people/list.html:108
+#: yaffo/templates/people/list.html:107
 msgid "Edit Person"
 msgstr "编辑人物"
 
@@ -2030,6 +2026,34 @@ msgstr "任务队列数据库路径："
 #: yaffo/templates/settings/index.html:153
 msgid "Database used by the background task queue to process jobs."
 msgstr "后台任务队列用来处理作业的数据库。"
+
+#: yaffo/templates/settings/index.html:157
+msgid "ExifTool Path:"
+msgstr "Exif工具路径："
+
+#: yaffo/templates/settings/index.html:158
+msgid "not found"
+msgstr "未找到"
+
+#: yaffo/templates/settings/index.html:159
+msgid "ExifTool executable used for reading and writing media metadata."
+msgstr "ExifTool 可执行文件用于读取和写入媒体元数据。"
+
+#: yaffo/templates/settings/index.html:163
+msgid "Downloaded Model Cache:"
+msgstr "下载的模型缓存："
+
+#: yaffo/templates/settings/index.html:165
+msgid "Writable cache where Yaffo stores downloaded ML models such as CLIP encoders."
+msgstr "可写缓存，Yaffo 存储下载的 ML 模型，例如 CLIP 编码器。"
+
+#: yaffo/templates/settings/index.html:169
+msgid "Bundled Models Directory:"
+msgstr "捆绑模型目录："
+
+#: yaffo/templates/settings/index.html:171
+msgid "Read-only model directory included with a bundled app build, when available."
+msgstr "捆绑应用程序构建中包含的只读模型目录（如果可用）。"
 
 #: yaffo/templates/themes_page/index.html:6
 msgid "Themes - Yaffo"

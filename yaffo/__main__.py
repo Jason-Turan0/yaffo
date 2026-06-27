@@ -100,10 +100,15 @@ def _run_web() -> None:
     url = f"http://{HOST}:{PORT}"
     threading.Timer(1.5, lambda: webbrowser.open(url)).start()
 
+    if sys.platform != "darwin":
+        logger.info(f"serving Yaffo at {url} (no menu bar)")
+        serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
+        return
+
     try:
         import rumps  # noqa: F401  (probe: present in the bundle, absent in plain dev)
     except Exception:
-        # No menu bar (e.g. Linux / a bare dev run): serve on the main thread.
+        # No menu bar in a bare macOS dev run: serve on the main thread.
         logger.info(f"serving Yaffo at {url} (no menu bar)")
         serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
         return

@@ -1,5 +1,14 @@
-[tool.setuptools]
-packages = ["yaffo"]
+[tool.setuptools.packages.find]
+include = ["yaffo", "yaffo.*"]
+exclude = ["yaffo_ui_tests", "yaffo_ui_tests.*"]
+
+[tool.setuptools.package-data]
+yaffo = [
+    "resources/**/*",
+    "static/**/*",
+    "templates/**/*",
+    "translations/**/*",
+]
 
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
@@ -76,6 +85,9 @@ dev = [
 docs = [
     "mkdocs-material==9.6.21",
 ]
+
+[project.scripts]
+yaffo = "yaffo.launcher:main"
 
 [project.urls]
 Homepage = "https://github.com/Jason-Turan0/yaffo"

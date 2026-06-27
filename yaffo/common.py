@@ -63,7 +63,10 @@ MODEL_CACHE_DIR = Path(user_cache_dir(app_name, app_author))
 # BUNDLED_MODELS_DIR; loaders prefer them and fall back to a network download.
 if getattr(sys, "frozen", False):
     BUNDLE_ROOT = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+    RESOURCES_DIR = BUNDLE_ROOT / "resources"
 else:
     BUNDLE_ROOT = Path(__file__).resolve().parents[1]
-RESOURCES_DIR = BUNDLE_ROOT / "resources"
+    _source_resources = BUNDLE_ROOT / "resources"
+    _package_resources = Path(__file__).resolve().parent / "resources"
+    RESOURCES_DIR = _source_resources if _source_resources.exists() else _package_resources
 BUNDLED_MODELS_DIR = RESOURCES_DIR / "models"
