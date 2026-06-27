@@ -57,6 +57,24 @@ def test_ambiguous_match_is_skipped(monkeypatch, progress_reporter):
     assert progress_reporter.run_with_progress_calls == [[1]]
 
 
+def test_ambiguous_match_can_assign_highest_score(monkeypatch, progress_reporter):
+    face = SimpleNamespace(id=10)
+    linked = _patch(
+        monkeypatch,
+        faces_by_photo={1: [face]},
+        scores_by_face={10: {7: 0.96, 8: 0.98}},  # two people clear the bar -> pick best
+    )
+    assert mod._assign_faces(
+        None,
+        progress_reporter,
+        media_item_ids=[1],
+        threshold=0.95,
+        assign_multiple_matches=True,
+    ) == 1
+    assert linked == [(8, 10)]
+    assert progress_reporter.run_with_progress_calls == [[1]]
+
+
 def test_no_match_above_threshold_is_skipped(monkeypatch, progress_reporter):
     face = SimpleNamespace(id=10)
     _patch(monkeypatch, faces_by_photo={1: [face]}, scores_by_face={10: {7: 0.5}})
@@ -98,13 +116,18 @@ def test_task_scales_ui_threshold_to_cosine_against_the_band(monkeypatch, progre
             pass
 
     monkeypatch.setattr(mod, "SessionFactory", FakeFactory())
-    monkeypatch.setattr(mod, "config_value", lambda automation, field: 50)  # UI midpoint
+    monkeypatch.setattr(
+        mod,
+        "config_value",
+        lambda automation, field: 50 if field.key == "threshold" else True,
+    )  # UI midpoint + assign multiple matches enabled
     monkeypatch.setattr(mod, "get_similarity_bounds", lambda session: (0.40, 0.80))
     monkeypatch.setattr(mod, "record_run", lambda session, automation, work: work(progress_reporter))
 
-    def _capture(session, reporter, media_item_ids, threshold):
+    def _capture(session, reporter, media_item_ids, threshold, assign_multiple_matches=False):
         captured["threshold"] = threshold
         captured["reporter"] = reporter
+        captured["assign_multiple_matches"] = assign_multiple_matches
         return 0
 
     monkeypatch.setattr(mod, "_assign_faces", _capture)
@@ -116,6 +139,7 @@ def test_task_scales_ui_threshold_to_cosine_against_the_band(monkeypatch, progre
     assert captured["threshold"] == pytest.approx(0.60)
     # record_run hands work the ProgressReporter, which is threaded through to _assign_faces.
     assert captured["reporter"] is progress_reporter
+    assert captured["assign_multiple_matches"] is True
 
 
 def test_handler_enqueues_for_event_photos(monkeypatch):

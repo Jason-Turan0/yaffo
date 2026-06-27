@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-26 19:42-0500\n"
+"POT-Creation-Date: 2026-06-27 15:02-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -47,6 +47,131 @@ msgstr ""
 
 #: yaffo/themes.py:56
 msgid "Memphis"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:57
+msgid "Match threshold"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:59
+msgid ""
+"Threshold to use when comparing faces (0 = least similar, 100 = most "
+"similar) Higher is stricter: fewer, more confident assignments."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:70
+msgid "Assign when multiple people match"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:72
+msgid ""
+"When on, a face matching more than one person above the threshold is "
+"assigned to the highest-scoring match. When off, ambiguous faces are left"
+" unassigned."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:83
+msgid "Export Location Tags"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:89
+msgid "Export People Tags"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:95
+msgid "Export Labels"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:96
+msgid "Write the photo's classification labels into the file's keywords."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:102
+msgid "Export Custom Tags"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:103
+msgid ""
+"Write the photo's manual tags (name, or name: value) into the file's "
+"keywords."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:109
+msgid "Export Favorite"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:110
+msgid ""
+"Write a \"Favorite\" keyword into the file when the photo is marked a "
+"favorite."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:118
+msgid "Reuse a nearby photo's name"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:120
+msgid ""
+"Copy the location name of the closest already-named photo within the "
+"radius below. Free, offline, and keeps your own naming."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:128
+msgid "Nearby radius"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:130
+msgid ""
+"How close an already-named photo must be to copy its name. Larger values "
+"reuse names more aggressively and make fewer online lookups."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:142
+msgid "Look up name online (OpenStreetMap)"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:144
+msgid ""
+"When no nearby photo is named, reverse-geocode the coordinates via "
+"OpenStreetMap Nominatim (throttled to ~1 request/second)."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:152
+msgid "Overwrite existing location names"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:153
+msgid "When off, photos that already have a location name are left untouched."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:161
+msgid "Time window (minutes)"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:163
+msgid ""
+"A photo with no GPS borrows the coordinates of the closest-in-time GPS-"
+"tagged photo, but only if it was taken within this many minutes (so "
+"coordinates aren't copied across a long gap / a different place)."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:177
+msgid "Confidence threshold"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:179
+msgid ""
+"A photo gets a label only when the CLIP image–text similarity is at or "
+"above this confidence (0 = least similar, 100 = most similar) Higher is "
+"stricter: fewer, more confident labels."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:190
+msgid "Max labels per photo"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:191
+msgid "At most this many labels are kept per photo (the highest-scoring ones)."
 msgstr ""
 
 #: yaffo/db/models.py:355
@@ -238,12 +363,12 @@ msgid "Untitled Page"
 msgstr ""
 
 #: yaffo/routes/pages.py:242 yaffo/routes/themes_page.py:239
-#: yaffo/routes/utilities/automations.py:700
+#: yaffo/routes/utilities/automations.py:618
 msgid "Message is required."
 msgstr ""
 
 #: yaffo/routes/pages.py:246 yaffo/routes/themes_page.py:243
-#: yaffo/routes/utilities/automations.py:704
+#: yaffo/routes/utilities/automations.py:622
 #, python-format
 msgid ""
 "No API key configured. Add your %(provider)s API key in Settings → AI "
@@ -251,7 +376,7 @@ msgid ""
 msgstr ""
 
 #: yaffo/routes/pages.py:260 yaffo/routes/themes_page.py:235
-#: yaffo/routes/utilities/automations.py:697
+#: yaffo/routes/utilities/automations.py:615
 msgid "A generation is already running."
 msgstr ""
 
@@ -318,7 +443,7 @@ msgstr ""
 msgid "Claude Haiku 4.5 — fastest"
 msgstr ""
 
-#: yaffo/routes/settings.py:130 yaffo/routes/utilities/automations.py:518
+#: yaffo/routes/settings.py:130 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr ""
 
@@ -457,205 +582,90 @@ msgstr ""
 msgid "Failed"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:207
-msgid "Match threshold"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:208
-msgid "Export Location Tags"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:209
-msgid "Export People Tags"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:210
-msgid "Export Labels"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:211
-msgid "Export Custom Tags"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:212
-msgid "Export Favorite"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:213
-msgid "Reuse a nearby photo's name"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:214
-msgid "Nearby radius"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:215
-msgid "Look up name online (OpenStreetMap)"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:216
-msgid "Overwrite existing location names"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:217
-msgid "Time window (minutes)"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:218
-msgid "Confidence threshold"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:219
-msgid "Max labels per photo"
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:243
-msgid ""
-"A detected face is assigned only when exactly one person matches at or "
-"above this similarity (0 = least similar, 100 = most similar) Higher is "
-"stricter: fewer, more confident assignments."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:248
-msgid "Write the photo's classification labels into the file's keywords."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:251
-msgid ""
-"Write the photo's manual tags (name, or name: value) into the file's "
-"keywords."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:254
-msgid ""
-"Write a \"Favorite\" keyword into the file when the photo is marked a "
-"favorite."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:260
-msgid ""
-"Copy the location name of the closest already-named photo within the "
-"radius below. Free, offline, and keeps your own naming."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:267
-msgid ""
-"How close an already-named photo must be to copy its name. Larger values "
-"reuse names more aggressively and make fewer online lookups."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:274
-msgid ""
-"When no nearby photo is named, reverse-geocode the coordinates via "
-"OpenStreetMap Nominatim (throttled to ~1 request/second)."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:278
-msgid "When off, photos that already have a location name are left untouched."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:285
-msgid ""
-"A photo with no GPS borrows the coordinates of the closest-in-time GPS-"
-"tagged photo, but only if it was taken within this many minutes (so "
-"coordinates aren't copied across a long gap / a different place)."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:293
-msgid ""
-"A photo gets a label only when the CLIP image–text similarity is at or "
-"above this confidence (0 = least similar, 100 = most similar) Higher is "
-"stricter: fewer, more confident labels."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:297
-msgid "At most this many labels are kept per photo (the highest-scoring ones)."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:304
+#: yaffo/routes/utilities/automations.py:220
 msgid "Media imported"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:305
+#: yaffo/routes/utilities/automations.py:221
 msgid "Media indexed"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:306
+#: yaffo/routes/utilities/automations.py:222
 msgid "Duplicates found"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:307
+#: yaffo/routes/utilities/automations.py:223
 msgid "Media modified"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:308
+#: yaffo/routes/utilities/automations.py:224
 msgid "Media labeled"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:430
-#: yaffo/routes/utilities/automations.py:466
+#: yaffo/routes/utilities/automations.py:346
+#: yaffo/routes/utilities/automations.py:382
 msgid "Automation name is required"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:463
-#: yaffo/routes/utilities/automations.py:695
+#: yaffo/routes/utilities/automations.py:379
+#: yaffo/routes/utilities/automations.py:613
 msgid "System automations cannot be edited."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:485
+#: yaffo/routes/utilities/automations.py:401
 msgid "This automation has no configurable settings."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:499
-#: yaffo/routes/utilities/automations.py:529
+#: yaffo/routes/utilities/automations.py:417
+#: yaffo/routes/utilities/automations.py:447
 #, python-format
 msgid "%(label)s must be a number."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:507
-#: yaffo/routes/utilities/automations.py:537
+#: yaffo/routes/utilities/automations.py:425
+#: yaffo/routes/utilities/automations.py:455
 #, python-format
 msgid "%(label)s must be between %(min)s and %(max)s."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:548
+#: yaffo/routes/utilities/automations.py:466
 #, python-format
 msgid "%(label)s is required."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:566
+#: yaffo/routes/utilities/automations.py:484
 msgid "System automations cannot be deleted"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:614
+#: yaffo/routes/utilities/automations.py:532
 msgid "No indexed photos found under that path."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:622
+#: yaffo/routes/utilities/automations.py:540
 msgid "Nothing to run yet — publish the automation's code first."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:662
+#: yaffo/routes/utilities/automations.py:580
 msgid "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:672
+#: yaffo/routes/utilities/automations.py:590
 msgid "Choose an event type."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:685
+#: yaffo/routes/utilities/automations.py:603
 msgid "Unknown trigger action."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:740
+#: yaffo/routes/utilities/automations.py:658
 msgid "No code to test yet."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:744
+#: yaffo/routes/utilities/automations.py:662
 msgid "No path selected."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:755
+#: yaffo/routes/utilities/automations.py:673
 msgid "No draft to publish."
 msgstr ""
 

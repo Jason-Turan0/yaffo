@@ -12,7 +12,9 @@ Add a tunable setting = add one `ConfigField` to the handler's list.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
+
+from flask_babel import lazy_gettext
 
 from yaffo.db.models import (
     Automation,
@@ -37,10 +39,10 @@ class ConfigField:
     'bool' -> checkbox, 'distance' -> numeric input plus mi/km unit selector.
     min/max/step apply to the numeric types only."""
     key: str
-    label: str
+    label: Any
     type: str
     default: str | float | int | bool
-    help: Optional[str] = None
+    help: Optional[Any] = None
     min: Optional[float] = None
     max: Optional[float] = None
     step: Optional[float] = None
@@ -52,10 +54,9 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
     AUTOMATION_HANDLER_AUTO_ASSIGN_FACES: [
         ConfigField(
             key="threshold",
-            label="Match threshold",
-            help=(
-                "A detected face is assigned only when exactly one person matches at "
-                "or above this similarity (0 = least similar, 100 = most similar) "
+            label=lazy_gettext("Match threshold"),
+            help=lazy_gettext(
+                "Threshold to use when comparing faces (0 = least similar, 100 = most similar) "
                 "Higher is stricter: fewer, more confident assignments."
             ),
             min=0,
@@ -64,38 +65,49 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
             default=AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD,
             type='int'
         ),
+        ConfigField(
+            key="assign_multiple_matches",
+            label=lazy_gettext("Assign when multiple people match"),
+            help=lazy_gettext(
+                "When on, a face matching more than one person above the threshold "
+                "is assigned to the highest-scoring match. When off, ambiguous "
+                "faces are left unassigned."
+            ),
+            default=False,
+            type='bool',
+        ),
     ],
     AUTOMATION_HANDLER_EXPORT_PHOTO_TAG: [
         ConfigField(
             key="export_location_tag_enabled",
-            label="Export Location Tags",
+            label=lazy_gettext("Export Location Tags"),
             default=False,
             type='bool'
         ),
         ConfigField(
             key="export_people_tag_enabled",
-            label="Export People Tags",
+            label=lazy_gettext("Export People Tags"),
             default=False,
             type='bool'
         ),
         ConfigField(
             key="export_labels_enabled",
-            label="Export Labels",
-            help="Write the photo's classification labels into the file's keywords.",
+            label=lazy_gettext("Export Labels"),
+            help=lazy_gettext("Write the photo's classification labels into the file's keywords."),
             default=False,
             type='bool'
         ),
         ConfigField(
             key="export_custom_tags_enabled",
-            label="Export Custom Tags",
-            help="Write the photo's manual tags (name, or name: value) into the file's keywords.",
+            label=lazy_gettext("Export Custom Tags"),
+            help=lazy_gettext("Write the photo's manual tags (name, or name: value) into the file's keywords."),
             default=False,
             type='bool'
         ),
         ConfigField(
             key="export_favorite_enabled",
-            label="Export Favorite",
-            help="Write a \"Favorite\" keyword into the file when the photo is marked a favorite.",
+            label=lazy_gettext("Export Favorite"),
+            help=lazy_gettext("Write a \"Favorite\" keyword into the file when the photo is marked a favorite."),
             default=False,
             type='bool'
         ),
@@ -103,8 +115,8 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
     AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME: [
         ConfigField(
             key="reuse_nearby_enabled",
-            label="Reuse a nearby photo's name",
-            help=(
+            label=lazy_gettext("Reuse a nearby photo's name"),
+            help=lazy_gettext(
                 "Copy the location name of the closest already-named photo within "
                 "the radius below. Free, offline, and keeps your own naming."
             ),
@@ -113,8 +125,8 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
         ),
         ConfigField(
             key="nearby_radius",
-            label="Nearby radius",
-            help=(
+            label=lazy_gettext("Nearby radius"),
+            help=lazy_gettext(
                 "How close an already-named photo must be to copy its name. Larger "
                 "values reuse names more aggressively and make fewer online lookups."
             ),
@@ -127,8 +139,8 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
         ),
         ConfigField(
             key="reverse_geocode_enabled",
-            label="Look up name online (OpenStreetMap)",
-            help=(
+            label=lazy_gettext("Look up name online (OpenStreetMap)"),
+            help=lazy_gettext(
                 "When no nearby photo is named, reverse-geocode the coordinates via "
                 "OpenStreetMap Nominatim (throttled to ~1 request/second)."
             ),
@@ -137,8 +149,8 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
         ),
         ConfigField(
             key="overwrite_existing",
-            label="Overwrite existing location names",
-            help="When off, photos that already have a location name are left untouched.",
+            label=lazy_gettext("Overwrite existing location names"),
+            help=lazy_gettext("When off, photos that already have a location name are left untouched."),
             default=False,
             type='bool',
         ),
@@ -146,8 +158,8 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
     AUTOMATION_HANDLER_GEOTAG_FROM_NEIGHBORS: [
         ConfigField(
             key="max_minutes",
-            label="Time window (minutes)",
-            help=(
+            label=lazy_gettext("Time window (minutes)"),
+            help=lazy_gettext(
                 "A photo with no GPS borrows the coordinates of the closest-in-time "
                 "GPS-tagged photo, but only if it was taken within this many minutes "
                 "(so coordinates aren't copied across a long gap / a different place)."
@@ -162,8 +174,8 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
     AUTOMATION_HANDLER_CLASSIFY_LABELS: [
         ConfigField(
             key="confidence_threshold",
-            label="Confidence threshold",
-            help=(
+            label=lazy_gettext("Confidence threshold"),
+            help=lazy_gettext(
                 "A photo gets a label only when the CLIP image–text similarity is at or above this confidence "
                 "(0 = least similar, 100 = most similar) Higher is stricter: fewer, more confident labels."
             ),
@@ -175,8 +187,8 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
         ),
         ConfigField(
             key="max_labels",
-            label="Max labels per photo",
-            help="At most this many labels are kept per photo (the highest-scoring ones).",
+            label=lazy_gettext("Max labels per photo"),
+            help=lazy_gettext("At most this many labels are kept per photo (the highest-scoring ones)."),
             min=1,
             max=20,
             step=1,

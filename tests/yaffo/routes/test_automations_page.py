@@ -515,7 +515,22 @@ def test_config_saves_valid_threshold(app, client):
     assert resp.status_code == 302
     with app.app_context():
         a = db.session.query(Automation).filter_by(slug="auto_assign_faces").first()
-        assert a.config == {"threshold": 70}  # 0-100 UI scale, stored as int
+        assert a.config == {
+            "threshold": 70,  # 0-100 UI scale, stored as int
+            "assign_multiple_matches": False,
+        }
+
+
+def test_config_saves_assign_multiple_matches(app, client):
+    _add_system_assign_faces(app)
+    resp = client.post(
+        "/utilities/automations/auto_assign_faces/config",
+        data={"threshold": "70", "assign_multiple_matches": "on"},
+    )
+    assert resp.status_code == 302
+    with app.app_context():
+        a = db.session.query(Automation).filter_by(slug="auto_assign_faces").first()
+        assert a.config == {"threshold": 70, "assign_multiple_matches": True}
 
 
 def test_config_rejects_out_of_range(app, client):

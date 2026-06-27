@@ -2,6 +2,7 @@ import json
 from datetime import date
 
 import pytest
+from flask_babel import gettext
 
 from yaffo.db import db
 from yaffo.db.models import (
@@ -50,6 +51,24 @@ def test_settings_locale_persists_and_renders_gettext(client, app):
     assert "<h2>Sprache</h2>" in body
     assert "Anwendungssprache" in body
     assert ">Speichern</button>" in body
+
+
+def test_missing_gettext_logs_warning(app, monkeypatch):
+    warnings = []
+    monkeypatch.setattr("yaffo.i18n.logger.warning", lambda *args: warnings.append(args))
+    with app.app_context():
+        db.session.add(ApplicationSettings(name=LOCALE_SETTING, type="string", value="de"))
+        db.session.commit()
+        with app.test_request_context("/"):
+            assert gettext("Deliberately missing test translation") == "Deliberately missing test translation"
+
+    assert warnings == [
+        (
+            "Missing translation for locale=%s key=%r",
+            "de",
+            "Deliberately missing test translation",
+        )
+    ]
 
 
 def test_settings_distance_unit_persists(client, app):

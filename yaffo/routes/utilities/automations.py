@@ -202,23 +202,6 @@ def init_automations_routes(app: Flask):
     def _error(message: str, code: str, status: int):
         return jsonify(asdict(RouteError(error=message, code=code))), status
 
-    def _localized_config_label(label: str) -> str:
-        return {
-            "Match threshold": gettext("Match threshold"),
-            "Export Location Tags": gettext("Export Location Tags"),
-            "Export People Tags": gettext("Export People Tags"),
-            "Export Labels": gettext("Export Labels"),
-            "Export Custom Tags": gettext("Export Custom Tags"),
-            "Export Favorite": gettext("Export Favorite"),
-            "Reuse a nearby photo's name": gettext("Reuse a nearby photo's name"),
-            "Nearby radius": gettext("Nearby radius"),
-            "Look up name online (OpenStreetMap)": gettext("Look up name online (OpenStreetMap)"),
-            "Overwrite existing location names": gettext("Overwrite existing location names"),
-            "Time window (minutes)": gettext("Time window (minutes)"),
-            "Confidence threshold": gettext("Confidence threshold"),
-            "Max labels per photo": gettext("Max labels per photo"),
-        }.get(label, label)
-
     def _distance_config_value(automation: Automation, field) -> tuple[float, str]:
         config = automation.config or {}
         preferred_unit = get_saved_distance_unit(db.session)
@@ -230,73 +213,6 @@ def init_automations_routes(app: Flask):
         if isinstance(stored_kilometers, (int, float)):
             return round(kilometers_to_distance(float(stored_kilometers), unit), 2), unit
         return field.default, unit
-
-    def _localized_config_help(help_text: str | None) -> str | None:
-        if help_text is None:
-            return None
-        return {
-            (
-                "A detected face is assigned only when exactly one person matches at "
-                "or above this similarity (0 = least similar, 100 = most similar) "
-                "Higher is stricter: fewer, more confident assignments."
-            ): gettext(
-                "A detected face is assigned only when exactly one person matches at "
-                "or above this similarity (0 = least similar, 100 = most similar) "
-                "Higher is stricter: fewer, more confident assignments."
-            ),
-            "Write the photo's classification labels into the file's keywords.": gettext(
-                "Write the photo's classification labels into the file's keywords."
-            ),
-            "Write the photo's manual tags (name, or name: value) into the file's keywords.": gettext(
-                "Write the photo's manual tags (name, or name: value) into the file's keywords."
-            ),
-            "Write a \"Favorite\" keyword into the file when the photo is marked a favorite.": gettext(
-                "Write a \"Favorite\" keyword into the file when the photo is marked a favorite."
-            ),
-            (
-                "Copy the location name of the closest already-named photo within "
-                "the radius below. Free, offline, and keeps your own naming."
-            ): gettext(
-                "Copy the location name of the closest already-named photo within "
-                "the radius below. Free, offline, and keeps your own naming."
-            ),
-            (
-                "How close an already-named photo must be to copy its name. Larger "
-                "values reuse names more aggressively and make fewer online lookups."
-            ): gettext(
-                "How close an already-named photo must be to copy its name. Larger "
-                "values reuse names more aggressively and make fewer online lookups."
-            ),
-            (
-                "When no nearby photo is named, reverse-geocode the coordinates via "
-                "OpenStreetMap Nominatim (throttled to ~1 request/second)."
-            ): gettext(
-                "When no nearby photo is named, reverse-geocode the coordinates via "
-                "OpenStreetMap Nominatim (throttled to ~1 request/second)."
-            ),
-            "When off, photos that already have a location name are left untouched.": gettext(
-                "When off, photos that already have a location name are left untouched."
-            ),
-            (
-                "A photo with no GPS borrows the coordinates of the closest-in-time "
-                "GPS-tagged photo, but only if it was taken within this many minutes "
-                "(so coordinates aren't copied across a long gap / a different place)."
-            ): gettext(
-                "A photo with no GPS borrows the coordinates of the closest-in-time "
-                "GPS-tagged photo, but only if it was taken within this many minutes "
-                "(so coordinates aren't copied across a long gap / a different place)."
-            ),
-            (
-                "A photo gets a label only when the CLIP image–text similarity is at or above this confidence "
-                "(0 = least similar, 100 = most similar) Higher is stricter: fewer, more confident labels."
-            ): gettext(
-                "A photo gets a label only when the CLIP image–text similarity is at or above this confidence "
-                "(0 = least similar, 100 = most similar) Higher is stricter: fewer, more confident labels."
-            ),
-            "At most this many labels are kept per photo (the highest-scoring ones).": gettext(
-                "At most this many labels are kept per photo (the highest-scoring ones)."
-            ),
-        }.get(help_text, help_text)
 
     def _localized_event_labels() -> dict[str, str]:
         return {
@@ -317,8 +233,8 @@ def init_automations_routes(app: Flask):
         fields = []
         for f in config_fields_for(automation):
             field = {
-                "key": f.key, "label": _localized_config_label(f.label),
-                "help": _localized_config_help(f.help),
+                "key": f.key, "label": str(f.label),
+                "help": str(f.help) if f.help is not None else None,
                 "min": f.min, "max": f.max, "step": f.step, "type": f.type,
                 "required": f.required,
                 "value": config_value(automation, f)
@@ -498,7 +414,7 @@ def init_automations_routes(app: Flask):
                     value = float(raw)
                 except ValueError:
                     return _error(
-                        gettext("%(label)s must be a number.", label=_localized_config_label(field.label)),
+                        gettext("%(label)s must be a number.", label=str(field.label)),
                         "config_value_not_numeric",
                         400,
                     )
@@ -507,7 +423,7 @@ def init_automations_routes(app: Flask):
                     return _error(
                         gettext(
                             "%(label)s must be between %(min)s and %(max)s.",
-                            label=_localized_config_label(field.label),
+                            label=str(field.label),
                             min=field.min,
                             max=field.max,
                         ),
@@ -528,7 +444,7 @@ def init_automations_routes(app: Flask):
                     value = float(raw) if field.type == "float" else int(raw)
                 except ValueError:
                     return _error(
-                        gettext("%(label)s must be a number.", label=_localized_config_label(field.label)),
+                        gettext("%(label)s must be a number.", label=str(field.label)),
                         "config_value_not_numeric",
                         400,
                     )
@@ -537,7 +453,7 @@ def init_automations_routes(app: Flask):
                     return _error(
                         gettext(
                             "%(label)s must be between %(min)s and %(max)s.",
-                            label=_localized_config_label(field.label),
+                            label=str(field.label),
                             min=field.min,
                             max=field.max,
                         ),
@@ -547,7 +463,7 @@ def init_automations_routes(app: Flask):
             elif field.type == "string":
                 if field.required and not raw:
                     return _error(
-                        gettext("%(label)s is required.", label=_localized_config_label(field.label)),
+                        gettext("%(label)s is required.", label=str(field.label)),
                         "config_value_required",
                         400,
                     )

@@ -186,6 +186,26 @@ def app_local(c, host="127.0.0.1", port=5002, debug=True, workers=4, recycle=100
 
 
 @task
+def docs(c, host="127.0.0.1", port=8000):
+    """
+    Serve the MkDocs documentation site locally with live reload.
+
+    Install docs dependencies first with `pip install -e ".[docs]"`.
+
+    Args:
+        host: Host to bind to (default: 127.0.0.1)
+        port: Port to bind to (default: 8000)
+
+    Example:
+        inv docs
+        inv docs --port=8001
+    """
+    address = f"{host}:{port}"
+    print(f"Serving docs at http://{address}")
+    c.run(f"mkdocs serve -a {address}", pty=True)
+
+
+@task
 def test(c, verbose=False, coverage=False, path="tests", k=None, failed=False, markers=None):
     """
     Run tests using pytest.
@@ -303,6 +323,49 @@ def i18n_translate(c, locale, dry_run=False, keys_only=False, overwrite=False, b
     if overwrite:
         options.append("--overwrite")
     c.run(f"python -m scripts.i18n_catalogs translate {' '.join(options)}", env=_data_env(), pty=True)
+
+
+def _translation_locales():
+    return [
+        path.name
+        for path in sorted(Path("yaffo/translations").iterdir())
+        if path.is_dir() and path.name != "en"
+    ]
+
+
+@task
+def i18n_translate_all(c, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="auto"):
+    """Extract, update, translate all configured locales, then compile catalogs."""
+    c.run("pybabel extract -F babel.cfg -o messages.pot .", pty=True)
+    c.run("pybabel update -i messages.pot -d yaffo/translations", pty=True)
+    for locale_path in sorted(Path("yaffo/static/locales").glob("*.json")):
+        if locale_path.stem == "en" or locale_path.stem.endswith(".review"):
+            continue
+        c.run(
+            f"python -m scripts.i18n_catalogs sync --locale {locale_path.stem}",
+            pty=True,
+        )
+
+    for locale in _translation_locales():
+        options = [
+            f"--locale {shlex.quote(locale)}",
+            f"--batch-size {int(batch_size)}",
+            f"--engine {shlex.quote(engine)}",
+        ]
+        if dry_run:
+            options.append("--dry-run")
+        if keys_only:
+            options.append("--keys-only")
+        if overwrite:
+            options.append("--overwrite")
+        c.run(
+            f"python -m scripts.i18n_catalogs translate {' '.join(options)}",
+            env=_data_env(),
+            pty=True,
+        )
+
+    c.run("python -m scripts.i18n_catalogs check", pty=True)
+    c.run("pybabel compile -d yaffo/translations", pty=True)
 
 
 @task
