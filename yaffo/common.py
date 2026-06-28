@@ -54,7 +54,7 @@ QUEUE_DB_PATH = ROOT_DIR / f"{APP_NAME}-queue.db"
 # App-managed binary/model assets live under ROOT_DIR and are checked/downloaded
 # on app start.
 MODEL_CACHE_DIR = ROOT_DIR / "models"
-EXIFTOOL_DIR = ROOT_DIR / "Image-ExifTool-13.40"
+EXIFTOOL_DIR = ROOT_DIR / "Image-ExifTool"
 FFMPEG_DIR = ROOT_DIR / "ffmpeg"
 
 # Read-only UI resources shipped with the source tree and bundled into the app.

@@ -3,7 +3,7 @@
 Assets are stored under ``ROOT_DIR`` so packaged and source installs use the same
 runtime paths:
 
-- ``ROOT_DIR/Image-ExifTool-13.40``
+- ``ROOT_DIR/Image-ExifTool-<latest>``
 - ``ROOT_DIR/models``
 - ``ROOT_DIR/ffmpeg``
 """
@@ -12,6 +12,7 @@ from __future__ import annotations
 import io
 import os
 import platform
+import re
 import shutil
 import sys
 import tarfile
@@ -19,21 +20,15 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-from yaffo.common import EXIFTOOL_DIR, FFMPEG_DIR, MODEL_CACHE_DIR
+from yaffo.common import FFMPEG_DIR, MODEL_CACHE_DIR, ROOT_DIR
 from yaffo.logging_config import get_logger
+from yaffo.utils.exiftool_path import EXIFTOOL_DIR_PREFIX, get_exiftool_path
 
 logger = get_logger(__name__, "webapp")
 
-EXIFTOOL_VERSION = "13.40"
-EXIFTOOL_SRC_DIR = EXIFTOOL_DIR / "src"
-EXIFTOOL_SOURCE_URLS = [
-    f"https://sourceforge.net/projects/exiftool/files/Image-ExifTool-{EXIFTOOL_VERSION}.tar.gz/download",
-    f"https://github.com/exiftool/exiftool/archive/refs/tags/{EXIFTOOL_VERSION}.tar.gz",
-]
-EXIFTOOL_WINDOWS_URLS = {
-    "32": f"https://sourceforge.net/projects/exiftool/files/exiftool-{EXIFTOOL_VERSION}_32.zip/download",
-    "64": f"https://sourceforge.net/projects/exiftool/files/exiftool-{EXIFTOOL_VERSION}_64.zip/download",
-}
+
+SOURCEFORGE_EXIFTOOL_FILES_URL = "https://sourceforge.net/projects/exiftool/files/"
+EXIFTOOL_FALLBACK_VERSION = "13.59"
 
 INSIGHTFACE_DIR = MODEL_CACHE_DIR / "insightface" / "models" / "buffalo_l"
 INSIGHTFACE_URL = "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip"
@@ -61,15 +56,63 @@ def _fetch(url: str) -> bytes:
         return resp.read()
 
 
-def _fetch_first(urls: list[str]) -> bytes:
-    last: Exception | None = None
-    for url in urls:
-        try:
-            return _fetch(url)
-        except Exception as e:  # noqa: BLE001 - try the next mirror
-            last = e
-            logger.warning("asset source failed for %s: %s", url, e)
-    raise RuntimeError(f"all sources failed for {urls}") from last
+def _fetch_text(url: str) -> str:
+    return _fetch(url).decode("utf-8", errors="replace")
+
+
+def _version_key(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
+
+
+def _installed_exiftool_version() -> str | None:
+    path = get_exiftool_path()
+    if path is None:
+        return None
+    for parent in (path, *path.parents):
+        if parent.name.startswith(EXIFTOOL_DIR_PREFIX):
+            return parent.name.removeprefix(EXIFTOOL_DIR_PREFIX)
+    return None
+
+
+def _latest_exiftool_version(pattern: str) -> str:
+    try:
+        html = _fetch_text(SOURCEFORGE_EXIFTOOL_FILES_URL)
+    except Exception as e:  # noqa: BLE001 - use the current known version when offline
+        installed_version = _installed_exiftool_version()
+        if installed_version is not None:
+            logger.warning(
+                "could not check latest ExifTool version; keeping installed %s: %s",
+                installed_version,
+                e,
+            )
+            return installed_version
+        logger.warning(
+            "could not check latest ExifTool version; falling back to %s: %s",
+            EXIFTOOL_FALLBACK_VERSION,
+            e,
+        )
+        return EXIFTOOL_FALLBACK_VERSION
+
+    versions = sorted(set(re.findall(pattern, html)), key=_version_key, reverse=True)
+    if not versions:
+        raise RuntimeError("SourceForge ExifTool listing did not contain a matching package")
+    return versions[0]
+
+
+def _exiftool_source_url(version: str) -> str:
+    return f"https://sourceforge.net/projects/exiftool/files/Image-ExifTool-{version}.tar.gz/download"
+
+
+def _exiftool_windows_url(version: str, bits: str) -> str:
+    return f"https://sourceforge.net/projects/exiftool/files/exiftool-{version}_{bits}.zip/download"
+
+
+def _exiftool_dir(version: str) -> Path:
+    return ROOT_DIR / f"{EXIFTOOL_DIR_PREFIX}{version}"
+
+
+def _exiftool_src_dir(version: str) -> Path:
+    return _exiftool_dir(version) / "src"
 
 
 def _rm(path: Path) -> None:
@@ -82,11 +125,13 @@ def _rm(path: Path) -> None:
         path.unlink()
 
 
-def _prune_exiftool() -> None:
-    for child in EXIFTOOL_DIR.iterdir():
-        if child != EXIFTOOL_SRC_DIR:
+def _prune_exiftool_source(version: str) -> None:
+    exiftool_dir = _exiftool_dir(version)
+    src_dir = _exiftool_src_dir(version)
+    for child in exiftool_dir.iterdir():
+        if child != src_dir:
             _rm(child)
-    for child in EXIFTOOL_SRC_DIR.iterdir():
+    for child in src_dir.iterdir():
         if child.name not in ("exiftool", "lib"):
             _rm(child)
 
@@ -95,27 +140,29 @@ def _exiftool_windows_bits() -> str:
     return "64" if platform.machine().endswith("64") else "32"
 
 
-def _exiftool_windows_dir() -> Path:
-    return EXIFTOOL_DIR / "bin" / f"exiftool-{EXIFTOOL_VERSION}_{_exiftool_windows_bits()}"
+def _exiftool_windows_dir(version: str) -> Path:
+    return _exiftool_dir(version) / "bin" / f"exiftool-{version}_{_exiftool_windows_bits()}"
 
 
 def _download_exiftool_windows() -> None:
-    target_dir = _exiftool_windows_dir()
+    bits = _exiftool_windows_bits()
+    version = _latest_exiftool_version(rf"exiftool-(\d+\.\d+)_{bits}\.zip")
+    target_dir = _exiftool_windows_dir(version)
     target = target_dir / "exiftool.exe"
     if target.exists():
-        logger.info("exiftool already present")
+        logger.info("exiftool %s already present", version)
         return
 
-    bits = _exiftool_windows_bits()
-    logger.info("downloading exiftool windows %s-bit package", bits)
-    blob = _fetch(EXIFTOOL_WINDOWS_URLS[bits])
-    tmp = EXIFTOOL_DIR / "_exiftool_windows_tmp"
+    logger.info("downloading exiftool %s windows %s-bit package", version, bits)
+    blob = _fetch(_exiftool_windows_url(version, bits))
+    exiftool_dir = _exiftool_dir(version)
+    tmp = exiftool_dir / "_exiftool_windows_tmp"
     if tmp.exists():
         shutil.rmtree(tmp)
     if target_dir.exists():
         shutil.rmtree(target_dir)
 
-    EXIFTOOL_DIR.mkdir(parents=True, exist_ok=True)
+    exiftool_dir.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(io.BytesIO(blob)) as zf:
         zf.extractall(tmp)
 
@@ -141,29 +188,32 @@ def _download_exiftool_windows() -> None:
 
 
 def _download_exiftool_source() -> None:
-    if (EXIFTOOL_SRC_DIR / "exiftool").exists():
-        logger.info("exiftool already present")
-        _prune_exiftool()
+    version = _latest_exiftool_version(r"Image-ExifTool-(\d+\.\d+)\.tar\.gz")
+    src_dir = _exiftool_src_dir(version)
+    if (src_dir / "exiftool").exists():
+        logger.info("exiftool %s already present", version)
+        _prune_exiftool_source(version)
         return
 
-    logger.info("downloading exiftool")
-    blob = _fetch_first(EXIFTOOL_SOURCE_URLS)
-    tmp = EXIFTOOL_DIR / "_exiftool_tmp"
+    logger.info("downloading exiftool %s", version)
+    blob = _fetch(_exiftool_source_url(version))
+    exiftool_dir = _exiftool_dir(version)
+    tmp = exiftool_dir / "_exiftool_tmp"
     if tmp.exists():
         shutil.rmtree(tmp)
 
     with tarfile.open(fileobj=io.BytesIO(blob), mode="r:gz") as tar:
         root = tar.getmembers()[0].name.split("/")[0]
-        EXIFTOOL_DIR.mkdir(parents=True, exist_ok=True)
+        exiftool_dir.mkdir(parents=True, exist_ok=True)
         tar.extractall(tmp)
 
-    if EXIFTOOL_SRC_DIR.exists():
-        shutil.rmtree(EXIFTOOL_SRC_DIR)
-    (tmp / root).rename(EXIFTOOL_SRC_DIR)
+    if src_dir.exists():
+        shutil.rmtree(src_dir)
+    (tmp / root).rename(src_dir)
     shutil.rmtree(tmp, ignore_errors=True)
-    (EXIFTOOL_SRC_DIR / "exiftool").chmod(0o755)
-    _prune_exiftool()
-    logger.info("exiftool installed at %s", EXIFTOOL_SRC_DIR)
+    (src_dir / "exiftool").chmod(0o755)
+    _prune_exiftool_source(version)
+    logger.info("exiftool installed at %s", src_dir)
 
 
 def download_exiftool() -> None:

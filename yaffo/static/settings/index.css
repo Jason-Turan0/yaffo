@@ -59,6 +59,24 @@
     gap: 20px;
 }
 
+.asset-download-warning {
+    justify-content: flex-start;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.asset-download-warning-icon {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+}
+
+.asset-download-warning-icon::before {
+    width: 18px;
+    height: 18px;
+    background: currentColor;
+}
+
 .system-path-item {
     padding: 15px;
     background: var(--color-bg);

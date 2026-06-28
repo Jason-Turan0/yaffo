@@ -158,6 +158,16 @@ def init_settings_routes(app: Flask):
         # by the streaming endpoint below, so the page no longer blocks on counting them.
         exiftool_path = get_exiftool_path()
         ffmpeg_path = get_ffmpeg_path()
+        classification_model = _model_template_info(get_classification_model_location())
+        face_model = _model_template_info(get_face_model_location())
+        asset_download_failed = not all(
+            (
+                exiftool_path,
+                ffmpeg_path,
+                classification_model["path"],
+                face_model["path"],
+            )
+        )
         library_update_in_progress = _library_update_in_progress()
 
         return render_template(
@@ -169,8 +179,9 @@ def init_settings_routes(app: Flask):
             queue_db_path=str(QUEUE_DB_PATH),
             exiftool_path=str(exiftool_path) if exiftool_path else None,
             ffmpeg_path=str(ffmpeg_path) if ffmpeg_path else None,
-            classification_model=_model_template_info(get_classification_model_location()),
-            face_model=_model_template_info(get_face_model_location()),
+            classification_model=classification_model,
+            face_model=face_model,
+            asset_download_failed=asset_download_failed,
             build_info=get_build_info(),
             llm=llm_status,
             labels=classification_repository.list_labels(db.session),

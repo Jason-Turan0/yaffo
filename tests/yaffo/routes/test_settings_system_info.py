@@ -34,6 +34,7 @@ def test_settings_system_info_shows_exiftool_and_model_paths(client, monkeypatch
     assert "Face Recognition Model:" in body
     assert str(face_model) in body
     assert "Downloaded model cache used for face recognition." in body
+    assert "An application component failed to download." not in body
 
 
 def test_settings_system_info_shows_exiftool_missing(client, monkeypatch):
@@ -44,7 +45,10 @@ def test_settings_system_info_shows_exiftool_missing(client, monkeypatch):
 
     assert "ExifTool Path:" in body
     assert "FFmpeg Path:" in body
-    assert "not found" in body
+    assert "Not found" in body
+    assert "An application component failed to download." in body
+    assert "Double check network settings and restart the application." in body
+    assert 'data-icon="warning"' in body
 
 
 def test_settings_system_info_shows_pending_model_downloads(client, monkeypatch):
@@ -59,4 +63,6 @@ def test_settings_system_info_shows_pending_model_downloads(client, monkeypatch)
 
     body = client.get("/settings").get_data(as_text=True)
 
+    assert "Not found" in body
     assert "Will be downloaded on app start." in body
+    assert "An application component failed to download." in body

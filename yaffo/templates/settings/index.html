@@ -138,6 +138,13 @@
         <h2>{{ _("System Information") }}</h2>
         <p class="section-description">{{ _("Build details and configured paths (read-only).") }}</p>
 
+        {% if asset_download_failed %}
+            <div class="asset-download-warning alert alert-warning" role="alert">
+                <span class="asset-download-warning-icon" data-icon="warning" aria-hidden="true"></span>
+                <span class="alert-message">{{ _("An application component failed to download. Double check network settings and restart the application.") }}</span>
+            </div>
+        {% endif %}
+
         <div class="system-paths">
             <div class="system-path-item">
                 <label>{{ _("Build Version:") }}</label>
@@ -165,19 +172,19 @@
 
             <div class="system-path-item">
                 <label>{{ _("ExifTool Path:") }}</label>
-                <code>{{ exiftool_path or _("not found") }}</code>
+                <code>{{ exiftool_path or _("Not found") }}</code>
                 <p class="path-description">{{ _("ExifTool executable used for reading and writing media metadata.") }}</p>
             </div>
 
             <div class="system-path-item">
                 <label>{{ _("FFmpeg Path:") }}</label>
-                <code>{{ ffmpeg_path or _("not found") }}</code>
+                <code>{{ ffmpeg_path or _("Not found") }}</code>
                 <p class="path-description">{{ _("FFmpeg executable used for video poster frames and frame sampling.") }}</p>
             </div>
 
             <div class="system-path-item">
                 <label>{{ _("Image Classification Model:") }}</label>
-                <code>{{ classification_model.path }}</code>
+                <code>{{ classification_model.path or _("Not found") }}</code>
                 {% if classification_model.source == "downloaded" %}
                     <p class="path-description">{{ _("Downloaded model cache used for image classification.") }}</p>
                 {% else %}
@@ -187,7 +194,7 @@
 
             <div class="system-path-item">
                 <label>{{ _("Face Recognition Model:") }}</label>
-                <code>{{ face_model.path }}</code>
+                <code>{{ face_model.path or _("Not found") }}</code>
                 {% if face_model.source == "downloaded" %}
                     <p class="path-description">{{ _("Downloaded model cache used for face recognition.") }}</p>
                 {% else %}
