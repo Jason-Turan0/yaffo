@@ -174,10 +174,10 @@ jobs:
           name: python-dist
           path: release-dist/
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: macos-dmg
-          path: release-dist/
+#      - uses: actions/download-artifact@v4
+#        with:
+#          name: macos-dmg
+#          path: release-dist/
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
