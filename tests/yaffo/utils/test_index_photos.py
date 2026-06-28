@@ -1,6 +1,7 @@
 import tempfile
 import shutil
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock, patch, MagicMock
 import pytest
 import numpy as np
@@ -45,6 +46,30 @@ class TestDeviceFromExif:
 
     def test_empty_values_ignored(self):
         assert device_from_exif({"EXIF:Make": "", "EXIF:Model": ""}) is None
+
+
+def test_index_photo_continues_when_face_detection_fails(monkeypatch, tmp_path):
+    photo_path = tmp_path / "photo.jpg"
+    photo_path.write_bytes(b"fake")
+
+    monkeypatch.setattr("yaffo.utils.index_photos.get_exif_data_with_exiftool", lambda path: None)
+    monkeypatch.setattr("yaffo.utils.index_photos.image_from_path", lambda path: object())
+    monkeypatch.setattr("yaffo.utils.index_photos.image_to_numpy", lambda image: np.zeros((10, 10, 3), dtype=np.uint8))
+    monkeypatch.setattr("yaffo.utils.index_photos.get_gps_coordinates", lambda image: (None, None, None))
+    monkeypatch.setattr(
+        "yaffo.utils.index_photos.get_photo_date_info",
+        lambda path, exif_data: SimpleNamespace(date=None, year=2024, month=6),
+    )
+    monkeypatch.setattr(
+        "yaffo.utils.index_photos.detect_faces",
+        lambda image: (_ for _ in ()).throw(RuntimeError("model missing")),
+    )
+
+    result = index_photo(photo_path, tmp_path / "thumbs")
+
+    assert result is not None
+    assert result["faces_data"] == []
+    assert result["year"] == 2024
 
 
 @pytest.fixture

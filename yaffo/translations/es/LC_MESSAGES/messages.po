@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-28 01:56-0500\n"
+"POT-Creation-Date: 2026-06-28 02:29-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -461,63 +461,63 @@ msgstr "Claude Soneto 4.6 - equilibrado"
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "Claude Haiku 4.5: el más rápido"
 
-#: yaffo/routes/settings.py:190 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:201 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr "Unidad de distancia no compatible"
 
-#: yaffo/routes/settings.py:226
+#: yaffo/routes/settings.py:237
 msgid "Label name is required."
 msgstr "El nombre de la etiqueta es obligatorio."
 
-#: yaffo/routes/settings.py:229
+#: yaffo/routes/settings.py:240
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr "La etiqueta '%(name)s' ya existe."
 
-#: yaffo/routes/settings.py:245
+#: yaffo/routes/settings.py:256
 msgid "Classify-labels automation is not installed."
 msgstr "La automatización de clasificación de etiquetas no está instalada."
 
-#: yaffo/routes/settings.py:251
+#: yaffo/routes/settings.py:262
 msgid "No indexed photos to classify yet."
 msgstr "Aún no hay fotos indexadas para clasificar."
 
-#: yaffo/routes/settings.py:257
+#: yaffo/routes/settings.py:268
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] "Reclasificando la foto %(count)s de fondo…"
 msgstr[1] "Reclasificando fotos %(count)s en segundo plano…"
 
-#: yaffo/routes/settings.py:276
+#: yaffo/routes/settings.py:287
 msgid "AI model updated."
 msgstr "Modelo de IA actualizado."
 
-#: yaffo/routes/settings.py:308 yaffo/routes/settings.py:409
+#: yaffo/routes/settings.py:319 yaffo/routes/settings.py:420
 msgid "Directory path is required"
 msgstr "Se requiere la ruta del directorio"
 
-#: yaffo/routes/settings.py:316
+#: yaffo/routes/settings.py:327
 msgid "Could not create the directory"
 msgstr "No se pudo crear el directorio"
 
-#: yaffo/routes/settings.py:322
+#: yaffo/routes/settings.py:333
 msgid "Directory is already configured"
 msgstr "El directorio ya está configurado"
 
-#: yaffo/routes/settings.py:339
+#: yaffo/routes/settings.py:350
 msgid "Media directory not found"
 msgstr "Directorio de medios no encontrado"
 
-#: yaffo/routes/settings.py:388
+#: yaffo/routes/settings.py:399
 msgid "Could not count thumbnail files"
 msgstr "No se pudieron contar los archivos en miniatura"
 
-#: yaffo/routes/settings.py:426
+#: yaffo/routes/settings.py:437
 msgid "The new directory is the same as the current directory"
 msgstr "El nuevo directorio es el mismo que el directorio actual."
 
-#: yaffo/routes/settings.py:491
+#: yaffo/routes/settings.py:502
 msgid "Could not move thumbnail files"
 msgstr "No se pudieron mover archivos en miniatura"
 
@@ -2086,81 +2086,90 @@ msgstr "Información del sistema"
 msgid "Build details and configured paths (read-only)."
 msgstr "Detalles de compilación y rutas configuradas (solo lectura)."
 
-#: yaffo/templates/settings/index.html:143
+#: yaffo/templates/settings/index.html:144
+msgid ""
+"An application component failed to download. Double check network settings and restart the "
+"application."
+msgstr ""
+"No se pudo descargar un componente de la aplicación. Verifique la configuración de red y reinicie"
+" la aplicación."
+
+#: yaffo/templates/settings/index.html:150
 msgid "Build Version:"
 msgstr "Versión de compilación:"
 
-#: yaffo/templates/settings/index.html:145
+#: yaffo/templates/settings/index.html:152
 msgid "The version of Yaffo currently running."
 msgstr "La versión de Yaffo que se está ejecutando actualmente."
 
-#: yaffo/templates/settings/index.html:149
+#: yaffo/templates/settings/index.html:156
 msgid "Build Timestamp:"
 msgstr "Marca de tiempo de compilación:"
 
-#: yaffo/templates/settings/index.html:150
+#: yaffo/templates/settings/index.html:157
 msgid "development build"
 msgstr "construcción de desarrollo"
 
-#: yaffo/templates/settings/index.html:151
+#: yaffo/templates/settings/index.html:158
 msgid "When this build was produced."
 msgstr "Cuando se produjo esta compilación."
 
-#: yaffo/templates/settings/index.html:155
+#: yaffo/templates/settings/index.html:162
 msgid "Database Path:"
 msgstr "Ruta de la base de datos:"
 
-#: yaffo/templates/settings/index.html:157
+#: yaffo/templates/settings/index.html:164
 msgid "Location of the SQLite database containing photo metadata, faces, and people information."
 msgstr ""
 "Ubicación de la base de datos SQLite que contiene metadatos de fotografías, rostros e información"
 " de personas."
 
-#: yaffo/templates/settings/index.html:161
+#: yaffo/templates/settings/index.html:168
 msgid "Task Queue Database Path:"
 msgstr "Ruta de la base de datos de la cola de tareas:"
 
-#: yaffo/templates/settings/index.html:163
+#: yaffo/templates/settings/index.html:170
 msgid "Database used by the background task queue to process jobs."
 msgstr "Base de datos utilizada por la cola de tareas en segundo plano para procesar trabajos."
 
-#: yaffo/templates/settings/index.html:167
+#: yaffo/templates/settings/index.html:174
 msgid "ExifTool Path:"
 msgstr "Ruta de la herramienta Exif:"
 
-#: yaffo/templates/settings/index.html:168 yaffo/templates/settings/index.html:174
-msgid "not found"
-msgstr "extraviado"
+#: yaffo/templates/settings/index.html:175 yaffo/templates/settings/index.html:181
+#: yaffo/templates/settings/index.html:187 yaffo/templates/settings/index.html:197
+msgid "Not found"
+msgstr "Extraviado"
 
-#: yaffo/templates/settings/index.html:169
+#: yaffo/templates/settings/index.html:176
 msgid "ExifTool executable used for reading and writing media metadata."
 msgstr "Ejecutable ExifTool utilizado para leer y escribir metadatos multimedia."
 
-#: yaffo/templates/settings/index.html:173
+#: yaffo/templates/settings/index.html:180
 msgid "FFmpeg Path:"
 msgstr "Ruta de FFmpeg:"
 
-#: yaffo/templates/settings/index.html:175
+#: yaffo/templates/settings/index.html:182
 msgid "FFmpeg executable used for video poster frames and frame sampling."
 msgstr "Ejecutable FFmpeg utilizado para fotogramas de póster de video y muestreo de fotogramas."
 
-#: yaffo/templates/settings/index.html:179
+#: yaffo/templates/settings/index.html:186
 msgid "Image Classification Model:"
 msgstr "Modelo de clasificación de imágenes:"
 
-#: yaffo/templates/settings/index.html:182
+#: yaffo/templates/settings/index.html:189
 msgid "Downloaded model cache used for image classification."
 msgstr "Caché de modelo descargado utilizado para la clasificación de imágenes."
 
-#: yaffo/templates/settings/index.html:184 yaffo/templates/settings/index.html:194
+#: yaffo/templates/settings/index.html:191 yaffo/templates/settings/index.html:201
 msgid "Will be downloaded on app start."
 msgstr "Se descargará al iniciar la aplicación."
 
-#: yaffo/templates/settings/index.html:189
+#: yaffo/templates/settings/index.html:196
 msgid "Face Recognition Model:"
 msgstr "Modelo de reconocimiento facial:"
 
-#: yaffo/templates/settings/index.html:192
+#: yaffo/templates/settings/index.html:199
 msgid "Downloaded model cache used for face recognition."
 msgstr "Caché de modelo descargado utilizado para el reconocimiento facial."
 

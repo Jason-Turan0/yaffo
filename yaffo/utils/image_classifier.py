@@ -29,7 +29,6 @@ _IMAGE_SIZE = 224
 _MEAN = np.array([0.48145466, 0.4578275, 0.40821073], dtype=np.float32)
 _STD = np.array([0.26862954, 0.26130258, 0.27577711], dtype=np.float32)
 
-_HF_BASE = "https://huggingface.co/immich-app/ViT-B-32__openai/resolve/main"
 _FILES = {"visual": "visual/model.onnx", "textual": "textual/model.onnx"}
 
 _visual = None
@@ -66,30 +65,18 @@ def _model_dir() -> Path:
 
 def get_model_location() -> ModelLocation:
     downloaded = Path(MODEL_CACHE_DIR) / "clip" / MODEL_NAME
-    if any((downloaded / model_file).is_file() for model_file in _FILES.values()):
+    if all((downloaded / model_file).is_file() for model_file in _FILES.values()):
         return ModelLocation(path=downloaded, source="downloaded")
 
     return ModelLocation(path=None, source="pending")
 
 
 def ensure_model(kind: str) -> Path:
-    """Path to the `kind` encoder, downloading it to the cache on first use."""
+    """Path to the `kind` encoder. Assets are downloaded on app start, not in jobs."""
     path = _model_dir() / _FILES[kind]
     if path.is_file():
         return path
-    import requests
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    url = f"{_HF_BASE}/{_FILES[kind]}"
-    logger.info(f"downloading CLIP {kind} encoder -> {path}")
-    tmp = path.with_suffix(".onnx.part")
-    with requests.get(url, stream=True, timeout=120) as resp:
-        resp.raise_for_status()
-        with open(tmp, "wb") as fh:
-            for chunk in resp.iter_content(chunk_size=1 << 20):
-                fh.write(chunk)
-    tmp.rename(path)
-    return path
+    raise FileNotFoundError(f"CLIP {kind} encoder is not installed: {path}")
 
 
 def _session(kind: str):

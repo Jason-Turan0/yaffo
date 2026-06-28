@@ -130,6 +130,20 @@ def test_no_enabled_labels_is_noop(monkeypatch, progress_reporter):
     assert progress_reporter.run_with_progress_calls == []
 
 
+def test_missing_clip_model_is_noop(monkeypatch, progress_reporter):
+    written = _patch(
+        monkeypatch,
+        labels=[(1, "dog")],
+        label_vectors=[[1.0, 0.0]],
+        image_vectors={"/photos/2.jpg": [1.0, 0.0]},
+    )
+    monkeypatch.setattr(mod, "embed_texts", lambda prompts: (_ for _ in ()).throw(FileNotFoundError("clip missing")))
+
+    assert mod._classify_media_items(_session(), progress_reporter, media_item_ids=[2], threshold=0.5, max_labels=5) == []
+    assert written == {}
+    assert progress_reporter.run_with_progress_calls == []
+
+
 def test_unreadable_image_is_skipped(monkeypatch, progress_reporter):
     written = _patch(
         monkeypatch,

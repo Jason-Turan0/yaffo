@@ -55,7 +55,11 @@ def _classify_media_items(session: Session, progress_reporter: ProgressReporter,
     labels = classification_repository.get_enabled_labels(session)
     if not labels:
         return []
-    label_embeddings = embed_texts([label.effective_prompt for label in labels])
+    try:
+        label_embeddings = embed_texts([label.effective_prompt for label in labels])
+    except Exception as e:  # noqa: BLE001 - missing/broken CLIP should make this run a no-op
+        logger.warning("classify_labels: CLIP unavailable; skipping classification: %s", e)
+        return []
     targets = media_repository.get_label_inputs_by_ids(session, media_item_ids)
 
     def _video_label_sims(path: str, duration):

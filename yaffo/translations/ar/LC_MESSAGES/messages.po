@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-28 01:56-0500\n"
+"POT-Creation-Date: 2026-06-28 02:29-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ar\n"
@@ -461,28 +461,28 @@ msgstr "كلود سونيت 4.6 – متوازن"
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "كلود هايكو 4.5 – الأسرع"
 
-#: yaffo/routes/settings.py:190 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:201 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr "وحدة مسافة غير مدعومة"
 
-#: yaffo/routes/settings.py:226
+#: yaffo/routes/settings.py:237
 msgid "Label name is required."
 msgstr "اسم التصنيف مطلوب."
 
-#: yaffo/routes/settings.py:229
+#: yaffo/routes/settings.py:240
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr "ملصق '%(name)s\"موجود بالفعل."
 
-#: yaffo/routes/settings.py:245
+#: yaffo/routes/settings.py:256
 msgid "Classify-labels automation is not installed."
 msgstr "لم يتم تثبيت أتمتة التصنيفات."
 
-#: yaffo/routes/settings.py:251
+#: yaffo/routes/settings.py:262
 msgid "No indexed photos to classify yet."
 msgstr "لا توجد صور مفهرسة لتصنيفها حتى الآن."
 
-#: yaffo/routes/settings.py:257
+#: yaffo/routes/settings.py:268
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
@@ -493,35 +493,35 @@ msgstr[3] "إعادة التصنيف %(count)s الصور في الخلفية…
 msgstr[4] "إعادة التصنيف %(count)s الصور في الخلفية…"
 msgstr[5] "إعادة التصنيف %(count)s الصور في الخلفية…"
 
-#: yaffo/routes/settings.py:276
+#: yaffo/routes/settings.py:287
 msgid "AI model updated."
 msgstr "تم تحديث نموذج الذكاء الاصطناعي."
 
-#: yaffo/routes/settings.py:308 yaffo/routes/settings.py:409
+#: yaffo/routes/settings.py:319 yaffo/routes/settings.py:420
 msgid "Directory path is required"
 msgstr "مسار الدليل مطلوب"
 
-#: yaffo/routes/settings.py:316
+#: yaffo/routes/settings.py:327
 msgid "Could not create the directory"
 msgstr "لا يمكن إنشاء الدليل"
 
-#: yaffo/routes/settings.py:322
+#: yaffo/routes/settings.py:333
 msgid "Directory is already configured"
 msgstr "تم تكوين الدليل بالفعل"
 
-#: yaffo/routes/settings.py:339
+#: yaffo/routes/settings.py:350
 msgid "Media directory not found"
 msgstr "لم يتم العثور على دليل الوسائط"
 
-#: yaffo/routes/settings.py:388
+#: yaffo/routes/settings.py:399
 msgid "Could not count thumbnail files"
 msgstr "لا يمكن حساب الملفات المصغرة"
 
-#: yaffo/routes/settings.py:426
+#: yaffo/routes/settings.py:437
 msgid "The new directory is the same as the current directory"
 msgstr "الدليل الجديد هو نفس الدليل الحالي"
 
-#: yaffo/routes/settings.py:491
+#: yaffo/routes/settings.py:502
 msgid "Could not move thumbnail files"
 msgstr "لا يمكن نقل الملفات المصغرة"
 
@@ -2120,79 +2120,86 @@ msgstr "معلومات النظام"
 msgid "Build details and configured paths (read-only)."
 msgstr "تفاصيل البناء والمسارات التي تم تكوينها (للقراءة فقط)."
 
-#: yaffo/templates/settings/index.html:143
+#: yaffo/templates/settings/index.html:144
+msgid ""
+"An application component failed to download. Double check network settings and restart the "
+"application."
+msgstr "فشل تنزيل أحد مكونات التطبيق. تحقق مرة أخرى من إعدادات الشبكة وأعد تشغيل التطبيق."
+
+#: yaffo/templates/settings/index.html:150
 msgid "Build Version:"
 msgstr "نسخة البناء:"
 
-#: yaffo/templates/settings/index.html:145
+#: yaffo/templates/settings/index.html:152
 msgid "The version of Yaffo currently running."
 msgstr "نسخة يافو قيد التشغيل حاليا."
 
-#: yaffo/templates/settings/index.html:149
+#: yaffo/templates/settings/index.html:156
 msgid "Build Timestamp:"
 msgstr "بناء الطابع الزمني:"
 
-#: yaffo/templates/settings/index.html:150
+#: yaffo/templates/settings/index.html:157
 msgid "development build"
 msgstr "بناء التنمية"
 
-#: yaffo/templates/settings/index.html:151
+#: yaffo/templates/settings/index.html:158
 msgid "When this build was produced."
 msgstr "عندما تم إنتاج هذا البناء."
 
-#: yaffo/templates/settings/index.html:155
+#: yaffo/templates/settings/index.html:162
 msgid "Database Path:"
 msgstr "مسار قاعدة البيانات:"
 
-#: yaffo/templates/settings/index.html:157
+#: yaffo/templates/settings/index.html:164
 msgid "Location of the SQLite database containing photo metadata, faces, and people information."
 msgstr "موقع قاعدة بيانات SQLite التي تحتوي على البيانات الوصفية للصور والوجوه ومعلومات الأشخاص."
 
-#: yaffo/templates/settings/index.html:161
+#: yaffo/templates/settings/index.html:168
 msgid "Task Queue Database Path:"
 msgstr "مسار قاعدة بيانات قائمة انتظار المهام:"
 
-#: yaffo/templates/settings/index.html:163
+#: yaffo/templates/settings/index.html:170
 msgid "Database used by the background task queue to process jobs."
 msgstr "قاعدة البيانات المستخدمة بواسطة قائمة انتظار المهام في الخلفية لمعالجة المهام."
 
-#: yaffo/templates/settings/index.html:167
+#: yaffo/templates/settings/index.html:174
 msgid "ExifTool Path:"
 msgstr "مسار ExifTool:"
 
-#: yaffo/templates/settings/index.html:168 yaffo/templates/settings/index.html:174
-msgid "not found"
+#: yaffo/templates/settings/index.html:175 yaffo/templates/settings/index.html:181
+#: yaffo/templates/settings/index.html:187 yaffo/templates/settings/index.html:197
+msgid "Not found"
 msgstr "لم يتم العثور عليه"
 
-#: yaffo/templates/settings/index.html:169
+#: yaffo/templates/settings/index.html:176
 msgid "ExifTool executable used for reading and writing media metadata."
 msgstr "ExifTool قابل للتنفيذ يستخدم لقراءة وكتابة البيانات التعريفية للوسائط."
 
-#: yaffo/templates/settings/index.html:173
+#: yaffo/templates/settings/index.html:180
 msgid "FFmpeg Path:"
 msgstr "مسار FFmpeg:"
 
-#: yaffo/templates/settings/index.html:175
+#: yaffo/templates/settings/index.html:182
 msgid "FFmpeg executable used for video poster frames and frame sampling."
 msgstr "ملف FFmpeg التنفيذي المستخدم لإطارات ملصقات الفيديو وأخذ عينات الإطارات."
 
-#: yaffo/templates/settings/index.html:179
+#: yaffo/templates/settings/index.html:186
 msgid "Image Classification Model:"
 msgstr "نموذج تصنيف الصور:"
 
-#: yaffo/templates/settings/index.html:182
+#: yaffo/templates/settings/index.html:189
 msgid "Downloaded model cache used for image classification."
 msgstr "تم تنزيل ذاكرة التخزين المؤقت للنموذج المستخدمة لتصنيف الصور."
 
-#: yaffo/templates/settings/index.html:184 yaffo/templates/settings/index.html:194
+#: yaffo/templates/settings/index.html:191 yaffo/templates/settings/index.html:201
 msgid "Will be downloaded on app start."
 msgstr "سيتم تنزيله عند بدء التطبيق."
 
-#: yaffo/templates/settings/index.html:189
+#: yaffo/templates/settings/index.html:196
 msgid "Face Recognition Model:"
 msgstr "نموذج التعرف على الوجه:"
 
-#: yaffo/templates/settings/index.html:192
+#: yaffo/templates/settings/index.html:199
 msgid "Downloaded model cache used for face recognition."
 msgstr "تم تنزيل ذاكرة التخزين المؤقت للنموذج المستخدمة للتعرف على الوجوه."
 

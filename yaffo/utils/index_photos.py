@@ -330,7 +330,11 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
 
         image = image_tag if image_tag is not None else image_from_path(photo_path)
         image_numpy = image_to_numpy(image)
-        detected_faces = detect_faces(image_numpy)
+        try:
+            detected_faces = detect_faces(image_numpy)
+        except Exception as e:  # noqa: BLE001 - index metadata even if face detection fails
+            logger.warning("Face detection failed for %s; indexing without faces: %s", photo_path, e)
+            detected_faces = []
 
         faces_data = []
         for i, face in enumerate(detected_faces):

@@ -25,10 +25,12 @@ from yaffo.logging_config import get_logger
 logger = get_logger(__name__, "background_tasks")
 
 MODEL_NAME = "buffalo_l"
+REQUIRED_MODEL_FILES = {"det_10g.onnx", "w600k_r50.onnx", "genderage.onnx"}
 DET_SIZE = (640, 640)
 EMBEDDING_DIM = 512
 
 _app = None
+_load_failed = False
 
 
 @dataclass(frozen=True)
@@ -44,7 +46,7 @@ def _model_root() -> str:
 
 def get_model_location() -> ModelLocation:
     downloaded = MODEL_CACHE_DIR / "insightface" / "models" / MODEL_NAME
-    if any(downloaded.glob("*.onnx")):
+    if all((downloaded / model_file).is_file() for model_file in REQUIRED_MODEL_FILES):
         return ModelLocation(path=downloaded, source="downloaded")
 
     return ModelLocation(path=None, source="pending")
@@ -58,6 +60,8 @@ def download_model():
 
 def get_app():
     global _app
+    if get_model_location().path is None:
+        raise FileNotFoundError(f"InsightFace model package is not installed: {MODEL_NAME}")
     if _app is None:
         from insightface.app import FaceAnalysis
         logger.info(f"loading InsightFace model '{MODEL_NAME}' (CPU)")
@@ -93,7 +97,15 @@ class DetectedFace:
 def detect_faces(image_rgb: np.ndarray) -> list[DetectedFace]:
     """Detect faces in an RGB image and return their boxes + ArcFace embeddings.
     Boxes are clamped to the image bounds."""
-    app = get_app()
+    global _load_failed
+    if _load_failed:
+        return []
+    try:
+        app = get_app()
+    except Exception as e:  # noqa: BLE001 - missing/broken model should not fail indexing
+        _load_failed = True
+        logger.warning("InsightFace unavailable; skipping face detection: %s", e)
+        return []
     h, w = image_rgb.shape[:2]
     bgr = np.ascontiguousarray(image_rgb[:, :, ::-1])  # InsightFace expects BGR
     out: list[DetectedFace] = []

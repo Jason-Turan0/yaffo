@@ -195,7 +195,12 @@ def detect_video_faces(video_path: Path, thumbnail_dir: Path, duration_seconds: 
     with tempfile.TemporaryDirectory(prefix="yaffo_frames_") as tmp:
         for frame_path in extract_sample_frames(video_path, Path(tmp), duration_seconds):
             image_numpy = image_to_numpy(image_from_path(frame_path))
-            for face in detect_faces(image_numpy):
+            try:
+                detected_faces = detect_faces(image_numpy)
+            except Exception as e:  # noqa: BLE001 - index the video even if face detection fails
+                logger.warning("video face detection failed for %s; skipping faces: %s", video_path, e)
+                return []
+            for face in detected_faces:
                 if _face_min_side(face) < _FACE_MIN_SIZE_PX:
                     continue
                 quality = _face_quality(image_numpy, face)

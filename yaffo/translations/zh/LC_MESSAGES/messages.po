@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-28 01:56-0500\n"
+"POT-Creation-Date: 2026-06-28 02:29-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: zh\n"
@@ -424,62 +424,62 @@ msgstr "克劳德十四行诗 4.6 — 平衡"
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "克劳德俳句 4.5 — 最快"
 
-#: yaffo/routes/settings.py:190 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:201 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr "不支持的距离单位"
 
-#: yaffo/routes/settings.py:226
+#: yaffo/routes/settings.py:237
 msgid "Label name is required."
 msgstr "标签名称为必填项。"
 
-#: yaffo/routes/settings.py:229
+#: yaffo/routes/settings.py:240
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr "标签 '%(name)s' 已经存在。"
 
-#: yaffo/routes/settings.py:245
+#: yaffo/routes/settings.py:256
 msgid "Classify-labels automation is not installed."
 msgstr "未安装分类标签自动化。"
 
-#: yaffo/routes/settings.py:251
+#: yaffo/routes/settings.py:262
 msgid "No indexed photos to classify yet."
 msgstr "尚无可分类的索引照片。"
 
-#: yaffo/routes/settings.py:257
+#: yaffo/routes/settings.py:268
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] "重新分类 %(count)s 照片在背景中…"
 
-#: yaffo/routes/settings.py:276
+#: yaffo/routes/settings.py:287
 msgid "AI model updated."
 msgstr "AI模型更新。"
 
-#: yaffo/routes/settings.py:308 yaffo/routes/settings.py:409
+#: yaffo/routes/settings.py:319 yaffo/routes/settings.py:420
 msgid "Directory path is required"
 msgstr "目录路径为必填项"
 
-#: yaffo/routes/settings.py:316
+#: yaffo/routes/settings.py:327
 msgid "Could not create the directory"
 msgstr "无法创建目录"
 
-#: yaffo/routes/settings.py:322
+#: yaffo/routes/settings.py:333
 msgid "Directory is already configured"
 msgstr "目录已配置"
 
-#: yaffo/routes/settings.py:339
+#: yaffo/routes/settings.py:350
 msgid "Media directory not found"
 msgstr "找不到媒体目录"
 
-#: yaffo/routes/settings.py:388
+#: yaffo/routes/settings.py:399
 msgid "Could not count thumbnail files"
 msgstr "无法计算缩略图文件数"
 
-#: yaffo/routes/settings.py:426
+#: yaffo/routes/settings.py:437
 msgid "The new directory is the same as the current directory"
 msgstr "新目录与当前目录相同"
 
-#: yaffo/routes/settings.py:491
+#: yaffo/routes/settings.py:502
 msgid "Could not move thumbnail files"
 msgstr "无法移动缩略图文件"
 
@@ -1996,79 +1996,86 @@ msgstr "系统信息"
 msgid "Build details and configured paths (read-only)."
 msgstr "构建详细信息和配置的路径（只读）。"
 
-#: yaffo/templates/settings/index.html:143
+#: yaffo/templates/settings/index.html:144
+msgid ""
+"An application component failed to download. Double check network settings and restart the "
+"application."
+msgstr "应用程序组件下载失败。仔细检查网络设置并重新启动应用程序。"
+
+#: yaffo/templates/settings/index.html:150
 msgid "Build Version:"
 msgstr "构建版本："
 
-#: yaffo/templates/settings/index.html:145
+#: yaffo/templates/settings/index.html:152
 msgid "The version of Yaffo currently running."
 msgstr "当前运行的 Yaffo 版本。"
 
-#: yaffo/templates/settings/index.html:149
+#: yaffo/templates/settings/index.html:156
 msgid "Build Timestamp:"
 msgstr "构建时间戳："
 
-#: yaffo/templates/settings/index.html:150
+#: yaffo/templates/settings/index.html:157
 msgid "development build"
 msgstr "开发构建"
 
-#: yaffo/templates/settings/index.html:151
+#: yaffo/templates/settings/index.html:158
 msgid "When this build was produced."
 msgstr "当这个版本产生时。"
 
-#: yaffo/templates/settings/index.html:155
+#: yaffo/templates/settings/index.html:162
 msgid "Database Path:"
 msgstr "数据库路径："
 
-#: yaffo/templates/settings/index.html:157
+#: yaffo/templates/settings/index.html:164
 msgid "Location of the SQLite database containing photo metadata, faces, and people information."
 msgstr "包含照片元数据、面孔和人物信息的 SQLite 数据库的位置。"
 
-#: yaffo/templates/settings/index.html:161
+#: yaffo/templates/settings/index.html:168
 msgid "Task Queue Database Path:"
 msgstr "任务队列数据库路径："
 
-#: yaffo/templates/settings/index.html:163
+#: yaffo/templates/settings/index.html:170
 msgid "Database used by the background task queue to process jobs."
 msgstr "后台任务队列用来处理作业的数据库。"
 
-#: yaffo/templates/settings/index.html:167
+#: yaffo/templates/settings/index.html:174
 msgid "ExifTool Path:"
 msgstr "Exif工具路径："
 
-#: yaffo/templates/settings/index.html:168 yaffo/templates/settings/index.html:174
-msgid "not found"
+#: yaffo/templates/settings/index.html:175 yaffo/templates/settings/index.html:181
+#: yaffo/templates/settings/index.html:187 yaffo/templates/settings/index.html:197
+msgid "Not found"
 msgstr "未找到"
 
-#: yaffo/templates/settings/index.html:169
+#: yaffo/templates/settings/index.html:176
 msgid "ExifTool executable used for reading and writing media metadata."
 msgstr "ExifTool 可执行文件用于读取和写入媒体元数据。"
 
-#: yaffo/templates/settings/index.html:173
+#: yaffo/templates/settings/index.html:180
 msgid "FFmpeg Path:"
 msgstr "FFmpeg 路径："
 
-#: yaffo/templates/settings/index.html:175
+#: yaffo/templates/settings/index.html:182
 msgid "FFmpeg executable used for video poster frames and frame sampling."
 msgstr "用于视频海报帧和帧采样的 FFmpeg 可执行文件。"
 
-#: yaffo/templates/settings/index.html:179
+#: yaffo/templates/settings/index.html:186
 msgid "Image Classification Model:"
 msgstr "图像分类模型："
 
-#: yaffo/templates/settings/index.html:182
+#: yaffo/templates/settings/index.html:189
 msgid "Downloaded model cache used for image classification."
 msgstr "下载的模型缓存用于图像分类。"
 
-#: yaffo/templates/settings/index.html:184 yaffo/templates/settings/index.html:194
+#: yaffo/templates/settings/index.html:191 yaffo/templates/settings/index.html:201
 msgid "Will be downloaded on app start."
 msgstr "将在应用程序启动时下载。"
 
-#: yaffo/templates/settings/index.html:189
+#: yaffo/templates/settings/index.html:196
 msgid "Face Recognition Model:"
 msgstr "人脸识别模型："
 
-#: yaffo/templates/settings/index.html:192
+#: yaffo/templates/settings/index.html:199
 msgid "Downloaded model cache used for face recognition."
 msgstr "下载的模型缓存用于人脸识别。"
 
