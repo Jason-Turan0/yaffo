@@ -165,7 +165,6 @@ jobs:
     needs:
       - release-context
       - build-python
-      - build-macos-dmg
     runs-on: ubuntu-latest
     permissions:
       contents: write
