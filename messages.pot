@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-28 02:29-0500\n"
+"POT-Creation-Date: 2026-06-28 09:51-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -363,12 +363,12 @@ msgid "Untitled Page"
 msgstr ""
 
 #: yaffo/routes/pages.py:242 yaffo/routes/themes_page.py:239
-#: yaffo/routes/utilities/automations.py:618
+#: yaffo/routes/utilities/automations.py:635
 msgid "Message is required."
 msgstr ""
 
 #: yaffo/routes/pages.py:246 yaffo/routes/themes_page.py:243
-#: yaffo/routes/utilities/automations.py:622
+#: yaffo/routes/utilities/automations.py:639
 #, python-format
 msgid ""
 "No API key configured. Add your %(provider)s API key in Settings → AI "
@@ -376,7 +376,7 @@ msgid ""
 msgstr ""
 
 #: yaffo/routes/pages.py:260 yaffo/routes/themes_page.py:235
-#: yaffo/routes/utilities/automations.py:615
+#: yaffo/routes/utilities/automations.py:632
 msgid "A generation is already running."
 msgstr ""
 
@@ -450,7 +450,7 @@ msgstr ""
 msgid "Claude Haiku 4.5 — fastest"
 msgstr ""
 
-#: yaffo/routes/settings.py:201 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:201 yaffo/routes/utilities/automations.py:453
 msgid "Unsupported distance unit"
 msgstr ""
 
@@ -609,70 +609,70 @@ msgstr ""
 msgid "Media labeled"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:346
-#: yaffo/routes/utilities/automations.py:382
+#: yaffo/routes/utilities/automations.py:340
+#: yaffo/routes/utilities/automations.py:399
 msgid "Automation name is required"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:379
-#: yaffo/routes/utilities/automations.py:613
+#: yaffo/routes/utilities/automations.py:396
+#: yaffo/routes/utilities/automations.py:630
 msgid "System automations cannot be edited."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:401
+#: yaffo/routes/utilities/automations.py:418
 msgid "This automation has no configurable settings."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:417
-#: yaffo/routes/utilities/automations.py:447
+#: yaffo/routes/utilities/automations.py:434
+#: yaffo/routes/utilities/automations.py:464
 #, python-format
 msgid "%(label)s must be a number."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:425
-#: yaffo/routes/utilities/automations.py:455
+#: yaffo/routes/utilities/automations.py:442
+#: yaffo/routes/utilities/automations.py:472
 #, python-format
 msgid "%(label)s must be between %(min)s and %(max)s."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:466
+#: yaffo/routes/utilities/automations.py:483
 #, python-format
 msgid "%(label)s is required."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:484
+#: yaffo/routes/utilities/automations.py:501
 msgid "System automations cannot be deleted"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:532
+#: yaffo/routes/utilities/automations.py:549
 msgid "No indexed photos found under that path."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:540
+#: yaffo/routes/utilities/automations.py:557
 msgid "Nothing to run yet — publish the automation's code first."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:580
+#: yaffo/routes/utilities/automations.py:597
 msgid "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:590
+#: yaffo/routes/utilities/automations.py:607
 msgid "Choose an event type."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:603
+#: yaffo/routes/utilities/automations.py:620
 msgid "Unknown trigger action."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:658
+#: yaffo/routes/utilities/automations.py:675
 msgid "No code to test yet."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:662
+#: yaffo/routes/utilities/automations.py:679
 msgid "No path selected."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:673
+#: yaffo/routes/utilities/automations.py:690
 msgid "No draft to publish."
 msgstr ""
 
@@ -948,7 +948,7 @@ msgstr ""
 #: yaffo/templates/themes_page/index.html:115
 #: yaffo/templates/themes_page/index.html:127
 #: yaffo/templates/utilities/_base.html:11
-#: yaffo/templates/utilities/automations.html:9
+#: yaffo/templates/utilities/automations.html:8
 msgid "Name"
 msgstr ""
 
@@ -999,8 +999,8 @@ msgstr ""
 #: yaffo/templates/settings/index.html:29
 #: yaffo/templates/settings/index.html:47
 #: yaffo/templates/themes_page/index.html:134
-#: yaffo/templates/utilities/automations.html:184
-#: yaffo/templates/utilities/automations.html:189
+#: yaffo/templates/utilities/automations.html:120
+#: yaffo/templates/utilities/automations.html:125
 msgid "Save"
 msgstr ""
 
@@ -1506,7 +1506,7 @@ msgstr ""
 #: yaffo/templates/fragments/job_status_fragment.html:28
 #: yaffo/templates/people/list.html:65
 #: yaffo/templates/themes_page/index.html:66
-#: yaffo/templates/utilities/automations.html:95
+#: yaffo/templates/utilities/automations.html:98
 #: yaffo/templates/utilities/automations_triggers.html:37
 #: yaffo/templates/utilities/remove_duplicates_form.html:49
 msgid "Delete"
@@ -1820,6 +1820,8 @@ msgid "Unnamed"
 msgstr ""
 
 #: yaffo/templates/people/list.html:61
+#: yaffo/templates/utilities/automations.html:86
+#: yaffo/templates/utilities/automations_edit.html:15
 #: yaffo/templates/utilities/automations_triggers.html:28
 msgid "Edit"
 msgstr ""
@@ -2221,12 +2223,12 @@ msgid "Save draft"
 msgstr ""
 
 #: yaffo/templates/themes_page/index.html:90
-#: yaffo/templates/utilities/automations.html:165
+#: yaffo/templates/utilities/automations_edit.html:67
 msgid "Discard"
 msgstr ""
 
 #: yaffo/templates/themes_page/index.html:97
-#: yaffo/templates/utilities/automations.html:117
+#: yaffo/templates/utilities/automations_edit.html:23
 msgid "Conversation"
 msgstr ""
 
@@ -2315,122 +2317,125 @@ msgstr ""
 msgid "New Automation"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:13
+#: yaffo/templates/utilities/automations.html:12
 msgid "Description"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:15
+#: yaffo/templates/utilities/automations.html:14
 msgid "What does this automation do?"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:60
+#: yaffo/templates/utilities/automations.html:59
+#: yaffo/templates/utilities/automations_edit.html:5
 msgid "Automations - Yaffo"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:70
+#: yaffo/templates/utilities/automations.html:69
 msgid "No automation selected"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:71
+#: yaffo/templates/utilities/automations.html:70
 msgid "Pick one from the sidebar, or create one with “New automation”."
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:78
+#: yaffo/templates/utilities/automations.html:77
 #: yaffo/templates/utilities/automations_triggers.html:33
 msgid "Disable"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:78
+#: yaffo/templates/utilities/automations.html:77
 #: yaffo/templates/utilities/automations_triggers.html:33
 msgid "Enable"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:81
+#: yaffo/templates/utilities/automations.html:80
 msgid "Run…"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:83
+#: yaffo/templates/utilities/automations.html:82
 msgid "Run now"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:86
+#: yaffo/templates/utilities/automations.html:89
 msgid "Edit triggers"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:88
+#: yaffo/templates/utilities/automations.html:91
 msgid "Configure"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:92
+#: yaffo/templates/utilities/automations.html:95
 msgid "Edit details"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:102
+#: yaffo/templates/utilities/automations.html:105
 msgid ""
 "A built-in automation that ships with Yaffo. System automations cannot be"
 " edited or deleted."
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:104
+#: yaffo/templates/utilities/automations.html:107
 msgid "No description yet — use “Edit details” to add one."
 msgstr ""
 
 #: yaffo/templates/utilities/automations.html:118
-msgid "Describe what this automation should do and the assistant will write it."
-msgstr ""
-
-#: yaffo/templates/utilities/automations.html:119
-msgid "Describe what this automation should do…"
-msgstr ""
-
-#: yaffo/templates/utilities/automations.html:121
-msgid "System automations are built-in and have no conversation."
+msgid "Edit automation"
 msgstr ""
 
 #: yaffo/templates/utilities/automations.html:123
+msgid "Configure automation"
+msgstr ""
+
+#: yaffo/templates/utilities/automations_edit.html:13
+#: yaffo/templates/utilities/automations_triggers_edit.html:13
+msgid "Back to automation"
+msgstr ""
+
+#: yaffo/templates/utilities/automations_edit.html:16
+#: yaffo/templates/utilities/automations_edit.html:24
+msgid "Describe what this automation should do and the assistant will write it."
+msgstr ""
+
+#: yaffo/templates/utilities/automations_edit.html:25
+msgid "Describe what this automation should do…"
+msgstr ""
+
+#: yaffo/templates/utilities/automations_edit.html:27
 msgid ""
 "No conversation yet — describe what you want and the assistant will build"
 " it."
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:130
+#: yaffo/templates/utilities/automations_edit.html:34
 msgid "Code"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:134
+#: yaffo/templates/utilities/automations_edit.html:36
 msgid "Code version"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:135
+#: yaffo/templates/utilities/automations_edit.html:37
 msgid "Working code"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:136
+#: yaffo/templates/utilities/automations_edit.html:38
 msgid "Active code"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:146
+#: yaffo/templates/utilities/automations_edit.html:48
 msgid "No active code yet — this draft hasn’t been published."
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:151
+#: yaffo/templates/utilities/automations_edit.html:53
 msgid "No published code yet."
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:157
+#: yaffo/templates/utilities/automations_edit.html:59
 msgid "Test…"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:161
+#: yaffo/templates/utilities/automations_edit.html:63
 msgid "Publish draft"
-msgstr ""
-
-#: yaffo/templates/utilities/automations.html:182
-msgid "Edit automation"
-msgstr ""
-
-#: yaffo/templates/utilities/automations.html:187
-msgid "Configure automation"
 msgstr ""
 
 #: yaffo/templates/utilities/automations_runs.html:9
@@ -2490,10 +2495,6 @@ msgstr ""
 #: yaffo/templates/utilities/automations_triggers_edit.html:4
 #, python-format
 msgid "Triggers · %(name)s - Yaffo"
-msgstr ""
-
-#: yaffo/templates/utilities/automations_triggers_edit.html:13
-msgid "Back to automation"
 msgstr ""
 
 #: yaffo/templates/utilities/automations_triggers_edit.html:15

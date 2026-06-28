@@ -14,7 +14,21 @@ import sys
 from yaffo.__main__ import HOST, PORT
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    args = sys.argv[1:] if argv is None else argv
+    if args:
+        if args[0] == "install-shortcut":
+            from yaffo.shortcuts import install_shortcut
+
+            result = install_shortcut()
+            print(f"Installed Yaffo {result.kind}: {result.path}")
+            return
+        if args[0] in ("-h", "--help"):
+            print("Usage: yaffo [install-shortcut]")
+            return
+        print(f"Unknown command: {args[0]}", file=sys.stderr)
+        raise SystemExit(2)
+
     env = {**os.environ, "YAFFO_LAUNCHED_FROM_CONSOLE": "1"}
     kwargs: dict[str, object] = {
         "env": env,

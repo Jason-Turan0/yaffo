@@ -71,6 +71,20 @@ python -m pip install yaffo
 yaffo
 ```
 
+For end users, prefer `pipx install yaffo` so Yaffo lives in an isolated
+environment while the `yaffo` command is exposed globally. After install, users
+can create a clickable launcher:
+
+```shell
+yaffo install-shortcut
+```
+
+That writes a per-user OS launcher: a macOS `.app` wrapper on the Desktop, a
+Windows `.lnk` on the Desktop, or a Linux `~/.local/share/applications/yaffo.desktop`
+entry. Shortcuts call the installed interpreter with `-m yaffo.launcher` so they do
+not depend on an interactive shell's `PATH`. `[project.gui-scripts]` also exposes
+`yaffo-gui`, primarily to avoid a console window on Windows.
+
 Foreground/debug fallback if the console script is unavailable:
 
 ```shell

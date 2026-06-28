@@ -19,6 +19,7 @@ PYINSTALLER="pyinstaller"
 APP="dist/Yaffo Photo Organizer.app"
 
 echo "==> Staging attribution file into resources/"
+
 cp THIRD_PARTY_LICENSES.txt resources/THIRD_PARTY_LICENSES.txt
 
 # Name the DMG after the just-bumped version.

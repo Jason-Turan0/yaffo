@@ -73,6 +73,26 @@ inv app-local
 
 The app will be available at http://127.0.0.1:5000
 
+### Installed App Launcher
+
+For an installed PyPI/pipx copy, use the app launcher instead of the Flask
+development server:
+
+```bash
+pipx install yaffo
+yaffo
+```
+
+To add a per-user desktop/app shortcut:
+
+```bash
+yaffo install-shortcut
+```
+
+The shortcut launches the installed Python entry point directly, so it does not
+depend on your shell `PATH`. A `yaffo-gui` entry point is also installed for
+platforms that distinguish console and GUI launchers.
+
 ## Project Structure
 
 ```

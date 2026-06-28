@@ -89,6 +89,9 @@ docs = [
 [project.scripts]
 yaffo = "yaffo.launcher:main"
 
+[project.gui-scripts]
+yaffo-gui = "yaffo.launcher:main"
+
 [project.urls]
 Homepage = "https://github.com/Jason-Turan0/yaffo"
 Documentation = "https://jason-turan0.github.io/yaffo/"
