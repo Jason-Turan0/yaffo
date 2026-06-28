@@ -19,12 +19,27 @@ class ShortcutResult:
     kind: str
 
 
+@dataclass(frozen=True)
+class ShortcutRemovalResult:
+    path: Path
+    kind: str
+    removed: bool
+
+
 def install_shortcut() -> ShortcutResult:
     if sys.platform == "darwin":
         return _install_macos_app()
     if sys.platform == "win32":
         return _install_windows_shortcut()
     return _install_linux_desktop_file()
+
+
+def uninstall_shortcut() -> ShortcutRemovalResult:
+    if sys.platform == "darwin":
+        return _remove_path(_desktop_dir() / "Yaffo.app", "macOS app")
+    if sys.platform == "win32":
+        return _remove_path(_desktop_dir() / "Yaffo.lnk", "Windows shortcut")
+    return _remove_path(Path.home() / ".local" / "share" / "applications" / "yaffo.desktop", "desktop entry")
 
 
 def _launcher_command() -> list[str]:
@@ -41,6 +56,16 @@ def _desktop_dir() -> Path:
 def _write_executable(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+
+def _remove_path(path: Path, kind: str) -> ShortcutRemovalResult:
+    if path.is_dir():
+        shutil.rmtree(path)
+        return ShortcutRemovalResult(path=path, kind=kind, removed=True)
+    if path.exists():
+        path.unlink()
+        return ShortcutRemovalResult(path=path, kind=kind, removed=True)
+    return ShortcutRemovalResult(path=path, kind=kind, removed=False)
 
 
 def _install_macos_app() -> ShortcutResult:

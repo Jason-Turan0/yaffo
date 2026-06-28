@@ -75,3 +75,27 @@ def test_install_shortcut_dispatches_by_platform(monkeypatch):
     result = shortcuts.install_shortcut()
 
     assert result.path == Path("/tmp/yaffo.desktop")
+
+
+def test_uninstall_shortcut_removes_linux_desktop_file(monkeypatch, tmp_path):
+    monkeypatch.setattr(shortcuts.sys, "platform", "linux")
+    monkeypatch.setattr(shortcuts.Path, "home", lambda: tmp_path)
+    shortcut = tmp_path / ".local" / "share" / "applications" / "yaffo.desktop"
+    shortcut.parent.mkdir(parents=True)
+    shortcut.write_text("launcher")
+
+    result = shortcuts.uninstall_shortcut()
+
+    assert result.removed is True
+    assert result.path == shortcut
+    assert not shortcut.exists()
+
+
+def test_uninstall_shortcut_reports_missing(monkeypatch, tmp_path):
+    monkeypatch.setattr(shortcuts.sys, "platform", "darwin")
+    monkeypatch.setattr(shortcuts.Path, "home", lambda: tmp_path)
+
+    result = shortcuts.uninstall_shortcut()
+
+    assert result.removed is False
+    assert result.path == tmp_path / "Desktop" / "Yaffo.app"

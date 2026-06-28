@@ -80,10 +80,13 @@ development server:
 
 ```bash
 pipx install yaffo
-yaffo
+yaffo setup
 ```
 
-To add a per-user desktop/app shortcut:
+`yaffo setup` can install a per-user desktop/app shortcut, runs database
+migrations, downloads runtime assets up front, and asks whether to launch the app.
+Runtime startup still checks migrations and assets, so `yaffo` remains safe to run
+directly.
 
 ```bash
 yaffo install-shortcut
@@ -92,6 +95,16 @@ yaffo install-shortcut
 The shortcut launches the installed Python entry point directly, so it does not
 depend on your shell `PATH`. A `yaffo-gui` entry point is also installed for
 platforms that distinguish console and GUI launchers.
+
+Before uninstalling the package, clean up app-managed files:
+
+```bash
+yaffo uninstall
+pipx uninstall yaffo
+```
+
+The uninstall command removes the shortcut, downloaded assets, and logs, then asks
+before deleting Yaffo user data such as the SQLite databases and config.
 
 ## Project Structure
 

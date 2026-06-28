@@ -73,17 +73,28 @@ yaffo
 
 For end users, prefer `pipx install yaffo` so Yaffo lives in an isolated
 environment while the `yaffo` command is exposed globally. After install, users
-can create a clickable launcher:
+should run setup:
 
 ```shell
-yaffo install-shortcut
+yaffo setup
 ```
 
-That writes a per-user OS launcher: a macOS `.app` wrapper on the Desktop, a
-Windows `.lnk` on the Desktop, or a Linux `~/.local/share/applications/yaffo.desktop`
-entry. Shortcuts call the installed interpreter with `-m yaffo.launcher` so they do
-not depend on an interactive shell's `PATH`. `[project.gui-scripts]` also exposes
-`yaffo-gui`, primarily to avoid a console window on Windows.
+Setup can write a per-user OS launcher, runs database migrations, downloads
+runtime assets synchronously, and asks whether to launch the app. Runtime startup
+still runs migrations and checks assets, so direct `yaffo` launches remain
+self-healing. Shortcuts call the installed interpreter with `-m yaffo.launcher` so
+they do not depend on an interactive shell's `PATH`. `[project.gui-scripts]` also
+exposes `yaffo-gui`, primarily to avoid a console window on Windows.
+
+To remove app-managed files before removing the pipx environment:
+
+```shell
+yaffo uninstall
+pipx uninstall yaffo
+```
+
+Uninstall removes the shortcut, downloaded assets, and logs, then asks before
+removing Yaffo user data such as databases and config.
 
 Foreground/debug fallback if the console script is unavailable:
 

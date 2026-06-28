@@ -11,24 +11,15 @@ import os
 import subprocess
 import sys
 
-from yaffo.__main__ import HOST, PORT
+from yaffo.config import get_int as get_config_int
+from yaffo.setup import run_setup, run_uninstall
+from yaffo.shortcuts import install_shortcut
+
+HOST = "127.0.0.1"
+PORT = get_config_int("web", "port", 5001)
 
 
-def main(argv: list[str] | None = None) -> None:
-    args = sys.argv[1:] if argv is None else argv
-    if args:
-        if args[0] == "install-shortcut":
-            from yaffo.shortcuts import install_shortcut
-
-            result = install_shortcut()
-            print(f"Installed Yaffo {result.kind}: {result.path}")
-            return
-        if args[0] in ("-h", "--help"):
-            print("Usage: yaffo [install-shortcut]")
-            return
-        print(f"Unknown command: {args[0]}", file=sys.stderr)
-        raise SystemExit(2)
-
+def start_app_detached() -> None:
     env = {**os.environ, "YAFFO_LAUNCHED_FROM_CONSOLE": "1"}
     kwargs: dict[str, object] = {
         "env": env,
@@ -43,6 +34,28 @@ def main(argv: list[str] | None = None) -> None:
 
     subprocess.Popen([sys.executable, "-m", "yaffo"], **kwargs)
     print(f"Yaffo is starting at http://{HOST}:{PORT}")
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = sys.argv[1:] if argv is None else argv
+    if args:
+        if args[0] == "setup":
+            run_setup(launch_fn=start_app_detached)
+            return
+        if args[0] == "uninstall":
+            run_uninstall()
+            return
+        if args[0] == "install-shortcut":
+            result = install_shortcut()
+            print(f"Installed Yaffo {result.kind}: {result.path}")
+            return
+        if args[0] in ("-h", "--help"):
+            print("Usage: yaffo [setup|uninstall|install-shortcut]")
+            return
+        print(f"Unknown command: {args[0]}", file=sys.stderr)
+        raise SystemExit(2)
+
+    start_app_detached()
 
 
 if __name__ == "__main__":

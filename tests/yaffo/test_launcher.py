@@ -34,11 +34,30 @@ def test_launcher_installs_shortcut(monkeypatch, tmp_path, capsys):
         kind = "desktop entry"
         path = tmp_path / "yaffo.desktop"
 
-    monkeypatch.setattr("yaffo.shortcuts.install_shortcut", lambda: Result())
+    monkeypatch.setattr(launcher, "install_shortcut", lambda: Result())
 
     launcher.main(["install-shortcut"])
 
     assert f"Installed Yaffo desktop entry: {Result.path}" in capsys.readouterr().out
+
+
+def test_launcher_runs_setup(monkeypatch):
+    calls = []
+    monkeypatch.setattr(launcher, "run_setup", lambda **kwargs: calls.append(kwargs))
+
+    launcher.main(["setup"])
+
+    assert calls
+    assert calls[0]["launch_fn"] is launcher.start_app_detached
+
+
+def test_launcher_runs_uninstall(monkeypatch):
+    calls = []
+    monkeypatch.setattr(launcher, "run_uninstall", lambda: calls.append(True))
+
+    launcher.main(["uninstall"])
+
+    assert calls == [True]
 
 
 def test_launcher_unknown_command_exits(capsys):
