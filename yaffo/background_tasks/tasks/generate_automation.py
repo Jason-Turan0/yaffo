@@ -42,6 +42,7 @@ logger = get_logger(__name__, 'background_tasks')
 # Anything not listed falls back to a generic "Working…".
 _TOOL_STATUS = {
     "write_automation_code": "Writing the automation…",
+    "test_automation_code": "Testing the automation…",
     "run_data_query": "Inspecting your data…",
     "get_source_schema": "Checking available fields…",
     "add_automation_trigger": "Setting up a trigger…",

@@ -121,7 +121,6 @@ def _create_tray_icon(procs: list[subprocess.Popen], url: str):
 def _run_web() -> None:
     from waitress import serve
     from yaffo.app import create_app
-    from yaffo.logging_config import get_logger
     from yaffo.scripts.db.migrate import run_migrations
 
     run_migrations()
