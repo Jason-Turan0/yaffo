@@ -27,6 +27,7 @@ EXIFTOOL_DIR = RESOURCES / f"Image-ExifTool-{EXIFTOOL_VERSION}" / "src"
 EXIFTOOL_URLS = [
     f"https://exiftool.org/Image-ExifTool-{EXIFTOOL_VERSION}.tar.gz",
     f"https://exiftool.org/older/Image-ExifTool-{EXIFTOOL_VERSION}.tar.gz",
+    f"https://github.com/exiftool/exiftool/archive/refs/tags/{EXIFTOOL_VERSION}.tar.gz"
 ]
 
 # InsightFace expects <root>/models/buffalo_l/*.onnx (root = resources/models/insightface).
