@@ -220,6 +220,7 @@ def test_i18next_bootstrap_treats_top_level_catalog_objects_as_namespaces():
     source = Path("yaffo/static/i18n.js").read_text(encoding="utf-8")
     assert "[locale]: catalog" in source
     assert "defaultNS: 'common'" in source
+    assert "escapeValue: false" in source
 
 
 def test_shared_javascript_components_use_catalog_keys():
@@ -334,6 +335,7 @@ def test_settings_media_controls_use_catalog_keys_and_delegated_actions():
     assert "settings:thumbnail.moveSucceeded" in source
     assert "config.urls.add_media_dir" in source
     assert "config.urls.update_thumbnail_dir" in source
+    assert "window.location.reload()" in source
     assert "escapeHtml(dir.path)" in source
     assert 'data-action="remove-media-dir"' in template
     assert "onclick=" not in template

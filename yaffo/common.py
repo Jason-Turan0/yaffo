@@ -3,9 +3,8 @@ from pathlib import Path
 from platformdirs import user_cache_dir, user_data_dir
 import os
 
-app_author = "Jason Turan"
-version = "0.0.1"
-app_name = "yaffo"
+APP_AUTHOR = "Jason Turan"
+APP_NAME = "yaffo"
 
 # Media-type discriminator values. Defined here (a dependency-free leaf module) so
 # both yaffo.common and yaffo.db.models can expose them without an import cycle;
@@ -42,19 +41,19 @@ def is_browser_playable_video(path: "Path | str") -> bool:
 if os.environ.get("YAFFO_DATA_DIR"):
     data_dir = Path(os.environ["YAFFO_DATA_DIR"])
 else:
-    data_dir = Path(user_data_dir(app_name, app_author))
+    data_dir = Path(user_data_dir(APP_NAME, APP_AUTHOR))
 
 ROOT_DIR = Path(data_dir)
 # Ensure the DB/log home exists before anything writes into it (logging opens a
 # file here at import time, ahead of any migration step).
 ROOT_DIR.mkdir(parents=True, exist_ok=True)
 
-DB_PATH = ROOT_DIR / f"{app_name}.db"
-QUEUE_DB_PATH = ROOT_DIR / f"{app_name}-queue.db"
+DB_PATH = ROOT_DIR / f"{APP_NAME}.db"
+QUEUE_DB_PATH = ROOT_DIR / f"{APP_NAME}-queue.db"
 
 # Downloaded vision models (CLIP ONNX encoders) cache here on first use, like
 # InsightFace's ~/.insightface — kept out of the photo library / data dir.
-MODEL_CACHE_DIR = Path(user_cache_dir(app_name, app_author))
+MODEL_CACHE_DIR = Path(user_cache_dir(APP_NAME, APP_AUTHOR))
 
 # Read-only assets shipped with the source tree and bundled into the app. When
 # frozen by PyInstaller they live under sys._MEIPASS (the spec adds `resources`

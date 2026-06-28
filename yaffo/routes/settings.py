@@ -11,7 +11,16 @@ import yaffo.db.repositories.media_dir_repository
 from yaffo.background_tasks.tasks.classify_labels_automation import classify_labels_automation_task
 from yaffo.common import DB_PATH, QUEUE_DB_PATH
 from yaffo.db import db
-from yaffo.db.models import AUTOMATION_HANDLER_CLASSIFY_LABELS, ApplicationSettings, ClassificationLabel, Face
+from yaffo.db.models import (
+    AUTOMATION_HANDLER_CLASSIFY_LABELS,
+    JOB_STATUS_PENDING,
+    JOB_STATUS_RUNNING,
+    ApplicationSettings,
+    ClassificationLabel,
+    Face,
+    Job,
+    MediaItem,
+)
 from yaffo.db.repositories import automation_repository, classification_repository, media_repository
 from yaffo.distance_units import get_saved_distance_unit, set_distance_unit
 from yaffo.i18n import get_saved_locale, set_locale
@@ -45,11 +54,43 @@ class ThumbnailStatsError:
     type: str = "error"
 
 
+_LIBRARY_UPDATE_JOB_NAMES = ("import_photos", "index_photos")
+_ACTIVE_JOB_STATUSES = (JOB_STATUS_PENDING, JOB_STATUS_RUNNING)
+
+
 def _model_template_info(location):
     return {
         "path": str(location.path) if location.path else "",
         "source": location.source,
     }
+
+
+def _relocated_thumbnail_path(path_value: str | None, current_dir: Path, new_dir: Path) -> str | None:
+    if not path_value:
+        return None
+
+    path = Path(path_value)
+    for old_base, new_base in ((current_dir, new_dir), (current_dir.resolve(), new_dir.resolve())):
+        try:
+            relative_path = path.relative_to(old_base)
+        except ValueError:
+            continue
+        return str(new_base / relative_path)
+    return None
+
+
+def _library_update_in_progress() -> bool:
+    return db.session.query(Job.id).filter(
+        Job.name.in_(_LIBRARY_UPDATE_JOB_NAMES),
+        Job.status.in_(_ACTIVE_JOB_STATUSES),
+    ).first() is not None
+
+
+def _library_update_blocked_response():
+    return jsonify({
+        "error": gettext("Media and thumbnail directories cannot be changed while importing or indexing is in progress."),
+        "code": "library_update_in_progress",
+    }), 409
 
 
 def iter_thumbnail_stats(directory: Path | None, progress_every: int = 500) -> Iterator[int | tuple[int, int]]:
@@ -115,10 +156,12 @@ def init_settings_routes(app: Flask):
         # Thumbnail stats (a slow recursive walk on large libraries) are filled in live
         # by the streaming endpoint below, so the page no longer blocks on counting them.
         exiftool_path = get_exiftool_path()
+        library_update_in_progress = _library_update_in_progress()
 
         return render_template(
             "settings/index.html",
             media_dirs=media_dirs,
+            library_update_in_progress=library_update_in_progress,
             db_path=str(DB_PATH),
             current_thumbnail_dir=str(current_thumbnail_dir) if current_thumbnail_dir else None,
             queue_db_path=str(QUEUE_DB_PATH),
@@ -251,6 +294,9 @@ def init_settings_routes(app: Flask):
     @app.route("/api/settings/media-dirs", methods=["POST"])
     def add_media_dir():
         """Add a new media directory"""
+        if _library_update_in_progress():
+            return _library_update_blocked_response()
+
         data = request.get_json(silent=True) or {}
         new_dir = data.get("directory", "").strip()
 
@@ -281,6 +327,9 @@ def init_settings_routes(app: Flask):
     @app.route("/api/settings/media-dirs/<int:index>", methods=["DELETE"])
     def remove_media_dir(index: int):
         """Remove a media directory by index"""
+        if _library_update_in_progress():
+            return _library_update_blocked_response()
+
         removed = yaffo.db.repositories.media_dir_repository.remove_media_dir(db.session, index)
         if removed is None:
             return jsonify({
@@ -346,6 +395,9 @@ def init_settings_routes(app: Flask):
     @app.route("/api/settings/thumbnail-dir", methods=["POST"])
     def update_thumbnail_dir():
         """Update thumbnail directory and move files"""
+        if _library_update_in_progress():
+            return _library_update_blocked_response()
+
         data = request.get_json(silent=True) or {}
         new_dir = data.get("directory", "").strip()
 
@@ -379,9 +431,6 @@ def init_settings_routes(app: Flask):
             # Get stats before moving
             file_count, total_size = get_thumbnail_stats(current_dir)
 
-            # Track path mappings for database update
-            path_mappings = {}
-
             # Move files
             if current_dir and current_dir.exists() and file_count > 0:
                 for file_path in current_dir.rglob("*"):
@@ -390,19 +439,27 @@ def init_settings_routes(app: Flask):
                         dest_path = new_dir_path / relative_path
                         dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-                        # Track the mapping of old path to new path
-                        path_mappings[str(file_path)] = str(dest_path)
-
                         shutil.move(str(file_path), str(dest_path))
 
-            # Update Face table with new thumbnail paths
+            # Update DB references by path prefix, not by exact moved filenames. This
+            # keeps references correct even when a referenced crop was already missing
+            # from disk or a stored path differs lexically from the rglob result.
             faces_updated = 0
-            if path_mappings:
-                faces = db.session.query(Face).filter(Face.full_file_path.in_(path_mappings.keys())).all()
+            posters_updated = 0
+            if current_dir:
+                faces = db.session.query(Face).filter(Face.full_file_path.isnot(None)).all()
                 for face in faces:
-                    if face.full_file_path in path_mappings:
-                        face.full_file_path = path_mappings[face.full_file_path]
+                    relocated = _relocated_thumbnail_path(face.full_file_path, current_dir, new_dir_path)
+                    if relocated and relocated != face.full_file_path:
+                        face.full_file_path = relocated
                         faces_updated += 1
+
+                media_items = db.session.query(MediaItem).filter(MediaItem.poster_path.isnot(None)).all()
+                for media_item in media_items:
+                    relocated = _relocated_thumbnail_path(media_item.poster_path, current_dir, new_dir_path)
+                    if relocated and relocated != media_item.poster_path:
+                        media_item.poster_path = relocated
+                        posters_updated += 1
 
             # Update or create setting
             if thumbnail_setting:
@@ -421,6 +478,7 @@ def init_settings_routes(app: Flask):
                 "new_directory": str(new_dir_path),
                 "files_moved": file_count,
                 "faces_updated": faces_updated,
+                "posters_updated": posters_updated,
                 "size_moved": total_size,
             })
 

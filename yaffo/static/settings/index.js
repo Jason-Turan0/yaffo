@@ -172,19 +172,7 @@ window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
                     directory: data.new_directory
                 }));
 
-                const currentDirectory = document.getElementById('current-thumbnail-dir');
-                if (currentDirectory) {
-                    currentDirectory.textContent = data.new_directory;
-                }
-                const countElement = document.getElementById('thumbnail-count');
-                const sizeElement = document.getElementById('thumbnail-size');
-                if (countElement) {
-                    countElement.textContent = i18n.number(data.files_moved);
-                }
-                if (sizeElement) {
-                    sizeElement.textContent = formatBytes(data.size_moved);
-                }
-                input.value = '';
+                window.location.reload();
             } else {
                 window.notification.error(data.error || i18n.t('settings:thumbnail.moveFailed'));
             }

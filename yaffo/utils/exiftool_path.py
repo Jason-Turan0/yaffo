@@ -1,7 +1,6 @@
 import shutil
 from pathlib import Path
 from typing import Optional
-import platform
 
 from yaffo.common import RESOURCES_DIR
 from yaffo.logging_config import get_logger

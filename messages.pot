@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-27 18:26-0500\n"
+"POT-Creation-Date: 2026-06-27 19:15-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -431,75 +431,82 @@ msgstr ""
 msgid "Person updated"
 msgstr ""
 
-#: yaffo/routes/settings.py:96
+#: yaffo/routes/settings.py:91 yaffo/templates/settings/index.html:55
+#: yaffo/templates/settings/index.html:89
+msgid ""
+"Media and thumbnail directories cannot be changed while importing or "
+"indexing is in progress."
+msgstr ""
+
+#: yaffo/routes/settings.py:137
 msgid "Claude Opus 4.8 — most capable"
 msgstr ""
 
-#: yaffo/routes/settings.py:97
+#: yaffo/routes/settings.py:138
 msgid "Claude Sonnet 4.6 — balanced"
 msgstr ""
 
-#: yaffo/routes/settings.py:98
+#: yaffo/routes/settings.py:139
 msgid "Claude Haiku 4.5 — fastest"
 msgstr ""
 
-#: yaffo/routes/settings.py:144 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:187 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr ""
 
-#: yaffo/routes/settings.py:180
+#: yaffo/routes/settings.py:223
 msgid "Label name is required."
 msgstr ""
 
-#: yaffo/routes/settings.py:183
+#: yaffo/routes/settings.py:226
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr ""
 
-#: yaffo/routes/settings.py:199
+#: yaffo/routes/settings.py:242
 msgid "Classify-labels automation is not installed."
 msgstr ""
 
-#: yaffo/routes/settings.py:205
+#: yaffo/routes/settings.py:248
 msgid "No indexed photos to classify yet."
 msgstr ""
 
-#: yaffo/routes/settings.py:211
+#: yaffo/routes/settings.py:254
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/settings.py:230
+#: yaffo/routes/settings.py:273
 msgid "AI model updated."
 msgstr ""
 
-#: yaffo/routes/settings.py:259 yaffo/routes/settings.py:354
+#: yaffo/routes/settings.py:305 yaffo/routes/settings.py:406
 msgid "Directory path is required"
 msgstr ""
 
-#: yaffo/routes/settings.py:267
+#: yaffo/routes/settings.py:313
 msgid "Could not create the directory"
 msgstr ""
 
-#: yaffo/routes/settings.py:273
+#: yaffo/routes/settings.py:319
 msgid "Directory is already configured"
 msgstr ""
 
-#: yaffo/routes/settings.py:287
+#: yaffo/routes/settings.py:336
 msgid "Media directory not found"
 msgstr ""
 
-#: yaffo/routes/settings.py:336
+#: yaffo/routes/settings.py:385
 msgid "Could not count thumbnail files"
 msgstr ""
 
-#: yaffo/routes/settings.py:371
+#: yaffo/routes/settings.py:423
 msgid "The new directory is the same as the current directory"
 msgstr ""
 
-#: yaffo/routes/settings.py:430
+#: yaffo/routes/settings.py:488
 msgid "Could not move thumbnail files"
 msgstr ""
 
@@ -698,7 +705,7 @@ msgid "Could not scan the filesystem"
 msgstr ""
 
 #: yaffo/routes/utilities/index_photos.py:157
-#: yaffo/templates/settings/index.html:65
+#: yaffo/templates/settings/index.html:69
 msgid "No media directories configured"
 msgstr ""
 
@@ -2004,150 +2011,150 @@ msgid ""
 "directories for photos and videos to index."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:61
+#: yaffo/templates/settings/index.html:65
 msgid "Remove"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:72
+#: yaffo/templates/settings/index.html:76
 msgid "Enter directory path (for example, /Volumes/Photos or C:\\Photos)"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:76
+#: yaffo/templates/settings/index.html:81
 msgid "Add Directory"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:81
+#: yaffo/templates/settings/index.html:86
 msgid "Thumbnail Directory"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:82
+#: yaffo/templates/settings/index.html:87
 msgid ""
 "Configure where cropped thumbnails of detected faces are stored for quick"
 " loading."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:87
+#: yaffo/templates/settings/index.html:95
 msgid "Current Thumbnail Directory:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:92
+#: yaffo/templates/settings/index.html:100
 msgid "Files:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:93
+#: yaffo/templates/settings/index.html:101
 msgid "Total Size:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:93
+#: yaffo/templates/settings/index.html:101
 msgid "Counting…"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:100
+#: yaffo/templates/settings/index.html:108
 msgid "Enter new thumbnail directory path"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:104
+#: yaffo/templates/settings/index.html:113
 msgid "Change Directory"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:108
+#: yaffo/templates/settings/index.html:117
 msgid ""
 "No thumbnail directory configured. Set a directory to enable face "
 "thumbnail generation."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:114
+#: yaffo/templates/settings/index.html:123
 msgid "Enter thumbnail directory path"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:118
+#: yaffo/templates/settings/index.html:128
 msgid "Set Directory"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:128
+#: yaffo/templates/settings/index.html:138
 msgid "System Information"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:129
+#: yaffo/templates/settings/index.html:139
 msgid "Build details and configured paths (read-only)."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:133
+#: yaffo/templates/settings/index.html:143
 msgid "Build Version:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:135
+#: yaffo/templates/settings/index.html:145
 msgid "The version of Yaffo currently running."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:139
+#: yaffo/templates/settings/index.html:149
 msgid "Build Timestamp:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:140
+#: yaffo/templates/settings/index.html:150
 msgid "development build"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:141
+#: yaffo/templates/settings/index.html:151
 msgid "When this build was produced."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:145
+#: yaffo/templates/settings/index.html:155
 msgid "Database Path:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:147
+#: yaffo/templates/settings/index.html:157
 msgid ""
 "Location of the SQLite database containing photo metadata, faces, and "
 "people information."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:151
+#: yaffo/templates/settings/index.html:161
 msgid "Task Queue Database Path:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:153
+#: yaffo/templates/settings/index.html:163
 msgid "Database used by the background task queue to process jobs."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:157
+#: yaffo/templates/settings/index.html:167
 msgid "ExifTool Path:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:158
+#: yaffo/templates/settings/index.html:168
 msgid "not found"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:159
+#: yaffo/templates/settings/index.html:169
 msgid "ExifTool executable used for reading and writing media metadata."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:163
+#: yaffo/templates/settings/index.html:173
 msgid "Image Classification Model:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:166
-#: yaffo/templates/settings/index.html:178
+#: yaffo/templates/settings/index.html:176
+#: yaffo/templates/settings/index.html:188
 msgid "Bundled with this app."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:168
+#: yaffo/templates/settings/index.html:178
 msgid "Downloaded model cache used for image classification."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:170
+#: yaffo/templates/settings/index.html:180
 msgid "Will be downloaded on first image-classification run."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:175
+#: yaffo/templates/settings/index.html:185
 msgid "Face Recognition Model:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:180
+#: yaffo/templates/settings/index.html:190
 msgid "Downloaded model cache used for face recognition."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:182
+#: yaffo/templates/settings/index.html:192
 msgid "Will be downloaded on first face-recognition run."
 msgstr ""
 

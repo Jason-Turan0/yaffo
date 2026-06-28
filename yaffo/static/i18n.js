@@ -28,7 +28,10 @@ window.PHOTO_ORGANIZER.initI18n = async (config) => {
             [config.fallbackLocale]: fallbackCatalog
         },
         ns: Object.keys(fallbackCatalog),
-        defaultNS: 'common'
+        defaultNS: 'common',
+        interpolation: {
+            escapeValue: false
+        }
     });
 
     return {

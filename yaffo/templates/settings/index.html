@@ -51,6 +51,9 @@
     <div class="settings-section">
         <h2>{{ _("Media Directories") }}</h2>
         <p class="section-description">{{ _("Add directories where your photos are stored. Yaffo scans these directories for photos and videos to index.") }}</p>
+        {% if library_update_in_progress %}
+        <p class="hint-text">{{ _("Media and thumbnail directories cannot be changed while importing or indexing is in progress.") }}</p>
+        {% endif %}
 
         <div class="media-dirs-list" id="media-dirs-list">
             {% if media_dirs|length > 0 %}
@@ -58,7 +61,8 @@
                 <div class="media-dir-item" data-index="{{ loop.index0 }}">
                     <span class="media-dir-path">{{ dir.path }}</span>
                     <button type="button" class="btn-danger btn-sm" data-icon="delete"
-                            data-action="remove-media-dir" data-index="{{ loop.index0 }}">{{ _("Remove") }}</button>
+                            data-action="remove-media-dir" data-index="{{ loop.index0 }}"
+                            {% if library_update_in_progress %}disabled{% endif %}>{{ _("Remove") }}</button>
                 </div>
                 {% endfor %}
             {% else %}
@@ -73,13 +77,17 @@
                 show_label=False
             ) }}
             <button type="button" class="btn-primary" data-icon="add"
-                    data-action="add-media-dir">{{ _("Add Directory") }}</button>
+                    data-action="add-media-dir"
+                    {% if library_update_in_progress %}disabled{% endif %}>{{ _("Add Directory") }}</button>
         </div>
     </div>
 
     <div class="settings-section">
         <h2>{{ _("Thumbnail Directory") }}</h2>
         <p class="section-description">{{ _("Configure where cropped thumbnails of detected faces are stored for quick loading.") }}</p>
+        {% if library_update_in_progress %}
+        <p class="hint-text">{{ _("Media and thumbnail directories cannot be changed while importing or indexing is in progress.") }}</p>
+        {% endif %}
 
         {% if current_thumbnail_dir and current_thumbnail_dir != "None" %}
         <div class="thumbnail-dir-info">
@@ -101,7 +109,8 @@
                 show_label=False
             ) }}
             <button type="button" class="btn-primary"
-                    data-action="change-thumbnail-dir">{{ _("Change Directory") }}</button>
+                    data-action="change-thumbnail-dir"
+                    {% if library_update_in_progress %}disabled{% endif %}>{{ _("Change Directory") }}</button>
         </div>
         {% else %}
         <div class="no-thumbnail-dir">
@@ -115,7 +124,8 @@
                 show_label=False
             ) }}
             <button type="button" class="btn-primary"
-                    data-action="change-thumbnail-dir">{{ _("Set Directory") }}</button>
+                    data-action="change-thumbnail-dir"
+                    {% if library_update_in_progress %}disabled{% endif %}>{{ _("Set Directory") }}</button>
         </div>
         {% endif %}
     </div>
