@@ -3,9 +3,8 @@
 Two ONNX encoders map images and label texts into a shared 512-d space; cosine
 similarity (a dot product, since both are L2-normalized) scores how well a label
 describes a photo. Mirrors utils.face_analysis: CPU-only, lazy per-process
-singletons, and the model auto-downloads on first use — here to common.MODEL_CACHE_DIR
-rather than ~/.insightface. The tokenizer is vendored (utils.clip_tokenizer), so
-no torch/transformers is pulled in.
+singletons, and the model is stored under ROOT_DIR/models. The tokenizer is
+vendored (utils.clip_tokenizer), so no torch/transformers is pulled in.
 
 The encoders come from immich's pinned ONNX export of open_clip ViT-B-32__openai
 (image input [1,3,224,224] float -> [1,512]; text input [1,77] int32 -> [1,512]).
@@ -17,7 +16,7 @@ from pathlib import Path
 
 import numpy as np
 
-from yaffo.common import BUNDLED_MODELS_DIR, MODEL_CACHE_DIR
+from yaffo.common import MODEL_CACHE_DIR
 from yaffo.logging_config import get_logger
 from yaffo.utils.clip_tokenizer import tokenize
 
@@ -51,6 +50,7 @@ class ModelLocation:
 CLIP_SIMILARITY_FLOOR = 0.18
 CLIP_SIMILARITY_CEILING = 0.298
 
+
 def get_clip_threshold(ui_threshold: int) -> float:
     """Maps a 0-100 strictness slider to the practical CLIP similarity range."""
     ui_threshold = max(0, min(100, ui_threshold))
@@ -59,20 +59,12 @@ def get_clip_threshold(ui_threshold: int) -> float:
     range_width = CLIP_SIMILARITY_CEILING - CLIP_SIMILARITY_FLOOR
     return CLIP_SIMILARITY_FLOOR + (ui_threshold / 100.0) * range_width
 
+
 def _model_dir() -> Path:
-    """Prefer the encoders bundled into the app (no network on first run);
-    otherwise use the cache dir, where `_ensure_model` downloads them on demand."""
-    bundled = BUNDLED_MODELS_DIR / "clip" / MODEL_NAME
-    if (bundled / _FILES["visual"]).is_file():
-        return bundled
     return Path(MODEL_CACHE_DIR) / "clip" / MODEL_NAME
 
 
 def get_model_location() -> ModelLocation:
-    bundled = BUNDLED_MODELS_DIR / "clip" / MODEL_NAME
-    if (bundled / _FILES["visual"]).is_file():
-        return ModelLocation(path=bundled, source="bundled")
-
     downloaded = Path(MODEL_CACHE_DIR) / "clip" / MODEL_NAME
     if any((downloaded / model_file).is_file() for model_file in _FILES.values()):
         return ModelLocation(path=downloaded, source="downloaded")
@@ -80,7 +72,7 @@ def get_model_location() -> ModelLocation:
     return ModelLocation(path=None, source="pending")
 
 
-def _ensure_model(kind: str) -> Path:
+def ensure_model(kind: str) -> Path:
     """Path to the `kind` encoder, downloading it to the cache on first use."""
     path = _model_dir() / _FILES[kind]
     if path.is_file():
@@ -103,7 +95,7 @@ def _ensure_model(kind: str) -> Path:
 def _session(kind: str):
     import onnxruntime as ort
 
-    return ort.InferenceSession(str(_ensure_model(kind)), providers=["CPUExecutionProvider"])
+    return ort.InferenceSession(str(ensure_model(kind)), providers=["CPUExecutionProvider"])
 
 
 def _get_visual():

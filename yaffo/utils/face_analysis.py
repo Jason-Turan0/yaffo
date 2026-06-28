@@ -6,21 +6,20 @@ vs 79%; recognition AUC 0.993 vs 0.848) -- see benchmarks/face/. Embeddings are
 512-d, L2-normalized float32, compared by cosine similarity (the matching code in
 domain/compare_utils already uses cosine).
 
-The model (`buffalo_l`, ~280MB) auto-downloads to ~/.insightface on first use and
+The model (`buffalo_l`, ~280MB) is downloaded to ROOT_DIR/models on app start and
 loads lazily as a per-process singleton -- so a spawn worker pays the load once,
 and the host (which never imports task code) never loads it at all. Only the
 detection + recognition sub-models are loaded; gender/age/landmark extras are not.
 """
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
 
-from yaffo.common import BUNDLED_MODELS_DIR
+from yaffo.common import MODEL_CACHE_DIR
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__, "background_tasks")
@@ -39,28 +38,25 @@ class ModelLocation:
 
 
 def _model_root() -> str:
-    """InsightFace loads models from `<root>/models/<name>`. Prefer the copy
-    bundled into the app (no network on first run); otherwise use the default
-    ~/.insightface, which auto-downloads buffalo_l on first use."""
-    bundled = BUNDLED_MODELS_DIR / "insightface"
-    if (bundled / "models" / MODEL_NAME).is_dir():
-        return str(bundled)
-    return os.path.expanduser("~/.insightface")
+    """InsightFace loads models from `<root>/models/<name>`."""
+    return str(MODEL_CACHE_DIR / "insightface")
 
 
 def get_model_location() -> ModelLocation:
-    bundled = BUNDLED_MODELS_DIR / "insightface" / "models" / MODEL_NAME
-    if bundled.is_dir():
-        return ModelLocation(path=bundled, source="bundled")
-
-    downloaded = Path.home() / ".insightface" / "models" / MODEL_NAME
-    if downloaded.is_dir():
+    downloaded = MODEL_CACHE_DIR / "insightface" / "models" / MODEL_NAME
+    if any(downloaded.glob("*.onnx")):
         return ModelLocation(path=downloaded, source="downloaded")
 
     return ModelLocation(path=None, source="pending")
 
 
-def _get_app():
+def download_model():
+    from yaffo.download_assets import download_insightface
+
+    download_insightface()
+
+
+def get_app():
     global _app
     if _app is None:
         from insightface.app import FaceAnalysis
@@ -97,7 +93,7 @@ class DetectedFace:
 def detect_faces(image_rgb: np.ndarray) -> list[DetectedFace]:
     """Detect faces in an RGB image and return their boxes + ArcFace embeddings.
     Boxes are clamped to the image bounds."""
-    app = _get_app()
+    app = get_app()
     h, w = image_rgb.shape[:2]
     bgr = np.ascontiguousarray(image_rgb[:, :, ::-1])  # InsightFace expects BGR
     out: list[DetectedFace] = []

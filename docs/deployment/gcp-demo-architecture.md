@@ -14,8 +14,9 @@ Yaffo is a stateful, filesystem-bound app:
   `yaffo-queue.db`). SQLite shared across processes needs real POSIX file locking.
 - Jobs (face recognition, indexing, clustering) are CPU-heavy and run for
   minutes — they exceed function time/memory limits.
-- Heavy native deps (`insightface` + `onnxruntime`, `opencv`) plus the `exiftool`
-  binary and the bundled face models make the image large with slow cold starts.
+- Heavy native deps (`insightface` + `onnxruntime`, `opencv`) plus app-start
+  downloads for ExifTool, ffmpeg, and model assets make cold starts network- and
+  storage-sensitive.
 
 Cloud Run / Cloud Functions (GCP's "Fargate-like" serverless options) are a poor
 fit unless SQLite→Postgres and a move off the file-backed `yaffo.taskq` queue to a
@@ -89,8 +90,8 @@ What matters: escaping the data sandbox, compute abuse, and host/secret leakage.
 1. **Setup environment**: GCP project, enable APIs, Artifact Registry repo,
    persistent disk, COS VM.
 2. **Deployment scripts**: Dockerfile (slim runtime with `libgl1`,
-   `libglib2.0-0`, `libimage-exiftool-perl`; `onnxruntime` installs as a prebuilt
-   wheel — no source build — and the InsightFace models are bundled), supervisor
+   `libglib2.0-0`; `onnxruntime` installs as a prebuilt wheel — no source build
+   — and runtime assets download under `YAFFO_DATA_DIR` on app start), supervisor
    config / entrypoint, `startup.sh` (mount+format disk, create subdirs, docker
    login, run container), `gcloud` build + deploy commands.
 3. **Personal access**: IAP tunnel, no public IP.

@@ -25,7 +25,12 @@ class TestRenderMigration:
         assert merged["database"]["synchronous"] == "FULL"
         # new keys/sections filled from the template defaults
         assert merged["logging"]["max_model_log_runs"] == 50
+        assert merged["web"]["port"] == 5001
         assert merged["ai"]["max_iterations"] == 25
+
+    def test_preserves_user_web_port(self):
+        merged = tomllib.loads(_render({"web": {"port": 8123}}))
+        assert merged["web"]["port"] == 8123
 
     def test_activates_commented_default_when_user_sets_it(self):
         # `# workers = 4` is commented by default; setting it should make it active.

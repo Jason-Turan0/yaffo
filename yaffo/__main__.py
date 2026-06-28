@@ -23,11 +23,39 @@ import sys
 import threading
 import webbrowser
 
+from yaffo.logging_config import get_logger
+from yaffo.config import get_int as get_config_int
+
 HOST = "127.0.0.1"
-PORT = 5001
+PORT = get_config_int("web", "port", 5001)
 WEB_THREADS = 8
 WORKERS = max(2, (os.cpu_count() or 4) - 1)
 RECYCLE = 100
+
+logger = get_logger(__name__, "webapp")
+
+
+def _start_asset_downloads() -> None:
+    from yaffo.download_assets import (
+        download_clip,
+        download_exiftool,
+        download_ffmpeg,
+        download_insightface,
+    )
+
+    def run(name: str, fn) -> None:
+        try:
+            fn()
+        except Exception:
+            logger.exception("failed to download %s asset package", name)
+
+    for name, fn in (
+        ("exiftool", download_exiftool),
+        ("insightface", download_insightface),
+        ("clip", download_clip),
+        ("ffmpeg", download_ffmpeg),
+    ):
+        threading.Thread(target=run, args=(name, fn), daemon=True, name=f"download-{name}").start()
 
 
 def _child_cmd() -> list[str]:
@@ -96,8 +124,8 @@ def _run_web() -> None:
     from yaffo.logging_config import get_logger
     from yaffo.scripts.db.migrate import run_migrations
 
-    logger = get_logger(__name__, "webapp")
     run_migrations()
+    _start_asset_downloads()
     procs = _start_background()
     atexit.register(_stop_background, procs)
 

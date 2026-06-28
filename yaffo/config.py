@@ -35,6 +35,10 @@ backup_count = 3
 # How many recent page/theme/automation generation runs to keep under model_logs/.
 max_model_log_runs = 50
 
+[web]
+# Port for the local web server opened by `python -m yaffo`.
+port = 5001
+
 [database]
 # SQLite durability vs. write speed (PRAGMA synchronous), paired with WAL.
 #   NORMAL = fast; the last transaction can be lost on an OS/power/disk failure

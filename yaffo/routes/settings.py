@@ -27,6 +27,7 @@ from yaffo.i18n import get_saved_locale, set_locale
 from yaffo.site_agents import llm_config
 from yaffo.utils.exiftool_path import get_exiftool_path
 from yaffo.utils.face_analysis import get_model_location as get_face_model_location
+from yaffo.utils.ffmpeg_path import get_ffmpeg_path
 from yaffo.utils.image_classifier import get_model_location as get_classification_model_location
 from yaffo.version import get_build_info
 
@@ -156,6 +157,7 @@ def init_settings_routes(app: Flask):
         # Thumbnail stats (a slow recursive walk on large libraries) are filled in live
         # by the streaming endpoint below, so the page no longer blocks on counting them.
         exiftool_path = get_exiftool_path()
+        ffmpeg_path = get_ffmpeg_path()
         library_update_in_progress = _library_update_in_progress()
 
         return render_template(
@@ -166,6 +168,7 @@ def init_settings_routes(app: Flask):
             current_thumbnail_dir=str(current_thumbnail_dir) if current_thumbnail_dir else None,
             queue_db_path=str(QUEUE_DB_PATH),
             exiftool_path=str(exiftool_path) if exiftool_path else None,
+            ffmpeg_path=str(ffmpeg_path) if ffmpeg_path else None,
             classification_model=_model_template_info(get_classification_model_location()),
             face_model=_model_template_info(get_face_model_location()),
             build_info=get_build_info(),

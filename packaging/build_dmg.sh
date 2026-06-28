@@ -4,9 +4,9 @@
 #
 #   ./packaging/build_dmg.sh
 #
-# Run from an activated venv that has the dev deps (pyinstaller). Downloads the
-# bundled assets (exiftool + ML models) first, then freezes the app and wraps it in
-# a DMG. The .dmg lands in dist/. After installing, run packaging/install_yaffo.sh.
+# Run from an activated venv that has the dev deps (pyinstaller). Freezes the app
+# and wraps it in a DMG. Runtime assets are downloaded under ROOT_DIR on app start.
+# The .dmg lands in dist/. After installing, run packaging/install_yaffo.sh.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -17,9 +17,6 @@ PYINSTALLER="pyinstaller"
 [ -x "venv/bin/pyinstaller" ] && PYINSTALLER="venv/bin/pyinstaller"
 
 APP="dist/Yaffo Photo Organizer.app"
-
-echo "==> Downloading bundled assets (exiftool, ffmpeg, models)"
-"$PYTHON" packaging/download_assets.py
 
 echo "==> Staging attribution file into resources/"
 cp THIRD_PARTY_LICENSES.txt resources/THIRD_PARTY_LICENSES.txt

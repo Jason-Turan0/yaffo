@@ -45,7 +45,7 @@ datas += [
     ("yaffo/translations", "yaffo/translations"),
     ("yaffo/utils/clip_tokenizer", "yaffo/utils/clip_tokenizer"),  # vendored CLIP vocab .gz
     ("yaffo/scripts/db/migrations", "yaffo/scripts/db/migrations"),  # loaded by file path
-    ("resources", "resources"),  # exiftool + bundled models + THIRD_PARTY_LICENSES
+    ("resources", "resources"),  # UI resources + THIRD_PARTY_LICENSES
 ]
 
 a = Analysis(

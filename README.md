@@ -93,7 +93,7 @@ yaffo/
 ├── yaffo_ui_tests/          # Playwright UI tests
 ├── hooks/                   # Git hooks
 ├── docs/                    # Design references (taskq, automations, page builder, video)
-└── resources/               # ExifTool binaries + bundled face models
+└── resources/               # UI resources bundled with the app
 ```
 
 ## Development

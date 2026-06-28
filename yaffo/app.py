@@ -5,6 +5,7 @@ from typing import Optional
 
 from flask import Flask
 from yaffo import themes
+from yaffo.config import get_int as get_config_int
 from yaffo.db import db
 from yaffo.common import DB_PATH
 from yaffo.distance_units import supported_distance_unit_options
@@ -74,6 +75,6 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None):
 if __name__ == "__main__":
     app = create_app()
     # threaded so a long streaming response (e.g. the index-photos scan) doesn't block
-    # the page's other requests on the single-user dev server. Port 5001, not 5000 —
+    # the page's other requests on the single-user dev server. Default port 5001, not 5000 —
     # macOS AirPlay Receiver (Control Center) binds *:5000 and answers with a 403.
-    app.run(debug=True, threaded=True, port=5001)
+    app.run(debug=True, threaded=True, port=get_config_int("web", "port", 5001))

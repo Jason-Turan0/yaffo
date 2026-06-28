@@ -6,21 +6,34 @@ from typing import Optional
 from PIL import Image, PngImagePlugin
 import piexif
 from yaffo.common import VIDEO_EXTENSIONS
-from yaffo.utils.exiftool_path import get_exiftool_path, is_exiftool_available
+from yaffo.utils.exiftool_path import get_exiftool_path
 
 
 _IS_MAC = platform.system().lower() == "darwin"
-_EXIFTOOL_PATH = get_exiftool_path()
-_HAS_EXIFTOOL = is_exiftool_available()
+_EXIFTOOL_PATH: Optional[Path] = None
+_HAS_EXIFTOOL: Optional[bool] = None
+
+
+def _current_exiftool_path() -> Optional[Path]:
+    if _EXIFTOOL_PATH is not None:
+        return _EXIFTOOL_PATH
+    return get_exiftool_path()
+
+
+def _has_exiftool() -> bool:
+    if _HAS_EXIFTOOL is not None:
+        return _HAS_EXIFTOOL
+    return _current_exiftool_path() is not None
 
 
 def _get_existing_person_in_image(photo_path: Path) -> list[str]:
     """Read existing PersonInImage values from the photo using exiftool."""
-    if not _EXIFTOOL_PATH:
+    exiftool_path = _current_exiftool_path()
+    if not exiftool_path:
         return []
 
     try:
-        cmd = [str(_EXIFTOOL_PATH), "-json", "-XMP:PersonInImage", str(photo_path)]
+        cmd = [str(exiftool_path), "-json", "-XMP:PersonInImage", str(photo_path)]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             return []
@@ -50,10 +63,11 @@ def _merge_unique(existing: list[str], new_values: list[str]) -> list[str]:
 
 def _get_existing_keywords(photo_path: Path) -> list[str]:
     """Read existing XMP:Subject (keyword) values from the photo using exiftool."""
-    if not _EXIFTOOL_PATH:
+    exiftool_path = _current_exiftool_path()
+    if not exiftool_path:
         return []
     try:
-        cmd = [str(_EXIFTOOL_PATH), "-json", "-XMP:Subject", str(photo_path)]
+        cmd = [str(exiftool_path), "-json", "-XMP:Subject", str(photo_path)]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             return []
@@ -82,11 +96,12 @@ def _append_keyword_args(args: list[str], photo_path: Path, keywords: Optional[l
 
 
 def _run_exiftool(args: list[str]) -> subprocess.CompletedProcess:
-    """Run exiftool with the bundled or system binary."""
-    if not _EXIFTOOL_PATH:
+    """Run exiftool with the app-managed binary."""
+    exiftool_path = _current_exiftool_path()
+    if not exiftool_path:
         raise FileNotFoundError("exiftool not available")
 
-    cmd = [str(_EXIFTOOL_PATH)] + args
+    cmd = [str(exiftool_path)] + args
     return subprocess.run(cmd, check=True, capture_output=True, text=True)
 
 
@@ -137,7 +152,7 @@ def _write_heic_metadata(
     people_names: Optional[list[str]],
     keywords: Optional[list[str]] = None
 ) -> tuple[bool, Optional[str]]:
-    if _HAS_EXIFTOOL:
+    if _has_exiftool():
         args = ["-overwrite_original"]
         if date_str:
             args.append(f"-DateTimeOriginal={date_str}")
@@ -162,7 +177,7 @@ def _write_jpeg_metadata(
     people_names: Optional[list[str]],
     keywords: Optional[list[str]] = None
 ) -> tuple[bool, Optional[str]]:
-    if _HAS_EXIFTOOL:
+    if _has_exiftool():
         args = ["-overwrite_original"]
         if date_str:
             args.append(f"-DateTimeOriginal={date_str}")
@@ -217,7 +232,7 @@ def _write_video_metadata(
     XMP:Location. People (PersonInImage) are intentionally not written to video — see
     docs/development/video.md. Returns (True, None) with nothing to do when no applicable field
     is set, so an export that only requested people doesn't error per clip."""
-    if not _HAS_EXIFTOOL:
+    if not _has_exiftool():
         return False, "No tool available"
 
     args = ["-overwrite_original"]

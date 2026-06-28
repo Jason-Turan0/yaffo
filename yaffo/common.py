@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from platformdirs import user_cache_dir, user_data_dir
+from platformdirs import user_data_dir
 import os
 
 APP_AUTHOR = "Jason Turan"
@@ -51,15 +51,15 @@ ROOT_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = ROOT_DIR / f"{APP_NAME}.db"
 QUEUE_DB_PATH = ROOT_DIR / f"{APP_NAME}-queue.db"
 
-# Downloaded vision models (CLIP ONNX encoders) cache here on first use, like
-# InsightFace's ~/.insightface — kept out of the photo library / data dir.
-MODEL_CACHE_DIR = Path(user_cache_dir(APP_NAME, APP_AUTHOR))
+# App-managed binary/model assets live under ROOT_DIR and are checked/downloaded
+# on app start.
+MODEL_CACHE_DIR = ROOT_DIR / "models"
+EXIFTOOL_DIR = ROOT_DIR / "Image-ExifTool-13.40"
+FFMPEG_DIR = ROOT_DIR / "ffmpeg"
 
-# Read-only assets shipped with the source tree and bundled into the app. When
-# frozen by PyInstaller they live under sys._MEIPASS (the spec adds `resources`
-# there); in dev `parents[1]` is the repo root, where `resources/` sits beside the
-# `yaffo/` package. Models, when pre-bundled by the build script, live under
-# BUNDLED_MODELS_DIR; loaders prefer them and fall back to a network download.
+# Read-only UI resources shipped with the source tree and bundled into the app.
+# Operational assets such as ExifTool, ffmpeg, and ML models are downloaded to
+# ROOT_DIR instead.
 if getattr(sys, "frozen", False):
     BUNDLE_ROOT = Path(sys._MEIPASS)  # type: ignore[attr-defined]
     RESOURCES_DIR = BUNDLE_ROOT / "resources"
@@ -68,4 +68,3 @@ else:
     _source_resources = BUNDLE_ROOT / "resources"
     _package_resources = Path(__file__).resolve().parent / "resources"
     RESOURCES_DIR = _source_resources if _source_resources.exists() else _package_resources
-BUNDLED_MODELS_DIR = RESOURCES_DIR / "models"

@@ -9,7 +9,6 @@ import subprocess
 import threading
 import time
 
-
 VENDOR_DIR = Path("yaffo/static/vendor")
 VENDOR_MANIFEST = VENDOR_DIR / "manifest.json"
 
@@ -42,6 +41,8 @@ def _host_command(workers, recycle):
 def _watcher_command():
     return "python -m yaffo.background_tasks.watcher"
 
+def _download_assets_command():
+    return "python -m yaffo.download_assets"
 
 def _open_chrome(url, delay=2):
     system = platform.system()
@@ -182,6 +183,12 @@ def app_local(c, host="127.0.0.1", port=5002, debug=True, workers=4, recycle=100
         ("flask", _flask_command(host, port), _flask_env(debug)),
         ("host", _host_command(workers, recycle), _data_env()),
         ("watcher", _watcher_command(), _data_env()),
+    ])
+
+@task
+def download_assets(c):
+    _run_concurrently([
+        ("download_assets", _download_assets_command(), _data_env()),
     ])
 
 

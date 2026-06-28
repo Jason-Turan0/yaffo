@@ -389,6 +389,8 @@ class TestPersonInImageMerging:
         PersonInImage values case-insensitively, not create duplicates.
         """
         exiftool_path = get_exiftool_path()
+        if exiftool_path is None:
+            pytest.skip("app-managed ExifTool package is not installed")
         test_copy = temp_dir / "test_merge.jpg"
         shutil.copy(test_image_path, test_copy)
 
@@ -434,6 +436,8 @@ class TestPersonInImageMerging:
         should not create duplicate PersonInImage entries.
         """
         exiftool_path = get_exiftool_path()
+        if exiftool_path is None:
+            pytest.skip("app-managed ExifTool package is not installed")
         test_copy = temp_dir / "test_no_dupes.jpg"
         shutil.copy(test_image_path, test_copy)
 
@@ -467,6 +471,10 @@ class TestPersonInImageMerging:
 
 class TestIntegrationWithRealImage:
     def test_write_metadata_to_real_jpeg(self, test_image_path, temp_dir):
+        exiftool_path = get_exiftool_path()
+        if exiftool_path is None:
+            pytest.skip("app-managed ExifTool package is not installed")
+
         # Copy the test image to temp directory
         test_copy = temp_dir / "test_copy.jpg"
         shutil.copy(test_image_path, test_copy)
@@ -480,7 +488,6 @@ class TestIntegrationWithRealImage:
         assert success is True
         assert error is None
 
-        exiftool_path = get_exiftool_path()
         result = subprocess.run(
             [str(exiftool_path), "-json", "-DateTimeOriginal", "-XMP:Location", "-XMP:PersonInImage", str(test_copy)],
             capture_output=True,

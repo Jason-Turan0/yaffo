@@ -254,7 +254,7 @@ photo would show its pixels: gallery thumbnail, CLIP labeling input, (phase 2)
 duplicate hashing. This keeps "show me this media as an image" a uniform
 operation and avoids special-casing video in the gallery and the label pipeline.
 
-### Frame extraction & codecs: bundle ffmpeg vs. OS-native decode
+### Frame extraction & codecs: app-managed ffmpeg vs. OS-native decode
 
 Getting a poster frame (and probing metadata) needs a video decoder. Python has no
 native one, so there's a real dependency decision here — and it gates Phase 1. Two
@@ -266,8 +266,8 @@ some filters). The big mitigator: we'd invoke `ffmpeg`/`ffprobe` as a **separate
 CLI subprocess**, not link the libraries into our process. Calling a separate
 executable is "mere aggregation," not a derivative work — so even a GPL build's
 copyleft does **not** reach our application code. We'd still owe the redistribution
-duties for the bundled binary itself: ship FFmpeg's `COPYING`/`LICENSE`, credit it
-in an acknowledgements screen, and link the exact source/build. Bundle an **LGPL
+duties for the downloaded binary itself: store FFmpeg's `COPYING`/`LICENSE`, credit
+it in an acknowledgements screen, and link the exact source/build. Use an **LGPL
 build** to keep even that minimal.
 
 **(b) Codec patents — the actual landmine, and independent of (a).** The LGPL/GPL

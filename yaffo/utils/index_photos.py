@@ -20,12 +20,11 @@ from yaffo.common import PHOTO_EXTENSIONS
 from yaffo.utils.photo_dates import get_photo_date_info
 from yaffo.utils.image import image_from_path, image_to_numpy
 from yaffo.utils.face_analysis import detect_faces
-from yaffo.utils.exiftool_path import get_exiftool_path, is_exiftool_available
+from yaffo.utils.exiftool_path import get_exiftool_path
 
 logger = get_logger(__name__, 'background_tasks')
 
-_EXIFTOOL_PATH = get_exiftool_path()
-_HAS_EXIFTOOL = is_exiftool_available()
+_EXIFTOOL_PATH: Optional[Path] = None
 
 SYSTEM_FILES = {'.DS_Store', 'Thumbs.db', 'desktop.ini', '.Spotlight-V100', '.Trashes', '.fseventsd'}
 
@@ -89,13 +88,14 @@ def get_signed_gps_from_exiftool(exif_data: Dict) -> Tuple[Optional[float], Opti
 
 
 def get_exif_data_with_exiftool(photo_path: Path) -> Optional[Dict]:
-    if not _HAS_EXIFTOOL:
+    exiftool_path = _EXIFTOOL_PATH or get_exiftool_path()
+    if not exiftool_path:
         return None
 
     try:
         # Use -n flag to get numeric GPS coordinates instead of formatted strings
         result = subprocess.run(
-            [str(_EXIFTOOL_PATH), "-json", "-G", "-n", str(photo_path)],
+            [str(exiftool_path), "-json", "-G", "-n", str(photo_path)],
             capture_output=True,
             text=True,
             timeout=10

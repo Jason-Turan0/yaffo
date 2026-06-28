@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-27 19:15-0500\n"
+"POT-Creation-Date: 2026-06-28 01:56-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -431,82 +431,82 @@ msgstr ""
 msgid "Person updated"
 msgstr ""
 
-#: yaffo/routes/settings.py:91 yaffo/templates/settings/index.html:55
+#: yaffo/routes/settings.py:92 yaffo/templates/settings/index.html:55
 #: yaffo/templates/settings/index.html:89
 msgid ""
 "Media and thumbnail directories cannot be changed while importing or "
 "indexing is in progress."
 msgstr ""
 
-#: yaffo/routes/settings.py:137
+#: yaffo/routes/settings.py:138
 msgid "Claude Opus 4.8 — most capable"
 msgstr ""
 
-#: yaffo/routes/settings.py:138
+#: yaffo/routes/settings.py:139
 msgid "Claude Sonnet 4.6 — balanced"
 msgstr ""
 
-#: yaffo/routes/settings.py:139
+#: yaffo/routes/settings.py:140
 msgid "Claude Haiku 4.5 — fastest"
 msgstr ""
 
-#: yaffo/routes/settings.py:187 yaffo/routes/utilities/automations.py:436
+#: yaffo/routes/settings.py:190 yaffo/routes/utilities/automations.py:436
 msgid "Unsupported distance unit"
 msgstr ""
 
-#: yaffo/routes/settings.py:223
+#: yaffo/routes/settings.py:226
 msgid "Label name is required."
 msgstr ""
 
-#: yaffo/routes/settings.py:226
+#: yaffo/routes/settings.py:229
 #, python-format
 msgid "Label '%(name)s' already exists."
 msgstr ""
 
-#: yaffo/routes/settings.py:242
+#: yaffo/routes/settings.py:245
 msgid "Classify-labels automation is not installed."
 msgstr ""
 
-#: yaffo/routes/settings.py:248
+#: yaffo/routes/settings.py:251
 msgid "No indexed photos to classify yet."
 msgstr ""
 
-#: yaffo/routes/settings.py:254
+#: yaffo/routes/settings.py:257
 #, python-format
 msgid "Re-classifying %(count)s photo in the background…"
 msgid_plural "Re-classifying %(count)s photos in the background…"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/settings.py:273
+#: yaffo/routes/settings.py:276
 msgid "AI model updated."
 msgstr ""
 
-#: yaffo/routes/settings.py:305 yaffo/routes/settings.py:406
+#: yaffo/routes/settings.py:308 yaffo/routes/settings.py:409
 msgid "Directory path is required"
 msgstr ""
 
-#: yaffo/routes/settings.py:313
+#: yaffo/routes/settings.py:316
 msgid "Could not create the directory"
 msgstr ""
 
-#: yaffo/routes/settings.py:319
+#: yaffo/routes/settings.py:322
 msgid "Directory is already configured"
 msgstr ""
 
-#: yaffo/routes/settings.py:336
+#: yaffo/routes/settings.py:339
 msgid "Media directory not found"
 msgstr ""
 
-#: yaffo/routes/settings.py:385
+#: yaffo/routes/settings.py:388
 msgid "Could not count thumbnail files"
 msgstr ""
 
-#: yaffo/routes/settings.py:423
+#: yaffo/routes/settings.py:426
 msgid "The new directory is the same as the current directory"
 msgstr ""
 
-#: yaffo/routes/settings.py:488
+#: yaffo/routes/settings.py:491
 msgid "Could not move thumbnail files"
 msgstr ""
 
@@ -2122,6 +2122,7 @@ msgid "ExifTool Path:"
 msgstr ""
 
 #: yaffo/templates/settings/index.html:168
+#: yaffo/templates/settings/index.html:174
 msgid "not found"
 msgstr ""
 
@@ -2130,32 +2131,32 @@ msgid "ExifTool executable used for reading and writing media metadata."
 msgstr ""
 
 #: yaffo/templates/settings/index.html:173
+msgid "FFmpeg Path:"
+msgstr ""
+
+#: yaffo/templates/settings/index.html:175
+msgid "FFmpeg executable used for video poster frames and frame sampling."
+msgstr ""
+
+#: yaffo/templates/settings/index.html:179
 msgid "Image Classification Model:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:176
-#: yaffo/templates/settings/index.html:188
-msgid "Bundled with this app."
-msgstr ""
-
-#: yaffo/templates/settings/index.html:178
+#: yaffo/templates/settings/index.html:182
 msgid "Downloaded model cache used for image classification."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:180
-msgid "Will be downloaded on first image-classification run."
+#: yaffo/templates/settings/index.html:184
+#: yaffo/templates/settings/index.html:194
+msgid "Will be downloaded on app start."
 msgstr ""
 
-#: yaffo/templates/settings/index.html:185
+#: yaffo/templates/settings/index.html:189
 msgid "Face Recognition Model:"
 msgstr ""
 
-#: yaffo/templates/settings/index.html:190
-msgid "Downloaded model cache used for face recognition."
-msgstr ""
-
 #: yaffo/templates/settings/index.html:192
-msgid "Will be downloaded on first face-recognition run."
+msgid "Downloaded model cache used for face recognition."
 msgstr ""
 
 #: yaffo/templates/themes_page/index.html:6
