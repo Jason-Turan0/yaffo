@@ -6,7 +6,8 @@ window.PHOTO_ORGANIZER.COMPONENTS.overlay = {
         const {
             placement = 'bottom',
             offset = 8,
-            closeOnEsc = true
+            closeOnEsc = true,
+            closeOnOutsideClick = true
         } = options;
 
         const overlay = document.createElement('div');
@@ -115,7 +116,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.overlay = {
                 overlay.remove();
             }, { once: true });
 
-            document.removeEventListener('click', handleOutsideClick);
+            if (closeOnOutsideClick) document.removeEventListener('click', handleOutsideClick);
             window.removeEventListener('resize', handleReposition);
             window.removeEventListener('scroll', handleReposition);
             if (closeOnEsc) document.removeEventListener('keydown', handleKeyDown);
@@ -129,7 +130,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.overlay = {
 
         // Listeners
         setTimeout(() => {
-            document.addEventListener('click', handleOutsideClick);
+            if (closeOnOutsideClick) document.addEventListener('click', handleOutsideClick);
             window.addEventListener('resize', handleReposition);
             window.addEventListener('scroll', handleReposition);
             if (closeOnEsc) document.addEventListener('keydown', handleKeyDown);

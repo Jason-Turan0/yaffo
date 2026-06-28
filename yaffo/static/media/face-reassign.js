@@ -24,7 +24,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
         const {overlay, close} = window.PHOTO_ORGANIZER.COMPONENTS.overlay.init(
             faceThumbnail.id,
             overlayContent,
-            {placement: 'right'}
+            {placement: 'right', closeOnOutsideClick: false}
         )
 
         const selectElement = overlay.querySelector(`#reassign-person-select-${faceId}`);
