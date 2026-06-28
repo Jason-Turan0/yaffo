@@ -1,5 +1,4 @@
 {% extends "utilities/_base.html" %}
-{% from "components/chat_dialog.html" import chat_dialog %}
 {% from "components/distance_input.html" import distance_input %}
 {% from "components/page_header.html" import page_header %}
 {% from "components/modal.html" import render_modal %}
@@ -82,6 +81,10 @@
     {% else %}
         <button type="button" id="run-automation-button" class="btn-secondary">{{ _("Run now") }}</button>
     {% endif %}
+    {% if not selected.is_system %}
+        <a href="{{ url_for('automations_edit', slug=selected.slug) }}"
+           class="btn-primary" data-icon="edit">{{ _("Edit") }}</a>
+    {% endif %}
     <a href="{{ url_for('automations_edit_triggers', slug=selected.slug) }}"
        class="btn-secondary" data-icon="edit">{{ _("Edit triggers") }}</a>
     {% if config_fields %}
@@ -106,73 +109,6 @@
 {% endcall %}
 
 <div class="automation-detail">
-    {# System automations are code-backed (no AI builder, no editable code), so the
-       conversation panel and code section are hidden — only the header actions,
-       config, and run history apply to them. #}
-    {% if not selected.is_system %}
-    <div class="automation-lower">
-        <section class="chat-card automation-conversation">
-            {{ chat_dialog(
-                        'automation-chat',
-                        _('Conversation'),
-                        _('Describe what this automation should do and the assistant will write it.'),
-                        _('Describe what this automation should do…'),
-                        messages=selected.messages,
-                        empty_text=(_('System automations are built-in and have no conversation.')
-                                    if selected.is_system
-                                    else _('No conversation yet — describe what you want and the assistant will build it.')),
-                        disabled=selected.is_system
-                    ) }}
-        </section>
-
-        <section class="automation-code-section">
-            <div class="automation-code-head">
-                <h3 class="automation-section-title">{{ _("Code") }}</h3>
-                {% if selected_has_draft %}
-                    {# Unpublished draft: one panel toggles between the working draft and
-                       the live (active) code. The visible view is the version tested. #}
-                    <div class="automation-code-toggle" role="group" aria-label="{{ _('Code version') }}">
-                        <button type="button" class="js-code-toggle active" data-version="working">{{ _("Working code") }}</button>
-                        <button type="button" class="js-code-toggle" data-version="published">{{ _("Active code") }}</button>
-                    </div>
-                {% endif %}
-            </div>
-
-            {% if selected_has_draft %}
-                <pre class="automation-code thin-scrollbar js-code-view" data-version="working"><code>{{ selected.working_code }}</code></pre>
-                {% if selected.published_code %}
-                    <pre class="automation-code thin-scrollbar js-code-view" data-version="published" hidden><code>{{ selected.published_code }}</code></pre>
-                {% else %}
-                    <p class="no-data js-code-view" data-version="published" hidden>{{ _("No active code yet — this draft hasn’t been published.") }}</p>
-                {% endif %}
-            {% elif selected.published_code %}
-                <pre class="automation-code thin-scrollbar"><code>{{ selected.published_code }}</code></pre>
-            {% else %}
-                <p class="no-data">{{ _("No published code yet.") }}</p>
-            {% endif %}
-
-            {% if selected.published_code or selected.working_code %}
-                <div class="automation-test">
-                    <div class="automation-test-controls">
-                        <button type="button" class="btn-secondary" id="automation-test-button" data-mode="any">{{ _("Test…") }}</button>
-                        {% if selected_has_draft %}
-                        <button type="button" class="btn-primary"
-                                hx-post="{{ url_for('automations_publish', slug=selected.slug) }}"
-                                hx-swap="none">{{ _("Publish draft") }}
-                        </button>
-                        <button type="button" class="btn-secondary"
-                                hx-post="{{ url_for('automations_discard', slug=selected.slug) }}"
-                                hx-swap="none">{{ _("Discard") }}
-                        </button>
-                        {% endif %}
-                    </div>
-                    <div id="automation-test-result" class="automation-test-result" hidden></div>
-                </div>
-            {% endif %}
-        </section>
-    </div>
-    {% endif %}
-
     {% include "utilities/automations_runs.html" %}
 </div>
 
@@ -207,13 +143,6 @@
                 {% if config_fields %}window.PHOTO_ORGANIZER.initAutomationConfigure();{% endif %}
                 {% if not selected.is_system %}
                 window.PHOTO_ORGANIZER.initAutomationDetails();
-                window.PHOTO_ORGANIZER.initAutomationTest({{ selected_slug | tojson }}, window.APP_CONFIG, {{ default_media_dir | tojson }}, i18n);
-                window.PHOTO_ORGANIZER.automationChat = window.PHOTO_ORGANIZER.initAutomationChat(
-                    {{ selected_slug | tojson }},
-                    {{ selected_status | tojson }},
-                    window.APP_CONFIG,
-                    i18n
-                );
                 {% endif %}
             });
         </script>

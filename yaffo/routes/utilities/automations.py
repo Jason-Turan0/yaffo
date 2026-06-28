@@ -271,12 +271,6 @@ def init_automations_routes(app: Flask):
             # Default the file/folder picker to the user's first media dir (their library)
             # rather than home; None when none is configured.
             default_media_dir=(media_dirs[0]["path"] if media_dirs else None),
-            selected_status=selected.status if selected else None,
-            selected_has_draft=(
-                selected is not None
-                and selected.status == AUTOMATION_STATUS_READY
-                and selected.working_code is not None
-            ),
             config_fields=_config_fields(selected),
             recent_runs=_recent_runs(selected),
             scoped_run=_supports_scoped_run(selected) if selected else False,
@@ -364,6 +358,29 @@ def init_automations_routes(app: Flask):
             selected=automation,
             selected_slug=slug,
             **_triggers_context(automation),
+            **automations_sidebar_context(),
+        )
+
+    @app.route("/utilities/automations/<slug>/edit", methods=["GET"])
+    def automations_edit(slug: str):
+        """The custom automation builder screen: conversation plus generated code.
+
+        Kept separate from the automation detail page so the default automation view
+        stays focused on run history and operational controls."""
+        automation = repo.get_by_slug(db.session, slug)
+        if automation is None or automation.is_system:
+            abort(404)
+        media_dirs = media_dir_repository.list_media_dirs(db.session)
+        return render_template(
+            "utilities/automations_edit.html",
+            selected=automation,
+            selected_slug=slug,
+            default_media_dir=(media_dirs[0]["path"] if media_dirs else None),
+            selected_status=automation.status,
+            selected_has_draft=(
+                automation.status == AUTOMATION_STATUS_READY
+                and automation.working_code is not None
+            ),
             **automations_sidebar_context(),
         )
 

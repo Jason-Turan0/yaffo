@@ -134,9 +134,27 @@ def test_saved_locale_translates_automation_detail_page(app, client):
     body = client.get("/utilities/automations/a1").get_data(as_text=True)
 
     assert "Auslöser bearbeiten" in body
-    assert "Gespräch" in body
     assert "Noch keine Beschreibung" in body
-    assert "Arbeitscode" in body
+    assert "Ausführungsverlauf" in body
+    assert 'class="btn-primary" data-icon="edit">Bearbeiten</a>' in body
+    assert 'id="automation-chat"' not in body
+    assert "js-code-toggle" not in body
+
+
+def test_custom_edit_page_shows_conversation_code_and_back_link(app, client):
+    _add(app, name="Editable", working_code="print('draft')")
+    body = client.get("/utilities/automations/a1/edit").get_data(as_text=True)
+
+    assert "Conversation" in body
+    assert "Working code" in body
+    assert "print(&#39;draft&#39;)" in body
+    assert "Back to automation" in body
+    assert "/utilities/automations/a1" in body
+
+
+def test_system_edit_page_404(app, client):
+    _add(app, slug="sys", name="Sys", is_system=True, handler="file_sync")
+    assert client.get("/utilities/automations/sys/edit").status_code == 404
 
 
 def test_saved_locale_translates_system_automation_name_and_description(app, client):

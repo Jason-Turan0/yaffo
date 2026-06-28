@@ -196,7 +196,7 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config, defaultPath = null, i
                 const detail = el('td', 'test-action-detail automation-test-advanced');
                 if (group.length === 1) {
                     summary.textContent = group[0].summary;
-                    const args = (group[0].args || []).map((a) => JSON.stringify(a)).join(', ');
+                    const args = (group[0].args || []).map((a) => JSON.stringify(a, null , 2)).join(', ');
                     detail.append(el('code', null, `${group[0].name}(${args})`));
                 } else {
                     summary.append(document.createTextNode(`${humanize(group[0].name)} `));

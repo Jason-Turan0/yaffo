@@ -1,0 +1,91 @@
+{% extends "utilities/_base.html" %}
+{% from "components/chat_dialog.html" import chat_dialog %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}{{ _("Automations - Yaffo") }}{% endblock %}
+
+{% block utility_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='utilities/automations.css') }}">
+{% endblock %}
+
+{% block utility_content %}
+    {% set header_actions %}
+    <a href="{{ url_for('automations_show', slug=selected.slug) }}" class="btn-secondary">← {{ _("Back to automation") }}</a>
+    {% endset %}
+    {% call page_header(_('Edit') ~ ' · ' ~ selected.display_name, actions=header_actions) %}
+        {{ _("Describe what this automation should do and the assistant will write it.") }}
+    {% endcall %}
+
+    <div class="automation-edit-screen">
+        <section class="chat-card automation-conversation">
+            {{ chat_dialog(
+                        'automation-chat',
+                        _('Conversation'),
+                        _('Describe what this automation should do and the assistant will write it.'),
+                        _('Describe what this automation should do…'),
+                        messages=selected.messages,
+                        empty_text=_('No conversation yet — describe what you want and the assistant will build it.'),
+                        disabled=false
+                    ) }}
+        </section>
+
+        <section class="automation-code-section">
+            <div class="automation-code-head">
+                <h3 class="automation-section-title">{{ _("Code") }}</h3>
+                {% if selected_has_draft %}
+                    <div class="automation-code-toggle" role="group" aria-label="{{ _('Code version') }}">
+                        <button type="button" class="js-code-toggle active" data-version="working">{{ _("Working code") }}</button>
+                        <button type="button" class="js-code-toggle" data-version="published">{{ _("Active code") }}</button>
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if selected_has_draft %}
+                <pre class="automation-code thin-scrollbar js-code-view" data-version="working"><code>{{ selected.working_code }}</code></pre>
+                {% if selected.published_code %}
+                    <pre class="automation-code thin-scrollbar js-code-view" data-version="published" hidden><code>{{ selected.published_code }}</code></pre>
+                {% else %}
+                    <p class="no-data js-code-view" data-version="published" hidden>{{ _("No active code yet — this draft hasn’t been published.") }}</p>
+                {% endif %}
+            {% elif selected.published_code %}
+                <pre class="automation-code thin-scrollbar"><code>{{ selected.published_code }}</code></pre>
+            {% else %}
+                <p class="no-data">{{ _("No published code yet.") }}</p>
+            {% endif %}
+
+            {% if selected.published_code or selected.working_code %}
+                <div class="automation-test">
+                    <div class="automation-test-controls">
+                        <button type="button" class="btn-secondary" id="automation-test-button" data-mode="any">{{ _("Test…") }}</button>
+                        {% if selected_has_draft %}
+                        <button type="button" class="btn-primary"
+                                hx-post="{{ url_for('automations_publish', slug=selected.slug) }}"
+                                hx-swap="none">{{ _("Publish draft") }}
+                        </button>
+                        <button type="button" class="btn-secondary"
+                                hx-post="{{ url_for('automations_discard', slug=selected.slug) }}"
+                                hx-swap="none">{{ _("Discard") }}
+                        </button>
+                        {% endif %}
+                    </div>
+                    <div id="automation-test-result" class="automation-test-result" hidden></div>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
+    <script>
+        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+            window.PHOTO_ORGANIZER.initAutomationTest({{ selected_slug | tojson }}, window.APP_CONFIG, {{ default_media_dir | tojson }}, i18n);
+            window.PHOTO_ORGANIZER.automationChat = window.PHOTO_ORGANIZER.initAutomationChat(
+                {{ selected_slug | tojson }},
+                {{ selected_status | tojson }},
+                window.APP_CONFIG,
+                i18n
+            );
+        });
+    </script>
+{% endblock %}
