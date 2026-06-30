@@ -1,6 +1,6 @@
 import { loadModule } from '../support/load_module.js';
 
-const loadFavorite = async () => (await loadModule('media/favorite.js')).initFavoriteToggles;
+const loadFavorite = async () => (await loadModule('media/favorite.js')).media.favorite.init;
 
 const config = {
   buildUrl: (endpoint, params = {}) => `/${endpoint}/${params.media_item_id}`,

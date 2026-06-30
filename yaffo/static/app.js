@@ -1,43 +1,9 @@
 // @ts-check
 
-/**
- * @typedef {Object} I18nService
- * @property {(key: string, options?: Record<string, unknown>) => string} t
- *
- * @typedef {Object} ComponentInitContext
- * @property {PhotoOrganizerApp} app
- * @property {I18nService} i18n
- * @property {typeof window.APP_CONFIG} config
- *
- * @typedef {Object} PhotoOrganizerComponents
- * @property {() => void} [initAll]
- * @property {{ init?: () => void }} [fileBrowser]
- * @property {{ initAll?: (i18n: I18nService, root?: ParentNode) => unknown }} [intlDateInput]
- * @property {{ initAll?: () => void }} [percentageSlider]
- *
- * @typedef {Object} PhotoOrganizerApp
- * @property {Promise<void>} domReady
- * @property {Promise<I18nService>} i18nReady
- * @property {Promise<PhotoOrganizerApp>} [appReady]
- * @property {I18nService} [i18n]
- * @property {PhotoOrganizerComponents} COMPONENTS
- * @property {{ initImageFallbacks: () => void }} utils
- * @property {() => unknown} [initNavPagesBar]
- * @property {unknown} [navPagesBar]
- * @property {() => Promise<PhotoOrganizerApp>} [initApp]
- * @property {(button: Element | null) => void} [closeAlert]
- */
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
-const appWindow = /** @type {Window & {
-    APP_CONFIG: { i18n: unknown },
-    PHOTO_ORGANIZER: PhotoOrganizerApp,
-    closeAlert?: (button: Element | null) => void,
-}} */ (/** @type {unknown} */ (window));
-
-appWindow.PHOTO_ORGANIZER = appWindow.PHOTO_ORGANIZER || {};
-appWindow.PHOTO_ORGANIZER.COMPONENTS = appWindow.PHOTO_ORGANIZER.COMPONENTS || {};
-
-const app = appWindow.PHOTO_ORGANIZER;
+const app = window.PHOTO_ORGANIZER;
 
 app.domReady = app.domReady || new Promise((resolve) => {
     if (document.readyState === 'loading') {
@@ -57,7 +23,7 @@ app.closeAlert = (button) => {
     }, 300);
 };
 
-appWindow.closeAlert = app.closeAlert;
+window.closeAlert = app.closeAlert;
 
 app.COMPONENTS.initAll = () => {
     const components = app.COMPONENTS;
@@ -66,7 +32,7 @@ app.COMPONENTS.initAll = () => {
     components.fileBrowser?.init?.();
     components.intlDateInput?.initAll?.(i18n);
     components.percentageSlider?.initAll?.();
-    components?.initCronBuilder?.({i18n, document: appWindow.document});
+    components?.initCronBuilder?.({i18n, document: window.document});
 };
 
 const initBasePageBehavior = () => {
@@ -76,7 +42,7 @@ const initBasePageBehavior = () => {
         }, 5000);
     });
 
-    app.utils.initImageFallbacks();
+    app.utils?.initImageFallbacks?.();
 
     const activePageTab = document.querySelector('.navbar-pages .nav-page-tab.active');
     if (activePageTab) {

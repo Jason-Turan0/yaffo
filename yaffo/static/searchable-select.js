@@ -15,19 +15,11 @@
  */
 
 /**
- * @typedef {Object} I18nService
- * @property {(key: string, options?: Record<string, unknown>) => string} t
- *
  * @typedef {Object} SearchableOption
  * @property {string} value
  * @property {string} text
  * @property {boolean} selected
  */
-
-const searchableSelectWindow = /** @type {Window & {
-    PHOTO_ORGANIZER?: { i18nReady?: Promise<I18nService> },
-    SearchableSelect?: typeof SearchableSelect,
-}} */ (/** @type {unknown} */ (window));
 
 class SearchableSelect {
     /**
@@ -359,7 +351,7 @@ class SearchableSelect {
     }
 }
 
-/** @type {I18nService} */
+/** @type {Pick<I18nService, 't'>} */
 SearchableSelect.i18n = {
     /**
      * @param {string} key
@@ -373,8 +365,8 @@ SearchableSelect.i18n = {
 };
 
 // Auto-initialize on page load
-if (searchableSelectWindow.PHOTO_ORGANIZER?.i18nReady) {
-    searchableSelectWindow.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+if (window.PHOTO_ORGANIZER?.i18nReady) {
+    window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
         SearchableSelect.i18n = i18n;
         SearchableSelect.initAll();
     });
@@ -389,4 +381,4 @@ document.addEventListener('htmx:afterSwap', () => {
 });
 
 // Export for use in other scripts
-searchableSelectWindow.SearchableSelect = SearchableSelect;
+window.SearchableSelect = SearchableSelect;

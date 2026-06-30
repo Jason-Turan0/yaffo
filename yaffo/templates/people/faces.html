@@ -112,8 +112,9 @@
 {% block scripts %}
     <script src="{{ url_for('static', filename='people/faces.js') }}"></script>
     <script>
-        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-            window.PHOTO_ORGANIZER.initPersonFaces(i18n, window.APP_CONFIG);
+        document.addEventListener('yaffo:app-init-complete', (event) => {
+            const app = event.detail.app;
+            app.people.faces = app.people.initFaces(app.i18n, window.APP_CONFIG);
         });
     </script>
 {% endblock %}

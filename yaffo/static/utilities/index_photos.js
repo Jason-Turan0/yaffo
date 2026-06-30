@@ -7,10 +7,6 @@
  * @property {boolean} hasActiveJobs
  * @property {string[]} mediaDirs
  *
- * @typedef {Object} I18nService
- * @property {(key: string, options?: Record<string, unknown>) => string} t
- * @property {(value: number) => string} number
- *
  * @typedef {Object} IndexPhotoConfig
  * @property {{ utilities_index_photos_scan: string, utilities_sync_photos: string }} urls
  *
@@ -33,21 +29,9 @@
  * @property {() => Promise<void>} startSync
  */
 
-const indexPhotosWindow = /** @type {Window & {
-    PHOTO_ORGANIZER: {
-        initIndexPhotos?: (
-            opts: IndexPhotoOptions,
-            i18n: I18nService,
-            config: IndexPhotoConfig
-        ) => IndexPhotosApi,
-    },
-    notification: {
-        success: (message: string) => void,
-        error: (message: string) => void,
-    },
-}} */ (/** @type {unknown} */ (window));
-
-indexPhotosWindow.PHOTO_ORGANIZER = indexPhotosWindow.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+const indexPhotosApi = window.PHOTO_ORGANIZER.indexPhotos =
+    /** @type {IndexPhotosNamespace} */ (window.PHOTO_ORGANIZER.indexPhotos || {});
 
 // The Index Photos page renders instantly, then streams the (slow) media-dir scan as
 // NDJSON: `progress` records drive the live "Total on Filesystem" counter; the final
@@ -246,20 +230,20 @@ const initIndexPhotos = (opts, i18n, config) => {
                 }),
             });
             if (response.ok) {
-                indexPhotosWindow.notification.success(i18n.t('utilities:indexPhotos.sync.started'));
-                indexPhotosWindow.location.reload();
+                window.notification.success(i18n.t('utilities:indexPhotos.sync.started'));
+                window.location.reload();
             } else {
                 const data = /** @type {{ error?: string }} */ (
                     await response.json().catch(() => ({}))
                 );
-                indexPhotosWindow.notification.error(
+                window.notification.error(
                     data.error || i18n.t('utilities:indexPhotos.sync.startFailed'));
                 syncButton.disabled = false;
                 syncButton.textContent = i18n.t('utilities:indexPhotos.sync.button');
             }
         } catch (error) {
             const reason = error instanceof Error ? error.message : String(error);
-            indexPhotosWindow.notification.error(i18n.t('utilities:indexPhotos.sync.error', {
+            window.notification.error(i18n.t('utilities:indexPhotos.sync.error', {
                 reason,
             }));
             syncButton.disabled = false;
@@ -286,7 +270,7 @@ const initIndexPhotos = (opts, i18n, config) => {
             revealSyncIfWork();
         } else if (record.type === 'error') {
             setStatus('');
-            indexPhotosWindow.notification.error(i18n.t('utilities:indexPhotos.scan.error', {
+            window.notification.error(i18n.t('utilities:indexPhotos.scan.error', {
                 reason: record.message,
             }));
         }
@@ -317,7 +301,7 @@ const initIndexPhotos = (opts, i18n, config) => {
             if (tail) handleRecord(/** @type {ScanRecord} */ (JSON.parse(tail)));
         } catch (error) {
             setStatus('');
-            indexPhotosWindow.notification.error(i18n.t('utilities:indexPhotos.scan.failed'));
+            window.notification.error(i18n.t('utilities:indexPhotos.scan.failed'));
         }
     };
 
@@ -327,5 +311,4 @@ const initIndexPhotos = (opts, i18n, config) => {
     return { runScan, startSync };
 };
 
-indexPhotosWindow.PHOTO_ORGANIZER = indexPhotosWindow.PHOTO_ORGANIZER || {};
-indexPhotosWindow.PHOTO_ORGANIZER.initIndexPhotos = initIndexPhotos;
+indexPhotosApi.init = initIndexPhotos;

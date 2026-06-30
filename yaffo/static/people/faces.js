@@ -1,6 +1,7 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.people = window.PHOTO_ORGANIZER.people || {};
 
-window.PHOTO_ORGANIZER.initPersonFaces = (i18n, config) => {
+window.PHOTO_ORGANIZER.people.initFaces = (i18n, config) => {
     const tooltip = document.createElement('div');
     tooltip.className = 'tooltip';
     document.body.appendChild(tooltip);

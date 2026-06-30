@@ -1,22 +1,6 @@
 // @ts-check
 
 /**
- * @typedef {Object} I18nService
- * @property {(key: string, options?: Record<string, unknown>) => string} t
- */
-
-const multiSelectWindow = /** @type {Window & {
-    PHOTO_ORGANIZER: {
-        i18n: I18nService,
-        i18nReady: Promise<I18nService>,
-    },
-    toggleMultiSelect: (header: Element) => void,
-    updateMultiSelectText: (checkbox: HTMLInputElement) => void,
-    filterMultiSelectOptions: (input: HTMLInputElement) => void,
-    initSearchableMultiSelects: () => void,
-}} */ (/** @type {unknown} */ (window));
-
-/**
  * @param {Element} header
  */
 const toggleMultiSelect = (header) => {
@@ -36,7 +20,7 @@ const toggleMultiSelect = (header) => {
  * @param {HTMLInputElement} checkbox
  */
 const updateMultiSelectText = (checkbox) => {
-    const i18n = multiSelectWindow.PHOTO_ORGANIZER.i18n;
+    const i18n = window.PHOTO_ORGANIZER.i18n;
     const wrapper = /** @type {HTMLElement | null} */ (
         checkbox.closest('.multi-select-wrapper')
     );
@@ -107,7 +91,7 @@ const initSearchableMultiSelects = () => {
         input.type = 'text';
         input.className = 'multi-select-search';
         input.placeholder = multiSelect.dataset.searchPlaceholder
-            || multiSelectWindow.PHOTO_ORGANIZER.i18n.t('common:search');
+            || window.PHOTO_ORGANIZER.i18n.t('common:search');
         input.addEventListener('input', () => filterMultiSelectOptions(input));
         // The box lives inside the filter form; Enter would submit it, so swallow it.
         input.addEventListener('keydown', (e) => {
@@ -119,10 +103,10 @@ const initSearchableMultiSelects = () => {
     });
 };
 
-multiSelectWindow.toggleMultiSelect = toggleMultiSelect;
-multiSelectWindow.updateMultiSelectText = updateMultiSelectText;
-multiSelectWindow.filterMultiSelectOptions = filterMultiSelectOptions;
-multiSelectWindow.initSearchableMultiSelects = initSearchableMultiSelects;
+window.toggleMultiSelect = toggleMultiSelect;
+window.updateMultiSelectText = updateMultiSelectText;
+window.filterMultiSelectOptions = filterMultiSelectOptions;
+window.initSearchableMultiSelects = initSearchableMultiSelects;
 
 // Close dropdown when clicking outside
 document.addEventListener('click', (e) => {
@@ -134,7 +118,7 @@ document.addEventListener('click', (e) => {
 });
 
 // Initialize text and search boxes on page load
-multiSelectWindow.PHOTO_ORGANIZER.i18nReady.then(() => {
+window.PHOTO_ORGANIZER.i18nReady.then(() => {
     initSearchableMultiSelects();
     document.querySelectorAll('.multi-select-wrapper').forEach(wrapper => {
         const firstCheckbox = /** @type {HTMLInputElement | null} */ (

@@ -1,19 +1,8 @@
 // @ts-check
 
-/**
- * @typedef {Object} NavPagesBarApi
- * @property {() => void} syncNavbarHeight
- */
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
-const navWindow = /** @type {Window & {
-    PHOTO_ORGANIZER: {
-        initNavPagesBar?: () => NavPagesBarApi | undefined,
-    },
-}} */ (/** @type {unknown} */ (window));
-
-navWindow.PHOTO_ORGANIZER = navWindow.PHOTO_ORGANIZER || {};
-
-navWindow.PHOTO_ORGANIZER.initNavPagesBar = () => {
+window.PHOTO_ORGANIZER.initNavPagesBar = () => {
     const navbar = /** @type {HTMLElement | null} */ (document.querySelector('.navbar'));
     const toggle = /** @type {HTMLElement | null} */ (
         document.getElementById('nav-pages-toggle')

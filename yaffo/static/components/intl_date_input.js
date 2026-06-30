@@ -8,37 +8,13 @@
  * @property {string} value
  * @property {number} length
  *
- * @typedef {Object} I18nService
- * @property {string} locale
- * @property {(key: string, options?: Record<string, unknown>) => string} t
- *
- * @typedef {Object} IntlDateInputControl
- * @property {(isoValue: string | null | undefined) => void} setValue
- * @property {() => boolean} sync
- *
- * @typedef {Object} IntlDateInputApi
- * @property {(isoValue: string | null | undefined, locale: string) => string} formatValue
- * @property {(rawValue: string, locale: string) => string} formatPartial
- * @property {(root: HTMLElement, i18n: I18nService) => IntlDateInputControl} init
- * @property {(i18n: I18nService, root?: ParentNode) => IntlDateInputControl[]} initAll
- * @property {(rawValue: string, locale: string) => string | null} parseDate
- * @property {(locale: string) => string} placeholder
- *
  * @typedef {HTMLElement & { intlDateInput?: IntlDateInputControl }} IntlDateInputRoot
  */
 
-const intlDateInputWindow = /** @type {Window & {
-    PHOTO_ORGANIZER: {
-        COMPONENTS?: {
-            intlDateInput?: IntlDateInputApi,
-        },
-    },
-}} */ (/** @type {unknown} */ (window));
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
-intlDateInputWindow.PHOTO_ORGANIZER = intlDateInputWindow.PHOTO_ORGANIZER || {};
-intlDateInputWindow.PHOTO_ORGANIZER.COMPONENTS = intlDateInputWindow.PHOTO_ORGANIZER.COMPONENTS || {};
-
-intlDateInputWindow.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
+window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
     /**
      * @param {string} locale
      * @returns {Intl.DateTimeFormatPart[]}

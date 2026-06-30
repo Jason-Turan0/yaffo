@@ -256,24 +256,25 @@
     <script src="{{ url_for('static', filename='media/tags.js') }}"></script>
     <script src="{{ url_for('static', filename='media/face-reassign.js') }}"></script>
     <script>
-        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-            window.PHOTO_ORGANIZER.initFavoriteToggles(i18n, window.APP_CONFIG);
-            window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView = window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView(
+        document.addEventListener('yaffo:app-init-complete', (event) => {
+            const app = event.detail.app;
+            app.media.favorite.init(app.i18n, window.APP_CONFIG);
+            app.VIEW_PHOTO.photoView = app.VIEW_PHOTO.initPhotoView(
                 {{ faces_with_locations | tojson }},
                 {{ absolute_file_path | tojson }},
                 {{ absolute_folder_path | tojson }},
-                i18n,
+                app.i18n,
                 window.APP_CONFIG
             );
-            window.PHOTO_ORGANIZER.VIEW_PHOTO.photoTags = window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags(
+            app.VIEW_PHOTO.photoTags = app.VIEW_PHOTO.initPhotoTags(
                 {{ media_item.id }},
                 {{ tags_data | tojson }},
-                i18n,
+                app.i18n,
                 window.APP_CONFIG
             );
-            window.PHOTO_ORGANIZER.VIEW_PHOTO.faceReassign = window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign(
+            app.VIEW_PHOTO.faceReassign = app.VIEW_PHOTO.initFaceReassign(
                 {{ all_people | tojson }},
-                i18n,
+                app.i18n,
                 window.APP_CONFIG
             );
         });

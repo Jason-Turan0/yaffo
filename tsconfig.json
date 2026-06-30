@@ -10,6 +10,7 @@
     "skipLibCheck": true
   },
   "files": [
+    "yaffo/static/types/global.d.ts",
     "yaffo/static/i18n.js",
     "yaffo/static/components/collapsible_panel.js",
     "yaffo/static/components/cron_builder.js",

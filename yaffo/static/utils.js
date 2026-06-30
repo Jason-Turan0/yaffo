@@ -1,28 +1,11 @@
 // @ts-check
 
-/**
- * @typedef {Object} DateUtils
- * @property {(isoDate: string | null | undefined, options?: Intl.DateTimeFormatOptions) => string} format
- * @property {(isoDate: string | null | undefined, options?: Intl.DateTimeFormatOptions) => string} formatWithTime
- * @property {(isoDate: string | null | undefined) => string} formatRelative
- *
- * @typedef {Object} UtilsNamespace
- * @property {string} locale
- * @property {() => void} initImageFallbacks
- * @property {DateUtils} date
- */
-
-const utilsWindow = /** @type {Window & {
-    PHOTO_ORGANIZER: { utils?: Partial<UtilsNamespace> },
-    APP_CONFIG: { i18n: { locale: string } },
-}} */ (/** @type {unknown} */ (window));
-
-utilsWindow.PHOTO_ORGANIZER = utilsWindow.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 const utils = /** @type {Partial<UtilsNamespace> & { locale: string }} */ (
-    utilsWindow.PHOTO_ORGANIZER.utils || {}
+    window.PHOTO_ORGANIZER.utils || {}
 );
-utilsWindow.PHOTO_ORGANIZER.utils = utils;
-utils.locale = utilsWindow.APP_CONFIG.i18n.locale;
+window.PHOTO_ORGANIZER.utils = utils;
+utils.locale = window.APP_CONFIG.i18n.locale;
 
 utils.initImageFallbacks = () => {
     document.querySelectorAll('img[data-fallback]').forEach((img) => {

@@ -1,26 +1,14 @@
 // @ts-check
 
 /**
- * @typedef {Object} I18nService
- * @property {(key: string, options?: Record<string, unknown>) => string} t
- *
- * @typedef {Object} AppConfig
- * @property {(endpoint: string, params?: Record<string, string | number | undefined>) => string} buildUrl
- *
  * @typedef {Object} FavoriteResponse
  * @property {boolean} favorite
  */
 
-const favoriteWindow = /** @type {Window & {
-    PHOTO_ORGANIZER: {
-        initFavoriteToggles?: (i18n: I18nService, config: AppConfig) => void,
-    },
-    notification: {
-        error: (message: string) => void,
-    },
-}} */ (/** @type {unknown} */ (window));
-
-favoriteWindow.PHOTO_ORGANIZER = favoriteWindow.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.media = window.PHOTO_ORGANIZER.media || {};
+const favoriteApi = window.PHOTO_ORGANIZER.media.favorite =
+    /** @type {FavoriteNamespace} */ (window.PHOTO_ORGANIZER.media.favorite || {});
 
 // Wires every favorite heart on the page: the detail view's single toggle and each
 // home-grid card's. Buttons carry .favorite-toggle + data-photo-id; the click is
@@ -30,7 +18,7 @@ favoriteWindow.PHOTO_ORGANIZER = favoriteWindow.PHOTO_ORGANIZER || {};
  * @param {AppConfig} config
  * @returns {void}
  */
-favoriteWindow.PHOTO_ORGANIZER.initFavoriteToggles = (i18n, config) => {
+favoriteApi.init = (i18n, config) => {
     /**
      * @param {HTMLButtonElement} button
      * @returns {Promise<void>}
@@ -48,7 +36,7 @@ favoriteWindow.PHOTO_ORGANIZER.initFavoriteToggles = (i18n, config) => {
             button.classList.toggle('is-favorite', !!data.favorite);
             button.setAttribute('aria-pressed', data.favorite ? 'true' : 'false');
         } catch (error) {
-            favoriteWindow.notification.error(i18n.t('media:favorite.updateFailed'));
+            window.notification.error(i18n.t('media:favorite.updateFailed'));
             console.error('Error:', error);
         } finally {
             button.disabled = false;

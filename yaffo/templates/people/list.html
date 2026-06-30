@@ -111,8 +111,9 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='people/list.js') }}"></script>
 <script>
-    window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-        window.PHOTO_ORGANIZER.peopleList = window.PHOTO_ORGANIZER.initPeopleList(i18n, window.APP_CONFIG);
+    document.addEventListener('yaffo:app-init-complete', (event) => {
+        const app = event.detail.app;
+        app.people.list = app.people.initList(app.i18n, window.APP_CONFIG);
     });
 </script>
 {% endblock %}

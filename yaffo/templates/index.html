@@ -171,12 +171,13 @@
     <script src="{{ url_for('static', filename='media/favorite.js') }}"></script>
     <script src="{{ url_for('static', filename='media/gallery_video.js') }}"></script>
     <script>
-        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-            window.PHOTO_ORGANIZER.initTagFilters(i18n, window.APP_CONFIG);
-            window.PHOTO_ORGANIZER.initLocationAutocomplete(i18n, window.APP_CONFIG);
-            window.PHOTO_ORGANIZER.initFilterConfig(i18n, window.APP_CONFIG);
-            window.PHOTO_ORGANIZER.initFavoriteToggles(i18n, window.APP_CONFIG);
-            window.PHOTO_ORGANIZER.initGalleryVideos(i18n, window.APP_CONFIG);
+        document.addEventListener('yaffo:app-init-complete', (event) => {
+            const app = event.detail.app;
+            app.initTagFilters(app.i18n, window.APP_CONFIG);
+            app.initLocationAutocomplete(app.i18n, window.APP_CONFIG);
+            app.initFilterConfig(app.i18n, window.APP_CONFIG);
+            app.media.favorite.init(app.i18n, window.APP_CONFIG);
+            app.initGalleryVideos(app.i18n, window.APP_CONFIG);
         });
     </script>
 {% endblock %}

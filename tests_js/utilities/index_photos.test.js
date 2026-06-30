@@ -55,7 +55,7 @@ const stubFetch = (response) => {
 
 const init = async () => (
   await loadModule('utilities/index_photos.js')
-).initIndexPhotos(opts, window.testI18n, config);
+).indexPhotos.init(opts, window.testI18n, config);
 
 const stat = (id) => document.getElementById(id).textContent;
 

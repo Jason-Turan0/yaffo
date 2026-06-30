@@ -1,15 +1,11 @@
 // @ts-check
 
-const collapsiblePanelWindow = /** @type {Window & {
-    togglePanel: (panelId: string) => void,
-}} */ (/** @type {unknown} */ (window));
-
 /**
  * Toggle a collapsible panel rendered with matching header/content children.
  *
  * @param {string} panelId
  */
-collapsiblePanelWindow.togglePanel = function(panelId) {
+window.togglePanel = function(panelId) {
     const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
     if (!panel) return;
 

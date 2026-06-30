@@ -3,20 +3,6 @@
 /**
  * @typedef {Object<string, Object<string, unknown>>} TranslationCatalog
  *
- * @typedef {Object} I18nConfig
- * @property {string} locale
- * @property {string} fallbackLocale
- * @property {string} resourceUrl
- *
- * @typedef {Object} I18nService
- * @property {string} locale
- * @property {(key: string, options?: Record<string, unknown>) => string} t
- * @property {(value: number, options?: Intl.NumberFormatOptions) => string} number
- * @property {(value: number, options?: Intl.NumberFormatOptions) => string} percent
- * @property {(value: string | number | Date, options?: Intl.DateTimeFormatOptions) => string} date
- * @property {(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions) => string} relativeTime
- * @property {(values: Iterable<string>, options?: Intl.ListFormatOptions) => string} list
- *
  * @typedef {Object} I18nextLike
  * @property {(options: {
  *   lng: string,
@@ -29,17 +15,7 @@
  * @property {(key: string, options?: Record<string, unknown>) => string} t
  */
 
-const i18nWindow = /** @type {Window & {
- *   PHOTO_ORGANIZER: {
- *     initI18n?: (config: I18nConfig) => Promise<I18nService>,
- *     i18nReady?: Promise<I18nService>,
- *     i18n?: I18nService,
- *   },
- *   APP_CONFIG: { i18n: I18nConfig },
- *   i18next: I18nextLike,
- * }} */ (/** @type {unknown} */ (window));
-
-i18nWindow.PHOTO_ORGANIZER = i18nWindow.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
 /**
  * Load translation catalogs and return the shared i18n formatting service.
@@ -74,7 +50,7 @@ const initI18n = async (config) => {
     fallbackCatalog = locale === config.fallbackLocale ? catalog : await loadCatalog(fallbackUrl);
 
     /** @type {I18nextLike} */
-    const i18next = i18nWindow.i18next;
+    const i18next = window.i18next;
     await i18next.init({
         lng: locale,
         fallbackLng: config.fallbackLocale,
@@ -102,11 +78,11 @@ const initI18n = async (config) => {
     };
 };
 
-i18nWindow.PHOTO_ORGANIZER.initI18n = initI18n;
+window.PHOTO_ORGANIZER.initI18n = initI18n;
 
-i18nWindow.PHOTO_ORGANIZER.i18nReady = initI18n(i18nWindow.APP_CONFIG.i18n)
+window.PHOTO_ORGANIZER.i18nReady = initI18n(window.APP_CONFIG.i18n)
     .then((service) => {
-        i18nWindow.PHOTO_ORGANIZER.i18n = service;
+        window.PHOTO_ORGANIZER.i18n = service;
         document.dispatchEvent(new CustomEvent('yaffo:i18n-ready', {detail: service}));
         return service;
     });

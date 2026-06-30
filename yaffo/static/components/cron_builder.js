@@ -1,20 +1,6 @@
 // @ts-check
 
 /**
- * @typedef {Object} I18nService
- * @property {(key: string, options?: Record<string, unknown>) => string} t
- * @property {(value: Date, options?: Intl.DateTimeFormatOptions) => string} date
- *
- * @typedef {Object} CronBuilderDeps
- * @property {I18nService} i18n
- * @property {Document} [document]
- *
- * @typedef {Object} CronBuilderApi
- * @property {(scope?: Document | Element) => void} initAll
- * @property {(cron?: string) => string} describeCron
- * @property {(root: CronBuilderRoot | null) => void} reset
- * @property {(root: CronBuilderRoot | null, cron: string) => void} setCron
- *
  * @typedef {HTMLElement & {
  *   _cron?: {
  *     reset: () => void,
@@ -45,16 +31,6 @@
  * @property {HTMLElement} preview
  */
 
-const cronBuilderWindow = /** @type {Window & {
-    PHOTO_ORGANIZER: {
-        COMPONENTS: {
-            cronBuilder?: CronBuilderApi,
-            createCronBuilder: (deps: CronBuilderDeps) => CronBuilderApi,
-            initCronBuilder?: (deps: CronBuilderDeps) => CronBuilderApi,
-        },
-    },
-}} */ (/** @type {unknown} */ (window));
-
 // Self-contained cron editor. A tidy alternative to a raw cron textbox: a
 // "Common schedules" preset list plus a Period-driven single-value builder
 // (Hourly/Daily/Weekly/Monthly) and an Advanced (raw cron) escape hatch, all
@@ -67,14 +43,14 @@ const cronBuilderWindow = /** @type {Window & {
 // schedules render their cron in plain English via [data-cron] spans. Call
 // createCronBuilder({ i18n, document }) from the page entrypoint, then wire
 // initAll for the initial document and any HTMX swaps.
-cronBuilderWindow.PHOTO_ORGANIZER = cronBuilderWindow.PHOTO_ORGANIZER || {};
-cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS = cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS || {};
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
 /**
  * @param {CronBuilderDeps} deps
  * @returns {CronBuilderApi}
  */
-cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.createCronBuilder = ({ i18n, document: cronDocument = document }) => {
+window.PHOTO_ORGANIZER.COMPONENTS.createCronBuilder = ({ i18n, document: cronDocument = document }) => {
     /** @param {string} key @param {Record<string, unknown>} [options] */
     const t = (key, options = {}) => i18n.t(`components:cron.${key}`, options);
     /** @type {{ cron: string, label: string }[]} */
@@ -390,10 +366,10 @@ cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.createCronBuilder = ({ i18n, docume
  * @param {CronBuilderDeps} deps
  * @returns {CronBuilderApi}
  */
-cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.initCronBuilder = (deps) => {
-    const cronBuilder = cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.createCronBuilder(deps);
+window.PHOTO_ORGANIZER.COMPONENTS.initCronBuilder = (deps) => {
+    const cronBuilder = window.PHOTO_ORGANIZER.COMPONENTS.createCronBuilder(deps);
     const cronDocument = deps.document || document;
-    cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.cronBuilder = cronBuilder;
+    window.PHOTO_ORGANIZER.COMPONENTS.cronBuilder = cronBuilder;
     cronBuilder.initAll(cronDocument);
     cronDocument.body.addEventListener("htmx:afterSwap", (event) => {
         cronBuilder.initAll(/** @type {Element} */ (event.target));

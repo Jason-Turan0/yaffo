@@ -1,5 +1,7 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.initPeopleList = (i18n, config) => {
+window.PHOTO_ORGANIZER.people = window.PHOTO_ORGANIZER.people || {};
+
+window.PHOTO_ORGANIZER.people.initList = (i18n, config) => {
     const addModal = window.PHOTO_ORGANIZER.COMPONENTS.modal.init('addModal');
     const editModal = window.PHOTO_ORGANIZER.COMPONENTS.modal.init('editModal');
     window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput.initAll(i18n, addModal.element);

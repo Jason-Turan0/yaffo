@@ -6,25 +6,6 @@
 // confirmation survives the navigation that would otherwise wipe the toast.
 const NOTIFICATION_FLASH_KEY = 'app-notification-flash';
 
-/**
- * @typedef {'success' | 'error' | 'warning' | 'info'} NotificationType
- *
- * @typedef {Object} NotificationApi
- * @property {(message: string, type?: NotificationType, duration?: number) => void} show
- * @property {() => void} hide
- * @property {(message: string, type?: NotificationType, duration?: number) => void} flash
- * @property {() => void} showPendingFlash
- * @property {(message: string, duration?: number) => void} success
- * @property {(message: string, duration?: number) => void} error
- * @property {(message: string, duration?: number) => void} warning
- * @property {(message: string, duration?: number) => void} info
- */
-
-const notificationWindow = /** @type {Window & {
-    notification: NotificationApi,
-    showNotification: (message: string, type?: NotificationType, duration?: number) => void,
-}} */ (/** @type {unknown} */ (window));
-
 class Notification {
     constructor() {
         // Create notification element if it doesn't exist
@@ -149,7 +130,7 @@ class Notification {
 }
 
 // Create global notification instance
-notificationWindow.notification = new Notification();
+window.notification = new Notification();
 
 // Backward compatibility: also expose as a function
 /**
@@ -157,6 +138,6 @@ notificationWindow.notification = new Notification();
  * @param {NotificationType} type
  * @param {number} duration
  */
-notificationWindow.showNotification = function(message, type = 'success', duration = 3000) {
-    notificationWindow.notification.show(message, type, duration);
+window.showNotification = function(message, type = 'success', duration = 3000) {
+    window.notification.show(message, type, duration);
 };
