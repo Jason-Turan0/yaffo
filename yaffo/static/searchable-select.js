@@ -24,6 +24,11 @@
  * @property {boolean} selected
  */
 
+const searchableSelectWindow = /** @type {Window & {
+    PHOTO_ORGANIZER?: { i18nReady?: Promise<I18nService> },
+    SearchableSelect?: typeof SearchableSelect,
+}} */ (/** @type {unknown} */ (window));
+
 class SearchableSelect {
     /**
      * @param {HTMLSelectElement} selectElement
@@ -368,10 +373,14 @@ SearchableSelect.i18n = {
 };
 
 // Auto-initialize on page load
-if ((/** @type {Window & { PHOTO_ORGANIZER?: { i18nReady?: Promise<I18nService> } }} */ (window)).PHOTO_ORGANIZER?.i18nReady) (/** @type {Window & { PHOTO_ORGANIZER?: { i18nReady?: Promise<I18nService> } }} */ (window)).PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-    SearchableSelect.i18n = i18n;
+if (searchableSelectWindow.PHOTO_ORGANIZER?.i18nReady) {
+    searchableSelectWindow.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+        SearchableSelect.i18n = i18n;
+        SearchableSelect.initAll();
+    });
+} else {
     SearchableSelect.initAll();
-}); else SearchableSelect.initAll();
+}
 
 // Re-initialize selects arriving in htmx-swapped fragments (initAll skips
 // anything already initialized via data-searchable-initialized)
@@ -380,6 +389,4 @@ document.addEventListener('htmx:afterSwap', () => {
 });
 
 // Export for use in other scripts
-(/** @type {Window & { SearchableSelect: typeof SearchableSelect }} */ (
-    /** @type {unknown} */ (window)
-)).SearchableSelect = SearchableSelect;
+searchableSelectWindow.SearchableSelect = SearchableSelect;

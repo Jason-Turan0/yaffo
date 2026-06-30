@@ -272,12 +272,13 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config, defaultPath = null, i
 // schedule panel pre-populated; Cancel collapses back to the buttons. Delegated off
 // document so it survives the #automation-triggers HTMX re-renders. Save/Add-event
 // are plain HTMX (edit_trigger_id tells the server add vs update for a schedule).
-window.PHOTO_ORGANIZER.initTriggerEditor = (i18n = window.PHOTO_ORGANIZER.i18n) => {
-    const cronBuilderReady = window.PHOTO_ORGANIZER.COMPONENTS.cronBuilderReady;
+window.PHOTO_ORGANIZER.initTriggerEditor = (
+    i18n = window.PHOTO_ORGANIZER.i18n,
+    cronBuilder = window.PHOTO_ORGANIZER.COMPONENTS.cronBuilder,
+) => {
     const areaFor = (el) => el.closest('#automation-triggers').querySelector('.automation-trigger-add');
 
-    const openSchedule = async (area, { cron, triggerId, title }) => {
-        const cronBuilder = await cronBuilderReady;
+    const openSchedule = (area, { cron, triggerId, title }) => {
         area.querySelector('[name="edit_trigger_id"]').value = triggerId || '';
         area.querySelector('.schedule-editor-title').textContent = title;
         const mount = area.querySelector('[data-cron-builder]');
@@ -331,15 +332,15 @@ window.PHOTO_ORGANIZER.initTriggerEditor = (i18n = window.PHOTO_ORGANIZER.i18n) 
         else { clearTimeout(validateTimer); applyValidity(area, { valid: true, showError: false }); }
     });
 
-    document.addEventListener('click', async (event) => {
+    document.addEventListener('click', (event) => {
         const add = event.target.closest('.js-add-schedule');
         const edit = event.target.closest('.js-edit-schedule');
         const addEvent = event.target.closest('.js-add-event');
         const cancel = event.target.closest('.js-cancel');
         if (add) {
-            await openSchedule(areaFor(add), { title: i18n.t('utilities:automations.triggers.addSchedule') });
+            openSchedule(areaFor(add), { title: i18n.t('utilities:automations.triggers.addSchedule') });
         } else if (edit) {
-            await openSchedule(areaFor(edit), {
+            openSchedule(areaFor(edit), {
                 cron: edit.dataset.cronValue,
                 triggerId: edit.dataset.triggerId,
                 title: i18n.t('utilities:automations.triggers.editSchedule'),

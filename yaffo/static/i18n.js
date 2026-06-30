@@ -107,6 +107,6 @@ i18nWindow.PHOTO_ORGANIZER.initI18n = initI18n;
 i18nWindow.PHOTO_ORGANIZER.i18nReady = initI18n(i18nWindow.APP_CONFIG.i18n)
     .then((service) => {
         i18nWindow.PHOTO_ORGANIZER.i18n = service;
-        document.dispatchEvent(new CustomEvent('yaffo:i18n-ready'));
+        document.dispatchEvent(new CustomEvent('yaffo:i18n-ready', {detail: service}));
         return service;
     });

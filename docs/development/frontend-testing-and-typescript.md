@@ -21,7 +21,9 @@ Settled choices (the rest of the doc is the supporting analysis). Date: 2026-06-
 | D4 | **Unit tests run from the CLI via npm scripts; coverage is included** (`vitest run --coverage`, v8 provider, scoped to `yaffo/static/**` excluding `vendor/`). | Mirrors the existing `yaffo_ui_tests` npm-script workflow; coverage is first-class, no extra framework. | §3.7 |
 | D5 | **DOM fixtures come from the real Jinja templates, not hand-written HTML** — rendered to committed fixture files by a generation step, drift-guarded in CI. | Keeps the template as the single source of truth; prevents test/markup duplication. | §3.8 |
 
-Open items still to decide before Step 1 of the roadmap: **runner** (Vitest vs. reuse `yaffo_ui_tests` Jest) and **where `package.json` lives** (new root vs. `yaffo_ui_tests/`) — see §6.
+Current implementation: the frontend unit-test and type-check tooling lives at
+the repo root. `package.json` drives Vitest/jsdom unit tests and `tsc --noEmit`
+checks the migrated JavaScript files listed in `tsconfig.json`.
 
 ---
 
@@ -149,26 +151,29 @@ nearly identical.
 
 ### 3.2 The loading shim (the one real piece of glue)
 
-Because modules attach to a global instead of exporting, a tiny helper evaluates a
-module against fresh globals and hands back the namespace:
+Because modules attach to a global instead of exporting, a tiny helper imports a
+static file against the current jsdom globals and hands back the namespace:
 
 ```js
-// tests_js/support/load_module.js
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
-/** Evaluate a yaffo/static module against a provided window-like global. */
-export function loadModule(relPath, globals = {}) {
-  const code = readFileSync(new URL(`../../yaffo/static/${relPath}`, import.meta.url), 'utf8');
-  const sandbox = { window: {}, document, console, fetch, TextDecoder, ...globals };
-  sandbox.window = sandbox.window ?? {};
-  vm.runInNewContext(code, { ...sandbox, globalThis: sandbox });
-  return sandbox.window.PHOTO_ORGANIZER;
+const STATIC_DIR = path.join(process.cwd(), 'yaffo', 'static');
+let reloadCounter = 0;
+
+/**
+ * Load a yaffo/static module into the current jsdom global.
+ *
+ * The app's modules attach to `window.PHOTO_ORGANIZER` as a side effect of
+ * evaluation. Importing through Vitest keeps coverage mapped to the real file,
+ * and a cache-busting query gives each test a fresh module evaluation.
+ */
+export async function loadModule(relPath) {
+  const fileUrl = pathToFileURL(path.join(STATIC_DIR, relPath)).href;
+  await import(/* @vite-ignore */ `${fileUrl}?reload=${reloadCounter++}`);
+  return window.PHOTO_ORGANIZER;
 }
 ```
-
-(With Vitest's `jsdom` env, `document`/`window` already exist on the global, so the
-shim can be even smaller — just set `window.APP_CONFIG` etc. before importing.)
 
 ### 3.3 Fakes for the implicit globals
 
@@ -431,84 +436,111 @@ gradual `.js`→`.ts` migration with both coexisting.
   — then components, then pages, same order as the test rollout. Type a file when
   you add its first test.
 
-### 4.5 Worked example — typing `pages/widget_api.js` with JSDoc (named structs)
+### 4.5 Golden example — `components/cron_builder.js`
 
-JSDoc is not limited to one-off `@param`/`@returns` tags (already present in
-`utils.js`). It supports **named struct types** (`@typedef` + `@property`),
-**function types** (`@callback`), **generics** (`@template`), and **cross-file
-type imports** — enough to fully type a module with *no build step*, checked by
-`tsc --noEmit`.
+Use `cron_builder.js` as the reference migration shape for DOM components. It
+shows the intended split between runtime construction, page-level initialization,
+explicit dependency injection, and JSDoc type checking without a build step.
 
-`widget_api.js` is the ideal case: it returns a structured `api` object (a
-contract other widget code depends on) and consumes loosely-typed `postMessage`
-data. Today it's untyped ES5 (`var`/`function`). Typed:
+The public API has two factory methods:
 
 ```js
 /**
- * @typedef {Object} WidgetQuery
- * @property {string} source   - Data source name (e.g. "photos").
- * @property {number} [limit]  - Optional row cap.
- *   Additional `key: value` entries are treated as filters (see §note below).
- *
- * @callback EventHandler
- * @param {any} payload
- * @returns {void}
- *
- * @typedef {Object} YaffoApi                 // the returned struct — the key type
- * @property {Object<string, any[]>} data     - data_query results, keyed by query name.
- * @property {Object<string, any>}  state     - Persisted state from the last saveState().
- * @property {string} locale
- * @property {(value: number, options?: Intl.NumberFormatOptions) => string} number
- * @property {(value: number, options?: Intl.NumberFormatOptions) => string} percent
- * @property {(value: string|number|Date, options?: Intl.DateTimeFormatOptions) => string} date
- * @property {(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions) => string} relativeTime
- * @property {(values: Iterable<string>, options?: Intl.ListFormatOptions) => string} list
- * @property {(query: WidgetQuery) => Promise<any[]|null>} query
- * @property {(topic: string, payload: any) => void} publish
- * @property {(topic: string, handler: EventHandler) => void} subscribe
- * @property {(newState: Object<string, any>) => void} saveState
- * @property {(id: number) => string} mediaUrl
+ * @param {CronBuilderDeps} deps
+ * @returns {CronBuilderApi}
  */
+cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.createCronBuilder = ({ i18n, document: cronDocument = document }) => {
+    // Build a runtime instance. No global async work, no DOM auto-init.
+    return { initAll, describeCron, reset, setCron };
+};
 
 /**
- * @param {Object<string, any[]>} data   - host-injected data_query results.
- * @param {Object<string, any>}  state   - previously persisted widget state.
- * @param {string} [locale]
- * @returns {YaffoApi}
+ * @param {CronBuilderDeps} deps
+ * @returns {CronBuilderApi}
  */
-window.PHOTO_ORGANIZER.initWidgetApi = function (data, state, locale) {
-    /** @type {Object<number, (data: any) => void>} */
-    var pending = {};               // requestId -> resolve fn
-    /** @type {Object<string, EventHandler[]>} */
-    var subscribers = {};           // topic -> handlers
-
-    /** @type {YaffoApi} */
-    var api = { /* ...existing object literal, now shape-checked against YaffoApi... */ };
-    return api;
+cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.initCronBuilder = (deps) => {
+    const cronBuilder = cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.createCronBuilder(deps);
+    const cronDocument = deps.document || document;
+    cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.cronBuilder = cronBuilder;
+    cronBuilder.initAll(cronDocument);
+    cronDocument.body.addEventListener("htmx:afterSwap", (event) => {
+        cronBuilder.initAll(/** @type {Element} */ (event.target));
+    });
+    return cronBuilder;
 };
 ```
 
-What this buys, concretely:
+The template owns the async boundary and injects the ready component into the
+single consumer:
 
-- **`/** @type {YaffoApi} *\/ var api = {…}`** is the payoff for a returned
-  struct: `checkJs` errors if the literal drops a property, has a typo, or a
-  method signature drifts from the typedef. The struct is the single source of
-  truth for the widget contract.
-- **Cross-file reuse without importing code.** A widget consuming the global
-  imports just the *type*:
-  ```js
-  /** @type {import('./widget_api.js').YaffoApi} */
-  const yaffo = window.yaffo;
-  ```
-  and the global itself is declared ambiently in a check-only `globals.d.ts`
-  (read by `tsc`, never shipped): `interface Window { yaffo: import('./pages/widget_api.js').YaffoApi }`.
-- **Generics** are available where needed via `@template T` (e.g. a typed
-  `request<T>(...) => Promise<T>`).
+```html
+<script>
+    window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+        const cronBuilder = window.PHOTO_ORGANIZER.COMPONENTS.initCronBuilder({
+            i18n,
+            document,
+        });
+        window.PHOTO_ORGANIZER.initTriggerEditor(i18n, cronBuilder);
+    });
+</script>
+```
 
-**The one rough edge (§note):** JSDoc can't cleanly express an *index signature* —
-"`WidgetQuery` has a known `source` plus arbitrary filter keys." You fall back to
-`Object<string, any>` or document it in prose. Accumulating cases like this are the
-practical signal to graduate from JSDoc (Option 1) to real `.ts` (Option 2).
+Key points to copy:
+
+- **Use `create*` for runtime instances.** It receives dependencies and returns an
+  API object. It should not wait on `i18nReady`, attach global event listeners, or
+  mutate the shared namespace beyond installing the factory itself.
+- **Use `init*` for the shared page component.** It calls `create*`, stores the
+  shared instance on `window.PHOTO_ORGANIZER.COMPONENTS`, performs initial DOM
+  setup, and wires HTMX re-initialization.
+- **Keep async orchestration in the template or page entrypoint.** Components
+  receive an already-ready `i18n` service; they do not call
+  `window.PHOTO_ORGANIZER.i18nReady.then(...)` internally.
+- **Inject dependencies into consumers.** `initTriggerEditor(i18n, cronBuilder)`
+  takes the component it uses instead of awaiting a global `cronBuilderReady`
+  promise inside click handlers.
+- **Use file-specific window aliases.** `cronBuilderWindow` avoids top-level
+  lexical collisions between classic scripts. Do not reuse a generic
+  `const appWindow = ...` name across multiple static files.
+- **Type public contracts first.** `CronBuilderDeps`, `CronBuilderApi`, and the
+  component root/control types make the public surface readable while keeping DOM
+  casts localized near `querySelector`.
+- **Back behavior with focused unit tests.** The cron tests assert the factory is
+  synchronous, `initCronBuilder` stores and initializes the shared instance, and
+  `automations.js` uses the injected builder when opening schedules.
+
+### 4.6 Migration checklist
+
+Use this checklist when migrating another frontend file to unit tests and
+`checkJs`.
+
+- [ ] Identify the public entrypoint: `initPageFeature(...)`,
+  `createComponent(...)`, or `initComponent(...)`.
+- [ ] Keep runtime factories synchronous. Do not add hidden
+  `i18nReady.then(...)` calls inside component modules.
+- [ ] Move page orchestration to the template or page script: await `i18nReady`
+  once, create/init dependencies, then pass them into consumers.
+- [ ] Prefer two factory methods for shared DOM components:
+  `createThing(deps)` returns an instance, and `initThing(deps)` creates, stores,
+  initializes, and wires page-level listeners.
+- [ ] Replace promise globals such as `thingReady` with explicit injected
+  dependencies where practical.
+- [ ] Use a file-specific typed window alias, e.g. `cronBuilderWindow`, not a
+  repeated top-level `appWindow`.
+- [ ] Add `// @ts-check` to the migrated file.
+- [ ] Add named JSDoc typedefs for injected dependencies, public API return
+  shape, important DOM roots, and non-trivial data records.
+- [ ] Keep casts close to DOM boundaries (`querySelector`, `event.target`,
+  `dataset`, `value`), not scattered through business logic.
+- [ ] Convert nullable DOM lookups deliberately: either guard missing elements or
+  cast only when the component just rendered the markup itself.
+- [ ] Add the migrated file to `tsconfig.json`'s `files` list.
+- [ ] Add or update unit tests in `tests_js/`, using `tests_js/support/setup.js`
+  for globals and `tests_js/support/load_module.js` to load static modules.
+- [ ] Test the new dependency boundary: factory is synchronous, initializer stores
+  shared state when expected, and consumers receive dependencies as arguments.
+- [ ] Run `npm run typecheck:js`.
+- [ ] Run `npm run test:unit`.
 
 ---
 
@@ -516,22 +548,21 @@ practical signal to graduate from JSDoc (Option 1) to real `.ts` (Option 2).
 
 | Step | Effort | Outcome |
 |------|--------|---------|
-| 1. Vitest + jsdom harness, loading shim, fakes (§3.2–3.3) | ½ day | first JS unit test green |
-| 2. Root `tsconfig.json`, `checkJs`/`noEmit`, type `utils.js`+`i18n.js` (Option 1) | ½ day | type-checking with no build |
-| 3. Refactor `multi-select.js` to factory pattern (§3.6) | ½ day | last outlier conformant + testable |
-| 4. Phase-1 unit tests (`utils`, `index_photos`, `multi-select`, `i18n`) | 1–2 days | core logic covered |
-| 5. CI workflow: `vitest run` + `tsc --noEmit` + `eslint` gate | ½ day | regressions caught on PRs |
-| 6. Phase-2 component tests + type files as touched | ongoing | coverage ratchets up |
+| 1. Vitest + jsdom harness, loading shim, fakes (§3.2–3.3) | Done | root unit-test harness is in place |
+| 2. Root `tsconfig.json`, `checkJs`/`noEmit`, type initial files (Option 1) | Done | type-checking with no build |
+| 3. Migrate shared/global components with the cron builder pattern (§4.5–4.6) | ongoing | tested, typed components with explicit DI |
+| 4. Phase-1 unit tests (`utils`, `index_photos`, `multi-select`, `i18n`) | ongoing | core logic covered |
+| 5. CI workflow: `npm run test:unit`, `npm run typecheck:js`, and optional coverage gate | ½ day | regressions caught on PRs |
+| 6. Phase-2 page modules as touched | ongoing | coverage ratchets up |
 | 7. *(optional, later)* evaluate Option 2 full-TS build | 2–3 days | only if JSDoc verbosity bites |
 
 ---
 
 ## 6. Risks & open questions
 
-- **Reuse vs. new toolchain.** Adding Vitest means a second JS test runner
-  alongside the `yaffo_ui_tests` Jest. Acceptable (different targets), but if the
-  team wants one runner, standardize on Jest + `jest-environment-jsdom` instead —
-  decide before Step 1.
+- **Separate JS test targets.** Vitest now covers first-party app JavaScript,
+  while `yaffo_ui_tests` continues to own browser/E2E tooling. Keep that boundary
+  clear so app unit tests do not inherit E2E framework concerns.
 - **The loading shim is glue.** It depends on modules being side-effect-evaluable
   against a global. Converting modules to real ESM `export`s later would remove the
   shim but is a larger change touching every `<script>` tag in templates.
@@ -540,5 +571,3 @@ practical signal to graduate from JSDoc (Option 1) to real `.ts` (Option 2).
   1 sidesteps it entirely.
 - **Coverage targets.** Start with none; set per-file floors after Phase 1 to avoid
   a vanity whole-tree percentage that punishes untested vendored/page glue.
-</content>
-</invoke>

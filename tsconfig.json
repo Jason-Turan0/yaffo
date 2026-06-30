@@ -12,6 +12,7 @@
   "files": [
     "yaffo/static/i18n.js",
     "yaffo/static/components/collapsible_panel.js",
+    "yaffo/static/components/cron_builder.js",
     "yaffo/static/components/intl_date_input.js",
     "yaffo/static/components/percentage_slider.js",
     "yaffo/static/media/favorite.js",

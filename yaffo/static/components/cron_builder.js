@@ -1,3 +1,60 @@
+// @ts-check
+
+/**
+ * @typedef {Object} I18nService
+ * @property {(key: string, options?: Record<string, unknown>) => string} t
+ * @property {(value: Date, options?: Intl.DateTimeFormatOptions) => string} date
+ *
+ * @typedef {Object} CronBuilderDeps
+ * @property {I18nService} i18n
+ * @property {Document} [document]
+ *
+ * @typedef {Object} CronBuilderApi
+ * @property {(scope?: Document | Element) => void} initAll
+ * @property {(cron?: string) => string} describeCron
+ * @property {(root: CronBuilderRoot | null) => void} reset
+ * @property {(root: CronBuilderRoot | null, cron: string) => void} setCron
+ *
+ * @typedef {HTMLElement & {
+ *   _cron?: {
+ *     reset: () => void,
+ *     setCron: (cron: string) => void,
+ *   },
+ * }} CronBuilderRoot
+ *
+ * @typedef {Object} CronState
+ * @property {string} mode
+ * @property {string} preset
+ * @property {string} cadence
+ * @property {number} minute
+ * @property {number} hour
+ * @property {number} weekday
+ * @property {number} dom
+ * @property {string} raw
+ *
+ * @typedef {Object} CronControls
+ * @property {HTMLInputElement} hidden
+ * @property {HTMLSelectElement} mode
+ * @property {HTMLSelectElement} preset
+ * @property {HTMLSelectElement} cadence
+ * @property {HTMLSelectElement} weekday
+ * @property {HTMLSelectElement} dom
+ * @property {HTMLSelectElement} hour
+ * @property {HTMLSelectElement} minute
+ * @property {HTMLInputElement} raw
+ * @property {HTMLElement} preview
+ */
+
+const cronBuilderWindow = /** @type {Window & {
+    PHOTO_ORGANIZER: {
+        COMPONENTS: {
+            cronBuilder?: CronBuilderApi,
+            createCronBuilder: (deps: CronBuilderDeps) => CronBuilderApi,
+            initCronBuilder?: (deps: CronBuilderDeps) => CronBuilderApi,
+        },
+    },
+}} */ (/** @type {unknown} */ (window));
+
 // Self-contained cron editor. A tidy alternative to a raw cron textbox: a
 // "Common schedules" preset list plus a Period-driven single-value builder
 // (Hourly/Daily/Weekly/Monthly) and an Advanced (raw cron) escape hatch, all
@@ -7,14 +64,20 @@
 // Usage: drop `<div data-cron-builder data-cron-name="cron"></div>` inside a
 // form. The component renders into it and keeps a hidden input (the given name)
 // holding the live cron, so a normal form/HTMX submit carries it. Existing
-// schedules render their cron in plain English via [data-cron] spans. Both are
-// (re)initialised automatically on load and after every htmx swap.
-window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
+// schedules render their cron in plain English via [data-cron] spans. Call
+// createCronBuilder({ i18n, document }) from the page entrypoint, then wire
+// initAll for the initial document and any HTMX swaps.
+cronBuilderWindow.PHOTO_ORGANIZER = cronBuilderWindow.PHOTO_ORGANIZER || {};
+cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS = cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS || {};
 
-window.PHOTO_ORGANIZER.COMPONENTS.cronBuilderReady =
-window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+/**
+ * @param {CronBuilderDeps} deps
+ * @returns {CronBuilderApi}
+ */
+cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.createCronBuilder = ({ i18n, document: cronDocument = document }) => {
+    /** @param {string} key @param {Record<string, unknown>} [options] */
     const t = (key, options = {}) => i18n.t(`components:cron.${key}`, options);
+    /** @type {{ cron: string, label: string }[]} */
     const PRESETS = [
         { cron: "*/15 * * * *", label: t("everyMinutes", { count: 15 }) },
         { cron: "0 * * * *", label: t("everyHour") },
@@ -23,21 +86,27 @@ window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
         { cron: "0 9 * * *", label: t("dailyAt", { time: "9:00 AM" }) },
         { cron: "0 9 * * 1", label: t("weeklyOnAt", { day: t("monday"), time: "9:00 AM" }) },
     ];
+    /** @type {[number, string][]} */
     const WEEKDAYS = [
         [1, t("monday")], [2, t("tuesday")], [3, t("wednesday")],
         [4, t("thursday")], [5, t("friday")], [6, t("saturday")], [0, t("sunday")],
     ];
+    /** @type {Record<number, string>} */
     const WEEKDAY_LABEL = {
         0: t("sunday"), 1: t("monday"), 2: t("tuesday"), 3: t("wednesday"),
         4: t("thursday"), 5: t("friday"), 6: t("saturday"), 7: t("sunday"),
     };
+    /** @type {[string, string][]} */
     const CADENCES = [
         ["hourly", t("hourly")], ["daily", t("daily")], ["weekly", t("weekly")],
         ["monthly", t("monthly")], ["advanced", t("advanced")],
     ];
 
+    /** @param {number} n */
     const pad = (n) => String(n).padStart(2, "0");
+    /** @param {string} s */
     const isInt = (s) => /^\d+$/.test(s);
+    /** @param {number} h @param {number} m */
     const fmtTime = (h, m) => i18n.date(
         new Date(Date.UTC(2000, 0, 1, h, m)),
         { hour: "numeric", minute: "2-digit", timeZone: "UTC" }
@@ -45,6 +114,7 @@ window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
 
     // cron -> friendly text, covering the shapes the presets/builder produce and
     // falling back to the raw expression for anything richer.
+    /** @type {CronBuilderApi["describeCron"]} */
     const describeCron = (cron) => {
         if (!cron) return "";
         const parts = cron.trim().split(/\s+/);
@@ -75,15 +145,22 @@ window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
         return cron;
     };
 
+    /**
+     * @param {[string | number, string][]} pairs
+     * @param {string | number} selected
+     */
     const options = (pairs, selected) => pairs
         .map(([value, label]) => `<option value="${value}"${value == selected ? " selected" : ""}>${label}</option>`)
         .join("");
+    /** @param {number} from @param {number} to @param {number} step @param {number} selected */
     const numOptions = (from, to, step, selected) => {
+        /** @type {[number, string][]} */
         const pairs = [];
         for (let n = from; n <= to; n += step) pairs.push([n, pad(n)]);
         return options(pairs, selected);
     };
 
+    /** @param {string} name */
     const TEMPLATE = (name) => `
         <input type="hidden" name="${name}" class="cron-value">
         <div class="form-row">
@@ -141,6 +218,7 @@ window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
             <span class="cron-preview" aria-live="polite"></span>
         </div>`;
 
+    /** @param {CronControls} els */
     const buildCron = (els) => {
         if (els.mode.value === "preset") return els.preset.value;
         const { minute, hour, weekday, dom } = els;
@@ -154,8 +232,10 @@ window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
         }
     };
 
+    /** @type {Set<number>} */
     const MINUTE_SET = new Set();
     for (let n = 0; n <= 55; n += 5) MINUTE_SET.add(n);
+    /** @returns {CronState} */
     const DEFAULT_STATE = () => ({
         mode: "preset", preset: "0 * * * *", cadence: "daily",
         minute: 0, hour: 9, weekday: 1, dom: 1, raw: "",
@@ -164,6 +244,7 @@ window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
     // Inverse of buildCron: a cron string -> control state, so editing an existing
     // schedule reopens the builder on the right fields. Any shape the single-value
     // builder can't represent (lists, steps, out-of-grid minutes) falls to Advanced.
+    /** @param {string | undefined} cron */
     const parseCron = (cron) => {
         const def = DEFAULT_STATE();
         const c = (cron || "").trim();
@@ -197,16 +278,26 @@ window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
         return advanced;
     };
 
+    /** @param {CronBuilderRoot} root */
     const create = (root) => {
         root.classList.add("cron-builder");
         root.innerHTML = TEMPLATE(root.dataset.cronName || "cron");
+        /** @param {string} sel */
         const q = (sel) => root.querySelector(sel);
+        /** @type {CronControls} */
         const els = {
-            hidden: q(".cron-value"), mode: q(".cron-mode"), preset: q(".cron-preset"),
-            cadence: q(".cron-cadence"), weekday: q(".cron-weekday"), dom: q(".cron-dom"),
-            hour: q(".cron-hour"), minute: q(".cron-minute"), raw: q(".cron-raw"),
-            preview: q(".cron-preview"),
+            hidden: /** @type {HTMLInputElement} */ (q(".cron-value")),
+            mode: /** @type {HTMLSelectElement} */ (q(".cron-mode")),
+            preset: /** @type {HTMLSelectElement} */ (q(".cron-preset")),
+            cadence: /** @type {HTMLSelectElement} */ (q(".cron-cadence")),
+            weekday: /** @type {HTMLSelectElement} */ (q(".cron-weekday")),
+            dom: /** @type {HTMLSelectElement} */ (q(".cron-dom")),
+            hour: /** @type {HTMLSelectElement} */ (q(".cron-hour")),
+            minute: /** @type {HTMLSelectElement} */ (q(".cron-minute")),
+            raw: /** @type {HTMLInputElement} */ (q(".cron-raw")),
+            preview: /** @type {HTMLElement} */ (q(".cron-preview")),
         };
+        /** @param {string} sel @param {boolean} on */
         const show = (sel, on) => root.querySelectorAll(sel)
             .forEach((el) => el.classList.toggle("is-hidden", !on));
 
@@ -239,14 +330,15 @@ window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
             }));
         };
 
+        /** @param {CronState} st */
         const setState = (st) => {
             els.mode.value = st.mode;
             els.preset.value = st.preset;
             els.cadence.value = st.cadence;
-            els.minute.value = st.minute;
-            els.hour.value = st.hour;
-            els.weekday.value = st.weekday;
-            els.dom.value = st.dom;
+            els.minute.value = String(st.minute);
+            els.hour.value = String(st.hour);
+            els.weekday.value = String(st.weekday);
+            els.dom.value = String(st.dom);
             els.raw.value = st.raw;
             refresh();
         };
@@ -262,27 +354,49 @@ window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
         refresh();
     };
 
-    const initAll = (scope) => {
-        const inScope = (el) => scope === el || scope.contains(el);
-        (scope.matches?.("[data-cron-builder]") ? [scope] : [])
+    /** @type {CronBuilderApi["initAll"]} */
+    const initAll = (scope = cronDocument) => {
+        /** @param {Element} el */
+        const inScope = (el) => scope === cronDocument || scope === el || scope.contains(el);
+        const scopeElement = scope instanceof Element ? scope : null;
+        (scopeElement?.matches("[data-cron-builder]") ? [scopeElement] : [])
             .concat(Array.from(scope.querySelectorAll?.("[data-cron-builder]") || []))
-            .forEach((el) => { if (!el.dataset.cronReady) { el.dataset.cronReady = "1"; create(el); } });
-        document.querySelectorAll("[data-cron]").forEach((el) => {
-            if (inScope(el)) el.textContent = describeCron(el.dataset.cron);
+            .forEach((el) => {
+                const root = /** @type {CronBuilderRoot} */ (el);
+                if (!root.dataset.cronReady) {
+                    root.dataset.cronReady = "1";
+                    create(root);
+                }
+            });
+        cronDocument.querySelectorAll("[data-cron]").forEach((el) => {
+            const cronEl = /** @type {HTMLElement} */ (el);
+            if (inScope(cronEl)) cronEl.textContent = describeCron(cronEl.dataset.cron);
         });
     };
 
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => initAll(document));
-    } else {
-        initAll(document);
-    }
-    document.body.addEventListener("htmx:afterSwap", (e) => initAll(e.target));
+    /** @type {CronBuilderApi["reset"]} */
+    const reset = (root) => {
+        if (root && root._cron) root._cron.reset();
+    };
+    /** @type {CronBuilderApi["setCron"]} */
+    const setCron = (root, cron) => {
+        if (root && root._cron) root._cron.setCron(cron);
+    };
 
-    const reset = (root) => root && root._cron && root._cron.reset();
-    const setCron = (root, cron) => root && root._cron && root._cron.setCron(cron);
+    return { initAll, describeCron, reset, setCron };
+};
 
-    const api = { initAll, describeCron, reset, setCron };
-    window.PHOTO_ORGANIZER.COMPONENTS.cronBuilder = api;
-    return api;
-});
+/**
+ * @param {CronBuilderDeps} deps
+ * @returns {CronBuilderApi}
+ */
+cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.initCronBuilder = (deps) => {
+    const cronBuilder = cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.createCronBuilder(deps);
+    const cronDocument = deps.document || document;
+    cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.cronBuilder = cronBuilder;
+    cronBuilder.initAll(cronDocument);
+    cronDocument.body.addEventListener("htmx:afterSwap", (event) => {
+        cronBuilder.initAll(/** @type {Element} */ (event.target));
+    });
+    return cronBuilder;
+};
