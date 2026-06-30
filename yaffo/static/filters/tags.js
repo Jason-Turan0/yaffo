@@ -1,9 +1,22 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
+const filters = window.PHOTO_ORGANIZER.filters;
 
+/**
+ * @param {I18nService} i18n
+ * @param {AppConfig} config
+ * @returns {TagsFilterApi}
+ */
 window.PHOTO_ORGANIZER.filters.initTags = (i18n, config) => {
+    /**
+     * @param {string} tagName
+     * @param {string | null} [selectedValue]
+     */
     const loadTagValues = async (tagName, selectedValue = null) => {
         const tagValueSelect = document.getElementById('tag-value-select');
+        if (!(tagValueSelect instanceof HTMLSelectElement)) return;
         const tagValueWrapper = tagValueSelect.nextElementSibling;
 
         if (!tagName) {
@@ -35,11 +48,11 @@ window.PHOTO_ORGANIZER.filters.initTags = (i18n, config) => {
                 throw new Error('Failed to load tag values');
             }
 
-            const data = await response.json();
+            const data = /** @type {{ values: string[] }} */ (await response.json());
 
             tagValueSelect.innerHTML = `<option value="">— ${i18n.t('media:filters.allValues')} —</option>`;
 
-            data.values.forEach(value => {
+            data.values.forEach((value) => {
                 const option = document.createElement('option');
                 option.value = value;
                 option.textContent = value;
@@ -67,11 +80,11 @@ window.PHOTO_ORGANIZER.filters.initTags = (i18n, config) => {
 
     const tagNameSelect = document.getElementById('tag-name-select');
 
-    if (tagNameSelect && tagNameSelect.value) {
+    if (tagNameSelect instanceof HTMLSelectElement && tagNameSelect.value) {
         loadTagValues(tagNameSelect.value);
     }
 
     const api = { loadTagValues };
-    window.PHOTO_ORGANIZER.filters.tags = api;
+    filters.tags = api;
     return api;
 };

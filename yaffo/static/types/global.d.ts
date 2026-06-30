@@ -55,6 +55,18 @@ type NavPagesBarApi = {
     syncNavbarHeight(): void;
 };
 
+type ModalControl = {
+    element: HTMLElement;
+    formElement: HTMLFormElement | null;
+    close(): void;
+    open(): void;
+    setFormAction(url: string): void;
+};
+
+type ModalApi = {
+    init(modalId: string): ModalControl;
+};
+
 type DateUtils = {
     format(isoDate: string | null | undefined, options?: Intl.DateTimeFormatOptions): string;
     formatWithTime(isoDate: string | null | undefined, options?: Intl.DateTimeFormatOptions): string;
@@ -109,6 +121,7 @@ type CronBuilderApi = {
 type PhotoOrganizerComponents = {
     initAll?: () => void;
     fileBrowser?: { init?: () => void };
+    modal: ModalApi;
     initNavPagesBar?: () => NavPagesBarApi | undefined;
     navPagesBar?: NavPagesBarApi;
     intlDateInput?: IntlDateInputApi;
@@ -124,6 +137,34 @@ type FavoriteNamespace = {
     init?(i18n: I18nService, config: AppConfig): void;
 };
 
+type MediaNamespace = {
+    favorite?: FavoriteNamespace;
+    initGalleryVideos?: (i18n: I18nService, config: AppConfig) => void;
+};
+
+type TagsFilterApi = {
+    loadTagValues(tagName: string, selectedValue?: string | null): Promise<void>;
+};
+
+type FiltersNamespace = {
+    initConfig?: (i18n: I18nService, config: AppConfig) => void;
+    initLocationAutocomplete?: (i18n: I18nService, config: AppConfig) => LocationAutocompleteApi | undefined;
+    initTags?: (i18n: I18nService, config: AppConfig) => TagsFilterApi;
+    tags?: TagsFilterApi;
+};
+
+type LocationAutocompleteResult = {
+    name: string;
+    lat: string;
+    lon: string;
+    source: 'photos' | 'openstreetmap' | string;
+};
+
+type LocationAutocompleteApi = {
+    clearSuggestions(): void;
+    fetchSuggestions(query: string): Promise<void>;
+};
+
 type IndexPhotosNamespace = {
     init?(opts: IndexPhotoOptions, i18n: I18nService, config: IndexPhotoConfig): IndexPhotosApi;
 };
@@ -133,11 +174,20 @@ type UtilitiesNamespace = {
     initRemoveDuplicates?: () => void;
 };
 
+type SettingsNamespace = {
+    initLabelFilter?: () => void;
+};
+
 type SearchableSelectConstructor = {
     new(selectElement: HTMLSelectElement): unknown;
     i18n: Pick<I18nService, 't'>;
     initAll(): void;
     init(selectElement: HTMLSelectElement): void;
+};
+
+type AppInitCompleteDetail = {
+    app: PhotoOrganizerApp;
+    PHOTO_ORGANIZER: PhotoOrganizerApp;
 };
 
 type PhotoOrganizerApp = {
@@ -147,10 +197,10 @@ type PhotoOrganizerApp = {
     i18n: I18nService;
     COMPONENTS: PhotoOrganizerComponents;
     utils?: UtilsNamespace;
-    media?: {
-        favorite?: FavoriteNamespace;
-    };
+    filters?: FiltersNamespace;
+    media?: MediaNamespace;
     indexPhotos?: IndexPhotosNamespace;
+    settings?: SettingsNamespace;
     utilities?: UtilitiesNamespace;
     initI18n?: (config: I18nConfig) => Promise<I18nService>;
     initApp?: () => Promise<PhotoOrganizerApp>;
@@ -170,4 +220,8 @@ interface Window {
     updateMultiSelectText?: (checkbox: HTMLInputElement) => void;
     filterMultiSelectOptions?: (input: HTMLInputElement) => void;
     initSearchableMultiSelects?: () => void;
+}
+
+interface DocumentEventMap {
+    'yaffo:app-init-complete': CustomEvent<AppInitCompleteDetail>;
 }

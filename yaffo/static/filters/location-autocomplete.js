@@ -1,6 +1,13 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
 
+/**
+ * @param {I18nService} i18n
+ * @param {AppConfig} appConfig
+ * @returns {LocationAutocompleteApi | undefined}
+ */
 window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
     const searchInput = document.getElementById('location-search');
     const suggestionsContainer = document.getElementById('location-suggestions');
@@ -8,11 +15,20 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
     const lonInput = document.getElementById('proximity-lon');
     const locationInput = document.getElementById('proximity-location');
 
-    if (!searchInput) return;
+    if (
+        !(searchInput instanceof HTMLInputElement) ||
+        !(suggestionsContainer instanceof HTMLElement) ||
+        !(latInput instanceof HTMLInputElement) ||
+        !(lonInput instanceof HTMLInputElement) ||
+        !(locationInput instanceof HTMLInputElement)
+    ) return;
 
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
     let debounceTimer;
+    /** @type {AbortController | null} */
     let currentRequest = null;
     let selectedIndex = -1;
+    /** @type {LocationAutocompleteResult[]} */
     let currentResults = [];
 
     const clearSuggestions = () => {
@@ -22,6 +38,9 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
         currentResults = [];
     };
 
+    /**
+     * @param {LocationAutocompleteResult} result
+     */
     const selectSuggestion = (result) => {
         searchInput.value = result.name;
         latInput.value = result.lat;
@@ -30,6 +49,9 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
         clearSuggestions();
     };
 
+    /**
+     * @param {number} index
+     */
     const highlightSuggestion = (index) => {
         const items = suggestionsContainer.querySelectorAll('.location-suggestion-item:not(.loading)');
         items.forEach((item, i) => {
@@ -42,6 +64,9 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
         });
     };
 
+    /**
+     * @param {LocationAutocompleteResult[]} results
+     */
     const showSuggestions = (results) => {
         clearSuggestions();
         currentResults = results;
@@ -87,6 +112,9 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
         suggestionsContainer.classList.add('active');
     };
 
+    /**
+     * @param {string} query
+     */
     const fetchSuggestions = async (query) => {
         if (query.length < 2) {
             clearSuggestions();
@@ -113,10 +141,10 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
                 throw new Error('Failed to fetch suggestions');
             }
 
-            const data = await response.json();
+            const data = /** @type {{ results: LocationAutocompleteResult[] }} */ (await response.json());
             showSuggestions(data.results);
         } catch (error) {
-            if (error.name !== 'AbortError') {
+            if (!(error instanceof DOMException) || error.name !== 'AbortError') {
                 console.error('Error fetching location suggestions:', error);
                 clearSuggestions();
             }
@@ -126,7 +154,7 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
     };
 
     searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
+        const query = searchInput.value.trim();
 
         clearTimeout(debounceTimer);
 
@@ -144,7 +172,7 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
     });
 
     searchInput.addEventListener('focus', (e) => {
-        const query = e.target.value.trim();
+        const query = searchInput.value.trim();
         if (query.length >= 2 && suggestionsContainer.children.length > 0) {
             suggestionsContainer.classList.add('active');
         }
@@ -196,7 +224,7 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
     });
 
     document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+        if (e.target instanceof Node && !searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
             clearSuggestions();
         }
     });

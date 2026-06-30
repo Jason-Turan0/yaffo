@@ -1,8 +1,14 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {}
 
 window.PHOTO_ORGANIZER.COMPONENTS.modal =
       {
+        /**
+         * @param {string} modalId
+         * @returns {ModalControl}
+         */
         init : (modalId) => {
             const modalElement = document.getElementById(modalId);
             if(modalElement == null){
@@ -31,7 +37,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.modal =
             const open = () => {
                 modalElement.classList.add('active');
             }
-            const setFormAction = (url) => {
+            const setFormAction = (/** @type {string} */ url) => {
                 if(formElement == null){
                     throw new Error(`Modal ${modalId} has no form to set an action on`);
                 }

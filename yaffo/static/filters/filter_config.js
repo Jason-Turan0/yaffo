@@ -1,31 +1,47 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
 
 // Configure-filters modal: drag-and-drop reorder, show/hide checkboxes, reset to
 // defaults, and save (POST the layout, then reload so the sidebar re-renders).
+/**
+ * @param {I18nService} i18n
+ * @param {AppConfig} config
+ */
 window.PHOTO_ORGANIZER.filters.initConfig = (i18n, config) => {
     const trigger = document.getElementById('configure-filters-btn');
     const list = document.getElementById('filter-config-list');
     if (!trigger || !list) return;  // sidebar without the configurable layout
 
     const modal = window.PHOTO_ORGANIZER.COMPONENTS.modal.init('configureFiltersModal');
+    const formElement = modal.formElement;
+    if (!formElement) return;
     const resetBtn = document.getElementById('filter-config-reset');
 
     trigger.addEventListener('click', () => modal.open());
 
     // --- drag & drop reorder ---
+    /** @type {HTMLElement | null} */
     let dragged = null;
 
+    /**
+     * @param {number} y
+     * @returns {HTMLElement | null}
+     */
     const rowAfterPoint = (y) => {
-        const rows = [...list.querySelectorAll('.filter-config-row:not(.dragging)')];
+        const rows = /** @type {HTMLElement[]} */ ([...list.querySelectorAll('.filter-config-row:not(.dragging)')]);
+        /** @type {{ offset: number, row: HTMLElement | null }} */
+        const initialClosest = { offset: Number.NEGATIVE_INFINITY, row: null };
         return rows.reduce((closest, row) => {
             const box = row.getBoundingClientRect();
             const offset = y - box.top - box.height / 2;
             return offset < 0 && offset > closest.offset ? { offset, row } : closest;
-        }, { offset: Number.NEGATIVE_INFINITY, row: null }).row;
+        }, initialClosest).row;
     };
 
     list.addEventListener('dragstart', (e) => {
+        if (!(e.target instanceof Element)) return;
         dragged = e.target.closest('.filter-config-row');
         if (dragged) dragged.classList.add('dragging');
     });
@@ -42,24 +58,36 @@ window.PHOTO_ORGANIZER.filters.initConfig = (i18n, config) => {
     });
 
     // --- reset to defaults: registry order, all visible ---
-    resetBtn.addEventListener('click', () => {
+    resetBtn?.addEventListener('click', () => {
+        /** @type {Record<string, HTMLElement>} */
         const byKey = {};
-        list.querySelectorAll('.filter-config-row').forEach((row) => { byKey[row.dataset.key] = row; });
+        list.querySelectorAll('.filter-config-row').forEach((row) => {
+            if (!(row instanceof HTMLElement) || !row.dataset.key) return;
+            byKey[row.dataset.key] = row;
+        });
         (list.dataset.defaultKeys || '').split(',').filter(Boolean).forEach((key) => {
             const row = byKey[key];
             if (!row) return;
-            row.querySelector('.filter-config-toggle').checked = true;
+            const toggle = row.querySelector('.filter-config-toggle');
+            if (toggle instanceof HTMLInputElement) toggle.checked = true;
             list.appendChild(row);  // re-append in default order
         });
     });
 
     // --- save: post the layout in DOM order, reload on success ---
-    modal.formElement.addEventListener('submit', async (e) => {
+    formElement.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const items = [...list.querySelectorAll('.filter-config-row')].map((row) => ({
-            key: row.dataset.key,
-            visible: row.querySelector('.filter-config-toggle').checked,
-        }));
+        /** @type {{ key: string, visible: boolean }[]} */
+        const items = [];
+        list.querySelectorAll('.filter-config-row').forEach((row) => {
+            if (!(row instanceof HTMLElement) || !row.dataset.key) return;
+            const toggle = row.querySelector('.filter-config-toggle');
+            if (!(toggle instanceof HTMLInputElement)) return;
+            items.push({
+                key: row.dataset.key,
+                visible: toggle.checked,
+            });
+        });
         try {
             const res = await fetch(config.urls.save_home_filters, {
                 method: 'POST',
@@ -69,7 +97,7 @@ window.PHOTO_ORGANIZER.filters.initConfig = (i18n, config) => {
             if (!res.ok) throw new Error('save failed');
             window.location.reload();
         } catch (err) {
-            notification.error(i18n.t('media:filters.saveFailed'));
+            window.notification.error(i18n.t('media:filters.saveFailed'));
         }
     });
 };

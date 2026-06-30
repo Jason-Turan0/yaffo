@@ -13,7 +13,7 @@ app.domReady = app.domReady || new Promise((resolve) => {
     resolve();
 });
 
-app.closeAlert = (button) => {
+app.closeAlert = (/** @type {Element | null} */ button) => {
     if (!button) return;
     const alert = button.closest('.alert');
     if (!alert) return;
