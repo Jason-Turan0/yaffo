@@ -194,8 +194,8 @@ jobs:
       - github-release
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || inputs.publish_pypi
-    # Trusted Publishing (OIDC) — no PyPI token stored in the repo. Requires a
-    # matching "pending publisher" configured on PyPI (see docs/distribution.md).
+    # Trusted Publishing (OIDC) — no PyPI token stored in the repo.
+    # The matching PyPI trusted publisher is already configured.
     environment:
       name: pypi
       url: https://pypi.org/project/yaffo/

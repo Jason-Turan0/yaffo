@@ -1,8 +1,29 @@
+// @ts-check
+
 // Notification component - reusable across the application
 
 // A flash queued for the *next* page load (e.g. just before a reload), so a
 // confirmation survives the navigation that would otherwise wipe the toast.
 const NOTIFICATION_FLASH_KEY = 'app-notification-flash';
+
+/**
+ * @typedef {'success' | 'error' | 'warning' | 'info'} NotificationType
+ *
+ * @typedef {Object} NotificationApi
+ * @property {(message: string, type?: NotificationType, duration?: number) => void} show
+ * @property {() => void} hide
+ * @property {(message: string, type?: NotificationType, duration?: number) => void} flash
+ * @property {() => void} showPendingFlash
+ * @property {(message: string, duration?: number) => void} success
+ * @property {(message: string, duration?: number) => void} error
+ * @property {(message: string, duration?: number) => void} warning
+ * @property {(message: string, duration?: number) => void} info
+ */
+
+const appWindow = /** @type {Window & {
+    notification: NotificationApi,
+    showNotification: (message: string, type?: NotificationType, duration?: number) => void,
+}} */ (/** @type {unknown} */ (window));
 
 class Notification {
     constructor() {
@@ -13,9 +34,12 @@ class Notification {
             this.element.className = 'notification';
             document.body.appendChild(this.element);
         } else {
-            this.element = document.getElementById('app-notification');
+            this.element = /** @type {HTMLElement} */ (
+                document.getElementById('app-notification')
+            );
         }
 
+        /** @type {ReturnType<typeof setTimeout> | null} */
         this.hideTimeout = null;
         this.showPendingFlash();
     }
@@ -23,7 +47,7 @@ class Notification {
     /**
      * Show a notification message
      * @param {string} message - The message to display
-     * @param {string} type - The notification type: 'success', 'error', 'warning', 'info'
+     * @param {NotificationType} type - The notification type
      * @param {number} duration - Duration in milliseconds (default: 3000)
      */
     show(message, type = 'success', duration = 3000) {
@@ -59,6 +83,9 @@ class Notification {
      * Queue a notification to show after the next page load. Use this instead of
      * show() right before a window.location.reload()/navigation, which would
      * otherwise destroy the toast before it's seen.
+     * @param {string} message
+     * @param {NotificationType} type
+     * @param {number} duration
      */
     flash(message, type = 'success', duration = 3000) {
         try {
@@ -81,7 +108,7 @@ class Notification {
         if (!raw) return;
         try {
             const { message, type, duration } = JSON.parse(raw);
-            this.show(message, type, duration);
+            this.show(String(message), type, Number(duration));
         } catch (e) {
             // Ignore a malformed flash payload.
         }
@@ -89,28 +116,47 @@ class Notification {
 
     /**
      * Convenience methods for different notification types
+     * @param {string} message
+     * @param {number} duration
      */
     success(message, duration = 3000) {
         this.show(message, 'success', duration);
     }
 
+    /**
+     * @param {string} message
+     * @param {number} duration
+     */
     error(message, duration = 3000) {
         this.show(message, 'error', duration);
     }
 
+    /**
+     * @param {string} message
+     * @param {number} duration
+     */
     warning(message, duration = 3000) {
         this.show(message, 'warning', duration);
     }
 
+    /**
+     * @param {string} message
+     * @param {number} duration
+     */
     info(message, duration = 3000) {
         this.show(message, 'info', duration);
     }
 }
 
 // Create global notification instance
-window.notification = new Notification();
+appWindow.notification = new Notification();
 
 // Backward compatibility: also expose as a function
-window.showNotification = function(message, type = 'success', duration = 3000) {
-    window.notification.show(message, type, duration);
+/**
+ * @param {string} message
+ * @param {NotificationType} type
+ * @param {number} duration
+ */
+appWindow.showNotification = function(message, type = 'success', duration = 3000) {
+    appWindow.notification.show(message, type, duration);
 };

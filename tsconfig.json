@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "moduleDetection": "force",
+    "lib": ["DOM", "DOM.Iterable", "ES2022", "ES2022.Intl"],
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "files": [
+    "yaffo/static/i18n.js",
+    "yaffo/static/notification.js",
+    "yaffo/static/utils.js",
+    "yaffo/static/utilities/index_photos.js"
+  ]
+}

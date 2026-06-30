@@ -1,4 +1,53 @@
-window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+// @ts-check
+
+/**
+ * @typedef {Object} IndexPhotoOptions
+ * @property {boolean} canScan
+ * @property {boolean} canSync
+ * @property {boolean} hasActiveJobs
+ * @property {string[]} mediaDirs
+ *
+ * @typedef {Object} I18nService
+ * @property {(key: string, options?: Record<string, unknown>) => string} t
+ * @property {(value: number) => string} number
+ *
+ * @typedef {Object} IndexPhotoConfig
+ * @property {{ utilities_index_photos_scan: string, utilities_sync_photos: string }} urls
+ *
+ * @typedef {Object} UnindexedPhoto
+ * @property {string} filename
+ * @property {string} full_path
+ *
+ * @typedef {Object} OrphanedPhoto
+ * @property {number} id
+ * @property {string} [reason]
+ * @property {string} full_path
+ *
+ * @typedef {{ type: 'progress', scanned: number }} ProgressRecord
+ * @typedef {{ type: 'done', total_filesystem: number, total_imported: number, total_indexed: number, unindexed: UnindexedPhoto[], orphaned: OrphanedPhoto[] }} DoneRecord
+ * @typedef {{ type: 'error', message: string }} ErrorRecord
+ * @typedef {ProgressRecord | DoneRecord | ErrorRecord} ScanRecord
+ *
+ * @typedef {Object} IndexPhotosApi
+ * @property {() => Promise<void>} runScan
+ * @property {() => Promise<void>} startSync
+ */
+
+const appWindow = /** @type {Window & {
+    PHOTO_ORGANIZER: {
+        initIndexPhotos?: (
+            opts: IndexPhotoOptions,
+            i18n: I18nService,
+            config: IndexPhotoConfig
+        ) => IndexPhotosApi,
+    },
+    notification: {
+        success: (message: string) => void,
+        error: (message: string) => void,
+    },
+}} */ (/** @type {unknown} */ (window));
+
+appWindow.PHOTO_ORGANIZER = appWindow.PHOTO_ORGANIZER || {};
 
 // The Index Photos page renders instantly, then streams the (slow) media-dir scan as
 // NDJSON: `progress` records drive the live "Total on Filesystem" counter; the final
@@ -8,30 +57,56 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 // of paths is slow and not useful. Sync still acts on the full lists held in memory.
 const MAX_DISPLAY_ROWS = 200;
 
-window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
+/**
+ * @param {IndexPhotoOptions} opts
+ * @param {I18nService} i18n
+ * @param {IndexPhotoConfig} config
+ * @returns {IndexPhotosApi}
+ */
+const initIndexPhotos = (opts, i18n, config) => {
     const { canScan, canSync, hasActiveJobs, mediaDirs } = opts;
+    /** @type {UnindexedPhoto[]} */
     let unindexed = [];
+    /** @type {OrphanedPhoto[]} */
     let orphaned = [];
 
+    /**
+     * @param {keyof HTMLElementTagNameMap} tag
+     * @param {string | null} [className]
+     * @param {string | number} [text]
+     * @returns {HTMLElement}
+     */
     const el = (tag, className, text) => {
         const node = document.createElement(tag);
         if (className) node.className = className;
-        if (text !== undefined) node.textContent = text;
+        if (text !== undefined) node.textContent = String(text);
         return node;
     };
 
+    /**
+     * @param {string} id
+     * @param {number} value
+     */
     const setStat = (id, value) => {
         const node = document.getElementById(id);
         if (node) node.textContent = i18n.number(Number(value));
     };
 
     const statusEl = document.getElementById('scan-status');
+    /**
+     * @param {string} text
+     */
     const setStatus = (text) => {
         if (!statusEl) return;
         statusEl.textContent = text || '';
         statusEl.hidden = !text;
     };
 
+    /**
+     * @param {string[]} headers
+     * @param {string[][]} rows
+     * @returns {HTMLElement}
+     */
     const buildTable = (headers, rows) => {
         const wrapper = el('div', 'table-container');
         const table = el('table', 'data-table');
@@ -60,6 +135,10 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
         return wrapper;
     };
 
+    /**
+     * @param {number} total
+     * @returns {HTMLElement}
+     */
     const truncationNote = (total) => el(
         'p',
         'section-description scan-truncation',
@@ -69,6 +148,7 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
         })
     );
 
+    /** @returns {HTMLElement} */
     const buildUnindexedSection = () => {
         const section = el('div', 'section');
         section.append(el('h2', null, i18n.t('utilities:indexPhotos.unindexed.title')));
@@ -94,11 +174,13 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
     };
 
     // Keep these labels in sync with ORPHAN_* in yaffo/utils/file_sync.py.
+    /** @type {Record<string, string>} */
     const ORPHAN_REASON_LABELS = {
         missing: 'utilities:indexPhotos.orphanReasons.missing',
         unconfigured: 'utilities:indexPhotos.orphanReasons.unconfigured',
     };
 
+    /** @returns {HTMLElement} */
     const buildOrphanedSection = () => {
         const section = el('div', 'section');
         section.append(el('h2', null, i18n.t('utilities:indexPhotos.orphaned.title')));
@@ -107,7 +189,7 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
         const rows = orphaned.slice(0, MAX_DISPLAY_ROWS).map(
             (p) => [
                 i18n.number(p.id),
-                ORPHAN_REASON_LABELS[p.reason]
+                p.reason && ORPHAN_REASON_LABELS[p.reason]
                     ? i18n.t(ORPHAN_REASON_LABELS[p.reason])
                     : p.reason || '—',
                 p.full_path,
@@ -138,7 +220,9 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
         if (orphaned.length > 0) container.append(buildOrphanedSection());
     };
 
-    const syncButton = document.getElementById('sync-button');
+    const syncButton = /** @type {HTMLButtonElement | null} */ (
+        document.getElementById('sync-button')
+    );
 
     const revealSyncIfWork = () => {
         if (!syncButton) return;
@@ -162,24 +246,30 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
                 }),
             });
             if (response.ok) {
-                notification.success(i18n.t('utilities:indexPhotos.sync.started'));
-                window.location.reload();
+                appWindow.notification.success(i18n.t('utilities:indexPhotos.sync.started'));
+                appWindow.location.reload();
             } else {
-                const data = await response.json().catch(() => ({}));
-                notification.error(
+                const data = /** @type {{ error?: string }} */ (
+                    await response.json().catch(() => ({}))
+                );
+                appWindow.notification.error(
                     data.error || i18n.t('utilities:indexPhotos.sync.startFailed'));
                 syncButton.disabled = false;
                 syncButton.textContent = i18n.t('utilities:indexPhotos.sync.button');
             }
         } catch (error) {
-            notification.error(i18n.t('utilities:indexPhotos.sync.error', {
-                reason: error.message,
+            const reason = error instanceof Error ? error.message : String(error);
+            appWindow.notification.error(i18n.t('utilities:indexPhotos.sync.error', {
+                reason,
             }));
             syncButton.disabled = false;
             syncButton.textContent = i18n.t('utilities:indexPhotos.sync.button');
         }
     };
 
+    /**
+     * @param {ScanRecord} record
+     */
     const handleRecord = (record) => {
         if (record.type === 'progress') {
             setStat('stat-total-filesystem', record.scanned);
@@ -196,7 +286,7 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
             revealSyncIfWork();
         } else if (record.type === 'error') {
             setStatus('');
-            notification.error(i18n.t('utilities:indexPhotos.scan.error', {
+            appWindow.notification.error(i18n.t('utilities:indexPhotos.scan.error', {
                 reason: record.message,
             }));
         }
@@ -220,14 +310,14 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
                 while ((newline = buffer.indexOf('\n')) >= 0) {
                     const line = buffer.slice(0, newline).trim();
                     buffer = buffer.slice(newline + 1);
-                    if (line) handleRecord(JSON.parse(line));
+                    if (line) handleRecord(/** @type {ScanRecord} */ (JSON.parse(line)));
                 }
             }
             const tail = buffer.trim();
-            if (tail) handleRecord(JSON.parse(tail));
+            if (tail) handleRecord(/** @type {ScanRecord} */ (JSON.parse(tail)));
         } catch (error) {
             setStatus('');
-            notification.error(i18n.t('utilities:indexPhotos.scan.failed'));
+            appWindow.notification.error(i18n.t('utilities:indexPhotos.scan.failed'));
         }
     };
 
@@ -236,3 +326,6 @@ window.PHOTO_ORGANIZER.initIndexPhotos = (opts, i18n, config) => {
 
     return { runScan, startSync };
 };
+
+appWindow.PHOTO_ORGANIZER = appWindow.PHOTO_ORGANIZER || {};
+appWindow.PHOTO_ORGANIZER.initIndexPhotos = initIndexPhotos;

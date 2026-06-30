@@ -1,31 +1,55 @@
-window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.utils = window.PHOTO_ORGANIZER.utils || {};
-window.PHOTO_ORGANIZER.utils.locale = window.APP_CONFIG.i18n.locale;
+// @ts-check
 
-window.PHOTO_ORGANIZER.utils.initImageFallbacks = () => {
+/**
+ * @typedef {Object} DateUtils
+ * @property {(isoDate: string | null | undefined, options?: Intl.DateTimeFormatOptions) => string} format
+ * @property {(isoDate: string | null | undefined, options?: Intl.DateTimeFormatOptions) => string} formatWithTime
+ * @property {(isoDate: string | null | undefined) => string} formatRelative
+ *
+ * @typedef {Object} UtilsNamespace
+ * @property {string} locale
+ * @property {() => void} initImageFallbacks
+ * @property {DateUtils} date
+ */
+
+const appWindow = /** @type {Window & {
+    PHOTO_ORGANIZER: { utils?: Partial<UtilsNamespace> },
+    APP_CONFIG: { i18n: { locale: string } },
+}} */ (/** @type {unknown} */ (window));
+
+appWindow.PHOTO_ORGANIZER = appWindow.PHOTO_ORGANIZER || {};
+const utils = /** @type {Partial<UtilsNamespace> & { locale: string }} */ (
+    appWindow.PHOTO_ORGANIZER.utils || {}
+);
+appWindow.PHOTO_ORGANIZER.utils = utils;
+utils.locale = appWindow.APP_CONFIG.i18n.locale;
+
+utils.initImageFallbacks = () => {
     document.querySelectorAll('img[data-fallback]').forEach((img) => {
+        const image = /** @type {HTMLImageElement} */ (img);
         const applyFallback = () => {
-            const fallback = img.dataset.fallback;
-            if (fallback && img.src !== fallback) {
-                img.src = fallback;
+            const fallback = image.dataset.fallback;
+            if (fallback && image.src !== fallback) {
+                image.src = fallback;
             }
         };
 
         // Check if image already failed (complete but no dimensions = error)
-        if (img.complete && img.naturalWidth === 0) {
+        if (image.complete && image.naturalWidth === 0) {
             applyFallback();
         } else {
             // Attach handler for future errors
-            img.addEventListener('error', applyFallback, { once: true });
+            image.addEventListener('error', applyFallback, { once: true });
         }
     });
 };
 
-window.PHOTO_ORGANIZER.utils.date = {
+/** @type {DateUtils} */
+const dateUtils = {
     /**
      * Format an ISO date string using the selected application locale.
-     * @param {string} isoDate - ISO date string (e.g., "2024-03-15T10:30:00Z")
-     * @param {object} options - Optional Intl.DateTimeFormat options override
+     * @param {string | null | undefined} isoDate - ISO date string (e.g., "2024-03-15T10:30:00Z")
+     * @param {Intl.DateTimeFormatOptions} options - Optional Intl.DateTimeFormat options override
      * @returns {string} - Formatted date string
      */
     format: (isoDate, options = {}) => {
@@ -33,21 +57,22 @@ window.PHOTO_ORGANIZER.utils.date = {
         const date = new Date(isoDate);
         if (isNaN(date.getTime())) return '';
 
+        /** @type {Intl.DateTimeFormatOptions} */
         const defaultOptions = {
             year: 'numeric',
             month: 'short',
             day: 'numeric'
         };
         return new Intl.DateTimeFormat(
-            window.PHOTO_ORGANIZER.utils.locale,
+            utils.locale,
             { ...defaultOptions, ...options }
         ).format(date);
     },
 
     /**
      * Format an ISO date string with time using the selected application locale.
-     * @param {string} isoDate - ISO date string
-     * @param {object} options - Optional Intl.DateTimeFormat options override
+     * @param {string | null | undefined} isoDate - ISO date string
+     * @param {Intl.DateTimeFormatOptions} options - Optional Intl.DateTimeFormat options override
      * @returns {string} - Formatted date/time string
      */
     formatWithTime: (isoDate, options = {}) => {
@@ -55,6 +80,7 @@ window.PHOTO_ORGANIZER.utils.date = {
         const date = new Date(isoDate);
         if (isNaN(date.getTime())) return '';
 
+        /** @type {Intl.DateTimeFormatOptions} */
         const defaultOptions = {
             year: 'numeric',
             month: 'short',
@@ -63,14 +89,14 @@ window.PHOTO_ORGANIZER.utils.date = {
             minute: '2-digit'
         };
         return new Intl.DateTimeFormat(
-            window.PHOTO_ORGANIZER.utils.locale,
+            utils.locale,
             { ...defaultOptions, ...options }
         ).format(date);
     },
 
     /**
      * Format an ISO date string as relative time (e.g., "2 days ago")
-     * @param {string} isoDate - ISO date string
+     * @param {string | null | undefined} isoDate - ISO date string
      * @returns {string} - Relative time string
      */
     formatRelative: (isoDate) => {
@@ -79,19 +105,19 @@ window.PHOTO_ORGANIZER.utils.date = {
         if (isNaN(date.getTime())) return '';
 
         const now = new Date();
-        const diffMs = now - date;
+        const diffMs = now.getTime() - date.getTime();
         const diffSecs = Math.floor(diffMs / 1000);
         const diffMins = Math.floor(diffSecs / 60);
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
 
         const rtf = new Intl.RelativeTimeFormat(
-            window.PHOTO_ORGANIZER.utils.locale,
+            utils.locale,
             { numeric: 'auto' }
         );
 
         if (diffDays > 30) {
-            return window.PHOTO_ORGANIZER.utils.date.format(isoDate);
+            return dateUtils.format(isoDate);
         } else if (diffDays >= 1) {
             return rtf.format(-diffDays, 'day');
         } else if (diffHours >= 1) {
@@ -103,3 +129,5 @@ window.PHOTO_ORGANIZER.utils.date = {
         }
     }
 };
+
+utils.date = dateUtils;
