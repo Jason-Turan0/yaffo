@@ -33,7 +33,7 @@ describe('automations trigger editor', () => {
       setCron: vi.fn(),
     };
 
-    PO.initTriggerEditor(window.testI18n, cronBuilder);
+    PO.automations.initTriggerEditor(window.testI18n, cronBuilder);
     document.querySelector('.js-add-schedule').click();
 
     const area = document.querySelector('.automation-trigger-add');

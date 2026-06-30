@@ -20,6 +20,8 @@ Settled choices (the rest of the doc is the supporting analysis). Date: 2026-06-
 | D3 | **Full TypeScript (`.ts` + bundler) is deferred, not rejected.** Revisit only if JSDoc verbosity (e.g. index signatures) becomes the bottleneck. `allowJs` keeps the path open for gradual `.js`→`.ts`. | A mandatory build touches dev loop + CI + packaging; not worth it yet. | §4.2 Option 2 |
 | D4 | **Unit tests run from the CLI via npm scripts; coverage is included** (`vitest run --coverage`, v8 provider, scoped to `yaffo/static/**` excluding `vendor/`). | Mirrors the existing `yaffo_ui_tests` npm-script workflow; coverage is first-class, no extra framework. | §3.7 |
 | D5 | **DOM fixtures come from the real Jinja templates, not hand-written HTML** — rendered to committed fixture files by a generation step, drift-guarded in CI. | Keeps the template as the single source of truth; prevents test/markup duplication. | §3.8 |
+| D6 | **Page modules use page-level namespaces and explicit app initialization.** Page APIs live under `window.PHOTO_ORGANIZER.<pageName>`, and templates/page scripts wait for `yaffo:app-init-complete` instead of calling `i18nReady` directly. | Keeps the root namespace from becoming a flat list of unrelated page functions, and gives every page the same ready app object (`i18n`, `APP_CONFIG`, shared components). | §4.5–§4.6 |
+| D7 | **App-level components initialize in the root app initializer.** Shared components under `window.PHOTO_ORGANIZER.COMPONENTS` are initialized by `static/app.js` before `yaffo:app-init-complete` is dispatched. | Consuming pages should not need to know app-wide component boot order or repeat global component initialization details. | §4.5–§4.6 |
 
 Current implementation: the frontend unit-test and type-check tooling lives at
 the repo root. `package.json` drives Vitest/jsdom unit tests and `tsc --noEmit`
@@ -121,6 +123,9 @@ proposal below mirrors the backend's "mirror-the-tree + a CI gate" shape.
 3. Lay a path to **type safety** that can start *today* without a build step and
    graduate to full TypeScript only if/when the team wants it.
 4. Add a **CI gate** so regressions are caught.
+5. Refactor frontend initialization so page code uses explicit page-level
+   namespaces and the global app-ready event instead of scattered
+   `i18nReady.then(...)` chains.
 
 Non-goals: replacing the Playwright E2E suite (complementary — E2E covers
 integration/DOM-in-browser; units cover logic fast and deterministically), and
@@ -250,6 +255,14 @@ backfill all at once.
 - **Convert `multi-select.js`** to the `initMultiSelect(...)` factory and drop the
   inline `onclick=` handlers (replace with `addEventListener` wiring). Brings the
   last outlier in line with `CLAUDE.md` and makes it testable.
+- **Move page APIs under page-level namespaces.** For example,
+  `utilities/automations.js` exposes `window.PHOTO_ORGANIZER.automations.*`
+  instead of adding `initAutomation*` functions directly to
+  `window.PHOTO_ORGANIZER`.
+- **Use the global app-ready event for page entrypoints.** Templates should
+  listen for `yaffo:app-init-complete`, read `event.detail.app`, and pass
+  `app.i18n`, `window.APP_CONFIG`, and initialized components into page functions
+  explicitly.
 - **Expose pure helpers** on the returned API where a test wants them (e.g.
   `handleRecord` in `index_photos.js`) rather than reaching into closures.
 - Keep DOM lookups behind the existing `el()`/`getElementById` helpers so fixtures
@@ -438,9 +451,11 @@ gradual `.js`→`.ts` migration with both coexisting.
 
 ### 4.5 Golden example — `components/cron_builder.js`
 
-Use `cron_builder.js` as the reference migration shape for DOM components. It
-shows the intended split between runtime construction, page-level initialization,
-explicit dependency injection, and JSDoc type checking without a build step.
+Use `cron_builder.js` and `utilities/automations.js` as the reference migration
+shape for DOM components and page modules. They show the intended split between
+runtime construction, page-level namespacing, explicit initialization through the
+global app-ready event, dependency injection, and JSDoc type checking without a
+build step.
 
 The public API has two factory methods:
 
@@ -470,19 +485,38 @@ cronBuilderWindow.PHOTO_ORGANIZER.COMPONENTS.initCronBuilder = (deps) => {
 };
 ```
 
-The template owns the async boundary and injects the ready component into the
-single consumer:
+The app initializer owns the async boundary. Page scripts listen for
+`yaffo:app-init-complete`, take the completed app object from `event.detail.app`,
+and initialize only page-owned behavior. App-level components under
+`window.PHOTO_ORGANIZER.COMPONENTS` are initialized by `static/app.js` before the
+event is dispatched, so consuming pages should treat `app.COMPONENTS` as ready
+and should not repeat global component bootstrapping.
 
 ```html
 <script>
-    window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-        const cronBuilder = window.PHOTO_ORGANIZER.COMPONENTS.initCronBuilder({
-            i18n,
-            document,
-        });
-        window.PHOTO_ORGANIZER.initTriggerEditor(i18n, cronBuilder);
+    document.addEventListener('yaffo:app-init-complete', (event) => {
+        const app = event.detail.app;
+        app.automations.initAutomationTest(
+            {{ selected_slug | tojson }},
+            window.APP_CONFIG,
+            {{ default_media_dir | tojson }},
+            app.i18n
+        );
     });
 </script>
+```
+
+Page modules should install their API under a page-level namespace:
+
+```js
+window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.automations = window.PHOTO_ORGANIZER.automations || {};
+
+const automations = window.PHOTO_ORGANIZER.automations;
+
+automations.initTriggerEditor = (i18n, cronBuilder) => {
+    // page behavior
+};
 ```
 
 Key points to copy:
@@ -493,9 +527,17 @@ Key points to copy:
 - **Use `init*` for the shared page component.** It calls `create*`, stores the
   shared instance on `window.PHOTO_ORGANIZER.COMPONENTS`, performs initial DOM
   setup, and wires HTMX re-initialization.
-- **Keep async orchestration in the template or page entrypoint.** Components
-  receive an already-ready `i18n` service; they do not call
-  `window.PHOTO_ORGANIZER.i18nReady.then(...)` internally.
+- **Initialize app-level components in `static/app.js`.** Global/shared
+  components should be wired by the root app initializer before
+  `yaffo:app-init-complete` fires. Pages consume `app.COMPONENTS`; they do not
+  call global `initAll()` routines or recreate app-wide component instances.
+- **Keep async orchestration in `static/app.js`.** Page templates and page
+  entrypoints consume `yaffo:app-init-complete`; they should not call
+  `window.PHOTO_ORGANIZER.i18nReady.then(...)` directly for page setup.
+- **Use page-level namespaces for page modules.** Put page-specific entrypoints
+  under `window.PHOTO_ORGANIZER.<pageName>`, such as
+  `window.PHOTO_ORGANIZER.automations.initAutomationTest`, rather than placing a
+  flat list of functions on `window.PHOTO_ORGANIZER`.
 - **Inject dependencies into consumers.** `initTriggerEditor(i18n, cronBuilder)`
   takes the component it uses instead of awaiting a global `cronBuilderReady`
   promise inside click handlers.
@@ -518,8 +560,16 @@ Use this checklist when migrating another frontend file to unit tests and
   `createComponent(...)`, or `initComponent(...)`.
 - [ ] Keep runtime factories synchronous. Do not add hidden
   `i18nReady.then(...)` calls inside component modules.
-- [ ] Move page orchestration to the template or page script: await `i18nReady`
-  once, create/init dependencies, then pass them into consumers.
+- [ ] Move page orchestration to the app-ready event: listen for
+  `yaffo:app-init-complete`, read `event.detail.app`, create/init page-owned
+  dependencies, then pass them into consumers.
+- [ ] If a component is app-level/shared, initialize it in `static/app.js` before
+  dispatching `yaffo:app-init-complete`; pages should consume the ready
+  `app.COMPONENTS` entry instead of bootstrapping it.
+- [ ] Put page-level APIs under `window.PHOTO_ORGANIZER.<pageName>` instead of
+  adding new root-level `window.PHOTO_ORGANIZER.init*` functions.
+- [ ] Do not add new page-level `window.PHOTO_ORGANIZER.i18nReady.then(...)`
+  chains. Use `app.i18n` from the app-init event.
 - [ ] Prefer two factory methods for shared DOM components:
   `createThing(deps)` returns an instance, and `initThing(deps)` creates, stores,
   initializes, and wires page-level listeners.
@@ -551,10 +601,11 @@ Use this checklist when migrating another frontend file to unit tests and
 | 1. Vitest + jsdom harness, loading shim, fakes (§3.2–3.3) | Done | root unit-test harness is in place |
 | 2. Root `tsconfig.json`, `checkJs`/`noEmit`, type initial files (Option 1) | Done | type-checking with no build |
 | 3. Migrate shared/global components with the cron builder pattern (§4.5–4.6) | ongoing | tested, typed components with explicit DI |
-| 4. Phase-1 unit tests (`utils`, `index_photos`, `multi-select`, `i18n`) | ongoing | core logic covered |
-| 5. CI workflow: `npm run test:unit`, `npm run typecheck:js`, and optional coverage gate | ½ day | regressions caught on PRs |
-| 6. Phase-2 page modules as touched | ongoing | coverage ratchets up |
-| 7. *(optional, later)* evaluate Option 2 full-TS build | 2–3 days | only if JSDoc verbosity bites |
+| 4. Migrate app/page initialization to root-initialized components, page-level namespaces, and `yaffo:app-init-complete` | ongoing | fewer chained init calls and one explicit app-ready boundary |
+| 5. Phase-1 unit tests (`utils`, `index_photos`, `multi-select`, `i18n`) | ongoing | core logic covered |
+| 6. CI workflow: `npm run test:unit`, `npm run typecheck:js`, and optional coverage gate | ½ day | regressions caught on PRs |
+| 7. Phase-2 page modules as touched | ongoing | coverage ratchets up |
+| 8. *(optional, later)* evaluate Option 2 full-TS build | 2–3 days | only if JSDoc verbosity bites |
 
 ---
 

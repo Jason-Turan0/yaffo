@@ -23,16 +23,13 @@
     <script src="{{ url_for('static', filename='components/cron_builder.js') }}"></script>
     <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
     <script>
-        window.document.addEventListener('yaffo:i18n-ready', (event) => {
-            debugger;
-            console.log(`FOOBAR! ${event}. ${eventProps}`);
+    document.addEventListener('yaffo:app-init-complete', (event) => {
+        const app = event.detail.app;
+        const cronBuilder = app.COMPONENTS.initCronBuilder({
+            i18n: app.i18n,
+            document,
         });
-        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-            const cronBuilder = window.PHOTO_ORGANIZER.COMPONENTS.initCronBuilder({
-                i18n,
-                document,
-            });
-            window.PHOTO_ORGANIZER.initTriggerEditor(i18n, cronBuilder);
-        });
+        app.automations.initTriggerEditor(app.i18n, cronBuilder);
+    });
     </script>
 {% endblock %}

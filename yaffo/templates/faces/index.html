@@ -245,11 +245,12 @@
 {% block scripts %}
     <script src="{{ url_for('static', filename='faces/index.js') }}"></script>
     <script>
-        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-            window.PHOTO_ORGANIZER.initFaceAssignment(
+        document.addEventListener('yaffo:app-init-complete', (event) => {
+            const app = event.detail.app;
+            app.initFaceAssignment(
                 {{ sample_size | tojson }},
                 {{ top_people | tojson }},
-                i18n,
+                app.i18n,
                 window.APP_CONFIG
             );
         });

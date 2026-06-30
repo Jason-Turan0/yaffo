@@ -142,9 +142,6 @@
     </div>
 </nav>
 <script src="{{ url_for('static', filename='nav.js') }}"></script>
-<script>
-    window.PHOTO_ORGANIZER.initNavPagesBar();
-</script>
 <div class="main-container">
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -215,33 +212,7 @@
 <script src="{{ url_for('static', filename='components/file_browser.js') }}"></script>
 <script src="{{ url_for('static', filename='components/intl_date_input.js') }}"></script>
 <script src="{{ url_for('static', filename='utils.js') }}"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Auto-close alerts after 5 seconds
-        const alerts = document.querySelectorAll('.alert');
-        alerts.forEach(alert => {
-            setTimeout(() => {
-                closeAlert(alert.querySelector('.alert-close'));
-            }, 5000);
-        });
-
-        // Initialize image fallbacks for any img with data-fallback attribute
-        window.PHOTO_ORGANIZER.utils.initImageFallbacks();
-
-        const activePageTab = document.querySelector('.navbar-pages .nav-page-tab.active');
-        if (activePageTab) {
-            activePageTab.closest('.nav-page-li').scrollIntoView({block: 'nearest', inline: 'nearest'});
-        }
-    });
-
-    function closeAlert(button) {
-        const alert = button.closest('.alert');
-        alert.classList.add('fade-out');
-        setTimeout(() => {
-            alert.remove();
-        }, 300);
-    }
-</script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
 
 {% block scripts %}{% endblock %}
 </body>

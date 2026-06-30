@@ -1,4 +1,7 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.automations = window.PHOTO_ORGANIZER.automations || {};
+
+const automations = window.PHOTO_ORGANIZER.automations;
 
 // Open the in-app path picker in the chosen mode (folder|file|any); returns the
 // selected path or null. Shared by the Test and Run controls, which both scope an
@@ -10,7 +13,7 @@ const pickAutomationPath = async (config, mode, defaultPath = null) => {
 
 // Confirm + submit the hidden delete form for the selected automation. (The "New
 // automation" modal is wired globally in utilities/_base.js.)
-window.PHOTO_ORGANIZER.initAutomationDelete = (selectedName, i18n) => {
+automations.initAutomationDelete = (selectedName, i18n) => {
     const deleteButton = document.getElementById('delete-automation-button');
     if (!deleteButton) return;
     deleteButton.addEventListener('click', async () => {
@@ -29,7 +32,7 @@ window.PHOTO_ORGANIZER.initAutomationDelete = (selectedName, i18n) => {
 // Wire the "Edit details" button to the name/description modal (custom automations
 // only). The modal posts a normal form that redirects back, refreshing the header
 // and the sidebar name.
-window.PHOTO_ORGANIZER.initAutomationDetails = () => {
+automations.initAutomationDetails = () => {
     const button = document.getElementById('edit-automation-button');
     const components = window.PHOTO_ORGANIZER.COMPONENTS;
     if (!button || !components || !components.modal) return;
@@ -42,7 +45,7 @@ window.PHOTO_ORGANIZER.initAutomationDetails = () => {
 // else has a plain button that fires context-less. A trigger-less automation still
 // shows the plain button, but clicking it only warns (add a trigger first) and does
 // not run. Otherwise the run is enqueued async and shows up in Run history.
-window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl, config, hasTriggers, defaultPath = null, i18n) => {
+automations.initAutomationRunNow = (runUrl, config, hasTriggers, defaultPath = null, i18n) => {
     const post = async (button, body) => {
         button.disabled = true;
         try {
@@ -86,7 +89,7 @@ window.PHOTO_ORGANIZER.initAutomationRunNow = (runUrl, config, hasTriggers, defa
 // Wire the "Configure" button to the settings modal (system automations that
 // declare config fields, e.g. auto-assign-faces' match threshold). The modal posts
 // a normal form that redirects back, refreshing the page with the new value.
-window.PHOTO_ORGANIZER.initAutomationConfigure = () => {
+automations.initAutomationConfigure = () => {
     const button = document.getElementById('configure-automation-button');
     const components = window.PHOTO_ORGANIZER.COMPONENTS;
     if (!button || !components || !components.modal) return;
@@ -97,7 +100,7 @@ window.PHOTO_ORGANIZER.initAutomationConfigure = () => {
 // Run the automation's code in a sandbox dry-run and render what it did: the host-API
 // actions intercepted during the run, the captured output, and any error. Changes
 // nothing (no Job recorded; the host surface is read-only).
-window.PHOTO_ORGANIZER.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
+automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
     // Code-version toggle (working draft vs active/published). The visible view is the
     // version a Test runs against. The toggle is only rendered when there's an
     // unpublished draft; otherwise there's a single (published) view.
@@ -272,7 +275,7 @@ window.PHOTO_ORGANIZER.initAutomationTest = (slug, config, defaultPath = null, i
 // schedule panel pre-populated; Cancel collapses back to the buttons. Delegated off
 // document so it survives the #automation-triggers HTMX re-renders. Save/Add-event
 // are plain HTMX (edit_trigger_id tells the server add vs update for a schedule).
-window.PHOTO_ORGANIZER.initTriggerEditor = (
+automations.initTriggerEditor = (
     i18n = window.PHOTO_ORGANIZER.i18n,
     cronBuilder = window.PHOTO_ORGANIZER.COMPONENTS.cronBuilder,
 ) => {
@@ -358,7 +361,7 @@ window.PHOTO_ORGANIZER.initTriggerEditor = (
 // (or cancelled) generation reloads so the published code / draft and server-rendered
 // transcript take effect, while a FAILED run stays open for a follow-up. System
 // automations render a read-only transcript (no form), so initChatDialog returns null.
-window.PHOTO_ORGANIZER.initAutomationChat = (slug, startStatus, config, i18n) => {
+automations.initAutomationChat = (slug, startStatus, config, i18n) => {
     return window.PHOTO_ORGANIZER.initChatDialog('automation-chat', {
         startStatus,
         statusUrl: () => config.buildUrl('automations_status', { slug }),

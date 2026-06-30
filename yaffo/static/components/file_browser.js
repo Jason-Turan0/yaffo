@@ -14,6 +14,9 @@ window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
  */
 window.PHOTO_ORGANIZER.COMPONENTS.fileBrowser = {
     init: () => {
+        if (document.documentElement.dataset.fileBrowserReady === '1') return;
+        document.documentElement.dataset.fileBrowserReady = '1';
+
         document.addEventListener('click', async (event) => {
             const btn = event.target.closest('.file-browser-btn');
             if (!btn) return;
@@ -31,7 +34,3 @@ window.PHOTO_ORGANIZER.COMPONENTS.fileBrowser = {
         });
     },
 };
-
-document.addEventListener('DOMContentLoaded', () => {
-    window.PHOTO_ORGANIZER.COMPONENTS.fileBrowser.init();
-});

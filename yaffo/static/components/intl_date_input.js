@@ -243,6 +243,8 @@ intlDateInputWindow.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
      * @returns {IntlDateInputControl}
      */
     const init = (root, i18n) => {
+        if (root.intlDateInput) return root.intlDateInput;
+
         const visible = /** @type {HTMLInputElement | null} */ (
             root.querySelector('.intl-date-input')
         );

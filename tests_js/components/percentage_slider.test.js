@@ -15,13 +15,14 @@ const fixture = (value = '0.75') => {
 };
 
 describe('percentageSlider', () => {
-  it('auto-initializes after i18n is ready and updates display on input', async () => {
+  it('updates display on input after initAll', async () => {
     fixture('0.75');
-    await loadPercentageSlider();
+    const api = await loadPercentageSlider();
 
     const input = document.querySelector('input[type="range"]');
     const display = document.querySelector('.percentage-slider-display span');
 
+    api.initAll();
     input.value = '0.6';
     input.dispatchEvent(new Event('input'));
 

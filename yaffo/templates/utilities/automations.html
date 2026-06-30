@@ -131,18 +131,19 @@
     {% if selected %}
         <script src="{{ url_for('static', filename='utilities/automations.js') }}"></script>
         <script>
-            window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-                window.PHOTO_ORGANIZER.initAutomationDelete({{ selected.display_name | tojson }}, i18n);
-                window.PHOTO_ORGANIZER.initAutomationRunNow(
+            document.addEventListener('yaffo:app-init-complete', (event) => {
+                const app = event.detail.app;
+                app.automations.initAutomationDelete({{ selected.display_name | tojson }}, app.i18n);
+                app.automations.initAutomationRunNow(
                     {{ url_for('automations_run_now', slug=selected.slug) | tojson }},
                     window.APP_CONFIG,
                     {{ (selected.triggers | length > 0) | tojson }},
                     {{ default_media_dir | tojson }},
-                    i18n
+                    app.i18n
                 );
-                {% if config_fields %}window.PHOTO_ORGANIZER.initAutomationConfigure();{% endif %}
+                {% if config_fields %}app.automations.initAutomationConfigure();{% endif %}
                 {% if not selected.is_system %}
-                window.PHOTO_ORGANIZER.initAutomationDetails();
+                app.automations.initAutomationDetails();
                 {% endif %}
             });
         </script>

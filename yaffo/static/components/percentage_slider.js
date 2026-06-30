@@ -27,10 +27,18 @@ const percentageSliderApi = {
      * @param {Element} sliderDom
      */
     init: (sliderDom) => {
+        if (sliderDom instanceof HTMLElement && sliderDom.dataset.percentageSliderReady === '1') {
+            return;
+        }
+
         const percentageSlider = /** @type {HTMLInputElement | null} */ (
             sliderDom.querySelector('input[type="range"]')
         );
         if (!percentageSlider) return;
+        if (sliderDom instanceof HTMLElement) {
+            sliderDom.dataset.percentageSliderReady = '1';
+        }
+
         const percentageDisplay = document.querySelector('.percentage-slider-display span');
         const updateSimilarityDisplay = () => {
             if (percentageDisplay) {
@@ -49,7 +57,3 @@ const percentageSliderApi = {
 };
 
 percentageSliderWindow.PHOTO_ORGANIZER.COMPONENTS.percentageSlider = percentageSliderApi;
-
-percentageSliderWindow.PHOTO_ORGANIZER.i18nReady.then(() => {
-    percentageSliderApi.initAll();
-});
