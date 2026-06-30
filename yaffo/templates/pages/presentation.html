@@ -23,11 +23,12 @@
 <script src="{{ url_for('static', filename='pages/widget_broker.js') }}"></script>
 <script src="{{ url_for('static', filename='pages/grid.js') }}"></script>
 <script>
-    window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-        window.PHOTO_ORGANIZER.pageGrid = window.PHOTO_ORGANIZER.initPresentationGrid(i18n);
+    document.addEventListener('yaffo:app-init-complete', (event) => {
+        const app = event.detail.app;
+        app.pages.grid = app.pages.initPresentationGrid(app.i18n);
         // Presentation always displays the published version.
         const publishedVersionId = {{ page.published_version_id }};
-        window.PHOTO_ORGANIZER.initWidgetBroker(
+        app.pages.initWidgetBroker(
             {{ page.id }}, () => publishedVersionId, window.APP_CONFIG);
     });
 </script>

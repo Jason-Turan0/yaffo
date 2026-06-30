@@ -362,7 +362,7 @@ automations.initTriggerEditor = (
 // transcript take effect, while a FAILED run stays open for a follow-up. System
 // automations render a read-only transcript (no form), so initChatDialog returns null.
 automations.initAutomationChat = (slug, startStatus, config, i18n) => {
-    return window.PHOTO_ORGANIZER.initChatDialog('automation-chat', {
+    return window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog('automation-chat', {
         startStatus,
         statusUrl: () => config.buildUrl('automations_status', { slug }),
         onSend: async (message) => {

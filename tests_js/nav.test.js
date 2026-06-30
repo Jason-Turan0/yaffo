@@ -1,6 +1,6 @@
 import { loadModule } from './support/load_module.js';
 
-const loadNav = async () => (await loadModule('nav.js')).initNavPagesBar;
+const loadNav = async () => (await loadModule('nav.js')).COMPONENTS.initNavPagesBar;
 
 const fixture = () => {
   document.body.innerHTML = `

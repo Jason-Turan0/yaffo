@@ -1,5 +1,7 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.initPageDetail = (pageTitle, i18n) => {
+window.PHOTO_ORGANIZER.pages = window.PHOTO_ORGANIZER.pages || {};
+
+window.PHOTO_ORGANIZER.pages.initDetail = (pageTitle, i18n) => {
     const t = (key, options = {}) => i18n.t(key, options);
 
     const confirmDelete = async () => {

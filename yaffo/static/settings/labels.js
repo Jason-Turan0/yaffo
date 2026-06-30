@@ -1,9 +1,10 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.settings = window.PHOTO_ORGANIZER.settings || {};
 
 // Live client-side filter for the Photo Labels list. Delegated on document so it
 // keeps working after #labels-section is re-rendered by HTMX (create/delete) — the
 // fresh input just starts empty.
-window.PHOTO_ORGANIZER.initLabelFilter = () => {
+window.PHOTO_ORGANIZER.settings.initLabelFilter = () => {
     document.addEventListener('input', (event) => {
         if (event.target.id !== 'label-filter') return;
         const section = event.target.closest('#labels-section');

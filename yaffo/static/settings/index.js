@@ -1,6 +1,7 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.settings = window.PHOTO_ORGANIZER.settings || {};
 
-window.PHOTO_ORGANIZER.initSettings = (initialMediaDirs, i18n, config) => {
+window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
     let mediaDirs = [...initialMediaDirs];
 
     const escapeHtml = (value) => {

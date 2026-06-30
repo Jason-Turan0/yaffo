@@ -18,6 +18,8 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='utilities/remove_duplicates.js') }}"></script>
 <script>
-window.PHOTO_ORGANIZER.initRemoveDuplicates(window.PHOTO_ORGANIZER.i18n, window.APP_CONFIG);
+document.addEventListener('yaffo:app-init-complete', (event) => {
+    event.detail.app.utilities.initRemoveDuplicates();
+});
 </script>
 {% endblock %}

@@ -247,7 +247,7 @@
     <script>
         document.addEventListener('yaffo:app-init-complete', (event) => {
             const app = event.detail.app;
-            app.initFaceAssignment(
+            app.faces.assignment = app.faces.initAssignment(
                 {{ sample_size | tojson }},
                 {{ top_people | tojson }},
                 app.i18n,

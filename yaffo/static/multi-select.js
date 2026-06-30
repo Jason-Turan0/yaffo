@@ -107,6 +107,20 @@ window.toggleMultiSelect = toggleMultiSelect;
 window.updateMultiSelectText = updateMultiSelectText;
 window.filterMultiSelectOptions = filterMultiSelectOptions;
 window.initSearchableMultiSelects = initSearchableMultiSelects;
+window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
+window.PHOTO_ORGANIZER.COMPONENTS.multiSelect = {
+    initAll: () => {
+        initSearchableMultiSelects();
+        document.querySelectorAll('.multi-select-wrapper').forEach(wrapper => {
+            const firstCheckbox = /** @type {HTMLInputElement | null} */ (
+                wrapper.querySelector('input[type="checkbox"]')
+            );
+            if (firstCheckbox) {
+                updateMultiSelectText(firstCheckbox);
+            }
+        });
+    },
+};
 
 // Close dropdown when clicking outside
 document.addEventListener('click', (e) => {
@@ -115,17 +129,4 @@ document.addEventListener('click', (e) => {
             wrapper.classList.remove('open');
         });
     }
-});
-
-// Initialize text and search boxes on page load
-window.PHOTO_ORGANIZER.i18nReady.then(() => {
-    initSearchableMultiSelects();
-    document.querySelectorAll('.multi-select-wrapper').forEach(wrapper => {
-        const firstCheckbox = /** @type {HTMLInputElement | null} */ (
-            wrapper.querySelector('input[type="checkbox"]')
-        );
-        if (firstCheckbox) {
-            updateMultiSelectText(firstCheckbox);
-        }
-    });
 });

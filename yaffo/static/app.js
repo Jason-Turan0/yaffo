@@ -29,7 +29,10 @@ app.COMPONENTS.initAll = () => {
     const components = app.COMPONENTS;
     const i18n = /** @type {I18nService} */ (app.i18n);
 
+    components.navPagesBar = components.initNavPagesBar?.();
     components.fileBrowser?.init?.();
+    components.multiSelect?.initAll?.();
+    components.searchableSelect?.initAll?.(i18n);
     components.intlDateInput?.initAll?.(i18n);
     components.percentageSlider?.initAll?.();
     components?.initCronBuilder?.({i18n, document: window.document});
@@ -60,7 +63,6 @@ app.initApp = () => {
         app.i18nReady,
     ]).then(([, i18n]) => {
         app.i18n = i18n;
-        app.navPagesBar = app.initNavPagesBar?.();
         app.COMPONENTS.initAll?.();
         initBasePageBehavior();
 

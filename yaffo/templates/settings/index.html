@@ -210,13 +210,14 @@
 <script src="{{ url_for('static', filename='settings/index.js') }}"></script>
 <script src="{{ url_for('static', filename='settings/labels.js') }}"></script>
 <script>
-window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-    window.PHOTO_ORGANIZER.settings = window.PHOTO_ORGANIZER.initSettings(
+document.addEventListener('yaffo:app-init-complete', (event) => {
+    const app = event.detail.app;
+    app.settings.instance = app.settings.init(
         {{ media_dirs | tojson }},
-        i18n,
+        app.i18n,
         window.APP_CONFIG
     );
-    window.PHOTO_ORGANIZER.initLabelFilter();
+    app.settings.initLabelFilter();
 });
 </script>
 {% endblock %}

@@ -41,10 +41,11 @@
 <script src="{{ url_for('static', filename='vendor/ol/10.3.1/ol.js') }}"></script>
 <script src="{{ url_for('static', filename='locations/list.js') }}"></script>
 <script>
-window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-    window.PHOTO_ORGANIZER.initLocationsMap(
+document.addEventListener('yaffo:app-init-complete', (event) => {
+    const app = event.detail.app;
+    app.locations.map = app.locations.initMap(
         {{ locations | tojson }},
-        i18n,
+        app.i18n,
         window.APP_CONFIG
     );
 });

@@ -364,15 +364,16 @@ SearchableSelect.i18n = {
     })[key] || key,
 };
 
-// Auto-initialize on page load
-if (window.PHOTO_ORGANIZER?.i18nReady) {
-    window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
+window.PHOTO_ORGANIZER.COMPONENTS.searchableSelect = {
+    /**
+     * @param {I18nService} i18n
+     */
+    initAll: (i18n) => {
         SearchableSelect.i18n = i18n;
         SearchableSelect.initAll();
-    });
-} else {
-    SearchableSelect.initAll();
-}
+    },
+};
 
 // Re-initialize selects arriving in htmx-swapped fragments (initAll skips
 // anything already initialized via data-searchable-initialized)

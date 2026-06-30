@@ -1,6 +1,7 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.utilities = window.PHOTO_ORGANIZER.utilities || {};
 
-window.PHOTO_ORGANIZER.initRemoveDuplicates = () => {
+window.PHOTO_ORGANIZER.utilities.initRemoveDuplicates = () => {
     document.addEventListener('htmx:afterRequest', (event) => {
         if (event.detail.elt.id === 'find-duplicates-button' && event.detail.successful) {
             window.location.reload();

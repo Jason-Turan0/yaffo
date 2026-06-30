@@ -1,4 +1,5 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.pages = window.PHOTO_ORGANIZER.pages || {};
 
 // Runtime widget errors, kept locally (in memory, per session) keyed by widget
 // id. Not persisted — they're only sent along as context the next time the model
@@ -25,10 +26,10 @@ const STATUS = {
     CANCELLED: 'CANCELLED',
 };
 
-// The widget iframe broker (window.PHOTO_ORGANIZER.initWidgetBroker) lives in
+// The widget iframe broker (window.PHOTO_ORGANIZER.pages.initWidgetBroker) lives in
 // widget_broker.js — the host-side counterpart of the in-iframe widget_api.js.
 
-window.PHOTO_ORGANIZER.initPresentationGrid = () => {
+window.PHOTO_ORGANIZER.pages.initPresentationGrid = () => {
     return GridStack.init({ ...BASE_GRID_OPTS, staticGrid: true });
 };
 
@@ -39,7 +40,7 @@ window.PHOTO_ORGANIZER.initPresentationGrid = () => {
 // IN_PROGRESS/READY/FAILED mean it's a working draft (poll + review). A new draft is
 // forked on the first chat message, and `generation.versionId` then tracks it.
 // See docs/ai-page-builder-async-generation.md.
-window.PHOTO_ORGANIZER.initDesignGrid = (pageId, editVersionId, startStatus, config, i18n) => {
+window.PHOTO_ORGANIZER.pages.initDesignGrid = (pageId, editVersionId, startStatus, config, i18n) => {
     const t = (key, options = {}) => i18n.t(key, options);
     const grid = GridStack.init({ ...BASE_GRID_OPTS, handle: '.widget-header' });
 

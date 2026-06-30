@@ -1,4 +1,5 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
 // Generic controller for the chat dialog component (templates/components/chat_dialog.html
 // + static/components/chat_dialog.css). It owns the parts every consumer shares: the
@@ -27,7 +28,7 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 //                   input / Send / Cancel / status bar.
 //   runningStatus   the status meaning "a run is active" (default 'IN_PROGRESS').
 //   cancelConfirm   { title, message, confirmText } for the cancel confirm dialog.
-window.PHOTO_ORGANIZER.initChatDialog = (id, options) => {
+window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
     const i18n = window.PHOTO_ORGANIZER.i18n;
     const {
         startStatus,

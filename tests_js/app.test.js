@@ -13,6 +13,11 @@ const setupBaseDom = () => {
       <input type="range" value="0.5">
     </div>
     <div class="percentage-slider-display"><span></span></div>
+    <button type="button" id="new-automation-button"></button>
+    <div id="newAutomationModal" class="modal">
+      <button name="cancel" type="button"></button>
+      <form></form>
+    </div>
   `;
 };
 
@@ -21,9 +26,11 @@ describe('app initializer', () => {
     setupBaseDom();
     await loadModule('utils.js');
     await loadModule('nav.js');
+    await loadModule('components/modal.js');
     await loadModule('components/file_browser.js');
     await loadModule('components/intl_date_input.js');
     await loadModule('components/percentage_slider.js');
+    await loadModule('utilities/_base.js');
 
     const events = [];
     document.addEventListener('yaffo:app-init-complete', (event) => events.push(event));
@@ -34,11 +41,14 @@ describe('app initializer', () => {
     expect(app).toBe(window.PHOTO_ORGANIZER);
     expect(events).toHaveLength(1);
     expect(events[0].detail.app).toBe(window.PHOTO_ORGANIZER);
-    expect(window.PHOTO_ORGANIZER.navPagesBar).toBeTruthy();
+    expect(window.PHOTO_ORGANIZER.COMPONENTS.navPagesBar).toBeTruthy();
 
     const input = document.querySelector('input[type="range"]');
     input.value = '0.25';
     input.dispatchEvent(new Event('input'));
     expect(document.querySelector('.percentage-slider-display span').textContent).toBe('25%');
+
+    document.getElementById('new-automation-button').click();
+    expect(document.getElementById('newAutomationModal').classList.contains('active')).toBe(true);
   });
 });

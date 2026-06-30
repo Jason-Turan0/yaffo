@@ -1,6 +1,7 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
 
-window.PHOTO_ORGANIZER.initTagFilters = (i18n, config) => {
+window.PHOTO_ORGANIZER.filters.initTags = (i18n, config) => {
     const loadTagValues = async (tagName, selectedValue = null) => {
         const tagValueSelect = document.getElementById('tag-value-select');
         const tagValueWrapper = tagValueSelect.nextElementSibling;
@@ -71,6 +72,6 @@ window.PHOTO_ORGANIZER.initTagFilters = (i18n, config) => {
     }
 
     const api = { loadTagValues };
-    window.PHOTO_ORGANIZER.tagFilters = api;
+    window.PHOTO_ORGANIZER.filters.tags = api;
     return api;
 };

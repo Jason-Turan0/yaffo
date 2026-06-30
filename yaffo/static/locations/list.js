@@ -1,6 +1,7 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.locations = window.PHOTO_ORGANIZER.locations || {};
 
-window.PHOTO_ORGANIZER.initLocationsMap = (locations, i18n, config) => {
+window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
     const escapeHtml = (value) => String(value ?? '').replace(
         /[&<>"']/g,
         (character) => ({

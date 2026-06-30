@@ -56,7 +56,7 @@
 <script>
     // The template hands the server-resolved data + saved state to the init
     // function (project convention); the widget then reads them via window.yaffo.
-    window.yaffo = window.PHOTO_ORGANIZER.initWidgetApi(
+    window.yaffo = window.PHOTO_ORGANIZER.pages.initWidgetApi(
         {{ data | tojson }},
         {{ widget.state | tojson }},
         {{ current_locale | tojson }}

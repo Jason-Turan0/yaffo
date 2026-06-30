@@ -1,8 +1,8 @@
 import { loadModule } from './support/load_module.js';
 
 const loadMultiSelect = async () => {
-  await loadModule('multi-select.js');
-  await Promise.resolve();
+  const PO = await loadModule('multi-select.js');
+  PO.COMPONENTS.multiSelect.initAll();
 };
 
 const fixture = ({

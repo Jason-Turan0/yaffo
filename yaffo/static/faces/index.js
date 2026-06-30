@@ -1,11 +1,12 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.faces = window.PHOTO_ORGANIZER.faces || {};
 
 // One cluster is shown at a time. For each cluster we only paint a random
 // sample of up to `sampleSize` thumbnails (a 50k batch would otherwise melt the
 // DOM), but selection/assignment span the WHOLE cluster: `selectedIds` starts as
 // every face id and clicking a visible face just removes it. Assigning advances
 // to the next cluster; when none remain we reload to pull the next batch.
-window.PHOTO_ORGANIZER.initFaceAssignment = (sampleSize, topPeople, i18n, config) => {
+window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, config) => {
     const tooltip = document.createElement('div');
     tooltip.className = 'tooltip';
     document.body.appendChild(tooltip);

@@ -141,18 +141,19 @@
 {% block scripts %}
     <script src="{{ url_for('static', filename='themes_page/index.js') }}"></script>
     <script>
-        window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
-            window.PHOTO_ORGANIZER.themesPage = window.PHOTO_ORGANIZER.initThemesPage(
+        document.addEventListener('yaffo:app-init-complete', (event) => {
+            const app = event.detail.app;
+            app.themes.page = app.themes.initPage(
                 {{ selected_label | tojson }},
                 window.APP_CONFIG,
-                i18n
+                app.i18n
             );
             {% if not selected_is_builtin %}
-            window.PHOTO_ORGANIZER.themeChat = window.PHOTO_ORGANIZER.initThemeChat(
+            app.themes.chat = app.themes.initChat(
                 {{ selected_slug | tojson }},
                 {{ selected_status | tojson }},
                 window.APP_CONFIG,
-                i18n
+                app.i18n
             );
             {% endif %}
         });

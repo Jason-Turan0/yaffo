@@ -68,17 +68,18 @@
 <script src="{{ url_for('static', filename='pages/grid.js') }}"></script>
 <script src="{{ url_for('static', filename='pages/detail.js') }}"></script>
 <script>
-    window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+    document.addEventListener('yaffo:app-init-complete', (event) => {
+        const app = event.detail.app;
         // The single version the design page edits: the working draft if one exists,
         // else the published version. Its id + status are passed in so every edit
         // targets it unambiguously (no published-vs-working guessing server-side).
         {% set edit_version = page.working_version or page.published_version %}
-        window.PHOTO_ORGANIZER.pageDetail = window.PHOTO_ORGANIZER.initPageDetail({{ page.title | tojson }}, i18n);
-        window.PHOTO_ORGANIZER.pageGrid = window.PHOTO_ORGANIZER.initDesignGrid(
-            {{ page.id }}, {{ edit_version.id }}, '{{ edit_version.status }}', window.APP_CONFIG, i18n);
+        app.pages.detail = app.pages.initDetail({{ page.title | tojson }}, app.i18n);
+        app.pages.grid = app.pages.initDesignGrid(
+            {{ page.id }}, {{ edit_version.id }}, '{{ edit_version.status }}', window.APP_CONFIG, app.i18n);
         // The broker targets whichever version the grid is currently editing.
-        window.PHOTO_ORGANIZER.initWidgetBroker(
-            {{ page.id }}, window.PHOTO_ORGANIZER.pageGrid.getVersionId, window.APP_CONFIG);
+        app.pages.initWidgetBroker(
+            {{ page.id }}, app.pages.grid.getVersionId, window.APP_CONFIG);
     });
 </script>
 {% endblock %}

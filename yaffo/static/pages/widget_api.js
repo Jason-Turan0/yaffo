@@ -1,7 +1,7 @@
 /**
  * Yaffo widget API.
  *
- * The widget frame calls window.PHOTO_ORGANIZER.initWidgetApi(data, state, locale) with
+ * The widget frame calls window.PHOTO_ORGANIZER.pages.initWidgetApi(data, state, locale) with
  * the host-injected data and assigns the result to window.yaffo, BEFORE your code
  * runs. In your widget code you just use window.yaffo — never call init yourself.
  *
@@ -10,8 +10,9 @@
  * through this helper, which relays to the host app over postMessage.
  */
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.pages = window.PHOTO_ORGANIZER.pages || {};
 
-window.PHOTO_ORGANIZER.initWidgetApi = function (data, state, locale) {
+window.PHOTO_ORGANIZER.pages.initWidgetApi = function (data, state, locale) {
     var pending = {};       // requestId -> resolve fn, awaiting a yaffo:result
     var subscribers = {};   // topic -> [handler]
     var nextRequestId = 0;

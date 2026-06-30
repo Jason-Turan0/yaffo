@@ -1,8 +1,9 @@
 // @ts-check
 
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
-window.PHOTO_ORGANIZER.initNavPagesBar = () => {
+window.PHOTO_ORGANIZER.COMPONENTS.initNavPagesBar = () => {
     const navbar = /** @type {HTMLElement | null} */ (document.querySelector('.navbar'));
     const toggle = /** @type {HTMLElement | null} */ (
         document.getElementById('nav-pages-toggle')

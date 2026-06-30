@@ -86,6 +86,14 @@ type PercentageSliderApi = {
     initAll(): void;
 };
 
+type MultiSelectApi = {
+    initAll(): void;
+};
+
+type SearchableSelectApi = {
+    initAll(i18n: I18nService): void;
+};
+
 type CronBuilderDeps = {
     i18n: I18nService;
     document?: Document;
@@ -101,7 +109,11 @@ type CronBuilderApi = {
 type PhotoOrganizerComponents = {
     initAll?: () => void;
     fileBrowser?: { init?: () => void };
+    initNavPagesBar?: () => NavPagesBarApi | undefined;
+    navPagesBar?: NavPagesBarApi;
     intlDateInput?: IntlDateInputApi;
+    multiSelect?: MultiSelectApi;
+    searchableSelect?: SearchableSelectApi;
     percentageSlider?: PercentageSliderApi;
     cronBuilder?: CronBuilderApi;
     createCronBuilder: (deps: CronBuilderDeps) => CronBuilderApi;
@@ -114,6 +126,11 @@ type FavoriteNamespace = {
 
 type IndexPhotosNamespace = {
     init?(opts: IndexPhotoOptions, i18n: I18nService, config: IndexPhotoConfig): IndexPhotosApi;
+};
+
+type UtilitiesNamespace = {
+    initBase?: () => void;
+    initRemoveDuplicates?: () => void;
 };
 
 type SearchableSelectConstructor = {
@@ -134,9 +151,8 @@ type PhotoOrganizerApp = {
         favorite?: FavoriteNamespace;
     };
     indexPhotos?: IndexPhotosNamespace;
+    utilities?: UtilitiesNamespace;
     initI18n?: (config: I18nConfig) => Promise<I18nService>;
-    initNavPagesBar?: () => NavPagesBarApi | undefined;
-    navPagesBar?: NavPagesBarApi;
     initApp?: () => Promise<PhotoOrganizerApp>;
     closeAlert?: (button: Element | null) => void;
 };

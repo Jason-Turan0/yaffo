@@ -1,4 +1,5 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.pages = window.PHOTO_ORGANIZER.pages || {};
 
 // Runtime widget errors, kept locally (in memory, per session) keyed by widget
 // id. Not persisted — they're only sent along as context the next time the model
@@ -14,7 +15,7 @@ window.PHOTO_ORGANIZER.widgetErrors = window.PHOTO_ORGANIZER.widgetErrors || {};
 // presentation, the edit version (draft or published) in design, re-read each call
 // so it tracks a draft forked mid-session. Widget state/query are scoped to that
 // version's widget (widgets are unique per version).
-window.PHOTO_ORGANIZER.initWidgetBroker = (pageId, getVersionId, config) => {
+window.PHOTO_ORGANIZER.pages.initWidgetBroker = (pageId, getVersionId, config) => {
     const frames = () => [...document.querySelectorAll('.widget-frame')];
     const senderFrame = (event) => frames().find((f) => f.contentWindow === event.source);
 

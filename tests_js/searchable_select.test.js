@@ -1,8 +1,8 @@
 import { loadModule } from './support/load_module.js';
 
 const loadSearchableSelect = async () => {
-  await loadModule('searchable-select.js');
-  await Promise.resolve();
+  const PO = await loadModule('searchable-select.js');
+  PO.COMPONENTS.searchableSelect.initAll(window.testI18n);
   return window.SearchableSelect;
 };
 

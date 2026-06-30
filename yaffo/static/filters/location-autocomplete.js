@@ -1,6 +1,7 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
 
-window.PHOTO_ORGANIZER.initLocationAutocomplete = (i18n, appConfig) => {
+window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
     const searchInput = document.getElementById('location-search');
     const suggestionsContainer = document.getElementById('location-suggestions');
     const latInput = document.getElementById('proximity-lat');

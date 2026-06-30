@@ -173,11 +173,11 @@
     <script>
         document.addEventListener('yaffo:app-init-complete', (event) => {
             const app = event.detail.app;
-            app.initTagFilters(app.i18n, window.APP_CONFIG);
-            app.initLocationAutocomplete(app.i18n, window.APP_CONFIG);
-            app.initFilterConfig(app.i18n, window.APP_CONFIG);
+            app.filters.initTags(app.i18n, window.APP_CONFIG);
+            app.filters.initLocationAutocomplete(app.i18n, window.APP_CONFIG);
+            app.filters.initConfig(app.i18n, window.APP_CONFIG);
             app.media.favorite.init(app.i18n, window.APP_CONFIG);
-            app.initGalleryVideos(app.i18n, window.APP_CONFIG);
+            app.media.initGalleryVideos(app.i18n, window.APP_CONFIG);
         });
     </script>
 {% endblock %}

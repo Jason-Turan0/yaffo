@@ -104,7 +104,7 @@
             <li><a href="{{ url_for('locations_list') }}" data-icon="locations"
                    class="nav-link {% if request.endpoint and 'locations' in request.endpoint %}active{% endif %}">{{ _("Locations") }}</a></li>
             <li><a href="{{ url_for('utilities_index') }}" data-icon="utilities"
-                   class="nav-link {% if request.endpoint and 'utilities' in request.endpoint %}active{% endif %}">{{ _("Utilities") }}</a></li>
+                   class="nav-link {% if request.endpoint and (request.endpoint.startswith('utilities_') or request.endpoint.startswith('automations_')) %}active{% endif %}">{{ _("Utilities") }}</a></li>
             <li><a href="{{ url_for('themes_index') }}" data-icon="themes"
                    class="nav-link {% if request.endpoint in ['themes_index', 'themes_show'] %}active{% endif %}">{{ _("Themes") }}</a></li>
             <li><a href="{{ url_for('settings_index') }}" data-icon="settings"

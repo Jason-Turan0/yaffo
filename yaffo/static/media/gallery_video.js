@@ -1,10 +1,11 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+window.PHOTO_ORGANIZER.media = window.PHOTO_ORGANIZER.media || {};
 
 // Home-grid video previews: clicking a card's ▶ badge swaps the placeholder still
 // for an inline <video> and plays it in place, instead of letting the click fall
 // through to the card's open-the-view-screen navigation. Clicking anywhere else on
 // the card still opens the view screen.
-window.PHOTO_ORGANIZER.initGalleryVideos = (i18n, config) => {
+window.PHOTO_ORGANIZER.media.initGalleryVideos = (i18n, config) => {
     const playInline = (badge) => {
         const thumb = badge.closest('.photo-thumb');
         if (!thumb || thumb.querySelector('video')) return;
