@@ -1,7 +1,48 @@
-window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
+// @ts-check
 
-window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
+/**
+ * @typedef {'day' | 'month' | 'year'} DateField
+ *
+ * @typedef {Object} DatePatternPart
+ * @property {Intl.DateTimeFormatPartTypes} type
+ * @property {string} value
+ * @property {number} length
+ *
+ * @typedef {Object} I18nService
+ * @property {string} locale
+ * @property {(key: string, options?: Record<string, unknown>) => string} t
+ *
+ * @typedef {Object} IntlDateInputControl
+ * @property {(isoValue: string | null | undefined) => void} setValue
+ * @property {() => boolean} sync
+ *
+ * @typedef {Object} IntlDateInputApi
+ * @property {(isoValue: string | null | undefined, locale: string) => string} formatValue
+ * @property {(rawValue: string, locale: string) => string} formatPartial
+ * @property {(root: HTMLElement, i18n: I18nService) => IntlDateInputControl} init
+ * @property {(i18n: I18nService, root?: ParentNode) => IntlDateInputControl[]} initAll
+ * @property {(rawValue: string, locale: string) => string | null} parseDate
+ * @property {(locale: string) => string} placeholder
+ *
+ * @typedef {HTMLElement & { intlDateInput?: IntlDateInputControl }} IntlDateInputRoot
+ */
+
+const intlDateInputWindow = /** @type {Window & {
+    PHOTO_ORGANIZER: {
+        COMPONENTS?: {
+            intlDateInput?: IntlDateInputApi,
+        },
+    },
+}} */ (/** @type {unknown} */ (window));
+
+intlDateInputWindow.PHOTO_ORGANIZER = intlDateInputWindow.PHOTO_ORGANIZER || {};
+intlDateInputWindow.PHOTO_ORGANIZER.COMPONENTS = intlDateInputWindow.PHOTO_ORGANIZER.COMPONENTS || {};
+
+intlDateInputWindow.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
+    /**
+     * @param {string} locale
+     * @returns {Intl.DateTimeFormatPart[]}
+     */
     const sampleParts = (locale) => new Intl.DateTimeFormat(locale, {
         year: 'numeric',
         month: '2-digit',
@@ -9,6 +50,11 @@ window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
         timeZone: 'UTC',
     }).formatToParts(new Date(Date.UTC(2006, 10, 22)));
 
+    /**
+     * @param {string | null | undefined} isoValue
+     * @param {string} locale
+     * @returns {string}
+     */
     const formatValue = (isoValue, locale) => {
         const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoValue || '');
         if (!match) return '';
@@ -21,6 +67,10 @@ window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
         }).format(new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))));
     };
 
+    /**
+     * @param {string} locale
+     * @returns {string}
+     */
     const placeholder = (locale) => sampleParts(locale).map((part) => {
         if (part.type === 'day') return 'DD';
         if (part.type === 'month') return 'MM';
@@ -28,16 +78,28 @@ window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
         return part.value;
     }).join('');
 
+    /**
+     * @param {string} locale
+     * @returns {DatePatternPart[]}
+     */
     const pattern = (locale) => sampleParts(locale).map((part) => ({
         type: part.type,
         value: part.value,
         length: part.type === 'year' ? 4 : 2,
     }));
 
+    /**
+     * @param {string} locale
+     * @returns {DateField[]}
+     */
     const order = (locale) => sampleParts(locale)
         .filter((part) => ['day', 'month', 'year'].includes(part.type))
-        .map((part) => part.type);
+        .map((part) => /** @type {DateField} */ (part.type));
 
+    /**
+     * @param {string} locale
+     * @returns {(value: string) => string}
+     */
     const digitNormalizer = (locale) => {
         const formatter = new Intl.NumberFormat(locale, { useGrouping: false });
         const replacements = new Map();
@@ -47,10 +109,25 @@ window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
         return (value) => Array.from(value).map((char) => replacements.get(char) || char).join('');
     };
 
+    /**
+     * @param {string} value
+     * @param {string} locale
+     * @returns {string}
+     */
     const normalizedDigits = (value, locale) => digitNormalizer(locale)(value).replace(/\D/g, '');
 
+    /**
+     * @param {string} value
+     * @param {string} locale
+     * @returns {number}
+     */
     const countDigits = (value, locale) => normalizedDigits(value, locale).length;
 
+    /**
+     * @param {string} value
+     * @param {number} digitCount
+     * @returns {number}
+     */
     const caretForDigitCount = (value, digitCount) => {
         if (digitCount <= 0) return 0;
         let seen = 0;
@@ -67,6 +144,11 @@ window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
         return value.length;
     };
 
+    /**
+     * @param {string} rawValue
+     * @param {string} locale
+     * @returns {string}
+     */
     const formatPartial = (rawValue, locale) => {
         const digits = normalizedDigits(rawValue, locale).slice(0, 8);
         if (!digits) return '';
@@ -86,6 +168,12 @@ window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
         return formatted;
     };
 
+    /**
+     * @param {number} year
+     * @param {number} month
+     * @param {number} day
+     * @returns {boolean}
+     */
     const isValidDate = (year, month, day) => {
         if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return false;
         const date = new Date(Date.UTC(year, month - 1, day));
@@ -94,6 +182,11 @@ window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
             && date.getUTCDate() === day;
     };
 
+    /**
+     * @param {string} rawValue
+     * @param {string} locale
+     * @returns {string | null}
+     */
     const parseDate = (rawValue, locale) => {
         const normalized = digitNormalizer(locale)(rawValue.trim());
         if (!normalized) return '';
@@ -120,7 +213,8 @@ window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
             }
 
             let offset = 0;
-            const compactValues = {};
+            /** @type {Record<DateField, number>} */
+            const compactValues = { day: 0, month: 0, year: 0 };
             for (const part of order(locale)) {
                 const length = part === 'year' ? 4 : 2;
                 compactValues[part] = Number(digits.slice(offset, offset + length));
@@ -134,7 +228,8 @@ window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
         const tokens = normalized.split(/\D+/).filter(Boolean);
         if (tokens.length !== 3) return null;
 
-        const values = {};
+        /** @type {Record<DateField, number>} */
+        const values = { day: 0, month: 0, year: 0 };
         order(locale).forEach((part, index) => {
             values[part] = Number(tokens[index]);
         });
@@ -142,15 +237,30 @@ window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
         return `${String(values.year).padStart(4, '0')}-${String(values.month).padStart(2, '0')}-${String(values.day).padStart(2, '0')}`;
     };
 
+    /**
+     * @param {IntlDateInputRoot} root
+     * @param {I18nService} i18n
+     * @returns {IntlDateInputControl}
+     */
     const init = (root, i18n) => {
-        const visible = root.querySelector('.intl-date-input');
-        const hidden = root.querySelector('input[type="hidden"]');
+        const visible = /** @type {HTMLInputElement | null} */ (
+            root.querySelector('.intl-date-input')
+        );
+        const hidden = /** @type {HTMLInputElement | null} */ (
+            root.querySelector('input[type="hidden"]')
+        );
+        if (!visible || !hidden) {
+            throw new Error('intl-date-input requires visible and hidden input elements');
+        }
         const locale = i18n.locale;
         const invalidMessage = i18n.t('components:dateInput.invalidDate');
 
         visible.placeholder = placeholder(locale);
         visible.value = formatValue(hidden.value, locale);
 
+        /**
+         * @param {string | null | undefined} isoValue
+         */
         const setValue = (isoValue) => {
             hidden.value = isoValue || '';
             visible.value = formatValue(hidden.value, locale);
@@ -190,13 +300,19 @@ window.PHOTO_ORGANIZER.COMPONENTS.intlDateInput = (() => {
             }
         });
 
-        root.intlDateInput = { setValue, sync };
-        return root.intlDateInput;
+        const control = { setValue, sync };
+        root.intlDateInput = control;
+        return control;
     };
 
+    /**
+     * @param {I18nService} i18n
+     * @param {ParentNode} root
+     * @returns {IntlDateInputControl[]}
+     */
     const initAll = (i18n, root = document) => Array.from(
         root.querySelectorAll('.intl-date-input-control')
-    ).map((control) => init(control, i18n));
+    ).map((control) => init(/** @type {IntlDateInputRoot} */ (control), i18n));
 
     return {
         formatValue,

@@ -9,11 +9,6 @@ import { loadModule } from '../support/load_module.js';
 
 const SCAN_URL = '/utilities/index-photos/scan';
 
-const i18n = {
-  t: (key) => key,
-  number: (value) => String(value),
-};
-
 const config = { urls: { utilities_index_photos_scan: SCAN_URL } };
 
 const opts = { canScan: false, canSync: true, hasActiveJobs: false, mediaDirs: [] };
@@ -58,7 +53,9 @@ const stubFetch = (response) => {
   return fetchMock;
 };
 
-const init = async () => (await loadModule('utilities/index_photos.js')).initIndexPhotos(opts, i18n, config);
+const init = async () => (
+  await loadModule('utilities/index_photos.js')
+).initIndexPhotos(opts, window.testI18n, config);
 
 const stat = (id) => document.getElementById(id).textContent;
 

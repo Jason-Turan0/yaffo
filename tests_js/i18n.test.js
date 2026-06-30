@@ -1,47 +1,18 @@
 import { loadModule } from './support/load_module.js';
 
-const response = (body, { ok = true, status = 200 } = {}) => ({
-  ok,
-  status,
-  json: vi.fn(() => Promise.resolve(body)),
-});
-
-const installI18next = () => {
-  window.i18next = {
-    init: vi.fn(() => Promise.resolve()),
-    t: vi.fn((key, options = {}) => `${key}:${JSON.stringify(options)}`),
-  };
-  return window.i18next;
-};
-
-const stubCatalogFetch = (catalogs) => {
-  const fetchMock = vi.fn((url) => {
-    if (!(url in catalogs)) {
-      return Promise.resolve(response({}, { ok: false, status: 404 }));
-    }
-    const value = catalogs[url];
-    if (value instanceof Error) {
-      return Promise.reject(value);
-    }
-    return Promise.resolve(response(value));
-  });
-  vi.stubGlobal('fetch', fetchMock);
-  return fetchMock;
-};
-
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe('PHOTO_ORGANIZER.initI18n', () => {
   it('loads locale and fallback catalogs through i18next', async () => {
-    const i18next = installI18next();
+    const i18next = window.testHelpers.installTestI18next();
     window.APP_CONFIG.i18n = {
       locale: 'fr',
       fallbackLocale: 'en',
       resourceUrl: '/locales/__lng__.json',
     };
-    const fetchMock = stubCatalogFetch({
+    const fetchMock = window.testHelpers.stubCatalogFetch({
       '/locales/fr.json': { common: { hello: 'Bonjour' } },
       '/locales/en.json': { common: { hello: 'Hello' }, components: {} },
     });
@@ -71,14 +42,14 @@ describe('PHOTO_ORGANIZER.initI18n', () => {
   });
 
   it('falls back to an empty locale catalog when the locale fetch fails', async () => {
-    const i18next = installI18next();
+    const i18next = window.testHelpers.installTestI18next();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     window.APP_CONFIG.i18n = {
       locale: 'es',
       fallbackLocale: 'en',
       resourceUrl: '/locales/__lng__.json',
     };
-    stubCatalogFetch({
+    window.testHelpers.stubCatalogFetch({
       '/locales/es.json': new Error('network down'),
       '/locales/en.json': { common: { hello: 'Hello' } },
     });
@@ -96,13 +67,13 @@ describe('PHOTO_ORGANIZER.initI18n', () => {
   });
 
   it('reuses the locale catalog when locale and fallback are the same', async () => {
-    const i18next = installI18next();
+    const i18next = window.testHelpers.installTestI18next();
     window.APP_CONFIG.i18n = {
       locale: 'en',
       fallbackLocale: 'en',
       resourceUrl: '/locales/__lng__.json',
     };
-    const fetchMock = stubCatalogFetch({
+    const fetchMock = window.testHelpers.stubCatalogFetch({
       '/locales/en.json': { common: { hello: 'Hello' } },
     });
 
@@ -116,13 +87,13 @@ describe('PHOTO_ORGANIZER.initI18n', () => {
   });
 
   it('returns a formatter service backed by i18next and Intl', async () => {
-    const i18next = installI18next();
+    const i18next = window.testHelpers.installTestI18next();
     window.APP_CONFIG.i18n = {
       locale: 'en-US',
       fallbackLocale: 'en-US',
       resourceUrl: '/locales/__lng__.json',
     };
-    stubCatalogFetch({
+    window.testHelpers.stubCatalogFetch({
       '/locales/en-US.json': { common: {} },
     });
 

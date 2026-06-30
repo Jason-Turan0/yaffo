@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Searchable Select Component
  * Converts standard <select> elements into searchable dropdowns with filtering
@@ -12,20 +14,44 @@
  *   keyboard navigation still works.
  */
 
+/**
+ * @typedef {Object} I18nService
+ * @property {(key: string, options?: Record<string, unknown>) => string} t
+ *
+ * @typedef {Object} SearchableOption
+ * @property {string} value
+ * @property {string} text
+ * @property {boolean} selected
+ */
+
 class SearchableSelect {
+    /**
+     * @param {HTMLSelectElement} selectElement
+     */
     constructor(selectElement) {
         this.select = selectElement;
         this.searchEnabled = !selectElement.hasAttribute('data-search-disabled');
+        /** @type {HTMLDivElement | null} */
         this.wrapper = null;
+        /** @type {HTMLInputElement | null} */
         this.searchInput = null;
+        /** @type {HTMLDivElement | null} */
         this.optionsList = null;
+        /** @type {SearchableOption[]} */
         this.options = [];
         this.isOpen = false;
         this.highlightedIndex = -1;
+        /** @type {HTMLButtonElement | null} */
+        this.displayButton = null;
+        /** @type {HTMLElement | null} */
+        this.displayText = null;
+        /** @type {HTMLDivElement | null} */
+        this.dropdown = null;
 
         this.init();
     }
 
+    /** @returns {void} */
     init() {
         // Store original options
         this.updateOptions();
@@ -40,14 +66,16 @@ class SearchableSelect {
         this.select.dataset.searchableInitialized = 'true';
     }
 
+    /** @returns {void} */
     updateOptions() {
         this.options = Array.from(this.select.options).map(option => ({
             value: option.value,
-            text: option.textContent,
+            text: option.textContent || '',
             selected: option.selected
         }));
     }
 
+    /** @returns {void} */
     createWrapper() {
         // Create wrapper
         this.wrapper = document.createElement('div');
@@ -91,7 +119,7 @@ class SearchableSelect {
 
         // Insert after original select and hide select
         this.select.style.display = 'none';
-        this.select.parentNode.insertBefore(this.wrapper, this.select.nextSibling);
+        (/** @type {Node} */ (this.select.parentNode)).insertBefore(this.wrapper, this.select.nextSibling);
 
         // Store references
         this.displayButton = displayButton;
@@ -99,8 +127,12 @@ class SearchableSelect {
         this.dropdown = dropdown;
     }
 
+    /**
+     * @param {string} filter
+     * @returns {void}
+     */
     renderOptions(filter = '') {
-        this.optionsList.innerHTML = '';
+        /** @type {HTMLDivElement} */ (this.optionsList).innerHTML = '';
         this.highlightedIndex = -1;
 
         const filteredOptions = this.options.filter(opt =>
@@ -111,7 +143,7 @@ class SearchableSelect {
             const noResults = document.createElement('div');
             noResults.className = 'searchable-select-no-results';
             noResults.textContent = SearchableSelect.i18n.t('components:select.noResults');
-            this.optionsList.appendChild(noResults);
+            /** @type {HTMLDivElement} */ (this.optionsList).appendChild(noResults);
             return;
         }
 
@@ -120,7 +152,7 @@ class SearchableSelect {
             optionDiv.className = 'searchable-select-option';
             optionDiv.textContent = option.text;
             optionDiv.dataset.value = option.value;
-            optionDiv.dataset.index = index;
+            optionDiv.dataset.index = /** @type {string} */ (/** @type {unknown} */ (index));
 
             if (option.selected) {
                 optionDiv.classList.add('selected');
@@ -128,28 +160,30 @@ class SearchableSelect {
 
             optionDiv.addEventListener('click', () => this.selectOption(option.value));
 
-            this.optionsList.appendChild(optionDiv);
+            /** @type {HTMLDivElement} */ (this.optionsList).appendChild(optionDiv);
         });
     }
 
+    /** @returns {void} */
     bindEvents() {
         // Toggle dropdown
-        this.displayButton.addEventListener('click', (e) => {
+        /** @type {HTMLButtonElement} */ (this.displayButton).addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggle();
         });
 
         // Search input
-        this.searchInput.addEventListener('input', (e) => {
-            this.renderOptions(e.target.value);
+        /** @type {HTMLInputElement} */ (this.searchInput).addEventListener('input', (e) => {
+            this.renderOptions(/** @type {HTMLInputElement} */ (e.target).value);
         });
 
         // Keyboard navigation (bound to the wrapper so it also works when the
         // search box is disabled and focus stays on the display button)
-        this.wrapper.addEventListener('keydown', (e) => {
+        /** @type {HTMLDivElement} */ (this.wrapper).addEventListener('keydown', (e) => {
             if (!this.isOpen) return;
 
-            const optionElements = this.optionsList.querySelectorAll('.searchable-select-option');
+            const optionElements = /** @type {HTMLDivElement} */ (this.optionsList)
+                .querySelectorAll('.searchable-select-option');
             const optionCount = optionElements.length;
 
             if (optionCount === 0) return;
@@ -170,8 +204,10 @@ class SearchableSelect {
                 case 'Enter':
                     e.preventDefault();
                     if (this.highlightedIndex >= 0 && this.highlightedIndex < optionCount) {
-                        const highlightedOption = optionElements[this.highlightedIndex];
-                        this.selectOption(highlightedOption.dataset.value);
+                        const highlightedOption = /** @type {HTMLElement} */ (
+                            optionElements[this.highlightedIndex]
+                        );
+                        this.selectOption(/** @type {string} */ (highlightedOption.dataset.value));
                     }
                     break;
 
@@ -183,19 +219,19 @@ class SearchableSelect {
         });
 
         // Prevent dropdown close when clicking search input
-        this.searchInput.addEventListener('click', (e) => {
+        /** @type {HTMLInputElement} */ (this.searchInput).addEventListener('click', (e) => {
             e.stopPropagation();
         });
 
         this.select.addEventListener('change', () => {
             this.updateOptions();
             this.updateDisplayText();
-            this.renderOptions(this.searchInput.value);
+            this.renderOptions(/** @type {HTMLInputElement} */ (this.searchInput).value);
         });
 
         // Close on outside click
         document.addEventListener('click', (e) => {
-            if (!this.wrapper.contains(e.target)) {
+            if (!/** @type {HTMLDivElement} */ (this.wrapper).contains(/** @type {Node} */ (e.target))) {
                 this.close();
             }
         });
@@ -203,9 +239,9 @@ class SearchableSelect {
         // Listen for changes to the underlying select (for dynamic updates)
         const observer = new MutationObserver(() => {
             this.updateOptions();
-            this.renderOptions(this.searchInput.value);
+            this.renderOptions(/** @type {HTMLInputElement} */ (this.searchInput).value);
             this.updateDisplayText();
-            this.wrapper.classList.toggle('disabled', this.select.disabled);
+            /** @type {HTMLDivElement} */ (this.wrapper).classList.toggle('disabled', this.select.disabled);
         });
 
         observer.observe(this.select, {
@@ -216,6 +252,7 @@ class SearchableSelect {
         });
     }
 
+    /** @returns {void} */
     toggle() {
         if (this.select.disabled) {
             return;
@@ -227,24 +264,28 @@ class SearchableSelect {
         }
     }
 
+    /** @returns {void} */
     open() {
         this.isOpen = true;
-        this.wrapper.classList.add('open');
-        this.searchInput.value = '';
+        /** @type {HTMLDivElement} */ (this.wrapper).classList.add('open');
+        /** @type {HTMLInputElement} */ (this.searchInput).value = '';
         this.renderOptions('');
         if (this.searchEnabled) {
-            this.searchInput.focus();
+            /** @type {HTMLInputElement} */ (this.searchInput).focus();
         }
     }
 
+    /** @returns {void} */
     close() {
         this.isOpen = false;
-        this.wrapper.classList.remove('open');
+        /** @type {HTMLDivElement} */ (this.wrapper).classList.remove('open');
         this.highlightedIndex = -1;
     }
 
+    /** @returns {void} */
     updateHighlight() {
-        const optionElements = this.optionsList.querySelectorAll('.searchable-select-option');
+        const optionElements = /** @type {HTMLDivElement} */ (this.optionsList)
+            .querySelectorAll('.searchable-select-option');
 
         optionElements.forEach((el, index) => {
             if (index === this.highlightedIndex) {
@@ -257,6 +298,10 @@ class SearchableSelect {
         });
     }
 
+    /**
+     * @param {string} value
+     * @returns {void}
+     */
     selectOption(value) {
         // Update the underlying select
         this.select.value = value;
@@ -275,25 +320,32 @@ class SearchableSelect {
         this.close();
     }
 
+    /** @returns {void} */
     updateDisplayText() {
-        this.displayText.textContent = this.getSelectedText();
+        /** @type {HTMLElement} */ (this.displayText).textContent = this.getSelectedText();
     }
 
+    /** @returns {string} */
     getSelectedText() {
         const selectedOption = this.select.options[this.select.selectedIndex];
         return selectedOption
-            ? selectedOption.textContent
+            ? selectedOption.textContent || ''
             : SearchableSelect.i18n.t('components:select.select');
     }
 
     // Static method to initialize all searchable selects on the page
+    /** @returns {void} */
     static initAll() {
         document.querySelectorAll('select.searchable-select:not([data-searchable-initialized])').forEach(select => {
-            new SearchableSelect(select);
+            new SearchableSelect(/** @type {HTMLSelectElement} */ (select));
         });
     }
 
     // Static method to initialize a specific select
+    /**
+     * @param {HTMLSelectElement} selectElement
+     * @returns {void}
+     */
     static init(selectElement) {
         if (selectElement.dataset.searchableInitialized) {
             return;
@@ -302,7 +354,12 @@ class SearchableSelect {
     }
 }
 
+/** @type {I18nService} */
 SearchableSelect.i18n = {
+    /**
+     * @param {string} key
+     * @returns {string}
+     */
     t: (key) => ({
         'components:select.typeToSearch': document.documentElement.dataset.selectSearch,
         'components:select.noResults': document.documentElement.dataset.selectNoResults,
@@ -311,7 +368,7 @@ SearchableSelect.i18n = {
 };
 
 // Auto-initialize on page load
-if (window.PHOTO_ORGANIZER?.i18nReady) window.PHOTO_ORGANIZER.i18nReady.then((i18n) => {
+if ((/** @type {Window & { PHOTO_ORGANIZER?: { i18nReady?: Promise<I18nService> } }} */ (window)).PHOTO_ORGANIZER?.i18nReady) (/** @type {Window & { PHOTO_ORGANIZER?: { i18nReady?: Promise<I18nService> } }} */ (window)).PHOTO_ORGANIZER.i18nReady.then((i18n) => {
     SearchableSelect.i18n = i18n;
     SearchableSelect.initAll();
 }); else SearchableSelect.initAll();
@@ -323,4 +380,6 @@ document.addEventListener('htmx:afterSwap', () => {
 });
 
 // Export for use in other scripts
-window.SearchableSelect = SearchableSelect;
+(/** @type {Window & { SearchableSelect: typeof SearchableSelect }} */ (
+    /** @type {unknown} */ (window)
+)).SearchableSelect = SearchableSelect;

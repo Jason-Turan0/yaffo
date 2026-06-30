@@ -1,12 +1,40 @@
-window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
-window.PHOTO_ORGANIZER.COMPONENTS.percentageSlider = {
+// @ts-check
+
+/**
+ * @typedef {Object} I18nService
+ * @property {(value: number, options?: Intl.NumberFormatOptions) => string} percent
+ *
+ * @typedef {Object} PercentageSliderApi
+ * @property {(sliderDom: Element) => void} init
+ * @property {() => void} initAll
+ */
+
+const percentageSliderWindow = /** @type {Window & {
+    PHOTO_ORGANIZER: {
+        COMPONENTS: {
+            percentageSlider?: PercentageSliderApi,
+        },
+        i18n: I18nService,
+        i18nReady: Promise<I18nService>,
+    },
+}} */ (/** @type {unknown} */ (window));
+
+percentageSliderWindow.PHOTO_ORGANIZER = percentageSliderWindow.PHOTO_ORGANIZER || {};
+percentageSliderWindow.PHOTO_ORGANIZER.COMPONENTS = percentageSliderWindow.PHOTO_ORGANIZER.COMPONENTS || {};
+/** @type {PercentageSliderApi} */
+const percentageSliderApi = {
+    /**
+     * @param {Element} sliderDom
+     */
     init: (sliderDom) => {
-        const percentageSlider = sliderDom.querySelector('input[type="range"]');
+        const percentageSlider = /** @type {HTMLInputElement | null} */ (
+            sliderDom.querySelector('input[type="range"]')
+        );
+        if (!percentageSlider) return;
         const percentageDisplay = document.querySelector('.percentage-slider-display span');
         const updateSimilarityDisplay = () => {
             if (percentageDisplay) {
-                percentageDisplay.textContent = window.PHOTO_ORGANIZER.i18n.percent(
+                percentageDisplay.textContent = percentageSliderWindow.PHOTO_ORGANIZER.i18n.percent(
                     Number(percentageSlider.value)
                 );
             }
@@ -15,11 +43,13 @@ window.PHOTO_ORGANIZER.COMPONENTS.percentageSlider = {
     },
     initAll: () => {
         document.querySelectorAll('.percentage-slider').forEach(slider => {
-            window.PHOTO_ORGANIZER.COMPONENTS.percentageSlider.init(slider);
-        })
-    }
-}
+            percentageSliderApi.init(slider);
+        });
+    },
+};
 
-window.PHOTO_ORGANIZER.i18nReady.then(() => {
-    window.PHOTO_ORGANIZER.COMPONENTS.percentageSlider.initAll();
+percentageSliderWindow.PHOTO_ORGANIZER.COMPONENTS.percentageSlider = percentageSliderApi;
+
+percentageSliderWindow.PHOTO_ORGANIZER.i18nReady.then(() => {
+    percentageSliderApi.initAll();
 });

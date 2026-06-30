@@ -1,9 +1,26 @@
-window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
+// @ts-check
 
-window.PHOTO_ORGANIZER.initNavPagesBar = () => {
-    const navbar = document.querySelector('.navbar');
-    const toggle = document.getElementById('nav-pages-toggle');
-    const bar = document.getElementById('navbar-pages-bar');
+/**
+ * @typedef {Object} NavPagesBarApi
+ * @property {() => void} syncNavbarHeight
+ */
+
+const navWindow = /** @type {Window & {
+    PHOTO_ORGANIZER: {
+        initNavPagesBar?: () => NavPagesBarApi | undefined,
+    },
+}} */ (/** @type {unknown} */ (window));
+
+navWindow.PHOTO_ORGANIZER = navWindow.PHOTO_ORGANIZER || {};
+
+navWindow.PHOTO_ORGANIZER.initNavPagesBar = () => {
+    const navbar = /** @type {HTMLElement | null} */ (document.querySelector('.navbar'));
+    const toggle = /** @type {HTMLElement | null} */ (
+        document.getElementById('nav-pages-toggle')
+    );
+    const bar = /** @type {HTMLElement | null} */ (
+        document.getElementById('navbar-pages-bar')
+    );
     if (!navbar || !toggle || !bar) return;
 
     const STORAGE_KEY = 'yaffo.pagesBarHidden';
@@ -14,6 +31,9 @@ window.PHOTO_ORGANIZER.initNavPagesBar = () => {
         document.documentElement.style.setProperty('--navbar-height', navbar.offsetHeight + 'px');
     };
 
+    /**
+     * @param {boolean} hidden
+     */
     const apply = (hidden) => {
         bar.hidden = hidden;
         toggle.setAttribute('aria-expanded', String(!hidden));

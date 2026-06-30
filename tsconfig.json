@@ -11,7 +11,14 @@
   },
   "files": [
     "yaffo/static/i18n.js",
+    "yaffo/static/components/collapsible_panel.js",
+    "yaffo/static/components/intl_date_input.js",
+    "yaffo/static/components/percentage_slider.js",
+    "yaffo/static/media/favorite.js",
+    "yaffo/static/multi-select.js",
+    "yaffo/static/nav.js",
     "yaffo/static/notification.js",
+    "yaffo/static/searchable-select.js",
     "yaffo/static/utils.js",
     "yaffo/static/utilities/index_photos.js"
   ]

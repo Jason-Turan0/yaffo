@@ -20,7 +20,7 @@ const NOTIFICATION_FLASH_KEY = 'app-notification-flash';
  * @property {(message: string, duration?: number) => void} info
  */
 
-const appWindow = /** @type {Window & {
+const notificationWindow = /** @type {Window & {
     notification: NotificationApi,
     showNotification: (message: string, type?: NotificationType, duration?: number) => void,
 }} */ (/** @type {unknown} */ (window));
@@ -149,7 +149,7 @@ class Notification {
 }
 
 // Create global notification instance
-appWindow.notification = new Notification();
+notificationWindow.notification = new Notification();
 
 // Backward compatibility: also expose as a function
 /**
@@ -157,6 +157,6 @@ appWindow.notification = new Notification();
  * @param {NotificationType} type
  * @param {number} duration
  */
-appWindow.showNotification = function(message, type = 'success', duration = 3000) {
-    appWindow.notification.show(message, type, duration);
+notificationWindow.showNotification = function(message, type = 'success', duration = 3000) {
+    notificationWindow.notification.show(message, type, duration);
 };

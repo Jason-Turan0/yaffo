@@ -12,17 +12,17 @@
  * @property {DateUtils} date
  */
 
-const appWindow = /** @type {Window & {
+const utilsWindow = /** @type {Window & {
     PHOTO_ORGANIZER: { utils?: Partial<UtilsNamespace> },
     APP_CONFIG: { i18n: { locale: string } },
 }} */ (/** @type {unknown} */ (window));
 
-appWindow.PHOTO_ORGANIZER = appWindow.PHOTO_ORGANIZER || {};
+utilsWindow.PHOTO_ORGANIZER = utilsWindow.PHOTO_ORGANIZER || {};
 const utils = /** @type {Partial<UtilsNamespace> & { locale: string }} */ (
-    appWindow.PHOTO_ORGANIZER.utils || {}
+    utilsWindow.PHOTO_ORGANIZER.utils || {}
 );
-appWindow.PHOTO_ORGANIZER.utils = utils;
-utils.locale = appWindow.APP_CONFIG.i18n.locale;
+utilsWindow.PHOTO_ORGANIZER.utils = utils;
+utils.locale = utilsWindow.APP_CONFIG.i18n.locale;
 
 utils.initImageFallbacks = () => {
     document.querySelectorAll('img[data-fallback]').forEach((img) => {

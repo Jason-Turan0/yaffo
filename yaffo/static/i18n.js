@@ -29,7 +29,7 @@
  * @property {(key: string, options?: Record<string, unknown>) => string} t
  */
 
-const appWindow = /** @type {Window & {
+const i18nWindow = /** @type {Window & {
  *   PHOTO_ORGANIZER: {
  *     initI18n?: (config: I18nConfig) => Promise<I18nService>,
  *     i18nReady?: Promise<I18nService>,
@@ -39,7 +39,7 @@ const appWindow = /** @type {Window & {
  *   i18next: I18nextLike,
  * }} */ (/** @type {unknown} */ (window));
 
-appWindow.PHOTO_ORGANIZER = appWindow.PHOTO_ORGANIZER || {};
+i18nWindow.PHOTO_ORGANIZER = i18nWindow.PHOTO_ORGANIZER || {};
 
 /**
  * Load translation catalogs and return the shared i18n formatting service.
@@ -74,7 +74,7 @@ const initI18n = async (config) => {
     fallbackCatalog = locale === config.fallbackLocale ? catalog : await loadCatalog(fallbackUrl);
 
     /** @type {I18nextLike} */
-    const i18next = appWindow.i18next;
+    const i18next = i18nWindow.i18next;
     await i18next.init({
         lng: locale,
         fallbackLng: config.fallbackLocale,
@@ -102,11 +102,11 @@ const initI18n = async (config) => {
     };
 };
 
-appWindow.PHOTO_ORGANIZER.initI18n = initI18n;
+i18nWindow.PHOTO_ORGANIZER.initI18n = initI18n;
 
-appWindow.PHOTO_ORGANIZER.i18nReady = initI18n(appWindow.APP_CONFIG.i18n)
+i18nWindow.PHOTO_ORGANIZER.i18nReady = initI18n(i18nWindow.APP_CONFIG.i18n)
     .then((service) => {
-        appWindow.PHOTO_ORGANIZER.i18n = service;
+        i18nWindow.PHOTO_ORGANIZER.i18n = service;
         document.dispatchEvent(new CustomEvent('yaffo:i18n-ready'));
         return service;
     });
