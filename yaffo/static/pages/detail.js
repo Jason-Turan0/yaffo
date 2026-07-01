@@ -1,7 +1,18 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.pages = window.PHOTO_ORGANIZER.pages || {};
 
+/**
+ * @param {string} pageTitle
+ * @param {I18nService} i18n
+ * @returns {PageDetailApi}
+ */
 window.PHOTO_ORGANIZER.pages.initDetail = (pageTitle, i18n) => {
+    /**
+     * @param {string} key
+     * @param {Record<string, unknown>} [options]
+     */
     const t = (key, options = {}) => i18n.t(key, options);
 
     const confirmDelete = async () => {
@@ -12,7 +23,8 @@ window.PHOTO_ORGANIZER.pages.initDetail = (pageTitle, i18n) => {
             confirmClass: 'btn-danger'
         });
         if (confirmed) {
-            document.getElementById('delete-page-form').submit();
+            const form = document.getElementById('delete-page-form');
+            if (form instanceof HTMLFormElement) form.submit();
         }
     };
 

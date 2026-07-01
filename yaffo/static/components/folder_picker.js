@@ -1,3 +1,5 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
 /**
@@ -12,6 +14,9 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
  * also lists files and resolves when one is clicked; 'any' lists files and folders
  * and also allows selecting the current folder.
  */
+/**
+ * @type {PickFolderApi}
+ */
 window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {}) => {
     return new Promise((resolve) => {
         const i18n = window.PHOTO_ORGANIZER.i18n;
@@ -24,8 +29,22 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
         const selectBtn = document.getElementById('folder-picker-select');
         const cancelBtn = document.getElementById('folder-picker-cancel');
         const errorBox = document.getElementById('folder-picker-error');
+        if (
+            !modal ||
+            !title ||
+            !pathLabel ||
+            !list ||
+            !(upBtn instanceof HTMLButtonElement) ||
+            !rootsBox ||
+            !(selectBtn instanceof HTMLButtonElement) ||
+            !(cancelBtn instanceof HTMLButtonElement) ||
+            !errorBox
+        ) {
+            throw new Error('Folder picker markup is incomplete');
+        }
 
         let currentPath = startPath;
+        /** @type {string | null} */
         let parentPath = null;
 
         const isFileMode = mode === 'file';
@@ -42,6 +61,9 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
         // "Select this folder" is hidden only for file-only selection; files resolve on click.
         selectBtn.style.display = isFileMode ? 'none' : '';
 
+        /**
+         * @param {string | null} value
+         */
         const settle = (value) => {
             cleanup();
             resolve(value);
@@ -61,9 +83,12 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
         const onSelect = () => settle(currentPath);
         const onCancel = () => settle(null);
         const onUp = () => { if (parentPath) navigate(parentPath); };
-        const onBackdrop = (e) => { if (e.target === modal) onCancel(); };
-        const onKeydown = (e) => { if (e.key === 'Escape') onCancel(); };
+        const onBackdrop = (/** @type {MouseEvent} */ e) => { if (e.target === modal) onCancel(); };
+        const onKeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === 'Escape') onCancel(); };
 
+        /**
+         * @param {FolderPickerRoot[]} roots
+         */
         const renderRoots = (roots) => {
             rootsBox.innerHTML = '';
             roots.forEach((r) => {
@@ -77,6 +102,9 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
             });
         };
 
+        /**
+         * @param {FolderPickerEntry[]} entries
+         */
         const renderEntries = (entries) => {
             list.innerHTML = '';
             if (entries.length === 0) {
@@ -108,20 +136,25 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
             });
         };
 
+        /**
+         * @param {string | null} path
+         */
         const navigate = async (path) => {
             const params = new URLSearchParams({ mode });
             if (path) params.set('path', path);
+            /** @type {FolderPickerListResponse} */
             let data;
             try {
-                data = await (await fetch(`${window.APP_CONFIG.urls.fs_list}?${params}`)).json();
+                data = /** @type {FolderPickerListResponse} */ (await (await fetch(`${window.APP_CONFIG.urls.fs_list}?${params}`)).json());
             } catch {
                 errorBox.textContent = i18n.t('components:folderPicker.readFailed');
                 return;
             }
             currentPath = data.path;
             parentPath = data.parent;
-            pathLabel.textContent = data.path;
-            pathLabel.title = data.path;
+            const displayPath = data.path || '';
+            pathLabel.textContent = displayPath;
+            pathLabel.title = displayPath;
             errorBox.textContent = data.error || '';
             upBtn.disabled = !data.parent;
             renderRoots(data.roots || []);

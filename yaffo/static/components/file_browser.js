@@ -1,3 +1,5 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
@@ -18,14 +20,15 @@ window.PHOTO_ORGANIZER.COMPONENTS.fileBrowser = {
         document.documentElement.dataset.fileBrowserReady = '1';
 
         document.addEventListener('click', async (event) => {
+            if (!(event.target instanceof Element)) return;
             const btn = event.target.closest('.file-browser-btn');
             if (!btn) return;
             const group = btn.closest('.file-browser-input-group') || btn.closest('.file-browser-group');
             const input = group && group.querySelector('.file-browser-input');
-            if (!input) return;
+            if (!(input instanceof HTMLInputElement)) return;
 
             const modeEl = btn.closest('[data-mode]');
-            const mode = (modeEl && modeEl.dataset.mode) || 'folder';
+            const mode = /** @type {FolderPickerMode} */ ((modeEl instanceof HTMLElement && modeEl.dataset.mode) || 'folder');
             const path = await window.PHOTO_ORGANIZER.pickFolder({ mode, startPath: input.value || null });
             if (path) {
                 input.value = path;

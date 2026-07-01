@@ -1,7 +1,22 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
+/**
+ * @param {MediaFacePerson[]} allPeople
+ * @param {I18nService} i18n
+ * @param {AppConfig} config
+ * @returns {FaceReassignApi}
+ */
 window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) => {
+    /**
+     * @param {HTMLElement} faceThumbnail
+     * @param {number} faceId
+     */
     const createReassignOverlay = (faceThumbnail, faceId) => {
+        if (!window.PHOTO_ORGANIZER.COMPONENTS.overlay) {
+            throw new Error('Overlay component is not initialized');
+        }
         const overlayContent = `
             <div class="face-reassign-header">${i18n.t('media:faces.reassign')}</div>
             <div class="face-reassign-controls">
@@ -28,10 +43,12 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
         )
 
         const selectElement = overlay.querySelector(`#reassign-person-select-${faceId}`);
-        window.SearchableSelect.init(selectElement);
+        if (!(selectElement instanceof HTMLSelectElement)) return overlay;
+        window.SearchableSelect?.init(selectElement);
 
         const cancelBtn = overlay.querySelector('[data-action="cancel"]');
         const applyBtn = overlay.querySelector('[data-action="apply"]');
+        if (!(cancelBtn instanceof HTMLButtonElement) || !(applyBtn instanceof HTMLButtonElement)) return overlay;
 
         cancelBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -46,6 +63,11 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
         return overlay;
     };
 
+    /**
+     * @param {number} faceId
+     * @param {string} personId
+     * @param {HTMLButtonElement} applyBtn
+     */
     const reassignFace = async (faceId, personId, applyBtn) => {
         if (!personId) {
             window.notification.warning(i18n.t('media:faces.selectPersonRequired'));
@@ -89,7 +111,10 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
         }
     };
 
-    const handleFaceClick = (e) => createReassignOverlay(e.currentTarget, parseInt(e.currentTarget.dataset.faceId))
+    const handleFaceClick = (/** @type {Event} */ e) => {
+        if (!(e.currentTarget instanceof HTMLElement)) return;
+        createReassignOverlay(e.currentTarget, parseInt(e.currentTarget.dataset.faceId || '', 10));
+    };
 
 
     document.querySelectorAll('.face-thumbnail').forEach(thumbnail => {

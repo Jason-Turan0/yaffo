@@ -1,3 +1,5 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.pages = window.PHOTO_ORGANIZER.pages || {};
 
@@ -15,22 +17,39 @@ window.PHOTO_ORGANIZER.widgetErrors = window.PHOTO_ORGANIZER.widgetErrors || {};
 // presentation, the edit version (draft or published) in design, re-read each call
 // so it tracks a draft forked mid-session. Widget state/query are scoped to that
 // version's widget (widgets are unique per version).
+/**
+ * @param {number} pageId
+ * @param {() => number} getVersionId
+ * @param {AppConfig} config
+ */
 window.PHOTO_ORGANIZER.pages.initWidgetBroker = (pageId, getVersionId, config) => {
-    const frames = () => [...document.querySelectorAll('.widget-frame')];
+    const frames = () => /** @type {HTMLIFrameElement[]} */ ([...document.querySelectorAll('.widget-frame')]);
+    /**
+     * @param {MessageEvent} event
+     * @returns {HTMLIFrameElement | undefined}
+     */
     const senderFrame = (event) => frames().find((f) => f.contentWindow === event.source);
 
     // yaffo:publish -> fan out as yaffo:event to every widget (pub/sub bus)
+    /**
+     * @param {MessageEvent} event
+     * @param {WidgetMessage} msg
+     */
     const handlePublish = (event, msg) => {
         frames().forEach((f) =>
-            f.contentWindow.postMessage(
+            f.contentWindow?.postMessage(
                 { type: 'yaffo:event', topic: msg.topic, payload: msg.payload }, '*'
             ));
     };
 
     // yaffo:state -> persist the sending widget's state (fire-and-forget)
+    /**
+     * @param {MessageEvent} event
+     * @param {WidgetMessage} msg
+     */
     const handleState = (event, msg) => {
         const frame = senderFrame(event);
-        if (!frame) return;
+        if (!frame || !frame.dataset.widgetId) return;
         fetch(
             config.buildUrl('pages_version_widget_state', { page_id: pageId, version_id: getVersionId(), widget_id: frame.dataset.widgetId }),
             { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: msg.state }) }
@@ -40,9 +59,15 @@ window.PHOTO_ORGANIZER.pages.initWidgetBroker = (pageId, getVersionId, config) =
     // POST `body` to a version/widget-scoped endpoint for the sending widget and
     // reply yaffo:result with the response's `data` (null on any failure). The
     // request/response round trip every read-style message shares.
+    /**
+     * @param {MessageEvent} event
+     * @param {WidgetMessage} msg
+     * @param {string} endpoint
+     * @param {Record<string, unknown>} body
+     */
     const brokerResult = async (event, msg, endpoint, body) => {
         const frame = senderFrame(event);
-        if (!frame) return;
+        if (!frame || !frame.dataset.widgetId) return;
         let data = null;
         try {
             const response = await fetch(
@@ -53,24 +78,30 @@ window.PHOTO_ORGANIZER.pages.initWidgetBroker = (pageId, getVersionId, config) =
         } catch (e) {
             data = null;
         }
-        frame.contentWindow.postMessage({ type: 'yaffo:result', requestId: msg.requestId, data }, '*');
+        frame.contentWindow?.postMessage({ type: 'yaffo:result', requestId: msg.requestId, data }, '*');
     };
 
     // yaffo:query -> resolve a live data_query, reply yaffo:result to the sender.
     // Media dirs + the folder tree are just sources (media_dirs / folders), so they
     // go through this same path — no dedicated message types.
-    const handleQuery = (event, msg) =>
+    const handleQuery = (/** @type {MessageEvent} */ event, /** @type {WidgetMessage} */ msg) =>
         brokerResult(event, msg, 'pages_version_widget_query', { query: msg.query });
 
     // yaffo:error -> record the sending widget's runtime error locally
+    /**
+     * @param {MessageEvent} event
+     * @param {WidgetMessage} msg
+     */
     const handleError = (event, msg) => {
         const frame = senderFrame(event);
-        if (!frame) return;
+        if (!frame || !frame.dataset.widgetId) return;
         const store = window.PHOTO_ORGANIZER.widgetErrors;
+        if (!store) return;
         const id = frame.dataset.widgetId;
-        store[id] = [...(store[id] || []), msg.message].slice(-10);
+        store[id] = [...(store[id] || []), String(msg.message || '')].slice(-10);
     };
 
+    /** @type {Record<string, (event: MessageEvent, msg: WidgetMessage) => void | Promise<void>>} */
     const handlers = {
         'yaffo:publish': handlePublish,
         'yaffo:state': handleState,
@@ -79,7 +110,8 @@ window.PHOTO_ORGANIZER.pages.initWidgetBroker = (pageId, getVersionId, config) =
     };
 
     window.addEventListener('message', (event) => {
-        const msg = event.data || {};
+        const msg = /** @type {WidgetMessage} */ (event.data || {});
+        if (typeof msg.type !== 'string') return;
         const handler = handlers[msg.type];
         if (handler) handler(event, msg);
     });

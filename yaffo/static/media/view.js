@@ -1,5 +1,15 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
+/**
+ * @param {MediaFace[] | null} faceData
+ * @param {string} absoluteFilePath
+ * @param {string} absoluteFolderPath
+ * @param {I18nService} i18n
+ * @param {AppConfig} config
+ * @returns {PhotoViewApi}
+ */
 window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
     faceData,
     absoluteFilePath,
@@ -7,13 +17,20 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
     i18n,
     config
 ) => {
-    let canvas, ctx, mainPhoto;
+    /** @type {HTMLCanvasElement | null} */
+    let canvas = null;
+    /** @type {CanvasRenderingContext2D | null} */
+    let ctx = null;
+    /** @type {HTMLImageElement | null} */
+    let mainPhoto = null;
 
     const initializeFaceHighlighting = () => {
-        canvas = document.getElementById('faceCanvas');
-        mainPhoto = document.getElementById('mainPhoto');
+        const canvasElement = document.getElementById('faceCanvas');
+        const photoElement = document.getElementById('mainPhoto');
 
-        if (!canvas || !mainPhoto || !faceData) return;
+        if (!(canvasElement instanceof HTMLCanvasElement) || !(photoElement instanceof HTMLImageElement) || !faceData) return;
+        canvas = canvasElement;
+        mainPhoto = photoElement;
 
         ctx = canvas.getContext('2d');
 
@@ -30,8 +47,8 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
         canvas.height = mainPhoto.offsetHeight;
     };
 
-    const highlightFace = (faceId) => {
-        if (!faceData || !ctx || !mainPhoto) return;
+    const highlightFace = (/** @type {number} */ faceId) => {
+        if (!faceData || !ctx || !mainPhoto || !canvas) return;
 
         const faceInfo = faceData.find(f => f.id === faceId);
         if (!faceInfo || !faceInfo.location) return;
@@ -79,7 +96,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
     };
 
     const clearHighlights = () => {
-        if (ctx) {
+        if (ctx && canvas) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
@@ -88,7 +105,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
         });
     };
 
-    const openFile = (filePath) => {
+    const openFile = (/** @type {string} */ filePath) => {
         fetch('/api/open-file', {
             method: 'POST',
             headers: {
@@ -99,18 +116,18 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                notification.error(i18n.t('media:actions.openFileFailedWithReason', { reason: data.error }));
+                window.notification.error(i18n.t('media:actions.openFileFailedWithReason', { reason: data.error }));
             } else {
-                notification.success(i18n.t('media:actions.openingFile'));
+                window.notification.success(i18n.t('media:actions.openingFile'));
             }
         })
         .catch(error => {
-            notification.error(i18n.t('media:actions.openFileFailed'));
+            window.notification.error(i18n.t('media:actions.openFileFailed'));
             console.error('Error:', error);
         });
     };
 
-    const openFolder = (folderPath) => {
+    const openFolder = (/** @type {string} */ folderPath) => {
         fetch('/api/open-folder', {
             method: 'POST',
             headers: {
@@ -121,13 +138,13 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                notification.error(i18n.t('media:actions.openFolderFailedWithReason', { reason: data.error }));
+                window.notification.error(i18n.t('media:actions.openFolderFailedWithReason', { reason: data.error }));
             } else {
-                notification.success(i18n.t('media:actions.openingFolder'));
+                window.notification.success(i18n.t('media:actions.openingFolder'));
             }
         })
         .catch(error => {
-            notification.error(i18n.t('media:actions.openFolderFailed'));
+            window.notification.error(i18n.t('media:actions.openFolderFailed'));
             console.error('Error:', error);
         });
     };

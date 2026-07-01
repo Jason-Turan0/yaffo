@@ -51,6 +51,16 @@ type NotificationApi = {
     info(message: string, duration?: number): void;
 };
 
+type ConfirmDialogOptions = {
+    title?: string;
+    message?: string;
+    confirmText?: string;
+    cancelText?: string;
+    confirmClass?: string;
+};
+
+type ConfirmDialogApi = (options: ConfirmDialogOptions) => Promise<boolean>;
+
 type NavPagesBarApi = {
     syncNavbarHeight(): void;
 };
@@ -65,6 +75,91 @@ type ModalControl = {
 
 type ModalApi = {
     init(modalId: string): ModalControl;
+};
+
+type FileBrowserApi = {
+    init(): void;
+};
+
+type FolderPickerMode = 'folder' | 'file' | 'any';
+
+type FolderPickerOptions = {
+    mode?: FolderPickerMode;
+    startPath?: string | null;
+};
+
+type PickFolderApi = (options?: FolderPickerOptions) => Promise<string | null>;
+
+type FolderPickerRoot = {
+    name: string;
+    path: string;
+};
+
+type FolderPickerEntry = {
+    name: string;
+    path: string;
+    is_dir: boolean;
+};
+
+type FolderPickerListResponse = {
+    path: string | null;
+    parent: string | null;
+    error?: string;
+    roots?: FolderPickerRoot[];
+    entries?: FolderPickerEntry[];
+};
+
+type OverlayPlacement = 'top' | 'bottom' | 'left' | 'right';
+
+type OverlayOptions = {
+    placement?: OverlayPlacement;
+    offset?: number;
+    closeOnEsc?: boolean;
+    closeOnOutsideClick?: boolean;
+};
+
+type OverlayControl = {
+    overlay: HTMLElement;
+    close(): void;
+    reposition(): void;
+};
+
+type OverlayApi = {
+    init(targetElementId: string, overlayContent: string, options?: OverlayOptions): OverlayControl;
+};
+
+type ChatStatusBody = {
+    status: string;
+    started_at?: string | null;
+    messages?: Array<{
+        type: string;
+        content: string;
+    }>;
+    [key: string]: unknown;
+};
+
+type ChatSendResult = {
+    ok: boolean;
+    error?: string;
+};
+
+type ChatDialogOptions = {
+    startStatus: string;
+    statusUrl(): string;
+    onSend(message: string): Promise<ChatSendResult>;
+    onCancel?: () => Promise<unknown>;
+    onStatus?: (body: ChatStatusBody) => void;
+    onSettled?: (body: ChatStatusBody) => void;
+    onPhase?: (status: string) => void;
+    runningStatus?: string;
+    cancelConfirm?: Pick<ConfirmDialogOptions, 'title' | 'message' | 'confirmText'>;
+    pollIntervalMs?: number;
+    pollRetryMs?: number;
+};
+
+type ChatDialogApi = {
+    enterRunning(): void;
+    isRunning(): boolean;
 };
 
 type DateUtils = {
@@ -120,8 +215,10 @@ type CronBuilderApi = {
 
 type PhotoOrganizerComponents = {
     initAll?: () => void;
-    fileBrowser?: { init?: () => void };
+    fileBrowser?: FileBrowserApi;
     modal: ModalApi;
+    overlay?: OverlayApi;
+    initChatDialog?: (id: string, options: ChatDialogOptions) => ChatDialogApi | null;
     initNavPagesBar?: () => NavPagesBarApi | undefined;
     navPagesBar?: NavPagesBarApi;
     intlDateInput?: IntlDateInputApi;
@@ -140,6 +237,90 @@ type FavoriteNamespace = {
 type MediaNamespace = {
     favorite?: FavoriteNamespace;
     initGalleryVideos?: (i18n: I18nService, config: AppConfig) => void;
+};
+
+type FaceLocation = {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+};
+
+type MediaFacePerson = {
+    id?: number;
+    name: string;
+};
+
+type MediaFace = {
+    id: number;
+    location?: FaceLocation | null;
+    people?: MediaFacePerson[];
+};
+
+type MediaTag = {
+    tempId?: number;
+    tag_name?: string;
+    tag_value?: string;
+    isNew?: boolean;
+    modified?: boolean;
+    markedForDeletion?: boolean;
+    [key: string]: unknown;
+};
+
+type PhotoViewApi = {
+    highlightFace(faceId: number): void;
+    clearHighlights(): void;
+    openFile(filePath: string): void;
+    openFolder(folderPath: string): void;
+};
+
+type PhotoTagsApi = {
+    openEditModal(): void;
+    addTagToList(): void;
+    removeTagFromList(tempId: number): void;
+    updateTagName(tempId: number, newName: string): void;
+    updateTagValue(tempId: number, newValue: string): void;
+};
+
+type FaceReassignApi = Record<string, never>;
+
+type ViewPhotoNamespace = {
+    initPhotoView?: (
+        faceData: MediaFace[] | null,
+        absoluteFilePath: string,
+        absoluteFolderPath: string,
+        i18n: I18nService,
+        config: AppConfig,
+    ) => PhotoViewApi;
+    initPhotoTags?: (photoId: number, initialTags: MediaTag[], i18n: I18nService, config: AppConfig) => PhotoTagsApi;
+    initFaceReassign?: (allPeople: MediaFacePerson[], i18n: I18nService, config: AppConfig) => FaceReassignApi;
+    photoView?: PhotoViewApi;
+    photoTags?: PhotoTagsApi;
+    faceReassign?: FaceReassignApi;
+};
+
+type LocationMediaItem = {
+    id: number;
+    lat?: number;
+    lon?: number;
+    name?: string | null;
+    location?: string | null;
+    photo_path?: string | null;
+    filename?: string;
+    media_type?: string | null;
+};
+
+type LocationMapApi = {
+    map: unknown;
+    vectorSource: unknown;
+    selectedFeatures: Set<unknown>;
+    updateSelectionPanel(): Promise<void>;
+    applyFilter(showOnlyUnnamed: boolean): void;
+};
+
+type LocationsNamespace = {
+    initMap?: (locations: LocationMediaItem[], i18n: I18nService, config: AppConfig) => LocationMapApi;
+    map?: LocationMapApi;
 };
 
 type TagsFilterApi = {
@@ -178,6 +359,78 @@ type SettingsNamespace = {
     initLabelFilter?: () => void;
 };
 
+type PageDetailApi = {
+    confirmDelete(): Promise<void>;
+};
+
+type PagesNamespace = {
+    initDetail?: (pageTitle: string, i18n: I18nService) => PageDetailApi;
+    initWidgetApi?: (data?: WidgetData, state?: WidgetState, locale?: string) => WidgetApi;
+    initWidgetBroker?: (pageId: number, getVersionId: () => number, config: AppConfig) => void;
+    detail?: PageDetailApi;
+};
+
+type WidgetData = Record<string, unknown>;
+type WidgetState = Record<string, unknown>;
+type WidgetQuery = Record<string, unknown>;
+type WidgetPayload = unknown;
+
+type WidgetApi = {
+    data: WidgetData;
+    state: WidgetState;
+    locale: string;
+    number(value: number, options?: Intl.NumberFormatOptions): string;
+    percent(value: number, options?: Intl.NumberFormatOptions): string;
+    date(value: string | number | Date, options?: Intl.DateTimeFormatOptions): string;
+    relativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
+    list(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
+    query(query: WidgetQuery): Promise<unknown>;
+    publish(topic: string, payload: WidgetPayload): void;
+    subscribe(topic: string, handler: (payload: WidgetPayload) => void): void;
+    saveState(newState: WidgetState): void;
+    mediaUrl(id: string | number): string;
+};
+
+type WidgetMessage = {
+    type?: string;
+    requestId?: number;
+    topic?: string;
+    payload?: WidgetPayload;
+    state?: WidgetState;
+    query?: WidgetQuery;
+    message?: string;
+    data?: unknown;
+    [key: string]: unknown;
+};
+
+type PeopleListApi = {
+    openAddModal(): void;
+    openEditModal(personId: number, personName: string, birthdate?: string, gender?: number | null): void;
+    confirmDelete(personId: number, personName: string): Promise<void>;
+};
+
+type PeopleFacesApi = {
+    setAllSelected(selected: boolean): void;
+};
+
+type PeopleNamespace = {
+    initFaces?: (i18n: I18nService, config: AppConfig) => PeopleFacesApi;
+    faces?: PeopleFacesApi;
+    initList?: (i18n: I18nService, config: AppConfig) => PeopleListApi;
+    list?: PeopleListApi;
+};
+
+type ThemesPageApi = {
+    confirmDelete(): Promise<void>;
+};
+
+type ThemesNamespace = {
+    initPage?: (selectedLabel: string, config: AppConfig, i18n: I18nService) => ThemesPageApi;
+    initChat?: (slug: string, startStatus: string, config: AppConfig, i18n: I18nService) => ChatDialogApi | null;
+    page?: ThemesPageApi;
+    chat?: ChatDialogApi | null;
+};
+
 type SearchableSelectConstructor = {
     new(selectElement: HTMLSelectElement): unknown;
     i18n: Pick<I18nService, 't'>;
@@ -199,9 +452,17 @@ type PhotoOrganizerApp = {
     utils?: UtilsNamespace;
     filters?: FiltersNamespace;
     media?: MediaNamespace;
+    VIEW_PHOTO?: ViewPhotoNamespace;
     indexPhotos?: IndexPhotosNamespace;
+    locations?: LocationsNamespace;
+    pages?: PagesNamespace;
+    people?: PeopleNamespace;
     settings?: SettingsNamespace;
+    themes?: ThemesNamespace;
     utilities?: UtilitiesNamespace;
+    confirmDialog: ConfirmDialogApi;
+    pickFolder: PickFolderApi;
+    widgetErrors?: Record<string, string[]>;
     initI18n?: (config: I18nConfig) => Promise<I18nService>;
     initApp?: () => Promise<PhotoOrganizerApp>;
     closeAlert?: (button: Element | null) => void;
@@ -215,6 +476,7 @@ interface Window {
     closeAlert?: (button: Element | null) => void;
     togglePanel?: (panelId: string) => void;
     i18next: I18nextLike;
+    yaffo?: WidgetApi;
     SearchableSelect?: SearchableSelectConstructor;
     toggleMultiSelect?: (header: Element) => void;
     updateMultiSelectText?: (checkbox: HTMLInputElement) => void;
@@ -224,4 +486,10 @@ interface Window {
 
 interface DocumentEventMap {
     'yaffo:app-init-complete': CustomEvent<AppInitCompleteDetail>;
+}
+
+declare const ol: any;
+
+interface HTMLElement {
+    intlDateInput?: IntlDateInputControl;
 }

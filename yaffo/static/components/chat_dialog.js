@@ -1,3 +1,5 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
@@ -28,6 +30,11 @@ window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 //                   input / Send / Cancel / status bar.
 //   runningStatus   the status meaning "a run is active" (default 'IN_PROGRESS').
 //   cancelConfirm   { title, message, confirmText } for the cancel confirm dialog.
+/**
+ * @param {string} id
+ * @param {ChatDialogOptions} options
+ * @returns {ChatDialogApi | null}
+ */
 window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
     const i18n = window.PHOTO_ORGANIZER.i18n;
     const {
@@ -50,6 +57,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
 
     const form = document.getElementById(`${id}-form`);
     if (!form) return null;  // a disabled (read-only) dialog renders no input
+    if (!(form instanceof HTMLFormElement)) return null;
 
     const messagesEl = document.getElementById(`${id}-messages`);
     const messageInput = document.getElementById(`${id}-message`);
@@ -57,12 +65,19 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
     const cancelButton = document.getElementById(`${id}-cancel`);
     const statusBar = document.getElementById(`${id}-status`);
     const elapsedEl = document.getElementById(`${id}-elapsed`);
+    if (
+        !(messageInput instanceof HTMLTextAreaElement || messageInput instanceof HTMLInputElement) ||
+        !(sendButton instanceof HTMLButtonElement)
+    ) return null;
 
     // status drives the UI phase; startedAt seeds the elapsed counter (the server
     // returns the prompt timestamp so a resumed run keeps ticking from the right time).
     let status = startStatus;
+    /** @type {string | null | undefined} */
     let startedAt = null;
+    /** @type {ReturnType<typeof setTimeout> | null} */
     let pollTimer = null;
+    /** @type {ReturnType<typeof setInterval> | null} */
     let elapsedTimer = null;
 
     const isRunning = () => status === runningStatus;
@@ -72,13 +87,17 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
     // layer their own controls on top via onPhase.
     const refreshUi = () => {
         const running = isRunning();
-        if (messageInput) messageInput.disabled = running;
-        if (sendButton) sendButton.disabled = running;
-        if (cancelButton) cancelButton.disabled = !running;
-        if (statusBar) statusBar.hidden = !running;
+        messageInput.disabled = running;
+        sendButton.disabled = running;
+        if (cancelButton instanceof HTMLButtonElement) cancelButton.disabled = !running;
+        if (statusBar instanceof HTMLElement) statusBar.hidden = !running;
         if (onPhase) onPhase(status);
     };
 
+    /**
+     * @param {string | null | undefined} fromIso
+     * @param {number} toMs
+     */
     const formatElapsed = (fromIso, toMs) => {
         const start = fromIso ? new Date(fromIso).getTime() : toMs;
         const secs = Math.max(0, Math.round((toMs - start) / 1000));
@@ -95,6 +114,9 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
 
     // Rebuild the conversation feed from the polled transcript (the source of truth
     // while generating): user / assistant bubbles and interleaved status / error lines.
+    /**
+     * @param {ChatStatusBody['messages']} messages
+     */
     const renderFeed = (messages) => {
         if (!messagesEl) return;
         messagesEl.innerHTML = '';
@@ -108,10 +130,15 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
     };
 
     const stopPolling = () => {
-        clearTimeout(pollTimer);
-        clearInterval(elapsedTimer);
+        if (pollTimer !== null) clearTimeout(pollTimer);
+        if (elapsedTimer !== null) clearInterval(elapsedTimer);
+        pollTimer = null;
+        elapsedTimer = null;
     };
 
+    /**
+     * @param {ChatStatusBody} body
+     */
     const applyStatus = (body) => {
         status = body.status;
         startedAt = body.started_at;
@@ -130,7 +157,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
         try {
             const response = await fetch(statusUrl());
             if (response.status === 404) { window.location.reload(); return; }
-            const body = await response.json();
+            const body = /** @type {ChatStatusBody} */ (await response.json());
             applyStatus(body);
             if (isRunning()) pollTimer = setTimeout(poll, pollIntervalMs);
         } catch (error) {
@@ -149,6 +176,9 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
         poll();
     };
 
+    /**
+     * @param {SubmitEvent} event
+     */
     const sendMessage = async (event) => {
         event.preventDefault();
         if (isRunning()) return;  // a run is active

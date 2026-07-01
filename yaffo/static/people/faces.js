@@ -1,27 +1,49 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.people = window.PHOTO_ORGANIZER.people || {};
 
+/**
+ * @param {I18nService} i18n
+ * @param {AppConfig} config
+ * @returns {PeopleFacesApi}
+ */
 window.PHOTO_ORGANIZER.people.initFaces = (i18n, config) => {
     const tooltip = document.createElement('div');
     tooltip.className = 'tooltip';
     document.body.appendChild(tooltip);
 
+    /**
+     * @param {string} rangeId
+     * @param {string} valueId
+     */
     const updateSimilarityDisplay = (rangeId, valueId) => {
         const range = document.getElementById(rangeId);
         const value = document.getElementById(valueId);
+        if (!(range instanceof HTMLInputElement) || !value) return;
         range?.addEventListener('input', (event) => {
-            value.textContent = i18n.percent(Number(event.target.value) / 100);
+            value.textContent = i18n.percent(Number(range.value) / 100);
         });
     };
 
     updateSimilarityDisplay('min_similarity-range', 'min_similarity-value');
     updateSimilarityDisplay('max_similarity-range', 'max_similarity-value');
 
-    const cards = Array.from(document.querySelectorAll('.face-card'));
+    const cards = /** @type {HTMLElement[]} */ (Array.from(document.querySelectorAll('.face-card')));
+    /**
+     * @param {Element} card
+     * @returns {HTMLInputElement | null}
+     */
+    const getCheckbox = (card) => {
+        const checkbox = card.querySelector('input[type="checkbox"]');
+        return checkbox instanceof HTMLInputElement ? checkbox : null;
+    };
+
     cards.forEach((card) => {
         card.addEventListener('click', () => {
             card.classList.toggle('selected');
-            const checkbox = card.querySelector('input[type="checkbox"]');
+            const checkbox = getCheckbox(card);
+            if (!checkbox) return;
             checkbox.checked = !checkbox.checked;
         });
 
@@ -29,7 +51,7 @@ window.PHOTO_ORGANIZER.people.initFaces = (i18n, config) => {
             const similarity = card.dataset.similarity === ''
                 ? Number.NaN
                 : Number(card.dataset.similarity);
-            const date = window.PHOTO_ORGANIZER.utils.date.format(card.dataset.date);
+            const date = window.PHOTO_ORGANIZER.utils?.date?.format(card.dataset.date) || '';
             const similarityText = Number.isFinite(similarity)
                 ? i18n.percent(similarity / 100)
                 : i18n.t('common:notAvailable');
@@ -53,10 +75,14 @@ window.PHOTO_ORGANIZER.people.initFaces = (i18n, config) => {
         });
     });
 
+    /**
+     * @param {boolean} selected
+     */
     const setAllSelected = (selected) => {
         cards.forEach((card) => {
             card.classList.toggle('selected', selected);
-            card.querySelector('input[type="checkbox"]').checked = selected;
+            const checkbox = getCheckbox(card);
+            if (checkbox) checkbox.checked = selected;
         });
     };
 
@@ -75,7 +101,7 @@ window.PHOTO_ORGANIZER.people.initFaces = (i18n, config) => {
             '.face-card input[type="checkbox"]:checked',
         );
         if (selectedCheckboxes.length === 0) {
-            notification.warning(i18n.t('people:faces.selectRequired'));
+            window.notification.warning(i18n.t('people:faces.selectRequired'));
             return;
         }
 
@@ -88,15 +114,18 @@ window.PHOTO_ORGANIZER.people.initFaces = (i18n, config) => {
         if (!confirmed) return;
 
         const container = document.getElementById('selected-faces-container');
+        if (!container) return;
         container.replaceChildren();
         selectedCheckboxes.forEach((checkbox) => {
+            if (!(checkbox instanceof HTMLInputElement)) return;
             const hidden = document.createElement('input');
             hidden.type = 'hidden';
             hidden.name = 'faces';
             hidden.value = checkbox.value;
             container.appendChild(hidden);
         });
-        document.getElementById('remove-form').submit();
+        const form = document.getElementById('remove-form');
+        if (form instanceof HTMLFormElement) form.submit();
     });
 
     return { setAllSelected };

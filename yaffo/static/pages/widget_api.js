@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Yaffo widget API.
  *
@@ -12,17 +14,25 @@
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.pages = window.PHOTO_ORGANIZER.pages || {};
 
+/**
+ * @param {WidgetData} [data]
+ * @param {WidgetState} [state]
+ * @param {string} [locale]
+ * @returns {WidgetApi}
+ */
 window.PHOTO_ORGANIZER.pages.initWidgetApi = function (data, state, locale) {
+    /** @type {Record<number, (value: unknown) => void>} */
     var pending = {};       // requestId -> resolve fn, awaiting a yaffo:result
+    /** @type {Record<string, Array<(payload: WidgetPayload) => void>>} */
     var subscribers = {};   // topic -> [handler]
     var nextRequestId = 0;
 
     window.addEventListener('message', function (event) {
-        var msg = event.data || {};
-        if (msg.type === 'yaffo:result' && pending[msg.requestId]) {
+        var msg = /** @type {WidgetMessage} */ (event.data || {});
+        if (msg.type === 'yaffo:result' && typeof msg.requestId === 'number' && pending[msg.requestId]) {
             pending[msg.requestId](msg.data);
             delete pending[msg.requestId];
-        } else if (msg.type === 'yaffo:event') {
+        } else if (msg.type === 'yaffo:event' && typeof msg.topic === 'string') {
             (subscribers[msg.topic] || []).forEach(function (fn) { fn(msg.payload); });
         }
     });
@@ -30,12 +40,17 @@ window.PHOTO_ORGANIZER.pages.initWidgetApi = function (data, state, locale) {
     // Send a request to the host and resolve when its yaffo:result comes back
     // (matched by requestId). `fields` are merged into the message alongside the
     // type/requestId. Resolves to null on a host-side error.
+    /**
+     * @param {string} type
+     * @param {WidgetMessage} [fields]
+     */
     function request(type, fields) {
         return new Promise(function (resolve) {
             var id = ++nextRequestId;
             pending[id] = resolve;
+            /** @type {WidgetMessage} */
             var msg = { type: type, requestId: id };
-            Object.keys(fields || {}).forEach(function (k) { msg[k] = fields[k]; });
+            Object.keys(fields || {}).forEach(function (k) { msg[k] = (fields || {})[k]; });
             parent.postMessage(msg, '*');
         });
     }
@@ -51,22 +66,26 @@ window.PHOTO_ORGANIZER.pages.initWidgetApi = function (data, state, locale) {
         locale: locale || 'en',
 
         /** Locale-aware display formatters. Camera-local dates are not timezone-rebased. */
-        number: function (value, options) {
+        number: function (/** @type {number} */ value, /** @type {Intl.NumberFormatOptions | undefined} */ options) {
             return new Intl.NumberFormat(api.locale, options || {}).format(value);
         },
-        percent: function (value, options) {
+        percent: function (/** @type {number} */ value, /** @type {Intl.NumberFormatOptions | undefined} */ options) {
             return new Intl.NumberFormat(
                 api.locale,
                 Object.assign({ style: 'percent' }, options || {})
             ).format(value);
         },
-        date: function (value, options) {
+        date: function (/** @type {string | number | Date} */ value, /** @type {Intl.DateTimeFormatOptions | undefined} */ options) {
             return new Intl.DateTimeFormat(api.locale, options || {}).format(new Date(value));
         },
-        relativeTime: function (value, unit, options) {
+        relativeTime: function (
+            /** @type {number} */ value,
+            /** @type {Intl.RelativeTimeFormatUnit} */ unit,
+            /** @type {Intl.RelativeTimeFormatOptions | undefined} */ options
+        ) {
             return new Intl.RelativeTimeFormat(api.locale, options || {}).format(value, unit);
         },
-        list: function (values, options) {
+        list: function (/** @type {Iterable<string>} */ values, /** @type {Intl.ListFormatOptions | undefined} */ options) {
             return new Intl.ListFormat(api.locale, options || {}).format(values);
         },
 
@@ -75,28 +94,28 @@ window.PHOTO_ORGANIZER.pages.initWidgetApi = function (data, state, locale) {
          * `query` is a single { source, ...filters, limit } — the same shape as a
          * value in data_query. Use it to filter or drill down after first render.
          */
-        query: function (query) {
+        query: function (/** @type {WidgetQuery} */ query) {
             return request('yaffo:query', { query: query });
         },
 
         /** Broadcast `payload` on `topic` to every widget on the page (pub/sub bus). */
-        publish: function (topic, payload) {
+        publish: function (/** @type {string} */ topic, /** @type {WidgetPayload} */ payload) {
             parent.postMessage({ type: 'yaffo:publish', topic: topic, payload: payload }, '*');
         },
 
         /** Run handler(payload) whenever any widget publishes on `topic`. */
-        subscribe: function (topic, handler) {
+        subscribe: function (/** @type {string} */ topic, /** @type {(payload: WidgetPayload) => void} */ handler) {
             (subscribers[topic] = subscribers[topic] || []).push(handler);
         },
 
         /** Persist this widget's state; it returns as yaffo.state on the next render. */
-        saveState: function (newState) {
+        saveState: function (/** @type {WidgetState} */ newState) {
             api.state = newState;
             parent.postMessage({ type: 'yaffo:state', state: newState }, '*');
         },
 
         /** The image URL for a photo id (photos carry an id, not a URL). */
-        mediaUrl: function (id) { return '/media/' + id; }
+        mediaUrl: function (/** @type {string | number} */ id) { return '/media/' + id; }
     };
 
     return api;

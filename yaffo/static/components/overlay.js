@@ -1,7 +1,15 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 
 window.PHOTO_ORGANIZER.COMPONENTS.overlay = {
+    /**
+     * @param {string} targetElementId
+     * @param {string} overlayContent
+     * @param {OverlayOptions} [options]
+     * @returns {OverlayControl}
+     */
     init: (targetElementId, overlayContent, options = {}) => {
         const {
             placement = 'bottom',
@@ -33,6 +41,9 @@ window.PHOTO_ORGANIZER.COMPONENTS.overlay = {
             let finalPlacement = placement;
             let top, left;
 
+            /**
+             * @param {OverlayPlacement} pos
+             */
             const calculatePosition = (pos) => {
                 let t, l;
                 switch (pos) {
@@ -59,6 +70,9 @@ window.PHOTO_ORGANIZER.COMPONENTS.overlay = {
                 return { top: t, left: l };
             };
 
+            /**
+             * @param {OverlayPlacement} pos
+             */
             const willOverflow = (pos) => {
                 const { top: t, left: l } = calculatePosition(pos);
                 const bottom = t + overlayRect.height;
@@ -95,13 +109,13 @@ window.PHOTO_ORGANIZER.COMPONENTS.overlay = {
             overlay.dataset.placement = finalPlacement;
         };
 
-        const handleOutsideClick = (e) => {
-            if (!overlay.contains(e.target) && !targetElement.contains(e.target)) {
+        const handleOutsideClick = (/** @type {MouseEvent} */ e) => {
+            if (e.target instanceof Node && !overlay.contains(e.target) && !targetElement.contains(e.target)) {
                 close();
             }
         };
 
-        const handleKeyDown = (e) => {
+        const handleKeyDown = (/** @type {KeyboardEvent} */ e) => {
             if (e.key === 'Escape' && closeOnEsc) close();
         };
 

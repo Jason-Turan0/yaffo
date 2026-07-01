@@ -1,6 +1,14 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.themes = window.PHOTO_ORGANIZER.themes || {};
 
+/**
+ * @param {string} selectedLabel
+ * @param {AppConfig} config
+ * @param {I18nService} i18n
+ * @returns {ThemesPageApi}
+ */
 window.PHOTO_ORGANIZER.themes.initPage = (selectedLabel, config, i18n) => {
     const newThemeModal = window.PHOTO_ORGANIZER.COMPONENTS.modal.init('newThemeModal');
 
@@ -23,7 +31,8 @@ window.PHOTO_ORGANIZER.themes.initPage = (selectedLabel, config, i18n) => {
             confirmClass: 'btn-danger'
         });
         if (confirmed) {
-            document.getElementById('delete-theme-form').submit();
+            const form = document.getElementById('delete-theme-form');
+            if (form instanceof HTMLFormElement) form.submit();
         }
     };
 
@@ -42,7 +51,15 @@ window.PHOTO_ORGANIZER.themes.initPage = (selectedLabel, config, i18n) => {
 // cancelled) generation reloads so the regenerated CSS and server-rendered transcript
 // take effect, while a FAILED run stays open for a follow-up. Built-in themes render a
 // read-only transcript (no form), so initChatDialog returns null and this is inert.
+/**
+ * @param {string} slug
+ * @param {string} startStatus
+ * @param {AppConfig} config
+ * @param {I18nService} i18n
+ * @returns {ChatDialogApi | null}
+ */
 window.PHOTO_ORGANIZER.themes.initChat = (slug, startStatus, config, i18n) => {
+    if (!window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog) return null;
     return window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog('theme-chat', {
         startStatus,
         statusUrl: () => config.buildUrl('themes_status', { slug }),

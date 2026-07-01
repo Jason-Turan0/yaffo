@@ -1,13 +1,36 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
+/**
+ * @param {number} photoId
+ * @param {MediaTag[]} initialTags
+ * @param {I18nService} i18n
+ * @param {AppConfig} config
+ * @returns {PhotoTagsApi}
+ */
 window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, config) => {
     const modal = window.PHOTO_ORGANIZER.COMPONENTS.modal.init('tagsModal');
 
+    /** @type {MediaTag[]} */
     let tags = [];
     let nextTempId = -1;
 
+    /**
+     * @param {string} id
+     * @returns {HTMLInputElement}
+     */
+    const getInput = (id) => {
+        const input = document.getElementById(id);
+        if (!(input instanceof HTMLInputElement)) {
+            throw new Error(`Expected input ${id}`);
+        }
+        return input;
+    };
+
     const renderTagsList = () => {
         const container = document.getElementById('tags-editor-list');
+        if (!container) return;
         const visibleTags = tags.filter(tag => !tag.markedForDeletion);
 
         if (visibleTags.length === 0) {
@@ -48,8 +71,8 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, c
 
         renderTagsList();
 
-        document.getElementById('modal-new-tag-name').value = '';
-        document.getElementById('modal-new-tag-value').value = '';
+        getInput('modal-new-tag-name').value = '';
+        getInput('modal-new-tag-value').value = '';
 
         modal.open();
     };
@@ -57,12 +80,13 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, c
     const addTagToList = () => {
         const nameInput = document.getElementById('modal-new-tag-name');
         const valueInput = document.getElementById('modal-new-tag-value');
+        if (!(nameInput instanceof HTMLInputElement) || !(valueInput instanceof HTMLInputElement)) return;
 
         const tagName = nameInput.value.trim();
         const tagValue = valueInput.value.trim();
 
         if (!tagName) {
-            notification.error(i18n.t('media:tags.nameRequired'));
+            window.notification.error(i18n.t('media:tags.nameRequired'));
             return;
         }
 
@@ -80,7 +104,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, c
         renderTagsList();
     };
 
-    const removeTagFromList = (tempId) => {
+    const removeTagFromList = (/** @type {number} */ tempId) => {
         const tagIndex = tags.findIndex(t => t.tempId === tempId);
         if (tagIndex !== -1) {
             const tag = tags[tagIndex];
@@ -93,7 +117,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, c
         renderTagsList();
     };
 
-    const updateTagName = (tempId, newName) => {
+    const updateTagName = (/** @type {number} */ tempId, /** @type {string} */ newName) => {
         const tag = tags.find(t => t.tempId === tempId);
         if (tag) {
             tag.tag_name = newName.trim();
@@ -101,7 +125,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, c
         }
     };
 
-    const updateTagValue = (tempId, newValue) => {
+    const updateTagValue = (/** @type {number} */ tempId, /** @type {string} */ newValue) => {
         const tag = tags.find(t => t.tempId === tempId);
         if (tag) {
             tag.tag_value = newValue.trim();
@@ -109,7 +133,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, c
         }
     };
 
-    const saveAllChanges = async (event) => {
+    const saveAllChanges = async (/** @type {SubmitEvent} */ event) => {
         event.preventDefault();
 
         // Nothing touched -> just close (avoids a needless write + media_modified event).
@@ -122,12 +146,12 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, c
         // The final tag set is everything not marked for deletion; all must be named.
         const finalTags = tags.filter(t => !t.markedForDeletion);
         if (finalTags.some(t => !(t.tag_name || '').trim())) {
-            notification.error(i18n.t('media:tags.allNeedName'));
+            window.notification.error(i18n.t('media:tags.allNeedName'));
             return;
         }
 
         const payload = finalTags.map(t => ({
-            tag_name: t.tag_name.trim(),
+            tag_name: (t.tag_name || '').trim(),
             tag_value: (t.tag_value || '').trim()
         }));
 
@@ -141,19 +165,19 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, c
             if (response.ok) {
                 modal.close();
                 // Queue the confirmation so it survives the reload below.
-                notification.flash(i18n.t('media:tags.updateSucceeded'));
+                window.notification.flash(i18n.t('media:tags.updateSucceeded'));
                 window.location.reload();
             } else {
                 const data = await response.json().catch(() => ({}));
-                notification.error(data.error || i18n.t('media:tags.updateFailed'));
+                window.notification.error(data.error || i18n.t('media:tags.updateFailed'));
             }
         } catch (error) {
-            notification.error(i18n.t('media:tags.saveFailed'));
+            window.notification.error(i18n.t('media:tags.saveFailed'));
             console.error(error);
         }
     };
 
-    modal.formElement.addEventListener('submit', saveAllChanges);
+    if (modal.formElement) modal.formElement.addEventListener('submit', saveAllChanges);
 
     return {
         openEditModal,

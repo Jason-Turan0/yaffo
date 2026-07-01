@@ -1,3 +1,5 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 
 /**
@@ -11,6 +13,10 @@ window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
  * });
  * if (result) { // user clicked confirm }
  */
+/**
+ * @param {ConfirmDialogOptions} options
+ * @returns {Promise<boolean>}
+ */
 window.PHOTO_ORGANIZER.confirmDialog = (options) => {
     return new Promise((resolve) => {
         const i18n = window.PHOTO_ORGANIZER.i18n;
@@ -19,6 +25,9 @@ window.PHOTO_ORGANIZER.confirmDialog = (options) => {
         const message = document.getElementById('confirm-dialog-message');
         const confirmBtn = document.getElementById('confirm-dialog-confirm');
         const cancelBtn = document.getElementById('confirm-dialog-cancel');
+        if (!modal || !title || !message || !confirmBtn || !cancelBtn) {
+            throw new Error('Global confirm dialog markup is incomplete');
+        }
 
         // Set content
         title.textContent = options.title || i18n.t('common:confirm');
@@ -50,13 +59,13 @@ window.PHOTO_ORGANIZER.confirmDialog = (options) => {
             resolve(false);
         };
 
-        const onBackdropClick = (e) => {
+        const onBackdropClick = (/** @type {MouseEvent} */ e) => {
             if (e.target === modal) {
                 onCancel();
             }
         };
 
-        const onEscape = (e) => {
+        const onEscape = (/** @type {KeyboardEvent} */ e) => {
             if (e.key === 'Escape') {
                 onCancel();
             }

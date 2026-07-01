@@ -1,10 +1,18 @@
+// @ts-check
+
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
 window.PHOTO_ORGANIZER.locations = window.PHOTO_ORGANIZER.locations || {};
 
+/**
+ * @param {LocationMediaItem[]} locations
+ * @param {I18nService} i18n
+ * @param {AppConfig} config
+ * @returns {LocationMapApi}
+ */
 window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
-    const escapeHtml = (value) => String(value ?? '').replace(
+    const escapeHtml = (/** @type {unknown} */ value) => String(value ?? '').replace(
         /[&<>"']/g,
-        (character) => ({
+        (character) => /** @type {Record<string, string>} */ ({
             '&': '&amp;',
             '<': '&lt;',
             '>': '&gt;',
@@ -55,12 +63,14 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         source: vectorSource
     });
 
+    /** @type {Set<any>} */
     const selectedFeatures = new Set();
 
+    /** @type {Record<string, any>} */
     const styleCache = {};
     const clusterLayer = new ol.layer.Vector({
         source: clusterSource,
-        style: function(feature) {
+        style: function(/** @type {any} */ feature) {
             const size = feature.get('features').length;
             const isSelected = selectedFeatures.has(feature);
             const cacheKey = `${size}-${isSelected}`;
@@ -112,9 +122,10 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
 
     dragBox.on('boxend', function() {
         const extent = dragBox.getGeometry().getExtent();
+        /** @type {any[]} */
         const boxFeatures = [];
 
-        clusterSource.getFeatures().forEach(function(feature) {
+        clusterSource.getFeatures().forEach(function(/** @type {any} */ feature) {
             if (ol.extent.intersects(extent, feature.getGeometry().getExtent())) {
                 boxFeatures.push(feature);
             }
@@ -142,6 +153,9 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
     const popup = document.getElementById('popup');
     const popupContent = document.getElementById('popup-content');
     const popupCloser = document.getElementById('popup-closer');
+    if (!popup || !popupContent || !popupCloser) {
+        throw new Error('Location map popup markup is incomplete');
+    }
 
     const overlay = new ol.Overlay({
         element: popup,
@@ -163,12 +177,16 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
     // A video's media route returns the raw clip, so the popup thumbnail
     // points at its poster frame (falling back to the placeholder when there's no
     // poster, via data-fallback + initImageFallbacks). Photos use /media directly.
-    const thumbUrl = (item) => item.media_type === 'video'
+    const thumbUrl = (/** @type {LocationMediaItem} */ item) => item.media_type === 'video'
         ? config.buildUrl('media_poster', { media_item_id: item.id })
         : config.buildUrl('media', { media_item_id: item.id });
 
     const fallbackUrl = config.urls.placeholder;
 
+    /**
+     * @param {LocationMediaItem} photoData
+     * @param {any} coordinate
+     */
     const showPhotoInPopup = (photoData, coordinate) => {
         const photoViewUrl = config.buildUrl('media_view', { media_item_id: photoData.id });
         const safeName = escapeHtml(photoData.name);
@@ -182,12 +200,12 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
             <h3>${safeName}</h3>
             <p class="photo-location">${escapeHtml(photoData.location || unknownLocation)}</p>
         `;
-        window.PHOTO_ORGANIZER.utils.initImageFallbacks();
+        window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
         overlay.setPosition(coordinate);
     };
 
-    map.on('click', function(evt) {
-        const feature = map.forEachFeatureAtPixel(evt.pixel, function(feature) {
+    map.on('click', function(/** @type {any} */ evt) {
+        const feature = map.forEachFeatureAtPixel(evt.pixel, function(/** @type {any} */ feature) {
             return feature;
         });
 
@@ -196,13 +214,13 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
             const coordinate = feature.getGeometry().getCoordinates();
 
             if (features && features.length > 1) {
-                const photosData = features.map(f => ({
+                const photosData = /** @type {LocationMediaItem[]} */ (features.map((/** @type {any} */ f) => ({
                     name: f.get('filename'),
                     location: f.get('name'),
                     id: f.get('id'),
                     photo_path: f.get('photo_path'),
                     media_type: f.get('media_type')
-                }));
+                })));
 
                 const selectId = 'photo-select-' + Date.now();
                 const selectOptions = photosData.map((photo, idx) =>
@@ -231,25 +249,32 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                     <h3 id="photo-name">${safeFirstName}</h3>
                     <p class="photo-location">${escapeHtml(firstPhoto.location || unknownLocation)}</p>
                 `;
-                window.PHOTO_ORGANIZER.utils.initImageFallbacks();
+                window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
 
                 const selectElement = document.getElementById(selectId);
-                window.SearchableSelect.init(selectElement);
-                selectElement.addEventListener('change', function(e) {
-                    const selectedIndex = parseInt(e.target.value);
+                if (!(selectElement instanceof HTMLSelectElement)) return;
+                window.SearchableSelect?.init(selectElement);
+                selectElement.addEventListener('change', function() {
+                    const selectedIndex = parseInt(selectElement.value);
                     const selectedPhoto = photosData[selectedIndex];
+                    if (!selectedPhoto) return;
 
                     const newPhotoViewUrl = config.buildUrl('media_view', { media_item_id: selectedPhoto.id });
 
                     const img = document.getElementById('photo-img');
-                    img.src = thumbUrl(selectedPhoto);
-                    img.alt = selectedPhoto.name;
-                    document.getElementById('photo-link').href = newPhotoViewUrl;
-                    document.getElementById('photo-name').textContent = selectedPhoto.name;
-                    document.querySelector('.photo-location').textContent =
-                        selectedPhoto.location || unknownLocation;
+                    const link = document.getElementById('photo-link');
+                    const name = document.getElementById('photo-name');
+                    const location = document.querySelector('.photo-location');
+                    const selectedName = selectedPhoto.filename || selectedPhoto.name || '';
+                    if (img instanceof HTMLImageElement) {
+                        img.src = thumbUrl(selectedPhoto);
+                        img.alt = selectedName;
+                    }
+                    if (link instanceof HTMLAnchorElement) link.href = newPhotoViewUrl;
+                    if (name) name.textContent = selectedName;
+                    if (location) location.textContent = selectedPhoto.location || unknownLocation;
                     // Re-arm the fallback for the swapped src (the handler is once-only).
-                    window.PHOTO_ORGANIZER.utils.initImageFallbacks();
+                    window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
                 });
 
                 overlay.setPosition(coordinate);
@@ -269,7 +294,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         }
     });
 
-    map.on('pointermove', function(evt) {
+    map.on('pointermove', function(/** @type {any} */ evt) {
         const pixel = map.getEventPixel(evt.originalEvent);
         const hit = map.hasFeatureAtPixel(pixel);
         const targetElement = map.getTargetElement();
@@ -278,11 +303,11 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         }
     });
 
-    const calculateCentroid = (features) => {
+    const calculateCentroid = (/** @type {any[]} */ features) => {
         let totalLat = 0;
         let totalLon = 0;
 
-        features.forEach(f => {
+        features.forEach((/** @type {any} */ f) => {
             const coords = ol.proj.toLonLat(f.getGeometry().getCoordinates());
             totalLon += coords[0];
             totalLat += coords[1];
@@ -294,7 +319,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         };
     };
 
-    const getRecommendedLocation = async (lat, lon) => {
+    const getRecommendedLocation = async (/** @type {number} */ lat, /** @type {number} */ lon) => {
         try {
             const response = await fetch(config.urls.reverse_geocode_route, {
                 method: 'POST',
@@ -317,6 +342,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
     const updateSelectionPanel = async () => {
         const panel = document.getElementById('selection-panel');
         const panelContent = document.getElementById('selection-panel-content');
+        if (!panel || !panelContent) return;
 
         if (selectedFeatures.size === 0) {
             panel.classList.remove('active');
@@ -325,10 +351,11 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
 
         const selectedClusters = Array.from(selectedFeatures).map((clusterFeature, idx) => {
             const features = clusterFeature.get('features');
-            const photoIds = features.map(f => f.get('id'));
+            const photoIds = features.map((/** @type {any} */ f) => f.get('id'));
 
+            /** @type {Record<string, number>} */
             const locationCounts = {};
-            features.forEach(f => {
+            features.forEach((/** @type {any} */ f) => {
                 const locationName = f.get('name') || unknownLocation;
                 locationCounts[locationName] = (locationCounts[locationName] || 0) + 1;
             });
@@ -354,6 +381,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         const allPhotoIds = selectedClusters.flatMap(c => c.photoIds);
         const totalPhotos = allPhotoIds.length;
 
+        /** @type {Record<string, number>} */
         const allLocationCounts = {};
         selectedClusters.forEach(cluster => {
             Object.entries(cluster.locationCounts).forEach(([name, count]) => {
@@ -424,6 +452,10 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
             <button class="btn btn-secondary btn-block btn-clear-selection">${escapeHtml(i18n.t('locations:selection.clearSelection'))}</button>
         `;
 
+        /**
+         * @param {number[]} photoIds
+         * @param {string} locationName
+         */
         const assignLocation = async (photoIds, locationName) => {
             try {
                 const response = await fetch(config.urls.locations_bulk_update, {
@@ -451,7 +483,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                     });
 
                     const filterCheckbox = document.getElementById('filter-unnamed');
-                    if (filterCheckbox && filterCheckbox.checked) {
+                    if (filterCheckbox instanceof HTMLInputElement && filterCheckbox.checked) {
                         applyFilter(true);
                     } else {
                         clusterLayer.changed();
@@ -477,18 +509,21 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         };
 
         document.querySelectorAll('.btn-quick-assign').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const photoIds = this.dataset.photoIds.split(',').map(Number);
-                const locationName = this.dataset.locationName;
+            btn.addEventListener('click', async (event) => {
+                if (!(event.currentTarget instanceof HTMLElement)) return;
+                const photoIds = (event.currentTarget.dataset.photoIds || '').split(',').filter(Boolean).map(Number);
+                const locationName = event.currentTarget.dataset.locationName || '';
                 await assignLocation(photoIds, locationName);
             });
         });
 
         const massAssignBtn = document.getElementById('mass-assign-btn');
         if (massAssignBtn) {
-            massAssignBtn.addEventListener('click', async function() {
-                const photoIds = this.dataset.photoIds.split(',').map(Number);
+            massAssignBtn.addEventListener('click', async (event) => {
+                if (!(event.currentTarget instanceof HTMLElement)) return;
+                const photoIds = (event.currentTarget.dataset.photoIds || '').split(',').filter(Boolean).map(Number);
                 const input = document.getElementById('mass-location-input');
+                if (!(input instanceof HTMLInputElement)) return;
                 const newLocationName = input.value.trim();
 
                 if (!newLocationName) {
@@ -503,7 +538,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
             });
         }
 
-        document.querySelector('.btn-clear-selection').addEventListener('click', () => {
+        document.querySelector('.btn-clear-selection')?.addEventListener('click', () => {
             selectedFeatures.clear();
             clusterLayer.changed();
             updateSelectionPanel();
@@ -534,13 +569,14 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                         panelContent.insertBefore(recommendedSection, quickActionsSection);
                     } else {
                         const clusterAssign = panelContent.querySelector('.cluster-assign');
-                        panelContent.insertBefore(recommendedSection, clusterAssign);
+                        if (clusterAssign) panelContent.insertBefore(recommendedSection, clusterAssign);
                     }
 
                     const newRecommendedBtn = recommendedSection.querySelector('.btn-quick-assign');
-                    newRecommendedBtn.addEventListener('click', async function() {
-                        const photoIds = this.dataset.photoIds.split(',').map(Number);
-                        const locationName = this.dataset.locationName;
+                    newRecommendedBtn?.addEventListener('click', async (event) => {
+                        if (!(event.currentTarget instanceof HTMLElement)) return;
+                        const photoIds = (event.currentTarget.dataset.photoIds || '').split(',').filter(Boolean).map(Number);
+                        const locationName = event.currentTarget.dataset.locationName || '';
                         await assignLocation(photoIds, locationName);
                     });
                 }
@@ -548,7 +584,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         })();
     };
 
-    const applyFilter = (showOnlyUnnamed) => {
+    const applyFilter = (/** @type {boolean} */ showOnlyUnnamed) => {
         vectorSource.clear();
 
         if (showOnlyUnnamed) {
@@ -574,7 +610,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
     const filterCheckbox = document.getElementById('filter-unnamed');
     if (filterCheckbox) {
         filterCheckbox.addEventListener('change', (e) => {
-            applyFilter(e.target.checked);
+            if (e.target instanceof HTMLInputElement) applyFilter(e.target.checked);
         });
     }
 
