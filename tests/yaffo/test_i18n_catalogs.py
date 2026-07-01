@@ -243,10 +243,18 @@ def test_shared_javascript_components_use_catalog_keys():
 def test_trigger_editor_waits_for_localized_cron_builder():
     builder_source = Path("yaffo/static/components/cron_builder.js").read_text(encoding="utf-8")
     automation_source = Path("yaffo/static/utilities/automations.js").read_text(encoding="utf-8")
+    template = Path("yaffo/templates/utilities/automations_triggers_edit.html").read_text(encoding="utf-8")
 
-    assert "COMPONENTS.cronBuilderReady =" in builder_source
-    assert "return api;" in builder_source
-    assert "await cronBuilderReady" in automation_source
+    # The builder exposes a synchronous factory (create*) and a shared initializer (init*).
+    assert "COMPONENTS.createCronBuilder =" in builder_source
+    assert "COMPONENTS.initCronBuilder =" in builder_source
+    assert "return { initAll, describeCron, reset, setCron };" in builder_source
+    # The page builds the localized cron builder on app-init and injects it into the editor.
+    assert "app.COMPONENTS.initCronBuilder({" in template
+    assert "app.automations.initTriggerEditor(app.i18n, cronBuilder)" in template
+    # The trigger editor consumes the builder as an injected dependency, not a global ready promise.
+    assert "cronBuilder.initAll" in automation_source
+    assert "cronBuilderReady" not in automation_source
 
 
 def test_media_javascript_uses_catalog_keys_and_receives_i18n_service():
@@ -268,8 +276,8 @@ def test_media_javascript_uses_catalog_keys_and_receives_i18n_service():
     assert "media:gallery.videoPlaybackFailed" in source
     assert "media:tags.updateSucceeded" in source
     assert "media:faces.reassign" in source
-    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in gallery_template
-    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in detail_template
+    assert "document.addEventListener('yaffo:app-init-complete'" in gallery_template
+    assert "document.addEventListener('yaffo:app-init-complete'" in detail_template
 
 
 def test_faces_javascript_uses_catalog_keys_and_receives_i18n_service():
@@ -280,7 +288,7 @@ def test_faces_javascript_uses_catalog_keys_and_receives_i18n_service():
     assert "faces:assignment.noneSelected" in source
     assert "faces:assignment.clusterSkipped" in source
     assert "faces:people.nameRequired" in source
-    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+    assert "document.addEventListener('yaffo:app-init-complete'" in template
     assert "ngettext:1,2" in babel_config
 
 
@@ -291,7 +299,7 @@ def test_people_list_uses_catalog_keys_and_delegated_actions():
 
     assert "people:delete.message" in source
     assert "window.PHOTO_ORGANIZER.confirmDialog" in source
-    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+    assert "document.addEventListener('yaffo:app-init-complete'" in template
     assert 'data-action="edit"' in template
     assert 'data-action="delete"' in template
     assert "onclick=" not in template
@@ -302,12 +310,12 @@ def test_person_faces_uses_catalog_keys_and_page_initializer():
     source = Path("yaffo/static/people/faces.js").read_text(encoding="utf-8")
     template = Path("yaffo/templates/people/faces.html").read_text(encoding="utf-8")
 
-    assert "window.PHOTO_ORGANIZER.initPersonFaces" in source
+    assert "window.PHOTO_ORGANIZER.people.initFaces" in source
     assert "people:faces.selectRequired" in source
     assert "people:faces.removeMessage" in source
     assert "window.PHOTO_ORGANIZER.confirmDialog" in source
     assert "alert(" not in source
-    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+    assert "document.addEventListener('yaffo:app-init-complete'" in template
     assert "onclick=" not in template
 
 
@@ -322,7 +330,7 @@ def test_locations_map_uses_catalog_keys_and_application_config():
     assert "config.urls.reverse_geocode_route" in source
     assert "window.APP_CONFIG.buildUrl" not in source
     assert "fetch('/locations/" not in source
-    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+    assert "document.addEventListener('yaffo:app-init-complete'" in template
 
 
 def test_settings_media_controls_use_catalog_keys_and_delegated_actions():
@@ -339,7 +347,7 @@ def test_settings_media_controls_use_catalog_keys_and_delegated_actions():
     assert "escapeHtml(dir.path)" in source
     assert 'data-action="remove-media-dir"' in template
     assert "onclick=" not in template
-    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+    assert "document.addEventListener('yaffo:app-init-complete'" in template
 
 
 def test_settings_label_management_uses_gettext_and_delegated_filtering():
@@ -375,7 +383,7 @@ def test_themes_page_uses_gettext_and_localized_javascript():
 
     assert '{{ _("Themes - Yaffo") }}' in template
     assert '{{ _("New theme") }}' in template
-    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in template
+    assert "document.addEventListener('yaffo:app-init-complete'" in template
     assert "themes:delete.message" in source
     assert "themes:chat.cancelMessage" in source
     assert "gettext(\"Theme name is required\")" in routes
@@ -392,8 +400,8 @@ def test_custom_page_grid_uses_gettext_and_localized_javascript():
 
     assert "{{ _('Widget title') }}" in widget_template
     assert "_('%(title)s preview'" in widget_template
-    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in presentation_template
-    assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in design_template
+    assert "document.addEventListener('yaffo:app-init-complete'" in presentation_template
+    assert "document.addEventListener('yaffo:app-init-complete'" in design_template
     assert "pages:delete.message" in detail_source
     assert "pages:widgets.deleteMessage" in grid_source
     assert "pages:chat.cancelMessage" in grid_source

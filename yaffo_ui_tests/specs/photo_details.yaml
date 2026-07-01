@@ -11,7 +11,7 @@ preconditions:
 
 context:
   - tag: photo-view-template
-    path: templates/photos/view.html
+    path: templates/media/view.html
     description: Photo details view template with sidebar and main image
 data:
   - Test Image "DSCN0010.jpg" has location data and should be used for the test

@@ -1,0 +1,85 @@
+feature: locations
+description: User can view photos on a map by location, filter for unnamed places, and assign location names to clusters of photos
+
+tags:
+  - smoke
+  - core
+
+preconditions:
+  - Application is running
+  - Database contains sample photos, at least one of which has GPS coordinates
+
+context:
+  - tag: locations-template
+    path: templates/locations/list.html
+    description: Map page with OpenLayers map, cluster selection panel, and unnamed filter
+  - tag: locations-routes
+    path: routes/locations.py
+    description: Routes for the locations list, bulk location-name update, and reverse geocoding
+  - tag: locations-map-js
+    path: static/locations/list.js
+    description: Client map wiring — cluster selection, popup, and bulk assignment
+
+data:
+  - Photo "DSCN0010.jpg" (id 14) has latitude/longitude and should appear on the map
+  - Most Obama sample photos have no GPS coordinates
+
+scenarios:
+  - name: locations_map_displays_photo_markers
+    goal: The map loads and shows markers/clusters for photos that have coordinates
+    priority: high
+    steps:
+      - Navigate to the locations page
+      - Wait for the map container to be visible
+    verify:
+      - The map (id "map") is visible and rendered
+      - At least one photo marker or cluster is shown on the map
+      - Map tiles load without broken-image errors
+
+  - name: locations_popup_shows_photo_details
+    goal: Clicking a marker/cluster opens a popup with the photos at that location
+    priority: high
+    steps:
+      - Navigate to the locations page
+      - Click on a photo marker or cluster on the map
+    verify:
+      - The map popup (id "popup") becomes visible
+      - The popup shows one or more photo thumbnails for that location
+      - Clicking the popup closer (id "popup-closer") hides the popup
+
+  - name: locations_filter_unnamed_photos
+    goal: The "only unnamed" filter narrows the map to photos without a location name
+    priority: medium
+    steps:
+      - Navigate to the locations page
+      - Enable the "Only show photos without location names" checkbox (id "filter-unnamed")
+    verify:
+      - The map updates to show only photos that have no assigned location name
+      - Photos that already have a location name are removed from the map
+      - Disabling the checkbox restores the full set of located photos
+
+  - name: locations_select_clusters_and_assign_name
+    goal: The user can select one or more clusters and assign a location name to all their photos
+    priority: high
+    steps:
+      - Navigate to the locations page
+      - Hold Shift and drag a box to select one or more clusters
+      - In the selection panel enter a location name such as "Test Beach"
+      - Save/apply the assigned name
+    verify:
+      - The selection panel (id "selection-panel") shows the count of selected photos
+      - After saving, a success message is displayed
+      - The selected photos now carry the location name "Test Beach"
+    cleanup:
+      - Clear the location name "Test Beach" from the affected photos
+
+  - name: locations_reverse_geocode_suggests_name
+    goal: The app can suggest a place name from coordinates via reverse geocoding
+    priority: medium
+    steps:
+      - Navigate to the locations page
+      - Select a cluster of photos that has coordinates
+      - Trigger the reverse-geocode / suggest-name action in the selection panel
+    verify:
+      - A suggested location name is returned and populated in the name field
+      - The suggestion reflects the coordinates of the selected photos

@@ -366,8 +366,10 @@ class TestRunExiftool:
         assert call_args[0][0][0] == '/usr/bin/exiftool'
         assert call_args[0][0][1] == '-version'
 
+    @patch('yaffo.utils.write_metadata.get_exiftool_path', return_value=None)
     @patch('yaffo.utils.write_metadata._EXIFTOOL_PATH', None)
-    def test_run_exiftool_not_available(self):
+    def test_run_exiftool_not_available(self, mock_get_path):
+        # With no cached path and none discoverable on the host, exiftool is unavailable.
         with pytest.raises(FileNotFoundError, match="exiftool not available"):
             _run_exiftool(["-version"])
 

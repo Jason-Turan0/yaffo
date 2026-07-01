@@ -33,7 +33,7 @@ class TestWidgetApiSource:
         src = widget_api_source()
         # Installed via the project's init-function convention; the frame assigns
         # the result to window.yaffo.
-        assert "window.PHOTO_ORGANIZER.initWidgetApi" in src
+        assert "window.PHOTO_ORGANIZER.pages.initWidgetApi" in src
         assert "window.yaffo" in src  # documented surface (in the header comment)
         for member in _API_MEMBERS:
             assert member in src, member
@@ -45,7 +45,7 @@ class TestWidgetApiSource:
 class TestSystemPromptEmbedsApi:
     def test_prompt_advertises_the_yaffo_api(self):
         prompt = build_system_prompt()
-        assert "window.PHOTO_ORGANIZER.initWidgetApi" in prompt
+        assert "window.PHOTO_ORGANIZER.pages.initWidgetApi" in prompt
         for member in _API_MEMBERS:
             assert member in prompt, member
 

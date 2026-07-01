@@ -1,0 +1,179 @@
+import { loadModule } from '../support/load_module.js';
+
+// faces.initAssignment drives the face-assignment page: it paints a sampled grid
+// per cluster, tracks a whole-cluster selection (every id selected by default,
+// clicking a visible face toggles it), and POSTs the selection to /faces/assign —
+// advancing to the next cluster on success. These tests build a minimal cluster
+// fixture and drive the delegated handlers plus the returned public API.
+
+const config = () => ({
+  urls: {
+    placeholder: '/static/placeholder.png',
+    faces_assign: '/faces/assign',
+    api_people_create: '/api/people',
+  },
+  buildUrl: (endpoint, params = {}) => {
+    let url = `/${endpoint}`;
+    for (const [k, v] of Object.entries(params)) url += `/${k}/${v}`;
+    return url;
+  },
+});
+
+const group = (faces, { people = [] } = {}) => `
+  <div class="suggestion-group" data-faces='${JSON.stringify(faces)}'>
+    <input type="checkbox" class="group-select-checkbox">
+    <button class="shuffle-sample-btn"></button>
+    <span class="cluster-page-label"></span>
+    <span class="sample-range"></span>
+    <button class="cluster-first"></button>
+    <button class="cluster-prev"></button>
+    <button class="cluster-next"></button>
+    <button class="cluster-last"></button>
+    <div class="grid"></div>
+    ${people.map((p) => `<button class="assign-group-btn" data-person-id="${p.id}" data-person-name="${p.name}"></button>`).join('')}
+  </div>`;
+
+const fixture = (groupsHtml) => {
+  document.body.innerHTML = `
+    <div id="clusters">${groupsHtml}</div>
+    <div id="sidebar-shortcut-people"></div>
+    <button id="sidebar-ignore-btn"></button>`;
+  // initAssignment opens the keyboard-help modal via the shared component.
+  window.PHOTO_ORGANIZER.COMPONENTS.modal = { init: () => ({ open: vi.fn() }) };
+};
+
+const stubFetch = (body, { ok = true } = {}) => {
+  const fetchMock = vi.fn(() => Promise.resolve({ ok, json: () => Promise.resolve(body) }));
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+};
+
+const init = async (sampleSize = 10, topPeople = []) =>
+  (await loadModule('faces/index.js')).faces.initAssignment(
+    sampleSize,
+    topPeople,
+    window.testI18n,
+    config(),
+  );
+
+const activeFaces = () =>
+  Array.from(document.querySelectorAll('.suggestion-group:not([hidden]) .face'));
+
+// initAssignment attaches a document-level `keydown` listener. jsdom's document
+// persists across tests in a file, so without cleanup those listeners accumulate
+// and stale ones fire on later dispatches. Track and remove them per test.
+const docListeners = [];
+beforeEach(() => {
+  docListeners.length = 0;
+  const original = document.addEventListener.bind(document);
+  vi.spyOn(document, 'addEventListener').mockImplementation((type, handler, opts) => {
+    docListeners.push([type, handler, opts]);
+    original(type, handler, opts);
+  });
+});
+afterEach(() => {
+  for (const [type, handler, opts] of docListeners) document.removeEventListener(type, handler, opts);
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+describe('faces initAssignment — rendering & selection', () => {
+  it('paints the first cluster with every face selected', async () => {
+    fixture(group([{ id: 1 }, { id: 2 }, { id: 3 }]));
+    const api = await init();
+
+    expect(activeFaces().length).toBe(3);
+    expect(activeFaces().every((el) => el.classList.contains('selected'))).toBe(true);
+    expect([...api.getSelectedIds()].sort()).toEqual([1, 2, 3]);
+    // sample-range reads "1–3" via the i18n number formatter (identity in tests).
+    expect(document.querySelector('.sample-range').textContent).toBe('1–3');
+  });
+
+  it('toggles a single face off when clicked', async () => {
+    fixture(group([{ id: 1 }, { id: 2 }, { id: 3 }]));
+    const api = await init();
+
+    document.querySelector('.face[data-face-id="2"]').click();
+
+    expect(api.getSelectedIds().has(2)).toBe(false);
+    expect(document.querySelector('.face[data-face-id="2"]').classList.contains('selected')).toBe(false);
+    expect([...api.getSelectedIds()].sort()).toEqual([1, 3]);
+  });
+
+  it('clears the whole cluster when the group checkbox is unchecked', async () => {
+    fixture(group([{ id: 1 }, { id: 2 }]));
+    const api = await init();
+
+    const checkbox = document.querySelector('.group-select-checkbox');
+    checkbox.checked = false;
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(api.getSelectedIds().size).toBe(0);
+    expect(activeFaces().some((el) => el.classList.contains('selected'))).toBe(false);
+  });
+});
+
+describe('faces initAssignment — submitFaces', () => {
+  it('POSTs the selection and advances to the next cluster on success', async () => {
+    fixture(group([{ id: 1 }, { id: 2 }]) + group([{ id: 3 }]));
+    const fetchMock = stubFetch({ success: true, message: 'ok' });
+    const api = await init();
+
+    await api.submitFaces('7', 'ASSIGNED');
+
+    expect(fetchMock).toHaveBeenCalledWith('/faces/assign', expect.objectContaining({ method: 'POST' }));
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body).toEqual({ faces: [1, 2], person: '7', faceStatus: 'ASSIGNED' });
+
+    // The second cluster is now the visible one.
+    const visible = document.querySelector('.suggestion-group:not([hidden])');
+    expect(visible.querySelector('.face').dataset.faceId).toBe('3');
+  });
+
+  it('skips (info + advance) without fetching when nothing is selected', async () => {
+    fixture(group([{ id: 1 }]) + group([{ id: 2 }]));
+    const fetchMock = stubFetch({ success: true });
+    const api = await init();
+
+    api.selectWholeCluster(false);
+    await api.submitFaces('7', 'ASSIGNED');
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(window.notification.info).toHaveBeenCalled();
+    expect(document.querySelector('.suggestion-group:not([hidden]) .face').dataset.faceId).toBe('2');
+  });
+});
+
+describe('faces initAssignment — helpers & shortcuts', () => {
+  it('randomSample returns n items drawn from the input', async () => {
+    fixture(group([{ id: 1 }]));
+    const api = await init();
+
+    const input = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }];
+    const sample = api.randomSample(input, 2);
+
+    expect(sample.length).toBe(2);
+    expect(sample.every((f) => input.includes(f))).toBe(true);
+  });
+
+  it('assigns the ignored status when the "i" key is pressed', async () => {
+    fixture(group([{ id: 1 }, { id: 2 }]) + group([{ id: 3 }]));
+    const fetchMock = stubFetch({ success: true, message: 'ok' });
+    await init();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'i', bubbles: true }));
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body).toEqual({ faces: [1, 2], person: null, faceStatus: 'IGNORED' });
+  });
+
+  it('renders keyboard shortcuts from the active cluster people', async () => {
+    fixture(group([{ id: 1 }], { people: [{ id: 9, name: 'Alice' }] }));
+    await init();
+
+    const shortcut = document.querySelector('#sidebar-shortcut-people .shortcut-item');
+    expect(shortcut.dataset.personId).toBe('9');
+    expect(shortcut.textContent).toContain('Alice');
+  });
+});

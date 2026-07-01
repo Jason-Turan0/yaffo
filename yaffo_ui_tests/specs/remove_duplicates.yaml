@@ -1,0 +1,80 @@
+feature: remove_duplicates
+description: User can scan selected directories for duplicate photos/videos, review the duplicate groups, choose which copies to keep and what to do with the rest, then execute the removal
+
+tags:
+  - core
+
+preconditions:
+  - Application is running
+  - At least one directory with duplicate photos/videos is available
+
+context:
+  - tag: remove-duplicates-template
+    path: templates/utilities/remove_duplicates.html
+    description: Remove Duplicates page including the directory-selection form fragment
+  - tag: remove-duplicates-form
+    path: templates/utilities/remove_duplicates_form.html
+    description: Directory selection form for the duplicate scan
+  - tag: remove-duplicates-routes
+    path: routes/utilities/remove_duplicates.py
+    description: Routes for the scan form, start, paged results, action changes, toggling, and execute
+  - tag: remove-duplicates-js
+    path: static/utilities/remove_duplicates.js
+    description: Client wiring for the duplicate review flow
+
+data:
+  - Duplicates are grouped; each group keeps one photo and marks the others for removal
+  - The action can be to trash duplicates or move them to a destination folder
+  - Results are paged (default page size 10)
+
+scenarios:
+  - name: remove_duplicates_scan_finds_groups
+    goal: Scanning the selected directories finds groups of duplicate media
+    priority: high
+    steps:
+      - Navigate to the Remove Duplicates utility page
+      - Add one or more directories to scan
+      - Start the duplicate scan
+      - Wait for the scan to finish
+    verify:
+      - The directory-selection form accepts one or more directories
+      - After the scan, duplicate groups are listed
+      - Each group shows the duplicate copies with one kept by default
+
+  - name: remove_duplicates_review_and_select_photos
+    goal: The user can choose which copy in each group to keep
+    priority: high
+    steps:
+      - Run a duplicate scan that produces at least one group
+      - In a group, toggle which photo is kept versus marked for removal
+      - Page through the results
+    verify:
+      - Toggling a photo updates which copies are marked for removal
+      - The selected/processed/duplicate counts update accordingly
+      - Result pagination works and preserves selections
+
+  - name: remove_duplicates_change_action_type
+    goal: The user can switch between trashing duplicates and moving them to a folder
+    priority: medium
+    steps:
+      - Run a duplicate scan that produces at least one group
+      - Change the action type from trash to move-to-folder
+      - Provide a destination folder for the move action
+    verify:
+      - The action type can be switched between trash and move
+      - Choosing move reveals a destination folder input
+      - The chosen action type is reflected in the results summary
+
+  - name: remove_duplicates_execute_removal
+    goal: Executing applies the chosen action to the marked duplicates
+    priority: high
+    steps:
+      - Run a duplicate scan and review the groups
+      - Confirm the copies to keep and the action type
+      - Execute the removal
+    verify:
+      - A confirmation is required before executing a destructive action
+      - After executing, the marked duplicates are trashed or moved as chosen
+      - A summary of how many files were removed/moved is displayed
+    cleanup:
+      - Restore any test files that were trashed or moved during the run

@@ -1,15 +1,47 @@
-window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.settings = window.PHOTO_ORGANIZER.settings || {};
+// @ts-check
 
-window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
+/**
+ * A configured media directory row.
+ * @typedef {Object} SettingsMediaDir
+ * @property {string} path
+ *
+ * A record from the thumbnail-stats NDJSON stream (see streamThumbnailStats).
+ * @typedef {{ type: 'progress', scanned: number }} ThumbnailProgressRecord
+ * @typedef {{ type: 'done', count: number, size: number }} ThumbnailDoneRecord
+ * @typedef {{ type: 'error', message?: string }} ThumbnailErrorRecord
+ * @typedef {ThumbnailProgressRecord | ThumbnailDoneRecord | ThumbnailErrorRecord} ThumbnailStatsRecord
+ *
+ * The public surface returned by the page initializer.
+ * @typedef {Object} SettingsApi
+ * @property {() => Promise<void>} addMediaDir
+ * @property {(index: number) => Promise<void>} removeMediaDir
+ * @property {() => Promise<void>} changeThumbnailDir
+ * @property {() => Promise<void>} streamThumbnailStats
+ */
+
+const settingsWindow = window;
+
+settingsWindow.PHOTO_ORGANIZER = settingsWindow.PHOTO_ORGANIZER || {};
+const settings = settingsWindow.PHOTO_ORGANIZER.settings =
+    /** @type {SettingsNamespace} */ (settingsWindow.PHOTO_ORGANIZER.settings || {});
+
+/**
+ * @param {SettingsMediaDir[]} initialMediaDirs
+ * @param {I18nService} i18n
+ * @param {AppConfig} config
+ * @returns {SettingsApi}
+ */
+settings.init = (initialMediaDirs, i18n, config) => {
     let mediaDirs = [...initialMediaDirs];
 
+    /** @param {unknown} value */
     const escapeHtml = (value) => {
         const element = document.createElement('div');
         element.textContent = String(value);
         return element.innerHTML;
     };
 
+    /** @param {number} bytes */
     const formatBytes = (bytes) => {
         const units = ['B', 'KB', 'MB', 'GB', 'TB'];
         let value = Number(bytes);
@@ -25,11 +57,11 @@ window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
     };
 
     const addMediaDir = async () => {
-        const input = document.getElementById('new-media-dir');
+        const input = /** @type {HTMLInputElement} */ (document.getElementById('new-media-dir'));
         const directory = input.value.trim();
 
         if (!directory) {
-            window.notification.error(i18n.t('settings:directory.pathRequired'));
+            settingsWindow.notification.error(i18n.t('settings:directory.pathRequired'));
             return;
         }
 
@@ -48,22 +80,23 @@ window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
                 mediaDirs = data.media_dirs;
                 renderMediaDirs();
                 input.value = '';
-                window.notification.success(i18n.t('settings:media.addSucceeded'));
+                settingsWindow.notification.success(i18n.t('settings:media.addSucceeded'));
             } else {
-                window.notification.error(data.error || i18n.t('settings:media.addFailed'));
+                settingsWindow.notification.error(data.error || i18n.t('settings:media.addFailed'));
             }
         } catch (error) {
             console.error('Error adding media directory:', error);
-            window.notification.error(i18n.t('settings:media.addFailed'));
+            settingsWindow.notification.error(i18n.t('settings:media.addFailed'));
         }
     };
 
+    /** @param {number} index */
     const removeMediaDir = async (index) => {
         const directory = mediaDirs[index];
         if (!directory) {
             return;
         }
-        const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+        const confirmed = await settingsWindow.PHOTO_ORGANIZER.confirmDialog({
             title: i18n.t('settings:media.removeTitle'),
             message: i18n.t('settings:media.removeMessage', { directory: directory.path }),
             confirmText: i18n.t('settings:media.removeConfirm'),
@@ -85,20 +118,21 @@ window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
             if (response.ok) {
                 mediaDirs = data.media_dirs;
                 renderMediaDirs();
-                window.notification.success(i18n.t('settings:media.removeSucceeded', {
+                settingsWindow.notification.success(i18n.t('settings:media.removeSucceeded', {
                     directory: data.removed
                 }));
             } else {
-                window.notification.error(data.error || i18n.t('settings:media.removeFailed'));
+                settingsWindow.notification.error(data.error || i18n.t('settings:media.removeFailed'));
             }
         } catch (error) {
             console.error('Error removing media directory:', error);
-            window.notification.error(i18n.t('settings:media.removeFailed'));
+            settingsWindow.notification.error(i18n.t('settings:media.removeFailed'));
         }
     };
 
     const renderMediaDirs = () => {
         const container = document.getElementById('media-dirs-list');
+        if (!container) return;
 
         if (mediaDirs.length === 0) {
             container.innerHTML = `<p class="no-data">${i18n.t('settings:media.noneConfigured')}</p>`;
@@ -117,11 +151,11 @@ window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
     };
 
     const changeThumbnailDir = async () => {
-        const input = document.getElementById('new-thumbnail-dir');
+        const input = /** @type {HTMLInputElement} */ (document.getElementById('new-thumbnail-dir'));
         const directory = input.value.trim();
 
         if (!directory) {
-            window.notification.error(i18n.t('settings:directory.pathRequired'));
+            settingsWindow.notification.error(i18n.t('settings:directory.pathRequired'));
             return;
         }
 
@@ -131,7 +165,7 @@ window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
             const stats = await statsResponse.json();
 
             if (!statsResponse.ok) {
-                window.notification.error(stats.error || i18n.t('settings:thumbnail.statsFailed'));
+                settingsWindow.notification.error(stats.error || i18n.t('settings:thumbnail.statsFailed'));
                 return;
             }
 
@@ -143,7 +177,7 @@ window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
                 size: formatBytes(stats.size)
             });
 
-            const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+            const confirmed = await settingsWindow.PHOTO_ORGANIZER.confirmDialog({
                 title: i18n.t('settings:thumbnail.moveTitle'),
                 message: message,
                 confirmText: i18n.t('settings:thumbnail.moveConfirm'),
@@ -166,7 +200,7 @@ window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
             const data = await response.json();
 
             if (response.ok) {
-                window.notification.success(i18n.t('settings:thumbnail.moveSucceeded', {
+                settingsWindow.notification.success(i18n.t('settings:thumbnail.moveSucceeded', {
                     count: data.files_moved,
                     formattedCount: i18n.number(data.files_moved),
                     size: formatBytes(data.size_moved),
@@ -175,17 +209,18 @@ window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
 
                 window.location.reload();
             } else {
-                window.notification.error(data.error || i18n.t('settings:thumbnail.moveFailed'));
+                settingsWindow.notification.error(data.error || i18n.t('settings:thumbnail.moveFailed'));
             }
         } catch (error) {
             console.error('Error changing thumbnail directory:', error);
-            window.notification.error(i18n.t('settings:thumbnail.moveFailed'));
+            settingsWindow.notification.error(i18n.t('settings:thumbnail.moveFailed'));
         }
     };
 
     // Fill the thumbnail stats live from the NDJSON stream so the page doesn't block on
     // the (slow) recursive walk. `progress` records drive the running file count; the
     // final `done` record sets the count + formatted size. Mirrors index_photos.js.
+    /** @param {ThumbnailStatsRecord} record */
     const handleStatsRecord = (record) => {
         const countEl = document.getElementById('thumbnail-count');
         const sizeEl = document.getElementById('thumbnail-size');
@@ -196,7 +231,7 @@ window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
             if (sizeEl) sizeEl.textContent = formatBytes(record.size);
         } else if (record.type === 'error') {
             if (sizeEl) sizeEl.textContent = '—';
-            window.notification.error(record.message || i18n.t('settings:thumbnail.countFailed'));
+            settingsWindow.notification.error(record.message || i18n.t('settings:thumbnail.countFailed'));
         }
     };
 
@@ -224,12 +259,13 @@ window.PHOTO_ORGANIZER.settings.init = (initialMediaDirs, i18n, config) => {
         } catch (error) {
             const sizeEl = document.getElementById('thumbnail-size');
             if (sizeEl) sizeEl.textContent = '—';
-            window.notification.error(i18n.t('settings:thumbnail.countFailed'));
+            settingsWindow.notification.error(i18n.t('settings:thumbnail.countFailed'));
         }
     };
 
     document.querySelector('.main-content')?.addEventListener('click', (event) => {
-        const button = event.target.closest('[data-action]');
+        const origin = event.target instanceof Element ? event.target : null;
+        const button = /** @type {HTMLElement | null} */ (origin?.closest('[data-action]') ?? null);
         if (!button) {
             return;
         }

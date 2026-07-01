@@ -106,9 +106,11 @@ tooling from scratch.
 ### 1.5 Backend reference points (for parity)
 
 Python is tested with `pytest` + `pytest-cov` and type-checked with `mypy`, under
-`tests/` mirroring the package tree. CI today (`.github/workflows/`) only builds
-docs and releases — **there is no JS or test CI gate at all.** The frontend
-proposal below mirrors the backend's "mirror-the-tree + a CI gate" shape.
+`tests/` mirroring the package tree. The frontend proposal below mirrors the
+backend's "mirror-the-tree + a CI gate" shape. A check-in workflow
+(`.github/workflows/checks.yml`) now runs the JS type-check + unit tests and the
+Python unit tests (`pytest -m unit`) on pushes to `master` and on pull requests —
+the first test CI gate in the repo (release stays in its own `release.yml`).
 
 ---
 
@@ -603,7 +605,7 @@ Use this checklist when migrating another frontend file to unit tests and
 | 3. Migrate shared/global components with the cron builder pattern (§4.5–4.6) | ongoing | tested, typed components with explicit DI |
 | 4. Migrate app/page initialization to root-initialized components, page-level namespaces, and `yaffo:app-init-complete` | ongoing | fewer chained init calls and one explicit app-ready boundary |
 | 5. Phase-1 unit tests (`utils`, `index_photos`, `multi-select`, `i18n`) | ongoing | core logic covered |
-| 6. CI workflow: `npm run test:unit`, `npm run typecheck:js`, and optional coverage gate | ½ day | regressions caught on PRs |
+| 6. CI workflow: `npm run test:unit` + `npm run typecheck:js` on check-in (`checks.yml`) | Done | regressions caught on PRs |
 | 7. Phase-2 page modules as touched | ongoing | coverage ratchets up |
 | 8. *(optional, later)* evaluate Option 2 full-TS build | 2–3 days | only if JSDoc verbosity bites |
 

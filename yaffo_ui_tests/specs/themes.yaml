@@ -1,0 +1,101 @@
+feature: themes
+description: User can browse system and custom themes, generate a new theme with the AI assistant, rename, publish or discard drafts, set a default, and delete custom themes
+
+tags:
+  - core
+
+preconditions:
+  - Application is running
+  - An AI model/API key is configured for theme generation
+
+context:
+  - tag: themes-template
+    path: templates/themes_page/index.html
+    description: Themes page — system/custom nav, chat assistant, and theme actions
+  - tag: themes-routes
+    path: routes/themes_page.py
+    description: Routes for theme create, rename, default, publish, discard, delete, chat, status, cancel
+  - tag: themes-js
+    path: static/themes_page/index.js
+    description: Client wiring for the theme chat dialog and theme actions
+
+data:
+  - System themes cannot be renamed or deleted; only custom themes can
+  - A generation produces a draft that must be published to take effect or discarded to revert
+
+scenarios:
+  - name: themes_list_shows_system_and_custom
+    goal: The themes page lists the built-in system themes and any custom themes
+    priority: high
+    steps:
+      - Navigate to the themes page
+    verify:
+      - The Themes heading is visible
+      - A System themes group is listed
+      - A Custom themes group is listed (or "No custom themes yet" when empty)
+      - The currently active/default theme is indicated
+
+  - name: themes_create_new_theme
+    goal: The user can create a new custom theme and generate its look with the AI assistant
+    priority: high
+    steps:
+      - Navigate to the themes page
+      - Click "New theme" and enter the name "SpecTestTheme"
+      - Submit the create form
+      - In the conversation, describe the desired look (e.g. "a dark forest green theme")
+      - Wait for the generation to finish
+    verify:
+      - The new-theme modal opens with a Name field
+      - The theme "SpecTestTheme" appears under Custom themes
+      - The assistant runs a generation and produces a draft preview
+      - No error messages are shown
+    cleanup:
+      - Delete the theme "SpecTestTheme"
+
+  - name: themes_rename_theme
+    goal: The user can rename a custom theme
+    priority: medium
+    steps:
+      - Create a custom theme named "SpecTestTheme" if needed
+      - Select it and click Rename
+      - Change the name to "SpecTestRenamed" and save
+    verify:
+      - The rename modal is pre-populated with the current name
+      - The theme is now listed as "SpecTestRenamed"
+    cleanup:
+      - Delete the theme "SpecTestRenamed"
+
+  - name: themes_publish_or_discard_draft
+    goal: A generated draft can be published to take effect or discarded to revert
+    priority: high
+    steps:
+      - Create a custom theme "SpecTestTheme" and generate a draft
+      - Click "Save draft" / publish to apply the draft
+    verify:
+      - Publishing applies the draft as the theme's active look
+      - Discarding a draft reverts to the previously published version
+      - A success message is displayed
+    cleanup:
+      - Delete the theme "SpecTestTheme"
+
+  - name: themes_set_default_theme
+    goal: The user can make a theme the application default
+    priority: medium
+    steps:
+      - Navigate to the themes page
+      - Select a theme and click "Make default"
+    verify:
+      - The chosen theme is marked as the default
+      - The default theme is applied across the app on the next page load
+
+  - name: themes_delete_custom_theme
+    goal: The user can delete a custom theme after confirming
+    priority: high
+    steps:
+      - Create a custom theme named "SpecTestTheme" if needed
+      - Select it and click Delete
+      - Confirm the deletion
+    verify:
+      - A confirmation dialog is shown before deleting
+      - After confirming, "SpecTestTheme" is removed from the Custom themes list
+      - System themes have no delete action

@@ -356,18 +356,61 @@ type UtilitiesNamespace = {
 };
 
 type SettingsNamespace = {
+    init?(initialMediaDirs: SettingsMediaDir[], i18n: I18nService, config: AppConfig): SettingsApi;
+    instance?: SettingsApi;
     initLabelFilter?: () => void;
+};
+
+type AutomationsNamespace = {
+    initAutomationDelete?: (selectedName: string, i18n: I18nService) => void;
+    initAutomationDetails?: () => void;
+    initAutomationRunNow?: (
+        runUrl: string,
+        config: AppConfig,
+        hasTriggers: boolean,
+        defaultPath: string | null | undefined,
+        i18n: I18nService,
+    ) => void;
+    initAutomationConfigure?: () => void;
+    initAutomationTest?: (
+        slug: string,
+        config: AppConfig,
+        defaultPath: string | null | undefined,
+        i18n: I18nService,
+    ) => void;
+    initTriggerEditor?: (i18n?: I18nService, cronBuilder?: CronBuilderApi) => void;
+    initAutomationChat?: (
+        slug: string,
+        startStatus: string,
+        config: AppConfig,
+        i18n: I18nService,
+    ) => ChatDialogApi | null;
+    automationChat?: ChatDialogApi | null;
 };
 
 type PageDetailApi = {
     confirmDelete(): Promise<void>;
 };
 
+type PageDesignGridApi = {
+    grid: any;
+    getVersionId: () => number;
+};
+
 type PagesNamespace = {
     initDetail?: (pageTitle: string, i18n: I18nService) => PageDetailApi;
     initWidgetApi?: (data?: WidgetData, state?: WidgetState, locale?: string) => WidgetApi;
     initWidgetBroker?: (pageId: number, getVersionId: () => number, config: AppConfig) => void;
+    initPresentationGrid?: () => any;
+    initDesignGrid?: (
+        pageId: number,
+        editVersionId: number,
+        startStatus: string,
+        config: AppConfig,
+        i18n: I18nService,
+    ) => PageDesignGridApi;
     detail?: PageDetailApi;
+    grid?: PageDesignGridApi;
 };
 
 type WidgetData = Record<string, unknown>;
@@ -407,6 +450,23 @@ type PeopleListApi = {
     openAddModal(): void;
     openEditModal(personId: number, personName: string, birthdate?: string, gender?: number | null): void;
     confirmDelete(personId: number, personName: string): Promise<void>;
+};
+
+type FacesAssignmentApi = {
+    submitFaces(personId: string | number | null, faceStatus: string): Promise<void>;
+    selectWholeCluster(on: boolean): void;
+    randomSample(arr: FaceRecord[], n: number): FaceRecord[];
+    getSelectedIds(): Set<number>;
+};
+
+type FacesNamespace = {
+    initAssignment?: (
+        sampleSize: number,
+        topPeople: PersonShortcut[],
+        i18n: I18nService,
+        config: AppConfig,
+    ) => FacesAssignmentApi;
+    assignment?: FacesAssignmentApi;
 };
 
 type PeopleFacesApi = {
@@ -454,10 +514,12 @@ type PhotoOrganizerApp = {
     media?: MediaNamespace;
     VIEW_PHOTO?: ViewPhotoNamespace;
     indexPhotos?: IndexPhotosNamespace;
+    faces?: FacesNamespace;
     locations?: LocationsNamespace;
     pages?: PagesNamespace;
     people?: PeopleNamespace;
     settings?: SettingsNamespace;
+    automations?: AutomationsNamespace;
     themes?: ThemesNamespace;
     utilities?: UtilitiesNamespace;
     confirmDialog: ConfirmDialogApi;
@@ -484,11 +546,20 @@ interface Window {
     initSearchableMultiSelects?: () => void;
 }
 
+type CronChangeDetail = {
+    cron: string;
+    valid: boolean | null;
+};
+
 interface DocumentEventMap {
     'yaffo:app-init-complete': CustomEvent<AppInitCompleteDetail>;
+    'cron:change': CustomEvent<CronChangeDetail>;
 }
 
 declare const ol: any;
+
+// Vendored gridstack; its full surface is not modelled here.
+declare const GridStack: any;
 
 interface HTMLElement {
     intlDateInput?: IntlDateInputControl;

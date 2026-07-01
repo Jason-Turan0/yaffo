@@ -98,7 +98,7 @@ class TestDetail:
         assert 'aria-label="Titel bearbeiten"' in body
         assert 'aria-label="Widget löschen"' in body
         assert 'title="Karte Vorschau"' in body
-        assert "window.PHOTO_ORGANIZER.i18nReady.then((i18n)" in body
+        assert "document.addEventListener('yaffo:app-init-complete'" in body
         assert "onclick=" not in body
 
     def test_unknown_page_404(self, client):

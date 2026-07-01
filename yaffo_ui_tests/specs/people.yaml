@@ -1,0 +1,96 @@
+feature: people
+description: User can manage people — list, add, edit, delete, and review the faces assigned to each person
+
+tags:
+  - smoke
+  - core
+
+preconditions:
+  - Application is running
+  - Database contains sample photos with detected faces
+
+context:
+  - tag: people-list-template
+    path: templates/people/list.html
+    description: People listing with add/edit/delete actions and per-person face/photo counts
+  - tag: person-faces-template
+    path: templates/people/faces.html
+    description: Per-person faces view with the ability to unassign faces
+  - tag: people-routes
+    path: routes/people.py
+    description: Routes for people CRUD, api person create, and per-person face removal
+  - tag: face_assignment
+    attribute: yaffo-face_assignment
+    description: Shared context — people are the assignment target for detected faces
+
+data:
+  - A newly created person starts with zero faces and zero photos
+  - Gender options are Male, Female, and Not specified
+
+scenarios:
+  - name: people_list_displays_all_people
+    goal: The people page lists every person with their name, face count, and photo count
+    priority: high
+    steps:
+      - Navigate to the people page
+    verify:
+      - The People heading is visible
+      - Each person row shows a name, a Faces count, and a Photos count
+      - Each person row exposes Edit and Delete actions
+      - When there are no people an empty state ("No people yet") is shown
+
+  - name: people_can_add_new_person
+    goal: The user can create a new person with a name, birthdate, and gender
+    priority: high
+    steps:
+      - Navigate to the people page
+      - Click the "Add Person" button
+      - In the modal enter the name "SpecTestPerson"
+      - Set a birthdate and select a gender
+      - Submit the add-person form
+    verify:
+      - The add-person modal opens with Name, Birthdate, and Gender fields
+      - After saving, "SpecTestPerson" appears in the people list
+      - A success message is displayed
+    cleanup:
+      - Delete the person "SpecTestPerson"
+
+  - name: people_can_edit_person
+    goal: The user can rename a person and change their details
+    priority: high
+    steps:
+      - Create a person named "SpecTestPerson" if needed
+      - Click the Edit action for "SpecTestPerson"
+      - Change the name to "SpecTestRenamed" and save
+    verify:
+      - The edit-person modal is pre-populated with the current details
+      - After saving, the list shows "SpecTestRenamed" and no longer shows "SpecTestPerson"
+      - A success message is displayed
+    cleanup:
+      - Delete the person "SpecTestRenamed"
+
+  - name: people_can_delete_person
+    goal: The user can delete a person after confirming
+    priority: high
+    steps:
+      - Create a person named "SpecTestPerson" if needed
+      - Click the Delete action for "SpecTestPerson"
+      - Confirm the deletion in the confirmation dialog
+    verify:
+      - A confirmation dialog is shown before deleting
+      - After confirming, "SpecTestPerson" is removed from the people list
+      - A success message is displayed
+      - Any faces previously assigned to the person return to the unassigned pool
+
+  - name: people_can_view_and_remove_faces
+    goal: The user can open a person's faces and unassign a face
+    priority: medium
+    steps:
+      - Navigate to the people page
+      - Open the Faces view for a person that has assigned faces
+      - Select one face and remove it from the person
+    verify:
+      - The per-person faces view shows the person's assigned face thumbnails
+      - After removing, the face count for that person decreases
+      - A success message is displayed
+      - The removed face becomes available again on the face assignment page

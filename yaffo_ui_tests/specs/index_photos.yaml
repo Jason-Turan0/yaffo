@@ -1,0 +1,59 @@
+feature: index_photos
+description: User can scan the media directories for photos, view database vs filesystem statistics, and sync the database to import new photos and clear orphaned entries
+
+tags:
+  - core
+
+preconditions:
+  - Application is running
+  - At least one media directory is configured
+
+context:
+  - tag: index-photos-template
+    path: templates/utilities/index_photos.html
+    description: Index Photos page — live stats, scan results, and the Sync Database button
+  - tag: index-photos-routes
+    path: routes/utilities/index_photos.py
+    description: Routes for the streaming filesystem scan and the database sync
+  - tag: index-photos-js
+    path: static/utilities/index_photos.js
+    description: Client wiring — NDJSON scan streaming and sync
+
+data:
+  - The scan streams progress records then a final summary of counts and unindexed/orphaned lists
+  - Sync imports the unindexed photos and removes orphaned database rows
+
+scenarios:
+  - name: index_photos_scan_shows_stats
+    goal: The page scans the filesystem and fills in the indexing statistics
+    priority: high
+    steps:
+      - Navigate to the Index Photos utility page
+      - Wait for the scan to stream and complete
+    verify:
+      - The "Total on Filesystem" counter updates live during the scan
+      - After the scan, Imported, Indexed, Not Indexed, and Orphaned counts are populated
+      - When there are unindexed or orphaned photos, their result tables are shown
+
+  - name: index_photos_sync_database
+    goal: Syncing imports unindexed photos and removes orphaned entries
+    priority: high
+    steps:
+      - Navigate to the Index Photos utility page and let the scan complete
+      - If there is work to do, click the "Sync Database" button
+      - Wait for the sync to finish
+    verify:
+      - The Sync button is visible/enabled only when there is unindexed or orphaned work
+      - After syncing, a success message is displayed
+      - Re-scanning shows the Not Indexed and Orphaned counts reduced toward zero
+
+  - name: index_photos_no_media_dirs_prompts_settings
+    goal: With no media directories configured the page prompts the user to add one
+    priority: medium
+    steps:
+      - Ensure no media directories are configured
+      - Navigate to the Index Photos utility page
+    verify:
+      - A "No Media Directories Configured" message is shown
+      - A "Go to Settings" link/button is offered
+      - The scan does not run and the stats stay empty

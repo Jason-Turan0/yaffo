@@ -1,0 +1,140 @@
+feature: automations
+description: User can manage automations — enable/disable, edit schedule and event triggers, run and dry-run them, configure system automations, and create custom ones with the AI assistant
+
+tags:
+  - core
+
+preconditions:
+  - Application is running
+  - An AI model/API key is configured for automation generation
+
+context:
+  - tag: automations-template
+    path: templates/utilities/automations.html
+    description: Automations page — sidebar list, details, run/configure, and delete controls
+  - tag: automations-triggers-template
+    path: templates/utilities/automations_triggers_edit.html
+    description: Trigger editor — schedule (cron builder) and event triggers
+  - tag: automations-edit-template
+    path: templates/utilities/automations_edit.html
+    description: Custom automation editor with the AI chat assistant and dry-run test
+  - tag: automations-routes
+    path: routes/utilities/automations.py
+    description: Routes for automation CRUD, triggers, enable, run, test-files, chat, status
+  - tag: automations-js
+    path: static/utilities/automations.js
+    description: Client wiring — trigger editor, run/test controls, and the chat dialog
+
+data:
+  - System automations ship built-in and cannot be edited or deleted; custom ones can
+  - An automation whose triggers are all events runs scoped to a picked file/folder
+  - A trigger-less automation warns instead of running when "Run now" is clicked
+
+scenarios:
+  - name: automations_list_shows_system_and_custom
+    goal: The automations page lists system and custom automations and shows the selected one's details
+    priority: high
+    steps:
+      - Navigate to the automations page
+      - Select an automation from the sidebar
+    verify:
+      - The sidebar lists system and custom automations
+      - Selecting one shows its name, description, and available actions
+      - System automations show no Edit/Delete; custom automations show them
+      - With none selected, a "No automation selected" prompt is shown
+
+  - name: automations_enable_disable_toggle
+    goal: The user can enable and disable an automation
+    priority: high
+    steps:
+      - Navigate to the automations page and select an automation
+      - Click the Enable/Disable toggle
+    verify:
+      - The toggle switches the automation between enabled and disabled
+      - The button label updates accordingly (Enable <-> Disable)
+
+  - name: automations_edit_schedule_trigger
+    goal: The user can add or edit a schedule (cron) trigger with the cron builder
+    priority: high
+    steps:
+      - Select an automation and open "Edit triggers"
+      - Click "Add a schedule"
+      - Build a schedule with the cron builder (or an advanced cron expression)
+      - Save the schedule
+    verify:
+      - The cron builder renders and describes the chosen schedule in plain language
+      - Save is disabled while the cron expression is invalid
+      - After saving, the new schedule trigger appears in the triggers list
+    cleanup:
+      - Remove the schedule trigger that was added
+
+  - name: automations_add_event_trigger
+    goal: The user can add an event trigger to an automation
+    priority: medium
+    steps:
+      - Select an automation and open "Edit triggers"
+      - Click "Add an event" and choose an event
+      - Save the event trigger
+    verify:
+      - The event panel opens (only one trigger panel is open at a time)
+      - After saving, the event trigger appears in the triggers list
+    cleanup:
+      - Remove the event trigger that was added
+
+  - name: automations_run_now
+    goal: The user can run an automation on demand
+    priority: high
+    steps:
+      - Select an enabled automation that has at least one trigger
+      - Click "Run now" (picking a file/folder if the automation is event-scoped)
+    verify:
+      - The run is enqueued and a "started" success message is displayed
+      - The run appears in the automation's run history
+      - A trigger-less automation instead warns to add a trigger first
+
+  - name: automations_test_dry_run
+    goal: The user can dry-run a custom automation and see the actions it would take
+    priority: medium
+    steps:
+      - Open a custom automation's editor
+      - Click the Test button and pick a file/folder to scope the run
+    verify:
+      - The dry-run renders the intercepted host-API actions without changing anything
+      - Actions are grouped with a count and expandable details
+      - The captured return value and any error are shown
+
+  - name: automations_configure_system_automation
+    goal: The user can configure a system automation that declares config fields
+    priority: medium
+    steps:
+      - Select a system automation that exposes configuration (e.g. a match threshold)
+      - Click "Configure" and change a config value
+      - Save the configuration
+    verify:
+      - The configure modal opens with the automation's config fields
+      - After saving, the page reflects the new configuration value
+
+  - name: automations_create_custom_automation
+    goal: The user can create a new custom automation and generate its code with the AI assistant
+    priority: high
+    steps:
+      - Click "New automation" and give it a name
+      - In the editor conversation, describe what the automation should do
+      - Wait for the generation to finish
+    verify:
+      - The new automation appears in the sidebar as a custom automation
+      - The assistant generates code and a transcript is shown
+      - A finished generation reloads to show the published code/draft
+    cleanup:
+      - Delete the created custom automation
+
+  - name: automations_delete_custom_automation
+    goal: The user can delete a custom automation after confirming
+    priority: high
+    steps:
+      - Select a custom automation
+      - Click Delete and confirm
+    verify:
+      - A confirmation dialog is shown before deleting
+      - After confirming, the automation is removed from the sidebar
+      - System automations offer no delete action

@@ -1,0 +1,116 @@
+feature: settings
+description: User can configure media directories, the thumbnail directory, language and units, classification labels, and view system information
+
+tags:
+  - core
+
+preconditions:
+  - Application is running
+
+context:
+  - tag: settings-template
+    path: templates/settings/index.html
+    description: Settings page — media dirs, thumbnail dir, language, units, labels, LLM, system info
+  - tag: settings-routes
+    path: routes/settings.py
+    description: Routes for media dirs, thumbnail stats/dir, locale, distance unit, labels, and LLM config
+  - tag: settings-js
+    path: static/settings/index.js
+    description: Client wiring for adding/removing media dirs and streaming thumbnail stats
+
+data:
+  - Removing the last media directory should be allowed but leaves indexing with nothing to scan
+  - Changing the language re-renders the UI text in the chosen locale
+
+scenarios:
+  - name: settings_add_media_directory
+    goal: The user can add a media directory
+    priority: high
+    steps:
+      - Navigate to the settings page
+      - Enter a valid directory path into the new media directory field
+      - Click the "Add Directory" button
+    verify:
+      - The new directory appears in the Media Directories list
+      - A success message is displayed
+      - Entering an empty path shows a validation error instead of adding
+    cleanup:
+      - Remove the media directory that was added
+
+  - name: settings_remove_media_directory
+    goal: The user can remove a media directory after confirming
+    priority: high
+    steps:
+      - Navigate to the settings page
+      - Click Remove on one of the listed media directories
+      - Confirm the removal in the confirmation dialog
+    verify:
+      - A confirmation dialog is shown before removing
+      - After confirming, the directory disappears from the Media Directories list
+      - A success message is displayed
+      - When no directories remain, "No media directories configured" is shown
+
+  - name: settings_change_language
+    goal: Changing the application language re-renders the UI in that locale
+    priority: high
+    steps:
+      - Navigate to the settings page
+      - Select a different language from the "Application language" selector
+    verify:
+      - The page reloads/updates and visible UI text is shown in the selected language
+      - The selected language remains chosen after navigating to another page
+    cleanup:
+      - Restore the language back to the original value
+
+  - name: settings_change_distance_unit
+    goal: The user can switch the preferred distance unit
+    priority: medium
+    steps:
+      - Navigate to the settings page
+      - Change the "Preferred distance unit" selector
+    verify:
+      - The distance unit preference is saved
+      - Distances shown elsewhere (e.g. locations) reflect the chosen unit
+    cleanup:
+      - Restore the original distance unit
+
+  - name: settings_change_thumbnail_directory
+    goal: The user can move the thumbnail directory to a new location
+    priority: medium
+    steps:
+      - Navigate to the settings page
+      - Enter a new thumbnail directory path
+      - Click "Change Directory" / "Set Directory"
+      - Confirm the move when prompted with the file count and size
+    verify:
+      - The thumbnail stats (file count and total size) stream in and populate
+      - The confirmation dialog shows how many files and how much data will move
+      - After confirming, the Current Thumbnail Directory updates to the new path
+      - A success message is displayed
+    cleanup:
+      - Restore the thumbnail directory to the original path
+
+  - name: settings_manage_classification_labels
+    goal: The user can edit the image-classification label vocabulary
+    priority: medium
+    steps:
+      - Navigate to the settings page
+      - Add a new classification label to the vocabulary
+      - Save the labels
+    verify:
+      - The new label appears in the label vocabulary
+      - A success message is displayed
+      - A removed label no longer appears in the vocabulary
+    cleanup:
+      - Remove the label that was added
+
+  - name: settings_system_information_displayed
+    goal: The System Information section shows environment and model paths
+    priority: low
+    steps:
+      - Navigate to the settings page
+      - Scroll to the System Information section
+    verify:
+      - Build Version and Build Timestamp are displayed
+      - Database Path and Task Queue Database Path are shown
+      - ExifTool, FFmpeg, Face Recognition, and Image Classification model paths are listed (or "Not found")

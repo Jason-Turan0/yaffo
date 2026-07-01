@@ -1,0 +1,108 @@
+feature: custom_pages
+description: User can create custom dashboard pages, add and arrange widgets, generate widgets with the AI assistant, present the page, and delete it
+
+tags:
+  - core
+
+preconditions:
+  - Application is running
+  - An AI model/API key is configured for widget generation
+
+context:
+  - tag: pages
+    attribute: yaffo-pages
+    description: Python routes tagged for the custom pages / AI page builder feature
+  - tag: pages-design-template
+    path: templates/pages/design.html
+    description: Design view — editable gridstack, page metadata form, and AI assistant chat
+  - tag: pages-presentation-template
+    path: templates/pages/presentation.html
+    description: Read-only presentation view of a published page
+  - tag: pages-grid-js
+    path: static/pages/grid.js
+    description: Client grid wiring — widget lifecycle, generation polling, save/publish
+  - tag: pages-routes
+    path: routes/pages.py
+    description: Routes for page CRUD, widget preview, version status/publish/cancel, and chat
+
+data:
+  - A page edits exactly one version — the working draft if one exists, else the published version
+  - A generation forks a working draft; Save publishes a READY draft, Cancel discards it
+
+scenarios:
+  - name: pages_create_new_page
+    goal: The user can create a new custom page
+    priority: high
+    steps:
+      - Create a new custom page (from the pages navigation / create action)
+      - Open the new page's design view
+    verify:
+      - A new page is created and opens in the design view
+      - The page starts with a default/"Untitled Page" title and no widgets
+    cleanup:
+      - Delete the created page
+
+  - name: pages_edit_metadata_and_save
+    goal: The user can edit the page title, subtitle, tab order, and show-title, then save
+    priority: high
+    steps:
+      - Create a page and open its design view
+      - Set the Title to "SpecTestPage" and a Subtitle
+      - Set a Tab order value and toggle "Display title?"
+      - Click the "Save" button
+    verify:
+      - The Title (id "page-title"), Subtitle, Tab order, and Display-title controls are editable
+      - After saving, the page reflects the new title and metadata
+      - Navigating back to the page shows the saved values
+    cleanup:
+      - Delete the page "SpecTestPage"
+
+  - name: pages_design_add_widget_manually
+    goal: The user can add a blank widget to the grid and rename it
+    priority: high
+    steps:
+      - Create a page and open its design view
+      - Click the "Add widget" button (id "add-widget-button")
+      - Rename the new widget via the widget title pencil
+      - Click Save
+    verify:
+      - A new widget shell is added to the grid
+      - The widget title can be edited inline and persists after save
+    cleanup:
+      - Delete the page
+
+  - name: pages_generate_widgets_via_ai_chat
+    goal: The AI assistant can generate widgets from a natural-language request
+    priority: high
+    steps:
+      - Create a page and open its design view
+      - In the assistant conversation, describe what you want (e.g. "show a count of my photos")
+      - Send the message and wait for the generation to finish
+    verify:
+      - The grid locks and a status bar ticks while generating
+      - The conversation feed shows the user and assistant messages
+      - When the draft is READY, the generated widget(s) render on the grid
+      - Save publishes the READY draft; Cancel would discard it
+    cleanup:
+      - Delete the page
+
+  - name: pages_presentation_view_renders_widgets
+    goal: The published page renders its widgets read-only in the presentation view
+    priority: medium
+    steps:
+      - Open a published page in its presentation (non-design) view
+    verify:
+      - The page title/subtitle render according to the show-title setting
+      - Widgets render their content (iframe) without edit controls
+      - The grid is static (widgets cannot be dragged or resized)
+
+  - name: pages_delete_page
+    goal: The user can delete a custom page after confirming
+    priority: high
+    steps:
+      - Create a page named "SpecTestPage" and open its design view
+      - Click the "Delete Page" button (id "delete-page-button")
+      - Confirm the deletion
+    verify:
+      - A confirmation dialog is shown before deleting
+      - After confirming, the page is removed and no longer appears in navigation

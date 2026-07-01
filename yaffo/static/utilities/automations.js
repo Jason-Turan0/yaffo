@@ -1,30 +1,67 @@
-window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.automations = window.PHOTO_ORGANIZER.automations || {};
+// @ts-check
 
-const automations = window.PHOTO_ORGANIZER.automations;
+/**
+ * A single host-API action intercepted during a dry-run test.
+ * @typedef {Object} AutomationTestAction
+ * @property {string} name - host-API function name, e.g. "tag_media_items".
+ * @property {string} summary - human-readable one-line description.
+ * @property {unknown[]} [args] - the raw arguments the action was called with.
+ *
+ * The payload rendered by a Test dry-run.
+ * @typedef {Object} AutomationTestResult
+ * @property {boolean} success
+ * @property {string} code_source - which code version ran (working/published).
+ * @property {{ media_item_ids?: number[] }} context
+ * @property {AutomationTestAction[]} actions
+ * @property {string} [error]
+ * @property {unknown} [value] - the automation's return value, if any.
+ *
+ * The last file/folder the user picked for a scoped Test run.
+ * @typedef {Object} AutomationTestSelection
+ * @property {string} path
+ * @property {string} mode
+ */
+
+const automationsWindow = window;
+
+automationsWindow.PHOTO_ORGANIZER = automationsWindow.PHOTO_ORGANIZER || {};
+automationsWindow.PHOTO_ORGANIZER.automations = automationsWindow.PHOTO_ORGANIZER.automations || {};
+
+const automations = automationsWindow.PHOTO_ORGANIZER.automations;
 
 // Open the in-app path picker in the chosen mode (folder|file|any); returns the
 // selected path or null. Shared by the Test and Run controls, which both scope an
 // action to a user-picked file/folder. Opens at `defaultPath` (the first configured
 // media dir) when given, so the user starts in their library rather than at home.
+/**
+ * @param {AppConfig} config
+ * @param {FolderPickerMode} mode
+ * @param {string | null} [defaultPath]
+ * @returns {Promise<string | null>}
+ */
 const pickAutomationPath = async (config, mode, defaultPath = null) => {
-    return window.PHOTO_ORGANIZER.pickFolder({ mode, startPath: defaultPath });
+    return automationsWindow.PHOTO_ORGANIZER.pickFolder({ mode, startPath: defaultPath });
 };
 
 // Confirm + submit the hidden delete form for the selected automation. (The "New
 // automation" modal is wired globally in utilities/_base.js.)
+/**
+ * @param {string} selectedName
+ * @param {I18nService} i18n
+ */
 automations.initAutomationDelete = (selectedName, i18n) => {
     const deleteButton = document.getElementById('delete-automation-button');
     if (!deleteButton) return;
     deleteButton.addEventListener('click', async () => {
-        const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+        const confirmed = await automationsWindow.PHOTO_ORGANIZER.confirmDialog({
             title: i18n.t('utilities:automations.delete.title'),
             message: i18n.t('utilities:automations.delete.message', { name: selectedName }),
             confirmText: i18n.t('common:delete'),
             confirmClass: 'btn-danger'
         });
         if (confirmed) {
-            document.getElementById('delete-automation-form').submit();
+            const form = /** @type {HTMLFormElement | null} */ (document.getElementById('delete-automation-form'));
+            form?.submit();
         }
     });
 };
@@ -34,7 +71,7 @@ automations.initAutomationDelete = (selectedName, i18n) => {
 // and the sidebar name.
 automations.initAutomationDetails = () => {
     const button = document.getElementById('edit-automation-button');
-    const components = window.PHOTO_ORGANIZER.COMPONENTS;
+    const components = automationsWindow.PHOTO_ORGANIZER.COMPONENTS;
     if (!button || !components || !components.modal) return;
     const modal = components.modal.init('editAutomationModal');
     button.addEventListener('click', modal.open);
@@ -45,7 +82,18 @@ automations.initAutomationDetails = () => {
 // else has a plain button that fires context-less. A trigger-less automation still
 // shows the plain button, but clicking it only warns (add a trigger first) and does
 // not run. Otherwise the run is enqueued async and shows up in Run history.
+/**
+ * @param {string} runUrl
+ * @param {AppConfig} config
+ * @param {boolean} hasTriggers
+ * @param {string | null} defaultPath
+ * @param {I18nService} i18n
+ */
 automations.initAutomationRunNow = (runUrl, config, hasTriggers, defaultPath = null, i18n) => {
+    /**
+     * @param {HTMLButtonElement} button
+     * @param {{ path: string } | null} body
+     */
     const post = async (button, body) => {
         button.disabled = true;
         try {
@@ -55,32 +103,34 @@ automations.initAutomationRunNow = (runUrl, config, hasTriggers, defaultPath = n
                 body: body ? JSON.stringify(body) : undefined,
             });
             if (response.ok) {
-                notification.success(i18n.t('utilities:automations.run.started'));
+                automationsWindow.notification.success(i18n.t('utilities:automations.run.started'));
             } else {
                 const data = await response.json().catch(() => ({}));
-                notification.error(data.error || i18n.t('utilities:automations.run.startFailed'));
+                automationsWindow.notification.error(data.error || i18n.t('utilities:automations.run.startFailed'));
             }
         } catch (error) {
-            notification.error(i18n.t('utilities:automations.run.startFailed'));
+            automationsWindow.notification.error(i18n.t('utilities:automations.run.startFailed'));
         } finally {
             button.disabled = false;
         }
     };
 
-    const plainButton = document.getElementById('run-automation-button');
+    const plainButton = /** @type {HTMLButtonElement | null} */ (document.getElementById('run-automation-button'));
     if (plainButton) {
         plainButton.addEventListener('click', () => {
             if (!hasTriggers) {
-                notification.warning(i18n.t('utilities:automations.run.noTriggers'));
+                automationsWindow.notification.warning(i18n.t('utilities:automations.run.noTriggers'));
                 return;
             }
             post(plainButton, null);
         });
     }
 
-    document.querySelectorAll('.js-run-files').forEach((button) => {
+    document.querySelectorAll('.js-run-files').forEach((element) => {
+        const button = /** @type {HTMLButtonElement} */ (element);
         button.addEventListener('click', async () => {
-            const path = await pickAutomationPath(config, button.dataset.mode || 'any', defaultPath);
+            const mode = /** @type {FolderPickerMode} */ (button.dataset.mode || 'any');
+            const path = await pickAutomationPath(config, mode, defaultPath);
             if (path) post(button, { path });
         });
     });
@@ -91,7 +141,7 @@ automations.initAutomationRunNow = (runUrl, config, hasTriggers, defaultPath = n
 // a normal form that redirects back, refreshing the page with the new value.
 automations.initAutomationConfigure = () => {
     const button = document.getElementById('configure-automation-button');
-    const components = window.PHOTO_ORGANIZER.COMPONENTS;
+    const components = automationsWindow.PHOTO_ORGANIZER.COMPONENTS;
     if (!button || !components || !components.modal) return;
     const modal = components.modal.init('configureAutomationModal');
     button.addEventListener('click', modal.open);
@@ -100,30 +150,48 @@ automations.initAutomationConfigure = () => {
 // Run the automation's code in a sandbox dry-run and render what it did: the host-API
 // actions intercepted during the run, the captured output, and any error. Changes
 // nothing (no Job recorded; the host surface is read-only).
+/**
+ * @param {string} slug
+ * @param {AppConfig} config
+ * @param {string | null} defaultPath
+ * @param {I18nService} i18n
+ */
 automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
     // Code-version toggle (working draft vs active/published). The visible view is the
     // version a Test runs against. The toggle is only rendered when there's an
     // unpublished draft; otherwise there's a single (published) view.
     const toggleButtons = document.querySelectorAll('.js-code-toggle');
     const codeViews = document.querySelectorAll('.js-code-view');
+    const activeToggle = /** @type {HTMLElement | null} */ (document.querySelector('.js-code-toggle.active'));
     let currentVersion = toggleButtons.length
-        ? (document.querySelector('.js-code-toggle.active')?.dataset.version || 'working')
+        ? (activeToggle?.dataset.version || 'working')
         : 'published';
-    toggleButtons.forEach((toggle) => {
+    toggleButtons.forEach((element) => {
+        const toggle = /** @type {HTMLElement} */ (element);
         toggle.addEventListener('click', () => {
-            currentVersion = toggle.dataset.version;
+            currentVersion = toggle.dataset.version || 'working';
             toggleButtons.forEach((b) => b.classList.toggle('active', b === toggle));
-            codeViews.forEach((view) => { view.hidden = view.dataset.version !== currentVersion; });
+            codeViews.forEach((viewElement) => {
+                const view = /** @type {HTMLElement} */ (viewElement);
+                view.hidden = view.dataset.version !== currentVersion;
+            });
         });
     });
 
-    const button = document.getElementById('automation-test-button');
+    const button = /** @type {HTMLButtonElement | null} */ (document.getElementById('automation-test-button'));
     const resultEl = document.getElementById('automation-test-result');
     if (!button || !resultEl) return;
 
     // The last file/folder picked, displayed with the dry-run output.
+    /** @type {AutomationTestSelection | null} */
     let selection = null;
 
+    /**
+     * @param {string} tag
+     * @param {string | null} [className]
+     * @param {string} [text]
+     * @returns {HTMLElement}
+     */
     const el = (tag, className, text) => {
         const node = document.createElement(tag);
         if (className) node.className = className;
@@ -131,6 +199,7 @@ automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
         return node;
     };
 
+    /** @param {{ media_item_ids?: number[] }} ctx */
     const photoCount = (ctx) => {
         const n = (ctx.media_item_ids || []).length;
         return i18n.t('utilities:automations.test.photoCount', {
@@ -140,6 +209,7 @@ automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
     };
 
     // Action name -> a generic label for a grouped run, e.g. "tag_media_items" -> "Tag media items".
+    /** @param {string} name */
     const humanize = (name) => {
         const key = `utilities:automations.test.actionNames.${name}`;
         const translated = i18n.t(key);
@@ -148,6 +218,7 @@ automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
         return words.charAt(0).toUpperCase() + words.slice(1);
     };
 
+    /** @param {AutomationTestResult} data */
     const render = (data) => {
         resultEl.replaceChildren();
         resultEl.hidden = false;
@@ -184,6 +255,7 @@ automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
         if (data.actions.length) {
             // Collapse a run of the same action into one row with a × count; the
             // per-item detail lives behind "Show details".
+            /** @type {AutomationTestAction[][]} */
             const groups = [];
             data.actions.forEach((action) => {
                 const last = groups[groups.length - 1];
@@ -225,6 +297,10 @@ automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
         }
     };
 
+    /**
+     * @param {HTMLButtonElement} clicked
+     * @param {() => Promise<Response>} doFetch
+     */
     const run = async (clicked, doFetch) => {
         const label = clicked.textContent;
         clicked.disabled = true;
@@ -241,13 +317,17 @@ automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
                 resultEl.classList.add('is-error');
             }
         } catch {
-            window.notification.error(i18n.t('utilities:automations.test.runFailed'));
+            automationsWindow.notification.error(i18n.t('utilities:automations.test.runFailed'));
         } finally {
             clicked.disabled = false;
             clicked.textContent = label;
         }
     };
 
+    /**
+     * @param {HTMLButtonElement} clicked
+     * @param {string} path
+     */
     const runFiles = (clicked, path) => run(clicked, () =>
         fetch(config.buildUrl('automations_test_files', { slug }), {
             method: 'POST',
@@ -255,13 +335,17 @@ automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
             body: JSON.stringify({ path, version: currentVersion }),
         }));
 
+    /**
+     * @param {string} path
+     * @param {string} mode
+     */
     const setSelection = (path, mode) => {
         selection = { path, mode };
     };
 
     // Pick a file/folder, remember it, and run against it.
     button.addEventListener('click', async () => {
-        const mode = button.dataset.mode || 'any';
+        const mode = /** @type {FolderPickerMode} */ (button.dataset.mode || 'any');
         const path = await pickAutomationPath(config, mode, defaultPath);
         if (!path) return;
         setSelection(path, 'path');
@@ -275,16 +359,33 @@ automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
 // schedule panel pre-populated; Cancel collapses back to the buttons. Delegated off
 // document so it survives the #automation-triggers HTMX re-renders. Save/Add-event
 // are plain HTMX (edit_trigger_id tells the server add vs update for a schedule).
+/**
+ * @param {I18nService} [i18n]
+ * @param {CronBuilderApi} [cronBuilder]
+ */
 automations.initTriggerEditor = (
-    i18n = window.PHOTO_ORGANIZER.i18n,
-    cronBuilder = window.PHOTO_ORGANIZER.COMPONENTS.cronBuilder,
+    i18n = automationsWindow.PHOTO_ORGANIZER.i18n,
+    cronBuilder = /** @type {CronBuilderApi} */ (automationsWindow.PHOTO_ORGANIZER.COMPONENTS.cronBuilder),
 ) => {
-    const areaFor = (el) => el.closest('#automation-triggers').querySelector('.automation-trigger-add');
+    /**
+     * @param {EventTarget | Element | null} target
+     * @returns {HTMLElement | null}
+     */
+    const areaFor = (target) => {
+        const origin = target instanceof Element ? target : null;
+        const container = origin?.closest('#automation-triggers');
+        return /** @type {HTMLElement | null} */ (container?.querySelector('.automation-trigger-add') ?? null);
+    };
 
+    /**
+     * @param {HTMLElement | null} area
+     * @param {{ cron?: string, triggerId?: string, title: string }} opts
+     */
     const openSchedule = (area, { cron, triggerId, title }) => {
-        area.querySelector('[name="edit_trigger_id"]').value = triggerId || '';
-        area.querySelector('.schedule-editor-title').textContent = title;
-        const mount = area.querySelector('[data-cron-builder]');
+        if (!area) return;
+        /** @type {HTMLInputElement} */ (area.querySelector('[name="edit_trigger_id"]')).value = triggerId || '';
+        /** @type {HTMLElement} */ (area.querySelector('.schedule-editor-title')).textContent = title;
+        const mount = /** @type {HTMLElement} */ (area.querySelector('[data-cron-builder]'));
         cronBuilder.initAll(mount);
         if (cron) cronBuilder.setCron(mount, cron); else cronBuilder.reset(mount);
         area.classList.remove('adding-event');
@@ -292,14 +393,18 @@ automations.initTriggerEditor = (
         area.scrollIntoView({ block: 'nearest' });
     };
 
+    /** @param {HTMLElement | null} area */
     const openEvent = (area) => {
+        if (!area) return;
         area.classList.remove('adding-schedule');
         area.classList.add('adding-event');
         area.scrollIntoView({ block: 'nearest' });
     };
 
+    /** @param {HTMLElement | null} area */
     const collapse = (area) => {
-        area.querySelector('[name="edit_trigger_id"]').value = '';
+        if (!area) return;
+        /** @type {HTMLInputElement} */ (area.querySelector('[name="edit_trigger_id"]')).value = '';
         area.classList.remove('adding-schedule', 'adding-event');
     };
 
@@ -308,20 +413,29 @@ automations.initTriggerEditor = (
     // authoritative source), debounced and guarded against stale responses. Save is
     // disabled whenever the cron is invalid; the error line shows only for a non-empty
     // invalid expression (an empty field already reads "Enter a cron…").
+    /**
+     * @param {HTMLElement} area
+     * @param {{ valid: boolean, showError: boolean }} state
+     */
     const applyValidity = (area, { valid, showError }) => {
-        area.querySelector('.js-save-schedule').disabled = !valid;
-        area.querySelector('.schedule-editor-error').hidden = !showError;
+        /** @type {HTMLButtonElement} */ (area.querySelector('.js-save-schedule')).disabled = !valid;
+        /** @type {HTMLElement} */ (area.querySelector('.schedule-editor-error')).hidden = !showError;
     };
 
-    let validateTimer = null;
+    /** @type {number | undefined} */
+    let validateTimer;
+    /**
+     * @param {HTMLElement} area
+     * @param {string} cron
+     */
     const validateOnServer = (area, cron) => {
         clearTimeout(validateTimer);
         if (!cron) { applyValidity(area, { valid: false, showError: false }); return; }
         validateTimer = setTimeout(async () => {
-            const url = `${window.APP_CONFIG.urls.automations_validate_cron}?cron=${encodeURIComponent(cron)}`;
+            const url = `${automationsWindow.APP_CONFIG.urls.automations_validate_cron}?cron=${encodeURIComponent(cron)}`;
             try {
                 const { valid } = await (await fetch(url)).json();
-                if (area.querySelector('[name="cron"]').value === cron) {
+                if (/** @type {HTMLInputElement} */ (area.querySelector('[name="cron"]')).value === cron) {
                     applyValidity(area, { valid, showError: !valid });
                 }
             } catch { /* leave Save as-is on a network error; the server still re-validates on save */ }
@@ -336,10 +450,12 @@ automations.initTriggerEditor = (
     });
 
     document.addEventListener('click', (event) => {
-        const add = event.target.closest('.js-add-schedule');
-        const edit = event.target.closest('.js-edit-schedule');
-        const addEvent = event.target.closest('.js-add-event');
-        const cancel = event.target.closest('.js-cancel');
+        const origin = event.target instanceof Element ? event.target : null;
+        if (!origin) return;
+        const add = origin.closest('.js-add-schedule');
+        const edit = /** @type {HTMLElement | null} */ (origin.closest('.js-edit-schedule'));
+        const addEvent = origin.closest('.js-add-event');
+        const cancel = origin.closest('.js-cancel');
         if (add) {
             openSchedule(areaFor(add), { title: i18n.t('utilities:automations.triggers.addSchedule') });
         } else if (edit) {
@@ -361,8 +477,16 @@ automations.initTriggerEditor = (
 // (or cancelled) generation reloads so the published code / draft and server-rendered
 // transcript take effect, while a FAILED run stays open for a follow-up. System
 // automations render a read-only transcript (no form), so initChatDialog returns null.
+/**
+ * @param {string} slug
+ * @param {string} startStatus
+ * @param {AppConfig} config
+ * @param {I18nService} i18n
+ * @returns {ChatDialogApi | null}
+ */
 automations.initAutomationChat = (slug, startStatus, config, i18n) => {
-    return window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog('automation-chat', {
+    if (!automationsWindow.PHOTO_ORGANIZER.COMPONENTS.initChatDialog) return null;
+    return automationsWindow.PHOTO_ORGANIZER.COMPONENTS.initChatDialog('automation-chat', {
         startStatus,
         statusUrl: () => config.buildUrl('automations_status', { slug }),
         onSend: async (message) => {

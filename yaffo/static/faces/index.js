@@ -1,25 +1,63 @@
-window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
-window.PHOTO_ORGANIZER.faces = window.PHOTO_ORGANIZER.faces || {};
+// @ts-check
+
+/**
+ * One face awaiting assignment within a cluster.
+ * @typedef {Object} FaceRecord
+ * @property {number} id
+ * @property {string} [photo_date]
+ * @property {number | null} [similarity]
+ *
+ * A person offered as a keyboard/shortcut assignment target.
+ * @typedef {Object} PersonShortcut
+ * @property {string | number} id
+ * @property {string} name
+ *
+ * The public surface returned by the page initializer.
+ * @typedef {Object} FacesAssignmentApi
+ * @property {(personId: string | number | null, faceStatus: string) => Promise<void>} submitFaces
+ * @property {(on: boolean) => void} selectWholeCluster
+ * @property {(arr: FaceRecord[], n: number) => FaceRecord[]} randomSample
+ * @property {() => Set<number>} getSelectedIds
+ */
+
+const facesWindow = window;
+
+facesWindow.PHOTO_ORGANIZER = facesWindow.PHOTO_ORGANIZER || {};
+const facesNamespace = facesWindow.PHOTO_ORGANIZER.faces =
+    /** @type {FacesNamespace} */ (facesWindow.PHOTO_ORGANIZER.faces || {});
 
 // One cluster is shown at a time. For each cluster we only paint a random
 // sample of up to `sampleSize` thumbnails (a 50k batch would otherwise melt the
 // DOM), but selection/assignment span the WHOLE cluster: `selectedIds` starts as
 // every face id and clicking a visible face just removes it. Assigning advances
 // to the next cluster; when none remain we reload to pull the next batch.
-window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, config) => {
+/**
+ * @param {number} sampleSize
+ * @param {PersonShortcut[]} topPeople
+ * @param {I18nService} i18n
+ * @param {AppConfig} config
+ * @returns {FacesAssignmentApi}
+ */
+facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
     const tooltip = document.createElement('div');
     tooltip.className = 'tooltip';
     document.body.appendChild(tooltip);
 
-    const groups = Array.from(document.querySelectorAll('.suggestion-group'));
+    const groups = /** @type {HTMLElement[]} */ (Array.from(document.querySelectorAll('.suggestion-group')));
+    /** @type {HTMLElement | null} */
     let activeGroup = null;
+    /** @type {FaceRecord[]} */
     let faces = [];            // current cluster: [{id, photo_date, similarity}]
+    /** @type {FaceRecord[]} */
     let order = [];            // `faces` in display order (shuffle reorders this)
     let page = 0;              // 0-based page within `order`
     let pageCount = 1;
+    /** @type {Set<number>} */
     let selectedIds = new Set();
+    /** @type {number | null} */
     let lastClickedId = null;
 
+    /** @param {number} id */
     const thumbUrl = (id) => config.buildUrl('face_thumbnail', { face_id: id });
     const placeholderUrl = config.urls.placeholder;
 
@@ -32,6 +70,11 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
         window.location.assign(url.toString());
     };
 
+    /**
+     * @param {FaceRecord[]} arr
+     * @param {number} n
+     * @returns {FaceRecord[]}
+     */
     const randomSample = (arr, n) => {
         const copy = arr.slice();
         for (let i = copy.length - 1; i > 0; i--) {
@@ -42,20 +85,23 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
     };
 
     const updatePager = () => {
-        activeGroup.querySelector('.cluster-page-label').textContent = i18n.t('common:pageOf', {
-            page: i18n.number(page + 1),
-            total: i18n.number(pageCount),
-        });
+        if (!activeGroup) return;
+        /** @type {HTMLElement} */ (activeGroup.querySelector('.cluster-page-label')).textContent =
+            i18n.t('common:pageOf', {
+                page: i18n.number(page + 1),
+                total: i18n.number(pageCount),
+            });
         const atFirst = page === 0;
         const atLast = page >= pageCount - 1;
         // `.disabled` matches the home pager's look; the `disabled` attribute
         // blocks the click so no extra guard is needed in the handlers.
+        /** @type {[string, boolean][]} */
         const states = [
             ['.cluster-first', atFirst], ['.cluster-prev', atFirst],
             ['.cluster-next', atLast], ['.cluster-last', atLast],
         ];
         states.forEach(([selector, off]) => {
-            const btn = activeGroup.querySelector(selector);
+            const btn = /** @type {HTMLButtonElement} */ (activeGroup?.querySelector(selector));
             btn.disabled = off;
             btn.classList.toggle('disabled', off);
         });
@@ -63,7 +109,7 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
 
     const renderPage = () => {
         if (!activeGroup) return;
-        const grid = activeGroup.querySelector('.grid');
+        const grid = /** @type {HTMLElement} */ (activeGroup.querySelector('.grid'));
         const start = page * sampleSize;
         const shown = order.slice(start, start + sampleSize);
         grid.innerHTML = shown.map(face => {
@@ -74,8 +120,8 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
                 + `<img src="${thumbUrl(face.id)}" data-fallback="${placeholderUrl}" width="100" height="100">`
                 + `</div>`;
         }).join('');
-        window.PHOTO_ORGANIZER.utils.initImageFallbacks();
-        activeGroup.querySelector('.sample-range').textContent =
+        facesWindow.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
+        /** @type {HTMLElement} */ (activeGroup.querySelector('.sample-range')).textContent =
             shown.length
                 ? i18n.number(start + 1) + '–' + i18n.number(start + shown.length)
                 : i18n.number(0);
@@ -83,6 +129,7 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
         lastClickedId = null;
     };
 
+    /** @param {HTMLElement} group */
     const activateGroup = (group) => {
         groups.forEach(g => { g.hidden = g !== group; });
         activeGroup = group;
@@ -91,34 +138,43 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
         page = 0;
         pageCount = Math.max(1, Math.ceil(faces.length / sampleSize));
         selectedIds = new Set(faces.map(f => f.id));
-        const groupCheckbox = group.querySelector('.group-select-checkbox');
+        const groupCheckbox = /** @type {HTMLInputElement | null} */ (group.querySelector('.group-select-checkbox'));
         if (groupCheckbox) groupCheckbox.checked = true;
         // Shuffling only matters when the cluster spills past a single page.
-        const shuffleBtn = group.querySelector('.shuffle-sample-btn');
+        const shuffleBtn = /** @type {HTMLButtonElement | null} */ (group.querySelector('.shuffle-sample-btn'));
         if (shuffleBtn) shuffleBtn.disabled = faces.length <= sampleSize;
         // People-mode clusters carry their matched people on the assign buttons;
         // similarity-mode clusters have none, so fall back to the frequent people.
         const clusterPeople = Array.from(group.querySelectorAll('.assign-group-btn'))
-            .map(b => ({ id: b.dataset.personId, name: b.dataset.personName }));
+            .map(b => ({
+                id: /** @type {HTMLElement} */ (b).dataset.personId || '',
+                name: /** @type {HTMLElement} */ (b).dataset.personName || '',
+            }));
         rebuildShortcuts(clusterPeople.length ? clusterPeople : topPeople);
         renderPage();
     };
 
+    /**
+     * @param {HTMLElement} faceEl
+     * @param {boolean} on
+     */
     const setVisibleSelected = (faceEl, on) => {
         const id = Number(faceEl.dataset.faceId);
         if (on) selectedIds.add(id); else selectedIds.delete(id);
         faceEl.classList.toggle('selected', on);
     };
 
+    /** @param {boolean} on */
     const selectWholeCluster = (on) => {
         selectedIds = on ? new Set(faces.map(f => f.id)) : new Set();
         if (!activeGroup) return;
         activeGroup.querySelectorAll('.face').forEach(el => el.classList.toggle('selected', on));
-        const groupCheckbox = activeGroup.querySelector('.group-select-checkbox');
+        const groupCheckbox = /** @type {HTMLInputElement | null} */ (activeGroup.querySelector('.group-select-checkbox'));
         if (groupCheckbox) groupCheckbox.checked = on;
     };
 
     const advanceCluster = () => {
+        if (!activeGroup) return;
         const index = groups.indexOf(activeGroup);
         const next = groups[index + 1];
         if (next) {
@@ -128,12 +184,16 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
         }
     };
 
+    /**
+     * @param {string | number | null} personId
+     * @param {string} faceStatus
+     */
     const submitFaces = async (personId, faceStatus) => {
         const faceIds = Array.from(selectedIds);
         // Nothing selected: treat the cluster as skipped. The faces stay
         // unassigned (they'll resurface in a later batch) and we move on.
         if (faceIds.length === 0) {
-            notification.info(i18n.t('faces:assignment.noneSelected'));
+            facesWindow.notification.info(i18n.t('faces:assignment.noneSelected'));
             advanceCluster();
             return;
         }
@@ -145,25 +205,28 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
             });
             const result = await response.json();
             if (result.success) {
-                showNotification(result.message, 'success');
+                facesWindow.showNotification?.(result.message, 'success');
                 advanceCluster();
             } else {
-                showNotification(result.message, 'error');
+                facesWindow.showNotification?.(result.message, 'error');
             }
         } catch (error) {
-            notification.error(i18n.t('faces:assignment.requestFailed', { reason: error.message }));
+            facesWindow.notification.error(i18n.t('faces:assignment.requestFailed', {
+                reason: error instanceof Error ? error.message : String(error),
+            }));
             console.error('Error submitting faces:', error);
         }
     };
 
     // --- Click handling on the active cluster (delegated; the grid is re-rendered on every shuffle) ---
-    const clusters = document.getElementById('clusters');
+    const clusters = /** @type {HTMLElement} */ (document.getElementById('clusters'));
 
     clusters.addEventListener('click', (e) => {
-        const faceEl = e.target.closest('.face');
+        const origin = e.target instanceof Element ? e.target : null;
+        const faceEl = /** @type {HTMLElement | null} */ (origin?.closest('.face') ?? null);
         if (faceEl && activeGroup && activeGroup.contains(faceEl)) {
             if (e.shiftKey && lastClickedId != null) {
-                const visible = Array.from(activeGroup.querySelectorAll('.face'));
+                const visible = /** @type {HTMLElement[]} */ (Array.from(activeGroup.querySelectorAll('.face')));
                 const ids = visible.map(el => Number(el.dataset.faceId));
                 const lastIndex = ids.indexOf(lastClickedId);
                 const currentIndex = ids.indexOf(Number(faceEl.dataset.faceId));
@@ -182,14 +245,14 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
             return;
         }
 
-        const assignBtn = e.target.closest('.assign-group-btn');
+        const assignBtn = /** @type {HTMLElement | null} */ (origin?.closest('.assign-group-btn') ?? null);
         if (assignBtn) {
             e.preventDefault();
-            submitFaces(assignBtn.dataset.personId, 'ASSIGNED');
+            submitFaces(assignBtn.dataset.personId ?? null, 'ASSIGNED');
             return;
         }
 
-        if (e.target.closest('.shuffle-sample-btn')) {
+        if (origin?.closest('.shuffle-sample-btn')) {
             e.preventDefault();
             order = randomSample(faces, faces.length);
             page = 0;
@@ -197,32 +260,32 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
             return;
         }
 
-        if (e.target.closest('.skip-cluster-btn')) {
+        if (origin?.closest('.skip-cluster-btn')) {
             e.preventDefault();
-            notification.info(i18n.t('faces:assignment.clusterSkipped'));
+            facesWindow.notification.info(i18n.t('faces:assignment.clusterSkipped'));
             advanceCluster();
             return;
         }
 
-        if (e.target.closest('.cluster-first')) {
+        if (origin?.closest('.cluster-first')) {
             e.preventDefault();
             if (page !== 0) { page = 0; renderPage(); }
             return;
         }
 
-        if (e.target.closest('.cluster-prev')) {
+        if (origin?.closest('.cluster-prev')) {
             e.preventDefault();
             if (page > 0) { page -= 1; renderPage(); }
             return;
         }
 
-        if (e.target.closest('.cluster-next')) {
+        if (origin?.closest('.cluster-next')) {
             e.preventDefault();
             if (page < pageCount - 1) { page += 1; renderPage(); }
             return;
         }
 
-        if (e.target.closest('.cluster-last')) {
+        if (origin?.closest('.cluster-last')) {
             e.preventDefault();
             if (page !== pageCount - 1) { page = pageCount - 1; renderPage(); }
             return;
@@ -230,17 +293,19 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
     });
 
     clusters.addEventListener('change', (e) => {
-        if (e.target.classList.contains('group-select-checkbox')) {
-            selectWholeCluster(e.target.checked);
+        const target = /** @type {HTMLInputElement | null} */ (e.target instanceof HTMLElement ? e.target : null);
+        if (target && target.classList.contains('group-select-checkbox')) {
+            selectWholeCluster(target.checked);
         }
     });
 
     // Tooltip on hover (delegated)
     clusters.addEventListener('mouseover', (e) => {
-        const faceEl = e.target.closest('.face');
+        const origin = e.target instanceof Element ? e.target : null;
+        const faceEl = /** @type {HTMLElement | null} */ (origin?.closest('.face') ?? null);
         if (!faceEl) return;
         const similarity = Number(faceEl.dataset.similarity);
-        const date = PHOTO_ORGANIZER.utils.date.format(faceEl.dataset.date);
+        const date = facesWindow.PHOTO_ORGANIZER.utils?.date?.format(faceEl.dataset.date) ?? '';
         const hasSimilarity = Number.isFinite(similarity);
         const similarityText = hasSimilarity
             ? i18n.percent(similarity, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -261,36 +326,37 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
         tooltip.style.transform = 'translate(-50%, -100%)';
     });
     clusters.addEventListener('mouseout', (e) => {
-        if (e.target.closest('.face')) tooltip.classList.remove('visible');
+        const origin = e.target instanceof Element ? e.target : null;
+        if (origin?.closest('.face')) tooltip.classList.remove('visible');
     });
 
     // Threshold slider display
     const thresholdRange = document.getElementById('threshold-range');
     const thresholdValue = document.getElementById('threshold-value');
-    if (thresholdRange) {
+    if (thresholdRange && thresholdValue) {
         thresholdRange.addEventListener('input', (e) => {
-            thresholdValue.textContent = e.target.value;
+            thresholdValue.textContent = /** @type {HTMLInputElement} */ (e.target).value;
         });
     }
 
     // Sidebar: assign from searchable select
     const assignSelectedBtn = document.getElementById('sidebar-assign-selected-btn');
-    const sidebarPersonSelect = document.getElementById('sidebar-person-select');
-    const createPersonBtn = document.getElementById('create-person-btn');
+    const sidebarPersonSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('sidebar-person-select'));
+    const createPersonBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('create-person-btn'));
 
     if (assignSelectedBtn) {
         assignSelectedBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            const personId = sidebarPersonSelect.value;
+            const personId = sidebarPersonSelect?.value;
             if (!personId) {
-                notification.error(i18n.t('faces:assignment.selectPersonFirst'));
+                facesWindow.notification.error(i18n.t('faces:assignment.selectPersonFirst'));
                 return;
             }
             submitFaces(personId, 'ASSIGNED');
         });
     }
 
-    document.getElementById('sidebar-ignore-btn').addEventListener('click', (e) => {
+    document.getElementById('sidebar-ignore-btn')?.addEventListener('click', (e) => {
         e.preventDefault();
         submitFaces(null, 'IGNORED');
     });
@@ -298,7 +364,7 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
     // Keep the assign-person filter in the URL without reloading
     if (sidebarPersonSelect) {
         sidebarPersonSelect.addEventListener('change', (e) => {
-            const personId = e.target.value;
+            const personId = /** @type {HTMLSelectElement} */ (e.target).value;
             const url = new URL(window.location.href);
             if (personId) {
                 url.searchParams.set('assign_person', personId);
@@ -312,10 +378,10 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
     if (createPersonBtn) {
         createPersonBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            const inputElement = document.getElementById('create-person-name');
+            const inputElement = /** @type {HTMLInputElement} */ (document.getElementById('create-person-name'));
             const personName = inputElement.value;
             if (!personName || !personName.trim()) {
-                notification.error(i18n.t('faces:people.nameRequired'));
+                facesWindow.notification.error(i18n.t('faces:people.nameRequired'));
                 return;
             }
             createPersonBtn.disabled = true;
@@ -326,14 +392,14 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
                     body: JSON.stringify({ name: personName.trim() })
                 });
                 if (createResponse.ok) {
-                    notification.success(i18n.t('faces:people.created', { name: personName }));
+                    facesWindow.notification.success(i18n.t('faces:people.created', { name: personName }));
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
                     const error = await createResponse.json();
-                    notification.error(`${error?.error}`);
+                    facesWindow.notification.error(`${error?.error}`);
                 }
             } catch (err) {
-                notification.error(err.message);
+                facesWindow.notification.error(err instanceof Error ? err.message : String(err));
             } finally {
                 createPersonBtn.disabled = false;
             }
@@ -344,17 +410,21 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
     // active cluster's matched people (rebuilt per cluster); in "group by
     // similarity" the cluster has none, so we fall back to the most-frequent
     // people passed from the server.
+    /** @type {Map<string, { personId: string | number, element: HTMLElement | null }>} */
     const keyboardShortcutMap = new Map();
-    const sidebarShortcutList = document.getElementById('sidebar-shortcut-people');
+    const sidebarShortcutList = /** @type {HTMLElement} */ (document.getElementById('sidebar-shortcut-people'));
     const helpShortcutList = document.getElementById('help-shortcut-people');
+    /** @param {HTMLElement | null} element */
     const flashElement = (element) => {
         if (!element) return;
         element.classList.add('keyboard-activated');
         setTimeout(() => element.classList.remove('keyboard-activated'), 300);
     };
+    /** @param {string | number} s */
     const escapeHtml = (s) => String(s).replace(/[&<>"']/g,
-        c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
 
+    /** @param {PersonShortcut[]} peopleList */
     const rebuildShortcuts = (peopleList) => {
         const limited = peopleList.slice(0, 9);
         keyboardShortcutMap.clear();
@@ -367,23 +437,25 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
                 + `<span>${escapeHtml(p.name)}</span></div>`).join('');
         }
         limited.forEach((p, i) => {
-            const element = sidebarShortcutList.querySelector(`[data-shortcut="${i + 1}"]`);
+            const element = /** @type {HTMLElement | null} */ (sidebarShortcutList.querySelector(`[data-shortcut="${i + 1}"]`));
             keyboardShortcutMap.set(String(i + 1), { personId: p.id, element });
         });
     };
 
     // Clicking a sidebar shortcut row assigns the same as pressing its key.
     sidebarShortcutList.addEventListener('click', (e) => {
-        const item = e.target.closest('.shortcut-item[data-person-id]');
+        const origin = e.target instanceof Element ? e.target : null;
+        const item = /** @type {HTMLElement | null} */ (origin?.closest('.shortcut-item[data-person-id]') ?? null);
         if (!item) return;
         flashElement(item);
-        submitFaces(item.dataset.personId, 'ASSIGNED');
+        submitFaces(item.dataset.personId ?? null, 'ASSIGNED');
     });
 
-    const keyboardHelpModal = window.PHOTO_ORGANIZER.COMPONENTS.modal.init('keyboardHelpModal');
+    const keyboardHelpModal = facesWindow.PHOTO_ORGANIZER.COMPONENTS.modal.init('keyboardHelpModal');
 
     document.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        const target = e.target instanceof HTMLElement ? e.target : null;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
             return;
         }
         if (e.key >= '1' && e.key <= '9') {
@@ -414,4 +486,11 @@ window.PHOTO_ORGANIZER.faces.initAssignment = (sampleSize, topPeople, i18n, conf
     } else {
         rebuildShortcuts(topPeople);
     }
+
+    return {
+        submitFaces,
+        selectWholeCluster,
+        randomSample,
+        getSelectedIds: () => new Set(selectedIds),
+    };
 };
