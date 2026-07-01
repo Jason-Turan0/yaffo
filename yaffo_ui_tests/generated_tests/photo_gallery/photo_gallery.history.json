@@ -11,7 +11,7 @@
       },
       "failedTests": [
         {
-          "testName": "Photo Gallery Feature › gallery_page_navigation_works - Verify that the page navigation works",
+          "testName": "Photo Gallery Feature \u203a gallery_page_navigation_works - Verify that the page navigation works",
           "error": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
         }
       ]
@@ -27,15 +27,15 @@
       },
       "failedTests": [
         {
-          "testName": "Photo Gallery Feature › gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
+          "testName": "Photo Gallery Feature \u203a gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         },
         {
-          "testName": "Photo Gallery Feature › gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
+          "testName": "Photo Gallery Feature \u203a gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         },
         {
-          "testName": "Photo Gallery Feature › gallery_page_navigation_works - Verify that the page navigation works",
+          "testName": "Photo Gallery Feature \u203a gallery_page_navigation_works - Verify that the page navigation works",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         }
       ]
@@ -51,15 +51,15 @@
       },
       "failedTests": [
         {
-          "testName": "Photo Gallery Feature › gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
+          "testName": "Photo Gallery Feature \u203a gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         },
         {
-          "testName": "Photo Gallery Feature › gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
+          "testName": "Photo Gallery Feature \u203a gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         },
         {
-          "testName": "Photo Gallery Feature › gallery_page_navigation_works - Verify that the page navigation works",
+          "testName": "Photo Gallery Feature \u203a gallery_page_navigation_works - Verify that the page navigation works",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         }
       ]
@@ -75,15 +75,15 @@
       },
       "failedTests": [
         {
-          "testName": "Photo Gallery Feature › gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
+          "testName": "Photo Gallery Feature \u203a gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         },
         {
-          "testName": "Photo Gallery Feature › gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
+          "testName": "Photo Gallery Feature \u203a gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         },
         {
-          "testName": "Photo Gallery Feature › gallery_page_navigation_works - Verify that the page navigation works",
+          "testName": "Photo Gallery Feature \u203a gallery_page_navigation_works - Verify that the page navigation works",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         }
       ]
@@ -99,18 +99,29 @@
       },
       "failedTests": [
         {
-          "testName": "Photo Gallery Feature › gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
+          "testName": "Photo Gallery Feature \u203a gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         },
         {
-          "testName": "Photo Gallery Feature › gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
+          "testName": "Photo Gallery Feature \u203a gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         },
         {
-          "testName": "Photo Gallery Feature › gallery_page_navigation_works - Verify that the page navigation works",
+          "testName": "Photo Gallery Feature \u203a gallery_page_navigation_works - Verify that the page navigation works",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         }
       ]
+    },
+    {
+      "timestamp": "2026-07-01T23:08:55.000Z",
+      "success": true,
+      "summary": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      "failedTests": []
     }
   ]
 }

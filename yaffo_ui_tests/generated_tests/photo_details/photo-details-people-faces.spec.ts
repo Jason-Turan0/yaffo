@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Photo Details - People and Faces', () => {
-  const PHOTO_ID = 14;
+  // Photo 4 has several detected faces in the seeded test data
+  const PHOTO_ID = 4;
 
   test('photo_details_displays_people_and_faces', async ({ page }) => {
     // Navigate to the photo details page
-    await page.goto(`/photo/view/${PHOTO_ID}`);
+    await page.goto(`/media/view/${PHOTO_ID}`);
 
     // Wait for the page to load
     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();
@@ -21,15 +22,15 @@ test.describe('Photo Details - People and Faces', () => {
     // Check if people are assigned - if so, verify person links are clickable
     const peopleList = page.locator('.people-list');
     if (await peopleList.isVisible()) {
-      const personLinks = peopleList.locator('a.person-tag');
+      const personLinks = peopleList.locator('a.person-link');
       const count = await personLinks.count();
       expect(count).toBeGreaterThan(0);
-      
+
       // Verify first person link is clickable and has href
       const firstLink = personLinks.first();
       await expect(firstLink).toBeVisible();
       const href = await firstLink.getAttribute('href');
-      expect(href).toMatch(/\/person\/\d+\/faces/);
+      expect(href).toMatch(/\/people\/\d+\/faces/);
     }
 
     // Verify Faces section shows the count

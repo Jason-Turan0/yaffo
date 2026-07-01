@@ -5,7 +5,7 @@ test.describe('Photo Details - Face Hover Highlights', () => {
 
   test('photo_details_face_hover_highlights', async ({ page }) => {
     // Navigate to the photo details page
-    await page.goto(`/photo/view/${PHOTO_ID}`);
+    await page.goto(`/media/view/${PHOTO_ID}`);
 
     // Wait for page to load
     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();
@@ -13,6 +13,17 @@ test.describe('Photo Details - Face Hover Highlights', () => {
     // Verify face canvas exists
     const faceCanvas = page.locator('#faceCanvas');
     await expect(faceCanvas).toBeAttached();
+
+    // The highlight geometry is scaled from the loaded photo's natural size and
+    // the canvas is sized from the rendered photo, so wait for the image first
+    const mainPhoto = page.locator('#mainPhoto');
+    await expect(mainPhoto).toBeVisible();
+    await page.waitForFunction(() => {
+      const img = document.getElementById('mainPhoto') as HTMLImageElement | null;
+      const canvas = document.getElementById('faceCanvas') as HTMLCanvasElement | null;
+      return !!img && img.complete && img.naturalWidth > 0
+        && !!canvas && canvas.width > 0 && canvas.height > 0;
+    });
 
     // Find face thumbnails
     const facesGrid = page.locator('.faces-grid');

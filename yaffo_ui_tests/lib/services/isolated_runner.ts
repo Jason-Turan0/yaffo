@@ -8,6 +8,7 @@ export interface IsolatedEnvironment {
     port: number;
     baseUrl: string;
     flaskProcess: ChildProcess | null;
+    taskqProcess: ChildProcess | null;
     cleanup: () => Promise<void>;
 }
 
@@ -115,6 +116,20 @@ export const startIsolatedEnvironment = async (port = 5001): Promise<IsolatedEnv
         console.error(`   ⚠️ Warning: seed_database.py failed: ${e}`);
     }
 
+    // Face assignment (and other write flows) enqueue background tasks; without
+    // the taskq host they'd sit in the queue forever and the UI would never
+    // reflect the change.
+    console.log(`\n⚙️ Starting taskq host...`);
+    const taskqProcess = spawn(
+        "python",
+        ["-m", "yaffo.taskq.host"],
+        {
+            env,
+            cwd: YAFFO_DIR,
+            stdio: ["ignore", "pipe", "pipe"],
+        }
+    );
+
     console.log(`\n🚀 Starting Flask on port ${port}...`);
     const flaskProcess = spawn(
         "python",
@@ -142,6 +157,7 @@ export const startIsolatedEnvironment = async (port = 5001): Promise<IsolatedEnv
         console.error(`   ❌ Flask failed to start. Output:`);
         console.error(flaskOutput);
         flaskProcess.kill();
+        taskqProcess.kill();
         throw new Error("Flask server failed to start");
     }
 
@@ -152,6 +168,10 @@ export const startIsolatedEnvironment = async (port = 5001): Promise<IsolatedEnv
         if (flaskProcess && !flaskProcess.killed) {
             flaskProcess.kill();
             console.log(`   ✅ Stopped Flask server`);
+        }
+        if (taskqProcess && !taskqProcess.killed) {
+            taskqProcess.kill();
+            console.log(`   ✅ Stopped taskq host`);
         }
         if (existsSync(tempDir)) {
             rmSync(tempDir, {recursive: true, force: true});
@@ -164,6 +184,7 @@ export const startIsolatedEnvironment = async (port = 5001): Promise<IsolatedEnv
         port,
         baseUrl,
         flaskProcess,
+        taskqProcess,
         cleanup,
     };
 };

@@ -5,25 +5,37 @@ test.describe('Photo Details - Edit Tags', () => {
   // Use timestamp to make tag name unique across test runs/retries
   const TEST_TAG_NAME = `TestTag_${Date.now()}`;
   const TEST_TAG_VALUE = 'TestValue';
-  let createdTagId: number | null = null;
+  // Snapshot of the photo's tags before the test, used to restore state.
+  // Tags are saved wholesale via PUT /api/media/<id>/tags (no per-tag delete).
+  let originalTags: { tag_name: string; tag_value: string }[] | null = null;
 
-  // Cleanup after test using API
   test.afterEach(async ({ request }) => {
-    if (createdTagId) {
+    if (originalTags) {
       try {
-        await request.delete(`/api/photo/tags/${createdTagId}`);
+        await request.put(`/api/media/${PHOTO_ID}/tags`, {
+          data: { tags: originalTags },
+        });
       } catch (error) {
         console.log('Cleanup failed:', error);
       }
     }
   });
 
-  test('photo_details_can_edit_tags', async ({ page, request }) => {
+  test('photo_details_can_edit_tags', async ({ page }) => {
     // Navigate to the photo details page
-    await page.goto(`/photo/view/${PHOTO_ID}`);
+    await page.goto(`/media/view/${PHOTO_ID}`);
 
     // Wait for page to load
     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();
+
+    // Snapshot the current tags so afterEach can restore them
+    const tagsSection = page.locator('.detail-section').filter({ hasText: 'Tag' });
+    originalTags = await tagsSection.locator('.tag-item').evaluateAll(items =>
+      items.map(item => ({
+        tag_name: item.querySelector('.tag-name')?.textContent?.trim() ?? '',
+        tag_value: item.querySelector('.tag-value')?.textContent?.trim() ?? '',
+      }))
+    );
 
     // Find and click the Edit Tags button
     const editTagsButton = page.locator('button.action-button').filter({ hasText: 'Edit Tags' });
@@ -33,7 +45,7 @@ test.describe('Photo Details - Edit Tags', () => {
     // Verify Edit Tags modal opens
     const modal = page.locator('#tagsModal');
     await expect(modal).toBeVisible();
-    await expect(modal.locator('#modalTitle')).toHaveText('Edit Tags');
+    await expect(modal.locator('#tagsModalTitle')).toHaveText('Edit Tags');
 
     // Verify new tag input fields are visible
     const tagNameInput = page.locator('#modal-new-tag-name');
@@ -56,53 +68,35 @@ test.describe('Photo Details - Edit Tags', () => {
 
     // Verify the tag appears in the editor list - check that count increased
     await expect(tagsEditorList.locator('.tag-editor-item')).toHaveCount(existingTagsCount + 1);
-    
+
     // Verify our specific tag is visible in the editor list
     // The tag name is in an input field, so we need to check by input value
     const newTagItem = tagsEditorList.locator('.tag-editor-item').last();
     await expect(newTagItem).toBeVisible();
-    
+
     // Verify the inputs have the correct values
     const nameInputInEditor = newTagItem.locator('input.tag-input').first();
     const valueInputInEditor = newTagItem.locator('input.tag-input').last();
     await expect(nameInputInEditor).toHaveValue(TEST_TAG_NAME);
     await expect(valueInputInEditor).toHaveValue(TEST_TAG_VALUE);
 
-    // Click Save Changes
+    // Click Save Changes; the tags are saved via PUT and the page reloads
     const saveButton = page.locator('#tagsModal button[type="submit"]').filter({ hasText: 'Save Changes' });
     await expect(saveButton).toBeVisible();
-    await saveButton.click();
+    const [response] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/api/media/${PHOTO_ID}/tags`)),
+      saveButton.click(),
+    ]);
+    expect(response.ok()).toBeTruthy();
 
-    // Wait for page reload after save
-    await page.waitForLoadState('networkidle');
+    // After the reload the new tag appears in the Tags section on the page
+    const newTag = tagsSection.locator('.tag-item').filter({ hasText: TEST_TAG_NAME });
+    await expect(newTag.first()).toBeVisible({ timeout: 10000 });
 
-    // Verify the new tag appears in the Tags section on the page
-    const tagsSection = page.locator('.detail-section').filter({ hasText: 'Tags' });
-    await expect(tagsSection).toBeVisible();
-    
-    const tagsList = tagsSection.locator('.tags-list');
-    const newTag = tagsList.locator('.tag-item').filter({ hasText: TEST_TAG_NAME });
-    // Use first() in case there are duplicates from previous failed test runs
-    await expect(newTag.first()).toBeVisible();
-    
     // Verify tag displays both name and value
     await expect(newTag.first().locator('.tag-name')).toHaveText(TEST_TAG_NAME);
     await expect(newTag.first().locator('.tag-value')).toHaveText(TEST_TAG_VALUE);
 
-    // Get the tag ID from the page for cleanup via API
-    // Extract tag ID from the page content (it's in the JavaScript initialization)
-    const response = await request.get(`/photo/view/${PHOTO_ID}`);
-    const htmlContent = await response.text();
-    const tagDataMatch = htmlContent.match(/tags_data[\s]*=[\s]*\[([^\]]+)\]/);
-    if (tagDataMatch) {
-      const tagsData = JSON.parse(`[${tagDataMatch[1]}]`);
-      const createdTag = tagsData.find((t: any) => t.tag_name === TEST_TAG_NAME);
-      if (createdTag) {
-        createdTagId = createdTag.id;
-      }
-    }
-
-    // Note: Cleanup of the created tag is handled by test.afterEach using the API
-    // This ensures test data doesn't persist even if the test fails
+    // Note: Cleanup restores the original tag set in test.afterEach via the API
   });
 });

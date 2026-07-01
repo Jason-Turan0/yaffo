@@ -1,61 +1,25 @@
-# Photo Gallery Test Generation
+# Photo Gallery Tests — Current State (2026-07-01)
 
-## Status: COMPLETE - Tests Generated Successfully
+## Status: PASSING (3/3) against the isolated sandbox
 
-### Improvements Made:
-1. Use `page.on('response')` to capture HTTP responses for images
-2. Validate images loaded successfully (no 404s) via response listeners
-3. Proper Playwright patterns for waiting and assertions
-4. Simplified selectors based on confirmed HTML structure
+## Application facts (verified against live app)
+- Gallery is the home page `/`. Container: `.photo-grid`; items: `.photo-card`; card date: `.photo-date`; hover overlay: `.photo-hover`.
+- Photo cards open details at `/media/view/{id}` (photos→media rename). Images served from `/media/{id}` with `data-fallback` = `/placeholder`.
+- Seeded test data: 14 photos, multiple years, so page-size 10 yields 2 pages.
+- Pagination component: `.page-btn` anchors named `« First`, `‹ Previous`, `Next ›`, `Last »`; disabled state = `.disabled` class + `onclick="return false"`.
 
-### Tests to Generate:
-1. gallery_loads_with_valid_images - Network monitoring + visual verification
-2. gallery_filter_year_works - Filter state and visibility checks
+## Critical gotcha: searchable-select widgets
+Every `<select class="searchable-select">` (`#year-select`, `#page-size`, etc.) is hidden (`display:none`) behind a custom widget inserted immediately after it. `locator.selectOption()` TIMES OUT on these. Interact via:
 
-## Specification Analysis
-- Feature: photo_gallery
-- Two main test scenarios:
-  1. gallery_loads_with_valid_images - Verify gallery displays photos with valid HTTP 200 responses
-  2. gallery_filter_year_works - Verify year filter functionality
+```ts
+const wrapper = page.locator('select#year-select + .searchable-select-wrapper');
+await wrapper.locator('.searchable-select-display').click();
+await wrapper.locator('.searchable-select-option').filter({ hasText: value }).first().click();
+```
 
-## Key Findings from Context
-- Template: templates/index.html with class `.photo-grid` for gallery container
-- Photo cards use `.photo-card` class
-- Images have `src` attribute pointing to `/photo/<photo_id>`
-- Year filter exists in sidebar (filters.selected_year)
-- Clear button exists (.clear-filters class)
-- Pagination component with page size options
+- `#page-size` option VALUES are full URLs (`/?page=1&page-size=10&...`); choosing one navigates via the select's onchange. Option text has surrounding whitespace — match with `/^\s*10\s*$/` to avoid matching "100".
+- The filter form GET-submits every filter field, so don't assert exact query strings; use regexes like `page.waitForURL(/[?&]year=2014/)`.
 
-## HTML Elements Identified
-- Photo grid: `.photo-grid`
-- Photo cards: `.photo-card` 
-- Images: `img` tags within photo cards with `src="{{ url_for('photo', photo_id=photo.id) }}"`
-- Year filter select: needs exploration for exact selector
-- Apply Filters button: needs exploration for exact selector
-- Clear Filters button: `.clear-filters`
-
-## Test Exploration Complete
-
-### Confirmed Selectors:
-- Photo grid: `.photo-grid` (generic with role)
-- Photo cards: `.photo-card` (div with onclick)
-- Images: `img` with alt text like "Photo from [date]"
-- Year select: `select[name="year"]` with id="year-select"
-- Month select: `select[name="month"]` with id="month-select"
-- Apply Filters: `button.filter-btn` with text "Apply Filters"
-- Clear Filters: `button.clear-filters` with text "Clear Filters"
-
-### Test Results:
-1. Gallery loads with 13 photos initially
-2. Year filter works: selecting 2014 reduces to 4 photos (May, Apr, Mar, Jan 2014)
-3. Clear filters works: returns to all 13 photos
-4. Images have proper src attributes (/photos/1, /photos/4, etc.)
-
-### Generated Tests Will Include:
-1. gallery_loads_with_valid_images - Check grid visibility, image count, HTTP 200 responses
-2. gallery_filter_year_works - Test year filter selection, apply, and clear functionality
-
-## Final Generation Phase
-- Using confirmed selectors from previous exploration
-- Creating comprehensive tests with network monitoring
-- Proper Playwright patterns for async image loading
+## History of resolved issues (do not re-investigate)
+- `.gallery-grid` selector bug → fixed long ago (`.photo-grid` is correct).
+- 2026-07: `selectOption` timeouts on year/page-size selects → caused by the searchable-select migration, fixed as above.

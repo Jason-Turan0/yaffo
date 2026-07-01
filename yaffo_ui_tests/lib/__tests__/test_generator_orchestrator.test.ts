@@ -589,6 +589,7 @@ describe('TestGeneratorOrchestrator', () => {
                 port: 5001,
                 baseUrl: testBaseUrl,
                 flaskProcess: null,
+                taskqProcess: null,
                 cleanup: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
             };
 

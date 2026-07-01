@@ -5,7 +5,7 @@ test.describe('Photo Details - Location Section', () => {
 
   test('photo_details_location_section_works', async ({ page, context }) => {
     // Navigate to the photo details page
-    await page.goto(`/photo/view/${PHOTO_ID}`);
+    await page.goto(`/media/view/${PHOTO_ID}`);
 
     // Wait for page to load
     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();
@@ -31,8 +31,8 @@ test.describe('Photo Details - Location Section', () => {
     
     const coordinatesValue = coordinatesItem.locator('.detail-value');
     const coordText = await coordinatesValue.textContent();
-    // Coordinates should be in format: "latitude, longitude"
-    expect(coordText).toMatch(/[-+]?\d+\.\d+,\s*[-+]?\d+\.\d+/);
+    // Coordinates are displayed as "latitude°, longitude°"
+    expect(coordText).toMatch(/[-+]?\d+\.\d+°?,\s*[-+]?\d+\.\d+°?/);
 
     // Verify View on Map link is present
     const viewMapLink = locationDetails.locator('a.action-button').filter({ hasText: 'View on Map' });
@@ -49,7 +49,7 @@ test.describe('Photo Details - Location Section', () => {
 
     // Verify the URL coordinates match the displayed coordinates (with tolerance for precision)
     // Extract coordinates from both display and URL
-    const displayMatch = coordText?.match(/([-+]?\d+\.\d+),\s*([-+]?\d+\.\d+)/);
+    const displayMatch = coordText?.match(/([-+]?\d+\.\d+)°?,\s*([-+]?\d+\.\d+)°?/);
     const urlMatch = href?.match(/q=([-+]?\d+\.\d+),([-+]?\d+\.\d+)/);
     
     if (displayMatch && urlMatch) {

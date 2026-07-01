@@ -76,14 +76,6 @@ def seed_database() -> int:
                     )
                     db.session.add(photo)
                     db.session.flush()
-                    tags = result["tags"]
-                    for tag_data in tags:
-                        tag = Tag(
-                            media_item_id=photo.id,
-                            tag_name=tag_data['tag_name'],
-                            tag_value=tag_data['tag_value']
-                        )
-                        db.session.add(tag)
                     faces_data = result["faces_data"]
                     for face_data in faces_data:
                         face = Face(

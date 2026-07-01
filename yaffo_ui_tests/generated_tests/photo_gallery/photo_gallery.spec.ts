@@ -5,6 +5,14 @@ async function getPhotoCount(page: Page): Promise<number> {
   return page.locator('.photo-card').count();
 }
 
+// Selects an option in the custom searchable-select widget that wraps a native
+// <select> (the native element is hidden, so locator.selectOption won't work).
+async function pickSearchableOption(page: Page, selectSelector: string, optionText: string): Promise<void> {
+  const wrapper = page.locator(`${selectSelector} + .searchable-select-wrapper`);
+  await wrapper.locator('.searchable-select-display').click();
+  await wrapper.locator('.searchable-select-option').filter({ hasText: optionText }).first().click();
+}
+
 test.describe('Photo Gallery Feature', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -40,18 +48,19 @@ test.describe('Photo Gallery Feature', () => {
     const initialPhotoCount = await getPhotoCount(page);
     expect(initialPhotoCount).toBeGreaterThan(0);
 
+    // The native select is hidden behind the searchable-select widget
     const yearSelect = page.locator('select#year-select');
-    await expect(yearSelect).toBeVisible();
+    await expect(yearSelect).toBeAttached();
 
     // Get a valid year from the dropdown (the second option, as the first is 'All Years')
     const yearToSelect = await yearSelect.locator('option').nth(1).getAttribute('value');
     expect(yearToSelect).not.toBeNull();
     expect(yearToSelect).not.toBe('');
 
-    // Apply the year filter
-    await yearSelect.selectOption({ value: yearToSelect! });
+    // Apply the year filter via the searchable-select widget
+    await pickSearchableOption(page, 'select#year-select', yearToSelect!);
     await page.getByRole('button', { name: 'Apply Filters' }).click();
-    await page.waitForURL(`**/?year=${yearToSelect}**`);
+    await page.waitForURL(new RegExp(`[?&]year=${yearToSelect}`));
     
     await expect(page.locator('.photo-card').first()).toBeVisible();
     const filteredPhotoCount = await getPhotoCount(page);
@@ -75,10 +84,12 @@ test.describe('Photo Gallery Feature', () => {
   });
 
   test('gallery_page_navigation_works - Verify that the page navigation works', async ({ page }) => {
-    // Set page size to 10
-    const pageSizeSelect = page.locator('select#page-size');
-    await pageSizeSelect.selectOption({ label: '10' });
-    await page.waitForURL('**/?page=1&page-size=10**');
+    // Set page size to 10 via the searchable-select widget (the native select
+    // is hidden; choosing an option navigates to the option's URL)
+    const wrapper = page.locator('select#page-size + .searchable-select-wrapper');
+    await wrapper.locator('.searchable-select-display').click();
+    await wrapper.locator('.searchable-select-option').filter({ hasText: /^\s*10\s*$/ }).click();
+    await page.waitForURL(/[?&]page=1&page-size=10/);
 
     await expect(page.locator('.photo-card')).toHaveCount(10);
 
@@ -86,7 +97,7 @@ test.describe('Photo Gallery Feature', () => {
     const firstImageSrcPage1 = await page.locator('.photo-card img').first().getAttribute('src');
     const nextButton = page.getByRole('link', { name: 'Next ›' });
     await nextButton.click();
-    await page.waitForURL('**/?page=2&page-size=10**');
+    await page.waitForURL(/[?&]page=2&page-size=10/);
     await expect(page.locator('.photo-card').first()).toBeVisible();
     const firstImageSrcPage2 = await page.locator('.photo-card img').first().getAttribute('src');
     expect(firstImageSrcPage1).not.toEqual(firstImageSrcPage2);
@@ -94,7 +105,7 @@ test.describe('Photo Gallery Feature', () => {
     // Navigate to the first page
     const firstButton = page.getByRole('link', { name: '« First' });
     await firstButton.click();
-    await page.waitForURL('**/?page=1&page-size=10**');
+    await page.waitForURL(/[?&]page=1&page-size=10/);
     const firstImageSrcAfterReset = await page.locator('.photo-card img').first().getAttribute('src');
     expect(firstImageSrcAfterReset).toEqual(firstImageSrcPage1);
 

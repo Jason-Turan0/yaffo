@@ -1,0 +1,15 @@
+{
+  "testRunHistory": [
+    {
+      "timestamp": "2026-07-01T23:09:21.000Z",
+      "success": true,
+      "summary": {
+        "total": 5,
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0
+      },
+      "failedTests": []
+    }
+  ]
+}
