@@ -42,15 +42,12 @@ class Drained(NamedTuple):
     file_moves: list[FileMove]
 
 
-def _is_indexable(path: Path) -> bool:
+def _is_indexable(path: Path, ignored_dirs: list[Path] | None = None) -> bool:
     if path.suffix.lower() not in MEDIA_EXTENSIONS:
         return False
     if path.name.startswith("."):
         return False
-    ignored_dirs =[]
-    thumbnail_dir = _get_thumbnail_dir()
-    if thumbnail_dir:
-        ignored_dirs.append(thumbnail_dir)
+    ignored_dirs = ignored_dirs or []
     return not any(ignored in path.parents for ignored in ignored_dirs)
 
 
@@ -61,17 +58,17 @@ class _DebouncedHandler(FileSystemEventHandler):
     or do real work. It only stamps paths; draining/enqueuing happens elsewhere.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, ignored_dirs: list[Path] | None = None) -> None:
         self._pending_adds: dict[Path, float] = {}
         self._pending_deletes: dict[Path, float] = {}
         self._pending_dir_ops: dict[Path, tuple[Path | None, float]] = {}
         self._pending_file_moves: dict[Path, tuple[Path, float]] = {}  # dest -> (src, ts)
         self._lock = threading.Lock()
-        self.ignored_dirs: list[Path] = []
+        self.ignored_dirs = ignored_dirs or []
 
     def _mark_add(self, raw_path: str) -> None:
         path = Path(raw_path)
-        if not _is_indexable(path):
+        if not _is_indexable(path, self.ignored_dirs):
             return
         with self._lock:
             self._pending_deletes.pop(path, None)
@@ -79,7 +76,7 @@ class _DebouncedHandler(FileSystemEventHandler):
 
     def _mark_delete(self, raw_path: str) -> None:
         path = Path(raw_path)
-        if not _is_indexable(path):
+        if not _is_indexable(path, self.ignored_dirs):
             return
         with self._lock:
             self._pending_adds.pop(path, None)
@@ -104,7 +101,7 @@ class _DebouncedHandler(FileSystemEventHandler):
         so the flusher can update the photo in place (preserving its id/faces/tags)
         rather than deleting the old row and re-indexing the new path from scratch."""
         src, dest = Path(src_path), Path(dest_path)
-        if not _is_indexable(src) and not _is_indexable(dest):
+        if not _is_indexable(src, self.ignored_dirs) and not _is_indexable(dest, self.ignored_dirs):
             return
         with self._lock:
             # Supersede any add/delete already queued for these exact paths.
@@ -200,13 +197,17 @@ def _under_watched(path: Path, watched: set[Path]) -> bool:
     return any(path == media_dir or media_dir in path.parents for media_dir in watched)
 
 
-def _existing_media_items_under(directory: Path) -> list[Path]:
+def _existing_media_items_under(directory: Path, ignored_dirs: list[Path] | None = None) -> list[Path]:
     if not directory.exists():
         return []
-    return [p for p in directory.rglob("*") if p.is_file() and _is_indexable(p)]
+    return [p for p in directory.rglob("*") if p.is_file() and _is_indexable(p, ignored_dirs)]
 
 
-def _resolve_dir_ops(dir_ops: list[DirOp], watched: set[Path]) -> tuple[list[Path], list[Path]]:
+def _resolve_dir_ops(
+    dir_ops: list[DirOp],
+    watched: set[Path],
+    ignored_dirs: list[Path] | None = None,
+) -> tuple[list[Path], list[Path]]:
     """Translate settled directory moves/deletes into concrete file work.
 
     Returns (paths_to_index, dirs_to_remove). A directory's old location is
@@ -218,11 +219,15 @@ def _resolve_dir_ops(dir_ops: list[DirOp], watched: set[Path]) -> tuple[list[Pat
     for op in dir_ops:
         dirs_to_remove.append(op.src)
         if op.dest is not None and _under_watched(op.dest, watched):
-            paths_to_index.extend(_existing_media_items_under(op.dest))
+            paths_to_index.extend(_existing_media_items_under(op.dest, ignored_dirs))
     return paths_to_index, dirs_to_remove
 
 
-def _move_in_index(file_moves: list[FileMove], watched: set[Path]) -> tuple[list[Path], list[Path]]:
+def _move_in_index(
+    file_moves: list[FileMove],
+    watched: set[Path],
+    ignored_dirs: list[Path] | None = None,
+) -> tuple[list[Path], list[Path]]:
     """Apply settled file moves to the index in place, preserving the photo's id (and
     its faces/tags) instead of deleting + re-indexing.
 
@@ -237,7 +242,7 @@ def _move_in_index(file_moves: list[FileMove], watched: set[Path]) -> tuple[list
     session = SessionFactory()
     try:
         for move in file_moves:
-            if _is_indexable(move.dest) and move.dest.exists() and _under_watched(move.dest, watched):
+            if _is_indexable(move.dest, ignored_dirs) and move.dest.exists() and _under_watched(move.dest, watched):
                 if move_media_item_path(session, str(move.src), str(move.dest)):
                     logger.debug(f"Moved photo in index: {move.src} -> {move.dest}")
                 else:
@@ -249,7 +254,7 @@ def _move_in_index(file_moves: list[FileMove], watched: set[Path]) -> tuple[list
         SessionFactory.remove()
     return paths_to_index, paths_to_remove
 
-
+@cached(cache=TTLCache(maxsize=1, ttl=300))
 def _desired_media_dirs() -> set[Path]:
     """Currently-configured media dirs that exist on disk."""
     session = SessionFactory()
@@ -278,6 +283,9 @@ def _get_thumbnail_dir() -> Path | None:
     finally:
         session.close()
         SessionFactory.remove()
+
+    if thumbnail_dir is None:
+        return None
 
     if not thumbnail_dir.exists():
         logger.warning(f"Thumbnail dir does not exist, skipping: {thumbnail_dir}")
@@ -326,9 +334,13 @@ def main() -> None:
                 if desired != set(watches):
                     _reconcile_watches(observer, handler, watches, desired)
 
+                thumbnail_dir = _get_thumbnail_dir()
+                ignored_dirs = [thumbnail_dir] if thumbnail_dir else []
+                handler.ignored_dirs = ignored_dirs
+
                 result = handler.drain_settled()
-                to_index, dirs_to_remove = _resolve_dir_ops(result.dir_ops, set(watches))
-                move_adds, move_removes = _move_in_index(result.file_moves, set(watches))
+                to_index, dirs_to_remove = _resolve_dir_ops(result.dir_ops, set(watches), ignored_dirs)
+                move_adds, move_removes = _move_in_index(result.file_moves, set(watches), ignored_dirs)
 
                 adds = _filter_self_writes(list(dict.fromkeys(result.adds + to_index + move_adds)))
                 if adds:

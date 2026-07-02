@@ -141,6 +141,12 @@ def _watching(media: Path):
     observer = Observer()
     observer.schedule(handler, str(media), recursive=True)
     observer.start()
+    assert _wait_until(
+        lambda: observer.is_alive() and all(emitter.is_alive() for emitter in observer.emitters),
+        timeout=2.0,
+        interval=0.01,
+    )
+    time.sleep(0.25)
     try:
         yield _Collector(handler, {media})
     finally:
