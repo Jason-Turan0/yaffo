@@ -47,7 +47,11 @@ scenarios:
     verify:
       - The new-theme modal opens with a Name field
       - The theme "SpecTestTheme" appears under Custom themes
-      - The assistant runs a generation and produces a draft preview
+      # With the agent simulated client-side the server never stores a draft, so
+      # this scenario verifies the running transcript/busy state; the draft
+      # preview/publish/discard flow is covered by themes_publish_or_discard_draft
+      # via a draft injected into the theme's ApplicationSettings row.
+      - The assistant conversation runs (transcript + busy status) and the page reloads on finish
       - No error messages are shown
     cleanup:
       - Delete the theme "SpecTestTheme"

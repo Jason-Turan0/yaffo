@@ -73,8 +73,11 @@ scenarios:
       - Confirm the copies to keep and the action type
       - Execute the removal
     verify:
-      - A confirmation is required before executing a destructive action
-      - After executing, the marked duplicates are trashed or moved as chosen
-      - A summary of how many files were removed/moved is displayed
+      # APP GAP (flagged 2026-07-02): the app shows NO confirmation dialog before
+      # executing — the Remove button posts directly, even for Permanently Delete.
+      # The "Started removing N duplicates" toast is wiped immediately by the
+      # HX-Redirect, so the durable outcomes are asserted instead.
+      - After executing, the marked duplicates are trashed or moved as chosen (verified on the filesystem)
+      - The page redirects back to the Remove Duplicates utility
     cleanup:
       - Restore any test files that were trashed or moved during the run

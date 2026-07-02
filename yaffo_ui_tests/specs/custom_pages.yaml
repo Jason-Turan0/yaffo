@@ -48,6 +48,8 @@ scenarios:
     steps:
       - Create a page and open its design view
       - Set the Title to "SpecTestPage" and a Subtitle
+      # Tab order is a POSITION among the nav pages; the server repositions and
+      # clamps out-of-range values, so tests must use a valid position.
       - Set a Tab order value and toggle "Display title?"
       - Click the "Save" button
     verify:
@@ -82,7 +84,9 @@ scenarios:
       - The grid locks and a status bar ticks while generating
       - The conversation feed shows the user and assistant messages
       - When the draft is READY, the generated widget(s) render on the grid
-      - Save publishes the READY draft; Cancel would discard it
+      # Cancel is only enabled while a run is IN_PROGRESS (or FAILED); on a READY
+      # draft it is disabled — discarding means cancelling during the run.
+      - Save publishes the READY draft
     cleanup:
       - Delete the page
 

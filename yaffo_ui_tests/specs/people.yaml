@@ -25,6 +25,7 @@ context:
 
 data:
   - A newly created person starts with zero faces and zero photos
+  - Face ids 1,11,13,18,26,37,41 are reserved by the face_assignment suite (person Obama); never assign them from other suites
   - Gender options are Male, Female, and Not specified
 
 scenarios:
@@ -37,7 +38,9 @@ scenarios:
       - The People heading is visible
       - Each person row shows a name, a Faces count, and a Photos count
       - Each person row exposes Edit and Delete actions
-      - When there are no people an empty state ("No people yet") is shown
+      # The "No people yet" empty state requires zero people in the database;
+      # concurrent suites (face_assignment) create people mid-run, so it is not
+      # asserted deterministically.
 
   - name: people_can_add_new_person
     goal: The user can create a new person with a name, birthdate, and gender

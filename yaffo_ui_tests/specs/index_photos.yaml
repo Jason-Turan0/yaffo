@@ -31,8 +31,9 @@ scenarios:
       - Navigate to the Index Photos utility page
       - Wait for the scan to stream and complete
     verify:
-      - The "Total on Filesystem" counter updates live during the scan
-      - After the scan, Imported, Indexed, Not Indexed, and Orphaned counts are populated
+      # Per-tick live updates aren't observable on a small library (the stream
+      # finishes in one beat); the populated end state is the asserted contract.
+      - After the scan, Total on Filesystem, Imported, Indexed, Not Indexed, and Orphaned counts are populated
       - When there are unindexed or orphaned photos, their result tables are shown
 
   - name: index_photos_sync_database
@@ -47,6 +48,9 @@ scenarios:
       - After syncing, a success message is displayed
       - Re-scanning shows the Not Indexed and Orphaned counts reduced toward zero
 
+  # NOT EXERCISED: reaching this state means removing the seeded library
+  # directory; if the hourly file_sync automation ticks in that window it deletes
+  # every media row as "unconfigured", destroying the shared sandbox.
   - name: index_photos_no_media_dirs_prompts_settings
     goal: With no media directories configured the page prompts the user to add one
     priority: medium

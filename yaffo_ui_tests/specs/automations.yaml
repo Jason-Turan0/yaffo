@@ -29,6 +29,8 @@ data:
   - An automation whose triggers are all events runs scoped to a picked file/folder
   - A trigger-less automation warns instead of running when "Run now" is clicked
   - Sandbox Environment does not have API Keys setup so use client side interception to simulate agent interactions
+  - The sandbox seeds two custom automations - tag-recent-imports (enabled, schedule trigger, published code) and tag-new-arrivals (disabled, event trigger, published code plus a working draft)
+  - file_sync records no run Job when the index is already in sync; use tag-recent-imports for run-history assertions
 
 scenarios:
   - name: automations_list_shows_system_and_custom
@@ -41,7 +43,9 @@ scenarios:
       - The sidebar lists system and custom automations
       - Selecting one shows its name, description, and available actions
       - System automations show no Edit/Delete; custom automations show them
-      - With none selected, a "No automation selected" prompt is shown
+      # The "No automation selected" empty state only renders when the database holds
+      # zero automations; the seeded system automations make it unreachable (the index
+      # route redirects to the first automation), so it is not asserted.
 
   - name: automations_enable_disable_toggle
     goal: The user can enable and disable an automation
@@ -123,8 +127,11 @@ scenarios:
       - Wait for the generation to finish
     verify:
       - The new automation appears in the sidebar as a custom automation
-      - The assistant generates code and a transcript is shown
-      - A finished generation reloads to show the published code/draft
+      - While generating, the transcript shows the conversation and a busy status
+      # With the agent simulated client-side, the server never stores generated code,
+      # so the post-reload page truthfully shows no draft; verify the reload happens
+      # and the editor re-renders rather than asserting the code appears.
+      - A finished generation reloads the editor
     cleanup:
       - Delete the created custom automation
 

@@ -4,6 +4,15 @@
     box-sizing: border-box;
 }
 
+/* Author display rules (e.g. `.btn { display: inline-block }`,
+   `button[data-icon] { display: inline-flex }`) outrank the UA's
+   `[hidden] { display: none }`, silently un-hiding elements rendered with the
+   hidden attribute. All visibility toggling in this app drives the attribute
+   itself, so hidden must always win. */
+[hidden] {
+    display: none !important;
+}
+
 body {
     font-family: var(--font-body);
     background: var(--color-bg);

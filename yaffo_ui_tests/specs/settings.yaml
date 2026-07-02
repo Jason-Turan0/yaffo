@@ -48,7 +48,9 @@ scenarios:
       - A confirmation dialog is shown before removing
       - After confirming, the directory disappears from the Media Directories list
       - A success message is displayed
-      - When no directories remain, "No media directories configured" is shown
+      # The "No media directories configured" empty state requires removing the
+      # seeded library directory, which the parallel suites depend on — not asserted.
+      # Tests add their own scratch directory and remove that one.
 
   - name: settings_change_language
     goal: Changing the application language re-renders the UI in that locale
@@ -69,8 +71,10 @@ scenarios:
       - Navigate to the settings page
       - Change the "Preferred distance unit" selector
     verify:
-      - The distance unit preference is saved
-      - Distances shown elsewhere (e.g. locations) reflect the chosen unit
+      - The distance unit preference is saved and survives a reload
+      # Distance rendering elsewhere (locations, automation distance fields) reads
+      # the preference live; asserting it would couple this suite to those pages,
+      # so persistence is the verified contract.
     cleanup:
       - Restore the original distance unit
 
