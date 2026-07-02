@@ -6,7 +6,6 @@ tags:
 
 preconditions:
   - Application is running
-  - An AI model/API key is configured for automation generation
 
 context:
   - tag: automations-template
@@ -29,6 +28,7 @@ data:
   - System automations ship built-in and cannot be edited or deleted; custom ones can
   - An automation whose triggers are all events runs scoped to a picked file/folder
   - A trigger-less automation warns instead of running when "Run now" is clicked
+  - Sandbox Environment does not have API Keys setup so use client side interception to simulate agent interactions
 
 scenarios:
   - name: automations_list_shows_system_and_custom

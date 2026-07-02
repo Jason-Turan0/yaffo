@@ -449,36 +449,46 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                 </div>
             </div>
 
+            <button class="btn btn-secondary btn-block btn-clear-names">${escapeHtml(i18n.t('locations:selection.clearNames'))}</button>
             <button class="btn btn-secondary btn-block btn-clear-selection">${escapeHtml(i18n.t('locations:selection.clearSelection'))}</button>
         `;
 
         /**
+         * Assign `locationName` to the photos, or remove their names when it is
+         * null (the server requires an explicit clear flag so a blank input can
+         * never wipe names by accident).
          * @param {number[]} photoIds
-         * @param {string} locationName
+         * @param {string | null} locationName
          */
         const assignLocation = async (photoIds, locationName) => {
+            const clearing = locationName === null;
             try {
                 const response = await fetch(config.urls.locations_bulk_update, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
+                    body: JSON.stringify(clearing ? {
+                        media_item_ids: photoIds,
+                        clear: true
+                    } : {
                         media_item_ids: photoIds,
                         location_name: locationName
                     })
                 });
 
                 if (response.ok) {
-                    window.notification.success(i18n.t('locations:update.succeeded', {
-                        count: photoIds.length,
-                        location: locationName,
-                    }));
+                    window.notification.success(clearing
+                        ? i18n.t('locations:update.cleared', { count: photoIds.length })
+                        : i18n.t('locations:update.succeeded', {
+                            count: photoIds.length,
+                            location: locationName,
+                        }));
 
                     allFeatures.forEach(feature => {
                         const featureId = feature.get('id');
                         if (photoIds.includes(featureId)) {
-                            feature.set('name', locationName);
+                            feature.set('name', clearing ? null : locationName);
                         }
                     });
 
@@ -537,6 +547,10 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                 }
             });
         }
+
+        document.querySelector('.btn-clear-names')?.addEventListener('click', async () => {
+            await assignLocation(allPhotoIds, null);
+        });
 
         document.querySelector('.btn-clear-selection')?.addEventListener('click', () => {
             selectedFeatures.clear();

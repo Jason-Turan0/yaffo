@@ -44,6 +44,54 @@ test.describe('Photo Gallery Feature', () => {
     }
   });
 
+  test('gallery_loads_with_valid_videos - Gallery displays videos with valid posters and inline playback works', async ({ page }) => {
+    // Show only videos so the cards are on page 1 regardless of paging
+    await page.goto('/?media-type=video');
+    await expect(page.locator('.photo-card').first()).toBeVisible();
+
+    // Playable videos carry an interactive ▶ badge on their card
+    const videoCards = page.locator('.photo-card:has(.video-play-badge)');
+    const videoCount = await videoCards.count();
+    expect(videoCount).toBeGreaterThan(0);
+
+    // Poster stills load and are not the fallback placeholder
+    for (const img of await page.locator('.photo-card .photo-thumb img').all()) {
+      const src = await img.getAttribute('src');
+      const fallbackSrc = await img.getAttribute('data-fallback');
+      expect(src).not.toBeNull();
+      expect(src).not.toContain(fallbackSrc!);
+      const response = await page.request.get(src!, { failOnStatusCode: false });
+      expect(response.ok(), `Poster src "${src}" failed with status ${response.status()}`).toBe(true);
+    }
+
+    // Each video card shows its duration badge
+    const firstCard = videoCards.first();
+    await expect(firstCard.locator('.video-duration')).toBeVisible();
+
+    // The video stream itself is servable
+    const playBadge = firstCard.locator('button.video-play-badge');
+    const mediaId = await playBadge.getAttribute('data-photo-id');
+    expect(mediaId).not.toBeNull();
+    const mediaResponse = await page.request.get(`/media/${mediaId}`, { failOnStatusCode: false });
+    expect(mediaResponse.ok(), `Video src "/media/${mediaId}" failed with status ${mediaResponse.status()}`).toBe(true);
+
+    // Clicking the badge swaps the poster for an inline, muted, autoplaying player
+    await playBadge.click();
+    const inlineVideo = firstCard.locator('video.video-inline');
+    await expect(inlineVideo).toBeVisible();
+    await expect(firstCard.locator('.photo-thumb')).toHaveClass(/is-playing/);
+    await expect(firstCard.locator('.photo-thumb img')).toBeHidden();
+
+    // It is actually playing (time advances), then pause it
+    await expect.poll(() => inlineVideo.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(0);
+    expect(await inlineVideo.evaluate((v: HTMLVideoElement) => v.paused)).toBe(false);
+    await inlineVideo.evaluate((v: HTMLVideoElement) => v.pause());
+    expect(await inlineVideo.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+
+    // Inline play/pause must not have navigated off the gallery
+    expect(new URL(page.url()).pathname).toBe('/');
+  });
+
   test('gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page', async ({ page }) => {
     const initialPhotoCount = await getPhotoCount(page);
     expect(initialPhotoCount).toBeGreaterThan(0);

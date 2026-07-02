@@ -73,6 +73,18 @@ scenarios:
     cleanup:
       - Clear the location name "Test Beach" from the affected photos
 
+  - name: locations_clear_location_names
+    goal: The user can select clusters and remove the location names from all their photos
+    priority: medium
+    steps:
+      - Navigate to the locations page
+      - Hold Shift and drag a box to select one or more clusters
+      - Click the "Clear location names" button in the selection panel
+    verify:
+      - A success message reports the names were cleared
+      - The selected photos no longer carry a location name
+      - The "only unnamed" filter includes the affected photos again
+
   - name: locations_reverse_geocode_suggests_name
     goal: The app can suggest a place name from coordinates via reverse geocoding
     priority: medium
@@ -81,5 +93,5 @@ scenarios:
       - Select a cluster of photos that has coordinates
       - Trigger the reverse-geocode / suggest-name action in the selection panel
     verify:
-      - A suggested location name is returned and populated in the name field
+      - A suggested location name is offered as a recommended quick-assign action
       - The suggestion reflects the coordinates of the selected photos

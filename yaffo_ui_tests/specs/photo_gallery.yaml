@@ -7,7 +7,7 @@ tags:
 
 preconditions:
   - Application is running
-  - Database contains sample photos
+  - Database contains sample photos and browser-playable (h264) sample videos
 
 context:
   - tag: gallery-template

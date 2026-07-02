@@ -148,6 +148,7 @@
     },
     "selection": {
       "assignAll": "Allen zuweisen",
+      "clearNames": "Ortsnamen entfernen",
       "clearSelection": "Auswahl aufheben",
       "customLocation": "Oder einen benutzerdefinierten Ort eingeben",
       "massAssignment": "Massenzuweisung",
@@ -163,6 +164,8 @@
     },
     "unknownLocation": "Unbekannter Ort",
     "update": {
+      "cleared_one": "Ortsname von {{count}} Foto entfernt",
+      "cleared_other": "Ortsnamen von {{count}} Fotos entfernt",
       "failed": "Orte konnten nicht aktualisiert werden",
       "nameRequired": "Bitte geben Sie einen Ortsnamen ein",
       "succeeded_one": "{{count}} Foto wurde auf „{{location}}“ aktualisiert",

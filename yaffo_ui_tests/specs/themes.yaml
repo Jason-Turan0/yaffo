@@ -6,7 +6,6 @@ tags:
 
 preconditions:
   - Application is running
-  - An AI model/API key is configured for theme generation
 
 context:
   - tag: themes-template
@@ -22,6 +21,7 @@ context:
 data:
   - System themes cannot be renamed or deleted; only custom themes can
   - A generation produces a draft that must be published to take effect or discarded to revert
+  - Sandbox Environment does not have API Keys setup so use client side interception to simulate agent interactions
 
 scenarios:
   - name: themes_list_shows_system_and_custom

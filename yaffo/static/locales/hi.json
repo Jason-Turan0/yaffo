@@ -148,6 +148,7 @@
     },
     "selection": {
       "assignAll": "सभी को सौंपें",
+      "clearNames": "स्थान नाम हटाएँ",
       "clearSelection": "स्पष्ट चयन",
       "customLocation": "या कस्टम स्थान दर्ज करें",
       "massAssignment": "मास असाइनमेंट",
@@ -163,6 +164,8 @@
     },
     "unknownLocation": "अज्ञात स्थान",
     "update": {
+      "cleared_one": "{{count}} फ़ोटो से स्थान नाम हटा दिया गया",
+      "cleared_other": "{{count}} फ़ोटो से स्थान नाम हटा दिए गए",
       "failed": "स्थान अपडेट करने में विफल",
       "nameRequired": "कृपया स्थान का नाम दर्ज करें",
       "succeeded_one": "अद्यतन {{count}} फ़ोटो को \"{{location}}\"",

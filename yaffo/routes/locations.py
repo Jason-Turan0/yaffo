@@ -45,13 +45,16 @@ def init_locations_routes(app: Flask):
 
     @app.route("/locations/bulk-update", methods=["POST"])
     def locations_bulk_update():
-        """Bulk update location names for multiple photos"""
+        """Bulk update (or, with clear=true, remove) location names for multiple
+        photos. Clearing is an explicit flag rather than an empty name so a blank
+        input can never silently wipe names."""
         data = request.get_json(silent=True) or {}
         media_item_ids = data.get('media_item_ids', [])
+        clear = data.get('clear') is True
         raw_location_name = data.get('location_name')
         location_name = raw_location_name.strip() if isinstance(raw_location_name, str) else ""
 
-        if not media_item_ids or not location_name:
+        if not media_item_ids or (not location_name and not clear):
             return jsonify({
                 'error': gettext("Media item IDs and location name are required"),
                 'code': 'location_fields_required',
@@ -62,7 +65,7 @@ def init_locations_routes(app: Flask):
                 db.session.query(MediaItem)
                 .filter(MediaItem.id.in_(media_item_ids))
                 .update({
-                    'location_name': location_name,
+                    'location_name': None if clear else location_name,
                     'status': MEDIA_STATUS_INDEXED
                 }, synchronize_session=False)
             )
@@ -72,7 +75,7 @@ def init_locations_routes(app: Flask):
             return jsonify({
                 'success': True,
                 'updated_count': updated_count,
-                'location_name': location_name
+                'location_name': None if clear else location_name
             })
         except Exception:
             db.session.rollback()

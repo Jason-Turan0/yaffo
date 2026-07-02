@@ -6,7 +6,6 @@ tags:
 
 preconditions:
   - Application is running
-  - An AI model/API key is configured for widget generation
 
 context:
   - tag: pages
@@ -28,6 +27,7 @@ context:
 data:
   - A page edits exactly one version — the working draft if one exists, else the published version
   - A generation forks a working draft; Save publishes a READY draft, Cancel discards it
+  - Sandbox Environment does not have API Keys setup so use client side interception to simulate agent interactions
 
 scenarios:
   - name: pages_create_new_page

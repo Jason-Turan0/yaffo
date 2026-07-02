@@ -148,6 +148,7 @@
     },
     "selection": {
       "assignAll": "分配给全部",
+      "clearNames": "清除位置名称",
       "clearSelection": "清除选择",
       "customLocation": "或输入自定义位置",
       "massAssignment": "批量分配",
@@ -163,6 +164,8 @@
     },
     "unknownLocation": "未知地点",
     "update": {
+      "cleared_one": "已清除 {{count}} 张照片的位置名称",
+      "cleared_other": "已清除 {{count}} 张照片的位置名称",
       "failed": "无法更新位置",
       "nameRequired": "请输入地点名称",
       "succeeded_one": "已更新 {{count}} 照片到“{{location}}\"",

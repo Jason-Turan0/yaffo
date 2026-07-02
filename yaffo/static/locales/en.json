@@ -148,6 +148,7 @@
     },
     "selection": {
       "assignAll": "Assign to All",
+      "clearNames": "Clear location names",
       "clearSelection": "Clear Selection",
       "customLocation": "Or enter custom location",
       "massAssignment": "Mass Assignment",
@@ -163,6 +164,8 @@
     },
     "unknownLocation": "Unknown Location",
     "update": {
+      "cleared_one": "Cleared the location name from {{count}} photo",
+      "cleared_other": "Cleared the location name from {{count}} photos",
       "failed": "Failed to update locations",
       "nameRequired": "Please enter a location name",
       "succeeded_one": "Updated {{count}} photo to \"{{location}}\"",

@@ -148,6 +148,7 @@
     },
     "selection": {
       "assignAll": "Asignar a todos",
+      "clearNames": "Quitar nombres de ubicación",
       "clearSelection": "Borrar selección",
       "customLocation": "O ingrese una ubicación personalizada",
       "massAssignment": "Asignación masiva",
@@ -163,6 +164,8 @@
     },
     "unknownLocation": "Ubicación desconocida",
     "update": {
+      "cleared_one": "Se quitó el nombre de ubicación de {{count}} foto",
+      "cleared_other": "Se quitó el nombre de ubicación de {{count}} fotos",
       "failed": "No se pudieron actualizar las ubicaciones",
       "nameRequired": "Por favor ingresa un nombre de ubicación",
       "succeeded_one": "Foto {{count}} actualizada a \"{{location}}\"",

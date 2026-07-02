@@ -148,6 +148,7 @@
     },
     "selection": {
       "assignAll": "تعيين للجميع",
+      "clearNames": "مسح أسماء المواقع",
       "clearSelection": "مسح التحديد",
       "customLocation": "أو أدخل الموقع المخصص",
       "massAssignment": "التكليف الجماعي",
@@ -163,6 +164,8 @@
     },
     "unknownLocation": "موقع غير معروف",
     "update": {
+      "cleared_one": "تم مسح اسم الموقع من {{count}} صورة",
+      "cleared_other": "تم مسح اسم الموقع من {{count}} صور",
       "failed": "فشل تحديث المواقع",
       "nameRequired": "الرجاء إدخال اسم الموقع",
       "succeeded_one": "تم التحديث {{count}} الصورة إلى \"{{location}}\"",
