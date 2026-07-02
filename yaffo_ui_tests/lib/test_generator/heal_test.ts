@@ -18,6 +18,7 @@ import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client"
 import {GENERATED_TESTS_ROOT, YAFFO_APP_ROOT} from "@lib/types";
 import {recordTestResult} from "@lib/test_generator/test_result_history";
 import {parseSpecFile} from "@lib/test_generator/prompt/spec_parser";
+import {ModelAlias} from "@lib/model_clients/model_client.interface";
 
 const SPECS_DIR = resolve(join(process.cwd(), "specs"));
 
@@ -34,13 +35,14 @@ function inferSpecPath(testFilePath: string): string {
 
 interface HealOptions {
     port?: number;
+    model?: string;
 }
 
 export async function healTest(
     testFilePath: string,
     options: HealOptions = {}
 ): Promise<HealResult> {
-    const {port = 5001} = options;
+    const {port = 5001, model = "claude-sonnet-4-5"} = options;
     const specPath = inferSpecPath(testFilePath);
     const baseUrl = `http://127.0.0.1:${port}`;
 
@@ -92,7 +94,7 @@ export async function healTest(
             absoluteTestPath,
             logPath,
             outputDir,
-            "claude-sonnet-4-5",
+            model as ModelAlias,
             baseUrl,
             allowedDirectories,
             await createFilesystemClient(allowedDirectories),
@@ -114,10 +116,15 @@ async function main() {
     const port = portIndex !== -1 && args[portIndex + 1]
         ? parseInt(args[portIndex + 1], 10)
         : 5001;
+    const modelIndex = args.findIndex(a => a === "--model" || a === "-m");
+    const model = modelIndex !== -1 && args[modelIndex + 1]
+        ? args[modelIndex + 1]
+        : "claude-sonnet-4-5";
 
     const filteredArgs = args.filter((a, i) =>
         !a.startsWith("--") && !a.startsWith("-") &&
-        (portIndex === -1 || i !== portIndex + 1)
+        (portIndex === -1 || i !== portIndex + 1) &&
+        (modelIndex === -1 || i !== modelIndex + 1)
     );
 
     if (filteredArgs.length === 0) {
@@ -125,6 +132,7 @@ async function main() {
         console.error("");
         console.error("Options:");
         console.error("  -p, --port <port>   Port for isolated Flask server (default: 5001)");
+        console.error("  -m, --model <model> Model alias (default: claude-sonnet-4-5)");
         console.error("");
         process.exit(1);
     }
@@ -133,7 +141,7 @@ async function main() {
 
     console.log(`\n🩹 Auto-healing test: ${testFilePath}`);
 
-    const result = await healTest(testFilePath, {port});
+    const result = await healTest(testFilePath, {port, model});
 
     if (result.success) {
         console.log(`\n✅ Test healed successfully after ${result.iterations} iteration(s)`);

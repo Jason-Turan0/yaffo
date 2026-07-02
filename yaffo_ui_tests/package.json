@@ -13,6 +13,7 @@
     "test:headed": "playwright test --headed",
     "isolatedEnvironment:start": "tsx lib/services/isolated_runner.ts --port 5002",
     "test:heal": "tsx lib/test_generator/heal_test.ts",
+    "test:heal:repo": "tsx lib/test_generator/heal_repo.ts",
     "analyze": "tsx lib/cli/analyze.ts",
     "regenerate": "tsx lib/cli/regenerate.ts",
     "validate": "tsx lib/cli/validate-specs.ts",
