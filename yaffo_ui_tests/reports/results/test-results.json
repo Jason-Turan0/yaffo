@@ -93,12 +93,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 2622,
+                      "duration": 3154,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:21.632Z",
+                      "startTime": "2026-07-02T01:33:43.004Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -127,12 +127,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 587,
+                      "duration": 1940,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:24.512Z",
+                      "startTime": "2026-07-02T01:33:46.594Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -161,12 +161,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1574,
+                      "duration": 1551,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:25.103Z",
+                      "startTime": "2026-07-02T01:33:48.541Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -195,12 +195,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 268,
+                      "duration": 256,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:26.682Z",
+                      "startTime": "2026-07-02T01:33:50.096Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -229,12 +229,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 466,
+                      "duration": 1592,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:26.954Z",
+                      "startTime": "2026-07-02T01:33:50.355Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -263,12 +263,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 307,
+                      "duration": 297,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:27.425Z",
+                      "startTime": "2026-07-02T01:33:51.952Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -279,6 +279,227 @@
               "id": "74b764fe8023e3d0b0fe-9f19be366c14c4bf7df0",
               "file": "face_assignment/face-assignment.spec.ts",
               "line": 250,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "locations/locations.spec.ts",
+      "file": "locations/locations.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Locations Map",
+          "file": "locations/locations.spec.ts",
+          "line": 90,
+          "column": 6,
+          "specs": [
+            {
+              "title": "locations_map_displays_photo_markers - Map renders with markers for photos that have coordinates",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 20000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1254,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-02T01:33:43.004Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-7dd20a579e981dfac684",
+              "file": "locations/locations.spec.ts",
+              "line": 92,
+              "column": 3
+            },
+            {
+              "title": "locations_popup_shows_photo_details - Clicking a marker opens a popup with the photo, closing hides it",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 20000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1011,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-02T01:33:44.692Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-b5ca1658801bb8058b27",
+              "file": "locations/locations.spec.ts",
+              "line": 108,
+              "column": 3
+            },
+            {
+              "title": "locations_filter_unnamed_photos - The unnamed-only filter narrows the map and unchecking restores it",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 20000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 873,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-02T01:33:45.709Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-ae019652ed9cc112149c",
+              "file": "locations/locations.spec.ts",
+              "line": 139,
+              "column": 3
+            },
+            {
+              "title": "locations_reverse_geocode_suggests_name - Selecting a cluster surfaces a reverse-geocoded name suggestion",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 20000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 941,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-02T01:33:46.586Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-e266b695afca783fc4b7",
+              "file": "locations/locations.spec.ts",
+              "line": 155,
+              "column": 3
+            },
+            {
+              "title": "locations_select_clusters_and_assign_name - Shift-drag selection assigns a location name to the photos",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 20000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 914,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-02T01:33:47.531Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-8b17af4d1a34d1b30762",
+              "file": "locations/locations.spec.ts",
+              "line": 190,
+              "column": 3
+            },
+            {
+              "title": "locations_clear_location_names - Clearing removes the names from the selected photos",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 20000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1148,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-02T01:33:48.450Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-8056494297b14b3c7c5d",
+              "file": "locations/locations.spec.ts",
+              "line": 230,
               "column": 3
             }
           ]
@@ -311,15 +532,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 1106,
+                      "duration": 1344,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:21.606Z",
+                      "startTime": "2026-07-02T01:33:42.998Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -362,15 +583,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 533,
+                      "duration": 881,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:21.604Z",
+                      "startTime": "2026-07-02T01:33:43.004Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -413,15 +634,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 4,
+                      "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 537,
+                      "duration": 880,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:21.615Z",
+                      "startTime": "2026-07-02T01:33:43.019Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -464,15 +685,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 4,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 849,
+                      "duration": 620,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:21.620Z",
+                      "startTime": "2026-07-02T01:33:44.320Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -515,15 +736,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 4,
+                      "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 955,
+                      "duration": 787,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:22.413Z",
+                      "startTime": "2026-07-02T01:33:44.321Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -566,15 +787,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 1186,
+                      "duration": 1161,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:22.419Z",
+                      "startTime": "2026-07-02T01:33:44.788Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -585,6 +806,40 @@
               "id": "471d0833fad5445aea7e-12319756122df01d8746",
               "file": "photo_gallery/photo_gallery.spec.ts",
               "line": 24,
+              "column": 3
+            },
+            {
+              "title": "gallery_loads_with_valid_videos - Gallery displays videos with valid posters and inline playback works",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 1363,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-02T01:33:44.964Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-de2324be9d417c59a050",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 47,
               "column": 3
             },
             {
@@ -603,12 +858,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 1060,
+                      "duration": 1221,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:22.739Z",
+                      "startTime": "2026-07-02T01:33:45.120Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -618,7 +873,7 @@
               ],
               "id": "471d0833fad5445aea7e-9d78d8b97cfa643c3db9",
               "file": "photo_gallery/photo_gallery.spec.ts",
-              "line": 47,
+              "line": 95,
               "column": 3
             },
             {
@@ -634,15 +889,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 1065,
+                      "duration": 1358,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-01T23:04:22.989Z",
+                      "startTime": "2026-07-02T01:33:45.961Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -652,7 +907,7 @@
               ],
               "id": "471d0833fad5445aea7e-c2aefbf64dc2ad57a7dd",
               "file": "photo_gallery/photo_gallery.spec.ts",
-              "line": 86,
+              "line": 134,
               "column": 3
             }
           ]
@@ -662,9 +917,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-01T23:04:21.299Z",
-    "duration": 6455.324,
-    "expected": 14,
+    "startTime": "2026-07-02T01:33:42.610Z",
+    "duration": 9663.815999999999,
+    "expected": 21,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

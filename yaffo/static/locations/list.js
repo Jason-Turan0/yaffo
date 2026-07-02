@@ -398,40 +398,44 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
             totalPhotos === 1 ? 'One' : 'Other'
         }${selectedClusters.length === 1 ? 'One' : 'Other'}`;
         panelContent.innerHTML = `
-            <h3>${escapeHtml(i18n.t('locations:selection.massAssignment'))}</h3>
-            <div class="mass-assignment-info">
-                ${escapeHtml(i18n.t(summaryKey, {
-                    photos: i18n.number(totalPhotos),
-                    clusters: i18n.number(selectedClusters.length),
-                }))}
+            <div class="selection-panel-header">
+                <h3>${escapeHtml(i18n.t('locations:selection.massAssignment'))}</h3>
+                <div class="mass-assignment-info">
+                    ${escapeHtml(i18n.t(summaryKey, {
+                        photos: i18n.number(totalPhotos),
+                        clusters: i18n.number(selectedClusters.length),
+                    }))}
+                </div>
             </div>
 
-            ${sortedLocations.length > 0 ? `
-                <div class="quick-actions">
-                    <div class="quick-action-label">${escapeHtml(i18n.t('locations:selection.quickAssign'))}</div>
-                    <div class="quick-actions-buttons">
-                        ${sortedLocations.map(([name, count]) => `
-                            <button class="btn-quick-assign"
-                                    data-photo-ids="${allPhotoIds.join(',')}"
-                                    data-location-name="${escapeHtml(name)}"
-                                    title="${escapeHtml(name)} (${i18n.number(count)})">
-                                ${escapeHtml(name)} (${i18n.number(count)})
-                            </button>
-                        `).join('')}
+            <div class="selection-assignment">
+                ${sortedLocations.length > 0 ? `
+                    <div class="quick-actions">
+                        <div class="quick-action-label">${escapeHtml(i18n.t('locations:selection.quickAssign'))}</div>
+                        <div class="quick-actions-buttons">
+                            ${sortedLocations.map(([name, count]) => `
+                                <button class="btn-quick-assign"
+                                        data-photo-ids="${allPhotoIds.join(',')}"
+                                        data-location-name="${escapeHtml(name)}"
+                                        title="${escapeHtml(name)} (${i18n.number(count)})">
+                                    ${escapeHtml(name)} (${i18n.number(count)})
+                                </button>
+                            `).join('')}
+                        </div>
                     </div>
-                </div>
-            ` : ''}
+                ` : ''}
 
-            <div class="cluster-assign">
-                <input type="text"
-                       class="location-input"
-                       placeholder="${escapeHtml(i18n.t('locations:selection.customLocation'))}"
-                       id="mass-location-input">
-                <button class="btn btn-primary btn-assign"
-                        data-photo-ids="${allPhotoIds.join(',')}"
-                        id="mass-assign-btn">
-                    ${escapeHtml(i18n.t('locations:selection.assignAll'))}
-                </button>
+                <div class="cluster-assign">
+                    <input type="text"
+                           class="location-input"
+                           placeholder="${escapeHtml(i18n.t('locations:selection.customLocation'))}"
+                           id="mass-location-input">
+                    <button class="btn btn-primary btn-assign"
+                            data-photo-ids="${allPhotoIds.join(',')}"
+                            id="mass-assign-btn">
+                        ${escapeHtml(i18n.t('locations:selection.assignAll'))}
+                    </button>
+                </div>
             </div>
 
             <div class="clusters-summary">
@@ -449,8 +453,10 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                 </div>
             </div>
 
-            <button class="btn btn-secondary btn-block btn-clear-names">${escapeHtml(i18n.t('locations:selection.clearNames'))}</button>
-            <button class="btn btn-secondary btn-block btn-clear-selection">${escapeHtml(i18n.t('locations:selection.clearSelection'))}</button>
+            <div class="selection-panel-actions">
+                <button class="btn btn-secondary btn-clear-selection">${escapeHtml(i18n.t('locations:selection.clearSelection'))}</button>
+                <button class="btn btn-secondary btn-clear-names">${escapeHtml(i18n.t('locations:selection.clearNames'))}</button>
+            </div>
         `;
 
         /**
@@ -578,12 +584,13 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                         </button>
                     `;
 
-                    const quickActionsSection = panelContent.querySelector('.quick-actions');
+                    const assignmentSection = panelContent.querySelector('.selection-assignment');
+                    const quickActionsSection = assignmentSection?.querySelector('.quick-actions');
                     if (quickActionsSection) {
-                        panelContent.insertBefore(recommendedSection, quickActionsSection);
+                        assignmentSection?.insertBefore(recommendedSection, quickActionsSection);
                     } else {
-                        const clusterAssign = panelContent.querySelector('.cluster-assign');
-                        if (clusterAssign) panelContent.insertBefore(recommendedSection, clusterAssign);
+                        const clusterAssign = assignmentSection?.querySelector('.cluster-assign');
+                        if (clusterAssign) assignmentSection?.insertBefore(recommendedSection, clusterAssign);
                     }
 
                     const newRecommendedBtn = recommendedSection.querySelector('.btn-quick-assign');
