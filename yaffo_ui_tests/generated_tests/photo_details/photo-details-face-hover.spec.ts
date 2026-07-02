@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { findFirstPhotoIdWithDetectedFaces } from '../_support/media-test-data';
 
 test.describe('Photo Details - Face Hover Highlights', () => {
-  const PHOTO_ID = 7;
+  test('photo_details_face_hover_highlights', async ({ page, request }) => {
+    const photoId = await findFirstPhotoIdWithDetectedFaces(request);
 
-  test('photo_details_face_hover_highlights', async ({ page }) => {
     // Navigate to the photo details page
-    await page.goto(`/media/view/${PHOTO_ID}`);
+    await page.goto(`/media/view/${photoId}`);
 
     // Wait for page to load
     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();

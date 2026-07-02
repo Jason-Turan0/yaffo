@@ -15,7 +15,7 @@ import {runPlaywrightTests} from "@lib/services/run_playwright_tests";
 import {generateTimestampString} from "@lib/test_generator/utils";
 import {startIsolatedEnvironment, IsolatedEnvironment} from "@lib/services/isolated_runner";
 import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
-import {YAFFO_ROOT} from "@lib/types";
+import {GENERATED_TESTS_ROOT, YAFFO_APP_ROOT} from "@lib/types";
 import {recordTestResult} from "@lib/test_generator/test_result_history";
 import {parseSpecFile} from "@lib/test_generator/prompt/spec_parser";
 
@@ -87,7 +87,7 @@ export async function healTest(
         console.log(`\n🩹 Starting auto-heal process...`);
 
 
-        const allowedDirectories = [YAFFO_ROOT, outputDir, isolatedEnvironment.tempDir];
+        const allowedDirectories = [YAFFO_APP_ROOT, GENERATED_TESTS_ROOT, outputDir, isolatedEnvironment.tempDir];
         const healer = await autoHealTestOrchestratorFactory(
             absoluteTestPath,
             logPath,

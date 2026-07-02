@@ -49,4 +49,7 @@ export interface GenerationMetadata {
   domContextHash?: string;
 }
 
-export const YAFFO_ROOT = resolve(join(__dirname, "../../yaffo"));
+export const YAFFO_PROJECT_ROOT = resolve(join(__dirname, "../.."));
+export const YAFFO_APP_ROOT = resolve(join(YAFFO_PROJECT_ROOT, "yaffo"));
+export const GENERATED_TESTS_ROOT = resolve(join(YAFFO_PROJECT_ROOT, "yaffo_ui_tests", "generated_tests"));
+export const YAFFO_ROOT = YAFFO_APP_ROOT;

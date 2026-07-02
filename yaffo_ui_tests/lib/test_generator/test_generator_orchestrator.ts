@@ -1,4 +1,4 @@
-import {join, resolve, basename} from "path";
+import {join, basename} from "path";
 import {writeFileSync, existsSync, readFileSync, unlinkSync, mkdirSync} from "fs";
 import {GenerationResult} from "@lib/test_generator/index.types";
 import {Spec} from "@lib/test_generator/prompt/spec_parser.types";
@@ -27,8 +27,7 @@ import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesy
 import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/services/run_playwright_tests";
 import {recordTestResult} from "@lib/test_generator/test_result_history";
 import {buildTestFailurePrompt} from "@lib/test_generator/prompt/formatters";
-
-const YAFFO_ROOT = resolve(join(process.cwd(), "../yaffo"));
+import {GENERATED_TESTS_ROOT, YAFFO_APP_ROOT, YAFFO_PROJECT_ROOT} from "@lib/types";
 
 export class TestGeneratorOrchestrator {
     private iterationCount = 0;
@@ -357,7 +356,7 @@ export const testGeneratorOrchestratorFactory = async (
     port: number,
 ) => {
     let isolatedEnvironment: IsolatedEnvironment | null = null;
-    const allowedDirectories = [YAFFO_ROOT, outputDir];
+    const allowedDirectories = [YAFFO_PROJECT_ROOT, outputDir, GENERATED_TESTS_ROOT];
     if (runTestEnvironment) {
         isolatedEnvironment = await startIsolatedEnvironment(port);
         allowedDirectories.push(isolatedEnvironment.tempDir);
@@ -378,7 +377,7 @@ export const testGeneratorOrchestratorFactory = async (
 
     const toolProviders: ToolProvider[] = [fileMcpClient, mcpPlaywrightClient, memoryTool];
 
-    const promptGenerator = promptGeneratorFactory(runTestEnvironment, baseUrl, YAFFO_ROOT, outputDir, spec);
+    const promptGenerator = promptGeneratorFactory(runTestEnvironment, baseUrl, YAFFO_APP_ROOT, outputDir, spec);
     const outputSchemaStr = supportsNativeStructuredOutput(model)
         ? undefined
         : JSON.stringify(zodToJsonSchema(GeneratedTestResponseSchema), null, 2);

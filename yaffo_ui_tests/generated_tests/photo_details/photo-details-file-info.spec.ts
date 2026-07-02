@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { findMediaIdByFilename } from '../_support/media-test-data';
 
 test.describe('Photo Details - File Information', () => {
-  const PHOTO_ID = 14;
+  test('photo_details_displays_file_information', async ({ page, request }) => {
+    const photoId = await findMediaIdByFilename(request, 'DSCN0010.jpg');
 
-  test('photo_details_displays_file_information', async ({ page, baseURL }) => {
     // Navigate to the photo details page
-    await page.goto(`/media/view/${PHOTO_ID}`);
+    await page.goto(`/media/view/${photoId}`);
 
     // Verify page loads successfully
     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();
@@ -26,7 +27,7 @@ test.describe('Photo Details - File Information', () => {
     await expect(mainPhoto).toBeVisible();
 
     // Check that the image source is correct and returns 200
-    const imageResponse = await page.request.get(`/media/${PHOTO_ID}`);
+    const imageResponse = await page.request.get(`/media/${photoId}`);
     expect(imageResponse.status()).toBe(200);
 
     // Verify Open File and Open Folder buttons are visible

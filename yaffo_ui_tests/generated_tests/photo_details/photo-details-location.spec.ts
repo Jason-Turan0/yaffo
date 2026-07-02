@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { findMediaIdByFilename } from '../_support/media-test-data';
 
 test.describe('Photo Details - Location Section', () => {
-  const PHOTO_ID = 14;
+  test('photo_details_location_section_works', async ({ page, request }) => {
+    const photoId = await findMediaIdByFilename(request, 'DSCN0010.jpg');
 
-  test('photo_details_location_section_works', async ({ page, context }) => {
     // Navigate to the photo details page
-    await page.goto(`/media/view/${PHOTO_ID}`);
+    await page.goto(`/media/view/${photoId}`);
 
     // Wait for page to load
     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();

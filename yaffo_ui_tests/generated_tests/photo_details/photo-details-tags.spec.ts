@@ -1,18 +1,19 @@
 import { test, expect } from '@playwright/test';
+import { findMediaIdByFilename } from '../_support/media-test-data';
 
 test.describe('Photo Details - Edit Tags', () => {
-  const PHOTO_ID = 14;
   // Use timestamp to make tag name unique across test runs/retries
   const TEST_TAG_NAME = `TestTag_${Date.now()}`;
   const TEST_TAG_VALUE = 'TestValue';
   // Snapshot of the photo's tags before the test, used to restore state.
   // Tags are saved wholesale via PUT /api/media/<id>/tags (no per-tag delete).
   let originalTags: { tag_name: string; tag_value: string }[] | null = null;
+  let photoId: number | null = null;
 
   test.afterEach(async ({ request }) => {
-    if (originalTags) {
+    if (originalTags && photoId !== null) {
       try {
-        await request.put(`/api/media/${PHOTO_ID}/tags`, {
+        await request.put(`/api/media/${photoId}/tags`, {
           data: { tags: originalTags },
         });
       } catch (error) {
@@ -21,9 +22,11 @@ test.describe('Photo Details - Edit Tags', () => {
     }
   });
 
-  test('photo_details_can_edit_tags', async ({ page }) => {
+  test('photo_details_can_edit_tags', async ({ page, request }) => {
+    photoId = await findMediaIdByFilename(request, 'DSCN0010.jpg');
+
     // Navigate to the photo details page
-    await page.goto(`/media/view/${PHOTO_ID}`);
+    await page.goto(`/media/view/${photoId}`);
 
     // Wait for page to load
     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();
@@ -84,7 +87,7 @@ test.describe('Photo Details - Edit Tags', () => {
     const saveButton = page.locator('#tagsModal button[type="submit"]').filter({ hasText: 'Save Changes' });
     await expect(saveButton).toBeVisible();
     const [response] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes(`/api/media/${PHOTO_ID}/tags`)),
+      page.waitForResponse(resp => resp.url().includes(`/api/media/${photoId}/tags`)),
       saveButton.click(),
     ]);
     expect(response.ok()).toBeTruthy();

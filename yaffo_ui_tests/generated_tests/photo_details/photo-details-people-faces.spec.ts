@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { findFirstPhotoIdWithDetectedFaces } from '../_support/media-test-data';
 
 test.describe('Photo Details - People and Faces', () => {
-  // Photo 4 has several detected faces in the seeded test data
-  const PHOTO_ID = 4;
+  test('photo_details_displays_people_and_faces', async ({ page, request }) => {
+    const photoId = await findFirstPhotoIdWithDetectedFaces(request);
 
-  test('photo_details_displays_people_and_faces', async ({ page }) => {
     // Navigate to the photo details page
-    await page.goto(`/media/view/${PHOTO_ID}`);
+    await page.goto(`/media/view/${photoId}`);
 
     // Wait for the page to load
     await expect(page.locator('h2').filter({ hasText: 'Photo Details' })).toBeVisible();
