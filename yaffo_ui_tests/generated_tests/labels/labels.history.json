@@ -1,0 +1,16 @@
+{
+  "testRunHistory": [
+    {
+      "timestamp": "2026-07-02T01:54:27Z",
+      "success": true,
+      "summary": {
+        "total": 7,
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0
+      },
+      "failedTests": [],
+      "command": "cd yaffo_ui_tests && BASE_URL=http://127.0.0.1:5002 npx playwright test generated_tests/labels/labels.spec.ts"
+    }
+  ]
+}
