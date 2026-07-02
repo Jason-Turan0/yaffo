@@ -53,6 +53,22 @@ const generateTimestamp = (): string => {
     return now.toISOString().replace(/[-:]/g, "").replace("T", "_").slice(0, 15);
 };
 
+// kill() only sends the signal; the process can still be running (and holding
+// files in the temp dir) when it returns. Resolve once the child has actually
+// exited, escalating to SIGKILL if it ignores SIGTERM.
+const waitForExit = (child: ChildProcess | null, timeoutMs = 10_000): Promise<void> => {
+    if (!child || child.exitCode !== null || child.signalCode !== null) {
+        return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+        const forceKill = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
+        child.once("exit", () => {
+            clearTimeout(forceKill);
+            resolve();
+        });
+    });
+};
+
 const waitForServer = async (url: string, maxAttempts = 30): Promise<boolean> => {
     for (let i = 0; i < maxAttempts; i++) {
         try {
@@ -81,9 +97,11 @@ export const startIsolatedEnvironment = async (port = 5001): Promise<IsolatedEnv
     mkdirSync(join(tempDir, "duplicates"), {recursive: true});
 
     const testPhotosDir = join(UI_TESTS_DIR, "test_data", "photos");
+    const testVideoDir = join(UI_TESTS_DIR, "test_data", "mp4");
     if (existsSync(testPhotosDir)) {
         cpSync(testPhotosDir, join(tempDir, "organized"), {recursive: true});
-        console.log(`   ✅ Copied test photos`);
+        cpSync(testVideoDir, join(tempDir, "organized"), {recursive: true});
+        console.log(`   ✅ Copied test photos/videos`);
     }
 
     const testDbPath = join(UI_TESTS_DIR, "test_data", "database", "yaffo.db");
@@ -167,15 +185,19 @@ export const startIsolatedEnvironment = async (port = 5001): Promise<IsolatedEnv
         console.log(`\n🧹 Cleaning up isolated environment...`);
         if (flaskProcess && !flaskProcess.killed) {
             flaskProcess.kill();
-            console.log(`   ✅ Stopped Flask server`);
         }
         if (taskqProcess && !taskqProcess.killed) {
             taskqProcess.kill();
-            console.log(`   ✅ Stopped taskq host`);
         }
+        // Don't delete the temp dir out from under live processes — they hold
+        // the SQLite DBs inside it open (that's a disk I/O error waiting to happen).
+        await Promise.all([waitForExit(flaskProcess), waitForExit(taskqProcess)]);
+        console.log(`   ✅ Stopped Flask server and taskq host`);
         if (existsSync(tempDir)) {
-            rmSync(tempDir, {recursive: true, force: true});
+            rmSync(tempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
             console.log(`   ✅ Removed temp directory`);
+        }else{
+            console.log(`   tmp dir ${tempDir} not found`);
         }
     };
 

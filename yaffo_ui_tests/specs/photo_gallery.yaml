@@ -31,6 +31,20 @@ scenarios:
       - At least one photo is displayed
       - All photo image sources return HTTP 200 (no broken links)
       - No images are using the fallback placeholder
+  - name: gallery_loads_with_valid_videos
+    goal: Gallery displays videos and all videos are valid (no broken links)
+    priority: high
+    steps:
+      - Navigate to the home page
+      - Wait for the gallery grid to be visible
+      - Collect all video elements in the gallery
+      - Play the first video in the gallery
+      - Pause the first video in the gallery
+    verify:
+      - Gallery grid container is visible
+      - At least one video is displayed
+      - All video image sources return HTTP 200 (no broken links)
+      - No images are using the fallback placeholder
   - name: gallery_filter_year_works
     goal: Should be able to find photos by filtering for year on the gallery page
     priority: high
