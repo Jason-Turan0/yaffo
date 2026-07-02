@@ -58,4 +58,6 @@ jobs:
 
       # The unit-marked subset (integration/slow tests are deselected).
       - name: Unit tests
+        env:
+          PYTHONPATH: .
         run: pytest -m unit
