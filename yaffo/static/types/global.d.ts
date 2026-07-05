@@ -308,6 +308,39 @@ type LocationMediaItem = {
     photo_path?: string | null;
     filename?: string;
     media_type?: string | null;
+    year?: number | null;
+    month?: number | null;
+    device?: string | null;
+    favorite?: boolean;
+    person_ids?: number[];
+    genders?: number[];
+    label_ids?: number[];
+    tags?: { name: string; value: string | null }[];
+};
+
+type ClientFilterItem = LocationMediaItem;
+
+type ClientFilterCriteria = {
+    path: string | null;
+    year: number | null;
+    month: number | null;
+    device: string | null;
+    favorite: boolean;
+    mediaType: 'photo' | 'video' | null;
+    personIds: number[];
+    personMatchType: string;
+    gender: number | null;
+    labelIds: number[];
+    labelsMatchType: string;
+    tagName: string | null;
+    tagValue: string | null;
+    locationNames: string[];
+    proximity: { lat: number; lon: number; distance: number } | null;
+};
+
+type ClientFilterApi = {
+    apply(): void;
+    readCriteria(): ClientFilterCriteria;
 };
 
 type LocationMapApi = {
@@ -316,6 +349,7 @@ type LocationMapApi = {
     selectedFeatures: Set<unknown>;
     updateSelectionPanel(): Promise<void>;
     applyFilter(showOnlyUnnamed: boolean): void;
+    setClientFilter(predicate: (item: ClientFilterItem) => boolean): void;
 };
 
 type LocationsNamespace = {
@@ -332,6 +366,19 @@ type FiltersNamespace = {
     initLocationAutocomplete?: (i18n: I18nService, config: AppConfig) => LocationAutocompleteApi | undefined;
     initTags?: (i18n: I18nService, config: AppConfig) => TagsFilterApi;
     tags?: TagsFilterApi;
+    initClientFilter?: (opts: {
+        form: HTMLFormElement | null;
+        distanceUnit?: string;
+        onApply: (predicate: (item: ClientFilterItem) => boolean) => void;
+    }) => ClientFilterApi | undefined;
+    clientFilter?: ClientFilterApi;
+    clientFilterCore?: {
+        readCriteria(form: HTMLFormElement): ClientFilterCriteria;
+        buildPredicate(
+            criteria: ClientFilterCriteria,
+            options?: { distanceUnit?: string },
+        ): (item: ClientFilterItem) => boolean;
+    };
 };
 
 type LocationAutocompleteResult = {

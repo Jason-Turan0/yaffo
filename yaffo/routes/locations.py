@@ -1,47 +1,80 @@
 import os
 from flask import Flask, render_template, jsonify, request
 from flask_babel import gettext
-from sqlalchemy import func
+from sqlalchemy.orm import selectinload
 
 from yaffo.db import db
-from yaffo.db.models import MediaItem, MEDIA_STATUS_INDEXED, EVENT_MEDIA_MODIFIED
+from yaffo.db.models import Face, MediaItem, MEDIA_STATUS_INDEXED, EVENT_MEDIA_MODIFIED
 from yaffo.background_tasks.events import emit_event
+from yaffo.routes import filter_config
+from yaffo.routes.filter_panel import build_filters_context
 from yaffo.utils.reverse_geocode import reverse_geocode
+
+
+def _location_payload(media_item: MediaItem) -> dict:
+    """One map marker's JSON. Besides what the popup renders, it carries every
+    field the sidebar can filter on — filtering happens client-side here
+    (static/filters/client_filter.js), unlike the home gallery's SQL filters."""
+    person_ids: set[int] = set()
+    genders: set[int] = set()
+    for face in media_item.faces:
+        # Same fallback as the home route's gender filter: a person's declared
+        # gender overrides the face estimate; unassigned faces use the estimate.
+        if face.people:
+            for person in face.people:
+                person_ids.add(person.id)
+                gender = person.gender if person.gender is not None else face.gender
+                if gender is not None:
+                    genders.add(gender)
+        elif face.gender is not None:
+            genders.add(face.gender)
+
+    return {
+        'id': media_item.id,
+        'name': media_item.location_name,
+        'lat': float(media_item.latitude),
+        'lon': float(media_item.longitude),
+        'photo_path': media_item.full_file_path,
+        'filename': os.path.basename(media_item.full_file_path),
+        # The map popup renders this as an <img>; a video's /media/<id> is the
+        # raw clip, so the client must use the poster route instead.
+        'media_type': media_item.media_type,
+        'year': media_item.year,
+        'month': media_item.month,
+        'device': media_item.device,
+        'favorite': bool(media_item.favorite),
+        'person_ids': sorted(person_ids),
+        'genders': sorted(genders),
+        'label_ids': sorted({media_label.label_id for media_label in media_item.labels}),
+        'tags': [{'name': tag.tag_name, 'value': tag.tag_value} for tag in media_item.tags],
+    }
+
 
 def init_locations_routes(app: Flask):
     @app.route("/locations", methods=["GET"])
     def locations_list():
         """List all locations"""
-        locations = (
-            db.session.query(
-                MediaItem.id,
-                MediaItem.location_name,
-                MediaItem.latitude,
-                MediaItem.longitude,
-                MediaItem.full_file_path,
-                MediaItem.media_type
+        media_items = (
+            db.session.query(MediaItem)
+            .options(
+                selectinload(MediaItem.faces).selectinload(Face.people),
+                selectinload(MediaItem.labels),
+                selectinload(MediaItem.tags),
             )
             .filter(MediaItem.latitude.isnot(None))
             .filter(MediaItem.longitude.isnot(None))
             .all()
         )
 
-        locations_data = [
-            {
-                'id': loc.id,
-                'name': loc.location_name,
-                'lat': float(loc.latitude),
-                'lon': float(loc.longitude),
-                'photo_path': loc.full_file_path,
-                'filename': os.path.basename(loc.full_file_path),
-                # The map popup renders this as an <img>; a video's /media/<id> is the
-                # raw clip, so the client must use the poster route instead.
-                'media_type': loc.media_type
-            }
-            for loc in locations
-        ]
+        locations_data = [_location_payload(media_item) for media_item in media_items]
 
-        return render_template("locations/list.html", locations=locations_data)
+        return render_template(
+            "locations/list.html",
+            locations=locations_data,
+            filters=build_filters_context(db.session, request.args),
+            filter_layout=filter_config.load_layout(db.session, page="locations"),
+            filter_default_keys=filter_config.default_keys(),
+        )
 
     @app.route("/locations/bulk-update", methods=["POST"])
     def locations_bulk_update():

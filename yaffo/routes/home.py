@@ -5,14 +5,11 @@ import pydash as py_
 import requests
 from flask import Flask, jsonify, render_template, request
 from flask_babel import gettext
-from sqlalchemy import distinct, func
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from yaffo.db import db
 from yaffo.db.models import (
-    MEDIA_TYPE_PHOTO,
-    MEDIA_TYPE_VIDEO,
-    ClassificationLabel,
     Face,
     MediaItem,
     MediaLabel,
@@ -20,9 +17,9 @@ from yaffo.db.models import (
     PersonFace,
     Tag,
 )
-from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
-from yaffo.distance_units import DISTANCE_UNIT_KILOMETERS, distance_to_kilometers, get_saved_distance_unit
+from yaffo.distance_units import distance_to_kilometers
 from yaffo.routes import filter_config
+from yaffo.routes.filter_panel import build_filters_context
 from yaffo.utils.context import context
 
 
@@ -49,31 +46,28 @@ def calculate_bounding_box(lat: float, lon: float, distance_kilometers: float) -
 def init_home_routes(app: Flask):
     @app.route("/", methods=["GET"])
     def index():
-        # Get filter parameters
-        path = request.args.get("path", type=str)
-        path = path.strip() if path else None
-        person_ids = request.args.getlist("person", type=int)
-        person_match_type = request.args.get("person-match-type", default='any', type=str)
-        gender = request.args.get("gender", type=int)
-        labels_ids = request.args.getlist("labels", type=int)
-        labels_match_type = request.args.get("labels-match-type", default='any', type=str)
-        tag_name = request.args.get("tag-name", type=str)
-        tag_value = request.args.get("tag-value", type=str)
-        location_names = request.args.getlist("location", type=str)
-        location_match_type = request.args.get("location-match-type", default='any', type=str)
-        proximity_lat = request.args.get("proximity-lat", type=float)
-        proximity_lon = request.args.get("proximity-lon", type=float)
-        proximity_distance = request.args.get("proximity-distance", type=float)
-        proximity_location = request.args.get("proximity-location", type=str)
-        distance_unit = get_saved_distance_unit(db.session)
-        year = request.args.get("year", type=int)
-        month = request.args.get("month", type=int)
-        device = request.args.get("device", type=str)
-        device = device.strip() if device else None
-        favorite = request.args.get("favorite", type=int)
-        media_type = request.args.get("media-type", type=str)
-        if media_type not in (MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO):
-            media_type = None
+        # Parse filter parameters + build the sidebar's option lists (shared with
+        # the locations page, which filters client-side from the same panel).
+        filters = build_filters_context(db.session, request.args)
+        path = filters["selected_path"]
+        person_ids = filters["selected_person_ids"]
+        person_match_type = filters["selected_person_match_type"]
+        gender = filters["selected_gender"]
+        labels_ids = filters["selected_label_ids"]
+        labels_match_type = filters["selected_labels_match_type"]
+        tag_name = filters["selected_tag_name"]
+        tag_value = filters["selected_tag_value"]
+        location_names = filters["selected_location_names"]
+        location_match_type = filters["selected_location_match_type"]
+        proximity_lat = filters["selected_proximity_lat"]
+        proximity_lon = filters["selected_proximity_lon"]
+        proximity_distance = filters["selected_proximity_distance"]
+        distance_unit = filters["selected_distance_unit"]
+        year = filters["selected_year"]
+        month = filters["selected_month"]
+        device = filters["selected_device"]
+        favorite = filters["selected_favorite"]
+        media_type = filters["selected_media_type"]
         page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", type=int)
         filter_page_size = page_size if page_size else 25
@@ -211,78 +205,8 @@ def init_home_routes(app: Flask):
             media_item.file_name = file_path.name if file_path else ""
             media_item.folder = str(file_path.parent) if file_path else ""
 
-        # Get distinct tag names and location names
-        distinct_tag_names = (
-            db.session.query(Tag.tag_name)
-            .distinct()
-            .order_by(Tag.tag_name)
-            .all()
-        )
-        tag_names_list = [tag[0] for tag in distinct_tag_names if tag[0]]
-
-        distinct_locations = (
-            db.session.query(MediaItem.location_name)
-            .filter(MediaItem.location_name.isnot(None))
-            .distinct()
-            .order_by(MediaItem.location_name)
-            .all()
-        )
-        location_names_list = [loc[0] for loc in distinct_locations if loc[0]]
-
-        distinct_devices = (
-            db.session.query(MediaItem.device)
-            .filter(MediaItem.device.isnot(None))
-            .filter(MediaItem.device != "")
-            .distinct()
-            .order_by(MediaItem.device)
-            .all()
-        )
-        device_list = [d[0] for d in distinct_devices if d[0]]
-
-        labels = (
-            db.session.query(ClassificationLabel)
-            .filter(ClassificationLabel.enabled == True)
-            .order_by(func.lower(ClassificationLabel.name))
-            .all()
-        )
-
-        # Prepare filter options
-        filters = {
-            'people': Person.query.order_by(Person.name).all(),
-            'years': get_distinct_years(db.session),
-            'months': get_distinct_months(),
-            'tag_names': tag_names_list,
-            'location_names': location_names_list,
-            'devices': device_list,
-            'labels': labels,
-            'genders': [
-                {'name': gettext("Male"), 'value': 1},
-                {'name': gettext("Female"), 'value': 0},
-            ],
-            'selected_path': path,
-            'selected_person_ids': person_ids,
-            'selected_person_match_type': person_match_type,
-            'selected_label_ids':labels_ids,
-            'selected_labels_match_type': labels_match_type,
-            'selected_tag_name': tag_name,
-            'selected_tag_value': tag_value,
-            'selected_location_names': location_names,
-            'selected_location_match_type': location_match_type,
-            'selected_proximity_lat': proximity_lat,
-            'selected_proximity_lon': proximity_lon,
-            'selected_proximity_distance': proximity_distance,
-            'selected_distance_unit': distance_unit,
-            'selected_distance_unit_label': gettext("Kilometers") if distance_unit == DISTANCE_UNIT_KILOMETERS else gettext("Miles"),
-            'selected_proximity_location': proximity_location,
-            'selected_year': year,
-            'selected_month': month,
-            'selected_device': device,
-            'selected_favorite': favorite,
-            'selected_media_type': media_type,
-            'selected_gender': gender,
-            "page_sizes": [10, 25, 50, 100, 250],
-            "page_size": filter_page_size
-        }
+        filters["page_sizes"] = [10, 25, 50, 100, 250]
+        filters["page_size"] = filter_page_size
 
         pagination = {
             "current_page": page,
@@ -300,20 +224,6 @@ def init_home_routes(app: Flask):
             filter_layout=filter_config.load_layout(db.session),
             filter_default_keys=filter_config.default_keys(),
         )
-
-    @app.route("/settings/home-filters", methods=["POST"])
-    def save_home_filters():
-        """Persist the gallery sidebar's filter layout (order + visibility). Scoped to
-        this page's filter set; body is {"items": [{key, visible}, ...]}."""
-        payload = request.get_json(silent=True) or {}
-        items = payload.get("items")
-        if not isinstance(items, list):
-            return {
-                "error": gettext("Items must be a list"),
-                "code": "items_must_be_list",
-            }, 400
-        filter_config.save_layout(db.session, items)
-        return "", 204
 
     @app.route("/api/tag-values", methods=["GET"])
     def get_tag_values():

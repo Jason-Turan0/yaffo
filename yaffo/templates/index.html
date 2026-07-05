@@ -145,24 +145,8 @@
         </div>
     </div>
 
-    {% from "components/modal.html" import render_modal %}
-    {% macro configure_filters_form() %}
-        <p class="filter-config-hint">{{ _("Drag to reorder. Uncheck to hide a filter.") }}</p>
-        <div class="filter-config" id="filter-config-list"
-             data-default-keys="{{ filter_default_keys | join(',') }}">
-            {% for entry in filter_layout %}
-            <div class="filter-config-row" draggable="true" data-key="{{ entry.key }}">
-                <span class="filter-config-handle" aria-hidden="true">⠿</span>
-                <label class="filter-config-item">
-                    <input type="checkbox" class="filter-config-toggle" {% if entry.visible %}checked{% endif %}>
-                    <span>{{ _(entry.label) }}</span>
-                </label>
-            </div>
-            {% endfor %}
-        </div>
-        <button type="button" class="btn btn-secondary" id="filter-config-reset">{{ _("Reset to defaults") }}</button>
-    {% endmacro %}
-    {{ render_modal("configureFiltersModal", _("Configure Filters"), "", configure_filters_form, action_text=_("Save")) }}
+    {% from "filters/_config_modal.html" import filter_config_modal %}
+    {{ filter_config_modal(filter_layout, filter_default_keys, "home") }}
 {% endblock %}
 
 {% block scripts %}

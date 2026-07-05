@@ -50,7 +50,9 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
             id: location.id,
             photo_path: location.photo_path,
             filename: location.filename,
-            media_type: location.media_type
+            media_type: location.media_type,
+            // The full payload, kept for the sidebar's client-side filtering.
+            item: location
         });
     });
 
@@ -495,12 +497,16 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                         const featureId = feature.get('id');
                         if (photoIds.includes(featureId)) {
                             feature.set('name', clearing ? null : locationName);
+                            // Keep the filterable payload in step so an active
+                            // location-name filter sees the new value.
+                            const item = feature.get('item');
+                            if (item) item.name = clearing ? null : locationName;
                         }
                     });
 
                     const filterCheckbox = document.getElementById('filter-unnamed');
                     if (filterCheckbox instanceof HTMLInputElement && filterCheckbox.checked) {
-                        applyFilter(true);
+                        refreshFeatures();
                     } else {
                         clusterLayer.changed();
                     }
@@ -605,15 +611,25 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         })();
     };
 
-    const applyFilter = (/** @type {boolean} */ showOnlyUnnamed) => {
-        vectorSource.clear();
+    // Two independent filters narrow the markers: the header's "only unnamed"
+    // checkbox and the sidebar's client-side predicate (set via the shared
+    // filter panel). Both are re-applied together from the full feature list.
+    let showOnlyUnnamed = false;
+    /** @type {((item: ClientFilterItem) => boolean) | null} */
+    let clientPredicate = null;
 
+    const refreshFeatures = () => {
+        let visibleFeatures = allFeatures;
         if (showOnlyUnnamed) {
-            const unnamedFeatures = allFeatures.filter(feature => !feature.get('name'));
-            vectorSource.addFeatures(unnamedFeatures);
-        } else {
-            vectorSource.addFeatures(allFeatures);
+            visibleFeatures = visibleFeatures.filter(feature => !feature.get('name'));
         }
+        if (clientPredicate) {
+            const predicate = clientPredicate;
+            visibleFeatures = visibleFeatures.filter(feature => predicate(feature.get('item')));
+        }
+
+        vectorSource.clear();
+        vectorSource.addFeatures(visibleFeatures);
 
         selectedFeatures.clear();
         clusterLayer.changed();
@@ -628,6 +644,16 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         }
     };
 
+    const applyFilter = (/** @type {boolean} */ onlyUnnamed) => {
+        showOnlyUnnamed = onlyUnnamed;
+        refreshFeatures();
+    };
+
+    const setClientFilter = (/** @type {(item: ClientFilterItem) => boolean} */ predicate) => {
+        clientPredicate = predicate;
+        refreshFeatures();
+    };
+
     const filterCheckbox = document.getElementById('filter-unnamed');
     if (filterCheckbox) {
         filterCheckbox.addEventListener('change', (e) => {
@@ -635,5 +661,5 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         });
     }
 
-    return { map, vectorSource, selectedFeatures, updateSelectionPanel, applyFilter };
+    return { map, vectorSource, selectedFeatures, updateSelectionPanel, applyFilter, setClientFilter };
 };

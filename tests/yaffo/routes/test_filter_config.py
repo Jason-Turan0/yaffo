@@ -60,3 +60,20 @@ class TestSaveLoad:
         layout = {i.key: i.visible for i in fc.load_layout(session)}
         assert layout["month"] is False
         assert layout["year"] is True  # no longer in the save -> back to default visible
+
+
+class TestPerPageLayouts:
+    """Each page that renders the panel keeps its own saved layout (the setting
+    name is derived from the page key), so configuring one leaves the other alone."""
+
+    def test_pages_have_independent_layouts(self, session):
+        fc.save_layout(session, [{"key": "device", "visible": False}], page="locations")
+
+        home = {i.key: i.visible for i in fc.load_layout(session, page="home")}
+        locations = {i.key: i.visible for i in fc.load_layout(session, page="locations")}
+        assert home["device"] is True
+        assert locations["device"] is False
+
+    def test_default_page_is_home(self, session):
+        fc.save_layout(session, [{"key": "year", "visible": False}])
+        assert next(i for i in fc.load_layout(session, page="home") if i.key == "year").visible is False

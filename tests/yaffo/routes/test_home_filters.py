@@ -168,7 +168,7 @@ class TestConfigurableFilterLayout:
         assert 'id="device-select"' in body
 
     def test_saving_hides_a_filter(self, client):
-        resp = client.post("/settings/home-filters", json={"items": [
+        resp = client.post("/settings/filters/home", json={"items": [
             {"key": "year", "visible": False},
             {"key": "device", "visible": True},
         ]})
@@ -180,7 +180,7 @@ class TestConfigurableFilterLayout:
         assert 'data-key="year"' in body           # but still listed in the modal
 
     def test_saving_reorders_filters(self, client):
-        client.post("/settings/home-filters", json={"items": [
+        client.post("/settings/filters/home", json={"items": [
             {"key": "device", "visible": True},
             {"key": "year", "visible": True},
         ]})
@@ -189,8 +189,19 @@ class TestConfigurableFilterLayout:
         assert body.index('id="device-select"') < body.index('id="year-select"')
 
     def test_save_rejects_non_list_items(self, client):
-        resp = client.post("/settings/home-filters", json={"items": "nope"})
+        resp = client.post("/settings/filters/home", json={"items": "nope"})
         assert resp.status_code == 400
+
+    def test_save_rejects_unknown_page(self, client):
+        resp = client.post("/settings/filters/bogus", json={"items": []})
+        assert resp.status_code == 404
+
+    def test_locations_layout_does_not_affect_home(self, client):
+        client.post("/settings/filters/locations", json={"items": [
+            {"key": "year", "visible": False},
+        ]})
+        body = client.get("/").data.decode()
+        assert 'id="year-select"' in body  # home layout untouched
 
 
 @pytest.fixture

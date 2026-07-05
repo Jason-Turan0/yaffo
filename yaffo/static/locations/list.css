@@ -1,5 +1,8 @@
 .locations-container {
-    padding: 20px;
+    /* Content column beside the shared filter sidebar; min-width lets the
+       map shrink inside the flex row instead of overflowing it. */
+    flex: 1;
+    min-width: 0;
 }
 
 .filter-toggle {

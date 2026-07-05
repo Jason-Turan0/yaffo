@@ -340,3 +340,41 @@ describe('locations list map selection panel', () => {
     expect(window.notification.success).toHaveBeenCalledWith('Cleared 2');
   });
 });
+
+describe('locations list map client-side filtering', () => {
+  it('setClientFilter narrows the markers by the sidebar predicate', async () => {
+    const { api } = await initLocationsMap();
+
+    api.setClientFilter((item) => item.id === 1);
+
+    expect(api.vectorSource.getFeatures().map((feature) => feature.get('id'))).toEqual([1]);
+  });
+
+  it('composes with the only-unnamed checkbox and restores on a match-all predicate', async () => {
+    const { api } = await initLocationsMap();
+
+    api.applyFilter(true); // only the unnamed marker (id 2)
+    api.setClientFilter((item) => item.id === 1); // intersection is empty
+    expect(api.vectorSource.getFeatures()).toEqual([]);
+
+    api.applyFilter(false);
+    api.setClientFilter(() => true);
+    expect(api.vectorSource.getFeatures()).toHaveLength(2);
+  });
+
+  it('name filters see names assigned after page load', async () => {
+    const { api } = await initLocationsMap();
+
+    // assign flows update the feature's filterable payload in step
+    await api.updateSelectionPanel();
+    document.getElementById('mass-location-input').value = 'New Harbor';
+    document.getElementById('mass-assign-btn').click();
+    await flushPromises();
+
+    api.setClientFilter((item) => item.name === 'New Harbor');
+    expect(api.vectorSource.getFeatures()).toHaveLength(2);
+
+    api.setClientFilter((item) => item.name === 'Beach');
+    expect(api.vectorSource.getFeatures()).toEqual([]);
+  });
+});

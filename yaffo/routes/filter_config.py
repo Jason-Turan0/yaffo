@@ -1,6 +1,7 @@
-"""Home-page filter layout: which filters appear in the gallery sidebar and in what
-order. Persisted for this page only, in ApplicationSettings (name=SETTING_NAME) as a
-JSON list of {key, visible}.
+"""Sidebar filter layout: which filters appear in the panel and in what order.
+Persisted per page — the home gallery and the locations map each keep their own
+layout, in ApplicationSettings (name=<page>_filter_layout) as a JSON list of
+{key, visible}.
 
 FILTERS is the source of truth for the available filters (key -> label + template).
 The saved layout is *merged* onto it on read: known keys keep their saved order and
@@ -13,11 +14,19 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
+from flask import Flask, request
+from flask_babel import gettext
 from sqlalchemy.orm import Session
 
+from yaffo.db import db
 from yaffo.db.models import ApplicationSettings
 
-SETTING_NAME = "home_filter_layout"
+# Pages that render the configurable filter panel, each with its own saved layout.
+PAGES = ("home", "locations")
+
+
+def _setting_name(page: str) -> str:
+    return f"{page}_filter_layout"
 
 
 @dataclass(frozen=True)
@@ -59,8 +68,8 @@ def default_keys() -> list[str]:
     return [f.key for f in FILTERS]
 
 
-def _saved(session: Session) -> list[dict]:
-    setting = session.query(ApplicationSettings).filter_by(name=SETTING_NAME).first()
+def _saved(session: Session, page: str) -> list[dict]:
+    setting = session.query(ApplicationSettings).filter_by(name=_setting_name(page)).first()
     if not setting or not setting.value:
         return []
     try:
@@ -70,13 +79,13 @@ def _saved(session: Session) -> list[dict]:
     return data if isinstance(data, list) else []
 
 
-def load_layout(session: Session) -> list[FilterLayoutItem]:
+def load_layout(session: Session, page: str = "home") -> list[FilterLayoutItem]:
     """The resolved layout: saved order/visibility for known keys, then any registry
     filter not yet saved appended (visible). Defaults to all filters visible in
     registry order when nothing is saved."""
     items: list[FilterLayoutItem] = []
     seen: set[str] = set()
-    for entry in _saved(session):
+    for entry in _saved(session, page):
         key = entry.get("key") if isinstance(entry, dict) else None
         f = _BY_KEY.get(key)
         if f and key not in seen:
@@ -88,9 +97,9 @@ def load_layout(session: Session) -> list[FilterLayoutItem]:
     return items
 
 
-def save_layout(session: Session, items: list[dict]) -> None:
+def save_layout(session: Session, items: list[dict], page: str = "home") -> None:
     """Persist [{key, visible}] (list order = display order), keeping only known keys
-    and de-duping. Stored as JSON on the ApplicationSettings row."""
+    and de-duping. Stored as JSON on the page's ApplicationSettings row."""
     cleaned: list[dict] = []
     seen: set[str] = set()
     for entry in items:
@@ -98,9 +107,31 @@ def save_layout(session: Session, items: list[dict]) -> None:
         if key in _BY_KEY and key not in seen:
             cleaned.append({"key": key, "visible": bool(entry.get("visible", True))})
             seen.add(key)
-    setting = session.query(ApplicationSettings).filter_by(name=SETTING_NAME).first()
+    name = _setting_name(page)
+    setting = session.query(ApplicationSettings).filter_by(name=name).first()
     if setting is None:
-        session.add(ApplicationSettings(name=SETTING_NAME, type="json", value=json.dumps(cleaned)))
+        session.add(ApplicationSettings(name=name, type="json", value=json.dumps(cleaned)))
     else:
         setting.value = json.dumps(cleaned)
     session.commit()
+
+
+def init_filter_config_routes(app: Flask):
+    @app.route("/settings/filters/<page>", methods=["POST"])
+    def save_filter_layout(page: str):
+        """Persist a sidebar's filter layout (order + visibility), scoped to the
+        given page's filter set; body is {"items": [{key, visible}, ...]}."""
+        if page not in PAGES:
+            return {
+                "error": gettext("Unknown filter page"),
+                "code": "unknown_filter_page",
+            }, 404
+        payload = request.get_json(silent=True) or {}
+        items = payload.get("items")
+        if not isinstance(items, list):
+            return {
+                "error": gettext("Items must be a list"),
+                "code": "items_must_be_list",
+            }, 400
+        save_layout(db.session, items, page)
+        return "", 204
