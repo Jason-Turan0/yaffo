@@ -1,5 +1,5 @@
 feature: locations
-description: User can view photos on a map by location, filter for unnamed places, and assign location names to clusters of photos
+description: User can view located photos on a map, filter markers client-side, select photos through clustered markers, and assign or clear location names
 
 tags:
   - smoke
@@ -8,25 +8,41 @@ tags:
 preconditions:
   - Application is running
   - Database contains sample photos, at least one of which has GPS coordinates
+  - The locations page is available at /locations
 
 context:
   - tag: locations-template
     path: templates/locations/list.html
-    description: Map page with OpenLayers map, cluster selection panel, and unnamed filter
+    description: Map page with OpenLayers map, shared filter sidebar, configurable filter modal, and selection side panel
   - tag: locations-routes
     path: routes/locations.py
-    description: Routes for the locations list, bulk location-name update, and reverse geocoding
+    description: Routes for locations payload, bulk location-name update, assign-location nearby radius config, and reverse geocoding
   - tag: locations-map-js
     path: static/locations/list.js
-    description: Client map wiring — cluster selection, popup, and bulk assignment
+    description: Client map wiring for clustering, photo-id based selection, partial cluster rendering, recommendation lookup, and bulk assignment
+  - tag: client-filter-js
+    path: static/filters/client_filter.js
+    description: Client-side implementation of the shared filter sidebar for the locations map
+  - tag: filter-sidebar
+    path: templates/_sidebar.html
+    description: Shared filter form with Apply, Clear, and Configure controls
+  - tag: locations-route-tests
+    path: tests/yaffo/routes/test_locations.py
+    description: Server-side expectations for payload fields, sidebar rendering, nearby radius config, bulk update, and geocode rate limits
 
 data:
   - Photo "DSCN0010.jpg" (id 14) has latitude/longitude and should appear on the map
-  - Most Obama sample photos have no GPS coordinates
+  - Photo "obama-family-photo-celebration-1514413986.jpg" has GPS metadata for Chicago Grant Park at approximately 41.876465, -87.621887
+  - Photos "whitehouse_2014_01282014.jpg", "whitehouse_2014_03012014.jpg", "whitehouse_2014_04042014.jpg", and "whitehouse_2014_05062014.jpg" have GPS metadata around the White House at approximately 38.897676, -77.036530
+  - The White House photos are intentionally offset from one another by less than 500 yards so they are near each other without having identical coordinates
+  - The Chicago Grant Park photo and the White House photos are visually distinct locations on the map view
+  - Most other Obama sample photos have no GPS coordinates
+  - Located photos may be named or unnamed; unnamed means the location name is null or blank
+  - The map payload includes fields used by client-side filters, including path, year, month, device, favorite, media type, people, labels, tags, name, latitude, and longitude
 
 scenarios:
   - name: locations_map_displays_photo_markers
-    goal: The map loads and shows markers/clusters for photos that have coordinates
+    goal: The map loads and shows visually distinct markers/clusters for photos that have coordinates
     priority: high
     steps:
       - Navigate to the locations page
@@ -34,10 +50,13 @@ scenarios:
     verify:
       - The map (id "map") is visible and rendered
       - At least one photo marker or cluster is shown on the map
+      - The Chicago Grant Park photo and the White House photo group appear as separate visible map points or clusters
+      - The White House photos remain close enough to each other to form a nearby group at normal map zoom levels
       - Map tiles load without broken-image errors
+      - The map view is initially fitted to the located photos
 
-  - name: locations_popup_shows_photo_details
-    goal: Clicking a marker/cluster selects it and the side panel offers preview plus assignment
+  - name: locations_selection_panel_shows_photo_details
+    goal: Clicking a marker/cluster selects its photos and opens the side panel with preview plus assignment controls
     priority: high
     steps:
       - Navigate to the locations page
@@ -48,24 +67,71 @@ scenarios:
       - Clicking a thumbnail (class "preview-thumb") swaps the previewed photo
       - Clicking the "Preview" toggle (class "preview-toggle") collapses and expands the section
       - The assignment controls (id "mass-assign-btn") are available for the clicked cluster
+      - The selected photo IDs are tracked in window.PHOTO_ORGANIZER.locations.map.selectedPhotoIds
+      - Zooming or panning the map recalculates clusters while preserving the selected photo IDs and updating the panel for the new cluster grouping
       - Shift-clicking another cluster adds it to the selection; shift-clicking a selected cluster removes it
       - Holding Shift and dragging a box adds the enclosed clusters to the current selection
       - Clicking the close button (class "selection-panel-close") or an empty spot on the map clears the selection and hides the panel
 
-  - name: locations_filter_unnamed_photos
-    goal: The "only unnamed" filter narrows the map to photos without a location name
+  - name: locations_partial_cluster_selection_indicator
+    goal: Partially selected clusters are rendered as proportionally filled markers and follow the partial-to-full-to-unselected selection cycle
+    priority: high
+    steps:
+      - Navigate to the locations page with multiple located photos that can cluster together
+      - Select only some photos in a cluster, then change zoom so the selected photos are clustered with unselected photos
+      - Click the partially selected cluster
+      - Click the fully selected cluster again
+    verify:
+      - The cluster marker shows a partial pie fill based on selected photos divided by total photos in that cluster
+      - A cluster with 3 selected photos out of 4 total photos is rendered as approximately 75% filled
+      - The cluster summary in the side panel shows the selected count over total count for partial clusters
+      - Clicking a partial cluster makes every photo in that cluster selected
+      - Clicking the now fully selected cluster clears those photos from the selection
+
+  - name: locations_filter_sidebar_filters_client_side
+    goal: Applying filters narrows map markers in the browser without moving the viewport or reloading the page
     priority: medium
     steps:
       - Navigate to the locations page
-      - In the filter sidebar's Locations group, enable the "Only show photos without location names" checkbox (name "unnamed")
+      - Record the current map center and zoom
+      - In the filter sidebar, enable a filter such as "Only show photos without location names" (name "unnamed")
       - Click the "Apply Filters" button
     verify:
-      - The map updates to show only photos that have no assigned location name
-      - Photos that already have a location name are removed from the map
-      - Unchecking the checkbox and applying again restores the full set of located photos
+      - The browser remains on /locations and the page is not reloaded
+      - The map updates to show only markers matching the filter
+      - Photos that do not match the filter are removed from the vector source
+      - The map center and zoom remain unchanged when the filter is applied
+      - Any active map selection is cleared when the visible marker set changes
+
+  - name: locations_clear_filters_client_side
+    goal: Clearing filters restores the full marker set without reloading the page or resizing the viewport
+    priority: medium
+    steps:
+      - Navigate to the locations page
+      - Apply one or more filters from the shared filter sidebar
+      - Record the current map center and zoom
+      - Click the sidebar "Clear" control
+    verify:
+      - Filter controls are reset to their empty or default values
+      - The full set of located photos is restored to the map
+      - The browser remains on /locations and the page is not reloaded
+      - The map center and zoom remain unchanged when filters are cleared
+
+  - name: locations_configure_filter_sidebar
+    goal: The user can customize which filter groups appear on the locations page independently from other pages
+    priority: low
+    steps:
+      - Navigate to the locations page
+      - Open the filter configuration modal from the sidebar
+      - Hide a filter group and save
+      - Reload the locations page
+    verify:
+      - The hidden filter group no longer appears in the locations sidebar
+      - The filter configuration is saved with data-page "locations"
+      - Other default filter groups remain available
 
   - name: locations_select_clusters_and_assign_name
-    goal: The user can select one or more clusters and assign a location name to all their photos
+    goal: The user can select photos through one or more clusters and assign a location name to all selected photos
     priority: high
     steps:
       - Navigate to the locations page
@@ -76,11 +142,13 @@ scenarios:
       - The selection panel (id "selection-panel") shows the count of selected photos
       - After saving, a success message is displayed
       - The selected photos now carry the location name "Test Beach"
+      - The map feature payload is updated in place so active client-side location filters see the new name
+      - The selection is cleared and the panel closes after a successful assignment
     cleanup:
       - Clear the location name "Test Beach" from the affected photos
 
   - name: locations_clear_location_names
-    goal: The user can select clusters and remove the location names from all their photos
+    goal: The user can select photos through clusters and remove location names from all selected photos
     priority: medium
     steps:
       - Navigate to the locations page
@@ -90,14 +158,43 @@ scenarios:
       - A success message reports the names were cleared
       - The selected photos no longer carry a location name
       - The "only unnamed" filter includes the affected photos again
+      - The clear request sends the explicit clear flag so a blank custom name cannot accidentally clear names
+      - The selection is cleared and the panel closes after a successful clear
+
+  - name: locations_recommends_existing_nearby_name
+    goal: The app recommends an existing nearby location name before calling reverse geocoding
+    priority: medium
+    steps:
+      - Navigate to the locations page with the assign-location nearby radius configured
+      - Select photos whose medoid is near other photos that all share one non-empty location name
+    verify:
+      - The side panel shows one recommended quick-assign button
+      - The recommended name matches the unique nearby existing location name
+      - The recommendation considers all photos within the configured nearby radius of the medoid photo, not only selected photos
+      - No reverse-geocode request is sent when there is exactly one nearby existing location name
 
   - name: locations_reverse_geocode_suggests_name
-    goal: The app can suggest a place name from coordinates via reverse geocoding
+    goal: The app falls back to reverse geocoding when no unique nearby existing location name can be used
     priority: medium
     steps:
       - Navigate to the locations page
-      - Select a cluster of photos that has coordinates
-      - Trigger the reverse-geocode / suggest-name action in the selection panel
+      - Select one or more photos that have coordinates but no unique nearby existing location name
     verify:
       - A suggested location name is offered as a recommended quick-assign action
-      - The suggestion reflects the coordinates of the selected photos
+      - The reverse-geocode request uses the medoid photo coordinates from the selected photos
+      - Re-rendering the panel for the same medoid reuses the in-flight or cached reverse-geocode result instead of sending duplicate requests
+      - If the selection changes before the lookup returns, the stale result is not rendered into the panel
+
+  - name: locations_reverse_geocode_rate_limit_fallback
+    goal: The page handles reverse-geocode rate limiting without duplicating recommended buttons
+    priority: medium
+    steps:
+      - Navigate to the locations page
+      - Mock or cause the reverse-geocode endpoint to return HTTP 429
+      - Select a cluster that would otherwise need reverse geocoding
+      - Trigger map movement or panel re-rendering
+    verify:
+      - No recommended location button is rendered for the rate-limited lookup
+      - The panel remains usable for quick-assign existing names, custom assignment, clear selection, and clear names
+      - Additional panel renders do not issue more reverse-geocode requests after the rate limit is detected
+      - Multiple recommended buttons are not rendered for the same selection
