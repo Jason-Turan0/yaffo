@@ -48,6 +48,31 @@
     box-shadow: var(--focus-ring);
 }
 
+/* A boolean filter row (e.g. "only unnamed locations"): overrides the
+   block/bold .filter-group label defaults for an inline checkbox + text. */
+.filter-group .filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    font-weight: normal;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    user-select: none;
+}
+
+.filter-group .filter-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.filter-group .filter-checkbox:hover span {
+    color: var(--color-text);
+}
+
 .filter-group input[type="range"] {
     width: 100%;
     padding: 0;

@@ -59,6 +59,7 @@ def init_home_routes(app: Flask):
         tag_value = filters["selected_tag_value"]
         location_names = filters["selected_location_names"]
         location_match_type = filters["selected_location_match_type"]
+        unnamed = filters["selected_unnamed"]
         proximity_lat = filters["selected_proximity_lat"]
         proximity_lon = filters["selected_proximity_lon"]
         proximity_distance = filters["selected_proximity_distance"]
@@ -170,6 +171,11 @@ def init_home_routes(app: Flask):
             else:
                 # OR logic: Photo location must match ANY of the selected locations
                 query = query.filter(MediaItem.location_name.in_(location_names))
+
+        if unnamed:
+            # Only photos with no location name; NULL and "" both count as unnamed
+            # (the locations map treats a falsy name the same way).
+            query = query.filter(func.coalesce(MediaItem.location_name, "") == "")
 
         if proximity_lat is not None and proximity_lon is not None and proximity_distance:
             min_lat, max_lat, min_lon, max_lon = calculate_bounding_box(

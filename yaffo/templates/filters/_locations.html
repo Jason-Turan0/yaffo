@@ -31,6 +31,12 @@
         </div>
     </div>
 
+    <label class="filter-checkbox">
+        <input type="checkbox" name="unnamed" value="1"
+               {% if filters.selected_unnamed %}checked{% endif %}>
+        <span>{{ _("Only show photos without location names") }}</span>
+    </label>
+
     <div class="location-proximity-filter">
         <label class="proximity-label">{{ _("Proximity Search") }}</label>
         <div class="location-autocomplete-wrapper">

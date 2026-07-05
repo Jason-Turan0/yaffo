@@ -92,6 +92,25 @@ def test_favorite_filter_shows_only_favorites(client, app):
     assert fav_id in only_favs and plain_id not in only_favs
 
 
+def test_unnamed_filter_shows_only_photos_without_location_names(client, app):
+    with app.app_context():
+        named = MediaItem(full_file_path="/media/named.jpg", location_name="Old Town")
+        blank = MediaItem(full_file_path="/media/blank.jpg", location_name="")
+        missing = MediaItem(full_file_path="/media/missing.jpg")  # location_name NULL
+        db.session.add_all([named, blank, missing])
+        db.session.commit()
+        named_id, blank_id, missing_id = named.id, blank.id, missing.id
+
+    all_ids = _rendered_ids(client.get("/").data.decode())
+    assert {named_id, blank_id, missing_id} <= all_ids
+
+    body = client.get("/?unnamed=1").data.decode()
+    # NULL and "" both count as unnamed; the checkbox repopulates checked
+    import re
+    assert _rendered_ids(body) == {blank_id, missing_id}
+    assert re.search(r'name="unnamed"[^>]*checked', body)
+
+
 def test_proximity_filter_uses_saved_kilometers(client, app):
     with app.app_context():
         near = MediaItem(full_file_path="/media/near.jpg", latitude=38.6005, longitude=-90.2000)

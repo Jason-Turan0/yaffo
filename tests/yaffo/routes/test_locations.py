@@ -60,6 +60,12 @@ class TestLocationsPageFilterPanel:
         # the layout saves to this page's scope, not home's
         assert 'data-page="locations"' in body
         assert "initClientFilter" in body
+        # the only-unnamed toggle lives in the panel now, not the page header
+        assert 'name="unnamed"' in body
+        assert 'id="filter-unnamed"' not in body
+        # cluster previews render in the side panel; the map popup is gone
+        assert 'id="selection-panel"' in body
+        assert 'id="popup"' not in body
 
     def test_locations_layout_controls_sidebar(self, client, app):
         _seed_located_media(app)

@@ -91,6 +91,7 @@ def build_filters_context(session: Session, args: MultiDict) -> dict:
         'selected_tag_value': args.get("tag-value", type=str),
         'selected_location_names': args.getlist("location", type=str),
         'selected_location_match_type': args.get("location-match-type", default='any', type=str),
+        'selected_unnamed': args.get("unnamed", type=int),
         'selected_proximity_lat': args.get("proximity-lat", type=float),
         'selected_proximity_lon': args.get("proximity-lon", type=float),
         'selected_proximity_distance': args.get("proximity-distance", type=float),

@@ -17,13 +17,7 @@
 <div class="main-container-layout">
     {{ render_sidebar(url_for('locations_list'), filters, filter_layout=filter_layout) }}
     <div class="main-content locations-container">
-        {% set header_actions %}
-            <label class="filter-toggle">
-                <input type="checkbox" id="filter-unnamed">
-                <span>{{ _("Only show photos without location names") }}</span>
-            </label>
-        {% endset %}
-        {% call page_header(_("Photo Locations"), actions=header_actions) %}
+        {% call page_header(_("Photo Locations")) %}
             {% trans %}Hold <kbd>Shift</kbd> and drag to select multiple clusters{% endtrans %}
         {% endcall %}
 
@@ -33,11 +27,6 @@
             <div id="selection-panel" class="selection-panel">
                 <div id="selection-panel-content"></div>
             </div>
-        </div>
-
-        <div id="popup" class="ol-popup">
-            <a href="#" id="popup-closer" class="ol-popup-closer" aria-label="{{ _('Close') }}">×</a>
-            <div id="popup-content" class="popup-content"></div>
         </div>
     </div>
 </div>

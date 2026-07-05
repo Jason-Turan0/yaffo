@@ -48,6 +48,7 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
             tagName: str('tag-name') || null,
             tagValue: str('tag-value') || null,
             locationNames: data.getAll('location').map(String),
+            unnamed: Boolean(num('unnamed')),
             proximity: proximityLat !== null && proximityLon !== null && proximityDistance
                 ? { lat: proximityLat, lon: proximityLon, distance: proximityDistance }
                 : null,
@@ -124,6 +125,9 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
             // and is treated as 'any'.
             if (criteria.locationNames.length > 0
                 && !criteria.locationNames.includes(String(item.name ?? ''))) return false;
+            // A falsy name (null or "") counts as unnamed, same as the server's
+            // coalesce(location_name, '') = ''.
+            if (criteria.unnamed && item.name) return false;
             if (box) {
                 if (item.lat == null || item.lon == null) return false;
                 if (item.lat < box.minLat || item.lat > box.maxLat) return false;

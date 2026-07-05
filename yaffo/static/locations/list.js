@@ -140,6 +140,8 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
     });
 
     dragBox.on('boxstart', function() {
+        // Box selection takes over the shared panel, so drop any click preview.
+        previewPhotos = null;
         selectedFeatures.clear();
         clusterLayer.changed();
     });
@@ -152,31 +154,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         });
     }
 
-    const popup = document.getElementById('popup');
-    const popupContent = document.getElementById('popup-content');
-    const popupCloser = document.getElementById('popup-closer');
-    if (!popup || !popupContent || !popupCloser) {
-        throw new Error('Location map popup markup is incomplete');
-    }
-
-    const overlay = new ol.Overlay({
-        element: popup,
-        autoPan: {
-            animation: {
-                duration: 250
-            }
-        }
-    });
-
-    map.addOverlay(overlay);
-
-    popupCloser.addEventListener('click', (event) => {
-        event.preventDefault();
-        overlay.setPosition(undefined);
-        popupCloser.blur();
-    });
-
-    // A video's media route returns the raw clip, so the popup thumbnail
+    // A video's media route returns the raw clip, so the preview thumbnail
     // points at its poster frame (falling back to the placeholder when there's no
     // poster, via data-fallback + initImageFallbacks). Photos use /media directly.
     const thumbUrl = (/** @type {LocationMediaItem} */ item) => item.media_type === 'video'
@@ -185,25 +163,99 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
 
     const fallbackUrl = config.urls.placeholder;
 
-    /**
-     * @param {LocationMediaItem} photoData
-     * @param {any} coordinate
-     */
-    const showPhotoInPopup = (photoData, coordinate) => {
-        const photoViewUrl = config.buildUrl('media_view', { media_item_id: photoData.id });
-        const safeName = escapeHtml(photoData.name);
+    // The side panel shows either the mass-assignment UI (shift-drag selection)
+    // or this: a preview of the last clicked cluster's photos. The two are
+    // mutually exclusive; updateSelectionPanel dispatches on current state.
+    /** @type {LocationMediaItem[] | null} */
+    let previewPhotos = null;
 
-        popupContent.innerHTML = `
-            <div class="popup-photo-container">
-                <a href="${photoViewUrl}" target="_blank">
-                    <img src="${thumbUrl(photoData)}" data-fallback="${fallbackUrl}" alt="${safeName}" class="popup-photo">
-                </a>
+    const renderPreviewPanel = () => {
+        const panel = document.getElementById('selection-panel');
+        const panelContent = document.getElementById('selection-panel-content');
+        if (!panel || !panelContent) return;
+
+        const photos = previewPhotos || [];
+        const firstPhoto = photos[0];
+        if (!firstPhoto) {
+            panel.classList.remove('active');
+            return;
+        }
+
+        const selectId = 'photo-select-' + Date.now();
+        const selectOptions = photos.map((photo, idx) =>
+            `<option value="${idx}">${escapeHtml(photo.name)}</option>`
+        ).join('');
+        // The photo selector only makes sense for clusters of several photos.
+        const selectorHtml = photos.length > 1 ? `
+                <div class="preview-select-container">
+                    <label for="${selectId}">${escapeHtml(i18n.t('locations:popup.selectPhoto', {
+                        count: photos.length,
+                        total: i18n.number(photos.length),
+                    }))}</label>
+                    <select id="${selectId}" class="photo-select searchable-select">
+                        ${selectOptions}
+                    </select>
+                </div>` : '';
+
+        const photoViewUrl = config.buildUrl('media_view', { media_item_id: firstPhoto.id });
+        const safeFirstName = escapeHtml(firstPhoto.name);
+
+        panelContent.innerHTML = `
+            <div class="selection-panel-header preview-header">
+                <h3>${escapeHtml(i18n.t('locations:selection.photoCount', {
+                    count: photos.length,
+                    formattedCount: i18n.number(photos.length),
+                }))}</h3>
+                <button type="button" class="preview-close"
+                        aria-label="${escapeHtml(i18n.t('common:close'))}"
+                        title="${escapeHtml(i18n.t('common:close'))}">×</button>
             </div>
-            <h3>${safeName}</h3>
-            <p class="photo-location">${escapeHtml(photoData.location || unknownLocation)}</p>
+            <div class="cluster-preview">
+                ${selectorHtml}
+                <div class="preview-photo-container">
+                    <a id="photo-link" href="${photoViewUrl}" target="_blank">
+                        <img id="photo-img" src="${thumbUrl(firstPhoto)}" data-fallback="${fallbackUrl}" alt="${safeFirstName}" class="preview-photo">
+                    </a>
+                </div>
+                <h3 id="photo-name">${safeFirstName}</h3>
+                <p class="photo-location">${escapeHtml(firstPhoto.location || unknownLocation)}</p>
+            </div>
         `;
         window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
-        overlay.setPosition(coordinate);
+
+        panelContent.querySelector('.preview-close')?.addEventListener('click', () => {
+            previewPhotos = null;
+            updateSelectionPanel();
+        });
+
+        const selectElement = document.getElementById(selectId);
+        if (selectElement instanceof HTMLSelectElement) {
+            window.SearchableSelect?.init(selectElement);
+            selectElement.addEventListener('change', function() {
+                const selectedIndex = parseInt(selectElement.value);
+                const selectedPhoto = photos[selectedIndex];
+                if (!selectedPhoto) return;
+
+                const newPhotoViewUrl = config.buildUrl('media_view', { media_item_id: selectedPhoto.id });
+
+                const img = document.getElementById('photo-img');
+                const link = document.getElementById('photo-link');
+                const name = document.getElementById('photo-name');
+                const location = document.querySelector('.photo-location');
+                const selectedName = selectedPhoto.filename || selectedPhoto.name || '';
+                if (img instanceof HTMLImageElement) {
+                    img.src = thumbUrl(selectedPhoto);
+                    img.alt = selectedName;
+                }
+                if (link instanceof HTMLAnchorElement) link.href = newPhotoViewUrl;
+                if (name) name.textContent = selectedName;
+                if (location) location.textContent = selectedPhoto.location || unknownLocation;
+                // Re-arm the fallback for the swapped src (the handler is once-only).
+                window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
+            });
+        }
+
+        panel.classList.add('active');
     };
 
     map.on('click', function(/** @type {any} */ evt) {
@@ -213,86 +265,24 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
 
         if (feature) {
             const features = feature.get('features');
-            const coordinate = feature.getGeometry().getCoordinates();
+            if (!features || features.length === 0) return;
 
-            if (features && features.length > 1) {
-                const photosData = /** @type {LocationMediaItem[]} */ (features.map((/** @type {any} */ f) => ({
-                    name: f.get('filename'),
-                    location: f.get('name'),
-                    id: f.get('id'),
-                    photo_path: f.get('photo_path'),
-                    media_type: f.get('media_type')
-                })));
-
-                const selectId = 'photo-select-' + Date.now();
-                const selectOptions = photosData.map((photo, idx) =>
-                    `<option value="${idx}">${escapeHtml(photo.name)}</option>`
-                ).join('');
-
-                const firstPhoto = photosData[0];
-                const photoViewUrl = config.buildUrl('media_view', { media_item_id: firstPhoto.id });
-                const safeFirstName = escapeHtml(firstPhoto.name);
-
-                popupContent.innerHTML = `
-                    <div class="popup-select-container">
-                        <label for="${selectId}">${escapeHtml(i18n.t('locations:popup.selectPhoto', {
-                            count: photosData.length,
-                            total: i18n.number(photosData.length),
-                        }))}</label>
-                        <select id="${selectId}" class="photo-select searchable-select">
-                            ${selectOptions}
-                        </select>
-                    </div>
-                    <div class="popup-photo-container">
-                        <a id="photo-link" href="${photoViewUrl}" target="_blank">
-                            <img id="photo-img" src="${thumbUrl(firstPhoto)}" data-fallback="${fallbackUrl}" alt="${safeFirstName}" class="popup-photo">
-                        </a>
-                    </div>
-                    <h3 id="photo-name">${safeFirstName}</h3>
-                    <p class="photo-location">${escapeHtml(firstPhoto.location || unknownLocation)}</p>
-                `;
-                window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
-
-                const selectElement = document.getElementById(selectId);
-                if (!(selectElement instanceof HTMLSelectElement)) return;
-                window.SearchableSelect?.init(selectElement);
-                selectElement.addEventListener('change', function() {
-                    const selectedIndex = parseInt(selectElement.value);
-                    const selectedPhoto = photosData[selectedIndex];
-                    if (!selectedPhoto) return;
-
-                    const newPhotoViewUrl = config.buildUrl('media_view', { media_item_id: selectedPhoto.id });
-
-                    const img = document.getElementById('photo-img');
-                    const link = document.getElementById('photo-link');
-                    const name = document.getElementById('photo-name');
-                    const location = document.querySelector('.photo-location');
-                    const selectedName = selectedPhoto.filename || selectedPhoto.name || '';
-                    if (img instanceof HTMLImageElement) {
-                        img.src = thumbUrl(selectedPhoto);
-                        img.alt = selectedName;
-                    }
-                    if (link instanceof HTMLAnchorElement) link.href = newPhotoViewUrl;
-                    if (name) name.textContent = selectedName;
-                    if (location) location.textContent = selectedPhoto.location || unknownLocation;
-                    // Re-arm the fallback for the swapped src (the handler is once-only).
-                    window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
-                });
-
-                overlay.setPosition(coordinate);
-            } else if (features && features.length === 1) {
-                const singleFeature = features[0];
-                const photoData = {
-                    name: singleFeature.get('filename'),
-                    location: singleFeature.get('name'),
-                    id: singleFeature.get('id'),
-                    photo_path: singleFeature.get('photo_path'),
-                    media_type: singleFeature.get('media_type')
-                };
-                showPhotoInPopup(photoData, coordinate);
-            }
-        } else {
-            overlay.setPosition(undefined);
+            previewPhotos = /** @type {LocationMediaItem[]} */ (features.map((/** @type {any} */ f) => ({
+                name: f.get('filename'),
+                location: f.get('name'),
+                id: f.get('id'),
+                photo_path: f.get('photo_path'),
+                media_type: f.get('media_type')
+            })));
+            // The panel is shared with the mass-assignment view; a plain click
+            // switches it to preview mode.
+            selectedFeatures.clear();
+            clusterLayer.changed();
+            updateSelectionPanel();
+        } else if (previewPhotos) {
+            // Clicking empty map dismisses the preview (like the old popup).
+            previewPhotos = null;
+            updateSelectionPanel();
         }
     });
 
@@ -347,7 +337,9 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         if (!panel || !panelContent) return;
 
         if (selectedFeatures.size === 0) {
-            panel.classList.remove('active');
+            // No box selection: fall back to the click preview, if one is open
+            // (renderPreviewPanel hides the panel when there isn't).
+            renderPreviewPanel();
             return;
         }
 
@@ -504,8 +496,9 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                         }
                     });
 
-                    const filterCheckbox = document.getElementById('filter-unnamed');
-                    if (filterCheckbox instanceof HTMLInputElement && filterCheckbox.checked) {
+                    // An active filter may match on the (just-changed) names,
+                    // so re-derive the visible set; otherwise a restyle is enough.
+                    if (clientPredicate) {
                         refreshFeatures();
                     } else {
                         clusterLayer.changed();
@@ -611,26 +604,22 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         })();
     };
 
-    // Two independent filters narrow the markers: the header's "only unnamed"
-    // checkbox and the sidebar's client-side predicate (set via the shared
-    // filter panel). Both are re-applied together from the full feature list.
-    let showOnlyUnnamed = false;
+    // The sidebar's client-side predicate (set via the shared filter panel,
+    // "only unnamed" included) narrows the markers from the full feature list.
     /** @type {((item: ClientFilterItem) => boolean) | null} */
     let clientPredicate = null;
 
     const refreshFeatures = () => {
-        let visibleFeatures = allFeatures;
-        if (showOnlyUnnamed) {
-            visibleFeatures = visibleFeatures.filter(feature => !feature.get('name'));
-        }
-        if (clientPredicate) {
-            const predicate = clientPredicate;
-            visibleFeatures = visibleFeatures.filter(feature => predicate(feature.get('item')));
-        }
+        const predicate = clientPredicate;
+        const visibleFeatures = predicate
+            ? allFeatures.filter(feature => predicate(feature.get('item')))
+            : allFeatures;
 
         vectorSource.clear();
         vectorSource.addFeatures(visibleFeatures);
 
+        // The previewed cluster may no longer be on the map; drop both panel states.
+        previewPhotos = null;
         selectedFeatures.clear();
         clusterLayer.changed();
         updateSelectionPanel();
@@ -644,22 +633,10 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         }
     };
 
-    const applyFilter = (/** @type {boolean} */ onlyUnnamed) => {
-        showOnlyUnnamed = onlyUnnamed;
-        refreshFeatures();
-    };
-
     const setClientFilter = (/** @type {(item: ClientFilterItem) => boolean} */ predicate) => {
         clientPredicate = predicate;
         refreshFeatures();
     };
 
-    const filterCheckbox = document.getElementById('filter-unnamed');
-    if (filterCheckbox) {
-        filterCheckbox.addEventListener('change', (e) => {
-            if (e.target instanceof HTMLInputElement) applyFilter(e.target.checked);
-        });
-    }
-
-    return { map, vectorSource, selectedFeatures, updateSelectionPanel, applyFilter, setClientFilter };
+    return { map, vectorSource, selectedFeatures, updateSelectionPanel, setClientFilter };
 };

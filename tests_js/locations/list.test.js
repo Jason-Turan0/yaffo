@@ -113,14 +113,9 @@ class TestDragBox {
 
 const setupDom = () => {
   document.body.innerHTML = `
-    <input type="checkbox" id="filter-unnamed">
     <div id="map"></div>
     <div id="selection-panel" class="selection-panel">
       <div id="selection-panel-content"></div>
-    </div>
-    <div id="popup">
-      <a href="#" id="popup-closer"></a>
-      <div id="popup-content"></div>
     </div>
   `;
 };
@@ -130,9 +125,6 @@ const installOpenLayersStub = () => {
     Map: TestMap,
     View: TestView,
     Feature: TestFeature,
-    Overlay: class {
-      setPosition() {}
-    },
     geom: {
       Point: TestGeometry,
     },
@@ -204,6 +196,8 @@ const createI18n = () => ({
     if (key === 'locations:update.cleared') return `Cleared ${options.count}`;
     if (key === 'locations:update.nameRequired') return 'Name required';
     if (key === 'locations:update.failed') return 'Update failed';
+    if (key === 'locations:popup.selectPhoto') return `Select photo (${options.total} total):`;
+    if (key === 'common:close') return 'Close';
     return key;
   },
   number: (value) => String(value),
@@ -350,14 +344,12 @@ describe('locations list map client-side filtering', () => {
     expect(api.vectorSource.getFeatures().map((feature) => feature.get('id'))).toEqual([1]);
   });
 
-  it('composes with the only-unnamed checkbox and restores on a match-all predicate', async () => {
+  it('an unnamed-only predicate narrows to markers without a name and restores on match-all', async () => {
     const { api } = await initLocationsMap();
 
-    api.applyFilter(true); // only the unnamed marker (id 2)
-    api.setClientFilter((item) => item.id === 1); // intersection is empty
-    expect(api.vectorSource.getFeatures()).toEqual([]);
+    api.setClientFilter((item) => !item.name); // only the unnamed marker (id 2)
+    expect(api.vectorSource.getFeatures().map((feature) => feature.get('id'))).toEqual([2]);
 
-    api.applyFilter(false);
     api.setClientFilter(() => true);
     expect(api.vectorSource.getFeatures()).toHaveLength(2);
   });
@@ -376,5 +368,88 @@ describe('locations list map client-side filtering', () => {
 
     api.setClientFilter((item) => item.name === 'Beach');
     expect(api.vectorSource.getFeatures()).toEqual([]);
+  });
+});
+
+describe('locations list map cluster preview', () => {
+  it('map clicks on a cluster render its preview in the side panel', async () => {
+    const { api } = await initLocationsMap();
+    api.selectedFeatures.clear();
+
+    const cluster = new TestFeature({ features: api.vectorSource.getFeatures() });
+    api.map.forEachFeatureAtPixel = () => cluster;
+    api.map.handlers.click({ pixel: [0, 0] });
+
+    const panel = document.getElementById('selection-panel');
+    expect(panel.classList.contains('active')).toBe(true);
+    expect(document.querySelector('.preview-header h3').textContent).toBe('2 photos');
+    // multiple photos -> a selector to flip between them
+    expect(document.querySelector('.photo-select')).toBeTruthy();
+    expect(document.getElementById('photo-img').getAttribute('src')).toBe('/media/1');
+    expect(document.getElementById('photo-name').textContent).toBe('one.jpg');
+    expect(document.querySelector('.photo-location').textContent).toBe('Beach');
+  });
+
+  it('selecting another photo in the preview swaps the image, link and caption', async () => {
+    const { api } = await initLocationsMap();
+    api.selectedFeatures.clear();
+
+    const cluster = new TestFeature({ features: api.vectorSource.getFeatures() });
+    api.map.forEachFeatureAtPixel = () => cluster;
+    api.map.handlers.click({ pixel: [0, 0] });
+
+    const select = document.querySelector('.photo-select');
+    select.value = '1';
+    select.dispatchEvent(new window.Event('change'));
+
+    expect(document.getElementById('photo-img').getAttribute('src')).toBe('/media/2');
+    expect(document.getElementById('photo-name').textContent).toBe('two.jpg');
+    expect(document.querySelector('.photo-location').textContent).toBe('Unknown location');
+  });
+
+  it('a single-photo cluster previews without the photo selector', async () => {
+    const { api } = await initLocationsMap();
+    api.selectedFeatures.clear();
+
+    const cluster = new TestFeature({ features: [api.vectorSource.getFeatures()[0]] });
+    api.map.forEachFeatureAtPixel = () => cluster;
+    api.map.handlers.click({ pixel: [0, 0] });
+
+    expect(document.querySelector('.photo-select')).toBeFalsy();
+    expect(document.getElementById('photo-name').textContent).toBe('one.jpg');
+  });
+
+  it('clicking empty map or the close button dismisses the preview', async () => {
+    const { api } = await initLocationsMap();
+    api.selectedFeatures.clear();
+    const panel = document.getElementById('selection-panel');
+
+    const cluster = new TestFeature({ features: api.vectorSource.getFeatures() });
+    api.map.forEachFeatureAtPixel = () => cluster;
+    api.map.handlers.click({ pixel: [0, 0] });
+    expect(panel.classList.contains('active')).toBe(true);
+
+    document.querySelector('.preview-close').click();
+    expect(panel.classList.contains('active')).toBe(false);
+
+    api.map.handlers.click({ pixel: [0, 0] });
+    expect(panel.classList.contains('active')).toBe(true);
+    api.map.forEachFeatureAtPixel = () => null;
+    api.map.handlers.click({ pixel: [0, 0] });
+    expect(panel.classList.contains('active')).toBe(false);
+  });
+
+  it('a plain click switches the panel from mass assignment to preview', async () => {
+    const { api } = await initLocationsMap(); // helper seeds a box selection
+    await api.updateSelectionPanel();
+    expect(document.querySelector('.selection-panel-header h3').textContent).toBe('Mass assignment');
+
+    const cluster = new TestFeature({ features: api.vectorSource.getFeatures() });
+    api.map.forEachFeatureAtPixel = () => cluster;
+    api.map.handlers.click({ pixel: [0, 0] });
+
+    expect(api.selectedFeatures.size).toBe(0);
+    expect(document.querySelector('.preview-header')).toBeTruthy();
+    expect(document.querySelector('#mass-assign-btn')).toBeFalsy();
   });
 });

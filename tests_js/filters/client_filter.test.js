@@ -25,6 +25,7 @@ const FORM_HTML = `
     <select name="tag-name"><option value="" selected></option><option value="Event">Event</option></select>
     <select name="tag-value"><option value="" selected></option><option value="Vacation">Vacation</option></select>
     <input type="checkbox" name="location" value="Old Town">
+    <input type="checkbox" name="unnamed" value="1">
     <input type="hidden" name="proximity-lat" value="">
     <input type="hidden" name="proximity-lon" value="">
     <input type="number" name="proximity-distance" value="">
@@ -74,7 +75,8 @@ describe('readCriteria', () => {
     const criteria = core.readCriteria(form);
     expect(criteria).toMatchObject({
       path: null, year: null, month: null, device: null, favorite: false,
-      mediaType: null, gender: null, tagName: null, tagValue: null, proximity: null,
+      mediaType: null, gender: null, tagName: null, tagValue: null,
+      unnamed: false, proximity: null,
     });
     expect(criteria.personIds).toEqual([]);
     expect(criteria.labelIds).toEqual([]);
@@ -155,6 +157,13 @@ describe('buildPredicate', () => {
     expect(predicate()(baseItem())).toBe(true);
     expect(predicate()({ ...baseItem(), name: 'Beach' })).toBe(false);
     expect(predicate()({ ...baseItem(), name: null })).toBe(false);
+  });
+
+  it('unnamed-only keeps items whose name is null or empty', () => {
+    check('unnamed', '1');
+    expect(predicate()(baseItem())).toBe(false);
+    expect(predicate()({ ...baseItem(), name: null })).toBe(true);
+    expect(predicate()({ ...baseItem(), name: '' })).toBe(true);
   });
 
   it('proximity uses the server bounding box in the saved unit', () => {

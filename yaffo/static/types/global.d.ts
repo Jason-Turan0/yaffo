@@ -335,6 +335,7 @@ type ClientFilterCriteria = {
     tagName: string | null;
     tagValue: string | null;
     locationNames: string[];
+    unnamed: boolean;
     proximity: { lat: number; lon: number; distance: number } | null;
 };
 
@@ -348,7 +349,6 @@ type LocationMapApi = {
     vectorSource: unknown;
     selectedFeatures: Set<unknown>;
     updateSelectionPanel(): Promise<void>;
-    applyFilter(showOnlyUnnamed: boolean): void;
     setClientFilter(predicate: (item: ClientFilterItem) => boolean): void;
 };
 

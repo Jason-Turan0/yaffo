@@ -5,29 +5,11 @@
     min-width: 0;
 }
 
-.filter-toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: var(--font-size-base);
-    color: var(--color-text-secondary);
-    user-select: none;
-}
-
-.filter-toggle input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-}
-
-.filter-toggle:hover span {
-    color: var(--color-text);
-}
-
 .map-layout {
+    /* No gap here: the hidden panel is a zero-width flex item, and a gap would
+       leave a stray gutter on the right of the map. The active panel brings
+       its own margin instead, so the map's right edge lines up with the header. */
     display: flex;
-    gap: 15px;
     position: relative;
 }
 
@@ -39,98 +21,66 @@
     transition: flex 0.3s ease;
 }
 
-#map.with-panel {
-    flex: 1;
+/* Preview of the last clicked cluster, shown in the side panel (shares it
+   with the mass-assignment view). */
+.preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
 }
 
-.ol-popup {
-    position: absolute;
-    background-color: var(--color-surface);
-    box-shadow: var(--shadow-sm);
-    padding: 15px;
-    border-radius: var(--radius-md);
-    border: var(--border-width) solid var(--color-border-strong);
-    bottom: 12px;
-    left: -50px;
-    min-width: 250px;
-}
-
-.ol-popup:after, .ol-popup:before {
-    top: 100%;
-    border: solid transparent;
-    content: " ";
-    height: 0;
-    width: 0;
-    position: absolute;
-    pointer-events: none;
-}
-
-.ol-popup:after {
-    border-top-color: var(--color-surface);
-    border-width: 10px;
-    left: 48px;
-    margin-left: -10px;
-}
-
-.ol-popup:before {
-    border-top-color: var(--color-border-strong);
-    border-width: 11px;
-    left: 48px;
-    margin-left: -11px;
-}
-
-.ol-popup-closer {
-    text-decoration: none;
-    position: absolute;
-    top: 8px;
-    right: 8px;
+.preview-close {
+    background: none;
+    border: none;
+    padding: 0 4px;
+    line-height: 1;
     font-size: var(--font-size-lg);
     color: var(--color-text-muted);
-    z-index: 1;
+    cursor: pointer;
 }
 
-.ol-popup-closer:hover {
+.preview-close:hover {
     color: var(--color-text);
 }
 
-.popup-content h3 {
+.cluster-preview {
+    padding: 16px 18px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.cluster-preview h3 {
     margin: 0 0 8px 0;
     font-size: var(--font-size-md);
     color: var(--color-text);
 }
 
-.popup-content p {
-    margin: 0;
-    font-size: var(--font-size-base);
-    color: var(--color-text-muted);
-}
-
-.popup-photo-container {
+.preview-photo-container {
     margin-bottom: 10px;
 }
 
-.popup-photo-container a {
+.preview-photo-container a {
     display: block;
 }
 
-.popup-photo {
+.preview-photo {
     width: 100%;
-    max-width: 220px;
     height: auto;
     border-radius: var(--radius-sm);
     display: block;
     transition: opacity 0.2s;
 }
 
-.popup-photo:hover {
+.preview-photo:hover {
     opacity: 0.9;
 }
 
-.popup-select-container {
+.preview-select-container {
     margin-bottom: 12px;
 }
 
-.popup-select-container label {
+.preview-select-container label {
     display: block;
     font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
@@ -164,10 +114,11 @@
     width: 0;
     opacity: 0;
     overflow: hidden;
+    margin-left: 0;
     background: var(--color-surface);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
-    transition: width 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+    transition: width 0.3s ease, opacity 0.3s ease, padding 0.3s ease, margin-left 0.3s ease;
     padding: 0;
 }
 
@@ -175,6 +126,7 @@
     width: 380px;
     opacity: 1;
     padding: 0;
+    margin-left: 15px;
 }
 
 .selection-panel h3 {
