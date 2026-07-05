@@ -21,39 +21,85 @@
     transition: flex 0.3s ease;
 }
 
-/* Preview of the last clicked cluster, shown in the side panel (shares it
-   with the mass-assignment view). */
-.preview-header {
+/* Collapsible preview section of the selection panel: current photo, select
+   box, and a thumbnail strip for the selected clusters. */
+.preview-section {
+    border-bottom: var(--border-width) solid var(--color-border-subtle);
+}
+
+.preview-toggle {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-}
-
-.preview-close {
+    width: 100%;
+    padding: 12px 18px;
     background: none;
     border: none;
-    padding: 0 4px;
-    line-height: 1;
-    font-size: var(--font-size-lg);
-    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-text-secondary);
     cursor: pointer;
 }
 
-.preview-close:hover {
+.preview-toggle:hover {
     color: var(--color-text);
 }
 
-.cluster-preview {
-    padding: 16px 18px;
-    overflow-y: auto;
-    min-height: 0;
+.preview-toggle-arrow {
+    color: var(--color-text-muted);
 }
 
-.cluster-preview h3 {
+.preview-body {
+    padding: 0 18px 16px;
+}
+
+.preview-section.collapsed .preview-body {
+    display: none;
+}
+
+.preview-body h3 {
     margin: 0 0 8px 0;
     font-size: var(--font-size-md);
     color: var(--color-text);
+}
+
+.preview-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.preview-thumb {
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    background: none;
+    cursor: pointer;
+    line-height: 0;
+}
+
+.preview-thumb img {
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
+.preview-thumb:hover {
+    border-color: var(--color-border-hover);
+}
+
+.preview-thumb.active {
+    border-color: var(--color-accent);
+}
+
+.preview-thumbs-more {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    padding-left: 4px;
 }
 
 .preview-photo-container {
@@ -140,6 +186,8 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
+    /* Preview + assignment together can outgrow the map height. */
+    overflow-y: auto;
 }
 
 .selection-panel-header {

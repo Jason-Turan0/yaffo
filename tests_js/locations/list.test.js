@@ -197,7 +197,8 @@ const createI18n = () => ({
     if (key === 'locations:update.nameRequired') return 'Name required';
     if (key === 'locations:update.failed') return 'Update failed';
     if (key === 'locations:popup.selectPhoto') return `Select photo (${options.total} total):`;
-    if (key === 'common:close') return 'Close';
+    if (key === 'locations:selection.preview') return 'Preview';
+    if (key === 'locations:selection.moreThumbnails') return `+${options.more} more`;
     return key;
   },
   number: (value) => String(value),
@@ -372,33 +373,39 @@ describe('locations list map client-side filtering', () => {
 });
 
 describe('locations list map cluster preview', () => {
-  it('map clicks on a cluster render its preview in the side panel', async () => {
+  const clickCluster = (api, features) => {
+    const cluster = new TestFeature({ features });
+    api.map.forEachFeatureAtPixel = () => cluster;
+    api.map.handlers.click({ pixel: [0, 0] });
+    return cluster;
+  };
+
+  it('clicking a cluster selects it and shows preview plus assignment tools', async () => {
     const { api } = await initLocationsMap();
     api.selectedFeatures.clear();
 
-    const cluster = new TestFeature({ features: api.vectorSource.getFeatures() });
-    api.map.forEachFeatureAtPixel = () => cluster;
-    api.map.handlers.click({ pixel: [0, 0] });
+    const cluster = clickCluster(api, api.vectorSource.getFeatures());
 
     const panel = document.getElementById('selection-panel');
     expect(panel.classList.contains('active')).toBe(true);
-    expect(document.querySelector('.preview-header h3').textContent).toBe('2 photos');
-    // multiple photos -> a selector to flip between them
-    expect(document.querySelector('.photo-select')).toBeTruthy();
+    expect(api.selectedFeatures.has(cluster)).toBe(true);
+    // one panel for both tasks: preview section + assignment controls
+    expect(document.querySelector('.preview-toggle span').textContent).toBe('Preview');
+    expect(document.getElementById('mass-assign-btn')).toBeTruthy();
+    // preview hosts the image, the select box and the thumbnails
     expect(document.getElementById('photo-img').getAttribute('src')).toBe('/media/1');
+    expect(document.getElementById('preview-photo-select')).toBeTruthy();
+    expect(document.querySelectorAll('.preview-thumb')).toHaveLength(2);
     expect(document.getElementById('photo-name').textContent).toBe('one.jpg');
     expect(document.querySelector('.photo-location').textContent).toBe('Beach');
   });
 
-  it('selecting another photo in the preview swaps the image, link and caption', async () => {
+  it('the select box swaps the previewed image, link and caption', async () => {
     const { api } = await initLocationsMap();
     api.selectedFeatures.clear();
+    clickCluster(api, api.vectorSource.getFeatures());
 
-    const cluster = new TestFeature({ features: api.vectorSource.getFeatures() });
-    api.map.forEachFeatureAtPixel = () => cluster;
-    api.map.handlers.click({ pixel: [0, 0] });
-
-    const select = document.querySelector('.photo-select');
+    const select = document.getElementById('preview-photo-select');
     select.value = '1';
     select.dispatchEvent(new window.Event('change'));
 
@@ -407,49 +414,91 @@ describe('locations list map cluster preview', () => {
     expect(document.querySelector('.photo-location').textContent).toBe('Unknown location');
   });
 
-  it('a single-photo cluster previews without the photo selector', async () => {
+  it('clicking a thumbnail selects that photo and highlights it', async () => {
+    const { api } = await initLocationsMap();
+    api.selectedFeatures.clear();
+    clickCluster(api, api.vectorSource.getFeatures());
+
+    const thumbs = document.querySelectorAll('.preview-thumb');
+    thumbs[1].click();
+
+    expect(document.getElementById('photo-img').getAttribute('src')).toBe('/media/2');
+    expect(document.getElementById('preview-photo-select').value).toBe('1');
+    expect(thumbs[1].classList.contains('active')).toBe(true);
+    expect(thumbs[0].classList.contains('active')).toBe(false);
+  });
+
+  it('a single-photo cluster previews without the select box or thumbnails', async () => {
     const { api } = await initLocationsMap();
     api.selectedFeatures.clear();
 
-    const cluster = new TestFeature({ features: [api.vectorSource.getFeatures()[0]] });
-    api.map.forEachFeatureAtPixel = () => cluster;
-    api.map.handlers.click({ pixel: [0, 0] });
+    clickCluster(api, [api.vectorSource.getFeatures()[0]]);
 
-    expect(document.querySelector('.photo-select')).toBeFalsy();
+    expect(document.getElementById('preview-photo-select')).toBeFalsy();
+    expect(document.querySelectorAll('.preview-thumb')).toHaveLength(0);
     expect(document.getElementById('photo-name').textContent).toBe('one.jpg');
+    // assignment tools are still offered for the single cluster
+    expect(document.getElementById('mass-assign-btn')).toBeTruthy();
   });
 
-  it('clicking empty map or the close button dismisses the preview', async () => {
+  it('the preview section collapses, and stays collapsed across re-renders', async () => {
+    const { api } = await initLocationsMap();
+    api.selectedFeatures.clear();
+    clickCluster(api, api.vectorSource.getFeatures());
+
+    const toggle = document.querySelector('.preview-toggle');
+    toggle.click();
+    expect(document.querySelector('.preview-section').classList.contains('collapsed')).toBe(true);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+    // a new selection re-renders the panel; the collapsed state sticks
+    clickCluster(api, [api.vectorSource.getFeatures()[0]]);
+    expect(document.querySelector('.preview-section').classList.contains('collapsed')).toBe(true);
+  });
+
+  it('clicking empty map clears the selection and closes the panel', async () => {
     const { api } = await initLocationsMap();
     api.selectedFeatures.clear();
     const panel = document.getElementById('selection-panel');
 
-    const cluster = new TestFeature({ features: api.vectorSource.getFeatures() });
-    api.map.forEachFeatureAtPixel = () => cluster;
-    api.map.handlers.click({ pixel: [0, 0] });
+    clickCluster(api, api.vectorSource.getFeatures());
     expect(panel.classList.contains('active')).toBe(true);
 
-    document.querySelector('.preview-close').click();
-    expect(panel.classList.contains('active')).toBe(false);
-
-    api.map.handlers.click({ pixel: [0, 0] });
-    expect(panel.classList.contains('active')).toBe(true);
     api.map.forEachFeatureAtPixel = () => null;
     api.map.handlers.click({ pixel: [0, 0] });
+    expect(api.selectedFeatures.size).toBe(0);
     expect(panel.classList.contains('active')).toBe(false);
   });
 
-  it('a plain click switches the panel from mass assignment to preview', async () => {
+  it('a plain click replaces an existing box selection with the clicked cluster', async () => {
     const { api } = await initLocationsMap(); // helper seeds a box selection
     await api.updateSelectionPanel();
     expect(document.querySelector('.selection-panel-header h3').textContent).toBe('Mass assignment');
 
-    const cluster = new TestFeature({ features: api.vectorSource.getFeatures() });
-    api.map.forEachFeatureAtPixel = () => cluster;
-    api.map.handlers.click({ pixel: [0, 0] });
+    const cluster = clickCluster(api, [api.vectorSource.getFeatures()[0]]);
 
-    expect(api.selectedFeatures.size).toBe(0);
-    expect(document.querySelector('.preview-header')).toBeTruthy();
-    expect(document.querySelector('#mass-assign-btn')).toBeFalsy();
+    expect(api.selectedFeatures.size).toBe(1);
+    expect(api.selectedFeatures.has(cluster)).toBe(true);
+    // the panel stays in its single unified layout
+    expect(document.querySelector('.preview-section')).toBeTruthy();
+    expect(document.getElementById('mass-assign-btn')).toBeTruthy();
+  });
+
+  it('assigning a name from a clicked cluster posts its photo ids', async () => {
+    const { api, fetchMock } = await initLocationsMap();
+    api.selectedFeatures.clear();
+    clickCluster(api, api.vectorSource.getFeatures());
+
+    document.getElementById('mass-location-input').value = 'Click Bay';
+    document.getElementById('mass-assign-btn').click();
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith('/locations/bulk-update', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        media_item_ids: [1, 2],
+        location_name: 'Click Bay',
+      }),
+    }));
   });
 });

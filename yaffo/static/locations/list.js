@@ -140,8 +140,6 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
     });
 
     dragBox.on('boxstart', function() {
-        // Box selection takes over the shared panel, so drop any click preview.
-        previewPhotos = null;
         selectedFeatures.clear();
         clusterLayer.changed();
     });
@@ -163,99 +161,140 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
 
     const fallbackUrl = config.urls.placeholder;
 
-    // The side panel shows either the mass-assignment UI (shift-drag selection)
-    // or this: a preview of the last clicked cluster's photos. The two are
-    // mutually exclusive; updateSelectionPanel dispatches on current state.
-    /** @type {LocationMediaItem[] | null} */
-    let previewPhotos = null;
+    // Collapsed/expanded state of the panel's preview section; kept outside the
+    // renderer so it survives re-renders as the selection changes.
+    let previewCollapsed = false;
 
-    const renderPreviewPanel = () => {
-        const panel = document.getElementById('selection-panel');
-        const panelContent = document.getElementById('selection-panel-content');
-        if (!panel || !panelContent) return;
+    // Show at most this many thumbnails; the select box still lists every photo.
+    const PREVIEW_THUMBS_LIMIT = 24;
 
-        const photos = previewPhotos || [];
+    /**
+     * The collapsible preview section of the selection panel: the current
+     * photo (image + caption), a select box, and a thumbnail strip.
+     * @param {LocationMediaItem[]} photos
+     */
+    const buildPreviewSection = (photos) => {
         const firstPhoto = photos[0];
-        if (!firstPhoto) {
-            panel.classList.remove('active');
-            return;
-        }
+        if (!firstPhoto) return '';
 
-        const selectId = 'photo-select-' + Date.now();
+        // The select box and thumbnails only make sense for several photos.
         const selectOptions = photos.map((photo, idx) =>
             `<option value="${idx}">${escapeHtml(photo.name)}</option>`
         ).join('');
-        // The photo selector only makes sense for clusters of several photos.
         const selectorHtml = photos.length > 1 ? `
                 <div class="preview-select-container">
-                    <label for="${selectId}">${escapeHtml(i18n.t('locations:popup.selectPhoto', {
+                    <label for="preview-photo-select">${escapeHtml(i18n.t('locations:popup.selectPhoto', {
                         count: photos.length,
                         total: i18n.number(photos.length),
                     }))}</label>
-                    <select id="${selectId}" class="photo-select searchable-select">
+                    <select id="preview-photo-select" class="photo-select searchable-select">
                         ${selectOptions}
                     </select>
                 </div>` : '';
 
+        const thumbButtons = photos.slice(0, PREVIEW_THUMBS_LIMIT).map((photo, idx) => {
+            const safeName = escapeHtml(photo.name);
+            return `
+                <button type="button" class="preview-thumb${idx === 0 ? ' active' : ''}"
+                        data-index="${idx}" title="${safeName}">
+                    <img src="${thumbUrl(photo)}" data-fallback="${fallbackUrl}" alt="${safeName}">
+                </button>`;
+        }).join('');
+        const moreHtml = photos.length > PREVIEW_THUMBS_LIMIT
+            ? `<span class="preview-thumbs-more">${escapeHtml(i18n.t('locations:selection.moreThumbnails', {
+                more: i18n.number(photos.length - PREVIEW_THUMBS_LIMIT),
+            }))}</span>`
+            : '';
+        const thumbsHtml = photos.length > 1
+            ? `<div class="preview-thumbs">${thumbButtons}${moreHtml}</div>`
+            : '';
+
         const photoViewUrl = config.buildUrl('media_view', { media_item_id: firstPhoto.id });
         const safeFirstName = escapeHtml(firstPhoto.name);
 
-        panelContent.innerHTML = `
-            <div class="selection-panel-header preview-header">
-                <h3>${escapeHtml(i18n.t('locations:selection.photoCount', {
-                    count: photos.length,
-                    formattedCount: i18n.number(photos.length),
-                }))}</h3>
-                <button type="button" class="preview-close"
-                        aria-label="${escapeHtml(i18n.t('common:close'))}"
-                        title="${escapeHtml(i18n.t('common:close'))}">×</button>
-            </div>
-            <div class="cluster-preview">
-                ${selectorHtml}
-                <div class="preview-photo-container">
-                    <a id="photo-link" href="${photoViewUrl}" target="_blank">
-                        <img id="photo-img" src="${thumbUrl(firstPhoto)}" data-fallback="${fallbackUrl}" alt="${safeFirstName}" class="preview-photo">
-                    </a>
+        return `
+            <div class="preview-section${previewCollapsed ? ' collapsed' : ''}">
+                <button type="button" class="preview-toggle" aria-expanded="${previewCollapsed ? 'false' : 'true'}">
+                    <span>${escapeHtml(i18n.t('locations:selection.preview'))}</span>
+                    <span class="preview-toggle-arrow" aria-hidden="true">${previewCollapsed ? '▸' : '▾'}</span>
+                </button>
+                <div class="preview-body">
+                    ${selectorHtml}
+                    <div class="preview-photo-container">
+                        <a id="photo-link" href="${photoViewUrl}" target="_blank">
+                            <img id="photo-img" src="${thumbUrl(firstPhoto)}" data-fallback="${fallbackUrl}" alt="${safeFirstName}" class="preview-photo">
+                        </a>
+                    </div>
+                    <h3 id="photo-name">${safeFirstName}</h3>
+                    <p class="photo-location">${escapeHtml(firstPhoto.location || unknownLocation)}</p>
+                    ${thumbsHtml}
                 </div>
-                <h3 id="photo-name">${safeFirstName}</h3>
-                <p class="photo-location">${escapeHtml(firstPhoto.location || unknownLocation)}</p>
-            </div>
-        `;
-        window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
+            </div>`;
+    };
 
-        panelContent.querySelector('.preview-close')?.addEventListener('click', () => {
-            previewPhotos = null;
-            updateSelectionPanel();
+    /**
+     * @param {HTMLElement} panelContent
+     * @param {LocationMediaItem[]} photos
+     */
+    const wirePreviewSection = (panelContent, photos) => {
+        const section = panelContent.querySelector('.preview-section');
+        if (!(section instanceof HTMLElement)) return;
+
+        const toggle = section.querySelector('.preview-toggle');
+        toggle?.addEventListener('click', () => {
+            previewCollapsed = !previewCollapsed;
+            section.classList.toggle('collapsed', previewCollapsed);
+            toggle.setAttribute('aria-expanded', previewCollapsed ? 'false' : 'true');
+            const arrow = toggle.querySelector('.preview-toggle-arrow');
+            if (arrow) arrow.textContent = previewCollapsed ? '▸' : '▾';
         });
 
-        const selectElement = document.getElementById(selectId);
-        if (selectElement instanceof HTMLSelectElement) {
-            window.SearchableSelect?.init(selectElement);
-            selectElement.addEventListener('change', function() {
-                const selectedIndex = parseInt(selectElement.value);
-                const selectedPhoto = photos[selectedIndex];
-                if (!selectedPhoto) return;
+        const showPhoto = (/** @type {number} */ index) => {
+            const photo = photos[index];
+            if (!photo) return;
 
-                const newPhotoViewUrl = config.buildUrl('media_view', { media_item_id: selectedPhoto.id });
-
-                const img = document.getElementById('photo-img');
-                const link = document.getElementById('photo-link');
-                const name = document.getElementById('photo-name');
-                const location = document.querySelector('.photo-location');
-                const selectedName = selectedPhoto.filename || selectedPhoto.name || '';
-                if (img instanceof HTMLImageElement) {
-                    img.src = thumbUrl(selectedPhoto);
-                    img.alt = selectedName;
-                }
-                if (link instanceof HTMLAnchorElement) link.href = newPhotoViewUrl;
-                if (name) name.textContent = selectedName;
-                if (location) location.textContent = selectedPhoto.location || unknownLocation;
-                // Re-arm the fallback for the swapped src (the handler is once-only).
-                window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
+            const img = document.getElementById('photo-img');
+            const link = document.getElementById('photo-link');
+            const name = document.getElementById('photo-name');
+            const location = section.querySelector('.photo-location');
+            const photoName = photo.name || '';
+            if (img instanceof HTMLImageElement) {
+                img.src = thumbUrl(photo);
+                img.alt = photoName;
+            }
+            if (link instanceof HTMLAnchorElement) {
+                link.href = config.buildUrl('media_view', { media_item_id: photo.id });
+            }
+            if (name) name.textContent = photoName;
+            if (location) location.textContent = photo.location || unknownLocation;
+            section.querySelectorAll('.preview-thumb').forEach((thumb) => {
+                if (!(thumb instanceof HTMLElement)) return;
+                thumb.classList.toggle('active', Number(thumb.dataset.index) === index);
             });
+            // Re-arm the fallback for the swapped src (the handler is once-only).
+            window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
+        };
+
+        const select = document.getElementById('preview-photo-select');
+        if (select instanceof HTMLSelectElement) {
+            window.SearchableSelect?.init(select);
+            select.addEventListener('change', () => showPhoto(parseInt(select.value)));
         }
 
-        panel.classList.add('active');
+        section.querySelectorAll('.preview-thumb').forEach((thumb) => {
+            thumb.addEventListener('click', () => {
+                if (!(thumb instanceof HTMLElement)) return;
+                const index = Number(thumb.dataset.index);
+                if (select instanceof HTMLSelectElement) {
+                    // Route through the select so its searchable widget stays
+                    // in sync; the change listener above updates the preview.
+                    select.value = String(index);
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                } else {
+                    showPhoto(index);
+                }
+            });
+        });
     };
 
     map.on('click', function(/** @type {any} */ evt) {
@@ -267,21 +306,16 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
             const features = feature.get('features');
             if (!features || features.length === 0) return;
 
-            previewPhotos = /** @type {LocationMediaItem[]} */ (features.map((/** @type {any} */ f) => ({
-                name: f.get('filename'),
-                location: f.get('name'),
-                id: f.get('id'),
-                photo_path: f.get('photo_path'),
-                media_type: f.get('media_type')
-            })));
-            // The panel is shared with the mass-assignment view; a plain click
-            // switches it to preview mode.
+            // Clicking a cluster selects it — the panel then offers both the
+            // preview and the assignment tools for that selection.
             selectedFeatures.clear();
+            selectedFeatures.add(feature);
             clusterLayer.changed();
             updateSelectionPanel();
-        } else if (previewPhotos) {
-            // Clicking empty map dismisses the preview (like the old popup).
-            previewPhotos = null;
+        } else if (selectedFeatures.size > 0) {
+            // Clicking empty map clears the selection and closes the panel.
+            selectedFeatures.clear();
+            clusterLayer.changed();
             updateSelectionPanel();
         }
     });
@@ -337,15 +371,19 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         if (!panel || !panelContent) return;
 
         if (selectedFeatures.size === 0) {
-            // No box selection: fall back to the click preview, if one is open
-            // (renderPreviewPanel hides the panel when there isn't).
-            renderPreviewPanel();
+            panel.classList.remove('active');
             return;
         }
 
         const selectedClusters = Array.from(selectedFeatures).map((clusterFeature, idx) => {
             const features = clusterFeature.get('features');
             const photoIds = features.map((/** @type {any} */ f) => f.get('id'));
+            const photos = /** @type {LocationMediaItem[]} */ (features.map((/** @type {any} */ f) => ({
+                id: f.get('id'),
+                name: f.get('filename'),
+                location: f.get('name'),
+                media_type: f.get('media_type')
+            })));
 
             /** @type {Record<string, number>} */
             const locationCounts = {};
@@ -365,6 +403,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                 index: idx,
                 photoCount: features.length,
                 photoIds: photoIds,
+                photos: photos,
                 locationBreakdown: locationBreakdown,
                 locationCounts: locationCounts,
                 centroid: centroid,
@@ -373,6 +412,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         });
 
         const allPhotoIds = selectedClusters.flatMap(c => c.photoIds);
+        const allPhotos = selectedClusters.flatMap(c => c.photos);
         const totalPhotos = allPhotoIds.length;
 
         /** @type {Record<string, number>} */
@@ -391,6 +431,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         const summaryKey = `locations:selection.summary${
             totalPhotos === 1 ? 'One' : 'Other'
         }${selectedClusters.length === 1 ? 'One' : 'Other'}`;
+        const previewSectionHtml = buildPreviewSection(allPhotos);
         panelContent.innerHTML = `
             <div class="selection-panel-header">
                 <h3>${escapeHtml(i18n.t('locations:selection.massAssignment'))}</h3>
@@ -401,6 +442,8 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                     }))}
                 </div>
             </div>
+
+            ${previewSectionHtml}
 
             <div class="selection-assignment">
                 ${sortedLocations.length > 0 ? `
@@ -452,6 +495,9 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                 <button class="btn btn-secondary btn-clear-names">${escapeHtml(i18n.t('locations:selection.clearNames'))}</button>
             </div>
         `;
+
+        wirePreviewSection(panelContent, allPhotos);
+        window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
 
         /**
          * Assign `locationName` to the photos, or remove their names when it is
@@ -618,8 +664,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         vectorSource.clear();
         vectorSource.addFeatures(visibleFeatures);
 
-        // The previewed cluster may no longer be on the map; drop both panel states.
-        previewPhotos = null;
+        // The selected clusters may no longer be on the map; drop the selection.
         selectedFeatures.clear();
         clusterLayer.changed();
         updateSelectionPanel();
