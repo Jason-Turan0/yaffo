@@ -172,6 +172,8 @@ scenarios:
       - The recommended name matches the unique nearby existing location name
       - The recommendation considers all photos within the configured nearby radius of the medoid photo, not only selected photos
       - No reverse-geocode request is sent when there is exactly one nearby existing location name
+      - Selecting the Chicago Grant Park photo when only a White House photo has the name "The White House" uses the reverse-geocode suggestion instead of recommending "The White House"
+
 
   - name: locations_reverse_geocode_suggests_name
     goal: The app falls back to reverse geocoding when no unique nearby existing location name can be used
