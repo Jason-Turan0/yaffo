@@ -48,7 +48,9 @@ scenarios:
       - Clicking a thumbnail (class "preview-thumb") swaps the previewed photo
       - Clicking the "Preview" toggle (class "preview-toggle") collapses and expands the section
       - The assignment controls (id "mass-assign-btn") are available for the clicked cluster
-      - Clicking an empty spot on the map clears the selection and hides the panel
+      - Shift-clicking another cluster adds it to the selection; shift-clicking a selected cluster removes it
+      - Holding Shift and dragging a box adds the enclosed clusters to the current selection
+      - Clicking the close button (class "selection-panel-close") or an empty spot on the map clears the selection and hides the panel
 
   - name: locations_filter_unnamed_photos
     goal: The "only unnamed" filter narrows the map to photos without a location name

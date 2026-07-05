@@ -199,6 +199,7 @@ const createI18n = () => ({
     if (key === 'locations:popup.selectPhoto') return `Select photo (${options.total} total):`;
     if (key === 'locations:selection.preview') return 'Preview';
     if (key === 'locations:selection.moreThumbnails') return `+${options.more} more`;
+    if (key === 'common:close') return 'Close';
     return key;
   },
   number: (value) => String(value),
@@ -482,6 +483,83 @@ describe('locations list map cluster preview', () => {
     // the panel stays in its single unified layout
     expect(document.querySelector('.preview-section')).toBeTruthy();
     expect(document.getElementById('mass-assign-btn')).toBeTruthy();
+  });
+
+  it('shift-click adds clusters to the selection and toggles them back out', async () => {
+    const { api } = await initLocationsMap();
+    api.selectedFeatures.clear();
+    const [featureA, featureB] = api.vectorSource.getFeatures();
+
+    const clusterA = clickCluster(api, [featureA]);
+
+    const clusterB = new TestFeature({ features: [featureB] });
+    api.map.forEachFeatureAtPixel = () => clusterB;
+    api.map.handlers.click({ pixel: [5, 5], originalEvent: { shiftKey: true } });
+
+    expect(api.selectedFeatures.size).toBe(2);
+    expect(api.selectedFeatures.has(clusterA)).toBe(true);
+    expect(api.selectedFeatures.has(clusterB)).toBe(true);
+    // the combined selection previews both photos
+    expect(document.querySelectorAll('.preview-thumb')).toHaveLength(2);
+
+    // shift-clicking a selected cluster removes it again
+    api.map.handlers.click({ pixel: [5, 5], originalEvent: { shiftKey: true } });
+    expect(api.selectedFeatures.size).toBe(1);
+    expect(api.selectedFeatures.has(clusterA)).toBe(true);
+  });
+
+  it('a missed shift-click on empty map keeps the selection', async () => {
+    const { api } = await initLocationsMap();
+    api.selectedFeatures.clear();
+    clickCluster(api, [api.vectorSource.getFeatures()[0]]);
+
+    api.map.forEachFeatureAtPixel = () => null;
+    api.map.handlers.click({ pixel: [0, 0], originalEvent: { shiftKey: true } });
+
+    expect(api.selectedFeatures.size).toBe(1);
+    expect(document.getElementById('selection-panel').classList.contains('active')).toBe(true);
+  });
+
+  it('a stationary shift-click does not run the drag-box selection', async () => {
+    const { api } = await initLocationsMap();
+    api.selectedFeatures.clear();
+    const clusterA = clickCluster(api, [api.vectorSource.getFeatures()[0]]);
+
+    const dragBox = api.map.addInteraction.mock.calls[0][0];
+    dragBox.handlers.boxstart({ mapBrowserEvent: { pixel: [10, 10] } });
+    dragBox.handlers.boxend({ mapBrowserEvent: { pixel: [12, 11] } });
+
+    // below the drag threshold the box is ignored; the click handler owns it
+    expect(api.selectedFeatures.size).toBe(1);
+    expect(api.selectedFeatures.has(clusterA)).toBe(true);
+  });
+
+  it('a real shift-drag adds the box contents to the current selection', async () => {
+    const { api } = await initLocationsMap();
+    api.selectedFeatures.clear();
+    const clusterA = clickCluster(api, [api.vectorSource.getFeatures()[0]]);
+
+    const dragBox = api.map.addInteraction.mock.calls[0][0];
+    dragBox.handlers.boxstart({ mapBrowserEvent: { pixel: [10, 10] } });
+    dragBox.handlers.boxend({ mapBrowserEvent: { pixel: [80, 90] } });
+
+    // the earlier click selection survives; the stubbed cluster source yields
+    // one cluster per marker, all inside the box
+    expect(api.selectedFeatures.has(clusterA)).toBe(true);
+    expect(api.selectedFeatures.size).toBe(3);
+  });
+
+  it('the panel × clears the selection and closes the panel', async () => {
+    const { api } = await initLocationsMap();
+    api.selectedFeatures.clear();
+    clickCluster(api, api.vectorSource.getFeatures());
+    const panel = document.getElementById('selection-panel');
+    expect(panel.classList.contains('active')).toBe(true);
+
+    document.querySelector('.selection-panel-close').click();
+
+    expect(api.selectedFeatures.size).toBe(0);
+    expect(panel.classList.contains('active')).toBe(false);
   });
 
   it('assigning a name from a clicked cluster posts its photo ids', async () => {

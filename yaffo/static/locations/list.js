@@ -122,7 +122,23 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
 
     map.addInteraction(dragBox);
 
-    dragBox.on('boxend', function() {
+    // The DragBox fires for a stationary shift-click too. Below this pixel
+    // distance it is treated as a click — the map's click handler then toggles
+    // the cluster in the selection — while a real drag replaces the selection
+    // with the box contents.
+    const CLICK_DRAG_THRESHOLD_PX = 6;
+    /** @type {number[] | null} */
+    let boxStartPixel = null;
+
+    dragBox.on('boxend', function(/** @type {any} */ evt) {
+        const startPixel = boxStartPixel;
+        boxStartPixel = null;
+        const endPixel = evt && evt.mapBrowserEvent ? evt.mapBrowserEvent.pixel : null;
+        if (startPixel && endPixel) {
+            const distance = Math.hypot(endPixel[0] - startPixel[0], endPixel[1] - startPixel[1]);
+            if (distance < CLICK_DRAG_THRESHOLD_PX) return; // shift-click, not a box
+        }
+
         const extent = dragBox.getGeometry().getExtent();
         /** @type {any[]} */
         const boxFeatures = [];
@@ -133,15 +149,17 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
             }
         });
 
-        selectedFeatures.clear();
+        // Like shift-click, a box extends the current selection rather than
+        // replacing it; the panel's × (or an empty plain click) starts over.
         boxFeatures.forEach(f => selectedFeatures.add(f));
         clusterLayer.changed();
         updateSelectionPanel();
     });
 
-    dragBox.on('boxstart', function() {
-        selectedFeatures.clear();
-        clusterLayer.changed();
+    dragBox.on('boxstart', function(/** @type {any} */ evt) {
+        // Selection is replaced at boxend, not here, so a shift-click can
+        // toggle a cluster without first wiping the current selection.
+        boxStartPixel = evt && evt.mapBrowserEvent ? evt.mapBrowserEvent.pixel : null;
     });
 
     if (locations.length > 0) {
@@ -301,19 +319,30 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         const feature = map.forEachFeatureAtPixel(evt.pixel, function(/** @type {any} */ feature) {
             return feature;
         });
+        const isShiftClick = Boolean(evt.originalEvent && evt.originalEvent.shiftKey);
 
         if (feature) {
             const features = feature.get('features');
             if (!features || features.length === 0) return;
 
-            // Clicking a cluster selects it — the panel then offers both the
-            // preview and the assignment tools for that selection.
-            selectedFeatures.clear();
-            selectedFeatures.add(feature);
+            if (isShiftClick) {
+                // Shift-click toggles the cluster in/out of the multi-selection.
+                if (selectedFeatures.has(feature)) {
+                    selectedFeatures.delete(feature);
+                } else {
+                    selectedFeatures.add(feature);
+                }
+            } else {
+                // A plain click selects just this cluster — the panel then offers
+                // both the preview and the assignment tools for that selection.
+                selectedFeatures.clear();
+                selectedFeatures.add(feature);
+            }
             clusterLayer.changed();
             updateSelectionPanel();
-        } else if (selectedFeatures.size > 0) {
-            // Clicking empty map clears the selection and closes the panel.
+        } else if (!isShiftClick && selectedFeatures.size > 0) {
+            // Clicking empty map clears the selection and closes the panel;
+            // a missed shift-click keeps the selection being built.
             selectedFeatures.clear();
             clusterLayer.changed();
             updateSelectionPanel();
@@ -434,13 +463,18 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         const previewSectionHtml = buildPreviewSection(allPhotos);
         panelContent.innerHTML = `
             <div class="selection-panel-header">
-                <h3>${escapeHtml(i18n.t('locations:selection.massAssignment'))}</h3>
-                <div class="mass-assignment-info">
-                    ${escapeHtml(i18n.t(summaryKey, {
-                        photos: i18n.number(totalPhotos),
-                        clusters: i18n.number(selectedClusters.length),
-                    }))}
+                <div class="selection-panel-heading">
+                    <h3>${escapeHtml(i18n.t('locations:selection.massAssignment'))}</h3>
+                    <div class="mass-assignment-info">
+                        ${escapeHtml(i18n.t(summaryKey, {
+                            photos: i18n.number(totalPhotos),
+                            clusters: i18n.number(selectedClusters.length),
+                        }))}
+                    </div>
                 </div>
+                <button type="button" class="selection-panel-close"
+                        aria-label="${escapeHtml(i18n.t('common:close'))}"
+                        title="${escapeHtml(i18n.t('common:close'))}">×</button>
             </div>
 
             ${previewSectionHtml}
@@ -498,6 +532,13 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
 
         wirePreviewSection(panelContent, allPhotos);
         window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
+
+        // The × closes the panel and drops the whole selection.
+        panelContent.querySelector('.selection-panel-close')?.addEventListener('click', () => {
+            selectedFeatures.clear();
+            clusterLayer.changed();
+            updateSelectionPanel();
+        });
 
         /**
          * Assign `locationName` to the photos, or remove their names when it is

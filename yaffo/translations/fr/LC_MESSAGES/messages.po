@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-28 09:51-0500\n"
+"POT-Creation-Date: 2026-07-05 07:38-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -18,11 +18,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: yaffo/distance_units.py:26 yaffo/routes/home.py:275
+#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:99
 msgid "Miles"
 msgstr "Milles"
 
-#: yaffo/distance_units.py:27 yaffo/routes/home.py:275
+#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:99
 msgid "Kilometers"
 msgstr "Kilomètres"
 
@@ -333,39 +333,43 @@ msgstr "Les visages, la personne et le statut du visage sont requis"
 msgid "Could not process faces"
 msgstr "Impossible de traiter les visages"
 
-#: yaffo/routes/home.py:259 yaffo/templates/people/list.html:40
+#: yaffo/routes/filter_config.py:126
+msgid "Unknown filter page"
+msgstr ""
+
+#: yaffo/routes/filter_config.py:133
+msgid "Items must be a list"
+msgstr "Les éléments doivent être une liste"
+
+#: yaffo/routes/filter_panel.py:82 yaffo/templates/people/list.html:40
 #: yaffo/templates/people/list.html:92
 msgid "Male"
 msgstr "Mâle"
 
-#: yaffo/routes/home.py:260 yaffo/templates/people/list.html:41
+#: yaffo/routes/filter_panel.py:83 yaffo/templates/people/list.html:41
 #: yaffo/templates/people/list.html:93
 msgid "Female"
 msgstr "Femelle"
 
-#: yaffo/routes/home.py:312
-msgid "Items must be a list"
-msgstr "Les éléments doivent être une liste"
-
-#: yaffo/routes/home.py:327
+#: yaffo/routes/home.py:243
 msgid "The tag_name parameter is required"
 msgstr "Le paramètre tag_name est obligatoire"
 
-#: yaffo/routes/locations.py:56
+#: yaffo/routes/locations.py:92
 msgid "Media item IDs and location name are required"
 msgstr ""
 "Les identifiants des éléments multimédias et le nom de l'emplacement sont"
 " requis"
 
-#: yaffo/routes/locations.py:80
+#: yaffo/routes/locations.py:116
 msgid "Could not update locations"
 msgstr "Impossible de mettre à jour les emplacements"
 
-#: yaffo/routes/locations.py:93
+#: yaffo/routes/locations.py:129
 msgid "Latitude and longitude are required"
 msgstr "La latitude et la longitude sont obligatoires"
 
-#: yaffo/routes/locations.py:100
+#: yaffo/routes/locations.py:136
 msgid "Could not determine a location name"
 msgstr "Impossible de déterminer un nom d'emplacement"
 
@@ -945,22 +949,21 @@ msgstr "Modifier la page"
 msgid "New page"
 msgstr "Nouvelle page"
 
-#: yaffo/templates/base.html:155 yaffo/templates/components/info_modal.html:6
+#: yaffo/templates/base.html:152 yaffo/templates/components/info_modal.html:6
 #: yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
-#: yaffo/templates/locations/list.html:34
 msgid "Close"
 msgstr "Fermer"
 
-#: yaffo/templates/base.html:169
+#: yaffo/templates/base.html:166
 msgid "Select a folder"
 msgstr "Sélectionnez un dossier"
 
-#: yaffo/templates/base.html:173
+#: yaffo/templates/base.html:170
 msgid "Up"
 msgstr "En haut"
 
-#: yaffo/templates/base.html:181 yaffo/templates/base.html:197
+#: yaffo/templates/base.html:178 yaffo/templates/base.html:194
 #: yaffo/templates/components/chat_dialog.html:39
 #: yaffo/templates/components/modal.html:16
 #: yaffo/templates/fragments/job_status_fragment.html:28
@@ -969,11 +972,11 @@ msgstr "En haut"
 msgid "Cancel"
 msgstr "Annuler"
 
-#: yaffo/templates/base.html:182
+#: yaffo/templates/base.html:179
 msgid "Select this folder"
 msgstr "Sélectionnez ce dossier"
 
-#: yaffo/templates/base.html:191 yaffo/templates/base.html:198
+#: yaffo/templates/base.html:188 yaffo/templates/base.html:195
 msgid "Confirm"
 msgstr "Confirmer"
 
@@ -992,7 +995,7 @@ msgid_plural "Showing %(shown)s of %(total)s photos"
 msgstr[0] "Affichage %(shown)s de %(total)s photo"
 msgstr[1] "Affichage %(shown)s de %(total)s des photos"
 
-#: yaffo/templates/index.html:28 yaffo/templates/index.html:141
+#: yaffo/templates/index.html:28 yaffo/templates/index.html:142
 msgid "No photos found"
 msgstr "Aucune photo trouvée"
 
@@ -1048,32 +1051,9 @@ msgstr "Coordonnées"
 msgid "Labels"
 msgstr "Étiquettes"
 
-#: yaffo/templates/index.html:142
+#: yaffo/templates/index.html:143
 msgid "Try adjusting your filters or check back later."
 msgstr "Essayez d'ajuster vos filtres ou revenez plus tard."
-
-#: yaffo/templates/index.html:150
-msgid "Drag to reorder. Uncheck to hide a filter."
-msgstr "Faites glisser pour réorganiser. Décochez pour masquer un filtre."
-
-#: yaffo/templates/index.html:163
-msgid "Reset to defaults"
-msgstr "Réinitialiser aux valeurs par défaut"
-
-#: yaffo/templates/index.html:165
-msgid "Configure Filters"
-msgstr "Configurer les filtres"
-
-#: yaffo/templates/components/modal.html:17 yaffo/templates/index.html:165
-#: yaffo/templates/pages/design.html:38
-#: yaffo/templates/settings/_llm_api_key.html:19
-#: yaffo/templates/settings/index.html:29
-#: yaffo/templates/settings/index.html:47
-#: yaffo/templates/themes_page/index.html:134
-#: yaffo/templates/utilities/automations.html:120
-#: yaffo/templates/utilities/automations.html:125
-msgid "Save"
-msgstr "Sauvegarder"
 
 #: yaffo/templates/components/chat_dialog.html:28
 msgid "Generating…"
@@ -1153,6 +1133,18 @@ msgstr "Dernier"
 #: yaffo/templates/components/job_section.html:5
 msgid "Processing in Progress"
 msgstr "Traitement en cours"
+
+#: yaffo/templates/components/modal.html:17
+#: yaffo/templates/filters/_config_modal.html:23
+#: yaffo/templates/pages/design.html:38
+#: yaffo/templates/settings/_llm_api_key.html:19
+#: yaffo/templates/settings/index.html:29
+#: yaffo/templates/settings/index.html:47
+#: yaffo/templates/themes_page/index.html:134
+#: yaffo/templates/utilities/automations.html:120
+#: yaffo/templates/utilities/automations.html:125
+msgid "Save"
+msgstr "Sauvegarder"
 
 #: yaffo/templates/faces/index.html:4
 msgid "Faces - Yaffo"
@@ -1425,6 +1417,18 @@ msgstr "Vous n'avez rien à faire ici."
 msgid "Help"
 msgstr "Aide"
 
+#: yaffo/templates/filters/_config_modal.html:7
+msgid "Drag to reorder. Uncheck to hide a filter."
+msgstr "Faites glisser pour réorganiser. Décochez pour masquer un filtre."
+
+#: yaffo/templates/filters/_config_modal.html:21
+msgid "Reset to defaults"
+msgstr "Réinitialiser aux valeurs par défaut"
+
+#: yaffo/templates/filters/_config_modal.html:23
+msgid "Configure Filters"
+msgstr "Configurer les filtres"
+
 #: yaffo/templates/filters/_device.html:2
 msgid "Device"
 msgstr "Appareil"
@@ -1486,15 +1490,19 @@ msgstr "{count} emplacements sélectionnés"
 msgid "Search locations…"
 msgstr "Rechercher des emplacements…"
 
-#: yaffo/templates/filters/_locations.html:35
+#: yaffo/templates/filters/_locations.html:37
+msgid "Only show photos without location names"
+msgstr "Afficher uniquement les photos sans noms de lieux"
+
+#: yaffo/templates/filters/_locations.html:41
 msgid "Proximity Search"
 msgstr "Recherche de proximité"
 
-#: yaffo/templates/filters/_locations.html:40
+#: yaffo/templates/filters/_locations.html:46
 msgid "Search for a location…"
 msgstr "Rechercher un emplacement…"
 
-#: yaffo/templates/filters/_locations.html:46
+#: yaffo/templates/filters/_locations.html:52
 #, python-format
 msgid "Within (%(unit)s):"
 msgstr "Dans (%(unit)s):"
@@ -1611,19 +1619,13 @@ msgstr "Supprimer"
 msgid "Locations - Yaffo"
 msgstr "Emplacements - Yaffo"
 
-#: yaffo/templates/locations/list.html:18
-msgid "Only show photos without location names"
-msgstr "Afficher uniquement les photos sans noms de lieux"
-
-#: yaffo/templates/locations/list.html:21
+#: yaffo/templates/locations/list.html:20
 msgid "Photo Locations"
 msgstr "Emplacements des photos"
 
-#: yaffo/templates/locations/list.html:22
-msgid "Hold <kbd>Shift</kbd> and drag to select multiple clusters"
-msgstr ""
-"Prise <kbd>Changement</kbd> et faites glisser pour sélectionner plusieurs"
-" clusters"
+#: yaffo/templates/locations/list.html:21
+msgid "Hold <kbd>Shift</kbd> and click or drag to select multiple clusters"
+msgstr Maintenez <kbd>Maj</kbd> enfoncée et cliquez ou faites glisser pour sélectionner plusieurs groupes"
 
 #: yaffo/templates/media/view.html:15
 msgid "Photo Details"

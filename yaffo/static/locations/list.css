@@ -191,8 +191,26 @@
 }
 
 .selection-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
     padding: 18px 18px 14px;
     border-bottom: var(--border-width) solid var(--color-border-subtle);
+}
+
+.selection-panel-close {
+    background: none;
+    border: none;
+    padding: 0 4px;
+    line-height: 1;
+    font-size: var(--font-size-lg);
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.selection-panel-close:hover {
+    color: var(--color-text);
 }
 
 .mass-assignment-info {

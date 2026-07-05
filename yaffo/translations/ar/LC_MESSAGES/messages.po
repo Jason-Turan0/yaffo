@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-28 09:51-0500\n"
+"POT-Creation-Date: 2026-07-05 07:38-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ar\n"
@@ -19,11 +19,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: yaffo/distance_units.py:26 yaffo/routes/home.py:275
+#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:99
 msgid "Miles"
 msgstr "مايلز"
 
-#: yaffo/distance_units.py:27 yaffo/routes/home.py:275
+#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:99
 msgid "Kilometers"
 msgstr "كيلومترات"
 
@@ -328,37 +328,41 @@ msgstr "الوجوه والشخص وحالة الوجه مطلوبة"
 msgid "Could not process faces"
 msgstr "لا يمكن معالجة الوجوه"
 
-#: yaffo/routes/home.py:259 yaffo/templates/people/list.html:40
+#: yaffo/routes/filter_config.py:126
+msgid "Unknown filter page"
+msgstr ""
+
+#: yaffo/routes/filter_config.py:133
+msgid "Items must be a list"
+msgstr "يجب أن تكون العناصر قائمة"
+
+#: yaffo/routes/filter_panel.py:82 yaffo/templates/people/list.html:40
 #: yaffo/templates/people/list.html:92
 msgid "Male"
 msgstr "ذكر"
 
-#: yaffo/routes/home.py:260 yaffo/templates/people/list.html:41
+#: yaffo/routes/filter_panel.py:83 yaffo/templates/people/list.html:41
 #: yaffo/templates/people/list.html:93
 msgid "Female"
 msgstr "أنثى"
 
-#: yaffo/routes/home.py:312
-msgid "Items must be a list"
-msgstr "يجب أن تكون العناصر قائمة"
-
-#: yaffo/routes/home.py:327
+#: yaffo/routes/home.py:243
 msgid "The tag_name parameter is required"
 msgstr "المعلمة tag_name مطلوبة"
 
-#: yaffo/routes/locations.py:56
+#: yaffo/routes/locations.py:92
 msgid "Media item IDs and location name are required"
 msgstr "معرفات عناصر الوسائط واسم الموقع مطلوبة"
 
-#: yaffo/routes/locations.py:80
+#: yaffo/routes/locations.py:116
 msgid "Could not update locations"
 msgstr "تعذر تحديث المواقع"
 
-#: yaffo/routes/locations.py:93
+#: yaffo/routes/locations.py:129
 msgid "Latitude and longitude are required"
 msgstr "خطوط الطول والعرض مطلوبة"
 
-#: yaffo/routes/locations.py:100
+#: yaffo/routes/locations.py:136
 msgid "Could not determine a location name"
 msgstr "لا يمكن تحديد اسم الموقع"
 
@@ -950,22 +954,21 @@ msgstr "تحرير الصفحة"
 msgid "New page"
 msgstr "صفحة جديدة"
 
-#: yaffo/templates/base.html:155 yaffo/templates/components/info_modal.html:6
+#: yaffo/templates/base.html:152 yaffo/templates/components/info_modal.html:6
 #: yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
-#: yaffo/templates/locations/list.html:34
 msgid "Close"
 msgstr "يغلق"
 
-#: yaffo/templates/base.html:169
+#: yaffo/templates/base.html:166
 msgid "Select a folder"
 msgstr "حدد مجلدًا"
 
-#: yaffo/templates/base.html:173
+#: yaffo/templates/base.html:170
 msgid "Up"
 msgstr "أعلى"
 
-#: yaffo/templates/base.html:181 yaffo/templates/base.html:197
+#: yaffo/templates/base.html:178 yaffo/templates/base.html:194
 #: yaffo/templates/components/chat_dialog.html:39
 #: yaffo/templates/components/modal.html:16
 #: yaffo/templates/fragments/job_status_fragment.html:28
@@ -974,11 +977,11 @@ msgstr "أعلى"
 msgid "Cancel"
 msgstr "يلغي"
 
-#: yaffo/templates/base.html:182
+#: yaffo/templates/base.html:179
 msgid "Select this folder"
 msgstr "حدد هذا المجلد"
 
-#: yaffo/templates/base.html:191 yaffo/templates/base.html:198
+#: yaffo/templates/base.html:188 yaffo/templates/base.html:195
 msgid "Confirm"
 msgstr "يتأكد"
 
@@ -1001,7 +1004,7 @@ msgstr[3] "عرض %(shown)s ل %(total)s صور"
 msgstr[4] "عرض %(shown)s ل %(total)s صور"
 msgstr[5] "عرض %(shown)s ل %(total)s صور"
 
-#: yaffo/templates/index.html:28 yaffo/templates/index.html:141
+#: yaffo/templates/index.html:28 yaffo/templates/index.html:142
 msgid "No photos found"
 msgstr "لم يتم العثور على صور"
 
@@ -1057,32 +1060,9 @@ msgstr "الإحداثيات"
 msgid "Labels"
 msgstr "التسميات"
 
-#: yaffo/templates/index.html:142
+#: yaffo/templates/index.html:143
 msgid "Try adjusting your filters or check back later."
 msgstr "حاول تعديل عوامل التصفية أو التحقق مرة أخرى لاحقًا."
-
-#: yaffo/templates/index.html:150
-msgid "Drag to reorder. Uncheck to hide a filter."
-msgstr "اسحب لإعادة الترتيب. قم بإلغاء التحديد لإخفاء عامل التصفية."
-
-#: yaffo/templates/index.html:163
-msgid "Reset to defaults"
-msgstr "إعادة التعيين إلى الإعدادات الافتراضية"
-
-#: yaffo/templates/index.html:165
-msgid "Configure Filters"
-msgstr "تكوين عوامل التصفية"
-
-#: yaffo/templates/components/modal.html:17 yaffo/templates/index.html:165
-#: yaffo/templates/pages/design.html:38
-#: yaffo/templates/settings/_llm_api_key.html:19
-#: yaffo/templates/settings/index.html:29
-#: yaffo/templates/settings/index.html:47
-#: yaffo/templates/themes_page/index.html:134
-#: yaffo/templates/utilities/automations.html:120
-#: yaffo/templates/utilities/automations.html:125
-msgid "Save"
-msgstr "يحفظ"
 
 #: yaffo/templates/components/chat_dialog.html:28
 msgid "Generating…"
@@ -1162,6 +1142,18 @@ msgstr "آخر"
 #: yaffo/templates/components/job_section.html:5
 msgid "Processing in Progress"
 msgstr "المعالجة قيد التقدم"
+
+#: yaffo/templates/components/modal.html:17
+#: yaffo/templates/filters/_config_modal.html:23
+#: yaffo/templates/pages/design.html:38
+#: yaffo/templates/settings/_llm_api_key.html:19
+#: yaffo/templates/settings/index.html:29
+#: yaffo/templates/settings/index.html:47
+#: yaffo/templates/themes_page/index.html:134
+#: yaffo/templates/utilities/automations.html:120
+#: yaffo/templates/utilities/automations.html:125
+msgid "Save"
+msgstr "يحفظ"
 
 #: yaffo/templates/faces/index.html:4
 msgid "Faces - Yaffo"
@@ -1440,6 +1432,18 @@ msgstr "ليس هناك أي شيء لتفعله هنا."
 msgid "Help"
 msgstr "يساعد"
 
+#: yaffo/templates/filters/_config_modal.html:7
+msgid "Drag to reorder. Uncheck to hide a filter."
+msgstr "اسحب لإعادة الترتيب. قم بإلغاء التحديد لإخفاء عامل التصفية."
+
+#: yaffo/templates/filters/_config_modal.html:21
+msgid "Reset to defaults"
+msgstr "إعادة التعيين إلى الإعدادات الافتراضية"
+
+#: yaffo/templates/filters/_config_modal.html:23
+msgid "Configure Filters"
+msgstr "تكوين عوامل التصفية"
+
 #: yaffo/templates/filters/_device.html:2
 msgid "Device"
 msgstr "جهاز"
@@ -1501,15 +1505,19 @@ msgstr "{count} المواقع المختارة"
 msgid "Search locations…"
 msgstr "مواقع البحث..."
 
-#: yaffo/templates/filters/_locations.html:35
+#: yaffo/templates/filters/_locations.html:37
+msgid "Only show photos without location names"
+msgstr "عرض الصور فقط بدون أسماء المواقع"
+
+#: yaffo/templates/filters/_locations.html:41
 msgid "Proximity Search"
 msgstr "بحث القرب"
 
-#: yaffo/templates/filters/_locations.html:40
+#: yaffo/templates/filters/_locations.html:46
 msgid "Search for a location…"
 msgstr "ابحث عن مكان…"
 
-#: yaffo/templates/filters/_locations.html:46
+#: yaffo/templates/filters/_locations.html:52
 #, python-format
 msgid "Within (%(unit)s):"
 msgstr "داخل (%(unit)s):"
@@ -1626,17 +1634,13 @@ msgstr "يمسح"
 msgid "Locations - Yaffo"
 msgstr "المواقع - يافا"
 
-#: yaffo/templates/locations/list.html:18
-msgid "Only show photos without location names"
-msgstr "عرض الصور فقط بدون أسماء المواقع"
-
-#: yaffo/templates/locations/list.html:21
+#: yaffo/templates/locations/list.html:20
 msgid "Photo Locations"
 msgstr "مواقع الصور"
 
-#: yaffo/templates/locations/list.html:22
-msgid "Hold <kbd>Shift</kbd> and drag to select multiple clusters"
-msgstr "يمسك <kbd>يحول</kbd> واسحب لتحديد مجموعات متعددة"
+#: yaffo/templates/locations/list.html:21
+msgid "Hold <kbd>Shift</kbd> and click or drag to select multiple clusters"
+msgstr اضغط باستمرار على <kbd>Shift</kbd> وانقر أو اسحب لتحديد مجموعات متعددة"
 
 #: yaffo/templates/media/view.html:15
 msgid "Photo Details"

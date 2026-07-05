@@ -18,7 +18,7 @@
     {{ render_sidebar(url_for('locations_list'), filters, filter_layout=filter_layout) }}
     <div class="main-content locations-container">
         {% call page_header(_("Photo Locations")) %}
-            {% trans %}Hold <kbd>Shift</kbd> and drag to select multiple clusters{% endtrans %}
+            {% trans %}Hold <kbd>Shift</kbd> and click or drag to select multiple clusters{% endtrans %}
         {% endcall %}
 
         <div class="map-layout">

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-28 09:51-0500\n"
+"POT-Creation-Date: 2026-07-05 07:38-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: hi\n"
@@ -18,11 +18,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: yaffo/distance_units.py:26 yaffo/routes/home.py:275
+#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:99
 msgid "Miles"
 msgstr "मील"
 
-#: yaffo/distance_units.py:27 yaffo/routes/home.py:275
+#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:99
 msgid "Kilometers"
 msgstr "किलोमीटर"
 
@@ -322,37 +322,41 @@ msgstr "चेहरे, व्यक्ति और चेहरे की स
 msgid "Could not process faces"
 msgstr "चेहरों को संसाधित नहीं किया जा सका"
 
-#: yaffo/routes/home.py:259 yaffo/templates/people/list.html:40
+#: yaffo/routes/filter_config.py:126
+msgid "Unknown filter page"
+msgstr ""
+
+#: yaffo/routes/filter_config.py:133
+msgid "Items must be a list"
+msgstr "आइटम एक सूची होनी चाहिए"
+
+#: yaffo/routes/filter_panel.py:82 yaffo/templates/people/list.html:40
 #: yaffo/templates/people/list.html:92
 msgid "Male"
 msgstr "पुरुष"
 
-#: yaffo/routes/home.py:260 yaffo/templates/people/list.html:41
+#: yaffo/routes/filter_panel.py:83 yaffo/templates/people/list.html:41
 #: yaffo/templates/people/list.html:93
 msgid "Female"
 msgstr "महिला"
 
-#: yaffo/routes/home.py:312
-msgid "Items must be a list"
-msgstr "आइटम एक सूची होनी चाहिए"
-
-#: yaffo/routes/home.py:327
+#: yaffo/routes/home.py:243
 msgid "The tag_name parameter is required"
 msgstr "tag_name पैरामीटर आवश्यक है"
 
-#: yaffo/routes/locations.py:56
+#: yaffo/routes/locations.py:92
 msgid "Media item IDs and location name are required"
 msgstr "मीडिया आइटम आईडी और स्थान का नाम आवश्यक है"
 
-#: yaffo/routes/locations.py:80
+#: yaffo/routes/locations.py:116
 msgid "Could not update locations"
 msgstr "स्थान अपडेट नहीं किए जा सके"
 
-#: yaffo/routes/locations.py:93
+#: yaffo/routes/locations.py:129
 msgid "Latitude and longitude are required"
 msgstr "अक्षांश और देशांतर आवश्यक हैं"
 
-#: yaffo/routes/locations.py:100
+#: yaffo/routes/locations.py:136
 msgid "Could not determine a location name"
 msgstr "स्थान का नाम निर्धारित नहीं किया जा सका"
 
@@ -928,22 +932,21 @@ msgstr "संपादित पेज"
 msgid "New page"
 msgstr "नया पेज"
 
-#: yaffo/templates/base.html:155 yaffo/templates/components/info_modal.html:6
+#: yaffo/templates/base.html:152 yaffo/templates/components/info_modal.html:6
 #: yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
-#: yaffo/templates/locations/list.html:34
 msgid "Close"
 msgstr "बंद करना"
 
-#: yaffo/templates/base.html:169
+#: yaffo/templates/base.html:166
 msgid "Select a folder"
 msgstr "एक फ़ोल्डर चुनें"
 
-#: yaffo/templates/base.html:173
+#: yaffo/templates/base.html:170
 msgid "Up"
 msgstr "ऊपर"
 
-#: yaffo/templates/base.html:181 yaffo/templates/base.html:197
+#: yaffo/templates/base.html:178 yaffo/templates/base.html:194
 #: yaffo/templates/components/chat_dialog.html:39
 #: yaffo/templates/components/modal.html:16
 #: yaffo/templates/fragments/job_status_fragment.html:28
@@ -952,11 +955,11 @@ msgstr "ऊपर"
 msgid "Cancel"
 msgstr "रद्द करना"
 
-#: yaffo/templates/base.html:182
+#: yaffo/templates/base.html:179
 msgid "Select this folder"
 msgstr "इस फ़ोल्डर का चयन करें"
 
-#: yaffo/templates/base.html:191 yaffo/templates/base.html:198
+#: yaffo/templates/base.html:188 yaffo/templates/base.html:195
 msgid "Confirm"
 msgstr "पुष्टि करना"
 
@@ -975,7 +978,7 @@ msgid_plural "Showing %(shown)s of %(total)s photos"
 msgstr[0] "दिखा %(shown)s का %(total)s तस्वीर"
 msgstr[1] "दिखा %(shown)s का %(total)s तस्वीरें"
 
-#: yaffo/templates/index.html:28 yaffo/templates/index.html:141
+#: yaffo/templates/index.html:28 yaffo/templates/index.html:142
 msgid "No photos found"
 msgstr "कोई फ़ोटो नहीं मिली"
 
@@ -1031,34 +1034,9 @@ msgstr "COORDINATES"
 msgid "Labels"
 msgstr "लेबल"
 
-#: yaffo/templates/index.html:142
+#: yaffo/templates/index.html:143
 msgid "Try adjusting your filters or check back later."
 msgstr "अपने फ़िल्टर समायोजित करने का प्रयास करें या बाद में दोबारा जाँचें।"
-
-#: yaffo/templates/index.html:150
-msgid "Drag to reorder. Uncheck to hide a filter."
-msgstr ""
-"पुन: व्यवस्थित करने के लिए खींचें। किसी फ़िल्टर को छिपाने के लिए अनचेक "
-"करें."
-
-#: yaffo/templates/index.html:163
-msgid "Reset to defaults"
-msgstr "डिफ़ॉल्ट पर पुनः सेट करें"
-
-#: yaffo/templates/index.html:165
-msgid "Configure Filters"
-msgstr "फ़िल्टर कॉन्फ़िगर करें"
-
-#: yaffo/templates/components/modal.html:17 yaffo/templates/index.html:165
-#: yaffo/templates/pages/design.html:38
-#: yaffo/templates/settings/_llm_api_key.html:19
-#: yaffo/templates/settings/index.html:29
-#: yaffo/templates/settings/index.html:47
-#: yaffo/templates/themes_page/index.html:134
-#: yaffo/templates/utilities/automations.html:120
-#: yaffo/templates/utilities/automations.html:125
-msgid "Save"
-msgstr "बचाना"
 
 #: yaffo/templates/components/chat_dialog.html:28
 msgid "Generating…"
@@ -1138,6 +1116,18 @@ msgstr "अंतिम"
 #: yaffo/templates/components/job_section.html:5
 msgid "Processing in Progress"
 msgstr "प्रसंस्करण प्रगति पर है"
+
+#: yaffo/templates/components/modal.html:17
+#: yaffo/templates/filters/_config_modal.html:23
+#: yaffo/templates/pages/design.html:38
+#: yaffo/templates/settings/_llm_api_key.html:19
+#: yaffo/templates/settings/index.html:29
+#: yaffo/templates/settings/index.html:47
+#: yaffo/templates/themes_page/index.html:134
+#: yaffo/templates/utilities/automations.html:120
+#: yaffo/templates/utilities/automations.html:125
+msgid "Save"
+msgstr "बचाना"
 
 #: yaffo/templates/faces/index.html:4
 msgid "Faces - Yaffo"
@@ -1406,6 +1396,20 @@ msgstr "यहां आपके करने के लिए कुछ भी
 msgid "Help"
 msgstr "मदद"
 
+#: yaffo/templates/filters/_config_modal.html:7
+msgid "Drag to reorder. Uncheck to hide a filter."
+msgstr ""
+"पुन: व्यवस्थित करने के लिए खींचें। किसी फ़िल्टर को छिपाने के लिए अनचेक "
+"करें."
+
+#: yaffo/templates/filters/_config_modal.html:21
+msgid "Reset to defaults"
+msgstr "डिफ़ॉल्ट पर पुनः सेट करें"
+
+#: yaffo/templates/filters/_config_modal.html:23
+msgid "Configure Filters"
+msgstr "फ़िल्टर कॉन्फ़िगर करें"
+
 #: yaffo/templates/filters/_device.html:2
 msgid "Device"
 msgstr "उपकरण"
@@ -1467,15 +1471,19 @@ msgstr "{count} स्थान चयनित"
 msgid "Search locations…"
 msgstr "स्थान खोजें..."
 
-#: yaffo/templates/filters/_locations.html:35
+#: yaffo/templates/filters/_locations.html:37
+msgid "Only show photos without location names"
+msgstr "केवल स्थान नाम के बिना फ़ोटो दिखाएं"
+
+#: yaffo/templates/filters/_locations.html:41
 msgid "Proximity Search"
 msgstr "निकटता खोज"
 
-#: yaffo/templates/filters/_locations.html:40
+#: yaffo/templates/filters/_locations.html:46
 msgid "Search for a location…"
 msgstr "कोई स्थान खोजें..."
 
-#: yaffo/templates/filters/_locations.html:46
+#: yaffo/templates/filters/_locations.html:52
 #, python-format
 msgid "Within (%(unit)s):"
 msgstr "अंदर (%(unit)s):"
@@ -1592,17 +1600,13 @@ msgstr "मिटाना"
 msgid "Locations - Yaffo"
 msgstr "स्थान - याफ़ो"
 
-#: yaffo/templates/locations/list.html:18
-msgid "Only show photos without location names"
-msgstr "केवल स्थान नाम के बिना फ़ोटो दिखाएं"
-
-#: yaffo/templates/locations/list.html:21
+#: yaffo/templates/locations/list.html:20
 msgid "Photo Locations"
 msgstr "फ़ोटो स्थान"
 
-#: yaffo/templates/locations/list.html:22
-msgid "Hold <kbd>Shift</kbd> and drag to select multiple clusters"
-msgstr "पकड़ना <kbd>बदलाव</kbd> और एकाधिक समूहों का चयन करने के लिए खींचें"
+#: yaffo/templates/locations/list.html:21
+msgid "Hold <kbd>Shift</kbd> and click or drag to select multiple clusters"
+msgstr <kbd>Shift</kbd> दबाए रखें और एकाधिक समूहों का चयन करने के लिए क्लिक करें या खींचें"
 
 #: yaffo/templates/media/view.html:15
 msgid "Photo Details"
