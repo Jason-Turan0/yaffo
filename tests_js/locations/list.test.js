@@ -239,7 +239,7 @@ const createLocations = () => [
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-const initLocationsMap = async ({ reverseLocation = null } = {}) => {
+const initLocationsMap = async ({ reverseLocation = null, locations = createLocations(), nearbyRadiusKm = 10 } = {}) => {
   setupDom();
   installOpenLayersStub();
 
@@ -255,7 +255,12 @@ const initLocationsMap = async ({ reverseLocation = null } = {}) => {
   vi.stubGlobal('fetch', fetchMock);
 
   await loadModule('locations/list.js');
-  const api = window.PHOTO_ORGANIZER.locations.initMap(createLocations(), createI18n(), createConfig());
+  const api = window.PHOTO_ORGANIZER.locations.initMap(
+    locations,
+    createI18n(),
+    createConfig(),
+    { nearbyRadiusKm },
+  );
 
   const clusterFeature = new TestFeature({
     features: api.vectorSource.getFeatures(),
@@ -286,21 +291,72 @@ describe('locations list map selection panel', () => {
   });
 
   it('inserts the reverse-geocode recommendation inside the assignment section', async () => {
-    const { api } = await initLocationsMap({ reverseLocation: 'Geo Beach' });
+    const { api } = await initLocationsMap({
+      reverseLocation: 'Geo Beach',
+      locations: [
+        { id: 1, name: null, filename: 'one.jpg', photo_path: '/one.jpg', media_type: 'photo', lat: 10, lon: 20 },
+        { id: 2, name: null, filename: 'two.jpg', photo_path: '/two.jpg', media_type: 'photo', lat: 11, lon: 21 },
+      ],
+    });
 
     await api.updateSelectionPanel();
     await flushPromises();
 
     const assignmentSection = document.querySelector('.selection-assignment');
     const recommended = assignmentSection.querySelector('.btn-recommended');
-    const existingQuickActions = assignmentSection.querySelectorAll('.quick-actions')[1];
+    const clusterAssign = assignmentSection.querySelector('.cluster-assign');
 
     expect(recommended).toBeTruthy();
     expect(recommended.textContent.trim()).toBe('Geo Beach');
     const recommendedSection = recommended.closest('.quick-actions');
     expect(
-      recommendedSection.compareDocumentPosition(existingQuickActions) & Node.DOCUMENT_POSITION_FOLLOWING,
+      recommendedSection.compareDocumentPosition(clusterAssign) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it('uses the only nearby location name around the selected medoid as the recommendation', async () => {
+    const { api, fetchMock } = await initLocationsMap({
+      reverseLocation: 'Geo Beach',
+      nearbyRadiusKm: 2,
+      locations: [
+        { id: 1, name: null, filename: 'one.jpg', photo_path: '/one.jpg', media_type: 'photo', lat: 0, lon: 0 },
+        { id: 2, name: 'Beach', filename: 'two.jpg', photo_path: '/two.jpg', media_type: 'photo', lat: 0, lon: 0.01 },
+        { id: 3, name: null, filename: 'three.jpg', photo_path: '/three.jpg', media_type: 'photo', lat: 10, lon: 10 },
+      ],
+    });
+    api.selectedPhotoIds.clear();
+    api.selectedPhotoIds.add(1);
+
+    await api.updateSelectionPanel();
+    await flushPromises();
+
+    expect(document.querySelector('.btn-recommended').textContent.trim()).toBe('Beach');
+    expect(fetchMock).not.toHaveBeenCalledWith('/locations/reverse-geocode', expect.anything());
+  });
+
+  it('reverse-geocodes the selected-photo medoid when nearby names are ambiguous', async () => {
+    const { api, fetchMock } = await initLocationsMap({
+      reverseLocation: 'Geo Beach',
+      nearbyRadiusKm: 200,
+      locations: [
+        { id: 1, name: null, filename: 'one.jpg', photo_path: '/one.jpg', media_type: 'photo', lat: 0, lon: 0 },
+        { id: 2, name: null, filename: 'two.jpg', photo_path: '/two.jpg', media_type: 'photo', lat: 0, lon: 1 },
+        { id: 3, name: null, filename: 'three.jpg', photo_path: '/three.jpg', media_type: 'photo', lat: 0, lon: 100 },
+        { id: 4, name: 'Beach', filename: 'four.jpg', photo_path: '/four.jpg', media_type: 'photo', lat: 0, lon: 1.01 },
+        { id: 5, name: 'Park', filename: 'five.jpg', photo_path: '/five.jpg', media_type: 'photo', lat: 0, lon: 1.02 },
+      ],
+    });
+    api.selectedPhotoIds.clear();
+    api.selectedPhotoIds.add(1);
+    api.selectedPhotoIds.add(2);
+    api.selectedPhotoIds.add(3);
+
+    await api.updateSelectionPanel();
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith('/locations/reverse-geocode', expect.objectContaining({
+      body: JSON.stringify({ lat: 0, lon: 1 }),
+    }));
   });
 
   it('assigns the typed location to selected photos', async () => {

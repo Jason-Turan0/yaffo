@@ -3,12 +3,25 @@ from flask import Flask, render_template, jsonify, request
 from flask_babel import gettext
 from sqlalchemy.orm import selectinload
 
+from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
 from yaffo.db import db
-from yaffo.db.models import Face, MediaItem, MEDIA_STATUS_INDEXED, EVENT_MEDIA_MODIFIED
+from yaffo.db.models import (
+    Automation,
+    Face,
+    MediaItem,
+    MEDIA_STATUS_INDEXED,
+    EVENT_MEDIA_MODIFIED,
+    AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME,
+)
 from yaffo.background_tasks.events import emit_event
 from yaffo.routes import filter_config
 from yaffo.routes.filter_panel import build_filters_context
 from yaffo.utils.reverse_geocode import reverse_geocode
+
+
+_ASSIGN_LOCATION_FIELDS = {
+    field.key: field for field in AUTOMATION_CONFIG[AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME]
+}
 
 
 def _location_payload(media_item: MediaItem) -> dict:
@@ -50,6 +63,21 @@ def _location_payload(media_item: MediaItem) -> dict:
     }
 
 
+def _assign_location_nearby_radius_km() -> float:
+    automation = (
+        db.session.query(Automation)
+        .filter(Automation.handler == AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME)
+        .one_or_none()
+    )
+    if automation is None:
+        return float(_ASSIGN_LOCATION_FIELDS["nearby_radius"].default)
+
+    config = automation.config or {}
+    config_km_value = config.get("nearby_radius_kilometers")
+    if config_km_value is None:
+        return float(_ASSIGN_LOCATION_FIELDS["nearby_radius"].default)
+    return float(config_km_value)
+
 def init_locations_routes(app: Flask):
     @app.route("/locations", methods=["GET"])
     def locations_list():
@@ -71,6 +99,7 @@ def init_locations_routes(app: Flask):
         return render_template(
             "locations/list.html",
             locations=locations_data,
+            nearby_radius_km=_assign_location_nearby_radius_km(),
             filters=build_filters_context(db.session, request.args),
             filter_layout=filter_config.load_layout(db.session, page="locations"),
             filter_default_keys=filter_config.default_keys(),

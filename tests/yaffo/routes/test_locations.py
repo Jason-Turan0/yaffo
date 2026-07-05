@@ -7,6 +7,9 @@ import re
 
 from yaffo.db import db
 from yaffo.db.models import (
+    AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME,
+    AUTOMATION_STATUS_READY,
+    Automation,
     ClassificationLabel,
     Face,
     MediaItem,
@@ -126,6 +129,28 @@ class TestLocationsPageFilterPanel:
             db.session.commit()
 
         assert _map_payload(client.get("/locations").data.decode()) == []
+
+    def test_locations_page_stores_assign_location_nearby_radius(self, client, app):
+        _seed_located_media(app)
+        with app.app_context():
+            db.session.add(Automation(
+                slug="assign_location_name",
+                name="Assign location name",
+                is_system=True,
+                enabled=True,
+                handler=AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME,
+                status=AUTOMATION_STATUS_READY,
+                config={
+                    "nearby_radius": 3,
+                    "nearby_radius_unit": "mi",
+                    "nearby_radius_kilometers": 4.828032,
+                },
+            ))
+            db.session.commit()
+
+        body = client.get("/locations").data.decode()
+
+        assert "{ nearbyRadiusKm: 4.828032 }" in body
 
 
 def test_bulk_update_assigns_location_name(client, app):

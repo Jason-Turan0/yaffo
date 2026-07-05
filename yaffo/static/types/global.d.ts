@@ -353,7 +353,12 @@ type LocationMapApi = {
 };
 
 type LocationsNamespace = {
-    initMap?: (locations: LocationMediaItem[], i18n: I18nService, config: AppConfig) => LocationMapApi;
+    initMap?: (
+        locations: LocationMediaItem[],
+        i18n: I18nService,
+        config: AppConfig,
+        options?: { nearbyRadiusKm?: number },
+    ) => LocationMapApi;
     map?: LocationMapApi;
 };
 

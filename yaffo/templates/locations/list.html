@@ -47,7 +47,8 @@ document.addEventListener('yaffo:app-init-complete', (event) => {
     app.locations.map = app.locations.initMap(
         {{ locations | tojson }},
         app.i18n,
-        window.APP_CONFIG
+        window.APP_CONFIG,
+        { nearbyRadiusKm: {{ nearby_radius_km | tojson }} }
     );
     app.filters.initTags(app.i18n, window.APP_CONFIG);
     app.filters.initLocationAutocomplete(app.i18n, window.APP_CONFIG);

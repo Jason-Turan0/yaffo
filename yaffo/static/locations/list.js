@@ -7,9 +7,10 @@ window.PHOTO_ORGANIZER.locations = window.PHOTO_ORGANIZER.locations || {};
  * @param {LocationMediaItem[]} locations
  * @param {I18nService} i18n
  * @param {AppConfig} config
+ * @param {{ nearbyRadiusKm?: number }} options
  * @returns {LocationMapApi}
  */
-window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
+window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {}) => {
     const escapeHtml = (/** @type {unknown} */ value) => String(value ?? '').replace(
         /[&<>"']/g,
         (character) => /** @type {Record<string, string>} */ ({
@@ -27,6 +28,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         selected: tokens.getPropertyValue('--color-success').trim(),
         contrast: tokens.getPropertyValue('--color-on-accent').trim()
     };
+    const nearbyRadiusKm = Number.isFinite(options.nearbyRadiusKm) ? Number(options.nearbyRadiusKm) : 10;
 
     const map = new ol.Map({
         target: 'map',
@@ -445,6 +447,52 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         };
     };
 
+    const featureCoordinates = (/** @type {any} */ feature) => {
+        const coords = ol.proj.toLonLat(feature.getGeometry().getCoordinates());
+        return { lat: coords[1], lon: coords[0] };
+    };
+
+    const calculateMedoid = (/** @type {any[]} */ features) => {
+        if (features.length === 0) return null;
+        const centroid = calculateCentroid(features);
+        return features.reduce((/** @type {any} */ closest, /** @type {any} */ feature) => {
+            const closestCoords = featureCoordinates(closest);
+            const featureCoords = featureCoordinates(feature);
+            const closestDistance = Math.hypot(closestCoords.lon - centroid.lon, closestCoords.lat - centroid.lat);
+            const featureDistance = Math.hypot(featureCoords.lon - centroid.lon, featureCoords.lat - centroid.lat);
+            return featureDistance < closestDistance ? feature : closest;
+        }, features[0]);
+    };
+
+    const distanceKm = (
+        /** @type {{ lat: number, lon: number }} */ a,
+        /** @type {{ lat: number, lon: number }} */ b,
+    ) => {
+        const earthRadiusKm = 6371.0088;
+        const toRadians = (/** @type {number} */ degrees) => degrees * Math.PI / 180;
+        const lat1 = toRadians(a.lat);
+        const lat2 = toRadians(b.lat);
+        const deltaLat = toRadians(b.lat - a.lat);
+        const deltaLon = toRadians(b.lon - a.lon);
+        const sinLat = Math.sin(deltaLat / 2);
+        const sinLon = Math.sin(deltaLon / 2);
+        const h = (sinLat * sinLat) + (Math.cos(lat1) * Math.cos(lat2) * sinLon * sinLon);
+        return earthRadiusKm * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    };
+
+    const uniqueNearbyLocationName = (/** @type {any} */ medoid) => {
+        const medoidCoords = featureCoordinates(medoid);
+        const nearbyNames = new Set();
+        allFeatures.forEach(feature => {
+            const locationName = String(feature.get('name') || '').trim();
+            if (!locationName) return;
+            if (distanceKm(medoidCoords, featureCoordinates(feature)) <= nearbyRadiusKm) {
+                nearbyNames.add(locationName);
+            }
+        });
+        return nearbyNames.size === 1 ? Array.from(nearbyNames)[0] : null;
+    };
+
     const getRecommendedLocation = async (/** @type {number} */ lat, /** @type {number} */ lon) => {
         try {
             const response = await fetch(config.urls.reverse_geocode_route, {
@@ -502,8 +550,6 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                 .map(([name, count]) => i18n.number(count) + ' ' + name)
                 .join(', ');
 
-            const centroid = calculateCentroid(features);
-
             return {
                 index: idx,
                 photoCount: selectedFeatures.length,
@@ -522,9 +568,9 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                     }),
                 photoIds: photoIds,
                 photos: photos,
+                features: selectedFeatures,
                 locationBreakdown: locationBreakdown,
                 locationCounts: locationCounts,
-                centroid: centroid,
                 recommendedLocation: null
             };
         }).filter((/** @type {any} */ cluster) => cluster.photoCount > 0);
@@ -536,6 +582,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
 
         const allPhotoIds = selectedClusters.flatMap((/** @type {any} */ c) => c.photoIds);
         const allPhotos = selectedClusters.flatMap((/** @type {any} */ c) => c.photos);
+        const allSelectedFeatures = selectedClusters.flatMap((/** @type {any} */ c) => c.features);
         const totalPhotos = allPhotoIds.length;
 
         /** @type {Record<string, number>} */
@@ -744,41 +791,44 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         panel.classList.add('active');
 
         (async () => {
-            const firstCluster = selectedClusters[0];
-            if (firstCluster && firstCluster.centroid) {
-                const recommendedLocation = await getRecommendedLocation(firstCluster.centroid.lat, firstCluster.centroid.lon);
+            const medoid = calculateMedoid(allSelectedFeatures);
+            let recommendedLocation = medoid ? uniqueNearbyLocationName(medoid) : null;
 
-                if (recommendedLocation) {
-                    const recommendedSection = document.createElement('div');
-                    recommendedSection.className = 'quick-actions';
-                    recommendedSection.innerHTML = `
-                        <div class="quick-action-label">${escapeHtml(i18n.t('locations:selection.recommended'))}</div>
-                        <button class="btn-quick-assign btn-recommended"
-                                data-photo-ids="${allPhotoIds.join(',')}"
-                                data-location-name="${escapeHtml(recommendedLocation)}"
-                                title="${escapeHtml(recommendedLocation)}">
-                            ${escapeHtml(recommendedLocation)}
-                        </button>
-                    `;
-
-                    const assignmentSection = panelContent.querySelector('.selection-assignment');
-                    const quickActionsSection = assignmentSection?.querySelector('.quick-actions');
-                    if (quickActionsSection) {
-                        assignmentSection?.insertBefore(recommendedSection, quickActionsSection);
-                    } else {
-                        const clusterAssign = assignmentSection?.querySelector('.cluster-assign');
-                        if (clusterAssign) assignmentSection?.insertBefore(recommendedSection, clusterAssign);
-                    }
-
-                    const newRecommendedBtn = recommendedSection.querySelector('.btn-quick-assign');
-                    newRecommendedBtn?.addEventListener('click', async (event) => {
-                        if (!(event.currentTarget instanceof HTMLElement)) return;
-                        const photoIds = (event.currentTarget.dataset.photoIds || '').split(',').filter(Boolean).map(Number);
-                        const locationName = event.currentTarget.dataset.locationName || '';
-                        await assignLocation(photoIds, locationName);
-                    });
-                }
+            if (!recommendedLocation && medoid) {
+                const coords = featureCoordinates(medoid);
+                recommendedLocation = await getRecommendedLocation(coords.lat, coords.lon);
             }
+
+            if (!recommendedLocation) return;
+
+            const recommendedSection = document.createElement('div');
+            recommendedSection.className = 'quick-actions';
+            recommendedSection.innerHTML = `
+                <div class="quick-action-label">${escapeHtml(i18n.t('locations:selection.recommended'))}</div>
+                <button class="btn-quick-assign btn-recommended"
+                        data-photo-ids="${allPhotoIds.join(',')}"
+                        data-location-name="${escapeHtml(recommendedLocation)}"
+                        title="${escapeHtml(recommendedLocation)}">
+                    ${escapeHtml(recommendedLocation)}
+                </button>
+            `;
+
+            const assignmentSection = panelContent.querySelector('.selection-assignment');
+            const quickActionsSection = assignmentSection?.querySelector('.quick-actions');
+            if (quickActionsSection) {
+                assignmentSection?.insertBefore(recommendedSection, quickActionsSection);
+            } else {
+                const clusterAssign = assignmentSection?.querySelector('.cluster-assign');
+                if (clusterAssign) assignmentSection?.insertBefore(recommendedSection, clusterAssign);
+            }
+
+            const newRecommendedBtn = recommendedSection.querySelector('.btn-quick-assign');
+            newRecommendedBtn?.addEventListener('click', async (event) => {
+                if (!(event.currentTarget instanceof HTMLElement)) return;
+                const photoIds = (event.currentTarget.dataset.photoIds || '').split(',').filter(Boolean).map(Number);
+                const locationName = event.currentTarget.dataset.locationName || '';
+                await assignLocation(photoIds, locationName);
+            });
         })();
     };
 
