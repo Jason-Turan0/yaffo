@@ -16,7 +16,7 @@ from yaffo.db.models import (
 from yaffo.background_tasks.events import emit_event
 from yaffo.routes import filter_config
 from yaffo.routes.filter_panel import build_filters_context
-from yaffo.utils.reverse_geocode import reverse_geocode
+from yaffo.utils.reverse_geocode import ReverseGeocodeRateLimited, reverse_geocode
 
 
 _ASSIGN_LOCATION_FIELDS = {
@@ -159,7 +159,14 @@ def init_locations_routes(app: Flask):
                 'code': 'coordinates_required',
             }), 400
 
-        location_name = reverse_geocode(lat, lon)
+        try:
+            location_name = reverse_geocode(lat, lon)
+        except ReverseGeocodeRateLimited:
+            return jsonify({
+                'error': gettext("Could not determine a location name"),
+                'code': 'reverse_geocode_rate_limited',
+            }), 429
+
         if location_name is None:
             return jsonify({
                 'error': gettext("Could not determine a location name"),

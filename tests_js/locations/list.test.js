@@ -389,6 +389,34 @@ describe('locations list map selection panel', () => {
     expect(document.querySelector('.btn-recommended').textContent.trim()).toBe('Geo Beach');
   });
 
+  it('stops reverse-geocode fallback lookups after the provider rate limit is hit', async () => {
+    const { api, fetchMock } = await initLocationsMap({
+      reverseResponse: Promise.resolve(window.testHelpers.response({
+        error: 'Rate limited',
+        code: 'reverse_geocode_rate_limited',
+      }, { ok: false, status: 429 })),
+      locations: [
+        { id: 1, name: null, filename: 'one.jpg', photo_path: '/one.jpg', media_type: 'photo', lat: 10, lon: 20 },
+        { id: 2, name: null, filename: 'two.jpg', photo_path: '/two.jpg', media_type: 'photo', lat: 20, lon: 30 },
+      ],
+    });
+
+    api.selectedPhotoIds.clear();
+    api.selectedPhotoIds.add(1);
+    await api.updateSelectionPanel();
+    await flushPromises();
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/locations/reverse-geocode')).toHaveLength(1);
+    expect(document.querySelector('.btn-recommended')).toBeFalsy();
+
+    api.selectedPhotoIds.clear();
+    api.selectedPhotoIds.add(2);
+    await api.updateSelectionPanel();
+    await flushPromises();
+
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/locations/reverse-geocode')).toHaveLength(1);
+    expect(document.querySelector('.btn-recommended')).toBeFalsy();
+  });
+
   it('assigns the typed location to selected photos', async () => {
     const { api, fetchMock } = await initLocationsMap();
 

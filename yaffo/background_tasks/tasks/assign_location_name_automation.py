@@ -33,7 +33,7 @@ from yaffo.db.models import (
 )
 from yaffo.db.repositories import media_repository
 from yaffo.utils.geo import haversine_meters
-from yaffo.utils.reverse_geocode import reverse_geocode
+from yaffo.utils.reverse_geocode import ReverseGeocodeRateLimited, reverse_geocode
 
 # The handler's config fields (see automation_config.AUTOMATION_CONFIG), by key.
 _FIELDS = {f.key: f for f in AUTOMATION_CONFIG[AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME]}
@@ -119,7 +119,10 @@ def _throttled_geocoder() -> Callable[[float, float], Optional[str]]:
         if wait > 0:
             time.sleep(wait)
         last_call = time.monotonic()
-        return reverse_geocode(lat, lon)
+        try:
+            return reverse_geocode(lat, lon)
+        except ReverseGeocodeRateLimited:
+            return None
 
     return geocode
 

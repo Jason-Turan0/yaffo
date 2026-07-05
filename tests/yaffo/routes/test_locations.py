@@ -5,6 +5,7 @@ removing them (an empty name alone must never clear)."""
 import json
 import re
 
+import yaffo.routes.locations as locations_routes
 from yaffo.db import db
 from yaffo.db.models import (
     AUTOMATION_HANDLER_ASSIGN_LOCATION_NAME,
@@ -200,3 +201,15 @@ def test_bulk_update_clear_requires_media_item_ids(client):
     response = client.post("/locations/bulk-update", json={"clear": True})
     assert response.status_code == 400
     assert response.get_json()["code"] == "location_fields_required"
+
+
+def test_reverse_geocode_rate_limit_returns_429(client, monkeypatch):
+    def rate_limited(_lat, _lon):
+        raise locations_routes.ReverseGeocodeRateLimited
+
+    monkeypatch.setattr(locations_routes, "reverse_geocode", rate_limited)
+
+    response = client.post("/locations/reverse-geocode", json={"lat": 38.6, "lon": -90.2})
+
+    assert response.status_code == 429
+    assert response.get_json()["code"] == "reverse_geocode_rate_limited"

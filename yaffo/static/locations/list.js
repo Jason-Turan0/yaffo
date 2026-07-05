@@ -248,6 +248,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
     // renderer so it survives re-renders as the selection changes.
     let previewCollapsed = false;
     let recommendationRenderId = 0;
+    let reverseGeocodeRateLimited = false;
     /** @type {Map<string, Promise<string | null>>} */
     const reverseGeocodeCache = new Map();
 
@@ -497,6 +498,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
     };
 
     const getRecommendedLocation = async (/** @type {number} */ lat, /** @type {number} */ lon) => {
+        if (reverseGeocodeRateLimited) return null;
         const cacheKey = lat.toFixed(6) + ',' + lon.toFixed(6);
         const cached = reverseGeocodeCache.get(cacheKey);
         if (cached) return cached;
@@ -514,6 +516,9 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
                 if (response.ok) {
                     const data = await response.json();
                     return data.location_name;
+                }
+                if (response.status === 429) {
+                    reverseGeocodeRateLimited = true;
                 }
             } catch (error) {
                 console.error('Error fetching recommended location:', error);

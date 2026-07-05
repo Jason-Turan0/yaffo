@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-05 07:38-0500\n"
+"POT-Creation-Date: 2026-07-05 09:54-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -126,51 +126,51 @@ msgid ""
 "reuse names more aggressively and make fewer online lookups."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:142
+#: yaffo/background_tasks/automation_config.py:140
 msgid "Look up name online (OpenStreetMap)"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:144
+#: yaffo/background_tasks/automation_config.py:142
 msgid ""
 "When no nearby photo is named, reverse-geocode the coordinates via "
 "OpenStreetMap Nominatim (throttled to ~1 request/second)."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:152
+#: yaffo/background_tasks/automation_config.py:150
 msgid "Overwrite existing location names"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:153
+#: yaffo/background_tasks/automation_config.py:151
 msgid "When off, photos that already have a location name are left untouched."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:161
+#: yaffo/background_tasks/automation_config.py:159
 msgid "Time window (minutes)"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:163
+#: yaffo/background_tasks/automation_config.py:161
 msgid ""
 "A photo with no GPS borrows the coordinates of the closest-in-time GPS-"
 "tagged photo, but only if it was taken within this many minutes (so "
 "coordinates aren't copied across a long gap / a different place)."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:177
+#: yaffo/background_tasks/automation_config.py:175
 msgid "Confidence threshold"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:179
+#: yaffo/background_tasks/automation_config.py:177
 msgid ""
 "A photo gets a label only when the CLIP image–text similarity is at or "
 "above this confidence (0 = least similar, 100 = most similar) Higher is "
 "stricter: fewer, more confident labels."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:190
+#: yaffo/background_tasks/automation_config.py:188
 msgid "Max labels per photo"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:191
+#: yaffo/background_tasks/automation_config.py:189
 msgid "At most this many labels are kept per photo (the highest-scoring ones)."
 msgstr ""
 
@@ -304,19 +304,19 @@ msgstr ""
 msgid "The tag_name parameter is required"
 msgstr ""
 
-#: yaffo/routes/locations.py:92
+#: yaffo/routes/locations.py:121
 msgid "Media item IDs and location name are required"
 msgstr ""
 
-#: yaffo/routes/locations.py:116
+#: yaffo/routes/locations.py:145
 msgid "Could not update locations"
 msgstr ""
 
-#: yaffo/routes/locations.py:129
+#: yaffo/routes/locations.py:158
 msgid "Latitude and longitude are required"
 msgstr ""
 
-#: yaffo/routes/locations.py:136
+#: yaffo/routes/locations.py:166 yaffo/routes/locations.py:172
 msgid "Could not determine a location name"
 msgstr ""
 

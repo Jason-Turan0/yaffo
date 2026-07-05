@@ -14,6 +14,10 @@ _USER_AGENT = "PhotoOrganizer/1.0"
 _ADDRESS_KEYS = ["city", "town", "village", "county", "state", "country"]
 
 
+class ReverseGeocodeRateLimited(Exception):
+    """The geocoding provider rejected the request due to rate limiting."""
+
+
 def reverse_geocode(lat: float, lon: float, timeout: float = 3) -> Optional[str]:
     """Return a location name for the coordinate, or None if the lookup fails.
 
@@ -30,6 +34,8 @@ def reverse_geocode(lat: float, lon: float, timeout: float = 3) -> Optional[str]
     except requests.RequestException:
         return None
 
+    if response.status_code == 429:
+        raise ReverseGeocodeRateLimited
     if response.status_code != 200:
         return None
 

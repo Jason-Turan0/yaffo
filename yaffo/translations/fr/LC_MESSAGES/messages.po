@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-05 07:38-0500\n"
+"POT-Creation-Date: 2026-07-05 09:54-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -56,12 +56,11 @@ msgstr "Seuil de correspondance"
 
 #: yaffo/background_tasks/automation_config.py:59
 msgid ""
-"Threshold to use when comparing faces (0 = least similar, 100 = most "
-"similar) Higher is stricter: fewer, more confident assignments."
+"Threshold to use when comparing faces (0 = least similar, 100 = most similar) Higher is stricter:"
+" fewer, more confident assignments."
 msgstr ""
-"Seuil à utiliser lors de la comparaison des visages (0 = le moins "
-"similaire, 100 = le plus similaire) Plus haut est plus strict : "
-"affectations moins nombreuses et plus sûres."
+"Seuil à utiliser lors de la comparaison des visages (0 = le moins similaire, 100 = le plus "
+"similaire) Plus haut est plus strict : affectations moins nombreuses et plus sûres."
 
 #: yaffo/background_tasks/automation_config.py:70
 msgid "Assign when multiple people match"
@@ -69,14 +68,12 @@ msgstr "Attribuer lorsque plusieurs personnes correspondent"
 
 #: yaffo/background_tasks/automation_config.py:72
 msgid ""
-"When on, a face matching more than one person above the threshold is "
-"assigned to the highest-scoring match. When off, ambiguous faces are left"
-" unassigned."
+"When on, a face matching more than one person above the threshold is assigned to the highest-"
+"scoring match. When off, ambiguous faces are left unassigned."
 msgstr ""
-"Lorsque cette option est activée, un visage correspondant à plus d'une "
-"personne au-dessus du seuil est attribué à la correspondance ayant obtenu"
-" le score le plus élevé. Lorsqu'elle est désactivée, les visages ambigus "
-"ne sont pas attribués."
+"Lorsque cette option est activée, un visage correspondant à plus d'une personne au-dessus du "
+"seuil est attribué à la correspondance ayant obtenu le score le plus élevé. Lorsqu'elle est "
+"désactivée, les visages ambigus ne sont pas attribués."
 
 #: yaffo/background_tasks/automation_config.py:83
 msgid "Export Location Tags"
@@ -92,33 +89,23 @@ msgstr "Exporter des étiquettes"
 
 #: yaffo/background_tasks/automation_config.py:96
 msgid "Write the photo's classification labels into the file's keywords."
-msgstr ""
-"Écrivez les étiquettes de classification de la photo dans les mots-clés "
-"du fichier."
+msgstr "Écrivez les étiquettes de classification de la photo dans les mots-clés du fichier."
 
 #: yaffo/background_tasks/automation_config.py:102
 msgid "Export Custom Tags"
 msgstr "Exporter des balises personnalisées"
 
 #: yaffo/background_tasks/automation_config.py:103
-msgid ""
-"Write the photo's manual tags (name, or name: value) into the file's "
-"keywords."
-msgstr ""
-"Écrivez les balises manuelles de la photo (nom ou nom : valeur) dans les "
-"mots-clés du fichier."
+msgid "Write the photo's manual tags (name, or name: value) into the file's keywords."
+msgstr "Écrivez les balises manuelles de la photo (nom ou nom : valeur) dans les mots-clés du fichier."
 
 #: yaffo/background_tasks/automation_config.py:109
 msgid "Export Favorite"
 msgstr "Exporter le favori"
 
 #: yaffo/background_tasks/automation_config.py:110
-msgid ""
-"Write a \"Favorite\" keyword into the file when the photo is marked a "
-"favorite."
-msgstr ""
-"Écrivez un mot-clé « Favoris » dans le fichier lorsque la photo est "
-"marquée comme favorite."
+msgid "Write a \"Favorite\" keyword into the file when the photo is marked a favorite."
+msgstr "Écrivez un mot-clé « Favoris » dans le fichier lorsque la photo est marquée comme favorite."
 
 #: yaffo/background_tasks/automation_config.py:118
 msgid "Reuse a nearby photo's name"
@@ -126,12 +113,11 @@ msgstr "Réutiliser le nom d'une photo à proximité"
 
 #: yaffo/background_tasks/automation_config.py:120
 msgid ""
-"Copy the location name of the closest already-named photo within the "
-"radius below. Free, offline, and keeps your own naming."
+"Copy the location name of the closest already-named photo within the radius below. Free, offline,"
+" and keeps your own naming."
 msgstr ""
-"Copiez le nom de l'emplacement de la photo déjà nommée la plus proche "
-"dans le rayon ci-dessous. Gratuit, hors ligne et conserve votre propre "
-"nom."
+"Copiez le nom de l'emplacement de la photo déjà nommée la plus proche dans le rayon ci-dessous. "
+"Gratuit, hors ligne et conserve votre propre nom."
 
 #: yaffo/background_tasks/automation_config.py:128
 msgid "Nearby radius"
@@ -139,74 +125,66 @@ msgstr "Rayon à proximité"
 
 #: yaffo/background_tasks/automation_config.py:130
 msgid ""
-"How close an already-named photo must be to copy its name. Larger values "
-"reuse names more aggressively and make fewer online lookups."
+"How close an already-named photo must be to copy its name. Larger values reuse names more "
+"aggressively and make fewer online lookups."
 msgstr ""
-"À quel point une photo déjà nommée doit être proche pour copier son nom. "
-"Des valeurs plus élevées réutilisent les noms de manière plus agressive "
-"et effectuent moins de recherches en ligne."
+"À quel point une photo déjà nommée doit être proche pour copier son nom. Des valeurs plus élevées"
+" réutilisent les noms de manière plus agressive et effectuent moins de recherches en ligne."
 
-#: yaffo/background_tasks/automation_config.py:142
+#: yaffo/background_tasks/automation_config.py:140
 msgid "Look up name online (OpenStreetMap)"
 msgstr "Rechercher un nom en ligne (OpenStreetMap)"
 
-#: yaffo/background_tasks/automation_config.py:144
+#: yaffo/background_tasks/automation_config.py:142
 msgid ""
-"When no nearby photo is named, reverse-geocode the coordinates via "
-"OpenStreetMap Nominatim (throttled to ~1 request/second)."
+"When no nearby photo is named, reverse-geocode the coordinates via OpenStreetMap Nominatim "
+"(throttled to ~1 request/second)."
 msgstr ""
-"Lorsqu'aucune photo à proximité n'est nommée, géocodez inversement les "
-"coordonnées via OpenStreetMap Nominatim (limité à ~ 1 requête/seconde)."
+"Lorsqu'aucune photo à proximité n'est nommée, géocodez inversement les coordonnées via "
+"OpenStreetMap Nominatim (limité à ~ 1 requête/seconde)."
 
-#: yaffo/background_tasks/automation_config.py:152
+#: yaffo/background_tasks/automation_config.py:150
 msgid "Overwrite existing location names"
 msgstr "Remplacer les noms d'emplacement existants"
 
-#: yaffo/background_tasks/automation_config.py:153
+#: yaffo/background_tasks/automation_config.py:151
 msgid "When off, photos that already have a location name are left untouched."
-msgstr ""
-"Lorsqu'elle est désactivée, les photos qui ont déjà un nom de lieu ne "
-"sont pas modifiées."
+msgstr "Lorsqu'elle est désactivée, les photos qui ont déjà un nom de lieu ne sont pas modifiées."
 
-#: yaffo/background_tasks/automation_config.py:161
+#: yaffo/background_tasks/automation_config.py:159
 msgid "Time window (minutes)"
 msgstr "Fenêtre de temps (minutes)"
 
-#: yaffo/background_tasks/automation_config.py:163
+#: yaffo/background_tasks/automation_config.py:161
 msgid ""
-"A photo with no GPS borrows the coordinates of the closest-in-time GPS-"
-"tagged photo, but only if it was taken within this many minutes (so "
-"coordinates aren't copied across a long gap / a different place)."
+"A photo with no GPS borrows the coordinates of the closest-in-time GPS-tagged photo, but only if "
+"it was taken within this many minutes (so coordinates aren't copied across a long gap / a "
+"different place)."
 msgstr ""
-"Une photo sans GPS emprunte les coordonnées de la photo marquée GPS la "
-"plus proche dans le temps, mais seulement si elle a été prise dans ce "
-"nombre de minutes (afin que les coordonnées ne soient pas copiées sur un "
-"long espace / un endroit différent)."
+"Une photo sans GPS emprunte les coordonnées de la photo marquée GPS la plus proche dans le temps,"
+" mais seulement si elle a été prise dans ce nombre de minutes (afin que les coordonnées ne soient"
+" pas copiées sur un long espace / un endroit différent)."
 
-#: yaffo/background_tasks/automation_config.py:177
+#: yaffo/background_tasks/automation_config.py:175
 msgid "Confidence threshold"
 msgstr "Seuil de confiance"
 
-#: yaffo/background_tasks/automation_config.py:179
+#: yaffo/background_tasks/automation_config.py:177
 msgid ""
-"A photo gets a label only when the CLIP image–text similarity is at or "
-"above this confidence (0 = least similar, 100 = most similar) Higher is "
-"stricter: fewer, more confident labels."
+"A photo gets a label only when the CLIP image–text similarity is at or above this confidence (0 ="
+" least similar, 100 = most similar) Higher is stricter: fewer, more confident labels."
 msgstr ""
-"Une photo reçoit une étiquette uniquement lorsque la similarité image-"
-"texte CLIP est égale ou supérieure à ce niveau de confiance (0 = la moins"
-" similaire, 100 = la plus similaire). Plus haut est plus strict : moins "
-"d'étiquettes, plus sûres."
+"Une photo reçoit une étiquette uniquement lorsque la similarité image-texte CLIP est égale ou "
+"supérieure à ce niveau de confiance (0 = la moins similaire, 100 = la plus similaire). Plus haut "
+"est plus strict : moins d'étiquettes, plus sûres."
 
-#: yaffo/background_tasks/automation_config.py:190
+#: yaffo/background_tasks/automation_config.py:188
 msgid "Max labels per photo"
 msgstr "Nombre maximum d'étiquettes par photo"
 
-#: yaffo/background_tasks/automation_config.py:191
+#: yaffo/background_tasks/automation_config.py:189
 msgid "At most this many labels are kept per photo (the highest-scoring ones)."
-msgstr ""
-"Tout au plus ce nombre d'étiquettes est conservé par photo (les plus "
-"performantes)."
+msgstr "Tout au plus ce nombre d'étiquettes est conservé par photo (les plus performantes)."
 
 #: yaffo/db/models.py:355
 msgid "File sync"
@@ -222,25 +200,21 @@ msgstr "Attribuer automatiquement des visages"
 
 #: yaffo/db/models.py:361
 msgid ""
-"When a photo is indexed, assign each detected face to the one person it "
-"matches above the threshold — a face matching several people is left "
-"unassigned."
+"When a photo is indexed, assign each detected face to the one person it matches above the "
+"threshold — a face matching several people is left unassigned."
 msgstr ""
-"Lorsqu'une photo est indexée, attribuez chaque visage détecté à la "
-"personne à laquelle il correspond au-dessus du seuil : un visage "
-"correspondant à plusieurs personnes n'est pas attribué."
+"Lorsqu'une photo est indexée, attribuez chaque visage détecté à la personne à laquelle il "
+"correspond au-dessus du seuil : un visage correspondant à plusieurs personnes n'est pas attribué."
 
 #: yaffo/db/models.py:367
 msgid "Export photo tag"
 msgstr "Exporter la balise photo"
 
 #: yaffo/db/models.py:369
-msgid ""
-"When a photo is modified, write its people and/or location tags back into"
-" the photo file."
+msgid "When a photo is modified, write its people and/or location tags back into the photo file."
 msgstr ""
-"Lorsqu'une photo est modifiée, réécrivez ses personnes et/ou ses balises "
-"de localisation dans le fichier photo."
+"Lorsqu'une photo est modifiée, réécrivez ses personnes et/ou ses balises de localisation dans le "
+"fichier photo."
 
 #: yaffo/db/models.py:374
 msgid "Assign location name"
@@ -248,12 +222,11 @@ msgstr "Attribuer un nom d'emplacement"
 
 #: yaffo/db/models.py:376
 msgid ""
-"When a photo is indexed, name its location from GPS — reuse a nearby "
-"named photo's name, then fall back to an OpenStreetMap lookup."
+"When a photo is indexed, name its location from GPS — reuse a nearby named photo's name, then "
+"fall back to an OpenStreetMap lookup."
 msgstr ""
-"Lorsqu'une photo est indexée, nommez son emplacement à partir du GPS - "
-"réutilisez le nom d'une photo nommée à proximité, puis revenez à une "
-"recherche OpenStreetMap."
+"Lorsqu'une photo est indexée, nommez son emplacement à partir du GPS - réutilisez le nom d'une "
+"photo nommée à proximité, puis revenez à une recherche OpenStreetMap."
 
 #: yaffo/db/models.py:381
 msgid "Geotag from neighbors"
@@ -261,13 +234,11 @@ msgstr "Géolocalisation des voisins"
 
 #: yaffo/db/models.py:383
 msgid ""
-"When a photo is indexed, give a GPS-less photo the coordinates of the "
-"closest-in-time photo that has GPS (e.g. a camera shot taken alongside "
-"phone shots)."
+"When a photo is indexed, give a GPS-less photo the coordinates of the closest-in-time photo that "
+"has GPS (e.g. a camera shot taken alongside phone shots)."
 msgstr ""
-"Lorsqu'une photo est indexée, donnez à une photo sans GPS les coordonnées"
-" de la photo la plus proche dans le temps dotée d'un GPS (par exemple, "
-"une photo prise avec un téléphone)."
+"Lorsqu'une photo est indexée, donnez à une photo sans GPS les coordonnées de la photo la plus "
+"proche dans le temps dotée d'un GPS (par exemple, une photo prise avec un téléphone)."
 
 #: yaffo/db/models.py:389
 msgid "Classify labels"
@@ -275,13 +246,11 @@ msgstr "Classer les étiquettes"
 
 #: yaffo/db/models.py:391
 msgid ""
-"When a photo is indexed, label it with the subjects, scenes, and "
-"activities it matches from your label vocabulary (offline CLIP image "
-"recognition)."
+"When a photo is indexed, label it with the subjects, scenes, and activities it matches from your "
+"label vocabulary (offline CLIP image recognition)."
 msgstr ""
-"Lorsqu'une photo est indexée, étiquetez-la avec les sujets, scènes et "
-"activités auxquels elle correspond à partir de votre vocabulaire "
-"d'étiquette (reconnaissance d'image CLIP hors ligne)."
+"Lorsqu'une photo est indexée, étiquetez-la avec les sujets, scènes et activités auxquels elle "
+"correspond à partir de votre vocabulaire d'étiquette (reconnaissance d'image CLIP hors ligne)."
 
 #: yaffo/db/models.py:397
 msgid "Duplicate scan"
@@ -289,12 +258,11 @@ msgstr "Analyse en double"
 
 #: yaffo/db/models.py:399
 msgid ""
-"Scan your indexed photos for duplicates on a schedule — results appear in"
-" the Remove Duplicates tool."
+"Scan your indexed photos for duplicates on a schedule — results appear in the Remove Duplicates "
+"tool."
 msgstr ""
-"Analysez vos photos indexées à la recherche de doublons selon un "
-"calendrier : les résultats apparaissent dans l'outil Supprimer les "
-"doublons."
+"Analysez vos photos indexées à la recherche de doublons selon un calendrier : les résultats "
+"apparaissent dans l'outil Supprimer les doublons."
 
 #: yaffo/routes/faces.py:76
 #, python-format
@@ -312,9 +280,8 @@ msgid_plural "Successfully ignored %(count)s faces"
 msgstr[0] "Ignoré avec succès %(count)s affronter"
 msgstr[1] "Ignoré avec succès %(count)s visages"
 
-#: yaffo/routes/faces.py:277 yaffo/routes/people.py:119
-#: yaffo/routes/people.py:178 yaffo/routes/people.py:220
-#: yaffo/routes/people.py:298
+#: yaffo/routes/faces.py:277 yaffo/routes/people.py:119 yaffo/routes/people.py:178
+#: yaffo/routes/people.py:220 yaffo/routes/people.py:298
 msgid "Person not found"
 msgstr "Personne introuvable"
 
@@ -335,7 +302,7 @@ msgstr "Impossible de traiter les visages"
 
 #: yaffo/routes/filter_config.py:126
 msgid "Unknown filter page"
-msgstr ""
+msgstr "Page de filtre inconnue"
 
 #: yaffo/routes/filter_config.py:133
 msgid "Items must be a list"
@@ -355,21 +322,19 @@ msgstr "Femelle"
 msgid "The tag_name parameter is required"
 msgstr "Le paramètre tag_name est obligatoire"
 
-#: yaffo/routes/locations.py:92
+#: yaffo/routes/locations.py:121
 msgid "Media item IDs and location name are required"
-msgstr ""
-"Les identifiants des éléments multimédias et le nom de l'emplacement sont"
-" requis"
+msgstr "Les identifiants des éléments multimédias et le nom de l'emplacement sont requis"
 
-#: yaffo/routes/locations.py:116
+#: yaffo/routes/locations.py:145
 msgid "Could not update locations"
 msgstr "Impossible de mettre à jour les emplacements"
 
-#: yaffo/routes/locations.py:129
+#: yaffo/routes/locations.py:158
 msgid "Latitude and longitude are required"
 msgstr "La latitude et la longitude sont obligatoires"
 
-#: yaffo/routes/locations.py:136
+#: yaffo/routes/locations.py:166 yaffo/routes/locations.py:172
 msgid "Could not determine a location name"
 msgstr "Impossible de déterminer un nom d'emplacement"
 
@@ -377,8 +342,7 @@ msgstr "Impossible de déterminer un nom d'emplacement"
 msgid "Photo not found"
 msgstr "Photo introuvable"
 
-#: yaffo/routes/media.py:28 yaffo/routes/media.py:66 yaffo/routes/media.py:84
-#: yaffo/routes/media.py:176
+#: yaffo/routes/media.py:28 yaffo/routes/media.py:66 yaffo/routes/media.py:84 yaffo/routes/media.py:176
 msgid "File not found"
 msgstr "Fichier introuvable"
 
@@ -414,28 +378,20 @@ msgstr "Chaque balise doit être un objet"
 msgid "Tag name is required"
 msgstr "Le nom de la balise est obligatoire"
 
-#: yaffo/routes/pages.py:105 yaffo/routes/pages.py:131
-#: yaffo/templates/pages/design.html:18
+#: yaffo/routes/pages.py:105 yaffo/routes/pages.py:131 yaffo/templates/pages/design.html:18
 msgid "Untitled Page"
 msgstr "Page sans titre"
 
-#: yaffo/routes/pages.py:242 yaffo/routes/themes_page.py:239
-#: yaffo/routes/utilities/automations.py:635
+#: yaffo/routes/pages.py:242 yaffo/routes/themes_page.py:239 yaffo/routes/utilities/automations.py:635
 msgid "Message is required."
 msgstr "Un message est requis."
 
-#: yaffo/routes/pages.py:246 yaffo/routes/themes_page.py:243
-#: yaffo/routes/utilities/automations.py:639
+#: yaffo/routes/pages.py:246 yaffo/routes/themes_page.py:243 yaffo/routes/utilities/automations.py:639
 #, python-format
-msgid ""
-"No API key configured. Add your %(provider)s API key in Settings → AI "
-"Generation."
-msgstr ""
-"Aucune clé API configurée. Ajoutez votre %(provider)s Clé API dans "
-"Paramètres → Génération IA."
+msgid "No API key configured. Add your %(provider)s API key in Settings → AI Generation."
+msgstr "Aucune clé API configurée. Ajoutez votre %(provider)s Clé API dans Paramètres → Génération IA."
 
-#: yaffo/routes/pages.py:260 yaffo/routes/themes_page.py:235
-#: yaffo/routes/utilities/automations.py:632
+#: yaffo/routes/pages.py:260 yaffo/routes/themes_page.py:235 yaffo/routes/utilities/automations.py:632
 msgid "A generation is already running."
 msgstr "Une génération est déjà en marche."
 
@@ -447,13 +403,11 @@ msgstr "La version n'est pas prête à être publiée."
 msgid "Gender must be male, female, or not specified"
 msgstr "Le sexe doit être masculin, féminin ou non spécifié"
 
-#: yaffo/routes/people.py:62 yaffo/routes/people.py:93
-#: yaffo/routes/people.py:124
+#: yaffo/routes/people.py:62 yaffo/routes/people.py:93 yaffo/routes/people.py:124
 msgid "Name is required"
 msgstr "Le nom est requis"
 
-#: yaffo/routes/people.py:68 yaffo/routes/people.py:100
-#: yaffo/routes/people.py:133
+#: yaffo/routes/people.py:68 yaffo/routes/people.py:100 yaffo/routes/people.py:133
 #, python-format
 msgid "Person '%(name)s' already exists"
 msgstr "Personne '%(name)s'existe déjà"
@@ -492,12 +446,10 @@ msgstr "Personne mise à jour"
 
 #: yaffo/routes/settings.py:92 yaffo/templates/settings/index.html:55
 #: yaffo/templates/settings/index.html:89
-msgid ""
-"Media and thumbnail directories cannot be changed while importing or "
-"indexing is in progress."
+msgid "Media and thumbnail directories cannot be changed while importing or indexing is in progress."
 msgstr ""
-"Les répertoires multimédias et de miniatures ne peuvent pas être modifiés"
-" pendant une importation ou une indexation."
+"Les répertoires multimédias et de miniatures ne peuvent pas être modifiés pendant une importation"
+" ou une indexation."
 
 #: yaffo/routes/settings.py:138
 msgid "Claude Opus 4.8 — most capable"
@@ -596,18 +548,15 @@ msgstr "Les thèmes système ne peuvent pas être supprimés"
 msgid "System themes cannot be generated."
 msgstr "Les thèmes système ne peuvent pas être générés."
 
-#: yaffo/routes/utilities/automations.py:116
-#: yaffo/routes/utilities/automations.py:119
+#: yaffo/routes/utilities/automations.py:116 yaffo/routes/utilities/automations.py:119
 msgid "Import photos"
 msgstr "Importer des photos"
 
-#: yaffo/routes/utilities/automations.py:117
-#: yaffo/routes/utilities/automations.py:120
+#: yaffo/routes/utilities/automations.py:117 yaffo/routes/utilities/automations.py:120
 msgid "Index photos"
 msgstr "Indexer les photos"
 
-#: yaffo/routes/utilities/automations.py:118
-#: yaffo/routes/utilities/automations.py:121
+#: yaffo/routes/utilities/automations.py:118 yaffo/routes/utilities/automations.py:121
 msgid "Find duplicates"
 msgstr "Rechercher des doublons"
 
@@ -670,13 +619,11 @@ msgstr "Média modifié"
 msgid "Media labeled"
 msgstr "Médias étiquetés"
 
-#: yaffo/routes/utilities/automations.py:340
-#: yaffo/routes/utilities/automations.py:399
+#: yaffo/routes/utilities/automations.py:340 yaffo/routes/utilities/automations.py:399
 msgid "Automation name is required"
 msgstr "Le nom de l'automatisation est requis"
 
-#: yaffo/routes/utilities/automations.py:396
-#: yaffo/routes/utilities/automations.py:630
+#: yaffo/routes/utilities/automations.py:396 yaffo/routes/utilities/automations.py:630
 msgid "System automations cannot be edited."
 msgstr "Les automatisations du système ne peuvent pas être modifiées."
 
@@ -684,14 +631,12 @@ msgstr "Les automatisations du système ne peuvent pas être modifiées."
 msgid "This automation has no configurable settings."
 msgstr "Cette automatisation n'a aucun paramètre configurable."
 
-#: yaffo/routes/utilities/automations.py:434
-#: yaffo/routes/utilities/automations.py:464
+#: yaffo/routes/utilities/automations.py:434 yaffo/routes/utilities/automations.py:464
 #, python-format
 msgid "%(label)s must be a number."
 msgstr "%(label)s doit être un nombre."
 
-#: yaffo/routes/utilities/automations.py:442
-#: yaffo/routes/utilities/automations.py:472
+#: yaffo/routes/utilities/automations.py:442 yaffo/routes/utilities/automations.py:472
 #, python-format
 msgid "%(label)s must be between %(min)s and %(max)s."
 msgstr "%(label)s doit être entre %(min)s et %(max)s."
@@ -711,9 +656,7 @@ msgstr "Aucune photo indexée trouvée sous ce chemin."
 
 #: yaffo/routes/utilities/automations.py:557
 msgid "Nothing to run yet — publish the automation's code first."
-msgstr ""
-"Rien à exécuter pour l'instant : publiez d'abord le code de "
-"l'automatisation."
+msgstr "Rien à exécuter pour l'instant : publiez d'abord le code de l'automatisation."
 
 #: yaffo/routes/utilities/automations.py:597
 msgid "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
@@ -740,12 +683,10 @@ msgid "No draft to publish."
 msgstr "Aucun brouillon à publier."
 
 #: yaffo/routes/utilities/index_photos.py:68
-msgid ""
-"No media directories configured. Please configure media directories in "
-"Settings before syncing."
+msgid "No media directories configured. Please configure media directories in Settings before syncing."
 msgstr ""
-"Aucun répertoire multimédia configuré. Veuillez configurer les "
-"répertoires multimédias dans Paramètres avant la synchronisation."
+"Aucun répertoire multimédia configuré. Veuillez configurer les répertoires multimédias dans "
+"Paramètres avant la synchronisation."
 
 #: yaffo/routes/utilities/index_photos.py:77
 #, python-format
@@ -754,27 +695,26 @@ msgstr "Les répertoires multimédias suivants n'existent pas : %(directories)s
 
 #: yaffo/routes/utilities/index_photos.py:86
 msgid ""
-"No thumbnail directory configured. Please configure thumbnail directory "
-"in Settings before syncing."
+"No thumbnail directory configured. Please configure thumbnail directory in Settings before "
+"syncing."
 msgstr ""
-"Aucun répertoire de vignettes configuré. Veuillez configurer le "
-"répertoire des vignettes dans les paramètres avant la synchronisation."
+"Aucun répertoire de vignettes configuré. Veuillez configurer le répertoire des vignettes dans les"
+" paramètres avant la synchronisation."
 
 #: yaffo/routes/utilities/index_photos.py:93
 #, python-format
 msgid ""
-"Thumbnail directory does not exist: %(directory)s. It will be created "
-"automatically during indexing."
+"Thumbnail directory does not exist: %(directory)s. It will be created automatically during "
+"indexing."
 msgstr ""
-"Le répertoire des vignettes n'existe pas : %(directory)s. Il sera créé "
-"automatiquement lors de l'indexation."
+"Le répertoire des vignettes n'existe pas : %(directory)s. Il sera créé automatiquement lors de "
+"l'indexation."
 
 #: yaffo/routes/utilities/index_photos.py:134
 msgid "Could not scan the filesystem"
 msgstr "Impossible d'analyser le système de fichiers"
 
-#: yaffo/routes/utilities/index_photos.py:157
-#: yaffo/templates/settings/index.html:69
+#: yaffo/routes/utilities/index_photos.py:157 yaffo/templates/settings/index.html:69
 msgid "No media directories configured"
 msgstr "Aucun répertoire multimédia configuré"
 
@@ -851,12 +791,11 @@ msgstr "Cette page n'a pas été développée"
 
 #: yaffo/templates/404.html:14
 msgid ""
-"We searched every album and contact sheet, but this one never made it out"
-" of the darkroom. The link may be broken or the page may have moved."
+"We searched every album and contact sheet, but this one never made it out of the darkroom. The "
+"link may be broken or the page may have moved."
 msgstr ""
-"Nous avons fouillé chaque album et chaque planche-contact, mais celui-ci "
-"n’est jamais sorti de la chambre noire. Le lien est peut-être rompu ou la"
-" page a peut-être été déplacée."
+"Nous avons fouillé chaque album et chaque planche-contact, mais celui-ci n’est jamais sorti de la"
+" chambre noire. Le lien est peut-être rompu ou la page a peut-être été déplacée."
 
 #: yaffo/templates/500.html:3
 msgid "Something went wrong - Yaffo"
@@ -868,12 +807,11 @@ msgstr "Quelque chose s'est mal passé dans la chambre noire"
 
 #: yaffo/templates/500.html:14
 msgid ""
-"A processing error stopped this page from loading. Give it another moment"
-" — if it keeps happening, the trouble is on our end, not yours."
+"A processing error stopped this page from loading. Give it another moment — if it keeps "
+"happening, the trouble is on our end, not yours."
 msgstr ""
-"Une erreur de traitement a empêché le chargement de cette page. Donnez-"
-"lui un autre moment – ​​si cela continue à se produire, le problème vient"
-" de nous, pas du vôtre."
+"Une erreur de traitement a empêché le chargement de cette page. Donnez-lui un autre moment – ​​si"
+" cela continue à se produire, le problème vient de nous, pas du vôtre."
 
 #: yaffo/templates/_sidebar.html:5 yaffo/templates/people/list.html:29
 msgid "Actions"
@@ -950,8 +888,7 @@ msgid "New page"
 msgstr "Nouvelle page"
 
 #: yaffo/templates/base.html:152 yaffo/templates/components/info_modal.html:6
-#: yaffo/templates/components/info_modal.html:12
-#: yaffo/templates/components/modal.html:9
+#: yaffo/templates/components/info_modal.html:12 yaffo/templates/components/modal.html:9
 msgid "Close"
 msgstr "Fermer"
 
@@ -964,8 +901,7 @@ msgid "Up"
 msgstr "En haut"
 
 #: yaffo/templates/base.html:178 yaffo/templates/base.html:194
-#: yaffo/templates/components/chat_dialog.html:39
-#: yaffo/templates/components/modal.html:16
+#: yaffo/templates/components/chat_dialog.html:39 yaffo/templates/components/modal.html:16
 #: yaffo/templates/fragments/job_status_fragment.html:28
 #: yaffo/templates/utilities/automations_triggers.html:65
 #: yaffo/templates/utilities/automations_triggers.html:85
@@ -1018,10 +954,8 @@ msgid "Photo from %(date)s"
 msgstr "Photo de %(date)s"
 
 #: yaffo/templates/index.html:64 yaffo/templates/people/list.html:24
-#: yaffo/templates/people/list.html:85
-#: yaffo/templates/themes_page/index.html:115
-#: yaffo/templates/themes_page/index.html:127
-#: yaffo/templates/utilities/_base.html:11
+#: yaffo/templates/people/list.html:85 yaffo/templates/themes_page/index.html:115
+#: yaffo/templates/themes_page/index.html:127 yaffo/templates/utilities/_base.html:11
 #: yaffo/templates/utilities/automations.html:8
 msgid "Name"
 msgstr "Nom"
@@ -1034,8 +968,7 @@ msgstr "Dossier"
 msgid "Taken"
 msgstr "Pris"
 
-#: yaffo/templates/index.html:74 yaffo/templates/index.html:98
-#: yaffo/templates/people/faces.html:66
+#: yaffo/templates/index.html:74 yaffo/templates/index.html:98 yaffo/templates/people/faces.html:66
 msgid "Unknown date"
 msgstr "Date inconnue"
 
@@ -1089,43 +1022,36 @@ msgstr "Annuaire"
 msgid "Browse…"
 msgstr "Parcourir…"
 
-#: yaffo/templates/components/htmx_pagination.html:16
-#: yaffo/templates/components/pagination.html:29
+#: yaffo/templates/components/htmx_pagination.html:16 yaffo/templates/components/pagination.html:29
 #, python-format
 msgid "Showing %(start)s–%(end)s of %(total)s results"
 msgstr "Affichage %(start)s–%(end)s de %(total)s résultats"
 
-#: yaffo/templates/components/htmx_pagination.html:24
-#: yaffo/templates/components/pagination.html:37
+#: yaffo/templates/components/htmx_pagination.html:24 yaffo/templates/components/pagination.html:37
 msgid "Items per page:"
 msgstr "Articles par page :"
 
-#: yaffo/templates/components/htmx_pagination.html:52
-#: yaffo/templates/components/pagination.html:53
+#: yaffo/templates/components/htmx_pagination.html:52 yaffo/templates/components/pagination.html:53
 #: yaffo/templates/faces/index.html:214
 msgid "First"
 msgstr "D'abord"
 
-#: yaffo/templates/components/htmx_pagination.html:63
-#: yaffo/templates/components/pagination.html:59
+#: yaffo/templates/components/htmx_pagination.html:63 yaffo/templates/components/pagination.html:59
 #: yaffo/templates/faces/index.html:215
 msgid "Previous"
 msgstr "Précédent"
 
-#: yaffo/templates/components/htmx_pagination.html:67
-#: yaffo/templates/components/pagination.html:63
+#: yaffo/templates/components/htmx_pagination.html:67 yaffo/templates/components/pagination.html:63
 #, python-format
 msgid "Page %(page)s of %(total)s"
 msgstr "Page %(page)s de %(total)s"
 
-#: yaffo/templates/components/htmx_pagination.html:80
-#: yaffo/templates/components/pagination.html:71
+#: yaffo/templates/components/htmx_pagination.html:80 yaffo/templates/components/pagination.html:71
 #: yaffo/templates/faces/index.html:217
 msgid "Next"
 msgstr "Suivant"
 
-#: yaffo/templates/components/htmx_pagination.html:91
-#: yaffo/templates/components/pagination.html:77
+#: yaffo/templates/components/htmx_pagination.html:91 yaffo/templates/components/pagination.html:77
 #: yaffo/templates/faces/index.html:218
 msgid "Last"
 msgstr "Dernier"
@@ -1134,14 +1060,10 @@ msgstr "Dernier"
 msgid "Processing in Progress"
 msgstr "Traitement en cours"
 
-#: yaffo/templates/components/modal.html:17
-#: yaffo/templates/filters/_config_modal.html:23
-#: yaffo/templates/pages/design.html:38
-#: yaffo/templates/settings/_llm_api_key.html:19
-#: yaffo/templates/settings/index.html:29
-#: yaffo/templates/settings/index.html:47
-#: yaffo/templates/themes_page/index.html:134
-#: yaffo/templates/utilities/automations.html:120
+#: yaffo/templates/components/modal.html:17 yaffo/templates/filters/_config_modal.html:23
+#: yaffo/templates/pages/design.html:38 yaffo/templates/settings/_llm_api_key.html:19
+#: yaffo/templates/settings/index.html:29 yaffo/templates/settings/index.html:47
+#: yaffo/templates/themes_page/index.html:134 yaffo/templates/utilities/automations.html:120
 #: yaffo/templates/utilities/automations.html:125
 msgid "Save"
 msgstr "Sauvegarder"
@@ -1156,15 +1078,13 @@ msgstr "Comment fonctionne cette page"
 
 #: yaffo/templates/faces/index.html:18
 msgid ""
-"The job here is to empty the pile of unassigned faces. Faces are detected"
-" automatically and grouped for you, so you can accept or reject a whole "
-"group at once — assign a group to a person, or ignore the ones you don't "
-"want."
+"The job here is to empty the pile of unassigned faces. Faces are detected automatically and "
+"grouped for you, so you can accept or reject a whole group at once — assign a group to a person, "
+"or ignore the ones you don't want."
 msgstr ""
-"Le travail ici consiste à vider la pile de visages non attribués. Les "
-"visages sont détectés automatiquement et regroupés pour vous, vous pouvez"
-" donc accepter ou rejeter un groupe entier à la fois : attribuer un "
-"groupe à une personne ou ignorer ceux dont vous ne souhaitez pas."
+"Le travail ici consiste à vider la pile de visages non attribués. Les visages sont détectés "
+"automatiquement et regroupés pour vous, vous pouvez donc accepter ou rejeter un groupe entier à "
+"la fois : attribuer un groupe à une personne ou ignorer ceux dont vous ne souhaitez pas."
 
 #: yaffo/templates/faces/index.html:20
 msgid "Group by People:"
@@ -1187,12 +1107,10 @@ msgid "Similarity Threshold:"
 msgstr "Seuil de similarité :"
 
 #: yaffo/templates/faces/index.html:22
-msgid ""
-"Higher values make tighter, cleaner groups; lower values make larger, "
-"looser ones"
+msgid "Higher values make tighter, cleaner groups; lower values make larger, looser ones"
 msgstr ""
-"Des valeurs plus élevées créent des groupes plus serrés et plus propres ;"
-" les valeurs inférieures donnent des valeurs plus grandes et plus souples"
+"Des valeurs plus élevées créent des groupes plus serrés et plus propres ; les valeurs inférieures"
+" donnent des valeurs plus grandes et plus souples"
 
 #: yaffo/templates/faces/index.html:25
 msgid "Recommended Workflow"
@@ -1203,12 +1121,8 @@ msgid "Start broad with Similarity."
 msgstr "Commencez largement avec la similarité."
 
 #: yaffo/templates/faces/index.html:27
-msgid ""
-"Group by Similarity at a high threshold and assign the big, obvious "
-"clusters first."
-msgstr ""
-"Regroupez par similarité à un seuil élevé et attribuez d'abord les grands"
-" clusters évidents."
+msgid "Group by Similarity at a high threshold and assign the big, obvious clusters first."
+msgstr "Regroupez par similarité à un seuil élevé et attribuez d'abord les grands clusters évidents."
 
 #: yaffo/templates/faces/index.html:28
 msgid "Lower the threshold as the groups shrink."
@@ -1216,13 +1130,12 @@ msgstr "Abaissez le seuil à mesure que les groupes diminuent."
 
 #: yaffo/templates/faces/index.html:28
 msgid ""
-"Once the biggest groups get small, drop the threshold to pull looser "
-"matches together. The right values vary a lot from batch to batch, so "
-"adjust to taste."
+"Once the biggest groups get small, drop the threshold to pull looser matches together. The right "
+"values vary a lot from batch to batch, so adjust to taste."
 msgstr ""
-"Une fois que les plus grands groupes deviennent petits, abaissez le seuil"
-" pour rassembler des matchs plus lâches. Les bonnes valeurs varient "
-"beaucoup d'un lot à l'autre, alors ajustez-les selon vos goûts."
+"Une fois que les plus grands groupes deviennent petits, abaissez le seuil pour rassembler des "
+"matchs plus lâches. Les bonnes valeurs varient beaucoup d'un lot à l'autre, alors ajustez-les "
+"selon vos goûts."
 
 #: yaffo/templates/faces/index.html:29
 msgid "Then switch to People."
@@ -1231,20 +1144,18 @@ msgstr "Passez ensuite à Personnes."
 #: yaffo/templates/faces/index.html:29
 msgid "Group by People to catch faces that match someone you've already built up."
 msgstr ""
-"Regroupez par personnes pour capturer les visages qui correspondent à "
-"quelqu'un que vous avez déjà créé."
+"Regroupez par personnes pour capturer les visages qui correspondent à quelqu'un que vous avez "
+"déjà créé."
 
 #: yaffo/templates/faces/index.html:30
 msgid "Ignore what's left."
 msgstr "Ignorez ce qui reste."
 
 #: yaffo/templates/faces/index.html:30
-msgid ""
-"The remainder is usually low quality — blurry, partial, or odd angles. "
-"Select and Ignore it."
+msgid "The remainder is usually low quality — blurry, partial, or odd angles. Select and Ignore it."
 msgstr ""
-"Le reste est généralement de mauvaise qualité : angles flous, partiels ou"
-" impairs. Sélectionnez-le et ignorez-le."
+"Le reste est généralement de mauvaise qualité : angles flous, partiels ou impairs. Sélectionnez-"
+"le et ignorez-le."
 
 #: yaffo/templates/faces/index.html:33
 msgid "Quick Assignment"
@@ -1284,26 +1195,24 @@ msgstr "Conseils:"
 
 #: yaffo/templates/faces/index.html:59
 msgid ""
-"Refresh the page between passes — it re-clusters the remaining faces into"
-" tighter, higher-quality groups"
+"Refresh the page between passes — it re-clusters the remaining faces into tighter, higher-quality"
+" groups"
 msgstr ""
-"Actualisez la page entre les passes : elle regroupe les faces restantes "
-"en groupes plus serrés et de meilleure qualité."
+"Actualisez la page entre les passes : elle regroupe les faces restantes en groupes plus serrés et"
+" de meilleure qualité."
 
 #: yaffo/templates/faces/index.html:60
 msgid ""
-"As your catalog of people grows, a background task assigns matching faces"
-" automatically — so this pile should shrink on its own over time"
+"As your catalog of people grows, a background task assigns matching faces automatically — so this"
+" pile should shrink on its own over time"
 msgstr ""
-"À mesure que votre catalogue de personnes s'agrandit, une tâche en "
-"arrière-plan attribue automatiquement les visages correspondants. Cette "
-"pile devrait donc diminuer d'elle-même au fil du temps."
+"À mesure que votre catalogue de personnes s'agrandit, une tâche en arrière-plan attribue "
+"automatiquement les visages correspondants. Cette pile devrait donc diminuer d'elle-même au fil "
+"du temps."
 
 #: yaffo/templates/faces/index.html:61
 msgid "Select faces then press a number key for quick assignment"
-msgstr ""
-"Sélectionnez les visages, puis appuyez sur une touche numérique pour une "
-"attribution rapide"
+msgstr "Sélectionnez les visages, puis appuyez sur une touche numérique pour une attribution rapide"
 
 #: yaffo/templates/faces/index.html:62
 msgid "Hold Shift+Click to select multiple faces at once"
@@ -1401,9 +1310,7 @@ msgstr "Page 1 sur 1"
 
 #: yaffo/templates/faces/index.html:228
 msgid "Double-check the applied filters or decrease the similarity threshold."
-msgstr ""
-"Vérifiez à nouveau les filtres appliqués ou diminuez le seuil de "
-"similarité."
+msgstr "Vérifiez à nouveau les filtres appliqués ou diminuez le seuil de similarité."
 
 #: yaffo/templates/faces/index.html:233
 msgid "All Faces Assigned!"
@@ -1462,8 +1369,7 @@ msgstr "Tous les genres"
 msgid "Label"
 msgstr "Étiquette"
 
-#: yaffo/templates/filters/_labels.html:8
-#: yaffo/templates/filters/_labels.html:16
+#: yaffo/templates/filters/_labels.html:8 yaffo/templates/filters/_labels.html:16
 msgid "All Labels"
 msgstr "Toutes les étiquettes"
 
@@ -1476,8 +1382,7 @@ msgstr "{count} étiquettes sélectionnées"
 msgid "Search labels…"
 msgstr "Rechercher des étiquettes…"
 
-#: yaffo/templates/filters/_locations.html:8
-#: yaffo/templates/filters/_locations.html:16
+#: yaffo/templates/filters/_locations.html:8 yaffo/templates/filters/_locations.html:16
 msgid "All Locations"
 msgstr "Tous les emplacements"
 
@@ -1551,8 +1456,7 @@ msgstr "Déposer"
 msgid "Search file or folder name…"
 msgstr "Rechercher le nom du fichier ou du dossier…"
 
-#: yaffo/templates/filters/_people.html:8
-#: yaffo/templates/filters/_people.html:16
+#: yaffo/templates/filters/_people.html:8 yaffo/templates/filters/_people.html:16
 msgid "All People"
 msgstr "Toutes les personnes"
 
@@ -1606,10 +1510,8 @@ msgstr "Commencé: %(started)s"
 msgid "Show Results"
 msgstr "Afficher les résultats"
 
-#: yaffo/templates/fragments/job_status_fragment.html:28
-#: yaffo/templates/people/list.html:65
-#: yaffo/templates/themes_page/index.html:66
-#: yaffo/templates/utilities/automations.html:98
+#: yaffo/templates/fragments/job_status_fragment.html:28 yaffo/templates/people/list.html:65
+#: yaffo/templates/themes_page/index.html:66 yaffo/templates/utilities/automations.html:98
 #: yaffo/templates/utilities/automations_triggers.html:37
 #: yaffo/templates/utilities/remove_duplicates_form.html:49
 msgid "Delete"
@@ -1625,7 +1527,7 @@ msgstr "Emplacements des photos"
 
 #: yaffo/templates/locations/list.html:21
 msgid "Hold <kbd>Shift</kbd> and click or drag to select multiple clusters"
-msgstr Maintenez <kbd>Maj</kbd> enfoncée et cliquez ou faites glisser pour sélectionner plusieurs groupes"
+msgstr "aintenez <kbd>Maj</kbd> enfoncée et cliquez ou faites glisser pour sélectionner plusieurs groupes"
 
 #: yaffo/templates/media/view.html:15
 msgid "Photo Details"
@@ -1827,11 +1729,11 @@ msgstr "Décrivez ce que vous voulez…"
 
 #: yaffo/templates/pages/design.html:50
 msgid ""
-"Describe what you want and I'll add widgets — e.g. “a map of Maine” or "
-"“our beach photos from 2023”."
+"Describe what you want and I'll add widgets — e.g. “a map of Maine” or “our beach photos from "
+"2023”."
 msgstr ""
-"Décrivez ce que vous voulez et j'ajouterai des widgets - par ex. « une "
-"carte du Maine » ou encore « nos photos de plage de 2023 »."
+"Décrivez ce que vous voulez et j'ajouterai des widgets - par ex. « une carte du Maine » ou encore"
+" « nos photos de plage de 2023 »."
 
 #: yaffo/templates/pages/widget_frame.html:49
 msgid "This widget couldn't render"
@@ -1920,8 +1822,7 @@ msgstr "Photos"
 msgid "Unnamed"
 msgstr "Anonyme"
 
-#: yaffo/templates/people/list.html:61
-#: yaffo/templates/utilities/automations.html:86
+#: yaffo/templates/people/list.html:61 yaffo/templates/utilities/automations.html:86
 #: yaffo/templates/utilities/automations_edit.html:15
 #: yaffo/templates/utilities/automations_triggers.html:28
 msgid "Edit"
@@ -1957,16 +1858,14 @@ msgstr "Modifier une personne"
 
 #: yaffo/templates/settings/_labels.html:2
 msgid ""
-"A label’s name is the tag shown on photos. Its optional prompt is the "
-"phrase the recognizer matches against — leave it blank for simple objects"
-" like “dog”, and use a fuller phrase for activities, e.g. “people "
-"swimming in water”."
+"A label’s name is the tag shown on photos. Its optional prompt is the phrase the recognizer "
+"matches against — leave it blank for simple objects like “dog”, and use a fuller phrase for "
+"activities, e.g. “people swimming in water”."
 msgstr ""
-"Le nom d’une étiquette est l’étiquette affichée sur les photos. Son "
-"invite facultative est la phrase à laquelle le module de reconnaissance "
-"correspond – laissez-la vide pour des objets simples comme « chien » et "
-"utilisez une phrase plus complète pour les activités, par exemple « chien"
-" ». \"les gens qui nagent dans l'eau\"."
+"Le nom d’une étiquette est l’étiquette affichée sur les photos. Son invite facultative est la "
+"phrase à laquelle le module de reconnaissance correspond – laissez-la vide pour des objets "
+"simples comme « chien » et utilisez une phrase plus complète pour les activités, par exemple « "
+"chien ». \"les gens qui nagent dans l'eau\"."
 
 #: yaffo/templates/settings/_labels.html:4
 msgid "Photo labels"
@@ -1974,20 +1873,19 @@ msgstr "Étiquettes photos"
 
 #: yaffo/templates/settings/_labels.html:8
 msgid ""
-"Label names and prompts must be written in English — the offline image "
-"recognition model only understands English text."
+"Label names and prompts must be written in English — the offline image recognition model only "
+"understands English text."
 msgstr ""
-"Les noms d'étiquettes et les invites doivent être rédigés en anglais : le"
-" modèle de reconnaissance d'image hors ligne ne comprend que le texte "
-"anglais."
+"Les noms d'étiquettes et les invites doivent être rédigés en anglais : le modèle de "
+"reconnaissance d'image hors ligne ne comprend que le texte anglais."
 
 #: yaffo/templates/settings/_labels.html:14
 msgid ""
-"Enable the labels the <strong>Classify labels</strong> automation should "
-"detect in your photos, or add your own."
+"Enable the labels the <strong>Classify labels</strong> automation should detect in your photos, "
+"or add your own."
 msgstr ""
-"Activez les étiquettes <strong>Classer les étiquettes</strong> "
-"l'automatisation doit détecter dans vos photos, ou ajouter les vôtres."
+"Activez les étiquettes <strong>Classer les étiquettes</strong> l'automatisation doit détecter "
+"dans vos photos, ou ajouter les vôtres."
 
 #: yaffo/templates/settings/_labels.html:18
 msgid "Filter labels…"
@@ -2037,12 +1935,12 @@ msgstr "Génération d'IA"
 
 #: yaffo/templates/settings/_llm.html:4
 msgid ""
-"Powers AI customization features. The API key for the selected model's "
-"provider is stored securely in the operating system's credential store."
+"Powers AI customization features. The API key for the selected model's provider is stored "
+"securely in the operating system's credential store."
 msgstr ""
-"Alimente les fonctionnalités de personnalisation de l’IA. La clé API du "
-"fournisseur du modèle sélectionné est stockée en toute sécurité dans le "
-"magasin d'informations d'identification du système d'exploitation."
+"Alimente les fonctionnalités de personnalisation de l’IA. La clé API du fournisseur du modèle "
+"sélectionné est stockée en toute sécurité dans le magasin d'informations d'identification du "
+"système d'exploitation."
 
 #: yaffo/templates/settings/_llm.html:8
 msgid "Model"
@@ -2103,9 +2001,7 @@ msgstr "Langue de candidature"
 
 #: yaffo/templates/settings/index.html:27
 msgid "Controls the language used by Yaffo. The page reloads after saving."
-msgstr ""
-"Contrôle la langue utilisée par Yaffo. La page se recharge après "
-"l'enregistrement."
+msgstr "Contrôle la langue utilisée par Yaffo. La page se recharge après l'enregistrement."
 
 #: yaffo/templates/settings/index.html:34
 msgid "Units"
@@ -2125,11 +2021,11 @@ msgstr "Répertoires des médias"
 
 #: yaffo/templates/settings/index.html:53
 msgid ""
-"Add directories where your photos are stored. Yaffo scans these "
-"directories for photos and videos to index."
+"Add directories where your photos are stored. Yaffo scans these directories for photos and videos"
+" to index."
 msgstr ""
-"Ajoutez des répertoires où vos photos sont stockées. Yaffo scanne ces "
-"répertoires à la recherche de photos et de vidéos à indexer."
+"Ajoutez des répertoires où vos photos sont stockées. Yaffo scanne ces répertoires à la recherche "
+"de photos et de vidéos à indexer."
 
 #: yaffo/templates/settings/index.html:65
 msgid "Remove"
@@ -2137,9 +2033,7 @@ msgstr "Retirer"
 
 #: yaffo/templates/settings/index.html:76
 msgid "Enter directory path (for example, /Volumes/Photos or C:\\Photos)"
-msgstr ""
-"Entrez le chemin du répertoire (par exemple, /Volumes/Photos ou "
-"C:\\Photos)"
+msgstr "Entrez le chemin du répertoire (par exemple, /Volumes/Photos ou C:\\Photos)"
 
 #: yaffo/templates/settings/index.html:81
 msgid "Add Directory"
@@ -2150,12 +2044,10 @@ msgid "Thumbnail Directory"
 msgstr "Répertoire de vignettes"
 
 #: yaffo/templates/settings/index.html:87
-msgid ""
-"Configure where cropped thumbnails of detected faces are stored for quick"
-" loading."
+msgid "Configure where cropped thumbnails of detected faces are stored for quick loading."
 msgstr ""
-"Configurez l'emplacement de stockage des vignettes recadrées des visages "
-"détectés pour un chargement rapide."
+"Configurez l'emplacement de stockage des vignettes recadrées des visages détectés pour un "
+"chargement rapide."
 
 #: yaffo/templates/settings/index.html:95
 msgid "Current Thumbnail Directory:"
@@ -2182,12 +2074,10 @@ msgid "Change Directory"
 msgstr "Changer de répertoire"
 
 #: yaffo/templates/settings/index.html:117
-msgid ""
-"No thumbnail directory configured. Set a directory to enable face "
-"thumbnail generation."
+msgid "No thumbnail directory configured. Set a directory to enable face thumbnail generation."
 msgstr ""
-"Aucun répertoire de vignettes configuré. Définissez un répertoire pour "
-"activer la génération de vignettes de visage."
+"Aucun répertoire de vignettes configuré. Définissez un répertoire pour activer la génération de "
+"vignettes de visage."
 
 #: yaffo/templates/settings/index.html:123
 msgid "Enter thumbnail directory path"
@@ -2207,11 +2097,11 @@ msgstr "Détails de la construction et chemins configurés (lecture seule)."
 
 #: yaffo/templates/settings/index.html:144
 msgid ""
-"An application component failed to download. Double check network "
-"settings and restart the application."
+"An application component failed to download. Double check network settings and restart the "
+"application."
 msgstr ""
-"Un composant d'application n'a pas pu être téléchargé. Double check "
-"network settings and restart the application."
+"Un composant d'application n'a pas pu être téléchargé. Double check network settings and restart "
+"the application."
 
 #: yaffo/templates/settings/index.html:150
 msgid "Build Version:"
@@ -2238,12 +2128,10 @@ msgid "Database Path:"
 msgstr "Chemin de la base de données :"
 
 #: yaffo/templates/settings/index.html:164
-msgid ""
-"Location of the SQLite database containing photo metadata, faces, and "
-"people information."
+msgid "Location of the SQLite database containing photo metadata, faces, and people information."
 msgstr ""
-"Emplacement de la base de données SQLite contenant les métadonnées des "
-"photos, les visages et les informations sur les personnes."
+"Emplacement de la base de données SQLite contenant les métadonnées des photos, les visages et les"
+" informations sur les personnes."
 
 #: yaffo/templates/settings/index.html:168
 msgid "Task Queue Database Path:"
@@ -2251,26 +2139,20 @@ msgstr "Chemin de la base de données de la file d'attente des tâches :"
 
 #: yaffo/templates/settings/index.html:170
 msgid "Database used by the background task queue to process jobs."
-msgstr ""
-"Base de données utilisée par la file d'attente des tâches en arrière-plan"
-" pour traiter les tâches."
+msgstr "Base de données utilisée par la file d'attente des tâches en arrière-plan pour traiter les tâches."
 
 #: yaffo/templates/settings/index.html:174
 msgid "ExifTool Path:"
 msgstr "Chemin ExifTool :"
 
-#: yaffo/templates/settings/index.html:175
-#: yaffo/templates/settings/index.html:181
-#: yaffo/templates/settings/index.html:187
-#: yaffo/templates/settings/index.html:197
+#: yaffo/templates/settings/index.html:175 yaffo/templates/settings/index.html:181
+#: yaffo/templates/settings/index.html:187 yaffo/templates/settings/index.html:197
 msgid "Not found"
 msgstr "Pas trouvé"
 
 #: yaffo/templates/settings/index.html:176
 msgid "ExifTool executable used for reading and writing media metadata."
-msgstr ""
-"Exécutable ExifTool utilisé pour lire et écrire des métadonnées "
-"multimédias."
+msgstr "Exécutable ExifTool utilisé pour lire et écrire des métadonnées multimédias."
 
 #: yaffo/templates/settings/index.html:180
 msgid "FFmpeg Path:"
@@ -2278,9 +2160,7 @@ msgstr "Chemin FFmpeg :"
 
 #: yaffo/templates/settings/index.html:182
 msgid "FFmpeg executable used for video poster frames and frame sampling."
-msgstr ""
-"Exécutable FFmpeg utilisé pour les affiches vidéo et l'échantillonnage "
-"des images."
+msgstr "Exécutable FFmpeg utilisé pour les affiches vidéo et l'échantillonnage des images."
 
 #: yaffo/templates/settings/index.html:186
 msgid "Image Classification Model:"
@@ -2290,8 +2170,7 @@ msgstr "Modèle de classification d'images :"
 msgid "Downloaded model cache used for image classification."
 msgstr "Cache de modèle téléchargé utilisé pour la classification des images."
 
-#: yaffo/templates/settings/index.html:191
-#: yaffo/templates/settings/index.html:201
+#: yaffo/templates/settings/index.html:191 yaffo/templates/settings/index.html:201
 msgid "Will be downloaded on app start."
 msgstr "Sera téléchargé au démarrage de l'application."
 
@@ -2307,18 +2186,15 @@ msgstr "Cache de modèle téléchargé utilisé pour la reconnaissance faciale."
 msgid "Themes - Yaffo"
 msgstr "Thèmes - Yaffo"
 
-#: yaffo/templates/themes_page/index.html:17
-#: yaffo/templates/utilities/_base.html:54
+#: yaffo/templates/themes_page/index.html:17 yaffo/templates/utilities/_base.html:54
 msgid "System"
 msgstr "Système"
 
-#: yaffo/templates/themes_page/index.html:24
-#: yaffo/templates/themes_page/index.html:38
+#: yaffo/templates/themes_page/index.html:24 yaffo/templates/themes_page/index.html:38
 msgid "default"
 msgstr "défaut"
 
-#: yaffo/templates/themes_page/index.html:30
-#: yaffo/templates/utilities/_base.html:61
+#: yaffo/templates/themes_page/index.html:30 yaffo/templates/utilities/_base.html:61
 msgid "Custom"
 msgstr "Coutume"
 
@@ -2340,9 +2216,7 @@ msgstr "Rebaptiser"
 
 #: yaffo/templates/themes_page/index.html:72
 msgid "A built-in theme that ships with Yaffo. System themes cannot be deleted."
-msgstr ""
-"Un thème intégré fourni avec Yaffo. Les thèmes système ne peuvent pas "
-"être supprimés."
+msgstr "Un thème intégré fourni avec Yaffo. Les thèmes système ne peuvent pas être supprimés."
 
 #: yaffo/templates/themes_page/index.html:72
 msgid "A custom theme stored in the application database."
@@ -2350,23 +2224,21 @@ msgstr "Un thème personnalisé stocké dans la base de données de l'applicatio
 
 #: yaffo/templates/themes_page/index.html:81
 msgid ""
-"The assistant has an unpublished design for this theme. Save it to make "
-"it live, or discard the draft."
+"The assistant has an unpublished design for this theme. Save it to make it live, or discard the "
+"draft."
 msgstr ""
-"L'assistant dispose d'un design inédit pour ce thème. Enregistrez-le pour"
-" le mettre en ligne ou supprimez le brouillon."
+"L'assistant dispose d'un design inédit pour ce thème. Enregistrez-le pour le mettre en ligne ou "
+"supprimez le brouillon."
 
 #: yaffo/templates/themes_page/index.html:86
 msgid "Save draft"
 msgstr "Enregistrer le brouillon"
 
-#: yaffo/templates/themes_page/index.html:90
-#: yaffo/templates/utilities/automations_edit.html:67
+#: yaffo/templates/themes_page/index.html:90 yaffo/templates/utilities/automations_edit.html:67
 msgid "Discard"
 msgstr "Jeter"
 
-#: yaffo/templates/themes_page/index.html:97
-#: yaffo/templates/utilities/automations_edit.html:23
+#: yaffo/templates/themes_page/index.html:97 yaffo/templates/utilities/automations_edit.html:23
 msgid "Conversation"
 msgstr "Conversation"
 
@@ -2383,12 +2255,10 @@ msgid "System themes are hand-crafted and have no conversation."
 msgstr "Les thèmes système sont créés à la main et n’ont aucune conversation."
 
 #: yaffo/templates/themes_page/index.html:103
-msgid ""
-"No conversation yet — describe the look you want and the assistant will "
-"build it."
+msgid "No conversation yet — describe the look you want and the assistant will build it."
 msgstr ""
-"Aucune conversation pour l'instant : décrivez le look que vous souhaitez "
-"et l'assistant le construira."
+"Aucune conversation pour l'instant : décrivez le look que vous souhaitez et l'assistant le "
+"construira."
 
 #: yaffo/templates/themes_page/index.html:117
 msgid "e.g. Midnight, Pastel, Forest"
@@ -2396,24 +2266,19 @@ msgstr "par ex. Minuit, Pastel, Forêt"
 
 #: yaffo/templates/themes_page/index.html:118
 msgid "Starts from the classic look — design it through a conversation later."
-msgstr ""
-"Commencez par le look classique : concevez-le ultérieurement lors d'une "
-"conversation."
+msgstr "Commencez par le look classique : concevez-le ultérieurement lors d'une conversation."
 
 #: yaffo/templates/themes_page/index.html:122
 msgid "New Theme"
 msgstr "Nouveau thème"
 
-#: yaffo/templates/themes_page/index.html:122
-#: yaffo/templates/utilities/_base.html:85
+#: yaffo/templates/themes_page/index.html:122 yaffo/templates/utilities/_base.html:85
 msgid "Create"
 msgstr "Créer"
 
 #: yaffo/templates/themes_page/index.html:130
 msgid "Renaming updates the theme's web address (slug) to match."
-msgstr ""
-"Renommer met à jour l’adresse Web du thème (slug) pour qu’elle "
-"corresponde."
+msgstr "Renommer met à jour l’adresse Web du thème (slug) pour qu’elle corresponde."
 
 #: yaffo/templates/themes_page/index.html:134
 msgid "Rename Theme"
@@ -2431,13 +2296,11 @@ msgstr "Commence vide : créez-le via une conversation, puis publiez-le."
 msgid "On"
 msgstr "Sur"
 
-#: yaffo/templates/utilities/_base.html:41
-#: yaffo/templates/utilities/index_photos.html:14
+#: yaffo/templates/utilities/_base.html:41 yaffo/templates/utilities/index_photos.html:14
 msgid "Index Photos"
 msgstr "Index des photos"
 
-#: yaffo/templates/utilities/_base.html:47
-#: yaffo/templates/utilities/remove_duplicates.html:9
+#: yaffo/templates/utilities/_base.html:47 yaffo/templates/utilities/remove_duplicates.html:9
 msgid "Remove Duplicates"
 msgstr "Supprimer les doublons"
 
@@ -2469,8 +2332,7 @@ msgstr "Description"
 msgid "What does this automation do?"
 msgstr "A quoi sert cette automatisation ?"
 
-#: yaffo/templates/utilities/automations.html:59
-#: yaffo/templates/utilities/automations_edit.html:5
+#: yaffo/templates/utilities/automations.html:59 yaffo/templates/utilities/automations_edit.html:5
 msgid "Automations - Yaffo"
 msgstr "Automatismes - Yaffo"
 
@@ -2480,17 +2342,13 @@ msgstr "Aucune automatisation sélectionnée"
 
 #: yaffo/templates/utilities/automations.html:70
 msgid "Pick one from the sidebar, or create one with “New automation”."
-msgstr ""
-"Choisissez-en un dans la barre latérale ou créez-en un avec « Nouvelle "
-"automatisation »."
+msgstr "Choisissez-en un dans la barre latérale ou créez-en un avec « Nouvelle automatisation »."
 
-#: yaffo/templates/utilities/automations.html:77
-#: yaffo/templates/utilities/automations_triggers.html:33
+#: yaffo/templates/utilities/automations.html:77 yaffo/templates/utilities/automations_triggers.html:33
 msgid "Disable"
 msgstr "Désactiver"
 
-#: yaffo/templates/utilities/automations.html:77
-#: yaffo/templates/utilities/automations_triggers.html:33
+#: yaffo/templates/utilities/automations.html:77 yaffo/templates/utilities/automations_triggers.html:33
 msgid "Enable"
 msgstr "Activer"
 
@@ -2515,18 +2373,14 @@ msgid "Edit details"
 msgstr "Modifier les détails"
 
 #: yaffo/templates/utilities/automations.html:105
-msgid ""
-"A built-in automation that ships with Yaffo. System automations cannot be"
-" edited or deleted."
+msgid "A built-in automation that ships with Yaffo. System automations cannot be edited or deleted."
 msgstr ""
-"Une automatisation intégrée fournie avec Yaffo. Les automatisations du "
-"système ne peuvent pas être modifiées ou supprimées."
+"Une automatisation intégrée fournie avec Yaffo. Les automatisations du système ne peuvent pas "
+"être modifiées ou supprimées."
 
 #: yaffo/templates/utilities/automations.html:107
 msgid "No description yet — use “Edit details” to add one."
-msgstr ""
-"Aucune description pour l'instant : utilisez « Modifier les détails » "
-"pour en ajouter une."
+msgstr "Aucune description pour l'instant : utilisez « Modifier les détails » pour en ajouter une."
 
 #: yaffo/templates/utilities/automations.html:118
 msgid "Edit automation"
@@ -2551,12 +2405,8 @@ msgid "Describe what this automation should do…"
 msgstr "Décrivez ce que cette automatisation devrait faire…"
 
 #: yaffo/templates/utilities/automations_edit.html:27
-msgid ""
-"No conversation yet — describe what you want and the assistant will build"
-" it."
-msgstr ""
-"Pas encore de conversation : décrivez ce que vous voulez et l'assistant "
-"le construira."
+msgid "No conversation yet — describe what you want and the assistant will build it."
+msgstr "Pas encore de conversation : décrivez ce que vous voulez et l'assistant le construira."
 
 #: yaffo/templates/utilities/automations_edit.html:34
 msgid "Code"
@@ -2613,9 +2463,7 @@ msgstr "Événement"
 
 #: yaffo/templates/utilities/automations_triggers.html:42
 msgid "No triggers — this automation won't run until one is added."
-msgstr ""
-"Aucun déclencheur : cette automatisation ne s'exécutera pas tant qu'un "
-"seul n'aura pas été ajouté."
+msgstr "Aucun déclencheur : cette automatisation ne s'exécutera pas tant qu'un seul n'aura pas été ajouté."
 
 #: yaffo/templates/utilities/automations_triggers.html:53
 #: yaffo/templates/utilities/automations_triggers.html:58
@@ -2657,12 +2505,10 @@ msgid "Triggers · %(name)s"
 msgstr "Déclencheurs · %(name)s"
 
 #: yaffo/templates/utilities/automations_triggers_edit.html:16
-msgid ""
-"Add, edit, enable, or remove the triggers that decide when this "
-"automation runs."
+msgid "Add, edit, enable, or remove the triggers that decide when this automation runs."
 msgstr ""
-"Ajoutez, modifiez, activez ou supprimez les déclencheurs qui décident du "
-"moment où cette automatisation s'exécute."
+"Ajoutez, modifiez, activez ou supprimez les déclencheurs qui décident du moment où cette "
+"automatisation s'exécute."
 
 #: yaffo/templates/utilities/index_photos.html:5
 msgid "Index Photos - Utilities - Yaffo"
@@ -2708,14 +2554,13 @@ msgstr "Aucun répertoire multimédia configuré"
 #, python-format
 msgid ""
 "\n"
-"                Please configure media directories in <a "
-"href=\"%(settings_url)s\">Settings</a> to start indexing photos.\n"
+"                Please configure media directories in <a href=\"%(settings_url)s\">Settings</a> "
+"to start indexing photos.\n"
 "            "
 msgstr ""
 "\n"
 "                Veuillez configurer les répertoires multimédias dans <a "
-"href=\"%(settings_url)s\">Paramètres</a> pour commencer à indexer les "
-"photos.\n"
+"href=\"%(settings_url)s\">Paramètres</a> pour commencer à indexer les photos.\n"
 "            "
 
 #: yaffo/templates/utilities/remove_duplicates.html:4
@@ -2740,9 +2585,7 @@ msgstr "Configuration"
 
 #: yaffo/templates/utilities/remove_duplicates_form.html:20
 msgid "Select one or more directories to scan for duplicate photos and videos."
-msgstr ""
-"Sélectionnez un ou plusieurs répertoires pour rechercher les photos et "
-"vidéos en double."
+msgstr "Sélectionnez un ou plusieurs répertoires pour rechercher les photos et vidéos en double."
 
 #: yaffo/templates/utilities/remove_duplicates_form.html:32
 msgid "Select directory to scan for duplicates"
