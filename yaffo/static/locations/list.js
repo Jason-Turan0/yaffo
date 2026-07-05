@@ -247,6 +247,9 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
     // Collapsed/expanded state of the panel's preview section; kept outside the
     // renderer so it survives re-renders as the selection changes.
     let previewCollapsed = false;
+    let recommendationRenderId = 0;
+    /** @type {Map<string, Promise<string | null>>} */
+    const reverseGeocodeCache = new Map();
 
     // Show at most this many thumbnails; the select box still lists every photo.
     const PREVIEW_THUMBS_LIMIT = 24;
@@ -494,23 +497,31 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
     };
 
     const getRecommendedLocation = async (/** @type {number} */ lat, /** @type {number} */ lon) => {
-        try {
-            const response = await fetch(config.urls.reverse_geocode_route, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ lat, lon })
-            });
+        const cacheKey = lat.toFixed(6) + ',' + lon.toFixed(6);
+        const cached = reverseGeocodeCache.get(cacheKey);
+        if (cached) return cached;
 
-            if (response.ok) {
-                const data = await response.json();
-                return data.location_name;
+        const request = (async () => {
+            try {
+                const response = await fetch(config.urls.reverse_geocode_route, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ lat, lon })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.location_name;
+                }
+            } catch (error) {
+                console.error('Error fetching recommended location:', error);
             }
-        } catch (error) {
-            console.error('Error fetching recommended location:', error);
-        }
-        return null;
+            return null;
+        })();
+        reverseGeocodeCache.set(cacheKey, request);
+        return request;
     };
 
     const updateSelectionPanel = async () => {
@@ -519,6 +530,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         if (!panel || !panelContent) return;
 
         if (selectedPhotoIds.size === 0) {
+            recommendationRenderId += 1;
             panel.classList.remove('active');
             return;
         }
@@ -576,6 +588,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         }).filter((/** @type {any} */ cluster) => cluster.photoCount > 0);
 
         if (selectedClusters.length === 0) {
+            recommendationRenderId += 1;
             panel.classList.remove('active');
             return;
         }
@@ -789,6 +802,8 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         });
 
         panel.classList.add('active');
+        const renderId = recommendationRenderId + 1;
+        recommendationRenderId = renderId;
 
         (async () => {
             const medoid = calculateMedoid(allSelectedFeatures);
@@ -799,10 +814,11 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
                 recommendedLocation = await getRecommendedLocation(coords.lat, coords.lon);
             }
 
+            if (renderId !== recommendationRenderId) return;
             if (!recommendedLocation) return;
 
             const recommendedSection = document.createElement('div');
-            recommendedSection.className = 'quick-actions';
+            recommendedSection.className = 'quick-actions recommendation-section';
             recommendedSection.innerHTML = `
                 <div class="quick-action-label">${escapeHtml(i18n.t('locations:selection.recommended'))}</div>
                 <button class="btn-quick-assign btn-recommended"
@@ -814,6 +830,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
             `;
 
             const assignmentSection = panelContent.querySelector('.selection-assignment');
+            assignmentSection?.querySelector('.recommendation-section')?.remove();
             const quickActionsSection = assignmentSection?.querySelector('.quick-actions');
             if (quickActionsSection) {
                 assignmentSection?.insertBefore(recommendedSection, quickActionsSection);

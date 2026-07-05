@@ -130,9 +130,7 @@ AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
                 "How close an already-named photo must be to copy its name. Larger "
                 "values reuse names more aggressively and make fewer online lookups."
             ),
-            min=0.01,
-            max=50,
-            step=0.1,
+            max=100,
             default=10,
             type='distance',
             unit_key="nearby_radius_unit",

@@ -239,12 +239,18 @@ const createLocations = () => [
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-const initLocationsMap = async ({ reverseLocation = null, locations = createLocations(), nearbyRadiusKm = 10 } = {}) => {
+const initLocationsMap = async ({
+  reverseLocation = null,
+  reverseResponse = null,
+  locations = createLocations(),
+  nearbyRadiusKm = 10,
+} = {}) => {
   setupDom();
   installOpenLayersStub();
 
   const fetchMock = vi.fn((url) => {
     if (url === '/locations/reverse-geocode') {
+      if (reverseResponse) return reverseResponse;
       return Promise.resolve(window.testHelpers.response({ location_name: reverseLocation }));
     }
     if (url === '/locations/bulk-update') {
@@ -357,6 +363,30 @@ describe('locations list map selection panel', () => {
     expect(fetchMock).toHaveBeenCalledWith('/locations/reverse-geocode', expect.objectContaining({
       body: JSON.stringify({ lat: 0, lon: 1 }),
     }));
+  });
+
+  it('deduplicates pending recommendation lookups and renders one recommended button', async () => {
+    let resolveReverse;
+    const reverseResponse = new Promise((resolve) => {
+      resolveReverse = resolve;
+    });
+    const { api, fetchMock } = await initLocationsMap({
+      reverseResponse,
+      locations: [
+        { id: 1, name: null, filename: 'one.jpg', photo_path: '/one.jpg', media_type: 'photo', lat: 10, lon: 20 },
+        { id: 2, name: null, filename: 'two.jpg', photo_path: '/two.jpg', media_type: 'photo', lat: 11, lon: 21 },
+      ],
+    });
+
+    await api.updateSelectionPanel();
+    await api.updateSelectionPanel();
+    resolveReverse(window.testHelpers.response({ location_name: 'Geo Beach' }));
+    await flushPromises();
+    await flushPromises();
+
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/locations/reverse-geocode')).toHaveLength(1);
+    expect(document.querySelectorAll('.btn-recommended')).toHaveLength(1);
+    expect(document.querySelector('.btn-recommended').textContent.trim()).toBe('Geo Beach');
   });
 
   it('assigns the typed location to selected photos', async () => {
