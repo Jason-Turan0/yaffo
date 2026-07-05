@@ -155,6 +155,7 @@
       "moreThumbnails": "+{{more}} 张",
       "photoCount_one": "{{formattedCount}} 照片",
       "photoCount_other": "{{formattedCount}} 照片",
+      "photos": "照片",
       "preview": "预览",
       "quickAssign": "快速分配：",
       "recommended": "受到推崇的：",

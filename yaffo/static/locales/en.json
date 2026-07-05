@@ -155,6 +155,7 @@
       "moreThumbnails": "+{{more}} more",
       "photoCount_one": "{{formattedCount}} photo",
       "photoCount_other": "{{formattedCount}} photos",
+      "photos": "photos",
       "preview": "Preview",
       "quickAssign": "Quick assign:",
       "recommended": "Recommended:",

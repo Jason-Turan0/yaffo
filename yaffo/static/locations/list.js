@@ -65,8 +65,94 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         source: vectorSource
     });
 
-    /** @type {Set<any>} */
-    const selectedFeatures = new Set();
+    /** @type {Set<number>} */
+    const selectedPhotoIds = new Set();
+
+    const getClusterPhotoIds = (/** @type {any} */ clusterFeature) => {
+        const features = clusterFeature.get('features') || [];
+        return features.map((/** @type {any} */ f) => f.get('id')).filter((/** @type {unknown} */ id) => typeof id === 'number');
+    };
+
+    const getClusterSelection = (/** @type {any} */ clusterFeature) => {
+        const photoIds = getClusterPhotoIds(clusterFeature);
+        const selectedCount = photoIds.filter((/** @type {number} */ id) => selectedPhotoIds.has(id)).length;
+        return {
+            photoIds,
+            selectedCount,
+            totalCount: photoIds.length,
+            ratio: photoIds.length > 0 ? selectedCount / photoIds.length : 0,
+            selected: photoIds.length > 0 && selectedCount === photoIds.length,
+            partial: selectedCount > 0 && selectedCount < photoIds.length,
+        };
+    };
+
+    const sectorPath = (/** @type {number} */ ratio) => {
+        if (ratio <= 0 || ratio >= 1) return '';
+        const angle = (Math.PI * 2 * ratio) - (Math.PI / 2);
+        const x = 16 + (16 * Math.cos(angle));
+        const y = 16 + (16 * Math.sin(angle));
+        const largeArc = ratio > 0.5 ? 1 : 0;
+        return 'M16 16 L16 0 A16 16 0 '
+            + largeArc
+            + ' 1 '
+            + x.toFixed(3)
+            + ' '
+            + y.toFixed(3)
+            + ' Z';
+    };
+
+    const markerSvg = (
+        /** @type {number} */ size,
+        /** @type {number} */ selectedCount,
+        /** @type {number} */ totalCount,
+    ) => {
+        const svgNamespace = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNamespace, 'svg');
+        svg.setAttribute('xmlns', svgNamespace);
+        svg.setAttribute('width', '32');
+        svg.setAttribute('height', '32');
+        svg.setAttribute('viewBox', '0 0 32 32');
+
+        const addCircle = (/** @type {string} */ fill) => {
+            const circle = document.createElementNS(svgNamespace, 'circle');
+            circle.setAttribute('cx', '16');
+            circle.setAttribute('cy', '16');
+            circle.setAttribute('r', '15');
+            circle.setAttribute('fill', fill);
+            circle.setAttribute('stroke', markerColors.contrast);
+            circle.setAttribute('stroke-width', '2');
+            svg.appendChild(circle);
+        };
+
+        const ratio = totalCount > 0 ? selectedCount / totalCount : 0;
+        const full = ratio >= 1;
+        const partialPath = sectorPath(ratio);
+        addCircle(full ? markerColors.selected : markerColors.base);
+
+        if (partialPath) {
+            const path = document.createElementNS(svgNamespace, 'path');
+            path.setAttribute('d', partialPath);
+            path.setAttribute('fill', markerColors.selected);
+            svg.appendChild(path);
+        }
+
+        addCircle('none');
+
+        if (size > 1) {
+            const label = document.createElementNS(svgNamespace, 'text');
+            label.setAttribute('x', '16');
+            label.setAttribute('y', '20');
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('font-family', 'sans-serif');
+            label.setAttribute('font-size', '12');
+            label.setAttribute('font-weight', '700');
+            label.setAttribute('fill', markerColors.contrast);
+            label.textContent = String(size);
+            svg.appendChild(label);
+        }
+
+        return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+    };
 
     /** @type {Record<string, any>} */
     const styleCache = {};
@@ -74,40 +160,17 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         source: clusterSource,
         style: function(/** @type {any} */ feature) {
             const size = feature.get('features').length;
-            const isSelected = selectedFeatures.has(feature);
-            const cacheKey = `${size}-${isSelected}`;
+            const selection = getClusterSelection(feature);
+            const cacheKey = String(size) + '-' + selection.selectedCount + '-' + selection.totalCount;
 
             let style = styleCache[cacheKey];
             if (!style) {
-                const fillColor = isSelected ? markerColors.selected : markerColors.base;
-                if (size > 1) {
-                    style = new ol.style.Style({
-                        image: new ol.style.Circle({
-                            radius: 15,
-                            fill: new ol.style.Fill({ color: fillColor }),
-                            stroke: new ol.style.Stroke({
-                                color: markerColors.contrast,
-                                width: 2
-                            })
-                        }),
-                        text: new ol.style.Text({
-                            text: i18n.number(size),
-                            fill: new ol.style.Fill({ color: markerColors.contrast }),
-                            font: 'bold 12px sans-serif'
-                        })
-                    });
-                } else {
-                    style = new ol.style.Style({
-                        image: new ol.style.Circle({
-                            radius: 7,
-                            fill: new ol.style.Fill({ color: fillColor }),
-                            stroke: new ol.style.Stroke({
-                                color: markerColors.contrast,
-                                width: 2
-                            })
-                        })
-                    });
-                }
+                style = new ol.style.Style({
+                    image: new ol.style.Icon({
+                        src: markerSvg(size, selection.selectedCount, selection.totalCount),
+                        scale: size > 1 ? 1 : 0.58,
+                    })
+                });
                 styleCache[cacheKey] = style;
             }
             return style;
@@ -151,7 +214,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
 
         // Like shift-click, a box extends the current selection rather than
         // replacing it; the panel's × (or an empty plain click) starts over.
-        boxFeatures.forEach(f => selectedFeatures.add(f));
+        boxFeatures.forEach(f => getClusterPhotoIds(f).forEach((/** @type {number} */ id) => selectedPhotoIds.add(id)));
         clusterLayer.changed();
         updateSelectionPanel();
     });
@@ -322,31 +385,39 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         const isShiftClick = Boolean(evt.originalEvent && evt.originalEvent.shiftKey);
 
         if (feature) {
-            const features = feature.get('features');
-            if (!features || features.length === 0) return;
+            const selection = getClusterSelection(feature);
+            if (selection.totalCount === 0) return;
 
             if (isShiftClick) {
-                // Shift-click toggles the cluster in/out of the multi-selection.
-                if (selectedFeatures.has(feature)) {
-                    selectedFeatures.delete(feature);
+                // Shift-click cycles just this cluster: partial/full, then empty.
+                if (selection.selected) {
+                    selection.photoIds.forEach((/** @type {number} */ id) => selectedPhotoIds.delete(id));
                 } else {
-                    selectedFeatures.add(feature);
+                    selection.photoIds.forEach((/** @type {number} */ id) => selectedPhotoIds.add(id));
                 }
             } else {
-                // A plain click selects just this cluster — the panel then offers
-                // both the preview and the assignment tools for that selection.
-                selectedFeatures.clear();
-                selectedFeatures.add(feature);
+                // A plain click starts from this cluster unless it is already in
+                // the selection cycle, where partial -> full -> unselected.
+                selectedPhotoIds.clear();
+                if (!selection.selected) {
+                    selection.photoIds.forEach((/** @type {number} */ id) => selectedPhotoIds.add(id));
+                }
             }
             clusterLayer.changed();
             updateSelectionPanel();
-        } else if (!isShiftClick && selectedFeatures.size > 0) {
+        } else if (!isShiftClick && selectedPhotoIds.size > 0) {
             // Clicking empty map clears the selection and closes the panel;
             // a missed shift-click keeps the selection being built.
-            selectedFeatures.clear();
+            selectedPhotoIds.clear();
             clusterLayer.changed();
             updateSelectionPanel();
         }
+    });
+
+    map.on('moveend', function() {
+        if (selectedPhotoIds.size === 0) return;
+        clusterLayer.changed();
+        updateSelectionPanel();
     });
 
     map.on('pointermove', function(/** @type {any} */ evt) {
@@ -399,15 +470,20 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         const panelContent = document.getElementById('selection-panel-content');
         if (!panel || !panelContent) return;
 
-        if (selectedFeatures.size === 0) {
+        if (selectedPhotoIds.size === 0) {
             panel.classList.remove('active');
             return;
         }
 
-        const selectedClusters = Array.from(selectedFeatures).map((clusterFeature, idx) => {
+        const selectedClusters = /** @type {any[]} */ (clusterSource.getFeatures()).map((
+            /** @type {any} */ clusterFeature,
+            /** @type {number} */ idx,
+        ) => {
             const features = clusterFeature.get('features');
-            const photoIds = features.map((/** @type {any} */ f) => f.get('id'));
-            const photos = /** @type {LocationMediaItem[]} */ (features.map((/** @type {any} */ f) => ({
+            const selection = getClusterSelection(clusterFeature);
+            const selectedFeatures = features.filter((/** @type {any} */ f) => selectedPhotoIds.has(f.get('id')));
+            const photoIds = selectedFeatures.map((/** @type {any} */ f) => f.get('id'));
+            const photos = /** @type {LocationMediaItem[]} */ (selectedFeatures.map((/** @type {any} */ f) => ({
                 id: f.get('id'),
                 name: f.get('filename'),
                 location: f.get('name'),
@@ -416,21 +492,34 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
 
             /** @type {Record<string, number>} */
             const locationCounts = {};
-            features.forEach((/** @type {any} */ f) => {
+            selectedFeatures.forEach((/** @type {any} */ f) => {
                 const locationName = f.get('name') || unknownLocation;
                 locationCounts[locationName] = (locationCounts[locationName] || 0) + 1;
             });
 
             const locationBreakdown = Object.entries(locationCounts)
                 .sort((a, b) => b[1] - a[1])
-                .map(([name, count]) => `${i18n.number(count)} ${name}`)
+                .map(([name, count]) => i18n.number(count) + ' ' + name)
                 .join(', ');
 
             const centroid = calculateCentroid(features);
 
             return {
                 index: idx,
-                photoCount: features.length,
+                photoCount: selectedFeatures.length,
+                clusterPhotoCount: features.length,
+                selectedRatio: selection.ratio,
+                partial: selection.partial,
+                summaryLabel: selection.partial
+                    ? i18n.number(selectedFeatures.length)
+                        + ' / '
+                        + i18n.number(features.length)
+                        + ' '
+                        + i18n.t('locations:selection.photos')
+                    : i18n.t('locations:selection.photoCount', {
+                        count: selectedFeatures.length,
+                        formattedCount: i18n.number(selectedFeatures.length),
+                    }),
                 photoIds: photoIds,
                 photos: photos,
                 locationBreakdown: locationBreakdown,
@@ -438,15 +527,20 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                 centroid: centroid,
                 recommendedLocation: null
             };
-        });
+        }).filter((/** @type {any} */ cluster) => cluster.photoCount > 0);
 
-        const allPhotoIds = selectedClusters.flatMap(c => c.photoIds);
-        const allPhotos = selectedClusters.flatMap(c => c.photos);
+        if (selectedClusters.length === 0) {
+            panel.classList.remove('active');
+            return;
+        }
+
+        const allPhotoIds = selectedClusters.flatMap((/** @type {any} */ c) => c.photoIds);
+        const allPhotos = selectedClusters.flatMap((/** @type {any} */ c) => c.photos);
         const totalPhotos = allPhotoIds.length;
 
         /** @type {Record<string, number>} */
         const allLocationCounts = {};
-        selectedClusters.forEach(cluster => {
+        selectedClusters.forEach((/** @type {any} */ cluster) => {
             Object.entries(cluster.locationCounts).forEach(([name, count]) => {
                 if (name !== unknownLocation) {
                     allLocationCounts[name] = (allLocationCounts[name] || 0) + count;
@@ -457,9 +551,9 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         const sortedLocations = Object.entries(allLocationCounts)
             .sort((a, b) => b[1] - a[1]);
 
-        const summaryKey = `locations:selection.summary${
-            totalPhotos === 1 ? 'One' : 'Other'
-        }${selectedClusters.length === 1 ? 'One' : 'Other'}`;
+        const summaryKey = 'locations:selection.summary'
+            + (totalPhotos === 1 ? 'One' : 'Other')
+            + (selectedClusters.length === 1 ? 'One' : 'Other');
         const previewSectionHtml = buildPreviewSection(allPhotos);
         panelContent.innerHTML = `
             <div class="selection-panel-header">
@@ -514,10 +608,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                 <div class="clusters-list">
                     ${selectedClusters.map(cluster => `
                         <div class="cluster-summary-item">
-                            <strong>${escapeHtml(i18n.t('locations:selection.photoCount', {
-                                count: cluster.photoCount,
-                                formattedCount: i18n.number(cluster.photoCount),
-                            }))}</strong>
+                            <strong>${escapeHtml(cluster.summaryLabel)}</strong>
                             <span class="current-location">${escapeHtml(cluster.locationBreakdown)}</span>
                         </div>
                     `).join('')}
@@ -535,7 +626,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
 
         // The × closes the panel and drops the whole selection.
         panelContent.querySelector('.selection-panel-close')?.addEventListener('click', () => {
-            selectedFeatures.clear();
+            selectedPhotoIds.clear();
             clusterLayer.changed();
             updateSelectionPanel();
         });
@@ -591,7 +682,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
                         clusterLayer.changed();
                     }
 
-                    selectedFeatures.clear();
+                    selectedPhotoIds.clear();
                     clusterLayer.changed();
                     updateSelectionPanel();
 
@@ -645,7 +736,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         });
 
         document.querySelector('.btn-clear-selection')?.addEventListener('click', () => {
-            selectedFeatures.clear();
+            selectedPhotoIds.clear();
             clusterLayer.changed();
             updateSelectionPanel();
         });
@@ -705,8 +796,8 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         vectorSource.clear();
         vectorSource.addFeatures(visibleFeatures);
 
-        // The selected clusters may no longer be on the map; drop the selection.
-        selectedFeatures.clear();
+        // Filters change which photos are on the map, so start the map selection over.
+        selectedPhotoIds.clear();
         clusterLayer.changed();
         updateSelectionPanel();
 
@@ -724,5 +815,5 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config) => {
         refreshFeatures();
     };
 
-    return { map, vectorSource, selectedFeatures, updateSelectionPanel, setClientFilter };
+    return { map, vectorSource, selectedPhotoIds, updateSelectionPanel, setClientFilter };
 };

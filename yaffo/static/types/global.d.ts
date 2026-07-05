@@ -347,7 +347,7 @@ type ClientFilterApi = {
 type LocationMapApi = {
     map: unknown;
     vectorSource: unknown;
-    selectedFeatures: Set<unknown>;
+    selectedPhotoIds: Set<number>;
     updateSelectionPanel(): Promise<void>;
     setClientFilter(predicate: (item: ClientFilterItem) => boolean): void;
 };
