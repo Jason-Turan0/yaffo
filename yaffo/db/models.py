@@ -359,8 +359,7 @@ SYSTEM_AUTOMATION_TEXT: dict[str, tuple] = {
         lazy_gettext("Auto-assign faces"),
         lazy_gettext(
             "When a photo is indexed, assign each detected face to the one person it "
-            "matches above the threshold — a face matching several people is left "
-            "unassigned."
+            "matches above the threshold."
         ),
     ),
     AUTOMATION_HANDLER_EXPORT_PHOTO_TAG: (

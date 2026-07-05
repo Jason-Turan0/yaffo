@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-05 09:54-0500\n"
+"POT-Creation-Date: 2026-07-05 12:44-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -49,128 +49,198 @@ msgstr ""
 msgid "Memphis"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:57
+#: yaffo/background_tasks/automation_config.py:66
+msgid "Threshold"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:67
+msgid ""
+"Low finds more faces, Medium is balanced, and High keeps only more "
+"confident faces."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:73
+msgid "Low"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:74
+msgid ""
+"More sensitive; finds more weak, small, blurry, or side-angle faces, but "
+"may add false positives."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:78
+msgid "Medium"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:79
+msgid "Balanced default for normal library indexing."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:83
+msgid "High"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:84
+msgid "Stricter; keeps fewer, more confident faces and may miss harder faces."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:90
+msgid "Scan Speed"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:92
+msgid ""
+"Fast scans quickest, Balanced keeps the default behavior, and Thorough is"
+" slower but better at finding small or distant faces."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:99
+msgid "Fast"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:100
+msgid "Faster scans that may miss small or distant faces."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:104
+msgid "Balanced"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:105
+msgid "Balanced default for detection quality and scan speed."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:109
+msgid "Thorough"
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:110
+msgid "Slower scans with better detection for small or distant faces."
+msgstr ""
+
+#: yaffo/background_tasks/automation_config.py:118
 msgid "Match threshold"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:59
+#: yaffo/background_tasks/automation_config.py:120
 msgid ""
 "Threshold to use when comparing faces (0 = least similar, 100 = most "
 "similar) Higher is stricter: fewer, more confident assignments."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:70
+#: yaffo/background_tasks/automation_config.py:131
 msgid "Assign when multiple people match"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:72
+#: yaffo/background_tasks/automation_config.py:133
 msgid ""
 "When on, a face matching more than one person above the threshold is "
 "assigned to the highest-scoring match. When off, ambiguous faces are left"
 " unassigned."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:83
+#: yaffo/background_tasks/automation_config.py:144
 msgid "Export Location Tags"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:89
+#: yaffo/background_tasks/automation_config.py:150
 msgid "Export People Tags"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:95
+#: yaffo/background_tasks/automation_config.py:156
 msgid "Export Labels"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:96
+#: yaffo/background_tasks/automation_config.py:157
 msgid "Write the photo's classification labels into the file's keywords."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:102
+#: yaffo/background_tasks/automation_config.py:163
 msgid "Export Custom Tags"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:103
+#: yaffo/background_tasks/automation_config.py:164
 msgid ""
 "Write the photo's manual tags (name, or name: value) into the file's "
 "keywords."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:109
+#: yaffo/background_tasks/automation_config.py:170
 msgid "Export Favorite"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:110
+#: yaffo/background_tasks/automation_config.py:171
 msgid ""
 "Write a \"Favorite\" keyword into the file when the photo is marked a "
 "favorite."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:118
+#: yaffo/background_tasks/automation_config.py:179
 msgid "Reuse a nearby photo's name"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:120
+#: yaffo/background_tasks/automation_config.py:181
 msgid ""
 "Copy the location name of the closest already-named photo within the "
 "radius below. Free, offline, and keeps your own naming."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:128
+#: yaffo/background_tasks/automation_config.py:189
 msgid "Nearby radius"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:130
+#: yaffo/background_tasks/automation_config.py:191
 msgid ""
 "How close an already-named photo must be to copy its name. Larger values "
 "reuse names more aggressively and make fewer online lookups."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:140
+#: yaffo/background_tasks/automation_config.py:201
 msgid "Look up name online (OpenStreetMap)"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:142
+#: yaffo/background_tasks/automation_config.py:203
 msgid ""
 "When no nearby photo is named, reverse-geocode the coordinates via "
 "OpenStreetMap Nominatim (throttled to ~1 request/second)."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:150
+#: yaffo/background_tasks/automation_config.py:211
 msgid "Overwrite existing location names"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:151
+#: yaffo/background_tasks/automation_config.py:212
 msgid "When off, photos that already have a location name are left untouched."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:159
+#: yaffo/background_tasks/automation_config.py:220
 msgid "Time window (minutes)"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:161
+#: yaffo/background_tasks/automation_config.py:222
 msgid ""
 "A photo with no GPS borrows the coordinates of the closest-in-time GPS-"
 "tagged photo, but only if it was taken within this many minutes (so "
 "coordinates aren't copied across a long gap / a different place)."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:175
+#: yaffo/background_tasks/automation_config.py:236
 msgid "Confidence threshold"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:177
+#: yaffo/background_tasks/automation_config.py:238
 msgid ""
 "A photo gets a label only when the CLIP image–text similarity is at or "
 "above this confidence (0 = least similar, 100 = most similar) Higher is "
 "stricter: fewer, more confident labels."
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:188
+#: yaffo/background_tasks/automation_config.py:249
 msgid "Max labels per photo"
 msgstr ""
 
-#: yaffo/background_tasks/automation_config.py:189
+#: yaffo/background_tasks/automation_config.py:250
 msgid "At most this many labels are kept per photo (the highest-scoring ones)."
 msgstr ""
 
@@ -189,57 +259,56 @@ msgstr ""
 #: yaffo/db/models.py:361
 msgid ""
 "When a photo is indexed, assign each detected face to the one person it "
-"matches above the threshold — a face matching several people is left "
-"unassigned."
+"matches above the threshold."
 msgstr ""
 
-#: yaffo/db/models.py:367
+#: yaffo/db/models.py:366
 msgid "Export photo tag"
 msgstr ""
 
-#: yaffo/db/models.py:369
+#: yaffo/db/models.py:368
 msgid ""
 "When a photo is modified, write its people and/or location tags back into"
 " the photo file."
 msgstr ""
 
-#: yaffo/db/models.py:374
+#: yaffo/db/models.py:373
 msgid "Assign location name"
 msgstr ""
 
-#: yaffo/db/models.py:376
+#: yaffo/db/models.py:375
 msgid ""
 "When a photo is indexed, name its location from GPS — reuse a nearby "
 "named photo's name, then fall back to an OpenStreetMap lookup."
 msgstr ""
 
-#: yaffo/db/models.py:381
+#: yaffo/db/models.py:380
 msgid "Geotag from neighbors"
 msgstr ""
 
-#: yaffo/db/models.py:383
+#: yaffo/db/models.py:382
 msgid ""
 "When a photo is indexed, give a GPS-less photo the coordinates of the "
 "closest-in-time photo that has GPS (e.g. a camera shot taken alongside "
 "phone shots)."
 msgstr ""
 
-#: yaffo/db/models.py:389
+#: yaffo/db/models.py:388
 msgid "Classify labels"
 msgstr ""
 
-#: yaffo/db/models.py:391
+#: yaffo/db/models.py:390
 msgid ""
 "When a photo is indexed, label it with the subjects, scenes, and "
 "activities it matches from your label vocabulary (offline CLIP image "
 "recognition)."
 msgstr ""
 
-#: yaffo/db/models.py:397
+#: yaffo/db/models.py:396
 msgid "Duplicate scan"
 msgstr ""
 
-#: yaffo/db/models.py:399
+#: yaffo/db/models.py:398
 msgid ""
 "Scan your indexed photos for duplicates on a schedule — results appear in"
 " the Remove Duplicates tool."
@@ -367,12 +436,12 @@ msgid "Untitled Page"
 msgstr ""
 
 #: yaffo/routes/pages.py:242 yaffo/routes/themes_page.py:239
-#: yaffo/routes/utilities/automations.py:635
+#: yaffo/routes/utilities/automations.py:652
 msgid "Message is required."
 msgstr ""
 
 #: yaffo/routes/pages.py:246 yaffo/routes/themes_page.py:243
-#: yaffo/routes/utilities/automations.py:639
+#: yaffo/routes/utilities/automations.py:656
 #, python-format
 msgid ""
 "No API key configured. Add your %(provider)s API key in Settings → AI "
@@ -380,7 +449,7 @@ msgid ""
 msgstr ""
 
 #: yaffo/routes/pages.py:260 yaffo/routes/themes_page.py:235
-#: yaffo/routes/utilities/automations.py:632
+#: yaffo/routes/utilities/automations.py:649
 msgid "A generation is already running."
 msgstr ""
 
@@ -454,7 +523,7 @@ msgstr ""
 msgid "Claude Haiku 4.5 — fastest"
 msgstr ""
 
-#: yaffo/routes/settings.py:201 yaffo/routes/utilities/automations.py:453
+#: yaffo/routes/settings.py:201 yaffo/routes/utilities/automations.py:461
 msgid "Unsupported distance unit"
 msgstr ""
 
@@ -613,70 +682,75 @@ msgstr ""
 msgid "Media labeled"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:340
-#: yaffo/routes/utilities/automations.py:399
+#: yaffo/routes/utilities/automations.py:348
+#: yaffo/routes/utilities/automations.py:407
 msgid "Automation name is required"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:396
-#: yaffo/routes/utilities/automations.py:630
+#: yaffo/routes/utilities/automations.py:404
+#: yaffo/routes/utilities/automations.py:647
 msgid "System automations cannot be edited."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:418
+#: yaffo/routes/utilities/automations.py:426
 msgid "This automation has no configurable settings."
-msgstr ""
-
-#: yaffo/routes/utilities/automations.py:434
-#: yaffo/routes/utilities/automations.py:464
-#, python-format
-msgid "%(label)s must be a number."
 msgstr ""
 
 #: yaffo/routes/utilities/automations.py:442
 #: yaffo/routes/utilities/automations.py:472
 #, python-format
+msgid "%(label)s must be a number."
+msgstr ""
+
+#: yaffo/routes/utilities/automations.py:450
+#: yaffo/routes/utilities/automations.py:480
+#, python-format
 msgid "%(label)s must be between %(min)s and %(max)s."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:483
+#: yaffo/routes/utilities/automations.py:491
 #, python-format
 msgid "%(label)s is required."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:501
+#: yaffo/routes/utilities/automations.py:500
+#, python-format
+msgid "%(label)s has an unsupported value."
+msgstr ""
+
+#: yaffo/routes/utilities/automations.py:518
 msgid "System automations cannot be deleted"
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:549
+#: yaffo/routes/utilities/automations.py:566
 msgid "No indexed photos found under that path."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:557
+#: yaffo/routes/utilities/automations.py:574
 msgid "Nothing to run yet — publish the automation's code first."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:597
+#: yaffo/routes/utilities/automations.py:614
 msgid "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:607
+#: yaffo/routes/utilities/automations.py:624
 msgid "Choose an event type."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:620
+#: yaffo/routes/utilities/automations.py:637
 msgid "Unknown trigger action."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:675
+#: yaffo/routes/utilities/automations.py:692
 msgid "No code to test yet."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:679
+#: yaffo/routes/utilities/automations.py:696
 msgid "No path selected."
 msgstr ""
 
-#: yaffo/routes/utilities/automations.py:690
+#: yaffo/routes/utilities/automations.py:707
 msgid "No draft to publish."
 msgstr ""
 
@@ -1070,8 +1144,8 @@ msgstr ""
 #: yaffo/templates/settings/index.html:29
 #: yaffo/templates/settings/index.html:47
 #: yaffo/templates/themes_page/index.html:134
-#: yaffo/templates/utilities/automations.html:120
-#: yaffo/templates/utilities/automations.html:125
+#: yaffo/templates/utilities/automations.html:130
+#: yaffo/templates/utilities/automations.html:135
 msgid "Save"
 msgstr ""
 
@@ -1514,7 +1588,7 @@ msgstr ""
 #: yaffo/templates/fragments/job_status_fragment.html:28
 #: yaffo/templates/people/list.html:65
 #: yaffo/templates/themes_page/index.html:66
-#: yaffo/templates/utilities/automations.html:98
+#: yaffo/templates/utilities/automations.html:108
 #: yaffo/templates/utilities/automations_triggers.html:37
 #: yaffo/templates/utilities/remove_duplicates_form.html:49
 msgid "Delete"
@@ -1824,7 +1898,7 @@ msgid "Unnamed"
 msgstr ""
 
 #: yaffo/templates/people/list.html:61
-#: yaffo/templates/utilities/automations.html:86
+#: yaffo/templates/utilities/automations.html:96
 #: yaffo/templates/utilities/automations_edit.html:15
 #: yaffo/templates/utilities/automations_triggers.html:28
 msgid "Edit"
@@ -2329,64 +2403,64 @@ msgstr ""
 msgid "What does this automation do?"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:59
+#: yaffo/templates/utilities/automations.html:69
 #: yaffo/templates/utilities/automations_edit.html:5
 msgid "Automations - Yaffo"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:69
+#: yaffo/templates/utilities/automations.html:79
 msgid "No automation selected"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:70
+#: yaffo/templates/utilities/automations.html:80
 msgid "Pick one from the sidebar, or create one with “New automation”."
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:77
+#: yaffo/templates/utilities/automations.html:87
 #: yaffo/templates/utilities/automations_triggers.html:33
 msgid "Disable"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:77
+#: yaffo/templates/utilities/automations.html:87
 #: yaffo/templates/utilities/automations_triggers.html:33
 msgid "Enable"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:80
+#: yaffo/templates/utilities/automations.html:90
 msgid "Run…"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:82
+#: yaffo/templates/utilities/automations.html:92
 msgid "Run now"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:89
+#: yaffo/templates/utilities/automations.html:99
 msgid "Edit triggers"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:91
+#: yaffo/templates/utilities/automations.html:101
 msgid "Configure"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:95
+#: yaffo/templates/utilities/automations.html:105
 msgid "Edit details"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:105
+#: yaffo/templates/utilities/automations.html:115
 msgid ""
 "A built-in automation that ships with Yaffo. System automations cannot be"
 " edited or deleted."
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:107
+#: yaffo/templates/utilities/automations.html:117
 msgid "No description yet — use “Edit details” to add one."
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:118
+#: yaffo/templates/utilities/automations.html:128
 msgid "Edit automation"
 msgstr ""
 
-#: yaffo/templates/utilities/automations.html:123
+#: yaffo/templates/utilities/automations.html:133
 msgid "Configure automation"
 msgstr ""
 

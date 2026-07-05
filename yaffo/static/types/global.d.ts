@@ -341,6 +341,7 @@ type ClientFilterCriteria = {
 
 type ClientFilterApi = {
     apply(): void;
+    clear(): void;
     readCriteria(): ClientFilterCriteria;
 };
 

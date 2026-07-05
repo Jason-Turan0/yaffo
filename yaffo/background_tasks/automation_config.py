@@ -18,6 +18,7 @@ from flask_babel import lazy_gettext
 
 from yaffo.db.models import (
     Automation,
+    AUTOMATION_HANDLER_FILE_SYNC,
     AUTOMATION_HANDLER_AUTO_ASSIGN_FACES,
     AUTO_ASSIGN_FACES_DEFAULT_THRESHOLD,
     AUTOMATION_HANDLER_EXPORT_PHOTO_TAG,
@@ -28,6 +29,13 @@ from yaffo.db.models import (
     CLASSIFY_LABELS_DEFAULT_THRESHOLD,
     CLASSIFY_LABELS_DEFAULT_MAX,
 )
+
+
+@dataclass(frozen=True)
+class ConfigOption:
+    value: str
+    label: Any
+    help: Optional[Any] = None
 
 
 @dataclass(frozen=True)
@@ -48,9 +56,62 @@ class ConfigField:
     step: Optional[float] = None
     required: bool = True
     unit_key: str | None = None
+    options: tuple[ConfigOption, ...] = ()
 
 
 AUTOMATION_CONFIG: dict[str, list[ConfigField]] = {
+    AUTOMATION_HANDLER_FILE_SYNC: [
+        ConfigField(
+            key="face_detection_threshold",
+            label=lazy_gettext("Threshold"),
+            help=lazy_gettext("Low finds more faces, Medium is balanced, and High keeps only more confident faces."),
+            default="medium",
+            type="select",
+            options=(
+                ConfigOption(
+                    value="low",
+                    label=lazy_gettext("Low"),
+                    help=lazy_gettext("More sensitive; finds more weak, small, blurry, or side-angle faces, but may add false positives."),
+                ),
+                ConfigOption(
+                    value="medium",
+                    label=lazy_gettext("Medium"),
+                    help=lazy_gettext("Balanced default for normal library indexing."),
+                ),
+                ConfigOption(
+                    value="high",
+                    label=lazy_gettext("High"),
+                    help=lazy_gettext("Stricter; keeps fewer, more confident faces and may miss harder faces."),
+                ),
+            ),
+        ),
+        ConfigField(
+            key="face_detection_size",
+            label=lazy_gettext("Scan Speed"),
+            help=lazy_gettext(
+                "Fast scans quickest, Balanced keeps the default behavior, and Thorough is slower but better at finding small or distant faces."
+            ),
+            default="medium",
+            type="select",
+            options=(
+                ConfigOption(
+                    value="small",
+                    label=lazy_gettext("Fast"),
+                    help=lazy_gettext("Faster scans that may miss small or distant faces."),
+                ),
+                ConfigOption(
+                    value="medium",
+                    label=lazy_gettext("Balanced"),
+                    help=lazy_gettext("Balanced default for detection quality and scan speed."),
+                ),
+                ConfigOption(
+                    value="large",
+                    label=lazy_gettext("Thorough"),
+                    help=lazy_gettext("Slower scans with better detection for small or distant faces."),
+                ),
+            ),
+        ),
+    ],
     AUTOMATION_HANDLER_AUTO_ASSIGN_FACES: [
         ConfigField(
             key="threshold",

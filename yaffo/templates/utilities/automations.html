@@ -30,6 +30,16 @@
                 <label for="config-{{ field.key }}">{{ field.label }}</label>
                 <input type="text" id="config-{{ field.key }}" name="{{ field.key }}" {{ "required" if field.required }} value="{{ field.value }}">
             {% endif %}
+            {% if field.type == 'select' %}
+                <label for="config-{{ field.key }}">{{ field.label }}</label>
+                <select id="config-{{ field.key }}" name="{{ field.key }}" class="searchable-select" data-search-disabled {{ "required" if field.required }}>
+                    {% for option in field.options %}
+                        <option value="{{ option.value }}" {{ "selected" if option.value == field.value else "" }}>
+                            {{ option.label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            {% endif %}
             {% if field.type == 'distance' %}
                 <label for="config-{{ field.key }}">{{ field.label }}</label>
                 {{ distance_input(

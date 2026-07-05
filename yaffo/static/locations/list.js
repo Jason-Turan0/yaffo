@@ -872,14 +872,6 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         selectedPhotoIds.clear();
         clusterLayer.changed();
         updateSelectionPanel();
-
-        if (vectorSource.getFeatures().length > 0) {
-            const extent = vectorSource.getExtent();
-            map.getView().fit(extent, {
-                padding: [50, 50, 50, 50],
-                maxZoom: 16
-            });
-        }
     };
 
     const setClientFilter = (/** @type {(item: ClientFilterItem) => boolean} */ predicate) => {

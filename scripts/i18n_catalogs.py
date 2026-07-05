@@ -342,7 +342,7 @@ def _translate_batch_with_deep_translator(
 
 
 def _translate_batch(entries: list[TranslationEntry], locale: str) -> dict[str, str | list[str]]:
-    return _translate_batch_with_engine(entries, locale, engine="auto")
+    return _translate_batch_with_engine(entries, locale, engine="deep-translator")
 
 
 def _translate_batch_with_engine(

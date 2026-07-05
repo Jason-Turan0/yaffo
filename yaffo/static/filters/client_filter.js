@@ -138,9 +138,69 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
     };
 
     /**
+     * Clear the real form controls and notify the custom select widgets that wrap
+     * them. This intentionally does not use form.reset(), because the page may
+     * have loaded with querystring-selected filters; Clear should mean "no
+     * filters", not "back to initial URL state".
+     * @param {HTMLFormElement} form
+     */
+    const clearControls = (form) => {
+        form.querySelectorAll('input').forEach((input) => {
+            if (!(input instanceof HTMLInputElement)) return;
+            if (input.type === 'radio') {
+                input.checked = input.value === 'any';
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                return;
+            }
+            if (input.type === 'checkbox') {
+                input.checked = false;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                return;
+            }
+            input.value = '';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        form.querySelectorAll('select').forEach((select) => {
+            if (!(select instanceof HTMLSelectElement)) return;
+            if (select.multiple) {
+                Array.from(select.options).forEach((option) => {
+                    option.selected = false;
+                });
+            } else if (Array.from(select.options).some((option) => option.value === '')) {
+                select.value = '';
+            } else {
+                select.selectedIndex = 0;
+            }
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        form.querySelectorAll('.multi-select-wrapper').forEach((wrapper) => {
+            const search = wrapper.querySelector('.multi-select-search');
+            if (search instanceof HTMLInputElement) {
+                search.value = '';
+                search.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            const firstCheckbox = wrapper.querySelector('input[type="checkbox"]');
+            if (firstCheckbox instanceof HTMLInputElement) {
+                window.updateMultiSelectText?.(firstCheckbox);
+            } else {
+                const selectedText = wrapper.querySelector('.selected-text');
+                if (selectedText) {
+                    selectedText.textContent = wrapper instanceof HTMLElement
+                        ? wrapper.dataset.placeholder || ''
+                        : '';
+                }
+            }
+            wrapper.classList.remove('open');
+        });
+    };
+
+    /**
      * Turn the sidebar into a client-side filter: intercept the form's GET
-     * submit and hand a fresh predicate to `onApply` instead. ("Clear Filters"
-     * still navigates, which reloads the page with everything visible.)
+     * submit and hand a fresh predicate to `onApply` instead. Clear is also
+     * handled here so pages using client-side filters do not reload.
      * @param {{ form: HTMLFormElement | null, distanceUnit?: string, onApply: (predicate: (item: ClientFilterItem) => boolean) => void }} opts
      * @returns {ClientFilterApi | undefined}
      */
@@ -151,7 +211,16 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
             event.preventDefault();
             apply();
         });
-        const api = { apply, readCriteria: () => readCriteria(form) };
+        const clear = () => {
+            clearControls(form);
+            apply();
+        };
+        form.querySelector('.clear-filters')?.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            clear();
+        }, { capture: true });
+        const api = { apply, clear, readCriteria: () => readCriteria(form) };
         window.PHOTO_ORGANIZER.filters.clientFilter = api;
         return api;
     };

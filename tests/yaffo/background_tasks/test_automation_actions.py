@@ -89,26 +89,59 @@ def test_move_photo_noop_when_destination_equals_source(monkeypatch, tmp_path):
 _ACTIONS = "yaffo.background_tasks.automation_sandbox.automation_actions."
 
 
+class _TagQuerySession:
+    def __init__(self, rows=None):
+        self.rows = rows or []
+
+    def query(self, *args):
+        return self
+
+    def filter(self, *args):
+        return self
+
+    def all(self):
+        return self.rows
+
+
 def test_tag_photos_batches_and_drops_incomplete(monkeypatch, emitted_events):
     captured = {}
     _patch(monkeypatch, _ACTIONS + "media_repository.add_tags",
            lambda s, items: captured.update(items=items))
 
-    automation_actions.tag_media_items(object(), [
+    automation_actions.tag_media_items(_TagQuerySession(), [
         {"media_item_id": 1, "name": "beach"},
         {"media_item_id": 2, "name": "rating", "value": 5},
         {"name": "no_photo"},   # dropped: no media_item_id
         {"media_item_id": 3},        # dropped: no name
     ])
 
-    assert captured["items"] == [(1, "beach", None), (2, "rating", 5)]
+    assert captured["items"] == [(1, "beach", None), (2, "rating", "5")]
     # announces photo_modified for the tagged photos so export_photo_tag reacts
     assert emitted_events == [("media_modified", {"media_item_ids": [1, 2]})]
 
 
+def test_tag_photos_is_idempotent(monkeypatch, emitted_events):
+    captured = {}
+    _patch(monkeypatch, _ACTIONS + "media_repository.add_tags",
+           lambda s, items: captured.update(items=items))
+
+    automation_actions.tag_media_items(_TagQuerySession(rows=[
+        (1, "beach", None),
+        (2, "rating", "5"),
+    ]), [
+        {"media_item_id": 1, "name": "beach"},
+        {"media_item_id": 1, "name": "beach"},  # duplicate in the same call
+        {"media_item_id": 2, "name": "rating", "value": 5},
+        {"media_item_id": 3, "name": "rating", "value": 5},
+    ])
+
+    assert captured["items"] == [(3, "rating", "5")]
+    assert emitted_events == [("media_modified", {"media_item_ids": [3]})]
+
+
 def test_tag_photos_with_nothing_to_write_does_not_emit(monkeypatch, emitted_events):
     _patch(monkeypatch, _ACTIONS + "media_repository.add_tags", lambda s, items: None)
-    automation_actions.tag_media_items(object(), [{"name": "no_photo"}])  # all dropped
+    automation_actions.tag_media_items(_TagQuerySession(), [{"name": "no_photo"}])  # all dropped
     assert emitted_events == []
 
 

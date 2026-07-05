@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.events import emit_event
 from yaffo.background_tasks.progress_reporter import ProgressReporter
-from yaffo.db.models import EVENT_MEDIA_MODIFIED
+from yaffo.db.models import EVENT_MEDIA_MODIFIED, Tag
 from yaffo.db.repositories import person_repository, media_repository
 from yaffo.db.repositories.media_dir_repository import media_dir_by_id
 from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_media_rows
@@ -63,15 +63,35 @@ def summarize_report_progress(args: list[Any], session: Session) -> str:
     total = args[1] if len(args) > 1 else 0
     return f"Report progress: {completed}/{total}"
 
+
+def _tag_value(value: Any) -> str | None:
+    return str(value) if value else None
+
+
+def _existing_tag_keys(session: Session, media_item_ids: list[int]) -> set[tuple[int, str, str | None]]:
+    if not media_item_ids:
+        return set()
+    rows = (
+        session.query(Tag.media_item_id, Tag.tag_name, Tag.tag_value)
+        .filter(Tag.media_item_id.in_(media_item_ids))
+        .all()
+    )
+    return {(media_item_id, name, value) for media_item_id, name, value in rows}
+
+
 def tag_media_items(session: Session, tags: list[dict]) -> None:
     """Batch-add tags in one write, then announce the change (photo_modified) so
     export_photo_tag can write the tags into the files. `tags` is a list of
     {media_item_id, name, value?}."""
-    items = [
-        (tag["media_item_id"], tag["name"], tag.get("value"))
+    items = list(dict.fromkeys(
+        (tag["media_item_id"], tag["name"], _tag_value(tag.get("value")))
         for tag in tags
         if tag.get("media_item_id") is not None and tag.get("name")
-    ]
+    ))
+    if not items:
+        return
+    existing = _existing_tag_keys(session, list(dict.fromkeys(media_item_id for media_item_id, _, _ in items)))
+    items = [item for item in items if item not in existing]
     if not items:
         return
     media_repository.add_tags(session, items)

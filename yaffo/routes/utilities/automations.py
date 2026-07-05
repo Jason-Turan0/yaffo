@@ -237,7 +237,15 @@ def init_automations_routes(app: Flask):
                 "help": str(f.help) if f.help is not None else None,
                 "min": f.min, "max": f.max, "step": f.step, "type": f.type,
                 "required": f.required,
-                "value": config_value(automation, f)
+                "value": config_value(automation, f),
+                "options": [
+                    {
+                        "value": option.value,
+                        "label": str(option.label),
+                        "help": str(option.help) if option.help is not None else None,
+                    }
+                    for option in f.options
+                ],
             }
             if f.type == "distance":
                 value, unit = _distance_config_value(automation, f)
@@ -482,6 +490,15 @@ def init_automations_routes(app: Flask):
                     return _error(
                         gettext("%(label)s is required.", label=str(field.label)),
                         "config_value_required",
+                        400,
+                    )
+                value = raw
+            elif field.type == "select":
+                allowed = {option.value for option in field.options}
+                if raw not in allowed:
+                    return _error(
+                        gettext("%(label)s has an unsupported value.", label=str(field.label)),
+                        "config_value_unsupported",
                         400,
                     )
                 value = raw

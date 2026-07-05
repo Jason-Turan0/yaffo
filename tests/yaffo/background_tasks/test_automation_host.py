@@ -149,12 +149,25 @@ def test_recording_run_skips_mutating_impl_but_records_it(monkeypatch):
 
 
 def test_live_run_performs_mutating_impl(monkeypatch):
+    class _TagQuerySession:
+        def query(self, *args):
+            return self
+
+        def filter(self, *args):
+            return self
+
+        def all(self):
+            return []
+
     performed = []
     monkeypatch.setattr(
         "yaffo.background_tasks.automation_sandbox.automation_actions.media_repository.add_tags",
         lambda session, items: performed.extend(items),
     )
-    run_starlark("tag_media_items([{'media_item_id': 1, 'name': 'beach'}])", functions=build_host_functions(object()))
+    run_starlark(
+        "tag_media_items([{'media_item_id': 1, 'name': 'beach'}])",
+        functions=build_host_functions(_TagQuerySession()),
+    )
     assert performed == [(1, "beach", None)]
 
 

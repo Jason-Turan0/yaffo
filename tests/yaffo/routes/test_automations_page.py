@@ -525,6 +525,17 @@ def _add_system_assign_location_name(app, config=None):
     )
 
 
+def _add_system_file_sync(app, config=None):
+    _add(
+        app,
+        slug="file_sync",
+        name="File sync",
+        is_system=True,
+        handler="file_sync",
+        config=config or {},
+    )
+
+
 def test_config_saves_valid_threshold(app, client):
     _add_system_assign_faces(app)
     resp = client.post(
@@ -621,6 +632,67 @@ def test_config_saves_distance_value_and_unit(app, client):
         assert automation.config["nearby_radius"] == 2.5
         assert automation.config["nearby_radius_unit"] == "km"
         assert automation.config["nearby_radius_kilometers"] == 2.5
+
+
+def test_file_sync_config_renders_face_detection_presets(app, client):
+    _add_system_file_sync(
+        app,
+        config={
+            "face_detection_threshold": "low",
+            "face_detection_size": "large",
+        },
+    )
+
+    body = client.get("/utilities/automations/file_sync").get_data(as_text=True)
+
+    assert "Threshold" in body
+    assert "Scan Speed" in body
+    assert 'name="face_detection_threshold"' in body
+    assert 'class="searchable-select" data-search-disabled' in body
+    assert 'value="low" selected' in body
+    assert "Low finds more faces, Medium is balanced, and High keeps only more confident faces." in body
+    assert 'name="face_detection_size"' in body
+    assert 'value="large" selected' in body
+    assert "Fast scans quickest, Balanced keeps the default behavior, and Thorough is slower but better at finding small or distant faces." in body
+    assert "Thorough" in body
+
+
+def test_file_sync_config_saves_face_detection_presets(app, client):
+    _add_system_file_sync(app)
+
+    resp = client.post(
+        "/utilities/automations/file_sync/config",
+        data={
+            "face_detection_threshold": "high",
+            "face_detection_size": "small",
+        },
+    )
+
+    assert resp.status_code == 302
+    with app.app_context():
+        automation = db.session.query(Automation).filter_by(slug="file_sync").one()
+        assert automation.config == {
+            "face_detection_threshold": "high",
+            "face_detection_size": "small",
+        }
+
+
+def test_file_sync_config_rejects_unknown_face_detection_preset(app, client):
+    _add_system_file_sync(app, config={"face_detection_threshold": "medium"})
+
+    resp = client.post(
+        "/utilities/automations/file_sync/config",
+        data={
+            "face_detection_threshold": "extreme",
+            "face_detection_size": "medium",
+        },
+    )
+
+    assert resp.status_code == 400
+    assert resp.get_json()["code"] == "config_value_unsupported"
+    with app.app_context():
+        automation = db.session.query(Automation).filter_by(slug="file_sync").one()
+        assert automation.config == {"face_detection_threshold": "medium"}
 
 
 def test_config_rejected_for_non_configurable(app, client):

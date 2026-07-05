@@ -26,10 +26,23 @@ logger = get_logger(__name__, "background_tasks")
 
 MODEL_NAME = "buffalo_l"
 REQUIRED_MODEL_FILES = {"det_10g.onnx", "w600k_r50.onnx", "genderage.onnx"}
-DET_SIZE = (640, 640)
+DEFAULT_DETECTION_THRESHOLD = "medium"
+DEFAULT_DETECTION_SIZE = "medium"
+DETECTION_THRESHOLDS = {
+    "low": 0.35,
+    "medium": 0.5,
+    "high": 0.65,
+}
+DETECTION_SIZES = {
+    "small": (320, 320),
+    "medium": (640, 640),
+    "large": (960, 960),
+}
+DET_SIZE = DETECTION_SIZES[DEFAULT_DETECTION_SIZE]
 EMBEDDING_DIM = 512
 
 _app = None
+_app_settings = None
 _load_failed = False
 
 
@@ -37,6 +50,12 @@ _load_failed = False
 class ModelLocation:
     path: Path | None
     source: str
+
+
+@dataclass(frozen=True)
+class DetectionSettings:
+    threshold: float
+    size: tuple[int, int]
 
 
 def _model_root() -> str:
@@ -58,10 +77,49 @@ def download_model():
     download_insightface()
 
 
+def _preset(value, default: str, supported: dict) -> str:
+    return value if isinstance(value, str) and value in supported else default
+
+
+def get_detection_settings() -> DetectionSettings:
+    """Read File Sync face-detection presets, falling back to today's defaults."""
+    threshold_preset = DEFAULT_DETECTION_THRESHOLD
+    size_preset = DEFAULT_DETECTION_SIZE
+    try:
+        from yaffo.db import db
+        from yaffo.db.models import Automation, AUTOMATION_HANDLER_FILE_SYNC
+
+        automation = (
+            db.session.query(Automation)
+            .filter(Automation.handler == AUTOMATION_HANDLER_FILE_SYNC)
+            .first()
+        )
+        config = automation.config if automation is not None else None
+        if isinstance(config, dict):
+            threshold_preset = _preset(
+                config.get("face_detection_threshold"),
+                DEFAULT_DETECTION_THRESHOLD,
+                DETECTION_THRESHOLDS,
+            )
+            size_preset = _preset(
+                config.get("face_detection_size"),
+                DEFAULT_DETECTION_SIZE,
+                DETECTION_SIZES,
+            )
+    except RuntimeError:
+        pass
+
+    return DetectionSettings(
+        threshold=DETECTION_THRESHOLDS[threshold_preset],
+        size=DETECTION_SIZES[size_preset],
+    )
+
+
 def get_app():
-    global _app
+    global _app, _app_settings
     if get_model_location().path is None:
         raise FileNotFoundError(f"InsightFace model package is not installed: {MODEL_NAME}")
+    settings = get_detection_settings()
     if _app is None:
         from insightface.app import FaceAnalysis
         logger.info(f"loading InsightFace model '{MODEL_NAME}' (CPU)")
@@ -73,7 +131,14 @@ def get_app():
             # person's birthdate; landmark modules stay off.
             allowed_modules=["detection", "recognition", "genderage"],
         )
-        _app.prepare(ctx_id=-1, det_size=DET_SIZE)
+    if _app_settings != settings:
+        logger.info(
+            "preparing InsightFace detector threshold=%s det_size=%s",
+            settings.threshold,
+            settings.size,
+        )
+        _app.prepare(ctx_id=-1, det_thresh=settings.threshold, det_size=settings.size)
+        _app_settings = settings
     return _app
 
 
