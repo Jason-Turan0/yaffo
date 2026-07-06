@@ -22,6 +22,10 @@ Quick reminders:
 - Use `pathlib.Path` for cross-platform paths.
 - Place imports at module top level.
 - Use the global confirm dialog instead of native `alert()` or `confirm()`.
+- When adding, removing, or renaming user guide pages, update `mkdocs.yml`
+  navigation in the same change. The User Guide navigation should include only
+  Markdown files under `docs/guide/`; do not add development, deployment, or
+  other non-guide docs to that section.
 - For schema migrations, follow
   [Project Context - Database Migrations](docs/development/project-context.md#database-migrations),
   including the required `YAFFO_DATA_DIR="$HOME/Pictures"` migration run.

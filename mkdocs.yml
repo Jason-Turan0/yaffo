@@ -40,9 +40,24 @@ markdown_extensions:
 nav:
   - Home: index.md
   - User Guide:
-      - Getting Started: guide/getting-started.md
-      - Organizing Photos: guide/organizing-photos.md
-      - Faces & People: guide/faces-and-people.md
-      - Finding Duplicates: guide/duplicates.md
-      - Custom Pages: guide/custom-pages.md
-      - Settings Reference: guide/settings.md
+      - Start Here:
+          - Getting Started: guide/start-here/getting-started.md
+          - Concepts and Glossary: guide/start-here/concepts.md
+      - Library Basics:
+          - Indexing & Library Management: guide/library-basics/indexing-library.md
+          - Browsing, Filtering, and Search: guide/library-basics/browsing-filtering.md
+          - Photo Details: guide/library-basics/photo-details.md
+          - Organizing Photos: guide/library-basics/organizing-photos.md
+      - Organize & Review:
+          - Faces & People: guide/organize-review/faces-and-people.md
+          - Labels and Auto-Classification: guide/organize-review/labels.md
+          - Locations & Map: guide/organize-review/locations.md
+          - Finding Duplicates: guide/organize-review/duplicates.md
+      - Create & Customize:
+          - Custom Pages: guide/create-customize/custom-pages.md
+          - Themes: guide/create-customize/themes.md
+          - Automations: guide/create-customize/automations.md
+      - Reference & Maintenance:
+          - Settings Reference: guide/reference-maintenance/settings.md
+          - Troubleshooting: guide/reference-maintenance/troubleshooting.md
+          - Uninstalling Yaffo: guide/reference-maintenance/uninstalling.md
