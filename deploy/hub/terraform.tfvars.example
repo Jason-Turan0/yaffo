@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored) and fill in your values.
+
+project_id = "my-gcp-project"
+
+# The hostname clients will dial. Prerequisite: you own the domain; after
+# `terraform apply`, create the A record shown in the `dns_record` output.
+hub_domain = "hub.example.app"
+
+# region     = "us-central1"
+# zone       = "us-central1-a"
+# relay_port = 40000

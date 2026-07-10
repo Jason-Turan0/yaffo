@@ -83,10 +83,12 @@ node_modules
 *.tfstate
 *.tfstate.*
 *.tfvars
+*tfplan*
 crash.log
 crash.*.log
 # keep the example tfvars and the provider lock file tracked
 !deploy/gcp/terraform.tfvars.example
+!deploy/hub/terraform.tfvars.example
 !**/.terraform.lock.hcl
 
 # Playwright

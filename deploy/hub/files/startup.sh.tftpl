@@ -1,0 +1,58 @@
+#!/bin/bash
+# yaffo-hub VM bootstrap. GCE runs this on EVERY boot, so every step is
+# idempotent. It installs everything code-independent (Caddy, the service
+# user, the systemd unit); the hub code itself arrives via deploy.sh, so a
+# fresh VM's yaffo-hub.service restarts-and-fails until the first deploy —
+# that's expected and harmless (Restart=always picks it up once code lands).
+set -euo pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+# --- Base packages + Caddy (official apt repo, per caddyserver.com/docs) -----
+if ! command -v caddy >/dev/null; then
+  apt-get update -qq
+  apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https curl gnupg python3-venv
+  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+    | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+    > /etc/apt/sources.list.d/caddy-stable.list
+  apt-get update -qq
+  apt-get install -y -qq caddy
+fi
+
+# --- Admin SSH user (static authorized_keys, independent of the guest agent) --
+%{ if admin_ssh_user != "" && admin_ssh_pubkey != "" ~}
+if ! id '${admin_ssh_user}' >/dev/null 2>&1; then
+  useradd --create-home --shell /bin/bash '${admin_ssh_user}'
+  usermod -aG google-sudoers '${admin_ssh_user}' 2>/dev/null || echo '${admin_ssh_user} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-${admin_ssh_user}
+fi
+ADMIN_HOME=$(getent passwd '${admin_ssh_user}' | cut -d: -f6)
+mkdir -p "$ADMIN_HOME/.ssh"
+grep -qxF '${admin_ssh_pubkey}' "$ADMIN_HOME/.ssh/authorized_keys" 2>/dev/null || echo '${admin_ssh_pubkey}' >> "$ADMIN_HOME/.ssh/authorized_keys"
+chmod 700 "$ADMIN_HOME/.ssh"
+chmod 600 "$ADMIN_HOME/.ssh/authorized_keys"
+chown -R '${admin_ssh_user}:${admin_ssh_user}' "$ADMIN_HOME/.ssh"
+%{ endif ~}
+
+# --- Service user + install dir ----------------------------------------------
+if ! id yaffo-hub >/dev/null 2>&1; then
+  useradd --system --home-dir /opt/yaffo-hub --shell /usr/sbin/nologin yaffo-hub
+fi
+mkdir -p /opt/yaffo-hub
+chown yaffo-hub:yaffo-hub /opt/yaffo-hub
+
+# --- Caddy: TLS terminator + reverse proxy to the hub process -----------------
+cat > /etc/caddy/Caddyfile <<'CADDYFILE'
+${caddyfile}
+CADDYFILE
+systemctl enable caddy
+systemctl restart caddy
+
+# --- The hub unit --------------------------------------------------------------
+cat > /etc/systemd/system/yaffo-hub.service <<'UNIT'
+${unit_file}
+UNIT
+systemctl daemon-reload
+systemctl enable yaffo-hub
+# Start (or restart, if this is a reboot with code already present).
+systemctl restart yaffo-hub || true

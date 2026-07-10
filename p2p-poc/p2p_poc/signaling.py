@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 import websockets
 
 from .identity import DeviceIdentity
+from .pairing import sign_nonce
 from .quic_transport import (
     PunchAwareQuicServer,
     PunchError,
@@ -140,7 +141,22 @@ class HubClient:
 
     def _dispatch(self, message: dict) -> None:
         kind = message.get("type")
-        if kind == "hub_info":
+        if kind == "challenge":
+            # The production hub (yaffo_hub) authenticates the socket before
+            # forwarding anything: it sends a nonce, we prove possession of
+            # the device key (device IDs are self-authenticating hashes of
+            # the pubkey, so no registry is involved). The POC hub sends no
+            # challenge — this arm simply never fires against it.
+            asyncio.ensure_future(
+                self._send(
+                    {
+                        "type": "auth",
+                        "pubkey": self._identity.public_key_b64,
+                        "signature": sign_nonce(self._identity.private_key, message["nonce"]),
+                    }
+                )
+            )
+        elif kind == "hub_info":
             self._relay_port = message["relay_port"]
         elif kind == "connect_request":
             asyncio.ensure_future(self._answer_call(message))

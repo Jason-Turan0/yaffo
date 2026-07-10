@@ -1,0 +1,26 @@
+[Unit]
+Description=Yaffo P2P hub (WebSocket signaling + UDP relay + STUN)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=yaffo-hub
+Group=yaffo-hub
+# Overrides (limits, log level) go in /etc/default/yaffo-hub as YAFFO_HUB_* vars.
+EnvironmentFile=-/etc/default/yaffo-hub
+ExecStart=/opt/yaffo-hub/venv/bin/python -m yaffo_hub --host 127.0.0.1 --port ${hub_port} --relay-host 0.0.0.0 --relay-port ${relay_port}
+Restart=always
+RestartSec=2
+
+# Hardening: the process needs nothing but its venv and the network.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

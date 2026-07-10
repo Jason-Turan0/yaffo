@@ -1,0 +1,6 @@
+# Caddy terminates TLS for the signaling WebSocket (wss://${hub_domain}/ws/...)
+# and auto-obtains/renews the Let's Encrypt certificate — no certbot plumbing.
+# The UDP relay never touches Caddy: it forwards already-encrypted QUIC.
+${hub_domain} {
+	reverse_proxy 127.0.0.1:${hub_port}
+}
