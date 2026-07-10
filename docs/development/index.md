@@ -20,4 +20,6 @@ Reference material for contributors and agents working in the Yaffo codebase.
 - [Distribution](distribution.md)
 - [Frontend Testing and TypeScript](frontend-testing-and-typescript.md)
 - [Icons](icons.md)
+- [P2P Device Pairing](p2p-sharing.md) - design sketch for peer trust without a
+  login system.
 - [Video](video.md)

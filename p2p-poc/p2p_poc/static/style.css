@@ -1,0 +1,115 @@
+:root {
+  color-scheme: light dark;
+  --border: #8884;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  max-width: 640px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  line-height: 1.5;
+}
+
+header {
+  margin-bottom: 1.5rem;
+}
+
+h1 {
+  font-size: 1.25rem;
+  font-family: ui-monospace, monospace;
+}
+
+.muted {
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+textarea {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  box-sizing: border-box;
+  margin: 0.5rem 0;
+}
+
+button {
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+code {
+  font-family: ui-monospace, monospace;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.badge.online {
+  background: #2e7d3222;
+  color: #2e7d32;
+}
+
+.badge.offline {
+  background: #8884;
+  opacity: 0.8;
+}
+
+.badge.unknown {
+  background: #8882;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.badge.revoked {
+  background: #c6282822;
+  color: #c62828;
+}
+
+.file-list details {
+  border-bottom: 1px solid var(--border);
+  padding: 0.25rem 0;
+}
+
+.file-list summary {
+  cursor: pointer;
+}
+
+.file-list pre {
+  background: #8881;
+  border-radius: 6px;
+  padding: 0.6rem;
+  font-size: 0.8rem;
+  overflow-x: auto;
+}
+
+#peer-files {
+  margin-top: 1rem;
+}
+
+.error {
+  color: #c62828;
+}
