@@ -388,20 +388,26 @@ async def _pinned_stream_exchange(protocol: QuicConnectionProtocol, expected_dev
     return data
 
 
-async def quic_pinned_request_fresh_socket(host: str, port: int, expected_device_id: str, payload: dict) -> dict:
+async def quic_pinned_request_fresh_socket(
+    host: str,
+    port: int,
+    expected_device_id: str,
+    payload: dict,
+    timeout: float = CONNECT_TIMEOUT_SECONDS,
+) -> dict:
     """quic_pinned_request on a fresh, throwaway socket — for one-shot dials
     that don't need the shared-socket NAT properties (e.g. the Phase 5 LAN
     fast path, and direct-dial tests)."""
     config = QuicConfiguration(is_client=True, alpn_protocols=[ALPN_PROTOCOL], verify_mode=ssl.CERT_NONE)
     try:
-        async with asyncio.timeout(CONNECT_TIMEOUT_SECONDS):
+        async with asyncio.timeout(timeout):
             async with connect(host, port, configuration=config) as protocol:
                 return await _pinned_stream_exchange(protocol, expected_device_id, payload)
     except TransportError:
         raise
     except (asyncio.TimeoutError, TimeoutError) as exc:
         raise TransportError(
-            f"could not reach peer at {host}:{port}: request did not complete within {CONNECT_TIMEOUT_SECONDS:.1f}s"
+            f"could not reach peer at {host}:{port}: request did not complete within {timeout:.1f}s"
         ) from exc
     except (OSError, ConnectionError) as exc:
         raise TransportError(f"could not reach peer at {host}:{port}: {exc}") from exc

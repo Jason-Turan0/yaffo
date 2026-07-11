@@ -13,6 +13,7 @@ from yaffo.db import db
 from yaffo.db.models import TRUST_STATE_REVOKED, TRUST_STATE_TRUSTED
 from yaffo.db.repositories import p2p_repository
 from yaffo.p2p.identity import InMemorySecretStore
+from yaffo.p2p.lan_discovery import LanCandidate
 from yaffo.p2p.pairing import PairingError
 from yaffo.p2p.service import P2PService, P2PServiceError
 from yaffo.p2p.signaling import CallError
@@ -26,16 +27,44 @@ def _free_udp_port() -> int:
         return s.getsockname()[1]
 
 
-def _make_instance(tmp_path, name, hub_url):
+def _free_tcp_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+class FakeLanDiscovery:
+    def __init__(self):
+        self.candidates = {}
+        self.started = False
+        self.stopped = False
+
+    def start(self):
+        self.started = True
+
+    def stop(self):
+        self.stopped = True
+
+    def candidate_for(self, device_id):
+        return self.candidates.get(device_id)
+
+    def reachable_device_ids(self):
+        return set(self.candidates)
+
+
+def _make_instance(tmp_path, name, hub_url, lan_discovery=None):
     app = create_app(db_path=tmp_path / f"{name}.db", config={"TESTING": True})
     with app.app_context():
         db.create_all()
+    port = _free_udp_port()
+    lan_discovery = lan_discovery or FakeLanDiscovery()
     service = P2PService(
         app,
         hub_url=hub_url,
-        quic_port=_free_udp_port(),
+        quic_port=port,
         bind_host="127.0.0.1",
         secret_store=InMemorySecretStore(),
+        lan_discovery_factory=lambda _identity, _port, _bind_host: lan_discovery,
     )
     service.start()
     app.extensions["p2p_service"] = service  # what _run_web does in production
@@ -72,6 +101,38 @@ def _known_device(app, device_id):
 def _pair(service_a, service_b):
     code = service_a.generate_pairing_code()
     return service_b.accept_pairing_code(code.encode())
+
+
+def test_pairing_and_calls_use_lan_when_hub_is_unreachable(tmp_path):
+    hub_url = f"ws://127.0.0.1:{_free_tcp_port()}"
+    lan_a = FakeLanDiscovery()
+    lan_b = FakeLanDiscovery()
+    app_a, service_a = _make_instance(tmp_path, "a", hub_url, lan_discovery=lan_a)
+    app_b, service_b = _make_instance(tmp_path, "b", hub_url, lan_discovery=lan_b)
+    try:
+        id_a = service_a.identity.device_id
+        id_b = service_b.identity.device_id
+        lan_a.candidates[id_b] = LanCandidate(id_b, "127.0.0.1", service_b._quic_port, "b", time.monotonic())
+        lan_b.candidates[id_a] = LanCandidate(id_a, "127.0.0.1", service_a._quic_port, "a", time.monotonic())
+
+        result = _pair(service_a, service_b)
+
+        assert result["peer_device_id"] == id_a
+        assert result["via"] == "local"
+        assert _known_device(app_a, id_b)["trust_state"] == TRUST_STATE_TRUSTED
+        assert _known_device(app_b, id_a)["trust_state"] == TRUST_STATE_TRUSTED
+        report = service_b.call(id_a)
+        assert report["path"] == "local"
+        assert report["relay"] is None
+        assert report["response"]["type"] == "pong"
+        assert service_b.local_device_ids() == {id_a}
+    finally:
+        service_a.stop()
+        service_b.stop()
+        with app_a.app_context():
+            db.session.remove()
+        with app_b.app_context():
+            db.session.remove()
 
 
 def test_pair_call_revoke_end_to_end(two_devices, loopback_hub):

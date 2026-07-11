@@ -60,7 +60,12 @@ def _service():
     return current_app.extensions.get("p2p_service")
 
 
-def _device_row(device, online) -> dict:
+def _device_row(device, online, local) -> dict:
+    presence = "unknown"
+    if device.device_id in local:
+        presence = "local"
+    elif online is not None:
+        presence = "online" if device.device_id in online else "offline"
     return {
         "device_id": device.device_id,
         "display_name": device.display_name or device.device_id,
@@ -68,7 +73,7 @@ def _device_row(device, online) -> dict:
         "trusted": device.trust_state == TRUST_STATE_TRUSTED,
         "paired_at": device.paired_at,
         "last_seen_at": device.last_seen_at,
-        "presence": ("online" if device.device_id in online else "offline") if online is not None else "unknown",
+        "presence": presence,
     }
 
 
@@ -81,12 +86,17 @@ def sharing_context() -> dict:
     service = _service()
     available = service is not None and service.identity is not None
     online = None
+    local = set()
     if available:
         try:
             online = service.connected_device_ids()
         except Exception:  # noqa: BLE001 — presence is display-only; never break the page
             online = None
-    devices = [_device_row(d, online) for d in p2p_repository.list_known_devices(db.session)]
+        try:
+            local = service.local_device_ids()
+        except Exception:  # noqa: BLE001 — local presence is display-only too
+            local = set()
+    devices = [_device_row(d, online, local) for d in p2p_repository.list_known_devices(db.session)]
     context = {"available": available, "devices": devices}
     if available:
         context.update(

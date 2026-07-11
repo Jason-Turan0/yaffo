@@ -25,6 +25,8 @@
                 <span class="panel-nav-label">{{ device.display_name }}</span>
                 {% if not device.trusted %}
                 <span class="sharing-nav-badge sharing-nav-badge-revoked">{{ _("Revoked") }}</span>
+                {% elif device.presence == 'local' %}
+                <span class="sharing-nav-badge sharing-nav-badge-local">{{ _("Local") }}</span>
                 {% elif device.presence == 'online' %}
                 <span class="sharing-nav-badge sharing-nav-badge-online">{{ _("Online") }}</span>
                 {% endif %}

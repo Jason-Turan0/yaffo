@@ -7,7 +7,10 @@ pairing/device-management UI ships as a dedicated Sharing nav tab
 underway: grant management UI and the first signed `list_shared` /
 JSON-chunked `pull_file` protocol are implemented, with a first receiving UI
 for browsing a peer's shared files and explicitly pulling one file into a
-local media directory; background transfer orchestration is still pending.**
+configured local download directory; background transfer orchestration is
+still pending. Phase 5 has started: mDNS LAN discovery, LAN-first pinned
+QUIC calls, LAN pairing fallback, and Local presence badges are implemented;
+real two-machine LAN validation is pending.**
 The original design sketch here was built out as a working proof of concept in
 [`p2p-poc/`](../../p2p-poc/README.md), which succeeded end-to-end: pairing,
 presence, relay-first calls with hole-punch upgrade, authorized file pulls,
@@ -514,10 +517,12 @@ The actual sharing feature, replacing the POC's seed-text-files demo:
 > `known_devices` row, checks active grants at request time, lists only
 > indexed files under granted configured media dirs/folders, and returns
 > bounded base64 JSON chunks with offset support. The device page can browse
-> a peer's granted file list and pull a selected file into `Shared/<device_id>/`
-> under a chosen local media dir, resuming from `.partial` and verifying each
-> transferred chunk. Remaining work: background transfer manifests/status UI,
-> bounded concurrency for batches, LAN/direct path work, and eventual true
+> a peer's granted file list and pull a selected file under a configured
+> local download directory as
+> `{DeviceName-or-ID}/{Album-or-MediaDir-or-Folder}/{Filename}`, resuming
+> from `.partial` and verifying each transferred chunk. Remaining work:
+> background transfer manifests/status UI,
+> bounded concurrency for batches, transfer path reporting, and eventual true
 > stream framing for multi-GB files.
 
 - **Grant management UI** (same Settings section): per known device, add a
@@ -552,6 +557,14 @@ B's next request denied. Loopback integration tests for grant scoping
 ### Phase 5 — mDNS LAN path
 
 Same-LAN discovery so home traffic never touches the hub:
+
+> **Status: STARTED (2026-07-11).** The P2P thread now advertises and
+> browses `_yaffo-p2p._udp.local.` when `zeroconf` is installed, caches LAN
+> candidates by `device_id`, tries a short pinned-QUIC LAN call before the
+> hub relay-first flow, and accepts pairing codes over LAN when the hub is
+> unreachable. Sharing UI presence can show a `Local` badge for LAN-reachable
+> paired devices. Remaining work: install/package validation with `zeroconf`
+> present and real two-machine LAN testing.
 
 - Advertise `_yaffo-p2p._udp.local.` via `zeroconf` (TXT: device_id, QUIC
   port) from the P2P thread; browse continuously and cache

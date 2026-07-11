@@ -39,6 +39,7 @@ class FakeP2PService:
         self.hub_url = "wss://hub.example"
         self.hub_connected = True
         self.online = {PEER_ONLINE}
+        self.local = set()
         self.accept_result = {"peer_device_id": PEER_ONLINE, "via": "relay"}
         self.accept_error = None
         self.revoke_result = {"revoked": PEER_ONLINE, "peer_notified": True}
@@ -102,6 +103,9 @@ class FakeP2PService:
 
     def connected_device_ids(self):
         return self.online
+
+    def local_device_ids(self):
+        return self.local
 
     def generate_pairing_code(self):
         return new_pairing_code(MY_ID, "pubkey")
@@ -223,6 +227,14 @@ def test_presence_unknown_when_hub_unreachable(app, client, service):
     body = client.get("/sharing/settings/section").get_data(as_text=True)
     assert "Unknown" in body
     assert "Online" not in body
+
+
+def test_local_presence_badge_for_lan_reachable_peer(app, client, service):
+    _seed_devices(app)
+    service.local = {PEER_ONLINE}
+    body = client.get("/sharing/settings/section").get_data(as_text=True)
+    assert "laptop" in body and "Local" in body
+    assert "desktop" in body and "Offline" in body
 
 
 def test_sidebar_lists_devices_with_selection(app, client, service):

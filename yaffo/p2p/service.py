@@ -18,6 +18,7 @@ import asyncio
 import atexit
 import base64
 import hashlib
+import inspect
 import os
 import socket
 import threading
@@ -71,8 +72,14 @@ from yaffo.p2p.pairing import (
     sign_nonce,
     verify_nonce_signature,
 )
-from yaffo.p2p.quic_transport import PunchAwareQuicServer, start_quic_server
-from yaffo.p2p.signaling import HubClient
+from yaffo.p2p.lan_discovery import create_lan_discovery
+from yaffo.p2p.quic_transport import (
+    PunchAwareQuicServer,
+    TransportError,
+    quic_pinned_request_fresh_socket,
+    start_quic_server,
+)
+from yaffo.p2p.signaling import CallError, HubClient
 
 logger = get_logger(__name__, "webapp")
 
@@ -84,6 +91,7 @@ DEFAULT_HUB_URL = "wss://hub.yaffo.app"
 DEFAULT_QUIC_PORT = 5002
 
 FACADE_TIMEOUT_SECONDS = 60.0
+LAN_CALL_TIMEOUT_SECONDS = 1.5
 DEFAULT_PULL_CHUNK_BYTES = 1024 * 1024
 MAX_PULL_CHUNK_BYTES = 4 * 1024 * 1024
 DEFAULT_LIST_FILES_LIMIT = 50
@@ -177,6 +185,7 @@ class P2PService:
         quic_port: Optional[int] = None,
         bind_host: str = "0.0.0.0",
         secret_store: Optional[SecretStore] = None,
+        lan_discovery_factory=None,
     ) -> None:
         self._app = flask_app
         self._hub_url = hub_url or resolve_hub_url()
@@ -184,6 +193,8 @@ class P2PService:
         logger.info(f"Starting p2p service on {self._quic_port}")
         self._bind_host = bind_host
         self._secret_store = secret_store
+        self._lan_discovery_factory = lan_discovery_factory or create_lan_discovery
+        self._lan_discovery = None
         self.identity: Optional[DeviceIdentity] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._thread: Optional[threading.Thread] = None
@@ -257,8 +268,20 @@ class P2PService:
             ),
         )
         self._hub_client.start()
+        try:
+            self._lan_discovery = self._lan_discovery_factory(self.identity, self._quic_port, self._bind_host)
+            start_result = self._lan_discovery.start()
+            if inspect.isawaitable(start_result):
+                await start_result
+        except Exception:
+            self._lan_discovery = None
+            logger.exception("p2p LAN discovery failed to start")
 
     async def _shutdown(self) -> None:
+        if self._lan_discovery is not None:
+            stop_result = self._lan_discovery.stop()
+            if inspect.isawaitable(stop_result):
+                await stop_result
         if self._hub_client is not None:
             await self._hub_client.stop()
         if self._quic_server is not None:
@@ -302,6 +325,11 @@ class P2PService:
             return None
         return self._submit(self._hub_client.connected_device_ids(), timeout)
 
+    def local_device_ids(self) -> set[str]:
+        if self._lan_discovery is None:
+            return set()
+        return self._lan_discovery.reachable_device_ids()
+
     # ---- facade: pairing -----------------------------------------------------
 
     def generate_pairing_code(self) -> PairingCode:
@@ -336,7 +364,7 @@ class P2PService:
         # once — the nonce burns on first use); the initiator's certificate
         # is pinned against the code's device_id inside the QUIC handshake,
         # which is what makes the hub trust-irrelevant.
-        report = self._submit(self._hub_client.call(code.device_id, payload=payload, attempt_upgrade=False))
+        report = self._submit(self._call_with_lan_first(code.device_id, payload=payload, attempt_upgrade=False))
         result = report["response"]
 
         with self._session() as session:
@@ -363,13 +391,7 @@ class P2PService:
             payload_type,
             attempt_upgrade,
         )
-        report = self._submit(
-            self._hub_client.call(
-                peer_device_id,
-                payload=payload,
-                attempt_upgrade=attempt_upgrade,
-            )
-        )
+        report = self._submit(self._call_with_lan_first(peer_device_id, payload=payload, attempt_upgrade=attempt_upgrade))
         logger.info(
             "p2p call done peer=%s payload=%s path=%s relay=%s punch=%s direct=%s",
             peer_device_id,
@@ -382,6 +404,55 @@ class P2PService:
         with self._session() as session:
             p2p_repository.touch_last_seen(session, peer_device_id)
         return report
+
+    async def _call_with_lan_first(
+        self,
+        peer_device_id: str,
+        payload: Optional[dict] = None,
+        attempt_upgrade: bool = True,
+    ) -> dict:
+        payload = payload or {"type": "ping"}
+        local_report = await self._call_lan_candidate(peer_device_id, payload)
+        if local_report is not None:
+            return local_report
+        if self._hub_client is None:
+            raise CallError("no LAN path and hub client is not running")
+        return await self._hub_client.call(peer_device_id, payload=payload, attempt_upgrade=attempt_upgrade)
+
+    async def _call_lan_candidate(self, peer_device_id: str, payload: dict) -> Optional[dict]:
+        if self._lan_discovery is None:
+            return None
+        candidate = self._lan_discovery.candidate_for(peer_device_id)
+        if candidate is None:
+            return None
+        started = asyncio.get_running_loop().time()
+        try:
+            response = await quic_pinned_request_fresh_socket(
+                candidate.host,
+                candidate.port,
+                peer_device_id,
+                payload,
+                timeout=LAN_CALL_TIMEOUT_SECONDS,
+            )
+        except TransportError as exc:
+            logger.info(
+                "p2p LAN candidate failed peer=%s addr=%s:%s: %s; falling back to hub",
+                peer_device_id,
+                candidate.host,
+                candidate.port,
+                exc,
+            )
+            return None
+        rtt_ms = round((asyncio.get_running_loop().time() - started) * 1000, 1)
+        return {
+            "peer_device_id": peer_device_id,
+            "relay": None,
+            "punch": None,
+            "direct": {"ok": True, "address": [candidate.host, candidate.port], "rtt_ms": rtt_ms},
+            "local": {"ok": True, "address": [candidate.host, candidate.port], "rtt_ms": rtt_ms},
+            "path": "local",
+            "response": response,
+        }
 
     def list_shared(self, peer_device_id: str) -> dict:
         """Ask a trusted peer for the scopes it grants this device, each with

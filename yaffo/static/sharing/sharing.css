@@ -36,6 +36,11 @@
     color: var(--color-success-soft-text);
 }
 
+.sharing-nav-badge-local {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+}
+
 .sharing-nav-badge-revoked {
     background: var(--color-danger-soft);
     color: var(--color-danger-soft-text);
@@ -107,6 +112,12 @@
     background: var(--color-success-soft);
     border-color: var(--color-success-soft-border);
     color: var(--color-success-soft-text);
+}
+
+.presence-local {
+    background: var(--color-accent-soft);
+    border-color: var(--color-accent-soft-text);
+    color: var(--color-accent-soft-text);
 }
 
 .presence-revoked {

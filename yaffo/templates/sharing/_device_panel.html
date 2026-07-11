@@ -4,6 +4,8 @@
             {% if not device.trusted %}
             <span class="presence-badge presence-revoked">{{ _("Revoked") }}</span>
             <span class="known-device-meta">{{ _("This device no longer has access. Pair again to restore it.") }}</span>
+            {% elif device.presence == 'local' %}
+            <span class="presence-badge presence-local">{{ _("Local") }}</span>
             {% elif device.presence == 'online' %}
             <span class="presence-badge presence-online">{{ _("Online") }}</span>
             {% elif device.presence == 'offline' %}
