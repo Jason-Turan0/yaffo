@@ -51,6 +51,17 @@ class FakeLanDiscovery:
     def reachable_device_ids(self):
         return set(self.candidates)
 
+    def mark_reachable(self, device_id):
+        candidate = self.candidates.get(device_id)
+        if candidate is not None:
+            self.candidates[device_id] = LanCandidate(
+                candidate.device_id,
+                candidate.host,
+                candidate.port,
+                candidate.name,
+                time.monotonic(),
+            )
+
 
 def _make_instance(tmp_path, name, hub_url, lan_discovery=None):
     app = create_app(db_path=tmp_path / f"{name}.db", config={"TESTING": True})
@@ -99,8 +110,8 @@ def _known_device(app, device_id):
 
 
 def _pair(service_a, service_b):
-    code = service_a.generate_pairing_code()
-    return service_b.accept_pairing_code(code.encode())
+    code = service_a.peering.generate_pairing_code()
+    return service_b.peering.send_accept_pairing_code(code.encode())
 
 
 def test_pairing_and_calls_use_lan_when_hub_is_unreachable(tmp_path):
@@ -114,6 +125,7 @@ def test_pairing_and_calls_use_lan_when_hub_is_unreachable(tmp_path):
         id_b = service_b.identity.device_id
         lan_a.candidates[id_b] = LanCandidate(id_b, "127.0.0.1", service_b._quic_port, "b", time.monotonic())
         lan_b.candidates[id_a] = LanCandidate(id_a, "127.0.0.1", service_a._quic_port, "a", time.monotonic())
+        initial_b_candidate_updated_at = lan_b.candidates[id_a].updated_at
 
         result = _pair(service_a, service_b)
 
@@ -125,6 +137,7 @@ def test_pairing_and_calls_use_lan_when_hub_is_unreachable(tmp_path):
         assert report["path"] == "local"
         assert report["relay"] is None
         assert report["response"]["type"] == "pong"
+        assert lan_b.candidates[id_a].updated_at > initial_b_candidate_updated_at
         assert service_b.local_device_ids() == {id_a}
     finally:
         service_a.stop()
@@ -184,7 +197,7 @@ def test_pair_call_revoke_end_to_end(two_devices, loopback_hub):
 
     # --- revocation: A flips its local trust store (the enforcement) and
     # the signed courtesy notice flips B's row for A to revoked.
-    outcome = service_a.revoke_peer(id_b)
+    outcome = service_a.peering.send_revoke_peer(id_b)
     assert outcome["peer_notified"] is True
     assert _known_device(app_a, id_b)["trust_state"] == TRUST_STATE_REVOKED
 
@@ -225,10 +238,10 @@ def test_concurrent_calls_to_the_same_peer_all_succeed(two_devices):
 
 def test_pairing_code_is_single_use(two_devices):
     (_, service_a), (_, service_b) = two_devices
-    code = service_a.generate_pairing_code().encode()
-    service_b.accept_pairing_code(code)
+    code = service_a.peering.generate_pairing_code().encode()
+    service_b.peering.send_accept_pairing_code(code)
     with pytest.raises(CallError, match="already-used"):
-        service_b.accept_pairing_code(code)
+        service_b.peering.send_accept_pairing_code(code)
 
 
 def test_tampered_code_grants_no_trust(two_devices):
@@ -239,13 +252,13 @@ def test_tampered_code_grants_no_trust(two_devices):
     import json
 
     (app_a, service_a), (app_b, service_b) = two_devices
-    code = service_a.generate_pairing_code().encode()
+    code = service_a.peering.generate_pairing_code().encode()
     decoded = json.loads(base64.urlsafe_b64decode(code))
     decoded["device_id"] = "EVIL-0000-0000-0000"
     tampered = base64.urlsafe_b64encode(json.dumps(decoded).encode()).decode()
 
     with pytest.raises(PairingError, match="does not match"):
-        service_b.accept_pairing_code(tampered)
+        service_b.peering.send_accept_pairing_code(tampered)
     assert _known_device(app_b, "EVIL-0000-0000-0000") is None
     assert _known_device(app_b, service_a.identity.device_id) is None
 
@@ -258,16 +271,16 @@ def test_call_to_unknown_device_fails_cleanly(two_devices):
 
 def test_expired_code_is_rejected_locally(two_devices):
     (_, service_a), (_, service_b) = two_devices
-    code = service_a.generate_pairing_code()
+    code = service_a.peering.generate_pairing_code()
     code.expires_at = time.time() - 1
     with pytest.raises(PairingError, match="expired"):
-        service_b.accept_pairing_code(code.encode())
+        service_b.peering.send_accept_pairing_code(code.encode())
 
 
 def test_revoking_unknown_device_raises(two_devices):
     (_, service_a), _ = two_devices
     with pytest.raises(P2PServiceError, match="not a known device"):
-        service_a.revoke_peer("NOBODY-HOME-0000")
+        service_a.peering.send_revoke_peer("NOBODY-HOME-0000")
 
 
 def test_pair_and_revoke_entirely_through_the_ui_routes(two_devices):

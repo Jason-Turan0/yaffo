@@ -451,9 +451,9 @@ def test_pull_file_resumes_partial_and_verifies_complete_file(serving_context):
             "data_b64": base64.b64encode(data).decode("ascii"),
         }
 
-    service.pull_file_chunk = fake_pull_file_chunk
+    service.sharing.pull_file_chunk = fake_pull_file_chunk
 
-    result = service.pull_file(
+    result = service.sharing.pull_file(
         requester.device_id,
         "remote-lib",
         "trip/a.jpg",

@@ -10,7 +10,7 @@ import asyncio
 import socket
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional
 
 from yaffo.logging_config import get_logger
@@ -56,6 +56,9 @@ class NullLanDiscovery:
 
     def reachable_device_ids(self) -> set[str]:
         return set()
+
+    def mark_reachable(self, device_id: str) -> None:
+        return
 
 
 class ZeroconfLanDiscovery:
@@ -123,29 +126,23 @@ class ZeroconfLanDiscovery:
             self._loop = None
 
     def candidate_for(self, device_id: str) -> Optional[LanCandidate]:
-        now = time.monotonic()
         with self._lock:
-            candidate = self._candidates.get(device_id)
-            if candidate is None:
-                return None
-            if now - candidate.updated_at > self._candidate_ttl_seconds:
-                self._candidates.pop(device_id, None)
-                self._service_names.pop(candidate.name, None)
-                return None
-            return candidate
+            return self._candidates.get(device_id)
 
     def reachable_device_ids(self) -> set[str]:
         now = time.monotonic()
         with self._lock:
-            stale = [
+            return {
                 device_id
                 for device_id, candidate in self._candidates.items()
-                if now - candidate.updated_at > self._candidate_ttl_seconds
-            ]
-            for device_id in stale:
-                candidate = self._candidates.pop(device_id)
-                self._service_names.pop(candidate.name, None)
-            return set(self._candidates)
+                if now - candidate.updated_at <= self._candidate_ttl_seconds
+            }
+
+    def mark_reachable(self, device_id: str) -> None:
+        with self._lock:
+            candidate = self._candidates.get(device_id)
+            if candidate is not None:
+                self._candidates[device_id] = replace(candidate, updated_at=time.monotonic())
 
     def _cache_service(self, zeroconf, service_type: str, name: str) -> None:
         if self._loop is None:

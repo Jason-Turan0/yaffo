@@ -263,7 +263,6 @@ def init_sharing_routes(app: Flask):
             media_dirs=_media_dir_choices(),
             grants=_active_grant_rows(device_id),
             remote_shared=None,
-            download_dir=_shared_download_dir_value(),
         )
 
     def render_remote_panel(device: dict, remote_shared: dict | None = None, remote_error: str | None = None):
@@ -281,7 +280,12 @@ def init_sharing_routes(app: Flask):
 
     @app.route("/sharing/settings", methods=["GET"])
     def sharing_settings():
-        return render_template("sharing/settings.html", sharing=sharing_context(), selected_key="settings")
+        return render_template(
+            "sharing/settings.html",
+            sharing=sharing_context(),
+            selected_key="settings",
+            download_dir=_shared_download_dir_value(),
+        )
 
     @app.route("/sharing/devices/<device_id>", methods=["GET"])
     def sharing_device(device_id: str):
@@ -297,7 +301,6 @@ def init_sharing_routes(app: Flask):
             media_dirs=_media_dir_choices(),
             grants=_active_grant_rows(device_id),
             remote_shared=None,
-            download_dir=_shared_download_dir_value(),
         )
 
     @app.route("/sharing/sidebar", methods=["GET"])
@@ -323,7 +326,7 @@ def init_sharing_routes(app: Flask):
         service = _service()
         if service is None:
             return _notify(gettext("Device sharing is not running."))
-        code = service.generate_pairing_code()
+        code = service.peering.generate_pairing_code()
         encoded = code.encode()
         return render_template(
             "sharing/_pairing_code.html",
@@ -344,7 +347,7 @@ def init_sharing_routes(app: Flask):
         if not code_text:
             return _notify(gettext("Paste a pairing code first."))
         try:
-            result = service.accept_pairing_code(code_text)
+            result = service.peering.send_accept_pairing_code(code_text)
         except PairingError as exc:
             return _notify(gettext("Pairing failed: %(reason)s", reason=str(exc)))
         except (CallError, P2PServiceError) as exc:
@@ -363,7 +366,7 @@ def init_sharing_routes(app: Flask):
         if service is None:
             return False, gettext("Device sharing is not running.")
         try:
-            outcome = service.revoke_peer(device_id)
+            outcome = service.peering.send_revoke_peer(device_id)
         except P2PServiceError as exc:
             return False, str(exc)
         except FutureTimeoutError:
@@ -506,7 +509,7 @@ def init_sharing_routes(app: Flask):
             error = gettext("This device is revoked. Pair it again before browsing shared files.")
         else:
             try:
-                result = service.list_shared_files(
+                result = service.sharing.list_shared_files(
                     device_id,
                     media_dir_id,
                     scope,
@@ -569,7 +572,7 @@ def init_sharing_routes(app: Flask):
         if service is None:
             return jsonify({"tag_name": tag_name, "values": []}), 503
         try:
-            result = service.list_shared_files(device_id, media_dir_id, scope, {"tag_name": tag_name}, limit=1)
+            result = service.sharing.list_shared_files(device_id, media_dir_id, scope, {"tag_name": tag_name}, limit=1)
         except (CallError, P2PServiceError):
             return jsonify({"tag_name": tag_name, "values": []}), 502
         except FutureTimeoutError:
@@ -591,7 +594,7 @@ def init_sharing_routes(app: Flask):
         if not media_dir_id or not relative_path:
             abort(404)
         try:
-            data = service.pull_preview(device_id, media_dir_id, relative_path)
+            data = service.sharing.pull_preview(device_id, media_dir_id, relative_path)
         except (CallError, P2PServiceError):
             abort(502)
         except FutureTimeoutError:
@@ -618,7 +621,7 @@ def init_sharing_routes(app: Flask):
             return render_remote_panel(device, remote_error=gettext("Device sharing is not running."))
         try:
             logger.info("browse shared scopes start peer=%s", device_id)
-            remote_shared = service.list_shared(device_id)
+            remote_shared = service.sharing.list_shared.send(device_id)
         except (CallError, P2PServiceError) as exc:
             logger.warning("browse shared scopes failed peer=%s error=%s", device_id, exc)
             return render_remote_panel(
@@ -662,7 +665,7 @@ def init_sharing_routes(app: Flask):
         collection_path = (request.form.get("collection_name") or "").strip() or remote_media_dir_id
         expected_sha256 = (request.form.get("sha256") or "").strip() or None
         try:
-            result = service.pull_file(
+            result = service.sharing.pull_file(
                 device_id,
                 remote_media_dir_id,
                 relative_path,

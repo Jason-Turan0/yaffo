@@ -40,7 +40,7 @@ def _flask_env(p2p_port, data_dir, debug):
         "YAFFO_P2P_ENABLED": "1",
         "YAFFO_P2P_PORT": str(p2p_port),
         "YAFFO_DATA_DIR": data_dir,
-        "YAFFO_HUB_URL": "ws:127.0.0.1:9"
+        #"YAFFO_HUB_URL": "ws:127.0.0.1:9"
     }
 
 def _host_command(workers, recycle):

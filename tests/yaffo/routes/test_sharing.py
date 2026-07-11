@@ -100,6 +100,13 @@ class FakeP2PService:
         self.listed_files_calls = []
         self.preview_calls = []
         self.pulled_files = []
+        self.peering = self
+        self.sharing = SimpleNamespace(
+            list_shared=SimpleNamespace(send=self.list_shared),
+            list_shared_files=self.list_shared_files,
+            pull_preview=self.pull_preview,
+            pull_file=self.pull_file,
+        )
 
     def connected_device_ids(self):
         return self.online
@@ -110,7 +117,7 @@ class FakeP2PService:
     def generate_pairing_code(self):
         return new_pairing_code(MY_ID, "pubkey")
 
-    def accept_pairing_code(self, code_text):
+    def send_accept_pairing_code(self, code_text):
         self.accepted_codes.append(code_text)
         if self.accept_error is not None:
             raise self.accept_error
@@ -121,6 +128,9 @@ class FakeP2PService:
         if self.revoke_error is not None:
             raise self.revoke_error
         return self.revoke_result
+
+    def send_revoke_peer(self, device_id):
+        return self.revoke_peer(device_id)
 
     def list_shared(self, device_id):
         self.listed_ids.append(device_id)
@@ -219,6 +229,7 @@ def test_settings_page_shows_identity_and_presence_tristate(app, client, service
     assert "laptop" in body and "Online" in body
     assert "desktop" in body and "Offline" in body
     assert "old-phone" in body and "Revoked" in body
+    assert "Downloaded copies" in body
 
 
 def test_presence_unknown_when_hub_unreachable(app, client, service):
@@ -253,7 +264,7 @@ def test_device_page_renders(app, client, service):
     assert "laptop" in body
     assert PEER_ONLINE in body
     assert "Shared with this device" in body
-    assert "Downloaded copies" in body
+    assert "Downloaded copies" not in body
     assert "Shared by this device" in body
 
 
