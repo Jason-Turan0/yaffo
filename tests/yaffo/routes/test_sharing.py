@@ -104,8 +104,8 @@ class FakeP2PService:
         self.sharing = SimpleNamespace(
             list_shared=SimpleNamespace(send=self.list_shared),
             list_shared_files=self.list_shared_files,
-            pull_preview=self.pull_preview,
-            pull_file=self.pull_file,
+            pull_preview=SimpleNamespace(send=self.pull_preview),
+            pull_file=SimpleNamespace(download=self.pull_file),
         )
 
     def connected_device_ids(self):

@@ -594,7 +594,7 @@ def init_sharing_routes(app: Flask):
         if not media_dir_id or not relative_path:
             abort(404)
         try:
-            data = service.sharing.pull_preview(device_id, media_dir_id, relative_path)
+            data = service.sharing.pull_preview.send(device_id, media_dir_id, relative_path)
         except (CallError, P2PServiceError):
             abort(502)
         except FutureTimeoutError:
@@ -665,7 +665,7 @@ def init_sharing_routes(app: Flask):
         collection_path = (request.form.get("collection_name") or "").strip() or remote_media_dir_id
         expected_sha256 = (request.form.get("sha256") or "").strip() or None
         try:
-            result = service.sharing.pull_file(
+            result = service.sharing.pull_file.download(
                 device_id,
                 remote_media_dir_id,
                 relative_path,

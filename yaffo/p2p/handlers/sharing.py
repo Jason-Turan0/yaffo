@@ -1,4 +1,3 @@
-import base64
 import hashlib
 import os
 from pathlib import Path, PurePosixPath
@@ -22,12 +21,7 @@ from yaffo.db.models import (
 )
 from yaffo.db.repositories import media_dir_repository, p2p_repository
 from yaffo.db.repositories.media_filter_repository import apply_media_filters
-from yaffo.p2p.errors import P2PServiceError
-from yaffo.p2p.messages import (
-    PeerRecord,
-    build_pull_file_request,
-    build_pull_preview_request,
-)
+from yaffo.p2p.messages import PeerRecord
 
 DEFAULT_PULL_CHUNK_BYTES = 1024 * 1024
 MAX_PULL_CHUNK_BYTES = 4 * 1024 * 1024
@@ -322,13 +316,13 @@ class SharingEndpoint:
         self._service = service
         from yaffo.p2p.handlers.list_files import ListFilesEndpoint
         from yaffo.p2p.handlers.list_shared import ListSharedEndpoint
-        from yaffo.p2p.handlers.pull_file import PullFileHandler
-        from yaffo.p2p.handlers.pull_preview import PullPreviewHandler
+        from yaffo.p2p.handlers.pull_file import PullFileEndpoint
+        from yaffo.p2p.handlers.pull_preview import PullPreviewEndpoint
 
         self.list_shared = ListSharedEndpoint(service)
         self.list_files = ListFilesEndpoint(service)
-        self._pull_preview_handler = PullPreviewHandler(service)
-        self._pull_file_handler = PullFileHandler(service)
+        self.pull_preview = PullPreviewEndpoint(service)
+        self.pull_file = PullFileEndpoint(service)
 
     def list_shared_files(
         self,
@@ -340,114 +334,3 @@ class SharingEndpoint:
         limit: int = DEFAULT_LIST_FILES_LIMIT,
     ) -> dict:
         return self.list_files.send(peer_device_id, media_dir_id, relative_path, filters, offset, limit)
-
-    def pull_preview(
-        self,
-        peer_device_id: str,
-        media_dir_id: str,
-        relative_path: str,
-        max_dimension: int = DEFAULT_PREVIEW_DIMENSION,
-    ) -> bytes:
-        """Fetch a downscaled JPEG preview for one shared file."""
-        payload = build_pull_preview_request(self._service.identity, media_dir_id, relative_path, max_dimension)
-        response = self._expect_ok(self._service.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"])
-        return base64.b64decode(response["data_b64"])
-
-    def pull_file_chunk(
-        self,
-        peer_device_id: str,
-        media_dir_id: str,
-        relative_path: str,
-        offset: int = 0,
-        length: int = DEFAULT_PULL_CHUNK_BYTES,
-    ) -> dict:
-        """Pull one bounded file chunk from a trusted peer."""
-        payload = build_pull_file_request(self._service.identity, media_dir_id, relative_path, offset, length)
-        return self._expect_ok(self._service.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"])
-
-    def pull_file(
-        self,
-        peer_device_id: str,
-        media_dir_id: str,
-        relative_path: str,
-        destination_root: Path,
-        expected_sha256: Optional[str] = None,
-        chunk_size: int = DEFAULT_PULL_CHUNK_BYTES,
-        destination_device_name: Optional[str] = None,
-        destination_collection_path: Optional[str] = None,
-        source_scope_path: Optional[str] = None,
-    ) -> dict:
-        """Pull one remote file into the configured download directory."""
-        clean_path = clean_relative_path(relative_path)
-        root = destination_root.expanduser().resolve()
-        device_folder = safe_path_component(destination_device_name or peer_device_id, peer_device_id)
-        collection_folder = clean_destination_path(destination_collection_path or media_dir_id)
-        file_path = relative_path_inside_scope(clean_path, source_scope_path)
-        destination = (
-            root
-            / device_folder
-            / collection_folder.replace("/", os.sep)
-            / file_path.replace("/", os.sep)
-        ).resolve()
-        if not path_inside(destination, root):
-            raise P2PServiceError("destination path escapes the download directory")
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        partial = destination.with_name(f"{destination.name}.partial")
-
-        offset = partial.stat().st_size if partial.exists() else 0
-        size = None
-        with partial.open("ab") as handle:
-            while True:
-                chunk = self.pull_file_chunk(
-                    peer_device_id,
-                    media_dir_id,
-                    clean_path,
-                    offset=offset,
-                    length=chunk_size,
-                )
-                data = base64.b64decode(chunk["data_b64"])
-                if chunk.get("media_dir_id") != media_dir_id or chunk.get("relative_path") != clean_path:
-                    raise P2PServiceError("peer returned a chunk for a different file")
-                if chunk.get("offset") != offset:
-                    raise P2PServiceError("peer returned a chunk at the wrong offset")
-                if len(data) != chunk.get("bytes"):
-                    raise P2PServiceError("peer returned a chunk with the wrong byte count")
-                if hashlib.sha256(data).hexdigest() != chunk.get("chunk_sha256"):
-                    raise P2PServiceError("peer returned a chunk with the wrong checksum")
-                if not data and not chunk.get("eof"):
-                    raise P2PServiceError("peer returned an empty chunk before the end of the file")
-
-                size = chunk["size"]
-                handle.write(data)
-                offset = chunk["next_offset"]
-                if chunk.get("eof"):
-                    break
-
-        actual_sha256 = sha256_file(partial)
-        if expected_sha256 and actual_sha256 != expected_sha256:
-            raise P2PServiceError("downloaded file checksum did not match the peer manifest")
-        partial.replace(destination)
-        return {
-            "saved_to": str(destination),
-            "relative_path": str(destination.relative_to(root)),
-            "bytes": size if size is not None else offset,
-            "sha256": actual_sha256,
-        }
-
-    def handle_list_shared(self, body: dict) -> dict:
-        return self.list_shared.handle(body)
-
-    def handle_list_files(self, body: dict) -> dict:
-        return self.list_files.handle(body)
-
-    def handle_pull_preview(self, body: dict) -> dict:
-        return self._pull_preview_handler.handle(body)
-
-    def handle_pull_file(self, body: dict) -> dict:
-        return self._pull_file_handler.handle(body)
-
-    def _expect_ok(self, response: dict) -> dict:
-        if not isinstance(response, dict) or response.get("status") != "ok":
-            detail = response.get("detail", "peer reported an error") if isinstance(response, dict) else "no response"
-            raise P2PServiceError(detail)
-        return response

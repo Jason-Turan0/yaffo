@@ -28,7 +28,7 @@ from yaffo.logging_config import get_logger
 from yaffo.p2p.errors import P2PServiceError
 from yaffo.p2p.handlers.dispatcher import handle_stream_request
 from yaffo.p2p.handlers.pairing import PeeringEndpoint
-from yaffo.p2p.handlers.ping import PingHandler
+from yaffo.p2p.handlers.ping import PingEndpoint
 from yaffo.p2p.handlers.sharing import SharingEndpoint
 from yaffo.p2p.identity import (
     DeviceIdentity,
@@ -119,7 +119,7 @@ class P2PService:
         self._pending_lock = threading.Lock()
         self._ready = threading.Event()
         self._startup_error: Optional[BaseException] = None
-        self.ping = PingHandler(self)
+        self.ping = PingEndpoint(self)
         self.peering = PeeringEndpoint(self)
         self.sharing = SharingEndpoint(self)
 
