@@ -3,16 +3,10 @@ trust store (never anything the message carries), replay bounds, and the
 trust-not-required rule for revocation notices."""
 import pytest
 
+from yaffo.p2p.handlers.pairing import build_revocation_notice, verify_revocation_notice
+from yaffo.p2p.handlers.pull_file import build_pull_file_request, verify_pull_file_request
 from yaffo.p2p.identity import InMemorySecretStore, load_or_create_identity
-from yaffo.p2p.messages import (
-    PeerRecord,
-    build_pull_file_request,
-    build_revocation_notice,
-    build_signed_message,
-    verify_pull_file_request,
-    verify_revocation_notice,
-    verify_signed_message,
-)
+from yaffo.p2p.messages import PeerRecord, build_signed_message, verify_signed_message
 
 pytestmark = pytest.mark.unit
 

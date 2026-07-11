@@ -509,7 +509,7 @@ def init_sharing_routes(app: Flask):
             error = gettext("This device is revoked. Pair it again before browsing shared files.")
         else:
             try:
-                result = service.sharing.list_shared_files(
+                result = service.list_files.send(
                     device_id,
                     media_dir_id,
                     scope,
@@ -572,7 +572,7 @@ def init_sharing_routes(app: Flask):
         if service is None:
             return jsonify({"tag_name": tag_name, "values": []}), 503
         try:
-            result = service.sharing.list_shared_files(device_id, media_dir_id, scope, {"tag_name": tag_name}, limit=1)
+            result = service.list_files.send(device_id, media_dir_id, scope, {"tag_name": tag_name}, limit=1)
         except (CallError, P2PServiceError):
             return jsonify({"tag_name": tag_name, "values": []}), 502
         except FutureTimeoutError:
@@ -594,7 +594,7 @@ def init_sharing_routes(app: Flask):
         if not media_dir_id or not relative_path:
             abort(404)
         try:
-            data = service.sharing.pull_preview.send(device_id, media_dir_id, relative_path)
+            data = service.pull_preview.send(device_id, media_dir_id, relative_path)
         except (CallError, P2PServiceError):
             abort(502)
         except FutureTimeoutError:
@@ -621,7 +621,7 @@ def init_sharing_routes(app: Flask):
             return render_remote_panel(device, remote_error=gettext("Device sharing is not running."))
         try:
             logger.info("browse shared scopes start peer=%s", device_id)
-            remote_shared = service.sharing.list_shared.send(device_id)
+            remote_shared = service.list_shared.send(device_id)
         except (CallError, P2PServiceError) as exc:
             logger.warning("browse shared scopes failed peer=%s error=%s", device_id, exc)
             return render_remote_panel(
@@ -665,7 +665,7 @@ def init_sharing_routes(app: Flask):
         collection_path = (request.form.get("collection_name") or "").strip() or remote_media_dir_id
         expected_sha256 = (request.form.get("sha256") or "").strip() or None
         try:
-            result = service.sharing.pull_file.download(
+            result = service.pull_file.download(
                 device_id,
                 remote_media_dir_id,
                 relative_path,

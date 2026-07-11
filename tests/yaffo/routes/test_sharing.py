@@ -101,12 +101,10 @@ class FakeP2PService:
         self.preview_calls = []
         self.pulled_files = []
         self.peering = self
-        self.sharing = SimpleNamespace(
-            list_shared=SimpleNamespace(send=self.list_shared),
-            list_shared_files=self.list_shared_files,
-            pull_preview=SimpleNamespace(send=self.pull_preview),
-            pull_file=SimpleNamespace(download=self.pull_file),
-        )
+        self.list_shared = SimpleNamespace(send=self.list_shared)
+        self.list_files = SimpleNamespace(send=self.list_shared_files)
+        self.pull_preview = SimpleNamespace(send=self.pull_preview)
+        self.pull_file = SimpleNamespace(download=self.pull_file)
 
     def connected_device_ids(self):
         return self.online

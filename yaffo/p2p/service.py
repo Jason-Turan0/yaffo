@@ -10,7 +10,8 @@ across a network exchange).
 
 Inbound QUIC stream requests are dispatched to yaffo.p2p.handlers; this class
 keeps lifecycle, presence, and the low-level transport call path. Domain
-endpoints on `peering` and `sharing` own request construction and handling.
+endpoints (`peering`, `list_shared`, `list_files`, `pull_preview`,
+`pull_file`) own request construction and handling.
 """
 from __future__ import annotations
 
@@ -27,9 +28,12 @@ from yaffo.db.repositories import p2p_repository
 from yaffo.logging_config import get_logger
 from yaffo.p2p.errors import P2PServiceError
 from yaffo.p2p.handlers.dispatcher import handle_stream_request
+from yaffo.p2p.handlers.list_files import ListFilesEndpoint
+from yaffo.p2p.handlers.list_shared import ListSharedEndpoint
 from yaffo.p2p.handlers.pairing import PeeringEndpoint
 from yaffo.p2p.handlers.ping import PingEndpoint
-from yaffo.p2p.handlers.sharing import SharingEndpoint
+from yaffo.p2p.handlers.pull_file import PullFileEndpoint
+from yaffo.p2p.handlers.pull_preview import PullPreviewEndpoint
 from yaffo.p2p.identity import (
     DeviceIdentity,
     SecretStore,
@@ -121,7 +125,10 @@ class P2PService:
         self._startup_error: Optional[BaseException] = None
         self.ping = PingEndpoint(self)
         self.peering = PeeringEndpoint(self)
-        self.sharing = SharingEndpoint(self)
+        self.list_shared = ListSharedEndpoint(self)
+        self.list_files = ListFilesEndpoint(self)
+        self.pull_preview = PullPreviewEndpoint(self)
+        self.pull_file = PullFileEndpoint(self)
 
     # ---- lifecycle ---------------------------------------------------------
 
@@ -276,6 +283,15 @@ class P2PService:
         with self._session() as session:
             p2p_repository.touch_last_seen(session, peer_device_id)
         return report
+
+    def expect_ok(self, response: dict) -> dict:
+        """Raise if a peer's response to one of our `send`-style calls isn't
+        a success — the shared error path for every domain endpoint's
+        `send()`."""
+        if not isinstance(response, dict) or response.get("status") != "ok":
+            detail = response.get("detail", "peer reported an error") if isinstance(response, dict) else "no response"
+            raise P2PServiceError(detail)
+        return response
 
     async def _call_with_lan_first(
         self,

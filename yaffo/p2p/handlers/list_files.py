@@ -15,8 +15,39 @@ from yaffo.p2p.handlers.sharing import (
     parse_non_negative_int,
     validate_list_filters,
 )
-from yaffo.p2p.errors import P2PServiceError
-from yaffo.p2p.messages import build_list_files_request, verify_list_files_request
+from yaffo.p2p.identity import DeviceIdentity
+from yaffo.p2p.messages import PeerLookup, build_signed_message, verify_signed_message
+
+MESSAGE_LIST_FILES = "list_files"
+
+
+def build_list_files_request(
+    identity: DeviceIdentity, media_dir_id: str, relative_path: str, filters: dict, offset: int, limit: int
+) -> dict:
+    """One page of a scope's file manifests. `relative_path` is the scope
+    being browsed ("" for a whole media dir); `filters` is a flat dict of
+    optional criteria (path substring, media_type, year, month, device) the
+    serving side applies *after* scoping to the grant."""
+    return build_signed_message(
+        identity,
+        MESSAGE_LIST_FILES,
+        {
+            "media_dir_id": media_dir_id,
+            "relative_path": relative_path,
+            "filters": filters,
+            "offset": offset,
+            "limit": limit,
+        },
+    )
+
+
+def verify_list_files_request(body: dict, lookup: PeerLookup) -> Optional[str]:
+    return verify_signed_message(
+        body,
+        lookup,
+        MESSAGE_LIST_FILES,
+        signed_fields=("media_dir_id", "relative_path", "filters", "offset", "limit"),
+    )
 
 
 class ListFilesEndpoint:
@@ -36,7 +67,8 @@ class ListFilesEndpoint:
         payload = build_list_files_request(
             self._service.identity, media_dir_id, relative_path, filters or {}, offset, limit
         )
-        return self._expect_ok(self._service.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"])
+        response = self._service.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"]
+        return self._service.expect_ok(response)
 
     def handle(self, body: dict) -> dict:
         """Return one page of granted file manifests plus scope-constrained facets."""
@@ -89,9 +121,3 @@ class ListFilesEndpoint:
             "files": files,
             "facets": facets,
         }
-
-    def _expect_ok(self, response: dict) -> dict:
-        if not isinstance(response, dict) or response.get("status") != "ok":
-            detail = response.get("detail", "peer reported an error") if isinstance(response, dict) else "no response"
-            raise P2PServiceError(detail)
-        return response

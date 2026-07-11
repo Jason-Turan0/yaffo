@@ -1,10 +1,10 @@
 import base64
 from pathlib import Path
+from typing import Optional
 
 from yaffo.db import db
 from yaffo.db.models import MEDIA_TYPE_VIDEO, MediaItem
 from yaffo.logging_config import get_logger
-from yaffo.p2p.errors import P2PServiceError
 from yaffo.p2p.handlers.sharing import (
     DEFAULT_PREVIEW_DIMENSION,
     MAX_PREVIEW_DIMENSION,
@@ -12,10 +12,38 @@ from yaffo.p2p.handlers.sharing import (
     peer_lookup,
     resolve_scoped_request,
 )
-from yaffo.p2p.messages import build_pull_preview_request, verify_pull_preview_request
+from yaffo.p2p.identity import DeviceIdentity
+from yaffo.p2p.messages import PeerLookup, build_signed_message, verify_signed_message
 from yaffo.utils.image import preview_jpeg_bytes
 
 logger = get_logger(__name__, "webapp")
+
+MESSAGE_PULL_PREVIEW = "pull_preview"
+
+
+def build_pull_preview_request(
+    identity: DeviceIdentity, media_dir_id: str, relative_path: str, max_dimension: int
+) -> dict:
+    """A downscaled, recompressed preview of one shared file — what the
+    remote gallery shows instead of pulling originals."""
+    return build_signed_message(
+        identity,
+        MESSAGE_PULL_PREVIEW,
+        {
+            "media_dir_id": media_dir_id,
+            "relative_path": relative_path,
+            "max_dimension": max_dimension,
+        },
+    )
+
+
+def verify_pull_preview_request(body: dict, lookup: PeerLookup) -> Optional[str]:
+    return verify_signed_message(
+        body,
+        lookup,
+        MESSAGE_PULL_PREVIEW,
+        signed_fields=("media_dir_id", "relative_path", "max_dimension"),
+    )
 
 
 class PullPreviewEndpoint:
@@ -31,7 +59,8 @@ class PullPreviewEndpoint:
     ) -> bytes:
         """Fetch a downscaled JPEG preview for one shared file."""
         payload = build_pull_preview_request(self._service.identity, media_dir_id, relative_path, max_dimension)
-        response = self._expect_ok(self._service.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"])
+        response = self._service.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"]
+        response = self._service.expect_ok(response)
         return base64.b64decode(response["data_b64"])
 
     def handle(self, body: dict) -> dict:
@@ -76,9 +105,3 @@ class PullPreviewEndpoint:
             "max_dimension": max_dimension,
             "data_b64": base64.b64encode(data).decode("ascii"),
         }
-
-    def _expect_ok(self, response: dict) -> dict:
-        if not isinstance(response, dict) or response.get("status") != "ok":
-            detail = response.get("detail", "peer reported an error") if isinstance(response, dict) else "no response"
-            raise P2PServiceError(detail)
-        return response

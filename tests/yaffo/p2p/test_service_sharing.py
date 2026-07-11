@@ -11,14 +11,17 @@ from yaffo.app import create_app
 from yaffo.db import db
 from yaffo.db.models import GRANT_SCOPE_FOLDER, GRANT_SCOPE_MEDIA_DIR, MEDIA_TYPE_PHOTO, MediaItem
 from yaffo.db.repositories import media_dir_repository, p2p_repository
+from yaffo.p2p.handlers.list_files import build_list_files_request
+from yaffo.p2p.handlers.list_shared import MESSAGE_LIST_SHARED
+from yaffo.p2p.handlers.pull_file import build_pull_file_request
+from yaffo.p2p.handlers.pull_preview import build_pull_preview_request
 from yaffo.p2p.identity import InMemorySecretStore, load_or_create_identity
-from yaffo.p2p.messages import (
-    build_list_files_request,
-    build_list_shared_request,
-    build_pull_file_request,
-    build_pull_preview_request,
-)
+from yaffo.p2p.messages import build_signed_message
 from yaffo.p2p.service import P2PService
+
+
+def build_list_shared_request(identity):
+    return build_signed_message(identity, MESSAGE_LIST_SHARED)
 
 pytestmark = pytest.mark.unit
 
@@ -451,9 +454,9 @@ def test_pull_file_resumes_partial_and_verifies_complete_file(serving_context):
             "data_b64": base64.b64encode(data).decode("ascii"),
         }
 
-    service.sharing.pull_file.send = fake_pull_file_chunk
+    service.pull_file.send = fake_pull_file_chunk
 
-    result = service.sharing.pull_file.download(
+    result = service.pull_file.download(
         requester.device_id,
         "remote-lib",
         "trip/a.jpg",

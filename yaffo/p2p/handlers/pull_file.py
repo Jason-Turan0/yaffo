@@ -21,7 +21,34 @@ from yaffo.p2p.handlers.sharing import (
     safe_path_component,
     sha256_file,
 )
-from yaffo.p2p.messages import build_pull_file_request, verify_pull_file_request
+from yaffo.p2p.identity import DeviceIdentity
+from yaffo.p2p.messages import PeerLookup, build_signed_message, verify_signed_message
+
+MESSAGE_PULL_FILE = "pull_file"
+
+
+def build_pull_file_request(
+    identity: DeviceIdentity, media_dir_id: str, relative_path: str, offset: int, length: int
+) -> dict:
+    return build_signed_message(
+        identity,
+        MESSAGE_PULL_FILE,
+        {
+            "media_dir_id": media_dir_id,
+            "relative_path": relative_path,
+            "offset": offset,
+            "length": length,
+        },
+    )
+
+
+def verify_pull_file_request(body: dict, lookup: PeerLookup) -> Optional[str]:
+    return verify_signed_message(
+        body,
+        lookup,
+        MESSAGE_PULL_FILE,
+        signed_fields=("media_dir_id", "relative_path", "offset", "length"),
+    )
 
 
 class PullFileEndpoint:
@@ -38,7 +65,8 @@ class PullFileEndpoint:
     ) -> dict:
         """Pull one bounded file chunk from a trusted peer."""
         payload = build_pull_file_request(self._service.identity, media_dir_id, relative_path, offset, length)
-        return self._expect_ok(self._service.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"])
+        response = self._service.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"]
+        return self._service.expect_ok(response)
 
     def download(
         self,
@@ -165,9 +193,3 @@ class PullFileEndpoint:
             "chunk_sha256": hashlib.sha256(chunk).hexdigest(),
             "data_b64": base64.b64encode(chunk).decode("ascii"),
         }
-
-    def _expect_ok(self, response: dict) -> dict:
-        if not isinstance(response, dict) or response.get("status") != "ok":
-            detail = response.get("detail", "peer reported an error") if isinstance(response, dict) else "no response"
-            raise P2PServiceError(detail)
-        return response

@@ -1,8 +1,9 @@
 from yaffo.db import db
 from yaffo.db.repositories import media_dir_repository, p2p_repository
-from yaffo.p2p.errors import P2PServiceError
 from yaffo.p2p.handlers.sharing import grant_target, indexed_media_query, peer_lookup
-from yaffo.p2p.messages import build_list_shared_request, verify_list_shared_request
+from yaffo.p2p.messages import build_signed_message, verify_signed_message
+
+MESSAGE_LIST_SHARED = "list_shared"
 
 
 class ListSharedEndpoint:
@@ -11,13 +12,14 @@ class ListSharedEndpoint:
 
     def send(self, peer_device_id: str) -> dict:
         """Ask a trusted peer for granted scopes and file counts."""
-        payload = build_list_shared_request(self._service.identity)
-        return self._expect_ok(self._service.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"])
+        payload = build_signed_message(self._service.identity, MESSAGE_LIST_SHARED)
+        response = self._service.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"]
+        return self._service.expect_ok(response)
 
     def handle(self, body: dict) -> dict:
         """Return the scopes this peer holds grants for, with per-scope counts."""
         with self._service._session():
-            denial = verify_list_shared_request(body, peer_lookup())
+            denial = verify_signed_message(body, peer_lookup(), MESSAGE_LIST_SHARED)
             if denial is not None:
                 return {"status": "error", "detail": denial}
             peer_device_id = body["device_id"]
@@ -54,9 +56,3 @@ class ListSharedEndpoint:
             "device_id": self._service.identity.device_id,
             "scopes": scopes,
         }
-
-    def _expect_ok(self, response: dict) -> dict:
-        if not isinstance(response, dict) or response.get("status") != "ok":
-            detail = response.get("detail", "peer reported an error") if isinstance(response, dict) else "no response"
-            raise P2PServiceError(detail)
-        return response

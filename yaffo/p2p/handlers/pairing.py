@@ -1,11 +1,29 @@
 import socket
+from typing import Optional
 
 from yaffo.db import db
 from yaffo.db.repositories import p2p_repository
-from yaffo.p2p.identity import device_id_from_pubkey_b64
-from yaffo.p2p.messages import build_revocation_notice, verify_revocation_notice
+from yaffo.p2p.identity import DeviceIdentity, device_id_from_pubkey_b64
+from yaffo.p2p.messages import PeerLookup, build_signed_message, verify_signed_message
 from yaffo.p2p.pairing import PairingCode, PairingError, new_pairing_code, sign_nonce, verify_nonce_signature
 from yaffo.p2p.errors import P2PServiceError
+
+MESSAGE_REVOKED = "revoked"
+
+
+def build_revocation_notice(identity: DeviceIdentity) -> dict:
+    """Courtesy notice sent over the hub when revoking a peer, so their UI
+    can say "revoked" instead of leaving them to discover it via failing
+    requests. Enforcement never depends on it arriving — the local trust
+    store is what every request is checked against."""
+    return build_signed_message(identity, MESSAGE_REVOKED)
+
+
+def verify_revocation_notice(body: dict, lookup: PeerLookup) -> Optional[str]:
+    """Trust is NOT required — only that the sender is a known device whose
+    stored pubkey verifies the signature (a revoked-marked row may see a
+    repeat notice; that's fine and idempotent)."""
+    return verify_signed_message(body, lookup, MESSAGE_REVOKED, require_trusted=False)
 
 
 class PeeringEndpoint:

@@ -309,28 +309,3 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
-
-
-class SharingEndpoint:
-    def __init__(self, service) -> None:
-        self._service = service
-        from yaffo.p2p.handlers.list_files import ListFilesEndpoint
-        from yaffo.p2p.handlers.list_shared import ListSharedEndpoint
-        from yaffo.p2p.handlers.pull_file import PullFileEndpoint
-        from yaffo.p2p.handlers.pull_preview import PullPreviewEndpoint
-
-        self.list_shared = ListSharedEndpoint(service)
-        self.list_files = ListFilesEndpoint(service)
-        self.pull_preview = PullPreviewEndpoint(service)
-        self.pull_file = PullFileEndpoint(service)
-
-    def list_shared_files(
-        self,
-        peer_device_id: str,
-        media_dir_id: str,
-        relative_path: str = "",
-        filters: Optional[dict] = None,
-        offset: int = 0,
-        limit: int = DEFAULT_LIST_FILES_LIMIT,
-    ) -> dict:
-        return self.list_files.send(peer_device_id, media_dir_id, relative_path, filters, offset, limit)
