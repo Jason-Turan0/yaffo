@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='sharing/sharing.css') }}">
+{% endblock %}
+
+{% block content %}
+    <div class="sharing-container">
+        {% include "sharing/_sidebar.html" %}
+        <div class="sharing-content">
+            {% block sharing_content %}{% endblock %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='sharing/sharing.js') }}"></script>
+{% endblock %}

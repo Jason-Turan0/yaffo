@@ -11,6 +11,7 @@ from yaffo.routes.people import init_people_routes
 from yaffo.routes.media import init_media_routes
 from yaffo.routes.utilities import init_utilities_routes
 from yaffo.routes.settings import init_settings_routes
+from yaffo.routes.sharing import init_sharing_routes
 from yaffo.routes.themes_page import init_themes_page_routes
 
 
@@ -25,5 +26,6 @@ def init_routes(app: Flask):
     init_jobs_routes(app)
     init_utilities_routes(app)
     init_settings_routes(app)
+    init_sharing_routes(app)
     init_themes_page_routes(app)
     init_pages_routes(app)

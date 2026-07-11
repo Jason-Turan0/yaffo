@@ -1,0 +1,64 @@
+<div id="device-panel">
+    <div class="sharing-panel">
+        <div class="device-detail-status">
+            {% if not device.trusted %}
+            <span class="presence-badge presence-revoked">{{ _("Revoked") }}</span>
+            <span class="known-device-meta">{{ _("This device no longer has access. Pair again to restore it.") }}</span>
+            {% elif device.presence == 'online' %}
+            <span class="presence-badge presence-online">{{ _("Online") }}</span>
+            {% elif device.presence == 'offline' %}
+            <span class="presence-badge presence-offline">{{ _("Offline") }}</span>
+            {% else %}
+            <span class="presence-badge presence-unknown">{{ _("Unknown") }}</span>
+            {% endif %}
+        </div>
+
+        <div class="device-identity">
+            <div class="device-identity-item">
+                <label>{{ _("Device ID:") }}</label>
+                <code class="device-id">{{ device.device_id }}</code>
+            </div>
+            <div class="device-identity-item">
+                <label>{{ _("Paired:") }}</label>
+                <span class="known-device-meta">{{ device.paired_at|format_date if device.paired_at else _("Unknown") }}</span>
+            </div>
+            <div class="device-identity-item">
+                <label>{{ _("Last seen:") }}</label>
+                <span class="known-device-meta">{{ device.last_seen_at|format_date if device.last_seen_at else _("Never") }}</span>
+            </div>
+        </div>
+
+        <form class="device-rename-form"
+              hx-post="{{ url_for('sharing_device_rename', device_id=device.device_id) }}"
+              hx-target="#device-panel" hx-swap="outerHTML">
+            <label for="device-display-name">{{ _("Name on this device") }}</label>
+            <div class="device-rename-controls">
+                <input type="text" id="device-display-name" name="display_name"
+                       value="{{ device.display_name }}" required
+                       aria-label="{{ _('Device name') }}">
+                <button type="submit" class="btn-secondary">{{ _("Rename") }}</button>
+            </div>
+            <p class="hint-text">{{ _("Only changes how the device is listed here; the device itself is not affected.") }}</p>
+        </form>
+
+        {% if device.trusted %}
+        <div class="device-danger">
+            {% set revoke_message = _('Revoke %(name)s? It will lose access to everything shared with it. Files it already copied stay on it.', name=device.display_name) %}
+            <button type="button" class="btn-danger" data-icon="delete"
+                    data-sharing-confirm="revoke"
+                    data-confirm-title="{{ _('Revoke device?') }}"
+                    data-confirm-message="{{ revoke_message }}"
+                    data-confirm-text="{{ _('Revoke') }}"
+                    hx-post="{{ url_for('sharing_device_revoke', device_id=device.device_id) }}"
+                    hx-confirm="{{ revoke_message }}"
+                    hx-target="#device-panel" hx-swap="outerHTML">{{ _("Revoke this device") }}</button>
+            <p class="hint-text">{{ _("Revoking stops all future access. Files this device already copied stay on it.") }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="sharing-panel">
+        <h3>{{ _("Shared with this device") }}</h3>
+        <p class="no-data">{{ _("Nothing is shared with this device yet. Granting access to folders and albums arrives in an upcoming update.") }}</p>
+    </div>
+</div>

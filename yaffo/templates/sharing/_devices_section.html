@@ -1,0 +1,108 @@
+<div class="sharing-panel" id="devices-section">
+    {% if not sharing.available %}
+    <p class="no-data">{{ _("Device sharing is not running in this process. Start Yaffo with the full application (python -m yaffo) to enable it.") }}</p>
+    {% else %}
+
+    <div class="device-identity">
+        <div class="device-identity-item">
+            <label>{{ _("This device's ID:") }}</label>
+            <code class="device-id">{{ sharing.device_id }}</code>
+            <p class="hint-text">{{ _("Shown so you can visually confirm it from another device during pairing.") }}</p>
+        </div>
+        <div class="device-identity-item">
+            <label>{{ _("Sharing hub:") }}</label>
+            {% if sharing.hub_connected %}
+            <span class="presence-badge presence-online">{{ _("Connected") }}</span>
+            {% else %}
+            <span class="presence-badge presence-offline">{{ _("Disconnected") }}</span>
+            {% endif %}
+            <code>{{ sharing.hub_url }}</code>
+        </div>
+    </div>
+
+    <div class="pairing-forms">
+        <div class="pairing-form">
+            {% set show_code_help = _('Pairing establishes trust between two of your devices, once. Generate a code here, then paste or scan it on the other device — both must be online at the same time.') %}
+            <h3>
+                {{ _("Show a pairing code") }}
+                <button type="button" class="help-tip" data-icon="info"
+                        aria-label="{{ show_code_help }}" data-tooltip="{{ show_code_help }}"></button>
+            </h3>
+            <p class="hint-text">{{ _("Generate a code here, then paste or scan it on the other device within 5 minutes.") }}</p>
+            <button type="button" class="btn-primary"
+                    hx-post="{{ url_for('sharing_pairing_code') }}"
+                    hx-target="#pairing-code-box" hx-swap="innerHTML">{{ _("Generate pairing code") }}</button>
+            <div id="pairing-code-box"></div>
+        </div>
+
+        <div class="pairing-form">
+            <h3>{{ _("Enter a pairing code") }}</h3>
+            <p class="hint-text">{{ _("Paste the code generated on your other device. Pairing can take up to a minute.") }}</p>
+            <form class="accept-pairing-form"
+                  hx-post="{{ url_for('sharing_pair') }}"
+                  hx-target="#devices-section" hx-swap="outerHTML"
+                  hx-disabled-elt="find button">
+                <textarea name="code" rows="3" required
+                          placeholder="{{ _('Paste the pairing code here') }}"
+                          aria-label="{{ _('Pairing code') }}"></textarea>
+                <button type="submit" class="btn-primary">
+                    {{ _("Pair") }}
+                    <span class="htmx-indicator pairing-busy">{{ _("Connecting…") }}</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <h3 class="known-devices-heading">
+        {{ _("Paired devices") }}
+        <button type="button" class="btn-secondary btn-sm" data-icon="refresh"
+                hx-get="{{ url_for('sharing_settings_section') }}"
+                hx-target="#devices-section" hx-swap="outerHTML">{{ _("Refresh") }}</button>
+    </h3>
+    {% if sharing.devices %}
+    <div class="known-devices-list">
+        {% for device in sharing.devices %}
+        <div class="known-device-item {% if not device.trusted %}known-device-revoked{% endif %}">
+            <div class="known-device-info">
+                <a class="known-device-name" href="{{ url_for('sharing_device', device_id=device.device_id) }}">{{ device.display_name }}</a>
+                <code class="device-id">{{ device.device_id }}</code>
+                <span class="known-device-meta">
+                    {% if device.last_seen_at %}
+                    {{ _("Last seen: %(when)s", when=device.last_seen_at|format_date) }}
+                    {% else %}
+                    {{ _("Paired: %(when)s", when=device.paired_at|format_date) }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="known-device-status">
+                {% if not device.trusted %}
+                <span class="presence-badge presence-revoked">{{ _("Revoked") }}</span>
+                {% elif device.presence == 'online' %}
+                <span class="presence-badge presence-online">{{ _("Online") }}</span>
+                {% elif device.presence == 'offline' %}
+                <span class="presence-badge presence-offline">{{ _("Offline") }}</span>
+                {% else %}
+                <span class="presence-badge presence-unknown">{{ _("Unknown") }}</span>
+                {% endif %}
+                {% if device.trusted %}
+                {% set revoke_message = _('Revoke %(name)s? It will lose access to everything shared with it. Files it already copied stay on it.', name=device.display_name) %}
+                <button type="button" class="btn-danger btn-sm" data-icon="delete"
+                        data-sharing-confirm="revoke"
+                        data-confirm-title="{{ _('Revoke device?') }}"
+                        data-confirm-message="{{ revoke_message }}"
+                        data-confirm-text="{{ _('Revoke') }}"
+                        hx-post="{{ url_for('sharing_revoke') }}"
+                        hx-vals='{"device_id": "{{ device.device_id }}"}'
+                        hx-confirm="{{ revoke_message }}"
+                        hx-target="#devices-section" hx-swap="outerHTML">{{ _("Revoke") }}</button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-data">{{ _("No paired devices yet") }}</p>
+    {% endif %}
+
+    {% endif %}
+</div>

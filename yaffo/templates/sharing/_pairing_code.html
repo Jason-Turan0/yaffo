@@ -1,0 +1,43 @@
+<div class="pairing-code-display">
+    <img class="pairing-code-qr" src="{{ qr_data_uri }}" alt="{{ _('Pairing code QR') }}">
+    <div class="pairing-code-text-wrap">
+        <textarea class="pairing-code-text" readonly rows="3"
+                  aria-label="{{ _('Pairing code') }}">{{ code_text }}</textarea>
+        <button type="button" class="btn-secondary btn-sm pairing-code-copy"
+                data-copied-label="{{ _('Copied!') }}">{{ _("Copy code") }}</button>
+        <p class="hint-text pairing-code-expiry">
+            {{ _("Expires in") }} <strong class="pairing-code-countdown"
+                data-expires-in="{{ ttl_seconds }}">{{ '%d:%02d' % (ttl_seconds // 60, ttl_seconds % 60) }}</strong>
+            <span class="pairing-code-expired" hidden>{{ _("This code has expired — generate a new one.") }}</span>
+        </p>
+    </div>
+</div>
+<script>
+(() => {
+    const box = document.querySelector('#pairing-code-box .pairing-code-display');
+    if (!box) return;
+    const copyButton = box.querySelector('.pairing-code-copy');
+    const codeField = box.querySelector('.pairing-code-text');
+    copyButton.addEventListener('click', async () => {
+        codeField.select();
+        try { await navigator.clipboard.writeText(codeField.value); } catch { document.execCommand('copy'); }
+        copyButton.textContent = copyButton.dataset.copiedLabel;
+    });
+
+    const countdown = box.querySelector('.pairing-code-countdown');
+    const expiredNote = box.querySelector('.pairing-code-expired');
+    let remaining = Number(countdown.dataset.expiresIn);
+    const timer = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0 || !document.body.contains(countdown)) {
+            clearInterval(timer);
+            if (document.body.contains(countdown)) {
+                countdown.hidden = true;
+                expiredNote.hidden = false;
+            }
+            return;
+        }
+        countdown.textContent = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`;
+    }, 1000);
+})();
+</script>

@@ -1,6 +1,10 @@
 # P2P Device Sharing — Design & Implementation Plan
 
-Status: **design validated by POC; implementation planned, not started.**
+Status: **Phases 1–3 complete — hub deployed and verified at
+`wss://hub.yaffo.app`, the p2p engine is ported into `yaffo/p2p/`, and the
+pairing/device-management UI ships as a dedicated Sharing nav tab
+(2026-07-10; Phase 3 pending Jason's in-browser check); Phases 4+ not
+started.**
 The original design sketch here was built out as a working proof of concept in
 [`p2p-poc/`](../../p2p-poc/README.md), which succeeded end-to-end: pairing,
 presence, relay-first calls with hole-punch upgrade, authorized file pulls,
@@ -318,6 +322,17 @@ configuration is deferred** (one operated hub).
 
 ### Phase 1 — Hub, production-ready
 
+> **Status: DONE (2026-07-10).** Live at `wss://hub.yaffo.app` (static IP
+> `yaffo-hub-ip`, `e2-micro` `yaffo-hub` in `us-central1-a`). Code in
+> [`hub/`](../../hub/README.md); infrastructure as **Terraform** in
+> [`deploy/hub/`](../../deploy/hub/README.md) (chosen over the shell script
+> suggested below), with `deploy.sh` for code delivery. Domain `yaffo.app`
+> registered via Cloud Domains with the zone in Cloud DNS (simpler on one
+> bill than the registrar-DNS suggestion below). All exit criteria verified:
+> real-internet pair + pull via relay with a browser-valid LE cert, 27 hub
+> tests cover auth/allowlist/limits rejection, and a VM reset self-healed
+> hands-free. SSH access and operations are documented in the deploy README.
+
 Productionize `p2p-poc/p2p_poc/hub.py` + `relay.py` as a small standalone
 service (it deploys independently of the app, so it ships first).
 
@@ -388,6 +403,27 @@ reboot brings everything back with no hands (systemd + Caddy auto-renew).
 
 ### Phase 2 — P2P engine inside Yaffo
 
+> **Status: DONE (2026-07-10).** Engine in
+> [`yaffo/p2p/`](../../yaffo/p2p/__init__.py)
+> (`identity`, `pairing`, `stun_client`, `relay` codec, `quic_transport`,
+> `signaling`, `messages`, and `service` — protocol handlers live in
+> `P2PService`); migration 006 + `KnownDevice`/`ShareGrant` models +
+> `p2p_repository`; started from `_run_web`, or by `create_app` when
+> `YAFFO_P2P_ENABLED=1` — which `inv app-local` / `inv start-app` set, so the
+> flask dev flow gets the engine too (available to routes as
+> `app.extensions["p2p_service"]`, hub/port overridable via `YAFFO_HUB_URL` /
+> `YAFFO_P2P_PORT`). The keychain entry is scoped per install
+> (`p2p_device_key:<data dir>`), so two instances on one machine are distinct
+> devices that can pair. Deviations from the sketch below: pairing codes no
+> longer embed host/port (relay-first needs no address), the confirm payload
+> gained an explicit `type: pairing_confirm`, and both sides now also check
+> `device_id == hash(pubkey)` on transmitted pairs. Exit criteria verified:
+> the ported Tier-1 suite (identity, pairing, signed messages, QUIC pinning
+> incl. the aioquic canary, repository, and the two-instance loopback
+> pair/call/revoke/re-pair integration test with an in-test hub speaking the
+> production challenge-auth protocol) is green in `tests/yaffo/p2p/`, and a
+> smoke run authenticated against the live `wss://hub.yaffo.app`.
+
 Port the POC's client-side modules into a new `yaffo/p2p/` package:
 `identity.py`, `pairing.py`, `quic_transport.py`, `stun_client.py`,
 `signaling.py` (HubClient), and the protocol handlers. Changes from the POC:
@@ -422,6 +458,26 @@ integration test (two `create_app`s, separate data dirs, a local hub,
 pair + call end-to-end) all green in Yaffo's pytest.
 
 ### Phase 3 — Pairing & device management UI
+
+> **Status: DONE (2026-07-10), pending Jason's in-browser pass.** Built as a
+> dedicated **"Sharing" nav tab** (evolved beyond the Settings-section sketch
+> below): utilities-style layout with a left sidebar — "Settings & pairing"
+> plus one entry per paired device (online/revoked badges; auto-refreshes via
+> a `sharingDevicesChanged` HTMX trigger) — and per-device pages (rename,
+> revoke, presence, and the placeholder Phase 4 fills with grants). Routes in
+> [`yaffo/routes/sharing.py`](../../yaffo/routes/sharing.py) (HTMX fragments
+> in the labels-section style — errors are 204 + toast so typed input
+> survives), templates under `templates/sharing/` (QR via `segno`,
+> pure-Python; expiry countdown), presence tri-state per render from the
+> hub's `/devices`. The service is reached via
+> `app.extensions["p2p_service"]`; without it (flask run without
+> `YAFFO_P2P_ENABLED=1`) pages render with presence unknown and pairing
+> disabled. Exit criteria verified by
+> `test_pair_and_revoke_entirely_through_the_ui_routes` (two instances pair,
+> show each other online, and revoke — through the routes only) plus
+> stub-service route tests; the live prod hub renders "Connected" on the
+> real page. Dev: `inv app-local` + `inv app-local-peer` run two instances
+> side by side for manual pairing.
 
 A "Devices" (or "Sharing") section on the Settings page
 (`yaffo/routes/settings.py` + templates), backed by JSON routes that bridge

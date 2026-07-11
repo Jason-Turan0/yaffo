@@ -105,10 +105,13 @@
                    class="nav-link {% if request.endpoint and 'locations' in request.endpoint %}active{% endif %}">{{ _("Locations") }}</a></li>
             <li><a href="{{ url_for('utilities_index') }}" data-icon="utilities"
                    class="nav-link {% if request.endpoint and (request.endpoint.startswith('utilities_') or request.endpoint.startswith('automations_')) %}active{% endif %}">{{ _("Utilities") }}</a></li>
+            <li><a href="{{ url_for('sharing_index') }}" data-icon="sharing"
+                   class="nav-link {% if request.endpoint and request.endpoint.startswith('sharing_') %}active{% endif %}">{{ _("Sharing") }}</a></li>
             <li><a href="{{ url_for('themes_index') }}" data-icon="themes"
                    class="nav-link {% if request.endpoint in ['themes_index', 'themes_show'] %}active{% endif %}">{{ _("Themes") }}</a></li>
+            {# startswith('settings_') (not substring) so sharing_settings doesn't light this tab too #}
             <li><a href="{{ url_for('settings_index') }}" data-icon="settings"
-                   class="nav-link {% if request.endpoint and 'settings' in request.endpoint %}active{% endif %}">{{ _("Settings") }}</a></li>
+                   class="nav-link {% if request.endpoint and request.endpoint.startswith('settings_') %}active{% endif %}">{{ _("Settings") }}</a></li>
 
         </ul>
         <button type="button" id="nav-pages-toggle" class="nav-link nav-pages-toggle"

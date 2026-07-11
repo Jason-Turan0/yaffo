@@ -21,16 +21,25 @@ def _data_env():
     return {"YAFFO_DATA_DIR": YAFFO_DATA_DIR}
 
 
+def _peer_data_env():
+    return {"YAFFO_DATA_DIR": '/tmp/yaffo-peer'}
+
 def _flask_command(host, port):
     return f"flask run --host={host} --port={port}"
 
 
-def _flask_env(debug):
+def _flask_env(p2p_port, data_dir, debug):
     return {
         "FLASK_APP": "yaffo.app:create_app",
         "FLASK_ENV": "development" if debug else "production",
         "FLASK_DEBUG": "1" if debug else "0",
-        **_data_env(),
+        # Start the p2p sharing engine inside the flask process (create_app
+        # honors this; `python -m yaffo` starts it without the flag). Each
+        # instance needs its own p2p UDP port and data dir — the peer stack
+        # (app-local-peer) passes different ones so the two can pair.
+        "YAFFO_P2P_ENABLED": "1",
+        "YAFFO_P2P_PORT": str(p2p_port),
+        "YAFFO_DATA_DIR": data_dir,
     }
 
 
@@ -103,7 +112,7 @@ def _run_concurrently(processes):
 
 
 @task
-def start_app(c, host="127.0.0.1", port=5002, debug=True):
+def start_app(c, host="127.0.0.1", port=5002,p2p_port= 5003, debug=True):
     """
     Start the Flask web application and open Chrome in incognito mode.
 
@@ -118,7 +127,7 @@ def start_app(c, host="127.0.0.1", port=5002, debug=True):
     """
     print(f"Starting Flask app on {host}:{port} (debug={debug})")
     _open_chrome(f"http://{host}:{port}")
-    c.run(_flask_command(host, port), env=_flask_env(debug), pty=True)
+    c.run(_flask_command(host, port), env=_flask_env(p2p_port,_data_env().get("YAFFO_DATA_DIR"), debug), pty=True)
 
 
 @task
@@ -160,7 +169,7 @@ def start_watcher(c):
 
 
 @task
-def app_local(c, host="127.0.0.1", port=5002, debug=True, workers=4, recycle=100):
+def app_local(c, host="127.0.0.1", port=5001, p2p_port= 5004, debug=True, workers=4, recycle=100):
     """
     Launch the full local stack at once: the Flask app, the task-queue host, and
     the photo watcher. Output from all three is interleaved with [flask]/[host]/
@@ -178,17 +187,49 @@ def app_local(c, host="127.0.0.1", port=5002, debug=True, workers=4, recycle=100
         inv app-local --port=8000 --workers=8
     """
     print(f"Starting the full local stack on {host}:{port} (debug={debug})")
+    # flask run doesn't run migrations (only `python -m yaffo` does), so bring
+    # the schema up to date first — idempotent and fast when already current.
+    c.run("python -m yaffo.scripts.db.migrate", env=_data_env(), pty=True)
     _open_chrome(f"http://{host}:{port}")
     _run_concurrently([
-        ("flask", _flask_command(host, port), _flask_env(debug)),
+        ("flask", _flask_command(host, port), _flask_env(p2p_port, _data_env().get('YAFFO_DATA_DIR'),debug)),
         ("host", _host_command(workers, recycle), _data_env()),
         ("watcher", _watcher_command(), _data_env()),
     ])
 
 @task
+def app_local_peer(c, host="127.0.0.1", port=5004, p2p_port= 5005, debug=True, workers=4, recycle=100):
+    """
+    Launch the full local stack at once: the Flask app, the task-queue host, and
+    the photo watcher. Output from all three is interleaved with [flask]/[host]/
+    [watcher] prefixes. Press Ctrl+C to stop everything together.
+
+    Args:
+        host: Host to bind the Flask app to (default: 127.0.0.1)
+        port: Port to bind the Flask app to (default: 5002 — 5000 collides with macOS AirPlay Receiver)
+        debug: Run Flask in debug mode (default: True)
+        workers: Number of spawn worker processes (default: 4)
+        recycle: Recycle each worker after this many tasks (default: 100)
+
+    Example:
+        inv app-local
+        inv app-local --port=8000 --workers=8
+    """
+    print(f"Starting the peer stack on {host}:{port} (debug={debug}, data dir {_peer_data_env()['YAFFO_DATA_DIR']})")
+    # The peer data dir starts empty; create/upgrade its schema before flask
+    # touches it (flask run doesn't run migrations).
+    c.run("python -m yaffo.scripts.db.migrate", env=_peer_data_env(), pty=True)
+    _open_chrome(f"http://{host}:{port}")
+    _run_concurrently([
+        ("flask", _flask_command(host, port), _flask_env(p2p_port, _peer_data_env().get('YAFFO_DATA_DIR'),debug)),
+        ("host", _host_command(workers, recycle), _peer_data_env()),
+        ("watcher", _watcher_command(), _peer_data_env()),
+    ])
+
+@task
 def download_assets(c):
     _run_concurrently([
-        ("download_assets", _download_assets_command(), _data_env()),
+        ("download_assets", _download_assets_command(), _peer_data_env()),
     ])
 
 

@@ -1,0 +1,11 @@
+{% extends "sharing/_base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}{{ _("Sharing - Yaffo") }}{% endblock %}
+
+{% block sharing_content %}
+<div class="sharing-page">
+    {{ page_header(_('Device sharing'), _('Pair your other Yaffo devices to share photos between them — device to device, never through a server.')) }}
+    {% include "sharing/_devices_section.html" %}
+</div>
+{% endblock %}

@@ -635,6 +635,66 @@ class Widget(db.Model):
     version = db.relationship("PageVersion", back_populates="widgets")
 
 
+# P2P device sharing (docs/development/p2p-sharing.md). Trust state of a paired
+# peer: every incoming request re-checks it, so flipping to revoked is the
+# enforcement (soft revocation — files already pulled stay pulled).
+TRUST_STATE_TRUSTED = "trusted"
+TRUST_STATE_REVOKED = "revoked"
+
+# What a share grant scopes: a whole media dir, a folder subtree within one, or
+# (Phase 6, migration 007) a curated album.
+GRANT_SCOPE_MEDIA_DIR = "media_dir"
+GRANT_SCOPE_FOLDER = "folder"
+GRANT_SCOPE_ALBUM = "album"
+
+
+class KnownDevice(db.Model):
+    """A paired peer device — one row per pairing (TOFU trust anchor).
+
+    `device_id` is the self-authenticating hash of `pubkey` (see yaffo.p2p.identity);
+    signatures and certificate pins verify against the stored pubkey, never against
+    anything a request carries. Presence is never persisted — the hub's open
+    WebSockets are the source of truth; only `last_seen_at` is recorded."""
+
+    __tablename__ = "known_devices"
+
+    device_id = db.Column(db.String, primary_key=True)
+    pubkey = db.Column(db.String, nullable=False)  # urlsafe-b64 uncompressed-point P-256
+    display_name = db.Column(db.String)  # peer-supplied at pairing, locally editable
+    trust_state = db.Column(db.String, nullable=False, default=TRUST_STATE_TRUSTED)
+    paired_at = db.Column(db.DateTime, default=utcnow)
+    last_seen_at = db.Column(db.DateTime, nullable=True)
+    revoked_at = db.Column(db.DateTime, nullable=True)  # audit trail for the revoked flip
+
+    grants = db.relationship("ShareGrant", back_populates="peer", cascade="all, delete-orphan")
+
+
+class ShareGrant(db.Model):
+    """One (peer, scope) authorization. Pairing grants access to nothing; a grant
+    is what lets one trusted peer pull one scope. Enforced at request time by the
+    serving device, so revocation (an update, not a delete — the UI can show
+    history) takes effect on the peer's next pull. Shape rule (enforced by the
+    repository): media_dir ⇒ media_dir_id set; folder ⇒ media_dir_id +
+    relative_path set; album (Phase 6) ⇒ album_id set; other scope columns NULL."""
+
+    __tablename__ = "share_grants"
+
+    id = db.Column(db.Integer, primary_key=True)
+    peer_device_id = db.Column(
+        db.String, db.ForeignKey("known_devices.device_id", ondelete="CASCADE"), nullable=False
+    )
+    scope_type = db.Column(db.String, nullable=False)
+    # Media-dir GUID. No DB-level FK possible — the registry lives in the
+    # application_settings `media_dirs` JSON — so the repository validates it and
+    # grants on since-removed dirs are inert.
+    media_dir_id = db.Column(db.String, nullable=True)
+    relative_path = db.Column(db.String, nullable=True)  # folder scope: POSIX-style subtree prefix
+    created_at = db.Column(db.DateTime, default=utcnow)
+    revoked_at = db.Column(db.DateTime, nullable=True)  # active grant ⇔ revoked_at IS NULL
+
+    peer = db.relationship("KnownDevice", back_populates="grants")
+
+
 class Conversation(db.Model):
     __tablename__ = "conversations"
 

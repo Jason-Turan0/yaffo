@@ -27,7 +27,19 @@ from yaffo.logging_config import get_logger
 from yaffo.config import get_int as get_config_int
 
 HOST = "127.0.0.1"
-PORT = get_config_int("web", "port", 5001)
+
+
+def _web_port() -> int:
+    """config.toml [web] port, overridable via YAFFO_WEB_PORT — the override
+    exists so a second instance (p2p pairing tests) can run beside the first
+    without editing its config."""
+    try:
+        return int(os.environ["YAFFO_WEB_PORT"])
+    except (KeyError, ValueError):
+        return get_config_int("web", "port", 5001)
+
+
+PORT = _web_port()
 WEB_THREADS = 8
 WORKERS = max(2, (os.cpu_count() or 4) - 1)
 RECYCLE = 100
@@ -128,7 +140,10 @@ def _run_web() -> None:
     procs = _start_background()
     atexit.register(_stop_background, procs)
 
+    from yaffo.p2p.service import start_p2p_service
+
     app = create_app()
+    start_p2p_service(app)
     url = f"http://{HOST}:{PORT}"
     threading.Timer(1.5, lambda: webbrowser.open(url)).start()
 

@@ -45,6 +45,7 @@
     "yaffo/static/searchable-select.js",
     "yaffo/static/settings/index.js",
     "yaffo/static/settings/labels.js",
+    "yaffo/static/sharing/sharing.js",
     "yaffo/static/themes_page/index.js",
     "yaffo/static/utils.js",
     "yaffo/static/utilities/_base.js",

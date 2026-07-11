@@ -1,0 +1,38 @@
+{# Left navigation for the Sharing tab: the settings entry plus one entry per
+   paired device. Re-fetches itself when an action fires sharingDevicesChanged
+   (pair / revoke / rename), so the list stays current without a page load. #}
+<nav class="sidebar sharing-sidebar" id="sharing-sidebar"
+     hx-get="{{ url_for('sharing_sidebar', selected=selected_key) }}"
+     hx-trigger="sharingDevicesChanged from:body"
+     hx-swap="outerHTML">
+    <h2>{{ _("Sharing") }}</h2>
+    <ul class="panel-nav">
+        <li>
+            <a href="{{ url_for('sharing_settings') }}"
+               class="{% if selected_key == 'settings' %}active{% endif %}">
+                {{ _("Settings & pairing") }}
+            </a>
+        </li>
+    </ul>
+
+    <h3>{{ _("Devices") }}</h3>
+    {% if sharing.devices %}
+    <ul class="panel-nav">
+        {% for device in sharing.devices %}
+        <li>
+            <a href="{{ url_for('sharing_device', device_id=device.device_id) }}"
+               class="{% if selected_key == device.device_id %}active{% endif %}">
+                <span class="panel-nav-label">{{ device.display_name }}</span>
+                {% if not device.trusted %}
+                <span class="sharing-nav-badge sharing-nav-badge-revoked">{{ _("Revoked") }}</span>
+                {% elif device.presence == 'online' %}
+                <span class="sharing-nav-badge sharing-nav-badge-online">{{ _("Online") }}</span>
+                {% endif %}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="no-data">{{ _("No paired devices yet") }}</p>
+    {% endif %}
+</nav>

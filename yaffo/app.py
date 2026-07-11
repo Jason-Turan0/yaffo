@@ -70,6 +70,25 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None):
 
     init_template_filters(app)
     init_routes(app)
+
+    # `python -m yaffo` starts the p2p sharing engine itself (see __main__);
+    # under `flask run` (the inv app-local / start-app dev flow) there is no
+    # __main__, so create_app starts it when the invoke env opts in. Never set
+    # for tests — they inject a service (or none) explicitly.
+    #
+    # Reloader caveat: with FLASK_DEBUG=1, `flask run` loads the app in BOTH
+    # the reloader parent and the serving child (Flask ≥2.2). Only the child
+    # (WERKZEUG_RUN_MAIN=true) may start the engine — otherwise the parent
+    # wins the UDP-port bind and the process actually serving requests gets
+    # "Address already in use" and sharing disabled.
+    reloader_parent = (
+        os.environ.get("FLASK_DEBUG") == "1" and os.environ.get("WERKZEUG_RUN_MAIN") != "true"
+    )
+    if os.environ.get("YAFFO_P2P_ENABLED") == "1" and not app.config.get("TESTING") and not reloader_parent:
+        from yaffo.p2p.service import start_p2p_service
+
+        start_p2p_service(app)
+
     return app
 
 if __name__ == "__main__":

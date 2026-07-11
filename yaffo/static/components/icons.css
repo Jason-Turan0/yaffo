@@ -63,6 +63,8 @@ button[data-icon]::before {
 [data-icon="file"]::before { -webkit-mask-image: url("/static/themes/classic/icon-file.svg"); mask-image: url("/static/themes/classic/icon-file.svg"); }
 [data-icon="arrow-up"]::before { -webkit-mask-image: url("/static/themes/classic/icon-arrow-up.svg"); mask-image: url("/static/themes/classic/icon-arrow-up.svg"); }
 [data-icon="sync"]::before { -webkit-mask-image: url("/static/themes/classic/icon-sync.svg"); mask-image: url("/static/themes/classic/icon-sync.svg"); }
+[data-icon="refresh"]::before { -webkit-mask-image: url("/static/themes/classic/icon-sync.svg"); mask-image: url("/static/themes/classic/icon-sync.svg"); }
+[data-icon="sharing"]::before { -webkit-mask-image: url("/static/themes/classic/icon-sharing.svg"); mask-image: url("/static/themes/classic/icon-sharing.svg"); }
 [data-icon="shuffle"]::before { -webkit-mask-image: url("/static/themes/classic/icon-shuffle.svg"); mask-image: url("/static/themes/classic/icon-shuffle.svg"); }
 [data-icon="skip"]::before { -webkit-mask-image: url("/static/themes/classic/icon-skip.svg"); mask-image: url("/static/themes/classic/icon-skip.svg"); }
 [data-icon="favorite"]::before { -webkit-mask-image: url("/static/themes/classic/icon-heart.svg"); mask-image: url("/static/themes/classic/icon-heart.svg"); }
