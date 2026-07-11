@@ -26,6 +26,9 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
         const list = document.getElementById('folder-picker-list');
         const upBtn = document.getElementById('folder-picker-up');
         const rootsBox = document.getElementById('folder-picker-roots');
+        const createForm = document.getElementById('folder-picker-create');
+        const createInput = document.getElementById('folder-picker-create-name');
+        const createSubmit = document.getElementById('folder-picker-create-submit');
         const selectBtn = document.getElementById('folder-picker-select');
         const cancelBtn = document.getElementById('folder-picker-cancel');
         const errorBox = document.getElementById('folder-picker-error');
@@ -36,6 +39,9 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
             !list ||
             !(upBtn instanceof HTMLButtonElement) ||
             !rootsBox ||
+            !(createForm instanceof HTMLFormElement) ||
+            !(createInput instanceof HTMLInputElement) ||
+            !(createSubmit instanceof HTMLButtonElement) ||
             !(selectBtn instanceof HTMLButtonElement) ||
             !(cancelBtn instanceof HTMLButtonElement) ||
             !errorBox
@@ -57,6 +63,9 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
                 : i18n.t('components:folderPicker.selectFolder'));
         upBtn.dataset.icon = 'arrow-up';
         upBtn.textContent = i18n.t('components:folderPicker.up');
+        createInput.placeholder = i18n.t('components:folderPicker.newFolderName');
+        createInput.setAttribute('aria-label', i18n.t('components:folderPicker.newFolderName'));
+        createSubmit.textContent = i18n.t('components:folderPicker.createFolder');
         selectBtn.dataset.icon = 'folder';
         // "Select this folder" is hidden only for file-only selection; files resolve on click.
         selectBtn.style.display = isFileMode ? 'none' : '';
@@ -76,6 +85,7 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
             selectBtn.removeEventListener('click', onSelect);
             cancelBtn.removeEventListener('click', onCancel);
             upBtn.removeEventListener('click', onUp);
+            createForm.removeEventListener('submit', onCreateFolder);
             modal.removeEventListener('click', onBackdrop);
             document.removeEventListener('keydown', onKeydown);
         };
@@ -85,6 +95,42 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
         const onUp = () => { if (parentPath) navigate(parentPath); };
         const onBackdrop = (/** @type {MouseEvent} */ e) => { if (e.target === modal) onCancel(); };
         const onKeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === 'Escape') onCancel(); };
+        const onCreateFolder = (/** @type {SubmitEvent} */ e) => {
+            e.preventDefault();
+            void createFolder();
+        };
+
+        const createFolder = async () => {
+            const name = createInput.value.trim();
+            if (!name) {
+                errorBox.textContent = i18n.t('components:folderPicker.folderNameRequired');
+                createInput.focus();
+                return;
+            }
+            if (!currentPath) {
+                errorBox.textContent = i18n.t('components:folderPicker.createFailed');
+                return;
+            }
+            createSubmit.disabled = true;
+            try {
+                const response = await fetch(window.APP_CONFIG.urls.fs_create_folder, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentPath, name }),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    errorBox.textContent = data.error || i18n.t('components:folderPicker.createFailed');
+                    return;
+                }
+                createInput.value = '';
+                await navigate(data.path);
+            } catch {
+                errorBox.textContent = i18n.t('components:folderPicker.createFailed');
+            } finally {
+                createSubmit.disabled = false;
+            }
+        };
 
         /**
          * @param {FolderPickerRoot[]} roots
@@ -97,6 +143,7 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
                 chip.className = 'folder-picker-root';
                 chip.dataset.icon = 'folder';
                 chip.textContent = r.name;
+                chip.title = r.path;
                 chip.addEventListener('click', () => navigate(r.path));
                 rootsBox.appendChild(chip);
             });
@@ -157,6 +204,7 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
             pathLabel.title = displayPath;
             errorBox.textContent = data.error || '';
             upBtn.disabled = !data.parent;
+            createSubmit.disabled = !data.path;
             renderRoots(data.roots || []);
             renderEntries(data.entries || []);
         };
@@ -164,9 +212,11 @@ window.PHOTO_ORGANIZER.pickFolder = ({ mode = 'folder', startPath = null } = {})
         selectBtn.addEventListener('click', onSelect);
         cancelBtn.addEventListener('click', onCancel);
         upBtn.addEventListener('click', onUp);
+        createForm.addEventListener('submit', onCreateFolder);
         modal.addEventListener('click', onBackdrop);
         document.addEventListener('keydown', onKeydown);
 
+        createInput.value = '';
         modal.classList.add('active');
         navigate(currentPath);
     });

@@ -453,16 +453,25 @@ class P2PService:
         destination_root: Path,
         expected_sha256: Optional[str] = None,
         chunk_size: int = DEFAULT_PULL_CHUNK_BYTES,
+        destination_device_name: Optional[str] = None,
+        destination_collection_path: Optional[str] = None,
+        source_scope_path: Optional[str] = None,
     ) -> dict:
-        """Pull one remote file into a local media directory, resuming from a
-        `.partial` file if present. The remote path is always nested under a
-        stable per-peer folder so two peers with the same relative path don't
-        collide."""
+        """Pull one remote file into the configured download directory,
+        resuming from a `.partial` file if present."""
         clean_relative_path = self._clean_relative_path(relative_path)
         root = destination_root.expanduser().resolve()
-        destination = (root / "Shared" / peer_device_id / clean_relative_path.replace("/", os.sep)).resolve()
+        device_folder = self._safe_path_component(destination_device_name or peer_device_id, peer_device_id)
+        collection_folder = self._clean_destination_path(destination_collection_path or media_dir_id)
+        file_path = self._relative_path_inside_scope(clean_relative_path, source_scope_path)
+        destination = (
+            root
+            / device_folder
+            / collection_folder.replace("/", os.sep)
+            / file_path.replace("/", os.sep)
+        ).resolve()
         if not self._path_inside(destination, root):
-            raise P2PServiceError("destination path escapes the media directory")
+            raise P2PServiceError("destination path escapes the download directory")
         destination.parent.mkdir(parents=True, exist_ok=True)
         partial = destination.with_name(f"{destination.name}.partial")
 
@@ -968,6 +977,35 @@ class P2PService:
         if path.is_absolute() or any(part in ("", ".", "..") for part in path.parts):
             raise ValueError("relative_path must stay inside the media directory")
         return path.as_posix()
+
+    def _safe_path_component(self, raw_value: str, fallback: str) -> str:
+        value = (raw_value or "").strip() or fallback
+        cleaned = "".join("_" if ch in '<>:"/\\|?*' or ord(ch) < 32 else ch for ch in value).strip()
+        if cleaned in ("", ".", ".."):
+            return fallback
+        return cleaned
+
+    def _clean_destination_path(self, raw_path: str) -> str:
+        path = PurePosixPath((raw_path or "").strip())
+        if path.is_absolute():
+            raise ValueError("destination collection must be relative")
+        parts = [
+            self._safe_path_component(part, "Files")
+            for part in path.parts
+            if part not in ("", ".", "..")
+        ]
+        return PurePosixPath(*parts).as_posix() if parts else "Files"
+
+    def _relative_path_inside_scope(self, relative_path: str, scope_path: Optional[str]) -> str:
+        if not scope_path:
+            return relative_path
+        scope = self._clean_relative_path(scope_path).rstrip("/")
+        if relative_path == scope:
+            return PurePosixPath(relative_path).name
+        prefix = f"{scope}/"
+        if relative_path.startswith(prefix):
+            return relative_path[len(prefix):]
+        return PurePosixPath(relative_path).name
 
     def _parse_non_negative_int(self, raw_value, field: str) -> int:
         if not isinstance(raw_value, int) or raw_value < 0:

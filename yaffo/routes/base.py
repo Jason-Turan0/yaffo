@@ -1,7 +1,12 @@
+from pathlib import Path
+
 from flask import Flask, Response, abort, jsonify, render_template, request, send_from_directory
+from flask_babel import gettext
 
 from yaffo import themes
-from yaffo.utils.file_system import list_directory, listing_to_dict
+from yaffo.db import db
+from yaffo.db.repositories import media_dir_repository
+from yaffo.utils.file_system import DirEntry, list_directory, listing_to_dict
 
 
 def _css_response(css: str) -> Response:
@@ -22,6 +27,33 @@ def _assemble_theme_css(assets) -> str:
     return f"{assets.tokens_css}\n\n{assets.skin_css}".strip() + "\n"
 
 
+def _shortcut_key(path_value: str) -> str:
+    try:
+        return str(Path(path_value).expanduser().resolve())
+    except OSError:
+        return str(Path(path_value).expanduser())
+
+
+def _append_unique_roots(roots: list[DirEntry], extra_roots: list[DirEntry]) -> None:
+    seen = {_shortcut_key(root.path) for root in roots}
+    for root in extra_roots:
+        key = _shortcut_key(root.path)
+        if key in seen:
+            continue
+        seen.add(key)
+        roots.append(root)
+
+
+def _configured_media_dir_roots() -> list[DirEntry]:
+    roots: list[DirEntry] = []
+    for media_dir in media_dir_repository.get_media_dir_entries(db.session):
+        directory = media_dir.path.expanduser()
+        if not directory.is_dir():
+            continue
+        roots.append(DirEntry(name=directory.name or str(directory), path=str(directory), is_dir=True))
+    return roots
+
+
 def init_base_routes(app: Flask):
     @app.errorhandler(404)
     def page_not_found(error):
@@ -36,7 +68,30 @@ def init_base_routes(app: Flask):
         """Browse the local filesystem for the in-app folder/file picker. `path` is the
         directory to list (defaults to home); `mode` is "folder", "file", or "any"."""
         listing = list_directory(request.args.get('path'), request.args.get('mode', 'folder'))
+        _append_unique_roots(listing.roots, _configured_media_dir_roots())
         return jsonify(listing_to_dict(listing))
+
+    @app.route('/api/fs/create-folder', methods=["POST"])
+    def fs_create_folder():
+        """Create one subfolder under the picker’s current directory."""
+        data = request.get_json(silent=True) or {}
+        parent_value = str(data.get("path") or "").strip()
+        name = str(data.get("name") or "").strip()
+        if not name:
+            return jsonify({"error": gettext("Folder name is required")}), 400
+        if name in (".", "..") or "/" in name or "\\" in name:
+            return jsonify({"error": gettext("Folder name cannot contain path separators")}), 400
+        parent = Path(parent_value).expanduser()
+        if not parent.is_dir():
+            return jsonify({"error": gettext("Choose an existing parent folder")}), 400
+        child = parent / name
+        if child.exists():
+            return jsonify({"error": gettext("A file or folder with that name already exists")}), 400
+        try:
+            child.mkdir()
+        except OSError as exc:
+            return jsonify({"error": gettext("Could not create folder: %(reason)s", reason=str(exc))}), 400
+        return jsonify({"path": str(child)}), 201
 
     @app.route('/favicon.ico', methods=["GET"])
     def favicon():

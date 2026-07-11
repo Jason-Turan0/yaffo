@@ -1,6 +1,10 @@
 """Route test for the folder-picker's filesystem listing endpoint."""
 import pytest
 
+from yaffo.db import db
+from yaffo.db.repositories import media_dir_repository
+from yaffo.utils import file_system
+
 pytestmark = pytest.mark.unit
 
 
@@ -50,3 +54,50 @@ def test_fs_list_defaults_to_home_without_path(client):
     resp = client.get("/api/fs/list")
     assert resp.status_code == 200
     assert resp.get_json()["path"] == str(Path.home())
+
+
+def test_fs_list_includes_configured_media_dirs(app, client, tmp_path):
+    media_dir = tmp_path / "library"
+    media_dir.mkdir()
+    with app.app_context():
+        media_dir_repository.add_media_dir(db.session, str(media_dir))
+
+    resp = client.get("/api/fs/list")
+
+    roots = {root["path"]: root for root in resp.get_json()["roots"]}
+    assert roots[str(media_dir)]["name"] == "library"
+
+
+def test_external_volume_shortcuts_include_mounted_directories(tmp_path):
+    volumes = tmp_path / "Volumes"
+    volumes.mkdir()
+    (volumes / "Camera Card").mkdir()
+    (volumes / ".hidden").mkdir()
+    (volumes / "readme.txt").write_text("x")
+
+    roots = file_system._external_volume_roots(volumes)
+
+    assert [(root.name, root.path) for root in roots] == [("Camera Card", str(volumes / "Camera Card"))]
+
+
+def test_fs_create_folder_creates_child_and_returns_path(client, tmp_path):
+    parent = tmp_path / "parent"
+    parent.mkdir()
+
+    resp = client.post("/api/fs/create-folder", json={"path": str(parent), "name": "New Folder"})
+
+    assert resp.status_code == 201
+    created = parent / "New Folder"
+    assert created.is_dir()
+    assert resp.get_json()["path"] == str(created)
+
+
+@pytest.mark.parametrize("name", ["", ".", "..", "nested/folder", "nested\\folder"])
+def test_fs_create_folder_rejects_invalid_names(client, tmp_path, name):
+    parent = tmp_path / "parent"
+    parent.mkdir()
+
+    resp = client.post("/api/fs/create-folder", json={"path": str(parent), "name": name})
+
+    assert resp.status_code == 400
+    assert "error" in resp.get_json()

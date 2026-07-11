@@ -9,6 +9,7 @@ returns the chosen absolute path.
 """
 from __future__ import annotations
 
+import platform
 import string
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -41,10 +42,42 @@ def _drive_roots() -> list[DirEntry]:
     return roots
 
 
+def _external_volume_roots(volumes_dir: Path | None = None) -> list[DirEntry]:
+    """Mounted macOS volumes. Empty on platforms without /Volumes."""
+    if volumes_dir is None and platform.system() != "Darwin":
+        return []
+    volumes = volumes_dir or Path("/Volumes")
+    if not volumes.is_dir():
+        return []
+    roots: list[DirEntry] = []
+    try:
+        children = sorted(volumes.iterdir(), key=lambda p: p.name.lower())
+    except OSError:
+        return []
+
+    try:
+        system_root = Path("/").resolve()
+    except OSError:
+        system_root = Path("/")
+    for child in children:
+        if child.name.startswith("."):
+            continue
+        try:
+            if not child.is_dir():
+                continue
+            if child.resolve() == system_root:
+                continue
+        except OSError:
+            continue
+        roots.append(DirEntry(name=child.name, path=str(child), is_dir=True))
+    return roots
+
+
 def _shortcuts() -> list[DirEntry]:
-    """Sensible starting points: the user's home, plus any Windows drives."""
+    """Sensible starting points: home, mounted volumes, and Windows drives."""
     home = Path.home()
     shortcuts = [DirEntry(name="Home", path=str(home), is_dir=True)]
+    shortcuts.extend(_external_volume_roots())
     shortcuts.extend(_drive_roots())
     return shortcuts
 

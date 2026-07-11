@@ -66,6 +66,10 @@
       "weeklyOnAt": "साप्ताहिक चालू {{day}} पर {{time}}"
     },
     "folderPicker": {
+      "createFailed": "फ़ोल्डर नहीं बनाया जा सका.",
+      "createFolder": "फ़ोल्डर बनाएँ",
+      "folderNameRequired": "फ़ोल्डर का नाम दर्ज करें.",
+      "newFolderName": "नया फ़ोल्डर नाम",
       "noFilesOrFolders": "यहां कोई फ़ाइल या फ़ोल्डर नहीं है.",
       "noSubfolders": "यहां कोई उप-फ़ोल्डर नहीं है.",
       "readFailed": "फ़ाइल सिस्टम को पढ़ने में विफल.",

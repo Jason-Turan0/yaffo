@@ -45,6 +45,7 @@ from yaffo.logging_config import get_logger
 from yaffo.p2p.pairing import PairingError
 from yaffo.p2p.service import P2PServiceError
 from yaffo.p2p.signaling import CallError
+from yaffo.utils.settings import get_shared_download_dir, set_shared_download_dir
 
 
 logger = get_logger(__name__, "webapp")
@@ -121,6 +122,28 @@ def _media_dir_choices() -> list[dict]:
         path = entry.path
         choices.append({"id": entry.id, "name": path.name or str(path), "path": str(path)})
     return choices
+
+
+def _shared_download_dir_value() -> str:
+    directory = get_shared_download_dir(db.session)
+    return str(directory) if directory else ""
+
+
+def _render_download_directory_panel():
+    return render_template("sharing/_download_directory_panel.html", download_dir=_shared_download_dir_value())
+
+
+def _validated_download_dir(raw_value: str) -> Path:
+    if not raw_value:
+        raise ValueError(gettext("Choose a download directory for shared files."))
+    directory = Path(raw_value).expanduser().resolve()
+    if directory.exists() and not directory.is_dir():
+        raise ValueError(gettext("Choose a directory, not a file."))
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ValueError(gettext("Could not create the download directory: %(reason)s", reason=str(exc))) from exc
+    return directory
 
 
 def _active_grant_rows(peer_device_id: str) -> list[dict]:
@@ -230,6 +253,7 @@ def init_sharing_routes(app: Flask):
             media_dirs=_media_dir_choices(),
             grants=_active_grant_rows(device_id),
             remote_shared=None,
+            download_dir=_shared_download_dir_value(),
         )
 
     def render_remote_panel(device: dict, remote_shared: dict | None = None, remote_error: str | None = None):
@@ -263,6 +287,7 @@ def init_sharing_routes(app: Flask):
             media_dirs=_media_dir_choices(),
             grants=_active_grant_rows(device_id),
             remote_shared=None,
+            download_dir=_shared_download_dir_value(),
         )
 
     @app.route("/sharing/sidebar", methods=["GET"])
@@ -365,6 +390,20 @@ def init_sharing_routes(app: Flask):
         if not p2p_repository.rename_device(db.session, device_id, name):
             return _notify(gettext("%(device)s is not a known device.", device=device_id))
         return _with_toast(render_device_panel(device_id), gettext("Device renamed."))
+
+    @app.route("/sharing/download-directory", methods=["POST"])
+    def sharing_download_directory():
+        directory_value = (request.form.get("download_dir") or "").strip()
+        try:
+            directory = _validated_download_dir(directory_value)
+        except ValueError as exc:
+            return _notify(str(exc))
+        set_shared_download_dir(db.session, directory)
+        return _with_toast(
+            _render_download_directory_panel(),
+            gettext("Download directory saved."),
+            devices_changed=False,
+        )
 
     @app.route("/sharing/devices/<device_id>/grants", methods=["POST"])
     def sharing_device_grant(device_id: str):
@@ -496,7 +535,7 @@ def init_sharing_routes(app: Flask):
             filters=filters,
             files=result.get("files", []),
             error=error,
-            media_dirs=_media_dir_choices(),
+            download_dir=_shared_download_dir_value(),
             pagination={
                 "current_page": page,
                 "total_items": result.get("total", 0),
@@ -599,21 +638,29 @@ def init_sharing_routes(app: Flask):
         if device.trust_state != TRUST_STATE_TRUSTED:
             return _notify(gettext("Pair this device again before pulling files from it."))
 
-        destination_media_dir_id = (request.form.get("destination_media_dir_id") or "").strip()
-        destination = media_dir_repository.media_dir_by_id(db.session, destination_media_dir_id)
-        if destination is None:
-            return _notify(gettext("Choose a local media directory."))
+        destination_root = get_shared_download_dir(db.session)
+        if destination_root is None:
+            return _notify(gettext("Choose a download directory for shared files first."))
+        try:
+            destination_root = _validated_download_dir(str(destination_root))
+        except ValueError as exc:
+            return _notify(str(exc))
 
         remote_media_dir_id = (request.form.get("remote_media_dir_id") or "").strip()
         relative_path = (request.form.get("relative_path") or "").strip()
+        source_scope_path = (request.form.get("scope") or "").strip()
+        collection_path = (request.form.get("collection_name") or "").strip() or remote_media_dir_id
         expected_sha256 = (request.form.get("sha256") or "").strip() or None
         try:
             result = service.pull_file(
                 device_id,
                 remote_media_dir_id,
                 relative_path,
-                destination.path,
+                destination_root,
                 expected_sha256=expected_sha256,
+                destination_device_name=device.display_name or device.device_id,
+                destination_collection_path=collection_path,
+                source_scope_path=source_scope_path,
             )
         except (CallError, P2PServiceError, ValueError) as exc:
             return _notify(gettext("Could not pull file: %(reason)s", reason=str(exc)))

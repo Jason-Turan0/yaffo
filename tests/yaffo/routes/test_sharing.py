@@ -13,6 +13,7 @@ from yaffo.db import db
 from yaffo.db.models import (
     GRANT_SCOPE_FOLDER,
     GRANT_SCOPE_MEDIA_DIR,
+    ApplicationSettings,
     KnownDevice,
     ShareGrant,
     TRUST_STATE_REVOKED,
@@ -22,6 +23,7 @@ from yaffo.db.repositories import media_dir_repository, p2p_repository
 from yaffo.p2p.pairing import PairingError, new_pairing_code
 from yaffo.p2p.service import P2PServiceError
 from yaffo.p2p.signaling import CallError
+from yaffo.utils.settings import SHARED_DOWNLOAD_DIR_SETTING
 
 pytestmark = pytest.mark.unit
 
@@ -134,11 +136,30 @@ class FakeP2PService:
             raise self.preview_error
         return self.preview_bytes
 
-    def pull_file(self, device_id, media_dir_id, relative_path, destination_root, expected_sha256=None):
-        self.pulled_files.append((device_id, media_dir_id, relative_path, destination_root, expected_sha256))
+    def pull_file(
+        self,
+        device_id,
+        media_dir_id,
+        relative_path,
+        destination_root,
+        expected_sha256=None,
+        destination_device_name=None,
+        destination_collection_path=None,
+        source_scope_path=None,
+    ):
+        self.pulled_files.append((
+            device_id,
+            media_dir_id,
+            relative_path,
+            destination_root,
+            expected_sha256,
+            destination_device_name,
+            destination_collection_path,
+            source_scope_path,
+        ))
         if self.pull_error is not None:
             raise self.pull_error
-        return {"relative_path": "Shared/laptop/trip/a.jpg", "bytes": 12}
+        return {"relative_path": "laptop/trip/a.jpg", "bytes": 12}
 
 
 @pytest.fixture
@@ -220,6 +241,7 @@ def test_device_page_renders(app, client, service):
     assert "laptop" in body
     assert PEER_ONLINE in body
     assert "Shared with this device" in body
+    assert "Downloaded copies" in body
     assert "Shared by this device" in body
 
 
@@ -482,13 +504,11 @@ def test_browse_remote_shared_revoked_device(app, client, service):
     assert service.listed_ids == []
 
 
-def test_shared_files_gallery_renders_with_filters_and_facets(app, client, service, tmp_path):
+def test_shared_files_gallery_renders_with_filters_and_facets(app, client, service):
     """The remote gallery is server-rendered like the home page: one
     list_files call per GET carrying the parsed filters, peer facets in the
     year/device selects, lazy preview images, and per-card pull forms."""
     _seed_devices(app)
-    with app.app_context():
-        media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
     service.list_files_result["total"] = 120
 
     resp = client.get(
@@ -519,11 +539,15 @@ def test_shared_files_gallery_renders_with_filters_and_facets(app, client, servi
     # Loading shows the skeleton plate; the "not found" placeholder is only
     # the failure fallback, never the initial state.
     assert "preview-pending" in body
+    assert "remote-preview-spinner" in body
     assert "data-fallback-src" in body
     assert "trip/a.jpg" in body
     assert "Lisbon" in body
     assert "Pull" in body
-    assert "pull-destination" in body
+    assert 'name="scope" value="trip"' in body
+    assert 'name="collection_name" value="trip"' in body
+    assert "pull-destination" not in body
+    assert "Set a download directory" in body
     # Facets from the peer populate the sidebar selects; selections stick.
     assert "2023" in body and "X-T200" in body
     assert 'value="beach"' in body
@@ -575,28 +599,76 @@ def test_preview_failure_is_an_error_status_for_the_img_fallback(app, client, se
     assert resp.status_code == 502
 
 
+def test_save_shared_download_directory(app, client, service, tmp_path):
+    _seed_devices(app)
+    download_dir = tmp_path / "shared-downloads"
+
+    resp = client.post("/sharing/download-directory", data={"download_dir": str(download_dir)})
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "remote-download-directory-panel" in body
+    assert str(download_dir.resolve()) in body
+    message, type_ = _notification(resp)
+    assert message == "Download directory saved." and type_ == "success"
+    assert download_dir.is_dir()
+    with app.app_context():
+        setting = db.session.query(ApplicationSettings).filter_by(name=SHARED_DOWNLOAD_DIR_SETTING).one()
+        assert setting.value == str(download_dir.resolve())
+
+
+def test_save_shared_download_directory_rejects_file(app, client, service, tmp_path):
+    _seed_devices(app)
+    file_path = tmp_path / "not-a-dir.txt"
+    file_path.write_text("x")
+
+    resp = client.post("/sharing/download-directory", data={"download_dir": str(file_path)})
+
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "not a file" in message and type_ == "error"
+
+
 def test_pull_remote_file(app, client, service, tmp_path):
     _seed_devices(app)
+    download_dir = tmp_path / "downloads"
     with app.app_context():
-        media_dir = media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+        db.session.add(
+            ApplicationSettings(
+                name=SHARED_DOWNLOAD_DIR_SETTING,
+                type="string",
+                value=str(download_dir),
+            )
+        )
+        db.session.commit()
 
     resp = client.post(
         f"/sharing/devices/{PEER_ONLINE}/pull",
         data={
-            "destination_media_dir_id": media_dir.id,
             "remote_media_dir_id": "remote-lib",
             "relative_path": "trip/a.jpg",
+            "scope": "trip",
+            "collection_name": "trip",
             "sha256": "abc123",
         },
     )
 
     assert resp.status_code == 204
     message, type_ = _notification(resp)
-    assert "Shared/laptop/trip/a.jpg" in message and type_ == "success"
-    assert service.pulled_files == [(PEER_ONLINE, "remote-lib", "trip/a.jpg", media_dir.path, "abc123")]
+    assert "laptop/trip/a.jpg" in message and type_ == "success"
+    assert service.pulled_files == [(
+        PEER_ONLINE,
+        "remote-lib",
+        "trip/a.jpg",
+        download_dir.resolve(),
+        "abc123",
+        "laptop",
+        "trip",
+        "trip",
+    )]
 
 
-def test_pull_remote_file_requires_destination_media_dir(app, client, service):
+def test_pull_remote_file_requires_download_directory(app, client, service):
     _seed_devices(app)
 
     resp = client.post(
@@ -606,7 +678,7 @@ def test_pull_remote_file_requires_destination_media_dir(app, client, service):
 
     assert resp.status_code == 204
     message, type_ = _notification(resp)
-    assert "Choose a local media directory" in message and type_ == "error"
+    assert "Choose a download directory" in message and type_ == "error"
 
 
 def test_actions_unavailable_without_service(client):

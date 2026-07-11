@@ -66,6 +66,10 @@
       "weeklyOnAt": "Wöchentlich am {{day}} um {{time}}"
     },
     "folderPicker": {
+      "createFailed": "Der Ordner konnte nicht erstellt werden.",
+      "createFolder": "Ordner erstellen",
+      "folderNameRequired": "Geben Sie einen Ordnernamen ein.",
+      "newFolderName": "Neuer Ordnername",
       "noFilesOrFolders": "Hier sind keine Dateien oder Ordner.",
       "noSubfolders": "Hier sind keine Unterordner.",
       "readFailed": "Das Dateisystem konnte nicht gelesen werden.",

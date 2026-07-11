@@ -66,6 +66,10 @@
       "weeklyOnAt": "Semanalmente en {{day}} en {{time}}"
     },
     "folderPicker": {
+      "createFailed": "No se pudo crear la carpeta.",
+      "createFolder": "Crear carpeta",
+      "folderNameRequired": "Ingrese un nombre de carpeta.",
+      "newFolderName": "Nuevo nombre de carpeta",
       "noFilesOrFolders": "No hay archivos ni carpetas aquí.",
       "noSubfolders": "No hay subcarpetas aquí.",
       "readFailed": "No se pudo leer el sistema de archivos.",

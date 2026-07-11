@@ -66,6 +66,10 @@
       "weeklyOnAt": "Hebdomadaire {{day}} à {{time}}"
     },
     "folderPicker": {
+      "createFailed": "Impossible de créer le dossier.",
+      "createFolder": "Créer un dossier",
+      "folderNameRequired": "Entrez un nom de dossier.",
+      "newFolderName": "Nouveau nom de dossier",
       "noFilesOrFolders": "Aucun fichier ou dossier ici.",
       "noSubfolders": "Pas de sous-dossiers ici.",
       "readFailed": "Échec de la lecture du système de fichiers.",

@@ -66,6 +66,10 @@
       "weeklyOnAt": "每周一次 {{day}} 在 {{time}}"
     },
     "folderPicker": {
+      "createFailed": "无法创建文件夹。",
+      "createFolder": "创建文件夹",
+      "folderNameRequired": "输入文件夹名称。",
+      "newFolderName": "新文件夹名称",
       "noFilesOrFolders": "这里没有文件或文件夹。",
       "noSubfolders": "这里没有子文件夹。",
       "readFailed": "无法读取文件系统。",

@@ -430,7 +430,7 @@ def test_pull_file_resumes_partial_and_verifies_complete_file(serving_context):
     _app, service, requester, _media_dir, root = serving_context
     remote_content = b"abcdef"
     expected_sha256 = hashlib.sha256(remote_content).hexdigest()
-    partial = root / "Shared" / requester.device_id / "trip" / "a.jpg.partial"
+    partial = root / requester.device_id / "trip" / "a.jpg.partial"
     partial.parent.mkdir(parents=True)
     partial.write_bytes(b"abc")
     calls = []
@@ -460,11 +460,13 @@ def test_pull_file_resumes_partial_and_verifies_complete_file(serving_context):
         root,
         expected_sha256=expected_sha256,
         chunk_size=3,
+        destination_collection_path="trip",
+        source_scope_path="trip",
     )
 
-    destination = root / "Shared" / requester.device_id / "trip" / "a.jpg"
+    destination = root / requester.device_id / "trip" / "a.jpg"
     assert calls == [(requester.device_id, "remote-lib", "trip/a.jpg", 3, 3)]
     assert destination.read_bytes() == remote_content
     assert not partial.exists()
-    assert result["relative_path"] == f"Shared/{requester.device_id}/trip/a.jpg"
+    assert result["relative_path"] == f"{requester.device_id}/trip/a.jpg"
     assert result["sha256"] == expected_sha256

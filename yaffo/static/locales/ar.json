@@ -66,6 +66,10 @@
       "weeklyOnAt": "اسبوعيا على {{day}} في {{time}}"
     },
     "folderPicker": {
+      "createFailed": "تعذر إنشاء المجلد.",
+      "createFolder": "إنشاء مجلد",
+      "folderNameRequired": "أدخل اسم المجلد.",
+      "newFolderName": "اسم المجلد الجديد",
       "noFilesOrFolders": "لا توجد ملفات أو مجلدات هنا.",
       "noSubfolders": "لا توجد مجلدات فرعية هنا.",
       "readFailed": "فشل في قراءة نظام الملفات.",
