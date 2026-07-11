@@ -1,16 +1,17 @@
 # P2P Device Sharing — Design & Implementation Plan
 
-Status: **Phases 1–3 complete — hub deployed and verified at
-`wss://hub.yaffo.app`, the p2p engine is ported into `yaffo/p2p/`, and the
-pairing/device-management UI ships as a dedicated Sharing nav tab
-(2026-07-10; Phase 3 pending Jason's in-browser check). Phase 4 is
-underway: grant management UI and the first signed `list_shared` /
-JSON-chunked `pull_file` protocol are implemented, with a first receiving UI
-for browsing a peer's shared files and explicitly pulling one file into a
-configured local download directory; background transfer orchestration is
-still pending. Phase 5 has started: mDNS LAN discovery, LAN-first pinned
-QUIC calls, LAN pairing fallback, and Local presence badges are implemented;
-real two-machine LAN validation is pending.**
+Status: **Phases 1–5 complete as re-scoped (2026-07-11) — hub deployed and
+verified at `wss://hub.yaffo.app`, the p2p engine is ported into
+`yaffo/p2p/`, the pairing/device-management UI ships as a dedicated Sharing
+nav tab, grant management plus the signed `list_shared` / JSON-chunked
+`pull_file` protocol work end to end (browse a peer's shared files, pull one
+file with chunk verification and `.partial` resume), and the mDNS LAN path
+is implemented. The concept is proven; what remains for real batch use is
+Phase 6: transfer sessions that reuse one upgraded QUIC connection (today
+every chunk is a standalone relay-only call, so all transfer bytes ride the
+hub — the main blocker), batch orchestration with a Download-all action,
+sidecar resume manifests, and the relay-bulk cost policy. Albums and
+hardening follow as Phases 7–8.**
 The original design sketch here was built out as a working proof of concept in
 [`p2p-poc/`](../../p2p-poc/README.md), which succeeded end-to-end: pairing,
 presence, relay-first calls with hole-punch upgrade, authorized file pulls,
@@ -176,7 +177,7 @@ itself. A grant row authorizes one trusted peer for one scope:
   - `folder` — a subtree: `media_dir_id` + a relative-path prefix, matching
     the `media_dir_id`/`relative_path` calculated columns the data-query
     layer already models.
-  - `album` — a curated album. Yaffo has no album concept yet; Phase 6
+  - `album` — a curated album. Yaffo has no album concept yet; Phase 7
     introduces it and this scope together. The polymorphic scope means album
     sharing is a new enum value + one nullable column, not a redesign.
 - `created_at`, `revoked_at` — grants are revocable; revocation is checked at
@@ -199,7 +200,7 @@ Mylio/Syncthing.
 Two migrations, per the schema conventions (numbered migration under
 `yaffo/scripts/db/migrations/` run by `run_migrations()`, mirrored in
 `yaffo/db/models.py`): **006** (Phase 2) creates `known_devices` and
-`share_grants`; **007** (Phase 6) creates `albums` and `album_items` and adds
+`share_grants`; **007** (Phase 7) creates `albums` and `album_items` and adds
 `share_grants.album_id`. Column types follow the existing models.py
 conventions (integer autoincrement PKs, `db.DateTime` with `utcnow`
 defaults).
@@ -225,7 +226,7 @@ defaults).
 | `scope_type`     | String                                 | `media_dir` \| `folder` \| `album`                                                                                                                                                             |
 | `media_dir_id`   | String, nullable                       | Media-dir GUID. No DB-level FK possible — the registry lives in the `application_settings` `media_dirs` JSON — so the repository validates it and treats grants on since-removed dirs as inert |
 | `relative_path`  | String, nullable                       | `folder` scope only: POSIX-style subtree prefix under the media dir                                                                                                                            |
-| `album_id`       | Integer, FK → `albums.id`, nullable    | `album` scope only; column added in 007                                                                                                                                                        |
+| `album_id`       | Integer, FK → `albums.id`, nullable    | `album` scope only; column added in 007 (Phase 7)                                                                                                                                              |
 | `created_at`     | DateTime                               | —                                                                                                                                                                                              |
 | `revoked_at`     | DateTime, nullable                     | Active grant ⇔ `revoked_at IS NULL`; revoking is an update, not a delete, so the UI can show history                                                                                           |
 
@@ -233,7 +234,7 @@ Shape rule enforced by the repository: `media_dir` ⇒ `media_dir_id` set;
 `folder` ⇒ `media_dir_id` + `relative_path` set; `album` ⇒ `album_id` set;
 the other scope columns NULL.
 
-### `albums` / `album_items` — curated collections (migration 007, Phase 6)
+### `albums` / `album_items` — curated collections (migration 007, Phase 7)
 
 | Column                      | Type                                     | Notes                              |
 |-----------------------------|------------------------------------------|------------------------------------|
@@ -319,7 +320,7 @@ looking at both screens.
 ## Implementation plan
 
 Scope decisions (settled 2026-07): grants are per-device on media dirs /
-folders — and albums, once Phase 6 introduces them — revocable (expiry and
+folders — and albums, once Phase 7 introduces them — revocable (expiry and
 view-only deferred); the P2P engine runs as an **asyncio loop in a
 background thread inside the Flask/waitress web process**; the hub is the
 **custom hardened relay** above (no coturn); v1 includes the **mDNS LAN
@@ -511,7 +512,7 @@ verified via route tests + Jason's own browser.)
 
 The actual sharing feature, replacing the POC's seed-text-files demo:
 
-> **Status: PARTIAL (2026-07-11).** Grant management now exists on each
+> **Status: DONE as re-scoped (2026-07-11).** Grant management exists on each
 > trusted device page, backed by `share_grants`. The serving device verifies
 > signed `list_shared` and `pull_file` requests against its local
 > `known_devices` row, checks active grants at request time, lists only
@@ -520,10 +521,14 @@ The actual sharing feature, replacing the POC's seed-text-files demo:
 > a peer's granted file list and pull a selected file under a configured
 > local download directory as
 > `{DeviceName-or-ID}/{Album-or-MediaDir-or-Folder}/{Filename}`, resuming
-> from `.partial` and verifying each transferred chunk. Remaining work:
-> background transfer manifests/status UI,
-> bounded concurrency for batches, transfer path reporting, and eventual true
-> stream framing for multi-GB files.
+> from `.partial` and verifying each transferred chunk. The transfer
+> resilience bullet below is only partially delivered: chunking, per-chunk
+> verification, and `.partial` resume work, but every chunk is a standalone
+> `attempt_upgrade=False` call — so all transfer bytes ride the hub relay
+> and pay per-chunk connection setup. That, plus background transfer
+> orchestration, bounded concurrency, sidecar resume manifests, transfer
+> path reporting, and the multi-GB resume exit criterion, rolls into
+> **Phase 6**.
 
 - **Grant management UI** (same Settings section): per known device, add a
   grant by picking a media dir or browsing to a folder within one; list and
@@ -549,22 +554,25 @@ The actual sharing feature, replacing the POC's seed-text-files demo:
   designated local folder (inside a media dir, so normal indexing picks them
   up) — v1 is explicit pull, not sync.
 
-Exit criteria: grant a folder on device A; browse and pull a multi-GB video
-from B with a mid-transfer interruption resuming; revoke the grant and see
-B's next request denied. Loopback integration tests for grant scoping
-(out-of-scope path requests rejected) and resume-from-offset.
+Exit criteria (as re-scoped): grant a folder on device A; browse and pull a
+file from B with chunk verification and `.partial` resume; revoke the grant
+and see B's next request denied. Loopback integration tests for grant
+scoping (out-of-scope path requests rejected) and resume-from-offset. The
+original multi-GB-video-with-interruption criterion moves to Phase 6, where
+transfer sessions make it realistic.
 
 ### Phase 5 — mDNS LAN path
 
 Same-LAN discovery so home traffic never touches the hub:
 
-> **Status: STARTED (2026-07-11).** The P2P thread now advertises and
-> browses `_yaffo-p2p._udp.local.` when `zeroconf` is installed, caches LAN
-> candidates by `device_id`, tries a short pinned-QUIC LAN call before the
-> hub relay-first flow, and accepts pairing codes over LAN when the hub is
-> unreachable. Sharing UI presence can show a `Local` badge for LAN-reachable
-> paired devices. Remaining work: install/package validation with `zeroconf`
-> present and real two-machine LAN testing.
+> **Status: DONE as re-scoped (2026-07-11).** The P2P thread now advertises
+> and browses `_yaffo-p2p._udp.local.` when `zeroconf` is installed, caches
+> LAN candidates by `device_id`, tries a short pinned-QUIC LAN call before
+> the hub relay-first flow, and accepts pairing codes over LAN when the hub
+> is unreachable. Sharing UI presence can show a `Local` badge for
+> LAN-reachable paired devices. Remaining work — install/package validation
+> with `zeroconf` present and real two-machine LAN testing — rolls into
+> **Phase 6**, where it doubles as the LAN validation of batch transfers.
 
 - Advertise `_yaffo-p2p._udp.local.` via `zeroconf` (TXT: device_id, QUIC
   port) from the P2P thread; browse continuously and cache
@@ -580,7 +588,106 @@ Exit criteria: two instances on one LAN pair and pull with the hub URL
 pointed at a black hole; presence UI shows a "local" badge for
 LAN-reachable peers.
 
-### Phase 6 — Albums: definition & sharing
+### Phase 6 — Batch transfers & transfer resilience
+
+> **Status: IMPLEMENTED (2026-07-11), pending Jason's in-browser pass and
+> the real two-machine LAN validation.** Items 1–5 are built and tested:
+> `PinnedConnection`/`quic_pinned_connect` (many streams per pinned
+> connection), `HubClient.open_session` (relay-proven, one punch upgrade
+> per session, relay slot freed on upgrade), idle-based answer-socket
+> reaping (a busy session keeps its socket; quiet ones still reap),
+> `yaffo/p2p/transfers.py` (`TransferManager` on the engine loop:
+> semaphore-bounded workers as streams on one shared session,
+> reconnect-and-resume via a session holder, `{name}.partial.json` sidecars
+> with source-change restart and wedged-partial cleanup, serving side sends
+> `mtime` per chunk + whole-file `file_sha256` on the eof chunk, relay
+> throttle + soft budget pause with a Continue-anyway button), and the
+> routes/UI (self-polling transfers panel on the device and gallery pages,
+> per-card Pull now enqueues a batch, **Download all** on the remote
+> gallery snapshots the filtered scope). Loopback exit criteria verified in
+> `tests/yaffo/p2p/test_transfers.py` (resume, restart, wedge-recovery,
+> budget) and `test_service_integration.py::
+> test_download_all_batch_rides_one_transfer_session` (a whole batch =
+> exactly one hub connect_request). Remaining: item 6 (zeroconf packaging +
+> two-machine LAN run) and item 7 (stream framing, deferred by design).
+
+Rolled-over scope from Phases 4–5 plus the design work that makes batches
+viable. The driving observation (2026-07-11 review of the Phase 4 code):
+`PullFileEndpoint.send()` issues every 1 MiB chunk as a standalone call with
+`attempt_upgrade=False`, so each chunk pays signaling RTT + STUN + relay
+HELLO + a fresh pinned-QUIC handshake, and — because relay-only calls never
+punch — **100% of transfer bytes ride the hub relay** even when a direct
+path is available. That inverts the design intent (relay is the correctness
+path; direct is the cost path) and makes the hub the bottleneck for bulk:
+relay egress is the only metered cost (~$0.09–0.12/GB; base64 JSON inflates
+a 4 GB video to ~5.3 GB relayed ≈ $0.50+, one 50 GB batch triples the
+monthly budget), and the relay is a single Python process on a shared
+0.25-vCPU `e2-micro` that also carries everyone's signaling. The fix is to
+make the unit of connection setup the **transfer session**, not the chunk.
+
+1. **Transfer sessions — one connection per (peer, batch), reused.** Open a
+   single call with `attempt_upgrade=True`, keep the pinned QUIC connection
+   alive for the whole batch, and run all chunk requests as streams on it.
+   The existing signed JSON chunk protocol is unchanged — only the transport
+   lifetime changes. The punch happens once per session; when it lands,
+   every subsequent byte moves on the free direct path. Record the call
+   report's `path` (`relay` / `direct` / `lan`) and stamp it on the
+   transfer — this delivers the Phase 4 path-reporting requirement.
+2. **Batch orchestration in the P2P thread.** A batch is a `list_files`
+   manifest snapshot turned into a job: an ordered list of file entries
+   processed by asyncio tasks under a per-peer `Semaphore` (2–3), as
+   concurrent streams on the shared session connection (N streams on one
+   connection punch once and share congestion control; never N
+   connections). Orchestration stays in the P2P asyncio thread — **not**
+   `yaffo/taskq`: a worker process asserting the same device identity would
+   fight the web process's hub WebSocket. Status UI (per-file state,
+   progress, transfer path) updates via an HTMX trigger, in the style of
+   `sharingDevicesChanged`.
+3. **Sidecar resume manifests.** Per the data-model section: a
+   `{name}.partial.json` next to each `.partial` holding the source (peer,
+   media dir, path), the expected size/mtime from the browse manifest, and
+   the verified offset. This closes two real resume holes in the Phase 4
+   code: (a) resume-after-source-change — today resume appends blindly from
+   `partial.stat().st_size`, silently splicing two file versions; a
+   size/mtime mismatch on resume must restart the file from zero; (b) the
+   wedged partial — a final checksum failure currently leaves the corrupt
+   `.partial` in place so every retry fails forever; the failure path must
+   truncate it. For end-to-end integrity without violating the
+   never-hash-during-browse rule, the serving side hashes the file *as it
+   streams* and returns the full-file sha256 in the `eof` chunk; the client
+   compares against its own running hash of the partial.
+4. **Relay bulk policy: discourage, don't forbid.** Hard-blocking relayed
+   transfers would strand hard-NAT users (the design never depends on
+   punching succeeding). Instead: the session upgrade from item 1 makes
+   direct the default outcome; the Phase 5 LAN path covers the common
+   at-home batch; sessions that stay relayed get a client-side throttle plus
+   the hub's per-session byte caps; and the UI labels the path — "via relay
+   (metered)" vs "direct" vs "local" — with a soft per-batch relay budget
+   and an explicit continue-anyway, so a user can choose to defer a big
+   batch until both machines are home.
+5. **Download-all on the remote dashboard** (new acceptance criterion): the
+   peer browse page gains a "Download all" action per granted scope that
+   snapshots the manifest and pulls the entire scope as a background batch
+   through items 1–3, with the same status UI.
+6. **Rolled from Phase 5**: install/package validation with `zeroconf`
+   present, and real two-machine LAN testing — run the LAN validation
+   against a batch transfer so it exercises this phase too.
+7. **Deferred within the phase**: true stream framing (raw length-prefixed
+   frames replacing base64 JSON, removing the ~33% overhead). It's a
+   worthwhile optimization but strictly secondary — connection reuse is the
+   difference between usable and unusable over the internet.
+
+Exit criteria: "Download all" on a granted multi-file folder from the
+remote dashboard completes as a background batch with per-file status and
+the transfer path shown; a multi-GB video pull interrupted mid-transfer —
+including across a device restart — resumes from the verified offset; a
+source file changed between resume attempts restarts cleanly instead of
+splicing; two real machines on one LAN run a batch with zero hub relay
+bytes; a batch that stays on the relay respects the throttle and byte caps.
+Loopback integration tests for session reuse (one connection, many chunks),
+resume-manifest mismatch restart, and the wedged-partial recovery.
+
+### Phase 7 — Albums: definition & sharing
 
 Yaffo has no album concept today; this phase introduces it as a first-class
 feature and immediately extends sharing to it (migration `007` in the data
@@ -611,7 +718,7 @@ its contents; removing an item from the album excludes it from B's next
 manifest; an album grant leaks nothing outside the album's membership
 (loopback test alongside the Phase 4 scoping tests).
 
-### Phase 7 — Hardening & real-world validation
+### Phase 8 — Hardening & real-world validation
 
 - Retune timeouts (dial, punch windows, relay RTT) against real home NAT
   conditions rather than the POC's loopback values; make the punch duration

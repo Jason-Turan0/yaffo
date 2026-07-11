@@ -220,8 +220,14 @@ class PunchAwareQuicServer(P2PDatagramMixin, QuicServer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._init_p2p()
+        # Stamped on every inbound datagram; lets per-call answer sockets be
+        # reaped when *idle* rather than after a fixed linger, so a transfer
+        # session that stays busy for minutes keeps its socket (see
+        # HubClient._answer_call).
+        self.last_activity = time.monotonic()
 
     def datagram_received(self, data: Union[bytes, str], addr) -> None:
+        self.last_activity = time.monotonic()
         if self._intercept_datagram(data, addr):
             return
         super().datagram_received(data, addr)
@@ -260,15 +266,15 @@ class P2PDialer(P2PDatagramMixin, asyncio.DatagramProtocol):
         if self._transport is not None:
             self._transport.close()
 
-    async def quic_pinned_request(
+    async def quic_pinned_connect(
         self,
         host: str,
         port: int,
         expected_device_id: str,
-        payload: dict,
         timeout: float = CONNECT_TIMEOUT_SECONDS,
-    ) -> dict:
-        """A fingerprint-pinned QUIC request/response on this shared socket.
+    ) -> PinnedConnection:
+        """Open a fingerprint-pinned QUIC connection on this shared socket
+        and keep it open for many streams (see PinnedConnection).
 
         Mirrors what aioquic.asyncio.connect() does internally (build
         QuicConnection + QuicConnectionProtocol, connect, wait), with the
@@ -289,24 +295,40 @@ class P2PDialer(P2PDatagramMixin, asyncio.DatagramProtocol):
                     await protocol.wait_connected()
             except (asyncio.TimeoutError, TimeoutError) as exc:
                 raise TransportError(f"could not establish QUIC connection to peer at {host}:{port}") from exc
-
-            try:
-                async with asyncio.timeout(timeout):
-                    return await _pinned_stream_exchange(protocol, expected_device_id, payload)
-            except (asyncio.TimeoutError, TimeoutError) as exc:
-                raise TransportError(
-                    f"peer at {host}:{port} did not answer {payload.get('type', 'request')} within {timeout:.1f}s"
-                ) from exc
+            verify_peer_pin(protocol, expected_device_id)
         except TransportError:
+            protocol.close()
+            self._routes.pop(addr, None)
             raise
         except (OSError, ConnectionError) as exc:
-            raise TransportError(f"could not reach peer at {host}:{port}: {exc}") from exc
-        finally:
             protocol.close()
-            # Deliberately not awaiting wait_closed(): the CONNECTION_CLOSE
-            # is already transmitted by close(), and dropping the route now
-            # just discards the peer's own close packets — harmless.
             self._routes.pop(addr, None)
+            raise TransportError(f"could not reach peer at {host}:{port}: {exc}") from exc
+
+        # Dropping the route on close discards the peer's own close packets —
+        # harmless, same as the one-shot path.
+        return PinnedConnection(protocol, expected_device_id, addr, on_close=lambda: self._routes.pop(addr, None))
+
+    async def quic_pinned_request(
+        self,
+        host: str,
+        port: int,
+        expected_device_id: str,
+        payload: dict,
+        timeout: float = CONNECT_TIMEOUT_SECONDS,
+    ) -> dict:
+        """A one-shot fingerprint-pinned QUIC request/response on this shared
+        socket: connect, exchange one stream, close. Unlike a session's
+        request(), an application-level error status raises here — one-shot
+        callers have no denial-vs-dead-connection distinction to make."""
+        connection = await self.quic_pinned_connect(host, port, expected_device_id, timeout=timeout)
+        try:
+            data = await connection.request(payload, timeout=timeout)
+        finally:
+            connection.close()
+        if data.get("status") != "ok":
+            raise TransportError(data.get("detail") or data.get("message") or "peer rejected request")
+        return data
 
 
 async def start_dialer(bind_host: str = "0.0.0.0") -> P2PDialer:
@@ -359,11 +381,10 @@ async def start_quic_server(
     return protocol
 
 
-async def _pinned_stream_exchange(protocol: QuicConnectionProtocol, expected_device_id: str, payload: dict) -> dict:
-    """The trust-critical half of a client connection: pin the peer's
-    certificate fingerprint against expected_device_id, then exchange one
-    JSON request/response stream.
-    """
+def verify_peer_pin(protocol: QuicConnectionProtocol, expected_device_id: str) -> None:
+    """The trust-critical check on every client connection: pin the peer's
+    certificate fingerprint against expected_device_id. Runs once per
+    connection — every stream on it afterwards rides the verified session."""
     # Private aioquic API — see module docstring and the canary test.
     peer_cert = protocol._quic.tls._peer_certificate
     if peer_cert is None:
@@ -376,16 +397,112 @@ async def _pinned_stream_exchange(protocol: QuicConnectionProtocol, expected_dev
             f"peer presented {actual_device_id} — aborting (possible MITM)"
         )
 
+
+async def stream_exchange(protocol: QuicConnectionProtocol, payload: dict) -> dict:
+    """One JSON request/response stream on an already-pinned connection.
+
+    Returns the peer's response verbatim, including error statuses — a
+    session must be able to tell an application-level denial (grant revoked,
+    bad path) from a dead connection, so only transport failures raise here.
+    """
     reader, writer = await protocol.create_stream()
     writer.write(json.dumps(payload).encode("utf-8"))
     writer.write_eof()
     await writer.drain()
 
     raw = await reader.read()
-    data = json.loads(raw)
+    return json.loads(raw)
+
+
+async def _pinned_stream_exchange(protocol: QuicConnectionProtocol, expected_device_id: str, payload: dict) -> dict:
+    verify_peer_pin(protocol, expected_device_id)
+    data = await stream_exchange(protocol, payload)
     if data.get("status") != "ok":
         raise TransportError(data.get("detail") or data.get("message") or "peer rejected request")
     return data
+
+
+class PinnedConnection:
+    """A pinned QUIC connection held open for many request/response streams
+    (Phase 6 transfer sessions). The fingerprint check already happened at
+    connect time; each request() is one stream on the verified session, so a
+    chunked pull pays the signaling/handshake cost once per session instead
+    of once per chunk. Concurrent request() calls are fine — QUIC multiplexes
+    the streams on one congestion-controlled connection."""
+
+    def __init__(
+        self,
+        protocol: QuicConnectionProtocol,
+        peer_device_id: str,
+        address: tuple[str, int],
+        on_close: Optional[Callable[[], None]] = None,
+    ) -> None:
+        self._protocol = protocol
+        self.peer_device_id = peer_device_id
+        self.address = address
+        self._on_close = on_close
+        self._closed = False
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    async def request(self, payload: dict, timeout: float = STREAM_TIMEOUT_SECONDS) -> dict:
+        if self._closed:
+            raise TransportError("connection is closed")
+        try:
+            async with asyncio.timeout(timeout):
+                return await stream_exchange(self._protocol, payload)
+        except (asyncio.TimeoutError, TimeoutError) as exc:
+            raise TransportError(
+                f"peer at {self.address[0]}:{self.address[1]} did not answer "
+                f"{payload.get('type', 'request')} within {timeout:.1f}s"
+            ) from exc
+        except (OSError, ConnectionError) as exc:
+            raise TransportError(f"connection to {self.address[0]}:{self.address[1]} failed: {exc}") from exc
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        self._protocol.close()
+        # Deliberately not awaiting wait_closed(): the CONNECTION_CLOSE is
+        # already transmitted by close() (same rationale as the one-shot
+        # request path).
+        if self._on_close is not None:
+            self._on_close()
+
+
+async def open_pinned_connection_fresh_socket(
+    host: str,
+    port: int,
+    expected_device_id: str,
+    timeout: float = CONNECT_TIMEOUT_SECONDS,
+) -> PinnedConnection:
+    """A persistent pinned connection on its own throwaway socket — the
+    session counterpart of quic_pinned_request_fresh_socket, for paths that
+    don't need the shared-socket NAT properties (the Phase 5 LAN fast path)."""
+    config = QuicConfiguration(is_client=True, alpn_protocols=[ALPN_PROTOCOL], verify_mode=ssl.CERT_NONE)
+    context = connect(host, port, configuration=config)
+    try:
+        async with asyncio.timeout(timeout):
+            protocol = await context.__aenter__()
+        verify_peer_pin(protocol, expected_device_id)
+    except TransportError:
+        asyncio.ensure_future(context.__aexit__(None, None, None))
+        raise
+    except (asyncio.TimeoutError, TimeoutError) as exc:
+        asyncio.ensure_future(context.__aexit__(None, None, None))
+        raise TransportError(
+            f"could not reach peer at {host}:{port}: connection did not complete within {timeout:.1f}s"
+        ) from exc
+    except (OSError, ConnectionError) as exc:
+        raise TransportError(f"could not reach peer at {host}:{port}: {exc}") from exc
+
+    def _tear_down() -> None:
+        asyncio.ensure_future(context.__aexit__(None, None, None))
+
+    return PinnedConnection(protocol, expected_device_id, (host, port), on_close=_tear_down)
 
 
 async def quic_pinned_request_fresh_socket(

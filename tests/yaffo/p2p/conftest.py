@@ -105,6 +105,9 @@ class LoopbackHub:
         self.port = free_tcp_port()
         self.relay_port = free_udp_port()
         self.connected: dict[str, object] = {}
+        # Every forwarded connect_request, in order — lets tests assert that
+        # a chunked batch opened ONE transfer session, not one call per chunk.
+        self.connect_requests: list[dict] = []
         self.relay: Optional[_LoopbackRelay] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._thread: Optional[threading.Thread] = None
@@ -174,6 +177,8 @@ class LoopbackHub:
             async for raw in connection:
                 message = json.loads(raw)
                 message["from"] = device_id
+                if message.get("type") == "connect_request":
+                    self.connect_requests.append(message)
                 peer = self.connected.get(message.get("to"))
                 if peer is None:
                     await connection.send(

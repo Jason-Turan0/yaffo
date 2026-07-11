@@ -429,47 +429,34 @@ def test_pull_file_rejects_traversal_even_when_signed(serving_context):
     assert "inside the media directory" in response["detail"]
 
 
-def test_pull_file_resumes_partial_and_verifies_complete_file(serving_context):
-    _app, service, requester, _media_dir, root = serving_context
-    remote_content = b"abcdef"
-    expected_sha256 = hashlib.sha256(remote_content).hexdigest()
-    partial = root / requester.device_id / "trip" / "a.jpg.partial"
-    partial.parent.mkdir(parents=True)
-    partial.write_bytes(b"abc")
-    calls = []
+def test_pull_file_eof_chunk_carries_mtime_and_whole_file_hash(serving_context):
+    """The eof chunk is the transfer engine's end-to-end integrity anchor:
+    mtime rides every chunk (source-change detection) and the whole-file
+    sha256 rides only the eof chunk (never computed during browse). The
+    client-side resume/restart logic that consumes these lives in
+    tests/yaffo/p2p/test_transfers.py."""
+    app, service, requester, media_dir, root = serving_context
+    content = b"abcdef"
+    with app.app_context():
+        _index_file(root / "trip" / "a.jpg", content)
+        p2p_repository.create_grant(
+            db.session,
+            requester.device_id,
+            GRANT_SCOPE_MEDIA_DIR,
+            media_dir_id=media_dir.id,
+        )
 
-    def fake_pull_file_chunk(peer_device_id, media_dir_id, relative_path, offset=0, length=10):
-        calls.append((peer_device_id, media_dir_id, relative_path, offset, length))
-        data = remote_content[offset:offset + length]
-        next_offset = offset + len(data)
-        return {
-            "media_dir_id": media_dir_id,
-            "relative_path": relative_path,
-            "offset": offset,
-            "next_offset": next_offset,
-            "size": len(remote_content),
-            "eof": next_offset >= len(remote_content),
-            "bytes": len(data),
-            "chunk_sha256": hashlib.sha256(data).hexdigest(),
-            "data_b64": base64.b64encode(data).decode("ascii"),
-        }
-
-    service.pull_file.send = fake_pull_file_chunk
-
-    result = service.pull_file.download(
-        requester.device_id,
-        "remote-lib",
-        "trip/a.jpg",
-        root,
-        expected_sha256=expected_sha256,
-        chunk_size=3,
-        destination_collection_path="trip",
-        source_scope_path="trip",
+    middle = service._handle_stream_request(
+        build_pull_file_request(requester, media_dir.id, "trip/a.jpg", offset=0, length=3)
     )
+    assert middle["status"] == "ok"
+    assert middle["eof"] is False
+    assert middle["mtime"] == (root / "trip" / "a.jpg").stat().st_mtime
+    assert "file_sha256" not in middle
 
-    destination = root / requester.device_id / "trip" / "a.jpg"
-    assert calls == [(requester.device_id, "remote-lib", "trip/a.jpg", 3, 3)]
-    assert destination.read_bytes() == remote_content
-    assert not partial.exists()
-    assert result["relative_path"] == f"{requester.device_id}/trip/a.jpg"
-    assert result["sha256"] == expected_sha256
+    final = service._handle_stream_request(
+        build_pull_file_request(requester, media_dir.id, "trip/a.jpg", offset=3, length=10)
+    )
+    assert final["status"] == "ok"
+    assert final["eof"] is True
+    assert final["file_sha256"] == hashlib.sha256(content).hexdigest()

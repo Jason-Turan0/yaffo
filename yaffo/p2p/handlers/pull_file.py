@@ -1,24 +1,18 @@
 import base64
 import hashlib
 import os
-from pathlib import Path
 from typing import Optional
 
 from yaffo.db import db
 from yaffo.db.models import MediaItem
 from yaffo.db.repositories import media_dir_repository
-from yaffo.p2p.errors import P2PServiceError
 from yaffo.p2p.handlers.sharing import (
-    DEFAULT_PULL_CHUNK_BYTES,
     MAX_PULL_CHUNK_BYTES,
-    clean_destination_path,
     clean_relative_path,
     grant_allows,
     parse_non_negative_int,
     path_inside,
     peer_lookup,
-    relative_path_inside_scope,
-    safe_path_component,
     sha256_file,
 )
 from yaffo.p2p.identity import DeviceIdentity
@@ -52,90 +46,12 @@ def verify_pull_file_request(body: dict, lookup: PeerLookup) -> Optional[str]:
 
 
 class PullFileEndpoint:
+    """Serving side of the chunked pull protocol. The client side lives in
+    yaffo.p2p.transfers (Phase 6): batches pull chunks over one transfer
+    session instead of one relay call per chunk."""
+
     def __init__(self, service) -> None:
         self._service = service
-
-    def send(
-        self,
-        peer_device_id: str,
-        media_dir_id: str,
-        relative_path: str,
-        offset: int = 0,
-        length: int = DEFAULT_PULL_CHUNK_BYTES,
-    ) -> dict:
-        """Pull one bounded file chunk from a trusted peer."""
-        payload = build_pull_file_request(self._service.identity, media_dir_id, relative_path, offset, length)
-        response = self._service.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"]
-        return self._service.expect_ok(response)
-
-    def download(
-        self,
-        peer_device_id: str,
-        media_dir_id: str,
-        relative_path: str,
-        destination_root: Path,
-        expected_sha256: Optional[str] = None,
-        chunk_size: int = DEFAULT_PULL_CHUNK_BYTES,
-        destination_device_name: Optional[str] = None,
-        destination_collection_path: Optional[str] = None,
-        source_scope_path: Optional[str] = None,
-    ) -> dict:
-        """Pull one remote file into the configured download directory."""
-        clean_path = clean_relative_path(relative_path)
-        root = destination_root.expanduser().resolve()
-        device_folder = safe_path_component(destination_device_name or peer_device_id, peer_device_id)
-        collection_folder = clean_destination_path(destination_collection_path or media_dir_id)
-        file_path = relative_path_inside_scope(clean_path, source_scope_path)
-        destination = (
-            root
-            / device_folder
-            / collection_folder.replace("/", os.sep)
-            / file_path.replace("/", os.sep)
-        ).resolve()
-        if not path_inside(destination, root):
-            raise P2PServiceError("destination path escapes the download directory")
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        partial = destination.with_name(f"{destination.name}.partial")
-
-        offset = partial.stat().st_size if partial.exists() else 0
-        size = None
-        with partial.open("ab") as handle:
-            while True:
-                chunk = self.send(
-                    peer_device_id,
-                    media_dir_id,
-                    clean_path,
-                    offset=offset,
-                    length=chunk_size,
-                )
-                data = base64.b64decode(chunk["data_b64"])
-                if chunk.get("media_dir_id") != media_dir_id or chunk.get("relative_path") != clean_path:
-                    raise P2PServiceError("peer returned a chunk for a different file")
-                if chunk.get("offset") != offset:
-                    raise P2PServiceError("peer returned a chunk at the wrong offset")
-                if len(data) != chunk.get("bytes"):
-                    raise P2PServiceError("peer returned a chunk with the wrong byte count")
-                if hashlib.sha256(data).hexdigest() != chunk.get("chunk_sha256"):
-                    raise P2PServiceError("peer returned a chunk with the wrong checksum")
-                if not data and not chunk.get("eof"):
-                    raise P2PServiceError("peer returned an empty chunk before the end of the file")
-
-                size = chunk["size"]
-                handle.write(data)
-                offset = chunk["next_offset"]
-                if chunk.get("eof"):
-                    break
-
-        actual_sha256 = sha256_file(partial)
-        if expected_sha256 and actual_sha256 != expected_sha256:
-            raise P2PServiceError("downloaded file checksum did not match the peer manifest")
-        partial.replace(destination)
-        return {
-            "saved_to": str(destination),
-            "relative_path": str(destination.relative_to(root)),
-            "bytes": size if size is not None else offset,
-            "sha256": actual_sha256,
-        }
 
     def handle(self, body: dict) -> dict:
         with self._service._session():
@@ -171,15 +87,24 @@ class PullFileEndpoint:
             if not path.is_file():
                 return {"status": "error", "detail": "file is not available"}
 
-            size = path.stat().st_size
+            stat = path.stat()
+            size = stat.st_size
             if offset > size:
                 return {"status": "error", "detail": "offset is beyond end of file"}
             with path.open("rb") as handle:
                 handle.seek(offset)
                 chunk = handle.read(length)
             next_offset = offset + len(chunk)
+            eof = next_offset >= size
+            # Whole-file hash on the eof chunk only: the client compares it
+            # against its running hash of everything it wrote (resumed bytes
+            # included). Hashing the file's CURRENT on-disk state — not the
+            # bytes we happened to serve — also catches a file that changed
+            # mid-transfer. Browse/manifest requests still never hash; this
+            # one extra read happens only at the end of a full pull.
+            file_sha256 = sha256_file(path) if eof else None
 
-        return {
+        response = {
             "status": "ok",
             "type": "file_chunk",
             "device_id": self._service.identity.device_id,
@@ -188,8 +113,12 @@ class PullFileEndpoint:
             "offset": offset,
             "next_offset": next_offset,
             "size": size,
-            "eof": next_offset >= size,
+            "mtime": stat.st_mtime,
+            "eof": eof,
             "bytes": len(chunk),
             "chunk_sha256": hashlib.sha256(chunk).hexdigest(),
             "data_b64": base64.b64encode(chunk).decode("ascii"),
         }
+        if file_sha256 is not None:
+            response["file_sha256"] = file_sha256
+        return response

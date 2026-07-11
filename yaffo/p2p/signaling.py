@@ -30,6 +30,7 @@ import websockets
 from yaffo.p2p.identity import DeviceIdentity
 from yaffo.p2p.pairing import sign_nonce
 from yaffo.p2p.quic_transport import (
+    PinnedConnection,
     PunchAwareQuicServer,
     PunchError,
     TransportError,
@@ -48,19 +49,34 @@ DEFAULT_PUNCH_DURATION_SECONDS = 10.0
 # caller only starts its own punch after the relay phase, so the extra
 # margin keeps the two send windows overlapping.
 CALLEE_PUNCH_GRACE_SECONDS = 5.0
-# How long a per-call answer socket stays open after the call is answered,
-# then reaped (the callee never learns explicitly when the caller is done).
-# Relay-only calls just need the relay exchange; upgrade calls also need the
-# punch window and the direct-path probe. Kept tight because every answered
-# call holds one socket (= one fd) for this long — a chunked pull answers
-# many calls per minute.
-SESSION_SOCKET_LINGER_SECONDS = 20.0
-SESSION_SOCKET_UPGRADE_LINGER_SECONDS = 60.0
+# How long a per-call answer socket stays open with no inbound datagrams
+# before it's reaped (the callee never learns explicitly when the caller is
+# done). Idle-based, not a fixed linger: a Phase 6 transfer session keeps
+# its answer socket for as long as chunks keep flowing, while a quick
+# request/response call still frees its fd promptly. Relay-only calls just
+# need the relay exchange; upgrade calls also need the punch window and the
+# direct-path probe, hence the longer idle allowance.
+SESSION_SOCKET_IDLE_SECONDS = 20.0
+SESSION_SOCKET_UPGRADE_IDLE_SECONDS = 60.0
+SESSION_SOCKET_REAP_POLL_SECONDS = 5.0
 
 logger = get_logger(__name__, 'webapp')
 
 class CallError(Exception):
     pass
+
+
+async def _reap_answer_socket_when_idle(answer_server, idle_limit: float) -> None:
+    """Close a per-call answer socket once no datagrams have arrived for
+    idle_limit seconds. An active transfer session keeps its socket alive
+    indefinitely; the loop wakes at most every few seconds, so a dormant
+    socket costs one fd for idle_limit + one poll interval at worst."""
+    while True:
+        idle = time.monotonic() - answer_server.last_activity
+        if idle >= idle_limit:
+            answer_server.close()
+            return
+        await asyncio.sleep(min(idle_limit - idle, SESSION_SOCKET_REAP_POLL_SECONDS))
 
 
 class HubClient:
@@ -224,8 +240,8 @@ class HubClient:
             answer_server = self._quic_server
             if self._session_server_factory is not None:
                 answer_server = await self._session_server_factory()
-                linger = SESSION_SOCKET_UPGRADE_LINGER_SECONDS if upgrade else SESSION_SOCKET_LINGER_SECONDS
-                asyncio.get_running_loop().call_later(linger, answer_server.close)
+                idle_limit = SESSION_SOCKET_UPGRADE_IDLE_SECONDS if upgrade else SESSION_SOCKET_IDLE_SECONDS
+                asyncio.ensure_future(_reap_answer_socket_when_idle(answer_server, idle_limit))
             relay_addr = await resolve_ipv4(self._relay_host, self._relay_port)
             my_public = await answer_server.discover_public_address(*relay_addr)
             await answer_server.relay_hello(relay_addr[0], relay_addr[1], token)
@@ -385,3 +401,183 @@ class HubClient:
             # idle TTL reaps the session).
             dialer.relay_bye(relay_addr, token)
             dialer.close()
+
+    async def open_session(
+        self,
+        peer_device_id: str,
+        punch_duration: float = DEFAULT_PUNCH_DURATION_SECONDS,
+        attempt_upgrade: bool = True,
+    ) -> "HubSession":
+        """Run the relay-first flow but keep the pinned connection open for
+        many exchanges — the Phase 6 transfer session. The relay connection
+        is established (and proven with a ping) first, so the session works
+        no matter what the NATs do; the punch upgrade then happens ONCE per
+        session, and when it lands every subsequent byte rides the free
+        direct path instead of metered relay egress. The caller owns the
+        returned session and must close() it."""
+        await self.wait_ready()
+        relay_addr = await resolve_ipv4(self._relay_host, self._relay_port)
+        token = new_session_token()
+        report: dict = {
+            "peer_device_id": peer_device_id,
+            "relay": None,
+            "punch": None,
+            "direct": None,
+            "path": None,
+        }
+
+        dialer = await start_dialer()
+        waiter: asyncio.Future = asyncio.get_running_loop().create_future()
+        self._pending[token] = waiter
+        connection: Optional[PinnedConnection] = None
+        try:
+            my_public = await dialer.discover_public_address(*relay_addr)
+            logger.info(
+                "session connect_request peer=%s token=%s upgrade=%s public=%s",
+                peer_device_id,
+                token,
+                attempt_upgrade,
+                my_public,
+            )
+            await self._send(
+                {
+                    "type": "connect_request",
+                    "to": peer_device_id,
+                    "token": token,
+                    "public": list(my_public),
+                    "punch_duration": punch_duration,
+                    "upgrade": attempt_upgrade,
+                }
+            )
+            try:
+                response = await asyncio.wait_for(waiter, timeout=CONNECT_RESPONSE_TIMEOUT_SECONDS)
+            except asyncio.TimeoutError:
+                raise CallError(f"{peer_device_id} did not answer within {CONNECT_RESPONSE_TIMEOUT_SECONDS}s") from None
+            if response["type"] == "error":
+                raise CallError(response.get("message", "peer reported an error"))
+            peer_public = tuple(response["public"])
+
+            # Phase 1 — pinned connection via the relay, proven with a ping.
+            started = time.monotonic()
+            await dialer.relay_hello(relay_addr[0], relay_addr[1], token)
+            connection = await dialer.quic_pinned_connect(
+                relay_addr[0], relay_addr[1], peer_device_id, timeout=CALL_QUIC_TIMEOUT_SECONDS
+            )
+            ping_reply = await connection.request({"type": "ping"}, timeout=CALL_QUIC_TIMEOUT_SECONDS)
+            if ping_reply.get("status") != "ok":
+                raise TransportError(ping_reply.get("detail") or "peer rejected the session ping")
+            report["relay"] = {"ok": True, "rtt_ms": round((time.monotonic() - started) * 1000, 1)}
+            report["path"] = "relay"
+
+            if attempt_upgrade:
+                upgraded = await self._upgrade_session(
+                    dialer, relay_addr, token, peer_device_id, peer_public, punch_duration, report
+                )
+                if upgraded is not None:
+                    connection.close()
+                    connection = upgraded
+
+            return HubSession(dialer, relay_addr, token, connection, report)
+        except CallError:
+            if connection is not None:
+                connection.close()
+            dialer.relay_bye(relay_addr, token)
+            dialer.close()
+            raise
+        except (TransportError, OSError, asyncio.TimeoutError) as exc:
+            if connection is not None:
+                connection.close()
+            dialer.relay_bye(relay_addr, token)
+            dialer.close()
+            raise CallError(str(exc)) from exc
+        finally:
+            self._pending.pop(token, None)
+
+    async def _upgrade_session(
+        self,
+        dialer,
+        relay_addr: tuple[str, int],
+        token: str,
+        peer_device_id: str,
+        peer_public: tuple,
+        punch_duration: float,
+        report: dict,
+    ) -> Optional[PinnedConnection]:
+        """Attempt the direct-path upgrade for an open session: punch, then a
+        pinned connection to the peer-reflexive address. Returns the direct
+        connection (and frees the relay session immediately — bulk bytes no
+        longer need it), or None when the session stays relayed."""
+        try:
+            punch = await dialer.punch(peer_public[0], peer_public[1], duration=punch_duration)
+            report["punch"] = {"ok": True, "peer_observed_from": list(punch.peer_observed_from)}
+        except PunchError as exc:
+            report["punch"] = {"ok": False, "error": str(exc)}
+            return None
+
+        direct_addr = punch.peer_observed_from
+        try:
+            started = time.monotonic()
+            direct = await dialer.quic_pinned_connect(
+                direct_addr[0], direct_addr[1], peer_device_id, timeout=CALL_QUIC_TIMEOUT_SECONDS
+            )
+            ping_reply = await direct.request({"type": "ping"}, timeout=CALL_QUIC_TIMEOUT_SECONDS)
+            if ping_reply.get("status") != "ok":
+                direct.close()
+                raise TransportError(ping_reply.get("detail") or "peer rejected the direct-path ping")
+        except TransportError as exc:
+            report["direct"] = {"ok": False, "error": str(exc)}
+            return None
+        report["direct"] = {
+            "ok": True,
+            "address": list(direct_addr),
+            "rtt_ms": round((time.monotonic() - started) * 1000, 1),
+        }
+        report["path"] = "direct"
+        # The relay session carried only the handshake — free the hub's
+        # per-device slot now rather than when the transfer ends.
+        dialer.relay_bye(relay_addr, token)
+        return direct
+
+
+class HubSession:
+    """One open transfer session to a peer from the relay-first flow: a
+    pinned QUIC connection (relayed or upgraded to direct) plus the shared
+    dialer socket it rides on. request() runs one signed exchange per stream;
+    close() frees the relay session and the socket."""
+
+    def __init__(
+        self,
+        dialer,
+        relay_addr: tuple[str, int],
+        token: str,
+        connection: PinnedConnection,
+        report: dict,
+    ) -> None:
+        self._dialer = dialer
+        self._relay_addr = relay_addr
+        self._token = token
+        self._connection = connection
+        self.report = report
+        self._closed = False
+
+    @property
+    def path(self) -> str:
+        return self.report.get("path") or "relay"
+
+    @property
+    def closed(self) -> bool:
+        return self._closed or self._connection.closed
+
+    async def request(self, payload: dict, timeout: float) -> dict:
+        return await self._connection.request(payload, timeout=timeout)
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        self._connection.close()
+        # Duplicate byes are harmless (the relay ignores unknown tokens), so
+        # this needs no path check even after a direct upgrade already freed
+        # the relay session.
+        self._dialer.relay_bye(self._relay_addr, self._token)
+        self._dialer.close()

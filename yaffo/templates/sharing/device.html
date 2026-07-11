@@ -6,6 +6,7 @@
 {% block sharing_content %}
 <div class="sharing-page">
     {{ page_header(device.display_name, _('A device paired with this one')) }}
+    {% include "sharing/_transfers_panel.html" %}
     {% include "sharing/_device_panel.html" %}
 </div>
 {% endblock %}

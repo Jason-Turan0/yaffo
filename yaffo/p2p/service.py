@@ -43,10 +43,12 @@ from yaffo.p2p.lan_discovery import create_lan_discovery
 from yaffo.p2p.quic_transport import (
     PunchAwareQuicServer,
     TransportError,
+    open_pinned_connection_fresh_socket,
     quic_pinned_request_fresh_socket,
     start_quic_server,
 )
 from yaffo.p2p.signaling import CallError, HubClient
+from yaffo.p2p.transfers import PeerSession, TransferManager
 
 if TYPE_CHECKING:
     from yaffo.p2p.pairing import PairingCode
@@ -129,6 +131,7 @@ class P2PService:
         self.list_files = ListFilesEndpoint(self)
         self.pull_preview = PullPreviewEndpoint(self)
         self.pull_file = PullFileEndpoint(self)
+        self.transfers = TransferManager(self)
 
     # ---- lifecycle ---------------------------------------------------------
 
@@ -306,6 +309,46 @@ class P2PService:
         if self._hub_client is None:
             raise CallError("no LAN path and hub client is not running")
         return await self._hub_client.call(peer_device_id, payload=payload, attempt_upgrade=attempt_upgrade)
+
+    async def open_peer_session(self, peer_device_id: str) -> PeerSession:
+        """Open one transfer session to a peer (engine loop only) — LAN
+        candidate first (free, fast, zero hub involvement), else the hub's
+        relay-first flow with the one-time punch upgrade. The caller owns
+        the session and must close() it; TransferManager is the intended
+        caller."""
+        lan_session = await self._open_lan_session(peer_device_id)
+        if lan_session is not None:
+            return lan_session
+        if self._hub_client is None:
+            raise CallError("no LAN path and hub client is not running")
+        hub_session = await self._hub_client.open_session(peer_device_id)
+        return PeerSession(hub_session.path, hub_session)
+
+    async def _open_lan_session(self, peer_device_id: str) -> Optional[PeerSession]:
+        if self._lan_discovery is None:
+            return None
+        candidate = self._lan_discovery.candidate_for(peer_device_id)
+        if candidate is None:
+            return None
+        try:
+            connection = await open_pinned_connection_fresh_socket(
+                candidate.host, candidate.port, peer_device_id, timeout=LAN_CALL_TIMEOUT_SECONDS
+            )
+            ping_reply = await connection.request({"type": "ping"}, timeout=LAN_CALL_TIMEOUT_SECONDS)
+            if ping_reply.get("status") != "ok":
+                connection.close()
+                raise TransportError(ping_reply.get("detail") or "peer rejected the LAN session ping")
+        except TransportError as exc:
+            logger.info(
+                "p2p LAN session candidate failed peer=%s addr=%s:%s: %s; falling back to hub",
+                peer_device_id,
+                candidate.host,
+                candidate.port,
+                exc,
+            )
+            return None
+        self._lan_discovery.mark_reachable(peer_device_id)
+        return PeerSession("local", connection)
 
     async def _call_lan_candidate(self, peer_device_id: str, payload: dict) -> Optional[dict]:
         if self._lan_discovery is None:

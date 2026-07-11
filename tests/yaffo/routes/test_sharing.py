@@ -93,18 +93,26 @@ class FakeP2PService:
         self.list_files_error = None
         self.preview_bytes = b"jpeg-bytes"
         self.preview_error = None
-        self.pull_error = None
+        self.transfer_error = None
+        self.transfer_rows = []
         self.accepted_codes = []
         self.revoked_ids = []
         self.listed_ids = []
         self.listed_files_calls = []
         self.preview_calls = []
-        self.pulled_files = []
+        self.started_batches = []
+        self.cancelled_batches = []
+        self.continued_batches = []
         self.peering = self
         self.list_shared = SimpleNamespace(send=self.list_shared)
         self.list_files = SimpleNamespace(send=self.list_shared_files)
         self.pull_preview = SimpleNamespace(send=self.pull_preview)
-        self.pull_file = SimpleNamespace(download=self.pull_file)
+        self.transfers = SimpleNamespace(
+            start_batch=self.start_transfer_batch,
+            snapshot=self.transfer_snapshot,
+            cancel=self.cancel_transfer,
+            allow_relay_overage=self.continue_transfer,
+        )
 
     def connected_device_ids(self):
         return self.online
@@ -148,30 +156,45 @@ class FakeP2PService:
             raise self.preview_error
         return self.preview_bytes
 
-    def pull_file(
+    def start_transfer_batch(
         self,
-        device_id,
+        peer_device_id,
+        peer_name,
         media_dir_id,
-        relative_path,
+        scope,
+        label,
+        filters,
         destination_root,
-        expected_sha256=None,
-        destination_device_name=None,
-        destination_collection_path=None,
-        source_scope_path=None,
+        collection_path,
+        files=None,
     ):
-        self.pulled_files.append((
-            device_id,
-            media_dir_id,
-            relative_path,
-            destination_root,
-            expected_sha256,
-            destination_device_name,
-            destination_collection_path,
-            source_scope_path,
-        ))
-        if self.pull_error is not None:
-            raise self.pull_error
-        return {"relative_path": "laptop/trip/a.jpg", "bytes": 12}
+        self.started_batches.append(
+            {
+                "peer_device_id": peer_device_id,
+                "peer_name": peer_name,
+                "media_dir_id": media_dir_id,
+                "scope": scope,
+                "label": label,
+                "filters": filters,
+                "destination_root": destination_root,
+                "collection_path": collection_path,
+                "files": files,
+            }
+        )
+        if self.transfer_error is not None:
+            raise self.transfer_error
+        return "batch-1"
+
+    def transfer_snapshot(self, peer_device_id=None):
+        return self.transfer_rows
+
+    def cancel_transfer(self, batch_id):
+        self.cancelled_batches.append(batch_id)
+        return True
+
+    def continue_transfer(self, batch_id):
+        self.continued_batches.append(batch_id)
+        return True
 
 
 @pytest.fixture
@@ -650,9 +673,7 @@ def test_save_shared_download_directory_rejects_file(app, client, service, tmp_p
     assert "not a file" in message and type_ == "error"
 
 
-def test_pull_remote_file(app, client, service, tmp_path):
-    _seed_devices(app)
-    download_dir = tmp_path / "downloads"
+def _set_download_dir(app, download_dir):
     with app.app_context():
         db.session.add(
             ApplicationSettings(
@@ -663,6 +684,15 @@ def test_pull_remote_file(app, client, service, tmp_path):
         )
         db.session.commit()
 
+
+def test_pull_remote_file_queues_a_single_file_batch(app, client, service, tmp_path):
+    """The per-card Pull enqueues a background transfer (Phase 6) instead of
+    blocking the request on the download; the manifest's size/mtime ride
+    along to seed the resume sidecar."""
+    _seed_devices(app)
+    download_dir = tmp_path / "downloads"
+    _set_download_dir(app, download_dir)
+
     resp = client.post(
         f"/sharing/devices/{PEER_ONLINE}/pull",
         data={
@@ -670,23 +700,164 @@ def test_pull_remote_file(app, client, service, tmp_path):
             "relative_path": "trip/a.jpg",
             "scope": "trip",
             "collection_name": "trip",
-            "sha256": "abc123",
+            "name": "a.jpg",
+            "size": "12",
+            "mtime": "1720000000.0",
         },
     )
 
     assert resp.status_code == 204
     message, type_ = _notification(resp)
-    assert "laptop/trip/a.jpg" in message and type_ == "success"
-    assert service.pulled_files == [(
-        PEER_ONLINE,
-        "remote-lib",
-        "trip/a.jpg",
-        download_dir.resolve(),
-        "abc123",
-        "laptop",
-        "trip",
-        "trip",
-    )]
+    assert "a.jpg" in message and "queued" in message and type_ == "success"
+    assert "sharingTransfersChanged" in json.loads(resp.headers["HX-Trigger"])
+    assert service.started_batches == [
+        {
+            "peer_device_id": PEER_ONLINE,
+            "peer_name": "laptop",
+            "media_dir_id": "remote-lib",
+            "scope": "trip",
+            "label": "a.jpg",
+            "filters": {},
+            "destination_root": download_dir.resolve(),
+            "collection_path": "trip",
+            "files": [{"relative_path": "trip/a.jpg", "name": "a.jpg", "size": 12, "mtime": 1720000000.0}],
+        }
+    ]
+
+
+def test_download_all_queues_a_batch_with_the_current_filters(app, client, service, tmp_path):
+    """Download-all snapshots the whole filtered scope as one batch — the
+    filters ride the querystring exactly as the gallery page shows them."""
+    _seed_devices(app)
+    download_dir = tmp_path / "downloads"
+    _set_download_dir(app, download_dir)
+
+    resp = client.post(
+        f"/sharing/devices/{PEER_ONLINE}/transfers/download-all"
+        "?media_dir_id=remote-lib&scope=trip&label=photos&media-type=photo&year=2024"
+    )
+
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "queued" in message and type_ == "success"
+    assert "sharingTransfersChanged" in json.loads(resp.headers["HX-Trigger"])
+    assert len(service.started_batches) == 1
+    batch = service.started_batches[0]
+    assert batch["peer_device_id"] == PEER_ONLINE
+    assert batch["media_dir_id"] == "remote-lib"
+    assert batch["scope"] == "trip"
+    assert batch["label"] == "photos"
+    assert batch["filters"] == {"media_type": "photo", "year": 2024}
+    assert batch["collection_path"] == "trip"
+    assert batch["files"] is None
+
+
+def test_download_all_requires_a_scope(app, client, service, tmp_path):
+    _seed_devices(app)
+    _set_download_dir(app, tmp_path / "downloads")
+    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/transfers/download-all")
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "scope is missing" in message and type_ == "error"
+    assert service.started_batches == []
+
+
+def test_transfers_fragment_renders_batches_and_polls_while_active(app, client, service):
+    _seed_devices(app)
+    service.transfer_rows = [
+        {
+            "id": "batch-1",
+            "peer_device_id": PEER_ONLINE,
+            "peer_name": "laptop",
+            "label": "trip",
+            "state": "running",
+            "path": "relay",
+            "active": True,
+            "paused_for_budget": False,
+            "files_total": 4,
+            "files_done": 1,
+            "files_failed": 0,
+            "bytes_total": 400,
+            "bytes_done": 100,
+            "relay_bytes": 100,
+            "relay_budget_bytes": 2**30,
+            "active_files": ["b.jpg"],
+            "failed_files": [],
+            "error": None,
+            "created_at": None,
+            "finished_at": None,
+        }
+    ]
+
+    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/transfers")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Transferring" in body
+    assert "Via relay (metered)" in body
+    assert "1 of 4 files" in body
+    assert "b.jpg" in body
+    assert 'hx-trigger="every 2s"' in body
+    assert "cancel" in body
+
+
+def test_transfers_fragment_idles_without_batches(app, client, service):
+    _seed_devices(app)
+    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/transfers")
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "sharingTransfersChanged from:body" in body
+    assert "every 2s" not in body
+
+
+def test_transfers_paused_batch_offers_continue_anyway(app, client, service):
+    _seed_devices(app)
+    service.transfer_rows = [
+        {
+            "id": "batch-1",
+            "peer_device_id": PEER_ONLINE,
+            "peer_name": "laptop",
+            "label": "trip",
+            "state": "paused_relay_budget",
+            "path": "relay",
+            "active": True,
+            "paused_for_budget": True,
+            "files_total": 4,
+            "files_done": 1,
+            "files_failed": 0,
+            "bytes_total": 400,
+            "bytes_done": 100,
+            "relay_bytes": 2**30,
+            "relay_budget_bytes": 2**30,
+            "active_files": [],
+            "failed_files": [],
+            "error": None,
+            "created_at": None,
+            "finished_at": None,
+        }
+    ]
+
+    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/transfers")
+
+    body = resp.get_data(as_text=True)
+    assert "Continue anyway" in body
+    assert f"/transfers/batch-1/continue" in body
+
+
+def test_cancel_and_continue_transfer_routes(app, client, service):
+    _seed_devices(app)
+
+    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/transfers/batch-1/cancel")
+    assert resp.status_code == 200
+    message, _type = _notification(resp)
+    assert "cancelled" in message.lower()
+    assert service.cancelled_batches == ["batch-1"]
+
+    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/transfers/batch-1/continue")
+    assert resp.status_code == 200
+    message, _type = _notification(resp)
+    assert "relay" in message.lower()
+    assert service.continued_batches == ["batch-1"]
 
 
 def test_pull_remote_file_requires_download_directory(app, client, service):

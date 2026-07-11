@@ -10,8 +10,14 @@ import pytest
 
 from yaffo.app import create_app
 from yaffo.db import db
-from yaffo.db.models import TRUST_STATE_REVOKED, TRUST_STATE_TRUSTED
-from yaffo.db.repositories import p2p_repository
+from yaffo.db.models import (
+    GRANT_SCOPE_MEDIA_DIR,
+    MEDIA_TYPE_PHOTO,
+    MediaItem,
+    TRUST_STATE_REVOKED,
+    TRUST_STATE_TRUSTED,
+)
+from yaffo.db.repositories import media_dir_repository, p2p_repository
 from yaffo.p2p.identity import InMemorySecretStore
 from yaffo.p2p.lan_discovery import LanCandidate
 from yaffo.p2p.pairing import PairingError
@@ -325,3 +331,63 @@ def test_pair_and_revoke_entirely_through_the_ui_routes(two_devices):
             break
         time.sleep(0.1)
     assert "Revoked" in client_b.get("/sharing/settings/section").get_data(as_text=True)
+
+
+def test_download_all_batch_rides_one_transfer_session(two_devices, loopback_hub, tmp_path):
+    """The Phase 6 exit criterion for session reuse: a download-all batch —
+    manifest paging plus every chunk of every file — opens exactly ONE
+    transfer session (one connect_request at the hub), instead of the old
+    one-relay-call-per-chunk behavior that pushed all bytes through the
+    relay."""
+    (app_a, service_a), (app_b, service_b) = two_devices
+    _pair(service_a, service_b)
+
+    library = tmp_path / "library-b"
+    contents = {f"trip/photo{i}.jpg": bytes([65 + i]) * (3000 + i) for i in range(3)}
+    with app_b.app_context():
+        media_dir = media_dir_repository.add_media_dir(db.session, str(library))
+        media_dir_id = media_dir.id
+        for rel, blob in contents.items():
+            path = library / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(blob)
+            db.session.add(MediaItem(full_file_path=str(path), media_type=MEDIA_TYPE_PHOTO))
+        db.session.commit()
+        p2p_repository.create_grant(
+            db.session,
+            service_a.identity.device_id,
+            GRANT_SCOPE_MEDIA_DIR,
+            media_dir_id=media_dir_id,
+        )
+
+    requests_before = len(loopback_hub.connect_requests)
+    downloads = tmp_path / "downloads-a"
+    batch_id = service_a.transfers.start_batch(
+        service_b.identity.device_id,
+        "deviceB",
+        media_dir_id,
+        "",
+        "Everything",
+        {},
+        downloads,
+        "library",
+    )
+
+    deadline = time.time() + 60
+    rows = []
+    while time.time() < deadline:
+        rows = service_a.transfers.snapshot(service_b.identity.device_id)
+        if rows and not rows[0]["active"]:
+            break
+        time.sleep(0.2)
+
+    assert rows and rows[0]["id"] == batch_id
+    assert rows[0]["state"] == "completed", rows[0]
+    assert rows[0]["files_done"] == 3
+    assert rows[0]["path"] in ("direct", "relay")
+
+    for rel, blob in contents.items():
+        landed = downloads / "deviceB" / "library" / rel
+        assert landed.read_bytes() == blob, rel
+
+    assert len(loopback_hub.connect_requests) - requests_before == 1

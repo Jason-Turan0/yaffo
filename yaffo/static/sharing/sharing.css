@@ -470,3 +470,136 @@
         width: 100%;
     }
 }
+
+/* ---- Transfers panel (Phase 6 batch transfers) ---- */
+
+.transfers-panel .transfer-batch {
+    padding: 12px 0;
+    border-top: var(--border-width) solid var(--color-border);
+}
+
+.transfers-panel .transfer-batch:first-of-type {
+    border-top: none;
+}
+
+.transfer-batch-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.transfer-batch-label {
+    color: var(--color-text);
+}
+
+.transfer-path-badge,
+.transfer-state-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    border: var(--border-width) solid var(--color-border);
+    background: var(--color-surface-sunken);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+}
+
+.transfer-path-local {
+    background: var(--color-accent-soft);
+    border-color: var(--color-accent-soft-text);
+    color: var(--color-accent-soft-text);
+}
+
+.transfer-path-direct {
+    background: var(--color-success-soft);
+    border-color: var(--color-success-soft-border);
+    color: var(--color-success-soft-text);
+}
+
+.transfer-path-relay {
+    background: var(--color-warning-soft);
+    color: var(--color-warning-soft-text);
+}
+
+.transfer-state-running,
+.transfer-state-collecting {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+}
+
+.transfer-state-completed {
+    background: var(--color-success-soft);
+    border-color: var(--color-success-soft-border);
+    color: var(--color-success-soft-text);
+}
+
+.transfer-state-paused_relay_budget,
+.transfer-state-completed_with_errors {
+    background: var(--color-warning-soft);
+    color: var(--color-warning-soft-text);
+}
+
+.transfer-state-failed,
+.transfer-state-cancelled {
+    background: var(--color-danger-soft);
+    border-color: var(--color-danger-soft-border);
+    color: var(--color-danger-soft-text);
+}
+
+.transfer-progress-meta {
+    margin-top: 6px;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.transfer-progress-track {
+    margin-top: 6px;
+    height: 6px;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-sunken);
+    border: var(--border-width) solid var(--color-border);
+    overflow: hidden;
+}
+
+.transfer-progress-fill {
+    height: 100%;
+    background: var(--color-accent);
+}
+
+.transfer-active-files {
+    margin-top: 4px;
+}
+
+.transfer-budget-notice {
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    background: var(--color-warning-soft);
+    color: var(--color-warning-soft-text);
+}
+
+.transfer-budget-notice p {
+    margin: 0 0 8px;
+}
+
+.transfer-error {
+    margin-top: 6px;
+    color: var(--color-danger-soft-text);
+    font-size: var(--font-size-sm);
+}
+
+.transfer-failed-files {
+    margin: 6px 0 0;
+    padding-left: 18px;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.transfer-batch-actions {
+    margin-top: 8px;
+}
+
+.download-all-form {
+    display: inline-block;
+}

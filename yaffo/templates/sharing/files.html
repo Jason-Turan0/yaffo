@@ -42,6 +42,14 @@
         {{ render_sidebar(scope_url, filters, render_filters_block=remote_filters) }}
         <div class="main-content photo-gallery">
             {% set header_actions %}
+                {% if not error and files|length > 0 and download_dir %}
+                <form hx-post="{{ url_for('sharing_device_download_all', device_id=device.device_id) }}{% if request.query_string %}?{{ request.query_string.decode() }}{% endif %}"
+                      hx-swap="none" class="download-all-form">
+                    <button type="submit" class="btn-secondary btn-sm" data-icon="sync">
+                        {{ _("Download all (%(total)s)", total=pagination.total_items|format_integer) }}
+                    </button>
+                </form>
+                {% endif %}
                 <a class="btn-secondary btn-sm" href="{{ url_for('sharing_device', device_id=device.device_id) }}">
                     {{ _("Back to device") }}
                 </a>
@@ -60,6 +68,8 @@
                     {{ _("No shared files found") }}
                 {%- endif -%}
             {% endcall %}
+
+            {% include "sharing/_transfers_panel.html" %}
 
             {% if error %}
                 <div class="empty-state">
@@ -126,6 +136,12 @@
                                     <input type="hidden" name="relative_path" value="{{ file.relative_path }}">
                                     <input type="hidden" name="scope" value="{{ scope }}">
                                     <input type="hidden" name="collection_name" value="{{ scope or label or media_dir_id }}">
+                                    {# Size + mtime seed the transfer's resume sidecar: a
+                                       resumed .partial only continues when the source still
+                                       matches this manifest snapshot. #}
+                                    <input type="hidden" name="name" value="{{ file.name }}">
+                                    <input type="hidden" name="size" value="{{ file.size }}">
+                                    <input type="hidden" name="mtime" value="{{ file.mtime }}">
                                     <button type="submit" class="btn-secondary btn-sm" data-icon="sync">
                                         {{ _("Pull") }}
                                     </button>

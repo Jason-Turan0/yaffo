@@ -301,6 +301,7 @@ def init_sharing_routes(app: Flask):
             media_dirs=_media_dir_choices(),
             grants=_active_grant_rows(device_id),
             remote_shared=None,
+            transfers=_transfers_for(device_id),
         )
 
     @app.route("/sharing/sidebar", methods=["GET"])
@@ -549,6 +550,7 @@ def init_sharing_routes(app: Flask):
             files=result.get("files", []),
             error=error,
             download_dir=_shared_download_dir_value(),
+            transfers=_transfers_for(device_id),
             pagination={
                 "current_page": page,
                 "total_items": result.get("total", 0),
@@ -639,44 +641,157 @@ def init_sharing_routes(app: Flask):
         )
         return render_remote_panel(device, remote_shared)
 
-    @app.route("/sharing/devices/<device_id>/pull", methods=["POST"])
-    def sharing_device_pull_file(device_id: str):
-        """Pull one remote file into a selected local media directory."""
+    def _transfer_prerequisites(device_id: str):
+        """Shared validation for the transfer-enqueue routes. Returns
+        (service, device, destination_root, error_response) — exactly one of
+        the first three tuple or error_response is None-ness to check."""
         service = _service()
         if service is None:
-            return _notify(gettext("Device sharing is not running."))
+            return None, None, None, _notify(gettext("Device sharing is not running."))
         device = p2p_repository.get_known_device(db.session, device_id)
         if device is None:
-            return _notify(gettext("%(device)s is not a known device.", device=device_id))
+            return None, None, None, _notify(gettext("%(device)s is not a known device.", device=device_id))
         if device.trust_state != TRUST_STATE_TRUSTED:
-            return _notify(gettext("Pair this device again before pulling files from it."))
-
+            return None, None, None, _notify(gettext("Pair this device again before pulling files from it."))
         destination_root = get_shared_download_dir(db.session)
         if destination_root is None:
-            return _notify(gettext("Choose a download directory for shared files first."))
+            return None, None, None, _notify(gettext("Choose a download directory for shared files first."))
         try:
             destination_root = _validated_download_dir(str(destination_root))
         except ValueError as exc:
-            return _notify(str(exc))
+            return None, None, None, _notify(str(exc))
+        return service, device, destination_root, None
+
+    def _transfer_queued_toast(message: str):
+        """204 + toast + the trigger the transfers panel listens for while
+        idle, so an enqueued batch makes the panel appear immediately."""
+        response = make_response("", 204)
+        response.headers["HX-Trigger"] = json.dumps(
+            {
+                "showNotification": {"message": message, "type": "success"},
+                "sharingTransfersChanged": True,
+            }
+        )
+        return response
+
+    def _transfers_for(device_id: str) -> list[dict]:
+        service = _service()
+        if service is None:
+            return []
+        try:
+            return service.transfers.snapshot(device_id)
+        except Exception:  # noqa: BLE001 — status is display-only; never break the page
+            logger.exception("transfer snapshot failed peer=%s", device_id)
+            return []
+
+    def _render_transfers_panel(device_id: str):
+        return render_template(
+            "sharing/_transfers_panel.html",
+            device={"device_id": device_id},
+            transfers=_transfers_for(device_id),
+        )
+
+    @app.route("/sharing/devices/<device_id>/transfers", methods=["GET"])
+    def sharing_device_transfers(device_id: str):
+        """The self-polling transfers status fragment."""
+        return _render_transfers_panel(device_id)
+
+    @app.route("/sharing/devices/<device_id>/pull", methods=["POST"])
+    def sharing_device_pull_file(device_id: str):
+        """Queue one remote file as a background transfer batch."""
+        service, device, destination_root, error = _transfer_prerequisites(device_id)
+        if error is not None:
+            return error
 
         remote_media_dir_id = (request.form.get("remote_media_dir_id") or "").strip()
         relative_path = (request.form.get("relative_path") or "").strip()
+        if not remote_media_dir_id or not relative_path:
+            return _notify(gettext("Could not pull file: the file reference is incomplete."))
         source_scope_path = (request.form.get("scope") or "").strip()
         collection_path = (request.form.get("collection_name") or "").strip() or remote_media_dir_id
-        expected_sha256 = (request.form.get("sha256") or "").strip() or None
+        name = (request.form.get("name") or "").strip() or Path(relative_path).name
         try:
-            result = service.pull_file.download(
+            service.transfers.start_batch(
                 device_id,
+                device.display_name or device.device_id,
                 remote_media_dir_id,
-                relative_path,
+                source_scope_path,
+                name,
+                {},
                 destination_root,
-                expected_sha256=expected_sha256,
-                destination_device_name=device.display_name or device.device_id,
-                destination_collection_path=collection_path,
-                source_scope_path=source_scope_path,
+                collection_path,
+                files=[
+                    {
+                        "relative_path": relative_path,
+                        "name": name,
+                        "size": request.form.get("size", type=int) or 0,
+                        "mtime": request.form.get("mtime", type=float) or 0,
+                    }
+                ],
             )
         except (CallError, P2PServiceError, ValueError) as exc:
             return _notify(gettext("Could not pull file: %(reason)s", reason=str(exc)))
         except FutureTimeoutError:
-            return _notify(gettext("Pulling the file timed out — is the other device online?"))
-        return _notify(gettext("Pulled %(file)s.", file=result["relative_path"]), type="success")
+            return _notify(gettext("Queuing the transfer timed out — is device sharing running?"))
+        return _transfer_queued_toast(gettext("Pull of %(file)s queued.", file=name))
+
+    @app.route("/sharing/devices/<device_id>/transfers/download-all", methods=["POST"])
+    def sharing_device_download_all(device_id: str):
+        """Queue everything the current remote-gallery view matches (scope +
+        filters) as one background batch. The batch snapshots the manifest
+        from the peer before pulling, so it is not limited to the rendered
+        page."""
+        service, device, destination_root, error = _transfer_prerequisites(device_id)
+        if error is not None:
+            return error
+
+        media_dir_id = (request.args.get("media_dir_id") or "").strip()
+        if not media_dir_id:
+            return _notify(gettext("Could not start the download: the shared scope is missing."))
+        scope = (request.args.get("scope") or "").strip()
+        label = (request.args.get("label") or "").strip()
+        selections = filter_selections(db.session, request.args)
+        filter_payload = _remote_filter_payload(selections)
+        try:
+            service.transfers.start_batch(
+                device_id,
+                device.display_name or device.device_id,
+                media_dir_id,
+                scope,
+                label or scope or media_dir_id,
+                filter_payload,
+                destination_root,
+                scope or label or media_dir_id,
+            )
+        except (CallError, P2PServiceError, ValueError) as exc:
+            return _notify(gettext("Could not start the download: %(reason)s", reason=str(exc)))
+        except FutureTimeoutError:
+            return _notify(gettext("Queuing the transfer timed out — is device sharing running?"))
+        return _transfer_queued_toast(gettext("Download queued — everything shared in this view will be pulled."))
+
+    @app.route("/sharing/devices/<device_id>/transfers/<batch_id>/cancel", methods=["POST"])
+    def sharing_transfer_cancel(device_id: str, batch_id: str):
+        service = _service()
+        if service is None:
+            return _notify(gettext("Device sharing is not running."))
+        try:
+            cancelled = service.transfers.cancel(batch_id)
+        except (P2PServiceError, FutureTimeoutError):
+            cancelled = False
+        message = gettext("Transfer cancelled.") if cancelled else gettext("Transfer is no longer active.")
+        return _with_toast(_render_transfers_panel(device_id), message, devices_changed=False)
+
+    @app.route("/sharing/devices/<device_id>/transfers/<batch_id>/continue", methods=["POST"])
+    def sharing_transfer_continue(device_id: str, batch_id: str):
+        """Continue-anyway for a batch paused at the soft relay budget."""
+        service = _service()
+        if service is None:
+            return _notify(gettext("Device sharing is not running."))
+        try:
+            resumed = service.transfers.allow_relay_overage(batch_id)
+        except (P2PServiceError, FutureTimeoutError):
+            resumed = False
+        message = (
+            gettext("Continuing over the relay.") if resumed else gettext("Transfer is no longer active.")
+        )
+        return _with_toast(_render_transfers_panel(device_id), message, devices_changed=False)
