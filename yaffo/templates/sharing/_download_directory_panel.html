@@ -1,0 +1,22 @@
+<div class="sharing-panel" id="remote-download-directory-panel">
+    <h3>{{ _("Downloaded copies") }}</h3>
+    <form class="share-download-dir-form"
+          hx-post="{{ url_for('sharing_download_directory') }}"
+          hx-target="#remote-download-directory-panel" hx-swap="outerHTML">
+        <label for="shared-download-dir">{{ _("Download directory") }}</label>
+        <div class="file-browser-input-group share-grant-controls">
+            <input type="text"
+                   id="shared-download-dir"
+                   name="download_dir"
+                   class="form-control file-browser-input"
+                   value="{{ download_dir }}"
+                   placeholder="{{ _('Choose a local folder for shared files') }}"
+                   required>
+            <button type="button" class="btn-secondary file-browser-btn" data-icon="folder">
+                {{ _("Browse…") }}
+            </button>
+            <button type="submit" class="btn-secondary">{{ _("Save") }}</button>
+        </div>
+        <p class="hint-text">{{ _("Pulled files are copied under a device folder inside this directory.") }}</p>
+    </form>
+</div>
