@@ -24,9 +24,18 @@ from yaffo.db.repositories.media_repository import get_distinct_months, get_dist
 from yaffo.distance_units import DISTANCE_UNIT_KILOMETERS, get_saved_distance_unit
 
 
-def build_filters_context(session: Session, args: MultiDict) -> dict:
-    """The `filters` template context: available options for every filter plus the
-    selections parsed from the querystring (empty selections when no args)."""
+def gender_options() -> list[dict]:
+    return [
+        {'name': gettext("Male"), 'value': 1},
+        {'name': gettext("Female"), 'value': 0},
+    ]
+
+
+def filter_selections(session: Session, args: MultiDict) -> dict:
+    """Just the `selected_*` half of the filters context: the selections
+    parsed from the querystring (empty when no args). Shared with the p2p
+    remote gallery, whose *option lists* come from a peer's facets instead
+    of the local DB."""
     path = args.get("path", type=str)
     path = path.strip() if path else None
     device = args.get("device", type=str)
@@ -36,6 +45,35 @@ def build_filters_context(session: Session, args: MultiDict) -> dict:
         media_type = None
     distance_unit = get_saved_distance_unit(session)
 
+    return {
+        'selected_path': path,
+        'selected_person_ids': args.getlist("person", type=int),
+        'selected_person_match_type': args.get("person-match-type", default='any', type=str),
+        'selected_label_ids': args.getlist("labels", type=int),
+        'selected_labels_match_type': args.get("labels-match-type", default='any', type=str),
+        'selected_tag_name': args.get("tag-name", type=str),
+        'selected_tag_value': args.get("tag-value", type=str),
+        'selected_location_names': args.getlist("location", type=str),
+        'selected_location_match_type': args.get("location-match-type", default='any', type=str),
+        'selected_unnamed': args.get("unnamed", type=int),
+        'selected_proximity_lat': args.get("proximity-lat", type=float),
+        'selected_proximity_lon': args.get("proximity-lon", type=float),
+        'selected_proximity_distance': args.get("proximity-distance", type=float),
+        'selected_distance_unit': distance_unit,
+        'selected_distance_unit_label': gettext("Kilometers") if distance_unit == DISTANCE_UNIT_KILOMETERS else gettext("Miles"),
+        'selected_proximity_location': args.get("proximity-location", type=str),
+        'selected_year': args.get("year", type=int),
+        'selected_month': args.get("month", type=int),
+        'selected_device': device,
+        'selected_favorite': args.get("favorite", type=int),
+        'selected_media_type': media_type,
+        'selected_gender': args.get("gender", type=int),
+    }
+
+
+def build_filters_context(session: Session, args: MultiDict) -> dict:
+    """The `filters` template context: available options for every filter plus the
+    selections parsed from the querystring (empty selections when no args)."""
     distinct_tag_names = (
         session.query(Tag.tag_name)
         .distinct()
@@ -78,30 +116,6 @@ def build_filters_context(session: Session, args: MultiDict) -> dict:
         'location_names': location_names_list,
         'devices': device_list,
         'labels': labels,
-        'genders': [
-            {'name': gettext("Male"), 'value': 1},
-            {'name': gettext("Female"), 'value': 0},
-        ],
-        'selected_path': path,
-        'selected_person_ids': args.getlist("person", type=int),
-        'selected_person_match_type': args.get("person-match-type", default='any', type=str),
-        'selected_label_ids': args.getlist("labels", type=int),
-        'selected_labels_match_type': args.get("labels-match-type", default='any', type=str),
-        'selected_tag_name': args.get("tag-name", type=str),
-        'selected_tag_value': args.get("tag-value", type=str),
-        'selected_location_names': args.getlist("location", type=str),
-        'selected_location_match_type': args.get("location-match-type", default='any', type=str),
-        'selected_unnamed': args.get("unnamed", type=int),
-        'selected_proximity_lat': args.get("proximity-lat", type=float),
-        'selected_proximity_lon': args.get("proximity-lon", type=float),
-        'selected_proximity_distance': args.get("proximity-distance", type=float),
-        'selected_distance_unit': distance_unit,
-        'selected_distance_unit_label': gettext("Kilometers") if distance_unit == DISTANCE_UNIT_KILOMETERS else gettext("Miles"),
-        'selected_proximity_location': args.get("proximity-location", type=str),
-        'selected_year': args.get("year", type=int),
-        'selected_month': args.get("month", type=int),
-        'selected_device': device,
-        'selected_favorite': args.get("favorite", type=int),
-        'selected_media_type': media_type,
-        'selected_gender': args.get("gender", type=int),
+        'genders': gender_options(),
+        **filter_selections(session, args),
     }

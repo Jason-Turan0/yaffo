@@ -81,11 +81,13 @@ def create_app(settings: Optional[HubSettings] = None) -> FastAPI:
 
     def _over_session_cap(device_id: str, token: str) -> bool:
         tokens = brokered.setdefault(device_id, {})
-        now = time.monotonic()
-        for known, authorized_at in list(tokens.items()):
-            # A token stops counting once the relay has forgotten it (never
-            # HELLO'd and allowlist expired, or session pruned after its TTL).
-            if now - authorized_at > settings.token_ttl_seconds and not app.state.relay.is_active(known):
+        for known in list(tokens):
+            # A token stops counting the moment the relay has forgotten it:
+            # session closed by a BYE, pruned after its idle TTL, or never
+            # HELLO'd and the allowlist entry expired. (authorize() runs
+            # before the token is recorded here, so a counted token is
+            # is_active until one of those genuinely happens.)
+            if not app.state.relay.is_active(known):
                 del tokens[known]
         if token in tokens:
             return False  # re-announcing an existing session is not a new one
@@ -157,7 +159,8 @@ def create_app(settings: Optional[HubSettings] = None) -> FastAPI:
                 message["from"] = device_id
 
                 token = message.get("token")
-                if message.get("type") in _BROKERING_TYPES and isinstance(token, str):
+                brokering = message.get("type") in _BROKERING_TYPES and isinstance(token, str)
+                if brokering:
                     if not valid_token(token):
                         await websocket.send_json(
                             {"type": "error", "token": token, "message": "malformed relay token"}
@@ -169,8 +172,6 @@ def create_app(settings: Optional[HubSettings] = None) -> FastAPI:
                             {"type": "error", "token": token, "message": "too many active relay sessions"}
                         )
                         continue
-                    app.state.relay.authorize(token)
-                    brokered.setdefault(device_id, {})[token] = time.monotonic()
 
                 peer = connected.get(target)
                 if peer is None:
@@ -181,8 +182,14 @@ def create_app(settings: Optional[HubSettings] = None) -> FastAPI:
                             "message": f"{target} is not connected to the hub",
                         }
                     )
-                else:
-                    await peer.send_json(message)
+                    continue
+                if brokering:
+                    # Only forwarded brokering messages authorize (and count)
+                    # a token — a call that dies here (peer offline) must not
+                    # eat a session slot.
+                    app.state.relay.authorize(token)
+                    brokered.setdefault(device_id, {})[token] = time.monotonic()
+                await peer.send_json(message)
         except WebSocketDisconnect:
             pass
         except (ValueError, KeyError) as exc:

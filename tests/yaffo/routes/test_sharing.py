@@ -44,22 +44,58 @@ class FakeP2PService:
         self.list_shared_result = {
             "status": "ok",
             "type": "shared_list",
+            "scopes": [
+                {
+                    "scope_type": "folder",
+                    "media_dir_id": "remote-lib",
+                    "relative_path": "trip",
+                    "name": "photos",
+                    "file_count": 3,
+                }
+            ],
+        }
+        self.list_shared_error = None
+        self.list_files_result = {
+            "status": "ok",
+            "type": "shared_files",
+            "media_dir_id": "remote-lib",
+            "relative_path": "trip",
+            "filters": {},
+            "offset": 0,
+            "limit": 50,
+            "total": 3,
             "files": [
                 {
                     "media_dir_id": "remote-lib",
                     "relative_path": "trip/a.jpg",
                     "name": "a.jpg",
                     "size": 12,
-                    "sha256": "abc123",
+                    "mtime": 1720000000.0,
+                    "media_type": "photo",
+                    "date_taken": "2024-03-05T10:00:00",
+                    "location_name": "Lisbon",
+                    "duration_seconds": None,
                 }
             ],
-            "scopes": [],
+            "facets": {
+                "years": [2023, 2024],
+                "devices": ["Pixel", "X-T200"],
+                "people": [{"id": 7, "name": "Alice"}],
+                "labels": [{"id": 3, "name": "beach"}],
+                "tag_names": ["event"],
+                "locations": ["Lisbon", "Porto"],
+                "tag_values": ["holiday"],
+            },
         }
-        self.list_shared_error = None
+        self.list_files_error = None
+        self.preview_bytes = b"jpeg-bytes"
+        self.preview_error = None
         self.pull_error = None
         self.accepted_codes = []
         self.revoked_ids = []
         self.listed_ids = []
+        self.listed_files_calls = []
+        self.preview_calls = []
         self.pulled_files = []
 
     def connected_device_ids(self):
@@ -85,6 +121,18 @@ class FakeP2PService:
         if self.list_shared_error is not None:
             raise self.list_shared_error
         return self.list_shared_result
+
+    def list_shared_files(self, device_id, media_dir_id, relative_path="", filters=None, offset=0, limit=50):
+        self.listed_files_calls.append((device_id, media_dir_id, relative_path, filters, offset, limit))
+        if self.list_files_error is not None:
+            raise self.list_files_error
+        return self.list_files_result
+
+    def pull_preview(self, device_id, media_dir_id, relative_path, max_dimension=512):
+        self.preview_calls.append((device_id, media_dir_id, relative_path, max_dimension))
+        if self.preview_error is not None:
+            raise self.preview_error
+        return self.preview_bytes
 
     def pull_file(self, device_id, media_dir_id, relative_path, destination_root, expected_sha256=None):
         self.pulled_files.append((device_id, media_dir_id, relative_path, destination_root, expected_sha256))
@@ -379,10 +427,18 @@ def test_revoke_share_grant(app, client, service, tmp_path):
 # ---- receiving shared files --------------------------------------------------
 
 
-def test_browse_remote_shared_files(app, client, service, tmp_path):
+def test_device_page_loads_remote_panel_on_load(app, client, service):
+    """The panel is a placeholder that fetches itself — the p2p call must
+    never block the page render."""
     _seed_devices(app)
-    with app.app_context():
-        media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+    body = client.get(f"/sharing/devices/{PEER_ONLINE}").get_data(as_text=True)
+    assert "Loading shared folders" in body
+    assert 'hx-trigger="load"' in body
+    assert service.listed_ids == []
+
+
+def test_browse_remote_shared_scopes_with_counts(app, client, service):
+    _seed_devices(app)
 
     resp = client.post(f"/sharing/devices/{PEER_ONLINE}/shared")
 
@@ -390,19 +446,133 @@ def test_browse_remote_shared_files(app, client, service, tmp_path):
     assert service.listed_ids == [PEER_ONLINE]
     body = resp.get_data(as_text=True)
     assert "remote-shared-panel" in body
-    assert "trip/a.jpg" in body
-    assert "Pull" in body
+    assert "trip" in body
+    assert "3 files" in body
+    assert "Open\n" in body and "Browse files" not in body  # the scope's gallery link
+    assert f"/sharing/devices/{PEER_ONLINE}/files?" in body
+    assert "label=photos+/+trip" in body  # scope label carried to the gallery page
+    assert "Pull" not in body  # pulling lives on the gallery page
+    assert 'hx-trigger="load"' not in body  # loaded panels must not re-trigger themselves
 
 
-def test_browse_remote_shared_files_error_toast(app, client, service):
+def test_browse_remote_shared_error_renders_inline_with_retry(app, client, service):
     _seed_devices(app)
     service.list_shared_error = CallError("peer did not answer")
 
     resp = client.post(f"/sharing/devices/{PEER_ONLINE}/shared")
 
-    assert resp.status_code == 204
-    message, type_ = _notification(resp)
-    assert "peer did not answer" in message and type_ == "error"
+    assert resp.status_code == 200  # inline error replaces the loading placeholder
+    body = resp.get_data(as_text=True)
+    assert "peer did not answer" in body
+    assert "Try again" in body
+    assert 'hx-trigger="load"' not in body
+
+
+def test_browse_remote_shared_without_service_renders_inline(app, client):
+    _seed_devices(app)
+    body = client.post(f"/sharing/devices/{PEER_ONLINE}/shared").get_data(as_text=True)
+    assert "not running" in body
+    assert "Try again" in body
+
+
+def test_browse_remote_shared_revoked_device(app, client, service):
+    _seed_devices(app)
+    resp = client.post(f"/sharing/devices/{PEER_REVOKED}/shared")
+    assert "revoked" in resp.get_data(as_text=True)
+    assert service.listed_ids == []
+
+
+def test_shared_files_gallery_renders_with_filters_and_facets(app, client, service, tmp_path):
+    """The remote gallery is server-rendered like the home page: one
+    list_files call per GET carrying the parsed filters, peer facets in the
+    year/device selects, lazy preview images, and per-card pull forms."""
+    _seed_devices(app)
+    with app.app_context():
+        media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+    service.list_files_result["total"] = 120
+
+    resp = client.get(
+        f"/sharing/devices/{PEER_ONLINE}/files"
+        "?media_dir_id=remote-lib&scope=trip&label=photos%20/%20trip"
+        "&path=beach&media-type=photo&year=2024&month=3&device=Pixel&page=2"
+    )
+
+    assert resp.status_code == 200
+    assert service.listed_files_calls == [
+        (
+            PEER_ONLINE,
+            "remote-lib",
+            "trip",
+            {"path": "beach", "media_type": "photo", "year": 2024, "month": 3, "device": "Pixel"},
+            50,
+            50,
+        )
+    ]
+    body = resp.get_data(as_text=True)
+    assert "Shared by laptop" in body
+    assert "photos / trip" in body
+    # The grid: previews load through the local proxy via the client-side
+    # queue (bounded concurrency), never as plain eager/lazy img src.
+    assert f"/sharing/devices/{PEER_ONLINE}/preview?" in body
+    assert "data-preview-src" in body
+    assert "remote_gallery.js" in body
+    # Loading shows the skeleton plate; the "not found" placeholder is only
+    # the failure fallback, never the initial state.
+    assert "preview-pending" in body
+    assert "data-fallback-src" in body
+    assert "trip/a.jpg" in body
+    assert "Lisbon" in body
+    assert "Pull" in body
+    assert "pull-destination" in body
+    # Facets from the peer populate the sidebar selects; selections stick.
+    assert "2023" in body and "X-T200" in body
+    assert 'value="beach"' in body
+    assert "Page 2 of 3" in body
+
+
+def test_shared_files_page_without_scope_redirects_to_device(app, client, service):
+    _seed_devices(app)
+    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/files")
+    assert resp.status_code == 302
+    assert f"/sharing/devices/{PEER_ONLINE}" in resp.headers["Location"]
+
+
+def test_shared_files_gallery_error_renders_inline(app, client, service):
+    _seed_devices(app)
+    service.list_files_error = CallError("peer did not answer")
+
+    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/files?media_dir_id=remote-lib&scope=trip")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "peer did not answer" in body
+    assert "Try again" in body
+
+
+def test_shared_files_gallery_revoked_device(app, client, service):
+    _seed_devices(app)
+    resp = client.get(f"/sharing/devices/{PEER_REVOKED}/files?media_dir_id=remote-lib")
+    assert "revoked" in resp.get_data(as_text=True)
+    assert service.listed_files_calls == []
+
+
+def test_preview_proxies_peer_image_with_caching(app, client, service):
+    _seed_devices(app)
+
+    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/preview?media_dir_id=remote-lib&path=trip/a.jpg")
+
+    assert resp.status_code == 200
+    assert resp.data == b"jpeg-bytes"
+    assert resp.headers["Content-Type"] == "image/jpeg"
+    assert "max-age" in resp.headers["Cache-Control"]
+    assert service.preview_calls == [(PEER_ONLINE, "remote-lib", "trip/a.jpg", 512)]
+
+
+def test_preview_failure_is_an_error_status_for_the_img_fallback(app, client, service):
+    _seed_devices(app)
+    service.preview_error = CallError("peer did not answer")
+    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/preview?media_dir_id=remote-lib&path=trip/a.jpg")
+    assert resp.status_code == 502
 
 
 def test_pull_remote_file(app, client, service, tmp_path):
@@ -444,7 +614,6 @@ def test_actions_unavailable_without_service(client):
         "/sharing/pairing-code",
         "/sharing/pair",
         "/sharing/revoke",
-        f"/sharing/devices/{PEER_ONLINE}/shared",
         f"/sharing/devices/{PEER_ONLINE}/pull",
     ):
         resp = client.post(path, data={"code": "x", "device_id": "y"})

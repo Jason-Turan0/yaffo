@@ -6,9 +6,11 @@ from yaffo_hub import stun
 from yaffo_hub.relay import (
     RelayLimits,
     build_ack,
+    build_bye,
     build_hello,
     new_session_token,
     parse_ack,
+    parse_bye,
     parse_hello,
     start_relay,
     valid_token,
@@ -21,9 +23,11 @@ def test_hello_ack_framing_round_trips():
     token = new_session_token()
     assert parse_hello(build_hello(token)) == token
     assert parse_ack(build_ack(token)) == token
+    assert parse_bye(build_bye(token)) == token
     # Frames are not interchangeable and garbage doesn't parse
     assert parse_hello(build_ack(token)) is None
     assert parse_ack(build_hello(token)) is None
+    assert parse_bye(build_hello(token)) is None
     assert parse_hello(b"nonsense") is None
 
 
@@ -157,6 +161,52 @@ async def test_session_byte_cap_stops_forwarding():
         await asyncio.sleep(0.2)
         assert b.received.empty()
         assert protocol.stats()["sessions_capped"] == 1
+    finally:
+        transport.close()
+
+
+async def test_bye_from_a_session_side_closes_it_immediately():
+    """A completed call must free its session (and its is_active claim on
+    the signaling side's per-device cap) without waiting out the idle TTL."""
+    transport, protocol, relay_addr = await _relay()
+    try:
+        a, b = await _make_endpoint(), await _make_endpoint()
+        token = new_session_token()
+        protocol.authorize(token)
+        for side in (a, b):
+            side.transport.sendto(build_hello(token), relay_addr)
+            await asyncio.wait_for(side.received.get(), timeout=2)  # ack
+        assert protocol.is_active(token)
+
+        a.transport.sendto(build_bye(token), relay_addr)
+        await asyncio.sleep(0.2)
+        assert not protocol.is_active(token)
+        assert protocol.stats()["active_sessions"] == 0
+        assert protocol.stats()["sessions_closed"] == 1
+
+        # The closed session forwards nothing anymore.
+        b.transport.sendto(b"late-payload", relay_addr)
+        await asyncio.sleep(0.2)
+        assert a.received.empty()
+    finally:
+        transport.close()
+
+
+async def test_bye_from_a_stranger_is_ignored():
+    """Knowing a token is not enough — only a registered side of the session
+    may close it."""
+    transport, protocol, relay_addr = await _relay()
+    try:
+        a, stranger = await _make_endpoint(), await _make_endpoint()
+        token = new_session_token()
+        protocol.authorize(token)
+        a.transport.sendto(build_hello(token), relay_addr)
+        await asyncio.wait_for(a.received.get(), timeout=2)  # ack
+
+        stranger.transport.sendto(build_bye(token), relay_addr)
+        await asyncio.sleep(0.2)
+        assert protocol.is_active(token)
+        assert protocol.stats()["active_sessions"] == 1
     finally:
         transport.close()
 

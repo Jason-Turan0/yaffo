@@ -24,8 +24,10 @@ class HubSettings:
 
     # Relay limits: idle sessions expire; a session that forwards more than
     # max_session_bytes stops forwarding (abuse backstop, not a feature
-    # limit — a legitimate multi-GB pull that lost the punch should fit).
-    session_ttl_seconds: float = 600.0
+    # limit — a legitimate multi-GB pull that lost the punch should fit;
+    # active transfers refresh last_seen, so the TTL only reaps sessions
+    # whose caller crashed before sending its BYE).
+    session_ttl_seconds: float = 120.0
     max_session_bytes: int = 8 * 2**30
 
     # Per-device / per-IP abuse limits on the signaling side.

@@ -22,6 +22,7 @@ from flask import (
     Flask,
     abort,
     current_app,
+    jsonify,
     make_response,
     redirect,
     render_template,
@@ -37,6 +38,9 @@ from yaffo.db.models import (
     TRUST_STATE_TRUSTED,
 )
 from yaffo.db.repositories import media_dir_repository, p2p_repository
+from yaffo.db.repositories.media_repository import get_distinct_months
+from yaffo.distance_units import distance_to_kilometers
+from yaffo.routes.filter_panel import filter_selections, gender_options
 from yaffo.logging_config import get_logger
 from yaffo.p2p.pairing import PairingError
 from yaffo.p2p.service import P2PServiceError
@@ -44,6 +48,11 @@ from yaffo.p2p.signaling import CallError
 
 
 logger = get_logger(__name__, "webapp")
+
+# Remote gallery paging (each render is a live signed p2p call to the peer,
+# so pages stay modest).
+REMOTE_FILES_PAGE_SIZE = 50
+REMOTE_FILES_PAGE_SIZES = [25, 50, 100]
 
 
 def _service():
@@ -146,6 +155,54 @@ def _active_grant_rows(peer_device_id: str) -> list[dict]:
     return rows
 
 
+def _remote_filter_payload(selections: dict) -> dict:
+    """Translate parsed querystring selections into the list_files protocol's
+    filter dict, sending only what's actually set. The proximity distance is
+    normalized to kilometers HERE, with this device's unit setting — the
+    units on the two devices need not match."""
+    payload = {}
+    if selections["selected_path"]:
+        payload["path"] = selections["selected_path"]
+    if selections["selected_media_type"]:
+        payload["media_type"] = selections["selected_media_type"]
+    if selections["selected_year"]:
+        payload["year"] = selections["selected_year"]
+    if selections["selected_month"]:
+        payload["month"] = selections["selected_month"]
+    if selections["selected_device"]:
+        payload["device"] = selections["selected_device"]
+    if selections["selected_favorite"]:
+        payload["favorite"] = True
+    if selections["selected_gender"] is not None:
+        payload["gender"] = selections["selected_gender"]
+    if selections["selected_person_ids"]:
+        payload["people"] = selections["selected_person_ids"]
+        payload["person_match_type"] = selections["selected_person_match_type"]
+    if selections["selected_label_ids"]:
+        payload["labels"] = selections["selected_label_ids"]
+        payload["labels_match_type"] = selections["selected_labels_match_type"]
+    if selections["selected_tag_name"]:
+        payload["tag_name"] = selections["selected_tag_name"]
+        if selections["selected_tag_value"]:
+            payload["tag_value"] = selections["selected_tag_value"]
+    if selections["selected_location_names"]:
+        payload["locations"] = selections["selected_location_names"]
+        payload["location_match_type"] = selections["selected_location_match_type"]
+    if selections["selected_unnamed"]:
+        payload["unnamed"] = True
+    if (
+        selections["selected_proximity_lat"] is not None
+        and selections["selected_proximity_lon"] is not None
+        and selections["selected_proximity_distance"]
+    ):
+        payload["proximity_lat"] = selections["selected_proximity_lat"]
+        payload["proximity_lon"] = selections["selected_proximity_lon"]
+        payload["proximity_km"] = distance_to_kilometers(
+            selections["selected_proximity_distance"], selections["selected_distance_unit"]
+        )
+    return payload
+
+
 def _resolve_folder_grant(folder_path: str) -> tuple[str, str | None]:
     folder = Path(folder_path).expanduser().resolve()
     for entry in media_dir_repository.get_media_dir_entries(db.session):
@@ -175,12 +232,13 @@ def init_sharing_routes(app: Flask):
             remote_shared=None,
         )
 
-    def render_remote_panel(device: dict, remote_shared: dict | None = None):
+    def render_remote_panel(device: dict, remote_shared: dict | None = None, remote_error: str | None = None):
         return render_template(
             "sharing/_remote_panel.html",
             device=device,
             media_dirs=_media_dir_choices(),
             remote_shared=remote_shared,
+            remote_error=remote_error,
         )
 
     @app.route("/sharing", methods=["GET"])
@@ -364,31 +422,168 @@ def init_sharing_routes(app: Flask):
         p2p_repository.revoke_grant(db.session, grant_id)
         return _with_toast(render_device_panel(device_id), gettext("Share grant revoked."), devices_changed=False)
 
-    @app.route("/sharing/devices/<device_id>/shared", methods=["POST"])
-    def sharing_device_remote_shared(device_id: str):
-        """Ask a peer for the files it currently grants to this device."""
+    @app.route("/sharing/devices/<device_id>/files", methods=["GET"])
+    def sharing_device_files(device_id: str):
+        """Remote gallery for one shared scope — behaves like the home page:
+        filter panel on the left, photo grid on the right, filters and
+        pagination as plain GET parameters. Each render is one live
+        list_files call to the peer, which scopes to the grant FIRST and
+        then applies these filters; the response's facets populate the
+        year/device selects. Previews load lazily via sharing_device_preview.
+        """
+        context = sharing_context()
+        device = next((d for d in context["devices"] if d["device_id"] == device_id), None)
+        if device is None:
+            abort(404)
+        media_dir_id = (request.args.get("media_dir_id") or "").strip()
+        if not media_dir_id:
+            return redirect(url_for("sharing_device", device_id=device_id))
+        scope = (request.args.get("scope") or "").strip()
+        label = (request.args.get("label") or "").strip()
+
+        page = max(request.args.get("page", default=1, type=int) or 1, 1)
+        page_size = request.args.get("page-size", type=int) or REMOTE_FILES_PAGE_SIZE
+        page_size = min(max(page_size, 1), max(REMOTE_FILES_PAGE_SIZES))
+
+        selections = filter_selections(db.session, request.args)
+        filter_payload = _remote_filter_payload(selections)
+
+        error = None
+        result = {}
         service = _service()
         if service is None:
-            return _notify(gettext("Device sharing is not running."))
+            error = gettext("Device sharing is not running.")
+        elif not device["trusted"]:
+            error = gettext("This device is revoked. Pair it again before browsing shared files.")
+        else:
+            try:
+                result = service.list_shared_files(
+                    device_id,
+                    media_dir_id,
+                    scope,
+                    filter_payload,
+                    offset=(page - 1) * page_size,
+                    limit=page_size,
+                )
+            except (CallError, P2PServiceError) as exc:
+                logger.warning("browse shared files failed peer=%s error=%s", device_id, exc)
+                error = gettext("Could not load shared files: %(reason)s", reason=str(exc))
+            except FutureTimeoutError:
+                error = gettext("Loading shared files timed out — is the other device online?")
+
+        facets = result.get("facets") or {}
+        filters = {
+            # The option lists the reused filter partials render from — all
+            # facets come from the PEER's library (scoped to the grant), not
+            # the local DB. People/label entries are the peer's own entity
+            # ids, echoed back to it when selected.
+            "years": facets.get("years", []),
+            "months": get_distinct_months(),
+            "devices": facets.get("devices", []),
+            "people": facets.get("people", []),
+            "labels": facets.get("labels", []),
+            "tag_names": facets.get("tag_names", []),
+            "location_names": facets.get("locations", []),
+            "genders": gender_options(),
+            **selections,
+        }
+        return render_template(
+            "sharing/files.html",
+            device=device,
+            media_dir_id=media_dir_id,
+            scope=scope,
+            label=label,
+            filters=filters,
+            files=result.get("files", []),
+            error=error,
+            media_dirs=_media_dir_choices(),
+            pagination={
+                "current_page": page,
+                "total_items": result.get("total", 0),
+                "page_size": page_size,
+                "page_sizes": REMOTE_FILES_PAGE_SIZES,
+            },
+        )
+
+    @app.route("/sharing/devices/<device_id>/tag-values", methods=["GET"])
+    def sharing_device_tag_values(device_id: str):
+        """Peer-side tag values for the remote gallery's tag filter — same
+        response shape as the home page's /api/tag-values, but the values
+        come from the peer, scoped to the grant (a facets-only list_files
+        call; no manifests wanted, hence limit=1)."""
+        service = _service()
+        tag_name = (request.args.get("tag_name") or "").strip()
+        media_dir_id = (request.args.get("media_dir_id") or "").strip()
+        scope = (request.args.get("scope") or "").strip()
+        if not tag_name or not media_dir_id:
+            return jsonify({"error": gettext("The tag_name parameter is required"), "code": "tag_name_required"}), 400
+        if service is None:
+            return jsonify({"tag_name": tag_name, "values": []}), 503
+        try:
+            result = service.list_shared_files(device_id, media_dir_id, scope, {"tag_name": tag_name}, limit=1)
+        except (CallError, P2PServiceError):
+            return jsonify({"tag_name": tag_name, "values": []}), 502
+        except FutureTimeoutError:
+            return jsonify({"tag_name": tag_name, "values": []}), 504
+        return jsonify({"tag_name": tag_name, "values": (result.get("facets") or {}).get("tag_values", [])})
+
+    @app.route("/sharing/devices/<device_id>/preview", methods=["GET"])
+    def sharing_device_preview(device_id: str):
+        """Proxy one gallery preview from the peer (which downscales and
+        recompresses before sending). Long-lived private browser caching —
+        the grid busts the cache via the file's mtime in the URL. Failures
+        are plain error statuses; the <img> data-fallback swaps in a
+        placeholder."""
+        service = _service()
+        if service is None:
+            abort(503)
+        media_dir_id = (request.args.get("media_dir_id") or "").strip()
+        relative_path = (request.args.get("path") or "").strip()
+        if not media_dir_id or not relative_path:
+            abort(404)
+        try:
+            data = service.pull_preview(device_id, media_dir_id, relative_path)
+        except (CallError, P2PServiceError):
+            abort(502)
+        except FutureTimeoutError:
+            abort(504)
+        response = make_response(data)
+        response.headers["Content-Type"] = "image/jpeg"
+        response.headers["Cache-Control"] = "private, max-age=604800"
+        return response
+
+    @app.route("/sharing/devices/<device_id>/shared", methods=["POST"])
+    def sharing_device_remote_shared(device_id: str):
+        """Ask a peer for the scopes it currently grants to this device.
+        Fired by the panel's own load trigger (and its Try-again button), so
+        errors render inline — a 204 toast would strand the loading
+        placeholder."""
         context = sharing_context()
         device = next((d for d in context["devices"] if d["device_id"] == device_id), None)
         if device is None:
             return _notify(gettext("%(device)s is not a known device.", device=device_id))
         if not device["trusted"]:
-            return _notify(gettext("Pair this device again before browsing shared files."))
+            return render_remote_panel(device)  # the template shows the revoked state
+        service = _service()
+        if service is None:
+            return render_remote_panel(device, remote_error=gettext("Device sharing is not running."))
         try:
-            logger.info("browse shared files start peer=%s", device_id)
+            logger.info("browse shared scopes start peer=%s", device_id)
             remote_shared = service.list_shared(device_id)
         except (CallError, P2PServiceError) as exc:
-            logger.warning("browse shared files failed peer=%s error=%s", device_id, exc)
-            return _notify(gettext("Could not browse shared files: %(reason)s", reason=str(exc)))
+            logger.warning("browse shared scopes failed peer=%s error=%s", device_id, exc)
+            return render_remote_panel(
+                device, remote_error=gettext("Could not load shared folders: %(reason)s", reason=str(exc))
+            )
         except FutureTimeoutError:
-            logger.warning("browse shared files timed out peer=%s", device_id)
-            return _notify(gettext("Browsing shared files timed out — is the other device online?"))
+            logger.warning("browse shared scopes timed out peer=%s", device_id)
+            return render_remote_panel(
+                device, remote_error=gettext("Loading shared folders timed out — is the other device online?")
+            )
         logger.info(
-            "browse shared files done peer=%s files=%d",
+            "browse shared scopes done peer=%s scopes=%d",
             device_id,
-            len(remote_shared.get("files", [])) if isinstance(remote_shared, dict) else 0,
+            len(remote_shared.get("scopes", [])) if isinstance(remote_shared, dict) else 0,
         )
         return render_remote_panel(device, remote_shared)
 

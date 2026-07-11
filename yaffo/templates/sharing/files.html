@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _("Shared by %(device)s - Sharing - Yaffo", device=device.display_name) }}{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='filters/location-autocomplete.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sharing/sharing.css') }}">
+{% endblock %}
+
+{% block content %}
+    {% from "_sidebar.html" import render_sidebar %}
+    {% from "components/pagination.html" import pagination as render_pagination %}
+    {% from "components/page_header.html" import page_header %}
+
+    {# The filter form GETs back to this page, so the scope coordinates ride
+       as hidden inputs (a GET submit replaces the querystring). Same filter
+       set and order as the home gallery — but every option list comes from
+       the peer's facets (scoped to the grant), and people/label values are
+       the peer's entity ids echoed back to it. #}
+    {% macro remote_filters() %}
+        <input type="hidden" name="media_dir_id" value="{{ media_dir_id }}">
+        <input type="hidden" name="scope" value="{{ scope }}">
+        <input type="hidden" name="label" value="{{ label }}">
+        {% include "filters/_year.html" %}
+        {% include "filters/_month.html" %}
+        {% include "filters/_path.html" %}
+        {% include "filters/_people.html" %}
+        {% include "filters/_gender.html" %}
+        {% include "filters/_labels.html" %}
+        {% include "filters/_tags.html" %}
+        {% include "filters/_locations.html" %}
+        {% include "filters/_device.html" %}
+        {% include "filters/_favorite.html" %}
+        {% include "filters/_media_type.html" %}
+    {% endmacro %}
+
+    {% set scope_url = url_for('sharing_device_files', device_id=device.device_id,
+                               media_dir_id=media_dir_id, scope=scope, label=label) %}
+
+    <div class="main-container-layout">
+        {{ render_sidebar(scope_url, filters, render_filters_block=remote_filters) }}
+        <div class="main-content photo-gallery">
+            {% set header_actions %}
+                <a class="btn-secondary btn-sm" href="{{ url_for('sharing_device', device_id=device.device_id) }}">
+                    {{ _("Back to device") }}
+                </a>
+            {% endset %}
+            {% call page_header(_("Shared by %(device)s", device=device.display_name), actions=header_actions) %}
+                {% if label %}{{ label }} — {% endif %}
+                {%- if error -%}
+                    {{ _("Unavailable") }}
+                {%- elif files|length > 0 -%}
+                    {% trans trimmed count=files|length, shown=files|length|format_integer, total=pagination.total_items|format_integer %}
+                        Showing {{ shown }} of {{ total }} shared file
+                    {% pluralize %}
+                        Showing {{ shown }} of {{ total }} shared files
+                    {% endtrans %}
+                {%- else -%}
+                    {{ _("No shared files found") }}
+                {%- endif -%}
+            {% endcall %}
+
+            {% if error %}
+                <div class="empty-state">
+                    <h2>{{ _("Could not reach this device") }}</h2>
+                    <p>{{ error }}</p>
+                    <a class="btn-secondary" href="{{ request.url }}">{{ _("Try again") }}</a>
+                </div>
+            {% elif files|length > 0 %}
+                {% if media_dirs %}
+                <div class="remote-pull-destination">
+                    <label for="pull-destination">{{ _("Save pulled files to") }}</label>
+                    <select id="pull-destination" name="destination_media_dir_id">
+                        {% for media_dir in media_dirs %}
+                        <option value="{{ media_dir.id }}">{{ media_dir.name }} - {{ media_dir.path }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% else %}
+                <p class="no-data">{{ _("Add a local media directory in Settings to pull files from this device.") }}</p>
+                {% endif %}
+
+                <div class="photo-grid remote-photo-grid">
+                    {% for file in files %}
+                        <div class="photo-card remote-photo-card">
+                            <div class="photo-thumb">
+                                {# Previews are live p2p calls, so the queue in
+                                   remote_gallery.js loads them viewport-first with
+                                   bounded concurrency — never the browser's own
+                                   free-for-all. While pending, the transparent src
+                                   shows the CSS skeleton plate; the real "not found"
+                                   placeholder appears only after a load truly fails. #}
+                                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'/%3E"
+                                     class="preview-pending"
+                                     data-preview-src="{{ url_for('sharing_device_preview', device_id=device.device_id, media_dir_id=file.media_dir_id, path=file.relative_path, v=file.mtime) }}"
+                                     data-fallback-src="{{ url_for('static', filename='video_placeholder.svg') if file.media_type == 'video' else url_for('placeholder') }}"
+                                     alt="{{ file.name }}">
+                                {% if file.duration_seconds %}
+                                    <span class="video-duration">{{ file.duration_seconds | format_duration }}</span>
+                                {% endif %}
+                                <dl class="photo-hover">
+                                    <div class="photo-hover-row">
+                                        <dt>{{ _("Name") }}</dt>
+                                        <dd class="photo-hover-path" title="{{ file.relative_path }}">{{ file.name }}</dd>
+                                    </div>
+                                    <div class="photo-hover-row">
+                                        <dt>{{ _("Folder") }}</dt>
+                                        <dd class="photo-hover-path">{{ file.relative_path.rsplit('/', 1)[0] if '/' in file.relative_path else '' }}</dd>
+                                    </div>
+                                    <div class="photo-hover-row">
+                                        <dt>{{ _("Taken") }}</dt>
+                                        <dd>{{ file.date_taken | format_date('datetime') if file.date_taken else _("Unknown date") }}</dd>
+                                    </div>
+                                    {% if file.location_name %}
+                                        <div class="photo-hover-row">
+                                            <dt>{{ _("Location") }}</dt>
+                                            <dd>{{ file.location_name }}</dd>
+                                        </div>
+                                    {% endif %}
+                                    <div class="photo-hover-row">
+                                        <dt>{{ _("Size") }}</dt>
+                                        <dd>{{ file.size | filesizeformat }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                            <div class="photo-info remote-photo-info">
+                                <div class="photo-date">{{ file.date_taken | format_date("date") if file.date_taken else _("Unknown date") }}</div>
+                                {% if media_dirs %}
+                                <form hx-post="{{ url_for('sharing_device_pull_file', device_id=device.device_id) }}"
+                                      hx-include="#pull-destination" hx-swap="none">
+                                    <input type="hidden" name="remote_media_dir_id" value="{{ file.media_dir_id }}">
+                                    <input type="hidden" name="relative_path" value="{{ file.relative_path }}">
+                                    <button type="submit" class="btn-secondary btn-sm" data-icon="sync">
+                                        {{ _("Pull") }}
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {{ render_pagination(
+                    pagination.current_page,
+                    pagination.total_items,
+                    pagination.page_size,
+                    pagination.page_sizes,
+                    url_for('sharing_device_files', device_id=device.device_id),
+                    {
+                        'media_dir_id': media_dir_id,
+                        'scope': scope,
+                        'label': label,
+                        'path': filters.selected_path,
+                        'media-type': filters.selected_media_type,
+                        'year': filters.selected_year,
+                        'month': filters.selected_month,
+                        'device': filters.selected_device,
+                        'person': filters.selected_person_ids,
+                        'person-match-type': filters.selected_person_match_type,
+                        'gender': filters.selected_gender,
+                        'labels': filters.selected_label_ids,
+                        'labels-match-type': filters.selected_labels_match_type,
+                        'tag-name': filters.selected_tag_name,
+                        'tag-value': filters.selected_tag_value,
+                        'location': filters.selected_location_names,
+                        'location-match-type': filters.selected_location_match_type,
+                        'unnamed': filters.selected_unnamed,
+                        'proximity-lat': filters.selected_proximity_lat,
+                        'proximity-lon': filters.selected_proximity_lon,
+                        'proximity-distance': filters.selected_proximity_distance,
+                        'proximity-location': filters.selected_proximity_location,
+                        'favorite': filters.selected_favorite
+                    }
+                ) }}
+            {% else %}
+                <div class="empty-state">
+                    <h2>{{ _("No shared files found") }}</h2>
+                    <p>{{ _("Try adjusting your filters, or check what this device shares with you.") }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='filters/location-autocomplete.js') }}"></script>
+    <script src="{{ url_for('static', filename='sharing/remote_gallery.js') }}"></script>
+    <script>
+        document.addEventListener('yaffo:app-init-complete', (event) => {
+            const app = event.detail.app;
+            app.sharing.remoteGallery.init();
+            // Same tags widget as home, but the value list comes from the
+            // PEER (scoped to this grant) through the sharing proxy route.
+            app.filters.initTags(app.i18n, {
+                ...window.APP_CONFIG,
+                urls: {
+                    ...window.APP_CONFIG.urls,
+                    get_tag_values: {{ url_for('sharing_device_tag_values', device_id=device.device_id, media_dir_id=media_dir_id, scope=scope) | tojson }},
+                },
+            });
+            app.filters.initLocationAutocomplete(app.i18n, window.APP_CONFIG);
+        });
+    </script>
+{% endblock %}

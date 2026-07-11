@@ -48,6 +48,14 @@ DEFAULT_PUNCH_DURATION_SECONDS = 10.0
 # caller only starts its own punch after the relay phase, so the extra
 # margin keeps the two send windows overlapping.
 CALLEE_PUNCH_GRACE_SECONDS = 5.0
+# How long a per-call answer socket stays open after the call is answered,
+# then reaped (the callee never learns explicitly when the caller is done).
+# Relay-only calls just need the relay exchange; upgrade calls also need the
+# punch window and the direct-path probe. Kept tight because every answered
+# call holds one socket (= one fd) for this long — a chunked pull answers
+# many calls per minute.
+SESSION_SOCKET_LINGER_SECONDS = 20.0
+SESSION_SOCKET_UPGRADE_LINGER_SECONDS = 60.0
 
 logger = get_logger(__name__, 'webapp')
 
@@ -62,6 +70,7 @@ class HubClient:
         identity: DeviceIdentity,
         quic_server: PunchAwareQuicServer,
         on_revoked=None,
+        session_server_factory=None,
     ) -> None:
         parsed = urlparse(hub_url)
         if parsed.scheme not in ("ws", "wss"):
@@ -72,6 +81,10 @@ class HubClient:
         self._relay_port: Optional[int] = None  # announced by hub_info on connect
         self._identity = identity
         self._quic_server = quic_server
+        # async () -> PunchAwareQuicServer: mints the per-call answer socket
+        # (see _answer_call). Optional so directly-constructed clients keep
+        # the single-socket behavior.
+        self._session_server_factory = session_server_factory
         self._on_revoked = on_revoked  # callable(message) — verification is the callback's job
         self._ws = None
         self._task: Optional[asyncio.Task] = None
@@ -199,9 +212,23 @@ class HubClient:
         )
 
         try:
+            # Answer from a dedicated ephemeral socket. The relay tells a
+            # session's two sides apart by SOURCE ADDRESS alone, so answering
+            # every call from the long-lived server socket cross-wires
+            # concurrent sessions: the relay's addr→token entry flips to
+            # whichever session HELLO'd last, and the callee's return traffic
+            # only reaches that one (the rest stall into handshake timeouts).
+            # One socket per call gives every session a unique address. The
+            # punch and the caller's direct-path probe ride the same socket —
+            # the NAT mapping the punch opens belongs to it.
+            answer_server = self._quic_server
+            if self._session_server_factory is not None:
+                answer_server = await self._session_server_factory()
+                linger = SESSION_SOCKET_UPGRADE_LINGER_SECONDS if upgrade else SESSION_SOCKET_LINGER_SECONDS
+                asyncio.get_running_loop().call_later(linger, answer_server.close)
             relay_addr = await resolve_ipv4(self._relay_host, self._relay_port)
-            my_public = await self._quic_server.discover_public_address(*relay_addr)
-            await self._quic_server.relay_hello(relay_addr[0], relay_addr[1], token)
+            my_public = await answer_server.discover_public_address(*relay_addr)
+            await answer_server.relay_hello(relay_addr[0], relay_addr[1], token)
             await self._send(
                 {
                     "type": "connect_response",
@@ -226,7 +253,7 @@ class HubClient:
         # Failure here is expected on hard NATs and NOT an error for the
         # call — the relay path already works; direct is just the upgrade.
         try:
-            result = await self._quic_server.punch(
+            result = await answer_server.punch(
                 caller_addr[0], caller_addr[1], duration=punch_duration + CALLEE_PUNCH_GRACE_SECONDS
             )
             logger.info("punch toward %s succeeded (observed from %s)", caller, result.peer_observed_from)
@@ -352,4 +379,9 @@ class HubClient:
             raise CallError(str(exc)) from exc
         finally:
             self._pending.pop(token, None)
+            # The call is over either way — close the relay session now so
+            # the hub's per-device session cap frees this slot immediately
+            # (otherwise every call would count against it until the relay's
+            # idle TTL reaps the session).
+            dialer.relay_bye(relay_addr, token)
             dialer.close()

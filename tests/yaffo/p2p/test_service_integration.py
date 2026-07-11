@@ -74,7 +74,7 @@ def _pair(service_a, service_b):
     return service_b.accept_pairing_code(code.encode())
 
 
-def test_pair_call_revoke_end_to_end(two_devices):
+def test_pair_call_revoke_end_to_end(two_devices, loopback_hub):
     (app_a, service_a), (app_b, service_b) = two_devices
     id_a = service_a.identity.device_id
     id_b = service_b.identity.device_id
@@ -114,6 +114,13 @@ def test_pair_call_revoke_end_to_end(two_devices):
     assert report["path"] == "relay"
     assert report["punch"] is None
 
+    # --- completed calls close their relay sessions (BYE), so bursts of
+    # short calls never pile up against the hub's per-device session cap.
+    deadline = time.time() + 2
+    while time.time() < deadline and loopback_hub.relay._sessions:
+        time.sleep(0.05)
+    assert loopback_hub.relay._sessions == {}
+
     # --- revocation: A flips its local trust store (the enforcement) and
     # the signed courtesy notice flips B's row for A to revoked.
     outcome = service_a.revoke_peer(id_b)
@@ -133,6 +140,26 @@ def test_pair_call_revoke_end_to_end(two_devices):
     assert result["peer_device_id"] == id_a
     assert _known_device(app_a, id_b)["trust_state"] == TRUST_STATE_TRUSTED
     assert _known_device(app_b, id_a)["trust_state"] == TRUST_STATE_TRUSTED
+
+
+def test_concurrent_calls_to_the_same_peer_all_succeed(two_devices):
+    """The remote gallery loads several previews in parallel, so a burst of
+    concurrent relay calls to ONE peer must all complete. Regression test for
+    the answer-socket collision: the relay tells session sides apart by
+    source address, so a callee answering every call from its single server
+    socket cross-wires concurrent sessions (only the last-HELLO'd one gets
+    its return traffic; the rest time out)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    (_app_a, service_a), (_app_b, service_b) = two_devices
+    _pair(service_a, service_b)
+    id_a = service_a.identity.device_id
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        reports = list(pool.map(lambda _: service_b.call(id_a, attempt_upgrade=False), range(6)))
+
+    assert all(report["response"]["type"] == "pong" for report in reports)
+    assert all(report["path"] == "relay" for report in reports)
 
 
 def test_pairing_code_is_single_use(two_devices):

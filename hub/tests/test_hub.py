@@ -12,7 +12,7 @@ from yaffo_hub.hub import (
     CLOSE_RATE_LIMITED,
     create_app,
 )
-from yaffo_hub.relay import build_hello, new_session_token, parse_ack
+from yaffo_hub.relay import build_bye, build_hello, new_session_token, parse_ack
 
 from conftest import FakeDevice, free_udp_port
 
@@ -158,6 +158,50 @@ def test_per_device_session_cap(device, other_device):
             message = ws_a.receive_json()
             assert message["type"] == "error"
             assert "too many" in message["message"]
+
+
+def test_session_cap_slot_frees_after_bye(device, other_device):
+    """A completed call (HELLO … BYE) must free its cap slot immediately —
+    this is what keeps a burst of short calls (page loads, searches) from
+    exhausting the per-device cap."""
+    import time
+
+    settings = _settings(max_sessions_per_device=1)
+    with TestClient(create_app(settings)) as client:
+        with connected(client, device) as ws_a, connected(client, other_device) as ws_b:
+            token = new_session_token()
+            ws_a.send_json({"type": "connect_request", "to": other_device.device_id, "token": token})
+            assert ws_b.receive_json()["token"] == token
+
+            # Open the session and close it like a completed call does —
+            # HELLO and BYE from the same socket (= the same session side).
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.settimeout(0.5)
+                s.sendto(build_hello(token), ("127.0.0.1", settings.relay_port))
+                assert parse_ack(s.recvfrom(2048)[0]) == token
+                s.sendto(build_bye(token), ("127.0.0.1", settings.relay_port))
+            time.sleep(0.2)  # let the app loop process the datagram
+
+            next_token = new_session_token()
+            ws_a.send_json({"type": "connect_request", "to": other_device.device_id, "token": next_token})
+            assert ws_b.receive_json()["token"] == next_token  # forwarded, not "too many"
+
+
+def test_connect_request_to_offline_peer_does_not_consume_a_slot(device, other_device):
+    settings = _settings(max_sessions_per_device=1)
+    with TestClient(create_app(settings)) as client:
+        with connected(client, device) as ws_a:
+            for _ in range(3):
+                ws_a.send_json(
+                    {"type": "connect_request", "to": "NOBO-DYAT-ALLX-XXXX", "token": new_session_token()}
+                )
+                message = ws_a.receive_json()
+                assert "not connected" in message["message"]  # never "too many"
+
+        with connected(client, device) as ws_a, connected(client, other_device) as ws_b:
+            token = new_session_token()
+            ws_a.send_json({"type": "connect_request", "to": other_device.device_id, "token": token})
+            assert ws_b.receive_json()["token"] == token
 
 
 def test_connect_rate_limit(device):

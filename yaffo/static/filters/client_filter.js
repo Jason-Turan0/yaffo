@@ -56,8 +56,8 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
     };
 
     /**
-     * Same box the server uses (home.calculate_bounding_box): a flat-earth
-     * degree offset, not a true great-circle distance.
+     * Same box the server uses (media_filter_repository.calculate_bounding_box):
+     * a flat-earth degree offset, not a true great-circle distance.
      * @param {number} lat
      * @param {number} lon
      * @param {number} distanceKilometers

@@ -379,6 +379,59 @@
     max-width: 260px;
 }
 
+/* Remote gallery (sharing/files.html — reuses the home page's photo-grid
+   styles from index.css; these are the sharing-specific bits). */
+
+.remote-pull-destination {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.remote-pull-destination label {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.remote-pull-destination select {
+    max-width: 420px;
+}
+
+/* Loading skeleton: while a preview is queued/loading, the img holds a
+   transparent pixel and this pulsing plate shows through. The theme's
+   "not found" placeholder only ever appears after a load genuinely fails
+   (remote_gallery.js swaps it in and drops the class). */
+.remote-photo-card .photo-thumb img {
+    background: var(--color-surface-sunken);
+}
+
+.remote-photo-card .photo-thumb img.preview-pending {
+    animation: preview-pending-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes preview-pending-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .remote-photo-card .photo-thumb img.preview-pending {
+        animation: none;
+    }
+}
+
+.remote-photo-card {
+    cursor: default;
+}
+
+.remote-photo-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
 @media (max-width: 720px) {
     .share-grant-controls {
         flex-wrap: wrap;

@@ -68,6 +68,17 @@ class _LoopbackRelay(asyncio.DatagramProtocol):
             self._transport.sendto(relay_codec.build_ack(token), addr)
             return
 
+        token = relay_codec.parse_bye(data)
+        if token is not None:
+            # Mirrors the production relay: a completed call closes its own
+            # session instead of waiting out the idle TTL.
+            session = self._sessions.get(token)
+            if session is not None and addr in session["addrs"]:
+                for side in session["addrs"]:
+                    self._addr_to_token.pop(side, None)
+                del self._sessions[token]
+            return
+
         token = self._addr_to_token.get(addr)
         session = self._sessions.get(token) if token else None
         if session is None:
@@ -94,6 +105,7 @@ class LoopbackHub:
         self.port = free_tcp_port()
         self.relay_port = free_udp_port()
         self.connected: dict[str, object] = {}
+        self.relay: Optional[_LoopbackRelay] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._thread: Optional[threading.Thread] = None
         self._ready = threading.Event()
@@ -120,7 +132,7 @@ class LoopbackHub:
     async def _serve(self) -> None:
         self._loop = asyncio.get_running_loop()
         self._stop_event = asyncio.Event()
-        transport, _ = await self._loop.create_datagram_endpoint(
+        transport, self.relay = await self._loop.create_datagram_endpoint(
             _LoopbackRelay, local_addr=(self.host, self.relay_port)
         )
         async with serve(

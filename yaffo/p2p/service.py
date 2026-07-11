@@ -25,11 +25,25 @@ from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 from typing import Optional
 
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 from yaffo.db import db
-from yaffo.db.models import GRANT_SCOPE_FOLDER, GRANT_SCOPE_MEDIA_DIR, MediaItem
+from yaffo.db.models import (
+    GRANT_SCOPE_FOLDER,
+    GRANT_SCOPE_MEDIA_DIR,
+    MEDIA_TYPE_PHOTO,
+    MEDIA_TYPE_VIDEO,
+    ClassificationLabel,
+    Face,
+    MediaItem,
+    MediaLabel,
+    Person,
+    PersonFace,
+    Tag,
+)
 from yaffo.db.repositories import media_dir_repository, p2p_repository
+from yaffo.db.repositories.media_filter_repository import apply_media_filters
+from yaffo.utils.image import preview_jpeg_bytes
 from yaffo.logging_config import get_logger
 from yaffo.p2p.identity import (
     DeviceIdentity,
@@ -39,11 +53,15 @@ from yaffo.p2p.identity import (
 )
 from yaffo.p2p.messages import (
     PeerRecord,
+    build_list_files_request,
     build_list_shared_request,
     build_pull_file_request,
+    build_pull_preview_request,
     build_revocation_notice,
+    verify_list_files_request,
     verify_list_shared_request,
     verify_pull_file_request,
+    verify_pull_preview_request,
     verify_revocation_notice,
 )
 from yaffo.p2p.pairing import (
@@ -68,6 +86,54 @@ DEFAULT_QUIC_PORT = 5002
 FACADE_TIMEOUT_SECONDS = 60.0
 DEFAULT_PULL_CHUNK_BYTES = 1024 * 1024
 MAX_PULL_CHUNK_BYTES = 4 * 1024 * 1024
+DEFAULT_LIST_FILES_LIMIT = 50
+MAX_LIST_FILES_LIMIT = 200
+DEFAULT_PREVIEW_DIMENSION = 512
+MAX_PREVIEW_DIMENSION = 1024
+# The filter criteria a peer may send with list_files — the full home-page
+# filter vocabulary. Plain values mean the same thing on both devices;
+# people/labels are SERVING-side entity IDs the peer learned from this
+# device's own facets and is echoing back (never the requester's local IDs).
+# Unknown keys are rejected, not ignored, so a filter the serving side
+# doesn't understand can't silently widen results.
+def _is_int(value) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _is_number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _is_int_list(value) -> bool:
+    return isinstance(value, list) and all(_is_int(item) for item in value)
+
+
+def _is_str_list(value) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)
+
+
+LIST_FILES_FILTER_VALIDATORS = {
+    "path": lambda v: isinstance(v, str),
+    "media_type": lambda v: v in (MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO),
+    "year": _is_int,
+    "month": _is_int,
+    "device": lambda v: isinstance(v, str),
+    "favorite": lambda v: isinstance(v, (bool, int)),
+    "gender": _is_int,
+    "people": _is_int_list,
+    "person_match_type": lambda v: v in ("any", "all"),
+    "labels": _is_int_list,
+    "labels_match_type": lambda v: v in ("any", "all"),
+    "tag_name": lambda v: isinstance(v, str),
+    "tag_value": lambda v: isinstance(v, str),
+    "locations": _is_str_list,
+    "location_match_type": lambda v: v in ("any", "all"),
+    "unnamed": lambda v: isinstance(v, (bool, int)),
+    "proximity_lat": _is_number,
+    "proximity_lon": _is_number,
+    "proximity_km": _is_number,
+}
+LIST_FILES_FILTER_KEYS = tuple(LIST_FILES_FILTER_VALIDATORS)
 
 
 def resolve_hub_url() -> str:
@@ -183,6 +249,12 @@ class P2PService:
             self.identity,
             self._quic_server,
             on_revoked=self._handle_revocation_notice,
+            # Each incoming call is answered from its own ephemeral socket
+            # (same cert + handlers) so concurrent relay sessions never share
+            # a source address — see HubClient._answer_call.
+            session_server_factory=lambda: start_quic_server(
+                self._bind_host, 0, self.identity, self._handle_stream_request
+            ),
         )
         self._hub_client.start()
 
@@ -312,11 +384,52 @@ class P2PService:
         return report
 
     def list_shared(self, peer_device_id: str) -> dict:
-        """Ask a trusted peer for the files it has granted this device.
-        Interactive metadata request: relay response is enough, so it skips
-        the direct-upgrade wait."""
+        """Ask a trusted peer for the scopes it grants this device, each with
+        a file count — file listings are paginated separately through
+        list_shared_files. Interactive metadata request: relay response is
+        enough, so it skips the direct-upgrade wait."""
         payload = build_list_shared_request(self.identity)
-        return self.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"]
+        return self._expect_ok(self.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"])
+
+    def list_shared_files(
+        self,
+        peer_device_id: str,
+        media_dir_id: str,
+        relative_path: str = "",
+        filters: Optional[dict] = None,
+        offset: int = 0,
+        limit: int = DEFAULT_LIST_FILES_LIMIT,
+    ) -> dict:
+        """One page of file manifests for a granted scope on a trusted peer,
+        newest first, filtered by the plain-value criteria in `filters` (see
+        LIST_FILES_FILTER_KEYS). The response carries facets (years/devices
+        within the scope) for building filter UIs."""
+        payload = build_list_files_request(
+            self.identity, media_dir_id, relative_path, filters or {}, offset, limit
+        )
+        return self._expect_ok(self.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"])
+
+    def pull_preview(
+        self,
+        peer_device_id: str,
+        media_dir_id: str,
+        relative_path: str,
+        max_dimension: int = DEFAULT_PREVIEW_DIMENSION,
+    ) -> bytes:
+        """A downscaled JPEG preview of one shared file (the peer compresses
+        before sending — the gallery never pulls originals)."""
+        payload = build_pull_preview_request(self.identity, media_dir_id, relative_path, max_dimension)
+        response = self._expect_ok(self.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"])
+        return base64.b64decode(response["data_b64"])
+
+    def _expect_ok(self, response: dict) -> dict:
+        """A peer's application-level refusal (bad scope, revoked grant, …)
+        surfaces like any other call failure instead of leaking an error
+        body to the caller."""
+        if not isinstance(response, dict) or response.get("status") != "ok":
+            detail = response.get("detail", "peer reported an error") if isinstance(response, dict) else "no response"
+            raise P2PServiceError(detail)
+        return response
 
     def pull_file_chunk(
         self,
@@ -330,7 +443,7 @@ class P2PService:
         orchestration/resume lives above this facade; this method owns only
         signed request construction and one QUIC request/response."""
         payload = build_pull_file_request(self.identity, media_dir_id, relative_path, offset, length)
-        return self.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"]
+        return self._expect_ok(self.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"])
 
     def pull_file(
         self,
@@ -426,6 +539,10 @@ class P2PService:
             return self._handle_pairing_confirm(body)
         if kind == "list_shared":
             return self._handle_list_shared(body)
+        if kind == "list_files":
+            return self._handle_list_files(body)
+        if kind == "pull_preview":
+            return self._handle_pull_preview(body)
         if kind == "pull_file":
             return self._handle_pull_file(body)
         return {"status": "error", "detail": f"unknown request type: {kind!r}"}
@@ -461,6 +578,10 @@ class P2PService:
         return lookup
 
     def _handle_list_shared(self, body: dict) -> dict:
+        """The scopes this peer holds grants for, each with a count of the
+        indexed files under it. No file manifests here — those are paged out
+        through list_files, so a huge granted library never rides one
+        response."""
         with self._session() as session:
             denial = verify_list_shared_request(body, self._peer_lookup(session))
             if denial is not None:
@@ -470,7 +591,6 @@ class P2PService:
             media_dirs = {entry.id: entry for entry in media_dir_repository.get_media_dir_entries(session)}
 
             scopes = []
-            files = []
             seen: set[tuple[str, str]] = set()
             for grant in grants:
                 media_dir = media_dirs.get(grant.media_dir_id)
@@ -480,31 +600,264 @@ class P2PService:
                 target = self._grant_target(root, grant)
                 if target is None:
                     continue
+                key = (grant.media_dir_id, grant.relative_path or "")
+                if key in seen:
+                    continue
+                seen.add(key)
                 scopes.append(
                     {
                         "scope_type": grant.scope_type,
                         "media_dir_id": grant.media_dir_id,
                         "relative_path": grant.relative_path,
                         "name": media_dir.path.name or grant.media_dir_id,
+                        "file_count": self._indexed_media_query(session, target).count(),
                     }
                 )
-                for item in self._indexed_media_under(session, target):
-                    path = Path(item.full_file_path).expanduser().resolve()
-                    if not self._path_inside(path, root) or not path.is_file():
-                        continue
-                    relative_path = path.relative_to(root).as_posix()
-                    key = (grant.media_dir_id, relative_path)
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    files.append(self._file_manifest(grant.media_dir_id, relative_path, path, item))
 
         return {
             "status": "ok",
             "type": "shared_list",
             "device_id": self.identity.device_id,
             "scopes": scopes,
+        }
+
+    def _resolve_scoped_request(self, session, body: dict):
+        """Shared validation for scope-addressed requests (list_files,
+        pull_preview): clean the scope path, resolve it inside a configured
+        media dir, and check an active grant covers it. Returns
+        (error_response | None, media_dir_id, scope_path, root, target)."""
+        peer_device_id = body["device_id"]
+        media_dir_id = body.get("media_dir_id")
+        raw_scope = body.get("relative_path") or ""
+        if not isinstance(raw_scope, str):
+            return {"status": "error", "detail": "relative_path must be a string"}, None, None, None, None
+        try:
+            scope_path = self._clean_relative_path(raw_scope) if raw_scope.strip() else ""
+        except ValueError as exc:
+            return {"status": "error", "detail": str(exc)}, None, None, None, None
+        media_dir = media_dir_repository.media_dir_by_id(session, media_dir_id)
+        if media_dir is None:
+            return {"status": "error", "detail": "media directory is not configured"}, None, None, None, None
+        root = media_dir.path.expanduser().resolve()
+        target = (root / scope_path.replace("/", os.sep)).resolve() if scope_path else root
+        if not self._path_inside(target, root):
+            return {"status": "error", "detail": "path escapes media directory"}, None, None, None, None
+        if not self._grant_allows(session, peer_device_id, media_dir_id, scope_path):
+            return {"status": "error", "detail": "no active share grant covers this scope"}, None, None, None, None
+        return None, media_dir_id, scope_path, root, target
+
+    def _handle_list_files(self, body: dict) -> dict:
+        """One page of file manifests for a scope the peer was granted,
+        newest first. The requested scope must sit inside an active grant;
+        the grant is applied FIRST, then the request's filters — and both
+        the filters and pagination run in SQL, so browsing a large library
+        stays a metadata request. Responds with facets (years/devices within
+        the scope) so the peer can build its filter UI."""
+        with self._session() as session:
+            denial = verify_list_files_request(body, self._peer_lookup(session))
+            if denial is not None:
+                return {"status": "error", "detail": denial}
+            error, media_dir_id, scope_path, root, target = self._resolve_scoped_request(session, body)
+            if error is not None:
+                return error
+            try:
+                offset = self._parse_non_negative_int(body.get("offset"), "offset")
+                limit = self._parse_non_negative_int(body.get("limit"), "limit")
+            except ValueError as exc:
+                return {"status": "error", "detail": str(exc)}
+            limit = min(limit, MAX_LIST_FILES_LIMIT)
+            if limit == 0:
+                return {"status": "error", "detail": "limit must be greater than zero"}
+            filters = body.get("filters") or {}
+            if not isinstance(filters, dict):
+                return {"status": "error", "detail": "filters must be an object"}
+            unknown = set(filters) - set(LIST_FILES_FILTER_KEYS)
+            if unknown:
+                return {"status": "error", "detail": f"unknown filters: {', '.join(sorted(unknown))}"}
+            for key, value in filters.items():
+                if not LIST_FILES_FILTER_VALIDATORS[key](value):
+                    return {"status": "error", "detail": f"invalid value for filter {key!r}"}
+
+            scope_query = self._indexed_media_query(session, target)
+            files_query = self._apply_list_filters(session, scope_query, target, filters)
+            total = files_query.count()
+            files = []
+            page = (
+                files_query.order_by(MediaItem.date_taken.desc(), MediaItem.full_file_path)
+                .offset(offset)
+                .limit(limit)
+            )
+            for item in page:
+                path = Path(item.full_file_path).expanduser().resolve()
+                if not self._path_inside(path, root) or not path.is_file():
+                    continue
+                files.append(self._file_manifest(media_dir_id, path.relative_to(root).as_posix(), path, item))
+            facets = self._list_files_facets(session, scope_query, filters)
+
+        return {
+            "status": "ok",
+            "type": "shared_files",
+            "device_id": self.identity.device_id,
+            "media_dir_id": media_dir_id,
+            "relative_path": scope_path,
+            "filters": filters,
+            "offset": offset,
+            "limit": limit,
+            "total": total,
             "files": files,
+            "facets": facets,
+        }
+
+    def _apply_list_filters(self, session, files_query, target: Path, filters: dict):
+        """The request's criteria (already validated), applied on top of the
+        grant-scoped query. Everything except `path` shares the home
+        gallery's SQL semantics via apply_media_filters; `path` is matched
+        against the path *relative to the scope* so a term can never
+        accidentally match everything via the local filesystem prefix (which
+        also must not leak)."""
+        path_text = (filters.get("path") or "").strip()
+        if path_text:
+            escaped = path_text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            relative_expr = func.substr(MediaItem.full_file_path, len(str(target).rstrip("/\\")) + 2)
+            files_query = files_query.filter(relative_expr.like(f"%{escaped}%", escape="\\"))
+        return apply_media_filters(
+            session,
+            files_query,
+            {
+                "media_type": filters.get("media_type"),
+                "year": filters.get("year"),
+                "month": filters.get("month"),
+                "device": (filters.get("device") or "").strip() or None,
+                "favorite": filters.get("favorite"),
+                "person_ids": filters.get("people"),
+                "person_match_type": filters.get("person_match_type", "any"),
+                "gender": filters.get("gender"),
+                "label_ids": filters.get("labels"),
+                "labels_match_type": filters.get("labels_match_type", "any"),
+                "tag_name": filters.get("tag_name"),
+                "tag_value": filters.get("tag_value"),
+                "location_names": filters.get("locations"),
+                "location_match_type": filters.get("location_match_type", "any"),
+                "unnamed": filters.get("unnamed"),
+                "proximity_lat": filters.get("proximity_lat"),
+                "proximity_lon": filters.get("proximity_lon"),
+                "proximity_km": filters.get("proximity_km"),
+            },
+        )
+
+    def _list_files_facets(self, session, scope_query, filters: dict) -> dict:
+        """The filter options that exist within the granted scope — what the
+        peer's filter panel renders from. People/labels ship as (id, name)
+        pairs whose ids only mean something back on this device; everything
+        else is plain values. Only scope-constrained queries here: nothing
+        outside the grant may leak into an option list."""
+        scope_ids = scope_query.with_entities(MediaItem.id)
+        facets = {
+            "years": [
+                row[0]
+                for row in scope_query.with_entities(MediaItem.year)
+                .filter(MediaItem.year.isnot(None))
+                .distinct()
+                .order_by(MediaItem.year)
+            ],
+            "devices": [
+                row[0]
+                for row in scope_query.with_entities(MediaItem.device)
+                .filter(MediaItem.device.isnot(None), MediaItem.device != "")
+                .distinct()
+                .order_by(MediaItem.device)
+            ],
+            "people": [
+                {"id": person_id, "name": name}
+                for person_id, name in session.query(Person.id, Person.name)
+                .join(PersonFace, PersonFace.person_id == Person.id)
+                .join(Face, Face.id == PersonFace.face_id)
+                .filter(Face.media_item_id.in_(scope_ids), Person.name.isnot(None))
+                .distinct()
+                .order_by(Person.name)
+            ],
+            "labels": [
+                {"id": label_id, "name": name}
+                for label_id, name in session.query(ClassificationLabel.id, ClassificationLabel.name)
+                .join(MediaLabel, MediaLabel.label_id == ClassificationLabel.id)
+                .filter(MediaLabel.media_item_id.in_(scope_ids))
+                .distinct()
+                .order_by(func.lower(ClassificationLabel.name))
+            ],
+            "tag_names": [
+                row[0]
+                for row in session.query(Tag.tag_name)
+                .filter(Tag.media_item_id.in_(scope_ids), Tag.tag_name.isnot(None))
+                .distinct()
+                .order_by(Tag.tag_name)
+            ],
+            "locations": [
+                row[0]
+                for row in scope_query.with_entities(MediaItem.location_name)
+                .filter(MediaItem.location_name.isnot(None), MediaItem.location_name != "")
+                .distinct()
+                .order_by(MediaItem.location_name)
+            ],
+        }
+        if filters.get("tag_name"):
+            # Values for the selected tag name, so the peer's tag-value
+            # select can populate without a separate protocol message.
+            facets["tag_values"] = [
+                row[0]
+                for row in session.query(Tag.tag_value)
+                .filter(
+                    Tag.media_item_id.in_(scope_ids),
+                    Tag.tag_name == filters["tag_name"],
+                    Tag.tag_value.isnot(None),
+                )
+                .distinct()
+                .order_by(Tag.tag_value)
+            ]
+        return facets
+
+    def _handle_pull_preview(self, body: dict) -> dict:
+        """A downscaled JPEG preview of one granted file, compressed here on
+        the serving side so the peer's gallery never pulls originals. Videos
+        serve their indexed poster frame."""
+        with self._session() as session:
+            denial = verify_pull_preview_request(body, self._peer_lookup(session))
+            if denial is not None:
+                return {"status": "error", "detail": denial}
+            error, media_dir_id, relative_path, root, target = self._resolve_scoped_request(session, body)
+            if error is not None:
+                return error
+            if not relative_path:
+                return {"status": "error", "detail": "relative_path is required"}
+            try:
+                max_dimension = self._parse_non_negative_int(body.get("max_dimension"), "max_dimension")
+            except ValueError as exc:
+                return {"status": "error", "detail": str(exc)}
+            max_dimension = min(max_dimension or DEFAULT_PREVIEW_DIMENSION, MAX_PREVIEW_DIMENSION)
+
+            item = session.query(MediaItem).filter_by(full_file_path=str(target)).first()
+            if item is None:
+                return {"status": "error", "detail": "file is not indexed"}
+            source = target
+            if item.media_type == MEDIA_TYPE_VIDEO:
+                if not item.poster_path:
+                    return {"status": "error", "detail": "video has no preview"}
+                source = Path(item.poster_path).expanduser().resolve()
+            if not source.is_file():
+                return {"status": "error", "detail": "file is not available"}
+            try:
+                data = preview_jpeg_bytes(source, max_dimension)
+            except Exception:  # noqa: BLE001 — unreadable/corrupt image, codec gaps
+                logger.exception("preview generation failed for %s", target)
+                return {"status": "error", "detail": "could not generate a preview"}
+
+        return {
+            "status": "ok",
+            "type": "file_preview",
+            "device_id": self.identity.device_id,
+            "media_dir_id": media_dir_id,
+            "relative_path": relative_path,
+            "max_dimension": max_dimension,
+            "data_b64": base64.b64encode(data).decode("ascii"),
         }
 
     def _handle_pull_file(self, body: dict) -> dict:
@@ -572,14 +925,11 @@ class P2PService:
             return target if self._path_inside(target, root) else None
         return None
 
-    def _indexed_media_under(self, session, path: Path) -> list[MediaItem]:
+    def _indexed_media_query(self, session, path: Path):
         path_text = str(path).rstrip("/\\")
         under = f"{path_text}{os.sep}%"
-        return (
-            session.query(MediaItem)
-            .filter(or_(MediaItem.full_file_path == path_text, MediaItem.full_file_path.like(under)))
-            .order_by(MediaItem.id)
-            .all()
+        return session.query(MediaItem).filter(
+            or_(MediaItem.full_file_path == path_text, MediaItem.full_file_path.like(under))
         )
 
     def _file_manifest(self, media_dir_id: str, relative_path: str, path: Path, item: MediaItem) -> dict:
@@ -591,15 +941,21 @@ class P2PService:
             "size": stat.st_size,
             "mtime": stat.st_mtime,
             "media_type": item.media_type,
+            "date_taken": item.date_taken,
+            "location_name": item.location_name,
+            "duration_seconds": item.duration_seconds,
         }
 
     def _grant_allows(self, session, peer_device_id: str, media_dir_id: str, relative_path: str) -> bool:
+        """Whether an active grant covers this path — a file being pulled or
+        a folder scope being browsed ("" means the media dir root, which only
+        a media_dir grant covers)."""
         for grant in p2p_repository.list_active_grants(session, peer_device_id):
             if grant.media_dir_id != media_dir_id:
                 continue
             if grant.scope_type == GRANT_SCOPE_MEDIA_DIR:
                 return True
-            if grant.scope_type == GRANT_SCOPE_FOLDER and grant.relative_path:
+            if grant.scope_type == GRANT_SCOPE_FOLDER and grant.relative_path and relative_path:
                 prefix = grant.relative_path.strip("/")
                 if relative_path == prefix or relative_path.startswith(f"{prefix}/"):
                     return True

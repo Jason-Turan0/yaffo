@@ -160,6 +160,17 @@ class P2PDatagramMixin:
             send_task.cancel()
             self._relay_ack_waiters.pop(token, None)
 
+    def relay_bye(self, relay_addr: tuple[str, int], token: str) -> None:
+        """Tell the relay this session is over so it (and the caller's slot
+        in the hub's per-device session cap) frees immediately instead of
+        waiting out the idle TTL. Fire-and-forget — no ACK; a few duplicate
+        datagrams cover casual UDP loss and the TTL backstops the rest."""
+        if self._transport is None or self._transport.is_closing():
+            return
+        frame = relay.build_bye(token)
+        for _ in range(3):
+            self._transport.sendto(frame, relay_addr)
+
     async def punch(self, peer_host: str, peer_port: int, duration: float = 6.0) -> PunchResult:
         loop = asyncio.get_running_loop()
         self._punch_waiter = loop.create_future()

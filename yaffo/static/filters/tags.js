@@ -41,7 +41,10 @@ window.PHOTO_ORGANIZER.filters.initTags = (i18n, config) => {
         tagValueSelect.innerHTML = `<option value="">${i18n.t('media:filters.loading')}</option>`;
 
         try {
-            const url = `${config.urls.get_tag_values}?tag_name=${encodeURIComponent(tagName)}`;
+            // URL API instead of string concatenation: the endpoint may
+            // already carry query params (the remote gallery's proxy does).
+            const url = new URL(config.urls.get_tag_values, window.location.origin);
+            url.searchParams.set('tag_name', tagName);
             const response = await fetch(url);
 
             if (!response.ok) {

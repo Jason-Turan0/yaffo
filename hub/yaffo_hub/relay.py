@@ -33,6 +33,7 @@ logger = logging.getLogger("yaffo_hub.relay")
 
 HELLO_MAGIC = b"YRLY1"
 ACK_MAGIC = b"YACK1"
+BYE_MAGIC = b"YBYE1"
 TOKEN_BYTES = 16
 
 
@@ -51,6 +52,10 @@ def build_ack(token: str) -> bytes:
     return ACK_MAGIC + bytes.fromhex(token)
 
 
+def build_bye(token: str) -> bytes:
+    return BYE_MAGIC + bytes.fromhex(token)
+
+
 def _parse_framed(data: bytes, magic: bytes) -> Optional[str]:
     if len(data) == len(magic) + TOKEN_BYTES and data.startswith(magic):
         return data[len(magic) :].hex()
@@ -63,6 +68,10 @@ def parse_hello(data: bytes) -> Optional[str]:
 
 def parse_ack(data: bytes) -> Optional[str]:
     return _parse_framed(data, ACK_MAGIC)
+
+
+def parse_bye(data: bytes) -> Optional[str]:
+    return _parse_framed(data, BYE_MAGIC)
 
 
 def valid_token(token: str) -> bool:
@@ -108,6 +117,7 @@ class RelayProtocol(asyncio.DatagramProtocol):
         # signal (relay egress is the only meaningful variable cost).
         self.total_bytes_forwarded = 0
         self.sessions_opened = 0
+        self.sessions_closed = 0
         self.hellos_rejected = 0
         self.sessions_capped = 0
 
@@ -128,6 +138,7 @@ class RelayProtocol(asyncio.DatagramProtocol):
         return {
             "active_sessions": len(self._sessions),
             "sessions_opened": self.sessions_opened,
+            "sessions_closed": self.sessions_closed,
             "total_bytes_forwarded": self.total_bytes_forwarded,
             "hellos_rejected": self.hellos_rejected,
             "sessions_capped": self.sessions_capped,
@@ -150,6 +161,17 @@ class RelayProtocol(asyncio.DatagramProtocol):
         if token is not None:
             if self._register(token, addr):
                 self._transport.sendto(build_ack(token), addr)
+            return
+
+        token = parse_bye(data)
+        if token is not None:
+            # A completed call frees its session (and the caller's slot in
+            # the signaling side's per-device cap via is_active) immediately
+            # instead of waiting out the idle TTL. Only a registered side of
+            # the session may close it.
+            session = self._sessions.get(token)
+            if session is not None and addr in session.addrs:
+                self._close_session(token, session)
             return
 
         token = self._addr_to_token.get(addr)
@@ -190,6 +212,13 @@ class RelayProtocol(asyncio.DatagramProtocol):
             session.addrs.append(addr)
             self._addr_to_token[addr] = token
         return True
+
+    def _close_session(self, token: str, session: _Session) -> None:
+        for side in session.addrs:
+            self._addr_to_token.pop(side, None)
+        del self._sessions[token]
+        self._authorized.pop(token, None)  # so is_active() goes false at once
+        self.sessions_closed += 1
 
     def _prune(self) -> None:
         now = time.monotonic()

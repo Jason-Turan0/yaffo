@@ -22,6 +22,8 @@ from yaffo.p2p.pairing import sign_nonce, verify_nonce_signature
 SIGNED_MESSAGE_MAX_AGE_SECONDS = 300
 
 MESSAGE_LIST_SHARED = "list_shared"
+MESSAGE_LIST_FILES = "list_files"
+MESSAGE_PULL_PREVIEW = "pull_preview"
 MESSAGE_PULL_FILE = "pull_file"
 MESSAGE_REVOKED = "revoked"
 
@@ -99,6 +101,60 @@ def build_list_shared_request(identity: DeviceIdentity) -> dict:
 
 def verify_list_shared_request(body: dict, lookup: PeerLookup) -> Optional[str]:
     return verify_signed_message(body, lookup, MESSAGE_LIST_SHARED)
+
+
+def build_list_files_request(
+    identity: DeviceIdentity, media_dir_id: str, relative_path: str, filters: dict, offset: int, limit: int
+) -> dict:
+    """One page of a scope's file manifests. `relative_path` is the scope
+    being browsed ("" for a whole media dir); `filters` is a flat dict of
+    optional criteria (path substring, media_type, year, month, device) the
+    serving side applies *after* scoping to the grant."""
+    return build_signed_message(
+        identity,
+        MESSAGE_LIST_FILES,
+        {
+            "media_dir_id": media_dir_id,
+            "relative_path": relative_path,
+            "filters": filters,
+            "offset": offset,
+            "limit": limit,
+        },
+    )
+
+
+def verify_list_files_request(body: dict, lookup: PeerLookup) -> Optional[str]:
+    return verify_signed_message(
+        body,
+        lookup,
+        MESSAGE_LIST_FILES,
+        signed_fields=("media_dir_id", "relative_path", "filters", "offset", "limit"),
+    )
+
+
+def build_pull_preview_request(
+    identity: DeviceIdentity, media_dir_id: str, relative_path: str, max_dimension: int
+) -> dict:
+    """A downscaled, recompressed preview of one shared file — what the
+    remote gallery shows instead of pulling originals."""
+    return build_signed_message(
+        identity,
+        MESSAGE_PULL_PREVIEW,
+        {
+            "media_dir_id": media_dir_id,
+            "relative_path": relative_path,
+            "max_dimension": max_dimension,
+        },
+    )
+
+
+def verify_pull_preview_request(body: dict, lookup: PeerLookup) -> Optional[str]:
+    return verify_signed_message(
+        body,
+        lookup,
+        MESSAGE_PULL_PREVIEW,
+        signed_fields=("media_dir_id", "relative_path", "max_dimension"),
+    )
 
 
 def build_pull_file_request(
