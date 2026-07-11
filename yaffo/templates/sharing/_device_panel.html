@@ -59,6 +59,73 @@
 
     <div class="sharing-panel">
         <h3>{{ _("Shared with this device") }}</h3>
-        <p class="no-data">{{ _("Nothing is shared with this device yet. Granting access to folders and albums arrives in an upcoming update.") }}</p>
+        {% if device.trusted %}
+            {% if media_dirs %}
+            <div class="share-grant-forms">
+                <form class="share-grant-form"
+                      hx-post="{{ url_for('sharing_device_grant', device_id=device.device_id) }}"
+                      hx-target="#device-panel" hx-swap="outerHTML">
+                    <input type="hidden" name="scope_type" value="media_dir">
+                    <label for="share-media-dir">{{ _("Share a media directory") }}</label>
+                    <div class="share-grant-controls">
+                        <select id="share-media-dir" name="media_dir_id" required>
+                            {% for media_dir in media_dirs %}
+                            <option value="{{ media_dir.id }}">{{ media_dir.name }} - {{ media_dir.path }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn-secondary" data-icon="sharing">{{ _("Share") }}</button>
+                    </div>
+                </form>
+
+                <form class="share-grant-form"
+                      hx-post="{{ url_for('sharing_device_grant', device_id=device.device_id) }}"
+                      hx-target="#device-panel" hx-swap="outerHTML">
+                    <input type="hidden" name="scope_type" value="folder">
+                    <label for="share-folder-path">{{ _("Share a folder") }}</label>
+                    <div class="file-browser-input-group share-grant-controls">
+                        <input type="text"
+                               id="share-folder-path"
+                               name="folder_path"
+                               class="form-control file-browser-input"
+                               placeholder="{{ _('Choose a folder inside a media directory') }}"
+                               required>
+                        <button type="button" class="btn-secondary file-browser-btn" data-icon="folder">
+                            {{ _("Browse…") }}
+                        </button>
+                        <button type="submit" class="btn-secondary" data-icon="sharing">{{ _("Share") }}</button>
+                    </div>
+                </form>
+            </div>
+            {% else %}
+            <p class="no-data">{{ _("Add a media directory in Settings before sharing folders with this device.") }}</p>
+            {% endif %}
+        {% else %}
+        <p class="no-data">{{ _("This device is revoked. Pair it again before sharing folders with it.") }}</p>
+        {% endif %}
+
+        {% if grants %}
+        <div class="share-grants-list">
+            {% for grant in grants %}
+            <div class="share-grant-item">
+                <div class="share-grant-details">
+                    <span class="share-grant-scope">{{ grant.scope_label }}</span>
+                    <strong>{{ grant.name }}</strong>
+                    {% if grant.detail %}
+                    <span class="known-device-meta">{{ grant.detail }}</span>
+                    {% endif %}
+                </div>
+                <button type="button" class="btn-danger btn-sm" data-icon="delete"
+                        hx-post="{{ url_for('sharing_device_grant_revoke', device_id=device.device_id, grant_id=grant.id) }}"
+                        hx-target="#device-panel" hx-swap="outerHTML">
+                    {{ _("Revoke grant") }}
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="no-data">{{ _("Nothing is shared with this device yet.") }}</p>
+        {% endif %}
     </div>
+
+    {% include "sharing/_remote_panel.html" %}
 </div>

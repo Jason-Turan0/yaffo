@@ -16,14 +16,20 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+import base64
+import hashlib
 import os
 import socket
 import threading
 from contextlib import contextmanager
+from pathlib import Path, PurePosixPath
 from typing import Optional
 
+from sqlalchemy import or_
+
 from yaffo.db import db
-from yaffo.db.repositories import p2p_repository
+from yaffo.db.models import GRANT_SCOPE_FOLDER, GRANT_SCOPE_MEDIA_DIR, MediaItem
+from yaffo.db.repositories import media_dir_repository, p2p_repository
 from yaffo.logging_config import get_logger
 from yaffo.p2p.identity import (
     DeviceIdentity,
@@ -31,7 +37,15 @@ from yaffo.p2p.identity import (
     device_id_from_pubkey_b64,
     load_or_create_identity,
 )
-from yaffo.p2p.messages import PeerRecord, build_revocation_notice, verify_revocation_notice
+from yaffo.p2p.messages import (
+    PeerRecord,
+    build_list_shared_request,
+    build_pull_file_request,
+    build_revocation_notice,
+    verify_list_shared_request,
+    verify_pull_file_request,
+    verify_revocation_notice,
+)
 from yaffo.p2p.pairing import (
     PairingCode,
     PairingError,
@@ -52,6 +66,8 @@ DEFAULT_HUB_URL = "wss://hub.yaffo.app"
 DEFAULT_QUIC_PORT = 5002
 
 FACADE_TIMEOUT_SECONDS = 60.0
+DEFAULT_PULL_CHUNK_BYTES = 1024 * 1024
+MAX_PULL_CHUNK_BYTES = 4 * 1024 * 1024
 
 
 def resolve_hub_url() -> str:
@@ -163,7 +179,10 @@ class P2PService:
             self._bind_host, self._quic_port, self.identity, self._handle_stream_request
         )
         self._hub_client = HubClient(
-            self._hub_url, self.identity, self._quic_server, on_revoked=self._handle_revocation_notice
+            self._hub_url,
+            self.identity,
+            self._quic_server,
+            on_revoked=self._handle_revocation_notice,
         )
         self._hub_client.start()
 
@@ -256,16 +275,123 @@ class P2PService:
 
     # ---- facade: calls & revocation -------------------------------------------
 
-    def call(self, peer_device_id: str, payload: Optional[dict] = None, attempt_upgrade: bool = True) -> dict:
+    def call(
+        self,
+        peer_device_id: str,
+        payload: Optional[dict] = None,
+        attempt_upgrade: bool = True,
+    ) -> dict:
         """Relay-first call to a paired peer (see HubClient.call). A
         successful exchange is proof the peer is alive, so last_seen_at is
         touched."""
+        payload_type = (payload or {"type": "ping"}).get("type")
+        logger.info(
+            "p2p call start peer=%s payload=%s attempt_upgrade=%s",
+            peer_device_id,
+            payload_type,
+            attempt_upgrade,
+        )
         report = self._submit(
-            self._hub_client.call(peer_device_id, payload=payload, attempt_upgrade=attempt_upgrade)
+            self._hub_client.call(
+                peer_device_id,
+                payload=payload,
+                attempt_upgrade=attempt_upgrade,
+            )
+        )
+        logger.info(
+            "p2p call done peer=%s payload=%s path=%s relay=%s punch=%s direct=%s",
+            peer_device_id,
+            payload_type,
+            report.get("path"),
+            report.get("relay"),
+            report.get("punch"),
+            report.get("direct"),
         )
         with self._session() as session:
             p2p_repository.touch_last_seen(session, peer_device_id)
         return report
+
+    def list_shared(self, peer_device_id: str) -> dict:
+        """Ask a trusted peer for the files it has granted this device.
+        Interactive metadata request: relay response is enough, so it skips
+        the direct-upgrade wait."""
+        payload = build_list_shared_request(self.identity)
+        return self.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"]
+
+    def pull_file_chunk(
+        self,
+        peer_device_id: str,
+        media_dir_id: str,
+        relative_path: str,
+        offset: int = 0,
+        length: int = DEFAULT_PULL_CHUNK_BYTES,
+    ) -> dict:
+        """Pull one bounded file chunk from a trusted peer. Full transfer
+        orchestration/resume lives above this facade; this method owns only
+        signed request construction and one QUIC request/response."""
+        payload = build_pull_file_request(self.identity, media_dir_id, relative_path, offset, length)
+        return self.call(peer_device_id, payload=payload, attempt_upgrade=False)["response"]
+
+    def pull_file(
+        self,
+        peer_device_id: str,
+        media_dir_id: str,
+        relative_path: str,
+        destination_root: Path,
+        expected_sha256: Optional[str] = None,
+        chunk_size: int = DEFAULT_PULL_CHUNK_BYTES,
+    ) -> dict:
+        """Pull one remote file into a local media directory, resuming from a
+        `.partial` file if present. The remote path is always nested under a
+        stable per-peer folder so two peers with the same relative path don't
+        collide."""
+        clean_relative_path = self._clean_relative_path(relative_path)
+        root = destination_root.expanduser().resolve()
+        destination = (root / "Shared" / peer_device_id / clean_relative_path.replace("/", os.sep)).resolve()
+        if not self._path_inside(destination, root):
+            raise P2PServiceError("destination path escapes the media directory")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        partial = destination.with_name(f"{destination.name}.partial")
+
+        offset = partial.stat().st_size if partial.exists() else 0
+        size = None
+        with partial.open("ab") as handle:
+            while True:
+                chunk = self.pull_file_chunk(
+                    peer_device_id,
+                    media_dir_id,
+                    clean_relative_path,
+                    offset=offset,
+                    length=chunk_size,
+                )
+                data = base64.b64decode(chunk["data_b64"])
+                if chunk.get("media_dir_id") != media_dir_id or chunk.get("relative_path") != clean_relative_path:
+                    raise P2PServiceError("peer returned a chunk for a different file")
+                if chunk.get("offset") != offset:
+                    raise P2PServiceError("peer returned a chunk at the wrong offset")
+                if len(data) != chunk.get("bytes"):
+                    raise P2PServiceError("peer returned a chunk with the wrong byte count")
+                if hashlib.sha256(data).hexdigest() != chunk.get("chunk_sha256"):
+                    raise P2PServiceError("peer returned a chunk with the wrong checksum")
+                if not data and not chunk.get("eof"):
+                    raise P2PServiceError("peer returned an empty chunk before the end of the file")
+
+                size = chunk["size"]
+                handle.write(data)
+                offset = chunk["next_offset"]
+                if chunk.get("eof"):
+                    break
+
+        actual_sha256 = self._sha256_file(partial)
+        if expected_sha256 and actual_sha256 != expected_sha256:
+            raise P2PServiceError("downloaded file checksum did not match the peer manifest")
+        partial.replace(destination)
+        return {
+            "saved_to": str(destination),
+            "relative_path": str(destination.relative_to(root)),
+            "bytes": size if size is not None else offset,
+            "sha256": actual_sha256,
+        }
 
     def revoke_peer(self, peer_device_id: str) -> dict:
         """Revoke a paired peer: flip the local trust store (the enforcement
@@ -292,13 +418,16 @@ class P2PService:
     # ---- protocol handlers (run on the engine loop) ----------------------------
 
     def _handle_stream_request(self, body: dict) -> dict:
-        """Everything a peer can ask of us over a QUIC stream. Phase 4 adds
-        the grant-checked list_shared / pull_file protocol here."""
+        """Everything a peer can ask of us over a QUIC stream."""
         kind = body.get("type")
         if kind == "ping":
             return {"status": "ok", "type": "pong", "device_id": self.identity.device_id}
         if kind == "pairing_confirm":
             return self._handle_pairing_confirm(body)
+        if kind == "list_shared":
+            return self._handle_list_shared(body)
+        if kind == "pull_file":
+            return self._handle_pull_file(body)
         return {"status": "error", "detail": f"unknown request type: {kind!r}"}
 
     def _handle_pairing_confirm(self, body: dict) -> dict:
@@ -324,6 +453,181 @@ class P2PService:
             p2p_repository.upsert_trusted_device(session, device_id, pubkey, device_id)
         return {"status": "ok", "display_name": self._display_name()}
 
+    def _peer_lookup(self, session):
+        def lookup(device_id: str) -> Optional[PeerRecord]:
+            row = p2p_repository.get_known_device(session, device_id)
+            return PeerRecord(pubkey=row.pubkey, trust_state=row.trust_state) if row else None
+
+        return lookup
+
+    def _handle_list_shared(self, body: dict) -> dict:
+        with self._session() as session:
+            denial = verify_list_shared_request(body, self._peer_lookup(session))
+            if denial is not None:
+                return {"status": "error", "detail": denial}
+            peer_device_id = body["device_id"]
+            grants = p2p_repository.list_active_grants(session, peer_device_id)
+            media_dirs = {entry.id: entry for entry in media_dir_repository.get_media_dir_entries(session)}
+
+            scopes = []
+            files = []
+            seen: set[tuple[str, str]] = set()
+            for grant in grants:
+                media_dir = media_dirs.get(grant.media_dir_id)
+                if media_dir is None:
+                    continue
+                root = media_dir.path.expanduser().resolve()
+                target = self._grant_target(root, grant)
+                if target is None:
+                    continue
+                scopes.append(
+                    {
+                        "scope_type": grant.scope_type,
+                        "media_dir_id": grant.media_dir_id,
+                        "relative_path": grant.relative_path,
+                        "name": media_dir.path.name or grant.media_dir_id,
+                    }
+                )
+                for item in self._indexed_media_under(session, target):
+                    path = Path(item.full_file_path).expanduser().resolve()
+                    if not self._path_inside(path, root) or not path.is_file():
+                        continue
+                    relative_path = path.relative_to(root).as_posix()
+                    key = (grant.media_dir_id, relative_path)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    files.append(self._file_manifest(grant.media_dir_id, relative_path, path, item))
+
+        return {
+            "status": "ok",
+            "type": "shared_list",
+            "device_id": self.identity.device_id,
+            "scopes": scopes,
+            "files": files,
+        }
+
+    def _handle_pull_file(self, body: dict) -> dict:
+        with self._session() as session:
+            denial = verify_pull_file_request(body, self._peer_lookup(session))
+            if denial is not None:
+                return {"status": "error", "detail": denial}
+
+            peer_device_id = body["device_id"]
+            media_dir_id = body.get("media_dir_id")
+            try:
+                relative_path = self._clean_relative_path(body.get("relative_path"))
+                offset = self._parse_non_negative_int(body.get("offset"), "offset")
+                requested_length = self._parse_non_negative_int(body.get("length"), "length")
+            except ValueError as exc:
+                return {"status": "error", "detail": str(exc)}
+            length = min(requested_length, MAX_PULL_CHUNK_BYTES)
+            if length == 0:
+                return {"status": "error", "detail": "length must be greater than zero"}
+
+            media_dir = media_dir_repository.media_dir_by_id(session, media_dir_id)
+            if media_dir is None:
+                return {"status": "error", "detail": "media directory is not configured"}
+            root = media_dir.path.expanduser().resolve()
+            path = (root / relative_path.replace("/", os.sep)).resolve()
+            if not self._path_inside(path, root):
+                return {"status": "error", "detail": "path escapes media directory"}
+            if not self._grant_allows(session, peer_device_id, media_dir_id, relative_path):
+                return {"status": "error", "detail": "no active share grant covers this file"}
+
+            item = session.query(MediaItem).filter_by(full_file_path=str(path)).first()
+            if item is None:
+                return {"status": "error", "detail": "file is not indexed"}
+            if not path.is_file():
+                return {"status": "error", "detail": "file is not available"}
+
+            size = path.stat().st_size
+            if offset > size:
+                return {"status": "error", "detail": "offset is beyond end of file"}
+            with path.open("rb") as handle:
+                handle.seek(offset)
+                chunk = handle.read(length)
+            next_offset = offset + len(chunk)
+
+        return {
+            "status": "ok",
+            "type": "file_chunk",
+            "device_id": self.identity.device_id,
+            "media_dir_id": media_dir_id,
+            "relative_path": relative_path,
+            "offset": offset,
+            "next_offset": next_offset,
+            "size": size,
+            "eof": next_offset >= size,
+            "bytes": len(chunk),
+            "chunk_sha256": hashlib.sha256(chunk).hexdigest(),
+            "data_b64": base64.b64encode(chunk).decode("ascii"),
+        }
+
+    def _grant_target(self, root: Path, grant) -> Optional[Path]:
+        if grant.scope_type == GRANT_SCOPE_MEDIA_DIR:
+            return root
+        if grant.scope_type == GRANT_SCOPE_FOLDER and grant.relative_path:
+            target = (root / grant.relative_path.replace("/", os.sep)).resolve()
+            return target if self._path_inside(target, root) else None
+        return None
+
+    def _indexed_media_under(self, session, path: Path) -> list[MediaItem]:
+        path_text = str(path).rstrip("/\\")
+        under = f"{path_text}{os.sep}%"
+        return (
+            session.query(MediaItem)
+            .filter(or_(MediaItem.full_file_path == path_text, MediaItem.full_file_path.like(under)))
+            .order_by(MediaItem.id)
+            .all()
+        )
+
+    def _file_manifest(self, media_dir_id: str, relative_path: str, path: Path, item: MediaItem) -> dict:
+        stat = path.stat()
+        return {
+            "media_dir_id": media_dir_id,
+            "relative_path": relative_path,
+            "name": path.name,
+            "size": stat.st_size,
+            "mtime": stat.st_mtime,
+            "media_type": item.media_type,
+        }
+
+    def _grant_allows(self, session, peer_device_id: str, media_dir_id: str, relative_path: str) -> bool:
+        for grant in p2p_repository.list_active_grants(session, peer_device_id):
+            if grant.media_dir_id != media_dir_id:
+                continue
+            if grant.scope_type == GRANT_SCOPE_MEDIA_DIR:
+                return True
+            if grant.scope_type == GRANT_SCOPE_FOLDER and grant.relative_path:
+                prefix = grant.relative_path.strip("/")
+                if relative_path == prefix or relative_path.startswith(f"{prefix}/"):
+                    return True
+        return False
+
+    def _clean_relative_path(self, raw_path) -> str:
+        if not isinstance(raw_path, str) or not raw_path.strip():
+            raise ValueError("relative_path is required")
+        path = PurePosixPath(raw_path.strip())
+        if path.is_absolute() or any(part in ("", ".", "..") for part in path.parts):
+            raise ValueError("relative_path must stay inside the media directory")
+        return path.as_posix()
+
+    def _parse_non_negative_int(self, raw_value, field: str) -> int:
+        if not isinstance(raw_value, int) or raw_value < 0:
+            raise ValueError(f"{field} must be a non-negative integer")
+        return raw_value
+
+    def _path_inside(self, path: Path, root: Path) -> bool:
+        return path == root or root in path.parents
+
+    def _sha256_file(self, path: Path) -> str:
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
     def _handle_revocation_notice(self, message: dict) -> None:
         """A peer says it revoked us. Only honored when the signature
         verifies against the pubkey we ALREADY hold for that device — an
@@ -332,11 +636,7 @@ class P2PService:
         Enforcement doesn't depend on this arriving; it exists so the UI can
         say why the peer stopped answering."""
         with self._session() as session:
-            def lookup(device_id: str) -> Optional[PeerRecord]:
-                row = p2p_repository.get_known_device(session, device_id)
-                return PeerRecord(pubkey=row.pubkey, trust_state=row.trust_state) if row else None
-
-            if verify_revocation_notice(message, lookup) is None:
+            if verify_revocation_notice(message, self._peer_lookup(session)) is None:
                 p2p_repository.mark_device_revoked(session, message["device_id"])
 
     def _display_name(self) -> str:

@@ -6,8 +6,10 @@ import pytest
 from yaffo.p2p.identity import InMemorySecretStore, load_or_create_identity
 from yaffo.p2p.messages import (
     PeerRecord,
+    build_pull_file_request,
     build_revocation_notice,
     build_signed_message,
+    verify_pull_file_request,
     verify_revocation_notice,
     verify_signed_message,
 )
@@ -63,6 +65,14 @@ def test_type_mismatch_breaks_signature(sender):
     body = build_signed_message(sender, "pull_files")
     lookup = _store((sender.device_id, sender.public_key_b64, "trusted"))
     assert verify_signed_message(body, lookup, "revoked") is not None
+
+
+def test_pull_file_signature_covers_requested_path(sender):
+    body = build_pull_file_request(sender, "media-1", "2024/a.jpg", 0, 1024)
+    lookup = _store((sender.device_id, sender.public_key_b64, "trusted"))
+    assert verify_pull_file_request(body, lookup) is None
+    body["relative_path"] = "private/a.jpg"
+    assert "signature" in verify_pull_file_request(body, lookup)
 
 
 def test_revocation_notice_verifies_without_trust(sender):

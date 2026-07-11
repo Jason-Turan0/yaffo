@@ -1,0 +1,51 @@
+<div id="remote-shared-panel" class="sharing-panel">
+    <div class="sharing-panel-title-row">
+        <h3>{{ _("Shared by this device") }}</h3>
+        {% if device.trusted %}
+        <button type="button" class="btn-secondary btn-sm" data-icon="refresh"
+                hx-post="{{ url_for('sharing_device_remote_shared', device_id=device.device_id) }}"
+                hx-target="#remote-shared-panel" hx-swap="outerHTML">
+            {{ _("Refresh") }}
+        </button>
+        {% endif %}
+    </div>
+
+    {% if not device.trusted %}
+    <p class="no-data">{{ _("This device is revoked. Pair it again before browsing shared files.") }}</p>
+    {% elif remote_shared and remote_shared.files %}
+    <div class="remote-files-list">
+        {% for file in remote_shared.files %}
+        <div class="remote-file-item">
+            <div class="remote-file-details">
+                <strong>{{ file.name }}</strong>
+                <span class="known-device-meta">{{ file.relative_path }}</span>
+                <span class="known-device-meta">{{ _("%(bytes)s bytes", bytes=file.size) }}</span>
+            </div>
+            {% if media_dirs %}
+            <form class="remote-file-pull-form"
+                  hx-post="{{ url_for('sharing_device_pull_file', device_id=device.device_id) }}"
+                  hx-swap="none">
+                <input type="hidden" name="remote_media_dir_id" value="{{ file.media_dir_id }}">
+                <input type="hidden" name="relative_path" value="{{ file.relative_path }}">
+                <input type="hidden" name="sha256" value="{{ file.sha256 or '' }}">
+                <select name="destination_media_dir_id" aria-label="{{ _('Save to media directory') }}" required>
+                    {% for media_dir in media_dirs %}
+                    <option value="{{ media_dir.id }}">{{ media_dir.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-secondary btn-sm" data-icon="sync">
+                    {{ _("Pull") }}
+                </button>
+            </form>
+            {% else %}
+            <span class="known-device-meta">{{ _("Add a local media directory before pulling files.") }}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% elif remote_shared %}
+    <p class="no-data">{{ _("This device is not sharing any indexed files with you.") }}</p>
+    {% else %}
+    <p class="no-data">{{ _("Refresh to browse files this device has shared with you.") }}</p>
+    {% endif %}
+</div>

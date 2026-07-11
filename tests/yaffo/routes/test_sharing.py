@@ -10,7 +10,15 @@ from types import SimpleNamespace
 import pytest
 
 from yaffo.db import db
-from yaffo.db.models import KnownDevice, TRUST_STATE_REVOKED, TRUST_STATE_TRUSTED
+from yaffo.db.models import (
+    GRANT_SCOPE_FOLDER,
+    GRANT_SCOPE_MEDIA_DIR,
+    KnownDevice,
+    ShareGrant,
+    TRUST_STATE_REVOKED,
+    TRUST_STATE_TRUSTED,
+)
+from yaffo.db.repositories import media_dir_repository, p2p_repository
 from yaffo.p2p.pairing import PairingError, new_pairing_code
 from yaffo.p2p.service import P2PServiceError
 from yaffo.p2p.signaling import CallError
@@ -33,8 +41,26 @@ class FakeP2PService:
         self.accept_error = None
         self.revoke_result = {"revoked": PEER_ONLINE, "peer_notified": True}
         self.revoke_error = None
+        self.list_shared_result = {
+            "status": "ok",
+            "type": "shared_list",
+            "files": [
+                {
+                    "media_dir_id": "remote-lib",
+                    "relative_path": "trip/a.jpg",
+                    "name": "a.jpg",
+                    "size": 12,
+                    "sha256": "abc123",
+                }
+            ],
+            "scopes": [],
+        }
+        self.list_shared_error = None
+        self.pull_error = None
         self.accepted_codes = []
         self.revoked_ids = []
+        self.listed_ids = []
+        self.pulled_files = []
 
     def connected_device_ids(self):
         return self.online
@@ -53,6 +79,18 @@ class FakeP2PService:
         if self.revoke_error is not None:
             raise self.revoke_error
         return self.revoke_result
+
+    def list_shared(self, device_id):
+        self.listed_ids.append(device_id)
+        if self.list_shared_error is not None:
+            raise self.list_shared_error
+        return self.list_shared_result
+
+    def pull_file(self, device_id, media_dir_id, relative_path, destination_root, expected_sha256=None):
+        self.pulled_files.append((device_id, media_dir_id, relative_path, destination_root, expected_sha256))
+        if self.pull_error is not None:
+            raise self.pull_error
+        return {"relative_path": "Shared/laptop/trip/a.jpg", "bytes": 12}
 
 
 @pytest.fixture
@@ -134,6 +172,17 @@ def test_device_page_renders(app, client, service):
     assert "laptop" in body
     assert PEER_ONLINE in body
     assert "Shared with this device" in body
+    assert "Shared by this device" in body
+
+
+def test_device_page_shows_grant_controls_when_media_dirs_exist(app, client, service, tmp_path):
+    _seed_devices(app)
+    with app.app_context():
+        media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+    body = client.get(f"/sharing/devices/{PEER_ONLINE}").get_data(as_text=True)
+    assert "Share a media directory" in body
+    assert "Share a folder" in body
+    assert "library" in body
 
 
 def test_device_page_404_for_unknown(client, service):
@@ -239,8 +288,165 @@ def test_rename_requires_a_name(app, client, service):
         assert db.session.get(KnownDevice, PEER_ONLINE).display_name == "laptop"
 
 
+# ---- share grants ------------------------------------------------------------
+
+
+def test_add_media_dir_grant(app, client, service, tmp_path):
+    _seed_devices(app)
+    with app.app_context():
+        media_dir = media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+
+    resp = client.post(
+        f"/sharing/devices/{PEER_ONLINE}/grants",
+        data={"scope_type": GRANT_SCOPE_MEDIA_DIR, "media_dir_id": media_dir.id},
+    )
+
+    assert resp.status_code == 200
+    message, type_ = _notification(resp)
+    assert message == "Share grant added." and type_ == "success"
+    body = resp.get_data(as_text=True)
+    assert "Media directory" in body
+    assert "library" in body
+    with app.app_context():
+        grants = p2p_repository.list_active_grants(db.session, PEER_ONLINE)
+        assert len(grants) == 1
+        assert grants[0].scope_type == GRANT_SCOPE_MEDIA_DIR
+        assert grants[0].media_dir_id == media_dir.id
+
+
+def test_add_folder_grant_stores_relative_path(app, client, service, tmp_path):
+    _seed_devices(app)
+    root = tmp_path / "library"
+    folder = root / "2024" / "summer"
+    folder.mkdir(parents=True)
+    with app.app_context():
+        media_dir = media_dir_repository.add_media_dir(db.session, str(root))
+
+    resp = client.post(
+        f"/sharing/devices/{PEER_ONLINE}/grants",
+        data={"scope_type": GRANT_SCOPE_FOLDER, "folder_path": str(folder)},
+    )
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "2024/summer" in body
+    with app.app_context():
+        grant = db.session.query(ShareGrant).one()
+        assert grant.scope_type == GRANT_SCOPE_FOLDER
+        assert grant.media_dir_id == media_dir.id
+        assert grant.relative_path == "2024/summer"
+
+
+def test_add_folder_grant_rejects_paths_outside_media_dirs(app, client, service, tmp_path):
+    _seed_devices(app)
+    with app.app_context():
+        media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+
+    resp = client.post(
+        f"/sharing/devices/{PEER_ONLINE}/grants",
+        data={"scope_type": GRANT_SCOPE_FOLDER, "folder_path": str(tmp_path / "outside")},
+    )
+
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "inside a configured media directory" in message and type_ == "error"
+    with app.app_context():
+        assert p2p_repository.list_active_grants(db.session, PEER_ONLINE) == []
+
+
+def test_revoke_share_grant(app, client, service, tmp_path):
+    _seed_devices(app)
+    with app.app_context():
+        media_dir = media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+        grant = p2p_repository.create_grant(
+            db.session,
+            PEER_ONLINE,
+            GRANT_SCOPE_MEDIA_DIR,
+            media_dir_id=media_dir.id,
+        )
+        grant_id = grant.id
+
+    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/grants/{grant_id}/revoke")
+
+    assert resp.status_code == 200
+    message, type_ = _notification(resp)
+    assert message == "Share grant revoked." and type_ == "success"
+    with app.app_context():
+        assert p2p_repository.list_active_grants(db.session, PEER_ONLINE) == []
+        assert db.session.get(ShareGrant, grant_id).revoked_at is not None
+
+
+# ---- receiving shared files --------------------------------------------------
+
+
+def test_browse_remote_shared_files(app, client, service, tmp_path):
+    _seed_devices(app)
+    with app.app_context():
+        media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+
+    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/shared")
+
+    assert resp.status_code == 200
+    assert service.listed_ids == [PEER_ONLINE]
+    body = resp.get_data(as_text=True)
+    assert "remote-shared-panel" in body
+    assert "trip/a.jpg" in body
+    assert "Pull" in body
+
+
+def test_browse_remote_shared_files_error_toast(app, client, service):
+    _seed_devices(app)
+    service.list_shared_error = CallError("peer did not answer")
+
+    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/shared")
+
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "peer did not answer" in message and type_ == "error"
+
+
+def test_pull_remote_file(app, client, service, tmp_path):
+    _seed_devices(app)
+    with app.app_context():
+        media_dir = media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+
+    resp = client.post(
+        f"/sharing/devices/{PEER_ONLINE}/pull",
+        data={
+            "destination_media_dir_id": media_dir.id,
+            "remote_media_dir_id": "remote-lib",
+            "relative_path": "trip/a.jpg",
+            "sha256": "abc123",
+        },
+    )
+
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "Shared/laptop/trip/a.jpg" in message and type_ == "success"
+    assert service.pulled_files == [(PEER_ONLINE, "remote-lib", "trip/a.jpg", media_dir.path, "abc123")]
+
+
+def test_pull_remote_file_requires_destination_media_dir(app, client, service):
+    _seed_devices(app)
+
+    resp = client.post(
+        f"/sharing/devices/{PEER_ONLINE}/pull",
+        data={"remote_media_dir_id": "remote-lib", "relative_path": "trip/a.jpg"},
+    )
+
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "Choose a local media directory" in message and type_ == "error"
+
+
 def test_actions_unavailable_without_service(client):
-    for path in ("/sharing/pairing-code", "/sharing/pair", "/sharing/revoke"):
+    for path in (
+        "/sharing/pairing-code",
+        "/sharing/pair",
+        "/sharing/revoke",
+        f"/sharing/devices/{PEER_ONLINE}/shared",
+        f"/sharing/devices/{PEER_ONLINE}/pull",
+    ):
         resp = client.post(path, data={"code": "x", "device_id": "y"})
         assert resp.status_code == 204
         message, type_ = _notification(resp)

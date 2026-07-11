@@ -3,8 +3,11 @@
 Status: **Phases 1–3 complete — hub deployed and verified at
 `wss://hub.yaffo.app`, the p2p engine is ported into `yaffo/p2p/`, and the
 pairing/device-management UI ships as a dedicated Sharing nav tab
-(2026-07-10; Phase 3 pending Jason's in-browser check); Phases 4+ not
-started.**
+(2026-07-10; Phase 3 pending Jason's in-browser check). Phase 4 is
+underway: grant management UI and the first signed `list_shared` /
+JSON-chunked `pull_file` protocol are implemented, with a first receiving UI
+for browsing a peer's shared files and explicitly pulling one file into a
+local media directory; background transfer orchestration is still pending.**
 The original design sketch here was built out as a working proof of concept in
 [`p2p-poc/`](../../p2p-poc/README.md), which succeeded end-to-end: pairing,
 presence, relay-first calls with hole-punch upgrade, authorized file pulls,
@@ -505,14 +508,28 @@ verified via route tests + Jason's own browser.)
 
 The actual sharing feature, replacing the POC's seed-text-files demo:
 
+> **Status: PARTIAL (2026-07-11).** Grant management now exists on each
+> trusted device page, backed by `share_grants`. The serving device verifies
+> signed `list_shared` and `pull_file` requests against its local
+> `known_devices` row, checks active grants at request time, lists only
+> indexed files under granted configured media dirs/folders, and returns
+> bounded base64 JSON chunks with offset support. The device page can browse
+> a peer's granted file list and pull a selected file into `Shared/<device_id>/`
+> under a chosen local media dir, resuming from `.partial` and verifying each
+> transferred chunk. Remaining work: background transfer manifests/status UI,
+> bounded concurrency for batches, LAN/direct path work, and eventual true
+> stream framing for multi-GB files.
+
 - **Grant management UI** (same Settings section): per known device, add a
   grant by picking a media dir or browsing to a folder within one; list and
   revoke active grants.
 - **Serving side**: signed-request verification (POC `sharing.py` pattern:
   canonical string + timestamp replay bound + signature against the local
   trust store) extended with grant checks. Protocol messages:
-  - `list_shared` → the scopes this peer holds grants for, with file
-    manifests (relative path, size, mtime, content hash).
+  - `list_shared` → the scopes this peer holds grants for, with cheap file
+    manifests (relative path, size, mtime, media type). It must not hash file
+    contents during browse; hashing large granted folders turns a metadata
+    request into a slow transfer.
   - `pull_file` → one file, streamed in chunks with offset support.
 - **Transfer resilience** (in scope for v1 — photos and videos are large):
   manifest-driven pulls; each file streamed in chunks over a QUIC stream

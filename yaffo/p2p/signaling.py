@@ -190,6 +190,13 @@ class HubClient:
         caller_addr = tuple(message["public"])
         punch_duration = float(message.get("punch_duration", DEFAULT_PUNCH_DURATION_SECONDS))
         upgrade = bool(message.get("upgrade", True))
+        logger.info(
+            "connect_request received caller=%s token=%s upgrade=%s public=%s",
+            caller,
+            token,
+            upgrade,
+            caller_addr,
+        )
 
         try:
             relay_addr = await resolve_ipv4(self._relay_host, self._relay_port)
@@ -267,6 +274,14 @@ class HubClient:
         self._pending[token] = waiter
         try:
             my_public = await dialer.discover_public_address(*relay_addr)
+            logger.info(
+                "connect_request peer=%s token=%s payload=%s upgrade=%s public=%s",
+                peer_device_id,
+                token,
+                payload.get("type"),
+                attempt_upgrade,
+                my_public,
+            )
             await self._send(
                 {
                     "type": "connect_request",

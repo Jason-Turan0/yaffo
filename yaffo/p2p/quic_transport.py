@@ -272,13 +272,23 @@ class P2PDialer(P2PDatagramMixin, asyncio.DatagramProtocol):
         addr = (host, port)
         self._routes[addr] = protocol
         try:
-            async with asyncio.timeout(timeout):
-                protocol.connect(addr)
-                await protocol.wait_connected()
-                return await _pinned_stream_exchange(protocol, expected_device_id, payload)
+            protocol.connect(addr)
+            try:
+                async with asyncio.timeout(timeout):
+                    await protocol.wait_connected()
+            except (asyncio.TimeoutError, TimeoutError) as exc:
+                raise TransportError(f"could not establish QUIC connection to peer at {host}:{port}") from exc
+
+            try:
+                async with asyncio.timeout(timeout):
+                    return await _pinned_stream_exchange(protocol, expected_device_id, payload)
+            except (asyncio.TimeoutError, TimeoutError) as exc:
+                raise TransportError(
+                    f"peer at {host}:{port} did not answer {payload.get('type', 'request')} within {timeout:.1f}s"
+                ) from exc
         except TransportError:
             raise
-        except (OSError, asyncio.TimeoutError, TimeoutError, ConnectionError) as exc:
+        except (OSError, ConnectionError) as exc:
             raise TransportError(f"could not reach peer at {host}:{port}: {exc}") from exc
         finally:
             protocol.close()
@@ -378,5 +388,9 @@ async def quic_pinned_request_fresh_socket(host: str, port: int, expected_device
                 return await _pinned_stream_exchange(protocol, expected_device_id, payload)
     except TransportError:
         raise
-    except (OSError, asyncio.TimeoutError, TimeoutError, ConnectionError) as exc:
+    except (asyncio.TimeoutError, TimeoutError) as exc:
+        raise TransportError(
+            f"could not reach peer at {host}:{port}: request did not complete within {CONNECT_TIMEOUT_SECONDS:.1f}s"
+        ) from exc
+    except (OSError, ConnectionError) as exc:
         raise TransportError(f"could not reach peer at {host}:{port}: {exc}") from exc

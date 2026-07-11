@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import datetime, timezone
+from pathlib import Path
 
 import segno
 from flask import (
@@ -30,11 +31,19 @@ from flask import (
 from flask_babel import gettext
 
 from yaffo.db import db
-from yaffo.db.models import TRUST_STATE_TRUSTED
-from yaffo.db.repositories import p2p_repository
+from yaffo.db.models import (
+    GRANT_SCOPE_FOLDER,
+    GRANT_SCOPE_MEDIA_DIR,
+    TRUST_STATE_TRUSTED,
+)
+from yaffo.db.repositories import media_dir_repository, p2p_repository
+from yaffo.logging_config import get_logger
 from yaffo.p2p.pairing import PairingError
 from yaffo.p2p.service import P2PServiceError
 from yaffo.p2p.signaling import CallError
+
+
+logger = get_logger(__name__, "webapp")
 
 
 def _service():
@@ -97,6 +106,57 @@ def _with_toast(response, message: str, type: str = "success", devices_changed: 
     return response
 
 
+def _media_dir_choices() -> list[dict]:
+    choices = []
+    for entry in media_dir_repository.get_media_dir_entries(db.session):
+        path = entry.path
+        choices.append({"id": entry.id, "name": path.name or str(path), "path": str(path)})
+    return choices
+
+
+def _active_grant_rows(peer_device_id: str) -> list[dict]:
+    media_dirs = {choice["id"]: choice for choice in _media_dir_choices()}
+    rows = []
+    for grant in p2p_repository.list_active_grants(db.session, peer_device_id):
+        media_dir = media_dirs.get(grant.media_dir_id or "")
+        if grant.scope_type == GRANT_SCOPE_MEDIA_DIR:
+            scope_label = gettext("Media directory")
+            name = media_dir["name"] if media_dir else grant.media_dir_id
+            detail = media_dir["path"] if media_dir else gettext("Media directory was removed.")
+        elif grant.scope_type == GRANT_SCOPE_FOLDER:
+            scope_label = gettext("Folder")
+            name = grant.relative_path
+            detail = (
+                str(Path(media_dir["path"]) / grant.relative_path)
+                if media_dir and grant.relative_path
+                else gettext("Media directory was removed.")
+            )
+        else:
+            scope_label = grant.scope_type
+            name = grant.relative_path or grant.media_dir_id or gettext("Unknown scope")
+            detail = ""
+        rows.append(
+            {
+                "id": grant.id,
+                "scope_label": scope_label,
+                "name": name,
+                "detail": detail,
+            }
+        )
+    return rows
+
+
+def _resolve_folder_grant(folder_path: str) -> tuple[str, str | None]:
+    folder = Path(folder_path).expanduser().resolve()
+    for entry in media_dir_repository.get_media_dir_entries(db.session):
+        root = entry.path.expanduser().resolve()
+        if folder == root:
+            return entry.id, None
+        if root in folder.parents:
+            return entry.id, folder.relative_to(root).as_posix()
+    raise ValueError(gettext("Choose a folder inside a configured media directory."))
+
+
 def init_sharing_routes(app: Flask):
     def render_settings_section():
         return render_template("sharing/_devices_section.html", sharing=sharing_context())
@@ -106,7 +166,22 @@ def init_sharing_routes(app: Flask):
         device = next((d for d in context["devices"] if d["device_id"] == device_id), None)
         if device is None:
             abort(404)
-        return render_template("sharing/_device_panel.html", sharing=context, device=device)
+        return render_template(
+            "sharing/_device_panel.html",
+            sharing=context,
+            device=device,
+            media_dirs=_media_dir_choices(),
+            grants=_active_grant_rows(device_id),
+            remote_shared=None,
+        )
+
+    def render_remote_panel(device: dict, remote_shared: dict | None = None):
+        return render_template(
+            "sharing/_remote_panel.html",
+            device=device,
+            media_dirs=_media_dir_choices(),
+            remote_shared=remote_shared,
+        )
 
     @app.route("/sharing", methods=["GET"])
     def sharing_index():
@@ -122,7 +197,15 @@ def init_sharing_routes(app: Flask):
         device = next((d for d in context["devices"] if d["device_id"] == device_id), None)
         if device is None:
             abort(404)
-        return render_template("sharing/device.html", sharing=context, device=device, selected_key=device_id)
+        return render_template(
+            "sharing/device.html",
+            sharing=context,
+            device=device,
+            selected_key=device_id,
+            media_dirs=_media_dir_choices(),
+            grants=_active_grant_rows(device_id),
+            remote_shared=None,
+        )
 
     @app.route("/sharing/sidebar", methods=["GET"])
     def sharing_sidebar():
@@ -224,3 +307,121 @@ def init_sharing_routes(app: Flask):
         if not p2p_repository.rename_device(db.session, device_id, name):
             return _notify(gettext("%(device)s is not a known device.", device=device_id))
         return _with_toast(render_device_panel(device_id), gettext("Device renamed."))
+
+    @app.route("/sharing/devices/<device_id>/grants", methods=["POST"])
+    def sharing_device_grant(device_id: str):
+        """Create a local share grant for a trusted peer."""
+        device = p2p_repository.get_known_device(db.session, device_id)
+        if device is None:
+            return _notify(gettext("%(device)s is not a known device.", device=device_id))
+        if device.trust_state != TRUST_STATE_TRUSTED:
+            return _notify(gettext("Pair this device again before sharing with it."))
+
+        scope_type = (request.form.get("scope_type") or "").strip()
+        try:
+            if scope_type == GRANT_SCOPE_MEDIA_DIR:
+                media_dir_id = (request.form.get("media_dir_id") or "").strip()
+                if media_dir_repository.media_dir_by_id(db.session, media_dir_id) is None:
+                    return _notify(gettext("Choose a configured media directory."))
+                p2p_repository.create_grant(
+                    db.session,
+                    device_id,
+                    GRANT_SCOPE_MEDIA_DIR,
+                    media_dir_id=media_dir_id,
+                )
+            elif scope_type == GRANT_SCOPE_FOLDER:
+                folder_path = (request.form.get("folder_path") or "").strip()
+                if not folder_path:
+                    return _notify(gettext("Choose a folder to share."))
+                media_dir_id, relative_path = _resolve_folder_grant(folder_path)
+                if relative_path is None:
+                    p2p_repository.create_grant(
+                        db.session,
+                        device_id,
+                        GRANT_SCOPE_MEDIA_DIR,
+                        media_dir_id=media_dir_id,
+                    )
+                else:
+                    p2p_repository.create_grant(
+                        db.session,
+                        device_id,
+                        GRANT_SCOPE_FOLDER,
+                        media_dir_id=media_dir_id,
+                        relative_path=relative_path,
+                    )
+            else:
+                return _notify(gettext("Choose what to share."))
+        except ValueError as exc:
+            return _notify(str(exc))
+        return _with_toast(render_device_panel(device_id), gettext("Share grant added."), devices_changed=False)
+
+    @app.route("/sharing/devices/<device_id>/grants/<int:grant_id>/revoke", methods=["POST"])
+    def sharing_device_grant_revoke(device_id: str, grant_id: int):
+        """Revoke one local share grant; the row stays as history."""
+        active_ids = {grant.id for grant in p2p_repository.list_active_grants(db.session, device_id)}
+        if grant_id not in active_ids:
+            return _notify(gettext("Share grant is no longer active."))
+        p2p_repository.revoke_grant(db.session, grant_id)
+        return _with_toast(render_device_panel(device_id), gettext("Share grant revoked."), devices_changed=False)
+
+    @app.route("/sharing/devices/<device_id>/shared", methods=["POST"])
+    def sharing_device_remote_shared(device_id: str):
+        """Ask a peer for the files it currently grants to this device."""
+        service = _service()
+        if service is None:
+            return _notify(gettext("Device sharing is not running."))
+        context = sharing_context()
+        device = next((d for d in context["devices"] if d["device_id"] == device_id), None)
+        if device is None:
+            return _notify(gettext("%(device)s is not a known device.", device=device_id))
+        if not device["trusted"]:
+            return _notify(gettext("Pair this device again before browsing shared files."))
+        try:
+            logger.info("browse shared files start peer=%s", device_id)
+            remote_shared = service.list_shared(device_id)
+        except (CallError, P2PServiceError) as exc:
+            logger.warning("browse shared files failed peer=%s error=%s", device_id, exc)
+            return _notify(gettext("Could not browse shared files: %(reason)s", reason=str(exc)))
+        except FutureTimeoutError:
+            logger.warning("browse shared files timed out peer=%s", device_id)
+            return _notify(gettext("Browsing shared files timed out — is the other device online?"))
+        logger.info(
+            "browse shared files done peer=%s files=%d",
+            device_id,
+            len(remote_shared.get("files", [])) if isinstance(remote_shared, dict) else 0,
+        )
+        return render_remote_panel(device, remote_shared)
+
+    @app.route("/sharing/devices/<device_id>/pull", methods=["POST"])
+    def sharing_device_pull_file(device_id: str):
+        """Pull one remote file into a selected local media directory."""
+        service = _service()
+        if service is None:
+            return _notify(gettext("Device sharing is not running."))
+        device = p2p_repository.get_known_device(db.session, device_id)
+        if device is None:
+            return _notify(gettext("%(device)s is not a known device.", device=device_id))
+        if device.trust_state != TRUST_STATE_TRUSTED:
+            return _notify(gettext("Pair this device again before pulling files from it."))
+
+        destination_media_dir_id = (request.form.get("destination_media_dir_id") or "").strip()
+        destination = media_dir_repository.media_dir_by_id(db.session, destination_media_dir_id)
+        if destination is None:
+            return _notify(gettext("Choose a local media directory."))
+
+        remote_media_dir_id = (request.form.get("remote_media_dir_id") or "").strip()
+        relative_path = (request.form.get("relative_path") or "").strip()
+        expected_sha256 = (request.form.get("sha256") or "").strip() or None
+        try:
+            result = service.pull_file(
+                device_id,
+                remote_media_dir_id,
+                relative_path,
+                destination.path,
+                expected_sha256=expected_sha256,
+            )
+        except (CallError, P2PServiceError, ValueError) as exc:
+            return _notify(gettext("Could not pull file: %(reason)s", reason=str(exc)))
+        except FutureTimeoutError:
+            return _notify(gettext("Pulling the file timed out — is the other device online?"))
+        return _notify(gettext("Pulled %(file)s.", file=result["relative_path"]), type="success")
