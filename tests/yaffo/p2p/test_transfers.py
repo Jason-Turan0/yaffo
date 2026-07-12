@@ -116,7 +116,7 @@ def manager(identity):
     return TransferManager(SimpleNamespace(identity=identity))
 
 
-def make_batch(tmp_path, scope="trip", collection="trip") -> TransferBatch:
+def make_batch(tmp_path, scope="trip", collection="trip", included=None, excluded=None) -> TransferBatch:
     return TransferBatch(
         id="t1",
         peer_device_id=PEER_ID,
@@ -127,6 +127,8 @@ def make_batch(tmp_path, scope="trip", collection="trip") -> TransferBatch:
         filters={},
         destination_root=tmp_path / "downloads",
         collection_path=collection,
+        included=set(included or ()),
+        excluded=set(excluded or ()),
     )
 
 
@@ -330,6 +332,44 @@ def test_collect_files_pages_through_the_manifest(manager, tmp_path):
     assert batch.total_expected == 3
     list_offsets = [r["offset"] for r in holder.requests if r.get("type") == "list_files"]
     assert list_offsets == [0, 2]
+
+
+def test_collect_files_keeps_only_the_selected_paths(manager, tmp_path):
+    """An explicit selection in the gallery: the browser sends relative paths, and the
+    batch takes their manifests (size/mtime — the resume-sidecar seed) from the PEER,
+    never from the browser."""
+    holder = ScriptedHolder(
+        {
+            "trip/a.jpg": RemoteFile(b"aa"),
+            "trip/b.jpg": RemoteFile(b"bbb"),
+            "trip/c.jpg": RemoteFile(b"cccc"),
+        }
+    )
+    batch = make_batch(tmp_path, included=["trip/a.jpg", "trip/c.jpg"])
+
+    asyncio.run(manager._collect_files(batch, holder))
+
+    assert [f.relative_path for f in batch.files] == ["trip/a.jpg", "trip/c.jpg"]
+    assert [f.size for f in batch.files] == [2, 4]  # authoritative, from the peer
+    assert batch.total_expected == 2  # what this batch will pull, not the scope size
+
+
+def test_collect_files_drops_the_excluded_paths(manager, tmp_path):
+    """"Select all, except these": the scope is snapshotted whole and the exclusions
+    are removed from it — so files on pages the user never rendered are still pulled."""
+    holder = ScriptedHolder(
+        {
+            "trip/a.jpg": RemoteFile(b"aa"),
+            "trip/b.jpg": RemoteFile(b"bbb"),
+            "trip/c.jpg": RemoteFile(b"cccc"),
+        }
+    )
+    batch = make_batch(tmp_path, excluded=["trip/b.jpg"])
+
+    asyncio.run(manager._collect_files(batch, holder))
+
+    assert [f.relative_path for f in batch.files] == ["trip/a.jpg", "trip/c.jpg"]
+    assert batch.total_expected == 2
 
 
 def test_relay_budget_pauses_and_continue_anyway_resumes(manager, tmp_path):

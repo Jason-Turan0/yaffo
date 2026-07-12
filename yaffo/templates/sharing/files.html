@@ -12,6 +12,7 @@
     {% from "_sidebar.html" import render_sidebar %}
     {% from "components/pagination.html" import pagination as render_pagination %}
     {% from "components/page_header.html" import page_header %}
+{% from "components/selection_bar.html" import selection_bar %}
 
     {# The filter form GETs back to this page, so the scope coordinates ride
        as hidden inputs (a GET submit replaces the querystring). Same filter
@@ -42,14 +43,6 @@
         {{ render_sidebar(scope_url, filters, render_filters_block=remote_filters) }}
         <div class="main-content photo-gallery">
             {% set header_actions %}
-                {% if not error and files|length > 0 and download_dir %}
-                <form hx-post="{{ url_for('sharing_device_download_all', device_id=device.device_id) }}{% if request.query_string %}?{{ request.query_string.decode() }}{% endif %}"
-                      hx-swap="none" class="download-all-form">
-                    <button type="submit" class="btn-secondary btn-sm" data-icon="sync">
-                        {{ _("Download all (%(total)s)", total=pagination.total_items|format_integer) }}
-                    </button>
-                </form>
-                {% endif %}
                 <a class="btn-secondary btn-sm" href="{{ url_for('sharing_device', device_id=device.device_id) }}">
                     {{ _("Back to device") }}
                 </a>
@@ -84,9 +77,22 @@
                 </p>
                 {% endif %}
 
-                <div class="photo-grid remote-photo-grid">
+                {% if download_dir %}
+                {# "Select all" is every file matching the scope + filters, including
+                   the pages not rendered — the batch snapshots the manifest from the
+                   peer, so it is never limited to what is on screen. #}
+                {% call selection_bar('remote-selection', selection, _('Select all %(count)s matching', count=pagination.total_items|format_integer)) %}
+                    <button type="button" class="btn-primary" id="pull-selected-button"
+                            data-selection-action data-selection-post data-icon="sync"
+                            hx-post="{{ url_for('sharing_device_pull_selected', device_id=device.device_id) }}{% if request.query_string %}?{{ request.query_string.decode() }}{% endif %}"
+                            hx-swap="none">{{ _("Pull selected") }}</button>
+                {% endcall %}
+                {% endif %}
+
+                <div class="photo-grid remote-photo-grid is-selecting">
                     {% for file in files %}
-                        <div class="photo-card remote-photo-card">
+                        <div class="photo-card remote-photo-card{% if selection.is_selected(file.relative_path) %} is-selected{% endif %}"
+                             data-select-id="{{ file.relative_path }}">
                             <div class="photo-thumb">
                                 {# Previews are live p2p calls, so the queue in
                                    remote_gallery.js loads them viewport-first with
@@ -130,58 +136,19 @@
                             </div>
                             <div class="photo-info remote-photo-info">
                                 <div class="photo-date">{{ file.date_taken | format_date("date") if file.date_taken else _("Unknown date") }}</div>
-                                <form hx-post="{{ url_for('sharing_device_pull_file', device_id=device.device_id) }}"
-                                      hx-swap="none">
-                                    <input type="hidden" name="remote_media_dir_id" value="{{ file.media_dir_id }}">
-                                    <input type="hidden" name="relative_path" value="{{ file.relative_path }}">
-                                    <input type="hidden" name="scope" value="{{ scope }}">
-                                    <input type="hidden" name="collection_name" value="{{ scope or label or media_dir_id }}">
-                                    {# Size + mtime seed the transfer's resume sidecar: a
-                                       resumed .partial only continues when the source still
-                                       matches this manifest snapshot. #}
-                                    <input type="hidden" name="name" value="{{ file.name }}">
-                                    <input type="hidden" name="size" value="{{ file.size }}">
-                                    <input type="hidden" name="mtime" value="{{ file.mtime }}">
-                                    <button type="submit" class="btn-secondary btn-sm" data-icon="sync">
-                                        {{ _("Pull") }}
-                                    </button>
-                                </form>
                             </div>
                         </div>
                     {% endfor %}
                 </div>
 
+                {# Scope + filters + selection, built once in the route. #}
                 {{ render_pagination(
                     pagination.current_page,
                     pagination.total_items,
                     pagination.page_size,
                     pagination.page_sizes,
                     url_for('sharing_device_files', device_id=device.device_id),
-                    {
-                        'media_dir_id': media_dir_id,
-                        'scope': scope,
-                        'label': label,
-                        'path': filters.selected_path,
-                        'media-type': filters.selected_media_type,
-                        'year': filters.selected_year,
-                        'month': filters.selected_month,
-                        'device': filters.selected_device,
-                        'person': filters.selected_person_ids,
-                        'person-match-type': filters.selected_person_match_type,
-                        'gender': filters.selected_gender,
-                        'labels': filters.selected_label_ids,
-                        'labels-match-type': filters.selected_labels_match_type,
-                        'tag-name': filters.selected_tag_name,
-                        'tag-value': filters.selected_tag_value,
-                        'location': filters.selected_location_names,
-                        'location-match-type': filters.selected_location_match_type,
-                        'unnamed': filters.selected_unnamed,
-                        'proximity-lat': filters.selected_proximity_lat,
-                        'proximity-lon': filters.selected_proximity_lon,
-                        'proximity-distance': filters.selected_proximity_distance,
-                        'proximity-location': filters.selected_proximity_location,
-                        'favorite': filters.selected_favorite
-                    }
+                    page_params
                 ) }}
             {% else %}
                 <div class="empty-state">
@@ -200,6 +167,14 @@
         document.addEventListener('yaffo:app-init-complete', (event) => {
             const app = event.detail.app;
             app.sharing.remoteGallery.init();
+            // Selecting is what this grid is for: pulling one file and pulling the
+            // lot are the same action on a selection. The selection lives on the URL,
+            // so the hx-post above already carries it (data-selection-post).
+            app.COMPONENTS.selectionBar?.init({
+                grid: '.remote-photo-grid',
+                bar: '#remote-selection',
+                totalCount: {{ pagination.total_items | tojson }},
+            });
             // Same tags widget as home, but the value list comes from the
             // PEER (scoped to this grant) through the sharing proxy route.
             app.filters.initTags(app.i18n, {

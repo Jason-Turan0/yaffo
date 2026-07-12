@@ -135,6 +135,20 @@ window.PHOTO_ORGANIZER.COMPONENTS.selectionBar = {
             });
         };
 
+        // An htmx action (the remote gallery's Pull) needs its URL fixed at REQUEST
+        // time, not by rewriting hx-post: htmx reads hx-post once, when it processes
+        // the node, and captures the path in the trigger's closure — so a later
+        // attribute change is ignored and the request would carry the selection as it
+        // stood at PAGE LOAD. configRequest is the supported hook that runs per
+        // request, so the posted URL is always the selection on screen.
+        document.addEventListener('htmx:configRequest', (event) => {
+            if (!(event instanceof CustomEvent)) return;
+            const element = event.detail?.elt;
+            if (!(element instanceof Element) || !element.closest('[data-selection-post]')) return;
+            const path = new URL(event.detail.path, window.location.origin);
+            event.detail.path = path.pathname + urlWithSelection().search;
+        });
+
         const render = () => {
             cards().forEach((card) => {
                 card.classList.toggle('is-selected', isSelected(idOf(card)));

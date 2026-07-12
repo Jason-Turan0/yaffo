@@ -23,6 +23,7 @@ from yaffo.db.repositories import p2p_repository
 from yaffo.db.repositories.media_filter_repository import apply_media_filters
 from yaffo.routes import filter_config
 from yaffo.routes.filter_panel import build_filters_context, to_media_filters, to_query_params
+from yaffo.routes.selection import SELECTION_ARGS, Selection, selection_from_args
 
 # Same ladder the home gallery offers.
 _PAGE_SIZES = [10, 25, 50, 100, 250]
@@ -43,48 +44,6 @@ class AlbumView:
     @property
     def is_shared(self) -> bool:
         return bool(self.shared_with)
-
-
-@dataclass(frozen=True)
-class SelectionView:
-    """What is selected on a paginated grid, read from the URL.
-
-    The selection lives in the querystring like every other bit of screen state in
-    this app (filters, page, page size). That means the server renders which cards
-    are ticked, paginating carries the selection in the links, and the POST that
-    acts on it reads the same parameters — no client-side store to drift out of sync.
-
-    It is one of two things, because the visible page is not the selection:
-      - explicit (`select_id=1&select_id=2`): the ids the user ticked;
-      - scope (`select=all`): the WHOLE scope — every member of the album / every
-        photo matching the filters, including rows on pages never rendered — minus
-        any `exclude_id` the user unticked. Unticking narrows the scope; it does not
-        collapse it to the visible page.
-    """
-
-    all: bool
-    ids: frozenset[int]
-    excluded: frozenset[int]
-    total: int  # size of the whole scope, so a scope selection can be counted
-
-    def is_selected(self, media_item_id: int) -> bool:
-        if self.all:
-            return media_item_id not in self.excluded
-        return media_item_id in self.ids
-
-    @property
-    def count(self) -> int:
-        if self.all:
-            return max(0, self.total - len(self.excluded))
-        return len(self.ids)
-
-    @property
-    def query_params(self) -> dict:
-        """The selection as querystring parameters, so pagination links (and the
-        action forms) carry it."""
-        if self.all:
-            return {"select": "all", "exclude_id": sorted(self.excluded)}
-        return {"select_id": sorted(self.ids)}
 
 
 def init_albums_routes(app: Flask):
@@ -126,15 +85,10 @@ def init_albums_routes(app: Flask):
             abort(404)
         return album
 
-    def _selection(total: int) -> SelectionView:
-        """The selection carried on the querystring. Read identically by the screen
-        that renders it and by the POST that acts on it — the URL is the state."""
-        return SelectionView(
-            all=request.args.get("select") == "all",
-            ids=frozenset(request.args.getlist("select_id", type=int)),
-            excluded=frozenset(request.args.getlist("exclude_id", type=int)),
-            total=total,
-        )
+    def _selection(total: int) -> Selection:
+        """The selection carried on the querystring (routes/selection.py). Read
+        identically by the screen that renders it and by the POST that acts on it."""
+        return selection_from_args(request.args, total=total, cast=int)
 
     @app.route("/albums", methods=["GET"])
     def albums_index():
@@ -268,7 +222,7 @@ def init_albums_routes(app: Flask):
     # the querystring into its action, so a second add would carry the previous
     # one's value and collide); the selection has just been consumed, so it must not
     # come back either.
-    _NON_FILTER_ARGS = {"added", "select", "select_id", "exclude_id"}
+    _NON_FILTER_ARGS = {"added", *SELECTION_ARGS}
 
     def _add_screen_url(album_id: int, added: int) -> str:
         """Back to the add screen with the same filters — a POST must not lose the

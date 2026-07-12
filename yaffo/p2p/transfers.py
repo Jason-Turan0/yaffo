@@ -201,6 +201,13 @@ class TransferBatch:
     filters: dict
     destination_root: Path
     collection_path: str
+    # A selection over the scope, resolved against the peer's manifest (see
+    # _collect_files). `included` empty means "everything matching the filters";
+    # `excluded` removes paths from whatever that yields. The browser only ever
+    # sends relative paths — sizes and mtimes come from the peer's manifest, which
+    # is what the resume sidecars must be seeded from.
+    included: set = field(default_factory=set)
+    excluded: set = field(default_factory=set)
     files: list = field(default_factory=list)
     state: str = STATE_COLLECTING
     path: Optional[str] = None
@@ -242,11 +249,17 @@ class TransferManager:
         destination_root: Path,
         collection_path: str,
         files: Optional[list[dict]] = None,
+        include_paths: Optional[list[str]] = None,
+        exclude_paths: Optional[list[str]] = None,
     ) -> str:
-        """Enqueue a batch and return its id immediately. With explicit
-        `files` (manifest dicts) those are pulled; without, the batch first
-        collects the full manifest for the scope+filters from the peer
-        (the Download-all path)."""
+        """Enqueue a batch and return its id immediately.
+
+        With explicit `files` (manifest dicts) those are pulled. Otherwise the batch
+        collects the manifest for the scope+filters from the peer and applies the
+        selection to it: `include_paths` keeps only those relative paths, and
+        `exclude_paths` drops them ("everything matching, except these"). Resolving
+        the selection against the peer's manifest — rather than trusting sizes and
+        mtimes sent by a browser — is what keeps the resume sidecars honest."""
         batch = TransferBatch(
             id=uuid.uuid4().hex[:12],
             peer_device_id=peer_device_id,
@@ -257,6 +270,8 @@ class TransferManager:
             filters=filters or {},
             destination_root=Path(destination_root),
             collection_path=collection_path,
+            included=set(include_paths or ()),
+            excluded=set(exclude_paths or ()),
         )
         for manifest in files or []:
             batch.files.append(
@@ -427,9 +442,9 @@ class TransferManager:
             )
 
     async def _collect_files(self, batch: TransferBatch, holder: _SessionHolder) -> None:
-        """Download-all: snapshot the full manifest for the granted scope +
-        filters by paging list_files over the session. The batch pulls the
-        snapshot, not a live query — files added on the peer mid-batch are
+        """Snapshot the manifest for the granted scope + filters by paging
+        list_files over the session, keeping what the selection asks for. The batch
+        pulls the snapshot, not a live query — files added on the peer mid-batch are
         simply not part of this batch."""
         offset = 0
         while True:
@@ -443,16 +458,22 @@ class TransferManager:
                 raise TransferAborted(response.get("detail") or "peer refused to list files")
             batch.path = holder.path or batch.path
             for manifest in response.get("files", []):
+                relative_path = manifest["relative_path"]
+                if batch.included and relative_path not in batch.included:
+                    continue  # an explicit selection: only these
+                if relative_path in batch.excluded:
+                    continue  # the whole scope, except these
                 batch.files.append(
                     TransferFile(
-                        relative_path=manifest["relative_path"],
-                        name=manifest.get("name") or Path(manifest["relative_path"]).name,
+                        relative_path=relative_path,
+                        name=manifest.get("name") or Path(relative_path).name,
                         size=int(manifest.get("size") or 0),
                         mtime=float(manifest.get("mtime") or 0),
                     )
                 )
             total = int(response.get("total") or 0)
-            batch.total_expected = total
+            # What this batch will actually pull, not what the scope holds.
+            batch.total_expected = len(batch.files) if (batch.included or batch.excluded) else total
             offset += int(response.get("limit") or MAX_LIST_FILES_LIMIT)
             if offset >= total or not response.get("files"):
                 return

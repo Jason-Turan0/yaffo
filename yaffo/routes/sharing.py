@@ -29,7 +29,7 @@ from flask import (
     request,
     url_for,
 )
-from flask_babel import gettext
+from flask_babel import gettext, ngettext
 
 from yaffo.db import db
 from yaffo.db.models import (
@@ -40,7 +40,8 @@ from yaffo.db.models import (
 from yaffo.db.repositories import media_dir_repository, p2p_repository
 from yaffo.db.repositories.media_repository import get_distinct_months
 from yaffo.distance_units import distance_to_kilometers
-from yaffo.routes.filter_panel import filter_selections, gender_options
+from yaffo.routes.filter_panel import filter_selections, gender_options, to_query_params
+from yaffo.routes.selection import selection_from_args
 from yaffo.logging_config import get_logger
 from yaffo.p2p.pairing import PairingError
 from yaffo.p2p.service import P2PServiceError
@@ -600,6 +601,19 @@ def init_sharing_routes(app: Flask):
             "genders": gender_options(),
             **selections,
         }
+        total = result.get("total", 0)
+        # Remote files are identified by their relative path — there is no local id
+        # for a file that lives on the peer.
+        selection = selection_from_args(request.args, total=total, cast=str)
+        # Pagination links must carry the scope, the filters AND the selection, or
+        # paging would silently drop what the user has ticked.
+        page_params = {
+            "media_dir_id": media_dir_id,
+            "scope": scope,
+            "label": label,
+            **to_query_params(selections),
+            **selection.query_params,
+        }
         return render_template(
             "sharing/files.html",
             device=device,
@@ -611,9 +625,11 @@ def init_sharing_routes(app: Flask):
             error=error,
             download_dir=_shared_download_dir_value(),
             transfers=_transfers_for(device_id),
+            selection=selection,
+            page_params=page_params,
             pagination={
                 "current_page": page,
-                "total_items": result.get("total", 0),
+                "total_items": total,
                 "page_size": page_size,
                 "page_sizes": REMOTE_FILES_PAGE_SIZES,
             },
@@ -721,51 +737,19 @@ def init_sharing_routes(app: Flask):
         """The self-polling transfers status fragment."""
         return _render_transfers_panel(device_id)
 
-    @app.route("/sharing/devices/<device_id>/pull", methods=["POST"])
-    def sharing_device_pull_file(device_id: str):
-        """Queue one remote file as a background transfer batch."""
-        service, device, destination_root, error = _transfer_prerequisites(device_id)
-        if error is not None:
-            return error
+    @app.route("/sharing/devices/<device_id>/transfers/pull", methods=["POST"])
+    def sharing_device_pull_selected(device_id: str):
+        """Pull the remote gallery's selection as one background batch.
 
-        remote_media_dir_id = (request.form.get("remote_media_dir_id") or "").strip()
-        relative_path = (request.form.get("relative_path") or "").strip()
-        if not remote_media_dir_id or not relative_path:
-            return _notify(gettext("Could not pull file: the file reference is incomplete."))
-        source_scope_path = (request.form.get("scope") or "").strip()
-        collection_path = (request.form.get("collection_name") or "").strip() or remote_media_dir_id
-        name = (request.form.get("name") or "").strip() or Path(relative_path).name
-        try:
-            service.transfers.start_batch(
-                device_id,
-                device.display_name or device.device_id,
-                remote_media_dir_id,
-                source_scope_path,
-                name,
-                {},
-                destination_root,
-                collection_path,
-                files=[
-                    {
-                        "relative_path": relative_path,
-                        "name": name,
-                        "size": request.form.get("size", type=int) or 0,
-                        "mtime": request.form.get("mtime", type=float) or 0,
-                    }
-                ],
-            )
-        except (CallError, P2PServiceError, ValueError) as exc:
-            return _notify(gettext("Could not pull file: %(reason)s", reason=str(exc)))
-        except FutureTimeoutError:
-            return _notify(gettext("Queuing the transfer timed out — is device sharing running?"))
-        return _transfer_queued_toast(gettext("Pull of %(file)s queued.", file=name))
+        The selection rides the querystring (routes/selection.py), exactly as the
+        gallery rendered it: `select=all` (everything matching the scope + filters —
+        including files on pages never rendered — minus any `exclude_id`), or a list
+        of `select_id` relative paths.
 
-    @app.route("/sharing/devices/<device_id>/transfers/download-all", methods=["POST"])
-    def sharing_device_download_all(device_id: str):
-        """Queue everything the current remote-gallery view matches (scope +
-        filters) as one background batch. The batch snapshots the manifest
-        from the peer before pulling, so it is not limited to the rendered
-        page."""
+        Either way the batch resolves the selection against the manifest it snapshots
+        FROM THE PEER: the browser sends paths, never sizes or mtimes. Those seed the
+        resume sidecars, and a resumed .partial is only continued when the source
+        still matches them, so they have to come from the source of truth."""
         service, device, destination_root, error = _transfer_prerequisites(device_id)
         if error is not None:
             return error
@@ -777,6 +761,15 @@ def init_sharing_routes(app: Flask):
         label = (request.args.get("label") or "").strip()
         selections = filter_selections(db.session, request.args)
         filter_payload = _remote_filter_payload(selections)
+
+        selection = selection_from_args(request.args, total=0, cast=str)
+        if selection.all:
+            include_paths, exclude_paths = None, sorted(selection.excluded)
+        elif selection.ids:
+            include_paths, exclude_paths = sorted(selection.ids), None
+        else:
+            return _notify(gettext("Select the files to pull first."))
+
         try:
             service.transfers.start_batch(
                 device_id,
@@ -787,12 +780,24 @@ def init_sharing_routes(app: Flask):
                 filter_payload,
                 destination_root,
                 scope or label or media_dir_id,
+                include_paths=include_paths,
+                exclude_paths=exclude_paths,
             )
         except (CallError, P2PServiceError, ValueError) as exc:
             return _notify(gettext("Could not start the download: %(reason)s", reason=str(exc)))
         except FutureTimeoutError:
             return _notify(gettext("Queuing the transfer timed out — is device sharing running?"))
-        return _transfer_queued_toast(gettext("Download queued — everything shared in this view will be pulled."))
+
+        if selection.all:
+            message = gettext("Download queued — everything selected in this view will be pulled.")
+        else:
+            message = ngettext(
+                "Pull of %(count)s file queued.",
+                "Pull of %(count)s files queued.",
+                len(selection.ids),
+                count=len(selection.ids),
+            )
+        return _transfer_queued_toast(message)
 
     @app.route("/sharing/devices/<device_id>/transfers/<batch_id>/cancel", methods=["POST"])
     def sharing_transfer_cancel(device_id: str, batch_id: str):

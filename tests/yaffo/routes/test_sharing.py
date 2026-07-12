@@ -170,6 +170,8 @@ class FakeP2PService:
         destination_root,
         collection_path,
         files=None,
+        include_paths=None,
+        exclude_paths=None,
     ):
         self.started_batches.append(
             {
@@ -182,6 +184,8 @@ class FakeP2PService:
                 "destination_root": destination_root,
                 "collection_path": collection_path,
                 "files": files,
+                "include_paths": include_paths,
+                "exclude_paths": exclude_paths,
             }
         )
         if self.transfer_error is not None:
@@ -605,9 +609,10 @@ def test_shared_files_gallery_renders_with_filters_and_facets(app, client, servi
     assert "data-fallback-src" in body
     assert "trip/a.jpg" in body
     assert "Lisbon" in body
-    assert "Pull" in body
-    assert 'name="scope" value="trip"' in body
-    assert 'name="collection_name" value="trip"' in body
+    # Cards are selectable; pulling one file and pulling the lot are the same action
+    # on a selection, so there are no per-card pull forms and no Download-all.
+    assert 'data-select-id="trip/a.jpg"' in body
+    assert "Download all" not in body
     assert "pull-destination" not in body
     assert "Set a download directory" in body
     # Facets from the peer populate the sidebar selects; selections stick.
@@ -703,30 +708,23 @@ def _set_download_dir(app, download_dir):
         db.session.commit()
 
 
-def test_pull_remote_file_queues_a_single_file_batch(app, client, service, tmp_path):
-    """The per-card Pull enqueues a background transfer (Phase 6) instead of
-    blocking the request on the download; the manifest's size/mtime ride
-    along to seed the resume sidecar."""
+def test_pull_selected_files_queues_one_batch(app, client, service, tmp_path):
+    """Pulling a selection enqueues a background transfer (Phase 6). The browser
+    sends only relative paths — the batch resolves them against the manifest it
+    snapshots FROM THE PEER, which is what seeds the resume sidecars."""
     _seed_devices(app)
     download_dir = tmp_path / "downloads"
     _set_download_dir(app, download_dir)
 
     resp = client.post(
-        f"/sharing/devices/{PEER_ONLINE}/pull",
-        data={
-            "remote_media_dir_id": "remote-lib",
-            "relative_path": "trip/a.jpg",
-            "scope": "trip",
-            "collection_name": "trip",
-            "name": "a.jpg",
-            "size": "12",
-            "mtime": "1720000000.0",
-        },
+        f"/sharing/devices/{PEER_ONLINE}/transfers/pull"
+        "?media_dir_id=remote-lib&scope=trip&label=photos"
+        "&select_id=trip/a.jpg&select_id=trip/b.jpg"
     )
 
     assert resp.status_code == 204
     message, type_ = _notification(resp)
-    assert "a.jpg" in message and "queued" in message and type_ == "success"
+    assert "2 files" in message and "queued" in message and type_ == "success"
     assert "sharingTransfersChanged" in json.loads(resp.headers["HX-Trigger"])
     assert service.started_batches == [
         {
@@ -734,25 +732,42 @@ def test_pull_remote_file_queues_a_single_file_batch(app, client, service, tmp_p
             "peer_name": "laptop",
             "media_dir_id": "remote-lib",
             "scope": "trip",
-            "label": "a.jpg",
+            "label": "photos",
             "filters": {},
             "destination_root": download_dir.resolve(),
             "collection_path": "trip",
-            "files": [{"relative_path": "trip/a.jpg", "name": "a.jpg", "size": 12, "mtime": 1720000000.0}],
+            "files": None,
+            "include_paths": ["trip/a.jpg", "trip/b.jpg"],
+            "exclude_paths": None,
         }
     ]
 
 
-def test_download_all_queues_a_batch_with_the_current_filters(app, client, service, tmp_path):
-    """Download-all snapshots the whole filtered scope as one batch — the
-    filters ride the querystring exactly as the gallery page shows them."""
+def test_pull_with_nothing_selected_is_refused(app, client, service, tmp_path):
+    _seed_devices(app)
+    _set_download_dir(app, tmp_path / "downloads")
+
+    resp = client.post(
+        f"/sharing/devices/{PEER_ONLINE}/transfers/pull?media_dir_id=remote-lib&scope=trip"
+    )
+
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "Select the files" in message and type_ == "error"
+    assert service.started_batches == []
+
+
+def test_pull_select_all_queues_the_whole_filtered_scope(app, client, service, tmp_path):
+    """"Select all" is the scope, not the rendered page: the batch snapshots the whole
+    filtered manifest from the peer, minus anything unticked out of it."""
     _seed_devices(app)
     download_dir = tmp_path / "downloads"
     _set_download_dir(app, download_dir)
 
     resp = client.post(
-        f"/sharing/devices/{PEER_ONLINE}/transfers/download-all"
+        f"/sharing/devices/{PEER_ONLINE}/transfers/pull"
         "?media_dir_id=remote-lib&scope=trip&label=photos&media-type=photo&year=2024"
+        "&select=all&exclude_id=trip/skip.jpg"
     )
 
     assert resp.status_code == 204
@@ -768,12 +783,14 @@ def test_download_all_queues_a_batch_with_the_current_filters(app, client, servi
     assert batch["filters"] == {"media_type": "photo", "year": 2024}
     assert batch["collection_path"] == "trip"
     assert batch["files"] is None
+    assert batch["include_paths"] is None          # the scope, not an enumeration
+    assert batch["exclude_paths"] == ["trip/skip.jpg"]
 
 
-def test_download_all_requires_a_scope(app, client, service, tmp_path):
+def test_pull_requires_a_scope(app, client, service, tmp_path):
     _seed_devices(app)
     _set_download_dir(app, tmp_path / "downloads")
-    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/transfers/download-all")
+    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/transfers/pull?select=all")
     assert resp.status_code == 204
     message, type_ = _notification(resp)
     assert "scope is missing" in message and type_ == "error"
@@ -923,12 +940,12 @@ def test_delete_transfer_route(app, client, service):
     assert service.deleted_batches == ["batch-1"]
 
 
-def test_pull_remote_file_requires_download_directory(app, client, service):
+def test_pull_requires_download_directory(app, client, service):
     _seed_devices(app)
 
     resp = client.post(
-        f"/sharing/devices/{PEER_ONLINE}/pull",
-        data={"remote_media_dir_id": "remote-lib", "relative_path": "trip/a.jpg"},
+        f"/sharing/devices/{PEER_ONLINE}/transfers/pull"
+        "?media_dir_id=remote-lib&select_id=trip/a.jpg"
     )
 
     assert resp.status_code == 204
@@ -941,7 +958,7 @@ def test_actions_unavailable_without_service(client):
         "/sharing/pairing-code",
         "/sharing/pair",
         "/sharing/revoke",
-        f"/sharing/devices/{PEER_ONLINE}/pull",
+        f"/sharing/devices/{PEER_ONLINE}/transfers/pull",
     ):
         resp = client.post(path, data={"code": "x", "device_id": "y"})
         assert resp.status_code == 204
