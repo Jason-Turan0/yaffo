@@ -13,6 +13,7 @@ const FORM_HTML = `
     <select name="device"><option value="" selected></option><option value="X-T4">X-T4</option></select>
     <select name="favorite"><option value="" selected></option><option value="1">1</option></select>
     <select name="media-type"><option value="" selected></option><option value="video">video</option></select>
+    <select name="shape"><option value="" selected></option><option value="portrait">portrait</option><option value="landscape">landscape</option></select>
     <select name="gender"><option value="" selected></option><option value="0">0</option><option value="1">1</option></select>
     <input type="radio" name="person-match-type" value="any" checked>
     <input type="radio" name="person-match-type" value="all">
@@ -37,6 +38,7 @@ const baseItem = () => ({
   name: 'Old Town',
   photo_path: '/media/2021/IMG_1.jpg',
   media_type: 'photo',
+  shape: 'landscape',
   lat: 43.4,
   lon: 11.8,
   year: 2021,
@@ -75,7 +77,7 @@ describe('readCriteria', () => {
     const criteria = core.readCriteria(form);
     expect(criteria).toMatchObject({
       path: null, year: null, month: null, device: null, favorite: false,
-      mediaType: null, gender: null, tagName: null, tagValue: null,
+      mediaType: null, shape: null, gender: null, tagName: null, tagValue: null,
       unnamed: false, proximity: null,
     });
     expect(criteria.personIds).toEqual([]);
@@ -197,5 +199,31 @@ describe('initClientFilter', () => {
     expect(received).toHaveLength(1);
     expect(received[0]({ ...baseItem(), year: 2021 })).toBe(true);
     expect(received[0]({ ...baseItem(), year: 1999 })).toBe(false);
+  });
+});
+
+
+describe('shape', () => {
+  it('keeps only items of the selected shape', () => {
+    setControl('shape', 'portrait');
+    const matches = predicate();
+
+    expect(matches({ ...baseItem(), shape: 'portrait' })).toBe(true);
+    expect(matches({ ...baseItem(), shape: 'landscape' })).toBe(false);
+  });
+
+  it('drops an item whose dimensions were never recorded', () => {
+    // Mirrors the SQL, where the NULL width/height comparison is false: an unsized
+    // item has no known shape, so it belongs to none of them.
+    setControl('shape', 'portrait');
+
+    expect(predicate()({ ...baseItem(), shape: null })).toBe(false);
+  });
+
+  it('ignores an unknown shape rather than matching nothing', () => {
+    setControl('shape', 'bogus');
+
+    expect(core.readCriteria(form).shape).toBe(null);
+    expect(predicate()({ ...baseItem(), shape: 'landscape' })).toBe(true);
   });
 });

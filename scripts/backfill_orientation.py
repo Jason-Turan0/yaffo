@@ -63,10 +63,13 @@ def backfill_orientation(dry_run: bool = False) -> None:
     with app.app_context():
         pending = (
             db.session.query(MediaItem)
-            .filter(MediaItem.media_type == MEDIA_TYPE_PHOTO, MediaItem.orientation.is_(None))
+            .filter(
+                MediaItem.media_type == MEDIA_TYPE_PHOTO,
+                or_(MediaItem.orientation.is_(None), MediaItem.width.is_(None)),
+            )
             .all()
         )
-        print(f"{len(pending)} photo(s) without a recorded orientation.")
+        print(f"{len(pending)} photo(s) without a recorded orientation or size.")
 
         missing = unreadable = rotated_photos = rotated_faces = recut = 0
         for index, media_item in enumerate(pending, start=1):

@@ -4,6 +4,7 @@ from flask_babel import gettext
 from sqlalchemy.orm import selectinload
 
 from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
+from yaffo.common import shape_for_dimensions
 from yaffo.db import db
 from yaffo.db.models import (
     Automation,
@@ -52,6 +53,9 @@ def _location_payload(media_item: MediaItem) -> dict:
         # The map popup renders this as an <img>; a video's /media/<id> is the
         # raw clip, so the client must use the poster route instead.
         'media_type': media_item.media_type,
+        # Precomputed rather than shipping width/height: the client only ever compares
+        # it, and this keeps the shape rule in one place (common.shape_for_dimensions).
+        'shape': shape_for_dimensions(media_item.width, media_item.height),
         'year': media_item.year,
         'month': media_item.month,
         'device': media_item.device,

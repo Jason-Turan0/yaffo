@@ -12,6 +12,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from werkzeug.datastructures import MultiDict
 
+from yaffo.common import SHAPES
 from yaffo.db.models import (
     MEDIA_TYPE_PHOTO,
     MEDIA_TYPE_VIDEO,
@@ -47,6 +48,9 @@ def filter_selections(session: Session, args: MultiDict) -> dict:
     media_type = args.get("media-type", type=str)
     if media_type not in (MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO):
         media_type = None
+    shape = args.get("shape", type=str)
+    if shape not in SHAPES:
+        shape = None
     distance_unit = get_saved_distance_unit(session)
 
     return {
@@ -71,6 +75,7 @@ def filter_selections(session: Session, args: MultiDict) -> dict:
         'selected_device': device,
         'selected_favorite': args.get("favorite", type=int),
         'selected_media_type': media_type,
+        'selected_shape': shape,
         'selected_gender': args.get("gender", type=int),
     }
 
@@ -141,6 +146,7 @@ def to_media_filters(filters: dict) -> dict:
         "device": filters["selected_device"],
         "favorite": filters["selected_favorite"],
         "media_type": filters["selected_media_type"],
+        "shape": filters["selected_shape"],
         "person_ids": filters["selected_person_ids"],
         "person_match_type": filters["selected_person_match_type"],
         "gender": filters["selected_gender"],
@@ -185,4 +191,5 @@ def to_query_params(filters: dict) -> dict:
         "gender": filters["selected_gender"],
         "favorite": filters["selected_favorite"],
         "media-type": filters["selected_media_type"],
+        "shape": filters["selected_shape"],
     }

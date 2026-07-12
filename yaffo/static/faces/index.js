@@ -28,6 +28,7 @@
  * @property {(on: boolean) => void} selectWholeCluster
  * @property {(arr: FaceRecord[], n: number) => FaceRecord[]} randomSample
  * @property {() => Set<number>} getSelectedIds
+ * @property {() => PersonShortcut[]} getShortcutPeople
  */
 
 const facesWindow = window;
@@ -49,12 +50,21 @@ const REGION_PADDING = 0.1;
 // to the next cluster; when none remain we reload to pull the next batch.
 /**
  * @param {number} sampleSize
- * @param {PersonShortcut[]} topPeople
+ * @param {PersonShortcut[]} initialShortcutPeople
+ * @param {PersonShortcut[]} allPeople
+ * @param {boolean} initialShortcutPeopleCustomized
  * @param {I18nService} i18n
  * @param {AppConfig} config
  * @returns {FacesAssignmentApi}
  */
-facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
+facesNamespace.initAssignment = (
+    sampleSize,
+    initialShortcutPeople,
+    allPeople,
+    initialShortcutPeopleCustomized,
+    i18n,
+    config
+) => {
     const tooltip = document.createElement('div');
     tooltip.className = 'tooltip face-tooltip';
     document.body.appendChild(tooltip);
@@ -72,6 +82,11 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
     let selectedIds = new Set();
     /** @type {number | null} */
     let lastClickedId = null;
+    /** @type {PersonShortcut[]} */
+    let shortcutPeople = initialShortcutPeople.slice(0, 9);
+    let shortcutPeopleCustomized = initialShortcutPeopleCustomized;
+    /** @type {PersonShortcut[]} */
+    let automaticShortcutPeople = initialShortcutPeople.slice(0, 9);
 
     /** @param {number} id */
     const thumbUrl = (id) => config.buildUrl('face_thumbnail', { face_id: id });
@@ -243,7 +258,9 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
                 id: /** @type {HTMLElement} */ (b).dataset.personId || '',
                 name: /** @type {HTMLElement} */ (b).dataset.personName || '',
             }));
-        rebuildShortcuts(clusterPeople.length ? clusterPeople : topPeople);
+        automaticShortcutPeople = (clusterPeople.length ? clusterPeople : initialShortcutPeople).slice(0, 9);
+        rebuildShortcuts(shortcutPeopleCustomized ? shortcutPeople : automaticShortcutPeople);
+        if (!shortcutPeopleCustomized) syncShortcutConfigSelection(automaticShortcutPeople);
         renderPage();
     };
 
@@ -566,6 +583,133 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
         });
     };
 
+    const shortcutConfigTrigger = document.getElementById('configure-shortcuts-btn');
+    const shortcutConfigList = /** @type {HTMLElement | null} */ (document.getElementById('shortcut-config-list'));
+    const shortcutModalElement = document.getElementById('shortcutPeopleModal');
+    const shortcutConfigModal = shortcutModalElement
+        ? facesWindow.PHOTO_ORGANIZER.COMPONENTS.modal.init('shortcutPeopleModal')
+        : null;
+    const shortcutConfigForm = shortcutConfigModal?.formElement;
+    const shortcutConfigReset = document.getElementById('shortcut-config-reset');
+    const peopleById = new Map(allPeople.map(person => [String(person.id), person]));
+
+    if (shortcutConfigTrigger && shortcutConfigModal) {
+        shortcutConfigTrigger.addEventListener('click', () => shortcutConfigModal.open());
+    }
+
+    if (shortcutConfigList) {
+        /** @type {HTMLElement | null} */
+        let draggedShortcutRow = null;
+
+        /**
+         * @param {number} y
+         * @returns {HTMLElement | null}
+         */
+        const rowAfterPoint = (y) => {
+            const rows = /** @type {HTMLElement[]} */ (
+                Array.from(shortcutConfigList.querySelectorAll('.shortcut-config-row:not(.dragging)'))
+            );
+            /** @type {{ offset: number, row: HTMLElement | null }} */
+            const initialClosest = { offset: Number.NEGATIVE_INFINITY, row: null };
+            return rows.reduce((closest, row) => {
+                const box = row.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                return offset < 0 && offset > closest.offset ? { offset, row } : closest;
+            }, initialClosest).row;
+        };
+
+        shortcutConfigList.addEventListener('dragstart', (e) => {
+            if (!(e.target instanceof Element)) return;
+            draggedShortcutRow = /** @type {HTMLElement | null} */ (e.target.closest('.shortcut-config-row'));
+            if (draggedShortcutRow) draggedShortcutRow.classList.add('dragging');
+        });
+        shortcutConfigList.addEventListener('dragend', () => {
+            if (draggedShortcutRow) draggedShortcutRow.classList.remove('dragging');
+            draggedShortcutRow = null;
+        });
+        shortcutConfigList.addEventListener('dragover', (e) => {
+            if (!draggedShortcutRow) return;
+            e.preventDefault();
+            const after = rowAfterPoint(e.clientY);
+            if (after == null) shortcutConfigList.appendChild(draggedShortcutRow);
+            else shortcutConfigList.insertBefore(draggedShortcutRow, after);
+        });
+    }
+
+    /** @param {PersonShortcut[]} peopleList */
+    const syncShortcutConfigSelection = (peopleList) => {
+        if (!shortcutConfigList) return;
+        const selectedIds = new Set(peopleList.slice(0, 9).map(person => String(person.id)));
+        /** @type {Record<string, HTMLElement>} */
+        const rowsById = {};
+        const rows = /** @type {HTMLElement[]} */ (
+            Array.from(shortcutConfigList.querySelectorAll('.shortcut-config-row'))
+        );
+        rows.forEach((row) => {
+            if (!(row instanceof HTMLElement) || !row.dataset.personId) return;
+            rowsById[row.dataset.personId] = row;
+            const toggle = row.querySelector('.shortcut-config-toggle');
+            if (toggle instanceof HTMLInputElement) toggle.checked = selectedIds.has(row.dataset.personId);
+        });
+        /** @type {HTMLElement[]} */
+        const selectedRows = [];
+        peopleList.slice(0, 9).forEach((person) => {
+            const row = rowsById[String(person.id)];
+            if (row) selectedRows.push(row);
+        });
+        const remainingRows = rows.filter(row => !selectedIds.has(row.dataset.personId || ''));
+        shortcutConfigList.replaceChildren(...selectedRows, ...remainingRows);
+    };
+
+    const selectedShortcutPeopleFromConfig = () => {
+        if (!shortcutConfigList) return [];
+        /** @type {PersonShortcut[]} */
+        const selected = [];
+        shortcutConfigList.querySelectorAll('.shortcut-config-row').forEach((row) => {
+            if (!(row instanceof HTMLElement) || !row.dataset.personId) return;
+            const toggle = row.querySelector('.shortcut-config-toggle');
+            if (!(toggle instanceof HTMLInputElement) || !toggle.checked) return;
+            const person = peopleById.get(row.dataset.personId);
+            if (person) selected.push(person);
+        });
+        return selected.slice(0, 9);
+    };
+
+    if (shortcutConfigForm) {
+        shortcutConfigForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const selected = selectedShortcutPeopleFromConfig();
+            try {
+                const response = await fetch(config.urls.face_shortcut_people_settings, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ person_ids: selected.map(person => person.id) }),
+                });
+                if (!response.ok) throw new Error('save failed');
+                shortcutPeople = selected;
+                shortcutPeopleCustomized = true;
+                rebuildShortcuts(shortcutPeople);
+                syncShortcutConfigSelection(shortcutPeople);
+                shortcutConfigModal?.close();
+            } catch {
+                facesWindow.notification.error(i18n.t('media:filters.saveFailed'));
+            }
+        });
+    }
+
+    shortcutConfigReset?.addEventListener('click', async () => {
+        try {
+            const response = await fetch(config.urls.face_shortcut_people_settings, { method: 'DELETE' });
+            if (!response.ok) throw new Error('reset failed');
+            shortcutPeopleCustomized = false;
+            rebuildShortcuts(automaticShortcutPeople);
+            syncShortcutConfigSelection(automaticShortcutPeople);
+            shortcutConfigModal?.close();
+        } catch {
+            facesWindow.notification.error(i18n.t('media:filters.saveFailed'));
+        }
+    });
+
     // Clicking a sidebar shortcut row assigns the same as pressing its key.
     sidebarShortcutList.addEventListener('click', (e) => {
         const origin = e.target instanceof Element ? e.target : null;
@@ -608,7 +752,9 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
     if (groups.length > 0) {
         activateGroup(groups[0]);
     } else {
-        rebuildShortcuts(topPeople);
+        automaticShortcutPeople = initialShortcutPeople.slice(0, 9);
+        rebuildShortcuts(shortcutPeopleCustomized ? shortcutPeople : automaticShortcutPeople);
+        if (!shortcutPeopleCustomized) syncShortcutConfigSelection(automaticShortcutPeople);
     }
 
     return {
@@ -616,5 +762,6 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
         selectWholeCluster,
         randomSample,
         getSelectedIds: () => new Set(selectedIds),
+        getShortcutPeople: () => shortcutPeople.slice(),
     };
 };

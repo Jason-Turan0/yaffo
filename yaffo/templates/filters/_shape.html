@@ -1,0 +1,12 @@
+{# Shape of the picture as displayed (portrait/landscape/square), derived from the
+   stored width/height — which indexing records after applying EXIF rotation. Photos
+   indexed before those dimensions were recorded have none, so they match no shape. #}
+<div class="filter-group">
+    <label for="shape-select">{{ _("Shape") }}</label>
+    <select name="shape" id="shape-select" class="searchable-select" data-search-disabled>
+        <option value="">{{ _("Any Shape") }}</option>
+        <option value="portrait" {% if filters.selected_shape == 'portrait' %}selected{% endif %}>{{ _("Portrait") }}</option>
+        <option value="landscape" {% if filters.selected_shape == 'landscape' %}selected{% endif %}>{{ _("Landscape") }}</option>
+        <option value="square" {% if filters.selected_shape == 'square' %}selected{% endif %}>{{ _("Square") }}</option>
+    </select>
+</div>

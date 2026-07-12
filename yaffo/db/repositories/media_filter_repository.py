@@ -12,6 +12,7 @@ import math
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from yaffo.common import SHAPE_LANDSCAPE, SHAPE_PORTRAIT, SHAPE_SQUARE
 from yaffo.db.models import (
     Face,
     MediaItem,
@@ -46,7 +47,8 @@ def apply_media_filters(session: Session, query, selections: dict):
     empty/None values are skipped):
 
     path (str, icontains on the stored path), year/month (int), device (str),
-    favorite (truthy), media_type (str), person_ids (list[int]) +
+    favorite (truthy), media_type (str), shape (portrait|landscape|square,
+    compared against the stored width/height), person_ids (list[int]) +
     person_match_type ('any'|'all'), gender (int), label_ids (list[int]) +
     labels_match_type, tag_name/tag_value (str), location_names (list[str]) +
     location_match_type, unnamed (truthy), proximity_lat/proximity_lon/
@@ -58,6 +60,7 @@ def apply_media_filters(session: Session, query, selections: dict):
     device = selections.get("device")
     favorite = selections.get("favorite")
     media_type = selections.get("media_type")
+    shape = selections.get("shape")
     person_ids = selections.get("person_ids")
     person_match_type = selections.get("person_match_type")
     gender = selections.get("gender")
@@ -86,6 +89,18 @@ def apply_media_filters(session: Session, query, selections: dict):
         query = query.filter(MediaItem.favorite.is_(True))
     if media_type:
         query = query.filter(MediaItem.media_type == media_type)
+    if shape:
+        # The dimensions are stored upright, so this is the shape as displayed. Items
+        # without dimensions (photos indexed before they were recorded) match no
+        # shape: NULL comparisons are false, which is the honest answer — we don't
+        # know their shape rather than knowing it isn't this one.
+        if shape == SHAPE_PORTRAIT:
+            query = query.filter(MediaItem.height > MediaItem.width)
+        elif shape == SHAPE_LANDSCAPE:
+            query = query.filter(MediaItem.width > MediaItem.height)
+        elif shape == SHAPE_SQUARE:
+            query = query.filter(MediaItem.width == MediaItem.height,
+                                 MediaItem.width.isnot(None))
 
     if person_ids and person_match_type and len(person_ids) > 0:
         if person_match_type == 'all':

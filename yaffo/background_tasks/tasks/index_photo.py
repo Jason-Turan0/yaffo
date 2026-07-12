@@ -92,10 +92,12 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             media_item.month = index_results["month"]
             media_item.device = index_results["device"]
             media_item.orientation = index_results.get("orientation")
+            # Both media types carry dimensions now (photos report theirs upright, so
+            # the shape filter sees what the browser draws); the rest is video-only.
+            media_item.width = index_results.get("width")
+            media_item.height = index_results.get("height")
             if index_results.get("media_type") == MEDIA_TYPE_VIDEO:
                 media_item.duration_seconds = index_results.get("duration_seconds")
-                media_item.width = index_results.get("width")
-                media_item.height = index_results.get("height")
                 media_item.video_codec = index_results.get("video_codec")
                 media_item.poster_path = index_results.get("poster_path")
             media_item.status = MEDIA_STATUS_INDEXED

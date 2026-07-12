@@ -262,3 +262,63 @@ def test_media_type_filter_ignores_garbage(client, mixed_media_ids):
     # An unknown value is treated as no filter, not an empty result.
     response = client.get("/?media-type=bogus")
     assert _rendered_ids(response.data.decode()) == set(mixed_media_ids.values())
+
+
+@pytest.fixture
+def shaped_media_ids(app):
+    """Photos of each shape, plus one whose dimensions were never recorded.
+
+    Dimensions are stored *upright* (indexing applies EXIF rotation before reading
+    them), so the shape here is the shape a viewer sees. Returns {label: id}."""
+    with app.app_context():
+        rows = {
+            "portrait": MediaItem(full_file_path="/media/tall.jpg", width=2448, height=3264),
+            "landscape": MediaItem(full_file_path="/media/wide.jpg", width=3264, height=2448),
+            "square": MediaItem(full_file_path="/media/square.jpg", width=1000, height=1000),
+            "unsized": MediaItem(full_file_path="/media/legacy.jpg"),
+        }
+        db.session.add_all(rows.values())
+        db.session.commit()
+        return {label: media_item.id for label, media_item in rows.items()}
+
+
+def test_shape_filter_portrait(client, shaped_media_ids):
+    response = client.get("/?shape=portrait")
+
+    assert response.status_code == 200
+    body = response.data.decode()
+    assert _rendered_ids(body) == {shaped_media_ids["portrait"]}
+    # The pager must carry the active filter, or paging drops it.
+    assert "shape=portrait" in body
+
+
+def test_shape_filter_landscape(client, shaped_media_ids):
+    response = client.get("/?shape=landscape")
+
+    assert _rendered_ids(response.data.decode()) == {shaped_media_ids["landscape"]}
+
+
+def test_shape_filter_square(client, shaped_media_ids):
+    response = client.get("/?shape=square")
+
+    assert _rendered_ids(response.data.decode()) == {shaped_media_ids["square"]}
+
+
+def test_shape_filter_excludes_media_with_no_recorded_size(client, shaped_media_ids):
+    """A photo indexed before dimensions were stored has no known shape. It matches
+    no shape rather than defaulting into one — we don't know it, we don't guess."""
+    for shape in ("portrait", "landscape", "square"):
+        rendered = _rendered_ids(client.get(f"/?shape={shape}").data.decode())
+        assert shaped_media_ids["unsized"] not in rendered
+
+
+def test_shape_filter_blank_shows_all(client, shaped_media_ids):
+    response = client.get("/?shape=")
+
+    assert _rendered_ids(response.data.decode()) == set(shaped_media_ids.values())
+
+
+def test_shape_filter_ignores_garbage(client, shaped_media_ids):
+    response = client.get("/?shape=bogus")
+
+    assert _rendered_ids(response.data.decode()) == set(shaped_media_ids.values())

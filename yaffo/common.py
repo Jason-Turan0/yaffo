@@ -12,6 +12,26 @@ APP_NAME = "yaffo"
 MEDIA_TYPE_PHOTO = "photo"
 MEDIA_TYPE_VIDEO = "video"
 
+# The shape of a picture *as displayed* — derived from the stored width/height, which
+# indexing records after applying EXIF rotation. Not a column: it's two comparisons,
+# and storing it would be a third thing to keep in step with the dimensions.
+SHAPE_PORTRAIT = "portrait"
+SHAPE_LANDSCAPE = "landscape"
+SHAPE_SQUARE = "square"
+SHAPES = (SHAPE_PORTRAIT, SHAPE_LANDSCAPE, SHAPE_SQUARE)
+
+
+def shape_for_dimensions(width: "int | None", height: "int | None") -> "str | None":
+    """A media item's SHAPE_*, or None when its dimensions were never recorded
+    (photos indexed before the width/height columns were written)."""
+    if not width or not height:
+        return None
+    if height > width:
+        return SHAPE_PORTRAIT
+    if width > height:
+        return SHAPE_LANDSCAPE
+    return SHAPE_SQUARE
+
 # Containers that play inline in the browser's <video> (H.264/HEVC in MP4/MOV/M4V).
 PLAYABLE_VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v"}
 # All cataloged video. The non-playable containers (avi/mkv/wmv/flv) are still

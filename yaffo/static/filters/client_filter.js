@@ -14,6 +14,9 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
     // saved unit but the bounding box is computed in kilometers.
     const KILOMETERS_PER_UNIT = { mi: 1.609344, km: 1 };
 
+    // Mirrors yaffo/common.py's SHAPES.
+    const SHAPES = ['portrait', 'landscape', 'square'];
+
     /**
      * Read the sidebar form into a criteria object; empty controls become null
      * (no filter), matching the server's querystring parsing.
@@ -30,6 +33,7 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
             return Number.isNaN(parsed) ? null : parsed;
         };
         const mediaType = str('media-type');
+        const shape = str('shape');
         const proximityLat = num('proximity-lat');
         const proximityLon = num('proximity-lon');
         const proximityDistance = num('proximity-distance');
@@ -40,6 +44,7 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
             device: str('device') || null,
             favorite: Boolean(num('favorite')),
             mediaType: mediaType === 'photo' || mediaType === 'video' ? mediaType : null,
+            shape: SHAPES.includes(shape) ? /** @type {ClientFilterCriteria['shape']} */ (shape) : null,
             personIds: data.getAll('person').map(Number),
             personMatchType: str('person-match-type') || 'any',
             gender: num('gender'),
@@ -109,6 +114,10 @@ window.PHOTO_ORGANIZER.filters = window.PHOTO_ORGANIZER.filters || {};
             if (criteria.device && item.device !== criteria.device) return false;
             if (criteria.favorite && !item.favorite) return false;
             if (criteria.mediaType && item.media_type !== criteria.mediaType) return false;
+            // The server precomputes `shape` from the stored dimensions; an item
+            // without them has none, and matches no shape — same as the SQL, where
+            // the NULL comparison is false.
+            if (criteria.shape && item.shape !== criteria.shape) return false;
             if (criteria.personIds.length > 0
                 && !matchesIds(item.person_ids, criteria.personIds, criteria.personMatchType)) return false;
             if (criteria.gender !== null && !(item.genders || []).includes(criteria.gender)) return false;

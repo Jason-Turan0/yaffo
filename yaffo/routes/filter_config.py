@@ -50,6 +50,7 @@ FILTERS: list[FilterDef] = [
     FilterDef("device", "Device", "filters/_device.html"),
     FilterDef("favorite", "Favorites", "filters/_favorite.html"),
     FilterDef("media_type", "Media Type", "filters/_media_type.html"),
+    FilterDef("shape", "Shape", "filters/_shape.html"),
 ]
 _BY_KEY = {f.key: f for f in FILTERS}
 

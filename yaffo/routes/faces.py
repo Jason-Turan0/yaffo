@@ -1,9 +1,11 @@
+import json
 import threading
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 import numpy as np
 from flask import Flask, render_template, request, jsonify
 from flask_babel import gettext, ngettext
+from sqlalchemy import func
 from sklearn.cluster import DBSCAN
 
 from yaffo.background_tasks.tasks.assign_faces_to_person import assign_faces_to_person
@@ -12,7 +14,8 @@ from yaffo.logging_config import get_logger
 import pydash as _
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
-    FACE_STATUS_ASSIGNED, MediaItem, MEDIA_STATUS_INDEXED, EVENT_MEDIA_MODIFIED, FACE_STATUS_PROCESSING
+    FACE_STATUS_ASSIGNED, MediaItem, MEDIA_STATUS_INDEXED, EVENT_MEDIA_MODIFIED, FACE_STATUS_PROCESSING, \
+    ApplicationSettings
 
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -29,6 +32,8 @@ DEFAULT_GROUP_BY = 'similarity'
 # Faces rendered as thumbnails per cluster. The whole cluster is still assigned;
 # this only caps how many we paint so a 50k batch stays responsive.
 SAMPLE_SIZE = 50
+SHORTCUT_LIMIT = 9
+FACE_SHORTCUT_PEOPLE_SETTING = "face_shortcut_people"
 
 
 @dataclass
@@ -56,6 +61,71 @@ class FaceSuggestion:
 
 
 logger = get_logger(__name__, 'webapp')
+
+
+def _person_shortcut(person: Person) -> dict:
+    return {"id": person.id, "name": person.name}
+
+
+def _default_shortcut_people() -> list[dict]:
+    return [
+        _person_shortcut(person)
+        for person in (
+            db.session.query(Person)
+            .outerjoin(PersonFace)
+            .group_by(Person.id)
+            .order_by(func.count(PersonFace.face_id).desc(), Person.name)
+            .limit(SHORTCUT_LIMIT)
+            .all()
+        )
+    ]
+
+
+def _saved_shortcut_person_ids() -> list[int] | None:
+    setting = db.session.query(ApplicationSettings).filter_by(name=FACE_SHORTCUT_PEOPLE_SETTING).first()
+    if setting is None:
+        return None
+    try:
+        raw = json.loads(setting.value or "[]")
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(raw, list):
+        return None
+    person_ids: list[int] = []
+    for item in raw:
+        try:
+            person_id = int(item)
+        except (TypeError, ValueError):
+            continue
+        if person_id not in person_ids:
+            person_ids.append(person_id)
+    return person_ids[:SHORTCUT_LIMIT]
+
+
+def _people_for_shortcut_ids(people: list[Person], person_ids: list[int]) -> list[dict]:
+    by_id = {person.id: person for person in people}
+    return [
+        _person_shortcut(by_id[person_id])
+        for person_id in person_ids
+        if person_id in by_id
+    ]
+
+
+def _save_shortcut_person_ids(person_ids: list[int]) -> None:
+    setting = db.session.query(ApplicationSettings).filter_by(name=FACE_SHORTCUT_PEOPLE_SETTING).first()
+    value = json.dumps(person_ids[:SHORTCUT_LIMIT])
+    if setting is None:
+        db.session.add(ApplicationSettings(name=FACE_SHORTCUT_PEOPLE_SETTING, type="json", value=value))
+    else:
+        setting.value = value
+    db.session.commit()
+
+
+def _reset_shortcut_people() -> None:
+    setting = db.session.query(ApplicationSettings).filter_by(name=FACE_SHORTCUT_PEOPLE_SETTING).first()
+    if setting is not None:
+        db.session.delete(setting)
+        db.session.commit()
 
 
 def _face_region(face: Face) -> Optional[dict]:
@@ -227,7 +297,6 @@ def init_faces_routes(app: Flask):
         # works through the resulting clusters then reloads for the next pass.
         unassigned_faces: List[Face] = query.limit(batch_size).all()
 
-        from sqlalchemy import func
         people = (db.session.query(Person)
                   .outerjoin(PersonFace)
                   .group_by(Person.id)
@@ -237,16 +306,16 @@ def init_faces_routes(app: Flask):
                   )
 
         # Similarity clusters aren't tied to specific people, so the number-key
-        # shortcuts fall back to the most frequently assigned people (1 = most).
-        top_people = [
-            {"id": p.id, "name": p.name}
-            for p in (db.session.query(Person)
-                      .outerjoin(PersonFace)
-                      .group_by(Person.id)
-                      .order_by(func.count(PersonFace.face_id).desc(), Person.name)
-                      .limit(9)
-                      .all())
-        ]
+        # shortcuts fall back to the most frequently assigned people until the
+        # user saves an explicit shortcut list.
+        default_shortcut_people = _default_shortcut_people()
+        saved_shortcut_person_ids = _saved_shortcut_person_ids()
+        shortcut_people_customized = saved_shortcut_person_ids is not None
+        shortcut_people = (
+            _people_for_shortcut_ids(people, saved_shortcut_person_ids or [])
+            if shortcut_people_customized else default_shortcut_people
+        )
+        all_people_shortcuts = [_person_shortcut(person) for person in people]
 
         # Scale the 0-100 slider to a cosine similarity against the live data band.
         min_similarity = ui_threshold_to_similarity(threshold, *get_similarity_bounds(db.session))
@@ -256,8 +325,9 @@ def init_faces_routes(app: Flask):
             make_suggestions_for_people(unassigned_faces, people, min_similarity, person_id)
 
         for suggestion in face_suggestions:
-            suggestion.faces = _.sort_by(suggestion.faces, lambda f: f.similarity if f.similarity is not None else 0,
-                                         reverse=True)
+            # Ascending: the weakest matches lead, so the faces most likely to be
+            # wrong are the ones you see first and can deselect before assigning.
+            suggestion.faces = _.sort_by(suggestion.faces, lambda f: f.similarity if f.similarity is not None else 0)
             # Show the cluster's capture-date span. Pick min/max by parsed datetime
             # (robust to mixed separators) but keep the original strings to format.
             dated = [(f.photo_date, parse_date_taken(f.photo_date)) for f in suggestion.faces]
@@ -284,8 +354,50 @@ def init_faces_routes(app: Flask):
         return render_template(
             "faces/index.html", faces=unassigned_faces, people=people, face_suggestions=face_suggestions,
             filters=filters, unassigned_face_count=unassigned_face_count,
-            sample_size=SAMPLE_SIZE, top_people=top_people
+            sample_size=SAMPLE_SIZE, shortcut_people=shortcut_people,
+            default_shortcut_people=default_shortcut_people,
+            all_people_shortcuts=all_people_shortcuts,
+            shortcut_people_customized=shortcut_people_customized,
         )
+
+    @app.route("/settings/faces/shortcuts", methods=["POST", "DELETE"])
+    def face_shortcut_people_settings():
+        if request.method == "DELETE":
+            _reset_shortcut_people()
+            return "", 204
+
+        payload = request.get_json(silent=True) or {}
+        raw_person_ids = payload.get("person_ids")
+        if not isinstance(raw_person_ids, list):
+            return {
+                "error": gettext("Items must be a list"),
+                "code": "items_must_be_list",
+            }, 400
+
+        person_ids: list[int] = []
+        for raw_id in raw_person_ids:
+            try:
+                person_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if person_id not in person_ids:
+                person_ids.append(person_id)
+            if len(person_ids) == SHORTCUT_LIMIT:
+                break
+
+        if person_ids:
+            known_ids = {
+                person_id
+                for person_id, in db.session.query(Person.id).filter(Person.id.in_(person_ids)).all()
+            }
+            if known_ids != set(person_ids):
+                return {
+                    "error": gettext("Person not found"),
+                    "code": "person_not_found",
+                }, 404
+
+        _save_shortcut_person_ids(person_ids)
+        return "", 204
 
     @app.route("/api/faces/assign", methods=["POST"])
     def faces_assign():

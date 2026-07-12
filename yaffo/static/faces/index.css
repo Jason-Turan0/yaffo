@@ -81,9 +81,16 @@
     font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-text-muted);
-    margin-bottom: 8px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.shortcuts-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
 }
 
 .shortcut-item {
@@ -341,4 +348,10 @@
 
 .existing-person-controls select {
     flex: 1;
+}
+
+.shortcut-config {
+    max-height: 50vh;
+    overflow-y: auto;
+    padding-right: 4px;
 }

@@ -11,6 +11,7 @@ const config = () => ({
     placeholder: '/static/placeholder.png',
     faces_assign: '/faces/assign',
     api_people_create: '/api/people',
+    face_shortcut_people_settings: '/settings/faces/shortcuts',
   },
   buildUrl: (endpoint, params = {}) => {
     let url = `/${endpoint}`;
@@ -35,13 +36,35 @@ const group = (faces, { people = [] } = {}) => `
     ${people.map((p) => `<button class="assign-group-btn" data-person-id="${p.id}" data-person-name="${p.name}"></button>`).join('')}
   </div>`;
 
-const fixture = (groupsHtml) => {
+const shortcutModal = (people) => `
+  <button id="configure-shortcuts-btn"></button>
+  <div id="shortcutPeopleModal">
+    <form data-js-form>
+      <div id="shortcut-config-list">
+        ${people.map((p) => `
+          <div class="shortcut-config-row" data-person-id="${p.id}" draggable="true">
+            <input type="checkbox" class="shortcut-config-toggle" ${p.checked ? 'checked' : ''}>
+            <span>${p.name}</span>
+          </div>`).join('')}
+      </div>
+      <button type="button" id="shortcut-config-reset"></button>
+    </form>
+  </div>`;
+
+const fixture = (groupsHtml, { shortcutPeople = [] } = {}) => {
   document.body.innerHTML = `
     <div id="clusters">${groupsHtml}</div>
     <div id="sidebar-shortcut-people"></div>
-    <button id="sidebar-ignore-btn"></button>`;
+    <button id="sidebar-ignore-btn"></button>
+    ${shortcutPeople.length ? shortcutModal(shortcutPeople) : ''}`;
   // initAssignment opens the keyboard-help modal via the shared component.
-  window.PHOTO_ORGANIZER.COMPONENTS.modal = { init: () => ({ open: vi.fn() }) };
+  window.PHOTO_ORGANIZER.COMPONENTS.modal = {
+    init: (id) => ({
+      formElement: document.querySelector(`#${id} form`),
+      open: vi.fn(),
+      close: vi.fn(),
+    }),
+  };
 };
 
 const stubFetch = (body, { ok = true } = {}) => {
@@ -50,10 +73,12 @@ const stubFetch = (body, { ok = true } = {}) => {
   return fetchMock;
 };
 
-const init = async (sampleSize = 10, topPeople = []) =>
+const init = async (sampleSize = 10, shortcutPeople = [], allPeople = shortcutPeople, customized = false) =>
   (await loadModule('faces/index.js')).faces.initAssignment(
     sampleSize,
-    topPeople,
+    shortcutPeople,
+    allPeople,
+    customized,
     window.testI18n,
     config(),
   );
@@ -317,5 +342,38 @@ describe('faces initAssignment — helpers & shortcuts', () => {
     const shortcut = document.querySelector('#sidebar-shortcut-people .shortcut-item');
     expect(shortcut.dataset.personId).toBe('9');
     expect(shortcut.textContent).toContain('Alice');
+  });
+
+  it('uses saved shortcut people instead of active cluster people', async () => {
+    fixture(group([{ id: 1 }], { people: [{ id: 9, name: 'Alice' }] }));
+    await init(10, [{ id: 4, name: 'Mina' }], [{ id: 4, name: 'Mina' }, { id: 9, name: 'Alice' }], true);
+
+    const shortcut = document.querySelector('#sidebar-shortcut-people .shortcut-item');
+    expect(shortcut.dataset.personId).toBe('4');
+    expect(shortcut.textContent).toContain('Mina');
+  });
+
+  it('saves edited shortcut people and rebuilds the key map', async () => {
+    fixture(group([{ id: 1 }]), {
+      shortcutPeople: [
+        { id: 4, name: 'Mina', checked: true },
+        { id: 8, name: 'Zoe', checked: true },
+      ],
+    });
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    await init(10, [{ id: 4, name: 'Mina' }], [{ id: 4, name: 'Mina' }, { id: 8, name: 'Zoe' }], false);
+    document.querySelector('.shortcut-config-row[data-person-id="8"] .shortcut-config-toggle').checked = true;
+
+    document.querySelector('#shortcutPeopleModal form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/settings/faces/shortcuts',
+      expect.objectContaining({ method: 'POST' }),
+    ));
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ person_ids: [4, 8] });
+    expect([...document.querySelectorAll('#sidebar-shortcut-people .shortcut-item')]
+      .map((el) => el.dataset.personId)).toEqual(['4', '8']);
   });
 });

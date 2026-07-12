@@ -8,10 +8,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/pagination.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/kbd.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='searchable-select.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='filters/filter_config.css') }}">
 {% endblock %}
 {% from "_sidebar.html" import render_sidebar %}
 {% from "components/page_header.html" import page_header %}
 {% from "components/info_modal.html" import render_info_modal %}
+{% from "components/modal.html" import render_modal %}
 
 {% macro render_modal_keyboard_help() %}
         <h3 class="modal-section-title">{{ _("How This Page Works") }}</h3>
@@ -62,6 +64,32 @@
                 • {{ _("Hold Shift+Click to select multiple faces at once") }}
             </p>
         </div>
+{% endmacro %}
+
+{% macro render_shortcut_people_config() %}
+    {% set selected_shortcut_ids = shortcut_people | map(attribute='id') | list %}
+    <div class="filter-config shortcut-config" id="shortcut-config-list"
+         data-customized="{{ 'true' if shortcut_people_customized else 'false' }}">
+        {% for person in shortcut_people %}
+            <div class="filter-config-row shortcut-config-row" draggable="true" data-person-id="{{ person.id }}">
+                <span class="filter-config-handle" aria-hidden="true">⠿</span>
+                <label class="filter-config-item">
+                    <input type="checkbox" class="shortcut-config-toggle" checked>
+                    <span>{{ person.name }}</span>
+                </label>
+            </div>
+        {% endfor %}
+        {% for person in all_people_shortcuts if person.id not in selected_shortcut_ids %}
+            <div class="filter-config-row shortcut-config-row" draggable="true" data-person-id="{{ person.id }}">
+                <span class="filter-config-handle" aria-hidden="true">⠿</span>
+                <label class="filter-config-item">
+                    <input type="checkbox" class="shortcut-config-toggle">
+                    <span>{{ person.name }}</span>
+                </label>
+            </div>
+        {% endfor %}
+    </div>
+    <button type="button" class="btn btn-secondary" id="shortcut-config-reset">{{ _("Reset to defaults") }}</button>
 {% endmacro %}
 
 {% block content %}
@@ -143,7 +171,12 @@
                 </div>
 
                 <div class="keyboard-shortcuts-list">
-                    <div class="shortcuts-label">{{ _("Keyboard Shortcuts:") }}</div>
+                    <div class="shortcuts-heading">
+                        <div class="shortcuts-label">{{ _("Keyboard Shortcuts:") }}</div>
+                        <button type="button" class="filter-config-trigger" id="configure-shortcuts-btn"
+                                data-icon="filter-config" aria-label="{{ _('Keyboard Shortcuts:') }}"
+                                title="{{ _('Keyboard Shortcuts:') }}"></button>
+                    </div>
                     <div id="sidebar-shortcut-people"></div>
                     <div class="shortcut-item">
                         <kbd>Enter</kbd>
@@ -237,6 +270,7 @@
         </div>
 
         {{ render_info_modal('keyboardHelpModal', _("Help"), render_modal_keyboard_help, size_class="modal-lg") }}
+        {{ render_modal('shortcutPeopleModal', _("Keyboard Shortcuts:"), "", render_shortcut_people_config, posts=false) }}
 
     </div>
 {% endblock %}
@@ -248,7 +282,9 @@
             const app = event.detail.app;
             app.faces.assignment = app.faces.initAssignment(
                 {{ sample_size | tojson }},
-                {{ top_people | tojson }},
+                {{ shortcut_people | tojson }},
+                {{ all_people_shortcuts | tojson }},
+                {{ shortcut_people_customized | tojson }},
                 app.i18n,
                 window.APP_CONFIG
             );

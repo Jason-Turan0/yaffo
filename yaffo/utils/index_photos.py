@@ -340,7 +340,12 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
         # the crops below) must agree with what a browser draws, which is the
         # EXIF-rotated image. Detecting on a sideways buffer also costs recall.
         orientation = exif_orientation(image)
-        image_numpy = image_to_numpy(ImageOps.exif_transpose(image))
+        upright = ImageOps.exif_transpose(image)
+        # Upright dimensions, not the raw buffer's: a quarter-turned photo is stored
+        # landscape and displayed portrait, and it's the displayed shape the library
+        # filters on (common.shape_for_dimensions).
+        width, height = upright.size
+        image_numpy = image_to_numpy(upright)
         try:
             detected_faces = detect_faces(image_numpy)
         except Exception as e:  # noqa: BLE001 - index metadata even if face detection fails
@@ -375,6 +380,8 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
             'location_name': location_name,
             'device': device,
             'orientation': orientation,
+            'width': width,
+            'height': height,
             'faces_data': faces_data
         }
 

@@ -347,6 +347,7 @@ type LocationMediaItem = {
     photo_path?: string | null;
     filename?: string;
     media_type?: string | null;
+    shape?: 'portrait' | 'landscape' | 'square' | null;
     year?: number | null;
     month?: number | null;
     device?: string | null;
@@ -366,6 +367,7 @@ type ClientFilterCriteria = {
     device: string | null;
     favorite: boolean;
     mediaType: 'photo' | 'video' | null;
+    shape: 'portrait' | 'landscape' | 'square' | null;
     personIds: number[];
     personMatchType: string;
     gender: number | null;
@@ -548,12 +550,15 @@ type FacesAssignmentApi = {
     selectWholeCluster(on: boolean): void;
     randomSample(arr: FaceRecord[], n: number): FaceRecord[];
     getSelectedIds(): Set<number>;
+    getShortcutPeople(): PersonShortcut[];
 };
 
 type FacesNamespace = {
     initAssignment?: (
         sampleSize: number,
-        topPeople: PersonShortcut[],
+        shortcutPeople: PersonShortcut[],
+        allPeople: PersonShortcut[],
+        shortcutPeopleCustomized: boolean,
         i18n: I18nService,
         config: AppConfig,
     ) => FacesAssignmentApi;
