@@ -26,7 +26,17 @@ from jsonschema import Draft202012Validator
 from sqlalchemy import Select, distinct, func, select
 from sqlalchemy.orm import Session
 
-from yaffo.db.models import ClassificationLabel, Face, Person, PersonFace, MediaItem, MediaLabel, Tag
+from yaffo.db.models import (
+    Album,
+    AlbumItem,
+    ClassificationLabel,
+    Face,
+    Person,
+    PersonFace,
+    MediaItem,
+    MediaLabel,
+    Tag,
+)
 from yaffo.db.repositories import media_dir_repository
 
 _DRAFT = "https://json-schema.org/draft/2020-12/schema"
@@ -36,7 +46,12 @@ _DRAFT = "https://json-schema.org/draft/2020-12/schema"
 # classification_labels + photo_labels expose the auto-classifier's labels read-only
 # (data_query is read-only; automations apply their own categorization via tag_media_items),
 # joined client-side like people/people_face/faces.
-_EXPOSED_MODELS = [MediaItem, Tag, Face, Person, PersonFace, ClassificationLabel, MediaLabel]
+# albums + album_items are plain tables, so an album is queried like any other source and
+# its membership joins client-side on album_items.media_item_id — the same shape as
+# people/people_face/faces. No virtual source is needed: an album IS a table.
+_EXPOSED_MODELS = [
+    MediaItem, Tag, Face, Person, PersonFace, ClassificationLabel, MediaLabel, Album, AlbumItem,
+]
 
 # Primitive columns to hide per model. Filesystem paths leak the local disk
 # layout, and images load via the /media/<id> route, so the path isn't needed.

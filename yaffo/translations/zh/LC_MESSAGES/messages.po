@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-12 00:29-0500\n"
+"POT-Creation-Date: 2026-07-12 02:17-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: zh\n"
@@ -375,7 +375,7 @@ msgstr "男性"
 msgid "Female"
 msgstr "女性"
 
-#: yaffo/routes/home.py:96 yaffo/routes/sharing.py:649
+#: yaffo/routes/home.py:96 yaffo/routes/sharing.py:675
 msgid "The tag_name parameter is required"
 msgstr "tag_name 参数是必需的"
 
@@ -577,196 +577,204 @@ msgstr "新目录与当前目录相同"
 msgid "Could not move thumbnail files"
 msgstr "无法移动缩略图文件"
 
-#: yaffo/routes/sharing.py:149
+#: yaffo/routes/sharing.py:150
 msgid "Choose a download directory for shared files."
 msgstr "选择共享文件的下载目录。"
 
-#: yaffo/routes/sharing.py:152
+#: yaffo/routes/sharing.py:153
 msgid "Choose a directory, not a file."
 msgstr "选择目录，而不是文件。"
 
-#: yaffo/routes/sharing.py:156
+#: yaffo/routes/sharing.py:157
 #, python-format
 msgid "Could not create the download directory: %(reason)s"
 msgstr "无法创建下载目录： %(reason)s"
 
-#: yaffo/routes/sharing.py:168 yaffo/routes/sharing.py:172
+#: yaffo/routes/sharing.py:170 yaffo/routes/sharing.py:179
 msgid "Unknown share"
 msgstr "未知分享"
 
-#: yaffo/routes/sharing.py:170 yaffo/templates/index.html:69
-#: yaffo/templates/sharing/_device_panel.html:60 yaffo/templates/sharing/_device_panel.html:76
-#: yaffo/templates/sharing/files.html:118
+#: yaffo/routes/sharing.py:172 yaffo/templates/index.html:69
+#: yaffo/templates/sharing/_device_panel.html:60 yaffo/templates/sharing/_device_panel.html:77
+#: yaffo/templates/sharing/files.html:123
 msgid "Folder"
 msgstr "文件夹"
 
-#: yaffo/routes/sharing.py:185
+#: yaffo/routes/sharing.py:177
+msgid "Deleted album"
+msgstr "已删除相册"
+
+#: yaffo/routes/sharing.py:192
 msgid "Shared folder"
 msgstr "共享文件夹"
 
-#: yaffo/routes/sharing.py:195 yaffo/routes/sharing.py:390 yaffo/routes/sharing.py:407
-#: yaffo/routes/sharing.py:429 yaffo/routes/sharing.py:569 yaffo/routes/sharing.py:691
-#: yaffo/routes/sharing.py:806 yaffo/routes/sharing.py:819 yaffo/routes/sharing.py:833
+#: yaffo/routes/sharing.py:202 yaffo/routes/sharing.py:402 yaffo/routes/sharing.py:419
+#: yaffo/routes/sharing.py:441 yaffo/routes/sharing.py:592 yaffo/routes/sharing.py:716
+#: yaffo/routes/sharing.py:836 yaffo/routes/sharing.py:849 yaffo/routes/sharing.py:863
 msgid "Device sharing is not running."
 msgstr "设备共享未运行。"
 
-#: yaffo/routes/sharing.py:224
+#: yaffo/routes/sharing.py:233
 msgid "Some shared folders could not be loaded."
 msgstr "无法加载某些共享文件夹。"
 
-#: yaffo/routes/sharing.py:284
+#: yaffo/routes/sharing.py:293
 msgid "Choose a folder inside a configured media directory."
 msgstr "在配置的媒体目录中选择一个文件夹。"
 
-#: yaffo/routes/sharing.py:374
+#: yaffo/routes/sharing.py:386
 msgid "Share grant is no longer active."
 msgstr "股份授予不再有效。"
 
-#: yaffo/routes/sharing.py:376
+#: yaffo/routes/sharing.py:388
 msgid "Share grant revoked."
 msgstr "股份授予被撤销。"
 
-#: yaffo/routes/sharing.py:410
+#: yaffo/routes/sharing.py:422
 msgid "Paste a pairing code first."
 msgstr "先粘贴配对码。"
 
-#: yaffo/routes/sharing.py:414
+#: yaffo/routes/sharing.py:426
 #, python-format
 msgid "Pairing failed: %(reason)s"
 msgstr "配对失败： %(reason)s"
 
-#: yaffo/routes/sharing.py:416
+#: yaffo/routes/sharing.py:428
 #, python-format
 msgid "Could not reach the other device: %(reason)s"
 msgstr "无法连接到其他设备： %(reason)s"
 
-#: yaffo/routes/sharing.py:418
+#: yaffo/routes/sharing.py:430
 msgid "Pairing timed out — is the other device online?"
 msgstr "配对超时 - 其他设备是否在线？"
 
-#: yaffo/routes/sharing.py:421
+#: yaffo/routes/sharing.py:433
 #, python-format
 msgid "Paired with %(device)s."
 msgstr "搭配 %(device)s."
 
-#: yaffo/routes/sharing.py:438
+#: yaffo/routes/sharing.py:450
 msgid "Device revoked. The other device was notified."
 msgstr "设备已撤销。另一台设备已收到通知。"
 
-#: yaffo/routes/sharing.py:440
+#: yaffo/routes/sharing.py:452
 msgid "Device revoked. The other device is offline and will find out when it next tries to connect."
 msgstr "设备已撤销。另一台设备处于离线状态，下次尝试连接时将会发现。"
 
-#: yaffo/routes/sharing.py:463
+#: yaffo/routes/sharing.py:475
 msgid "Revoke this device before deleting it."
 msgstr "删除此设备之前先将其撤销。"
 
-#: yaffo/routes/sharing.py:464
+#: yaffo/routes/sharing.py:476
 msgid "Device deleted."
 msgstr "设备已删除。"
 
-#: yaffo/routes/sharing.py:473
+#: yaffo/routes/sharing.py:485
 msgid "Device name cannot be empty."
 msgstr "设备名称不能为空。"
 
-#: yaffo/routes/sharing.py:475 yaffo/routes/sharing.py:497 yaffo/routes/sharing.py:694
+#: yaffo/routes/sharing.py:487 yaffo/routes/sharing.py:509 yaffo/routes/sharing.py:719
 #, python-format
 msgid "%(device)s is not a known device."
 msgstr "%(device)s 不是已知设备。"
 
-#: yaffo/routes/sharing.py:476
+#: yaffo/routes/sharing.py:488
 msgid "Device renamed."
 msgstr "设备已重命名。"
 
-#: yaffo/routes/sharing.py:488
+#: yaffo/routes/sharing.py:500
 msgid "Download directory saved."
 msgstr "下载目录已保存。"
 
-#: yaffo/routes/sharing.py:499
+#: yaffo/routes/sharing.py:511
 msgid "Pair this device again before sharing with it."
 msgstr "与此设备共享之前请重新配对。"
 
-#: yaffo/routes/sharing.py:506
+#: yaffo/routes/sharing.py:518
 msgid "Choose a configured media directory."
 msgstr "选择配置的媒体目录。"
 
-#: yaffo/routes/sharing.py:516
+#: yaffo/routes/sharing.py:528
 msgid "Choose a folder to share."
 msgstr "选择要共享的文件夹。"
 
-#: yaffo/routes/sharing.py:534
+#: yaffo/routes/sharing.py:548
+msgid "Choose an album to share."
+msgstr "选择要分享的相册。"
+
+#: yaffo/routes/sharing.py:553
 msgid "Choose what to share."
 msgstr "选择要分享的内容。"
 
-#: yaffo/routes/sharing.py:537
+#: yaffo/routes/sharing.py:556
 msgid "Share grant added."
 msgstr "添加了股份授予。"
 
-#: yaffo/routes/sharing.py:571
+#: yaffo/routes/sharing.py:594
 msgid "This device is revoked. Pair it again before browsing shared files."
 msgstr "该设备已被撤销。在浏览共享文件之前再次配对。"
 
-#: yaffo/routes/sharing.py:584
+#: yaffo/routes/sharing.py:608
 #, python-format
 msgid "Could not load shared files: %(reason)s"
 msgstr "无法加载共享文件： %(reason)s"
 
-#: yaffo/routes/sharing.py:586
+#: yaffo/routes/sharing.py:610
 msgid "Loading shared files timed out — is the other device online?"
 msgstr "加载共享文件超时 - 其他设备是否在线？"
 
-#: yaffo/routes/sharing.py:696
+#: yaffo/routes/sharing.py:721
 msgid "Pair this device again before pulling files from it."
 msgstr "从设备中提取文件之前，请再次配对该设备。"
 
-#: yaffo/routes/sharing.py:699
+#: yaffo/routes/sharing.py:724
 msgid "Choose a download directory for shared files first."
 msgstr "首先选择共享文件的下载目录。"
 
-#: yaffo/routes/sharing.py:759
+#: yaffo/routes/sharing.py:785
 msgid "Could not start the download: the shared scope is missing."
 msgstr "无法开始下载：缺少共享范围。"
 
-#: yaffo/routes/sharing.py:771
+#: yaffo/routes/sharing.py:797
 msgid "Select the files to pull first."
 msgstr "选择首先要拉取的文件。"
 
-#: yaffo/routes/sharing.py:787
+#: yaffo/routes/sharing.py:817
 #, python-format
 msgid "Could not start the download: %(reason)s"
 msgstr "无法开始下载： %(reason)s"
 
-#: yaffo/routes/sharing.py:789
+#: yaffo/routes/sharing.py:819
 msgid "Queuing the transfer timed out — is device sharing running?"
 msgstr "排队传输超时 - 设备共享是否正在运行？"
 
-#: yaffo/routes/sharing.py:792
+#: yaffo/routes/sharing.py:822
 msgid "Download queued — everything selected in this view will be pulled."
 msgstr "下载已排队 - 在此视图中选择的所有内容都将被拉出。"
 
-#: yaffo/routes/sharing.py:795
+#: yaffo/routes/sharing.py:825
 #, python-format
 msgid "Pull of %(count)s file queued."
 msgid_plural "Pull of %(count)s files queued."
 msgstr[0] "拉力 %(count)s 文件已排队。"
 
-#: yaffo/routes/sharing.py:811
+#: yaffo/routes/sharing.py:841
 msgid "Transfer cancelled."
 msgstr "转移已取消。"
 
-#: yaffo/routes/sharing.py:811 yaffo/routes/sharing.py:825
+#: yaffo/routes/sharing.py:841 yaffo/routes/sharing.py:855
 msgid "Transfer is no longer active."
 msgstr "转移不再有效。"
 
-#: yaffo/routes/sharing.py:825
+#: yaffo/routes/sharing.py:855
 msgid "Continuing over the relay."
 msgstr "继续通过中继。"
 
-#: yaffo/routes/sharing.py:839
+#: yaffo/routes/sharing.py:869
 msgid "Transfer deleted."
 msgstr "转移已删除。"
 
-#: yaffo/routes/sharing.py:841
+#: yaffo/routes/sharing.py:871
 msgid "Cancel or finish this transfer before deleting it."
 msgstr "在删除之前取消或完成此传输。"
 
@@ -1089,7 +1097,7 @@ msgstr "选择…"
 msgid "Home"
 msgstr "家"
 
-#: yaffo/templates/albums/_base.html:30 yaffo/templates/albums/index.html:7
+#: yaffo/templates/albums/_base.html:28 yaffo/templates/albums/index.html:7
 #: yaffo/templates/base.html:102
 msgid "Albums"
 msgstr "专辑"
@@ -1187,7 +1195,7 @@ msgstr "没有找到照片"
 msgid "Toggle favorite"
 msgstr "切换收藏夹"
 
-#: yaffo/templates/albums/add.html:58 yaffo/templates/albums/album.html:82
+#: yaffo/templates/albums/add.html:58 yaffo/templates/albums/album.html:108
 #: yaffo/templates/index.html:45
 #, python-format
 msgid "Video from %(date)s"
@@ -1197,32 +1205,32 @@ msgstr "视频来自 %(date)s"
 msgid "Play video"
 msgstr "播放视频"
 
-#: yaffo/templates/albums/add.html:62 yaffo/templates/albums/album.html:86
+#: yaffo/templates/albums/add.html:62 yaffo/templates/albums/album.html:112
 #: yaffo/templates/index.html:60
 #, python-format
 msgid "Photo from %(date)s"
 msgstr "照片来自 %(date)s"
 
-#: yaffo/templates/albums/_base.html:13 yaffo/templates/albums/album.html:10
+#: yaffo/templates/albums/_base.html:13 yaffo/templates/albums/album.html:33
 #: yaffo/templates/index.html:64 yaffo/templates/people/list.html:24
-#: yaffo/templates/people/list.html:85 yaffo/templates/sharing/files.html:114
+#: yaffo/templates/people/list.html:85 yaffo/templates/sharing/files.html:119
 #: yaffo/templates/themes_page/index.html:115 yaffo/templates/themes_page/index.html:127
 #: yaffo/templates/utilities/_base.html:11 yaffo/templates/utilities/automations.html:8
 msgid "Name"
 msgstr "姓名"
 
-#: yaffo/templates/index.html:73 yaffo/templates/sharing/files.html:122
+#: yaffo/templates/index.html:73 yaffo/templates/sharing/files.html:127
 msgid "Taken"
 msgstr "采取"
 
 #: yaffo/templates/albums/add.html:66 yaffo/templates/index.html:74 yaffo/templates/index.html:98
-#: yaffo/templates/people/faces.html:66 yaffo/templates/sharing/files.html:123
-#: yaffo/templates/sharing/files.html:138
+#: yaffo/templates/people/faces.html:66 yaffo/templates/sharing/files.html:128
+#: yaffo/templates/sharing/files.html:143
 msgid "Unknown date"
 msgstr "日期未知"
 
 #: yaffo/templates/index.html:78 yaffo/templates/media/view.html:74
-#: yaffo/templates/sharing/files.html:127
+#: yaffo/templates/sharing/files.html:132
 msgid "Location"
 msgstr "地点"
 
@@ -1242,7 +1250,7 @@ msgstr "尝试调整您的过滤器或稍后再回来查看。"
 msgid "e.g. Summer 2024, Grandma’s 80th"
 msgstr "例如2024 年夏天，奶奶 80 岁了"
 
-#: yaffo/templates/albums/_base.html:18 yaffo/templates/albums/album.html:14
+#: yaffo/templates/albums/_base.html:18 yaffo/templates/albums/album.html:37
 #: yaffo/templates/utilities/automations.html:12
 msgid "Description"
 msgstr "描述"
@@ -1255,23 +1263,23 @@ msgstr "可选——这张专辑有什么用？"
 msgid "Starts empty — add photos to it once it exists."
 msgstr "开始为空 - 一旦存在就添加照片。"
 
-#: yaffo/templates/albums/_base.html:39 yaffo/templates/albums/index.html:35
+#: yaffo/templates/albums/_base.html:36 yaffo/templates/albums/index.html:35
 msgid "Shared"
 msgstr "共享"
 
-#: yaffo/templates/albums/_base.html:46 yaffo/templates/albums/index.html:43
+#: yaffo/templates/albums/_base.html:43 yaffo/templates/albums/index.html:43
 msgid "No albums yet"
 msgstr "还没有专辑"
 
-#: yaffo/templates/albums/_base.html:50
+#: yaffo/templates/albums/_base.html:47
 msgid "New album"
 msgstr "新专辑"
 
-#: yaffo/templates/albums/_base.html:63
+#: yaffo/templates/albums/_base.html:60
 msgid "New Album"
 msgstr "新专辑"
 
-#: yaffo/templates/albums/_base.html:66 yaffo/templates/themes_page/index.html:122
+#: yaffo/templates/albums/_base.html:63 yaffo/templates/themes_page/index.html:122
 #: yaffo/templates/utilities/_base.html:85
 msgid "Create"
 msgstr "创造"
@@ -1281,7 +1289,7 @@ msgstr "创造"
 msgid "Add photos to %(album)s - Yaffo"
 msgstr "添加照片至 %(album)s - 雅福"
 
-#: yaffo/templates/albums/add.html:23 yaffo/templates/albums/album.html:62
+#: yaffo/templates/albums/add.html:23 yaffo/templates/albums/album.html:88
 msgid "Done"
 msgstr "完毕"
 
@@ -1305,13 +1313,13 @@ msgid "%(count)s photo added."
 msgid_plural "%(count)s photos added."
 msgstr[0] "%(count)s 照片已添加。"
 
-#: yaffo/templates/albums/add.html:43 yaffo/templates/sharing/files.html:84
+#: yaffo/templates/albums/add.html:43 yaffo/templates/sharing/files.html:78
 #, python-format
 msgid "Select all %(count)s matching"
 msgstr "选择全部 %(count)s 匹配"
 
-#: yaffo/templates/albums/add.html:46 yaffo/templates/albums/album.html:24
-#: yaffo/templates/albums/album.html:97
+#: yaffo/templates/albums/add.html:46 yaffo/templates/albums/album.html:47
+#: yaffo/templates/albums/album.html:123
 msgid "Add photos"
 msgstr "添加照片"
 
@@ -1332,30 +1340,45 @@ msgstr "尝试调整你的过滤器。"
 msgid "%(album)s - Albums - Yaffo"
 msgstr "%(album)s - 专辑 - Yaffo"
 
-#: yaffo/templates/albums/album.html:16
+#: yaffo/templates/albums/album.html:13
+msgid ""
+"Checked devices can pull this album. They see its contents at the time they ask, so adding or "
+"removing photos changes what they get next time."
+msgstr "已检查的设备可以拉取该相册。他们在询问时会看到其内容，因此添加或删除照片会改变他们下次获得的内容。"
+
+#: yaffo/templates/albums/album.html:27
+msgid "No paired devices yet. Pair a device on the Sharing tab first."
+msgstr "尚未配对的设备。首先在“共享”选项卡上配对设备。"
+
+#: yaffo/templates/albums/album.html:39
 msgid "What is this album for?"
 msgstr "这张专辑有什么用？"
 
-#: yaffo/templates/albums/album.html:21
+#: yaffo/templates/albums/album.html:44
 #, python-format
 msgid "Delete %(album)s? The album and its contents list go away — the photos themselves are not deleted."
 msgstr "删除 %(album)s？相册及其内容列表会消失 - 照片本身不会被删除。"
 
-#: yaffo/templates/albums/album.html:27 yaffo/templates/people/list.html:61
+#: yaffo/templates/albums/album.html:50 yaffo/templates/people/list.html:61
 #: yaffo/templates/utilities/automations.html:92 yaffo/templates/utilities/automations_edit.html:15
 #: yaffo/templates/utilities/automations_triggers.html:28
 msgid "Edit"
 msgstr "编辑"
 
-#: yaffo/templates/albums/album.html:30 yaffo/templates/utilities/automations.html:101
+#: yaffo/templates/albums/album.html:53 yaffo/templates/utilities/automations.html:101
 msgid "Edit details"
 msgstr "编辑详细信息"
 
-#: yaffo/templates/albums/album.html:33
+#: yaffo/templates/albums/album.html:56 yaffo/templates/albums/album.html:140
+#: yaffo/templates/sharing/_device_panel.html:106
+msgid "Share"
+msgstr "分享"
+
+#: yaffo/templates/albums/album.html:59
 msgid "Delete album?"
 msgstr "删除相册？"
 
-#: yaffo/templates/albums/album.html:35 yaffo/templates/albums/album.html:36
+#: yaffo/templates/albums/album.html:61 yaffo/templates/albums/album.html:62
 #: yaffo/templates/fragments/job_status_fragment.html:29 yaffo/templates/people/list.html:65
 #: yaffo/templates/sharing/_device_content.html:35 yaffo/templates/sharing/_device_content.html:37
 #: yaffo/templates/sharing/_transfers_panel.html:105 yaffo/templates/sharing/_transfers_panel.html:109
@@ -1365,53 +1388,53 @@ msgstr "删除相册？"
 msgid "Delete"
 msgstr "删除"
 
-#: yaffo/templates/albums/album.html:41 yaffo/templates/albums/index.html:34
+#: yaffo/templates/albums/album.html:67 yaffo/templates/albums/index.html:34
 #, python-format
 msgid "%(count)s photos"
 msgstr "%(count)s 照片"
 
-#: yaffo/templates/albums/album.html:53
+#: yaffo/templates/albums/album.html:79
 #, python-format
 msgid "Select all %(count)s photos"
 msgstr "选择全部 %(count)s 照片"
 
-#: yaffo/templates/albums/album.html:55
+#: yaffo/templates/albums/album.html:81
 msgid "Set as cover"
 msgstr "设置为封面"
 
-#: yaffo/templates/albums/album.html:58
+#: yaffo/templates/albums/album.html:84
 msgid "Remove from album?"
 msgstr "从相册中删除？"
 
-#: yaffo/templates/albums/album.html:59
+#: yaffo/templates/albums/album.html:85
 msgid "Remove the selected photos from this album? The photos themselves are not deleted."
 msgstr "要从此相册中删除选定的照片吗？照片本身不会被删除。"
 
-#: yaffo/templates/albums/album.html:60 yaffo/templates/settings/index.html:65
+#: yaffo/templates/albums/album.html:86 yaffo/templates/settings/index.html:65
 msgid "Remove"
 msgstr "消除"
 
-#: yaffo/templates/albums/album.html:60
+#: yaffo/templates/albums/album.html:86
 msgid "Remove from album"
 msgstr "从相册中删除"
 
-#: yaffo/templates/albums/album.html:77
+#: yaffo/templates/albums/album.html:103
 msgid "Cover"
 msgstr "覆盖"
 
-#: yaffo/templates/albums/album.html:94
+#: yaffo/templates/albums/album.html:120
 msgid "This album is empty"
 msgstr "此相册为空"
 
-#: yaffo/templates/albums/album.html:95
+#: yaffo/templates/albums/album.html:121
 msgid "Nothing has been added to it yet."
 msgstr "尚未添加任何内容。"
 
-#: yaffo/templates/albums/album.html:109
+#: yaffo/templates/albums/album.html:135
 msgid "Edit album"
 msgstr "编辑相册"
 
-#: yaffo/templates/albums/album.html:111 yaffo/templates/components/modal.html:17
+#: yaffo/templates/albums/album.html:137 yaffo/templates/components/modal.html:17
 #: yaffo/templates/filters/_config_modal.html:23 yaffo/templates/pages/design.html:38
 #: yaffo/templates/settings/_llm_api_key.html:19 yaffo/templates/settings/index.html:29
 #: yaffo/templates/settings/index.html:47 yaffo/templates/sharing/_download_directory_panel.html:18
@@ -1419,6 +1442,10 @@ msgstr "编辑相册"
 #: yaffo/templates/utilities/automations.html:131
 msgid "Save"
 msgstr "节省"
+
+#: yaffo/templates/albums/album.html:138
+msgid "Share album"
+msgstr "分享相册"
 
 #: yaffo/templates/albums/index.html:4
 msgid "Albums - Yaffo"
@@ -1471,7 +1498,7 @@ msgstr "输入目录路径"
 msgid "Directory"
 msgstr "目录"
 
-#: yaffo/templates/components/file_browser.html:14 yaffo/templates/sharing/_device_panel.html:86
+#: yaffo/templates/components/file_browser.html:14 yaffo/templates/sharing/_device_panel.html:87
 #: yaffo/templates/sharing/_download_directory_panel.html:16
 msgid "Browse…"
 msgstr "浏览…"
@@ -2654,23 +2681,23 @@ msgstr "添加共享"
 msgid "Share type"
 msgstr "股份类型"
 
-#: yaffo/templates/sharing/_device_panel.html:59 yaffo/templates/sharing/_device_panel.html:65
+#: yaffo/templates/sharing/_device_panel.html:59 yaffo/templates/sharing/_device_panel.html:66
 msgid "Media Directory"
 msgstr "媒体目录"
 
-#: yaffo/templates/sharing/_device_panel.html:82
+#: yaffo/templates/sharing/_device_panel.html:61 yaffo/templates/sharing/_device_panel.html:95
+msgid "Album"
+msgstr "专辑"
+
+#: yaffo/templates/sharing/_device_panel.html:83
 msgid "Choose a folder inside a media directory"
 msgstr "选择媒体目录中的一个文件夹"
 
-#: yaffo/templates/sharing/_device_panel.html:92
-msgid "Share"
-msgstr "分享"
-
-#: yaffo/templates/sharing/_device_panel.html:97
+#: yaffo/templates/sharing/_device_panel.html:111
 msgid "Add a media directory in Settings before sharing folders with this device."
 msgstr "与此设备共享文件夹之前，请在“设置”中添加媒体目录。"
 
-#: yaffo/templates/sharing/_device_panel.html:100
+#: yaffo/templates/sharing/_device_panel.html:114
 msgid "This device is revoked. Pair it again before sharing folders with it."
 msgstr "该设备已被撤销。在与其共享文件夹之前再次配对。"
 
@@ -2828,16 +2855,16 @@ msgstr "与我分享"
 msgid "Loading shared folders…"
 msgstr "正在加载共享文件夹..."
 
-#: yaffo/templates/sharing/_sidebar_shared_with_me.html:12
+#: yaffo/templates/sharing/_sidebar_shared_with_me.html:13
 #, python-format
 msgid "Open share from %(device)s"
 msgstr "打开共享来自 %(device)s"
 
-#: yaffo/templates/sharing/_sidebar_shared_with_me.html:14
+#: yaffo/templates/sharing/_sidebar_shared_with_me.html:15
 msgid "View"
 msgstr "看法"
 
-#: yaffo/templates/sharing/_sidebar_shared_with_me.html:20
+#: yaffo/templates/sharing/_sidebar_shared_with_me.html:21
 msgid "No shares from other devices"
 msgstr "没有来自其他设备的共享"
 
@@ -2936,7 +2963,7 @@ msgid "Showing %(shown)s of %(total)s shared file"
 msgid_plural "Showing %(shown)s of %(total)s shared files"
 msgstr[0] "显示中 %(shown)s 的 %(total)s 共享文件"
 
-#: yaffo/templates/sharing/files.html:61 yaffo/templates/sharing/files.html:155
+#: yaffo/templates/sharing/files.html:61 yaffo/templates/sharing/files.html:160
 msgid "No shared files found"
 msgstr "未找到共享文件"
 
@@ -2948,19 +2975,23 @@ msgstr "无法连接到该设备"
 msgid "Try again"
 msgstr "再试一次"
 
-#: yaffo/templates/sharing/files.html:76
-msgid "Set a download directory on this device's Sharing page before pulling files."
-msgstr "在提取文件之前，在此设备的共享页面上设置下载目录。"
-
-#: yaffo/templates/sharing/files.html:88
+#: yaffo/templates/sharing/files.html:82
 msgid "Pull selected"
 msgstr "拉选"
 
-#: yaffo/templates/sharing/files.html:132
+#: yaffo/templates/sharing/files.html:89
+msgid "Choose a download directory before you can pull files from this device."
+msgstr "选择一个下载目录，然后才能从此设备中提取文件。"
+
+#: yaffo/templates/sharing/files.html:91
+msgid "Set download directory"
+msgstr "设置下载目录"
+
+#: yaffo/templates/sharing/files.html:137
 msgid "Size"
 msgstr "尺寸"
 
-#: yaffo/templates/sharing/files.html:156
+#: yaffo/templates/sharing/files.html:161
 msgid "Try adjusting your filters, or check what this device shares with you."
 msgstr "尝试调整您的过滤器，或检查该设备与您共享的内容。"
 

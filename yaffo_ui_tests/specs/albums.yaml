@@ -1,0 +1,166 @@
+feature: albums
+description: User can curate albums — create, browse, bulk-add photos by filter, edit membership and cover, reorder, rename, share with a paired device, and delete
+
+tags:
+  - core
+
+preconditions:
+  - Application is running
+  - For the sharing scenario only - a second Yaffo instance is running and paired with this one (see the sharing spec: two instances, distinct data dirs and ports, no hub, paired over the LAN)
+
+context:
+  - tag: albums-base-template
+    path: templates/albums/_base.html
+    description: Albums layout — sidebar list of albums with count/Shared chips, and the "New album" modal
+  - tag: albums-overview-template
+    path: templates/albums/index.html
+    description: Albums overview — cover tiles, one per album (the landing screen)
+  - tag: albums-album-template
+    path: templates/albums/album.html
+    description: One album — header actions (Add photos, Edit, Edit details, Share, Delete), the members grid, edit mode, and the Share modal
+  - tag: albums-add-template
+    path: templates/albums/add.html
+    description: Bulk-add screen — home's filter sidebar plus a selectable results grid
+  - tag: albums-routes
+    path: routes/albums.py
+    description: Routes for album CRUD, membership, cover, reorder, bulk add, and album sharing
+  - tag: albums-js
+    path: static/albums/albums.js
+    description: Client wiring — new/edit/share modals, delete confirm, edit mode, drag-to-reorder
+  - tag: selection-bar
+    path: static/components/selection_bar.js
+    description: The shared selection component used by the album's edit mode and the add screen
+
+data:
+  - The sandbox seeds one album, "Seeded Album", with 4 photos
+  - A paired device only exists once the two instances have paired (the sharing spec drives that); with no paired device the Share modal correctly says there are none
+  - SELECTION IS IN THE URL, not client state - select=all plus exclude_id, or one select_id per ticked card. Paginating carries it, and reloading preserves it
+  - '"Select all N" means the whole scope, NOT the visible page - every member of the album, or every photo matching the current filters'
+  - Edit mode is a URL parameter (?edit=1), so it survives a reload
+  - The add screen hides photos already in the album, and stays on the add screen after adding (the added photos leave the grid)
+  - Removing a photo from an album never deletes the photo; deleting an album never deletes its photos
+
+scenarios:
+  - name: albums_overview_lists_albums_as_tiles
+    goal: The albums tab opens on an overview of album tiles with covers and counts
+    priority: high
+    steps:
+      - Navigate to the Albums tab
+    verify:
+      - The overview shows a tile per album with its cover image, name, and photo count
+      - The sidebar lists the albums, each with a count chip
+      - Clicking a tile opens that album
+
+  - name: albums_create_and_delete
+    goal: The user can create an album and delete it again
+    priority: high
+    steps:
+      - Click "New album" and give it a name and description
+      - Open the created album
+      - Click Delete and confirm
+    verify:
+      - The new album appears in the sidebar and opens on its own page
+      - A new album is empty and points at "Add photos"
+      - Deleting asks for confirmation first, and says the photos themselves are not deleted
+      - After confirming, the album is gone from the sidebar and the overview
+      - The photos that were in the library are still there
+
+  - name: albums_edit_details
+    goal: The user can rename an album and change its description
+    priority: medium
+    steps:
+      - Open an album and click "Edit details"
+      - Change the name and description, then save
+    verify:
+      - The modal opens with the album's current name and description
+      - After saving, the album page and the sidebar show the new name
+      - A name that clashes with another album is rejected
+    cleanup:
+      - Restore the album's original name
+
+  - name: albums_add_photos_by_selection
+    goal: The user can add specific photos to an album from the add screen
+    priority: high
+    steps:
+      - Open an album and click "Add photos"
+      - Tick two photos in the results grid
+      - Click "Add photos"
+    verify:
+      - The add screen shows the home filter sidebar beside a selectable grid
+      - The selection count reflects the ticked photos
+      - After adding, the screen STAYS on the add screen and confirms how many were added
+      - The added photos are no longer offered (they are members now)
+      - The album's count in the header goes up by two
+    cleanup:
+      - Remove the added photos from the album
+
+  - name: albums_bulk_add_by_filter
+    goal: The user can add every photo matching a filter, not just the ones on screen
+    priority: high
+    steps:
+      - Open an album and click "Add photos"
+      - Apply a filter in the sidebar (for example a year)
+      - Click the "Select all N matching" chip
+      - Click "Add photos"
+    verify:
+      - The chip names the number of photos MATCHING THE FILTER, not the number on the page
+      - The count changes when the filter changes
+      - After adding, every matching photo is in the album (including ones that were on later pages)
+    cleanup:
+      - Remove the added photos from the album
+
+  - name: albums_selection_survives_pagination
+    goal: A selection is kept while paging through the add screen
+    priority: medium
+    steps:
+      - Open an album's add screen with a page size small enough to paginate
+      - Press "Select all N matching"
+      - Untick one photo
+      - Go to the next page and back
+    verify:
+      - The selection is carried in the URL (select=all with an exclude_id)
+      - The unticked photo is still unticked after paging
+      - The selection count stays "everything except the unticked one", not "what is on this page"
+
+  - name: albums_edit_mode_remove_and_cover
+    goal: The user can remove photos from an album and pin a cover, in edit mode
+    priority: high
+    steps:
+      - Open an album with members and click Edit
+      - Tick one photo and click "Set as cover"
+      - Enter edit mode again, tick a different photo and click "Remove from album", confirming
+    verify:
+      - Edit mode shows checkboxes on the cards and a selection bar
+      - '"Set as cover" is only available when exactly one photo is selected'
+      - The covered photo is marked on the grid and becomes the tile image on the overview
+      - Removing asks for confirmation and states the photos are not deleted
+      - The removed photo leaves the album but is still in the library
+    cleanup:
+      - Add the removed photo back to the album
+
+  - name: albums_reorder_members
+    goal: The user can drag a photo to reorder the album
+    priority: low
+    steps:
+      - Open an album with several members and click Edit
+      - Drag the last photo to the first position
+      - Reload the page
+    verify:
+      - The dragged photo moves in the grid immediately
+      - The new order is still there after the reload
+    cleanup:
+      - Restore the original order
+
+  - name: albums_share_with_a_device
+    goal: The user can share an album with a paired device, and un-share it again
+    priority: high
+    steps:
+      - With the two instances paired, open an album and click Share
+      - Check the paired device and confirm
+      - Open Share again and uncheck it, then confirm
+    verify:
+      - The Share modal lists the trusted paired devices, checked exactly when the album is already shared with them
+      - After sharing, the album header names the device it is shared with, and the sidebar and overview show a "Shared" chip
+      - The share also appears under "Shared With Others" on the Sharing tab, named by the album
+      - The peer can then browse the album's photos (the sharing spec covers what it sees)
+      - Unchecking the device REVOKES the share - the chips and the header entry go away, and the peer loses access on its next request

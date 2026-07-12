@@ -341,6 +341,31 @@ def seed_custom_pages(db) -> None:
     print(f"  Seeded custom page: About (id={about.id})")
 
 
+def seed_albums(db) -> None:
+    """One album with a few members, so album screens have something to show without a
+    test having to build one first. Runs AFTER indexing — an album needs media items."""
+    from yaffo.db.models import MediaItem
+    from yaffo.db.repositories import album_repository
+
+    if album_repository.list_albums(db.session):
+        return
+    photo_ids = [
+        row[0]
+        for row in db.session.query(MediaItem.id)
+        .order_by(MediaItem.date_taken.desc())
+        .limit(4)
+        .all()
+    ]
+    if not photo_ids:
+        print("  Skipped album seed: no indexed media items")
+        return
+    album = album_repository.create_album(
+        db.session, "Seeded Album", description="Seeded for UI tests"
+    )
+    album_repository.add_items(db.session, album.id, photo_ids)
+    print(f"  Seeded album: Seeded Album ({len(photo_ids)} photos)")
+
+
 def seed_database() -> int:
     """Index test photos and seed the database. Returns count of photos indexed."""
     data_dir = os.environ.get("YAFFO_DATA_DIR")
@@ -450,6 +475,10 @@ def seed_database() -> int:
 
 
         db.session.commit()
+
+        # After indexing: an album needs media items to hold.
+        seed_albums(db)
+
         total = db.session.query(MediaItem).count()
         print(f"  Total media items in database: {total}")
 

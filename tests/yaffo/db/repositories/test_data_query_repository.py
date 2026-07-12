@@ -11,7 +11,7 @@ from sqlalchemy.dialects import sqlite as sqlite_dialect
 from sqlalchemy.orm import Session
 
 from yaffo.db import db
-from yaffo.db.models import Person, MediaItem
+from yaffo.db.models import Album, AlbumItem, Person, MediaItem
 from yaffo.db.repositories import data_query_repository as dq
 
 pytestmark = pytest.mark.unit
@@ -39,6 +39,12 @@ def session(tmp_path):
             MediaItem(id=11, year=2021, location_name="Acadia NP"),
             MediaItem(id=12, year=2023, location_name="Bar Harbor"),
             MediaItem(id=13, year=2023, location_name="Camden"),
+            # An album and its membership: a plain table pair, joined client-side on
+            # media_item_id the same way people/people_face/faces are.
+            Album(id=1, name="Maine 2023", description="Road trip"),
+            Album(id=2, name="Empty"),
+            AlbumItem(album_id=1, media_item_id=12, position=0),
+            AlbumItem(album_id=1, media_item_id=13, position=1),
         ])
         sess.commit()
         yield sess
@@ -51,14 +57,25 @@ class TestSchemaDerivation:
     def test_sources_are_the_exposed_tables(self):
         assert tuple(dq.FIELDS_BY_SOURCE) == (
             "media_items", "tags", "faces", "people", "people_face", "classification_labels", "media_labels",
+            "albums", "album_items",
         )
 
     def test_sources_include_the_virtual_sources(self):
         # Tables first, then the non-table (media-dir / folder-tree) sources.
         assert dq.SOURCES == (
             "media_items", "tags", "faces", "people", "people_face", "classification_labels", "media_labels",
+            "albums", "album_items",
             "media_dirs", "folders",
         )
+
+    def test_album_sources_expose_their_columns(self):
+        assert {"id", "name", "description", "cover_media_item_id"} <= set(
+            dq.FIELDS_BY_SOURCE["albums"]
+        )
+        # album_items is the join table: its link columns are what a widget stitches on.
+        assert set(dq.FIELDS_BY_SOURCE["album_items"]) == {
+            "album_id", "media_item_id", "position", "added_at",
+        }
 
     def test_photos_exposes_primitive_columns(self):
         fields = dq.FIELDS_BY_SOURCE["media_items"]
@@ -161,9 +178,10 @@ class TestValidateQuery:
             assert dq.validate_query({"source": source, "limit": 5}) == []
 
     def test_unknown_source_names_valid_sources(self):
-        errors = dq.validate_query({"source": "albums"})
+        # ("albums" used to be the example here — it is a real source now.)
+        errors = dq.validate_query({"source": "widgets"})
         assert len(errors) == 1
-        assert "unknown source 'albums'" in errors[0]
+        assert "unknown source 'widgets'" in errors[0]
         assert "media_items" in errors[0]
 
     def test_missing_source(self):
@@ -383,6 +401,30 @@ class TestResolve:
     def test_invalid_query_raises(self, session):
         with pytest.raises(ValueError):
             dq.resolve_query(session, {"source": "media_items", "colour": {"eq": "red"}})
+
+    def test_albums_resolve_like_any_other_table(self, session):
+        rows = dq.resolve_query(session, {"source": "albums", "name": {"eq": "Maine 2023"}})
+        assert [row["id"] for row in rows] == [1]
+        assert rows[0]["description"] == "Road trip"
+
+    def test_album_membership_is_queried_and_joined_on_media_item_id(self, session):
+        """A widget asks for an album, its membership, and the photos — then stitches
+        them in JS on media_item_id. There are no joins in the query layer, so this is
+        the shape the page builder actually emits."""
+        result = dq.resolve_data_query(session, {
+            "album": {"source": "albums", "name": {"eq": "Maine 2023"}},
+            "members": {"source": "album_items", "album_id": {"eq": 1}},
+            "photos": {"source": "media_items", "id": {"in": [12, 13]}},
+        })
+
+        assert [row["id"] for row in result["album"]] == [1]
+        assert {row["media_item_id"] for row in result["members"]} == {12, 13}
+        assert [row["position"] for row in sorted(result["members"], key=lambda r: r["position"])] == [0, 1]
+        assert {row["id"] for row in result["photos"]} == {12, 13}
+
+    def test_an_empty_album_has_no_membership_rows(self, session):
+        rows = dq.resolve_query(session, {"source": "album_items", "album_id": {"eq": 2}})
+        assert rows == []
 
 
 class TestParameterization:

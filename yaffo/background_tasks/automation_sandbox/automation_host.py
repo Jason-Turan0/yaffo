@@ -190,6 +190,60 @@ HOST_API: tuple[HostFunction, ...] = (
     ),
     HostFunction(
         description=(
+            "Create an album, or return the id of the existing album with that name. "
+            "IDEMPOTENT on the name, so a repeating automation can call it on every run "
+            "without failing or making duplicates. Read albums back with data_query "
+            '(sources "albums" and "album_items"), never with a host call.'
+        ),
+        example='album_id = create_album("Beach 2024", "Everything from the coast")',
+        impl=actions.create_album,
+        summarize=actions.summarize_create_album,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Rename an album / change its description. Membership is untouched. The "
+            "name must stay unique."
+        ),
+        example='update_album(album_id, "Beach 2024", "Coast trip")',
+        impl=actions.update_album,
+        summarize=actions.summarize_update_album,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Add photos to an album in one batched write. `media_item_ids` is a list of "
+            "ids; photos already in the album are skipped, so re-running is safe. Pass "
+            "the whole set in one call (see <batching>)."
+        ),
+        example='add_to_album(album_id, ctx["media_item_ids"])',
+        impl=actions.add_to_album,
+        summarize=actions.summarize_add_to_album,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Remove photos from an album in one batched write. Only the membership goes "
+            "-- the photos and their files are NOT deleted. Pass the whole set in one "
+            "call (see <batching>)."
+        ),
+        example='remove_from_album(album_id, [r["id"] for r in stale])',
+        impl=actions.remove_from_album,
+        summarize=actions.summarize_remove_from_album,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Delete an album and its contents list. The photos themselves are NOT "
+            "deleted -- use delete_media_items for that."
+        ),
+        example="delete_album(album_id)",
+        impl=actions.delete_album,
+        summarize=actions.summarize_delete_album,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
             "How similar each face in the photo is to a known person, by face "
             "embeddings -- use it to decide whether to assign_faces."
         ),

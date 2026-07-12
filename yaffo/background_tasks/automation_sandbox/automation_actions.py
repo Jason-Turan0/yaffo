@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from yaffo.background_tasks.events import emit_event
 from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.db.models import EVENT_MEDIA_MODIFIED, Tag
-from yaffo.db.repositories import person_repository, media_repository
+from yaffo.db.repositories import album_repository, person_repository, media_repository
 from yaffo.db.repositories.media_dir_repository import media_dir_by_id
 from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_media_rows
 from yaffo.db.repositories.data_query_repository import resolve_query
@@ -222,3 +222,74 @@ def delete_media_items(session: Session, media_item_ids: list[int]) -> None:
 def summarize_delete_media_items(args: list[Any], session: Session) -> str:
     media_item_ids = args[0] if args and isinstance(args[0], list) else []
     return f"Delete {len(media_item_ids)} photo(s)"
+
+
+# ---- albums ------------------------------------------------------------------
+# Reading albums needs no host function: `albums` and `album_items` are data_query
+# sources like any other table. These are the mutating half.
+#
+# create_album is IDEMPOTENT ON THE NAME, which the others are not: an automation
+# runs again and again (nightly, or on every import), and the obvious script —
+# "make sure album X exists, then put today's photos in it" — must not fail or
+# multiply albums on its second run. Adding a photo that is already a member, or
+# removing one that is not, is likewise a no-op rather than an error.
+
+def create_album(
+    session: Session, name: str, description: Optional[str] = None
+) -> Annotated[int, "The album's id — new, or the existing album with that name."]:
+    """Create an album, or return the existing one with that name. Idempotent, so a
+    repeating automation can call it on every run."""
+    existing = album_repository.get_album_by_name(session, (name or "").strip())
+    if existing is not None:
+        return existing.id
+    return album_repository.create_album(session, name, description).id
+
+
+def summarize_create_album(args: list[Any], session: Session) -> str:
+    name = args[0] if args else ""
+    return f"Create album '{name}'"
+
+
+def update_album(
+    session: Session, album_id: int, name: str, description: Optional[str] = None
+) -> None:
+    """Rename an album / change its description. Membership is not touched."""
+    album_repository.update_album(session, album_id, name, description)
+
+
+def summarize_update_album(args: list[Any], session: Session) -> str:
+    name = args[1] if len(args) > 1 else ""
+    return f"Rename album to '{name}'"
+
+
+def add_to_album(session: Session, album_id: int, media_item_ids: list[int]) -> None:
+    """Add photos to an album in one batched write. Photos already in it are skipped."""
+    album_repository.add_items(session, album_id, list(media_item_ids or []))
+
+
+def summarize_add_to_album(args: list[Any], session: Session) -> str:
+    media_item_ids = args[1] if len(args) > 1 and isinstance(args[1], list) else []
+    return f"Add {len(media_item_ids)} photo(s) to an album"
+
+
+def remove_from_album(session: Session, album_id: int, media_item_ids: list[int]) -> None:
+    """Remove photos from an album in one batched write. The photos themselves are NOT
+    deleted — only their membership."""
+    album_repository.remove_items(session, album_id, list(media_item_ids or []))
+
+
+def summarize_remove_from_album(args: list[Any], session: Session) -> str:
+    media_item_ids = args[1] if len(args) > 1 and isinstance(args[1], list) else []
+    return f"Remove {len(media_item_ids)} photo(s) from an album"
+
+
+def delete_album(session: Session, album_id: int) -> None:
+    """Delete an album and its membership rows. The photos themselves are NOT deleted,
+    and neither are their files."""
+    album_repository.delete_album(session, album_id)
+
+
+def summarize_delete_album(args: list[Any], session: Session) -> str:
+    album_id = args[0] if args else ""
+    album = album_repository.get_album(session, album_id) if isinstance(album_id, int) else None
+    return f"Delete album '{album.name}'" if album else "Delete an album"

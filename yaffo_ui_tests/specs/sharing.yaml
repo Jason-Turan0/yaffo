@@ -1,0 +1,182 @@
+feature: sharing
+description: Two Yaffo instances pair over the LAN, grant each other shares (media directory, folder, album), browse a peer's photos, pull them as background transfers, and revoke — with no hub reachable
+
+tags:
+  - core
+
+preconditions:
+  - Two Yaffo instances are running on this machine, each with its own YAFFO_DATA_DIR, web port, and YAFFO_P2P_PORT, and both with YAFFO_P2P_ENABLED=1
+  - Both instances have YAFFO_HUB_URL pointing at an unreachable address, so there is NO hub - the devices find each other over the LAN (mDNS) instead
+  - Instance A ("this device") has the seeded photo library and the seeded album
+  - Instance B ("the peer") has a download directory configured, so it can pull
+
+context:
+  - tag: sharing-settings-template
+    path: templates/sharing/settings.html
+    description: Sharing settings — the device status strip (device ID, hub connection), pairing, and the download directory
+  - tag: sharing-devices-section-template
+    path: templates/sharing/_devices_section.html
+    description: The status strip and the two pairing forms (show a code / enter a code)
+  - tag: sharing-sidebar-template
+    path: templates/sharing/_sidebar.html
+    description: Sharing sidebar — paired devices with presence chips, "Shared With Others" (revocable), "Shared With Me"
+  - tag: sharing-device-template
+    path: templates/sharing/_device_panel.html
+    description: One paired device — rename, and the "Add Shared" form (media directory / folder / album)
+  - tag: sharing-files-template
+    path: templates/sharing/files.html
+    description: The remote gallery — a peer's shared files, selectable, pulled as a background transfer
+  - tag: sharing-transfers-template
+    path: templates/sharing/_transfers_panel.html
+    description: The transfers panel — batch progress, cancel, continue, delete
+  - tag: sharing-routes
+    path: routes/sharing.py
+    description: Routes for pairing, devices, grants, the remote gallery, previews, and transfers
+
+data:
+  - NO HUB IS REACHABLE. That is deliberate - the devices pair and call over the LAN. Expect the hub chip on Sharing settings to read "Disconnected", and a paired peer's presence chip to read "Local" (NOT "Online" - that would mean the hub)
+  - Pairing is the trust anchor - generate a code on one instance, paste it on the other. Both must be running at the same time; codes expire in ~5 minutes and burn on first use
+  - Grants are decided LOCALLY and one-directionally - A decides what A shares. Pairing alone grants access to nothing
+  - A grant scope is a media directory, a folder inside one, or an ALBUM (a set of photos that can span folders)
+  - Transfers are BACKGROUND batches, not blocking downloads. Pulling enqueues a batch; assert on the transfers panel reaching completion, with a generous timeout
+  - Pulling needs a download directory on the PULLING device; without one the remote gallery shows a notice instead of a selection
+  - Revoking any grant lives in ONE place - the sidebar's "Shared With Others" on the granting device. Revocation takes effect on the peer's NEXT request; it cannot claw back files already pulled
+  - An album grant serves the album's membership AS OF EACH REQUEST - removing a photo from the album drops it from the peer's next listing
+
+scenarios:
+  - name: sharing_settings_shows_this_device
+    goal: The sharing settings page shows this device's identity and its hub state
+    priority: high
+    steps:
+      - On instance A, navigate to the Sharing tab
+    verify:
+      - The status strip shows this device's ID with a Copy action
+      - The hub chip reads "Disconnected" (no hub is reachable in this environment)
+      - Both pairing forms are offered - "Show a pairing code" and "Enter a pairing code"
+
+  - name: sharing_pair_two_devices_over_the_lan
+    goal: Two instances pair with each other with no hub, and each shows the other as a local device
+    priority: high
+    steps:
+      - On instance A, click "Generate pairing code" and copy the code
+      - On instance B, paste the code into "Enter a pairing code" and submit
+    verify:
+      - A pairing code is shown as text and as a QR, with an expiry countdown
+      - Pairing succeeds and a confirmation names the other device
+      - Each instance's sidebar now lists the other device, with a "Local" presence chip (found over the LAN, not the hub)
+      - Opening the paired device shows its device ID and pairing time
+
+  - name: sharing_grant_a_media_directory_and_browse_it
+    goal: A shares a media directory with B, and B can browse it
+    priority: high
+    steps:
+      - On instance A, open the paired device and share a Media Directory with it
+      - On instance B, open the share from the sidebar's "Shared With Me"
+    verify:
+      - On A, the share appears under "Shared With Others", named by the media directory
+      - On B, the share appears under "Shared With Me" and opens a gallery of A's photos
+      - The gallery shows previews of A's photos and the filter sidebar built from A's facets (years, devices, people)
+      - Filtering the remote gallery narrows the results
+
+  - name: sharing_pull_selected_photos
+    goal: B selects photos from A's shared gallery and pulls them
+    priority: high
+    steps:
+      - On instance B, open A's shared gallery
+      - Tick two photos and click "Pull selected"
+    verify:
+      - Selecting shows a live count; the selection is carried in the URL
+      - Pulling enqueues a background batch and confirms how many files were queued
+      - The transfers panel shows the batch, and it reaches "completed" (give it a generous timeout)
+      - The pulled files land under B's download directory, in a folder named for the peer
+
+  - name: sharing_pull_everything_matching
+    goal: B pulls every photo matching a filter, minus the ones it unticks
+    priority: high
+    steps:
+      - On instance B, open A's shared gallery and apply a filter
+      - Press the "Select all N matching" chip
+      - Untick one photo
+      - Click "Pull selected"
+    verify:
+      - The chip names the number of files MATCHING THE FILTER, not the number on the page
+      - The count drops by one when a photo is unticked ("everything, except this one")
+      - The batch pulls exactly the matching files minus the unticked one - including files on pages that were never rendered
+
+  - name: sharing_gallery_without_a_download_directory
+    goal: Without a download directory there is nothing to select, and the gallery says so
+    priority: medium
+    steps:
+      - On instance B, clear the download directory on the Sharing settings page
+      - Open A's shared gallery
+    verify:
+      - The gallery shows a notice asking for a download directory, with a button leading to the setting
+      - The photo cards show NO checkboxes and no "Pull selected" action (selection that cannot lead anywhere is not offered)
+    cleanup:
+      - Restore B's download directory
+
+  - name: sharing_grant_a_folder
+    goal: A shares one folder, and B sees only that folder's photos
+    priority: medium
+    steps:
+      - On instance A, share a Folder (a subfolder of a media directory) with B
+      - On instance B, open that share
+    verify:
+      - The folder browser only allows folders inside a configured media directory
+      - On A, the share is listed under "Shared With Others", named by the folder path
+      - On B, the gallery shows the folder's photos and NOTHING outside it
+    cleanup:
+      - Revoke the folder share on A
+
+  - name: sharing_grant_an_album
+    goal: A shares an album, B browses it, and changing the album's membership changes what B sees
+    priority: high
+    steps:
+      - On instance A, share the seeded album with B (from the device page or the album's own Share action)
+      - On instance B, open the album share and note the photos
+      - On instance A, remove one photo from the album
+      - On instance B, reload the album share
+    verify:
+      - On A, the share is listed under "Shared With Others" named by the ALBUM (not "Unknown share"), and the album shows a "Shared" chip
+      - On B, the share appears under "Shared With Me" and lists exactly the album's photos
+      - An album's photos can span folders, and are all served
+      - After A removes a photo from the album, B's NEXT listing no longer includes it — membership is resolved per request
+      - Photos outside the album are NOT reachable, even ones in the same folder as a member
+    cleanup:
+      - Restore the album's membership and revoke the album share
+
+  - name: sharing_revoke_a_grant
+    goal: Revoking a share stops the peer's next request
+    priority: high
+    steps:
+      - With a grant in place, on instance A revoke it from the sidebar's "Shared With Others"
+      - On instance B, try to open that share again
+    verify:
+      - Revoking asks for confirmation, and the share leaves "Shared With Others"
+      - B's next attempt to browse it is refused - the share is gone from "Shared With Me", or opening it shows an error
+      - Files B already pulled are still on B (revocation stops future access; it cannot claw back)
+
+  - name: sharing_revoke_a_device
+    goal: Revoking a device cuts it off entirely, and it can then be deleted
+    priority: medium
+    steps:
+      - On instance A, open the paired device and click Revoke, confirming
+      - On instance A, click Delete and confirm
+    verify:
+      - Revoking warns that files already copied stay on the other device
+      - The revoked device shows a "Revoked" chip and offers no sharing until paired again
+      - On instance B, the device's row flips to revoked as well (a signed courtesy notice), or B's next call to A is refused
+      - A revoked device can then be deleted, and leaves the sidebar
+    cleanup:
+      - Re-pair the two instances if later scenarios need them paired
+
+  - name: sharing_duplicate_grant_is_not_created_twice
+    goal: Sharing the same scope twice does not stack duplicate shares
+    priority: low
+    steps:
+      - On instance A, share a media directory with B
+      - Share the SAME media directory with B again
+    verify:
+      - '"Shared With Others" lists the share once, not twice'
+    cleanup:
+      - Revoke the share
