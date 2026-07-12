@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-05 12:44-0500\n"
+"POT-Creation-Date: 2026-07-12 00:29-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -18,11 +18,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:99
+#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:67
 msgid "Miles"
 msgstr "Millas"
 
-#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:99
+#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:67
 msgid "Kilometers"
 msgstr "Kilómetros"
 
@@ -374,12 +374,34 @@ msgstr ""
 "Escanee sus fotos indexadas en busca de duplicados según un cronograma; "
 "los resultados aparecen en la herramienta Eliminar duplicados."
 
+#: yaffo/routes/base.py:81
+msgid "Folder name is required"
+msgstr "El nombre de la carpeta es obligatorio."
+
+#: yaffo/routes/base.py:83
+msgid "Folder name cannot contain path separators"
+msgstr "El nombre de la carpeta no puede contener separadores de ruta"
+
+#: yaffo/routes/base.py:86
+msgid "Choose an existing parent folder"
+msgstr "Elija una carpeta principal existente"
+
+#: yaffo/routes/base.py:89
+msgid "A file or folder with that name already exists"
+msgstr "Ya existe un archivo o carpeta con ese nombre"
+
+#: yaffo/routes/base.py:93
+#, python-format
+msgid "Could not create folder: %(reason)s"
+msgstr "No se pudo crear la carpeta: %(reason)s"
+
 #: yaffo/routes/faces.py:76
 #, python-format
 msgid "Cluster %(number)s"
 msgstr "Clúster %(number)s"
 
-#: yaffo/routes/faces.py:101
+#: yaffo/routes/faces.py:101 yaffo/templates/sharing/_device_content.html:14
+#: yaffo/templates/sharing/_device_panel.html:18
 msgid "Unknown"
 msgstr "Desconocido"
 
@@ -419,17 +441,17 @@ msgstr "Página de filtro desconocida"
 msgid "Items must be a list"
 msgstr "Los elementos deben ser una lista."
 
-#: yaffo/routes/filter_panel.py:82 yaffo/templates/people/list.html:40
+#: yaffo/routes/filter_panel.py:33 yaffo/templates/people/list.html:40
 #: yaffo/templates/people/list.html:92
 msgid "Male"
 msgstr "Masculino"
 
-#: yaffo/routes/filter_panel.py:83 yaffo/templates/people/list.html:41
+#: yaffo/routes/filter_panel.py:34 yaffo/templates/people/list.html:41
 #: yaffo/templates/people/list.html:93
 msgid "Female"
 msgstr "Femenino"
 
-#: yaffo/routes/home.py:243
+#: yaffo/routes/home.py:96 yaffo/routes/sharing.py:649
 msgid "The tag_name parameter is required"
 msgstr "El parámetro tag_name es obligatorio"
 
@@ -498,12 +520,12 @@ msgid "Untitled Page"
 msgstr "Página sin título"
 
 #: yaffo/routes/pages.py:242 yaffo/routes/themes_page.py:239
-#: yaffo/routes/utilities/automations.py:652
+#: yaffo/routes/utilities/automations.py:649
 msgid "Message is required."
 msgstr "Se requiere mensaje."
 
 #: yaffo/routes/pages.py:246 yaffo/routes/themes_page.py:243
-#: yaffo/routes/utilities/automations.py:656
+#: yaffo/routes/utilities/automations.py:653
 #, python-format
 msgid ""
 "No API key configured. Add your %(provider)s API key in Settings → AI "
@@ -513,7 +535,7 @@ msgstr ""
 "Configuración → Generación de IA."
 
 #: yaffo/routes/pages.py:260 yaffo/routes/themes_page.py:235
-#: yaffo/routes/utilities/automations.py:649
+#: yaffo/routes/utilities/automations.py:646
 msgid "A generation is already running."
 msgstr "Ya corre una generación."
 
@@ -589,7 +611,7 @@ msgstr "Claude Soneto 4.6 - equilibrado"
 msgid "Claude Haiku 4.5 — fastest"
 msgstr "Claude Haiku 4.5: el más rápido"
 
-#: yaffo/routes/settings.py:201 yaffo/routes/utilities/automations.py:461
+#: yaffo/routes/settings.py:201 yaffo/routes/utilities/automations.py:459
 msgid "Unsupported distance unit"
 msgstr "Unidad de distancia no compatible"
 
@@ -648,6 +670,214 @@ msgstr "El nuevo directorio es el mismo que el directorio actual."
 #: yaffo/routes/settings.py:502
 msgid "Could not move thumbnail files"
 msgstr "No se pudieron mover archivos en miniatura"
+
+#: yaffo/routes/sharing.py:149
+msgid "Choose a download directory for shared files."
+msgstr "Elija un directorio de descarga para archivos compartidos."
+
+#: yaffo/routes/sharing.py:152
+msgid "Choose a directory, not a file."
+msgstr "Elija un directorio, no un archivo."
+
+#: yaffo/routes/sharing.py:156
+#, python-format
+msgid "Could not create the download directory: %(reason)s"
+msgstr "No se pudo crear el directorio de descarga: %(reason)s"
+
+#: yaffo/routes/sharing.py:168 yaffo/routes/sharing.py:172
+msgid "Unknown share"
+msgstr "Compartir desconocido"
+
+#: yaffo/routes/sharing.py:170 yaffo/templates/index.html:69
+#: yaffo/templates/sharing/_device_panel.html:60
+#: yaffo/templates/sharing/_device_panel.html:76
+#: yaffo/templates/sharing/files.html:118
+msgid "Folder"
+msgstr "Carpeta"
+
+#: yaffo/routes/sharing.py:185
+msgid "Shared folder"
+msgstr "Carpeta compartida"
+
+#: yaffo/routes/sharing.py:195 yaffo/routes/sharing.py:390
+#: yaffo/routes/sharing.py:407 yaffo/routes/sharing.py:429
+#: yaffo/routes/sharing.py:569 yaffo/routes/sharing.py:691
+#: yaffo/routes/sharing.py:806 yaffo/routes/sharing.py:819
+#: yaffo/routes/sharing.py:833
+msgid "Device sharing is not running."
+msgstr "El uso compartido de dispositivos no se está ejecutando."
+
+#: yaffo/routes/sharing.py:224
+msgid "Some shared folders could not be loaded."
+msgstr "No se pudieron cargar algunas carpetas compartidas."
+
+#: yaffo/routes/sharing.py:284
+msgid "Choose a folder inside a configured media directory."
+msgstr "Elija una carpeta dentro de un directorio de medios configurado."
+
+#: yaffo/routes/sharing.py:374
+msgid "Share grant is no longer active."
+msgstr "La concesión de acciones ya no está activa."
+
+#: yaffo/routes/sharing.py:376
+msgid "Share grant revoked."
+msgstr "Concesión de acciones revocada."
+
+#: yaffo/routes/sharing.py:410
+msgid "Paste a pairing code first."
+msgstr "Primero pegue un código de emparejamiento."
+
+#: yaffo/routes/sharing.py:414
+#, python-format
+msgid "Pairing failed: %(reason)s"
+msgstr "El emparejamiento falló: %(reason)s"
+
+#: yaffo/routes/sharing.py:416
+#, python-format
+msgid "Could not reach the other device: %(reason)s"
+msgstr "No se pudo acceder al otro dispositivo: %(reason)s"
+
+#: yaffo/routes/sharing.py:418
+msgid "Pairing timed out — is the other device online?"
+msgstr "Se agotó el tiempo de emparejamiento: ¿está el otro dispositivo en línea?"
+
+#: yaffo/routes/sharing.py:421
+#, python-format
+msgid "Paired with %(device)s."
+msgstr "Emparejado con %(device)s."
+
+#: yaffo/routes/sharing.py:438
+msgid "Device revoked. The other device was notified."
+msgstr "Dispositivo revocado. El otro dispositivo fue notificado."
+
+#: yaffo/routes/sharing.py:440
+msgid ""
+"Device revoked. The other device is offline and will find out when it "
+"next tries to connect."
+msgstr ""
+"Dispositivo revocado. El otro dispositivo está desconectado y lo "
+"descubrirá la próxima vez que intente conectarse."
+
+#: yaffo/routes/sharing.py:463
+msgid "Revoke this device before deleting it."
+msgstr "Revoca este dispositivo antes de eliminarlo."
+
+#: yaffo/routes/sharing.py:464
+msgid "Device deleted."
+msgstr "Dispositivo eliminado."
+
+#: yaffo/routes/sharing.py:473
+msgid "Device name cannot be empty."
+msgstr "El nombre del dispositivo no puede estar vacío."
+
+#: yaffo/routes/sharing.py:475 yaffo/routes/sharing.py:497
+#: yaffo/routes/sharing.py:694
+#, python-format
+msgid "%(device)s is not a known device."
+msgstr "%(device)s no es un dispositivo conocido."
+
+#: yaffo/routes/sharing.py:476
+msgid "Device renamed."
+msgstr "Dispositivo renombrado."
+
+#: yaffo/routes/sharing.py:488
+msgid "Download directory saved."
+msgstr "Directorio de descarga guardado."
+
+#: yaffo/routes/sharing.py:499
+msgid "Pair this device again before sharing with it."
+msgstr "Empareje este dispositivo nuevamente antes de compartirlo."
+
+#: yaffo/routes/sharing.py:506
+msgid "Choose a configured media directory."
+msgstr "Elija un directorio de medios configurado."
+
+#: yaffo/routes/sharing.py:516
+msgid "Choose a folder to share."
+msgstr "Elija una carpeta para compartir."
+
+#: yaffo/routes/sharing.py:534
+msgid "Choose what to share."
+msgstr "Elige qué compartir."
+
+#: yaffo/routes/sharing.py:537
+msgid "Share grant added."
+msgstr "Se agregó la subvención de acciones."
+
+#: yaffo/routes/sharing.py:571
+msgid "This device is revoked. Pair it again before browsing shared files."
+msgstr ""
+"Este dispositivo está revocado. Vuelva a vincularlo antes de explorar "
+"archivos compartidos."
+
+#: yaffo/routes/sharing.py:584
+#, python-format
+msgid "Could not load shared files: %(reason)s"
+msgstr "No se pudieron cargar archivos compartidos: %(reason)s"
+
+#: yaffo/routes/sharing.py:586
+msgid "Loading shared files timed out — is the other device online?"
+msgstr ""
+"Se agotó el tiempo de carga de archivos compartidos: ¿está el otro "
+"dispositivo en línea?"
+
+#: yaffo/routes/sharing.py:696
+msgid "Pair this device again before pulling files from it."
+msgstr "Empareje este dispositivo nuevamente antes de extraer archivos."
+
+#: yaffo/routes/sharing.py:699
+msgid "Choose a download directory for shared files first."
+msgstr "Primero elija un directorio de descarga para archivos compartidos."
+
+#: yaffo/routes/sharing.py:759
+msgid "Could not start the download: the shared scope is missing."
+msgstr "No se pudo iniciar la descarga: falta el alcance compartido."
+
+#: yaffo/routes/sharing.py:771
+msgid "Select the files to pull first."
+msgstr "Seleccione los archivos para extraer primero."
+
+#: yaffo/routes/sharing.py:787
+#, python-format
+msgid "Could not start the download: %(reason)s"
+msgstr "No se pudo iniciar la descarga: %(reason)s"
+
+#: yaffo/routes/sharing.py:789
+msgid "Queuing the transfer timed out — is device sharing running?"
+msgstr ""
+"Se agotó el tiempo de espera para la transferencia en cola: ¿se está "
+"ejecutando el uso compartido de dispositivos?"
+
+#: yaffo/routes/sharing.py:792
+msgid "Download queued — everything selected in this view will be pulled."
+msgstr "Descarga en cola: se extraerá todo lo seleccionado en esta vista."
+
+#: yaffo/routes/sharing.py:795
+#, python-format
+msgid "Pull of %(count)s file queued."
+msgid_plural "Pull of %(count)s files queued."
+msgstr[0] "tirar de %(count)s archivo en cola."
+msgstr[1] "tirar de %(count)s archivos en cola."
+
+#: yaffo/routes/sharing.py:811
+msgid "Transfer cancelled."
+msgstr "Transferencia cancelada."
+
+#: yaffo/routes/sharing.py:811 yaffo/routes/sharing.py:825
+msgid "Transfer is no longer active."
+msgstr "La transferencia ya no está activa."
+
+#: yaffo/routes/sharing.py:825
+msgid "Continuing over the relay."
+msgstr "Continuando por el relevo."
+
+#: yaffo/routes/sharing.py:839
+msgid "Transfer deleted."
+msgstr "Transferencia eliminada."
+
+#: yaffo/routes/sharing.py:841
+msgid "Cancel or finish this transfer before deleting it."
+msgstr "Cancele o finalice esta transferencia antes de eliminarla."
 
 #: yaffo/routes/themes_page.py:137
 #, python-format
@@ -717,108 +947,111 @@ msgid "Running"
 msgstr "Correr"
 
 #: yaffo/routes/utilities/automations.py:159
+#: yaffo/templates/sharing/_transfers_panel.html:28
 msgid "Completed"
 msgstr "Terminado"
 
 #: yaffo/routes/utilities/automations.py:160
+#: yaffo/templates/sharing/_transfers_panel.html:31
 msgid "Cancelled"
 msgstr "Cancelado"
 
 #: yaffo/routes/utilities/automations.py:161
+#: yaffo/templates/sharing/_transfers_panel.html:30
 msgid "Failed"
 msgstr "Fallido"
 
-#: yaffo/routes/utilities/automations.py:220
+#: yaffo/routes/utilities/automations.py:230
 msgid "Media imported"
 msgstr "Medios importados"
 
-#: yaffo/routes/utilities/automations.py:221
+#: yaffo/routes/utilities/automations.py:231
 msgid "Media indexed"
 msgstr "Medios indexados"
 
-#: yaffo/routes/utilities/automations.py:222
+#: yaffo/routes/utilities/automations.py:232
 msgid "Duplicates found"
 msgstr "Duplicados encontrados"
 
-#: yaffo/routes/utilities/automations.py:223
+#: yaffo/routes/utilities/automations.py:233
 msgid "Media modified"
 msgstr "Medios modificados"
 
-#: yaffo/routes/utilities/automations.py:224
+#: yaffo/routes/utilities/automations.py:234
 msgid "Media labeled"
 msgstr "Medios etiquetados"
 
-#: yaffo/routes/utilities/automations.py:348
-#: yaffo/routes/utilities/automations.py:407
+#: yaffo/routes/utilities/automations.py:346
+#: yaffo/routes/utilities/automations.py:405
 msgid "Automation name is required"
 msgstr "El nombre de la automatización es obligatorio."
 
-#: yaffo/routes/utilities/automations.py:404
-#: yaffo/routes/utilities/automations.py:647
+#: yaffo/routes/utilities/automations.py:402
+#: yaffo/routes/utilities/automations.py:644
 msgid "System automations cannot be edited."
 msgstr "Las automatizaciones del sistema no se pueden editar."
 
-#: yaffo/routes/utilities/automations.py:426
+#: yaffo/routes/utilities/automations.py:424
 msgid "This automation has no configurable settings."
 msgstr "Esta automatización no tiene ajustes configurables."
 
-#: yaffo/routes/utilities/automations.py:442
-#: yaffo/routes/utilities/automations.py:472
+#: yaffo/routes/utilities/automations.py:440
+#: yaffo/routes/utilities/automations.py:470
 #, python-format
 msgid "%(label)s must be a number."
 msgstr "%(label)s debe ser un número."
 
-#: yaffo/routes/utilities/automations.py:450
-#: yaffo/routes/utilities/automations.py:480
+#: yaffo/routes/utilities/automations.py:448
+#: yaffo/routes/utilities/automations.py:478
 #, python-format
 msgid "%(label)s must be between %(min)s and %(max)s."
 msgstr "%(label)s debe estar entre %(min)s y %(max)s."
 
-#: yaffo/routes/utilities/automations.py:491
+#: yaffo/routes/utilities/automations.py:489
 #, python-format
 msgid "%(label)s is required."
 msgstr "Se requiere %(label)s."
 
-#: yaffo/routes/utilities/automations.py:500
+#: yaffo/routes/utilities/automations.py:498
 #, python-format
 msgid "%(label)s has an unsupported value."
 msgstr "%(label)s tiene un valor no compatible."
 
-#: yaffo/routes/utilities/automations.py:518
+#: yaffo/routes/utilities/automations.py:516
 msgid "System automations cannot be deleted"
 msgstr "Las automatizaciones del sistema no se pueden eliminar"
 
-#: yaffo/routes/utilities/automations.py:566
+#: yaffo/routes/utilities/automations.py:563
 msgid "No indexed photos found under that path."
 msgstr "No se encontraron fotos indexadas en esa ruta."
 
-#: yaffo/routes/utilities/automations.py:574
+#: yaffo/routes/utilities/automations.py:571
 msgid "Nothing to run yet — publish the automation's code first."
 msgstr ""
 "Aún no hay nada que ejecutar: publique primero el código de la "
 "automatización."
 
-#: yaffo/routes/utilities/automations.py:614
+#: yaffo/routes/utilities/automations.py:611
 msgid "Enter a valid 5-field cron expression (e.g. */30 * * * *)."
 msgstr "Ingrese una expresión cron válida de 5 campos (por ejemplo, */30 * * * *)."
 
-#: yaffo/routes/utilities/automations.py:624
+#: yaffo/routes/utilities/automations.py:621
 msgid "Choose an event type."
 msgstr "Elija un tipo de evento."
 
-#: yaffo/routes/utilities/automations.py:637
+#: yaffo/routes/utilities/automations.py:634
 msgid "Unknown trigger action."
 msgstr "Acción de activación desconocida."
 
-#: yaffo/routes/utilities/automations.py:692
+#: yaffo/routes/utilities/automations.py:689
 msgid "No code to test yet."
 msgstr "Aún no hay código para probar."
 
-#: yaffo/routes/utilities/automations.py:696
+#: yaffo/routes/utilities/automations.py:693
 msgid "No path selected."
 msgstr "No se ha seleccionado ninguna ruta."
 
-#: yaffo/routes/utilities/automations.py:707
+#: yaffo/routes/utilities/automations.py:704
 msgid "No draft to publish."
 msgstr "No hay borrador para publicar."
 
@@ -983,7 +1216,7 @@ msgstr "Borrar filtros"
 msgid "Type to search…"
 msgstr "Escribe para buscar…"
 
-#: yaffo/templates/base.html:4 yaffo/templates/faces/index.html:227
+#: yaffo/templates/base.html:4 yaffo/templates/faces/index.html:226
 #: yaffo/templates/pages/widget_frame.html:4
 msgid "No results found"
 msgstr "No se encontraron resultados"
@@ -992,75 +1225,85 @@ msgstr "No se encontraron resultados"
 msgid "Select…"
 msgstr "Seleccionar…"
 
-#: yaffo/templates/base.html:97
+#: yaffo/templates/base.html:99
 msgid "Home"
 msgstr "Hogar"
 
-#: yaffo/templates/base.html:100 yaffo/templates/people/list.html:27
+#: yaffo/templates/albums/_base.html:30 yaffo/templates/albums/index.html:7
+#: yaffo/templates/base.html:102
+msgid "Albums"
+msgstr "Álbumes"
+
+#: yaffo/templates/base.html:104 yaffo/templates/people/list.html:27
 msgid "Faces"
 msgstr "caras"
 
-#: yaffo/templates/base.html:103 yaffo/templates/faces/index.html:79
+#: yaffo/templates/base.html:107 yaffo/templates/faces/index.html:79
 #: yaffo/templates/filters/_people.html:4 yaffo/templates/people/list.html:17
 msgid "People"
 msgstr "Gente"
 
-#: yaffo/templates/base.html:105 yaffo/templates/filters/_locations.html:4
+#: yaffo/templates/base.html:109 yaffo/templates/filters/_locations.html:4
 msgid "Locations"
 msgstr "Ubicaciones"
 
-#: yaffo/templates/base.html:107 yaffo/templates/utilities/_base.html:36
+#: yaffo/templates/base.html:111 yaffo/templates/utilities/_base.html:36
 msgid "Utilities"
 msgstr "Utilidades"
 
-#: yaffo/templates/base.html:109 yaffo/templates/themes_page/index.html:15
+#: yaffo/templates/base.html:113 yaffo/templates/sharing/_sidebar.html:8
+msgid "Sharing"
+msgstr "Intercambio"
+
+#: yaffo/templates/base.html:115 yaffo/templates/themes_page/index.html:15
 msgid "Themes"
 msgstr "Temas"
 
-#: yaffo/templates/base.html:111 yaffo/templates/settings/index.html:13
+#: yaffo/templates/base.html:118 yaffo/templates/settings/index.html:13
 msgid "Settings"
 msgstr "Ajustes"
 
-#: yaffo/templates/base.html:116
+#: yaffo/templates/base.html:123
 msgid "Pages"
 msgstr "paginas"
 
-#: yaffo/templates/base.html:132
+#: yaffo/templates/base.html:139
 msgid "Edit page"
 msgstr "Editar página"
 
-#: yaffo/templates/base.html:139
+#: yaffo/templates/base.html:146
 msgid "New page"
 msgstr "Nueva pagina"
 
-#: yaffo/templates/base.html:152 yaffo/templates/components/info_modal.html:6
+#: yaffo/templates/base.html:159 yaffo/templates/components/info_modal.html:6
 #: yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
 msgid "Close"
 msgstr "Cerca"
 
-#: yaffo/templates/base.html:166
+#: yaffo/templates/base.html:173
 msgid "Select a folder"
 msgstr "Seleccione una carpeta"
 
-#: yaffo/templates/base.html:170
+#: yaffo/templates/base.html:177
 msgid "Up"
 msgstr "Arriba"
 
-#: yaffo/templates/base.html:178 yaffo/templates/base.html:194
+#: yaffo/templates/base.html:192 yaffo/templates/base.html:208
 #: yaffo/templates/components/chat_dialog.html:39
 #: yaffo/templates/components/modal.html:16
-#: yaffo/templates/fragments/job_status_fragment.html:28
+#: yaffo/templates/fragments/job_status_fragment.html:29
+#: yaffo/templates/sharing/_transfers_panel.html:95
 #: yaffo/templates/utilities/automations_triggers.html:65
 #: yaffo/templates/utilities/automations_triggers.html:85
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: yaffo/templates/base.html:179
+#: yaffo/templates/base.html:193
 msgid "Select this folder"
 msgstr "Seleccione esta carpeta"
 
-#: yaffo/templates/base.html:188 yaffo/templates/base.html:195
+#: yaffo/templates/base.html:202 yaffo/templates/base.html:209
 msgid "Confirm"
 msgstr "Confirmar"
 
@@ -1079,7 +1322,8 @@ msgid_plural "Showing %(shown)s of %(total)s photos"
 msgstr[0] "Mostrando %(shown)s de la foto %(total)s"
 msgstr[1] "Mostrando fotos %(shown)s de %(total)s"
 
-#: yaffo/templates/index.html:28 yaffo/templates/index.html:142
+#: yaffo/templates/albums/add.html:89 yaffo/templates/index.html:28
+#: yaffo/templates/index.html:121
 msgid "No photos found"
 msgstr "No se encontraron fotos"
 
@@ -1087,6 +1331,7 @@ msgstr "No se encontraron fotos"
 msgid "Toggle favorite"
 msgstr "Alternar favorito"
 
+#: yaffo/templates/albums/add.html:58 yaffo/templates/albums/album.html:82
 #: yaffo/templates/index.html:45
 #, python-format
 msgid "Video from %(date)s"
@@ -1096,13 +1341,15 @@ msgstr "Vídeo de %(date)s"
 msgid "Play video"
 msgstr "Reproducir vídeo"
 
+#: yaffo/templates/albums/add.html:62 yaffo/templates/albums/album.html:86
 #: yaffo/templates/index.html:60
 #, python-format
 msgid "Photo from %(date)s"
 msgstr "Foto de %(date)s"
 
+#: yaffo/templates/albums/_base.html:13 yaffo/templates/albums/album.html:10
 #: yaffo/templates/index.html:64 yaffo/templates/people/list.html:24
-#: yaffo/templates/people/list.html:85
+#: yaffo/templates/people/list.html:85 yaffo/templates/sharing/files.html:114
 #: yaffo/templates/themes_page/index.html:115
 #: yaffo/templates/themes_page/index.html:127
 #: yaffo/templates/utilities/_base.html:11
@@ -1110,20 +1357,19 @@ msgstr "Foto de %(date)s"
 msgid "Name"
 msgstr "Nombre"
 
-#: yaffo/templates/index.html:69
-msgid "Folder"
-msgstr "Carpeta"
-
-#: yaffo/templates/index.html:73
+#: yaffo/templates/index.html:73 yaffo/templates/sharing/files.html:122
 msgid "Taken"
 msgstr "Tomado"
 
-#: yaffo/templates/index.html:74 yaffo/templates/index.html:98
-#: yaffo/templates/people/faces.html:66
+#: yaffo/templates/albums/add.html:66 yaffo/templates/index.html:74
+#: yaffo/templates/index.html:98 yaffo/templates/people/faces.html:66
+#: yaffo/templates/sharing/files.html:123
+#: yaffo/templates/sharing/files.html:138
 msgid "Unknown date"
 msgstr "fecha desconocida"
 
 #: yaffo/templates/index.html:78 yaffo/templates/media/view.html:74
+#: yaffo/templates/sharing/files.html:127
 msgid "Location"
 msgstr "Ubicación"
 
@@ -1135,9 +1381,247 @@ msgstr "Coordenadas"
 msgid "Labels"
 msgstr "Etiquetas"
 
-#: yaffo/templates/index.html:143
+#: yaffo/templates/index.html:122
 msgid "Try adjusting your filters or check back later."
 msgstr "Intente ajustar sus filtros o vuelva a consultar más tarde."
+
+#: yaffo/templates/albums/_base.html:15
+msgid "e.g. Summer 2024, Grandma’s 80th"
+msgstr "p.ej. Verano de 2024, 80 años de la abuela"
+
+#: yaffo/templates/albums/_base.html:18 yaffo/templates/albums/album.html:14
+#: yaffo/templates/utilities/automations.html:12
+msgid "Description"
+msgstr "Descripción"
+
+#: yaffo/templates/albums/_base.html:20
+msgid "Optional — what is this album for?"
+msgstr "Opcional: ¿para qué sirve este álbum?"
+
+#: yaffo/templates/albums/_base.html:21
+msgid "Starts empty — add photos to it once it exists."
+msgstr "Comienza vacío: agrégale fotos una vez que exista."
+
+#: yaffo/templates/albums/_base.html:39 yaffo/templates/albums/index.html:35
+msgid "Shared"
+msgstr "Compartido"
+
+#: yaffo/templates/albums/_base.html:46 yaffo/templates/albums/index.html:43
+msgid "No albums yet"
+msgstr "Aún no hay álbumes"
+
+#: yaffo/templates/albums/_base.html:50
+msgid "New album"
+msgstr "Nuevo album"
+
+#: yaffo/templates/albums/_base.html:63
+msgid "New Album"
+msgstr "Nuevo álbum"
+
+#: yaffo/templates/albums/_base.html:66
+#: yaffo/templates/themes_page/index.html:122
+#: yaffo/templates/utilities/_base.html:85
+msgid "Create"
+msgstr "Crear"
+
+#: yaffo/templates/albums/add.html:7
+#, python-format
+msgid "Add photos to %(album)s - Yaffo"
+msgstr "Añadir fotos a %(album)s -Yaffo"
+
+#: yaffo/templates/albums/add.html:23 yaffo/templates/albums/album.html:62
+msgid "Done"
+msgstr "Hecho"
+
+#: yaffo/templates/albums/add.html:25
+#, python-format
+msgid "Add photos to %(album)s"
+msgstr "Añadir fotos a %(album)s"
+
+#: yaffo/templates/albums/add.html:29
+#, python-format
+msgid "%(count)s in this album"
+msgstr "%(count)s en este álbum"
+
+#: yaffo/templates/albums/add.html:30
+msgid ""
+"Filter the library, then pick the photos to add. Photos already in the "
+"album are not shown."
+msgstr ""
+"Filtra la biblioteca y luego elige las fotos que deseas agregar. Las "
+"fotos que ya están en el álbum no se muestran."
+
+#: yaffo/templates/albums/add.html:35
+#, python-format
+msgid "%(count)s photo added."
+msgid_plural "%(count)s photos added."
+msgstr[0] "%(count)s foto agregada."
+msgstr[1] "%(count)s fotos agregadas."
+
+#: yaffo/templates/albums/add.html:43 yaffo/templates/sharing/files.html:84
+#, python-format
+msgid "Select all %(count)s matching"
+msgstr "Seleccionar todo %(count)s pareo"
+
+#: yaffo/templates/albums/add.html:46 yaffo/templates/albums/album.html:24
+#: yaffo/templates/albums/album.html:97
+msgid "Add photos"
+msgstr "Agregar fotos"
+
+#: yaffo/templates/albums/add.html:86
+msgid "Nothing left to add"
+msgstr "No queda nada que agregar"
+
+#: yaffo/templates/albums/add.html:87
+msgid ""
+"Every photo matching these filters is already in this album. Adjust the "
+"filters to find more."
+msgstr ""
+"Todas las fotos que coinciden con estos filtros ya están en este álbum. "
+"Ajusta los filtros para encontrar más."
+
+#: yaffo/templates/albums/add.html:90 yaffo/templates/people/faces.html:102
+msgid "Try adjusting your filters."
+msgstr "Intente ajustar sus filtros."
+
+#: yaffo/templates/albums/album.html:6
+#, python-format
+msgid "%(album)s - Albums - Yaffo"
+msgstr "%(album)s - Álbumes - Yaffo"
+
+#: yaffo/templates/albums/album.html:16
+msgid "What is this album for?"
+msgstr "¿Para qué es este álbum?"
+
+#: yaffo/templates/albums/album.html:21
+#, python-format
+msgid ""
+"Delete %(album)s? The album and its contents list go away — the photos "
+"themselves are not deleted."
+msgstr ""
+"Borrar %(album)s? El álbum y su lista de contenidos desaparecen; las "
+"fotos en sí no se eliminan."
+
+#: yaffo/templates/albums/album.html:27 yaffo/templates/people/list.html:61
+#: yaffo/templates/utilities/automations.html:92
+#: yaffo/templates/utilities/automations_edit.html:15
+#: yaffo/templates/utilities/automations_triggers.html:28
+msgid "Edit"
+msgstr "Editar"
+
+#: yaffo/templates/albums/album.html:30
+#: yaffo/templates/utilities/automations.html:101
+msgid "Edit details"
+msgstr "Editar detalles"
+
+#: yaffo/templates/albums/album.html:33
+msgid "Delete album?"
+msgstr "¿Eliminar álbum?"
+
+#: yaffo/templates/albums/album.html:35 yaffo/templates/albums/album.html:36
+#: yaffo/templates/fragments/job_status_fragment.html:29
+#: yaffo/templates/people/list.html:65
+#: yaffo/templates/sharing/_device_content.html:35
+#: yaffo/templates/sharing/_device_content.html:37
+#: yaffo/templates/sharing/_transfers_panel.html:105
+#: yaffo/templates/sharing/_transfers_panel.html:109
+#: yaffo/templates/themes_page/index.html:66
+#: yaffo/templates/utilities/automations.html:104
+#: yaffo/templates/utilities/automations_triggers.html:37
+#: yaffo/templates/utilities/remove_duplicates_form.html:49
+msgid "Delete"
+msgstr "Borrar"
+
+#: yaffo/templates/albums/album.html:41 yaffo/templates/albums/index.html:34
+#, python-format
+msgid "%(count)s photos"
+msgstr "%(count)s fotos"
+
+#: yaffo/templates/albums/album.html:53
+#, python-format
+msgid "Select all %(count)s photos"
+msgstr "Seleccionar todo %(count)s fotos"
+
+#: yaffo/templates/albums/album.html:55
+msgid "Set as cover"
+msgstr "Establecer como portada"
+
+#: yaffo/templates/albums/album.html:58
+msgid "Remove from album?"
+msgstr "¿Quitar del álbum?"
+
+#: yaffo/templates/albums/album.html:59
+msgid ""
+"Remove the selected photos from this album? The photos themselves are not"
+" deleted."
+msgstr ""
+"¿Eliminar las fotos seleccionadas de este álbum? Las fotos en sí no se "
+"eliminan."
+
+#: yaffo/templates/albums/album.html:60 yaffo/templates/settings/index.html:65
+msgid "Remove"
+msgstr "Eliminar"
+
+#: yaffo/templates/albums/album.html:60
+msgid "Remove from album"
+msgstr "Quitar del álbum"
+
+#: yaffo/templates/albums/album.html:77
+msgid "Cover"
+msgstr "Cubrir"
+
+#: yaffo/templates/albums/album.html:94
+msgid "This album is empty"
+msgstr "Este álbum está vacío."
+
+#: yaffo/templates/albums/album.html:95
+msgid "Nothing has been added to it yet."
+msgstr "Aún no se le ha agregado nada."
+
+#: yaffo/templates/albums/album.html:109
+msgid "Edit album"
+msgstr "Editar álbum"
+
+#: yaffo/templates/albums/album.html:111
+#: yaffo/templates/components/modal.html:17
+#: yaffo/templates/filters/_config_modal.html:23
+#: yaffo/templates/pages/design.html:38
+#: yaffo/templates/settings/_llm_api_key.html:19
+#: yaffo/templates/settings/index.html:29
+#: yaffo/templates/settings/index.html:47
+#: yaffo/templates/sharing/_download_directory_panel.html:18
+#: yaffo/templates/themes_page/index.html:134
+#: yaffo/templates/utilities/automations.html:126
+#: yaffo/templates/utilities/automations.html:131
+msgid "Save"
+msgstr "Ahorrar"
+
+#: yaffo/templates/albums/index.html:4
+msgid "Albums - Yaffo"
+msgstr "Álbumes - Yaffo"
+
+#: yaffo/templates/albums/index.html:8
+msgid "Curated collections you can browse and share with your other devices."
+msgstr ""
+"Colecciones seleccionadas que puedes explorar y compartir con tus otros "
+"dispositivos."
+
+#: yaffo/templates/albums/index.html:17
+msgid "Empty album"
+msgstr "álbum vacío"
+
+#: yaffo/templates/albums/index.html:24 yaffo/templates/albums/index.html:28
+#, python-format
+msgid "Cover of %(album)s"
+msgstr "portada de %(album)s"
+
+#: yaffo/templates/albums/index.html:44
+msgid ""
+"An album is a collection you curate by hand — create one, then add photos"
+" to it."
+msgstr ""
+"Un álbum es una colección que seleccionas a mano: crea uno y luego "
+"agrégale fotos."
 
 #: yaffo/templates/components/chat_dialog.html:28
 msgid "Generating…"
@@ -1170,6 +1654,8 @@ msgid "Directory"
 msgstr "Directorio"
 
 #: yaffo/templates/components/file_browser.html:14
+#: yaffo/templates/sharing/_device_panel.html:86
+#: yaffo/templates/sharing/_download_directory_panel.html:16
 msgid "Browse…"
 msgstr "Navegar…"
 
@@ -1186,13 +1672,13 @@ msgstr "Artículos por página:"
 
 #: yaffo/templates/components/htmx_pagination.html:52
 #: yaffo/templates/components/pagination.html:53
-#: yaffo/templates/faces/index.html:214
+#: yaffo/templates/faces/index.html:213
 msgid "First"
 msgstr "Primero"
 
 #: yaffo/templates/components/htmx_pagination.html:63
 #: yaffo/templates/components/pagination.html:59
-#: yaffo/templates/faces/index.html:215
+#: yaffo/templates/faces/index.html:214
 msgid "Previous"
 msgstr "Anterior"
 
@@ -1204,13 +1690,13 @@ msgstr "Página %(page)s de %(total)s"
 
 #: yaffo/templates/components/htmx_pagination.html:80
 #: yaffo/templates/components/pagination.html:71
-#: yaffo/templates/faces/index.html:217
+#: yaffo/templates/faces/index.html:216
 msgid "Next"
 msgstr "Próximo"
 
 #: yaffo/templates/components/htmx_pagination.html:91
 #: yaffo/templates/components/pagination.html:77
-#: yaffo/templates/faces/index.html:218
+#: yaffo/templates/faces/index.html:217
 msgid "Last"
 msgstr "Último"
 
@@ -1218,17 +1704,16 @@ msgstr "Último"
 msgid "Processing in Progress"
 msgstr "Procesamiento en curso"
 
-#: yaffo/templates/components/modal.html:17
-#: yaffo/templates/filters/_config_modal.html:23
-#: yaffo/templates/pages/design.html:38
-#: yaffo/templates/settings/_llm_api_key.html:19
-#: yaffo/templates/settings/index.html:29
-#: yaffo/templates/settings/index.html:47
-#: yaffo/templates/themes_page/index.html:134
-#: yaffo/templates/utilities/automations.html:130
-#: yaffo/templates/utilities/automations.html:135
-msgid "Save"
-msgstr "Ahorrar"
+#: yaffo/templates/components/selection_bar.html:23
+#, python-format
+msgid "%(count)s selected"
+msgstr "%(count)s seleccionado"
+
+#: yaffo/templates/components/selection_bar.html:29
+#: yaffo/templates/components/selection_bar.html:30
+#: yaffo/templates/faces/index.html:191 yaffo/templates/people/faces.html:53
+msgid "Clear selection"
+msgstr "Borrar selección"
 
 #: yaffo/templates/faces/index.html:4
 msgid "Faces - Yaffo"
@@ -1457,49 +1942,50 @@ msgid_plural "%(formatted_count)s faces"
 msgstr[0] "cara %(formatted_count)s"
 msgstr[1] "%(formatted_count)s caras"
 
-#: yaffo/templates/faces/index.html:191 yaffo/templates/people/faces.html:51
-msgid "Select all"
-msgstr "Seleccionar todo"
+#: yaffo/templates/faces/index.html:190
+#, python-format
+msgid "Select all %(count)s faces"
+msgstr "Seleccionar todo %(count)s caras"
 
-#: yaffo/templates/faces/index.html:194
+#: yaffo/templates/faces/index.html:193
 msgid "Shuffle"
 msgstr "Barajar"
 
-#: yaffo/templates/faces/index.html:198
+#: yaffo/templates/faces/index.html:197
 #, python-format
 msgid "Assign to %(person)s"
 msgstr "Asignar a %(person)s"
 
-#: yaffo/templates/faces/index.html:200
+#: yaffo/templates/faces/index.html:199
 msgid "Skip cluster"
 msgstr "Saltar grupo"
 
-#: yaffo/templates/faces/index.html:209
+#: yaffo/templates/faces/index.html:208
 #, python-format
 msgid "Showing <span class=\"sample-range\">0</span> of %(total)s face"
 msgid_plural "Showing <span class=\"sample-range\">0</span> of %(total)s faces"
 msgstr[0] "Mostrando la cara <span class=\"sample-range\">0</span> de %(total)s"
 msgstr[1] "Mostrando <span class=\"sample-range\">0</span> de caras %(total)s"
 
-#: yaffo/templates/faces/index.html:216
+#: yaffo/templates/faces/index.html:215
 msgid "Page 1 of 1"
 msgstr "Página 1 de 1"
 
-#: yaffo/templates/faces/index.html:228
+#: yaffo/templates/faces/index.html:227
 msgid "Double-check the applied filters or decrease the similarity threshold."
 msgstr ""
 "Vuelva a verificar los filtros aplicados o disminuya el umbral de "
 "similitud."
 
-#: yaffo/templates/faces/index.html:233
+#: yaffo/templates/faces/index.html:232
 msgid "All Faces Assigned!"
 msgstr "¡Todas las caras asignadas!"
 
-#: yaffo/templates/faces/index.html:234
+#: yaffo/templates/faces/index.html:233
 msgid "There isn't anything for you to do here."
 msgstr "No hay nada que puedas hacer aquí."
 
-#: yaffo/templates/faces/index.html:240
+#: yaffo/templates/faces/index.html:239
 msgid "Help"
 msgstr "Ayuda"
 
@@ -1683,23 +2169,13 @@ msgstr "Año"
 msgid "All Years"
 msgstr "Todos los años"
 
-#: yaffo/templates/fragments/job_status_fragment.html:12
-#, python-format
-msgid "Started: %(started)s"
-msgstr "Iniciado: %(started)s"
+#: yaffo/templates/fragments/job_status_fragment.html:13
+msgid "Started:"
+msgstr "Comenzó:"
 
-#: yaffo/templates/fragments/job_status_fragment.html:18
+#: yaffo/templates/fragments/job_status_fragment.html:19
 msgid "Show Results"
 msgstr "Mostrar resultados"
-
-#: yaffo/templates/fragments/job_status_fragment.html:28
-#: yaffo/templates/people/list.html:65
-#: yaffo/templates/themes_page/index.html:66
-#: yaffo/templates/utilities/automations.html:108
-#: yaffo/templates/utilities/automations_triggers.html:37
-#: yaffo/templates/utilities/remove_duplicates_form.html:49
-msgid "Delete"
-msgstr "Borrar"
 
 #: yaffo/templates/locations/list.html:3
 msgid "Locations - Yaffo"
@@ -1966,9 +2442,9 @@ msgstr "(filtrado)"
 msgid "No faces found"
 msgstr "No se encontraron caras"
 
-#: yaffo/templates/people/faces.html:53
-msgid "Clear selection"
-msgstr "Borrar selección"
+#: yaffo/templates/people/faces.html:51
+msgid "Select all"
+msgstr "Seleccionar todo"
 
 #: yaffo/templates/people/faces.html:69
 msgid "Similarity:"
@@ -1977,10 +2453,6 @@ msgstr "Semejanza:"
 #: yaffo/templates/people/faces.html:76
 msgid "N/A"
 msgstr "N / A"
-
-#: yaffo/templates/people/faces.html:102
-msgid "Try adjusting your filters."
-msgstr "Intente ajustar sus filtros."
 
 #: yaffo/templates/people/faces.html:104
 #, python-format
@@ -2007,13 +2479,6 @@ msgstr "Fotos"
 #: yaffo/templates/people/list.html:37
 msgid "Unnamed"
 msgstr "Sin nombre"
-
-#: yaffo/templates/people/list.html:61
-#: yaffo/templates/utilities/automations.html:96
-#: yaffo/templates/utilities/automations_edit.html:15
-#: yaffo/templates/utilities/automations_triggers.html:28
-msgid "Edit"
-msgstr "Editar"
 
 #: yaffo/templates/people/list.html:76
 msgid "No people yet"
@@ -2219,10 +2684,6 @@ msgstr ""
 "Añade directorios donde se almacenan tus fotos. Yaffo escanea estos "
 "directorios en busca de fotos y videos para indexar."
 
-#: yaffo/templates/settings/index.html:65
-msgid "Remove"
-msgstr "Eliminar"
-
 #: yaffo/templates/settings/index.html:76
 msgid "Enter directory path (for example, /Volumes/Photos or C:\\Photos)"
 msgstr "Ingrese la ruta del directorio (por ejemplo, /Volúmenes/Fotos o C:\\Fotos)"
@@ -2387,6 +2848,474 @@ msgstr "Modelo de reconocimiento facial:"
 msgid "Downloaded model cache used for face recognition."
 msgstr "Caché de modelo descargado utilizado para el reconocimiento facial."
 
+#: yaffo/templates/sharing/_device_content.html:6
+#: yaffo/templates/sharing/_sidebar.html:27
+msgid "Revoked"
+msgstr "Revocado"
+
+#: yaffo/templates/sharing/_device_content.html:8
+#: yaffo/templates/sharing/_sidebar.html:29
+msgid "Local"
+msgstr "Local"
+
+#: yaffo/templates/sharing/_device_content.html:10
+#: yaffo/templates/sharing/_sidebar.html:31
+msgid "Online"
+msgstr "En línea"
+
+#: yaffo/templates/sharing/_device_content.html:12
+#: yaffo/templates/sharing/_sidebar.html:33
+msgid "Offline"
+msgstr "Desconectado"
+
+#: yaffo/templates/sharing/_device_content.html:20
+#, python-format
+msgid ""
+"Revoke %(name)s? It will lose access to everything shared with it. Files "
+"it already copied stay on it."
+msgstr ""
+"Revocar %(name)s? Perderá el acceso a todo lo que se comparte con él. Los"
+" archivos que ya copió permanecen en él."
+
+#: yaffo/templates/sharing/_device_content.html:23
+msgid "Revoke device?"
+msgstr "¿Revocar dispositivo?"
+
+#: yaffo/templates/sharing/_device_content.html:25
+#: yaffo/templates/sharing/_device_content.html:28
+#: yaffo/templates/sharing/_sidebar.html:54
+#: yaffo/templates/sharing/_sidebar.html:58
+msgid "Revoke"
+msgstr "Revocar"
+
+#: yaffo/templates/sharing/_device_content.html:30
+#, python-format
+msgid ""
+"Delete %(name)s from this device? Pair it again later if you want to "
+"restore it."
+msgstr ""
+"Borrar %(name)s desde este dispositivo? Vuelva a vincularlo más tarde si "
+"desea restaurarlo."
+
+#: yaffo/templates/sharing/_device_content.html:33
+msgid "Delete device?"
+msgstr "¿Eliminar dispositivo?"
+
+#: yaffo/templates/sharing/_device_content.html:41
+msgid "A device paired with this one"
+msgstr "Un dispositivo emparejado con este"
+
+#: yaffo/templates/sharing/_device_panel.html:5
+msgid "This device no longer has access. Pair again to restore it."
+msgstr ""
+"Este dispositivo ya no tiene acceso. Vuelva a emparejarlo para "
+"restaurarlo."
+
+#: yaffo/templates/sharing/_device_panel.html:10
+msgid "Device ID:"
+msgstr "ID del dispositivo:"
+
+#: yaffo/templates/sharing/_device_panel.html:14
+msgid "Paired:"
+msgstr "Emparejado:"
+
+#: yaffo/templates/sharing/_device_panel.html:22
+msgid "Last seen:"
+msgstr "Visto por última vez:"
+
+#: yaffo/templates/sharing/_device_panel.html:26
+msgid "Never"
+msgstr "Nunca"
+
+#: yaffo/templates/sharing/_device_panel.html:34
+msgid "Device Name"
+msgstr "Nombre del dispositivo"
+
+#: yaffo/templates/sharing/_device_panel.html:39
+msgid "Device name"
+msgstr "Nombre del dispositivo"
+
+#: yaffo/templates/sharing/_device_panel.html:40
+#: yaffo/templates/themes_page/index.html:63
+msgid "Rename"
+msgstr "Rebautizar"
+
+#: yaffo/templates/sharing/_device_panel.html:48
+msgid "Add Shared"
+msgstr "Agregar compartido"
+
+#: yaffo/templates/sharing/_device_panel.html:55
+msgid "Share type"
+msgstr "Tipo de acción"
+
+#: yaffo/templates/sharing/_device_panel.html:59
+#: yaffo/templates/sharing/_device_panel.html:65
+msgid "Media Directory"
+msgstr "Directorio de medios"
+
+#: yaffo/templates/sharing/_device_panel.html:82
+msgid "Choose a folder inside a media directory"
+msgstr "Elija una carpeta dentro de un directorio de medios"
+
+#: yaffo/templates/sharing/_device_panel.html:92
+msgid "Share"
+msgstr "Compartir"
+
+#: yaffo/templates/sharing/_device_panel.html:97
+msgid "Add a media directory in Settings before sharing folders with this device."
+msgstr ""
+"Agregue un directorio multimedia en Configuración antes de compartir "
+"carpetas con este dispositivo."
+
+#: yaffo/templates/sharing/_device_panel.html:100
+msgid "This device is revoked. Pair it again before sharing folders with it."
+msgstr ""
+"Este dispositivo está revocado. Vuelva a vincularlo antes de compartir "
+"carpetas con él."
+
+#: yaffo/templates/sharing/_devices_section.html:8
+msgid ""
+"Device sharing is not running in this process. Start Yaffo with the full "
+"application (python -m yaffo) to enable it."
+msgstr ""
+"El uso compartido de dispositivos no se ejecuta en este proceso. Inicie "
+"Yaffo con la aplicación completa (python -m yaffo) para habilitarlo."
+
+#: yaffo/templates/sharing/_devices_section.html:12
+msgid "Shown so you can visually confirm it from another device during pairing."
+msgstr ""
+"Se muestra para que puedas confirmarlo visualmente desde otro dispositivo"
+" durante el emparejamiento."
+
+#: yaffo/templates/sharing/_devices_section.html:15
+msgid "This device"
+msgstr "este dispositivo"
+
+#: yaffo/templates/sharing/_devices_section.html:19
+#: yaffo/templates/sharing/_pairing_code.html:7
+msgid "Copied!"
+msgstr "¡Copiado!"
+
+#: yaffo/templates/sharing/_devices_section.html:19
+msgid "Copy"
+msgstr "Copiar"
+
+#: yaffo/templates/sharing/_devices_section.html:24
+msgid "Sharing hub"
+msgstr "Centro para compartir"
+
+#: yaffo/templates/sharing/_devices_section.html:26
+msgid "Connected"
+msgstr "Conectado"
+
+#: yaffo/templates/sharing/_devices_section.html:28
+msgid "Disconnected"
+msgstr "Desconectado"
+
+#: yaffo/templates/sharing/_devices_section.html:35
+msgid "Pair a device"
+msgstr "Emparejar un dispositivo"
+
+#: yaffo/templates/sharing/_devices_section.html:38
+msgid ""
+"Pairing establishes trust between two of your devices, once. Generate a "
+"code here, then paste or scan it on the other device — both must be "
+"online at the same time."
+msgstr ""
+"El emparejamiento establece confianza entre dos de tus dispositivos, una "
+"vez. Genera un código aquí, luego pégalo o escanéalo en el otro "
+"dispositivo; ambos deben estar en línea al mismo tiempo."
+
+#: yaffo/templates/sharing/_devices_section.html:40
+msgid "Show a pairing code"
+msgstr "Mostrar un código de emparejamiento"
+
+#: yaffo/templates/sharing/_devices_section.html:44
+msgid ""
+"Generate a code here, then paste or scan it on the other device within 5 "
+"minutes."
+msgstr ""
+"Genere un código aquí y luego péguelo o escanéelo en el otro dispositivo "
+"en 5 minutos."
+
+#: yaffo/templates/sharing/_devices_section.html:47
+msgid "Generate pairing code"
+msgstr "Generar código de emparejamiento"
+
+#: yaffo/templates/sharing/_devices_section.html:52
+msgid "Enter a pairing code"
+msgstr "Introduce un código de emparejamiento"
+
+#: yaffo/templates/sharing/_devices_section.html:53
+msgid ""
+"Paste the code generated on your other device. Pairing can take up to a "
+"minute."
+msgstr ""
+"Pega el código generado en tu otro dispositivo. El emparejamiento puede "
+"tardar hasta un minuto."
+
+#: yaffo/templates/sharing/_devices_section.html:59
+msgid "Paste the pairing code here"
+msgstr "Pegue el código de emparejamiento aquí"
+
+#: yaffo/templates/sharing/_devices_section.html:60
+#: yaffo/templates/sharing/_pairing_code.html:5
+msgid "Pairing code"
+msgstr "código de emparejamiento"
+
+#: yaffo/templates/sharing/_devices_section.html:62
+msgid "Pair"
+msgstr "Par"
+
+#: yaffo/templates/sharing/_devices_section.html:63
+msgid "Connecting…"
+msgstr "Conectando…"
+
+#: yaffo/templates/sharing/_download_directory_panel.html:2
+msgid "Downloaded copies"
+msgstr "Copias descargadas"
+
+#: yaffo/templates/sharing/_download_directory_panel.html:6
+msgid "Download directory"
+msgstr "Descargar directorio"
+
+#: yaffo/templates/sharing/_download_directory_panel.html:13
+msgid "Choose a local folder for shared files"
+msgstr "Elija una carpeta local para archivos compartidos"
+
+#: yaffo/templates/sharing/_download_directory_panel.html:20
+msgid "Pulled files are copied under a device folder inside this directory."
+msgstr ""
+"Los archivos extraídos se copian en una carpeta de dispositivo dentro de "
+"este directorio."
+
+#: yaffo/templates/sharing/_pairing_code.html:2
+msgid "Pairing code QR"
+msgstr "Código de emparejamiento QR"
+
+#: yaffo/templates/sharing/_pairing_code.html:7
+msgid "Copy code"
+msgstr "Copiar código"
+
+#: yaffo/templates/sharing/_pairing_code.html:9
+msgid "Expires in"
+msgstr "Vence en"
+
+#: yaffo/templates/sharing/_pairing_code.html:11
+msgid "This code has expired — generate a new one."
+msgstr "Este código ha caducado: genera uno nuevo."
+
+#: yaffo/templates/sharing/_sidebar.html:13
+msgid "Settings & pairing"
+msgstr "Configuración y emparejamiento"
+
+#: yaffo/templates/sharing/_sidebar.html:18
+msgid "Devices"
+msgstr "Dispositivos"
+
+#: yaffo/templates/sharing/_sidebar.html:40
+msgid "No paired devices yet"
+msgstr "Aún no hay dispositivos emparejados"
+
+#: yaffo/templates/sharing/_sidebar.html:43
+msgid "Shared With Others"
+msgstr "Compartido con otros"
+
+#: yaffo/templates/sharing/_sidebar.html:52
+msgid "Revoke share?"
+msgstr "¿Revocar compartir?"
+
+#: yaffo/templates/sharing/_sidebar.html:53
+#, python-format
+msgid "Revoke this share from %(device)s?"
+msgstr "Revocar este recurso compartido de %(device)s?"
+
+#: yaffo/templates/sharing/_sidebar.html:55
+#, python-format
+msgid "Revoke share from %(device)s"
+msgstr "Revocar compartir de %(device)s"
+
+#: yaffo/templates/sharing/_sidebar.html:64
+msgid "No shares with other devices"
+msgstr "No compartir con otros dispositivos"
+
+#: yaffo/templates/sharing/_sidebar.html:71
+#: yaffo/templates/sharing/_sidebar_shared_with_me.html:2
+msgid "Shared With Me"
+msgstr "compartido conmigo"
+
+#: yaffo/templates/sharing/_sidebar.html:72
+msgid "Loading shared folders…"
+msgstr "Cargando carpetas compartidas…"
+
+#: yaffo/templates/sharing/_sidebar_shared_with_me.html:12
+#, python-format
+msgid "Open share from %(device)s"
+msgstr "Abrir compartir desde %(device)s"
+
+#: yaffo/templates/sharing/_sidebar_shared_with_me.html:14
+msgid "View"
+msgstr "Vista"
+
+#: yaffo/templates/sharing/_sidebar_shared_with_me.html:20
+msgid "No shares from other devices"
+msgstr "No compartir desde otros dispositivos"
+
+#: yaffo/templates/sharing/_transfers_panel.html:12
+msgid "Transfers"
+msgstr "Transferencias"
+
+#: yaffo/templates/sharing/_transfers_panel.html:18
+msgid "Local network"
+msgstr "red local"
+
+#: yaffo/templates/sharing/_transfers_panel.html:20
+msgid "Direct"
+msgstr "Directo"
+
+#: yaffo/templates/sharing/_transfers_panel.html:22
+msgid "Via relay (metered)"
+msgstr "Mediante relé (medido)"
+
+#: yaffo/templates/sharing/_transfers_panel.html:25
+msgid "Collecting file list…"
+msgstr "Recopilando lista de archivos..."
+
+#: yaffo/templates/sharing/_transfers_panel.html:26
+msgid "Transferring"
+msgstr "Transferencia"
+
+#: yaffo/templates/sharing/_transfers_panel.html:27
+msgid "Paused"
+msgstr "En pausa"
+
+#: yaffo/templates/sharing/_transfers_panel.html:29
+msgid "Completed with errors"
+msgstr "Completado con errores."
+
+#: yaffo/templates/sharing/_transfers_panel.html:38
+#, python-format
+msgid "%(done)s of %(total)s file"
+msgid_plural "%(done)s of %(total)s files"
+msgstr[0] "%(done)s de %(total)s archivo"
+msgstr[1] "%(done)s de %(total)s archivos"
+
+#: yaffo/templates/sharing/_transfers_panel.html:47
+#, python-format
+msgid "%(amount)s over the relay"
+msgstr "%(amount)s sobre el relevo"
+
+#: yaffo/templates/sharing/_transfers_panel.html:61
+msgid "Pulling:"
+msgstr "Tracción:"
+
+#: yaffo/templates/sharing/_transfers_panel.html:68
+#, python-format
+msgid ""
+"This transfer reached %(budget)s over the shared relay. Relay traffic is "
+"metered — if both devices can be on the same network, that is the free "
+"path."
+msgstr ""
+"Esta transferencia alcanzó %(budget)s a través del relé compartido. El "
+"tráfico de retransmisión se mide: si ambos dispositivos pueden estar en "
+"la misma red, esa es la ruta libre."
+
+#: yaffo/templates/sharing/_transfers_panel.html:74
+msgid "Continue anyway"
+msgstr "Continuar de todos modos"
+
+#: yaffo/templates/sharing/_transfers_panel.html:100
+msgid ""
+"Delete this transfer from the list? Files already downloaded stay on this"
+" device."
+msgstr ""
+"¿Eliminar esta transferencia de la lista? Los archivos ya descargados "
+"permanecen en este dispositivo."
+
+#: yaffo/templates/sharing/_transfers_panel.html:103
+msgid "Delete transfer?"
+msgstr "¿Eliminar transferencia?"
+
+#: yaffo/templates/sharing/device.html:2
+#, python-format
+msgid "%(device)s - Sharing - Yaffo"
+msgstr "%(device)s - Compartiendo - Yaffo"
+
+#: yaffo/templates/sharing/files.html:3
+#, python-format
+msgid "Shared by %(device)s - Sharing - Yaffo"
+msgstr "Compartido por %(device)s - Compartiendo - Yaffo"
+
+#: yaffo/templates/sharing/files.html:47
+msgid "Back to device"
+msgstr "Volver al dispositivo"
+
+#: yaffo/templates/sharing/files.html:50
+#, python-format
+msgid "Shared by %(device)s"
+msgstr "Compartido por %(device)s"
+
+#: yaffo/templates/sharing/files.html:53
+msgid "Unavailable"
+msgstr "Indisponible"
+
+#: yaffo/templates/sharing/files.html:55
+#, python-format
+msgid "Showing %(shown)s of %(total)s shared file"
+msgid_plural "Showing %(shown)s of %(total)s shared files"
+msgstr[0] "Demostración %(shown)s de %(total)s archivo compartido"
+msgstr[1] "Demostración %(shown)s de %(total)s archivos compartidos"
+
+#: yaffo/templates/sharing/files.html:61 yaffo/templates/sharing/files.html:155
+msgid "No shared files found"
+msgstr "No se encontraron archivos compartidos"
+
+#: yaffo/templates/sharing/files.html:69
+msgid "Could not reach this device"
+msgstr "No se pudo acceder a este dispositivo"
+
+#: yaffo/templates/sharing/files.html:71
+msgid "Try again"
+msgstr "Intentar otra vez"
+
+#: yaffo/templates/sharing/files.html:76
+msgid ""
+"Set a download directory on this device's Sharing page before pulling "
+"files."
+msgstr ""
+"Configure un directorio de descarga en la página Compartir de este "
+"dispositivo antes de extraer archivos."
+
+#: yaffo/templates/sharing/files.html:88
+msgid "Pull selected"
+msgstr "Tirar seleccionado"
+
+#: yaffo/templates/sharing/files.html:132
+msgid "Size"
+msgstr "Tamaño"
+
+#: yaffo/templates/sharing/files.html:156
+msgid "Try adjusting your filters, or check what this device shares with you."
+msgstr ""
+"Intente ajustar sus filtros o verifique qué comparte este dispositivo con"
+" usted."
+
+#: yaffo/templates/sharing/settings.html:4
+msgid "Sharing - Yaffo"
+msgstr "Compartiendo - Yaffo"
+
+#: yaffo/templates/sharing/settings.html:8
+msgid "Device sharing"
+msgstr "Compartir dispositivo"
+
+#: yaffo/templates/sharing/settings.html:8
+msgid ""
+"Pair your other Yaffo devices to share photos between them — device to "
+"device, never through a server."
+msgstr ""
+"Empareje sus otros dispositivos Yaffo para compartir fotos entre ellos, "
+"de dispositivo a dispositivo, nunca a través de un servidor."
+
 #: yaffo/templates/themes_page/index.html:6
 msgid "Themes - Yaffo"
 msgstr "Temas - Yaffo"
@@ -2417,10 +3346,6 @@ msgstr "Nuevo tema"
 #: yaffo/templates/themes_page/index.html:58
 msgid "Make default"
 msgstr "Hacer predeterminado"
-
-#: yaffo/templates/themes_page/index.html:63
-msgid "Rename"
-msgstr "Rebautizar"
 
 #: yaffo/templates/themes_page/index.html:72
 msgid "A built-in theme that ships with Yaffo. System themes cannot be deleted."
@@ -2488,11 +3413,6 @@ msgstr ""
 msgid "New Theme"
 msgstr "Nuevo tema"
 
-#: yaffo/templates/themes_page/index.html:122
-#: yaffo/templates/utilities/_base.html:85
-msgid "Create"
-msgstr "Crear"
-
 #: yaffo/templates/themes_page/index.html:130
 msgid "Renaming updates the theme's web address (slug) to match."
 msgstr ""
@@ -2547,10 +3467,6 @@ msgstr "Nueva automatización"
 msgid "New Automation"
 msgstr "Nueva automatización"
 
-#: yaffo/templates/utilities/automations.html:12
-msgid "Description"
-msgstr "Descripción"
-
 #: yaffo/templates/utilities/automations.html:14
 msgid "What does this automation do?"
 msgstr "¿Qué hace esta automatización?"
@@ -2578,27 +3494,19 @@ msgstr "Desactivar"
 msgid "Enable"
 msgstr "Permitir"
 
-#: yaffo/templates/utilities/automations.html:90
+#: yaffo/templates/utilities/automations.html:89
 msgid "Run…"
 msgstr "Correr…"
 
-#: yaffo/templates/utilities/automations.html:92
-msgid "Run now"
-msgstr "Corre ahora"
-
-#: yaffo/templates/utilities/automations.html:99
+#: yaffo/templates/utilities/automations.html:95
 msgid "Edit triggers"
 msgstr "Editar desencadenantes"
 
-#: yaffo/templates/utilities/automations.html:101
+#: yaffo/templates/utilities/automations.html:97
 msgid "Configure"
 msgstr "Configurar"
 
-#: yaffo/templates/utilities/automations.html:105
-msgid "Edit details"
-msgstr "Editar detalles"
-
-#: yaffo/templates/utilities/automations.html:115
+#: yaffo/templates/utilities/automations.html:111
 msgid ""
 "A built-in automation that ships with Yaffo. System automations cannot be"
 " edited or deleted."
@@ -2606,15 +3514,15 @@ msgstr ""
 "Una automatización incorporada que se envía con Yaffo. Las "
 "automatizaciones del sistema no se pueden editar ni eliminar."
 
-#: yaffo/templates/utilities/automations.html:117
+#: yaffo/templates/utilities/automations.html:113
 msgid "No description yet — use “Edit details” to add one."
 msgstr "Aún no hay descripción: utilice \"Editar detalles\" para agregar una."
 
-#: yaffo/templates/utilities/automations.html:128
+#: yaffo/templates/utilities/automations.html:124
 msgid "Edit automation"
 msgstr "Editar automatización"
 
-#: yaffo/templates/utilities/automations.html:133
+#: yaffo/templates/utilities/automations.html:129
 msgid "Configure automation"
 msgstr "Configurar la automatización"
 
@@ -2670,15 +3578,15 @@ msgstr "Prueba…"
 msgid "Publish draft"
 msgstr "Publicar borrador"
 
-#: yaffo/templates/utilities/automations_runs.html:9
+#: yaffo/templates/utilities/automations_runs.html:10
 msgid "Run history"
 msgstr "Historial de ejecución"
 
-#: yaffo/templates/utilities/automations_runs.html:26
+#: yaffo/templates/utilities/automations_runs.html:27
 msgid "No runs yet."
 msgstr "Aún no hay carreras."
 
-#: yaffo/templates/utilities/automations_runs.html:28
+#: yaffo/templates/utilities/automations_runs.html:29
 msgid "No runs yet — this automation is disabled."
 msgstr "Aún no hay ejecuciones: esta automatización está deshabilitada."
 

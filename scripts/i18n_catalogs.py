@@ -303,7 +303,7 @@ def _translate_text_with_deep_translator(value: str, translator, pattern: re.Pat
     return "".join(parts)
 
 
-def _translate_plain_text(value: str, translator) -> str:
+def _translate_plain_text(value: str, translator, retry_count =0) -> str:
     if not value.strip() or not re.search(r"[A-Za-z]", value):
         return value
     leading = value[:len(value) - len(value.lstrip())]
@@ -312,8 +312,10 @@ def _translate_plain_text(value: str, translator) -> str:
     try:
         return f"{leading}{translator.translate(core)}{trailing}"
     except TranslationNotFound:
-        logger.error(f"Could not translate {value!r} to {translator.translate(core)!r}")
-        return value
+        if retry_count > 2:
+            logger.error(f"Could not translate {value!r}")
+            return value
+        return _translate_plain_text(value, translator, retry_count + 1)
 
 
 
@@ -414,7 +416,7 @@ def translate_missing(
     keys_only: bool = False,
     overwrite: bool = False,
     batch_size: int = 20,
-    engine: str = "auto",
+    engine: str = "deep-translator",
 ) -> list[str]:
     locale = _validate_locale(locale)
     sync_browser_locale(locale)

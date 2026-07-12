@@ -82,6 +82,46 @@ def test_overview_uses_the_pinned_cover_when_set(app, client):
     assert "/media/2" in body
 
 
+def test_overview_draws_a_video_cover_from_its_poster(app, client):
+    """/media/<id> serves the ORIGINAL file, so a video cover there streams an MP4
+    into an <img> and fails (the fallback then shows "image not found"). Videos are
+    covered by their poster, as on the home grid."""
+    with app.app_context():
+        db.session.add(
+            MediaItem(
+                id=1,
+                full_file_path="/lib/clip.mp4",
+                media_type="video",
+                poster_path="/lib/clip.jpg",
+                date_taken=datetime(2024, 7, 1),
+                year=2024,
+                month=7,
+            )
+        )
+        db.session.commit()
+    _album(app, "Movies", items=[1])
+
+    body = client.get("/albums").get_data(as_text=True)
+
+    assert "/media/1/poster" in body
+    assert 'src="/media/1"' not in body  # would render the video file into an <img>
+
+
+def test_overview_video_cover_without_a_poster_uses_the_video_placeholder(app, client):
+    with app.app_context():
+        db.session.add(
+            MediaItem(id=1, full_file_path="/lib/clip.mp4", media_type="video",
+                      date_taken=datetime(2024, 7, 1), year=2024, month=7)
+        )
+        db.session.commit()
+    _album(app, "Movies", items=[1])
+
+    body = client.get("/albums").get_data(as_text=True)
+
+    assert "video_placeholder.svg" in body
+    assert 'src="/media/1"' not in body
+
+
 def test_overview_empty_state(app, client):
     body = client.get("/albums").get_data(as_text=True)
     assert "No albums yet" in body

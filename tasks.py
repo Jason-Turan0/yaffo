@@ -382,7 +382,7 @@ def _translation_locales():
 
 
 @task
-def i18n_translate_all(c, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="auto"):
+def i18n_translate_all(c, dry_run=False, keys_only=False, overwrite=False, batch_size=20, engine="deep-translator"):
     """Extract, update, translate all configured locales, then compile catalogs."""
     c.run("pybabel extract -F babel.cfg -o messages.pot .", pty=True)
     c.run("pybabel update -N --ignore-obsolete -i messages.pot -d yaffo/translations", pty=True)

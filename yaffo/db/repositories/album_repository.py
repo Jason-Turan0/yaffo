@@ -111,17 +111,23 @@ def item_counts(session: Session) -> dict[int, int]:
     return {album_id: count for album_id, count in rows}
 
 
-def cover_media_item_id(session: Session, album: Album) -> Optional[int]:
+def cover_media_item(session: Session, album: Album) -> Optional[MediaItem]:
     """The album's cover, falling back to its first member when none is pinned.
-    None only when the album is empty (the UI then shows the theme placeholder)."""
+    None only when the album is empty (the UI then shows the theme placeholder).
+
+    The whole item, not just its id: a video cover has to be drawn from its poster
+    (its original file is a video, which an <img> cannot render), so the caller needs
+    the media type and poster too."""
     if album.cover_media_item_id is not None:
-        return album.cover_media_item_id
+        cover = session.get(MediaItem, album.cover_media_item_id)
+        if cover is not None:
+            return cover
     return (
-        session.query(AlbumItem.media_item_id)
+        session.query(MediaItem)
+        .join(AlbumItem, AlbumItem.media_item_id == MediaItem.id)
         .filter(AlbumItem.album_id == album.id)
         .order_by(AlbumItem.position, AlbumItem.added_at)
-        .limit(1)
-        .scalar()
+        .first()
     )
 
 

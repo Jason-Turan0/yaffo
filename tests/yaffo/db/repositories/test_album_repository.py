@@ -156,13 +156,13 @@ def test_remove_all_empties_the_album(session, photos):
 
 def test_cover_falls_back_to_the_first_member(session, photos):
     album = repo.create_album(session, "Trip")
-    assert repo.cover_media_item_id(session, album) is None  # empty album
+    assert repo.cover_media_item(session, album) is None  # empty album
 
     repo.add_items(session, album.id, [3, 1])
-    assert repo.cover_media_item_id(session, album) == 3
+    assert repo.cover_media_item(session, album).id == 3
 
     repo.set_cover(session, album.id, 1)
-    assert repo.cover_media_item_id(session, album) == 1
+    assert repo.cover_media_item(session, album).id == 1
 
 
 def test_cover_must_be_a_member(session, photos):
@@ -180,7 +180,7 @@ def test_removing_the_cover_photo_drops_back_to_the_fallback(session, photos):
     repo.remove_items(session, album.id, [1])
 
     assert album.cover_media_item_id is None  # no longer points outside the album
-    assert repo.cover_media_item_id(session, album) == 2
+    assert repo.cover_media_item(session, album).id == 2
 
 
 def test_reorder_persists_manual_order(session, photos):

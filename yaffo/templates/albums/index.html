@@ -13,12 +13,19 @@
     {% for album in albums %}
     <a class="album-tile" href="{{ url_for('albums_show', album_id=album.id) }}">
         <div class="album-tile-cover">
-            {% if album.cover_media_item_id %}
-            <img src="{{ url_for('media', media_item_id=album.cover_media_item_id) }}"
-                 data-fallback="{{ url_for('placeholder') }}"
+            {% if not album.cover %}
+            <img src="{{ url_for('placeholder') }}" alt="{{ _('Empty album') }}">
+            {% elif album.cover.media_type == 'video' %}
+            {# /media/<id> serves the ORIGINAL file, so a video there would stream an
+               MP4 into an <img> and fail. Videos are drawn from their poster, as on
+               the home grid. #}
+            <img src="{{ album.cover.poster_path and url_for('media_poster', media_item_id=album.cover.id) or url_for('static', filename='video_placeholder.svg') }}"
+                 data-fallback="{{ url_for('static', filename='video_placeholder.svg') }}"
                  alt="{{ _('Cover of %(album)s', album=album.name) }}">
             {% else %}
-            <img src="{{ url_for('placeholder') }}" alt="{{ _('Empty album') }}">
+            <img src="{{ url_for('media', media_item_id=album.cover.id) }}"
+                 data-fallback="{{ url_for('placeholder') }}"
+                 alt="{{ _('Cover of %(album)s', album=album.name) }}">
             {% endif %}
         </div>
         <div class="album-tile-body">

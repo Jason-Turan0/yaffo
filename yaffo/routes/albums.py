@@ -38,7 +38,10 @@ class AlbumView:
     name: str
     description: Optional[str]
     item_count: int
-    cover_media_item_id: Optional[int]  # pinned cover, else first member, else None
+    # The cover item itself, not just its id: a video cover must be drawn from its
+    # poster, since an <img> cannot render the original file. None when empty.
+    cover: Optional[MediaItem]
+    cover_media_item_id: Optional[int]  # marks the covering card on the album page
     shared_with: tuple[str, ...]  # display names of devices holding an active grant
 
     @property
@@ -67,17 +70,21 @@ def init_albums_routes(app: Flask):
         albums = repo.list_albums(db.session)
         counts = repo.item_counts(db.session)
         shared = _shared_device_names()
-        return [
-            AlbumView(
-                id=album.id,
-                name=album.name,
-                description=album.description,
-                item_count=counts.get(album.id, 0),
-                cover_media_item_id=repo.cover_media_item_id(db.session, album),
-                shared_with=tuple(shared.get(album.id, ())),
+        views = []
+        for album in albums:
+            cover = repo.cover_media_item(db.session, album)
+            views.append(
+                AlbumView(
+                    id=album.id,
+                    name=album.name,
+                    description=album.description,
+                    item_count=counts.get(album.id, 0),
+                    cover=cover,
+                    cover_media_item_id=cover.id if cover else None,
+                    shared_with=tuple(shared.get(album.id, ())),
+                )
             )
-            for album in albums
-        ]
+        return views
 
     def _require_album(album_id: int) -> Album:
         album = repo.get_album(db.session, album_id)
