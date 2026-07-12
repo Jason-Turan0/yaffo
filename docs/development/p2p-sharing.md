@@ -13,7 +13,7 @@ management, share grants over media dirs / folders / albums, the remote gallery,
 background batch transfers with resume, the mDNS LAN path, and albums as a
 first-class feature.
 
-**Not built:** the hardening in [Deferred](#deferred--not-built) — timeouts still
+**Not built:** timeouts still
 carry loopback values, there is no serving-side rate limiting, and the multi-NAT
 scenarios have not been re-run against the production hub. Everything is verified
 on loopback (two in-process instances) plus route tests; a two-machine LAN run is
