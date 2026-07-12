@@ -21,7 +21,9 @@ const config = () => ({
 
 const group = (faces, { people = [] } = {}) => `
   <div class="suggestion-group" data-faces='${JSON.stringify(faces)}'>
-    <input type="checkbox" class="group-select-checkbox">
+    <button class="chip chip-action cluster-select-all"
+            data-select-all-label="Select all ${faces.length} faces"
+            data-select-none-label="Clear selection"></button>
     <button class="shuffle-sample-btn"></button>
     <span class="cluster-page-label"></span>
     <span class="sample-range"></span>
@@ -100,16 +102,43 @@ describe('faces initAssignment — rendering & selection', () => {
     expect([...api.getSelectedIds()].sort()).toEqual([1, 3]);
   });
 
-  it('clears the whole cluster when the group checkbox is unchecked', async () => {
+  it('clears the whole cluster when the select-all chip is pressed', async () => {
     fixture(group([{ id: 1 }, { id: 2 }]));
     const api = await init();
 
-    const checkbox = document.querySelector('.group-select-checkbox');
-    checkbox.checked = false;
-    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    // A cluster arrives fully selected, so the chip offers to CLEAR it...
+    const chip = document.querySelector('.cluster-select-all');
+    expect(chip.textContent).toBe('Clear selection');
+
+    chip.click();
 
     expect(api.getSelectedIds().size).toBe(0);
     expect(activeFaces().some((el) => el.classList.contains('selected'))).toBe(false);
+    // ...and now offers to select them all again — the label always names the next action.
+    expect(chip.textContent).toBe('Select all 2 faces');
+  });
+
+  it('re-selects the whole cluster when the chip is pressed again', async () => {
+    fixture(group([{ id: 1 }, { id: 2 }]));
+    const api = await init();
+    const chip = document.querySelector('.cluster-select-all');
+
+    chip.click();  // clear
+    chip.click();  // select all
+
+    expect([...api.getSelectedIds()].sort()).toEqual([1, 2]);
+    expect(chip.textContent).toBe('Clear selection');
+  });
+
+  it('flips the chip back to "select all" when a single face is unticked', async () => {
+    fixture(group([{ id: 1 }, { id: 2 }]));
+    const api = await init();
+    const chip = document.querySelector('.cluster-select-all');
+
+    document.querySelector('.face[data-face-id="2"]').click();
+
+    expect(api.getSelectedIds().has(2)).toBe(false);
+    expect(chip.textContent).toBe('Select all 2 faces');
   });
 });
 

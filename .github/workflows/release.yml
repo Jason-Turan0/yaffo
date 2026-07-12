@@ -125,6 +125,13 @@ jobs:
         with:
           python-version: "3.13"
 
+      # yaffo/_build_info.py is generated, not committed (.gitignore), and the bump
+      # ran on a DIFFERENT runner — so this fresh checkout has no build info at all,
+      # and the artifact would report "dev build" with no timestamp or sha. Stamp it
+      # here, from the tagged VERSION, without bumping again.
+      - name: Stamp build info
+        run: python packaging/bump_version.py --stamp-only
+
       - name: Build sdist and wheel
         run: |
           python -m pip install --upgrade build twine

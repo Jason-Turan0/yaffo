@@ -18,6 +18,12 @@ PYINSTALLER="pyinstaller"
 
 APP="dist/Yaffo Photo Organizer.app"
 
+# yaffo/_build_info.py is generated, never committed (.gitignore), so a fresh
+# checkout — CI, or a clean clone — has none, and the frozen app would report a
+# "dev build" with no timestamp. Stamp it from the current VERSION (no bump).
+echo "==> Stamping build info"
+"$PYTHON" packaging/bump_version.py --stamp-only
+
 echo "==> Staging attribution file into resources/"
 
 cp THIRD_PARTY_LICENSES.txt resources/THIRD_PARTY_LICENSES.txt

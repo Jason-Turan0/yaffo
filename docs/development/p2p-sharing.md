@@ -62,17 +62,17 @@ signed by the sender's device key and checked against the pubkey in the
 
 ## Where the code lives
 
-| Area                                                                                          | Path                                                                                           |
-|-----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
-| Engine (identity, pairing, QUIC, STUN, relay codec, signaling, service)                       | [`yaffo/p2p/`](../../yaffo/p2p/__init__.py)                                                    |
-| Protocol handlers (`ping`, pairing, `list_shared`, `list_files`, `pull_file`, `pull_preview`) | [`yaffo/p2p/handlers/`](../../yaffo/p2p/handlers/dispatcher.py)                                |
-| **Authorization**                                                                             | [`yaffo/p2p/handlers/sharing.py`](../../yaffo/p2p/handlers/sharing.py) — `granted_media_query` |
-| Batch transfers                                                                               | [`yaffo/p2p/transfers.py`](../../yaffo/p2p/transfers.py)                                       |
-| LAN discovery (mDNS)                                                                          | [`yaffo/p2p/lan_discovery.py`](../../yaffo/p2p/lan_discovery.py)                               |
-| Sharing UI + routes                                                                           | [`yaffo/routes/sharing.py`](../../yaffo/routes/sharing.py), `templates/sharing/`               |
-| Albums UI + routes                                                                            | [`yaffo/routes/albums.py`](../../yaffo/routes/albums.py), `templates/albums/`                  |
-| Hub service                                                                                   | [`hub/`](../../hub/README.md)                                                                  |
-| Hub infrastructure (Terraform)                                                                | [`deploy/hub/`](../../deploy/hub/README.md)                                                    |
+| Area | Path |
+|------|------|
+| Engine (identity, pairing, QUIC, STUN, relay codec, signaling, service) | `yaffo/p2p/` |
+| Protocol handlers (`ping`, pairing, `list_shared`, `list_files`, `pull_file`, `pull_preview`) | `yaffo/p2p/handlers/` |
+| **Authorization** | `yaffo/p2p/handlers/sharing.py` — `granted_media_query` |
+| Batch transfers | `yaffo/p2p/transfers.py` |
+| LAN discovery (mDNS) | `yaffo/p2p/lan_discovery.py` |
+| Sharing UI + routes | `yaffo/routes/sharing.py`, `templates/sharing/` |
+| Albums UI + routes | `yaffo/routes/albums.py`, `templates/albums/` |
+| Hub service | `hub/` |
+| Hub infrastructure (Terraform) | `deploy/hub/` |
 
 The engine runs as an **asyncio loop in a daemon thread inside the Flask/waitress
 web process** — started by `_run_web`, or by `create_app` when
