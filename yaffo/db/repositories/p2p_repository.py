@@ -16,6 +16,7 @@ from yaffo.db.models import (
     GRANT_SCOPE_MEDIA_DIR,
     TRUST_STATE_REVOKED,
     TRUST_STATE_TRUSTED,
+    Album,
     KnownDevice,
     ShareGrant,
 )
@@ -101,9 +102,10 @@ def touch_last_seen(session: Session, device_id: str) -> None:
 # ---- share grants -----------------------------------------------------------
 
 _GRANT_SHAPES = {
-    # scope_type -> (media_dir_id required, relative_path required)
-    GRANT_SCOPE_MEDIA_DIR: (True, False),
-    GRANT_SCOPE_FOLDER: (True, True),
+    # scope_type -> (media_dir_id required, relative_path required, album_id required)
+    GRANT_SCOPE_MEDIA_DIR: (True, False, False),
+    GRANT_SCOPE_FOLDER: (True, True, False),
+    GRANT_SCOPE_ALBUM: (False, False, True),
 }
 
 
@@ -113,25 +115,32 @@ def create_grant(
     scope_type: str,
     media_dir_id: Optional[str] = None,
     relative_path: Optional[str] = None,
+    album_id: Optional[int] = None,
 ) -> ShareGrant:
     """Authorize one trusted peer for one scope. Enforces the shape rule:
-    media_dir ⇒ media_dir_id only; folder ⇒ media_dir_id + relative_path.
-    (The album scope arrives with migration 007 / Phase 6.)"""
-    if scope_type == GRANT_SCOPE_ALBUM:
-        raise ValueError("album grants arrive in Phase 6")
+    media_dir ⇒ media_dir_id only; folder ⇒ media_dir_id + relative_path;
+    album ⇒ album_id only. The other scope columns stay NULL, so a grant can
+    never carry a scope it does not mean."""
     if scope_type not in _GRANT_SHAPES:
         raise ValueError(f"unknown grant scope type: {scope_type!r}")
-    needs_dir, needs_path = _GRANT_SHAPES[scope_type]
-    if bool(media_dir_id) != needs_dir or bool(relative_path) != needs_path:
+    needs_dir, needs_path, needs_album = _GRANT_SHAPES[scope_type]
+    if (
+        bool(media_dir_id) != needs_dir
+        or bool(relative_path) != needs_path
+        or (album_id is not None) != needs_album
+    ):
         raise ValueError(f"grant shape invalid for scope {scope_type!r}")
     if get_known_device(session, peer_device_id) is None:
         raise ValueError(f"{peer_device_id} is not a known device")
+    if album_id is not None and session.get(Album, album_id) is None:
+        raise ValueError(f"no album with id {album_id}")
 
     grant = ShareGrant(
         peer_device_id=peer_device_id,
         scope_type=scope_type,
         media_dir_id=media_dir_id,
         relative_path=relative_path,
+        album_id=album_id,
     )
     session.add(grant)
     session.commit()

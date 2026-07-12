@@ -13,6 +13,7 @@ from yaffo.db.models import (
     TRUST_STATE_REVOKED,
     TRUST_STATE_TRUSTED,
 )
+from yaffo.db.repositories import album_repository as album_repo
 from yaffo.db.repositories import p2p_repository as repo
 
 pytestmark = pytest.mark.unit
@@ -88,13 +89,26 @@ def test_folder_grant_shape(session, paired):
     assert grant.relative_path == "2024/summer"
 
 
+def test_album_grant_shape(session, paired):
+    album = album_repo.create_album(session, "Summer 2024")
+    grant = repo.create_grant(session, DEVICE, GRANT_SCOPE_ALBUM, album_id=album.id)
+    assert grant.album_id == album.id
+    assert grant.media_dir_id is None and grant.relative_path is None
+
+
+def test_album_grant_requires_an_existing_album(session, paired):
+    with pytest.raises(ValueError, match="no album with id"):
+        repo.create_grant(session, DEVICE, GRANT_SCOPE_ALBUM, album_id=999)
+
+
 @pytest.mark.parametrize(
     "scope,kwargs",
     [
         (GRANT_SCOPE_MEDIA_DIR, {}),  # missing media_dir_id
         (GRANT_SCOPE_MEDIA_DIR, {"media_dir_id": "g", "relative_path": "x"}),  # extra path
         (GRANT_SCOPE_FOLDER, {"media_dir_id": "g"}),  # missing relative_path
-        (GRANT_SCOPE_ALBUM, {}),  # not until Phase 6
+        (GRANT_SCOPE_ALBUM, {}),  # missing album_id
+        (GRANT_SCOPE_ALBUM, {"album_id": 1, "media_dir_id": "g"}),  # extra media_dir_id
         ("bogus", {"media_dir_id": "g"}),
     ],
 )

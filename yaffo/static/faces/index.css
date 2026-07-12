@@ -275,6 +275,16 @@
     border-radius: var(--radius-sm);
     overflow: hidden;
     transition: border-color 0.2s;
+    position: relative;  /* anchors the selection checkbox (components/selection_bar.css) */
+}
+
+/* The shared checkbox, scaled for the smaller face tiles. */
+.face::after {
+    top: 5px;
+    left: 5px;
+    width: 18px;
+    height: 18px;
+    font-size: var(--font-size-xs);
 }
 
 .face:hover {

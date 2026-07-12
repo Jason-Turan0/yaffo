@@ -32,6 +32,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/icons.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/favorite-toggle.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/panel_nav.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/selection_bar.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/chat_dialog.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/tooltip.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='pages/nav.css') }}">
@@ -97,6 +98,8 @@
         <ul class="navbar-nav">
             <li><a href="{{ url_for('index') }}" data-icon="library" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">{{ _("Home") }}</a>
             </li>
+            <li><a href="{{ url_for('albums_index') }}" data-icon="albums"
+                   class="nav-link {% if request.endpoint and request.endpoint.startswith('albums_') %}active{% endif %}">{{ _("Albums") }}</a></li>
             <li><a href="{{ url_for('faces_index') }}" data-icon="faces"
                    class="nav-link {% if request.endpoint == 'faces_index' or request.endpoint == 'faces_assign' or request.endpoint == 'faces_remove' %}active{% endif %}">{{ _("Faces") }}</a>
             </li>
@@ -216,6 +219,7 @@
 <script src="{{ url_for('static', filename='components/modal.js') }}"></script>
 <script src="{{ url_for('static', filename='components/overlay.js') }}"></script>
 <script src="{{ url_for('static', filename='components/confirm-dialog.js') }}"></script>
+<script src="{{ url_for('static', filename='components/selection_bar.js') }}"></script>
 <script src="{{ url_for('static', filename='components/chat_dialog.js') }}"></script>
 <script src="{{ url_for('static', filename='filters/tags.js') }}"></script>
 <script src="{{ url_for('static', filename='components/percentage_slider.js') }}"></script>

@@ -21,7 +21,11 @@ from yaffo.db.models import (
     Tag,
 )
 from yaffo.db.repositories.media_repository import get_distinct_months, get_distinct_years
-from yaffo.distance_units import DISTANCE_UNIT_KILOMETERS, get_saved_distance_unit
+from yaffo.distance_units import (
+    DISTANCE_UNIT_KILOMETERS,
+    distance_to_kilometers,
+    get_saved_distance_unit,
+)
 
 
 def gender_options() -> list[dict]:
@@ -118,4 +122,67 @@ def build_filters_context(session: Session, args: MultiDict) -> dict:
         'labels': labels,
         'genders': gender_options(),
         **filter_selections(session, args),
+    }
+
+def to_media_filters(filters: dict) -> dict:
+    """Map the panel's `selected_*` context onto apply_media_filters' selections.
+
+    One mapping, used by every screen that shows the filter panel — the home
+    gallery and the album add screen — so they narrow the library identically.
+    That matters most for "add all N matching these filters", which re-runs this
+    same selection server-side (album_repository.add_matching): the photos added
+    are exactly the photos the filters were showing.
+    """
+    proximity_distance = filters["selected_proximity_distance"]
+    return {
+        "path": filters["selected_path"],
+        "year": filters["selected_year"],
+        "month": filters["selected_month"],
+        "device": filters["selected_device"],
+        "favorite": filters["selected_favorite"],
+        "media_type": filters["selected_media_type"],
+        "person_ids": filters["selected_person_ids"],
+        "person_match_type": filters["selected_person_match_type"],
+        "gender": filters["selected_gender"],
+        "label_ids": filters["selected_label_ids"],
+        "labels_match_type": filters["selected_labels_match_type"],
+        "tag_name": filters["selected_tag_name"],
+        "tag_value": filters["selected_tag_value"],
+        "location_names": filters["selected_location_names"],
+        "location_match_type": filters["selected_location_match_type"],
+        "unnamed": filters["selected_unnamed"],
+        "proximity_lat": filters["selected_proximity_lat"],
+        "proximity_lon": filters["selected_proximity_lon"],
+        "proximity_km": (
+            distance_to_kilometers(proximity_distance, filters["selected_distance_unit"])
+            if proximity_distance
+            else None
+        ),
+    }
+
+
+def to_query_params(filters: dict) -> dict:
+    """The selections as querystring parameters — for pagination links and for
+    carrying the current filters into a POST (the add screen's "all matching")."""
+    return {
+        "path": filters["selected_path"],
+        "year": filters["selected_year"],
+        "month": filters["selected_month"],
+        "device": filters["selected_device"],
+        "person": filters["selected_person_ids"],
+        "person-match-type": filters["selected_person_match_type"],
+        "tag-name": filters["selected_tag_name"],
+        "tag-value": filters["selected_tag_value"],
+        "location": filters["selected_location_names"],
+        "location-match-type": filters["selected_location_match_type"],
+        "unnamed": filters["selected_unnamed"],
+        "proximity-lat": filters["selected_proximity_lat"],
+        "proximity-lon": filters["selected_proximity_lon"],
+        "proximity-distance": filters["selected_proximity_distance"],
+        "proximity-location": filters["selected_proximity_location"],
+        "labels": filters["selected_label_ids"],
+        "labels-match-type": filters["selected_labels_match_type"],
+        "gender": filters["selected_gender"],
+        "favorite": filters["selected_favorite"],
+        "media-type": filters["selected_media_type"],
     }

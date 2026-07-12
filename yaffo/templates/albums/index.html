@@ -1,0 +1,40 @@
+{% extends "albums/_base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}{{ _("Albums - Yaffo") }}{% endblock %}
+
+{% block albums_content %}
+{% call page_header(_("Albums")) %}
+    {{ _("Curated collections you can browse and share with your other devices.") }}
+{% endcall %}
+
+{% if albums %}
+<div class="album-tiles">
+    {% for album in albums %}
+    <a class="album-tile" href="{{ url_for('albums_show', album_id=album.id) }}">
+        <div class="album-tile-cover">
+            {% if album.cover_media_item_id %}
+            <img src="{{ url_for('media', media_item_id=album.cover_media_item_id) }}"
+                 data-fallback="{{ url_for('placeholder') }}"
+                 alt="{{ _('Cover of %(album)s', album=album.name) }}">
+            {% else %}
+            <img src="{{ url_for('placeholder') }}" alt="{{ _('Empty album') }}">
+            {% endif %}
+        </div>
+        <div class="album-tile-body">
+            <span class="album-tile-name">{{ album.name }}</span>
+            <div class="album-tile-meta">
+                <span class="chip">{{ _("%(count)s photos", count=album.item_count | format_integer) }}</span>
+                {% if album.is_shared %}<span class="chip chip-accent">{{ _("Shared") }}</span>{% endif %}
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>{{ _("No albums yet") }}</h2>
+    <p>{{ _("An album is a collection you curate by hand — create one, then add photos to it.") }}</p>
+</div>
+{% endif %}
+{% endblock %}

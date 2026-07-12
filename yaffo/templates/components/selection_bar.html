@@ -1,0 +1,35 @@
+{# Selection bar for a server-rendered photo grid (album edit mode, album add
+   screen).
+
+   THE URL IS THE STATE. The selection is carried on the querystring — `select=all`
+   plus `exclude_id`, or `select_id` per ticked card (routes/albums.py:SelectionView)
+   — exactly like the filters and the page number. So the server renders which cards
+   are ticked and what the count is, pagination links carry the selection, and the
+   POST that acts on it reads the same parameters. selection_bar.js only keeps the
+   URL in step as the user clicks, so ticking a card need not reload the page.
+
+   `select_all_label` must say what "all" MEANS on this screen, because the grids
+   paginate and the visible page is not the selection: on the album it is every
+   member, on the add screen it is every photo matching the filters.
+
+   Usage:
+       {% call selection_bar('album-selection', selection, _('Select all 42 photos')) %}
+           <button type="button" data-selection-action id="remove-selected">Remove</button>
+       {% endcall %}
+#}
+{% macro selection_bar(id, selection, select_all_label) %}
+<div class="selection-bar" id="{{ id }}" data-selection-bar>
+    <span class="selection-count" data-selection-count
+          data-count-label="{{ _('%(count)s selected', count='{n}') }}">{{ _('%(count)s selected', count=selection.count | format_integer) }}</span>
+    {# One toggle, not two buttons: it selects the whole scope, and once everything
+       is selected the same chip clears it. The label always names what pressing it
+       will DO. #}
+    <button type="button" class="chip chip-action" data-selection-toggle
+            data-select-all-label="{{ select_all_label }}"
+            data-select-none-label="{{ _('Clear selection') }}">
+        {{ _('Clear selection') if selection.all else select_all_label }}
+    </button>
+    <span class="selection-bar-spacer"></span>
+    {{ caller() }}
+</div>
+{% endmacro %}

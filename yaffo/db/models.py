@@ -642,7 +642,7 @@ TRUST_STATE_TRUSTED = "trusted"
 TRUST_STATE_REVOKED = "revoked"
 
 # What a share grant scopes: a whole media dir, a folder subtree within one, or
-# (Phase 6, migration 007) a curated album.
+# a curated album (migration 007).
 GRANT_SCOPE_MEDIA_DIR = "media_dir"
 GRANT_SCOPE_FOLDER = "folder"
 GRANT_SCOPE_ALBUM = "album"
@@ -675,7 +675,7 @@ class ShareGrant(db.Model):
     serving device, so revocation (an update, not a delete — the UI can show
     history) takes effect on the peer's next pull. Shape rule (enforced by the
     repository): media_dir ⇒ media_dir_id set; folder ⇒ media_dir_id +
-    relative_path set; album (Phase 6) ⇒ album_id set; other scope columns NULL."""
+    relative_path set; album ⇒ album_id set; other scope columns NULL."""
 
     __tablename__ = "share_grants"
 
@@ -689,10 +689,55 @@ class ShareGrant(db.Model):
     # grants on since-removed dirs are inert.
     media_dir_id = db.Column(db.String, nullable=True)
     relative_path = db.Column(db.String, nullable=True)  # folder scope: POSIX-style subtree prefix
+    album_id = db.Column(db.Integer, db.ForeignKey("albums.id"), nullable=True)  # album scope
     created_at = db.Column(db.DateTime, default=utcnow)
     revoked_at = db.Column(db.DateTime, nullable=True)  # active grant ⇔ revoked_at IS NULL
 
     peer = db.relationship("KnownDevice", back_populates="grants")
+    album = db.relationship("Album")
+
+
+class Album(db.Model):
+    """A curated collection of media items. Membership is explicit (album_items),
+    never derived from a filter — an album is what the user put in it. The cover
+    is optional; the UI falls back to the first member, so an album always has a
+    cover conceptually without one being stored."""
+
+    __tablename__ = "albums"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False, unique=True)
+    description = db.Column(db.String, nullable=True)
+    cover_media_item_id = db.Column(
+        db.Integer, db.ForeignKey("media_items.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+
+    items = db.relationship(
+        "AlbumItem", back_populates="album", cascade="all, delete-orphan", order_by="AlbumItem.position"
+    )
+    cover = db.relationship("MediaItem", foreign_keys=[cover_media_item_id])
+
+
+class AlbumItem(db.Model):
+    """One photo's membership in one album. The composite PK makes a duplicate
+    membership impossible at the storage layer, so bulk add is an INSERT OR
+    IGNORE rather than a read-then-write."""
+
+    __tablename__ = "album_items"
+
+    album_id = db.Column(db.Integer, db.ForeignKey("albums.id", ondelete="CASCADE"), nullable=False)
+    media_item_id = db.Column(
+        db.Integer, db.ForeignKey("media_items.id", ondelete="CASCADE"), nullable=False
+    )
+    position = db.Column(db.Integer, nullable=False, default=0)  # manual ordering within the album
+    added_at = db.Column(db.DateTime, default=utcnow)
+
+    __table_args__ = (PrimaryKeyConstraint("album_id", "media_item_id"),)
+
+    album = db.relationship("Album", back_populates="items")
+    media_item = db.relationship("MediaItem")
 
 
 class Conversation(db.Model):

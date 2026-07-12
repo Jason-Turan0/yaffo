@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% from "_sidebar.html" import render_sidebar %}
+{% from "components/pagination.html" import pagination as render_pagination %}
+{% from "components/page_header.html" import page_header %}
+{% from "components/selection_bar.html" import selection_bar %}
+
+{% block title %}{{ _("Add photos to %(album)s - Yaffo", album=album.name) }}{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='albums/albums.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='filters/location-autocomplete.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='filters/filter_config.css') }}">
+{% endblock %}
+
+{% block content %}
+{# The home layout, not the albums layout: the filter panel needs the left column
+   that the album nav otherwise occupies — which is why bulk add is its own screen. #}
+<div class="main-container-layout">
+    {{ render_sidebar(url_for('albums_add', album_id=album.id), filters, filter_layout=filter_layout) }}
+    <div class="main-content photo-gallery">
+        {% set header_actions %}
+            <a class="btn-primary" href="{{ url_for('albums_show', album_id=album.id) }}">{{ _("Done") }}</a>
+        {% endset %}
+        {% call page_header(_("Add photos to %(album)s", album=album.name), actions=header_actions) %}
+            {# The album's running total. Adding keeps you on this screen, so this
+               count (and the photos leaving the grid) is the feedback that they
+               landed. #}
+            <span class="chip chip-accent">{{ _("%(count)s in this album", count=album_count | format_integer) }}</span>
+            {{ _("Filter the library, then pick the photos to add. Photos already in the album are not shown.") }}
+        {% endcall %}
+
+        {% if added_count %}
+        <p class="add-photos-confirmation">
+            {{ ngettext("%(count)s photo added.", "%(count)s photos added.", added_count, count=added_count) }}
+        </p>
+        {% endif %}
+
+        {% if media_items %}
+        {# "Select all" here is every photo MATCHING THE FILTERS — including the
+           ones on pages not rendered — which is why the count is the match total,
+           not the page size. The scope is posted; the ids are not enumerated. #}
+        {% call selection_bar('add-selection', selection, _('Select all %(count)s matching', count=match_count | format_integer)) %}
+            <button type="button" class="btn-primary" id="add-to-album-button" data-selection-action
+                    data-icon="add" data-match-count="{{ match_count }}"
+                    data-album-id="{{ album.id }}">{{ _("Add photos") }}</button>
+        {% endcall %}
+
+        {# Always selecting: the screen exists to select. #}
+        <div class="photo-grid is-selecting" id="add-grid">
+            {% for media_item in media_items %}
+            <div class="photo-card{% if selection.is_selected(media_item.id) %} is-selected{% endif %}"
+                 data-select-id="{{ media_item.id }}">
+                <div class="photo-thumb">
+                    {% if media_item.media_type == 'video' %}
+                    <img src="{{ media_item.poster_path and url_for('media_poster', media_item_id=media_item.id) or url_for('static', filename='video_placeholder.svg') }}"
+                         data-fallback="{{ url_for('static', filename='video_placeholder.svg') }}"
+                         alt="{{ _('Video from %(date)s', date=media_item.date_taken | format_date('date')) }}">
+                    {% else %}
+                    <img src="{{ url_for('media', media_item_id=media_item.id) }}"
+                         data-fallback="{{ url_for('placeholder') }}"
+                         alt="{{ _('Photo from %(date)s', date=media_item.date_taken | format_date('date')) }}">
+                    {% endif %}
+                </div>
+                <div class="photo-info">
+                    <div class="photo-date">{{ media_item.date_taken | format_date("date") if media_item.date_taken else _("Unknown date") }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {{ render_pagination(
+            pagination.current_page,
+            pagination.total_items,
+            pagination.page_size,
+            pagination.page_sizes,
+            url_for('albums_add', album_id=album.id),
+            page_params
+        ) }}
+        {% else %}
+        <div class="empty-state">
+            {% if album_count %}
+            {# Members are filtered out of the results, so "nothing here" usually
+               means everything matching is already in — say so, rather than implying
+               the library is empty. #}
+            <h2>{{ _("Nothing left to add") }}</h2>
+            <p>{{ _("Every photo matching these filters is already in this album. Adjust the filters to find more.") }}</p>
+            {% else %}
+            <h2>{{ _("No photos found") }}</h2>
+            <p>{{ _("Try adjusting your filters.") }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# The selection AND the filters ride the action's querystring — the server reads
+   exactly the parameters it rendered the grid from. data-selection-form keeps the
+   action in step as cards are ticked. #}
+<form id="add-to-album-form" method="POST" data-selection-form
+      action="{{ url_for('albums_add_items', album_id=album.id) }}{{ ('?' ~ request.query_string.decode()) if request.query_string else '' }}"
+      hidden></form>
+
+{% from "filters/_config_modal.html" import filter_config_modal %}
+{{ filter_config_modal(filter_layout, filter_default_keys, "albums_add") }}
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='filters/location-autocomplete.js') }}"></script>
+    <script src="{{ url_for('static', filename='filters/filter_config.js') }}"></script>
+    <script src="{{ url_for('static', filename='albums/albums_add.js') }}"></script>
+    <script>
+        document.addEventListener('yaffo:app-init-complete', (event) => {
+            const app = event.detail.app;
+            app.filters.initTags(app.i18n, window.APP_CONFIG);
+            app.filters.initLocationAutocomplete(app.i18n, window.APP_CONFIG);
+            app.filters.initConfig(app.i18n, window.APP_CONFIG);
+        });
+    </script>
+{% endblock %}

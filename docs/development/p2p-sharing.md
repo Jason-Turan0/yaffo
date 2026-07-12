@@ -694,9 +694,11 @@ feature and immediately extends sharing to it (migration `007` in the data
 model above):
 
 - **Album definition**: `albums` + `album_items` tables, an
-  `album_repository`, and CRUD UI — create/rename/delete an album, add and
-  remove media items from the grid and single-photo views, cover selection,
-  manual ordering via `position`.
+  `album_repository`, and CRUD UI (see "UX" below) — create/rename/delete an
+  album, add and remove media items, cover selection, manual ordering via
+  `position`.
+- **Album Bulk Add** Ability to search for photos and add them to the album in bulk. Use the same filter panel that is
+  on the home screen.
 - **Data-query integration**: expose albums as a virtual source /
   calculated column in the data-query layer, the same way `media_dirs` and
   `folders` are modeled (`media_dir_repository`'s virtual-source pattern) —
@@ -717,6 +719,77 @@ Exit criteria: create an album on device A, grant it to device B, B pulls
 its contents; removing an item from the album excludes it from B's next
 manifest; an album grant leaks nothing outside the album's membership
 (loopback test alongside the Phase 4 scoping tests).
+
+#### UX
+
+Albums get their own top-level nav tab. The screen is modeled on the
+Automations screen (`templates/utilities/`), which already solves the same
+problem — a list of user-created things on the left, the selected one's
+detail on the right — so albums reuse its structure rather than inventing a
+second one:
+
+- **Left sidebar** (`panel-nav`): one entry per album, active entry
+  highlighted, with chips on each row: a neutral chip for the item count and
+  a `chip-accent` "Shared" chip when the album has an active grant, so what
+  is shared is scannable without opening anything. A "New album" button sits
+  at the bottom of the sidebar and opens a create modal (name + optional
+  description), exactly like "New automation".
+- **Albums overview** (`/albums`, the landing screen with no album selected,
+  in place of an empty-state paragraph): a grid of album tiles — cover image,
+  name, item count, and the "Shared" chip — each linking to its album page.
+  This is the surface that gives `cover_media_item_id` a purpose: without a
+  tile view nothing on screen would render a cover, and "Set as cover" would
+  write a field no pixel depends on. The tile falls back to the album's first
+  item when the cover is NULL, and to the theme's placeholder when the album
+  is empty.
+- **Album page**: `page_header` with the album name, a subtitle line
+  (item count, plus chips naming the devices it is shared with), and the
+  header actions — **Add photos**, **Edit**, **Edit details**, **Share**,
+  **Delete**. The body is the album's photo grid, reusing the home page's
+  `.photo-card` / `.photo-grid` markup so a photo looks the same everywhere.
+  The split between the two edit actions mirrors automations, where "Edit"
+  changes the thing itself and "Edit details" changes its name/description.
+- **Edit** puts the grid into a selection/edit mode: checkboxes appear on
+  the cards and a selection bar appears above the grid with **Select all** /
+  **Select none**, the live selection count, **Remove from album**, **Set as
+  cover** (enabled on a single selection), and **Done**. This is the same
+  selection-bar pattern the Faces screen already uses ("Assign to selected
+  person" / "Ignore selected faces"), so it should reuse that component
+  rather than grow a parallel one. Removing a member never touches the file
+  or the media item — only the `album_items` row. Manual ordering is
+  drag-to-reorder within edit mode, persisted to `position` on drop; if it
+  proves fiddly it can land last in the phase without blocking anything else.
+- **Edit details** opens a small modal (name, description), exactly like the
+  automations "Edit details" modal.
+- **Add photos** opens a dedicated screen (`/albums/<id>/add`) rather than a
+  panel on the album page: the home page's filter sidebar occupies the same
+  left column the album nav uses, so the two cannot coexist. The add screen
+  is the home layout — filter sidebar + results grid — with selection
+  checkboxes on the cards and a sticky action bar showing the selection
+  count and an **Add photos** button. The bar also offers *"select all N
+  matching these filters"*, which posts the filter query rather than a list
+  of IDs (the point of bulk add is to not enumerate 500 checkboxes). Back
+  returns to the album.
+- **Share** opens a modal listing paired devices; confirming creates
+  `album`-scope grants for the checked devices. There is deliberately **no
+  revoke UI here** — the Sharing sidebar's "Shared With Others" already
+  lists and revokes every grant regardless of scope, and a second place to
+  revoke would be a second place to keep correct. The album header only
+  *shows* who it is shared with.
+- **Delete** goes through the existing confirm dialog, with copy that states
+  the stakes plainly: deleting an album removes the album and its membership
+  rows, never the photos.
+
+Both grids paginate, so "select all" is ambiguous in both of them and must
+say which it means: in the album's edit mode it selects every *member* of
+the album (not just the page), and on the add screen it selects every photo
+*matching the current filters* (not just the page). Both resolve server-side
+— the album id or the filter query, never a list of ids — so a 500-photo
+operation is one statement, not 500 checkboxes.
+
+Empty states: no albums at all → the overview grid is replaced by a prompt to
+create the first one; an album with no members → an empty grid pointing at
+**Add photos**.
 
 ### Phase 8 — Hardening & real-world validation
 

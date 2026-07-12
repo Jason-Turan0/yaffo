@@ -215,10 +215,47 @@ type CronBuilderApi = {
     setCron(root: CronBuilderRoot | null, cron: string): void;
 };
 
+type SelectionState = {
+    /** True when the user pressed "Select all": the whole scope (every album
+     *  member / every photo matching the filters), including rows never rendered.
+     *  The host posts the scope plus `excluded`, not an enumeration of ids. */
+    all: boolean;
+    /** The explicitly ticked card ids. Empty when `all` is true. */
+    ids: string[];
+    /** Ids unticked OUT of the scope. Only meaningful when `all` is true: the
+     *  selection is "everything, except these". Empty otherwise. */
+    excluded: string[];
+};
+
+// The selection is carried on the URL (select / select_id / exclude_id), so the
+// server renders it and the POST reads it; this component only keeps the URL, the
+// page's links and the action forms in step as the user clicks.
+
+type SelectionBarOptions = {
+    /** CSS selector for the grid whose cards carry data-select-id. */
+    grid: string;
+    /** CSS selector for the bar rendered by the selection_bar macro. */
+    bar: string;
+    /** Size of the whole scope, so a "select all" shows a truthful count. */
+    totalCount?: number;
+    onChange?: (state: SelectionState) => void;
+};
+
+type SelectionBarApi = {
+    getState(): SelectionState;
+    /** The querystring (selection included) that action forms post to. */
+    actionQuery(): string;
+};
+
+type SelectionBarComponent = {
+    init(options: SelectionBarOptions): SelectionBarApi | null;
+};
+
 type PhotoOrganizerComponents = {
     initAll?: () => void;
     fileBrowser?: FileBrowserApi;
     modal: ModalApi;
+    selectionBar?: SelectionBarComponent;
     overlay?: OverlayApi;
     initChatDialog?: (id: string, options: ChatDialogOptions) => ChatDialogApi | null;
     initNavPagesBar?: () => NavPagesBarApi | undefined;

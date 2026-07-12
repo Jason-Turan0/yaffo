@@ -1,0 +1,112 @@
+{% extends "albums/_base.html" %}
+{% from "components/page_header.html" import page_header %}
+{% from "components/modal.html" import render_modal %}
+{% from "components/selection_bar.html" import selection_bar %}
+
+{% block title %}{{ _("%(album)s - Albums - Yaffo", album=selected.name) }}{% endblock %}
+
+{% macro render_edit_album_form() %}
+    <div class="form-group">
+        <label for="edit-album-name">{{ _("Name") }}</label>
+        <input type="text" id="edit-album-name" name="name" required value="{{ selected.name }}">
+    </div>
+    <div class="form-group">
+        <label for="edit-album-description">{{ _("Description") }}</label>
+        <textarea id="edit-album-description" name="description" rows="3"
+                  placeholder="{{ _('What is this album for?') }}">{{ selected.description or '' }}</textarea>
+    </div>
+{% endmacro %}
+
+{% block albums_content %}
+{% set delete_message = _('Delete %(album)s? The album and its contents list go away — the photos themselves are not deleted.', album=selected.name) %}
+{% set album_actions %}
+    <a class="btn-primary" data-icon="add"
+       href="{{ url_for('albums_add', album_id=selected.id) }}">{{ _("Add photos") }}</a>
+    {% if items and not editing %}
+    <a class="btn-secondary" data-icon="edit"
+       href="{{ url_for('albums_show', album_id=selected.id, edit=1) }}">{{ _("Edit") }}</a>
+    {% endif %}
+    <button type="button" id="edit-album-details-button" class="btn-secondary" data-icon="edit">
+        {{ _("Edit details") }}
+    </button>
+    <button type="button" id="delete-album-button" class="btn-danger" data-icon="delete"
+            data-confirm-title="{{ _('Delete album?') }}"
+            data-confirm-message="{{ delete_message }}"
+            data-confirm-text="{{ _('Delete') }}">
+        {{ _("Delete") }}
+    </button>
+{% endset %}
+
+{% call page_header(selected.name, actions=album_actions) %}
+    {{ _("%(count)s photos", count=selected.item_count | format_integer) }}
+    {% if selected.description %} — {{ selected.description }}{% endif %}
+    {% if selected.is_shared %}
+        {% for device_name in selected.shared_with %}
+        <span class="chip chip-accent">{{ device_name }}</span>
+        {% endfor %}
+    {% endif %}
+{% endcall %}
+
+{% if items %}
+{% if editing %}
+{# "Select all" here means every member of the album, not the rendered page. #}
+{% call selection_bar('album-selection', selection, _('Select all %(count)s photos', count=selected.item_count | format_integer)) %}
+    <button type="button" class="btn-secondary" id="set-cover-button" data-selection-action
+            data-single-only>{{ _("Set as cover") }}</button>
+    <button type="button" class="btn-danger" id="remove-from-album-button" data-selection-action
+            data-icon="delete"
+            data-confirm-title="{{ _('Remove from album?') }}"
+            data-confirm-message="{{ _('Remove the selected photos from this album? The photos themselves are not deleted.') }}"
+            data-confirm-text="{{ _('Remove') }}">{{ _("Remove from album") }}</button>
+    {# Leaving edit mode drops the selection simply by dropping it from the URL. #}
+    <a class="btn-secondary" href="{{ url_for('albums_show', album_id=selected.id) }}">{{ _("Done") }}</a>
+{% endcall %}
+{% endif %}
+
+<div class="photo-grid{% if editing %} is-selecting{% endif %}" id="album-grid"
+     data-album-id="{{ selected.id }}"
+     data-member-count="{{ selected.item_count }}"
+     data-editing="{{ '1' if editing else '' }}"
+     data-reorder-url="{{ url_for('albums_reorder', album_id=selected.id) }}">
+    {% for media_item in items %}
+    <div class="photo-card album-photo-card{% if editing and selection.is_selected(media_item.id) %} is-selected{% endif %}"
+         data-select-id="{{ media_item.id }}"
+         onclick="window.open('{{ url_for('media_view', media_item_id=media_item.id) }}', '_blank')">
+        <div class="photo-thumb">
+            {% if media_item.id == selected.cover_media_item_id %}
+            <span class="chip chip-accent album-cover-chip">{{ _("Cover") }}</span>
+            {% endif %}
+            {% if media_item.media_type == 'video' %}
+            <img src="{{ media_item.poster_path and url_for('media_poster', media_item_id=media_item.id) or url_for('static', filename='video_placeholder.svg') }}"
+                 data-fallback="{{ url_for('static', filename='video_placeholder.svg') }}"
+                 alt="{{ _('Video from %(date)s', date=media_item.date_taken | format_date('date')) }}">
+            {% else %}
+            <img src="{{ url_for('media', media_item_id=media_item.id) }}"
+                 data-fallback="{{ url_for('placeholder') }}"
+                 alt="{{ _('Photo from %(date)s', date=media_item.date_taken | format_date('date')) }}">
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>{{ _("This album is empty") }}</h2>
+    <p>{{ _("Nothing has been added to it yet.") }}</p>
+    <a class="btn-primary" data-icon="add"
+       href="{{ url_for('albums_add', album_id=selected.id) }}">{{ _("Add photos") }}</a>
+</div>
+{% endif %}
+
+{# The selection rides the action's querystring (data-selection-form keeps it in
+   step as cards are ticked), so the server reads the same parameters it rendered. #}
+<form id="remove-from-album-form" method="POST" data-selection-form
+      action="{{ url_for('albums_remove_items', album_id=selected.id) }}" hidden></form>
+<form id="set-cover-form" method="POST"
+      action="{{ url_for('albums_set_cover', album_id=selected.id) }}" hidden></form>
+<form id="delete-album-form" method="POST"
+      action="{{ url_for('albums_delete', album_id=selected.id) }}" hidden></form>
+{{ render_modal('editAlbumModal', _('Edit album'),
+                url_for('albums_update_details', album_id=selected.id),
+                render_edit_album_form, _('Save')) }}
+{% endblock %}

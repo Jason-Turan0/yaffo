@@ -14,9 +14,8 @@ from yaffo.db.models import (
     Tag,
 )
 from yaffo.db.repositories.media_filter_repository import apply_media_filters
-from yaffo.distance_units import distance_to_kilometers
 from yaffo.routes import filter_config
-from yaffo.routes.filter_panel import build_filters_context
+from yaffo.routes.filter_panel import build_filters_context, to_media_filters, to_query_params
 from yaffo.utils.context import context
 
 
@@ -27,7 +26,6 @@ def init_home_routes(app: Flask):
         # Parse filter parameters + build the sidebar's option lists (shared with
         # the locations page, which filters client-side from the same panel).
         filters = build_filters_context(db.session, request.args)
-        proximity_distance = filters["selected_proximity_distance"]
         page = request.args.get("page", default=1, type=int)
         page_size = request.args.get("page-size", type=int)
         filter_page_size = page_size if page_size else 25
@@ -40,36 +38,9 @@ def init_home_routes(app: Flask):
         )
 
         # Apply filters (semantics shared with the p2p sharing handler —
-        # see media_filter_repository).
-        query = apply_media_filters(
-            db.session,
-            query,
-            {
-                "path": filters["selected_path"],
-                "year": filters["selected_year"],
-                "month": filters["selected_month"],
-                "device": filters["selected_device"],
-                "favorite": filters["selected_favorite"],
-                "media_type": filters["selected_media_type"],
-                "person_ids": filters["selected_person_ids"],
-                "person_match_type": filters["selected_person_match_type"],
-                "gender": filters["selected_gender"],
-                "label_ids": filters["selected_label_ids"],
-                "labels_match_type": filters["selected_labels_match_type"],
-                "tag_name": filters["selected_tag_name"],
-                "tag_value": filters["selected_tag_value"],
-                "location_names": filters["selected_location_names"],
-                "location_match_type": filters["selected_location_match_type"],
-                "unnamed": filters["selected_unnamed"],
-                "proximity_lat": filters["selected_proximity_lat"],
-                "proximity_lon": filters["selected_proximity_lon"],
-                "proximity_km": (
-                    distance_to_kilometers(proximity_distance, filters["selected_distance_unit"])
-                    if proximity_distance
-                    else None
-                ),
-            },
-        )
+        # see media_filter_repository, and with the album add screen via
+        # to_media_filters).
+        query = apply_media_filters(db.session, query, to_media_filters(filters))
 
         # Get total count of filtered results
         media_count = query.count()
@@ -106,6 +77,7 @@ def init_home_routes(app: Flask):
             "index.html",
             media_items=media_items,
             filters=filters,
+            filter_params=to_query_params(filters),
             media_count=media_count,
             pagination=pagination,
             filter_layout=filter_config.load_layout(db.session),

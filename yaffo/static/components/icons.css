@@ -48,6 +48,7 @@ button[data-icon]::before {
 }
 
 [data-icon="library"]::before { -webkit-mask-image: url("/static/themes/classic/icon-library.svg"); mask-image: url("/static/themes/classic/icon-library.svg"); }
+[data-icon="albums"]::before { -webkit-mask-image: url("/static/themes/classic/icon-albums.svg"); mask-image: url("/static/themes/classic/icon-albums.svg"); }
 [data-icon="faces"]::before { -webkit-mask-image: url("/static/themes/classic/icon-faces.svg"); mask-image: url("/static/themes/classic/icon-faces.svg"); }
 [data-icon="people"]::before { -webkit-mask-image: url("/static/themes/classic/icon-people.svg"); mask-image: url("/static/themes/classic/icon-people.svg"); }
 [data-icon="locations"]::before { -webkit-mask-image: url("/static/themes/classic/icon-locations.svg"); mask-image: url("/static/themes/classic/icon-locations.svg"); }

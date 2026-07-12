@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "components/modal.html" import render_modal %}
+
+{% block extra_styles %}
+    {# index.css owns .photo-grid / .photo-card — the album grid reuses them, so a
+       photo looks the same here as on the home page. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='albums/albums.css') }}">
+{% endblock %}
+
+{% macro render_new_album_form() %}
+    <div class="form-group">
+        <label for="new-album-name">{{ _("Name") }}</label>
+        <input type="text" id="new-album-name" name="name" required
+               placeholder="{{ _('e.g. Summer 2024, Grandma’s 80th') }}">
+    </div>
+    <div class="form-group">
+        <label for="new-album-description">{{ _("Description") }}</label>
+        <textarea id="new-album-description" name="description" rows="3"
+                  placeholder="{{ _('Optional — what is this album for?') }}"></textarea>
+        <p class="hint-text">{{ _("Starts empty — add photos to it once it exists.") }}</p>
+    </div>
+{% endmacro %}
+
+{% block content %}
+    <div class="albums-container">
+        <nav class="sidebar albums-sidebar">
+            <h2>
+                <a href="{{ url_for('albums_index') }}"
+                   class="{% if not selected_id %}active{% endif %}">{{ _("Albums") }}</a>
+            </h2>
+            {% if albums %}
+            <ul class="panel-nav">
+                {% for album in albums %}
+                <li>
+                    <a href="{{ url_for('albums_show', album_id=album.id) }}"
+                       class="{% if album.id == selected_id %}active{% endif %}">
+                        <span class="panel-nav-label">{{ album.name }}</span>
+                        {% if album.is_shared %}<span class="chip chip-accent">{{ _("Shared") }}</span>{% endif %}
+                        <span class="chip">{{ album.item_count | format_integer }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="no-data">{{ _("No albums yet") }}</p>
+            {% endif %}
+
+            <button type="button" id="new-album-button" class="btn-secondary new-album-button"
+                    data-icon="add">{{ _("New album") }}</button>
+        </nav>
+
+        <div class="albums-content">
+            {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+            {% block albums_content %}{% endblock %}
+        </div>
+    </div>
+
+    {# Shared by every albums page so "New album" works from the overview and from
+       inside an album. #}
+    {{ render_modal(
+        'newAlbumModal',
+        _('New Album'),
+        url_for('albums_create'),
+        render_new_album_form,
+        _('Create')
+    ) }}
+    <script src="{{ url_for('static', filename='albums/albums.js') }}"></script>
+{% endblock %}
