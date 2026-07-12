@@ -11,6 +11,7 @@ import pytest
 
 from yaffo.db import db
 from yaffo.db.models import (
+    GRANT_SCOPE_ALBUM,
     GRANT_SCOPE_FOLDER,
     GRANT_SCOPE_MEDIA_DIR,
     ApplicationSettings,
@@ -19,7 +20,7 @@ from yaffo.db.models import (
     TRUST_STATE_REVOKED,
     TRUST_STATE_TRUSTED,
 )
-from yaffo.db.repositories import media_dir_repository, p2p_repository
+from yaffo.db.repositories import album_repository, media_dir_repository, p2p_repository
 from yaffo.p2p.pairing import PairingError, new_pairing_code
 from yaffo.p2p.service import P2PServiceError
 from yaffo.p2p.signaling import CallError
@@ -69,6 +70,7 @@ class FakeP2PService:
             "total": 3,
             "files": [
                 {
+                    "media_item_id": 11,
                     "media_dir_id": "remote-lib",
                     "relative_path": "trip/a.jpg",
                     "name": "a.jpg",
@@ -99,6 +101,7 @@ class FakeP2PService:
         self.revoked_ids = []
         self.listed_ids = []
         self.listed_files_calls = []
+        self.listed_album_ids = []
         self.preview_calls = []
         self.started_batches = []
         self.cancelled_batches = []
@@ -147,14 +150,17 @@ class FakeP2PService:
             raise self.list_shared_error
         return self.list_shared_result
 
-    def list_shared_files(self, device_id, media_dir_id, relative_path="", filters=None, offset=0, limit=50):
+    def list_shared_files(
+        self, device_id, media_dir_id, relative_path="", filters=None, offset=0, limit=50, album_id=None
+    ):
         self.listed_files_calls.append((device_id, media_dir_id, relative_path, filters, offset, limit))
+        self.listed_album_ids.append(album_id)
         if self.list_files_error is not None:
             raise self.list_files_error
         return self.list_files_result
 
-    def pull_preview(self, device_id, media_dir_id, relative_path, max_dimension=512):
-        self.preview_calls.append((device_id, media_dir_id, relative_path, max_dimension))
+    def pull_preview(self, device_id, media_item_id, max_dimension=512):
+        self.preview_calls.append((device_id, media_item_id, max_dimension))
         if self.preview_error is not None:
             raise self.preview_error
         return self.preview_bytes
@@ -170,8 +176,9 @@ class FakeP2PService:
         destination_root,
         collection_path,
         files=None,
-        include_paths=None,
-        exclude_paths=None,
+        include_ids=None,
+        exclude_ids=None,
+        album_id=None,
     ):
         self.started_batches.append(
             {
@@ -184,8 +191,9 @@ class FakeP2PService:
                 "destination_root": destination_root,
                 "collection_path": collection_path,
                 "files": files,
-                "include_paths": include_paths,
-                "exclude_paths": exclude_paths,
+                "include_ids": include_ids,
+                "exclude_ids": exclude_ids,
+                "album_id": album_id,
             }
         )
         if self.transfer_error is not None:
@@ -501,6 +509,90 @@ def test_add_folder_grant_stores_relative_path(app, client, service, tmp_path):
         assert grant.relative_path == "2024/summer"
 
 
+def test_add_album_grant_from_the_device_page(app, client, service):
+    """The device page can share an album too — the same grant the album's own Share
+    action creates. An album grant carries no media dir: its members are whatever is
+    in the album at request time, wherever they live."""
+    _seed_devices(app)
+    with app.app_context():
+        album = album_repository.create_album(db.session, "Summer 2024")
+        album_id = album.id
+
+    resp = client.post(
+        f"/sharing/devices/{PEER_ONLINE}/grants",
+        data={"scope_type": GRANT_SCOPE_ALBUM, "album_id": str(album_id)},
+    )
+
+    assert resp.status_code == 200
+    message, type_ = _notification(resp)
+    assert message == "Share grant added." and type_ == "success"
+    with app.app_context():
+        grants = p2p_repository.list_active_grants(db.session, PEER_ONLINE)
+        assert len(grants) == 1
+        assert grants[0].scope_type == GRANT_SCOPE_ALBUM
+        assert grants[0].album_id == album_id
+        assert grants[0].media_dir_id is None
+
+
+def test_sidebar_names_an_album_grant_by_its_album(app, client, service):
+    """An album grant has no media dir and no path, so without naming it by its album
+    the sidebar row read "Unknown share"."""
+    _seed_devices(app)
+    with app.app_context():
+        album = album_repository.create_album(db.session, "Summer 2024")
+        p2p_repository.create_grant(db.session, PEER_ONLINE, GRANT_SCOPE_ALBUM, album_id=album.id)
+
+    body = client.get("/sharing/sidebar").get_data(as_text=True)
+
+    assert "Summer 2024" in body
+    assert "Unknown share" not in body
+
+
+def test_adding_the_same_grant_twice_does_not_duplicate_it(app, client, service, tmp_path):
+    _seed_devices(app)
+    with app.app_context():
+        media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+        album = album_repository.create_album(db.session, "Summer 2024")
+        album_id = album.id
+
+    for _ in range(2):
+        client.post(
+            f"/sharing/devices/{PEER_ONLINE}/grants",
+            data={"scope_type": GRANT_SCOPE_ALBUM, "album_id": str(album_id)},
+        )
+
+    with app.app_context():
+        assert len(p2p_repository.list_active_grants(db.session, PEER_ONLINE)) == 1
+
+
+def test_add_album_grant_requires_an_existing_album(app, client, service):
+    _seed_devices(app)
+
+    resp = client.post(
+        f"/sharing/devices/{PEER_ONLINE}/grants",
+        data={"scope_type": GRANT_SCOPE_ALBUM, "album_id": "999"},
+    )
+
+    message, type_ = _notification(resp)
+    assert "Choose an album" in message and type_ == "error"
+    with app.app_context():
+        assert p2p_repository.list_active_grants(db.session, PEER_ONLINE) == []
+
+
+def test_device_page_offers_the_album_scope_when_albums_exist(app, client, service, tmp_path):
+    _seed_devices(app)
+    with app.app_context():
+        # The share form only appears once a media dir is configured (an album's
+        # photos come from one), so set one up alongside the album.
+        media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+        album_repository.create_album(db.session, "Summer 2024")
+
+    body = client.get(f"/sharing/devices/{PEER_ONLINE}").get_data(as_text=True)
+
+    assert 'value="album"' in body
+    assert "Summer 2024" in body
+
+
 def test_add_folder_grant_rejects_paths_outside_media_dirs(app, client, service, tmp_path):
     _seed_devices(app)
     with app.app_context():
@@ -611,14 +703,42 @@ def test_shared_files_gallery_renders_with_filters_and_facets(app, client, servi
     assert "Lisbon" in body
     # Cards are selectable; pulling one file and pulling the lot are the same action
     # on a selection, so there are no per-card pull forms and no Download-all.
-    assert 'data-select-id="trip/a.jpg"' in body
+    assert 'data-select-id="11"' in body
     assert "Download all" not in body
     assert "pull-destination" not in body
-    assert "Set a download directory" in body
     # Facets from the peer populate the sidebar selects; selections stick.
     assert "2023" in body and "X-T200" in body
     assert 'value="beach"' in body
     assert "Page 2 of 3" in body
+
+
+def test_gallery_without_a_download_directory_offers_no_selection(app, client, service):
+    """Pulling needs somewhere to put the files. Without a download directory there is
+    nothing to select, so the grid must not show checkboxes that lead nowhere — it shows
+    a notice pointing at the setting instead."""
+    _seed_devices(app)
+
+    body = client.get(
+        f"/sharing/devices/{PEER_ONLINE}/files?media_dir_id=remote-lib&scope=trip"
+    ).get_data(as_text=True)
+
+    assert "Choose a download directory" in body
+    assert "Set download directory" in body
+    assert "is-selecting" not in body        # no dead checkboxes
+    assert "remote-selection" not in body    # ...and no selection bar
+
+
+def test_gallery_with_a_download_directory_offers_selection(app, client, service, tmp_path):
+    _seed_devices(app)
+    _set_download_dir(app, tmp_path / "downloads")
+
+    body = client.get(
+        f"/sharing/devices/{PEER_ONLINE}/files?media_dir_id=remote-lib&scope=trip"
+    ).get_data(as_text=True)
+
+    assert "is-selecting" in body
+    assert "Pull selected" in body
+    assert "Choose a download directory" not in body
 
 
 def test_shared_files_page_without_scope_redirects_to_device(app, client, service):
@@ -650,19 +770,19 @@ def test_shared_files_gallery_revoked_device(app, client, service):
 def test_preview_proxies_peer_image_with_caching(app, client, service):
     _seed_devices(app)
 
-    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/preview?media_dir_id=remote-lib&path=trip/a.jpg")
+    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/preview?media_item_id=11")
 
     assert resp.status_code == 200
     assert resp.data == b"jpeg-bytes"
     assert resp.headers["Content-Type"] == "image/jpeg"
     assert "max-age" in resp.headers["Cache-Control"]
-    assert service.preview_calls == [(PEER_ONLINE, "remote-lib", "trip/a.jpg", 512)]
+    assert service.preview_calls == [(PEER_ONLINE, 11, 512)]
 
 
 def test_preview_failure_is_an_error_status_for_the_img_fallback(app, client, service):
     _seed_devices(app)
     service.preview_error = CallError("peer did not answer")
-    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/preview?media_dir_id=remote-lib&path=trip/a.jpg")
+    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/preview?media_item_id=11")
     assert resp.status_code == 502
 
 
@@ -718,8 +838,7 @@ def test_pull_selected_files_queues_one_batch(app, client, service, tmp_path):
 
     resp = client.post(
         f"/sharing/devices/{PEER_ONLINE}/transfers/pull"
-        "?media_dir_id=remote-lib&scope=trip&label=photos"
-        "&select_id=trip/a.jpg&select_id=trip/b.jpg"
+        "?media_dir_id=remote-lib&scope=trip&label=photos&select_id=11&select_id=12"
     )
 
     assert resp.status_code == 204
@@ -737,10 +856,40 @@ def test_pull_selected_files_queues_one_batch(app, client, service, tmp_path):
             "destination_root": download_dir.resolve(),
             "collection_path": "trip",
             "files": None,
-            "include_paths": ["trip/a.jpg", "trip/b.jpg"],
-            "exclude_paths": None,
+            "include_ids": [11, 12],
+            "exclude_ids": None,
+            "album_id": None,
         }
     ]
+
+
+def test_album_share_is_browsed_by_album_id(app, client, service):
+    """An album share has no media dir and no path — the gallery browses it by album
+    id, and the peer resolves the membership."""
+    _seed_devices(app)
+
+    resp = client.get(f"/sharing/devices/{PEER_ONLINE}/files?album_id=7&label=Trip")
+
+    assert resp.status_code == 200
+    assert service.listed_album_ids == [7]
+    body = resp.get_data(as_text=True)
+    assert "Trip" in body
+
+
+def test_pulling_an_album_share_queues_an_album_batch(app, client, service, tmp_path):
+    _seed_devices(app)
+    download_dir = tmp_path / "downloads"
+    _set_download_dir(app, download_dir)
+
+    resp = client.post(
+        f"/sharing/devices/{PEER_ONLINE}/transfers/pull?album_id=7&label=Trip&select=all"
+    )
+
+    assert resp.status_code == 204
+    batch = service.started_batches[0]
+    assert batch["album_id"] == 7
+    assert batch["media_dir_id"] == ""       # an album has no single media dir
+    assert batch["collection_path"] == "Trip"  # ...so it lands under the album's name
 
 
 def test_pull_with_nothing_selected_is_refused(app, client, service, tmp_path):
@@ -767,7 +916,7 @@ def test_pull_select_all_queues_the_whole_filtered_scope(app, client, service, t
     resp = client.post(
         f"/sharing/devices/{PEER_ONLINE}/transfers/pull"
         "?media_dir_id=remote-lib&scope=trip&label=photos&media-type=photo&year=2024"
-        "&select=all&exclude_id=trip/skip.jpg"
+        "&select=all&exclude_id=13"
     )
 
     assert resp.status_code == 204
@@ -783,8 +932,9 @@ def test_pull_select_all_queues_the_whole_filtered_scope(app, client, service, t
     assert batch["filters"] == {"media_type": "photo", "year": 2024}
     assert batch["collection_path"] == "trip"
     assert batch["files"] is None
-    assert batch["include_paths"] is None          # the scope, not an enumeration
-    assert batch["exclude_paths"] == ["trip/skip.jpg"]
+    assert batch["include_ids"] is None            # the scope, not an enumeration
+    assert batch["exclude_ids"] == [13]
+    assert batch["album_id"] is None               # a path share, not an album
 
 
 def test_pull_requires_a_scope(app, client, service, tmp_path):
@@ -944,8 +1094,7 @@ def test_pull_requires_download_directory(app, client, service):
     _seed_devices(app)
 
     resp = client.post(
-        f"/sharing/devices/{PEER_ONLINE}/transfers/pull"
-        "?media_dir_id=remote-lib&select_id=trip/a.jpg"
+        f"/sharing/devices/{PEER_ONLINE}/transfers/pull?media_dir_id=remote-lib&select_id=11"
     )
 
     assert resp.status_code == 204

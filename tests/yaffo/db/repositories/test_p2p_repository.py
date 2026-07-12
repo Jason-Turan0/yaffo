@@ -117,6 +117,38 @@ def test_invalid_grant_shapes_are_rejected(session, paired, scope, kwargs):
         repo.create_grant(session, DEVICE, scope, **kwargs)
 
 
+def test_granting_the_same_scope_twice_is_a_no_op(session, paired):
+    """Duplicates would authorize nothing extra, but would show as separate rows the
+    user has to revoke one at a time."""
+    first = repo.create_grant(session, DEVICE, GRANT_SCOPE_MEDIA_DIR, media_dir_id="guid-1")
+    second = repo.create_grant(session, DEVICE, GRANT_SCOPE_MEDIA_DIR, media_dir_id="guid-1")
+
+    assert second.id == first.id
+    assert len(repo.list_active_grants(session, DEVICE)) == 1
+
+
+def test_duplicate_album_and_folder_grants_are_no_ops(session, paired):
+    album = album_repo.create_album(session, "Summer")
+    repo.create_grant(session, DEVICE, GRANT_SCOPE_ALBUM, album_id=album.id)
+    repo.create_grant(session, DEVICE, GRANT_SCOPE_ALBUM, album_id=album.id)
+    repo.create_grant(session, DEVICE, GRANT_SCOPE_FOLDER, media_dir_id="g", relative_path="2024")
+    repo.create_grant(session, DEVICE, GRANT_SCOPE_FOLDER, media_dir_id="g", relative_path="2024")
+
+    assert len(repo.list_active_grants(session, DEVICE)) == 2  # one album, one folder
+
+
+def test_a_revoked_grant_can_be_granted_again(session, paired):
+    """The duplicate check only looks at ACTIVE grants: re-sharing something you
+    revoked must work, and leaves the revoked row as history."""
+    first = repo.create_grant(session, DEVICE, GRANT_SCOPE_MEDIA_DIR, media_dir_id="guid-1")
+    repo.revoke_grant(session, first.id)
+
+    second = repo.create_grant(session, DEVICE, GRANT_SCOPE_MEDIA_DIR, media_dir_id="guid-1")
+
+    assert second.id != first.id
+    assert [g.id for g in repo.list_active_grants(session, DEVICE)] == [second.id]
+
+
 def test_grant_requires_a_known_device(session):
     with pytest.raises(ValueError, match="not a known device"):
         repo.create_grant(session, "NOBODY-HOME", GRANT_SCOPE_MEDIA_DIR, media_dir_id="guid-1")

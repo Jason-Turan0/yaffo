@@ -11,13 +11,14 @@ import pytest
 from yaffo.app import create_app
 from yaffo.db import db
 from yaffo.db.models import (
+    GRANT_SCOPE_ALBUM,
     GRANT_SCOPE_MEDIA_DIR,
     MEDIA_TYPE_PHOTO,
     MediaItem,
     TRUST_STATE_REVOKED,
     TRUST_STATE_TRUSTED,
 )
-from yaffo.db.repositories import media_dir_repository, p2p_repository
+from yaffo.db.repositories import album_repository, media_dir_repository, p2p_repository
 from yaffo.p2p.identity import InMemorySecretStore
 from yaffo.p2p.lan_discovery import LanCandidate
 from yaffo.p2p.pairing import PairingError
@@ -391,3 +392,141 @@ def test_download_all_batch_rides_one_transfer_session(two_devices, loopback_hub
         assert landed.read_bytes() == blob, rel
 
     assert len(loopback_hub.connect_requests) - requests_before == 1
+
+
+def test_album_grant_serves_exactly_its_membership(two_devices, tmp_path):
+    """The Phase 7 exit criterion. B grants A an album; A lists and pulls it; removing
+    an item from the album excludes it from A's NEXT listing (membership is resolved
+    per request, like revocation); and the grant leaks nothing outside the album —
+    not even a sibling file in the same folder."""
+    (app_a, service_a), (app_b, service_b) = two_devices
+    _pair(service_a, service_b)
+
+    library = tmp_path / "library-b"
+    contents = {
+        "trip/in-album-1.jpg": b"a" * 1200,
+        "trip/in-album-2.jpg": b"b" * 1300,
+        "trip/not-in-album.jpg": b"c" * 1400,  # same folder, NOT a member
+    }
+    with app_b.app_context():
+        media_dir_repository.add_media_dir(db.session, str(library))
+        item_ids = {}
+        for rel, blob in contents.items():
+            path = library / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(blob)
+            item = MediaItem(full_file_path=str(path), media_type=MEDIA_TYPE_PHOTO)
+            db.session.add(item)
+            db.session.flush()
+            item_ids[rel] = item.id
+        db.session.commit()
+
+        album = album_repository.create_album(db.session, "Trip")
+        album_id = album.id
+        album_repository.add_items(
+            db.session, album_id, [item_ids["trip/in-album-1.jpg"], item_ids["trip/in-album-2.jpg"]]
+        )
+        p2p_repository.create_grant(
+            db.session, service_a.identity.device_id, GRANT_SCOPE_ALBUM, album_id=album_id
+        )
+
+    # A sees the album offered as a scope, sized by its membership.
+    shared = service_a.list_shared.send(service_b.identity.device_id)
+    album_scopes = [s for s in shared["scopes"] if s["scope_type"] == GRANT_SCOPE_ALBUM]
+    assert len(album_scopes) == 1
+    assert album_scopes[0]["album_id"] == album_id
+    assert album_scopes[0]["name"] == "Trip"
+    assert album_scopes[0]["file_count"] == 2
+
+    # ...and listing it returns the members, each naming the media dir it lives in.
+    listed = service_a.list_files.send(service_b.identity.device_id, album_id=album_id)
+    names = sorted(f["relative_path"] for f in listed["files"])
+    assert names == ["trip/in-album-1.jpg", "trip/in-album-2.jpg"]
+    assert listed["total"] == 2
+    assert all(f["media_dir_id"] for f in listed["files"])  # per-file: members can span dirs
+
+    # The album grant authorizes its members ONLY — a sibling in the same folder, covered
+    # by no grant, is refused even though A knows its id (ids are handles, not authority).
+    with pytest.raises((CallError, P2PServiceError), match="no active share grant"):
+        service_a.pull_preview.send(
+            service_b.identity.device_id, item_ids["trip/not-in-album.jpg"]
+        )
+
+    # Removing an item from the album drops it from the NEXT listing: the serving
+    # device re-decides membership on every request.
+    with app_b.app_context():
+        album_repository.remove_items(db.session, album_id, [item_ids["trip/in-album-1.jpg"]])
+
+    listed = service_a.list_files.send(service_b.identity.device_id, album_id=album_id)
+    assert [f["relative_path"] for f in listed["files"]] == ["trip/in-album-2.jpg"]
+
+    # Revoking the album grant closes it entirely.
+    with app_b.app_context():
+        for grant in p2p_repository.list_active_grants(db.session, service_a.identity.device_id):
+            p2p_repository.revoke_grant(db.session, grant.id)
+    with pytest.raises((CallError, P2PServiceError), match="no active share grant"):
+        service_a.list_files.send(service_b.identity.device_id, album_id=album_id)
+
+
+def test_album_batch_pulls_only_its_members(two_devices, tmp_path):
+    """An album batch really transfers: the peer resolves the album's membership at
+    request time, each manifest names the media dir its file came from, and the bytes
+    land under a folder named for the album."""
+    (app_a, service_a), (app_b, service_b) = two_devices
+    _pair(service_a, service_b)
+
+    library = tmp_path / "library-b"
+    contents = {
+        "trip/a.jpg": b"a" * 2500,
+        "holiday/b.jpg": b"b" * 2600,   # a DIFFERENT folder — an album spans them
+        "trip/skip.jpg": b"c" * 2700,   # not a member
+    }
+    with app_b.app_context():
+        media_dir_repository.add_media_dir(db.session, str(library))
+        item_ids = {}
+        for rel, blob in contents.items():
+            path = library / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(blob)
+            item = MediaItem(full_file_path=str(path), media_type=MEDIA_TYPE_PHOTO)
+            db.session.add(item)
+            db.session.flush()
+            item_ids[rel] = item.id
+        db.session.commit()
+        album = album_repository.create_album(db.session, "Trip")
+        album_id = album.id
+        album_repository.add_items(
+            db.session, album_id, [item_ids["trip/a.jpg"], item_ids["holiday/b.jpg"]]
+        )
+        p2p_repository.create_grant(
+            db.session, service_a.identity.device_id, GRANT_SCOPE_ALBUM, album_id=album_id
+        )
+
+    downloads = tmp_path / "downloads-a"
+    batch_id = service_a.transfers.start_batch(
+        service_b.identity.device_id,
+        "deviceB",
+        "",           # no media dir: an album has no single one
+        "",
+        "Trip",
+        {},
+        downloads,
+        "Trip",
+        album_id=album_id,
+    )
+
+    deadline = time.time() + 60
+    rows = []
+    while time.time() < deadline:
+        rows = service_a.transfers.snapshot(service_b.identity.device_id)
+        if rows and not rows[0]["active"]:
+            break
+        time.sleep(0.2)
+
+    assert rows and rows[0]["id"] == batch_id
+    assert rows[0]["state"] == "completed", rows[0]["failed_files"]
+    assert rows[0]["files_done"] == 2  # the members only
+
+    assert (downloads / "deviceB" / "Trip" / "trip/a.jpg").read_bytes() == contents["trip/a.jpg"]
+    assert (downloads / "deviceB" / "Trip" / "holiday/b.jpg").read_bytes() == contents["holiday/b.jpg"]
+    assert not (downloads / "deviceB" / "Trip" / "trip/skip.jpg").exists()

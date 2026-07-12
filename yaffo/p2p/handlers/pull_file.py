@@ -1,17 +1,12 @@
 import base64
 import hashlib
-import os
+from pathlib import Path
 from typing import Optional
 
-from yaffo.db import db
-from yaffo.db.models import MediaItem
-from yaffo.db.repositories import media_dir_repository
 from yaffo.p2p.handlers.sharing import (
     MAX_PULL_CHUNK_BYTES,
-    clean_relative_path,
-    grant_allows,
+    granted_item,
     parse_non_negative_int,
-    path_inside,
     peer_lookup,
     sha256_file,
 )
@@ -22,14 +17,19 @@ MESSAGE_PULL_FILE = "pull_file"
 
 
 def build_pull_file_request(
-    identity: DeviceIdentity, media_dir_id: str, relative_path: str, offset: int, length: int
+    identity: DeviceIdentity, media_item_id: int, offset: int, length: int
 ) -> dict:
+    """One chunk of one shared file.
+
+    The file is named by the SERVING device's media item id — the handle its manifests
+    hand out. No path travels on the wire, so there is nothing to sanitize and no
+    traversal surface: the server derives the path from its own row, and the id is only
+    servable if granted_item() finds it inside an active grant."""
     return build_signed_message(
         identity,
         MESSAGE_PULL_FILE,
         {
-            "media_dir_id": media_dir_id,
-            "relative_path": relative_path,
+            "media_item_id": media_item_id,
             "offset": offset,
             "length": length,
         },
@@ -41,7 +41,7 @@ def verify_pull_file_request(body: dict, lookup: PeerLookup) -> Optional[str]:
         body,
         lookup,
         MESSAGE_PULL_FILE,
-        signed_fields=("media_dir_id", "relative_path", "offset", "length"),
+        signed_fields=("media_item_id", "offset", "length"),
     )
 
 
@@ -60,9 +60,7 @@ class PullFileEndpoint:
                 return {"status": "error", "detail": denial}
 
             peer_device_id = body["device_id"]
-            media_dir_id = body.get("media_dir_id")
             try:
-                relative_path = clean_relative_path(body.get("relative_path"))
                 offset = parse_non_negative_int(body.get("offset"), "offset")
                 requested_length = parse_non_negative_int(body.get("length"), "length")
             except ValueError as exc:
@@ -71,19 +69,12 @@ class PullFileEndpoint:
             if length == 0:
                 return {"status": "error", "detail": "length must be greater than zero"}
 
-            media_dir = media_dir_repository.media_dir_by_id(db.session, media_dir_id)
-            if media_dir is None:
-                return {"status": "error", "detail": "media directory is not configured"}
-            root = media_dir.path.expanduser().resolve()
-            path = (root / relative_path.replace("/", os.sep)).resolve()
-            if not path_inside(path, root):
-                return {"status": "error", "detail": "path escapes media directory"}
-            if not grant_allows(peer_device_id, media_dir_id, relative_path):
+            # The whole authorization check: is this item inside an active grant?
+            item = granted_item(peer_device_id, body.get("media_item_id"))
+            if item is None:
                 return {"status": "error", "detail": "no active share grant covers this file"}
 
-            item = db.session.query(MediaItem).filter_by(full_file_path=str(path)).first()
-            if item is None:
-                return {"status": "error", "detail": "file is not indexed"}
+            path = Path(item.full_file_path).expanduser().resolve()
             if not path.is_file():
                 return {"status": "error", "detail": "file is not available"}
 
@@ -103,13 +94,13 @@ class PullFileEndpoint:
             # mid-transfer. Browse/manifest requests still never hash; this
             # one extra read happens only at the end of a full pull.
             file_sha256 = sha256_file(path) if eof else None
+            media_item_id = item.id
 
         response = {
             "status": "ok",
             "type": "file_chunk",
             "device_id": self._service.identity.device_id,
-            "media_dir_id": media_dir_id,
-            "relative_path": relative_path,
+            "media_item_id": media_item_id,
             "offset": offset,
             "next_offset": next_offset,
             "size": size,

@@ -1,6 +1,12 @@
 from yaffo.db import db
-from yaffo.db.repositories import media_dir_repository, p2p_repository
-from yaffo.p2p.handlers.sharing import grant_target, indexed_media_query, peer_lookup
+from yaffo.db.models import GRANT_SCOPE_ALBUM
+from yaffo.db.repositories import album_repository, media_dir_repository, p2p_repository
+from yaffo.p2p.handlers.sharing import (
+    album_scope_query,
+    grant_target,
+    indexed_media_query,
+    peer_lookup,
+)
 from yaffo.p2p.messages import build_signed_message, verify_signed_message
 
 MESSAGE_LIST_SHARED = "list_shared"
@@ -29,6 +35,28 @@ class ListSharedEndpoint:
             scopes = []
             seen: set[tuple[str, str]] = set()
             for grant in grants:
+                if grant.scope_type == GRANT_SCOPE_ALBUM:
+                    # An album grant has no media dir and no path: it is a set of items,
+                    # named by its album, and its size is its membership right now.
+                    album = album_repository.get_album(db.session, grant.album_id)
+                    if album is None:
+                        continue  # the album was deleted; the grant authorizes nothing
+                    key = ("album", str(album.id))
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    scopes.append(
+                        {
+                            "scope_type": GRANT_SCOPE_ALBUM,
+                            "album_id": album.id,
+                            "media_dir_id": None,
+                            "relative_path": None,
+                            "name": album.name,
+                            "file_count": album_scope_query(album.id).count(),
+                        }
+                    )
+                    continue
+
                 media_dir = media_dirs.get(grant.media_dir_id)
                 if media_dir is None:
                     continue

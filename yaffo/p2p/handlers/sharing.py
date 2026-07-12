@@ -3,12 +3,14 @@ import os
 from pathlib import Path, PurePosixPath
 from typing import Optional
 
-from sqlalchemy import func, or_
+from sqlalchemy import false, func, or_, select
 
 from yaffo.db import db
 from yaffo.db.models import (
+    GRANT_SCOPE_ALBUM,
     GRANT_SCOPE_FOLDER,
     GRANT_SCOPE_MEDIA_DIR,
+    AlbumItem,
     MEDIA_TYPE_PHOTO,
     MEDIA_TYPE_VIDEO,
     ClassificationLabel,
@@ -80,7 +82,10 @@ def peer_lookup():
 
 
 def resolve_scoped_request(body: dict):
-    """Resolve a signed media-dir/scope request and check an active grant."""
+    """Resolve a signed media-dir/scope BROWSE request (the listing target).
+
+    Only listings name a path scope; pulling a file or a preview names a media item id
+    (granted_item), so no attacker-supplied path reaches the filesystem there."""
     peer_device_id = body["device_id"]
     media_dir_id = body.get("media_dir_id")
     raw_scope = body.get("relative_path") or ""
@@ -97,7 +102,7 @@ def resolve_scoped_request(body: dict):
     target = (root / scope_path.replace("/", os.sep)).resolve() if scope_path else root
     if not path_inside(target, root):
         return {"status": "error", "detail": "path escapes media directory"}, None, None, None, None
-    if not grant_allows(peer_device_id, media_dir_id, scope_path):
+    if not scope_is_granted(peer_device_id, media_dir_id, scope_path):
         return {"status": "error", "detail": "no active share grant covers this scope"}, None, None, None, None
     return None, media_dir_id, scope_path, root, target
 
@@ -230,6 +235,11 @@ def indexed_media_query(path: Path):
 def file_manifest(media_dir_id: str, relative_path: str, path: Path, item: MediaItem) -> dict:
     stat = path.stat()
     return {
+        # The id IS the handle: pulls and previews name it, and authorization is a
+        # lookup against granted_media_query. The path travels as DATA — the requester
+        # needs it for the destination layout and the resume sidecar — never as the
+        # thing a request is keyed on.
+        "media_item_id": item.id,
         "media_dir_id": media_dir_id,
         "relative_path": relative_path,
         "name": path.name,
@@ -242,18 +252,116 @@ def file_manifest(media_dir_id: str, relative_path: str, path: Path, item: Media
     }
 
 
-def grant_allows(peer_device_id: str, media_dir_id: str, relative_path: str) -> bool:
-    """Whether an active grant covers this file or browsed scope."""
+def granted_media_query(peer_device_id: str):
+    """Every media item this peer's active grants cover — the authorization set, as a
+    query.
+
+    THIS IS THE ONE PLACE file access is decided. Listing pages this query (narrowed to
+    the scope being browsed); pulling a file or a preview filters it to one id. Because
+    the listing and the authorization are the same object, a file that cannot appear in
+    a listing cannot be pulled either — the two cannot drift apart.
+
+    Each grant contributes one clause:
+      media_dir — every item under the dir's root;
+      folder    — every item under the granted subtree;
+      album     — exactly the album's members, wherever they live (an album grant
+                  authorizes its membership, never the folder a member happens to be in).
+
+    No grants means no items: the base query is false(), never "everything".
+    """
+    clauses = []
+    for grant in p2p_repository.list_active_grants(db.session, peer_device_id):
+        if grant.scope_type == GRANT_SCOPE_ALBUM and grant.album_id is not None:
+            clauses.append(
+                MediaItem.id.in_(
+                    select(AlbumItem.media_item_id).where(AlbumItem.album_id == grant.album_id)
+                )
+            )
+            continue
+
+        media_dir = media_dir_repository.media_dir_by_id(db.session, grant.media_dir_id)
+        if media_dir is None:
+            continue  # a grant on a since-removed media dir is inert
+        root = media_dir.path.expanduser().resolve()
+        if grant.scope_type == GRANT_SCOPE_MEDIA_DIR:
+            clauses.append(under_path(root))
+        elif grant.scope_type == GRANT_SCOPE_FOLDER and grant.relative_path:
+            target = (root / grant.relative_path.replace("/", os.sep)).resolve()
+            if path_inside(target, root):
+                clauses.append(under_path(target))
+
+    if not clauses:
+        return db.session.query(MediaItem).filter(false())
+    return db.session.query(MediaItem).filter(or_(*clauses))
+
+
+def granted_item(peer_device_id: str, media_item_id) -> Optional[MediaItem]:
+    """The item, if this peer is granted it — the whole file-level check.
+
+    Requests name a media item by ID, so there is no attacker-supplied path to
+    sanitize: the serving device derives the path from its own row."""
+    if not isinstance(media_item_id, int) or isinstance(media_item_id, bool):
+        return None
+    return granted_media_query(peer_device_id).filter(MediaItem.id == media_item_id).one_or_none()
+
+
+def granted_album_ids(peer_device_id: str) -> list[int]:
+    """Albums this peer holds an active grant on."""
+    return [
+        grant.album_id
+        for grant in p2p_repository.list_active_grants(db.session, peer_device_id)
+        if grant.scope_type == GRANT_SCOPE_ALBUM and grant.album_id is not None
+    ]
+
+
+def album_scope_query(album_id: int):
+    """An album's members, resolved NOW: adding or removing photos changes what the peer
+    sees on its next request, exactly as revocation does."""
+    return (
+        db.session.query(MediaItem)
+        .join(AlbumItem, AlbumItem.media_item_id == MediaItem.id)
+        .filter(AlbumItem.album_id == album_id)
+    )
+
+
+def scope_is_granted(peer_device_id: str, media_dir_id, scope_path: str, album_id=None) -> bool:
+    """Whether the peer may BROWSE this scope.
+
+    Distinct from granted_media_query, and deliberately weaker: it decides what the peer
+    may point a listing at, while the files that listing yields are still intersected
+    with the authorization set. So a scope can never widen what is actually served — at
+    worst it names a target that produces nothing."""
+    if album_id is not None:
+        return album_id in granted_album_ids(peer_device_id)
     for grant in p2p_repository.list_active_grants(db.session, peer_device_id):
         if grant.media_dir_id != media_dir_id:
             continue
         if grant.scope_type == GRANT_SCOPE_MEDIA_DIR:
             return True
-        if grant.scope_type == GRANT_SCOPE_FOLDER and grant.relative_path and relative_path:
+        if grant.scope_type == GRANT_SCOPE_FOLDER and grant.relative_path and scope_path:
             prefix = grant.relative_path.strip("/")
-            if relative_path == prefix or relative_path.startswith(f"{prefix}/"):
+            if scope_path == prefix or scope_path.startswith(f"{prefix}/"):
                 return True
     return False
+
+
+def under_path(path: Path):
+    """MediaItems stored at, or beneath, this path."""
+    path_text = str(path).rstrip("/\\")
+    return or_(
+        MediaItem.full_file_path == path_text,
+        MediaItem.full_file_path.like(f"{path_text}{os.sep}%"),
+    )
+
+
+def media_dir_location(path: Path, media_dirs) -> Optional[tuple[str, str]]:
+    """(media_dir_id, relative_path) for a file — an album's members can live in
+    different media dirs, so each manifest has to say which one it came from."""
+    for entry in media_dirs:
+        root = entry.path.expanduser().resolve()
+        if path_inside(path, root):
+            return entry.id, path.relative_to(root).as_posix()
+    return None
 
 
 def clean_relative_path(raw_path) -> str:

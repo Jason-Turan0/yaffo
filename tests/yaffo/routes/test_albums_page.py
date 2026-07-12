@@ -11,10 +11,12 @@ from yaffo.db.models import (
     GRANT_SCOPE_ALBUM,
     Album,
     MediaItem,
+    TRUST_STATE_REVOKED,
     TRUST_STATE_TRUSTED,
     KnownDevice,
 )
 from yaffo.db.repositories import album_repository as repo
+from yaffo.db.repositories import p2p_repository
 
 pytestmark = pytest.mark.unit
 
@@ -522,6 +524,132 @@ def test_empty_album_offers_no_edit_mode(app, client):
     album_id = _album(app, "Trip")
     body = client.get(f"/albums/{album_id}").get_data(as_text=True)
     assert "?edit=1" not in body  # nothing to select
+
+
+def _pair(app, device_id="PEER-1", name="laptop", trust=TRUST_STATE_TRUSTED):
+    with app.app_context():
+        db.session.add(
+            KnownDevice(device_id=device_id, pubkey="k", display_name=name, trust_state=trust)
+        )
+        db.session.commit()
+
+
+def test_share_modal_lists_trusted_devices(app, client):
+    _photos(app)
+    album_id = _album(app, "Trip", items=[1])
+    _pair(app, "PEER-1", "laptop")
+    _pair(app, "PEER-2", "old-phone", trust=TRUST_STATE_REVOKED)
+
+    body = client.get(f"/albums/{album_id}").get_data(as_text=True)
+
+    assert "laptop" in body
+    assert "old-phone" not in body  # a revoked device cannot be granted anything
+    assert "shareAlbumModal" in body
+    assert "disabled" not in body.split("shareAlbumModal")[1][:800]  # boxes are live
+
+
+def test_share_album_grants_the_checked_devices(app, client):
+    _photos(app)
+    album_id = _album(app, "Trip", items=[1])
+    _pair(app, "PEER-1", "laptop")
+
+    resp = client.post(f"/albums/{album_id}/share", data={"device_id": ["PEER-1"]})
+
+    assert resp.status_code == 302
+    with app.app_context():
+        grants = p2p_repository.list_active_grants(db.session, "PEER-1")
+        assert len(grants) == 1
+        assert grants[0].scope_type == GRANT_SCOPE_ALBUM
+        assert grants[0].album_id == album_id
+        assert grants[0].media_dir_id is None  # an album grant carries no media dir
+
+
+def test_share_album_is_idempotent(app, client):
+    """Re-posting the same checked devices must not stack duplicate grants."""
+    _photos(app)
+    album_id = _album(app, "Trip", items=[1])
+    _pair(app, "PEER-1", "laptop")
+
+    client.post(f"/albums/{album_id}/share", data={"device_id": ["PEER-1"]})
+    client.post(f"/albums/{album_id}/share", data={"device_id": ["PEER-1"]})
+
+    with app.app_context():
+        assert len(p2p_repository.list_active_grants(db.session, "PEER-1")) == 1
+
+
+def test_unchecking_a_device_revokes_the_album_share(app, client):
+    """The modal reconciles: the checked devices ARE the shared devices, so unchecking
+    one revokes its grant rather than leaving it stranded."""
+    _photos(app)
+    album_id = _album(app, "Trip", items=[1])
+    _pair(app, "PEER-1", "laptop")
+    _pair(app, "PEER-2", "desktop")
+    client.post(f"/albums/{album_id}/share", data={"device_id": ["PEER-1", "PEER-2"]})
+
+    # Post again with only PEER-2 checked — PEER-1 was unchecked.
+    client.post(f"/albums/{album_id}/share", data={"device_id": ["PEER-2"]})
+
+    with app.app_context():
+        assert p2p_repository.list_active_grants(db.session, "PEER-1") == []
+        assert len(p2p_repository.list_active_grants(db.session, "PEER-2")) == 1
+
+
+def test_unchecking_every_device_revokes_all_album_shares(app, client):
+    """An empty form posts no device_id at all — that means "shared with nobody",
+    not "leave it alone"."""
+    _photos(app)
+    album_id = _album(app, "Trip", items=[1])
+    _pair(app, "PEER-1", "laptop")
+    client.post(f"/albums/{album_id}/share", data={"device_id": ["PEER-1"]})
+
+    client.post(f"/albums/{album_id}/share", data={})
+
+    with app.app_context():
+        assert p2p_repository.list_active_grants(db.session, "PEER-1") == []
+
+
+def test_share_modal_reflects_a_grant_made_on_the_device_page(app, client, tmp_path):
+    """The two entry points are one grant: sharing from the device page must show up
+    checked in the album's Share modal."""
+    from yaffo.db.models import GRANT_SCOPE_ALBUM as ALBUM_SCOPE
+    from yaffo.db.repositories import media_dir_repository
+
+    _photos(app)
+    album_id = _album(app, "Trip", items=[1])
+    _pair(app, "PEER-1", "laptop")
+    with app.app_context():
+        media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+
+    client.post(
+        "/sharing/devices/PEER-1/grants",
+        data={"scope_type": ALBUM_SCOPE, "album_id": str(album_id)},
+    )
+
+    body = client.get(f"/albums/{album_id}").get_data(as_text=True)
+
+    assert 'value="PEER-1"' in body and "checked" in body
+
+
+def test_share_album_ignores_revoked_devices(app, client):
+    _photos(app)
+    album_id = _album(app, "Trip", items=[1])
+    _pair(app, "PEER-2", "old-phone", trust=TRUST_STATE_REVOKED)
+
+    client.post(f"/albums/{album_id}/share", data={"device_id": ["PEER-2"]})
+
+    with app.app_context():
+        assert p2p_repository.list_active_grants(db.session, "PEER-2") == []
+
+
+def test_shared_album_shows_the_device_in_the_header(app, client):
+    _photos(app)
+    album_id = _album(app, "Trip", items=[1])
+    _pair(app, "PEER-1", "laptop")
+    client.post(f"/albums/{album_id}/share", data={"device_id": ["PEER-1"]})
+
+    body = client.get(f"/albums/{album_id}").get_data(as_text=True)
+
+    assert '<span class="chip chip-accent">laptop</span>' in body
 
 
 def test_delete_album_keeps_the_photos(app, client):

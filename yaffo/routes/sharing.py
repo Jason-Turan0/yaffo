@@ -33,11 +33,12 @@ from flask_babel import gettext, ngettext
 
 from yaffo.db import db
 from yaffo.db.models import (
+    GRANT_SCOPE_ALBUM,
     GRANT_SCOPE_FOLDER,
     GRANT_SCOPE_MEDIA_DIR,
     TRUST_STATE_TRUSTED,
 )
-from yaffo.db.repositories import media_dir_repository, p2p_repository
+from yaffo.db.repositories import album_repository, media_dir_repository, p2p_repository
 from yaffo.db.repositories.media_repository import get_distinct_months
 from yaffo.distance_units import distance_to_kilometers
 from yaffo.routes.filter_panel import filter_selections, gender_options, to_query_params
@@ -160,6 +161,7 @@ def _validated_download_dir(raw_value: str) -> Path:
 def _outbound_share_rows() -> list[dict]:
     devices = {device.device_id: device for device in p2p_repository.list_known_devices(db.session)}
     media_dirs = {choice["id"]: choice for choice in _media_dir_choices()}
+    albums = {album.id: album for album in album_repository.list_albums(db.session)}
     rows = []
     for grant in p2p_repository.list_active_grants(db.session):
         device = devices.get(grant.peer_device_id)
@@ -168,6 +170,11 @@ def _outbound_share_rows() -> list[dict]:
             share_name = media_dir["name"] if media_dir else grant.media_dir_id or gettext("Unknown share")
         elif grant.scope_type == GRANT_SCOPE_FOLDER:
             share_name = grant.relative_path or gettext("Folder")
+        elif grant.scope_type == GRANT_SCOPE_ALBUM:
+            # An album grant carries no media dir and no path — it is named by its
+            # album, so without this it fell through to "Unknown share".
+            album = albums.get(grant.album_id)
+            share_name = album.name if album else gettext("Deleted album")
         else:
             share_name = grant.relative_path or grant.media_dir_id or gettext("Unknown share")
         rows.append(
@@ -215,8 +222,10 @@ def _shared_with_me_rows(context: dict) -> tuple[list[dict], str | None]:
                 {
                     "device_id": device["device_id"],
                     "device_name": device["display_name"],
+                    # An album share has no media dir or path: it is browsed by album id.
                     "media_dir_id": scope.get("media_dir_id") or "",
                     "scope": scope.get("relative_path") or "",
+                    "album_id": scope.get("album_id"),
                     "share_name": _remote_scope_label(scope),
                 }
             )
@@ -305,6 +314,7 @@ def init_sharing_routes(app: Flask):
             sharing=context,
             device=device,
             media_dirs=_media_dir_choices(),
+            albums=album_repository.list_albums(db.session),
         )
 
     def render_device_content(device_id: str):
@@ -318,6 +328,7 @@ def init_sharing_routes(app: Flask):
             device=device,
             selected_key=device_id,
             media_dirs=_media_dir_choices(),
+            albums=album_repository.list_albums(db.session),
             transfers=_transfers_for(device_id),
         )
 
@@ -346,6 +357,7 @@ def init_sharing_routes(app: Flask):
             device=device,
             selected_key=device_id,
             media_dirs=_media_dir_choices(),
+            albums=album_repository.list_albums(db.session),
             transfers=_transfers_for(device_id),
         )
 
@@ -530,6 +542,13 @@ def init_sharing_routes(app: Flask):
                         media_dir_id=media_dir_id,
                         relative_path=relative_path,
                     )
+            elif scope_type == GRANT_SCOPE_ALBUM:
+                album_id = request.form.get("album_id", type=int)
+                if album_id is None or album_repository.get_album(db.session, album_id) is None:
+                    return _notify(gettext("Choose an album to share."))
+                p2p_repository.create_grant(
+                    db.session, device_id, GRANT_SCOPE_ALBUM, album_id=album_id
+                )
             else:
                 return _notify(gettext("Choose what to share."))
         except ValueError as exc:
@@ -550,7 +569,11 @@ def init_sharing_routes(app: Flask):
         if device is None:
             abort(404)
         media_dir_id = (request.args.get("media_dir_id") or "").strip()
-        if not media_dir_id:
+        album_id = request.args.get("album_id", type=int)
+        # A scope is a path (media dir + optional subfolder) or an album — an album's
+        # members are a set of items that can live in several media dirs, so it has
+        # neither of those.
+        if not media_dir_id and album_id is None:
             return redirect(url_for("sharing_device", device_id=device_id))
         scope = (request.args.get("scope") or "").strip()
         label = (request.args.get("label") or "").strip()
@@ -578,6 +601,7 @@ def init_sharing_routes(app: Flask):
                     filter_payload,
                     offset=(page - 1) * page_size,
                     limit=page_size,
+                    album_id=album_id,
                 )
             except (CallError, P2PServiceError) as exc:
                 logger.warning("browse shared files failed peer=%s error=%s", device_id, exc)
@@ -602,15 +626,16 @@ def init_sharing_routes(app: Flask):
             **selections,
         }
         total = result.get("total", 0)
-        # Remote files are identified by their relative path — there is no local id
-        # for a file that lives on the peer.
-        selection = selection_from_args(request.args, total=total, cast=str)
+        # A remote file is identified by the PEER's media item id — the handle its
+        # manifests hand out, and what a pull is authorized against.
+        selection = selection_from_args(request.args, total=total, cast=int)
         # Pagination links must carry the scope, the filters AND the selection, or
         # paging would silently drop what the user has ticked.
         page_params = {
             "media_dir_id": media_dir_id,
             "scope": scope,
             "label": label,
+            "album_id": album_id,
             **to_query_params(selections),
             **selection.query_params,
         }
@@ -625,6 +650,7 @@ def init_sharing_routes(app: Flask):
             error=error,
             download_dir=_shared_download_dir_value(),
             transfers=_transfers_for(device_id),
+            album_id=album_id,
             selection=selection,
             page_params=page_params,
             pagination={
@@ -667,12 +693,11 @@ def init_sharing_routes(app: Flask):
         service = _service()
         if service is None:
             abort(503)
-        media_dir_id = (request.args.get("media_dir_id") or "").strip()
-        relative_path = (request.args.get("path") or "").strip()
-        if not media_dir_id or not relative_path:
+        media_item_id = request.args.get("media_item_id", type=int)
+        if media_item_id is None:
             abort(404)
         try:
-            data = service.pull_preview.send(device_id, media_dir_id, relative_path)
+            data = service.pull_preview.send(device_id, media_item_id)
         except (CallError, P2PServiceError):
             abort(502)
         except FutureTimeoutError:
@@ -744,29 +769,30 @@ def init_sharing_routes(app: Flask):
         The selection rides the querystring (routes/selection.py), exactly as the
         gallery rendered it: `select=all` (everything matching the scope + filters —
         including files on pages never rendered — minus any `exclude_id`), or a list
-        of `select_id` relative paths.
+        of `select_id` media item ids.
 
         Either way the batch resolves the selection against the manifest it snapshots
-        FROM THE PEER: the browser sends paths, never sizes or mtimes. Those seed the
-        resume sidecars, and a resumed .partial is only continued when the source
-        still matches them, so they have to come from the source of truth."""
+        FROM THE PEER: the browser sends ids, never sizes or mtimes. Those seed the
+        resume sidecars, and a resumed .partial is only continued when the source still
+        matches them, so they have to come from the source of truth."""
         service, device, destination_root, error = _transfer_prerequisites(device_id)
         if error is not None:
             return error
 
         media_dir_id = (request.args.get("media_dir_id") or "").strip()
-        if not media_dir_id:
+        album_id = request.args.get("album_id", type=int)
+        if not media_dir_id and album_id is None:
             return _notify(gettext("Could not start the download: the shared scope is missing."))
         scope = (request.args.get("scope") or "").strip()
         label = (request.args.get("label") or "").strip()
         selections = filter_selections(db.session, request.args)
         filter_payload = _remote_filter_payload(selections)
 
-        selection = selection_from_args(request.args, total=0, cast=str)
+        selection = selection_from_args(request.args, total=0, cast=int)
         if selection.all:
-            include_paths, exclude_paths = None, sorted(selection.excluded)
+            include_ids, exclude_ids = None, sorted(selection.excluded)
         elif selection.ids:
-            include_paths, exclude_paths = sorted(selection.ids), None
+            include_ids, exclude_ids = sorted(selection.ids), None
         else:
             return _notify(gettext("Select the files to pull first."))
 
@@ -779,9 +805,13 @@ def init_sharing_routes(app: Flask):
                 label or scope or media_dir_id,
                 filter_payload,
                 destination_root,
+                # The destination folder: the browsed scope for a path share (unchanged),
+                # and — since an album has no scope path — the album's name for an album
+                # share.
                 scope or label or media_dir_id,
-                include_paths=include_paths,
-                exclude_paths=exclude_paths,
+                include_ids=include_ids,
+                exclude_ids=exclude_ids,
+                album_id=album_id,
             )
         except (CallError, P2PServiceError, ValueError) as exc:
             return _notify(gettext("Could not start the download: %(reason)s", reason=str(exc)))

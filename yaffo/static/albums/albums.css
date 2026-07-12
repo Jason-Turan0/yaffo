@@ -117,3 +117,27 @@
     color: var(--color-success-soft-text);
     font-weight: 600;
 }
+
+/* Share modal: one row per paired device. The checkbox IS the state — checked means
+   granted — so the rows are a plain list, not stacked .form-groups (which add
+   form-field spacing that reads as gaps between unrelated fields). */
+.share-album-hint {
+    margin: 0 0 12px;
+}
+
+.share-device-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.share-device-list .checkbox-label {
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+}
+
+.share-device-list .checkbox-label:hover {
+    background: var(--color-surface-hover);
+}

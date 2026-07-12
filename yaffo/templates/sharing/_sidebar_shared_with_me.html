@@ -8,9 +8,10 @@
         {% for row in rows %}
         <li class="sharing-share-nav-item">
             <span class="sharing-share-label">{{ row.device_name }} - {{ row.share_name }}</span>
+            {# An album share is browsed by album id — it has no media dir or path. #}
             <a class="chip chip-action chip-accent"
                aria-label="{{ _('Open share from %(device)s', device=row.device_name) }}"
-               href="{{ url_for('sharing_device_files', device_id=row.device_id, media_dir_id=row.media_dir_id, scope=row.scope, label=row.share_name) }}">
+               href="{{ url_for('sharing_device_files', device_id=row.device_id, media_dir_id=row.media_dir_id, scope=row.scope, album_id=row.album_id, label=row.share_name) }}">
                 {{ _("View") }}
             </a>
         </li>

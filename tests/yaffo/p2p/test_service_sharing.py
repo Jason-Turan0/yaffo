@@ -49,11 +49,14 @@ def serving_context(tmp_path):
         db.drop_all()
 
 
-def _index_file(path, content: bytes, **columns):
+def _index_file(path, content: bytes, **columns) -> int:
+    """Index a file and return its media item id — the handle pulls and previews use."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
-    db.session.add(MediaItem(full_file_path=str(path), media_type=MEDIA_TYPE_PHOTO, **columns))
+    item = MediaItem(full_file_path=str(path), media_type=MEDIA_TYPE_PHOTO, **columns)
+    db.session.add(item)
     db.session.commit()
+    return item.id
 
 
 def _file_names(response: dict) -> list[str]:
@@ -292,13 +295,15 @@ def test_list_files_denies_scope_outside_grant(serving_context):
     assert _file_names(inside) == ["trip/a.jpg"]
 
 
-def _write_jpeg(path, width: int, height: int):
+def _write_jpeg(path, width: int, height: int) -> int:
     from PIL import Image
 
     path.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (width, height), color=(200, 60, 60)).save(path, format="JPEG")
-    db.session.add(MediaItem(full_file_path=str(path), media_type=MEDIA_TYPE_PHOTO))
+    item = MediaItem(full_file_path=str(path), media_type=MEDIA_TYPE_PHOTO)
+    db.session.add(item)
     db.session.commit()
+    return item.id
 
 
 def test_pull_preview_returns_downscaled_jpeg(serving_context):
@@ -308,7 +313,7 @@ def test_pull_preview_returns_downscaled_jpeg(serving_context):
 
     app, service, requester, media_dir, root = serving_context
     with app.app_context():
-        _write_jpeg(root / "trip" / "big.jpg", 1600, 900)
+        item_id = _write_jpeg(root / "trip" / "big.jpg", 1600, 900)
         p2p_repository.create_grant(
             db.session,
             requester.device_id,
@@ -317,7 +322,7 @@ def test_pull_preview_returns_downscaled_jpeg(serving_context):
         )
 
     response = service._handle_stream_request(
-        build_pull_preview_request(requester, media_dir.id, "trip/big.jpg", max_dimension=256)
+        build_pull_preview_request(requester, item_id, max_dimension=256)
     )
 
     assert response["status"] == "ok"
@@ -330,7 +335,7 @@ def test_pull_preview_returns_downscaled_jpeg(serving_context):
 def test_pull_preview_denies_out_of_scope_file(serving_context):
     app, service, requester, media_dir, root = serving_context
     with app.app_context():
-        _write_jpeg(root / "private" / "secret.jpg", 100, 100)
+        secret_id = _write_jpeg(root / "private" / "secret.jpg", 100, 100)
         p2p_repository.create_grant(
             db.session,
             requester.device_id,
@@ -340,7 +345,7 @@ def test_pull_preview_denies_out_of_scope_file(serving_context):
         )
 
     response = service._handle_stream_request(
-        build_pull_preview_request(requester, media_dir.id, "private/secret.jpg", max_dimension=256)
+        build_pull_preview_request(requester, secret_id, max_dimension=256)
     )
 
     assert response["status"] == "error"
@@ -350,7 +355,7 @@ def test_pull_preview_denies_out_of_scope_file(serving_context):
 def test_pull_file_returns_requested_chunk(serving_context):
     app, service, requester, media_dir, root = serving_context
     with app.app_context():
-        _index_file(root / "trip" / "a.jpg", b"abcdef")
+        item_id = _index_file(root / "trip" / "a.jpg", b"abcdef")
         p2p_repository.create_grant(
             db.session,
             requester.device_id,
@@ -358,7 +363,7 @@ def test_pull_file_returns_requested_chunk(serving_context):
             media_dir_id=media_dir.id,
         )
 
-    request = build_pull_file_request(requester, media_dir.id, "trip/a.jpg", offset=2, length=3)
+    request = build_pull_file_request(requester, item_id, offset=2, length=3)
     response = service._handle_stream_request(request)
 
     assert response["status"] == "ok"
@@ -374,7 +379,7 @@ def test_pull_file_denies_out_of_scope_file(serving_context):
     app, service, requester, media_dir, root = serving_context
     with app.app_context():
         _index_file(root / "trip" / "a.jpg", b"shared")
-        _index_file(root / "private" / "secret.jpg", b"private")
+        secret_id = _index_file(root / "private" / "secret.jpg", b"private")
         p2p_repository.create_grant(
             db.session,
             requester.device_id,
@@ -383,7 +388,9 @@ def test_pull_file_denies_out_of_scope_file(serving_context):
             relative_path="trip",
         )
 
-    request = build_pull_file_request(requester, media_dir.id, "private/secret.jpg", offset=0, length=10)
+    # A real id, but one no grant covers: authorization is a lookup in the granted set,
+    # so an item outside it is simply not there.
+    request = build_pull_file_request(requester, secret_id, offset=0, length=10)
     response = service._handle_stream_request(request)
 
     assert response["status"] == "error"
@@ -393,7 +400,7 @@ def test_pull_file_denies_out_of_scope_file(serving_context):
 def test_revoked_grant_stops_next_pull(serving_context):
     app, service, requester, media_dir, root = serving_context
     with app.app_context():
-        _index_file(root / "trip" / "a.jpg", b"shared")
+        item_id = _index_file(root / "trip" / "a.jpg", b"shared")
         grant = p2p_repository.create_grant(
             db.session,
             requester.device_id,
@@ -402,7 +409,7 @@ def test_revoked_grant_stops_next_pull(serving_context):
         )
         p2p_repository.revoke_grant(db.session, grant.id)
 
-    request = build_pull_file_request(requester, media_dir.id, "trip/a.jpg", offset=0, length=10)
+    request = build_pull_file_request(requester, item_id, offset=0, length=10)
     response = service._handle_stream_request(request)
 
     assert response["status"] == "error"
@@ -420,13 +427,25 @@ def test_revoked_device_cannot_list_shared(serving_context):
     assert "not a trusted device" in response["detail"]
 
 
-def test_pull_file_rejects_traversal_even_when_signed(serving_context):
-    _app, service, requester, media_dir, _root = serving_context
-    request = build_pull_file_request(requester, media_dir.id, "../secret.jpg", offset=0, length=10)
-    response = service._handle_stream_request(request)
+def test_pull_file_refuses_an_unknown_or_junk_id(serving_context):
+    """Requests name a media item id, not a path, so there is no traversal to attempt:
+    the server derives the path from its own row. An id outside the granted set — or one
+    that is not an id at all — resolves to nothing."""
+    app, service, requester, media_dir, root = serving_context
+    with app.app_context():
+        _index_file(root / "trip" / "a.jpg", b"shared")
+        p2p_repository.create_grant(
+            db.session,
+            requester.device_id,
+            GRANT_SCOPE_MEDIA_DIR,
+            media_dir_id=media_dir.id,
+        )
 
-    assert response["status"] == "error"
-    assert "inside the media directory" in response["detail"]
+    for bogus in (999999, "../secret.jpg", None, True):
+        request = build_pull_file_request(requester, bogus, offset=0, length=10)
+        response = service._handle_stream_request(request)
+        assert response["status"] == "error", bogus
+        assert "no active share grant" in response["detail"], bogus
 
 
 def test_pull_file_eof_chunk_carries_mtime_and_whole_file_hash(serving_context):
@@ -438,7 +457,7 @@ def test_pull_file_eof_chunk_carries_mtime_and_whole_file_hash(serving_context):
     app, service, requester, media_dir, root = serving_context
     content = b"abcdef"
     with app.app_context():
-        _index_file(root / "trip" / "a.jpg", content)
+        item_id = _index_file(root / "trip" / "a.jpg", content)
         p2p_repository.create_grant(
             db.session,
             requester.device_id,
@@ -447,7 +466,7 @@ def test_pull_file_eof_chunk_carries_mtime_and_whole_file_hash(serving_context):
         )
 
     middle = service._handle_stream_request(
-        build_pull_file_request(requester, media_dir.id, "trip/a.jpg", offset=0, length=3)
+        build_pull_file_request(requester, item_id, offset=0, length=3)
     )
     assert middle["status"] == "ok"
     assert middle["eof"] is False
@@ -455,7 +474,7 @@ def test_pull_file_eof_chunk_carries_mtime_and_whole_file_hash(serving_context):
     assert "file_sha256" not in middle
 
     final = service._handle_stream_request(
-        build_pull_file_request(requester, media_dir.id, "trip/a.jpg", offset=3, length=10)
+        build_pull_file_request(requester, item_id, offset=3, length=10)
     )
     assert final["status"] == "ok"
     assert final["eof"] is True

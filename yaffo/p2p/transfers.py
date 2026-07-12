@@ -181,6 +181,10 @@ class _SessionHolder:
 
 @dataclass
 class TransferFile:
+    # The peer's media item id: what a pull request names. The relative path travels as
+    # DATA — it decides where the file lands and keys the resume sidecar — but it is
+    # never what the file is requested BY.
+    media_item_id: int
     relative_path: str
     name: str
     size: int
@@ -201,11 +205,15 @@ class TransferBatch:
     filters: dict
     destination_root: Path
     collection_path: str
+    # Album-scoped batch: the peer lists the album's MEMBERS instead of a path scope.
+    # Membership is resolved by the peer at request time, so a batch pulls whatever the
+    # album holds when it runs.
+    album_id: Optional[int] = None
     # A selection over the scope, resolved against the peer's manifest (see
-    # _collect_files). `included` empty means "everything matching the filters";
-    # `excluded` removes paths from whatever that yields. The browser only ever
-    # sends relative paths — sizes and mtimes come from the peer's manifest, which
-    # is what the resume sidecars must be seeded from.
+    # _collect_files), as MEDIA ITEM IDS. `included` empty means "everything matching
+    # the filters"; `excluded` removes items from whatever that yields. Sizes and mtimes
+    # always come from the peer's manifest — they seed the resume sidecars, so they must
+    # come from the source of truth, never from a browser.
     included: set = field(default_factory=set)
     excluded: set = field(default_factory=set)
     files: list = field(default_factory=list)
@@ -249,17 +257,18 @@ class TransferManager:
         destination_root: Path,
         collection_path: str,
         files: Optional[list[dict]] = None,
-        include_paths: Optional[list[str]] = None,
-        exclude_paths: Optional[list[str]] = None,
+        include_ids: Optional[list[int]] = None,
+        exclude_ids: Optional[list[int]] = None,
+        album_id: Optional[int] = None,
     ) -> str:
         """Enqueue a batch and return its id immediately.
 
         With explicit `files` (manifest dicts) those are pulled. Otherwise the batch
         collects the manifest for the scope+filters from the peer and applies the
-        selection to it: `include_paths` keeps only those relative paths, and
-        `exclude_paths` drops them ("everything matching, except these"). Resolving
-        the selection against the peer's manifest — rather than trusting sizes and
-        mtimes sent by a browser — is what keeps the resume sidecars honest."""
+        selection to it: `include_ids` keeps only those media items, and `exclude_ids`
+        drops them ("everything matching, except these"). Resolving the selection
+        against the peer's manifest — rather than trusting sizes and mtimes sent by a
+        browser — is what keeps the resume sidecars honest."""
         batch = TransferBatch(
             id=uuid.uuid4().hex[:12],
             peer_device_id=peer_device_id,
@@ -270,12 +279,14 @@ class TransferManager:
             filters=filters or {},
             destination_root=Path(destination_root),
             collection_path=collection_path,
-            included=set(include_paths or ()),
-            excluded=set(exclude_paths or ()),
+            album_id=album_id,
+            included=set(include_ids or ()),
+            excluded=set(exclude_ids or ()),
         )
         for manifest in files or []:
             batch.files.append(
                 TransferFile(
+                    media_item_id=int(manifest["media_item_id"]),
                     relative_path=manifest["relative_path"],
                     name=manifest.get("name") or Path(manifest["relative_path"]).name,
                     size=int(manifest.get("size") or 0),
@@ -451,20 +462,28 @@ class TransferManager:
             if batch.cancelled:
                 return
             payload = build_list_files_request(
-                self._service.identity, batch.media_dir_id, batch.scope, batch.filters, offset, MAX_LIST_FILES_LIMIT
+                self._service.identity,
+                batch.media_dir_id,
+                batch.scope,
+                batch.filters,
+                offset,
+                MAX_LIST_FILES_LIMIT,
+                album_id=batch.album_id,
             )
             response = await holder.request(payload)
             if response.get("status") != "ok":
                 raise TransferAborted(response.get("detail") or "peer refused to list files")
             batch.path = holder.path or batch.path
             for manifest in response.get("files", []):
+                media_item_id = int(manifest["media_item_id"])
                 relative_path = manifest["relative_path"]
-                if batch.included and relative_path not in batch.included:
+                if batch.included and media_item_id not in batch.included:
                     continue  # an explicit selection: only these
-                if relative_path in batch.excluded:
+                if media_item_id in batch.excluded:
                     continue  # the whole scope, except these
                 batch.files.append(
                     TransferFile(
+                        media_item_id=media_item_id,
                         relative_path=relative_path,
                         name=manifest.get("name") or Path(relative_path).name,
                         size=int(manifest.get("size") or 0),
@@ -587,13 +606,13 @@ class TransferManager:
                     raise TransferAborted("cancelled")
                 await self._respect_relay_budget(batch, holder)
                 payload = build_pull_file_request(
-                    self._service.identity, batch.media_dir_id, clean_path, offset, DEFAULT_PULL_CHUNK_BYTES
+                    self._service.identity, entry.media_item_id, offset, DEFAULT_PULL_CHUNK_BYTES
                 )
                 chunk = await holder.request(payload)
                 if chunk.get("status") != "ok":
                     return "failed", chunk.get("detail") or "peer refused the file"
 
-                problem = self._chunk_problem(chunk, batch.media_dir_id, clean_path, offset)
+                problem = self._chunk_problem(chunk, entry.media_item_id, offset)
                 if problem is not None:
                     return "failed", problem
                 if entry.size and (chunk.get("size") != entry.size or self._mtime_changed(chunk, entry)):
@@ -631,8 +650,11 @@ class TransferManager:
         return abs(float(mtime) - entry.mtime) > 1e-6
 
     @staticmethod
-    def _chunk_problem(chunk: dict, media_dir_id: str, clean_path: str, offset: int) -> Optional[str]:
-        if chunk.get("media_dir_id") != media_dir_id or chunk.get("relative_path") != clean_path:
+    def _chunk_problem(chunk: dict, media_item_id: int, offset: int) -> Optional[str]:
+        # The chunk must be for the item we asked for. (A peer that re-indexed since the
+        # manifest was taken can hand back a different file for a recycled id — the
+        # size/mtime and final checksum checks below are what catch that.)
+        if chunk.get("media_item_id") != media_item_id:
             return "peer returned a chunk for a different file"
         if chunk.get("offset") != offset:
             return "peer returned a chunk at the wrong offset"

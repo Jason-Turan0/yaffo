@@ -5,6 +5,29 @@
 
 {% block title %}{{ _("%(album)s - Albums - Yaffo", album=selected.name) }}{% endblock %}
 
+{% macro render_share_album_form() %}
+    {% if devices %}
+    {# The checked devices ARE the devices this album is shared with: checking grants,
+       unchecking revokes. The modal shows the truth and can undo itself. #}
+    <p class="hint-text share-album-hint">
+        {{ _("Checked devices can pull this album. They see its contents at the time they ask, so adding or removing photos changes what they get next time.") }}
+    </p>
+    <ul class="share-device-list">
+        {% for device in devices %}
+        <li>
+            <label class="checkbox-label">
+                <input type="checkbox" name="device_id" value="{{ device.device_id }}"
+                       {% if device.shared %}checked{% endif %}>
+                {{ device.display_name }}
+            </label>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="no-data">{{ _("No paired devices yet. Pair a device on the Sharing tab first.") }}</p>
+    {% endif %}
+{% endmacro %}
+
 {% macro render_edit_album_form() %}
     <div class="form-group">
         <label for="edit-album-name">{{ _("Name") }}</label>
@@ -28,6 +51,9 @@
     {% endif %}
     <button type="button" id="edit-album-details-button" class="btn-secondary" data-icon="edit">
         {{ _("Edit details") }}
+    </button>
+    <button type="button" id="share-album-button" class="btn-secondary" data-icon="sharing">
+        {{ _("Share") }}
     </button>
     <button type="button" id="delete-album-button" class="btn-danger" data-icon="delete"
             data-confirm-title="{{ _('Delete album?') }}"
@@ -109,4 +135,7 @@
 {{ render_modal('editAlbumModal', _('Edit album'),
                 url_for('albums_update_details', album_id=selected.id),
                 render_edit_album_form, _('Save')) }}
+{{ render_modal('shareAlbumModal', _('Share album'),
+                url_for('albums_share', album_id=selected.id),
+                render_share_album_form, _('Share')) }}
 {% endblock %}

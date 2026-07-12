@@ -61,11 +61,12 @@ def test_type_mismatch_breaks_signature(sender):
     assert verify_signed_message(body, lookup, "revoked") is not None
 
 
-def test_pull_file_signature_covers_requested_path(sender):
-    body = build_pull_file_request(sender, "media-1", "2024/a.jpg", 0, 1024)
+def test_pull_file_signature_covers_the_requested_item(sender):
+    """A pull names a media item id; tampering with it after signing must not verify."""
+    body = build_pull_file_request(sender, 7, 0, 1024)
     lookup = _store((sender.device_id, sender.public_key_b64, "trusted"))
     assert verify_pull_file_request(body, lookup) is None
-    body["relative_path"] = "private/a.jpg"
+    body["media_item_id"] = 8
     assert "signature" in verify_pull_file_request(body, lookup)
 
 

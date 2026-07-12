@@ -570,3 +570,18 @@
 .transfer-batch-actions {
     margin-top: 8px;
 }
+
+/* Sits where the selection bar would be, when there is nowhere to pull files TO. */
+.remote-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background: var(--color-warning-soft);
+    border: var(--border-width) solid var(--color-warning-soft-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-warning-soft-text);
+}

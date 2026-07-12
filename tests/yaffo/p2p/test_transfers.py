@@ -43,6 +43,16 @@ class ScriptedHolder:
     """Answers the engine's signed requests the way the real serving handler
     does, from an in-memory remote library."""
 
+    # Media item ids the fake peer hands out, in manifest order (ids are the peer's
+    # handles — the requester never sends a path).
+    def _id_of(self, relative_path: str) -> int:
+        return sorted(self.files).index(relative_path) + 1
+
+    def _path_of(self, media_item_id: int) -> str | None:
+        paths = sorted(self.files)
+        index = int(media_item_id) - 1
+        return paths[index] if 0 <= index < len(paths) else None
+
     def __init__(self, files: dict[str, RemoteFile], path: str = "local", tamper_eof_hash: bool = False):
         self.files = files
         self.path = path
@@ -61,9 +71,10 @@ class ScriptedHolder:
         return {"status": "ok"}
 
     def _chunk(self, payload: dict) -> dict:
-        remote = self.files.get(payload["relative_path"])
+        relative_path = self._path_of(payload["media_item_id"])
+        remote = self.files.get(relative_path) if relative_path else None
         if remote is None:
-            return {"status": "error", "detail": "file is not indexed"}
+            return {"status": "error", "detail": "no active share grant covers this file"}
         offset, length = payload["offset"], payload["length"]
         data = remote.content[offset:offset + length]
         next_offset = offset + len(data)
@@ -71,8 +82,7 @@ class ScriptedHolder:
         response = {
             "status": "ok",
             "type": "file_chunk",
-            "media_dir_id": payload["media_dir_id"],
-            "relative_path": payload["relative_path"],
+            "media_item_id": payload["media_item_id"],
             "offset": offset,
             "next_offset": next_offset,
             "size": len(remote.content),
@@ -89,7 +99,14 @@ class ScriptedHolder:
 
     def _page(self, payload: dict) -> dict:
         manifests = [
-            {"relative_path": rel, "name": rel.rsplit("/", 1)[-1], "size": len(f.content), "mtime": f.mtime}
+            {
+                "media_item_id": self._id_of(rel),
+                "media_dir_id": "remote-lib",
+                "relative_path": rel,
+                "name": rel.rsplit("/", 1)[-1],
+                "size": len(f.content),
+                "mtime": f.mtime,
+            }
             for rel, f in sorted(self.files.items())
         ]
         offset = payload["offset"]
@@ -132,9 +149,13 @@ def make_batch(tmp_path, scope="trip", collection="trip", included=None, exclude
     )
 
 
-def make_entry(relative_path="trip/a.jpg", size=6, mtime=MTIME) -> TransferFile:
+def make_entry(relative_path="trip/a.jpg", size=6, mtime=MTIME, media_item_id=1) -> TransferFile:
     return TransferFile(
-        relative_path=relative_path, name=relative_path.rsplit("/", 1)[-1], size=size, mtime=mtime
+        media_item_id=media_item_id,
+        relative_path=relative_path,
+        name=relative_path.rsplit("/", 1)[-1],
+        size=size,
+        mtime=mtime,
     )
 
 
@@ -290,7 +311,7 @@ def test_peer_denial_marks_the_file_failed(manager, tmp_path):
     run_download(manager, holder, batch, entry)
 
     assert entry.state == FILE_FAILED
-    assert "not indexed" in entry.error
+    assert "no active share grant" in entry.error
 
 
 def test_cancel_mid_pull_keeps_the_partial_for_a_later_resume(manager, tmp_path, monkeypatch):
@@ -334,10 +355,10 @@ def test_collect_files_pages_through_the_manifest(manager, tmp_path):
     assert list_offsets == [0, 2]
 
 
-def test_collect_files_keeps_only_the_selected_paths(manager, tmp_path):
-    """An explicit selection in the gallery: the browser sends relative paths, and the
-    batch takes their manifests (size/mtime — the resume-sidecar seed) from the PEER,
-    never from the browser."""
+def test_collect_files_keeps_only_the_selected_items(manager, tmp_path):
+    """An explicit selection in the gallery: the browser sends the PEER's media item ids,
+    and the batch takes their manifests (size/mtime — the resume-sidecar seed) from the
+    peer, never from the browser."""
     holder = ScriptedHolder(
         {
             "trip/a.jpg": RemoteFile(b"aa"),
@@ -345,7 +366,7 @@ def test_collect_files_keeps_only_the_selected_paths(manager, tmp_path):
             "trip/c.jpg": RemoteFile(b"cccc"),
         }
     )
-    batch = make_batch(tmp_path, included=["trip/a.jpg", "trip/c.jpg"])
+    batch = make_batch(tmp_path, included=[1, 3])  # a.jpg and c.jpg, by the peer's ids
 
     asyncio.run(manager._collect_files(batch, holder))
 
@@ -354,7 +375,7 @@ def test_collect_files_keeps_only_the_selected_paths(manager, tmp_path):
     assert batch.total_expected == 2  # what this batch will pull, not the scope size
 
 
-def test_collect_files_drops_the_excluded_paths(manager, tmp_path):
+def test_collect_files_drops_the_excluded_items(manager, tmp_path):
     """"Select all, except these": the scope is snapshotted whole and the exclusions
     are removed from it — so files on pages the user never rendered are still pulled."""
     holder = ScriptedHolder(
@@ -364,7 +385,7 @@ def test_collect_files_drops_the_excluded_paths(manager, tmp_path):
             "trip/c.jpg": RemoteFile(b"cccc"),
         }
     )
-    batch = make_batch(tmp_path, excluded=["trip/b.jpg"])
+    batch = make_batch(tmp_path, excluded=[2])  # b.jpg, by the peer's id
 
     asyncio.run(manager._collect_files(batch, holder))
 

@@ -17,7 +17,7 @@ from typing import Optional
 from flask import Flask, abort, redirect, render_template, request, url_for
 
 from yaffo.db import db
-from yaffo.db.models import GRANT_SCOPE_ALBUM, Album, MediaItem
+from yaffo.db.models import GRANT_SCOPE_ALBUM, TRUST_STATE_TRUSTED, Album, MediaItem
 from yaffo.db.repositories import album_repository as repo
 from yaffo.db.repositories import p2p_repository
 from yaffo.db.repositories.media_filter_repository import apply_media_filters
@@ -86,6 +86,25 @@ def init_albums_routes(app: Flask):
             )
         return views
 
+    def _shareable_devices(album_id: int) -> list[dict]:
+        """Paired devices for the Share modal: the trusted ones, each flagged with
+        whether this album is already shared with it (revoking lives in the Sharing
+        sidebar, so a device already granted is simply not offered again)."""
+        granted = {
+            grant.peer_device_id
+            for grant in p2p_repository.list_active_grants(db.session)
+            if grant.scope_type == GRANT_SCOPE_ALBUM and grant.album_id == album_id
+        }
+        return [
+            {
+                "device_id": device.device_id,
+                "display_name": device.display_name or device.device_id,
+                "shared": device.device_id in granted,
+            }
+            for device in p2p_repository.list_known_devices(db.session)
+            if device.trust_state == TRUST_STATE_TRUSTED
+        ]
+
     def _require_album(album_id: int) -> Album:
         album = repo.get_album(db.session, album_id)
         if album is None:
@@ -119,6 +138,7 @@ def init_albums_routes(app: Flask):
             items=items,
             editing=request.args.get("edit") == "1",
             selection=_selection(total=len(items)),
+            devices=_shareable_devices(album.id),
         )
 
     @app.route("/albums/create", methods=["POST"])
@@ -285,6 +305,38 @@ def init_albums_routes(app: Flask):
             for item_id in request.form.getlist("media_item_id", type=int)
             if item_id is not None
         ]
+
+    @app.route("/albums/<int:album_id>/share", methods=["POST"])
+    def albums_share(album_id: int):
+        """Reconcile who this album is shared with: the checked devices are exactly
+        the devices that end up holding an `album` grant on it.
+
+        Checking a device grants it; UNCHECKING revokes — so the modal shows the
+        truth and can undo itself, rather than being a one-way "add" whose only undo
+        lives on another screen. (The Sharing sidebar still revokes any grant; this is
+        the same operation from the album's side.)
+
+        A grant authorizes the album's membership as it stands AT REQUEST TIME, so
+        adding or removing photos later changes what the peer sees on its next pull."""
+        _require_album(album_id)
+        wanted = set(request.form.getlist("device_id"))
+        granted = {
+            grant.peer_device_id: grant
+            for grant in p2p_repository.list_active_grants(db.session)
+            if grant.scope_type == GRANT_SCOPE_ALBUM and grant.album_id == album_id
+        }
+
+        for device in p2p_repository.list_known_devices(db.session):
+            if device.trust_state != TRUST_STATE_TRUSTED:
+                continue  # a revoked device cannot be granted anything
+            grant = granted.get(device.device_id)
+            if device.device_id in wanted and grant is None:
+                p2p_repository.create_grant(
+                    db.session, device.device_id, GRANT_SCOPE_ALBUM, album_id=album_id
+                )
+            elif device.device_id not in wanted and grant is not None:
+                p2p_repository.revoke_grant(db.session, grant.id)
+        return redirect(url_for("albums_show", album_id=album_id))
 
     @app.route("/albums/<int:album_id>/delete", methods=["POST"])
     def albums_delete(album_id: int):

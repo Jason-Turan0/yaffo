@@ -71,12 +71,6 @@
                     <a class="btn-secondary" href="{{ request.url }}">{{ _("Try again") }}</a>
                 </div>
             {% elif files|length > 0 %}
-                {% if not download_dir %}
-                <p class="no-data">
-                    {{ _("Set a download directory on this device's Sharing page before pulling files.") }}
-                </p>
-                {% endif %}
-
                 {% if download_dir %}
                 {# "Select all" is every file matching the scope + filters, including
                    the pages not rendered — the batch snapshots the manifest from the
@@ -87,12 +81,23 @@
                             hx-post="{{ url_for('sharing_device_pull_selected', device_id=device.device_id) }}{% if request.query_string %}?{{ request.query_string.decode() }}{% endif %}"
                             hx-swap="none">{{ _("Pull selected") }}</button>
                 {% endcall %}
+                {% else %}
+                {# Pulling needs somewhere to put the files, so without a download
+                   directory there is nothing to select. This sits in the selection bar's
+                   own slot and says so, rather than leaving the grid looking broken. #}
+                <div class="remote-notice">
+                    <span>{{ _("Choose a download directory before you can pull files from this device.") }}</span>
+                    <a class="btn-secondary btn-sm" data-icon="folder"
+                       href="{{ url_for('sharing_settings') }}">{{ _("Set download directory") }}</a>
+                </div>
                 {% endif %}
 
-                <div class="photo-grid remote-photo-grid is-selecting">
+                {# No selection without a download directory: checkboxes that cannot lead
+                   anywhere are worse than none. #}
+                <div class="photo-grid remote-photo-grid{% if download_dir %} is-selecting{% endif %}">
                     {% for file in files %}
-                        <div class="photo-card remote-photo-card{% if selection.is_selected(file.relative_path) %} is-selected{% endif %}"
-                             data-select-id="{{ file.relative_path }}">
+                        <div class="photo-card remote-photo-card{% if selection.is_selected(file.media_item_id) %} is-selected{% endif %}"
+                             data-select-id="{{ file.media_item_id }}">
                             <div class="photo-thumb">
                                 {# Previews are live p2p calls, so the queue in
                                    remote_gallery.js loads them viewport-first with
@@ -102,7 +107,7 @@
                                    placeholder appears only after a load truly fails. #}
                                 <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'/%3E"
                                      class="preview-pending"
-                                     data-preview-src="{{ url_for('sharing_device_preview', device_id=device.device_id, media_dir_id=file.media_dir_id, path=file.relative_path, v=file.mtime) }}"
+                                     data-preview-src="{{ url_for('sharing_device_preview', device_id=device.device_id, media_item_id=file.media_item_id, v=file.mtime) }}"
                                      data-fallback-src="{{ url_for('static', filename='video_placeholder.svg') if file.media_type == 'video' else url_for('placeholder') }}"
                                      alt="{{ file.name }}">
                                 <span class="remote-preview-spinner" aria-hidden="true"></span>
@@ -167,14 +172,17 @@
         document.addEventListener('yaffo:app-init-complete', (event) => {
             const app = event.detail.app;
             app.sharing.remoteGallery.init();
-            // Selecting is what this grid is for: pulling one file and pulling the
-            // lot are the same action on a selection. The selection lives on the URL,
-            // so the hx-post above already carries it (data-selection-post).
+            {% if download_dir %}
+            // Selecting is what this grid is for: pulling one file and pulling the lot
+            // are the same action on a selection. The selection lives on the URL, so the
+            // hx-post already carries it (data-selection-post). Without a download
+            // directory there is nothing to pull TO, so no selection is wired up at all.
             app.COMPONENTS.selectionBar?.init({
                 grid: '.remote-photo-grid',
                 bar: '#remote-selection',
                 totalCount: {{ pagination.total_items | tojson }},
             });
+            {% endif %}
             // Same tags widget as home, but the value list comes from the
             // PEER (scoped to this grant) through the sharing proxy route.
             app.filters.initTags(app.i18n, {

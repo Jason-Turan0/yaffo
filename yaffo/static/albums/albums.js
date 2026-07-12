@@ -76,6 +76,12 @@ document.addEventListener('yaffo:app-init-complete', (event) => {
         editDetailsButton.addEventListener('click', editModal.open);
     }
 
+    const shareButton = document.getElementById('share-album-button');
+    if (shareButton) {
+        const shareModal = app.COMPONENTS.modal.init('shareAlbumModal');
+        shareButton.addEventListener('click', shareModal.open);
+    }
+
     const deleteButton = document.getElementById('delete-album-button');
     if (deleteButton) {
         deleteButton.addEventListener('click', async () => {

@@ -135,6 +135,24 @@ def create_grant(
     if album_id is not None and session.get(Album, album_id) is None:
         raise ValueError(f"no album with id {album_id}")
 
+    # Granting the same scope twice is a no-op, not a second grant: duplicates would
+    # authorize nothing extra but would show as separate rows the user has to revoke
+    # one by one. Enforced here so every caller (the device page, an album's Share
+    # modal) gets it.
+    existing = next(
+        (
+            grant
+            for grant in list_active_grants(session, peer_device_id)
+            if grant.scope_type == scope_type
+            and grant.media_dir_id == media_dir_id
+            and grant.relative_path == relative_path
+            and grant.album_id == album_id
+        ),
+        None,
+    )
+    if existing is not None:
+        return existing
+
     grant = ShareGrant(
         peer_device_id=peer_device_id,
         scope_type=scope_type,

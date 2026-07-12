@@ -25,10 +25,7 @@
 {% block content %}
     <div class="albums-container">
         <nav class="sidebar albums-sidebar">
-            <h2>
-                <a href="{{ url_for('albums_index') }}"
-                   class="{% if not selected_id %}active{% endif %}">{{ _("Albums") }}</a>
-            </h2>
+            <h2>{{ _("Albums") }}</h2>
             {% if albums %}
             <ul class="panel-nav">
                 {% for album in albums %}

@@ -58,6 +58,7 @@
                                 data-search-disabled data-share-type-select>
                             <option value="media_dir" selected>{{ _("Media Directory") }}</option>
                             <option value="folder">{{ _("Folder") }}</option>
+                            {% if albums %}<option value="album">{{ _("Album") }}</option>{% endif %}
                         </select>
                     </div>
 
@@ -85,6 +86,19 @@
                             <button type="button" class="btn-secondary file-browser-btn" data-icon="folder" disabled>
                                 {{ _("Browse…") }}
                             </button>
+                        </div>
+                    </div>
+
+                    {# An album grant carries no media dir: its members are whatever is
+                       in the album at request time, wherever they live. #}
+                    <div class="share-grant-panel" data-share-type-panel="album" hidden>
+                        <label for="share-album">{{ _("Album") }}</label>
+                        <div class="share-grant-controls">
+                            <select id="share-album" name="album_id" class="searchable-select" required disabled>
+                                {% for album in albums %}
+                                <option value="{{ album.id }}">{{ album.name }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
 
