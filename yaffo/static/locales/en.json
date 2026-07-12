@@ -12,7 +12,8 @@
     "pageOf": "Page {{page}} of {{total}}",
     "save": "Save",
     "search": "Search…",
-    "similarityValue": "Similarity: {{value}}"
+    "similarityValue": "Similarity: {{value}}",
+    "unknown": "Unknown"
   },
   "components": {
     "chat": {
@@ -92,7 +93,8 @@
       "clusterSkipped": "Cluster skipped",
       "noneSelected": "Skipped — no faces selected",
       "requestFailed": "Error: {{reason}}",
-      "selectPersonFirst": "Please select a person first"
+      "selectPersonFirst": "Please select a person first",
+      "videoPreviewUnavailable": "Preview not available for videos"
     },
     "people": {
       "created": "Created \"{{name}}\"",

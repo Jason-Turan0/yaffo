@@ -173,6 +173,119 @@ describe('faces initAssignment — submitFaces', () => {
   });
 });
 
+describe('faces initAssignment — hover tooltip', () => {
+  const hover = (faceId) => {
+    document
+      .querySelector(`.face[data-face-id="${faceId}"]`)
+      .dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+    return document.querySelector('.tooltip').textContent;
+  };
+
+  // jsdom never fetches the image, so stand in for the decode: report the natural
+  // size the region outline is scaled against, then fire `load`.
+  const loadPreview = (naturalWidth, naturalHeight) => {
+    const image = document.querySelector('.tooltip .face-source-image');
+    Object.defineProperty(image, 'naturalWidth', { value: naturalWidth });
+    Object.defineProperty(image, 'naturalHeight', { value: naturalHeight });
+    image.dispatchEvent(new window.Event('load'));
+    return image;
+  };
+
+  it('previews the photo the face was cropped from', async () => {
+    fixture(group([{ id: 1, media_item_id: 42, media_type: 'photo', photo_date: '2020-01-01' }]));
+    await init();
+    hover(1);
+
+    expect(document.querySelector('.tooltip .face-source-image').getAttribute('src'))
+      .toBe('/media/media_item_id/42');
+  });
+
+  it('outlines the detection box over the letterboxed photo', async () => {
+    fixture(group([{
+      id: 1,
+      media_item_id: 42,
+      media_type: 'photo',
+      region: { top: 100, right: 300, bottom: 300, left: 100 },
+    }]));
+    await init();
+    hover(1);
+    // An 800×400 photo `contain`-fitted into the 320px square scales by 0.4 and is
+    // letterboxed with an 80px band top and bottom. The 200px box is padded by 10%
+    // of itself (20px a side) before scaling.
+    loadPreview(800, 400);
+
+    const box = document.querySelector('.tooltip .face-source-region');
+    expect(box.hidden).toBe(false);
+    expect(box.style.left).toBe('32px');          // (100 - 20) * 0.4, no horizontal band
+    expect(box.style.top).toBe('112px');          // 80 band + (100 - 20) * 0.4
+    expect(box.style.width).toBe('96px');         // (320 - 80) * 0.4
+    expect(box.style.height).toBe('96px');
+  });
+
+  it('clamps the padded box to the photo for a face at the edge of the frame', async () => {
+    fixture(group([{
+      id: 1,
+      media_item_id: 42,
+      media_type: 'photo',
+      region: { top: 0, right: 100, bottom: 100, left: 0 },  // flush to the top-left
+    }]));
+    await init();
+    hover(1);
+    loadPreview(400, 400);  // square photo: scales by 0.8, no letterboxing
+
+    const box = document.querySelector('.tooltip .face-source-region');
+    expect(box.style.left).toBe('0px');           // padding would go negative; clamped
+    expect(box.style.top).toBe('0px');
+    expect(box.style.width).toBe('88px');         // (110 - 0) * 0.8 — padded on one side only
+    expect(box.style.height).toBe('88px');
+  });
+
+  it('draws no outline for a face indexed without a detection box', async () => {
+    fixture(group([{ id: 1, media_item_id: 42, media_type: 'photo', region: null }]));
+    await init();
+    hover(1);
+    loadPreview(800, 400);
+
+    expect(document.querySelector('.tooltip .face-source-region')).toBe(null);
+  });
+
+  it('notes that a video-sourced face has no preview instead of showing an image', async () => {
+    fixture(group([{ id: 1, media_item_id: 42, media_type: 'video', photo_date: '2020-01-01' }]));
+    await init();
+    const text = hover(1);
+
+    expect(document.querySelector('.tooltip .face-source-image')).toBe(null);
+    expect(text).toContain('faces:assignment.videoPreviewUnavailable');
+  });
+
+  it('shows the similarity line for a face that has a score', async () => {
+    fixture(group([{ id: 1, similarity: 0.87, photo_date: '2020-01-01' }]));
+    await init();
+
+    expect(hover(1)).toContain('similarityValue');
+  });
+
+  it('omits the similarity line for a face with no score', async () => {
+    // Similarity-grouped clusters carry no per-face score. The empty data-attribute
+    // must not read as 0 — that painted every face as "0%".
+    fixture(group([{ id: 1, similarity: null, photo_date: '2020-01-01' }]));
+    await init();
+
+    expect(hover(1)).not.toContain('similarityValue');
+    expect(hover(1)).toContain('dateValue');
+  });
+
+  it('reads "unknown" for a face with no capture date', async () => {
+    // The shared test `t` drops its interpolations, so widen it to expose the
+    // value the tooltip passes in — that value is what this test is about.
+    window.testI18n.t = (key, options = {}) => `${key}=${options.value ?? ''}`;
+    fixture(group([{ id: 1, similarity: 0.87, photo_date: null }]));
+    await init();
+
+    expect(hover(1)).toContain('common:dateValue=common:unknown=');
+  });
+});
+
 describe('faces initAssignment — helpers & shortcuts', () => {
   it('randomSample returns n items drawn from the input', async () => {
     fixture(group([{ id: 1 }]));

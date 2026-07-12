@@ -16,7 +16,7 @@
     --color-text-muted: #9aa1ac;
     --color-text-faint: #5f6672;
 
-    /* Inverse — tooltips flip to light-on-dark page */
+    /* Inverse — flips to light-on-dark page */
     --color-surface-inverse: rgba(232, 234, 237, 0.95);
     --color-text-inverse: #101216;
 

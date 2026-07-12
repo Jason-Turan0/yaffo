@@ -12,7 +12,8 @@
     "pageOf": "Página {{page}} de {{total}}",
     "save": "Ahorrar",
     "search": "Buscar…",
-    "similarityValue": "Similitud: {{value}}"
+    "similarityValue": "Similitud: {{value}}",
+    "unknown": "Desconocido"
   },
   "components": {
     "chat": {
@@ -92,7 +93,8 @@
       "clusterSkipped": "Clúster omitido",
       "noneSelected": "Omitido: no hay caras seleccionadas",
       "requestFailed": "Error: {{reason}}",
-      "selectPersonFirst": "Por favor seleccione una persona primero"
+      "selectPersonFirst": "Por favor seleccione una persona primero",
+      "videoPreviewUnavailable": "Vista previa no disponible para vídeos"
     },
     "people": {
       "created": "Creado \"{{name}}\"",

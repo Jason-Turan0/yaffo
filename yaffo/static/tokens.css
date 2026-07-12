@@ -47,7 +47,7 @@
     --color-text-muted: #6c757d;      /* hints, subtitles, placeholders */
     --color-text-faint: #adb5bd;      /* empty states, separators */
 
-    /* Inverse (dark-on-light UI like tooltips) */
+    /* Inverse (dark-on-light UI like the home hero overlays) */
     --color-surface-inverse: rgba(0, 0, 0, 0.9);
     --color-text-inverse: #ffffff;
 

@@ -1,11 +1,21 @@
 // @ts-check
 
 /**
+ * A face's detection box, in source-image pixels.
+ * @typedef {Object} FaceRegion
+ * @property {number} top
+ * @property {number} right
+ * @property {number} bottom
+ * @property {number} left
+ *
  * One face awaiting assignment within a cluster.
  * @typedef {Object} FaceRecord
  * @property {number} id
  * @property {string} [photo_date]
  * @property {number | null} [similarity]
+ * @property {number} [media_item_id]
+ * @property {string} [media_type]
+ * @property {FaceRegion | null} [region]
  *
  * A person offered as a keyboard/shortcut assignment target.
  * @typedef {Object} PersonShortcut
@@ -26,6 +36,12 @@ facesWindow.PHOTO_ORGANIZER = facesWindow.PHOTO_ORGANIZER || {};
 const facesNamespace = facesWindow.PHOTO_ORGANIZER.faces =
     /** @type {FacesNamespace} */ (facesWindow.PHOTO_ORGANIZER.faces || {});
 
+// Edge length of the source-photo preview in the hover tooltip, in CSS pixels.
+const PREVIEW_SIZE = 320;
+// Breathing room around the detection box, as a fraction of its own size — a box
+// drawn tight to the crop reads as if it's cutting the face off.
+const REGION_PADDING = 0.1;
+
 // One cluster is shown at a time. For each cluster we only paint a random
 // sample of up to `sampleSize` thumbnails (a 50k batch would otherwise melt the
 // DOM), but selection/assignment span the WHOLE cluster: `selectedIds` starts as
@@ -40,7 +56,7 @@ const facesNamespace = facesWindow.PHOTO_ORGANIZER.faces =
  */
 facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
     const tooltip = document.createElement('div');
-    tooltip.className = 'tooltip';
+    tooltip.className = 'tooltip face-tooltip';
     document.body.appendChild(tooltip);
 
     const groups = /** @type {HTMLElement[]} */ (Array.from(document.querySelectorAll('.suggestion-group')));
@@ -60,6 +76,81 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
     /** @param {number} id */
     const thumbUrl = (id) => config.buildUrl('face_thumbnail', { face_id: id });
     const placeholderUrl = config.urls.placeholder;
+
+    // The hover preview shows the photo the face was cropped from. A video's /media
+    // route returns the raw clip and its poster frame is rarely the frame the face
+    // came from, so video-sourced faces get a "no preview" note instead of an image.
+    /** @param {FaceRecord} face */
+    const sourceUrl = (face) => (face.media_type === 'video' || face.media_item_id == null
+        ? ''
+        : config.buildUrl('media', { media_item_id: face.media_item_id }));
+
+    /**
+     * @param {string | undefined} raw
+     * @returns {FaceRegion | null}
+     */
+    const parseRegion = (raw) => {
+        if (!raw) return null;
+        try {
+            return /** @type {FaceRegion} */ (JSON.parse(raw));
+        } catch {
+            return null;
+        }
+    };
+
+    // The source photo, box-fitted into a PREVIEW_SIZE square with the detection
+    // outlined on it. The outline is placed once the image reports its natural
+    // size: `contain` letterboxes the photo inside the square, so the region — in
+    // source-image pixels — has to be scaled and offset onto the *drawn* area
+    // rather than the frame.
+    /**
+     * @param {string} source
+     * @param {FaceRegion | null} region
+     * @returns {HTMLElement}
+     */
+    const buildPreview = (source, region) => {
+        const preview = document.createElement('div');
+        preview.className = 'face-source-preview';
+
+        const image = document.createElement('img');
+        image.className = 'face-source-image';
+        image.alt = '';
+        preview.appendChild(image);
+
+        const box = document.createElement('div');
+        box.className = 'face-source-region';
+        box.hidden = true;  // until placed, so it can't flash in the corner
+        if (region) preview.appendChild(box);
+
+        image.addEventListener('load', () => {
+            const { naturalWidth, naturalHeight } = image;
+            if (!region || !naturalWidth || !naturalHeight) return;
+            // Pad the box by REGION_PADDING of its own size, clamped to the photo so
+            // a face at the edge of the frame doesn't push the outline off the image.
+            const padX = (region.right - region.left) * REGION_PADDING;
+            const padY = (region.bottom - region.top) * REGION_PADDING;
+            const left = Math.max(0, region.left - padX);
+            const top = Math.max(0, region.top - padY);
+            const right = Math.min(naturalWidth, region.right + padX);
+            const bottom = Math.min(naturalHeight, region.bottom + padY);
+
+            const scale = Math.min(PREVIEW_SIZE / naturalWidth, PREVIEW_SIZE / naturalHeight);
+            const offsetX = (PREVIEW_SIZE - naturalWidth * scale) / 2;
+            const offsetY = (PREVIEW_SIZE - naturalHeight * scale) / 2;
+            box.style.left = offsetX + left * scale + 'px';
+            box.style.top = offsetY + top * scale + 'px';
+            box.style.width = (right - left) * scale + 'px';
+            box.style.height = (bottom - top) * scale + 'px';
+            box.hidden = false;
+        });
+        image.addEventListener('error', () => {
+            if (image.src !== placeholderUrl) image.src = placeholderUrl;
+            box.hidden = true;  // the placeholder isn't the photo; nothing to outline
+        }, { once: true });
+        image.src = source;  // set last: the listeners have to be attached first
+
+        return preview;
+    };
 
     // Re-load /faces with the current filters, resetting to page 1: assignments
     // shrink the unassigned set, so page 1 always holds the next batch and the
@@ -115,8 +206,11 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
         grid.innerHTML = shown.map(face => {
             const similarity = face.similarity != null ? face.similarity : '';
             const selected = selectedIds.has(face.id) ? ' selected' : '';
+            // data-region is single-quoted: it holds JSON, whose own quotes are double.
             return `<div class="face${selected}" data-face-id="${face.id}"`
-                + ` data-similarity="${similarity}" data-date="${face.photo_date || ''}">`
+                + ` data-similarity="${similarity}" data-date="${face.photo_date || ''}"`
+                + ` data-media-type="${face.media_type || ''}" data-source="${sourceUrl(face)}"`
+                + ` data-region='${face.region ? JSON.stringify(face.region) : ''}'>`
                 + `<img src="${thumbUrl(face.id)}" data-fallback="${placeholderUrl}" width="100" height="100">`
                 + `</div>`;
         }).join('');
@@ -316,13 +410,25 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
         const origin = e.target instanceof Element ? e.target : null;
         const faceEl = /** @type {HTMLElement | null} */ (origin?.closest('.face') ?? null);
         if (!faceEl) return;
-        const similarity = Number(faceEl.dataset.similarity);
-        const date = facesWindow.PHOTO_ORGANIZER.utils?.date?.format(faceEl.dataset.date) ?? '';
+        const rawSimilarity = faceEl.dataset.similarity;
+        const similarity = rawSimilarity ? Number(rawSimilarity) : NaN;
+        const date = (faceEl.dataset.date
+            && facesWindow.PHOTO_ORGANIZER.utils?.date?.format(faceEl.dataset.date))
+            || i18n.t('common:unknown');
         const hasSimilarity = Number.isFinite(similarity);
         const similarityText = hasSimilarity
             ? i18n.percent(similarity, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
             : '';
         const tooltipParts = [];
+        const source = faceEl.dataset.source;
+        if (source) {
+            tooltipParts.push(buildPreview(source, parseRegion(faceEl.dataset.region)));
+        } else if (faceEl.dataset.mediaType === 'video') {
+            const note = document.createElement('div');
+            note.className = 'face-preview-note';
+            note.textContent = i18n.t('faces:assignment.videoPreviewUnavailable');
+            tooltipParts.push(note);
+        }
         if (hasSimilarity) {
             tooltipParts.push(document.createTextNode(
                 i18n.t('common:similarityValue', { value: similarityText })
@@ -332,10 +438,16 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
         tooltipParts.push(document.createTextNode(i18n.t('common:dateValue', { value: date })));
         tooltip.replaceChildren(...tooltipParts);
         tooltip.classList.add('visible');
+        // With a preview image the tooltip is tall enough to run off the top of the
+        // viewport, so it flips below the face when it won't fit above.
         const rect = faceEl.getBoundingClientRect();
+        const below = rect.top < tooltip.offsetHeight + 10;
+        tooltip.classList.toggle('tooltip-below', below);
         tooltip.style.left = rect.left + rect.width / 2 + 'px';
-        tooltip.style.top = rect.top + window.scrollY - 10 + 'px';
-        tooltip.style.transform = 'translate(-50%, -100%)';
+        tooltip.style.top = below
+            ? rect.bottom + window.scrollY + 10 + 'px'
+            : rect.top + window.scrollY - 10 + 'px';
+        tooltip.style.transform = below ? 'translate(-50%, 0)' : 'translate(-50%, -100%)';
     });
     clusters.addEventListener('mouseout', (e) => {
         const origin = e.target instanceof Element ? e.target : null;

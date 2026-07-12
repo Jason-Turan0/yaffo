@@ -135,7 +135,24 @@ def _run_web() -> None:
     from yaffo.app import create_app
     from yaffo.scripts.db.migrate import run_migrations
 
-    run_migrations()
+    # A failed migration used to kill the process with a traceback and no UI at all.
+    # Serve the error screen instead — and start nothing else: background workers and
+    # p2p would only pile more failures onto a database whose shape we can't trust.
+    try:
+        run_migrations()
+        startup_error = None
+    except Exception as error:  # noqa: BLE001 - reported to the user as a page, not a crash
+        logger.exception("database migrations failed; starting in recovery mode")
+        startup_error = error
+
+    if startup_error is not None:
+        app = create_app(startup_error=startup_error)
+        url = f"http://{HOST}:{PORT}"
+        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+        logger.error(f"serving the database error page at {url}")
+        serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
+        return
+
     _start_asset_downloads()
     procs = _start_background()
     atexit.register(_stop_background, procs)

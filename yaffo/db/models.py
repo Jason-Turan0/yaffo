@@ -39,6 +39,11 @@ class MediaItem(db.Model):
     # X-T200", "Apple iPhone 6"). The rest of the EXIF metadata is intentionally
     # not persisted; see utils.index_photos.device_from_exif.
     device = db.Column(db.String, nullable=True)
+    # EXIF orientation tag (1-8) as found on the file; 1 (or NULL, on rows indexed
+    # before this column existed) means upright. Recorded for search/filtering only:
+    # indexing transposes the image before detection, so face boxes and thumbnails
+    # are already in upright, as-displayed pixel space and need no rotation.
+    orientation = db.Column(db.Integer, nullable=True)
     # Tri-state favorite: NULL = never set (the default; exports/treat as nothing),
     # True = favorited. Toggled from the photo view; exported as a keyword only when set.
     favorite = db.Column(db.Boolean, nullable=True)

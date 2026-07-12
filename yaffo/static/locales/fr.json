@@ -12,7 +12,8 @@
     "pageOf": "Page {{page}} de {{total}}",
     "save": "Sauvegarder",
     "search": "Rechercher…",
-    "similarityValue": "Similarité: {{value}}"
+    "similarityValue": "Similarité: {{value}}",
+    "unknown": "Inconnu"
   },
   "components": {
     "chat": {
@@ -92,7 +93,8 @@
       "clusterSkipped": "Cluster ignoré",
       "noneSelected": "Ignoré : aucun visage sélectionné",
       "requestFailed": "Erreur: {{reason}}",
-      "selectPersonFirst": "Veuillez d'abord sélectionner une personne"
+      "selectPersonFirst": "Veuillez d'abord sélectionner une personne",
+      "videoPreviewUnavailable": "Aperçu non disponible pour les vidéos"
     },
     "people": {
       "created": "Créé \"{{name}}\"",

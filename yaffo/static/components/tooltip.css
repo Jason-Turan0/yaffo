@@ -1,7 +1,8 @@
 .tooltip {
     position: absolute;
-    background: var(--color-surface-inverse);
-    color: var(--color-text-inverse);
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
     padding: 8px 12px;
     border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
@@ -17,15 +18,31 @@
     opacity: 1;
 }
 
+/* The arrow is a rotated square straddling the tooltip's edge: its background hides
+   the border line it sits on, and only its two outward-facing sides are stroked so
+   the outline reads as continuous around the point. */
 .tooltip::before {
     content: '';
     position: absolute;
-    bottom: -4px;
+    bottom: -5px;
     left: 50%;
     width: 8px;
     height: 8px;
-    background: var(--color-surface-inverse);
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
     transform: translateX(-50%) rotate(45deg);
+}
+
+/* A tooltip placed under its anchor (it didn't fit above) points up instead, so the
+   stroked sides flip to the other two. */
+.tooltip.tooltip-below::before {
+    bottom: auto;
+    top: -5px;
+    border-right: none;
+    border-bottom: none;
+    border-left: 1px solid var(--color-border);
+    border-top: 1px solid var(--color-border);
 }
 
 /* Pure-CSS hover/focus tooltip: put data-tooltip="text" on any positioned element

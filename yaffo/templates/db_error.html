@@ -1,0 +1,19 @@
+{# The database doesn't match the code that's running — almost always a pending
+   migration (a column or table the app expects isn't there yet). Restarting applies
+   them, so the copy says that rather than the generic "try again" of 500.html. #}
+{% extends "base.html" %}
+
+{% block title %}{{ _("Database out of date - Yaffo") }}{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='error.css') }}">
+{% endblock %}
+
+{% block content %}
+{% from "components/error_screen.html" import error_screen %}
+{{ error_screen(
+    500,
+    _("Your library database is out of date"),
+    _("This version of Yaffo expects a newer database than the one it opened. Restarting Yaffo applies the pending updates — your photos and people are untouched.")
+) }}
+{% endblock %}

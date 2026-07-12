@@ -91,6 +91,7 @@ def index_photo_task(job_id: str, file_path_batch: list[str]):
             media_item.year = index_results["year"]
             media_item.month = index_results["month"]
             media_item.device = index_results["device"]
+            media_item.orientation = index_results.get("orientation")
             if index_results.get("media_type") == MEDIA_TYPE_VIDEO:
                 media_item.duration_seconds = index_results.get("duration_seconds")
                 media_item.width = index_results.get("width")

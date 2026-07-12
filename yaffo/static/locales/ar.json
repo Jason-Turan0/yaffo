@@ -12,7 +12,8 @@
     "pageOf": "صفحة {{page}} ل {{total}}",
     "save": "يحفظ",
     "search": "يبحث…",
-    "similarityValue": "تشابه: {{value}}"
+    "similarityValue": "تشابه: {{value}}",
+    "unknown": "غير معروف"
   },
   "components": {
     "chat": {
@@ -92,7 +93,8 @@
       "clusterSkipped": "تم تخطي الكتلة",
       "noneSelected": "تم التخطي — لم يتم تحديد أي وجوه",
       "requestFailed": "خطأ: {{reason}}",
-      "selectPersonFirst": "الرجاء اختيار شخص أولا"
+      "selectPersonFirst": "الرجاء اختيار شخص أولا",
+      "videoPreviewUnavailable": "المعاينة غير متاحة لمقاطع الفيديو"
     },
     "people": {
       "created": "مخلوق \"{{name}}\"",

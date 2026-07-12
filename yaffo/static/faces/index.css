@@ -291,6 +291,40 @@
     object-fit: cover;
 }
 
+/* Hover preview of the photo a face was cropped from. `contain` inside a fixed
+   square box keeps a portrait or panorama source in proportion, so the tooltip
+   never changes size as you move across a cluster. Keep the 320px square in step
+   with PREVIEW_SIZE in faces/index.js — the region outline is placed against it. */
+.face-tooltip .face-source-preview {
+    position: relative;  /* anchors the region outline */
+    width: 320px;
+    height: 320px;
+    margin-bottom: 6px;
+}
+
+.face-tooltip .face-source-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+}
+
+/* The detection box, drawn over the letterboxed photo (positioned from JS). */
+.face-tooltip .face-source-region {
+    position: absolute;
+    border: 2px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    pointer-events: none;
+}
+
+/* Faces cropped from a video have no still to preview. */
+.face-tooltip .face-preview-note {
+    margin-bottom: 6px;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
 /* Stacked: the input gets its own full-width line above the button, so a long
    localized button label (e.g. German under neobrutalist) can't squash it. */
 .new-person-controls {

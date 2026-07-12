@@ -36,6 +36,12 @@ class FaceViewModel:
     id: int
     photo_date: str
     similarity: Optional[float]
+    # The source media the face was cropped from — the hover preview shows it.
+    media_item_id: int
+    media_type: str
+    # Detection box in source-image pixels, so the preview can outline the face.
+    # Absent on faces indexed before the box was recorded.
+    region: Optional[dict]
 
 
 @dataclass
@@ -50,6 +56,39 @@ class FaceSuggestion:
 
 
 logger = get_logger(__name__, 'webapp')
+
+
+def _face_region(face: Face) -> Optional[dict]:
+    box = (face.location_top, face.location_right, face.location_bottom, face.location_left)
+    if any(coordinate is None for coordinate in box):
+        return None
+    top, right, bottom, left = box
+    return {"top": top, "right": right, "bottom": bottom, "left": left}
+
+
+def _face_view_model(face: Face, similarity: Optional[float]) -> FaceViewModel:
+    return FaceViewModel(
+        id=face.id,
+        photo_date=face.media_item.date_taken,
+        similarity=similarity,
+        media_item_id=face.media_item.id,
+        media_type=face.media_item.media_type,
+        region=_face_region(face),
+    )
+
+
+def _centroid_similarities(embeddings: list[np.ndarray]) -> list[float]:
+    """Cosine similarity of each embedding to the mean of the group."""
+    matrix = np.array(embeddings, dtype=np.float64)
+    centroid = matrix.mean(axis=0)
+    centroid_norm = np.linalg.norm(centroid)
+    if centroid_norm == 0:  # antipodal members cancel out; no meaningful centre
+        return [0.0] * len(embeddings)
+    centroid = centroid / centroid_norm
+    norms = np.linalg.norm(matrix, axis=1)
+    norms[norms == 0] = 1.0
+    similarities = (matrix @ centroid) / norms
+    return [float(value) for value in np.clip(similarities, 0.0, 1.0)]
 
 
 def make_suggestions_by_similarity(unassigned_faces: list[Face], min_similarity: float) -> list[FaceSuggestion]:
@@ -69,6 +108,7 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], min_similarity:
     # similarity tightens the clusters.
     eps = 1.0 - min_similarity
     clustering = DBSCAN(eps=eps, min_samples=DEFAULT_MIN_SAMPLE_SIZE, metric="cosine").fit(embeddings)
+    embedding_by_face_id = dict(zip(face_ids, embeddings))
     clusters = {}
     for face_id, label in zip(face_ids, clustering.labels_):
         if label == -1:  # skip noise faces
@@ -78,16 +118,24 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], min_similarity:
         clusters[label] = cluster
         cluster["face_ids"].append(face_id)
 
-    suggestions = [FaceSuggestion(
-        person_ids=[],
-        people=[],
-        suggestion_name=cluster["label"],
-        photo_date=face_dict[cluster["face_ids"][0]].media_item.date_taken,
-        faces=[
-            FaceViewModel(face_id, face_dict[face_id].media_item.date_taken, None)
-            for face_id in cluster["face_ids"]
-        ],
-    ) for cluster in clusters.values()]
+    suggestions = []
+    for cluster in clusters.values():
+        # A similarity cluster has no person to score against, so each face is
+        # scored against the cluster's own centroid: how representative it is of
+        # the group. Weak members sort to the bottom and are easy to deselect.
+        similarities = _centroid_similarities(
+            [embedding_by_face_id[face_id] for face_id in cluster["face_ids"]]
+        )
+        suggestions.append(FaceSuggestion(
+            person_ids=[],
+            people=[],
+            suggestion_name=cluster["label"],
+            photo_date=face_dict[cluster["face_ids"][0]].media_item.date_taken,
+            faces=[
+                _face_view_model(face_dict[face_id], similarity)
+                for face_id, similarity in zip(cluster["face_ids"], similarities)
+            ],
+        ))
     suggestions.sort(key=lambda suggestion: len(suggestion.faces), reverse=True)
     return suggestions
 
@@ -139,11 +187,9 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
 
         if best_suggestion is not None:
             best_sim = float(matching_people[0][2])
-            best_suggestion.faces.append(
-                FaceViewModel(face.id, face.media_item.date_taken, best_sim))
+            best_suggestion.faces.append(_face_view_model(face, best_sim))
         else:
-            default_suggestion.faces.append(
-                FaceViewModel(face.id, face.media_item.date_taken, None))
+            default_suggestion.faces.append(_face_view_model(face, None))
 
     face_suggestions.sort(key=lambda suggestion: (1 if len(suggestion.person_ids) == 1 else 0, len(suggestion.faces)),
                           reverse=True)

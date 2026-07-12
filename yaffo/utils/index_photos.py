@@ -9,7 +9,7 @@ from typing import List, Optional, Callable, Tuple, Dict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from PIL.Image import Image as PIL_Image
-from PIL import Image
+from PIL import Image, ImageOps
 
 import piexif
 from sqlalchemy.orm import Session
@@ -18,7 +18,12 @@ from yaffo.logging_config import get_logger
 from yaffo.db.models import MediaItem, Face, Tag, FACE_STATUS_UNASSIGNED
 from yaffo.common import PHOTO_EXTENSIONS
 from yaffo.utils.photo_dates import get_photo_date_info
-from yaffo.utils.image import image_from_path, image_to_numpy
+from yaffo.utils.image import (
+    exif_orientation,
+    image_from_path,
+    image_to_numpy,
+    upright_image_from_path,
+)
 from yaffo.utils.face_analysis import detect_faces
 from yaffo.utils.exiftool_path import get_exiftool_path
 
@@ -46,7 +51,9 @@ def save_face_thumbnail(
         face_index: int,
         thumbnail_dir: Path,
         face_location) -> Path:
-    image = image_from_path(image_path)
+    # Upright, like detection: the box is in as-displayed coordinates, so cropping
+    # the raw buffer would cut the wrong region out of an EXIF-rotated photo.
+    image = upright_image_from_path(image_path)
     top, right, bottom, left = face_location
     face_image = image.crop((left, top, right, bottom))
     face_image.thumbnail((150, 150))
@@ -329,7 +336,11 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
         date_info = get_photo_date_info(str(photo_path), exif_data)
 
         image = image_tag if image_tag is not None else image_from_path(photo_path)
-        image_numpy = image_to_numpy(image)
+        # Record the tag for search, then work upright from here on: detection (and
+        # the crops below) must agree with what a browser draws, which is the
+        # EXIF-rotated image. Detecting on a sideways buffer also costs recall.
+        orientation = exif_orientation(image)
+        image_numpy = image_to_numpy(ImageOps.exif_transpose(image))
         try:
             detected_faces = detect_faces(image_numpy)
         except Exception as e:  # noqa: BLE001 - index metadata even if face detection fails
@@ -363,6 +374,7 @@ def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
             'longitude': longitude,
             'location_name': location_name,
             'device': device,
+            'orientation': orientation,
             'faces_data': faces_data
         }
 

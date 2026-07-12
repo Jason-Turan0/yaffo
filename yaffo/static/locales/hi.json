@@ -12,7 +12,8 @@
     "pageOf": "पेज {{page}} का {{total}}",
     "save": "बचाना",
     "search": "खोजना…",
-    "similarityValue": "समानता: {{value}}"
+    "similarityValue": "समानता: {{value}}",
+    "unknown": "अज्ञात"
   },
   "components": {
     "chat": {
@@ -92,7 +93,8 @@
       "clusterSkipped": "क्लस्टर छोड़ दिया गया",
       "noneSelected": "छोड़ दिया गया - कोई चेहरा चयनित नहीं",
       "requestFailed": "गलती: {{reason}}",
-      "selectPersonFirst": "कृपया पहले एक व्यक्ति का चयन करें"
+      "selectPersonFirst": "कृपया पहले एक व्यक्ति का चयन करें",
+      "videoPreviewUnavailable": "वीडियो के लिए पूर्वावलोकन उपलब्ध नहीं है"
     },
     "people": {
       "created": "बनाया था \"{{name}}\"",

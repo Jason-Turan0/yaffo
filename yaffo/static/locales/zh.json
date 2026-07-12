@@ -12,7 +12,8 @@
     "pageOf": "页 {{page}} 的 {{total}}",
     "save": "节省",
     "search": "搜索…",
-    "similarityValue": "相似： {{value}}"
+    "similarityValue": "相似： {{value}}",
+    "unknown": "未知"
   },
   "components": {
     "chat": {
@@ -92,7 +93,8 @@
       "clusterSkipped": "集群已跳过",
       "noneSelected": "已跳过 — 未选择面",
       "requestFailed": "错误： {{reason}}",
-      "selectPersonFirst": "请先选择一个人"
+      "selectPersonFirst": "请先选择一个人",
+      "videoPreviewUnavailable": "视频无法预览"
     },
     "people": {
       "created": "创建了“{{name}}\"",

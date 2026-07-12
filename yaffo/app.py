@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from flask import Flask
+from flask import Flask, request
 from yaffo import themes
 from yaffo.config import get_int as get_config_int
 from yaffo.db import db
@@ -16,7 +16,15 @@ from yaffo.routes.init_routes import init_routes
 
 logger = get_logger(__name__, 'webapp')
 
-def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None):
+def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None,
+               startup_error: Optional[BaseException] = None):
+    """Build the Flask app.
+
+    `startup_error` puts it in recovery mode: something that had to succeed before
+    serving (migrations, so far) didn't, so every request answers with the error
+    screen instead of a traceback — or worse, a half-working app writing to a
+    database whose shape it has guessed wrong.
+    """
     app = Flask(__name__)
 
     # Configure werkzeug logger to use our logging system
@@ -70,6 +78,16 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None):
 
     init_template_filters(app)
     init_routes(app)
+
+    if startup_error is not None:
+        from yaffo.routes.base import render_critical_error
+
+        @app.before_request
+        def serve_startup_error():
+            # Static files still serve: the error screen needs its stylesheet.
+            if request.endpoint == "static":
+                return None
+            return render_critical_error(startup_error)
 
     # `python -m yaffo` starts the p2p sharing engine itself (see __main__);
     # under `flask run` (the inv app-local / start-app dev flow) there is no

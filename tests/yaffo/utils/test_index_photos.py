@@ -53,7 +53,10 @@ def test_index_photo_continues_when_face_detection_fails(monkeypatch, tmp_path):
     photo_path.write_bytes(b"fake")
 
     monkeypatch.setattr("yaffo.utils.index_photos.get_exif_data_with_exiftool", lambda path: None)
-    monkeypatch.setattr("yaffo.utils.index_photos.image_from_path", lambda path: object())
+    # A real PIL image, not a stand-in: index_photo reads its EXIF orientation and
+    # transposes it before detection.
+    monkeypatch.setattr("yaffo.utils.index_photos.image_from_path",
+                        lambda path: Image.new("RGB", (10, 10)))
     monkeypatch.setattr("yaffo.utils.index_photos.image_to_numpy", lambda image: np.zeros((10, 10, 3), dtype=np.uint8))
     monkeypatch.setattr("yaffo.utils.index_photos.get_gps_coordinates", lambda image: (None, None, None))
     monkeypatch.setattr(
@@ -70,6 +73,38 @@ def test_index_photo_continues_when_face_detection_fails(monkeypatch, tmp_path):
     assert result is not None
     assert result["faces_data"] == []
     assert result["year"] == 2024
+
+
+def test_index_photo_detects_on_the_upright_image_and_records_the_orientation(monkeypatch, tmp_path):
+    """A browser rotates by EXIF; detection has to see the same picture it does.
+
+    A box found on the raw buffer of a quarter-turned photo points somewhere else
+    once the browser draws it upright — so index_photo transposes first. The tag is
+    still recorded, for search.
+    """
+    photo_path = tmp_path / "sideways.jpg"
+    exif = Image.Exif()
+    exif[274] = 6  # rotate 90 CW: 40x20 landscape on disk, 20x40 upright on screen
+    Image.new("RGB", (40, 20), "white").save(photo_path, exif=exif)
+
+    monkeypatch.setattr("yaffo.utils.index_photos.get_exif_data_with_exiftool", lambda path: None)
+    monkeypatch.setattr(
+        "yaffo.utils.index_photos.get_photo_date_info",
+        lambda path, exif_data: SimpleNamespace(date=None, year=2024, month=6),
+    )
+    seen = {}
+
+    def record_shape(image):
+        seen["shape"] = image.shape
+        return []
+
+    monkeypatch.setattr("yaffo.utils.index_photos.detect_faces", record_shape)
+
+    result = index_photo(photo_path, tmp_path / "thumbs")
+
+    assert result["orientation"] == 6
+    # (height, width, channels) — upright, so the raw 40x20 arrives as 20 wide x 40 tall.
+    assert seen["shape"] == (40, 20, 3)
 
 
 @pytest.fixture

@@ -2,11 +2,37 @@ from pathlib import Path
 
 from flask import Flask, Response, abort, jsonify, render_template, request, send_from_directory
 from flask_babel import gettext
+from sqlalchemy.exc import OperationalError
+from werkzeug.exceptions import HTTPException
 
 from yaffo import themes
 from yaffo.db import db
 from yaffo.db.repositories import media_dir_repository
+from yaffo.logging_config import get_logger
 from yaffo.utils.file_system import DirEntry, list_directory, listing_to_dict
+
+logger = get_logger(__name__, 'webapp')
+
+# Last resort, used only when even the error template can't be rendered (the theme and
+# locale it needs are read from the database). Self-contained on purpose: no template,
+# no stylesheet, no database.
+FALLBACK_ERROR_PAGE = """<!doctype html>
+<meta charset="utf-8">
+<title>Yaffo — something went wrong</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; display: grid; place-items: center;
+         min-height: 100vh; background: #f8f9fa; color: #212529; }
+  main { max-width: 32rem; padding: 2rem; text-align: center; }
+  code { background: #e9ecef; padding: 0.15em 0.4em; border-radius: 3px; }
+</style>
+<main>
+  <h1>Something went wrong</h1>
+  <p>Yaffo could not load this page, and could not load its own error page either —
+     the library database may be unreadable or out of date.</p>
+  <p>Restarting Yaffo applies any pending database updates. If that doesn't help,
+     the details are in the log.</p>
+</main>
+"""
 
 
 def _css_response(css: str) -> Response:
@@ -54,6 +80,36 @@ def _configured_media_dir_roots() -> list[DirEntry]:
     return roots
 
 
+def is_schema_mismatch(error: BaseException) -> bool:
+    """Does this look like the database not matching the code that's running?
+
+    SQLite reports a missing migration as a plain OperationalError ("no such column:
+    media_items.orientation"), which is indistinguishable from any other query error
+    by type alone — hence the message sniff.
+    """
+    if not isinstance(error, OperationalError):
+        return False
+    message = str(getattr(error, "orig", error)).lower()
+    return "no such column" in message or "no such table" in message
+
+
+def render_critical_error(error: BaseException):
+    """The branded error screen for a failure that took the whole request down.
+
+    Falls back to a self-contained page if rendering itself fails: the templates pull
+    the theme and locale from the database, which is exactly what may be broken here,
+    and a handler that raises would hand the user a traceback — the thing it exists
+    to prevent.
+    """
+    schema_mismatch = is_schema_mismatch(error)
+    template = 'db_error.html' if schema_mismatch else '500.html'
+    try:
+        return render_template(template), 500
+    except Exception:  # noqa: BLE001 - the database is too broken to render a page from
+        logger.exception("could not render the error page")
+        return Response(FALLBACK_ERROR_PAGE, mimetype="text/html", status=500)
+
+
 def init_base_routes(app: Flask):
     @app.errorhandler(404)
     def page_not_found(error):
@@ -62,6 +118,35 @@ def init_base_routes(app: Flask):
     @app.errorhandler(500)
     def internal_server_error(error):
         return render_template('500.html'), 500
+
+    @app.errorhandler(Exception)
+    def unhandled_exception(error):
+        """Anything a route let escape — a schema mismatch, a bad query, a bug.
+
+        Without this, Flask only reaches the 500 page in production: in debug (the
+        `flask run` dev flow) it propagates instead, and the browser gets a Werkzeug
+        traceback. The traceback still goes to the log, where it belongs; the browser
+        gets a page. HTTPExceptions are re-raised untouched so abort(404) and friends
+        keep their own handlers.
+        """
+        if isinstance(error, HTTPException):
+            return error
+
+        logger.exception("unhandled error serving %s %s", request.method, request.path)
+
+        # An /api caller is JS expecting JSON; handing it an HTML page just turns one
+        # error into a parse error. Mirrors the {success, message, code} shape the
+        # other API routes use.
+        if request.path.startswith('/api/'):
+            schema_mismatch = is_schema_mismatch(error)
+            return jsonify({
+                "success": False,
+                "message": (gettext("The library database is out of date. Restart Yaffo to update it.")
+                            if schema_mismatch else gettext("Something went wrong")),
+                "code": "database_out_of_date" if schema_mismatch else "internal_error",
+            }), 500
+
+        return render_critical_error(error)
 
     @app.route('/api/fs/list', methods=["GET"])
     def fs_list():
