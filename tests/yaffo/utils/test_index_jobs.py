@@ -13,6 +13,7 @@ ordering guarantee the chord exists to provide.
 from contextlib import contextmanager
 from pathlib import Path
 
+import numpy as np
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -158,3 +159,79 @@ def test_nothing_to_do_completes_both_jobs(immediate_db, tmp_path):
         assert index_job.task_count == 0 and index_job.status == JOB_STATUS_COMPLETED
 
     assert completed_events == ["import_photos", "index_photos"]
+
+
+def test_force_reindexes_files_that_are_already_indexed(immediate_db, tmp_path):
+    """What the reindex actions ask for. Without `force`, an INDEXED file is skipped
+    (that's what makes Sync cheap to re-run); with it, indexing runs again."""
+    engine, _ = immediate_db
+    files = _make_files(tmp_path, 2)
+    with _session(engine) as session:
+        for path in files:
+            session.add(MediaItem(full_file_path=path, status=MEDIA_STATUS_INDEXED))
+        session.commit()
+
+    with _session(engine) as session:
+        skipped = enqueue_index_jobs(session, files)
+    with _session(engine) as session:
+        assert session.query(Job).filter_by(id=skipped.index_job_id).one().task_count == 0
+
+    with _session(engine) as session:
+        forced = enqueue_index_jobs(session, files, force=True)
+
+    with _session(engine) as session:
+        index_job = session.query(Job).filter_by(id=forced.index_job_id).one()
+        assert index_job.task_count == 2
+        assert index_job.status == JOB_STATUS_COMPLETED
+        # Nothing to import: the rows already exist, so only indexing re-runs.
+        assert session.query(Job).filter_by(id=forced.import_job_id).one().task_count == 0
+        assert session.query(MediaItem).count() == 2  # re-indexed in place, not duplicated
+
+
+def test_reindex_resets_the_rows_and_deletes_faces_thumbnails_and_assignments(immediate_db, tmp_path):
+    """The whole reindex action, end to end: the row is reset (IMPORTED, no faces, no
+    assignments, thumbnail file gone), the affected person's gallery is rebuilt from
+    what's left, and the index job re-runs on a file Sync would have skipped."""
+    from yaffo.db.models import Face, Person, PersonFace, PersonEmbedding, MEDIA_STATUS_INDEXED
+    from yaffo.domain.compare_utils import serialize_embedding
+    from yaffo.utils.index_jobs import reindex_media_items
+
+    engine, _ = immediate_db
+    photo = _make_files(tmp_path, 1)[0]
+    thumbnail = tmp_path / "face_thumb.jpg"
+    thumbnail.write_bytes(b"thumb")
+
+    with _session(engine) as session:
+        media_item = MediaItem(full_file_path=photo, status=MEDIA_STATUS_INDEXED)
+        person = Person(name="Ada")
+        session.add_all([media_item, person])
+        session.flush()
+        face = Face(media_item_id=media_item.id, full_file_path=str(thumbnail),
+                    embedding=serialize_embedding(np.ones(512, dtype=np.float32) / 32))
+        session.add(face)
+        session.flush()
+        session.add_all([
+            PersonFace(person_id=person.id, face_id=face.id, similarity=0.9),
+            PersonEmbedding(person_id=person.id, life_stage="adult",
+                            avg_embedding=serialize_embedding(np.ones(512, dtype=np.float32) / 32)),
+        ])
+        session.commit()
+        media_item_id, person_id = media_item.id, person.id
+
+    with _session(engine) as session:
+        result = reindex_media_items(session, [session.get(MediaItem, media_item_id)])
+
+    with _session(engine) as session:
+        # index_photo is stubbed to find no faces, so the row comes back INDEXED, empty.
+        assert session.get(MediaItem, media_item_id).status == MEDIA_STATUS_INDEXED
+        assert session.query(Face).count() == 0
+        assert session.query(PersonFace).count() == 0
+        assert session.query(Job).filter_by(id=result.index_job_id).one().task_count == 1
+
+        # The person survives, but the gallery built from the deleted face does not.
+        person = session.get(Person, person_id)
+        assert person is not None
+        assert person.avg_embedding is None
+        assert person.stage_embeddings == []
+
+    assert not thumbnail.exists()  # unlinked after the commit

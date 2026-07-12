@@ -1,13 +1,15 @@
 import json
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 from flask_babel import gettext
 
 from yaffo.db import db
-from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING
+from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, MediaItem
 from yaffo.routes.utilities.common import get_media_dirs, get_thumbnail_dir, automations_sidebar_context
 from yaffo.utils.file_sync import MediaScan, iter_media_scan, perform_sync
+from yaffo.utils.index_jobs import reindex_media_items
 
 
 # NDJSON records the scan stream emits (one JSON object per line). Named so the page
@@ -48,6 +50,12 @@ class ScanError:
 @dataclass
 class SyncStarted:
     job_id: str
+
+
+@dataclass
+class ReindexStarted:
+    job_id: str
+    media_item_count: int
 
 
 def init_index_photos_routes(app: Flask):
@@ -178,3 +186,39 @@ def init_index_photos_routes(app: Flask):
 
         jobs = perform_sync(db.session, files_to_index, files_to_delete, thumbnail_dir)
         return jsonify(asdict(SyncStarted(job_id=jobs.import_job_id))), 202
+
+    @app.route("/utilities/index-photos/reindex", methods=["POST"])
+    def utilities_reindex_library():
+        """Re-index every media item already in the library — a full rebuild of the
+        derived data (faces, sizes, metadata) from the files on disk.
+
+        Unlike Sync, which only picks up what's new, this re-runs indexing on files
+        that are already INDEXED: every item goes back to IMPORTED and its faces are
+        deleted up front, so every person assignment is dropped. The button behind this
+        confirms that first.
+        """
+        thumbnail_dir = get_thumbnail_dir()
+        if thumbnail_dir is None:
+            return jsonify({
+                "error": gettext("No thumbnail directory configured"),
+                "code": "thumbnail_directory_not_configured",
+            }), 400
+        thumbnail_dir.mkdir(parents=True, exist_ok=True)
+
+        # Sourced from the index, not a filesystem walk: "reindex the library" means
+        # the items in it. Files that have since vanished are skipped — indexing them
+        # would only error; Sync is what reconciles those.
+        media_items = [
+            item for item in db.session.query(MediaItem).all()
+            if item.full_file_path and Path(item.full_file_path).exists()
+        ]
+        if not media_items:
+            return jsonify({
+                "error": gettext("There is nothing indexed to reindex"),
+                "code": "library_empty",
+            }), 400
+
+        jobs = reindex_media_items(db.session, media_items)
+        return jsonify(asdict(
+            ReindexStarted(job_id=jobs.index_job_id, media_item_count=len(media_items))
+        )), 202

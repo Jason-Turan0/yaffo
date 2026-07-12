@@ -149,6 +149,34 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
         });
     };
 
+    // Re-run indexing for this one photo. Destructive in one specific way — the faces
+    // are re-detected, so whoever was assigned to them is forgotten — so it confirms
+    // before firing rather than after.
+    const reindex = async (/** @type {number} */ mediaItemId) => {
+        const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+            title: i18n.t('media:reindex.title'),
+            message: i18n.t('media:reindex.confirm'),
+            confirmText: i18n.t('media:reindex.action'),
+            confirmClass: 'btn-danger',
+        });
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`/api/media/${mediaItemId}/reindex`, { method: 'POST' });
+            const data = await response.json();
+            if (!response.ok) {
+                window.notification.error(
+                    i18n.t('media:reindex.failedWithReason', { reason: data.error })
+                );
+                return;
+            }
+            window.notification.success(i18n.t('media:reindex.started'));
+        } catch (error) {
+            window.notification.error(i18n.t('media:reindex.failed'));
+            console.error('Error:', error);
+        }
+    };
+
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             window.history.back();
@@ -167,6 +195,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
         highlightFace,
         clearHighlights,
         openFile,
-        openFolder
+        openFolder,
+        reindex
     };
 };

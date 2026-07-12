@@ -761,3 +761,98 @@ class TestOrphanedThumbnailsKeepPosters:
         assert poster not in orphaned
         assert face_crop not in orphaned
         assert stray in orphaned
+
+
+def test_clearing_faces_takes_their_person_assignments_with_them(tmp_path):
+    """Re-indexing deletes a photo's faces and detects new ones, so the assignments on
+    the old faces have nothing left to point at.
+
+    people_face declares ON DELETE CASCADE, but SQLite only honours that with PRAGMA
+    foreign_keys=ON, which this app doesn't set — so the rows have to go explicitly,
+    or they'd outlive their faces and dangle."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from yaffo.db import db
+    from yaffo.db.models import Face, MediaItem, Person, PersonFace
+    from yaffo.utils.index_photos import clear_faces_for_media_items
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'faces.db'}")
+    db.metadata.create_all(engine)
+    with Session(engine) as session:
+        media_item = MediaItem(full_file_path="/photos/assigned.jpg")
+        person = Person(name="Ada")
+        session.add_all([media_item, person])
+        session.flush()
+        face = Face(media_item_id=media_item.id, full_file_path="/thumbs/face.jpg")
+        session.add(face)
+        session.flush()
+        session.add(PersonFace(person_id=person.id, face_id=face.id))
+        session.commit()
+
+        thumbnails = clear_faces_for_media_items(session, [media_item.id])
+        session.commit()
+
+        assert thumbnails == ["/thumbs/face.jpg"]  # the caller unlinks these after committing
+        assert session.query(Face).count() == 0
+        assert session.query(PersonFace).count() == 0
+        assert session.query(Person).count() == 1  # the person survives, just unlinked
+
+
+def test_reset_for_reindex_returns_items_to_imported_and_strips_their_faces(tmp_path):
+    """A reindex resets the row up front rather than leaving it INDEXED with stale faces
+    until the queued job gets to it — the photo reads as un-indexed, and shows no boxes
+    or names from a detection pass that's about to be replaced."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from yaffo.db import db
+    from yaffo.db.models import (
+        Face, MediaItem, Person, PersonFace, MEDIA_STATUS_IMPORTED, MEDIA_STATUS_INDEXED,
+    )
+    from yaffo.utils.index_photos import reset_media_items_for_reindex
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'reset.db'}")
+    db.metadata.create_all(engine)
+    with Session(engine) as session:
+        target = MediaItem(full_file_path="/photos/a.jpg", status=MEDIA_STATUS_INDEXED)
+        untouched = MediaItem(full_file_path="/photos/b.jpg", status=MEDIA_STATUS_INDEXED)
+        person = Person(name="Ada")
+        session.add_all([target, untouched, person])
+        session.flush()
+        face = Face(media_item_id=target.id, full_file_path="/thumbs/a_face.jpg")
+        other_face = Face(media_item_id=untouched.id, full_file_path="/thumbs/b_face.jpg")
+        session.add_all([face, other_face])
+        session.flush()
+        session.add(PersonFace(person_id=person.id, face_id=face.id))
+        session.commit()
+
+        reset = reset_media_items_for_reindex(session, [target.id])
+        session.commit()
+
+        assert session.get(MediaItem, target.id).status == MEDIA_STATUS_IMPORTED
+        assert session.get(MediaItem, untouched.id).status == MEDIA_STATUS_INDEXED  # untouched
+        assert session.query(Face).filter_by(media_item_id=target.id).count() == 0
+        assert session.query(Face).filter_by(media_item_id=untouched.id).count() == 1
+        assert session.query(PersonFace).count() == 0  # the assignment went with the face
+        assert session.query(Person).count() == 1      # the person did not
+
+        # Handed back for the caller to finish after committing.
+        assert reset.thumbnails == ["/thumbs/a_face.jpg"]
+        assert reset.person_ids == [person.id]  # their gallery was built from a face that's gone
+
+
+def test_reset_for_reindex_is_a_no_op_for_an_empty_list(tmp_path):
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from yaffo.db import db
+    from yaffo.utils.index_photos import reset_media_items_for_reindex
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'empty.db'}")
+    db.metadata.create_all(engine)
+    with Session(engine) as session:
+        reset = reset_media_items_for_reindex(session, [])
+
+    assert reset.thumbnails == []
+    assert reset.person_ids == []

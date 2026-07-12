@@ -135,6 +135,14 @@
     "gallery": {
       "videoPlaybackFailed": "该视频无法播放 - 该浏览器可能不支持该格式，或者文件已被移动或删除。"
     },
+    "reindex": {
+      "action": "重新索引",
+      "confirm": "将重新读取文件并再次检测人脸。此照片人脸上已指派的人物将会丢失。",
+      "failed": "无法开始重新索引",
+      "failedWithReason": "无法开始重新索引：{{reason}}",
+      "started": "已开始重新索引",
+      "title": "重新索引这张照片？"
+    },
     "tags": {
       "allNeedName": "所有标签都必须有名称",
       "name": "标签名称",
@@ -301,6 +309,16 @@
       },
       "photoId": "带照片的身份证件",
       "reason": "原因",
+      "reindex": {
+        "action": "重新索引库",
+        "button": "重新索引库",
+        "confirm": "每个已索引的文件都会被重新读取并再次检测人脸。你所有的人脸与人物的指派都会丢失，而且可能需要很长时间。",
+        "error": "无法开始重新索引：{{reason}}",
+        "startFailed": "无法开始重新索引",
+        "started": "正在重新索引 {{count}} 个项目",
+        "starting": "正在开始…",
+        "title": "重新索引整个库？"
+      },
       "scan": {
         "error": "扫描错误： {{reason}}",
         "failed": "扫描文件系统失败。",
@@ -314,11 +332,11 @@
         "started": "同步作业已开始",
         "starting": "开始同步..."
       },
+      "truncation": "显示第一个 {{shown}} 的 {{total}}。同步处理所有这些。",
       "unindexed": {
         "description": "以下照片存在于配置的媒体目录中，但不在数据库中。",
         "title": "未索引的照片"
-      },
-      "truncation": "显示第一个 {{shown}} 的 {{total}}。同步处理所有这些。"
+      }
     }
   }
 }

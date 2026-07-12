@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-12 02:17-0500\n"
+"POT-Creation-Date: 2026-07-12 16:26-0500\n"
 "PO-Revision-Date: 2026-06-26 20:19-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: hi\n"
@@ -18,11 +18,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:67
+#: yaffo/distance_units.py:26 yaffo/routes/filter_panel.py:71
 msgid "Miles"
 msgstr "मील"
 
-#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:67
+#: yaffo/distance_units.py:27 yaffo/routes/filter_panel.py:71
 msgid "Kilometers"
 msgstr "किलोमीटर"
 
@@ -254,19 +254,19 @@ msgstr "प्रति फ़ोटो अधिकतम लेबल"
 msgid "At most this many labels are kept per photo (the highest-scoring ones)."
 msgstr "प्रति फ़ोटो (उच्चतम स्कोरिंग वाले) अधिक से अधिक इतने ही लेबल रखे जाते हैं।"
 
-#: yaffo/db/models.py:355
+#: yaffo/db/models.py:359
 msgid "File sync"
 msgstr "फ़ाइल समन्वयन"
 
-#: yaffo/db/models.py:356
+#: yaffo/db/models.py:360
 msgid "Reconcile the photo index with the files on disk."
 msgstr "डिस्क पर मौजूद फाइलों के साथ फोटो इंडेक्स का मिलान करें।"
 
-#: yaffo/db/models.py:359
+#: yaffo/db/models.py:363
 msgid "Auto-assign faces"
 msgstr "चेहरों को स्वतः-असाइन करें"
 
-#: yaffo/db/models.py:361
+#: yaffo/db/models.py:365
 msgid ""
 "When a photo is indexed, assign each detected face to the one person it matches above the "
 "threshold."
@@ -274,19 +274,19 @@ msgstr ""
 "जब कोई फ़ोटो इंडेक्स की जाती है, तो प्रत्येक पहचाने गए चेहरे को उस एक व्यक्ति को असाइन करें जो "
 "थ्रेशोल्ड से ऊपर मेल खाता हो।"
 
-#: yaffo/db/models.py:366
+#: yaffo/db/models.py:370
 msgid "Export photo tag"
 msgstr "फोटो टैग निर्यात करें"
 
-#: yaffo/db/models.py:368
+#: yaffo/db/models.py:372
 msgid "When a photo is modified, write its people and/or location tags back into the photo file."
 msgstr "जब कोई फोटो संशोधित किया जाता है, तो उसके लोगों और/या स्थान टैग को वापस फोटो फ़ाइल में लिखें।"
 
-#: yaffo/db/models.py:373
+#: yaffo/db/models.py:377
 msgid "Assign location name"
 msgstr "स्थान का नाम निर्दिष्ट करें"
 
-#: yaffo/db/models.py:375
+#: yaffo/db/models.py:379
 msgid ""
 "When a photo is indexed, name its location from GPS — reuse a nearby named photo's name, then "
 "fall back to an OpenStreetMap lookup."
@@ -294,11 +294,11 @@ msgstr ""
 "जब कोई फोटो अनुक्रमित होता है, तो जीपीएस से उसके स्थान का नाम बताएं - पास में नामित फोटो के नाम "
 "का पुन: उपयोग करें, फिर ओपनस्ट्रीटमैप लुकअप पर वापस आएं।"
 
-#: yaffo/db/models.py:380
+#: yaffo/db/models.py:384
 msgid "Geotag from neighbors"
 msgstr "पड़ोसियों से जियोटैग"
 
-#: yaffo/db/models.py:382
+#: yaffo/db/models.py:386
 msgid ""
 "When a photo is indexed, give a GPS-less photo the coordinates of the closest-in-time photo that "
 "has GPS (e.g. a camera shot taken alongside phone shots)."
@@ -306,11 +306,11 @@ msgstr ""
 "जब कोई फोटो अनुक्रमित किया जाता है, तो जीपीएस-रहित फोटो को जीपीएस वाले निकटतम समय के फोटो के "
 "निर्देशांक दें (उदाहरण के लिए फोन शॉट्स के साथ लिया गया कैमरा शॉट)।"
 
-#: yaffo/db/models.py:388
+#: yaffo/db/models.py:392
 msgid "Classify labels"
 msgstr "लेबल वर्गीकृत करें"
 
-#: yaffo/db/models.py:390
+#: yaffo/db/models.py:394
 msgid ""
 "When a photo is indexed, label it with the subjects, scenes, and activities it matches from your "
 "label vocabulary (offline CLIP image recognition)."
@@ -318,11 +318,11 @@ msgstr ""
 "जब कोई फोटो अनुक्रमित किया जाता है, तो इसे उन विषयों, दृश्यों और गतिविधियों के साथ लेबल करें जो "
 "आपके लेबल शब्दावली (ऑफ़लाइन सीएलआईपी छवि पहचान) से मेल खाते हों।"
 
-#: yaffo/db/models.py:396
+#: yaffo/db/models.py:400
 msgid "Duplicate scan"
 msgstr "डुप्लिकेट स्कैन"
 
-#: yaffo/db/models.py:398
+#: yaffo/db/models.py:402
 msgid ""
 "Scan your indexed photos for duplicates on a schedule — results appear in the Remove Duplicates "
 "tool."
@@ -330,78 +330,90 @@ msgstr ""
 "एक शेड्यूल पर डुप्लिकेट के लिए अपनी अनुक्रमित फ़ोटो को स्कैन करें - परिणाम डुप्लिकेट हटाएँ टूल "
 "में दिखाई देंगे।"
 
-#: yaffo/routes/base.py:81
+#: yaffo/routes/base.py:144
+msgid "The library database is out of date. Restart Yaffo to update it."
+msgstr "लाइब्रेरी डेटाबेस पुराना हो चुका है. इसे अपडेट करने के लिए Yaffo को पुनरारंभ करें।"
+
+#: yaffo/routes/base.py:145
+msgid "Something went wrong"
+msgstr "कुछ गलत हो गया"
+
+#: yaffo/routes/base.py:166
 msgid "Folder name is required"
 msgstr "फ़ोल्डर का नाम आवश्यक है"
 
-#: yaffo/routes/base.py:83
+#: yaffo/routes/base.py:168
 msgid "Folder name cannot contain path separators"
 msgstr "फ़ोल्डर नाम में पथ विभाजक नहीं हो सकते"
 
-#: yaffo/routes/base.py:86
+#: yaffo/routes/base.py:171
 msgid "Choose an existing parent folder"
 msgstr "कोई मौजूदा पैरेंट फ़ोल्डर चुनें"
 
-#: yaffo/routes/base.py:89
+#: yaffo/routes/base.py:174
 msgid "A file or folder with that name already exists"
 msgstr "उस नाम की एक फ़ाइल या फ़ोल्डर पहले से मौजूद है"
 
-#: yaffo/routes/base.py:93
+#: yaffo/routes/base.py:178
 #, python-format
 msgid "Could not create folder: %(reason)s"
 msgstr "फ़ोल्डर नहीं बनाया जा सका: %(reason)s"
 
-#: yaffo/routes/faces.py:76
+#: yaffo/routes/faces.py:192
 #, python-format
 msgid "Cluster %(number)s"
 msgstr "झुंड %(number)s"
 
-#: yaffo/routes/faces.py:101 yaffo/templates/sharing/_device_content.html:14
+#: yaffo/routes/faces.py:225 yaffo/templates/sharing/_device_content.html:14
 #: yaffo/templates/sharing/_device_panel.html:18
 msgid "Unknown"
 msgstr "अज्ञात"
 
-#: yaffo/routes/faces.py:259
+#: yaffo/routes/faces.py:256
+msgid " OR "
+msgstr " या "
+
+#: yaffo/routes/faces.py:377 yaffo/routes/filter_config.py:134
+msgid "Items must be a list"
+msgstr "आइटम एक सूची होनी चाहिए"
+
+#: yaffo/routes/faces.py:399 yaffo/routes/faces.py:439 yaffo/routes/people.py:119
+#: yaffo/routes/people.py:178 yaffo/routes/people.py:220 yaffo/routes/people.py:298
+msgid "Person not found"
+msgstr "व्यक्ति नहीं मिला"
+
+#: yaffo/routes/faces.py:421
 #, python-format
 msgid "Successfully ignored %(count)s face"
 msgid_plural "Successfully ignored %(count)s faces"
 msgstr[0] "सफलतापूर्वक अनदेखा किया गया %(count)s चेहरा"
 msgstr[1] "सफलतापूर्वक अनदेखा किया गया %(count)s चेहरे"
 
-#: yaffo/routes/faces.py:277 yaffo/routes/people.py:119 yaffo/routes/people.py:178
-#: yaffo/routes/people.py:220 yaffo/routes/people.py:298
-msgid "Person not found"
-msgstr "व्यक्ति नहीं मिला"
-
-#: yaffo/routes/faces.py:289
+#: yaffo/routes/faces.py:451
 #, python-format
 msgid "Successfully assigned %(count)s face to %(person)s"
 msgid_plural "Successfully assigned %(count)s faces to %(person)s"
 msgstr[0] "सफलतापूर्वक असाइन किया गया %(count)s सामना करना %(person)s"
 msgstr[1] "सफलतापूर्वक असाइन किया गया %(count)s का सामना करना पड़ता है %(person)s"
 
-#: yaffo/routes/faces.py:301
+#: yaffo/routes/faces.py:463
 msgid "Faces, person, and face status are required"
 msgstr "चेहरे, व्यक्ति और चेहरे की स्थिति आवश्यक है"
 
-#: yaffo/routes/faces.py:310
+#: yaffo/routes/faces.py:472
 msgid "Could not process faces"
 msgstr "चेहरों को संसाधित नहीं किया जा सका"
 
-#: yaffo/routes/filter_config.py:126
+#: yaffo/routes/filter_config.py:127
 msgid "Unknown filter page"
 msgstr "अज्ञात फ़िल्टर पृष्ठ"
 
-#: yaffo/routes/filter_config.py:133
-msgid "Items must be a list"
-msgstr "आइटम एक सूची होनी चाहिए"
-
-#: yaffo/routes/filter_panel.py:33 yaffo/templates/people/list.html:40
+#: yaffo/routes/filter_panel.py:34 yaffo/templates/people/list.html:40
 #: yaffo/templates/people/list.html:92
 msgid "Male"
 msgstr "पुरुष"
 
-#: yaffo/routes/filter_panel.py:34 yaffo/templates/people/list.html:41
+#: yaffo/routes/filter_panel.py:35 yaffo/templates/people/list.html:41
 #: yaffo/templates/people/list.html:93
 msgid "Female"
 msgstr "महिला"
@@ -410,59 +422,61 @@ msgstr "महिला"
 msgid "The tag_name parameter is required"
 msgstr "tag_name पैरामीटर आवश्यक है"
 
-#: yaffo/routes/locations.py:121
+#: yaffo/routes/locations.py:125
 msgid "Media item IDs and location name are required"
 msgstr "मीडिया आइटम आईडी और स्थान का नाम आवश्यक है"
 
-#: yaffo/routes/locations.py:145
+#: yaffo/routes/locations.py:149
 msgid "Could not update locations"
 msgstr "स्थान अपडेट नहीं किए जा सके"
 
-#: yaffo/routes/locations.py:158
+#: yaffo/routes/locations.py:162
 msgid "Latitude and longitude are required"
 msgstr "अक्षांश और देशांतर आवश्यक हैं"
 
-#: yaffo/routes/locations.py:166 yaffo/routes/locations.py:172
+#: yaffo/routes/locations.py:170 yaffo/routes/locations.py:176
 msgid "Could not determine a location name"
 msgstr "स्थान का नाम निर्धारित नहीं किया जा सका"
 
-#: yaffo/routes/media.py:24 yaffo/routes/media.py:231 yaffo/routes/media.py:248
+#: yaffo/routes/media.py:25 yaffo/routes/media.py:179 yaffo/routes/media.py:254
+#: yaffo/routes/media.py:271
 msgid "Photo not found"
 msgstr "फोटो नहीं मिला"
 
-#: yaffo/routes/media.py:28 yaffo/routes/media.py:66 yaffo/routes/media.py:84 yaffo/routes/media.py:176
+#: yaffo/routes/media.py:29 yaffo/routes/media.py:67 yaffo/routes/media.py:85 yaffo/routes/media.py:185
+#: yaffo/routes/media.py:199
 msgid "File not found"
 msgstr "फ़ाइल प्राप्त नहीं हुई"
 
-#: yaffo/routes/media.py:44 yaffo/routes/media.py:47
+#: yaffo/routes/media.py:45 yaffo/routes/media.py:48
 msgid "Poster not found"
 msgstr "पोस्टर नहीं मिला"
 
-#: yaffo/routes/media.py:80
+#: yaffo/routes/media.py:81
 msgid "Face not found"
 msgstr "चेहरा नहीं मिला"
 
-#: yaffo/routes/media.py:192
+#: yaffo/routes/media.py:215
 msgid "Could not open file"
 msgstr "फ़ाइल नहीं खुल सकी"
 
-#: yaffo/routes/media.py:203
+#: yaffo/routes/media.py:226
 msgid "Folder not found"
 msgstr "फ़ोल्डर नहीं मिला"
 
-#: yaffo/routes/media.py:219
+#: yaffo/routes/media.py:242
 msgid "Could not open folder"
 msgstr "फ़ोल्डर नहीं खुल सका"
 
-#: yaffo/routes/media.py:256
+#: yaffo/routes/media.py:279
 msgid "Tags must be a list"
 msgstr "टैग एक सूची होनी चाहिए"
 
-#: yaffo/routes/media.py:264
+#: yaffo/routes/media.py:287
 msgid "Each tag must be an object"
 msgstr "प्रत्येक टैग एक ऑब्जेक्ट होना चाहिए"
 
-#: yaffo/routes/media.py:271
+#: yaffo/routes/media.py:294
 msgid "Tag name is required"
 msgstr "टैग नाम आवश्यक है"
 
@@ -979,18 +993,18 @@ msgstr "कोई पथ चयनित नहीं."
 msgid "No draft to publish."
 msgstr "प्रकाशित करने के लिए कोई मसौदा नहीं."
 
-#: yaffo/routes/utilities/index_photos.py:68
+#: yaffo/routes/utilities/index_photos.py:76
 msgid "No media directories configured. Please configure media directories in Settings before syncing."
 msgstr ""
 "कोई मीडिया निर्देशिका कॉन्फ़िगर नहीं की गई. कृपया सिंक करने से पहले सेटिंग्स में मीडिया "
 "निर्देशिकाओं को कॉन्फ़िगर करें।"
 
-#: yaffo/routes/utilities/index_photos.py:77
+#: yaffo/routes/utilities/index_photos.py:85
 #, python-format
 msgid "The following media directories do not exist: %(directories)s"
 msgstr "निम्नलिखित मीडिया निर्देशिकाएँ मौजूद नहीं हैं: %(directories)s"
 
-#: yaffo/routes/utilities/index_photos.py:86
+#: yaffo/routes/utilities/index_photos.py:94
 msgid ""
 "No thumbnail directory configured. Please configure thumbnail directory in Settings before "
 "syncing."
@@ -998,29 +1012,33 @@ msgstr ""
 "No thumbnail directory configured. Please configure thumbnail directory in Settings before "
 "syncing."
 
-#: yaffo/routes/utilities/index_photos.py:93
+#: yaffo/routes/utilities/index_photos.py:101
 #, python-format
 msgid ""
 "Thumbnail directory does not exist: %(directory)s. It will be created automatically during "
 "indexing."
 msgstr "थंबनेल निर्देशिका मौजूद नहीं है: %(directory)s. यह अनुक्रमण के दौरान स्वचालित रूप से बनाया जाएगा।"
 
-#: yaffo/routes/utilities/index_photos.py:134
+#: yaffo/routes/utilities/index_photos.py:142
 msgid "Could not scan the filesystem"
 msgstr "फ़ाइल सिस्टम को स्कैन नहीं किया जा सका"
 
-#: yaffo/routes/utilities/index_photos.py:157 yaffo/templates/settings/index.html:69
+#: yaffo/routes/utilities/index_photos.py:165 yaffo/templates/settings/index.html:69
 msgid "No media directories configured"
 msgstr "कोई मीडिया निर्देशिका कॉन्फ़िगर नहीं की गई"
 
-#: yaffo/routes/utilities/index_photos.py:165
+#: yaffo/routes/utilities/index_photos.py:173
 #, python-format
 msgid "Media directories do not exist: %(directories)s"
 msgstr "मीडिया निर्देशिकाएँ मौजूद नहीं हैं: %(directories)s"
 
-#: yaffo/routes/utilities/index_photos.py:173
+#: yaffo/routes/utilities/index_photos.py:181 yaffo/routes/utilities/index_photos.py:203
 msgid "No thumbnail directory configured"
 msgstr "कोई थंबनेल निर्देशिका कॉन्फ़िगर नहीं की गई"
+
+#: yaffo/routes/utilities/index_photos.py:217
+msgid "There is nothing indexed to reindex"
+msgstr "रीइंडेक्स में कुछ भी अनुक्रमित नहीं है"
 
 #: yaffo/routes/utilities/remove_duplicates.py:216
 msgid "At least one directory is required"
@@ -1132,7 +1150,7 @@ msgstr "फ़िल्टर साफ़ करें"
 msgid "Type to search…"
 msgstr "खोजने के लिए टाइप करें..."
 
-#: yaffo/templates/base.html:4 yaffo/templates/faces/index.html:226
+#: yaffo/templates/base.html:4 yaffo/templates/faces/index.html:259
 #: yaffo/templates/pages/widget_frame.html:4
 msgid "No results found"
 msgstr "कोई परिणाम नहीं मिला"
@@ -1154,7 +1172,7 @@ msgstr "एलबम"
 msgid "Faces"
 msgstr "चेहरे"
 
-#: yaffo/templates/base.html:107 yaffo/templates/faces/index.html:79
+#: yaffo/templates/base.html:107 yaffo/templates/faces/index.html:107
 #: yaffo/templates/filters/_people.html:4 yaffo/templates/people/list.html:17
 msgid "People"
 msgstr "लोग"
@@ -1221,6 +1239,22 @@ msgstr "इस फ़ोल्डर का चयन करें"
 msgid "Confirm"
 msgstr "पुष्टि करना"
 
+#: yaffo/templates/db_error.html:6
+msgid "Database out of date - Yaffo"
+msgstr "डेटाबेस पुराना हो चुका है - याफ़ो"
+
+#: yaffo/templates/db_error.html:16
+msgid "Your library database is out of date"
+msgstr "आपकी लाइब्रेरी का डेटाबेस पुराना हो गया है"
+
+#: yaffo/templates/db_error.html:17
+msgid ""
+"This version of Yaffo expects a newer database than the one it opened. Restarting Yaffo applies "
+"the pending updates — your photos and people are untouched."
+msgstr ""
+"याफ़ो का यह संस्करण अपने द्वारा खोले गए डेटाबेस की तुलना में एक नए डेटाबेस की अपेक्षा करता है। "
+"Yaffo को पुनः आरंभ करने से लंबित अपडेट लागू हो जाते हैं - आपकी फ़ोटो और लोग अछूते रहते हैं।"
+
 #: yaffo/templates/index.html:4
 msgid "Home - Yaffo"
 msgstr "घर - याफ़ो"
@@ -1240,7 +1274,7 @@ msgstr[1] "दिखा %(shown)s का %(total)s तस्वीरें"
 msgid "No photos found"
 msgstr "कोई फ़ोटो नहीं मिली"
 
-#: yaffo/templates/index.html:41 yaffo/templates/media/view.html:223
+#: yaffo/templates/index.html:41 yaffo/templates/media/view.html:227
 msgid "Toggle favorite"
 msgstr "पसंदीदा टॉगल करें"
 
@@ -1278,7 +1312,7 @@ msgstr "लिया"
 msgid "Unknown date"
 msgstr "अज्ञात तिथि"
 
-#: yaffo/templates/index.html:78 yaffo/templates/media/view.html:74
+#: yaffo/templates/index.html:78 yaffo/templates/media/view.html:78
 #: yaffo/templates/sharing/files.html:132
 msgid "Location"
 msgstr "जगह"
@@ -1569,12 +1603,12 @@ msgid "Items per page:"
 msgstr "प्रति पृष्ठ आइटम:"
 
 #: yaffo/templates/components/htmx_pagination.html:52 yaffo/templates/components/pagination.html:53
-#: yaffo/templates/faces/index.html:213
+#: yaffo/templates/faces/index.html:246
 msgid "First"
 msgstr "पहला"
 
 #: yaffo/templates/components/htmx_pagination.html:63 yaffo/templates/components/pagination.html:59
-#: yaffo/templates/faces/index.html:214
+#: yaffo/templates/faces/index.html:247
 msgid "Previous"
 msgstr "पहले का"
 
@@ -1584,12 +1618,12 @@ msgid "Page %(page)s of %(total)s"
 msgstr "पेज %(page)s का %(total)s"
 
 #: yaffo/templates/components/htmx_pagination.html:80 yaffo/templates/components/pagination.html:71
-#: yaffo/templates/faces/index.html:216
+#: yaffo/templates/faces/index.html:249
 msgid "Next"
 msgstr "अगला"
 
 #: yaffo/templates/components/htmx_pagination.html:91 yaffo/templates/components/pagination.html:77
-#: yaffo/templates/faces/index.html:217
+#: yaffo/templates/faces/index.html:250
 msgid "Last"
 msgstr "अंतिम"
 
@@ -1603,7 +1637,7 @@ msgid "%(count)s selected"
 msgstr "%(count)s चयनित"
 
 #: yaffo/templates/components/selection_bar.html:29 yaffo/templates/components/selection_bar.html:30
-#: yaffo/templates/faces/index.html:191 yaffo/templates/people/faces.html:53
+#: yaffo/templates/faces/index.html:224 yaffo/templates/people/faces.html:53
 msgid "Clear selection"
 msgstr "स्पष्ट चयन"
 
@@ -1611,11 +1645,11 @@ msgstr "स्पष्ट चयन"
 msgid "Faces - Yaffo"
 msgstr "चेहरे - याफ़ो"
 
-#: yaffo/templates/faces/index.html:17
+#: yaffo/templates/faces/index.html:19
 msgid "How This Page Works"
 msgstr "यह पेज कैसे काम करता है"
 
-#: yaffo/templates/faces/index.html:18
+#: yaffo/templates/faces/index.html:20
 msgid ""
 "The job here is to empty the pile of unassigned faces. Faces are detected automatically and "
 "grouped for you, so you can accept or reject a whole group at once — assign a group to a person, "
@@ -1625,47 +1659,47 @@ msgstr ""
 "लिए समूहीकृत किए जाते हैं, इसलिए आप एक ही बार में पूरे समूह को स्वीकार या अस्वीकार कर सकते हैं - "
 "किसी व्यक्ति को समूह सौंप सकते हैं, या जिन्हें आप नहीं चाहते उन्हें अनदेखा कर सकते हैं।"
 
-#: yaffo/templates/faces/index.html:20
+#: yaffo/templates/faces/index.html:22
 msgid "Group by People:"
 msgstr "लोगों द्वारा समूह:"
 
-#: yaffo/templates/faces/index.html:20
+#: yaffo/templates/faces/index.html:22
 msgid "Matches faces to specific people"
 msgstr "विशिष्ट लोगों के चेहरों से मेल खाता है"
 
-#: yaffo/templates/faces/index.html:21
+#: yaffo/templates/faces/index.html:23
 msgid "Group by Similarity:"
 msgstr "समानता के आधार पर समूह:"
 
-#: yaffo/templates/faces/index.html:21
+#: yaffo/templates/faces/index.html:23
 msgid "Clusters visually similar faces together"
 msgstr "दिखने में एक जैसे दिखने वाले चेहरों के समूह"
 
-#: yaffo/templates/faces/index.html:22
+#: yaffo/templates/faces/index.html:24
 msgid "Similarity Threshold:"
 msgstr "समानता सीमा:"
 
-#: yaffo/templates/faces/index.html:22
+#: yaffo/templates/faces/index.html:24
 msgid "Higher values make tighter, cleaner groups; lower values make larger, looser ones"
 msgstr "उच्च मूल्य सघन, स्वच्छ समूह बनाते हैं; निम्न मान बड़े बनाते हैं, ढीले मान बनाते हैं"
 
-#: yaffo/templates/faces/index.html:25
+#: yaffo/templates/faces/index.html:27
 msgid "Recommended Workflow"
 msgstr "अनुशंसित वर्कफ़्लो"
 
-#: yaffo/templates/faces/index.html:27
+#: yaffo/templates/faces/index.html:29
 msgid "Start broad with Similarity."
 msgstr "समानता के साथ व्यापक शुरुआत करें।"
 
-#: yaffo/templates/faces/index.html:27
+#: yaffo/templates/faces/index.html:29
 msgid "Group by Similarity at a high threshold and assign the big, obvious clusters first."
 msgstr "उच्च सीमा पर समानता के आधार पर समूह बनाएं और पहले बड़े, स्पष्ट क्लस्टर निर्दिष्ट करें।"
 
-#: yaffo/templates/faces/index.html:28
+#: yaffo/templates/faces/index.html:30
 msgid "Lower the threshold as the groups shrink."
 msgstr "जैसे-जैसे समूह सिकुड़ें, सीमा कम करें।"
 
-#: yaffo/templates/faces/index.html:28
+#: yaffo/templates/faces/index.html:30
 msgid ""
 "Once the biggest groups get small, drop the threshold to pull looser matches together. The right "
 "values vary a lot from batch to batch, so adjust to taste."
@@ -1673,61 +1707,61 @@ msgstr ""
 "एक बार जब सबसे बड़े समूह छोटे हो जाएं, तो कमजोर मैचों को एक साथ लाने के लिए सीमा छोड़ दें। सही "
 "मान बैच-दर-बैच बहुत भिन्न होते हैं, इसलिए स्वाद के अनुसार समायोजित करें।"
 
-#: yaffo/templates/faces/index.html:29
+#: yaffo/templates/faces/index.html:31
 msgid "Then switch to People."
 msgstr "फिर पीपल पर स्विच करें."
 
-#: yaffo/templates/faces/index.html:29
+#: yaffo/templates/faces/index.html:31
 msgid "Group by People to catch faces that match someone you've already built up."
 msgstr ""
 "आपके द्वारा पहले से बनाए गए किसी व्यक्ति से मेल खाने वाले चेहरों को पकड़ने के लिए लोगों द्वारा "
 "समूह बनाएं।"
 
-#: yaffo/templates/faces/index.html:30
+#: yaffo/templates/faces/index.html:32
 msgid "Ignore what's left."
 msgstr "जो बचा है उसे नज़रअंदाज़ करें."
 
-#: yaffo/templates/faces/index.html:30
+#: yaffo/templates/faces/index.html:32
 msgid "The remainder is usually low quality — blurry, partial, or odd angles. Select and Ignore it."
 msgstr "शेष आमतौर पर निम्न गुणवत्ता वाला होता है - धुंधला, आंशिक या विषम कोण। इसे चुनें और अनदेखा करें."
 
-#: yaffo/templates/faces/index.html:33
+#: yaffo/templates/faces/index.html:35
 msgid "Quick Assignment"
 msgstr "त्वरित असाइनमेंट"
 
-#: yaffo/templates/faces/index.html:36
+#: yaffo/templates/faces/index.html:38
 msgid "Other Shortcuts"
 msgstr "अन्य शॉर्टकट"
 
-#: yaffo/templates/faces/index.html:39
+#: yaffo/templates/faces/index.html:41
 msgid "Click"
 msgstr "क्लिक"
 
-#: yaffo/templates/faces/index.html:40
+#: yaffo/templates/faces/index.html:42
 msgid "Select range of faces"
 msgstr "चेहरों की श्रेणी चुनें"
 
-#: yaffo/templates/faces/index.html:44 yaffo/templates/faces/index.html:150
+#: yaffo/templates/faces/index.html:46 yaffo/templates/faces/index.html:183
 msgid "Assign to selected person"
 msgstr "चयनित व्यक्ति को असाइन करें"
 
-#: yaffo/templates/faces/index.html:47 yaffo/templates/faces/index.html:153
+#: yaffo/templates/faces/index.html:49 yaffo/templates/faces/index.html:186
 msgid "or"
 msgstr "या"
 
-#: yaffo/templates/faces/index.html:48 yaffo/templates/faces/index.html:154
+#: yaffo/templates/faces/index.html:50 yaffo/templates/faces/index.html:187
 msgid "Ignore selected faces"
 msgstr "चयनित चेहरों पर ध्यान न दें"
 
-#: yaffo/templates/faces/index.html:52
+#: yaffo/templates/faces/index.html:54
 msgid "Show this help"
 msgstr "यह सहायता दिखाएँ"
 
-#: yaffo/templates/faces/index.html:58
+#: yaffo/templates/faces/index.html:60
 msgid "Tips:"
 msgstr "सुझावों:"
 
-#: yaffo/templates/faces/index.html:59
+#: yaffo/templates/faces/index.html:61
 msgid ""
 "Refresh the page between passes — it re-clusters the remaining faces into tighter, higher-quality"
 " groups"
@@ -1735,7 +1769,7 @@ msgstr ""
 "पासों के बीच पृष्ठ को ताज़ा करें - यह शेष चेहरों को सघन, उच्च-गुणवत्ता वाले समूहों में पुनः "
 "समूहित करता है"
 
-#: yaffo/templates/faces/index.html:60
+#: yaffo/templates/faces/index.html:62
 msgid ""
 "As your catalog of people grows, a background task assigns matching faces automatically — so this"
 " pile should shrink on its own over time"
@@ -1743,128 +1777,129 @@ msgstr ""
 "जैसे-जैसे आपके लोगों की सूची बढ़ती है, एक पृष्ठभूमि कार्य स्वचालित रूप से मिलते-जुलते चेहरों को "
 "निर्दिष्ट करता है - इसलिए यह ढेर समय के साथ अपने आप सिकुड़ जाना चाहिए"
 
-#: yaffo/templates/faces/index.html:61
+#: yaffo/templates/faces/index.html:63
 msgid "Select faces then press a number key for quick assignment"
 msgstr "चेहरों का चयन करें, फिर त्वरित असाइनमेंट के लिए एक नंबर कुंजी दबाएं"
 
-#: yaffo/templates/faces/index.html:62
+#: yaffo/templates/faces/index.html:64
 msgid "Hold Shift+Click to select multiple faces at once"
 msgstr "एक साथ कई चेहरों को चुनने के लिए Shift+Click दबाए रखें"
 
-#: yaffo/templates/faces/index.html:74
+#: yaffo/templates/faces/index.html:92 yaffo/templates/filters/_config_modal.html:21
+msgid "Reset to defaults"
+msgstr "डिफ़ॉल्ट पर पुनः सेट करें"
+
+#: yaffo/templates/faces/index.html:102
 msgid "Group by"
 msgstr "द्वारा समूह बनाएं"
 
-#: yaffo/templates/faces/index.html:84
+#: yaffo/templates/faces/index.html:112
 msgid "Similarity"
 msgstr "समानता"
 
-#: yaffo/templates/faces/index.html:89
+#: yaffo/templates/faces/index.html:117
 msgid "Similarity Threshold"
 msgstr "समानता दहलीज"
 
-#: yaffo/templates/faces/index.html:96
+#: yaffo/templates/faces/index.html:124
 msgid "Faces to analyze"
 msgstr "विश्लेषण करने के लिए चेहरे"
 
-#: yaffo/templates/faces/index.html:116
+#: yaffo/templates/faces/index.html:144
 msgid "Assign to Person"
 msgstr "व्यक्ति को सौंपें"
 
-#: yaffo/templates/faces/index.html:118
+#: yaffo/templates/faces/index.html:146
 msgid "Select person"
 msgstr "व्यक्ति का चयन करें"
 
-#: yaffo/templates/faces/index.html:125
+#: yaffo/templates/faces/index.html:153
 msgid "Assign Selected"
 msgstr "चयनित असाइन करें"
 
-#: yaffo/templates/faces/index.html:127
+#: yaffo/templates/faces/index.html:155
 msgid "Ignore Selected"
 msgstr "चयनित को अनदेखा करें"
 
-#: yaffo/templates/faces/index.html:139
+#: yaffo/templates/faces/index.html:167
 msgid "Create Person"
 msgstr "व्यक्ति बनाएँ"
 
-#: yaffo/templates/faces/index.html:146
+#: yaffo/templates/faces/index.html:175 yaffo/templates/faces/index.html:177
+#: yaffo/templates/faces/index.html:178 yaffo/templates/faces/index.html:273
 msgid "Keyboard Shortcuts:"
 msgstr "कुंजीपटल अल्प मार्ग:"
 
-#: yaffo/templates/faces/index.html:159
+#: yaffo/templates/faces/index.html:192
 msgid "Press <kbd>?</kbd> for help"
 msgstr "प्रेस <kbd>?</kbd> मदद के लिए"
 
-#: yaffo/templates/faces/index.html:166
+#: yaffo/templates/faces/index.html:199
 msgid "Unassigned Faces"
 msgstr "अनिर्धारित चेहरे"
 
-#: yaffo/templates/faces/index.html:167
+#: yaffo/templates/faces/index.html:200
 #, python-format
 msgid "Showing %(shown)s of %(total)s unassigned face"
 msgid_plural "Showing %(shown)s of %(total)s unassigned faces"
 msgstr[0] "दिखा %(shown)s का %(total)s अनिर्धारित चेहरा"
 msgstr[1] "दिखा %(shown)s का %(total)s अनिर्धारित चेहरे"
 
-#: yaffo/templates/faces/index.html:179
+#: yaffo/templates/faces/index.html:212
 #, python-format
 msgid "%(formatted_count)s face"
 msgid_plural "%(formatted_count)s faces"
 msgstr[0] "%(formatted_count)s चेहरा"
 msgstr[1] "%(formatted_count)s चेहरे"
 
-#: yaffo/templates/faces/index.html:190
+#: yaffo/templates/faces/index.html:223
 #, python-format
 msgid "Select all %(count)s faces"
 msgstr "सबका चयन करें %(count)s चेहरे"
 
-#: yaffo/templates/faces/index.html:193
+#: yaffo/templates/faces/index.html:226
 msgid "Shuffle"
 msgstr "मिश्रण"
 
-#: yaffo/templates/faces/index.html:197
+#: yaffo/templates/faces/index.html:230
 #, python-format
 msgid "Assign to %(person)s"
 msgstr "के लिए आवंटित %(person)s"
 
-#: yaffo/templates/faces/index.html:199
+#: yaffo/templates/faces/index.html:232
 msgid "Skip cluster"
 msgstr "क्लस्टर छोड़ें"
 
-#: yaffo/templates/faces/index.html:208
+#: yaffo/templates/faces/index.html:241
 #, python-format
 msgid "Showing <span class=\"sample-range\">0</span> of %(total)s face"
 msgid_plural "Showing <span class=\"sample-range\">0</span> of %(total)s faces"
 msgstr[0] "दिखा <span class=\"sample-range\">0</span> का %(total)s चेहरा"
 msgstr[1] "दिखा <span class=\"sample-range\">0</span> का %(total)s चेहरे"
 
-#: yaffo/templates/faces/index.html:215
+#: yaffo/templates/faces/index.html:248
 msgid "Page 1 of 1"
 msgstr "पेज 1 का 1"
 
-#: yaffo/templates/faces/index.html:227
+#: yaffo/templates/faces/index.html:260
 msgid "Double-check the applied filters or decrease the similarity threshold."
 msgstr "लागू फ़िल्टर की दोबारा जांच करें या समानता सीमा कम करें।"
 
-#: yaffo/templates/faces/index.html:232
+#: yaffo/templates/faces/index.html:265
 msgid "All Faces Assigned!"
 msgstr "सभी चेहरे नियुक्त!"
 
-#: yaffo/templates/faces/index.html:233
+#: yaffo/templates/faces/index.html:266
 msgid "There isn't anything for you to do here."
 msgstr "यहां आपके करने के लिए कुछ भी नहीं है."
 
-#: yaffo/templates/faces/index.html:239
+#: yaffo/templates/faces/index.html:272
 msgid "Help"
 msgstr "मदद"
 
 #: yaffo/templates/filters/_config_modal.html:7
 msgid "Drag to reorder. Uncheck to hide a filter."
 msgstr "पुन: व्यवस्थित करने के लिए खींचें। किसी फ़िल्टर को छिपाने के लिए अनचेक करें."
-
-#: yaffo/templates/filters/_config_modal.html:21
-msgid "Reset to defaults"
-msgstr "डिफ़ॉल्ट पर पुनः सेट करें"
 
 #: yaffo/templates/filters/_config_modal.html:23
 msgid "Configure Filters"
@@ -2011,6 +2046,26 @@ msgstr "व्यक्ति"
 msgid "Any Person"
 msgstr "किसी भी व्यक्ति"
 
+#: yaffo/templates/filters/_shape.html:5
+msgid "Shape"
+msgstr "आकार"
+
+#: yaffo/templates/filters/_shape.html:7
+msgid "Any Shape"
+msgstr "कोई भी आकार"
+
+#: yaffo/templates/filters/_shape.html:8
+msgid "Portrait"
+msgstr "चित्र"
+
+#: yaffo/templates/filters/_shape.html:9
+msgid "Landscape"
+msgstr "परिदृश्य"
+
+#: yaffo/templates/filters/_shape.html:10
+msgid "Square"
+msgstr "वर्ग"
+
 #: yaffo/templates/filters/_tags.html:2
 msgid "Tag Name"
 msgstr "टैग नाम"
@@ -2063,7 +2118,7 @@ msgstr "फोटो विवरण"
 msgid "File Information"
 msgstr "फ़ाइल जानकारी"
 
-#: yaffo/templates/media/view.html:22 yaffo/templates/media/view.html:79
+#: yaffo/templates/media/view.html:22 yaffo/templates/media/view.html:83
 msgid "Name:"
 msgstr "नाम:"
 
@@ -2099,104 +2154,108 @@ msgstr "खुली फाइल"
 msgid "Open Folder"
 msgstr "फोल्डर खोलें"
 
-#: yaffo/templates/media/view.html:85
+#: yaffo/templates/media/view.html:72
+msgid "Reindex"
+msgstr "अनुक्रमणः"
+
+#: yaffo/templates/media/view.html:89
 msgid "Coordinates:"
 msgstr "निर्देशांक:"
 
-#: yaffo/templates/media/view.html:94
+#: yaffo/templates/media/view.html:98
 msgid "View on Map"
 msgstr "मानचित्र पर देखें"
 
-#: yaffo/templates/media/view.html:100
+#: yaffo/templates/media/view.html:104
 msgid "No location information"
 msgstr "स्थान की कोई जानकारी नहीं"
 
-#: yaffo/templates/media/view.html:105
+#: yaffo/templates/media/view.html:109
 #, python-format
 msgid "Person (%(count)s)"
 msgid_plural "People (%(count)s)"
 msgstr[0] "व्यक्ति (%(count)s)"
 msgstr[1] "लोग (%(count)s)"
 
-#: yaffo/templates/media/view.html:115
+#: yaffo/templates/media/view.html:119
 msgid "No people assigned to this photo"
 msgstr "इस फ़ोटो के लिए कोई व्यक्ति निर्दिष्ट नहीं है"
 
-#: yaffo/templates/media/view.html:120
+#: yaffo/templates/media/view.html:124
 #, python-format
 msgid "Face (%(count)s)"
 msgid_plural "Faces (%(count)s)"
 msgstr[0] "चेहरा (%(count)s)"
 msgstr[1] "चेहरे (%(count)s)"
 
-#: yaffo/templates/media/view.html:130 yaffo/templates/people/faces.html:64
+#: yaffo/templates/media/view.html:134 yaffo/templates/people/faces.html:64
 msgid "Face"
 msgstr "चेहरा"
 
-#: yaffo/templates/media/view.html:142
+#: yaffo/templates/media/view.html:146
 msgid "No faces detected"
 msgstr "किसी चेहरे का पता नहीं चला"
 
-#: yaffo/templates/media/view.html:147
+#: yaffo/templates/media/view.html:151
 #, python-format
 msgid "Label (%(count)s)"
 msgid_plural "Labels (%(count)s)"
 msgstr[0] "लेबल (%(count)s)"
 msgstr[1] "लेबल (%(count)s)"
 
-#: yaffo/templates/media/view.html:151
+#: yaffo/templates/media/view.html:155
 #, python-format
 msgid "Confidence: %(value)s"
 msgstr "आत्मविश्वास: %(value)s"
 
-#: yaffo/templates/media/view.html:157
+#: yaffo/templates/media/view.html:161
 msgid "No labels"
 msgstr "कोई लेबल नहीं"
 
-#: yaffo/templates/media/view.html:162
+#: yaffo/templates/media/view.html:166
 #, python-format
 msgid "Tag (%(count)s)"
 msgid_plural "Tags (%(count)s)"
 msgstr[0] "टैग (%(count)s)"
 msgstr[1] "टैग (%(count)s)"
 
-#: yaffo/templates/media/view.html:176
+#: yaffo/templates/media/view.html:180
 msgid "No tags"
 msgstr "कोई टैग नहीं"
 
-#: yaffo/templates/media/view.html:181 yaffo/templates/media/view.html:248
+#: yaffo/templates/media/view.html:185 yaffo/templates/media/view.html:252
 msgid "Edit Tags"
 msgstr "जोड़ संपादित करें"
 
-#: yaffo/templates/media/view.html:193
+#: yaffo/templates/media/view.html:197
 msgid "This video is no longer available on disk."
 msgstr "यह वीडियो अब डिस्क पर उपलब्ध नहीं है."
 
-#: yaffo/templates/media/view.html:204
+#: yaffo/templates/media/view.html:208
 msgid "This format can't play in the browser."
 msgstr "यह प्रारूप ब्राउज़र में नहीं चल सकता."
 
-#: yaffo/templates/media/view.html:206
+#: yaffo/templates/media/view.html:210
 msgid "Open in default player"
 msgstr "डिफ़ॉल्ट प्लेयर में खोलें"
 
-#: yaffo/templates/media/view.html:237
+#: yaffo/templates/media/view.html:241
 msgid "Add New Tag"
 msgstr "नया टैग जोड़ें"
 
-#: yaffo/templates/media/view.html:239
+#: yaffo/templates/media/view.html:243
 msgid "Tag name"
 msgstr "टैग नाम"
 
-#: yaffo/templates/media/view.html:240
+#: yaffo/templates/media/view.html:244
 msgid "Tag value (optional)"
 msgstr "टैग मान (वैकल्पिक)"
 
-#: yaffo/templates/media/view.html:242
+#: yaffo/templates/media/view.html:246
 msgid "Add Tag"
 msgstr "टैग जोड़ें"
 
-#: yaffo/templates/media/view.html:248
+#: yaffo/templates/media/view.html:252
 msgid "Save Changes"
 msgstr "परिवर्तनों को सुरक्षित करें"
 
@@ -3217,7 +3276,7 @@ msgstr "खाली शुरू होता है - इसे बातच�
 msgid "On"
 msgstr "पर"
 
-#: yaffo/templates/utilities/_base.html:41 yaffo/templates/utilities/index_photos.html:14
+#: yaffo/templates/utilities/_base.html:41 yaffo/templates/utilities/index_photos.html:19
 msgid "Index Photos"
 msgstr "अनुक्रमणिका तस्वीरें"
 
@@ -3425,39 +3484,43 @@ msgstr "सूचकांक तस्वीरें - उपयोगित�
 msgid "Sync Database"
 msgstr "डेटाबेस सिंक करें"
 
-#: yaffo/templates/utilities/index_photos.html:15
+#: yaffo/templates/utilities/index_photos.html:16
+msgid "Reindex Library"
+msgstr "रीइंडेक्स लाइब्रेरी"
+
+#: yaffo/templates/utilities/index_photos.html:20
 msgid "Compare photos on the file system with the database"
 msgstr "डेटाबेस के साथ फ़ाइल सिस्टम पर फ़ोटो की तुलना करें"
 
-#: yaffo/templates/utilities/index_photos.html:25
+#: yaffo/templates/utilities/index_photos.html:30
 msgid "Go to Settings"
 msgstr "सेटिंग्स पर जाएं"
 
-#: yaffo/templates/utilities/index_photos.html:37
+#: yaffo/templates/utilities/index_photos.html:42
 msgid "Total on Filesystem"
 msgstr "फ़ाइल सिस्टम पर कुल"
 
-#: yaffo/templates/utilities/index_photos.html:41
+#: yaffo/templates/utilities/index_photos.html:46
 msgid "Imported in Database"
 msgstr "डेटाबेस में आयातित"
 
-#: yaffo/templates/utilities/index_photos.html:45
+#: yaffo/templates/utilities/index_photos.html:50
 msgid "Indexed in Database"
 msgstr "डेटाबेस में अनुक्रमित"
 
-#: yaffo/templates/utilities/index_photos.html:49
+#: yaffo/templates/utilities/index_photos.html:54
 msgid "Not Indexed"
 msgstr "अनुक्रमित नहीं"
 
-#: yaffo/templates/utilities/index_photos.html:53
+#: yaffo/templates/utilities/index_photos.html:58
 msgid "Orphaned in DB"
 msgstr "डीबी में अनाथ"
 
-#: yaffo/templates/utilities/index_photos.html:67
+#: yaffo/templates/utilities/index_photos.html:72
 msgid "No Media Directories Configured"
 msgstr "कोई मीडिया निर्देशिका कॉन्फ़िगर नहीं की गई"
 
-#: yaffo/templates/utilities/index_photos.html:69
+#: yaffo/templates/utilities/index_photos.html:74
 #, python-format
 msgid ""
 "\n"

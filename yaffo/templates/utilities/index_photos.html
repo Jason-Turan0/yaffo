@@ -9,6 +9,11 @@
     {% set header_actions %}
         {# Shown by JS once the scan finds work to do. #}
         <button class="btn btn-primary" id="sync-button" data-icon="sync" hidden>{{ _("Sync Database") }}</button>
+        {# Always available: unlike Sync, this re-runs indexing on files already
+           indexed — a rebuild, not a reconcile. It re-detects faces, so it confirms
+           the loss of person assignments first. #}
+        <button class="btn btn-secondary" id="reindex-button" data-icon="sync"
+                {% if not can_sync %}disabled{% endif %}>{{ _("Reindex Library") }}</button>
     {% endset %}
     {{ page_header(
         _('Index Photos'),

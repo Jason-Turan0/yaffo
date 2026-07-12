@@ -67,6 +67,10 @@
                                 class="action-button">
                             {{ _("Open Folder") }}
                         </button>
+                        <button onclick="window.PHOTO_ORGANIZER.VIEW_PHOTO.photoView.reindex({{ media_item.id }})"
+                                class="action-button" id="reindex-btn">
+                            {{ _("Reindex") }}
+                        </button>
                     </div>
                 </div>
 

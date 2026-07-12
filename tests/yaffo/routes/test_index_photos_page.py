@@ -6,6 +6,8 @@ import pytest
 
 from yaffo.db import db
 from yaffo.db.models import Automation
+from types import SimpleNamespace
+
 from yaffo.utils.file_sync import MediaScan
 
 pytestmark = pytest.mark.unit
@@ -147,3 +149,56 @@ def test_sync_validation_uses_saved_locale_and_error_code(client, monkeypatch):
         "error": "Keine Medienverzeichnisse konfiguriert",
         "code": "media_directories_not_configured",
     }
+
+
+def test_reindex_library_forces_every_indexed_file(app, client, monkeypatch, tmp_path):
+    """Reindex rebuilds what's already there — so it enqueues with force, which is what
+    makes indexing re-run on files Sync would skip."""
+    from yaffo.db import db
+    from yaffo.db.models import MediaItem
+
+    present = tmp_path / "present.jpg"
+    present.write_bytes(b"\xff\xd8\xff")
+    with app.app_context():
+        db.session.add_all([
+            MediaItem(full_file_path=str(present)),
+            MediaItem(full_file_path=str(tmp_path / "deleted.jpg")),  # gone from disk
+        ])
+        db.session.commit()
+
+    calls = {}
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
+    monkeypatch.setattr(
+        "yaffo.routes.utilities.index_photos.reindex_media_items",
+        lambda session, items: calls.update(paths=[item.full_file_path for item in items])
+        or SimpleNamespace(import_job_id="i1", index_job_id="x1"),
+    )
+
+    response = client.post("/utilities/index-photos/reindex")
+
+    assert response.status_code == 202
+    assert response.get_json() == {"job_id": "x1", "media_item_count": 1}
+    # The file that no longer exists is left out — indexing it would only error, and
+    # reconciling deletions is Sync's job, not this one's.
+    assert calls["paths"] == [str(present)]
+
+
+def test_reindex_library_rejects_an_empty_library(app, client, monkeypatch, tmp_path):
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
+
+    response = client.post("/utilities/index-photos/reindex")
+
+    assert response.status_code == 400
+    assert response.get_json()["code"] == "library_empty"
+
+
+def test_page_offers_the_reindex_button(client, monkeypatch, tmp_path):
+    media = tmp_path / "media"
+    media.mkdir()
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_media_dirs", lambda: [media])
+    monkeypatch.setattr("yaffo.routes.utilities.index_photos.get_thumbnail_dir", lambda: tmp_path / "thumbs")
+
+    body = client.get("/utilities/index-photos").data.decode()
+
+    assert 'id="reindex-button"' in body
+    assert "Reindex Library" in body

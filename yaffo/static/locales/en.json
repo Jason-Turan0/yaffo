@@ -135,6 +135,14 @@
     "gallery": {
       "videoPlaybackFailed": "This video can't be played — the format may be unsupported in this browser, or the file was moved or deleted."
     },
+    "reindex": {
+      "action": "Reindex",
+      "confirm": "This re-reads the file and detects its faces again. Any people assigned to this photo's faces will be forgotten.",
+      "failed": "Failed to start reindexing",
+      "failedWithReason": "Failed to start reindexing: {{reason}}",
+      "started": "Reindexing started",
+      "title": "Reindex this photo?"
+    },
     "tags": {
       "allNeedName": "All tags must have a name",
       "name": "Tag name",
@@ -301,6 +309,16 @@
       },
       "photoId": "Photo ID",
       "reason": "Reason",
+      "reindex": {
+        "action": "Reindex Library",
+        "button": "Reindex Library",
+        "confirm": "Every indexed file is read again and its faces detected again. All of your face-to-person assignments will be forgotten, and this can take a long time.",
+        "error": "Failed to start reindexing: {{reason}}",
+        "startFailed": "Failed to start reindexing",
+        "started": "Reindexing {{count}} item(s)",
+        "starting": "Starting…",
+        "title": "Reindex the whole library?"
+      },
       "scan": {
         "error": "Scan error: {{reason}}",
         "failed": "Failed to scan the filesystem.",
@@ -314,11 +332,11 @@
         "started": "Sync job started",
         "starting": "Starting sync…"
       },
+      "truncation": "Showing the first {{shown}} of {{total}}. Sync processes all of them.",
       "unindexed": {
         "description": "The following photos exist in the configured media directories but are not in the database.",
         "title": "Unindexed Photos"
-      },
-      "truncation": "Showing the first {{shown}} of {{total}}. Sync processes all of them."
+      }
     }
   }
 }

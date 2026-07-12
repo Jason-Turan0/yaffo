@@ -13,8 +13,42 @@ logger = get_logger(__name__, 'background_tasks')
 IMPORT_BATCH_SIZE = 250
 
 
+def reindex_media_items(session: Session, media_items: list[MediaItem]) -> IndexJobs:
+    """Rebuild the given media items from their files: the single action behind both
+    reindex buttons (one photo, whole library).
+
+    The rows are reset before the work is queued, not by the job when it eventually
+    runs: status goes back to IMPORTED and the faces (with their person assignments
+    and thumbnail files) are deleted. So a photo waiting in the queue reads as
+    un-indexed and shows no stale faces, rather than displaying boxes and names from
+    a detection pass that is about to be thrown away.
+
+    Deleting those faces invalidates the medoid gallery of every person who had one on
+    these photos -- it was built from faces that no longer exist -- so their embeddings
+    are rebuilt too (which also rescores their remaining faces; see
+    person_repository.update_person_embedding).
+    """
+    from yaffo.db.repositories.person_repository import update_person_embedding
+    from yaffo.utils.index_photos import reset_media_items_for_reindex, unlink_face_thumbnails
+
+    reset = reset_media_items_for_reindex(session, [item.id for item in media_items])
+    session.commit()
+    # After the commit: a rollback must never leave live faces pointing at files we
+    # already deleted.
+    unlink_face_thumbnails(reset.thumbnails)
+    for person_id in reset.person_ids:
+        update_person_embedding(person_id, session)
+
+    # The reset put these rows back to IMPORTED, so they'd be picked up anyway; `force`
+    # states the intent outright rather than relying on that as a side effect.
+    return enqueue_index_jobs(
+        session, [item.full_file_path for item in media_items], force=True
+    )
+
+
 def enqueue_index_jobs(
-    session: Session, files_to_index: list[str], automation_id: int | None = None
+    session: Session, files_to_index: list[str], automation_id: int | None = None,
+    force: bool = False,
 ) -> IndexJobs:
     """Create import/index Jobs for the given files and dispatch the queue tasks.
 
@@ -22,6 +56,10 @@ def enqueue_index_jobs(
     (re)indexed. Shared by the index-photos route and the file-system watcher so
     both schedule work identically. The caller owns the session and any other
     work (orphan cleanup); this commits the two Job rows before dispatching.
+
+    `force` re-indexes files that are already INDEXED -- what the reindex actions
+    ask for. Their faces are re-detected, which drops any person assignments on
+    them (see clear_faces_for_media_items), so only ask for it deliberately.
 
     `automation_id` tags the Jobs as a run of that automation (NULL for
     user-initiated syncs), so the job machinery doubles as the run history.
@@ -49,7 +87,7 @@ def enqueue_index_jobs(
     }
 
     files_to_import = [fp for fp in files_to_index if fp not in existing]
-    files_needing_indexing = [
+    files_needing_indexing = files_to_index if force else [
         fp for fp in files_to_index
         if fp not in existing or existing[fp] != MEDIA_STATUS_INDEXED
     ]

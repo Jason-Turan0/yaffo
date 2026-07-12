@@ -311,6 +311,7 @@ type PhotoViewApi = {
     clearHighlights(): void;
     openFile(filePath: string): void;
     openFolder(folderPath: string): void;
+    reindex(mediaItemId: number): Promise<void>;
 };
 
 type PhotoTagsApi = {

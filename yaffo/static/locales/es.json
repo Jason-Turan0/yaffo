@@ -135,6 +135,14 @@
     "gallery": {
       "videoPlaybackFailed": "Este video no se puede reproducir; es posible que el formato no sea compatible con este navegador o que el archivo se haya movido o eliminado."
     },
+    "reindex": {
+      "action": "Reindexar",
+      "confirm": "Se vuelve a leer el archivo y se detectan de nuevo sus caras. Se perderán las personas asignadas a las caras de esta foto.",
+      "failed": "No se pudo iniciar la reindexación",
+      "failedWithReason": "No se pudo iniciar la reindexación: {{reason}}",
+      "started": "Reindexación iniciada",
+      "title": "¿Reindexar esta foto?"
+    },
     "tags": {
       "allNeedName": "Todas las etiquetas deben tener un nombre.",
       "name": "Nombre de etiqueta",
@@ -301,6 +309,16 @@
       },
       "photoId": "Identificación con foto",
       "reason": "Razón",
+      "reindex": {
+        "action": "Reindexar biblioteca",
+        "button": "Reindexar biblioteca",
+        "confirm": "Cada archivo indexado se vuelve a leer y sus caras se detectan de nuevo. Se perderán todas las asignaciones de caras a personas, y puede tardar mucho.",
+        "error": "No se pudo iniciar la reindexación: {{reason}}",
+        "startFailed": "No se pudo iniciar la reindexación",
+        "started": "Reindexando {{count}} elemento(s)",
+        "starting": "Iniciando…",
+        "title": "¿Reindexar toda la biblioteca?"
+      },
       "scan": {
         "error": "Error de escaneo: {{reason}}",
         "failed": "No se pudo escanear el sistema de archivos.",
@@ -314,11 +332,11 @@
         "started": "Trabajo de sincronización iniciado",
         "starting": "Iniciando sincronización…"
       },
+      "truncation": "Mostrando el primer {{shown}} de {{total}}. La sincronización los procesa todos.",
       "unindexed": {
         "description": "Las siguientes fotografías existen en los directorios de medios configurados pero no están en la base de datos.",
         "title": "Fotos no indexadas"
-      },
-      "truncation": "Mostrando el primer {{shown}} de {{total}}. La sincronización los procesa todos."
+      }
     }
   }
 }

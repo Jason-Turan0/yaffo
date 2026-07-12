@@ -102,6 +102,7 @@ _REP_FACES_SQL = text("""
         JOIN faces f       ON f.id = pf.face_id
         LEFT JOIN media_items p ON p.id = f.media_item_id
         WHERE pf.person_id = :person_id
+          AND f.embedding IS NOT NULL  -- nothing to deserialize into a medoid
     )
     SELECT face_id, embedding, estimated_age, year
     FROM daily
@@ -205,6 +206,119 @@ def bulk_link_faces_to_people(session: Session, links: list[tuple[int, int]]) ->
     session.commit()
     return len(rows)
 
+# Faces scored (and written back) per pass. Keeps peak memory bounded on a person
+# with tens of thousands of faces, and keeps each write transaction short -- the
+# scoring itself is done lock-free, before any of it is flushed.
+_SIMILARITY_CHUNK = 2000
+
+# Every face assigned to a person, with what's needed to score it: the embedding, and
+# the year + predicted age that place it in a life stage. A face with no embedding is
+# still selected -- it can't be scored, so its score has to be cleared rather than left
+# at whatever stale value it happens to hold.
+_ASSIGNED_FACES_SQL = text("""
+    SELECT
+        pf.face_id      AS face_id,
+        f.embedding     AS embedding,
+        f.estimated_age AS estimated_age,
+        m.year          AS year
+    FROM people_face pf
+    JOIN faces f ON f.id = pf.face_id
+    LEFT JOIN media_items m ON m.id = f.media_item_id
+    WHERE pf.person_id = :person_id
+      AND (:only_missing = 0 OR pf.similarity IS NULL)
+    ORDER BY pf.face_id
+""")
+
+
+def recompute_person_similarities(session: Session, person_id: int, only_missing: bool = False) -> int:
+    """Rescore a person's assigned faces against their *current* stage gallery.
+
+    PersonFace.similarity is a cache of "how much does this face look like this
+    person", and the person it's measured against moves: every assignment rebuilds
+    the medoid gallery (update_person_embedding), which silently invalidates every
+    score written before it. This recomputes them, so a stored score always means the
+    same thing as a freshly computed one.
+
+    That matters beyond the number on the screen: the 0-100 scale the UI displays is
+    calibrated against the *percentiles of these stored values* (get_similarity_bounds),
+    so stale scores drag the band and mis-render even the faces that were scored
+    correctly.
+
+    Scoring matches domain.compare_utils.calculate_similarity, and must: the assignment
+    screen and the auto-assign automation score with that one, and this cache is what
+    the review screen sorts, filters and calibrates its scale from. Each face is scored
+    against the medoid of *its own* life stage, falling back to the person's overall
+    medoid for a stage they have no faces in. A person with no gallery at all gets NULL
+    -- honestly "not known", rather than a number scored against nothing.
+
+    `only_missing` restricts the pass to rows with no score, which is all that's
+    needed when the gallery itself didn't move. Returns the number of rows written.
+    """
+    person = session.get(Person, person_id)
+    if person is None:
+        return 0
+
+    stage_medoids = {
+        stage.life_stage: load_embedding(stage.avg_embedding)
+        for stage in person.stage_embeddings
+        if stage.avg_embedding
+    }
+    overall_medoid = load_embedding(person.avg_embedding) if person.avg_embedding else None
+    birthdate = effective_birthdate(person)
+
+    rows = session.execute(
+        _ASSIGNED_FACES_SQL,
+        {"person_id": person_id, "only_missing": 1 if only_missing else 0},
+    ).all()
+    if not rows:
+        return 0
+
+    # A face is scored against the medoid of its own life stage; a stage the person has
+    # no faces in falls back to their overall medoid. Group the faces by the medoid they
+    # land on, so each group is one matmul rather than a dot product per face. Mirrors
+    # compare_utils.reference_embedding_for_face -- same rule, off SQL columns rather
+    # than ORM objects.
+    _OVERALL = "__overall__"
+    updates: list[dict] = []
+    rows_by_reference: dict[str, list] = {}
+    for row in rows:
+        stage = life_stage(birthdate, row.year, row.estimated_age) if row.embedding else None
+        reference_key = stage if stage in stage_medoids else _OVERALL
+        if not row.embedding or (reference_key == _OVERALL and overall_medoid is None):
+            # Nothing to compare against: no embedding on the face, or no gallery at all.
+            updates.append({"face_id": row.face_id, "similarity": None})
+            continue
+        rows_by_reference.setdefault(reference_key, []).append(row)
+
+    for reference_key, scored_rows in rows_by_reference.items():
+        reference = overall_medoid if reference_key == _OVERALL else stage_medoids[reference_key]
+        for start in range(0, len(scored_rows), _SIMILARITY_CHUNK):
+            chunk = scored_rows[start:start + _SIMILARITY_CHUNK]
+            embeddings = np.stack([load_embedding(row.embedding) for row in chunk])
+            # Embeddings are L2-normalized, so the dot product IS the cosine.
+            #
+            # errstate: numpy's Accelerate BLAS backend (macOS) raises spurious
+            # divide-by-zero/overflow flags on float32 matmul -- sklearn's own
+            # cosine_similarity trips them on this same data, and the results agree to
+            # 3e-07 and stay finite. Nothing here can legitimately divide or overflow.
+            with np.errstate(all="ignore"):
+                scores = embeddings @ reference
+            updates.extend(
+                {"face_id": row.face_id, "similarity": float(score)}
+                for row, score in zip(chunk, scores)
+            )
+
+    # Compute first, write second: the scoring above holds no write lock, and the
+    # flush below takes one only in short chunks (see the SQLite concurrency notes
+    # in yaffo/db/__init__.py).
+    for start in range(0, len(updates), _SIMILARITY_CHUNK):
+        session.execute(
+            text("UPDATE people_face SET similarity = :similarity WHERE face_id = :face_id"),
+            updates[start:start + _SIMILARITY_CHUNK],
+        )
+        session.commit()
+    return len(updates)
+
 def update_person_embedding(person_id: int, session):
     """Recompute a person's estimated birthdate and their per-life-stage medoid
     gallery from their assigned faces. Stage embeddings are derived data, rebuilt
@@ -213,7 +327,13 @@ def update_person_embedding(person_id: int, session):
 
     Birthdate is a DB-side median over every face; the medoids use the daily-
     collapsed, top-N-by-confidence subset (_REP_FACES_SQL) so we deserialize at
-    most MAX_REPRESENTATIVE_FACES embeddings instead of eager-loading every face."""
+    most MAX_REPRESENTATIVE_FACES embeddings instead of eager-loading every face.
+
+    Rebuilding the gallery invalidates the cached PersonFace.similarity of every face
+    scored against the old one, so this rescores them afterwards. When the gallery
+    comes back unchanged -- the common case, since the medoids are drawn from at most
+    MAX_REPRESENTATIVE_FACES and a few new faces rarely move them -- only the faces
+    still missing a score are touched, not all of them."""
     try:
         person = session.get(Person, person_id)
         if person is None:
@@ -234,6 +354,9 @@ def update_person_embedding(person_id: int, session):
         if not rows:
             person.avg_embedding = None
             session.commit()
+            # No faces left to build a gallery from, so nothing can be scored against
+            # it: any surviving scores are meaningless and go back to NULL.
+            recompute_person_similarities(session, person_id)
             return
 
         birthdate = effective_birthdate(person)  # actual wins, else the estimate above
@@ -255,5 +378,10 @@ def update_person_embedding(person_id: int, session):
             ))
 
         session.commit()
+
+        written = recompute_person_similarities(session, person_id, only_missing=False)
+        logger.debug(
+            f"rescored {written} face(s) for person {person_id} "
+        )
     except Exception as e:
         logger.error(f"Failed to update person embedding for {person_id}", e)

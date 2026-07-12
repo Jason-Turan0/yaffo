@@ -7,7 +7,6 @@ from yaffo.db.repositories.person_repository import update_person_embedding
 from yaffo.logging_config import get_logger
 from yaffo.background_tasks.config import task_queue
 from sqlalchemy.dialects.sqlite import insert
-from yaffo.domain.compare_utils import calculate_similarity
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -22,16 +21,19 @@ def assign_faces_to_person(person_id: int, face_ids: list[int]):
         person: Person | None = (
             session.query(Person)
                    .options(joinedload(Person.stage_embeddings))
-                   .order_by(Person.name)
                    .get(int(person_id))
         )
         if not person:
             raise Exception(f"Person {person_id} not found")
         faces = (session.query(Face).filter(Face.id.in_(face_ids))).all()
-        similarity_by_face_id = calculate_similarity(person, faces)
         session.query(PersonFace).filter(PersonFace.face_id.in_(face_ids)).delete(synchronize_session=False)
+        # similarity is left NULL and filled in by update_person_embedding below, which
+        # rescores against the gallery *as rebuilt from this assignment*. Scoring here
+        # would measure the new faces against the gallery they're about to change --
+        # and for a person's first assignment there is no gallery at all, which used to
+        # score the batch against its own mean.
         stmt = insert(PersonFace).values([
-            {"person_id": person_id, "face_id": fid, "similarity": similarity_by_face_id.get(int(fid))}
+            {"person_id": person_id, "face_id": fid, "similarity": None}
             for fid in face_ids
         ])
         session.execute(stmt)
@@ -39,9 +41,6 @@ def assign_faces_to_person(person_id: int, face_ids: list[int]):
                                                                  synchronize_session=False)
         # Set photo status back to INDEXED when faces are assigned
         media_item_ids = [face.media_item_id for face in faces]
-        session.query(MediaItem).filter(MediaItem.id.in_(media_item_ids)).update(
-            {MediaItem.status: MEDIA_STATUS_INDEXED}, synchronize_session=False
-        )
         session.commit()
         update_person_embedding(person_id, session)
         emit_event(EVENT_MEDIA_MODIFIED, {"media_item_ids": list(set(media_item_ids))})

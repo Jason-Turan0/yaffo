@@ -1,5 +1,6 @@
 
 import tempfile
+from dataclasses import dataclass
 import uuid
 import platform
 import subprocess
@@ -15,7 +16,10 @@ import piexif
 from sqlalchemy.orm import Session
 
 from yaffo.logging_config import get_logger
-from yaffo.db.models import MediaItem, Face, Tag, FACE_STATUS_UNASSIGNED
+from yaffo.db.models import (
+    MediaItem, Face, PersonFace, Tag,
+    FACE_STATUS_UNASSIGNED, MEDIA_STATUS_IMPORTED,
+)
 from yaffo.common import PHOTO_EXTENSIONS
 from yaffo.utils.photo_dates import get_photo_date_info
 from yaffo.utils.image import (
@@ -501,15 +505,78 @@ def clear_faces_for_media_items(session: Session, media_item_ids: List[int]) -> 
     Makes re-indexing idempotent: a face's thumbnail path carries a uuid, so the
     unique constraint won't catch a re-insert -- replaying an index task would
     otherwise accumulate duplicate faces. Clearing first replaces a photo's faces
-    instead. Does not commit."""
+    instead. Any person assignments on those faces go with them -- re-detection
+    produces new faces, and there is nothing to carry an assignment onto.
+    Does not commit."""
     if not media_item_ids:
         return []
+    face_ids = [
+        row[0] for row in
+        session.query(Face.id).filter(Face.media_item_id.in_(media_item_ids)).all()
+    ]
     thumbnails = [
         row[0] for row in
         session.query(Face.full_file_path).filter(Face.media_item_id.in_(media_item_ids)).all()
     ]
+    # Explicitly, not by cascade: people_face declares ON DELETE CASCADE, but SQLite
+    # only honours it with PRAGMA foreign_keys=ON, which this app does not set. Without
+    # this the assignment rows would survive their faces, pointing at ids that no
+    # longer exist.
+    if face_ids:
+        session.query(PersonFace).filter(PersonFace.face_id.in_(face_ids)).delete(synchronize_session=False)
     session.query(Face).filter(Face.media_item_id.in_(media_item_ids)).delete(synchronize_session=False)
     return thumbnails
+
+
+# Ids per statement. An IN (...) over a whole library would blow past SQLite's
+# bound-variable ceiling (SQLITE_MAX_VARIABLE_NUMBER), so every id-list statement
+# below is fed in chunks.
+_ID_CHUNK = 500
+
+
+@dataclass(frozen=True)
+class ReindexReset:
+    """What a reindex reset left for the caller to finish, once it has committed.
+
+    `thumbnails` are unlinked after the commit (never before -- a rollback would
+    otherwise leave live faces pointing at files that are gone). `person_ids` are the
+    people who had a face on one of these items: their medoid gallery was built from
+    faces that no longer exist, so it has to be rebuilt.
+    """
+    thumbnails: List[str]
+    person_ids: List[int]
+
+
+def reset_media_items_for_reindex(session: Session, media_item_ids: List[int]) -> ReindexReset:
+    """Put media items back to square one so indexing can rebuild them from the file.
+
+    Their status returns to IMPORTED (the row exists; nothing has been derived from it
+    yet) and their faces -- with the person assignments on them -- are deleted, rather
+    than leaving stale faces and boxes on screen while the job works through the queue.
+    Does not commit: the caller owns the transaction, then unlinks the thumbnails and
+    rebuilds the affected people's embeddings.
+    """
+    if not media_item_ids:
+        return ReindexReset(thumbnails=[], person_ids=[])
+
+    thumbnails: List[str] = []
+    person_ids: set[int] = set()
+    for start in range(0, len(media_item_ids), _ID_CHUNK):
+        chunk = media_item_ids[start:start + _ID_CHUNK]
+        # Collect the affected people *before* the assignment rows are deleted.
+        person_ids.update(
+            row[0] for row in
+            session.query(PersonFace.person_id)
+            .join(Face, Face.id == PersonFace.face_id)
+            .filter(Face.media_item_id.in_(chunk))
+            .distinct()
+            .all()
+        )
+        thumbnails.extend(clear_faces_for_media_items(session, chunk))
+        session.query(MediaItem).filter(MediaItem.id.in_(chunk)).update(
+            {MediaItem.status: MEDIA_STATUS_IMPORTED}, synchronize_session=False
+        )
+    return ReindexReset(thumbnails=thumbnails, person_ids=sorted(person_ids))
 
 
 def delete_orphaned_media_items(session: Session, media_item_ids: List[int]) -> int:

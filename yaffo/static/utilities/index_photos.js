@@ -8,7 +8,7 @@
  * @property {string[]} mediaDirs
  *
  * @typedef {Object} IndexPhotoConfig
- * @property {{ utilities_index_photos_scan: string, utilities_sync_photos: string }} urls
+ * @property {{ utilities_index_photos_scan: string, utilities_sync_photos: string, utilities_reindex_library: string }} urls
  *
  * @typedef {Object} UnindexedPhoto
  * @property {string} filename
@@ -27,6 +27,7 @@
  * @typedef {Object} IndexPhotosApi
  * @property {() => Promise<void>} runScan
  * @property {() => Promise<void>} startSync
+ * @property {() => Promise<void>} startReindex
  */
 
 window.PHOTO_ORGANIZER = window.PHOTO_ORGANIZER || {};
@@ -251,6 +252,51 @@ const initIndexPhotos = (opts, i18n, config) => {
         }
     };
 
+    const reindexButton = /** @type {HTMLButtonElement | null} */ (
+        document.getElementById('reindex-button')
+    );
+
+    // Sync only picks up what's new. This re-indexes what's already there — the way to
+    // rebuild derived data (faces, sizes, metadata) after an indexing change. Every
+    // face is re-detected, so every person assignment goes: confirm, then fire.
+    const startReindex = async () => {
+        if (!reindexButton) return;
+        const confirmed = await window.PHOTO_ORGANIZER.confirmDialog({
+            title: i18n.t('utilities:indexPhotos.reindex.title'),
+            message: i18n.t('utilities:indexPhotos.reindex.confirm'),
+            confirmText: i18n.t('utilities:indexPhotos.reindex.action'),
+            confirmClass: 'btn-danger',
+        });
+        if (!confirmed) return;
+
+        reindexButton.disabled = true;
+        reindexButton.textContent = i18n.t('utilities:indexPhotos.reindex.starting');
+        const restore = () => {
+            reindexButton.disabled = false;
+            reindexButton.textContent = i18n.t('utilities:indexPhotos.reindex.button');
+        };
+        try {
+            const response = await fetch(config.urls.utilities_reindex_library, { method: 'POST' });
+            const data = /** @type {{ error?: string, media_item_count?: number }} */ (
+                await response.json().catch(() => ({}))
+            );
+            if (response.ok) {
+                window.notification.success(i18n.t('utilities:indexPhotos.reindex.started', {
+                    count: data.media_item_count,
+                }));
+                window.location.reload();
+            } else {
+                window.notification.error(
+                    data.error || i18n.t('utilities:indexPhotos.reindex.startFailed'));
+                restore();
+            }
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            window.notification.error(i18n.t('utilities:indexPhotos.reindex.error', { reason }));
+            restore();
+        }
+    };
+
     /**
      * @param {ScanRecord} record
      */
@@ -306,9 +352,10 @@ const initIndexPhotos = (opts, i18n, config) => {
     };
 
     if (syncButton) syncButton.addEventListener('click', startSync);
+    if (reindexButton) reindexButton.addEventListener('click', startReindex);
     if (canScan) runScan();
 
-    return { runScan, startSync };
+    return { runScan, startSync, startReindex };
 };
 
 indexPhotosApi.init = initIndexPhotos;

@@ -135,6 +135,14 @@
     "gallery": {
       "videoPlaybackFailed": "Cette vidéo ne peut pas être lue : le format n'est peut-être pas pris en charge dans ce navigateur ou le fichier a été déplacé ou supprimé."
     },
+    "reindex": {
+      "action": "Réindexer",
+      "confirm": "Le fichier est relu et ses visages sont détectés à nouveau. Les personnes attribuées aux visages de cette photo seront perdues.",
+      "failed": "Impossible de lancer la réindexation",
+      "failedWithReason": "Impossible de lancer la réindexation : {{reason}}",
+      "started": "Réindexation lancée",
+      "title": "Réindexer cette photo ?"
+    },
     "tags": {
       "allNeedName": "Toutes les balises doivent avoir un nom",
       "name": "Nom de la balise",
@@ -301,6 +309,16 @@
       },
       "photoId": "Photo d'identité",
       "reason": "Raison",
+      "reindex": {
+        "action": "Réindexer la bibliothèque",
+        "button": "Réindexer la bibliothèque",
+        "confirm": "Chaque fichier indexé est relu et ses visages détectés à nouveau. Toutes vos attributions de visages à des personnes seront perdues, et cela peut être long.",
+        "error": "Impossible de lancer la réindexation : {{reason}}",
+        "startFailed": "Impossible de lancer la réindexation",
+        "started": "Réindexation de {{count}} élément(s)",
+        "starting": "Démarrage…",
+        "title": "Réindexer toute la bibliothèque ?"
+      },
       "scan": {
         "error": "Erreur de numérisation : {{reason}}",
         "failed": "Échec de l'analyse du système de fichiers.",
@@ -314,11 +332,11 @@
         "started": "Travail de synchronisation démarré",
         "starting": "Démarrage de la synchronisation…"
       },
+      "truncation": "Montrant le premier {{shown}} de {{total}}. La synchronisation les traite tous.",
       "unindexed": {
         "description": "Les photos suivantes existent dans les répertoires multimédias configurés mais ne sont pas dans la base de données.",
         "title": "Photos non indexées"
-      },
-      "truncation": "Montrant le premier {{shown}} de {{total}}. La synchronisation les traite tous."
+      }
     }
   }
 }

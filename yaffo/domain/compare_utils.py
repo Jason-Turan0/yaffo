@@ -2,6 +2,8 @@ import numpy as np
 from yaffo.db.models import Face, Person
 from sklearn.metrics.pairwise import cosine_similarity
 
+from yaffo.domain.life_stages import effective_birthdate, life_stage
+
 def load_embedding(blob: bytes) -> np.ndarray:
     """Deserialize a stored face embedding. ArcFace embeddings are 512-d float32
     (see yaffo/utils/face_analysis); dimensionality is left implicit so the same
@@ -51,20 +53,61 @@ def similarity_to_ui_percent(
     return round(max(0.0, min(1.0, frac)) * 100)
 
 
+def reference_embedding_for_face(
+    face: Face,
+    stage_medoids: dict[str, np.ndarray],
+    overall_medoid: np.ndarray | None,
+    birthdate,
+) -> np.ndarray | None:
+    """The embedding a face should be scored against: the medoid of *its own* life
+    stage.
+
+    A person's face at 4 and at 40 are nearly orthogonal, so comparing a face to the
+    wrong stage says little. The face's stage comes from life_stage(): the age implied
+    by the birthdate and the photo's year when both are known, falling back to the
+    face's own predicted age when they aren't.
+
+    Falls back to the person's overall medoid when they have no embedding for that
+    stage yet -- a stage the person simply has no assigned faces in. None when there's
+    nothing to compare against at all.
+    """
+    stage = life_stage(
+        birthdate,
+        face.media_item.year if face.media_item else None,
+        face.estimated_age,
+    )
+    return stage_medoids.get(stage, overall_medoid)
+
+
 def calculate_similarity(person: Person, faces: list[Face]) -> dict[int, float]:
-    if len(faces) == 0: return {}
-    loaded_person_embeddings = [load_embedding(person_embedding.avg_embedding) for person_embedding in person.stage_embeddings]
-    if len(loaded_person_embeddings) == 0:
-        loaded_person_embeddings = [np.mean([load_embedding(face.embedding) for face in faces], axis=0)]
-    def calculate_similarity_for_face(face: Face) -> float:
-       face_emb = load_embedding(face.embedding)
-       if len(loaded_person_embeddings) == 0:
-           return 0
-       return max(
-           cosine_similarity([face_emb], [person_embedding])[0][0]
-           for person_embedding in loaded_person_embeddings
-       )
-    return { face.id: calculate_similarity_for_face(face) for face in faces  }
+    """How much each face looks like `person`, scored against the medoid of the face's
+    own life stage (see reference_embedding_for_face).
+
+    A person with no gallery yet (nothing assigned to them) scores nothing -- an empty
+    result, not a number. This used to fall back to the mean of the faces being scored,
+    which measured them against *themselves*: every face came back looking like a
+    strong match for a person it had never been compared to.
+    """
+    if len(faces) == 0:
+        return {}
+    stage_medoids = {
+        person_embedding.life_stage: load_embedding(person_embedding.avg_embedding)
+        for person_embedding in person.stage_embeddings
+        if person_embedding.avg_embedding
+    }
+    overall_medoid = load_embedding(person.avg_embedding) if person.avg_embedding else None
+    if not stage_medoids and overall_medoid is None:
+        return {}
+
+    birthdate = effective_birthdate(person)
+    scores: dict[int, float] = {}
+    for face in faces:
+        reference = reference_embedding_for_face(face, stage_medoids, overall_medoid, birthdate)
+        if reference is None:
+            continue
+        face_emb = load_embedding(face.embedding)
+        scores[face.id] = float(cosine_similarity([face_emb], [reference])[0][0])
+    return scores
 
 def calculate_face_similarity(face: Face, people: list[Person]) -> dict[int, float] :
     def calculate_person_similarity(person: Person) -> float:

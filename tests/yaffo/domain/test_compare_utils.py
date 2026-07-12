@@ -55,3 +55,78 @@ def test_degenerate_band_does_not_divide_by_zero():
 
 def test_higher_slider_demands_more_similarity():
     assert ui_threshold_to_similarity(20) < ui_threshold_to_similarity(80)
+
+
+# calculate_similarity scores a face against the medoid of its OWN life stage. It's the
+# rule the assignment screen's suggestions and the auto-assign automation both use, and
+# person_repository.recompute_person_similarities mirrors it for the stored cache — the
+# three have to agree or the review screen sorts by one meaning and displays another.
+
+from datetime import date
+from types import SimpleNamespace
+
+import numpy as np
+
+from yaffo.domain.compare_utils import calculate_similarity, serialize_embedding
+
+
+def _vec(*values) -> np.ndarray:
+    v = np.zeros(512, dtype=np.float32)
+    for i, x in enumerate(values):
+        v[i] = x
+    return v / np.linalg.norm(v)
+
+
+def _person(birthdate, stages: dict, overall=None):
+    return SimpleNamespace(
+        birthdate=birthdate,
+        estimated_birthdate=None,
+        avg_embedding=serialize_embedding(overall) if overall is not None else None,
+        stage_embeddings=[
+            SimpleNamespace(life_stage=stage, avg_embedding=serialize_embedding(vec))
+            for stage, vec in stages.items()
+        ],
+    )
+
+
+def _face(face_id, vec, year, estimated_age=None):
+    return SimpleNamespace(
+        id=face_id,
+        embedding=serialize_embedding(vec),
+        estimated_age=estimated_age,
+        media_item=SimpleNamespace(year=year),
+    )
+
+
+def test_scores_against_the_faces_own_stage_not_the_best_matching_stage():
+    person = _person(date(2000, 1, 1), {"baby": _vec(1, 0), "adult": _vec(0, 1)})
+    # A 2001 photo => baby stage, but the face leans toward the adult medoid.
+    face = _face(1, _vec(0.2, 0.98), year=2001)
+
+    scores = calculate_similarity(person, [face])
+
+    assert scores[1] == pytest.approx(0.2, abs=0.02)   # the baby medoid, its own stage
+
+
+def test_falls_back_to_the_overall_medoid_for_a_stage_the_person_has_no_faces_in():
+    person = _person(date(1950, 1, 1), {"adult": _vec(1, 0)}, overall=_vec(1, 0))
+    senior = _face(1, _vec(1, 0), year=2020)  # 70 years old: no senior medoid exists
+
+    assert calculate_similarity(person, [senior])[1] == pytest.approx(1.0, abs=1e-6)
+
+
+def test_uses_the_predicted_age_when_the_birthdate_or_photo_year_is_missing():
+    """No birthdate to date the photo against, so the face's own predicted age is what
+    places it — the fallback life_stage() already encodes."""
+    person = _person(None, {"baby": _vec(1, 0), "adult": _vec(0, 1)})
+    baby = _face(1, _vec(1, 0), year=None, estimated_age=1)
+    adult = _face(2, _vec(0, 1), year=None, estimated_age=40)
+
+    scores = calculate_similarity(person, [baby, adult])
+
+    assert scores[1] == pytest.approx(1.0, abs=1e-6)
+    assert scores[2] == pytest.approx(1.0, abs=1e-6)
+
+
+def test_a_person_with_no_gallery_scores_nothing():
+    assert calculate_similarity(_person(None, {}), [_face(1, _vec(1, 0), year=2001)]) == {}

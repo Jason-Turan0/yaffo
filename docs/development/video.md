@@ -114,7 +114,7 @@ Notes:
   (the `.mp4`/`.mov`), exactly as it points at the original image for photos. The
   unique constraint that protects re-imports (see the idempotency notes in
   `index_photo`) carries over for free.
-- **`status`** reuses `IMPORTED → INDEXED → SYNCED`. No new states.
+- **`status`** reuses `IMPORTED → INDEXED`. No new states.
 
 ### Constants
 

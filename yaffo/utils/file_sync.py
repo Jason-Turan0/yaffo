@@ -5,7 +5,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from yaffo.common import MEDIA_EXTENSIONS
-from yaffo.db.models import MediaItem, MEDIA_STATUS_INDEXED, MEDIA_STATUS_SYNCED
+from yaffo.db.models import MediaItem, MEDIA_STATUS_INDEXED
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
 from yaffo.utils.index_jobs_dto import IndexJobs
@@ -77,7 +77,7 @@ def iter_media_scan(
     db_photos = session.query(MediaItem.id, MediaItem.full_file_path, MediaItem.status).all()
     indexed_paths = {
         path for _id, path, status in db_photos
-        if status in (MEDIA_STATUS_INDEXED, MEDIA_STATUS_SYNCED)
+        if status == MEDIA_STATUS_INDEXED
     }
 
     filesystem_paths: set[str] = set()

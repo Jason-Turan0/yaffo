@@ -14,6 +14,7 @@ from yaffo.common import is_browser_playable_video
 from yaffo.db.models import EVENT_MEDIA_MODIFIED, Face, MediaItem, Person, Tag, db
 from yaffo.themes import get_theme
 from yaffo.utils.image import convert_heif
+from yaffo.utils.index_jobs import reindex_media_items
 
 
 def init_media_routes(app: Flask):
@@ -165,6 +166,28 @@ def init_media_routes(app: Flask):
             tags_data=tags_data,
             all_people=all_people_data
         )
+
+    @app.route("/api/media/<int:media_item_id>/reindex", methods=["POST"])
+    def reindex_media_item(media_item_id: int):
+        """Re-run indexing for one photo — the fix when its metadata or its faces are
+        wrong (a stale face box, a missing size). The photo goes back to IMPORTED and
+        its faces are deleted immediately, so any person assignments on them are
+        dropped; the caller confirms that first."""
+        media_item = db.session.get(MediaItem, media_item_id)
+        if not media_item:
+            return jsonify({
+                "error": gettext("Photo not found"),
+                "code": "media_item_not_found",
+            }), 404
+
+        if not Path(media_item.full_file_path).exists():
+            return jsonify({
+                "error": gettext("File not found"),
+                "code": "file_not_found",
+            }), 404
+
+        jobs = reindex_media_items(db.session, [media_item])
+        return jsonify({"job_id": jobs.index_job_id}), 202
 
     @app.route("/api/open-file", methods=["POST"])
     def open_file():

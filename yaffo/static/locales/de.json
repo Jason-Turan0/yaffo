@@ -135,6 +135,14 @@
     "gallery": {
       "videoPlaybackFailed": "Dieses Video kann nicht wiedergegeben werden — das Format wird möglicherweise von diesem Browser nicht unterstützt oder die Datei wurde verschoben oder gelöscht."
     },
+    "reindex": {
+      "action": "Neu indexieren",
+      "confirm": "Die Datei wird erneut gelesen und die Gesichter werden neu erkannt. Personen, die den Gesichtern dieses Fotos zugewiesen sind, gehen verloren.",
+      "failed": "Neuindexierung konnte nicht gestartet werden",
+      "failedWithReason": "Neuindexierung konnte nicht gestartet werden: {{reason}}",
+      "started": "Neuindexierung gestartet",
+      "title": "Dieses Foto neu indexieren?"
+    },
     "tags": {
       "allNeedName": "Alle Tags müssen einen Namen haben",
       "name": "Tag-Name",
@@ -301,6 +309,16 @@
       },
       "photoId": "Foto-ID",
       "reason": "Grund",
+      "reindex": {
+        "action": "Bibliothek neu indexieren",
+        "button": "Bibliothek neu indexieren",
+        "confirm": "Jede indexierte Datei wird erneut gelesen und ihre Gesichter werden neu erkannt. Alle Zuordnungen von Gesichtern zu Personen gehen verloren, und das kann lange dauern.",
+        "error": "Neuindexierung konnte nicht gestartet werden: {{reason}}",
+        "startFailed": "Neuindexierung konnte nicht gestartet werden",
+        "started": "{{count}} Element(e) werden neu indexiert",
+        "starting": "Wird gestartet…",
+        "title": "Gesamte Bibliothek neu indexieren?"
+      },
       "scan": {
         "error": "Scanfehler: {{reason}}",
         "failed": "Das Dateisystem konnte nicht durchsucht werden.",
@@ -314,11 +332,11 @@
         "started": "Synchronisierungsauftrag wurde gestartet",
         "starting": "Synchronisierung wird gestartet…"
       },
+      "truncation": "Die ersten {{shown}} von {{total}} werden angezeigt. Die Synchronisierung verarbeitet alle.",
       "unindexed": {
         "description": "Die folgenden Fotos befinden sich in den konfigurierten Medienverzeichnissen, aber nicht in der Datenbank.",
         "title": "Nicht indizierte Fotos"
-      },
-      "truncation": "Die ersten {{shown}} von {{total}} werden angezeigt. Die Synchronisierung verarbeitet alle."
+      }
     }
   }
 }

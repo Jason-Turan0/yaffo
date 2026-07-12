@@ -8,7 +8,6 @@ from yaffo.common import MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO
 
 MEDIA_STATUS_IMPORTED = "IMPORTED"
 MEDIA_STATUS_INDEXED = "INDEXED"
-MEDIA_STATUS_SYNCED = "SYNCED"
 
 class MediaItem(db.Model):
     __tablename__ = "media_items"

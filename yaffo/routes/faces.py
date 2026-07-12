@@ -21,12 +21,13 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from yaffo.db.repositories.person_repository import update_person_embedding, get_similarity_bounds
 from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
-from yaffo.domain.compare_utils import load_embedding, calculate_similarity, ui_threshold_to_similarity
+from yaffo.domain.compare_utils import load_embedding, calculate_similarity, ui_threshold_to_similarity, \
+    DEFAULT_SIMILARITY_FLOOR, DEFAULT_SIMILARITY_CEIL, similarity_to_ui_percent
 from yaffo.utils.context import context
 from yaffo.utils.photo_dates import parse_date_taken
 
 DEFAULT_THRESHOLD = 85  # UI similarity slider 0-100 (0 = least similar, 100 = most)
-DEFAULT_BATCH_SIZE = 50000  # max unassigned faces pulled + clustered per pass
+DEFAULT_BATCH_SIZE = 2000  # max unassigned faces pulled + clustered per pass
 DEFAULT_MIN_SAMPLE_SIZE = 3
 DEFAULT_GROUP_BY = 'similarity'
 # Faces rendered as thumbnails per cluster. The whole cluster is still assigned;
@@ -40,7 +41,11 @@ FACE_SHORTCUT_PEOPLE_SETTING = "face_shortcut_people"
 class FaceViewModel:
     id: int
     photo_date: str
+    #The best similarity of the person scaled to the UI range
     similarity: Optional[float]
+
+    # The best similarity of the person scaled to the cosign range
+    cosine_similarity: Optional[float]
     # The source media the face was cropped from — the hover preview shows it.
     media_item_id: int
     media_type: str
@@ -136,11 +141,12 @@ def _face_region(face: Face) -> Optional[dict]:
     return {"top": top, "right": right, "bottom": bottom, "left": left}
 
 
-def _face_view_model(face: Face, similarity: Optional[float]) -> FaceViewModel:
+def _face_view_model(face: Face, cosign_similarity: Optional[float]) -> FaceViewModel:
     return FaceViewModel(
         id=face.id,
         photo_date=face.media_item.date_taken,
-        similarity=similarity,
+        similarity=cosign_similarity,
+        cosine_similarity=cosign_similarity,
         media_item_id=face.media_item.id,
         media_type=face.media_item.media_type,
         region=_face_region(face),
@@ -210,7 +216,7 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], min_similarity:
     return suggestions
 
 
-def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Person], min_similarity: float, person_id) -> list[
+def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Person], min_cosine_similarity: float, person_id) -> list[
     FaceSuggestion]:
     face_suggestions = []
     default_suggestion = FaceSuggestion(
@@ -220,9 +226,7 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
         photo_date='',
         faces=[]
     )
-    # min_similarity is the required cosine similarity, already scaled from the UI
-    # slider against the live similarity band.
-    computed_threshold = min_similarity
+    # min_cosine_similarity is the required cosine similarity, already scaled from the UI slider
     for face in unassigned_faces:
         emb = load_embedding(face.embedding)
 
@@ -234,7 +238,7 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
             _.chain(people)
             .flat_map(flat_map_people)
             .map(lambda tuple: (tuple[0], tuple[1], cosine_similarity([emb], [tuple[2]])[0][0]))
-            .filter(lambda tuple: tuple[2] > computed_threshold and (person_id is None or tuple[0].id == person_id))
+            .filter(lambda tuple: tuple[2] > min_cosine_similarity and (person_id is None or tuple[0].id == person_id))
             .sort_by(lambda pair: pair[1], True)
             .group_by(lambda pair: pair[0].id)
             .values()
@@ -249,15 +253,15 @@ def make_suggestions_for_people(unassigned_faces: list[Face], people: list[Perso
             best_suggestion = FaceSuggestion(
                 person_ids=[pair[0].id for pair in matching_people],
                 people=[pair[0] for pair in matching_people],
-                suggestion_name=" OR ".join([pair[0].name for pair in matching_people]),
+                suggestion_name=gettext(" OR ").join([pair[0].name for pair in matching_people]),
                 photo_date=face.media_item.date_taken,
                 faces=[]
             )
             face_suggestions.append(best_suggestion)
 
         if best_suggestion is not None:
-            best_sim = float(matching_people[0][2])
-            best_suggestion.faces.append(_face_view_model(face, best_sim))
+            best_cosign_sim = float(matching_people[0][2])
+            best_suggestion.faces.append(_face_view_model(face, best_cosign_sim))
         else:
             default_suggestion.faces.append(_face_view_model(face, None))
 
@@ -318,11 +322,11 @@ def init_faces_routes(app: Flask):
         all_people_shortcuts = [_person_shortcut(person) for person in people]
 
         # Scale the 0-100 slider to a cosine similarity against the live data band.
-        min_similarity = ui_threshold_to_similarity(threshold, *get_similarity_bounds(db.session))
+        min_cosign_similarity = ui_threshold_to_similarity(threshold, *get_similarity_bounds(db.session))
         face_suggestions = (
-            make_suggestions_by_similarity(unassigned_faces, min_similarity)) \
+            make_suggestions_by_similarity(unassigned_faces, min_cosign_similarity)) \
             if (group_by == 'similarity') else \
-            make_suggestions_for_people(unassigned_faces, people, min_similarity, person_id)
+            make_suggestions_for_people(unassigned_faces, people, min_cosign_similarity, person_id)
 
         for suggestion in face_suggestions:
             # Ascending: the weakest matches lead, so the faces most likely to be
