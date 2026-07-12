@@ -186,10 +186,9 @@
                             </div>
 
                             <div class="cluster-decide">
-                                <label class="cluster-select-all">
-                                    <input type="checkbox" checked class="group-select-checkbox">
-                                    <span class="group-select-label">{{ _("Select all") }}</span>
-                                </label>
+                                <button type="button" class="chip chip-action cluster-select-all"
+                                        data-select-all-label="{{ _('Select all %(count)s faces', count=faceSuggestion.faces|length|format_integer) }}"
+                                        data-select-none-label="{{ _('Clear selection') }}">{{ _('Clear selection') }}</button>
                                 <div class="group-actions">
                                     <button type="button" class="btn-secondary shuffle-sample-btn" data-icon="shuffle">{{ _("Shuffle") }}</button>
                                     {% for person in faceSuggestion.people %}

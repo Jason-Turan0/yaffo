@@ -222,23 +222,10 @@
     margin-bottom: 12px;
 }
 
+/* .cluster-select-all is the shared select-all chip (components/chip.css); it needs
+   no styles of its own beyond not stretching in the flex row. */
 .cluster-select-all {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    user-select: none;
-}
-
-.group-select-checkbox {
-    cursor: pointer;
-    width: 18px;
-    height: 18px;
-}
-
-.group-select-label {
-    font-size: var(--font-size-base);
-    color: var(--color-text-secondary);
+    flex: none;
 }
 
 .group-actions {

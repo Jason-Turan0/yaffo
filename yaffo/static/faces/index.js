@@ -138,8 +138,7 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
         page = 0;
         pageCount = Math.max(1, Math.ceil(faces.length / sampleSize));
         selectedIds = new Set(faces.map(f => f.id));
-        const groupCheckbox = /** @type {HTMLInputElement | null} */ (group.querySelector('.group-select-checkbox'));
-        if (groupCheckbox) groupCheckbox.checked = true;
+        updateSelectAllChip();
         // Shuffling only matters when the cluster spills past a single page.
         const shuffleBtn = /** @type {HTMLButtonElement | null} */ (group.querySelector('.shuffle-sample-btn'));
         if (shuffleBtn) shuffleBtn.disabled = faces.length <= sampleSize;
@@ -162,6 +161,20 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
         const id = Number(faceEl.dataset.faceId);
         if (on) selectedIds.add(id); else selectedIds.delete(id);
         faceEl.classList.toggle('selected', on);
+        updateSelectAllChip();
+    };
+
+    /** Everything in the cluster selected? Drives the chip's label. */
+    const wholeClusterSelected = () => faces.length > 0 && selectedIds.size === faces.length;
+
+    /** The chip always names what pressing it will DO. */
+    const updateSelectAllChip = () => {
+        if (!activeGroup) return;
+        const chip = /** @type {HTMLElement | null} */ (activeGroup.querySelector('.cluster-select-all'));
+        if (!chip) return;
+        chip.textContent = wholeClusterSelected()
+            ? (chip.dataset.selectNoneLabel || '')
+            : (chip.dataset.selectAllLabel || '');
     };
 
     /** @param {boolean} on */
@@ -169,8 +182,7 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
         selectedIds = on ? new Set(faces.map(f => f.id)) : new Set();
         if (!activeGroup) return;
         activeGroup.querySelectorAll('.face').forEach(el => el.classList.toggle('selected', on));
-        const groupCheckbox = /** @type {HTMLInputElement | null} */ (activeGroup.querySelector('.group-select-checkbox'));
-        if (groupCheckbox) groupCheckbox.checked = on;
+        updateSelectAllChip();
     };
 
     const advanceCluster = () => {
@@ -223,6 +235,13 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
 
     clusters.addEventListener('click', (e) => {
         const origin = e.target instanceof Element ? e.target : null;
+
+        // Select-all chip: takes the whole cluster, or clears it once it is whole.
+        if (origin?.closest('.cluster-select-all')) {
+            selectWholeCluster(!wholeClusterSelected());
+            return;
+        }
+
         const faceEl = /** @type {HTMLElement | null} */ (origin?.closest('.face') ?? null);
         if (faceEl && activeGroup && activeGroup.contains(faceEl)) {
             if (e.shiftKey && lastClickedId != null) {
@@ -289,13 +308,6 @@ facesNamespace.initAssignment = (sampleSize, topPeople, i18n, config) => {
             e.preventDefault();
             if (page !== pageCount - 1) { page = pageCount - 1; renderPage(); }
             return;
-        }
-    });
-
-    clusters.addEventListener('change', (e) => {
-        const target = /** @type {HTMLInputElement | null} */ (e.target instanceof HTMLElement ? e.target : null);
-        if (target && target.classList.contains('group-select-checkbox')) {
-            selectWholeCluster(target.checked);
         }
     });
 

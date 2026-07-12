@@ -5,7 +5,7 @@
 ## Page architecture (redesigned — old notes about a flat face grid are obsolete)
 - `/faces` renders `.suggestion-group` clusters server-side, but the `.face[data-face-id]` thumbnails are painted CLIENT-SIDE into the ACTIVE group's `.grid` only. One cluster is visible at a time; the rest carry the `hidden` attribute.
 - Each group's complete face list is in its `data-faces` JSON attribute: `[{id, photo_date, similarity}]`. Assert on this payload for hidden groups or whole-cluster properties.
-- All faces of the active cluster start SELECTED. Deselect all via the group's `.group-select-checkbox`; click individual faces to toggle. There is NO `#deselect-all` button anymore.
+- All faces of the active cluster start SELECTED. Deselect all via the group's `.cluster-select-all` chip (a toggle whose label names its next action: 'Clear selection' when everything is selected, 'Select all N faces' otherwise); click individual faces to toggle. There is NO `#deselect-all` button anymore.
 - Assigning or skipping (`.skip-cluster-btn`) advances to the next cluster, or reloads the page for the next batch when none remain.
 - Per-cluster pager (`.cluster-first/.cluster-prev/.cluster-next/.cluster-last`, `.sample-range`) pages through samples of 50 faces; there is NO page-size select / global pagination on this page anymore.
 - Clusters come from DBSCAN with `min_samples=3` → every similarity group has ≥ 3 faces. People-mode groups are named after the person in `.cluster-name` and have `.assign-group-btn[data-person-id][data-person-name]` buttons; unmatched faces go to an "Unknown" group whose faces have `similarity: null`.

@@ -135,8 +135,10 @@ test.describe('Face Assignment', () => {
     const firstFace = firstGroup.locator('.face').first();
     await expect(firstFace).toBeVisible();
 
-    // Deselect the whole cluster, then select a single face
-    await firstGroup.locator('.group-select-checkbox').uncheck();
+    // Deselect the whole cluster, then select a single face. The select-all control
+    // is a chip whose label names its next action, so with everything selected it
+    // reads "Clear selection".
+    await firstGroup.locator('.cluster-select-all').click();
     await expect(firstFace).not.toHaveClass(/selected/);
     await firstFace.click();
     await expect(firstFace).toHaveClass(/selected/);
@@ -201,8 +203,9 @@ test.describe('Face Assignment', () => {
       expect(faces.length).toBeGreaterThanOrEqual(3);
     }
 
-    // The first group is active with everything selected for quick assignment
-    await expect(groups.first().locator('.group-select-checkbox')).toBeChecked();
+    // The first group is active with everything selected for quick assignment — so
+    // the select-all chip offers to CLEAR it.
+    await expect(groups.first().locator('.cluster-select-all')).toHaveText(/Clear selection/);
     await expect(groups.first().locator('.face.selected').first()).toBeVisible();
 
     // Only one cluster is worked on at a time; the rest stay hidden
