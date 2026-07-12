@@ -57,7 +57,7 @@ def test_page_translates_shared_utilities_navigation(app, client):
     assert ">Benutzerdefiniert</h3>" in body
     assert "Neue Automatisierung" in body
     assert 'placeholder="z. B. Strandfotos taggen, Wöchentliche Bereinigung"' in body
-    assert '<span class="automation-nav-badge">An</span>' in body
+    assert '<span class="chip chip-success">An</span>' in body
     assert "System task" in body
     assert "Custom task" in body
 

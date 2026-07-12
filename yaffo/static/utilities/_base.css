@@ -29,18 +29,6 @@
     margin: 16px 0 8px;
 }
 
-.automation-nav-badge {
-    flex: none;
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 1px 6px;
-    border-radius: var(--radius-sm);
-    background: var(--color-success-soft);
-    color: var(--color-success-soft-text);
-}
-
 .new-automation-button {
     width: 100%;
     margin-top: 16px;

@@ -238,14 +238,8 @@ test.describe('Automations', () => {
   });
 
   test('automations_run_now', async ({ page }) => {
-    // A trigger-less automation warns instead of running.
-    const slug = await ensureCustomAutomation(page);
-    await openAutomation(page, slug);
-    await page.locator('#run-automation-button').click();
-    await expect(page.locator('.notification.visible')).toContainText(/no triggers/i);
-
     // tag-recent-imports (seeded custom automation with published code) has a
-    // schedule trigger, so it gets the plain context-less Run now. Note: file_sync
+    // schedule trigger. Note: file_sync
     // is a poor target here — it records no run Job when the index is already in
     // sync. The run is enqueued (202) and lands in Run history once the taskq
     // worker records its Job (the section self-polls every 5s).
@@ -255,10 +249,11 @@ test.describe('Automations', () => {
     // change of the history section instead.
     const runList = page.locator('#automation-runs');
     const historyBefore = (await runList.innerText()).trim();
+    await page.locator('.js-run-files').click();
     await Promise.all([
       page.waitForResponse(response =>
         response.url().includes('/utilities/automations/tag-recent-imports/run') && response.status() === 202),
-      page.locator('#run-automation-button').click(),
+      pickCurrentFolder(page),
     ]);
     await expect(page.locator('.notification.visible')).toContainText(/Run started/i);
     await expect.poll(async () => (await runList.innerText()).trim(), { timeout: 60_000 })

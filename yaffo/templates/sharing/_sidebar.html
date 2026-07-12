@@ -24,11 +24,13 @@
                class="{% if selected_key == device.device_id %}active{% endif %}">
                 <span class="panel-nav-label">{{ device.display_name }}</span>
                 {% if not device.trusted %}
-                <span class="sharing-nav-badge sharing-nav-badge-revoked">{{ _("Revoked") }}</span>
+                <span class="chip chip-danger">{{ _("Revoked") }}</span>
                 {% elif device.presence == 'local' %}
-                <span class="sharing-nav-badge sharing-nav-badge-local">{{ _("Local") }}</span>
+                <span class="chip chip-accent">{{ _("Local") }}</span>
                 {% elif device.presence == 'online' %}
-                <span class="sharing-nav-badge sharing-nav-badge-online">{{ _("Online") }}</span>
+                <span class="chip chip-success">{{ _("Online") }}</span>
+                {% elif device.presence == 'offline' %}
+                <span class="chip">{{ _("Offline") }}</span>
                 {% endif %}
             </a>
         </li>
@@ -37,4 +39,36 @@
     {% else %}
     <p class="no-data">{{ _("No paired devices yet") }}</p>
     {% endif %}
+
+    <h3>{{ _("Shared With Others") }}</h3>
+    {% if sharing.outbound_shares %}
+    <ul class="panel-nav sharing-shares-nav">
+        {% for share in sharing.outbound_shares %}
+        <li class="sharing-share-nav-item">
+            <span class="sharing-share-label">{{ share.device_name }} - {{ share.share_name }}</span>
+            <button type="button"
+                    class="chip chip-action chip-danger"
+                    data-sharing-confirm="revoke"
+                    data-confirm-title="{{ _('Revoke share?') }}"
+                    data-confirm-message="{{ _('Revoke this share from %(device)s?', device=share.device_name) }}"
+                    data-confirm-text="{{ _('Revoke') }}"
+                    aria-label="{{ _('Revoke share from %(device)s', device=share.device_name) }}"
+                    hx-post="{{ url_for('sharing_sidebar_grant_revoke', grant_id=share.grant_id, selected=selected_key) }}"
+                    hx-target="#sharing-sidebar" hx-swap="outerHTML">
+                {{ _("Revoke") }}
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="no-data">{{ _("No shares with other devices") }}</p>
+    {% endif %}
+
+    <div id="sharing-sidebar-shared-with-me"
+         hx-get="{{ url_for('sharing_sidebar_shared_with_me', selected=selected_key) }}"
+         hx-trigger="load"
+         hx-swap="outerHTML">
+        <h3>{{ _("Shared With Me") }}</h3>
+        <p class="no-data">{{ _("Loading shared folders…") }}</p>
+    </div>
 </nav>

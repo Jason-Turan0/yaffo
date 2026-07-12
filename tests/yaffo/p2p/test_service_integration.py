@@ -291,9 +291,9 @@ def test_revoking_unknown_device_raises(two_devices):
 
 def test_pair_and_revoke_entirely_through_the_ui_routes(two_devices):
     """The Phase 3 exit criteria: two instances pair, show each other
-    online, and revoke — driven only through the Settings routes the
-    browser uses (generate code on A, paste on B, presence badges, revoke
-    on A, B's row flips via the signed notice)."""
+    online, and revoke — driven only through the routes the browser uses
+    (generate code on A, paste on B, presence chips in the sidebar, revoke
+    on A's device page, B's sidebar flips via the signed notice)."""
     (app_a, service_a), (app_b, service_b) = two_devices
     client_a, client_b = app_a.test_client(), app_b.test_client()
     id_a = service_a.identity.device_id
@@ -306,31 +306,31 @@ def test_pair_and_revoke_entirely_through_the_ui_routes(two_devices):
     assert "data:image/svg+xml" in body
     code = re.search(r'class="pairing-code-text"[^>]*>\s*([^<]+?)\s*</textarea>', body).group(1)
 
-    # B: paste it. The response is the re-rendered section listing A.
+    # B: paste it. Pairing is confirmed by the toast naming A.
     resp = client_b.post("/sharing/pair", data={"code": code})
     assert resp.status_code == 200, resp.get_data(as_text=True)
     assert "showNotification" in resp.headers.get("HX-Trigger", "")
-    assert id_a in resp.get_data(as_text=True)
+    assert id_a in resp.headers["HX-Trigger"]
 
-    # Presence badges: each side's page shows the other device online, and
-    # B's sidebar + device page list A.
-    assert "presence-online" in client_a.get("/sharing/settings/section").get_data(as_text=True)
-    body_b = client_b.get("/sharing/settings").get_data(as_text=True)
-    assert id_a in body_b and "presence-online" in body_b
+    # Presence chips: each side's sidebar shows the other device online, and
+    # B can open A's device page.
+    assert "chip chip-success" in client_a.get("/sharing/sidebar").get_data(as_text=True)
+    sidebar_b = client_b.get("/sharing/sidebar").get_data(as_text=True)
+    assert id_a in sidebar_b and "chip chip-success" in sidebar_b
     assert client_b.get(f"/sharing/devices/{id_a}").status_code == 200
 
-    # A revokes B through the UI; A's row flips immediately.
-    resp = client_a.post("/sharing/revoke", data={"device_id": id_b})
+    # A revokes B from B's device page; the re-rendered content flips immediately.
+    resp = client_a.post(f"/sharing/devices/{id_b}/revoke")
     assert resp.status_code == 200
     assert "Revoked" in resp.get_data(as_text=True)
 
-    # B's row for A flips once the signed courtesy notice lands.
+    # B's sidebar entry for A flips once the signed courtesy notice lands.
     deadline = time.time() + 5
     while time.time() < deadline:
-        if "Revoked" in client_b.get("/sharing/settings/section").get_data(as_text=True):
+        if "Revoked" in client_b.get("/sharing/sidebar").get_data(as_text=True):
             break
         time.sleep(0.1)
-    assert "Revoked" in client_b.get("/sharing/settings/section").get_data(as_text=True)
+    assert "Revoked" in client_b.get("/sharing/sidebar").get_data(as_text=True)
 
 
 def test_download_all_batch_rides_one_transfer_session(two_devices, loopback_hub, tmp_path):

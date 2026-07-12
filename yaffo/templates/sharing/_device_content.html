@@ -1,0 +1,43 @@
+{% from "components/page_header.html" import page_header %}
+
+{% set device_title %}
+    {{ device.display_name }}
+    {% if not device.trusted %}
+    <span class="chip chip-danger">{{ _("Revoked") }}</span>
+    {% elif device.presence == 'local' %}
+    <span class="chip chip-accent">{{ _("Local") }}</span>
+    {% elif device.presence == 'online' %}
+    <span class="chip chip-success">{{ _("Online") }}</span>
+    {% elif device.presence == 'offline' %}
+    <span class="chip">{{ _("Offline") }}</span>
+    {% else %}
+    <span class="chip">{{ _("Unknown") }}</span>
+    {% endif %}
+{% endset %}
+
+{% set device_actions %}
+    {% if device.trusted %}
+        {% set revoke_message = _('Revoke %(name)s? It will lose access to everything shared with it. Files it already copied stay on it.', name=device.display_name) %}
+        <button type="button" class="btn-danger" data-icon="delete"
+                data-sharing-confirm="revoke"
+                data-confirm-title="{{ _('Revoke device?') }}"
+                data-confirm-message="{{ revoke_message }}"
+                data-confirm-text="{{ _('Revoke') }}"
+                hx-post="{{ url_for('sharing_device_revoke', device_id=device.device_id) }}"
+                hx-confirm="{{ revoke_message }}"
+                hx-target=".sharing-content" hx-swap="innerHTML">{{ _("Revoke") }}</button>
+    {% else %}
+        {% set delete_message = _('Delete %(name)s from this device? Pair it again later if you want to restore it.', name=device.display_name) %}
+        <button type="button" class="btn-danger" data-icon="delete"
+                data-sharing-confirm="delete"
+                data-confirm-title="{{ _('Delete device?') }}"
+                data-confirm-message="{{ delete_message }}"
+                data-confirm-text="{{ _('Delete') }}"
+                hx-post="{{ url_for('sharing_device_delete', device_id=device.device_id) }}"
+                hx-confirm="{{ delete_message }}">{{ _("Delete") }}</button>
+    {% endif %}
+{% endset %}
+
+{{ page_header(device_title, _('A device paired with this one'), actions=device_actions) }}
+{% include "sharing/_transfers_panel.html" %}
+{% include "sharing/_device_panel.html" %}

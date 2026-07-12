@@ -54,6 +54,14 @@ mount_data_dir() {
 
   ensure_key
   require_vm
+  if ! vm_has_external_ip; then
+    cat >&2 <<ERROR
+sshfs mounting is not currently wired through IAP for the private NAT topology.
+Use ./copy-media.sh for file copy, or inspect the VM with:
+  gcloud compute ssh $VM_NAME --zone $ZONE --project $PROJECT --tunnel-through-iap --ssh-key-file=$KEY
+ERROR
+    exit 1
+  fi
   mkdir -p "$MOUNT_POINT"
 
   if is_mounted; then
@@ -61,17 +69,16 @@ mount_data_dir() {
     return 0
   fi
 
-  local ip
-  ip="$(vm_ip)"
+  local sshfs_args=()
+  while IFS= read -r option; do
+    sshfs_args+=("$option")
+  done < <(sshfs_options)
 
   echo "Mounting $VM_NAME:$REMOTE_DATA_DIR -> $MOUNT_POINT ..."
   sshfs \
-    -o IdentityFile="$KEY" \
-    -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null \
-    -o ConnectTimeout=10 \
+    "${sshfs_args[@]}" \
     -o reconnect \
-    "$SSH_USER@$ip:$REMOTE_DATA_DIR" \
+    "$SSH_USER@$(peer_ssh_host):$REMOTE_DATA_DIR" \
     "$MOUNT_POINT"
 
   echo "Mounted. Unmount with: ./mount-data-dir.sh unmount"

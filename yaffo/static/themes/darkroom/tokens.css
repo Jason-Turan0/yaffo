@@ -31,6 +31,7 @@
     --color-accent-hover: #f2b455;
     --color-accent-soft: rgba(232, 163, 61, 0.14);
     --color-accent-soft-text: #e8a33d;
+    --color-accent-soft-border: rgba(232, 163, 61, 0.35);
     --color-on-accent: #1a1205;
 
     /* Status — desaturated for dark panels; soft fills are translucent */

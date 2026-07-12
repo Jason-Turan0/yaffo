@@ -18,14 +18,16 @@ fi
 
 ensure_key
 require_vm
-IP=$(vm_ip)
 
 echo "Copying contents of $LOCAL_DIR -> $VM_NAME:$REMOTE_MEDIA_DIR ..."
 # tar over ssh: one round trip, keeps subdirectory structure, and
 # COPYFILE_DISABLE stops macOS from adding ._AppleDouble junk that the
 # indexer would then try to parse as photos.
-COPYFILE_DISABLE=1 tar czf - -C "$LOCAL_DIR" --exclude ".DS_Store" . |
-  ssh "${SSH_OPTS[@]}" "$SSH_USER@$IP" "mkdir -p $REMOTE_MEDIA_DIR && tar xzf - -C $REMOTE_MEDIA_DIR"
+MEDIA_TARBALL=$(mktemp -t yaffo_media.XXXXXX.tar.gz)
+trap 'rm -f "$MEDIA_TARBALL"' EXIT
+COPYFILE_DISABLE=1 tar czf "$MEDIA_TARBALL" -C "$LOCAL_DIR" --exclude ".DS_Store" .
+peer_scp_to "$MEDIA_TARBALL" "/tmp/yaffo-media.tar.gz"
+peer_ssh "mkdir -p $REMOTE_MEDIA_DIR && tar xzf /tmp/yaffo-media.tar.gz -C $REMOTE_MEDIA_DIR && rm -f /tmp/yaffo-media.tar.gz"
 
 echo "Done. If $REMOTE_MEDIA_DIR is already a configured media directory,"
 echo "the watcher will index the new files; otherwise add it in the peer's"

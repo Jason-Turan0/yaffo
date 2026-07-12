@@ -78,6 +78,17 @@ def rename_device(session: Session, device_id: str, display_name: str) -> bool:
     return True
 
 
+def delete_revoked_device(session: Session, device_id: str) -> bool:
+    """Forget a revoked device and its grants. Trusted devices must be revoked
+    first so deletion cannot accidentally grant silent future access."""
+    device = session.get(KnownDevice, device_id)
+    if device is None or device.trust_state != TRUST_STATE_REVOKED:
+        return False
+    session.delete(device)
+    session.commit()
+    return True
+
+
 def touch_last_seen(session: Session, device_id: str) -> None:
     """Record evidence the peer is alive (a successful authenticated
     exchange). Presence itself is never persisted — this is display-only."""

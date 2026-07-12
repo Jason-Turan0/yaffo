@@ -281,6 +281,11 @@ class TransferManager:
         """The soft relay budget's continue-anyway."""
         return self._service._submit(self._allow_overage_async(batch_id), timeout=10.0)
 
+    def delete(self, batch_id: str) -> bool:
+        """Remove an inactive batch from the status UI. Active batches must be
+        cancelled first so this never hides live work."""
+        return self._service._submit(self._delete_async(batch_id), timeout=10.0)
+
     # ---- engine-loop side --------------------------------------------------
 
     async def _admit(self, batch: TransferBatch) -> None:
@@ -314,6 +319,13 @@ class TransferManager:
         batch.relay_overage_allowed = True
         if batch.resume_event is not None:
             batch.resume_event.set()
+        return True
+
+    async def _delete_async(self, batch_id: str) -> bool:
+        batch = self._batches.get(batch_id)
+        if batch is None or batch.active:
+            return False
+        self._batches.pop(batch_id, None)
         return True
 
     def _describe(self, batch: TransferBatch) -> dict:

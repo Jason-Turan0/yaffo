@@ -64,6 +64,15 @@ def format_date(
     return babel_format_datetime(display_value, format="medium", locale=_locale())
 
 
+def utc_iso(value: DateValue) -> str:
+    """Serialize a UTC application timestamp with an explicit offset for browser display."""
+    parsed = _parse_datetime(value)
+    if not isinstance(parsed, datetime):
+        return ""
+    aware = parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+    return aware.isoformat()
+
+
 def format_integer(value: NumericValue) -> str:
     if value is None:
         return ""
@@ -125,6 +134,7 @@ def init_template_filters(app) -> None:
     app.add_template_filter(format_decimal, "format_decimal")
     app.add_template_filter(format_percent, "format_percent")
     app.add_template_filter(format_coordinate, "format_coordinate")
+    app.add_template_filter(utc_iso, "utc_iso")
 
     @app.template_filter("format_date")
     def format_date_filter(

@@ -58,7 +58,7 @@ def event_chain_scope(origin_automation_ids: list[int] | None, automation_id: in
         _event_chain.reset(token)
 
 
-# event_type stamped on the EventContext of a manual "Run now" over a picked
+# event_type stamped on the EventContext of a manual run over a picked
 # file/folder (no domain event fired it). Handlers act on media_item_ids regardless;
 # custom scripts can read ctx['event_type'] to tell a manual run from a real event.
 MANUAL_RUN_EVENT_TYPE = "manual"

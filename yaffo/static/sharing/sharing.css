@@ -21,29 +21,27 @@
     width: 100%;
 }
 
-.sharing-nav-badge {
-    flex: none;
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 1px 6px;
+.sharing-shares-nav {
+    display: grid;
+    gap: 8px;
+}
+
+.sharing-share-nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px;
+    border: var(--border-width) solid var(--color-border-subtle);
     border-radius: var(--radius-sm);
+    background: var(--color-surface);
 }
 
-.sharing-nav-badge-online {
-    background: var(--color-success-soft);
-    color: var(--color-success-soft-text);
-}
-
-.sharing-nav-badge-local {
-    background: var(--color-accent-soft);
-    color: var(--color-accent-soft-text);
-}
-
-.sharing-nav-badge-revoked {
-    background: var(--color-danger-soft);
-    color: var(--color-danger-soft-text);
+.sharing-share-label {
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+    overflow-wrap: anywhere;
+    min-width: 0;
 }
 
 .sharing-panel {
@@ -74,6 +72,34 @@
     margin-bottom: 0;
 }
 
+/* Settings status strip: this device's identity on the left, hub connection on
+   the right. Read-only context for pairing, so it is deliberately not styled
+   like the form controls below it. */
+.device-status-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    padding: 14px 20px;
+}
+
+.device-status-item {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+.device-status-label {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+}
+
 .device-identity {
     display: flex;
     flex-wrap: wrap;
@@ -88,6 +114,16 @@
     color: var(--color-text);
 }
 
+/* .hint-text carries no margins of its own, so a <p> hint falls back to the
+   browser's 1em block margins. Tighten it against the control it explains. */
+.sharing-panel .hint-text {
+    margin: 6px 0 0;
+}
+
+.pairing-form .hint-text {
+    margin: 0 0 12px;
+}
+
 .device-id {
     font-family: var(--font-mono);
     font-size: var(--font-size-base);
@@ -95,35 +131,6 @@
     background: var(--color-surface-sunken);
     padding: 2px 6px;
     border-radius: var(--radius-sm);
-}
-
-.presence-badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    border: var(--border-width) solid var(--color-border);
-    background: var(--color-surface-sunken);
-    color: var(--color-text-muted);
-}
-
-.presence-online {
-    background: var(--color-success-soft);
-    border-color: var(--color-success-soft-border);
-    color: var(--color-success-soft-text);
-}
-
-.presence-local {
-    background: var(--color-accent-soft);
-    border-color: var(--color-accent-soft-text);
-    color: var(--color-accent-soft-text);
-}
-
-.presence-revoked {
-    background: var(--color-danger-soft);
-    border-color: var(--color-danger-soft-border);
-    color: var(--color-danger-soft-text);
 }
 
 .pairing-forms {
@@ -242,13 +249,6 @@
     gap: 10px;
 }
 
-.device-detail-status {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
 .device-rename-form {
     margin-bottom: 24px;
 }
@@ -296,6 +296,18 @@
     color: var(--color-text);
 }
 
+.share-grant-panel {
+    margin-top: 14px;
+}
+
+.share-grant-actions {
+    margin-top: 14px;
+}
+
+.share-grant-actions .btn-secondary {
+    width: fit-content;
+}
+
 .share-grant-controls {
     display: flex;
     align-items: stretch;
@@ -306,47 +318,6 @@
 .share-grant-controls input {
     min-width: 0;
     flex: 1;
-}
-
-.share-grants-list {
-    display: grid;
-    gap: 10px;
-    margin-top: 14px;
-}
-
-.share-grant-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding: 12px 14px;
-    background: var(--color-bg);
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-sm);
-}
-
-.share-grant-details {
-    display: grid;
-    gap: 3px;
-    min-width: 0;
-}
-
-.share-grant-details strong,
-.share-grant-details .known-device-meta {
-    overflow-wrap: anywhere;
-}
-
-.share-grant-scope {
-    width: fit-content;
-    padding: 1px 7px;
-    border-radius: var(--radius-sm);
-    background: var(--color-surface-sunken);
-    color: var(--color-text-muted);
-    border: var(--border-width) solid var(--color-border-subtle);
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    text-transform: uppercase;
 }
 
 .remote-files-list {

@@ -171,6 +171,8 @@ type DateUtils = {
 type UtilsNamespace = {
     locale?: string;
     initImageFallbacks?: () => void;
+    initLocalDateTimes?: () => void;
+    formatLocalDateTimes?: (root?: Document | Element) => void;
     date?: DateUtils;
 };
 
@@ -420,7 +422,6 @@ type AutomationsNamespace = {
     initAutomationRunNow?: (
         runUrl: string,
         config: AppConfig,
-        hasTriggers: boolean,
         defaultPath: string | null | undefined,
         i18n: I18nService,
     ) => void;

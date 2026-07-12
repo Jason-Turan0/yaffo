@@ -97,7 +97,7 @@ def sharing_context() -> dict:
         except Exception:  # noqa: BLE001 — local presence is display-only too
             local = set()
     devices = [_device_row(d, online, local) for d in p2p_repository.list_known_devices(db.session)]
-    context = {"available": available, "devices": devices}
+    context = {"available": available, "devices": devices, "outbound_shares": _outbound_share_rows()}
     if available:
         context.update(
             device_id=service.identity.device_id,
@@ -156,36 +156,72 @@ def _validated_download_dir(raw_value: str) -> Path:
     return directory
 
 
-def _active_grant_rows(peer_device_id: str) -> list[dict]:
+def _outbound_share_rows() -> list[dict]:
+    devices = {device.device_id: device for device in p2p_repository.list_known_devices(db.session)}
     media_dirs = {choice["id"]: choice for choice in _media_dir_choices()}
     rows = []
-    for grant in p2p_repository.list_active_grants(db.session, peer_device_id):
+    for grant in p2p_repository.list_active_grants(db.session):
+        device = devices.get(grant.peer_device_id)
         media_dir = media_dirs.get(grant.media_dir_id or "")
         if grant.scope_type == GRANT_SCOPE_MEDIA_DIR:
-            scope_label = gettext("Media directory")
-            name = media_dir["name"] if media_dir else grant.media_dir_id
-            detail = media_dir["path"] if media_dir else gettext("Media directory was removed.")
+            share_name = media_dir["name"] if media_dir else grant.media_dir_id or gettext("Unknown share")
         elif grant.scope_type == GRANT_SCOPE_FOLDER:
-            scope_label = gettext("Folder")
-            name = grant.relative_path
-            detail = (
-                str(Path(media_dir["path"]) / grant.relative_path)
-                if media_dir and grant.relative_path
-                else gettext("Media directory was removed.")
-            )
+            share_name = grant.relative_path or gettext("Folder")
         else:
-            scope_label = grant.scope_type
-            name = grant.relative_path or grant.media_dir_id or gettext("Unknown scope")
-            detail = ""
+            share_name = grant.relative_path or grant.media_dir_id or gettext("Unknown share")
         rows.append(
             {
-                "id": grant.id,
-                "scope_label": scope_label,
-                "name": name,
-                "detail": detail,
+                "grant_id": grant.id,
+                "device_id": grant.peer_device_id,
+                "device_name": (device.display_name if device else grant.peer_device_id) or grant.peer_device_id,
+                "share_name": share_name,
             }
         )
     return rows
+
+
+def _remote_scope_label(scope: dict) -> str:
+    name = scope.get("name") or scope.get("media_dir_id") or gettext("Shared folder")
+    relative_path = scope.get("relative_path") or ""
+    if relative_path:
+        return f"{name} / {relative_path}"
+    return name
+
+
+def _shared_with_me_rows(context: dict) -> tuple[list[dict], str | None]:
+    service = _service()
+    if service is None:
+        return [], gettext("Device sharing is not running.")
+
+    rows = []
+    had_error = False
+    for device in context["devices"]:
+        if not device["trusted"]:
+            continue
+        try:
+            remote_shared = service.list_shared.send(device["device_id"])
+        except (CallError, P2PServiceError) as exc:
+            had_error = True
+            logger.warning("sidebar shared-with-me failed peer=%s error=%s", device["device_id"], exc)
+            continue
+        except FutureTimeoutError:
+            had_error = True
+            logger.warning("sidebar shared-with-me timed out peer=%s", device["device_id"])
+            continue
+
+        for scope in remote_shared.get("scopes", []) if isinstance(remote_shared, dict) else []:
+            rows.append(
+                {
+                    "device_id": device["device_id"],
+                    "device_name": device["display_name"],
+                    "media_dir_id": scope.get("media_dir_id") or "",
+                    "scope": scope.get("relative_path") or "",
+                    "share_name": _remote_scope_label(scope),
+                }
+            )
+
+    error = gettext("Some shared folders could not be loaded.") if had_error else None
+    return rows, error
 
 
 def _remote_filter_payload(selections: dict) -> dict:
@@ -248,6 +284,13 @@ def _resolve_folder_grant(folder_path: str) -> tuple[str, str | None]:
 
 
 def init_sharing_routes(app: Flask):
+    def render_sidebar(selected_key: str = ""):
+        return render_template(
+            "sharing/_sidebar.html",
+            sharing=sharing_context(),
+            selected_key=selected_key,
+        )
+
     def render_settings_section():
         return render_template("sharing/_devices_section.html", sharing=sharing_context())
 
@@ -261,17 +304,20 @@ def init_sharing_routes(app: Flask):
             sharing=context,
             device=device,
             media_dirs=_media_dir_choices(),
-            grants=_active_grant_rows(device_id),
-            remote_shared=None,
         )
 
-    def render_remote_panel(device: dict, remote_shared: dict | None = None, remote_error: str | None = None):
+    def render_device_content(device_id: str):
+        context = sharing_context()
+        device = next((d for d in context["devices"] if d["device_id"] == device_id), None)
+        if device is None:
+            abort(404)
         return render_template(
-            "sharing/_remote_panel.html",
+            "sharing/_device_content.html",
+            sharing=context,
             device=device,
+            selected_key=device_id,
             media_dirs=_media_dir_choices(),
-            remote_shared=remote_shared,
-            remote_error=remote_error,
+            transfers=_transfers_for(device_id),
         )
 
     @app.route("/sharing", methods=["GET"])
@@ -299,8 +345,6 @@ def init_sharing_routes(app: Flask):
             device=device,
             selected_key=device_id,
             media_dirs=_media_dir_choices(),
-            grants=_active_grant_rows(device_id),
-            remote_shared=None,
             transfers=_transfers_for(device_id),
         )
 
@@ -308,11 +352,27 @@ def init_sharing_routes(app: Flask):
     def sharing_sidebar():
         """Sidebar fragment; re-fetched via the sharingDevicesChanged trigger
         after pairing/revocation/rename so the device list stays current."""
+        return render_sidebar(request.args.get("selected", ""))
+
+    @app.route("/sharing/sidebar/shared-with-me", methods=["GET"])
+    def sharing_sidebar_shared_with_me():
+        context = sharing_context()
+        rows, error = _shared_with_me_rows(context)
         return render_template(
-            "sharing/_sidebar.html",
-            sharing=sharing_context(),
+            "sharing/_sidebar_shared_with_me.html",
+            rows=rows,
+            error=error,
             selected_key=request.args.get("selected", ""),
         )
+
+    @app.route("/sharing/grants/<int:grant_id>/revoke", methods=["POST"])
+    def sharing_sidebar_grant_revoke(grant_id: int):
+        """Revoke a local grant from the sidebar's Shared With Others list."""
+        active_ids = {grant.id for grant in p2p_repository.list_active_grants(db.session)}
+        if grant_id not in active_ids:
+            return _notify(gettext("Share grant is no longer active."))
+        p2p_repository.revoke_grant(db.session, grant_id)
+        return _with_toast(render_sidebar(request.args.get("selected", "")), gettext("Share grant revoked."))
 
     @app.route("/sharing/settings/section", methods=["GET"])
     def sharing_settings_section():
@@ -393,7 +453,16 @@ def init_sharing_routes(app: Flask):
         ok, message = _revoke(device_id)
         if not ok:
             return _notify(message)
-        return _with_toast(render_device_panel(device_id), message)
+        return _with_toast(render_device_content(device_id), message)
+
+    @app.route("/sharing/devices/<device_id>/delete", methods=["POST"])
+    def sharing_device_delete(device_id: str):
+        """Forget a device after it has been revoked."""
+        if not p2p_repository.delete_revoked_device(db.session, device_id):
+            return _notify(gettext("Revoke this device before deleting it."))
+        response = _notify(gettext("Device deleted."), "success")
+        response.headers["HX-Redirect"] = url_for("sharing_settings")
+        return response
 
     @app.route("/sharing/devices/<device_id>/rename", methods=["POST"])
     def sharing_device_rename(device_id: str):
@@ -403,7 +472,7 @@ def init_sharing_routes(app: Flask):
             return _notify(gettext("Device name cannot be empty."))
         if not p2p_repository.rename_device(db.session, device_id, name):
             return _notify(gettext("%(device)s is not a known device.", device=device_id))
-        return _with_toast(render_device_panel(device_id), gettext("Device renamed."))
+        return _with_toast(render_device_content(device_id), gettext("Device renamed."))
 
     @app.route("/sharing/download-directory", methods=["POST"])
     def sharing_download_directory():
@@ -464,16 +533,7 @@ def init_sharing_routes(app: Flask):
                 return _notify(gettext("Choose what to share."))
         except ValueError as exc:
             return _notify(str(exc))
-        return _with_toast(render_device_panel(device_id), gettext("Share grant added."), devices_changed=False)
-
-    @app.route("/sharing/devices/<device_id>/grants/<int:grant_id>/revoke", methods=["POST"])
-    def sharing_device_grant_revoke(device_id: str, grant_id: int):
-        """Revoke one local share grant; the row stays as history."""
-        active_ids = {grant.id for grant in p2p_repository.list_active_grants(db.session, device_id)}
-        if grant_id not in active_ids:
-            return _notify(gettext("Share grant is no longer active."))
-        p2p_repository.revoke_grant(db.session, grant_id)
-        return _with_toast(render_device_panel(device_id), gettext("Share grant revoked."), devices_changed=False)
+        return _with_toast(render_device_panel(device_id), gettext("Share grant added."))
 
     @app.route("/sharing/devices/<device_id>/files", methods=["GET"])
     def sharing_device_files(device_id: str):
@@ -605,41 +665,6 @@ def init_sharing_routes(app: Flask):
         response.headers["Content-Type"] = "image/jpeg"
         response.headers["Cache-Control"] = "private, max-age=604800"
         return response
-
-    @app.route("/sharing/devices/<device_id>/shared", methods=["POST"])
-    def sharing_device_remote_shared(device_id: str):
-        """Ask a peer for the scopes it currently grants to this device.
-        Fired by the panel's own load trigger (and its Try-again button), so
-        errors render inline — a 204 toast would strand the loading
-        placeholder."""
-        context = sharing_context()
-        device = next((d for d in context["devices"] if d["device_id"] == device_id), None)
-        if device is None:
-            return _notify(gettext("%(device)s is not a known device.", device=device_id))
-        if not device["trusted"]:
-            return render_remote_panel(device)  # the template shows the revoked state
-        service = _service()
-        if service is None:
-            return render_remote_panel(device, remote_error=gettext("Device sharing is not running."))
-        try:
-            logger.info("browse shared scopes start peer=%s", device_id)
-            remote_shared = service.list_shared.send(device_id)
-        except (CallError, P2PServiceError) as exc:
-            logger.warning("browse shared scopes failed peer=%s error=%s", device_id, exc)
-            return render_remote_panel(
-                device, remote_error=gettext("Could not load shared folders: %(reason)s", reason=str(exc))
-            )
-        except FutureTimeoutError:
-            logger.warning("browse shared scopes timed out peer=%s", device_id)
-            return render_remote_panel(
-                device, remote_error=gettext("Loading shared folders timed out — is the other device online?")
-            )
-        logger.info(
-            "browse shared scopes done peer=%s scopes=%d",
-            device_id,
-            len(remote_shared.get("scopes", [])) if isinstance(remote_shared, dict) else 0,
-        )
-        return render_remote_panel(device, remote_shared)
 
     def _transfer_prerequisites(device_id: str):
         """Shared validation for the transfer-enqueue routes. Returns
@@ -795,3 +820,24 @@ def init_sharing_routes(app: Flask):
             gettext("Continuing over the relay.") if resumed else gettext("Transfer is no longer active.")
         )
         return _with_toast(_render_transfers_panel(device_id), message, devices_changed=False)
+
+    @app.route("/sharing/devices/<device_id>/transfers/<batch_id>/delete", methods=["POST"])
+    def sharing_transfer_delete(device_id: str, batch_id: str):
+        service = _service()
+        if service is None:
+            return _notify(gettext("Device sharing is not running."))
+        try:
+            deleted = service.transfers.delete(batch_id)
+        except (P2PServiceError, FutureTimeoutError):
+            deleted = False
+        message = (
+            gettext("Transfer deleted.")
+            if deleted
+            else gettext("Cancel or finish this transfer before deleting it.")
+        )
+        return _with_toast(
+            _render_transfers_panel(device_id),
+            message,
+            "success" if deleted else "error",
+            devices_changed=False,
+        )

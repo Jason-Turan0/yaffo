@@ -77,19 +77,15 @@ automations.initAutomationDetails = () => {
     button.addEventListener('click', modal.open);
 };
 
-// Wire "Run now". An automation whose triggers are all events has a scoped Run
-// button that picks a file or folder and runs over the photos under it; anything
-// else has a plain button that fires context-less. A trigger-less automation still
-// shows the plain button, but clicking it only warns (add a trigger first) and does
-// not run. Otherwise the run is enqueued async and shows up in Run history.
+// Wire "Run...": pick a file or folder and run over the indexed photos under it.
+// The run is enqueued async and shows up in Run history once a worker records it.
 /**
  * @param {string} runUrl
  * @param {AppConfig} config
- * @param {boolean} hasTriggers
  * @param {string | null} defaultPath
  * @param {I18nService} i18n
  */
-automations.initAutomationRunNow = (runUrl, config, hasTriggers, defaultPath = null, i18n) => {
+automations.initAutomationRunNow = (runUrl, config, defaultPath = null, i18n) => {
     /**
      * @param {HTMLButtonElement} button
      * @param {{ path: string } | null} body
@@ -114,17 +110,6 @@ automations.initAutomationRunNow = (runUrl, config, hasTriggers, defaultPath = n
             button.disabled = false;
         }
     };
-
-    const plainButton = /** @type {HTMLButtonElement | null} */ (document.getElementById('run-automation-button'));
-    if (plainButton) {
-        plainButton.addEventListener('click', () => {
-            if (!hasTriggers) {
-                automationsWindow.notification.warning(i18n.t('utilities:automations.run.noTriggers'));
-                return;
-            }
-            post(plainButton, null);
-        });
-    }
 
     document.querySelectorAll('.js-run-files').forEach((element) => {
         const button = /** @type {HTMLButtonElement} */ (element);

@@ -1,0 +1,3 @@
+{% macro local_datetime(value, class_name='') -%}
+<span{% if class_name %} class="{{ class_name }}"{% endif %}{% if value %} data-local-datetime="{{ value | utc_iso }}"{% endif %}>{{ value | format_date(utc=True) }}</span>
+{%- endmacro %}

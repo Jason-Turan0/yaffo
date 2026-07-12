@@ -83,6 +83,20 @@ For an example drift guard, see `tests/yaffo/site_agents/test_schemas.py`, where
 
 ## Global JavaScript Components
 
+### Browser-Local Timestamps
+
+App-generated timestamps such as job run times, pairing times, and `created_at` /
+`started_at` / `completed_at` fields are stored as UTC. Do not render those as
+final server-formatted text, because deployed servers may run in UTC while the
+user's browser is local. Render them with the `local_datetime` macro, which emits
+a server-rendered fallback plus a `data-local-datetime` UTC ISO value; global
+JavaScript formats those values in the browser's timezone on initial load and
+after HTMX swaps.
+
+Camera/media capture timestamps (`MediaItem.date_taken`) are camera-local wall
+clock values, not UTC instants. Keep those server-rendered with `format_date`
+without browser timezone conversion.
+
 ### Notifications
 
 The global notification component is available as `window.notification`:

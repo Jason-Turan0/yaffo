@@ -63,6 +63,7 @@
     --color-accent-hover: #0056b3;
     --color-accent-soft: #e7f3ff;     /* selected option bg, tag chips, info callouts */
     --color-accent-soft-text: #004085; /* text on accent-soft */
+    --color-accent-soft-border: #c9e2fb; /* border on accent-soft */
     --color-on-accent: #ffffff;       /* text on accent/status fills */
 
     /* Status */

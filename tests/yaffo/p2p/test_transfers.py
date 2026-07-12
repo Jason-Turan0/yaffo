@@ -366,3 +366,22 @@ def test_relay_budget_ignores_free_paths(manager, tmp_path):
         assert batch.state == STATE_RUNNING
 
     asyncio.run(scenario())
+
+
+def test_delete_only_removes_inactive_batches(manager, tmp_path):
+    async def scenario():
+        active = make_batch(tmp_path)
+        active.id = "active"
+        active.state = STATE_RUNNING
+        inactive = make_batch(tmp_path)
+        inactive.id = "inactive"
+        inactive.state = "cancelled"
+        manager._batches = {active.id: active, inactive.id: inactive}
+
+        assert await manager._delete_async(active.id) is False
+        assert "active" in manager._batches
+
+        assert await manager._delete_async(inactive.id) is True
+        assert "inactive" not in manager._batches
+
+    asyncio.run(scenario())

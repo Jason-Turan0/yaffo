@@ -8,6 +8,7 @@ yaffo = [
     "static/**/*",
     "templates/**/*",
     "translations/**/*",
+    "utils/clip_tokenizer/*.gz",
 ]
 
 [tool.setuptools.dynamic]

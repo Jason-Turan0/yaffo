@@ -329,51 +329,42 @@ def test_run_now_unknown_404(app, client):
 
 def _run_buttons(client, slug="a1"):
     body = client.get(f"/utilities/automations/{slug}").get_data(as_text=True)
-    collapsed = "".join(body.split())  # whitespace-insensitive for the JS init args
     return {
         "picker": 'js-run-files" data-mode="any"' in body,
         "plain": 'id="run-automation-button"' in body,
-        # 3rd arg of initAutomationRunNow — the hasTriggers flag the click handler
-        # uses to warn before running a trigger-less automation.
-        "has_triggers_flag": ("window.APP_CONFIG,true" in collapsed),
-        "no_triggers_flag": ("window.APP_CONFIG,false" in collapsed),
     }
 
 
-def test_all_event_triggers_show_scoped_run_button(app, client):
-    """Every trigger an event → the automation is purely photo-driven → path picker,
-    not the plain Run-now button."""
+def test_event_triggers_show_run_picker(app, client):
+    """Every trigger an event → the automation runs over a picked path."""
     _add(app)
     _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="media_indexed")
     buttons = _run_buttons(client)
     assert buttons["picker"] and not buttons["plain"]
 
 
-def test_schedule_trigger_shows_plain_run_now(app, client):
-    """A schedule trigger → whole-library context-less Run-now, no path picker, no warning."""
+def test_schedule_trigger_shows_run_picker(app, client):
+    """A schedule trigger still uses the path-picking Run button."""
     _add(app)
     _add_trigger(app, trigger_type=TRIGGER_TYPE_SCHEDULE, enabled=True, cron="0 9 * * 1")
     buttons = _run_buttons(client)
-    assert buttons["plain"] and not buttons["picker"]
-    assert buttons["has_triggers_flag"]  # has a trigger → no click warning
+    assert buttons["picker"] and not buttons["plain"]
 
 
-def test_mixed_triggers_show_plain_run_now(app, client):
-    """An event + a schedule trigger → not all events → plain Run-now."""
+def test_mixed_triggers_show_run_picker(app, client):
+    """An event + a schedule trigger still uses the path-picking Run button."""
     _add(app)
     _add_trigger(app, trigger_type=TRIGGER_TYPE_EVENT, enabled=True, event_type="media_indexed")
     _add_trigger(app, trigger_type=TRIGGER_TYPE_SCHEDULE, enabled=True, cron="0 9 * * 1")
     buttons = _run_buttons(client)
-    assert buttons["plain"] and not buttons["picker"]
+    assert buttons["picker"] and not buttons["plain"]
 
 
-def test_no_triggers_show_plain_run_now_with_warning_flag(app, client):
-    """No triggers → plain Run-now, and the init is wired with hasTriggers=false so the
-    click handler warns the automation won't run on its own."""
+def test_no_triggers_show_run_picker(app, client):
+    """No triggers still uses the path-picking Run button; the server decides if it can run."""
     _add(app)
     buttons = _run_buttons(client)
-    assert buttons["plain"] and not buttons["picker"]
-    assert buttons["no_triggers_flag"]
+    assert buttons["picker"] and not buttons["plain"]
 
 
 def test_run_view_summarizes_batch_job():
@@ -429,7 +420,7 @@ def test_runs_fragment_polls_and_shows_in_progress(app, client):
              completed_count=10, error_count=0)
     body = client.get("/utilities/automations/a1/runs").get_data(as_text=True)
     assert 'hx-trigger="every 5s"' in body  # self-polls
-    assert "status-running" in body
+    assert 'class="chip chip-warning"' in body
     assert "20%" in body  # 10 / 50
     assert "10 of 50 processed" in body
 
@@ -439,11 +430,20 @@ def test_runs_fragment_unknown_404(app, client):
 
 
 def test_detail_page_shows_run_history(app, client):
+    from datetime import datetime
     _add(app)
-    _add_job(app, id="run1", task_count=10, completed_count=10)
+    _add_job(
+        app,
+        id="run1",
+        task_count=10,
+        completed_count=10,
+        completed_at=datetime(2026, 7, 11, 21, 7, 2),
+    )
     body = client.get("/utilities/automations/a1").get_data(as_text=True)
     assert "Run history" in body
     assert "10 of 10 processed" in body
+    assert 'class="automation-run-time"' in body
+    assert 'data-local-datetime="2026-07-11T21:07:02+00:00"' in body
 
 
 def test_detail_page_run_history_empty_state(app, client):

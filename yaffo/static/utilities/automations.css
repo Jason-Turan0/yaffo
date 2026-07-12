@@ -319,32 +319,6 @@
     border-bottom: none;
 }
 
-.automation-run-status {
-    padding: 1px 8px;
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    background: var(--color-surface-sunken);
-    color: var(--color-text-muted);
-}
-
-.automation-run-status.status-completed {
-    background: var(--color-success-soft);
-    color: var(--color-success-soft-text);
-}
-
-.automation-run-status.status-failed {
-    background: var(--color-danger-soft);
-    color: var(--color-danger-soft-text);
-}
-
-.automation-run-status.status-running,
-.automation-run-status.status-pending {
-    background: var(--color-warning-soft);
-    color: var(--color-warning-soft-text);
-}
-
 .automation-run-progress {
     font-variant-numeric: tabular-nums;
     font-weight: 600;

@@ -1,0 +1,67 @@
+/* Chip: the one badge primitive. Every small pill in the app is a chip —
+   status badges (Online, On, Completed) and inline actions (Open, Revoke) alike.
+   A tone modifier colors it; .chip-action makes it interactive. */
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: none;
+    width: fit-content;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-sunken);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4px 9px;
+    text-decoration: none;
+}
+
+/* Tones */
+.chip-accent {
+    border-color: var(--color-accent-soft-border);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+}
+
+.chip-success {
+    border-color: var(--color-success-soft-border);
+    background: var(--color-success-soft);
+    color: var(--color-success-soft-text);
+}
+
+.chip-warning {
+    border-color: var(--color-warning-soft-border);
+    background: var(--color-warning-soft);
+    color: var(--color-warning-soft-text);
+}
+
+.chip-danger {
+    border-color: var(--color-danger-soft-border);
+    background: var(--color-danger-soft);
+    color: var(--color-danger-soft-text);
+}
+
+/* Interactive chips (<a>/<button>): same pill, hover affordance. */
+.chip-action {
+    appearance: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.chip-action:hover,
+.chip-action:focus-visible {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+.chip-danger.chip-action:hover,
+.chip-danger.chip-action:focus-visible {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+}

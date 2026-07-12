@@ -18,7 +18,7 @@
   enable/disable toggle test), `classify_labels`, `duplicate_scan` (disabled).
 - Seeded custom automations:
   - `tag-recent-imports` — enabled, schedule trigger, published code. Records a run
-    Job every "Run now" → use it for run-history assertions.
+    Job every manual run → use it for run-history assertions.
   - `tag-new-arrivals` — disabled, `media_indexed` event trigger, published code AND a
     working draft → its editor shows the code version toggle and the real Test button.
     Its dry-run over the media dir yields actions `tag_media_items` ("Tag N photo(s)")
@@ -60,8 +60,8 @@
   `h3:has-text("System") + ul.panel-nav` / `h3:has-text("Custom") + ul.panel-nav`.
   New automation: `#new-automation-button` → `#newAutomationModal` (`.active` class),
   `#new-automation-name`, `button[type="submit"]`.
-- Detail actions: `.automation-actions`; `#run-automation-button` (plain) vs
-  `.js-run-files` "Run…" (rendered when ALL triggers are events); `#configure-automation-button`
+- Detail actions: `.automation-actions`; `.js-run-files` "Run…";
+  `#configure-automation-button`
   (only with config fields); `#edit-automation-button`/`#delete-automation-button`
   (custom only). Run history: `#automation-runs` / `.automation-run-row` (self-polls 5s).
   Run history is capped at the **10 most recent** jobs — on a long-lived environment a
@@ -95,5 +95,5 @@
   `#config-assign_multiple_matches`; cancel via `.modal-actions [name="cancel"]`;
   save redirects back to the detail page.
 - Confirm dialog: `#global-confirm-dialog` (`.active`), `#confirm-dialog-confirm`.
-- Notifications: `.notification.visible`. Key strings: "no triggers" warning,
+- Notifications: `.notification.visible`. Key string:
   "Run started — it will appear in Run history when it finishes."

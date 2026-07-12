@@ -17,7 +17,6 @@ LOCAL_PORT="${LOCAL_PORT:-5601}"
 
 ensure_key
 require_vm
-IP=$(vm_ip)
 
-echo "yaffo-peer UI: http://localhost:$LOCAL_PORT  (tunnel to $IP, Ctrl-C to stop)"
-exec ssh "${SSH_OPTS[@]}" -N -L "$LOCAL_PORT:127.0.0.1:$WEB_PORT" "$SSH_USER@$IP"
+echo "yaffo-peer UI: http://localhost:$LOCAL_PORT  (tunnel to $(peer_label), Ctrl-C to stop)"
+peer_tunnel "$LOCAL_PORT"

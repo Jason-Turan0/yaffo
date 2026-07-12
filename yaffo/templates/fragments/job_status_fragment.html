@@ -1,3 +1,4 @@
+{% from "macros/local_datetime.html" import local_datetime %}
 <div class="job-card"
      id="job-{{ job.id }}"
         {% if not is_finished %}
@@ -9,7 +10,7 @@
     <div class="job-header">
         <div>
             <span class="job-status">{{ job.status }}</span>
-            <span class="job-time">{% trans started=(job.started_at or job.created_at)|format_date(utc=True) %}Started: {{ started }}{% endtrans %}</span>
+            <span class="job-time">{{ _("Started:") }} {{ local_datetime(job.started_at or job.created_at) }}</span>
         </div>
         <div class="job-actions">
             {% if progress >= 100 and has_results and results_route %}

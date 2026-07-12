@@ -103,6 +103,7 @@ class FakeP2PService:
         self.started_batches = []
         self.cancelled_batches = []
         self.continued_batches = []
+        self.deleted_batches = []
         self.peering = self
         self.list_shared = SimpleNamespace(send=self.list_shared)
         self.list_files = SimpleNamespace(send=self.list_shared_files)
@@ -112,6 +113,7 @@ class FakeP2PService:
             snapshot=self.transfer_snapshot,
             cancel=self.cancel_transfer,
             allow_relay_overage=self.continue_transfer,
+            delete=self.delete_transfer,
         )
 
     def connected_device_ids(self):
@@ -133,6 +135,7 @@ class FakeP2PService:
         self.revoked_ids.append(device_id)
         if self.revoke_error is not None:
             raise self.revoke_error
+        p2p_repository.mark_device_revoked(db.session, device_id)
         return self.revoke_result
 
     def send_revoke_peer(self, device_id):
@@ -196,6 +199,10 @@ class FakeP2PService:
         self.continued_batches.append(batch_id)
         return True
 
+    def delete_transfer(self, batch_id):
+        self.deleted_batches.append(batch_id)
+        return True
+
 
 @pytest.fixture
 def service(app):
@@ -247,26 +254,26 @@ def test_settings_page_shows_identity_and_presence_tristate(app, client, service
     body = client.get("/sharing/settings").get_data(as_text=True)
     assert MY_ID in body
     assert "wss://hub.example" in body
-    assert "laptop" in body and "Online" in body
-    assert "desktop" in body and "Offline" in body
-    assert "old-phone" in body and "Revoked" in body
+    assert "Show a pairing code" in body
+    assert "Paired devices" not in body
+    assert "known-device-item" not in body
     assert "Downloaded copies" in body
 
 
 def test_presence_unknown_when_hub_unreachable(app, client, service):
     _seed_devices(app)
     service.online = None
-    body = client.get("/sharing/settings/section").get_data(as_text=True)
-    assert "Unknown" in body
+    body = client.get("/sharing/sidebar").get_data(as_text=True)
+    assert "laptop" in body
     assert "Online" not in body
 
 
 def test_local_presence_badge_for_lan_reachable_peer(app, client, service):
     _seed_devices(app)
     service.local = {PEER_ONLINE}
-    body = client.get("/sharing/settings/section").get_data(as_text=True)
+    body = client.get("/sharing/sidebar").get_data(as_text=True)
     assert "laptop" in body and "Local" in body
-    assert "desktop" in body and "Offline" in body
+    assert "desktop" in body
 
 
 def test_sidebar_lists_devices_with_selection(app, client, service):
@@ -284,9 +291,12 @@ def test_device_page_renders(app, client, service):
     body = client.get(f"/sharing/devices/{PEER_ONLINE}").get_data(as_text=True)
     assert "laptop" in body
     assert PEER_ONLINE in body
-    assert "Shared with this device" in body
+    assert "Device Name" in body
+    assert "Name on this device" not in body
+    assert "Only changes how the device is listed here" not in body
+    assert "Add Shared" in body
     assert "Downloaded copies" not in body
-    assert "Shared by this device" in body
+    assert "Shared by this device" not in body  # the sidebar's "Shared With Me" owns this
 
 
 def test_device_page_shows_grant_controls_when_media_dirs_exist(app, client, service, tmp_path):
@@ -294,9 +304,28 @@ def test_device_page_shows_grant_controls_when_media_dirs_exist(app, client, ser
     with app.app_context():
         media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
     body = client.get(f"/sharing/devices/{PEER_ONLINE}").get_data(as_text=True)
-    assert "Share a media directory" in body
-    assert "Share a folder" in body
+    assert "Add Shared" in body
+    assert "Media Directory" in body
+    assert "Folder" in body
     assert "library" in body
+
+
+def test_sidebar_lists_outbound_shares(app, client, service, tmp_path):
+    _seed_devices(app)
+    with app.app_context():
+        media_dir = media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
+        p2p_repository.create_grant(
+            db.session,
+            PEER_ONLINE,
+            GRANT_SCOPE_MEDIA_DIR,
+            media_dir_id=media_dir.id,
+        )
+
+    body = client.get("/sharing/sidebar").get_data(as_text=True)
+
+    assert "Shared With Others" in body
+    assert "laptop - library" in body
+    assert "Revoke" in body
 
 
 def test_device_page_404_for_unknown(client, service):
@@ -380,6 +409,28 @@ def test_device_page_revoke_rerenders_panel(app, client, service):
     assert resp.status_code == 200
     assert service.revoked_ids == [PEER_ONLINE]
     assert "device-panel" in resp.get_data(as_text=True)
+    assert "Delete" in resp.get_data(as_text=True)
+
+
+def test_delete_revoked_device_redirects_to_settings(app, client, service):
+    _seed_devices(app)
+    resp = client.post(f"/sharing/devices/{PEER_REVOKED}/delete")
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert message == "Device deleted." and type_ == "success"
+    assert resp.headers["HX-Redirect"].endswith("/sharing/settings")
+    with app.app_context():
+        assert db.session.get(KnownDevice, PEER_REVOKED) is None
+
+
+def test_delete_trusted_device_requires_revoke(app, client, service):
+    _seed_devices(app)
+    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/delete")
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "Revoke" in message and type_ == "error"
+    with app.app_context():
+        assert db.session.get(KnownDevice, PEER_ONLINE) is not None
 
 
 def test_rename_device(app, client, service):
@@ -418,9 +469,6 @@ def test_add_media_dir_grant(app, client, service, tmp_path):
     assert resp.status_code == 200
     message, type_ = _notification(resp)
     assert message == "Share grant added." and type_ == "success"
-    body = resp.get_data(as_text=True)
-    assert "Media directory" in body
-    assert "library" in body
     with app.app_context():
         grants = p2p_repository.list_active_grants(db.session, PEER_ONLINE)
         assert len(grants) == 1
@@ -442,8 +490,6 @@ def test_add_folder_grant_stores_relative_path(app, client, service, tmp_path):
     )
 
     assert resp.status_code == 200
-    body = resp.get_data(as_text=True)
-    assert "2024/summer" in body
     with app.app_context():
         grant = db.session.query(ShareGrant).one()
         assert grant.scope_type == GRANT_SCOPE_FOLDER
@@ -468,7 +514,7 @@ def test_add_folder_grant_rejects_paths_outside_media_dirs(app, client, service,
         assert p2p_repository.list_active_grants(db.session, PEER_ONLINE) == []
 
 
-def test_revoke_share_grant(app, client, service, tmp_path):
+def test_sidebar_revoke_share_grant(app, client, service, tmp_path):
     _seed_devices(app)
     with app.app_context():
         media_dir = media_dir_repository.add_media_dir(db.session, str(tmp_path / "library"))
@@ -480,14 +526,17 @@ def test_revoke_share_grant(app, client, service, tmp_path):
         )
         grant_id = grant.id
 
-    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/grants/{grant_id}/revoke")
+    resp = client.post(f"/sharing/grants/{grant_id}/revoke?selected={PEER_ONLINE}")
 
     assert resp.status_code == 200
     message, type_ = _notification(resp)
     assert message == "Share grant revoked." and type_ == "success"
+    assert _devices_changed(resp)
+    body = resp.get_data(as_text=True)
+    assert "sharing-sidebar" in body
+    assert "laptop - library" not in body
     with app.app_context():
         assert p2p_repository.list_active_grants(db.session, PEER_ONLINE) == []
-        assert db.session.get(ShareGrant, grant_id).revoked_at is not None
 
 
 # ---- receiving shared files --------------------------------------------------
@@ -503,49 +552,18 @@ def test_device_page_loads_remote_panel_on_load(app, client, service):
     assert service.listed_ids == []
 
 
-def test_browse_remote_shared_scopes_with_counts(app, client, service):
+def test_sidebar_shared_with_me_loads_remote_shares(app, client, service):
     _seed_devices(app)
 
-    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/shared")
+    resp = client.get("/sharing/sidebar/shared-with-me")
 
     assert resp.status_code == 200
-    assert service.listed_ids == [PEER_ONLINE]
+    assert service.listed_ids == [PEER_ONLINE, PEER_OFFLINE]
     body = resp.get_data(as_text=True)
-    assert "remote-shared-panel" in body
-    assert "trip" in body
-    assert "3 files" in body
-    assert "Open\n" in body and "Browse files" not in body  # the scope's gallery link
-    assert f"/sharing/devices/{PEER_ONLINE}/files?" in body
-    assert "label=photos+/+trip" in body  # scope label carried to the gallery page
-    assert "Pull" not in body  # pulling lives on the gallery page
-    assert 'hx-trigger="load"' not in body  # loaded panels must not re-trigger themselves
-
-
-def test_browse_remote_shared_error_renders_inline_with_retry(app, client, service):
-    _seed_devices(app)
-    service.list_shared_error = CallError("peer did not answer")
-
-    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/shared")
-
-    assert resp.status_code == 200  # inline error replaces the loading placeholder
-    body = resp.get_data(as_text=True)
-    assert "peer did not answer" in body
-    assert "Try again" in body
-    assert 'hx-trigger="load"' not in body
-
-
-def test_browse_remote_shared_without_service_renders_inline(app, client):
-    _seed_devices(app)
-    body = client.post(f"/sharing/devices/{PEER_ONLINE}/shared").get_data(as_text=True)
-    assert "not running" in body
-    assert "Try again" in body
-
-
-def test_browse_remote_shared_revoked_device(app, client, service):
-    _seed_devices(app)
-    resp = client.post(f"/sharing/devices/{PEER_REVOKED}/shared")
-    assert "revoked" in resp.get_data(as_text=True)
-    assert service.listed_ids == []
+    assert "Shared With Me" in body
+    assert "laptop - photos / trip" in body
+    assert "desktop - photos / trip" in body
+    assert "Open" in body
 
 
 def test_shared_files_gallery_renders_with_filters_and_facets(app, client, service):
@@ -810,6 +828,40 @@ def test_transfers_fragment_idles_without_batches(app, client, service):
     assert "every 2s" not in body
 
 
+def test_transfers_fragment_offers_delete_for_inactive_batches(app, client, service):
+    _seed_devices(app)
+    service.transfer_rows = [
+        {
+            "id": "batch-1",
+            "peer_device_id": PEER_ONLINE,
+            "peer_name": "laptop",
+            "label": "trip",
+            "state": "cancelled",
+            "path": "relay",
+            "active": False,
+            "paused_for_budget": False,
+            "files_total": 4,
+            "files_done": 1,
+            "files_failed": 0,
+            "bytes_total": 400,
+            "bytes_done": 100,
+            "relay_bytes": 100,
+            "relay_budget_bytes": 2**30,
+            "active_files": [],
+            "failed_files": [],
+            "error": None,
+            "created_at": None,
+            "finished_at": None,
+        }
+    ]
+
+    body = client.get(f"/sharing/devices/{PEER_ONLINE}/transfers").get_data(as_text=True)
+
+    assert "Cancelled" in body
+    assert f"/transfers/batch-1/delete" in body
+    assert "Delete transfer?" in body
+
+
 def test_transfers_paused_batch_offers_continue_anyway(app, client, service):
     _seed_devices(app)
     service.transfer_rows = [
@@ -858,6 +910,17 @@ def test_cancel_and_continue_transfer_routes(app, client, service):
     message, _type = _notification(resp)
     assert "relay" in message.lower()
     assert service.continued_batches == ["batch-1"]
+
+
+def test_delete_transfer_route(app, client, service):
+    _seed_devices(app)
+
+    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/transfers/batch-1/delete")
+
+    assert resp.status_code == 200
+    message, type_ = _notification(resp)
+    assert message == "Transfer deleted." and type_ == "success"
+    assert service.deleted_batches == ["batch-1"]
 
 
 def test_pull_remote_file_requires_download_directory(app, client, service):

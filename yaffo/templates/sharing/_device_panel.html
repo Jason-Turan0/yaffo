@@ -1,19 +1,9 @@
+{% from "macros/local_datetime.html" import local_datetime %}
 <div id="device-panel">
     <div class="sharing-panel">
-        <div class="device-detail-status">
-            {% if not device.trusted %}
-            <span class="presence-badge presence-revoked">{{ _("Revoked") }}</span>
-            <span class="known-device-meta">{{ _("This device no longer has access. Pair again to restore it.") }}</span>
-            {% elif device.presence == 'local' %}
-            <span class="presence-badge presence-local">{{ _("Local") }}</span>
-            {% elif device.presence == 'online' %}
-            <span class="presence-badge presence-online">{{ _("Online") }}</span>
-            {% elif device.presence == 'offline' %}
-            <span class="presence-badge presence-offline">{{ _("Offline") }}</span>
-            {% else %}
-            <span class="presence-badge presence-unknown">{{ _("Unknown") }}</span>
-            {% endif %}
-        </div>
+        {% if not device.trusted %}
+        <p class="known-device-meta">{{ _("This device no longer has access. Pair again to restore it.") }}</p>
+        {% endif %}
 
         <div class="device-identity">
             <div class="device-identity-item">
@@ -22,78 +12,83 @@
             </div>
             <div class="device-identity-item">
                 <label>{{ _("Paired:") }}</label>
-                <span class="known-device-meta">{{ device.paired_at|format_date if device.paired_at else _("Unknown") }}</span>
+                {% if device.paired_at %}
+                    {{ local_datetime(device.paired_at, "known-device-meta") }}
+                {% else %}
+                    <span class="known-device-meta">{{ _("Unknown") }}</span>
+                {% endif %}
             </div>
             <div class="device-identity-item">
                 <label>{{ _("Last seen:") }}</label>
-                <span class="known-device-meta">{{ device.last_seen_at|format_date if device.last_seen_at else _("Never") }}</span>
+                {% if device.last_seen_at %}
+                    {{ local_datetime(device.last_seen_at, "known-device-meta") }}
+                {% else %}
+                    <span class="known-device-meta">{{ _("Never") }}</span>
+                {% endif %}
             </div>
         </div>
 
         <form class="device-rename-form"
               hx-post="{{ url_for('sharing_device_rename', device_id=device.device_id) }}"
-              hx-target="#device-panel" hx-swap="outerHTML">
-            <label for="device-display-name">{{ _("Name on this device") }}</label>
+              hx-target=".sharing-content" hx-swap="innerHTML">
+            <label for="device-display-name">{{ _("Device Name") }}</label>
             <div class="device-rename-controls">
                 <input type="text" id="device-display-name" name="display_name"
+                       class="form-control"
                        value="{{ device.display_name }}" required
                        aria-label="{{ _('Device name') }}">
                 <button type="submit" class="btn-secondary">{{ _("Rename") }}</button>
             </div>
-            <p class="hint-text">{{ _("Only changes how the device is listed here; the device itself is not affected.") }}</p>
         </form>
-
-        {% if device.trusted %}
-        <div class="device-danger">
-            {% set revoke_message = _('Revoke %(name)s? It will lose access to everything shared with it. Files it already copied stay on it.', name=device.display_name) %}
-            <button type="button" class="btn-danger" data-icon="delete"
-                    data-sharing-confirm="revoke"
-                    data-confirm-title="{{ _('Revoke device?') }}"
-                    data-confirm-message="{{ revoke_message }}"
-                    data-confirm-text="{{ _('Revoke') }}"
-                    hx-post="{{ url_for('sharing_device_revoke', device_id=device.device_id) }}"
-                    hx-confirm="{{ revoke_message }}"
-                    hx-target="#device-panel" hx-swap="outerHTML">{{ _("Revoke this device") }}</button>
-            <p class="hint-text">{{ _("Revoking stops all future access. Files this device already copied stay on it.") }}</p>
-        </div>
-        {% endif %}
     </div>
 
+    {# Shares granted to this device are listed (and revoked) in the sidebar's
+       "Shared With Others"; this panel only adds new ones. #}
     <div class="sharing-panel">
-        <h3>{{ _("Shared with this device") }}</h3>
+        <h3>{{ _("Add Shared") }}</h3>
         {% if device.trusted %}
             {% if media_dirs %}
             <div class="share-grant-forms">
                 <form class="share-grant-form"
                       hx-post="{{ url_for('sharing_device_grant', device_id=device.device_id) }}"
                       hx-target="#device-panel" hx-swap="outerHTML">
-                    <input type="hidden" name="scope_type" value="media_dir">
-                    <label for="share-media-dir">{{ _("Share a media directory") }}</label>
-                    <div class="share-grant-controls">
-                        <select id="share-media-dir" name="media_dir_id" required>
-                            {% for media_dir in media_dirs %}
-                            <option value="{{ media_dir.id }}">{{ media_dir.name }} - {{ media_dir.path }}</option>
-                            {% endfor %}
+                    <label for="share-scope-type">{{ _("Share type") }}</label>
+                    <div class="share-grant-controls share-grant-type-controls">
+                        <select id="share-scope-type" name="scope_type" class="searchable-select"
+                                data-search-disabled data-share-type-select>
+                            <option value="media_dir" selected>{{ _("Media Directory") }}</option>
+                            <option value="folder">{{ _("Folder") }}</option>
                         </select>
-                        <button type="submit" class="btn-secondary" data-icon="sharing">{{ _("Share") }}</button>
                     </div>
-                </form>
 
-                <form class="share-grant-form"
-                      hx-post="{{ url_for('sharing_device_grant', device_id=device.device_id) }}"
-                      hx-target="#device-panel" hx-swap="outerHTML">
-                    <input type="hidden" name="scope_type" value="folder">
-                    <label for="share-folder-path">{{ _("Share a folder") }}</label>
-                    <div class="file-browser-input-group share-grant-controls">
-                        <input type="text"
-                               id="share-folder-path"
-                               name="folder_path"
-                               class="form-control file-browser-input"
-                               placeholder="{{ _('Choose a folder inside a media directory') }}"
-                               required>
-                        <button type="button" class="btn-secondary file-browser-btn" data-icon="folder">
-                            {{ _("Browse…") }}
-                        </button>
+                    <div class="share-grant-panel" data-share-type-panel="media_dir">
+                        <label for="share-media-dir">{{ _("Media Directory") }}</label>
+                        <div class="share-grant-controls">
+                            <select id="share-media-dir" name="media_dir_id" class="searchable-select" required>
+                                {% for media_dir in media_dirs %}
+                                <option value="{{ media_dir.id }}">{{ media_dir.name }} - {{ media_dir.path }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="share-grant-panel" data-share-type-panel="folder" hidden>
+                        <label for="share-folder-path">{{ _("Folder") }}</label>
+                        <div class="file-browser-input-group share-grant-controls">
+                            <input type="text"
+                                   id="share-folder-path"
+                                   name="folder_path"
+                                   class="form-control file-browser-input"
+                                   placeholder="{{ _('Choose a folder inside a media directory') }}"
+                                   required
+                                   disabled>
+                            <button type="button" class="btn-secondary file-browser-btn" data-icon="folder" disabled>
+                                {{ _("Browse…") }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="share-grant-actions">
                         <button type="submit" class="btn-secondary" data-icon="sharing">{{ _("Share") }}</button>
                     </div>
                 </form>
@@ -104,30 +99,5 @@
         {% else %}
         <p class="no-data">{{ _("This device is revoked. Pair it again before sharing folders with it.") }}</p>
         {% endif %}
-
-        {% if grants %}
-        <div class="share-grants-list">
-            {% for grant in grants %}
-            <div class="share-grant-item">
-                <div class="share-grant-details">
-                    <span class="share-grant-scope">{{ grant.scope_label }}</span>
-                    <strong>{{ grant.name }}</strong>
-                    {% if grant.detail %}
-                    <span class="known-device-meta">{{ grant.detail }}</span>
-                    {% endif %}
-                </div>
-                <button type="button" class="btn-danger btn-sm" data-icon="delete"
-                        hx-post="{{ url_for('sharing_device_grant_revoke', device_id=device.device_id, grant_id=grant.id) }}"
-                        hx-target="#device-panel" hx-swap="outerHTML">
-                    {{ _("Revoke grant") }}
-                </button>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <p class="no-data">{{ _("Nothing is shared with this device yet.") }}</p>
-        {% endif %}
     </div>
-
-    {% include "sharing/_remote_panel.html" %}
 </div>

@@ -11,7 +11,9 @@
     margin-bottom: 5px;
 }
 
-.panel-nav a {
+/* :not(.chip) — a chip inside a nav row (an Open/Revoke action) keeps its own
+   pill styling instead of being restyled as a nav link. */
+.panel-nav a:not(.chip) {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -32,12 +34,12 @@
     text-overflow: ellipsis;
 }
 
-.panel-nav a:hover {
+.panel-nav a:not(.chip):hover {
     background: var(--color-surface-hover);
     color: var(--color-accent);
 }
 
-.panel-nav a.active {
+.panel-nav a:not(.chip).active {
     background: var(--color-accent);
     color: var(--color-on-accent);
     font-weight: 500;

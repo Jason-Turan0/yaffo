@@ -95,6 +95,20 @@
                     {{ _("Cancel") }}
                 </button>
             </div>
+            {% else %}
+            <div class="transfer-batch-actions">
+                {% set delete_message = _('Delete this transfer from the list? Files already downloaded stay on this device.') %}
+                <button type="button" class="btn-danger btn-sm" data-icon="delete"
+                        data-sharing-confirm="delete"
+                        data-confirm-title="{{ _('Delete transfer?') }}"
+                        data-confirm-message="{{ delete_message }}"
+                        data-confirm-text="{{ _('Delete') }}"
+                        hx-post="{{ url_for('sharing_transfer_delete', device_id=device.device_id, batch_id=batch.id) }}"
+                        hx-confirm="{{ delete_message }}"
+                        hx-target="#transfers-panel" hx-swap="outerHTML">
+                    {{ _("Delete") }}
+                </button>
+            </div>
             {% endif %}
         </div>
         {% endfor %}

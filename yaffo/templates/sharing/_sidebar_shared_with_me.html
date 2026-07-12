@@ -1,0 +1,22 @@
+<div id="sharing-sidebar-shared-with-me">
+    <h3>{{ _("Shared With Me") }}</h3>
+    {% if error %}
+    <p class="no-data">{{ error }}</p>
+    {% endif %}
+    {% if rows %}
+    <ul class="panel-nav sharing-shares-nav">
+        {% for row in rows %}
+        <li class="sharing-share-nav-item">
+            <span class="sharing-share-label">{{ row.device_name }} - {{ row.share_name }}</span>
+            <a class="chip chip-action chip-accent"
+               aria-label="{{ _('Open share from %(device)s', device=row.device_name) }}"
+               href="{{ url_for('sharing_device_files', device_id=row.device_id, media_dir_id=row.media_dir_id, scope=row.scope, label=row.share_name) }}">
+                {{ _("Open") }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% elif not error %}
+    <p class="no-data">{{ _("No shares from other devices") }}</p>
+    {% endif %}
+</div>

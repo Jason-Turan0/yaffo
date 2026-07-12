@@ -86,11 +86,7 @@
             hx-post="{{ url_for('automations_toggle_enabled', slug=selected.slug) }}"
             hx-swap="none">{{ _("Disable") if selected.enabled else _("Enable") }}
     </button>
-    {% if scoped_run %}
-        <button type="button" class="btn-secondary js-run-files" data-mode="any">{{ _("Run…") }}</button>
-    {% else %}
-        <button type="button" id="run-automation-button" class="btn-secondary">{{ _("Run now") }}</button>
-    {% endif %}
+    <button type="button" class="btn-secondary js-run-files" data-mode="any">{{ _("Run…") }}</button>
     {% if not selected.is_system %}
         <a href="{{ url_for('automations_edit', slug=selected.slug) }}"
            class="btn-primary" data-icon="edit">{{ _("Edit") }}</a>
@@ -147,7 +143,6 @@
                 app.automations.initAutomationRunNow(
                     {{ url_for('automations_run_now', slug=selected.slug) | tojson }},
                     window.APP_CONFIG,
-                    {{ (selected.triggers | length > 0) | tojson }},
                     {{ default_media_dir | tojson }},
                     app.i18n
                 );

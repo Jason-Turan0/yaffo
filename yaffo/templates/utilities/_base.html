@@ -22,7 +22,7 @@
                 <a href="{{ url_for('automations_show', slug=automation.slug) }}"
                    class="{% if automation.slug == selected_slug %}active{% endif %}">
                     <span class="panel-nav-label">{{ automation.display_name }}</span>
-                    {% if automation.enabled %}<span class="automation-nav-badge">{{ _("On") }}</span>{% endif %}
+                    {% if automation.enabled %}<span class="chip chip-success">{{ _("On") }}</span>{% endif %}
                 </a>
             </li>
         {% endfor %}

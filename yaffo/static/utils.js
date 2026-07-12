@@ -7,6 +7,8 @@ const utils = /** @type {Partial<UtilsNamespace> & { locale: string }} */ (
 window.PHOTO_ORGANIZER.utils = utils;
 utils.locale = window.APP_CONFIG.i18n.locale;
 
+let localDateTimesInitialized = false;
+
 utils.initImageFallbacks = () => {
     document.querySelectorAll('img[data-fallback]').forEach((img) => {
         const image = /** @type {HTMLImageElement} */ (img);
@@ -114,3 +116,22 @@ const dateUtils = {
 };
 
 utils.date = dateUtils;
+
+/**
+ * @param {Document | Element} [root]
+ */
+utils.formatLocalDateTimes = (root = document) => {
+    root.querySelectorAll('[data-local-datetime]').forEach((element) => {
+        const timeElement = /** @type {HTMLElement} */ (element);
+        const iso = timeElement.dataset.localDatetime;
+        if (!iso) return;
+        timeElement.textContent = dateUtils.formatWithTime(iso, { second: '2-digit' });
+    });
+};
+
+utils.initLocalDateTimes = () => {
+    utils.formatLocalDateTimes?.();
+    if (localDateTimesInitialized) return;
+    localDateTimesInitialized = true;
+    document.addEventListener('htmx:afterSwap', () => utils.formatLocalDateTimes?.());
+};

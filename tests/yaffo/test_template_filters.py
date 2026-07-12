@@ -18,6 +18,7 @@ from yaffo.template_filters import (
     format_duration,
     format_integer,
     format_percent,
+    utc_iso,
 )
 
 pytestmark = pytest.mark.unit
@@ -54,6 +55,16 @@ def test_utc_true_handles_aware_value(tz_new_york):
     # An already-aware UTC datetime is converted to local too.
     dt = datetime(2022, 7, 3, 17, 28, 22, tzinfo=timezone.utc)
     assert format_date(dt, DateFormat.DATETIME, utc=True) == "Jul 3, 2022, 1:28:22\u202fPM"
+
+
+def test_utc_iso_stamps_naive_utc_timestamp():
+    dt = datetime(2022, 7, 3, 17, 28, 22)
+    assert utc_iso(dt) == "2022-07-03T17:28:22+00:00"
+
+
+def test_utc_iso_normalizes_aware_timestamp():
+    dt = datetime(2022, 7, 3, 13, 28, 22, tzinfo=timezone.utc).astimezone()
+    assert utc_iso(dt) == "2022-07-03T13:28:22+00:00"
 
 
 def test_none_returns_empty():

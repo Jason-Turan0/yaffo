@@ -35,7 +35,6 @@ from yaffo.db.models import (
     JOB_STATUS_FAILED,
     JOB_STATUS_PENDING,
     JOB_STATUS_RUNNING,
-    TRIGGER_TYPE_EVENT,
 )
 from yaffo.db.repositories import automation_repository as repo
 from yaffo.db.repositories import media_dir_repository
@@ -62,6 +61,7 @@ class AutomationRunView:
     per-run-kind display logic lives in one tested place."""
     status: str
     status_label: str
+    status_chip: str       # chip tone modifier for the status badge
     is_finished: bool
     is_error: bool
     progress: int          # 0–100; shown for in-progress runs
@@ -162,10 +162,20 @@ def _run_status_label(status: str) -> str:
     }.get(status, status.capitalize())
 
 
+def _run_status_chip(status: str) -> str:
+    return {
+        JOB_STATUS_PENDING: "chip-warning",
+        JOB_STATUS_RUNNING: "chip-warning",
+        JOB_STATUS_COMPLETED: "chip-success",
+        JOB_STATUS_FAILED: "chip-danger",
+    }.get(status, "")
+
+
 def _run_view(job: Job) -> AutomationRunView:
     return AutomationRunView(
         status=job.status,
         status_label=_run_status_label(job.status),
+        status_chip=_run_status_chip(job.status),
         is_finished=job.status in _RUN_FINISHED_STATUSES,
         is_error=job.status == JOB_STATUS_FAILED or bool(job.error_count),
         progress=_run_progress(job),
@@ -258,17 +268,6 @@ def init_automations_routes(app: Flask):
             fields.append(field)
         return fields
 
-    def _supports_scoped_run(automation: Automation) -> bool:
-        """Whether Run-now scopes to a user-picked file/folder (the "Run on a
-        folder…/file…" actions) vs the plain context-less "Run now".
-
-        Driven by the automation's configured triggers: when **every** trigger is an
-        event (so the automation is purely photo-driven), running it manually means
-        "run it over these photos" — show the path picker. If any trigger is a
-        schedule, or there are no triggers, it gets the whole-library Run-now instead."""
-        triggers = automation.triggers
-        return bool(triggers) and all(t.trigger_type == TRIGGER_TYPE_EVENT for t in triggers)
-
     def _render_page(selected_slug: str | None):
         selected = repo.get_by_slug(db.session, selected_slug) if selected_slug else None
         media_dirs = media_dir_repository.list_media_dirs(db.session)
@@ -281,7 +280,6 @@ def init_automations_routes(app: Flask):
             default_media_dir=(media_dirs[0]["path"] if media_dirs else None),
             config_fields=_config_fields(selected),
             recent_runs=_recent_runs(selected),
-            scoped_run=_supports_scoped_run(selected) if selected else False,
             **automations_sidebar_context(),
         )
 
@@ -546,13 +544,12 @@ def init_automations_routes(app: Flask):
     def automations_run_now(slug: str):
         """Run the automation now, independent of its triggers and enabled state.
 
-        A per-photo automation sends a `path` (a user-picked file/folder); the run
-        executes for real over the indexed photos under it, via an EventContext —
-        the live twin of the test-files dry run. A whole-library handler (file_sync
-        / duplicate_scan) sends no path and fires context-less, like a schedule tick.
-        Either way the run is enqueued async and shows up in Run history once a
-        worker records its Job. Returns 400 when a scoped run matches no indexed
-        photos, or for a custom automation with nothing published to run."""
+        The UI sends a `path` (a user-picked file/folder); the run executes for real
+        over the indexed photos under it, via an EventContext — the live twin of the
+        test-files dry run. Whole-library system handlers (file_sync / duplicate_scan)
+        ignore that context and keep their normal full-library behavior. Returns 400
+        when the selected path matches no indexed photos, or for a custom automation
+        with nothing published to run."""
         automation = repo.get_by_slug(db.session, slug)
         if automation is None:
             abort(404)

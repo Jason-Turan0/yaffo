@@ -2,6 +2,7 @@
    Self-polls every 5s and swaps itself, so in-progress runs appear and tick up to
    completion without a manual reload. Rendered inline on first load (included by
    automations.html) and re-served by the `automations_runs` endpoint. #}
+{% from "macros/local_datetime.html" import local_datetime %}
 <section class="automation-runs" id="automation-runs"
          hx-get="{{ url_for('automations_runs', slug=selected.slug) }}"
          hx-trigger="every 5s"
@@ -11,11 +12,11 @@
         <ul class="automation-run-list">
             {% for run in recent_runs %}
             <li class="automation-run-row{% if run.is_error %} is-error{% endif %}">
-                <span class="automation-run-status status-{{ run.status | lower }}">{{ run.status_label }}</span>
+                <span class="chip {{ run.status_chip }}">{{ run.status_label }}</span>
                 {% if not run.is_finished %}<span class="automation-run-progress">{{ (run.progress / 100) | format_percent }}</span>{% endif %}
                 <span class="automation-run-summary">{{ run.summary }}</span>
                 <span class="automation-run-spacer"></span>
-                <span class="automation-run-time">{{ (run.finished_at or run.started_at) | format_date(utc=True) }}</span>
+                {{ local_datetime(run.finished_at or run.started_at, "automation-run-time") }}
                 {% if run.error %}<p class="automation-run-error">{{ run.error }}</p>{% endif %}
             </li>
             {% endfor %}

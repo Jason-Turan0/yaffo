@@ -46,6 +46,7 @@ const initBasePageBehavior = () => {
     });
 
     app.utils?.initImageFallbacks?.();
+    app.utils?.initLocalDateTimes?.();
 
     const activePageTab = document.querySelector('.navbar-pages .nav-page-tab.active');
     if (activePageTab) {
