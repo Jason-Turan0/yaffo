@@ -456,6 +456,57 @@ test.describe('Sharing Feature', () => {
     await revokeOutboundShares(page, /Seeded Album/);
   });
 
+  test('sharing_album_share_modal_toggle - The album Share modal shares with a device and un-shares it again', async ({ page }) => {
+    const ids = await deviceIds(page, pageB);
+
+    await page.goto('/albums');
+    await page.locator('a', { hasText: 'Seeded Album' }).first().click();
+    await page.waitForURL(/\/albums\/\d+/);
+    const albumPath = new URL(page.url()).pathname;
+    const albumUrlPattern = new RegExp(`${albumPath.replace(/\//g, '\\/')}$`);
+
+    // The modal starts unchecked (the previous test revoked its album grant)
+    await page.locator('#share-album-button').click();
+    const modal = page.locator('#shareAlbumModal');
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('input[name="device_id"]')).toHaveCount(1);
+    const deviceCheckbox = modal.locator(`input[name="device_id"][value="${ids.idB}"]`);
+    const deviceName = (await deviceCheckbox.locator('..').textContent())!.trim();
+    expect(deviceName).not.toBe('');
+    await expect(deviceCheckbox).not.toBeChecked();
+
+    // Check the paired device and confirm
+    await deviceCheckbox.check();
+    await modal.locator('button[type="submit"]').click();
+    await page.waitForURL(albumUrlPattern);
+
+    // Header names the device; sidebar and overview show a "Shared" chip
+    await expect(page.locator('.page-header .subtitle .chip-accent')).toHaveText(deviceName);
+    await expect(page.locator('.albums-sidebar .chip', { hasText: 'Shared' })).toHaveCount(1);
+    await page.goto('/albums');
+    await expect(page.locator('.album-tile .chip', { hasText: 'Shared' })).toHaveCount(1);
+
+    // And it is listed under "Shared With Others", named by the album
+    await page.goto('/sharing/settings');
+    await expect(page.locator('.sharing-shares-nav .sharing-share-nav-item', { hasText: 'Seeded Album' })).toHaveCount(1);
+
+    // Reopen: the checkbox reflects the truth; unchecking revokes
+    await page.goto(albumPath);
+    await page.locator('#share-album-button').click();
+    await expect(modal).toBeVisible();
+    await expect(deviceCheckbox).toBeChecked();
+    await deviceCheckbox.uncheck();
+    await modal.locator('button[type="submit"]').click();
+    await page.waitForURL(albumUrlPattern);
+
+    await expect(page.locator('.page-header .subtitle .chip-accent')).toHaveCount(0);
+    await expect(page.locator('.albums-sidebar .chip', { hasText: 'Shared' })).toHaveCount(0);
+    await page.goto('/albums');
+    await expect(page.locator('.album-tile .chip', { hasText: 'Shared' })).toHaveCount(0);
+    await page.goto('/sharing/settings');
+    await expect(page.locator('.sharing-shares-nav .sharing-share-nav-item', { hasText: 'Seeded Album' })).toHaveCount(0);
+  });
+
   test('sharing_revoke_a_grant - Revoking a share stops the peer next request but keeps pulled files', async ({ page }) => {
     // The media-dir grant from the earlier test is still in place; find B's view of it first
     const viewLink = await sharedWithMeView(pageB, /.+/);

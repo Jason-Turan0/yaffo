@@ -1,12 +1,11 @@
 feature: albums
-description: User can curate albums — create, browse, bulk-add photos by filter, edit membership and cover, reorder, rename, share with a paired device, and delete
+description: User can curate albums — create, browse, bulk-add photos by filter, edit membership and cover, reorder, rename, and delete. Sharing an album with a paired device lives in the SHARING spec (it needs the two-instance environment); here there are no paired devices, and the Share modal says so.
 
 tags:
   - core
 
 preconditions:
-  - Application is running
-  - For the sharing scenario only - a second Yaffo instance is running and paired with this one (see the sharing spec: two instances, distinct data dirs and ports, no hub, paired over the LAN)
+  - Application is running (the standard single-instance sandbox - no peer, no p2p)
 
 context:
   - tag: albums-base-template
@@ -32,8 +31,8 @@ context:
     description: The shared selection component used by the album's edit mode and the add screen
 
 data:
-  - The sandbox seeds one album, "Seeded Album", with 4 photos
-  - A paired device only exists once the two instances have paired (the sharing spec drives that); with no paired device the Share modal correctly says there are none
+  - The sandbox seeds one album, "Seeded Album", with 4 photos, and a 16-item library (14 photos + 2 videos)
+  - This environment has NO paired devices, so the Share modal correctly says there are none - the full share/un-share flow is the sharing spec's sharing_album_share_modal_toggle scenario
   - SELECTION IS IN THE URL, not client state - select=all plus exclude_id, or one select_id per ticked card. Paginating carries it, and reloading preserves it
   - '"Select all N" means the whole scope, NOT the visible page - every member of the album, or every photo matching the current filters'
   - Edit mode is a URL parameter (?edit=1), so it survives a reload
@@ -151,16 +150,11 @@ scenarios:
     cleanup:
       - Restore the original order
 
-  - name: albums_share_with_a_device
-    goal: The user can share an album with a paired device, and un-share it again
-    priority: high
+  - name: albums_share_modal_without_paired_devices
+    goal: With no paired devices, the Share modal explains there is nothing to share with
+    priority: low
     steps:
-      - With the two instances paired, open an album and click Share
-      - Check the paired device and confirm
-      - Open Share again and uncheck it, then confirm
+      - Open an album and click Share
     verify:
-      - The Share modal lists the trusted paired devices, checked exactly when the album is already shared with them
-      - After sharing, the album header names the device it is shared with, and the sidebar and overview show a "Shared" chip
-      - The share also appears under "Shared With Others" on the Sharing tab, named by the album
-      - The peer can then browse the album's photos (the sharing spec covers what it sees)
-      - Unchecking the device REVOKES the share - the chips and the header entry go away, and the peer loses access on its next request
+      - The Share modal opens but lists no devices - it says to pair a device on the Sharing tab first
+      - No album in this environment carries a "Shared" chip

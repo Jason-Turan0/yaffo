@@ -13,15 +13,15 @@ pre-paired Yaffo instances on one Compute Engine VM:
   synthetic library and prepared albums.
 - `demo-b.yaffo.app` — the receiving device, seeded with a different library
   and an empty download directory.
-- `demo.yaffo.app` — a short walkthrough with links that open A and B in separate
-  tabs.
-- Caddy on the demo VM for automatic HTTPS and routing of the three public
-  hostnames to private containers.
+- `demo.yaffo.app` — a static HTML walkthrough, served directly by Caddy, with
+  links that open A and B in separate tabs.
+- Caddy on the demo VM for automatic HTTPS, direct walkthrough-file serving, and
+  routing of the A/B hostnames to their private containers.
 - The existing `hub.yaffo.app` for P2P signaling, STUN, and encrypted relay
   fallback.
-- `YAFFO_DEMO_MODE=1` on both app instances. This enables a fail-closed server-side
-  endpoint policy, immutable demo configuration, workload and transfer caps, and
-  an explicit disposable-demo banner.
+- `YAFFO_DEMO_MODE=1` on both app instances. This enables a centralized,
+  fail-closed HTTP-method gate, immutable demo configuration, workload and
+  transfer caps, and an explicit disposable-demo banner.
 - A scheduled restore from golden data directories every day, plus an
   operator-triggered reset and emergency stop.
 
@@ -41,13 +41,10 @@ reachable from the public hostname.
 The first demo should let a visitor:
 
 1. Browse a realistic but non-sensitive photo and video library.
-2. Use filters, people, labels, locations, favorites, and albums.
+2. Browse filters, people, labels, locations, favorites, albums, and reviewed
+   custom pages.
 3. See that pairing and sharing grants are different concepts.
-4. Open Device B, browse a share from Device A, preview remote media, select
-   items, and pull them.
-5. See whether the transfer used a local, direct, or relayed path.
-6. Make a few bounded changes while understanding that the sandbox is shared and
-   all changes/downloads disappear at the next visible reset time.
+4. Open Device B, browse a share from Device A, preview remote media.
 
 It is not intended to provide:
 
@@ -57,6 +54,7 @@ It is not intended to provide:
 - performance benchmarking of face recognition or bulk indexing;
 - proof that NAT traversal works between two independent networks;
 - unrestricted access to the AI builders or paid model APIs.
+- Ability to transfer files between instances
 
 The existing [`deploy/yaffo_peer`](../../deploy/yaffo_peer/README.md) topology is
 the right tool for real-network and relay validation. It should remain separate
@@ -77,9 +75,14 @@ contract:
 
 - `YAFFO_DEMO_MODE=1` must be read once at startup and cannot be changed through
   the UI or a request.
-- Every web endpoint and HTTP method must be classified as allowed, limited, or
-  blocked in demo mode. An unclassified new endpoint is blocked by default and
-  fails a CI test until its policy is explicit.
+- A single application-wide request gate must reject `POST`, `PUT`, `PATCH`, and
+  `DELETE` in demo mode unless the exact method, Flask endpoint name, and demo
+  role appear in a small central exception set. A new mutation is therefore
+  blocked without requiring a decorator or attribute on its route.
+- Public `GET`, `HEAD`, and `OPTIONS` endpoints must come from a central allowlist.
+  This separately excludes read-like routes that expose the filesystem,
+  configuration, or expensive operations. HTTP method alone is not a sufficient
+  safety classification.
 - Blocked endpoints must fail in the Flask application, not merely disappear from
   templates or be blocked at the proxy.
 - Dangerous service functions must also reject calls in demo mode when they can
@@ -103,12 +106,13 @@ small:
   `demo-b.yaffo.app` at the existing authoritative DNS provider. All three records
   point to that address.
 - Run Caddy in the deployment and expose only TCP 80 and 443. Caddy obtains and
-  renews public certificates, redirects HTTP to HTTPS, and routes each exact
-  hostname to its private container service.
+  renews public certificates, redirects HTTP to HTTPS, serves the walkthrough for
+  `demo.yaffo.app`, and reverse-proxies the A/B hostnames to their private
+  container services.
 - Publish no wildcard DNS record and configure no catch-all application proxy.
   Requests for unexpected hostnames must not reach Yaffo.
-- Keep the app and walkthrough ports on the private container network. They must
-  never be bound to the VM's public interface.
+- Keep the app ports on the private container network. They must never be bound
+  to the VM's public interface. The walkthrough has no process or port of its own.
 
 The public pilot deliberately has no separate CDN, managed WAF, or bot product.
 Demo mode, bounded fixtures, server-side action policy, request and transfer
@@ -130,20 +134,63 @@ anonymous browser
       v
 Caddy on demo VM static IP
       |
-      +----------------------+----------------------+
-      |                      |                      |
-      v                      v                      v
-walkthrough              Yaffo A                Yaffo B
-static container         web :5101              web :5102
-                         P2P UDP :5201           P2P UDP :5202
-                         task system: off        task system: off
-                         /data/a only             /data/b only
-                              \                    /
-                               \ WSS + QUIC/UDP   /
-                                v                v
-                               hub.yaffo.app
-                         signaling/STUN/relay
+      +-- demo.yaffo.app --------> static walkthrough files
+      |
+      +-- demo-a.yaffo.app ------> Yaffo A web :5101
+      |                            task system: off
+      |                            /data/a only
+      |
+      +-- demo-b.yaffo.app ------> Yaffo B web :5102
+                                   task system: off
+                                   /data/b only
+
+Yaffo A P2P UDP :5201 ----\
+                            +-- WSS + QUIC/UDP --> hub.yaffo.app
+Yaffo B P2P UDP :5202 ----/                signaling/STUN/relay
 ```
+
+### Walkthrough page and serving
+
+Keep the walkthrough as reviewed static files in the deployment source, for
+example:
+
+```text
+deploy/demo/walkthrough/
+├── index.html
+├── walkthrough.css
+└── walkthrough.js
+```
+
+Mount that directory read-only at `/srv/walkthrough` in the Caddy container. Do
+not run Flask, Node, or a separate static container for it. The page needs no
+database, cookies, server-side rendering, or API: it explains the shared and
+resettable sandbox, links to A and B with `target="_blank"`, and presents the
+numbered sharing walkthrough. A small local script may calculate the next reset
+time from the published reset interval; it must not make the walkthrough an
+operational control surface.
+
+Use exact Caddy site blocks rather than a catch-all:
+
+```caddyfile
+demo.yaffo.app {
+    root * /srv/walkthrough
+    file_server
+}
+
+demo-a.yaffo.app {
+    reverse_proxy yaffo-a:5101
+}
+
+demo-b.yaffo.app {
+    reverse_proxy yaffo-b:5102
+}
+```
+
+Add the security headers specified below to the walkthrough site, including a
+same-origin-only Content Security Policy and `frame-ancestors 'none'`. Serve the
+HTML with `Cache-Control: no-cache` so walkthrough or reset-schedule corrections
+appear promptly; versioned CSS, JavaScript, and images may use long-lived cache
+headers.
 
 Use one `e2-medium` VM initially. Run the two Yaffo processes in separate
 containers with distinct:
@@ -172,8 +219,7 @@ The demo should not run the task-queue host, task workers, filesystem watcher, o
 periodic dispatcher. Indexing, face analysis, label classification, automations,
 and AI generation are blocked in demo mode, while thumbnails and previews are
 prepared in the golden fixture. The two always-on Yaffo processes therefore serve
-HTTP, SQLite reads and bounded scratch writes, plus P2P presence, browsing, and
-small transfers.
+HTTP and SQLite reads, plus P2P presence and browsing.
 
 A local sizing probe on 2026-07-18 measured about 295 MB RSS after one web process
 loaded all 144 routes, before request traffic. Two processes start near 600 MB;
@@ -233,10 +279,11 @@ Before deploying, add:
    isolated and mode `0600`; do not use it for real user identities. Keep identity
    keys outside the resettable data directory, because the pre-paired database
    snapshots refer to those identities.
-6. A Caddy configuration for the three exact anonymous hostnames. Run Caddy on
-   the private container network, route each hostname to its intended service,
-   expose only Caddy's TCP 80 and 443 ports on the VM, and persist Caddy's
-   certificate state across container and VM restarts.
+6. A Caddy configuration for the three exact anonymous hostnames. Mount the
+   checked-in walkthrough directory read-only and serve it directly for
+   `demo.yaffo.app`; reverse-proxy only the A/B hostnames across the private
+   container network. Expose only Caddy's TCP 80 and 443 ports on the VM, and
+   persist Caddy's certificate state across container and VM restarts.
 7. Scheduled start/stop, health checks, restore automation, budget alerts, image
    retention, and log retention.
 
@@ -268,11 +315,10 @@ Walkthrough:
 3. Open B in a second tab and select A under **Shared with me**.
 4. Browse and filter the remote album, open a remote preview, and select two small
    files.
-5. Pull them to B. Show progress, resume/cancel behavior if useful, and the path
-   reported by the transfer panel.
-6. Cancel or resume the bounded transfer if useful, then show where B received the
-   files. Explain revocation with the walkthrough because public visitors cannot
-   alter the pre-paired trust state.
+5. Pull them to B. Show progress and the path reported by the transfer panel.
+6. Show where B received the files. Explain cancellation, resumption, and
+   revocation with the walkthrough because public visitors cannot alter the
+   shared transfer or trust state.
 
 Do not promise that this single-host topology will show a particular network
 path. Every call begins relayed and may upgrade; container networking and GCE NAT
@@ -329,11 +375,11 @@ pre-paired sharing story.
 | External lookup calls | Reverse geocoding and any future URL-backed integration | Turn the demo into a request amplifier, hit provider quotas, or create third-party cost | **Blocked initially** | Use pre-resolved fixture locations; later add a cache-only lookup or strict global/provider quota |
 | Full media, preview, and video delivery | `/media/<id>`, posters, remote P2P previews, HTTP Range requests | Scrape or hotlink the fixture set, issue pathological ranges, repeatedly resize previews, and drive network egress | **Limited** | Use small low-resolution licensed fixtures; pre-generate previews; validate ranges; CDN-cache safe responses; per-IP and global byte/request budgets; daily egress kill switch |
 | P2P pulls and relay traffic | Remote browse/preview and transfer pull/continue | Repeat batches, fill B's download volume, monopolize transfer slots, or create metered hub relay egress | **Limited to B** | One active batch globally, small file/count/batch-byte caps, per-IP cooldown, download-volume quota, disable “continue anyway” beyond relay budget, reset downloads every 15–30 minutes |
-| Seeded metadata edits | Favorites, tags, face/person assignments, location changes | Vandalize shared state, create stored text payloads, trigger event tasks, or confuse other visitors | **Limited** | Allow a small curated subset; cap text/counts and mutation rate; escape on output; disable event-driven automations; protect seed people; reset frequently and display the reset time |
-| Album edits | Create/update/delete albums, add/remove/reorder items, set cover | Row spam, very large selections, deletion of the sharing fixture, and cross-visitor interference | **Limited to a scratch album** | Protect seeded albums; allow at most one `Demo Scratchpad` album with bounded name/description and item count; reset frequently |
+| Seeded metadata edits | Favorites, tags, face/person assignments, location changes | Vandalize shared state, create stored text payloads, trigger event tasks, or confuse other visitors | **Blocked initially** | Let visitors browse prepared examples; reconsider a small scratch-only exception after the read-mostly pilot has usage data |
+| Album edits | Create/update/delete albums, add/remove/reorder items, set cover | Row spam, very large selections, deletion of the sharing fixture, and cross-visitor interference | **Blocked initially** | Let visitors browse prepared albums; reconsider one protected-size `Demo Scratchpad` only if editing is important to the walkthrough |
 | Global application settings | Locale, distance unit, filter configuration, label vocabulary, theme default | Change the experience for every visitor, trigger work, or leave the UI unusable | **Blocked or browser-local** | Move harmless presentation preferences to a signed cookie or local storage for demo mode; keep database-backed global settings immutable |
 | People and other row creation/deletion | Person create/update/delete and similar catalog mutations | Unbounded DB growth, offensive stored names, deletion of fixtures, or expensive embedding recalculation | **Blocked initially** | Consider bounded rename/assignment on designated scratch records only; enforce length/character rules and protected seed IDs |
-| Job and transfer administration | Cancel/delete jobs; cancel/continue/delete transfer records | Interrupt another visitor, hide evidence of abuse, or bypass a transfer budget | **Blocked for general jobs; limited for the single demo transfer** | No public job creation means no public job controls; expose only safe controls on the one capped B transfer batch |
+| Job and transfer administration | Cancel/delete jobs; cancel/continue/delete transfer records | Interrupt another visitor, hide evidence of abuse, or bypass a transfer budget | **Blocked** | No public job creation means no public job controls; let the capped B transfer finish and clear it during reset |
 | Query and search amplification | Large filter lists, repeated facets/autocomplete, custom-page widget queries, extreme pagination | Expensive SQLite queries, large responses, cache busting, and worker/thread starvation | **Limited** | Bound list lengths, page size, text length, and query complexity; set request/DB timeouts; cache stable facets; cap concurrent requests per IP and globally |
 | Stored HTML/CSS/widget content | Custom pages, widget previews/state, generated themes and SVG/CSS assets | Stored XSS, phishing content, CSP bypass attempts, or persistent visual defacement | **Blocked for authoring** | Serve only reviewed, pre-generated content; preserve widget sandboxing; apply a tested CSP and output escaping |
 | Service and host information | Settings/system-info pages, error detail, logs, metrics, health/admin endpoints | Reveal versions, absolute paths, topology, device IDs, workload state, or operational controls | **Blocked or sanitized** | Provide a demo-specific About page; keep detailed health/metrics on localhost or IAP; return generic public errors |
@@ -353,28 +399,76 @@ pre-paired sharing story.
 - **Operator-only** means the capability is absent from public routing and is
   available only through IAP or a separately started maintenance profile.
 
-Implement the classification as endpoint-and-method metadata rather than a list
-of URL prefixes. Include a test that iterates `app.url_map` and fails whenever a
-new route has no demo policy. Add service-layer guards around filesystem changes,
-LLM calls, task enqueueing, and trust mutation because those have non-route entry
-points.
+The current route inventory contains 144 rules: 57 `GET`, 85 `POST`, one `PUT`,
+and two `DELETE`. No rule combines `GET` with an unsafe method. Normal gallery,
+detail, people, album, remote-share, preview, and filter browsing use `GET`.
+There are two browse-adjacent exceptions:
+
+- reviewed custom pages initially render through `GET`, but an interactive widget
+  can use `POST` for a live, read-only data query and a separate `POST` to persist
+  state;
+- Device B browses A's grants, files, previews, and transfer status through `GET`,
+  but starting an actual pull is `POST`.
+
+Use one Flask `before_request` gate with the convention that GETs are allowed and other methods are disallowed. 
+When demo mode is active, reject every unsafe method before parsing its body
+unless it has an attribute to allow it. Certain get methods `yaffo/routes/base.py:fs_list` for example. Should
+have an attribute to disallow. The widget-query exception is read-only, has
+validated query shapes, bounded result sizes and rate limits, and never includes
+widget-state persistence.
+
+#### Consistent blocked-action feedback
+
+The request gate must return HTTP `403` for blocked API, `fetch`, and HTMX
+requests without invoking the route:
+
+```json
+{
+  "error": "This action is disabled in the public demo.",
+  "code": "demo_feature_disabled"
+}
+```
+
+Return `Content-Type: application/json` and `Cache-Control: no-store`. Keep the
+message translatable and stable; clients detect the `code`, not the English text.
+For an ordinary browser navigation or form submission that does not request an
+API response, render a small demo-disabled HTML response with the same message
+instead of exposing JSON as a page.
+
+Load one global demo-response module from `base.html` after `notification.js`.
+It should:
+
+1. observe every `fetch` response by cloning only `403` JSON responses, and
+   dispatch `yaffo:demo-feature-disabled` when the code matches;
+2. inspect HTMX error responses, suppress the failed fragment swap when the code
+   matches, and dispatch the same event; and
+3. have one event listener call
+   `window.notification.info(message, 5000)`.
+
+This keeps demo-specific handling out of the individual gallery, settings,
+sharing, and builder modules. The original `Response` must still be returned to
+the caller so existing feature error handling does not break. Add deduplication
+so one rejected response produces one toast. The toast is explanatory UI only;
+the Flask gate remains authoritative, and unavailable controls should still be
+hidden or annotated where practical.
 
 ### Proposed v1 interactive set
 
-Keep the first release useful, not merely view-only:
+Keep the first release useful while defaulting to read-only:
 
 - allow all normal browsing, filtering, pagination, detail views, people/faces,
   labels, locations, albums, and reviewed custom-page presentations;
-- allow favorites, bounded tag edits, assignments to designated scratch people,
-  and edits to one protected-size `Demo Scratchpad` album;
-- allow B to browse A's seeded grants, preview remote items, and run one capped
-  transfer batch with cancel/resume;
+- allow validated live queries from reviewed custom-page widgets, but do not
+  persist widget state;
+- allow B to browse A's seeded grants, preview remote items, and start one capped
+  transfer batch; let it finish without public cancel/resume/delete controls;
 - block filesystem/configuration utilities, all indexing and automations, AI and
   custom-content authoring, global settings, external lookups, P2P trust/grant
-  mutations, and seed-record deletion.
+  mutations, metadata and album edits, transfer administration, and seed-record
+  deletion.
 
-This split is a proposal for discussion. Before implementation, each row should
-be accepted or changed and translated into the endpoint policy table and tests.
+This split is the v1 baseline. Expand the central exception set only when a
+specific walkthrough step justifies the additional abuse controls and tests.
 
 ## Security requirements
 
@@ -389,11 +483,13 @@ with distributed traffic; container and global cost backstops are still required
    credentials, or identifiable EXIF metadata. Record the source and license of
    every fixture.
 2. **Add an application-level demo mode.** Deny risky routes on the server, not
-   only by hiding navigation. At minimum, block the filesystem list/create APIs,
-   `open-file`, `open-folder`, media-directory and thumbnail-directory changes,
-   arbitrary scans, duplicate-file actions, LLM key management and generation,
-   device revoke/delete/rename, and raw path-based media access. Allow only the
-   product mutations the walkthrough needs.
+   only by hiding navigation. Use the central unsafe-method gate, exact exception
+   set, and public-read allowlist described above. At minimum, block the filesystem
+   list/create APIs, `open-file`, `open-folder`, media-directory and
+   thumbnail-directory changes, arbitrary scans, duplicate-file actions, LLM key
+   management and generation, device revoke/delete/rename, and raw path-based
+   media access. Allow only the widget-query and bounded receiver-pull exceptions
+   the walkthrough needs.
 3. **Contain every filesystem path.** Resolve it and require it to be under the
    instance's explicit media, thumbnail, download, or temp roots before reading,
    writing, scanning, or deleting. Add negative traversal and symlink tests. The
@@ -434,8 +530,8 @@ with distributed traffic; container and global cost backstops are still required
 - Use a dedicated VPC with no permissive default ingress rules. Do not inherit
   the default VPC's broad SSH rule. Allow public inbound TCP only on 80 and 443
   to the tagged demo VM. If SSH is retained, allow TCP 22 only from IAP's
-  published TCP-forwarding range. Do not expose the walkthrough, app, database,
-  metrics, reset, Docker, or P2P container ports directly.
+  published TCP-forwarding range. Do not expose app, database, metrics, reset,
+  Docker, or P2P container ports directly.
 - Attach one reserved static external IPv4 address to the VM for DNS, inbound
   HTTPS, and outbound connectivity. The design needs neither Cloud NAT nor a GCP
   load balancer.
@@ -519,8 +615,8 @@ are disabled.
 
 ### Phase 0 — decide the operating policy
 
-- Confirm anonymous public access and record exactly which interactive mutations
-  from the abuse table are in v1.
+- Confirm anonymous public access and the v1 exception set: reviewed widget
+  queries on A/B and one bounded transfer start on B.
 - Confirm scheduled hours versus 24/7. Use 24/7 if the demo is linked publicly;
   scheduled availability is mainly a pre-launch or cost-reduction option.
 - Choose and document demo fixtures and licenses.
@@ -532,15 +628,18 @@ down.
 
 ### Phase 1 — harden the application boundary
 
-- Implement the `YAFFO_DEMO_MODE` and `YAFFO_DEMO_ROLE` policy states and a test
-  that requires every endpoint/method in `app.url_map` to be classified.
+- Implement `YAFFO_DEMO_MODE`, `YAFFO_DEMO_ROLE`, the centralized unsafe-method
+  gate, its exact exception set, and the public-read allowlist. Add route-map tests
+  that validate the named endpoints and prove everything else fails closed.
+- Add the global `demo_feature_disabled` response handler for `fetch` and HTMX,
+  the shared informational toast, and the non-JavaScript HTML fallback.
 - Add service-layer demo guards around filesystem changes, task enqueueing, LLM
   calls, and P2P trust/grant mutation.
 - Add path-root enforcement and symlink/traversal tests.
 - Add application-wide CSRF protection and production cookie/host/proxy settings.
 - Make the web bind host configurable.
-- Add per-session, per-IP, and global request/job/transfer/byte limits, plus
-  protected seed records and bounded scratch records.
+- Add per-session, per-IP, and global request/query/transfer/byte limits, plus
+  protected seed records and the receiver download-volume limit.
 - Ensure the UI clearly marks the environment as disposable and shows the next
   reset time.
 
@@ -552,7 +651,8 @@ outside the scripted demo.
 
 - Create the runtime image and a local Compose definition first.
 - Run A and B with separate mounts, ports, secrets, and request-concurrency limits.
-- Add the walkthrough and Caddy hostname routing.
+- Add the static walkthrough files, mount them read-only into Caddy, and configure
+  Caddy to serve `demo.yaffo.app` directly while proxying only the A/B hostnames.
 - Extend Terraform with a dedicated VPC, VM egress, least-privilege service
   account, Shielded VM options, static external IP, disk, start/stop schedule,
   firewall, budget, and DNS outputs.
@@ -593,6 +693,8 @@ the implementer can run and reset the demo from the runbook.
 
 - All demo hostnames are anonymously reachable over HTTPS through Caddy; app
   container ports and operator endpoints are not directly reachable.
+- `demo.yaffo.app` is served directly from reviewed, read-only static files by
+  Caddy and has no application process, database, cookie, API, or separate port.
 - No real photos, face data, location history, or paid API credentials exist on
   the VM or in its image.
 - A and B have different device IDs, database files, secrets, mounts, and ports.
@@ -603,11 +705,15 @@ the implementer can run and reset the demo from the runbook.
   files; this remains covered by the sharing integration test even though public
   trust controls are disabled.
 - Blocked routes fail server-side even when requested directly.
+- Blocked `fetch` and HTMX actions show one informational toast without replacing
+  the current page or fragment; direct non-JavaScript requests show the fallback
+  demo-disabled page.
 - State-changing requests without a valid CSRF token fail.
-- Every route and method has an explicit allowed, limited, blocked, or
-  operator-only demo policy, and CI fails on an unclassified route.
-- Protected seed records cannot be changed; permitted scratch mutations obey
-  count, length, selection, and rate limits.
+- Every unsafe method is rejected unless its exact endpoint and role are in the
+  central exception set; public read routes are explicitly allowlisted, and CI
+  proves new routes fail closed.
+- Protected seed records cannot be changed; widget queries and the receiver pull
+  obey query, count, byte, destination, concurrency, and rate limits.
 - Neither container can read the other's data or the host filesystem.
 - No task host, worker, watcher, or periodic dispatcher process is running;
   per-instance memory, CPU, requests, and transfer bytes are capped.

@@ -1,6 +1,6 @@
 # Sharing Tests — Current State (2026-07-18)
 
-## Status: PASSING (11/11) against a fresh two-instance sandbox (~3.3m)
+## Status: PASSING (12/12) against a fresh two-instance sandbox (~3.3m)
 
 ## Environment (non-negotiable)
 - `npm run isolatedEnvironment:start:sharing` → instance A (seeded library + album) on 5002, instance B (empty peer) on 5003. Both run the p2p engine (LAN/mDNS only; hub `ws://127.0.0.1:9` is deliberately unreachable → hub chip "Disconnected", presence chips "Local").
@@ -19,10 +19,11 @@
 - Toast = `.notification.visible` (single global element). Confirm modal = `#global-confirm-dialog.active` → `#confirm-dialog-confirm`; `data-sharing-confirm` intercepts `htmx:confirm`, so NO native dialog ever fires (nothing to auto-accept).
 - `#sharing-sidebar-shared-with-me` is an htmx fragment backed by a live p2p call — reload-poll for rows (see `sharedWithMeView`).
 - Grant form selects are hidden searchable-selects (wrapper-click pattern); the folder path is typed straight into `#share-folder-path` after switching share type to Folder. Media-dir option text is `<name> - <path>`.
+- Album sharing uses `#share-album-button` and `#shareAlbumModal`. The modal has one `input[name="device_id"]` per trusted peer; checked state reflects an active album grant. Submitting checked grants, while submitting unchecked revokes. The album header renders the peer display name in `.page-header .subtitle .chip-accent`; the album sidebar and overview use a `Shared` chip.
 - Remote-gallery card clicks toggle selection via a capture-phase handler (no navigation). Selection rides the URL: `select_id=…` or `select=all&exclude_id=…`.
 - Year facets can match a single file (2008 → 1). The select-all test probes year options until one matches >1 (2014 works).
 - Transfers: `#transfers-panel` self-polls every 2s; completion = `.transfer-batch[data-state="completed"]` containing "N of N files". Files land at `<downloadDir>/<peer folder>/<collection>/…`.
 - Pairing round-trip is fast on loopback (<2s), but keep generous timeouts (90s per test via beforeEach) — pull batches include peer manifest snapshots.
 
 ## Scenario order (dependencies)
-1 settings → 2 pair → 3 grant media dir + browse → 4 no-download-dir notice, then SET the dir → 5 pull two → 6 select-all-matching minus one → 7 folder grant (revoked in-test) → 8 album grant (removes one member; membership stays at 3; grant revoked in-test) → 9 revoke the media-dir grant → 10 revoke + delete the device → 11 re-pair, duplicate grant dedupe (revoked in-test).
+1 settings → 2 pair → 3 grant media dir + browse → 4 no-download-dir notice, then SET the dir → 5 pull two → 6 select-all-matching minus one → 7 folder grant (revoked in-test) → 8 album grant (removes one member; membership stays at 3; grant revoked in-test) → 9 album Share modal grant/ungrant (revoked in-test) → 10 revoke the media-dir grant → 11 revoke + delete the device → 12 re-pair, duplicate grant dedupe (revoked in-test).

@@ -32,6 +32,12 @@ context:
   - tag: sharing-routes
     path: routes/sharing.py
     description: Routes for pairing, devices, grants, the remote gallery, previews, and transfers
+  - tag: albums-album-template
+    path: templates/albums/album.html
+    description: One album — its Share modal (checkbox per trusted device) and the Shared chips
+  - tag: albums-routes
+    path: routes/albums.py
+    description: albums_share reconciles the checked devices with the album grants (check = grant, uncheck = revoke)
 
 data:
   - The scenarios are STATEFUL and run in order in one worker (pairing, grants and the download directory persist server-side between tests). Start the environment with `npm run isolatedEnvironment:start:sharing` and run with BASE_URL (instance A) and PEER_URL (instance B) set
@@ -145,6 +151,19 @@ scenarios:
       - Photos outside the album are NOT reachable, even ones in the same folder as a member
     cleanup:
       - Restore the album's membership and revoke the album share
+
+  - name: sharing_album_share_modal_toggle
+    goal: The album's Share modal shares with a paired device and un-shares it again (moved from the albums spec - it needs the two-instance environment)
+    priority: high
+    steps:
+      - On instance A, open the seeded album and click Share
+      - Check the paired device and confirm
+      - Open Share again, verify it is checked, uncheck it, and confirm
+    verify:
+      - The Share modal lists the trusted paired devices, checked exactly when the album is already shared with them
+      - After sharing, the album header names the device it is shared with, and the sidebar and overview show a "Shared" chip
+      - The share also appears under "Shared With Others" on the Sharing tab, named by the album
+      - Unchecking the device REVOKES the share - the chips and the header entry go away, and the share leaves "Shared With Others"
 
   - name: sharing_revoke_a_grant
     goal: Revoking a share stops the peer's next request
