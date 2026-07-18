@@ -24,8 +24,11 @@ context:
     description: Shared context — people are the assignment target for detected faces
 
 data:
+  - The Bennett seed creates Marcus Bennett, Elena Bennett, Maya Bennett, and Theo Bennett
+  - Maya Bennett has birthdate 2014-09-12 and Theo Bennett has birthdate 2017-11-15; the parents have no seeded birthdate
   - A newly created person starts with zero faces and zero photos
-  - Face ids 1,11,13,18,26,37,41 are reserved by the face_assignment suite (person Obama); never assign them from other suites
+  - The Bennett seed leaves unassigned faces available for people-management scenarios
+  - Tests dynamically avoid the active similarity cluster used by the parallel face_assignment suite
   - Gender options are Male, Female, and Not specified
 
 scenarios:

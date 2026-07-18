@@ -16,11 +16,11 @@ type ClusterSummary = {
 };
 
 const TEST_LOCATION_NAME = 'Test Beach';
-const WHITE_HOUSE_LOCATION_NAME = 'The White House';
-const NAMED_WHITE_HOUSE_IMAGE = 'whitehouse_2014_01282014.jpg';
-const SELECTED_WHITE_HOUSE_IMAGE = 'whitehouse_2014_03012014.jpg';
-const CHICAGO_IMAGE = 'obama-family-photo-celebration-1514413986.jpg';
-const CHICAGO_GEOCODE_NAME = 'Mocked Chicago Grant Park';
+const CHICAGO_LOCATION_NAME = 'Chicago Weekend';
+const NAMED_CHICAGO_IMAGE = '2015-10-09_103400_chicago-riverwalk.png';
+const SELECTED_CHICAGO_IMAGE = '2015-10-11_085600_family-breakfast.png';
+const DISTANT_IMAGE = '2021-07-10_101800_beach-arrival.png';
+const DISTANT_GEOCODE_NAME = 'Mocked Siesta Key Beach';
 
 async function openMap(page: Page): Promise<void> {
   await page.goto('/locations');
@@ -432,8 +432,9 @@ test.describe('Locations Map', () => {
     await expect(panel.locator('.mass-assignment-info')).toContainText(String(photoIds.length));
     await expect(panel.locator('.btn-recommended')).toBeVisible();
 
-    await panel.locator('#mass-location-input').fill(TEST_LOCATION_NAME);
-    await expect(panel.locator('#mass-location-input')).toHaveValue(TEST_LOCATION_NAME);
+    // Set the value and submit in one browser task. With a larger clustered
+    // fixture, a late recommendation refresh can otherwise clear the input
+    // between a separate fill and click.
     const [response] = await Promise.all([
       page.waitForResponse(resp => resp.url().includes('/locations/bulk-update')),
       page.evaluate((locationName) => {
@@ -493,12 +494,12 @@ test.describe('Locations Map', () => {
   test('locations_recommends_existing_nearby_name', async ({ page }) => {
     await clearAllLocationNames(page);
     await openMap(page);
-    const namedWhiteHouseId = await featureIdByImageName(page, NAMED_WHITE_HOUSE_IMAGE);
-    const selectedWhiteHouseId = await featureIdByImageName(page, SELECTED_WHITE_HOUSE_IMAGE);
-    expect(selectedWhiteHouseId).not.toBe(namedWhiteHouseId);
+    const namedChicagoId = await featureIdByImageName(page, NAMED_CHICAGO_IMAGE);
+    const selectedChicagoId = await featureIdByImageName(page, SELECTED_CHICAGO_IMAGE);
+    expect(selectedChicagoId).not.toBe(namedChicagoId);
 
     const assignResponse = await page.request.post('/locations/bulk-update', {
-      data: { media_item_ids: [namedWhiteHouseId], location_name: WHITE_HOUSE_LOCATION_NAME },
+      data: { media_item_ids: [namedChicagoId], location_name: CHICAGO_LOCATION_NAME },
       failOnStatusCode: false,
     });
     expect(assignResponse.ok()).toBe(true);
@@ -509,24 +510,24 @@ test.describe('Locations Map', () => {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, location_name: CHICAGO_GEOCODE_NAME }),
+        body: JSON.stringify({ success: true, location_name: DISTANT_GEOCODE_NAME }),
       });
     });
 
     await openMap(page);
-    await zoomToFeaturesByImageName(page, [NAMED_WHITE_HOUSE_IMAGE, SELECTED_WHITE_HOUSE_IMAGE]);
-    await selectFeatureByImageName(page, SELECTED_WHITE_HOUSE_IMAGE);
-    expect(await selectedIds(page)).toEqual([selectedWhiteHouseId]);
+    await zoomToFeaturesByImageName(page, [NAMED_CHICAGO_IMAGE, SELECTED_CHICAGO_IMAGE]);
+    await selectFeatureByImageName(page, SELECTED_CHICAGO_IMAGE);
+    expect(await selectedIds(page)).toEqual([selectedChicagoId]);
 
     const recommended = page.locator('#selection-panel .btn-recommended');
     await expect(recommended).toHaveCount(1);
-    await expect(recommended).toContainText(WHITE_HOUSE_LOCATION_NAME);
+    await expect(recommended).toContainText(CHICAGO_LOCATION_NAME);
     expect(reverseGeocodeCalls).toBe(0);
 
-    await selectFeatureByImageName(page, CHICAGO_IMAGE);
+    await selectFeatureByImageName(page, DISTANT_IMAGE);
     await expect(recommended).toHaveCount(1);
-    await expect(recommended).toContainText(CHICAGO_GEOCODE_NAME);
-    await expect(recommended).not.toContainText(WHITE_HOUSE_LOCATION_NAME);
+    await expect(recommended).toContainText(DISTANT_GEOCODE_NAME);
+    await expect(recommended).not.toContainText(CHICAGO_LOCATION_NAME);
     expect(reverseGeocodeCalls).toBe(1);
   });
 

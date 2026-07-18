@@ -5,7 +5,7 @@ import { tmpdir } from 'os';
 
 // Two-instance suite: `page` (Playwright's fixture, BASE_URL) is instance A —
 // the seeded library that GRANTS shares; `pageB` (created per test against
-// PEER_URL) is instance B — the empty peer that BROWSES and PULLS.
+// PEER_URL) is instance B — the Obama-library peer that BROWSES and PULLS.
 //
 // Start the environment with `npm run isolatedEnvironment:start:sharing`
 // (A on 5002, B on 5003; both p2p-enabled, hub unreachable, LAN/mDNS only).
@@ -23,9 +23,15 @@ const PEER_URL = process.env.PEER_URL || 'http://127.0.0.1:5003';
 // the suite runs on the same machine as both instances.
 const DOWNLOAD_DIR = join(tmpdir(), 'yaffo_ui_test_downloads');
 
-// The two photos the sandbox carves out into organized/shared_trip on A
-// (keep in sync with SHARED_TRIP_PHOTOS in lib/services/isolated_runner.ts).
-const SHARED_TRIP_PHOTOS = ['whitehouse_2014_01282014.jpg', 'whitehouse_2014_03012014.jpg'];
+// The Bennett family's Chicago trip folder on A (keep these values in sync with the
+// exported fixture constants in lib/services/isolated_runner.ts).
+const SHARED_TRIP_FOLDER = '2015_chicago_baby_trip';
+const SHARED_TRIP_PHOTOS = [
+  '2015-10-09_103400_chicago-riverwalk.png',
+  '2015-10-09_151800_lakefront.png',
+  '2015-10-10_110700_neighborhood-walk.png',
+  '2015-10-11_085600_family-breakfast.png',
+];
 
 // Cached device ids (stable for the sandbox's lifetime).
 let idA = '';
@@ -386,21 +392,21 @@ test.describe('Sharing Feature', () => {
   test('sharing_grant_a_folder - A shares one subfolder and B sees only its photos', async ({ page }) => {
     const ids = await deviceIds(page, pageB);
 
-    // Share the shared_trip subfolder of the media directory
+    // Share the Chicago trip subfolder of the media directory
     const { path: mediaDirPath } = await mediaDirNameAndPath(page, ids.idB);
     await pickSearchableOption(page, 'select#share-scope-type', 'Folder');
     const folderInput = page.locator('#share-folder-path');
     await expect(folderInput).toBeEnabled();
-    await folderInput.fill(`${mediaDirPath}/shared_trip`);
+    await folderInput.fill(`${mediaDirPath}/${SHARED_TRIP_FOLDER}`);
     await page.locator('.share-grant-form button[type="submit"]').click();
     await expectToast(page, /Share grant added/);
 
     // On A it is listed under "Shared With Others", named by the folder path
     await page.goto('/sharing/settings');
-    await expect(page.locator('.sharing-shares-nav .sharing-share-nav-item', { hasText: 'shared_trip' })).toHaveCount(1);
+    await expect(page.locator('.sharing-shares-nav .sharing-share-nav-item', { hasText: SHARED_TRIP_FOLDER })).toHaveCount(1);
 
     // On B the share opens a gallery of the folder's photos and NOTHING else
-    const viewLink = await sharedWithMeView(pageB, /shared_trip/);
+    const viewLink = await sharedWithMeView(pageB, SHARED_TRIP_FOLDER);
     await viewLink.click();
     await expect(pageB.locator('.remote-photo-card')).toHaveCount(SHARED_TRIP_PHOTOS.length);
     for (const name of SHARED_TRIP_PHOTOS) {
@@ -408,7 +414,7 @@ test.describe('Sharing Feature', () => {
     }
 
     // Cleanup: revoke the folder share
-    await revokeOutboundShares(page, /shared_trip/);
+    await revokeOutboundShares(page, SHARED_TRIP_FOLDER);
   });
 
   test('sharing_grant_an_album - A shares an album and its membership is resolved per request', async ({ page }) => {

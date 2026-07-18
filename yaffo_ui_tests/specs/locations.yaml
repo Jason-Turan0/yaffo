@@ -31,12 +31,11 @@ context:
     description: Server-side expectations for payload fields, sidebar rendering, nearby radius config, bulk update, and geocode rate limits
 
 data:
-  - Photo "DSCN0010.jpg" (id 14) has latitude/longitude and should appear on the map
-  - Photo "obama-family-photo-celebration-1514413986.jpg" has GPS metadata for Chicago Grant Park at approximately 41.876465, -87.621887
-  - Photos "whitehouse_2014_01282014.jpg", "whitehouse_2014_03012014.jpg", "whitehouse_2014_04042014.jpg", and "whitehouse_2014_05062014.jpg" have GPS metadata around the White House at approximately 38.897676, -77.036530
-  - The White House photos are intentionally offset from one another by less than 500 yards so they are near each other without having identical coordinates
-  - The Chicago Grant Park photo and the White House photos are visually distinct locations on the map view
-  - Most other Obama sample photos have no GPS coordinates
+  - Bennett photos have GPS metadata and should appear on the map
+  - "2015-10-09_103400_chicago-riverwalk.png" and "2015-10-11_085600_family-breakfast.png" have distinct but nearby Chicago coordinates
+  - "2021-07-10_101800_beach-arrival.png" has distant GPS metadata at Siesta Key Beach
+  - The home and beach photos are visually distinct locations on the map view
+  - Tests resolve fixture images by filename rather than relying on database IDs
   - Located photos may be named or unnamed; unnamed means the location name is null or blank
   - The map payload includes fields used by client-side filters, including path, year, month, device, favorite, media type, people, labels, tags, name, latitude, and longitude
 
@@ -50,8 +49,8 @@ scenarios:
     verify:
       - The map (id "map") is visible and rendered
       - At least one photo marker or cluster is shown on the map
-      - The Chicago Grant Park photo and the White House photo group appear as separate visible map points or clusters
-      - The White House photos remain close enough to each other to form a nearby group at normal map zoom levels
+      - The Siesta Key beach photos and the Chicago-area photo groups appear as separate visible map points or clusters
+      - Photos from each Bennett event remain close enough to form nearby groups at normal map zoom levels
       - Map tiles load without broken-image errors
       - The map view is initially fitted to the located photos
 

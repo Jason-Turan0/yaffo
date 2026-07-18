@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { findMediaIdByFilename } from '../_support/media-test-data';
+import { findMediaIdByFilename, PRIMARY_DETAIL_IMAGE } from '../_support/media-test-data';
 
 test.describe('Photo Details - Location Section', () => {
   test('photo_details_location_section_works', async ({ page, request }) => {
-    const photoId = await findMediaIdByFilename(request, 'DSCN0010.jpg');
+    const photoId = await findMediaIdByFilename(request, PRIMARY_DETAIL_IMAGE);
 
     // Navigate to the photo details page
     await page.goto(`/media/view/${photoId}`);

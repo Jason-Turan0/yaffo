@@ -1,6 +1,6 @@
 import {ChildProcess, execSync, spawn} from "child_process";
 import {join, resolve} from "path";
-import {cpSync, existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync} from "fs";
+import {cpSync, existsSync, mkdirSync, realpathSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
 
 // Resolved temp root: on macOS tmpdir() is /var/folders/… but /var is a symlink
@@ -25,8 +25,8 @@ export interface IsolatedEnvironment extends IsolatedInstance {
 
 export interface IsolatedEnvironmentOptions {
     /**
-     * Also start a second, minimally-seeded instance (schema + download
-     * directory, no media library) on port+1, and enable LAN-only p2p sharing
+     * Also start a second instance seeded with the Obama fixture library on
+     * port+1, and enable LAN-only p2p sharing
      * on BOTH instances: YAFFO_P2P_ENABLED=1, distinct YAFFO_P2P_PORT UDP
      * ports, an unreachable YAFFO_HUB_URL (the sharing tests pair over mDNS,
      * hubless by design), and YAFFO_P2P_EPHEMERAL_IDENTITY=1 so throwaway
@@ -117,14 +117,12 @@ interface StartInstanceOptions {
     label: string;
     port: number;
     tempDir: string;
-    /** Copy the sample library and run the full seed (photos, faces, album, …). */
-    seedLibrary: boolean;
-    /**
-     * Move two photos into organized/shared_trip so the folder-share grant
-     * tests have a real subfolder. Ids stay stable: the seed indexes by
-     * BASENAME order, which a move does not change.
-     */
-    sharedSubfolder?: boolean;
+    /** Fixture directory copied into organized before running the full seed. */
+    fixtureDir: string;
+    /** Selects fixture-specific database records created by the seed script. */
+    seedProfile: "bennett" | "obama";
+    /** Include the separate video fixtures in this instance. */
+    includeVideos?: boolean;
     /**
      * Env vars for the FLASK process only (the p2p wiring). The seed script and
      * the taskq host also call create_app; giving them YAFFO_P2P_ENABLED too
@@ -134,11 +132,21 @@ interface StartInstanceOptions {
     flaskOnlyEnv?: Record<string, string>;
 }
 
-// The photos carved out into organized/shared_trip for folder-share tests.
-export const SHARED_TRIP_PHOTOS = ["whitehouse_2014_01282014.jpg", "whitehouse_2014_03012014.jpg"];
+export const PRIMARY_FIXTURE_DIR = join(UI_TESTS_DIR, "test_data", "bennett");
+export const PEER_FIXTURE_DIR = join(UI_TESTS_DIR, "test_data", "obama", "images");
+
+// The Bennett fixture already has a real trip folder, so sharing tests can exercise a
+// scoped folder grant without mutating the copied fixture tree.
+export const SHARED_TRIP_FOLDER = "2015_chicago_baby_trip";
+export const SHARED_TRIP_PHOTOS = [
+    "2015-10-09_103400_chicago-riverwalk.png",
+    "2015-10-09_151800_lakefront.png",
+    "2015-10-10_110700_neighborhood-walk.png",
+    "2015-10-11_085600_family-breakfast.png",
+];
 
 const startInstance = async (options: StartInstanceOptions): Promise<IsolatedInstance> => {
-    const {label, port, tempDir, seedLibrary, sharedSubfolder = false, flaskOnlyEnv = {}} = options;
+    const {label, port, tempDir, fixtureDir, seedProfile, includeVideos = false, flaskOnlyEnv = {}} = options;
 
     console.log(`\n🔧 Setting up isolated instance ${label}...`);
     console.log(`   Temp directory: ${tempDir}`);
@@ -148,43 +156,25 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
     mkdirSync(join(tempDir, "temp"), {recursive: true});
     mkdirSync(join(tempDir, "duplicates"), {recursive: true});
 
-    if (seedLibrary) {
-        const testPhotosDir = join(UI_TESTS_DIR, "test_data", "photos");
-        const testVideoDir = join(UI_TESTS_DIR, "test_data", "mp4");
-        if (existsSync(testPhotosDir)) {
-            cpSync(testPhotosDir, join(tempDir, "organized"), {recursive: true});
-            cpSync(testVideoDir, join(tempDir, "organized"), {recursive: true});
-            console.log(`   ✅ Copied test photos/videos`);
-        }
-        if (sharedSubfolder) {
-            const subfolder = join(tempDir, "organized", "shared_trip");
-            mkdirSync(subfolder, {recursive: true});
-            for (const name of SHARED_TRIP_PHOTOS) {
-                const source = join(tempDir, "organized", name);
-                if (existsSync(source)) {
-                    renameSync(source, join(subfolder, name));
-                }
-            }
-            console.log(`   ✅ Carved out organized/shared_trip (${SHARED_TRIP_PHOTOS.length} photos)`);
-        }
-
-        const testDbPath = join(UI_TESTS_DIR, "test_data", "database", "yaffo.db");
-        if (existsSync(testDbPath)) {
-            cpSync(testDbPath, join(tempDir, "yaffo.db"));
-            console.log(`   ✅ Copied test database`);
-        } else {
-            writeFileSync(join(tempDir, "yaffo.db"), "");
-            console.log(`   ✅ Created empty database`);
-        }
-    } else {
-        writeFileSync(join(tempDir, "yaffo.db"), "");
-        console.log(`   ✅ Created empty peer database`);
+    if (!existsSync(fixtureDir)) {
+        throw new Error(`Fixture directory does not exist: ${fixtureDir}`);
     }
+    cpSync(fixtureDir, join(tempDir, "organized"), {recursive: true});
+    console.log(`   ✅ Copied photo fixture: ${fixtureDir}`);
+    if (includeVideos) {
+        const testVideoDir = join(UI_TESTS_DIR, "test_data", "mp4");
+        cpSync(testVideoDir, join(tempDir, "organized"), {recursive: true});
+        console.log(`   ✅ Copied video fixtures`);
+    }
+
+    writeFileSync(join(tempDir, "yaffo.db"), "");
+    console.log(`   ✅ Created empty database`);
     writeFileSync(join(tempDir, "yaffo-huey.db"), "");
 
     const env = {
         ...process.env,
         YAFFO_DATA_DIR: tempDir,
+        YAFFO_SEED_PROFILE: seedProfile,
         FLASK_APP: "yaffo.app:create_app",
         FLASK_ENV: "testing",
         VIRTUAL_ENV: join(YAFFO_DIR, "venv"),
@@ -192,7 +182,7 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
     };
     const flaskEnv = {...env, ...flaskOnlyEnv};
 
-    const seedScript = seedLibrary ? "seed_database.py" : "seed_peer_database.py";
+    const seedScript = "seed_database.py";
     console.log(`\n📦 Seeding instance ${label} (${seedScript})...`);
     try {
         execSync(`python "${join(SCRIPTS_DIR, seedScript)}"`, {
@@ -292,8 +282,9 @@ export const startIsolatedEnvironment = async (
         label: "A",
         port,
         tempDir,
-        seedLibrary: true,
-        sharedSubfolder: withPeer,
+        fixtureDir: PRIMARY_FIXTURE_DIR,
+        seedProfile: "bennett",
+        includeVideos: true,
         flaskOnlyEnv: withPeer ? p2pEnv(port) : {},
     });
 
@@ -305,7 +296,8 @@ export const startIsolatedEnvironment = async (
                 label: "B (peer)",
                 port: peerPort,
                 tempDir: join(TEMP_ROOT, `yaffo_test_${timestamp}_peer`),
-                seedLibrary: false,
+                fixtureDir: PEER_FIXTURE_DIR,
+                seedProfile: "obama",
                 flaskOnlyEnv: p2pEnv(peerPort),
             });
         } catch (e) {

@@ -159,10 +159,17 @@ test.describe('Face Assignment', () => {
   });
 
   test('faces are automatically matched to people based on similarity', async ({ page, request }) => {
-    // Setup: Create 'Obama' and assign a known face to establish a baseline embedding
+    // Establish a baseline from the live unassigned pool. Face ids are generated
+    // by indexing and therefore aren't stable across fixture changes.
     const obama = await createPersonViaApi(request, page, 'Obama');
-    await assignFaceToPersonViaApi(request, 1, obama.id);
-    await waitForFaceAssigned(page, obama.id, 1);
+    await page.goto('/faces?group_by=similarity&threshold=2');
+    const seedGroup = page.locator('.suggestion-group').first();
+    await expect(seedGroup).toBeVisible();
+    const seedFaces = JSON.parse(await seedGroup.getAttribute('data-faces') ?? '[]') as { id: number }[];
+    expect(seedFaces.length).toBeGreaterThanOrEqual(3);
+    const baselineFaceId = seedFaces[0].id;
+    await assignFaceToPersonViaApi(request, baselineFaceId, obama.id);
+    await waitForFaceAssigned(page, obama.id, baselineFaceId);
 
     // Group by people with a low similarity threshold to match generously
     await page.goto('/faces?group_by=people&threshold=2');

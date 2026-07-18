@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const UNIQ = Date.now();
-const SPEC_FILENAME = `spec-index-${UNIQ}.jpg`;
+const SPEC_FILE_STEM = `spec-index-${UNIQ}`;
 
 // The suite drops/removes a real file in the media directory and syncs the database
 // around it, so it runs serially and cleans back to the in-sync baseline. The Flask
@@ -13,6 +13,7 @@ test.describe.configure({ mode: 'serial', timeout: 900_000 });
 
 let mediaDir: string;
 let copiedFile: string | null = null;
+let copiedFilename: string | null = null;
 
 async function readMediaDir(page: Page): Promise<string> {
   await page.goto('/settings');
@@ -21,13 +22,13 @@ async function readMediaDir(page: Page): Promise<string> {
   return dir;
 }
 
-function findAnyJpeg(dir: string): string {
+function findAnyPhoto(dir: string): string {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true, recursive: true })) {
-    if (entry.isFile() && /\.jpe?g$/i.test(entry.name)) {
+    if (entry.isFile() && /\.(jpe?g|png|heic)$/i.test(entry.name)) {
       return path.join(entry.parentPath ?? (entry as { path?: string }).path ?? dir, entry.name);
     }
   }
-  throw new Error(`No JPEG found under ${dir}`);
+  throw new Error(`No supported photo found under ${dir}`);
 }
 
 async function openIndexPhotos(page: Page): Promise<void> {
@@ -111,10 +112,12 @@ test.describe('Index Photos', () => {
   });
 
   test('index_photos_sync_database', async ({ page }) => {
-    // Drop a new (content-unique) photo into the media directory: copy an existing
-    // JPEG and append a marker so hashing can't treat it as the same file.
-    const source = findAnyJpeg(mediaDir);
-    copiedFile = path.join(mediaDir, SPEC_FILENAME);
+    // Drop a new (content-unique) photo into the media directory. Preserve the
+    // source extension because the primary Bennett fixture is PNG while the
+    // peer fixture is JPEG.
+    const source = findAnyPhoto(mediaDir);
+    copiedFilename = `${SPEC_FILE_STEM}${path.extname(source).toLowerCase()}`;
+    copiedFile = path.join(mediaDir, copiedFilename);
     fs.copyFileSync(source, copiedFile);
     fs.appendFileSync(copiedFile, Buffer.from(`spec-${UNIQ}`));
 
@@ -125,7 +128,7 @@ test.describe('Index Photos', () => {
     const unindexedSection = page.locator('#scan-results .section')
       .filter({ has: page.locator('h2', { hasText: 'Unindexed Photos' }) });
     await expect(unindexedSection).toBeVisible();
-    await expect(unindexedSection.locator('td', { hasText: SPEC_FILENAME }).first()).toBeVisible();
+    await expect(unindexedSection.locator('td', { hasText: copiedFilename }).first()).toBeVisible();
 
     // Sync imports it; the button is only revealed when there is work (the helper
     // asserts the in-sync state and hidden button on a settled load).
@@ -142,7 +145,7 @@ test.describe('Index Photos', () => {
       .filter({ has: page.locator('h2', { hasText: 'Orphaned Database Entries' }) });
     await expect(orphanedSection).toBeVisible();
     await expect(orphanedSection.locator('td', { hasText: 'File deleted from disk' }).first()).toBeVisible();
-    await expect(orphanedSection.locator('code', { hasText: SPEC_FILENAME }).first()).toBeVisible();
+    await expect(orphanedSection.locator('code', { hasText: copiedFilename }).first()).toBeVisible();
 
     await syncAndWaitForZero(page);
   });

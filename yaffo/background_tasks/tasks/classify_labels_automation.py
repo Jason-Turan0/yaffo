@@ -43,8 +43,13 @@ _FIELDS = {field.key: field for field in AUTOMATION_CONFIG[AUTOMATION_HANDLER_CL
 _FLUSH_SIZE = 200
 
 
-def _classify_media_items(session: Session, progress_reporter: ProgressReporter, media_item_ids: list[int], threshold: float,
-                     max_labels: int) -> list[int]:
+def classify_media_items(
+        session: Session,
+        media_item_ids: list[int],
+        threshold: float,
+        max_labels: int,
+        progress_reporter: ProgressReporter | None = None,
+) -> list[int]:
     """Label each photo with the vocabulary entries scoring >= threshold (cosine),
     keeping the top `max_labels`. Replaces each photo's prior labels. Returns the ids
     of the photos that received at least one label.
@@ -108,9 +113,29 @@ def _classify_media_items(session: Session, progress_reporter: ProgressReporter,
         if len(pending) >= _FLUSH_SIZE:
             flush()
 
-    progress_reporter.run_with_progress(media_item_ids, media_item_processor)
+    if progress_reporter is None:
+        for media_item_id in media_item_ids:
+            media_item_processor(media_item_id)
+    else:
+        progress_reporter.run_with_progress(media_item_ids, media_item_processor)
     flush()  # remaining tail
     return labeled
+
+
+def _classify_media_items(
+        session: Session,
+        progress_reporter: ProgressReporter,
+        media_item_ids: list[int],
+        threshold: float,
+        max_labels: int,
+) -> list[int]:
+    return classify_media_items(
+        session,
+        media_item_ids,
+        threshold,
+        max_labels,
+        progress_reporter,
+    )
 
 
 @task_queue.task()
@@ -135,7 +160,13 @@ def classify_labels_automation_task(
 
         def work(progress_reporter: ProgressReporter) -> str:
             nonlocal labeled
-            labeled = _classify_media_items(session, progress_reporter, media_item_ids, threshold, max_labels)
+            labeled = classify_media_items(
+                session,
+                media_item_ids,
+                threshold,
+                max_labels,
+                progress_reporter,
+            )
             return (
                 f"labeled {len(labeled)} of {len(media_item_ids)} photo(s) "
                 f"at threshold {threshold:.2f} (max {max_labels} each)"

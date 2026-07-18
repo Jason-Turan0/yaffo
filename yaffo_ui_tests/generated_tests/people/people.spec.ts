@@ -9,11 +9,6 @@ const DELETE_NAME = `SpecTestDelete-${UNIQ}`;
 const FACES_NAME = `SpecTestFaces-${UNIQ}`;
 const ALL_TEST_NAMES = [LIST_NAME, ADD_NAME, EDIT_NAME, RENAMED_NAME, DELETE_NAME, FACES_NAME];
 
-// Faces the face_assignment suite reserves for its own scenarios (they belong to
-// person Obama there); never assign these from this suite — both suites can run in
-// the same parallel session.
-const RESERVED_FACE_IDS = [1, 11, 13, 18, 26, 37, 41];
-
 // Generous per-test budget: the face-assignment waits can sit behind minutes of
 // queued model work when the whole suite runs in parallel.
 test.describe.configure({ mode: 'serial', timeout: 300_000 });
@@ -49,11 +44,11 @@ async function setBirthdate(scope: Locator, visibleInputId: string, localeText: 
   await expect(scope.locator('.intl-date-input-control input[name="birthdate"]')).toHaveValue(expectedIso);
 }
 
-// The ids of the currently clustered unassigned faces per group, read from the
-// server-rendered data-faces JSON (covers hidden clusters too). A low threshold
-// keeps clustering permissive so every unassigned face lands in some group.
+// The ids of all currently unassigned faces. Grouping by people at the strictest
+// threshold puts every face in a rendered group (including DBSCAN noise), making
+// this helper independent of the fixture's similarity distribution.
 async function unassignedFaceIdsByGroup(page: Page): Promise<number[][]> {
-  await page.goto('/faces?threshold=1');
+  await page.goto('/faces?group_by=people&threshold=100');
   await expect(page.locator('.main-content')).toBeVisible();
   const groups = page.locator('.suggestion-group');
   const byGroup: number[][] = [];
@@ -69,15 +64,22 @@ async function unassignedFaceIds(page: Page): Promise<number[]> {
   return (await unassignedFaceIdsByGroup(page)).flat();
 }
 
-// Pick a face the concurrently-running face_assignment suite won't touch: its
-// tests act on the FIRST suggestion group (and the reserved ids), so prefer the
-// tail of a later group.
+async function activeSimilarityClusterFaceIds(page: Page): Promise<number[]> {
+  await page.goto('/faces?group_by=similarity&threshold=2');
+  const firstGroup = page.locator('.suggestion-group').first();
+  if (await firstGroup.count() === 0) return [];
+  const json = await firstGroup.getAttribute('data-faces');
+  return json ? (JSON.parse(json) as { id: number }[]).map(face => face.id) : [];
+}
+
+// The face_assignment suite mutates its active similarity cluster while running
+// in parallel. Reserve that cluster dynamically, then take a face from the tail
+// of the complete unassigned pool.
 async function pickPoolFaceId(page: Page): Promise<number> {
+  const reservedFaceIds = new Set(await activeSimilarityClusterFaceIds(page));
   const byGroup = await unassignedFaceIdsByGroup(page);
-  const laterGroups = byGroup.slice(1).flat().filter(id => !RESERVED_FACE_IDS.includes(id));
-  const anyGroup = byGroup.flat().filter(id => !RESERVED_FACE_IDS.includes(id));
-  const candidates = laterGroups.length > 0 ? laterGroups : anyGroup;
-  expect(candidates.length, 'expected at least one unassigned face outside the face_assignment reserved set').toBeGreaterThan(0);
+  const candidates = byGroup.flat().filter(id => !reservedFaceIds.has(id));
+  expect(candidates.length, 'expected an unassigned face outside the active similarity cluster').toBeGreaterThan(0);
   return candidates[candidates.length - 1];
 }
 

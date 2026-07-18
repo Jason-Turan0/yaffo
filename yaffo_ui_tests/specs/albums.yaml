@@ -31,7 +31,7 @@ context:
     description: The shared selection component used by the album's edit mode and the add screen
 
 data:
-  - The sandbox seeds one album, "Seeded Album", with 4 photos, and a 16-item library (14 photos + 2 videos)
+  - The primary sandbox seeds one album, "Seeded Album", with 4 photos, and a 33-item Bennett library (31 photos + 2 videos)
   - This environment has NO paired devices, so the Share modal correctly says there are none - the full share/un-share flow is the sharing spec's sharing_album_share_modal_toggle scenario
   - SELECTION IS IN THE URL, not client state - select=all plus exclude_id, or one select_id per ticked card. Paginating carries it, and reloading preserves it
   - '"Select all N" means the whole scope, NOT the visible page - every member of the album, or every photo matching the current filters'

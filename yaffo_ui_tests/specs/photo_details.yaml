@@ -14,9 +14,9 @@ context:
     path: templates/media/view.html
     description: Photo details view template with sidebar and main image
 data:
-  - Test Image "DSCN0010.jpg" has location data and should be used for the test
-  - ID for Test Image "DSCN0010.jpg" is 14
-  - Photo with ID of 7 has a detected face in it
+  - Test image "2015-09-10_153200_daughter-one-year-portrait.png" has location data and should be used for filename, location, and tag tests
+  - Tests resolve fixture images by filename rather than relying on database IDs
+  - Face tests dynamically find a photo with detected faces
 scenarios:
   - name: photo_details_displays_file_information
     goal: Photo details page shows correct file information

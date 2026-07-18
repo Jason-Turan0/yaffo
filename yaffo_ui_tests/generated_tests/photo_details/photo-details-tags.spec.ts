@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { findMediaIdByFilename } from '../_support/media-test-data';
+import { findMediaIdByFilename, PRIMARY_DETAIL_IMAGE } from '../_support/media-test-data';
 
 test.describe('Photo Details - Edit Tags', () => {
   // Use timestamp to make tag name unique across test runs/retries
@@ -23,7 +23,7 @@ test.describe('Photo Details - Edit Tags', () => {
   });
 
   test('photo_details_can_edit_tags', async ({ page, request }) => {
-    photoId = await findMediaIdByFilename(request, 'DSCN0010.jpg');
+    photoId = await findMediaIdByFilename(request, PRIMARY_DETAIL_IMAGE);
 
     // Navigate to the photo details page
     await page.goto(`/media/view/${photoId}`);

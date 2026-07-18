@@ -7,8 +7,8 @@ tags:
 preconditions:
   - Two Yaffo instances are running on this machine, each with its own YAFFO_DATA_DIR, web port, and YAFFO_P2P_PORT, and both with YAFFO_P2P_ENABLED=1
   - Both instances have YAFFO_HUB_URL pointing at an unreachable address, so there is NO hub - the devices find each other over the LAN (mDNS) instead
-  - Instance A ("this device") has the seeded photo library (with two photos carved out into the organized/shared_trip subfolder for folder grants) and the seeded album
-  - Instance B ("the peer") starts WITHOUT a download directory. The UI can set one but never clear one, so the "gallery without a download directory" scenario runs first and a later step sets the directory through the UI to a path the tests control
+  - Instance A ("this device") has the seeded Bennett library (including organized/2015_chicago_baby_trip for folder grants) and the seeded album
+  - Instance B ("the peer") has the independently seeded Obama library, including Barack, Michelle, Malia, and Sasha as people, and starts WITHOUT a download directory. The UI can set one but never clear one, so the "gallery without a download directory" scenario runs first and a later step sets the directory through the UI to a path the tests control
 
 context:
   - tag: sharing-settings-template

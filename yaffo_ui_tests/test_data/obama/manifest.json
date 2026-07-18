@@ -1,0 +1,615 @@
+{
+  "generatedAt": "2026-07-18T21:17:31.732Z",
+  "creditLine": "Courtesy Barack Obama Presidential Library.",
+  "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+  "sources": [
+    {
+      "slug": "obama-family",
+      "title": "The Obama Family",
+      "url": "https://obamalibrary.archives.gov/galleries/obama-family#131",
+      "include": "all"
+    },
+    {
+      "slug": "bo-sunny",
+      "title": "Bo & Sunny",
+      "url": "https://obamalibrary.archives.gov/galleries/bo-sunny#9",
+      "include": "named-family-members"
+    }
+  ],
+  "assets": [
+    {
+      "fileName": "bo2_hi-res.jpg",
+      "relativePath": "images/bo2_hi-res.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/bo2_hi-res.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 2228465,
+      "sha256": "38525d58a02f7f4f900248bc65ba5f50d889f3d291cdab5142a88e64db10af8c",
+      "artifactId": "",
+      "caption": "The Obamas welcome Bo, a six-month old Portuguese water dog and a gift from Senator and Mrs. Kennedy to Sasha and Malia, recently at the White House.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#10",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/bo2_hi-res.jpg",
+          "artifactId": "",
+          "caption": "The Obamas welcome Bo, a six-month old Portuguese water dog and a gift from Senator and Mrs. Kennedy to Sasha and Malia, recently at the White House.",
+          "altText": "The Obamas welcome Bo, a six-month old Portuguese water dog and a gift from Senator and Mrs. Kennedy to Sasha and Malia, recently at the White House."
+        }
+      ]
+    },
+    {
+      "fileName": "P012013PS-0583.jpg",
+      "relativePath": "images/P012013PS-0583.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P012013PS-0583.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 2264609,
+      "sha256": "328c77215cba356c32f47f93d77950cf89a34f8de968d4043a65d4bf7743e84b",
+      "artifactId": "P012013PS-0583",
+      "caption": "President Barack Obama and First Lady Michelle Obama embrace following the official swearing-in ceremony in the Blue Room of the White House on Inauguration Day, January 20, 2013. Standing, from left, are daughters Malia and Sasha and Supreme Court Chief Justice John G. Roberts, Jr.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#138",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P012013PS-0583.jpg",
+          "artifactId": "P012013PS-0583",
+          "caption": "President Barack Obama and First Lady Michelle Obama embrace following the official swearing-in ceremony in the Blue Room of the White House on Inauguration Day, January 20, 2013. Standing, from left, are daughters Malia and Sasha and Supreme Court Chief Justice John G. Roberts, Jr.",
+          "altText": "President Barack Obama and First Lady Michelle Obama embrace following the official swearing-in ceremony in the Blue Room of the White House on Inauguration Day, January 20, 2013. Standing, from left, are daughters Malia and Sasha and Supreme Court Chief"
+        }
+      ]
+    },
+    {
+      "fileName": "P012014PS-0127.jpg",
+      "relativePath": "images/P012014PS-0127.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P012014PS-0127.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 232910,
+      "sha256": "adc37f5e4f34121be915c8c3e20084ef212ad5d74b04019b618ab7b4d32b25f8",
+      "artifactId": "P012014PS-0127",
+      "caption": "President Barack Obama and his daughter Sasha assemble burritos during a Martin Luther King, Jr. Day of Service event at DC Central Kitchen in Washington, D.C., January 20, 2014.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#141",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P012014PS-0127.jpg",
+          "artifactId": "P012014PS-0127",
+          "caption": "President Barack Obama and his daughter Sasha assemble burritos during a Martin Luther King, Jr. Day of Service event at DC Central Kitchen in Washington, D.C., January 20, 2014.",
+          "altText": "President Barack Obama and his daughter Sasha assemble burritos during a Martin Luther King, Jr. Day of Service event at DC Central Kitchen in Washington, D.C., January 20, 2014"
+        }
+      ]
+    },
+    {
+      "fileName": "P012213PS-0572.jpg",
+      "relativePath": "images/P012213PS-0572.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P012213PS-0572_0.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 7684272,
+      "sha256": "b308c32e7635090ebf51583c6e724a03f5e272e297539db9512ac4cae71291a4",
+      "artifactId": "P012213PS-0572",
+      "caption": "President Barack Obama, First Lady Michelle Obama, and Bo, the Obama family dog, greet visitors during an inaugural open house in the Blue Room of the White House, January 22, 2013.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#34",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P012213PS-0572_0.jpg",
+          "artifactId": "P012213PS-0572",
+          "caption": "President Barack Obama, First Lady Michelle Obama, and Bo, the Obama family dog, greet visitors during an inaugural open house in the Blue Room of the White House, January 22, 2013.",
+          "altText": "President Barack Obama, First Lady Michelle Obama, and Bo, the Obama family dog, greet visitors during an inaugural open house in the Blue Room of the White House, January 22, 2013."
+        }
+      ]
+    },
+    {
+      "fileName": "P012814AL-0028.jpg",
+      "relativePath": "images/P012814AL-0028.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P012814AL-0028.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 280755,
+      "sha256": "e60c10370e49db15885f092dc35a588e444f0a032a2aae935ed2c2a7bd86ec33",
+      "artifactId": "P012814AL-0028",
+      "caption": "First Lady Michelle Obama, seated with Obama family pets Bo, left, and Sunny, tapes a video for Ellen DeGeneres' 56th birthday in the White House Library, January 28, 2014.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#38",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P012814AL-0028.jpg",
+          "artifactId": "P012814AL-0028",
+          "caption": "First Lady Michelle Obama, seated with Obama family pets Bo, left, and Sunny, tapes a video for Ellen DeGeneres' 56th birthday in the White House Library, January 28, 2014.",
+          "altText": "First Lady Michelle Obama, seated with Obama family pets Bo, left, and Sunny, tapes a video for Ellen DeGeneres' 56th birthday in the White House Library, January 28, 2014."
+        }
+      ]
+    },
+    {
+      "fileName": "P030209PS-0198.jpg",
+      "relativePath": "images/P030209PS-0198.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P030209PS-0198.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 117809,
+      "sha256": "f1d63812ae47235435bf094eeb70d1c8912a32854c2ac1d6c8178efa981a92c3",
+      "artifactId": "P030209PS-0198",
+      "caption": "First Lady Michelle Obama with daughters, Malia and Sasha, sled in the snow on the South Lawn of the White House, March 2, 2009.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#132",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P030209PS-0198.jpg",
+          "artifactId": "P030209PS-0198",
+          "caption": "First Lady Michelle Obama with daughters, Malia and Sasha, sled in the snow on the South Lawn of the White House, March 2, 2009.",
+          "altText": "First Lady Michelle Obama with daughters, Malia and Sasha, sled in the snow on the South Lawn of the White House, March 2, 2009."
+        }
+      ]
+    },
+    {
+      "fileName": "P030715PS-2003.jpg",
+      "relativePath": "images/P030715PS-2003.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P030715PS-2003.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 140862,
+      "sha256": "3dcabbbbe8b87b58bce502955d2694290c3a1fd473f5458ff2ce30cdffaea430",
+      "artifactId": "P030715PS-2003",
+      "caption": "President Barack Obama and First Lady Michelle Obama follow Marian Robinson and Malia Obama as they board Air Force One at Maxwell Air Force Base for departure from Montgomery, Alabama, following a trip to Selma, Alabama to commemorate the 50th Anniversary of Bloody Sunday, March 7, 2015",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#144",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P030715PS-2003.jpg",
+          "artifactId": "P030715PS-2003",
+          "caption": "President Barack Obama and First Lady Michelle Obama follow Marian Robinson and Malia Obama as they board Air Force One at Maxwell Air Force Base for departure from Montgomery, Alabama, following a trip to Selma, Alabama to commemorate the 50th Anniversary of Bloody Sunday, March 7, 2015",
+          "altText": "President Barack Obama and First Lady Michelle Obama follow Marian Robinson and Malia Obama as they board Air Force One at Maxwell Air Force Base for departure from Montgomery, Alabama, following a trip to Selma, Alabama to commemorate the 50th Anniversar"
+        }
+      ]
+    },
+    {
+      "fileName": "P032013LJ-0004.jpg",
+      "relativePath": "images/P032013LJ-0004.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P032013LJ-0004.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 1689710,
+      "sha256": "e2bf6d1e66b9c27d034249bed1375b4c7ce6225f83f0d64314f3836211191214",
+      "artifactId": "P032013LJ-0004",
+      "caption": "Bo, the Obama family dog, waits for First Lady Michelle Obama on the South Lawn driveway before departing the White House, March 20, 2013. Bo accompanied Mrs. Obama during her visit to Maryland Fisher House IV at Walter Reed National Military Medical Center in Bethesda, Maryland.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#35",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P032013LJ-0004.jpg",
+          "artifactId": "P032013LJ-0004",
+          "caption": "Bo, the Obama family dog, waits for First Lady Michelle Obama on the South Lawn driveway before departing the White House, March 20, 2013. Bo accompanied Mrs. Obama during her visit to Maryland Fisher House IV at Walter Reed National Military Medical Center in Bethesda, Maryland.",
+          "altText": "Bo, the Obama family dog, waits for First Lady Michelle Obama on the South Lawn driveway before departing the White House, March 20, 2013. Bo accompanied Mrs. Obama during her visit to Maryland Fisher House IV at Walter Reed National Military Medical Cent"
+        }
+      ]
+    },
+    {
+      "fileName": "P032314AL-0311.jpg",
+      "relativePath": "images/P032314AL-0311.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P032314AL-0311.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 180387,
+      "sha256": "db41311b7166c820d9124d1703d5338fcf11585c626aff9adcf81e5615f4a4d1",
+      "artifactId": "P032314AL-0311",
+      "caption": "First Lady Michelle Obama hugs daughters Sasha, left, and Malia as they visit the Great Wall of China in Mutianyu, China, March 23, 2014.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#142",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P032314AL-0311.jpg",
+          "artifactId": "P032314AL-0311",
+          "caption": "First Lady Michelle Obama hugs daughters Sasha, left, and Malia as they visit the Great Wall of China in Mutianyu, China, March 23, 2014.",
+          "altText": "First Lady Michelle Obama hugs daughters Sasha, left, and Malia as they visit the Great Wall of China in Mutianyu, China, March 23, 2014."
+        }
+      ]
+    },
+    {
+      "fileName": "P033113PS-0045.jpg",
+      "relativePath": "images/P033113PS-0045.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P033113PS-0045.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 1505873,
+      "sha256": "b616eac286f3e503de49fee43630dae7f9bad52e749bac29b7924d239017b55c",
+      "artifactId": "P033113PS-0045",
+      "caption": "President Barack Obama and First Lady Michelle Obama walk with their daughters Sasha and Malia, right, to attend an Easter service at St. John's Church in Washington, D.C., Sunday, March 31, 2013.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#139",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P033113PS-0045.jpg",
+          "artifactId": "P033113PS-0045",
+          "caption": "President Barack Obama and First Lady Michelle Obama walk with their daughters Sasha and Malia, right, to attend an Easter service at St. John's Church in Washington, D.C., Sunday, March 31, 2013.",
+          "altText": "President Barack Obama and First Lady Michelle Obama walk with their daughters Sasha and Malia, right, to attend an Easter service at St. John's Church in Washington, D.C., Sunday, March 31, 2013."
+        }
+      ]
+    },
+    {
+      "fileName": "P040515PS-0034.jpg",
+      "relativePath": "images/P040515PS-0034.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P040515PS-0034.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 1419023,
+      "sha256": "25250df5201f821e712568af3a6bc910e24114989c333a5d88f6b1ede31f3f22",
+      "artifactId": "P040515PS-0034",
+      "caption": "President Barack Obama, First Lady Michelle Obama, and daughters Malia and Sasha pose for a family portrait with Bo and Sunny in the Rose Garden of the White House on Easter Sunday, April 5, 2015.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#145",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P040515PS-0034.jpg",
+          "artifactId": "P040515PS-0034",
+          "caption": "President Barack Obama, First Lady Michelle Obama, and daughters Malia and Sasha pose for a family portrait with Bo and Sunny in the Rose Garden of the White House on Easter Sunday, April 5, 2015.",
+          "altText": "President Barack Obama, First Lady Michelle Obama, and daughters Malia and Sasha pose for a family portrait with Bo and Sunny in the Rose Garden of the White House on Easter Sunday, April 5, 2015."
+        }
+      ]
+    },
+    {
+      "fileName": "P040516LJ-0630.jpg",
+      "relativePath": "images/P040516LJ-0630.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/p040516lj-0630.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 217810,
+      "sha256": "66e9e29342d39adbcbb5e2656544aa9ff15d9f2fc90fe8a5ab93cc2c0eeeabb9",
+      "artifactId": "P040516LJ-0630",
+      "caption": "First Lady Michelle Obama walks back to the White House with Obama family pet, Sunny, after joining students for the \"Let's Move!\" spring garden planting in the White House Kitchen Garden, April 5, 2016.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#43",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/p040516lj-0630.jpg",
+          "artifactId": "P040516LJ-0630",
+          "caption": "First Lady Michelle Obama walks back to the White House with Obama family pet, Sunny, after joining students for the \"Let's Move!\" spring garden planting in the White House Kitchen Garden, April 5, 2016.",
+          "altText": "First Lady Michelle Obama walks back to the White House with Obama family pet, Sunny, after joining students for the \"Let's Move!\" spring garden planting in the White House Kitchen Garden, April 5, 2016."
+        }
+      ]
+    },
+    {
+      "fileName": "P041414AL-0019.jpg",
+      "relativePath": "images/P041414AL-0019.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P041414AL-0019.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 244939,
+      "sha256": "8a9589f2507068fcaa53c0289e4b41b9f349eb12ab49ff75779ba9644e0cd2d2",
+      "artifactId": "P041414AL-0019",
+      "caption": "First Lady Michelle Obama hugs family pets Sunny and Bo, right, during a video taping in the Map Room of the White House, April 14, 2014.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#40",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P041414AL-0019.jpg",
+          "artifactId": "P041414AL-0019",
+          "caption": "First Lady Michelle Obama hugs family pets Sunny and Bo, right, during a video taping in the Map Room of the White House, April 14, 2014.",
+          "altText": "First Lady Michelle Obama hugs family pets Sunny and Bo, right, during a video taping in the Map Room of the White House, April 14, 2014."
+        }
+      ]
+    },
+    {
+      "fileName": "P042511PS-0146.jpg",
+      "relativePath": "images/P042511PS-0146.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P042511PS-0146.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 104373,
+      "sha256": "6e70ed456e80b04a0146f062fd8886ce531d8dde11d5c5be923220689ef6fad5",
+      "artifactId": "P042511PS-0146",
+      "caption": "President Barack Obama and First Lady Michelle Obama wave to the crowd from the South Portico of the White House during the annual Easter Egg Roll, April 25, 2011. Daughters Malia and Sasha, Marian Robinson, and Bo, the Obama family dog, joined the President and First Lady on the balcony for the national anthem before participating in the activities on the South Lawn.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#136",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P042511PS-0146.jpg",
+          "artifactId": "P042511PS-0146",
+          "caption": "President Barack Obama and First Lady Michelle Obama wave to the crowd from the South Portico of the White House during the annual Easter Egg Roll, April 25, 2011. Daughters Malia and Sasha, Marian Robinson, and Bo, the Obama family dog, joined the President and First Lady on the balcony for the national anthem before participating in the activities on the South Lawn.",
+          "altText": "President Barack Obama and First Lady Michelle Obama wave to the crowd from the South Portico of the White House during the annual Easter Egg Roll, April 25, 2011. Daughters Malia and Sasha, Marian Robinson, and Bo, the Obama family dog, joined the Presid"
+        }
+      ]
+    },
+    {
+      "fileName": "P063013PS-0542.jpg",
+      "relativePath": "images/P063013PS-0542.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P063013PS-0542.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 137229,
+      "sha256": "2422a940a22c136508417dd9f33124bc5bedc7806a76af17c451f25dd7dd242e",
+      "artifactId": "P063013PS-0542",
+      "caption": "President Barack Obama and First Lady Michelle Obama, along with daughters Sasha and Malia, stand in former South African President Nelson Mandela's cell as they listen to former prisoner Ahmed Kathrada during their tour of Robben Island Prison on Robben Island in Cape Town, South Africa, June 30, 2013. Leslie Robinson is pictured at left.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#140",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P063013PS-0542.jpg",
+          "artifactId": "P063013PS-0542",
+          "caption": "President Barack Obama and First Lady Michelle Obama, along with daughters Sasha and Malia, stand in former South African President Nelson Mandela's cell as they listen to former prisoner Ahmed Kathrada during their tour of Robben Island Prison on Robben Island in Cape Town, South Africa, June 30, 2013. Leslie Robinson is pictured at left.",
+          "altText": "President Barack Obama and First Lady Michelle Obama, along with daughters Sasha and Malia, stand in former South African President Nelson Mandela's cell as they listen to former prisoner Ahmed Kathrada during their tour of Robben Island Prison on Robben"
+        }
+      ]
+    },
+    {
+      "fileName": "P080810PS-1246.jpg",
+      "relativePath": "images/P080810PS-1246.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P080810PS-1246.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 907213,
+      "sha256": "c2c9d75a0dc0fcf3a95f24fa7134c0aeb699e0f2f4d471f89b7bdb88c71ff48d",
+      "artifactId": "P080810PS-1246",
+      "caption": "President Barack Obama greets First Lady Michelle Obama and daughter Sasha upon their arrival at a barbecue in celebration of his 49th birthday on the South Lawn of the White House, August 8, 2010",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#134",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P080810PS-1246.jpg",
+          "artifactId": "P080810PS-1246",
+          "caption": "President Barack Obama greets First Lady Michelle Obama and daughter Sasha upon their arrival at a barbecue in celebration of his 49th birthday on the South Lawn of the White House, August 8, 2010",
+          "altText": "President Barack Obama greets First Lady Michelle Obama and daughter Sasha upon their arrival at a barbecue in celebration of his 49th birthday on the South Lawn of the White House, August 8, 2010"
+        }
+      ]
+    },
+    {
+      "fileName": "P090109-0127.jpg",
+      "relativePath": "images/P090109-0127.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P090109-0127.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 1525550,
+      "sha256": "adfeea7a3c014092e83199e365a02e97b545afee4229c4bdb7c92452c07b5062",
+      "artifactId": "P090109-0127",
+      "caption": "President Barack Obama, First Lady Michelle Obama, and their daughters, Sasha and Malia, sit for a family portrait in the Green Room of the White House, September 1, 2009. Official White House Photo by Annie Leibovitz",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#133",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P090109-0127.jpg",
+          "artifactId": "P090109-0127",
+          "caption": "President Barack Obama, First Lady Michelle Obama, and their daughters, Sasha and Malia, sit for a family portrait in the Green Room of the White House, September 1, 2009. Official White House Photo by Annie Leibovitz",
+          "altText": "President Barack Obama, First Lady Michelle Obama, and their daughters, Sasha and Malia, sit for a family portrait in the Green Room of the White House, September 1, 2009. (Official White House Photo by Annie Leibovitz)"
+        }
+      ]
+    },
+    {
+      "fileName": "P101411PS-0709.jpg",
+      "relativePath": "images/P101411PS-0709.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P101411PS-0709.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 415870,
+      "sha256": "8783e159c40c9e8a052f44ad81fe145e2852fbca44452c39e76098efa26991ca",
+      "artifactId": "P101411PS-0709",
+      "caption": "President Barack Obama, First Lady Michelle Obama, and daughters Sasha and Malia tour the Martin Luther King, Jr. Memorial in Washington, D.C., October 14, 2011.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#137",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P101411PS-0709.jpg",
+          "artifactId": "P101411PS-0709",
+          "caption": "President Barack Obama, First Lady Michelle Obama, and daughters Sasha and Malia tour the Martin Luther King, Jr. Memorial in Washington, D.C., October 14, 2011.",
+          "altText": "President Barack Obama, First Lady Michelle Obama, and daughters Sasha and Malia tour the Martin Luther King, Jr. Memorial in Washington, D.C., October 14, 2011."
+        }
+      ]
+    },
+    {
+      "fileName": "P110513PS-0197.jpg",
+      "relativePath": "images/P110513PS-0197.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P110513PS-0197.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 329443,
+      "sha256": "a1fd20952872bdb6a49a06c44fd7466e6a73ba3c49b15db526e71200f4702a44",
+      "artifactId": "P110513PS-0197",
+      "caption": "President Barack Obama and First Lady Michelle Obama, joined by family pets Sunny and Bo, wait to greet visitors in the Blue Room during a White House tour, November 5, 2013.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#37",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P110513PS-0197.jpg",
+          "artifactId": "P110513PS-0197",
+          "caption": "President Barack Obama and First Lady Michelle Obama, joined by family pets Sunny and Bo, wait to greet visitors in the Blue Room during a White House tour, November 5, 2013.",
+          "altText": "President Barack Obama and First Lady Michelle Obama, joined by family pets Sunny and Bo, wait to greet visitors in the Blue Room during a White House tour, November 5, 2013."
+        }
+      ]
+    },
+    {
+      "fileName": "P112814CK-0083.jpg",
+      "relativePath": "images/P112814CK-0083.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P112814CK-0083.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 314107,
+      "sha256": "d535db99838d640c415de1cea4431419c25fda1ac5d3d1ce1eeba7bf11438575",
+      "artifactId": "P112814CK-0083",
+      "caption": "First Lady Michelle Obama, with daughters Sasha and Malia and family pets Bo and Sunny, receives the official White House Christmas tree at the North Portico of the White House, November 28, 2014.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#143",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P112814CK-0083.jpg",
+          "artifactId": "P112814CK-0083",
+          "caption": "First Lady Michelle Obama, with daughters Sasha and Malia and family pets Bo and Sunny, receives the official White House Christmas tree at the North Portico of the White House, November 28, 2014.",
+          "altText": "First Lady Michelle Obama, with daughters Sasha and Malia and family pets Bo and Sunny, receives the official White House Christmas tree at the North Portico of the White House, November 28, 2014."
+        }
+      ]
+    },
+    {
+      "fileName": "P120314CK-0192.jpg",
+      "relativePath": "images/P120314CK-0192.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P120314CK-0192.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 379013,
+      "sha256": "c044a5e8fa03f680e07107f99f3a6b07c0eaf540e457255dbcb3d3d6fc19c278",
+      "artifactId": "P120314CK-0192",
+      "caption": "First Lady Michelle Obama, with family pets Sunny and Bo, visit with children of military families during a craft project in the State Dining Room of the White House, December 3, 2014.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#41",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P120314CK-0192.jpg",
+          "artifactId": "P120314CK-0192",
+          "caption": "First Lady Michelle Obama, with family pets Sunny and Bo, visit with children of military families during a craft project in the State Dining Room of the White House, December 3, 2014.",
+          "altText": "First Lady Michelle Obama, with family pets Sunny and Bo, visit with children of military families during a craft project in the State Dining Room of the White House, December 3, 2014."
+        }
+      ]
+    },
+    {
+      "fileName": "P120414CK-0224.jpg",
+      "relativePath": "images/P120414CK-0224.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P120414CK-0224.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 292329,
+      "sha256": "85728d3fca6ae85c8040d5f0b05450ba0b6d4108fcce6ecad0ff18a0e5dbbee9",
+      "artifactId": "P120414CK-0224",
+      "caption": "First Lady Michelle Obama introduces Jayla Raymond, 8, from New Orleans, Louisiana, to Obama family pets Sunny and Bo in the Map Room of the White House, December 4, 2014.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#42",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P120414CK-0224.jpg",
+          "artifactId": "P120414CK-0224",
+          "caption": "First Lady Michelle Obama introduces Jayla Raymond, 8, from New Orleans, Louisiana, to Obama family pets Sunny and Bo in the Map Room of the White House, December 4, 2014.",
+          "altText": "First Lady Michelle Obama introduces Jayla Raymond, 8, from New Orleans, Louisiana, to Obama family pets Sunny and Bo in the Map Room of the White House, December 4, 2014."
+        }
+      ]
+    },
+    {
+      "fileName": "P120910CK-0163.jpg",
+      "relativePath": "images/P120910CK-0163.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P120910CK-0163.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 103100,
+      "sha256": "233ef5356b7a691b397574ab0e5e5f492bd7878935e074195489289db96e3ea7",
+      "artifactId": "P120910CK-0163",
+      "caption": "President Barack Obama, with mother-in-law Marian Robinson, daughters Sasha and Malia, and First Lady Michelle Obama, react as they push the button to light the National Christmas Tree during a ceremony on the Ellipse in Washington, D.C., December 9, 2010.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#135",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/P120910CK-0163.jpg",
+          "artifactId": "P120910CK-0163",
+          "caption": "President Barack Obama, with mother-in-law Marian Robinson, daughters Sasha and Malia, and First Lady Michelle Obama, react as they push the button to light the National Christmas Tree during a ceremony on the Ellipse in Washington, D.C., December 9, 2010.",
+          "altText": "President Barack Obama, with mother-in-law Marian Robinson, daughters Sasha and Malia, and First Lady Michelle Obama, react as they push the button to light the National Christmas Tree during a ceremony on the Ellipse in Washington, D.C., December 9, 2010"
+        }
+      ]
+    },
+    {
+      "fileName": "P121111PS-0154.jpg",
+      "relativePath": "images/P121111PS-0154.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/6516504337_c643c0e2eb_b.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 417495,
+      "sha256": "526a924f4d4b01b73a9e1705813d5f4025d2867b73bed9b81d0f42c4f56490e1",
+      "artifactId": "P121111PS-0154",
+      "caption": "President Barack Obama, First Lady Michelle Obama, and their daughters, Malia, left, and Sasha, right, sit for a family portrait in the Oval Office, December 11, 2011.",
+      "sourceItems": [
+        {
+          "gallerySlug": "obama-family",
+          "galleryTitle": "The Obama Family",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/obama-family",
+          "itemAnchor": "#131",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/6516504337_c643c0e2eb_b.jpg",
+          "artifactId": "P121111PS-0154",
+          "caption": "President Barack Obama, First Lady Michelle Obama, and their daughters, Malia, left, and Sasha, right, sit for a family portrait in the Oval Office, December 11, 2011.",
+          "altText": "President Barack Obama, First Lady Michelle Obama, and their daughters, Malia, left, and Sasha, right, sit for a family portrait in the Oval Office, December 11, 2011."
+        }
+      ]
+    },
+    {
+      "fileName": "P121211CK-0327.jpg",
+      "relativePath": "images/P121211CK-0327.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/6797303167_4b67bb0bee_b.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 362376,
+      "sha256": "b6c70585664bcc2533082fc039bccaf2193c42eb62e81a23722a3875d859d839",
+      "artifactId": "P121211CK-0327",
+      "caption": "First Lady Michelle Obama and Bo, the Obama family dog, greet audience members at Children’s National Medical Center in Washington, D.C., December 12, 2011. Mrs. Obama read \"Twas the Night Before Christmas\" during a Christmas holiday program with children, parents, and staff.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#25",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/6797303167_4b67bb0bee_b.jpg",
+          "artifactId": "P121211CK-0327",
+          "caption": "First Lady Michelle Obama and Bo, the Obama family dog, greet audience members at Children’s National Medical Center in Washington, D.C., December 12, 2011. Mrs. Obama read \"Twas the Night Before Christmas\" during a Christmas holiday program with children, parents, and staff.",
+          "altText": "First Lady Michelle Obama and Bo, the Obama family dog, greet audience members at Children’s National Medical Center in Washington, D.C., December 12, 2011. Mrs. Obama read \"Twas the Night Before Christmas\" during a Christmas holiday program with children"
+        }
+      ]
+    },
+    {
+      "fileName": "P121510PS-0724.jpg",
+      "relativePath": "images/P121510PS-0724.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/5385071081_8aa4bcbe00_b.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 454977,
+      "sha256": "f717f675f84110ad8707df16a371f124764255fbaee4153462a2fe63bbee8a84",
+      "artifactId": "P121510PS-0724",
+      "caption": "President Barack Obama is joined by First Lady Michelle Obama and Bo, the Obama family dog, as he delivers remarks during a Christmas holiday reception in the Grand Foyer of the White House, December 15, 2010.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#24",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/5385071081_8aa4bcbe00_b.jpg",
+          "artifactId": "P121510PS-0724",
+          "caption": "President Barack Obama is joined by First Lady Michelle Obama and Bo, the Obama family dog, as he delivers remarks during a Christmas holiday reception in the Grand Foyer of the White House, December 15, 2010.",
+          "altText": "President Barack Obama is joined by First Lady Michelle Obama and Bo, the Obama family dog, as he delivers remarks during a Christmas holiday reception in the Grand Foyer of the White House, December 15, 2010."
+        }
+      ]
+    },
+    {
+      "fileName": "P121909PS-0247.jpg",
+      "relativePath": "images/P121909PS-0247.jpg",
+      "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/4291638986_06ed8dbb53_o.jpg",
+      "contentType": "image/jpeg",
+      "byteLength": 63697,
+      "sha256": "807de9f8d1cf6406974f2c23bd0ccdc9be4e8da2d61984589503345ca5469cc1",
+      "artifactId": "P121909PS-0247",
+      "caption": "First Lady Michelle Obama and daughters Sasha and Malia, along with family dog, Bo, play in the snow on the South Lawn of the White House on December 19, 2009.",
+      "sourceItems": [
+        {
+          "gallerySlug": "bo-sunny",
+          "galleryTitle": "Bo & Sunny",
+          "galleryUrl": "https://obamalibrary.archives.gov/galleries/bo-sunny",
+          "itemAnchor": "#17",
+          "downloadUrl": "https://www.obamalibrary.gov/sites/default/files/4291638986_06ed8dbb53_o.jpg",
+          "artifactId": "P121909PS-0247",
+          "caption": "First Lady Michelle Obama and daughters Sasha and Malia, along with family dog, Bo, play in the snow on the South Lawn of the White House on December 19, 2009.",
+          "altText": "First Lady Michelle Obama and daughters Sasha and Malia, along with family dog, Bo, play in the snow on the South Lawn of the White House on December 19, 2009."
+        }
+      ]
+    }
+  ]
+}

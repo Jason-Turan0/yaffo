@@ -1,0 +1,1025 @@
+[
+  {
+    "path": "2015_chicago_baby_trip/2015-10-09_103400_chicago-riverwalk.png",
+    "bbox": [
+      357,
+      785,
+      537,
+      641
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2015_chicago_baby_trip/2015-10-09_103400_chicago-riverwalk.png",
+    "bbox": [
+      171,
+      1019,
+      402,
+      852
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2015_chicago_baby_trip/2015-10-09_103400_chicago-riverwalk.png",
+    "bbox": [
+      95,
+      668,
+      369,
+      466
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2015_chicago_baby_trip/2015-10-09_151800_lakefront.png",
+    "bbox": [
+      404,
+      1112,
+      583,
+      976
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2015_chicago_baby_trip/2015-10-09_151800_lakefront.png",
+    "bbox": [
+      85,
+      607,
+      364,
+      403
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2015_chicago_baby_trip/2015-10-09_151800_lakefront.png",
+    "bbox": [
+      275,
+      821,
+      504,
+      652
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2015_chicago_baby_trip/2015-10-10_110700_neighborhood-walk.png",
+    "bbox": [
+      217,
+      1006,
+      411,
+      870
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2015_chicago_baby_trip/2015-10-10_110700_neighborhood-walk.png",
+    "bbox": [
+      418,
+      562,
+      572,
+      430
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2015_chicago_baby_trip/2015-10-10_110700_neighborhood-walk.png",
+    "bbox": [
+      96,
+      589,
+      321,
+      427
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2015_chicago_baby_trip/2015-10-11_085600_family-breakfast.png",
+    "bbox": [
+      478,
+      1113,
+      668,
+      959
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2015_chicago_baby_trip/2015-10-11_085600_family-breakfast.png",
+    "bbox": [
+      257,
+      855,
+      479,
+      688
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2015_chicago_baby_trip/2015-10-11_085600_family-breakfast.png",
+    "bbox": [
+      144,
+      607,
+      423,
+      407
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2015_daughter_baby/2015-09-10_153200_daughter-one-year-portrait.png",
+    "bbox": [
+      136,
+      844,
+      480,
+      551
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_162200_blowing-candles.png",
+    "bbox": [
+      476,
+      801,
+      665,
+      652
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_162200_blowing-candles.png",
+    "bbox": [
+      181,
+      463,
+      441,
+      270
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_162200_blowing-candles.png",
+    "bbox": [
+      190,
+      1133,
+      417,
+      961
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_163800_birthday-family-photo.png",
+    "bbox": [
+      168,
+      1002,
+      349,
+      875
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_163800_birthday-family-photo.png",
+    "bbox": [
+      269,
+      756,
+      406,
+      644
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_163800_birthday-family-photo.png",
+    "bbox": [
+      72,
+      579,
+      276,
+      434
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_165100_opening-gifts.png",
+    "bbox": [
+      463,
+      807,
+      622,
+      679
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_165100_opening-gifts.png",
+    "bbox": [
+      115,
+      997,
+      304,
+      861
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_165100_opening-gifts.png",
+    "bbox": [
+      87,
+      578,
+      302,
+      421
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_171400_birthday-candid.png",
+    "bbox": [
+      214,
+      1008,
+      413,
+      872
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_171400_birthday-candid.png",
+    "bbox": [
+      153,
+      763,
+      323,
+      635
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2017_third_birthday/2017-09-12_171400_birthday-candid.png",
+    "bbox": [
+      89,
+      548,
+      316,
+      386
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-01-14_061800_bottle-with-dad.png",
+    "bbox": [
+      341,
+      1043,
+      554,
+      858
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-01-14_061800_bottle-with-dad.png",
+    "bbox": [
+      32,
+      680,
+      418,
+      431
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-04-22_103600_tummy-time-with-sister.png",
+    "bbox": [
+      290,
+      654,
+      592,
+      405
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-04-22_103600_tummy-time-with-sister.png",
+    "bbox": [
+      241,
+      1083,
+      539,
+      858
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-06-24_193200_story-time.png",
+    "bbox": [
+      118,
+      802,
+      399,
+      600
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-06-24_193200_story-time.png",
+    "bbox": [
+      380,
+      1009,
+      599,
+      827
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-06-24_193200_story-time.png",
+    "bbox": [
+      352,
+      439,
+      595,
+      233
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-09-15_142800_son-ten-month-portrait.png",
+    "bbox": [
+      208,
+      941,
+      692,
+      549
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-09-22_101900_crawling-with-family.png",
+    "bbox": [
+      270,
+      666,
+      432,
+      539
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-09-22_101900_crawling-with-family.png",
+    "bbox": [
+      77,
+      1226,
+      271,
+      1092
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-09-22_101900_crawling-with-family.png",
+    "bbox": [
+      61,
+      456,
+      269,
+      300
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2018_son_baby/2018-09-22_101900_crawling-with-family.png",
+    "bbox": [
+      397,
+      982,
+      623,
+      794
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_101800_beach-arrival.png",
+    "bbox": [
+      373,
+      1050,
+      511,
+      948
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_101800_beach-arrival.png",
+    "bbox": [
+      184,
+      832,
+      333,
+      726
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_101800_beach-arrival.png",
+    "bbox": [
+      42,
+      530,
+      210,
+      405
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_101800_beach-arrival.png",
+    "bbox": [
+      158,
+      630,
+      277,
+      537
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_134200_family-sandcastle.png",
+    "bbox": [
+      257,
+      902,
+      412,
+      784
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_134200_family-sandcastle.png",
+    "bbox": [
+      214,
+      1204,
+      390,
+      1064
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_134200_family-sandcastle.png",
+    "bbox": [
+      418,
+      509,
+      580,
+      388
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_134200_family-sandcastle.png",
+    "bbox": [
+      168,
+      591,
+      361,
+      435
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_141700_family-wading.png",
+    "bbox": [
+      365,
+      650,
+      501,
+      555
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_141700_family-wading.png",
+    "bbox": [
+      59,
+      343,
+      214,
+      232
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_141700_family-wading.png",
+    "bbox": [
+      504,
+      1279,
+      633,
+      1180
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_141700_family-wading.png",
+    "bbox": [
+      149,
+      920,
+      289,
+      825
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_195400_sunset-walk.png",
+    "bbox": [
+      206,
+      933,
+      351,
+      835
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_195400_sunset-walk.png",
+    "bbox": [
+      124,
+      498,
+      285,
+      379
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_195400_sunset-walk.png",
+    "bbox": [
+      441,
+      710,
+      560,
+      619
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-10_195400_sunset-walk.png",
+    "bbox": [
+      571,
+      1257,
+      686,
+      1165
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_101300_collecting-shells.png",
+    "bbox": [
+      119,
+      607,
+      324,
+      461
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_101300_collecting-shells.png",
+    "bbox": [
+      265,
+      861,
+      484,
+      695
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_104800_sand-moat.png",
+    "bbox": [
+      146,
+      607,
+      344,
+      451
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_104800_sand-moat.png",
+    "bbox": [
+      365,
+      1063,
+      563,
+      868
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_112200_chasing-sandpipers.png",
+    "bbox": [
+      167,
+      679,
+      289,
+      591
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_112200_chasing-sandpipers.png",
+    "bbox": [
+      290,
+      316,
+      412,
+      253
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_113104_boy-approaches-waves.png",
+    "bbox": [
+      161,
+      610,
+      319,
+      528
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_113109_boy-runs-into-waves.png",
+    "bbox": [
+      172,
+      689,
+      337,
+      566
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_113114_boy-jumps-wave.png",
+    "bbox": [
+      119,
+      829,
+      295,
+      704
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_113119_boy-runs-out.png",
+    "bbox": [
+      130,
+      718,
+      318,
+      575
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_173600_sand-drawing.png",
+    "bbox": [
+      316,
+      740,
+      497,
+      592
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2021_gulf_beach_trip/2021-07-11_173600_sand-drawing.png",
+    "bbox": [
+      257,
+      1162,
+      434,
+      1008
+    ],
+    "status": "ASSIGNED",
+    "person": "Theo Bennett"
+  },
+  {
+    "path": "2026_present_day/2026-06-07_111500_family-at-home.png",
+    "bbox": [
+      407,
+      977,
+      614,
+      821
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2026_present_day/2026-06-07_111500_family-at-home.png",
+    "bbox": [
+      473,
+      1217,
+      679,
+      1065
+    ],
+    "status": "ASSIGNED",
+    "person": "Maya Bennett"
+  },
+  {
+    "path": "2026_present_day/2026-06-07_111500_family-at-home.png",
+    "bbox": [
+      255,
+      749,
+      482,
+      581
+    ],
+    "status": "ASSIGNED",
+    "person": "Elena Bennett"
+  },
+  {
+    "path": "2026_present_day/2026-06-07_111500_family-at-home.png",
+    "bbox": [
+      77,
+      514,
+      355,
+      312
+    ],
+    "status": "ASSIGNED",
+    "person": "Marcus Bennett"
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143012_volleyball-serve-reception.png",
+    "bbox": [
+      235,
+      259,
+      322,
+      193
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143012_volleyball-serve-reception.png",
+    "bbox": [
+      187,
+      554,
+      248,
+      509
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143012_volleyball-serve-reception.png",
+    "bbox": [
+      211,
+      1035,
+      273,
+      985
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143012_volleyball-serve-reception.png",
+    "bbox": [
+      331,
+      692,
+      434,
+      620
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143012_volleyball-serve-reception.png",
+    "bbox": [
+      345,
+      410,
+      377,
+      386
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143012_volleyball-serve-reception.png",
+    "bbox": [
+      313,
+      52,
+      349,
+      21
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143012_volleyball-serve-reception.png",
+    "bbox": [
+      145,
+      1107,
+      258,
+      1047
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143847_volleyball-attack-approach.png",
+    "bbox": [
+      259,
+      1219,
+      314,
+      1179
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143847_volleyball-attack-approach.png",
+    "bbox": [
+      266,
+      1375,
+      325,
+      1333
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143847_volleyball-attack-approach.png",
+    "bbox": [
+      403,
+      467,
+      466,
+      423
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143847_volleyball-attack-approach.png",
+    "bbox": [
+      240,
+      709,
+      277,
+      680
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143847_volleyball-attack-approach.png",
+    "bbox": [
+      272,
+      552,
+      308,
+      523
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143847_volleyball-attack-approach.png",
+    "bbox": [
+      274,
+      250,
+      312,
+      221
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143847_volleyball-attack-approach.png",
+    "bbox": [
+      270,
+      353,
+      306,
+      322
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143847_volleyball-attack-approach.png",
+    "bbox": [
+      519,
+      186,
+      581,
+      152
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_143847_volleyball-attack-approach.png",
+    "bbox": [
+      339,
+      1106,
+      393,
+      1066
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_144526_volleyball-rally-save.png",
+    "bbox": [
+      100,
+      1051,
+      193,
+      977
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_144526_volleyball-rally-save.png",
+    "bbox": [
+      323,
+      712,
+      430,
+      636
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_144526_volleyball-rally-save.png",
+    "bbox": [
+      111,
+      636,
+      182,
+      580
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_144526_volleyball-rally-save.png",
+    "bbox": [
+      146,
+      560,
+      207,
+      512
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_144526_volleyball-rally-save.png",
+    "bbox": [
+      142,
+      1311,
+      212,
+      1255
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_144526_volleyball-rally-save.png",
+    "bbox": [
+      290,
+      759,
+      334,
+      727
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_144526_volleyball-rally-save.png",
+    "bbox": [
+      307,
+      317,
+      340,
+      291
+    ],
+    "status": "IGNORED",
+    "person": null
+  },
+  {
+    "path": "2026_present_day/volleyball/2026-07-12_144526_volleyball-rally-save.png",
+    "bbox": [
+      318,
+      394,
+      352,
+      368
+    ],
+    "status": "IGNORED",
+    "person": null
+  }
+]

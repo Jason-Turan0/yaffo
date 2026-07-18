@@ -11,7 +11,8 @@ context:
     attribute: yaffo-face_assignment
     description: Context for face assignment feature
 data:
-  - Faces 1,11,13,18,26,37,41 belong to person Obama
+  - The Bennett fixture leaves detected faces unassigned so the assignment workflow has a realistic pool
+  - Tests discover faces from the current similarity groups because indexed face ids are not fixture-stable
 scenarios:
   - name: face_assignment_can_create_new_people
     goal: Should be able to create a new person using the quick action section
@@ -33,20 +34,20 @@ scenarios:
       - Update the filter to group by People and click the 'Apply Filter' button
       - Click Clear selection and the select one of the photos that belong to Obama
       - Select Obama from the 'Assign to Person' dropdown
-      - Click on face 1
+      - Click one face from the first suggested group
       - Click the Assign Selected button
 
     verify:
-      - Face 1 is removed from the view
+      - The selected face is removed from the view
       - Success message is displayed
-      - Face 1 is assigned to Obama on the people -> view faces screen
+      - The selected face is assigned to Obama on the people -> view faces screen
     cleanup:
       - Delete person Obama
   - name: faces_are_automatically_matched_to_people_based_on_similarity
     goal: After assigning at least one face to a person similar faces to that person should be suggested automatically
     priority: high
     steps:
-      - Create a person named 'Obama' and assign face 1 to him
+      - Create a person named 'Obama' and assign a face from a live similarity group to him
       - Update the filter to group by People
       - Set the similarity threshold to 2
       - Click the Apply Filters button

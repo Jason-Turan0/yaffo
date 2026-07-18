@@ -1,6 +1,6 @@
 # Demo Environment Plan
 
-Status: proposed
+Status: Phase 0 accepted; Phase 1 not started
 
 Last reviewed: 2026-07-18
 
@@ -22,7 +22,7 @@ pre-paired Yaffo instances on one Compute Engine VM:
 - `YAFFO_DEMO_MODE=1` on both app instances. This enables a centralized,
   fail-closed HTTP-method gate, immutable demo configuration, workload and
   transfer caps, and an explicit disposable-demo banner.
-- A scheduled restore from golden data directories every day, plus an
+- A scheduled restore from golden data directories once each day, plus an
   operator-triggered reset and emergency stop.
 
 This shape demonstrates real Yaffo behavior, including the actual device-key
@@ -374,7 +374,7 @@ pre-paired sharing story.
 | Automations and scheduled work | Create/configure/run/publish automations and triggers; built-in metadata/file actions | Persist repeated work, mutate files and metadata after the visitor leaves, call external services, or fill the queue | **Blocked** | Disable periodic dispatch and all enabled automations in the golden state; show prepared run history read-only |
 | External lookup calls | Reverse geocoding and any future URL-backed integration | Turn the demo into a request amplifier, hit provider quotas, or create third-party cost | **Blocked initially** | Use pre-resolved fixture locations; later add a cache-only lookup or strict global/provider quota |
 | Full media, preview, and video delivery | `/media/<id>`, posters, remote P2P previews, HTTP Range requests | Scrape or hotlink the fixture set, issue pathological ranges, repeatedly resize previews, and drive network egress | **Limited** | Use small low-resolution licensed fixtures; pre-generate previews; validate ranges; CDN-cache safe responses; per-IP and global byte/request budgets; daily egress kill switch |
-| P2P pulls and relay traffic | Remote browse/preview and transfer pull/continue | Repeat batches, fill B's download volume, monopolize transfer slots, or create metered hub relay egress | **Limited to B** | One active batch globally, small file/count/batch-byte caps, per-IP cooldown, download-volume quota, disable “continue anyway” beyond relay budget, reset downloads every 15–30 minutes |
+| P2P pulls and relay traffic | Remote browse/preview and transfer pull/continue | Repeat batches, fill B's download volume, monopolize transfer slots, or create metered hub relay egress | **Limited to B** | One active batch globally, small file/count/batch-byte caps, per-IP cooldown, download-volume quota, disable “continue anyway” beyond relay budget, clear downloads during the daily reset |
 | Seeded metadata edits | Favorites, tags, face/person assignments, location changes | Vandalize shared state, create stored text payloads, trigger event tasks, or confuse other visitors | **Blocked initially** | Let visitors browse prepared examples; reconsider a small scratch-only exception after the read-mostly pilot has usage data |
 | Album edits | Create/update/delete albums, add/remove/reorder items, set cover | Row spam, very large selections, deletion of the sharing fixture, and cross-visitor interference | **Blocked initially** | Let visitors browse prepared albums; reconsider one protected-size `Demo Scratchpad` only if editing is important to the walkthrough |
 | Global application settings | Locale, distance unit, filter configuration, label vocabulary, theme default | Change the experience for every visitor, trigger work, or leave the UI unusable | **Blocked or browser-local** | Move harmless presentation preferences to a signed cookie or local storage for demo mode; keep database-backed global settings immutable |
@@ -613,15 +613,116 @@ are disabled.
 
 ## Delivery plan
 
+### Phase 0 decision record
+
+Accepted on 2026-07-18. These decisions are the operating contract for the
+first pilot. Changing the audience, unsafe-method exceptions, operating hours,
+fixture rights, or spending ceiling requires updating this record before the
+deployment changes.
+
+#### Audience and capability policy
+
+- The pilot is an anonymously accessible public product demo. It has no visitor
+  login, invitation code, or claim of per-visitor isolation. The walkthrough and
+  both Yaffo instances may be linked from the public Yaffo site only after the
+  Phase 4 acceptance checklist passes.
+- The public demo uses the read-mostly v1 interactive set described above. The
+  only unsafe-method exceptions to the Phase 1 fail-closed gate are:
+  - `POST` to the Flask endpoint `pages_version_widget_query` on both `source`
+    and `receiver`, limited to reviewed, published widgets and read-only bounded
+    queries;
+  - `POST` to the Flask endpoint `sharing_device_pull_selected` on `receiver`
+    only, limited to one bounded transfer batch from the pre-paired source.
+- No other `POST`, `PUT`, `PATCH`, or `DELETE` endpoint is public. In particular,
+  widget state persistence, transfer administration, pairing, trust, and grant
+  changes are not exceptions. The exact public `GET` endpoint allowlist is part
+  of Phase 1 and remains fail-closed until it is committed and tested.
+- The public deployment is a shared disposable sandbox, not a hosted account or
+  cloud storage service. The walkthrough must say that visitors can affect the
+  one shared transfer slot and that state is reset automatically.
+
+#### Hours, reset interval, and pilot duration
+
+- Before public launch, the hostnames remain unpublished or public ingress stays
+  disabled except during operator testing.
+- Once linked publicly, the pilot is available every day from 8:00 AM through
+  10:00 PM in the `America/Chicago` time zone. The walkthrough must publish these
+  hours and show an offline explanation outside the service window.
+- The VM starts at 7:45 AM `America/Chicago`. Startup restores both instances
+  from their golden state before Caddy or either app is considered ready. A
+  failed restore keeps the public services unavailable. The VM stops at 10:00 PM.
+- The startup restore is the single scheduled daily reset. Deployments and
+  emergency response may reset sooner. A reset drains and stops both apps before
+  replacing SQLite data, as required by the reset design above.
+- The initial evaluation window is six weeks from public launch. At its end the
+  operator reviews usage, interference, reliability, egress, and cost against the
+  decision points below before extending the pilot.
+
+#### Fixture ownership and license policy
+
+- The public demo does not reuse `yaffo_ui_tests/test_data`, personal libraries,
+  stock-photo downloads, or media copied from the internet. Existing test media
+  is not approved for public redistribution and includes identifiable people.
+- Phase 3 creates a purpose-built synthetic library for this demo. Synthetic
+  people are fictional and must not intentionally resemble a real person. Short
+  video fixtures are rendered from the synthetic source artwork so the demo does
+  not depend on a separately licensed video library.
+- The Yaffo project operator owns or has the necessary rights to the generated
+  fixture outputs and approves each one for redistribution under `CC0-1.0`
+  before it enters a golden fixture. No third-party attribution requirement is
+  accepted for the pilot fixture set. Generated assets are deployment data, not
+  automatically covered by the repository's MIT license.
+- Device A (`Family Mac`) contains 18 still images and two short, low-resolution
+  videos. Its `Trips/Chicago` folder and `Chicago Weekend` album span at least two
+  child folders, and at least three sibling items remain outside all grants.
+  Device B (`Travel Laptop`) contains eight different still images and one short
+  video; its download directory starts empty.
+- Fixture metadata is fabricated for the demo. It contains no imported EXIF
+  identity, serial number, account, or precise real-person location history.
+  Approximate Chicago landmarks may be used for the location UI. Names assigned
+  to synthetic people must be clearly fictional.
+- Every file admitted to a golden fixture requires a manifest entry containing
+  its stable fixture id, SHA-256 digest, owning device, media type, synthetic
+  generation or rendering method, creation date, rights owner, the `CC0-1.0`
+  license identifier and approval, intended folder/album/grant membership, and a
+  metadata-scrub review. Phase 3 must fail fixture preparation when the manifest
+  and files differ.
+
+#### Budget and operational ownership
+
+- The incremental pilot budget is **USD 50 per calendar month**, including
+  compute, disk, static IP, registry storage, demo egress, and demo-attributable
+  hub relay egress. The operating target is at most USD 45 per month so the
+  ceiling retains a small response margin.
+- Starting the VM 15 minutes before the 14-hour service window is about 430
+  running hours in a 30-day month. At the planning prices above, compute is
+  approximately USD 15 per month and the total low-traffic pilot remains within
+  the USD 50 ceiling.
+- Billing budget notifications must be configured at 50%, 80%, and 100% of the
+  USD 50 ceiling. Monitoring must also alert on forecast overspend and abnormal
+  daily egress. Reaching or forecasting the ceiling triggers withdrawal of
+  public ingress; budgets alone are not treated as a spending cap.
+- **Jason Turan** is the pilot owner and initial alert recipient. Jason may run
+  an early reset, withdraw the public DNS/proxy path, disable the public ingress
+  firewall rule, or stop the VM. Deployment IAM must grant these controls to the
+  operator identity only; no reset or emergency endpoint is public.
+- Jason owns fixture-rights approval, billing review, incident response, and the
+  go/no-go launch decision. Before Phase 4 launch approval, a second operator
+  must be named and must successfully follow the reset and emergency-stop
+  runbook; until then the demo is not considered production-ready.
+
+Phase 0 is complete: the audience, hours, data ownership, exception policy,
+monthly budget, and current operational owner are recorded above.
+
 ### Phase 0 — decide the operating policy
 
-- Confirm anonymous public access and the v1 exception set: reviewed widget
+- [x] Confirm anonymous public access and the v1 exception set: reviewed widget
   queries on A/B and one bounded transfer start on B.
-- Confirm scheduled hours versus 24/7. Use 24/7 if the demo is linked publicly;
-  scheduled availability is mainly a pre-launch or cost-reduction option.
-- Choose and document demo fixtures and licenses.
-- Decide who can reset the sandbox, withdraw public routing, stop it, and receive
-  alerts.
+- [x] Confirm scheduled hours versus 24/7: use 8:00 AM–10:00 PM
+  `America/Chicago` every day, with VM startup at 7:45 AM for the daily reset.
+- [x] Choose and document demo fixtures and licenses.
+- [x] Decide who can reset the sandbox, withdraw public routing, stop it, and
+  receive alerts.
 
 Exit criterion: audience, hours, data ownership, and monthly budget are written
 down.
@@ -668,8 +769,8 @@ anonymous public hostnames, private operator controls, and no manually edited VM
 - Pre-pair stable identities and create the intended grants.
 - Save immutable golden data directories after the queue is drained and SQLite is
   closed.
-- Implement an idempotent reset every 15–30 minutes and validate it after
-  interruption halfway through.
+- Implement an idempotent reset once per day during scheduled startup and
+  validate it after interruption halfway through.
 
 Exit criterion: reset removes changes/downloads, restores the same paired device
 IDs and grants, and completes a small A-to-B pull.

@@ -237,7 +237,7 @@ test.describe('Photo Gallery Feature', () => {
   });
 
   test('timeline_infinite_scroll_streams_more_photos - Revealing the sentinel streams the next batch until the library is exhausted', async ({ page }) => {
-    // page-size=10 forces the 16-item library into multiple batches
+    // page-size=10 forces the Bennett library into multiple batches
     await page.goto('/?view=timeline&page-size=10');
     await expect(page.locator('.timeline')).toBeVisible();
 

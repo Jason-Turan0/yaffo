@@ -12,21 +12,266 @@ import importlib.util
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from collections import Counter, defaultdict
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from onnxruntime.transformers.profile_result_processor import process_results
 
-from yaffo.common import MEDIA_TYPE_VIDEO
-from yaffo.db.models import Tag, Face, FACE_STATUS_UNASSIGNED, MEDIA_STATUS_INDEXED
+from yaffo.background_tasks.tasks.classify_labels_automation import classify_media_items
+from yaffo.common import MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO, PHOTO_EXTENSIONS
+from yaffo.db.models import (
+    Tag,
+    Face,
+    MediaItem,
+    Person,
+    CLASSIFY_LABELS_DEFAULT_MAX,
+    CLASSIFY_LABELS_DEFAULT_THRESHOLD,
+    FACE_STATUS_ASSIGNED,
+    FACE_STATUS_IGNORED,
+    FACE_STATUS_UNASSIGNED,
+    MEDIA_STATUS_INDEXED,
+)
+from yaffo.db.repositories.person_repository import (
+    bulk_link_faces_to_people,
+    update_person_embedding,
+)
 from yaffo.db.repositories.media_dir_repository import add_media_dir
 from yaffo.domain.compare_utils import serialize_embedding
 from yaffo.download_assets import download_ffmpeg, download_exiftool, download_insightface, download_clip
+from yaffo.utils.image_classifier import get_clip_threshold
 from yaffo.utils.index_video import index_video
 
 # Add yaffo project to path
 YAFFO_PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(YAFFO_PROJECT_ROOT))
+BENNETT_FACE_ASSIGNMENTS_PATH = (
+    Path(__file__).parent.parent / "test_data" / "bennett_face_assignments.json"
+)
+
+SEED_PROFILE_BENNETT = "bennett"
+SEED_PROFILE_OBAMA = "obama"
+PersonSeed = tuple[str, int, date | None]
+
+BENNETT_PEOPLE: tuple[PersonSeed, ...] = (
+    ("Marcus Bennett", 1, None),
+    ("Elena Bennett", 0, None),
+    ("Maya Bennett", 0, date(2014, 9, 12)),
+    ("Theo Bennett", 1, date(2017, 11, 15)),
+)
+
+OBAMA_PEOPLE: tuple[PersonSeed, ...] = (
+    ("Barack Obama", 1, date(1961, 8, 4)),
+    ("Michelle Obama", 0, date(1964, 1, 17)),
+    ("Malia Obama", 0, date(1998, 7, 4)),
+    ("Sasha Obama", 0, date(2001, 6, 10)),
+)
+
+# Exactly one face per selected photo is assigned to each person. The remaining
+# ground-truth faces intentionally stay unassigned so the Faces page and its UI
+# tests have realistic work available. Selections span the family's timeline;
+# both children retain baby-era examples in their profiles.
+BENNETT_SEEDED_FACE_PATHS = {
+    "Marcus Bennett": {
+        "2015_chicago_baby_trip/2015-10-09_103400_chicago-riverwalk.png",
+        "2015_chicago_baby_trip/2015-10-09_151800_lakefront.png",
+        "2015_chicago_baby_trip/2015-10-10_110700_neighborhood-walk.png",
+        "2015_chicago_baby_trip/2015-10-11_085600_family-breakfast.png",
+        "2017_third_birthday/2017-09-12_162200_blowing-candles.png",
+        "2017_third_birthday/2017-09-12_165100_opening-gifts.png",
+        "2017_third_birthday/2017-09-12_171400_birthday-candid.png",
+        "2018_son_baby/2018-01-14_061800_bottle-with-dad.png",
+        "2021_gulf_beach_trip/2021-07-10_195400_sunset-walk.png",
+        "2026_present_day/2026-06-07_111500_family-at-home.png",
+    },
+    "Elena Bennett": {
+        "2015_chicago_baby_trip/2015-10-09_103400_chicago-riverwalk.png",
+        "2015_chicago_baby_trip/2015-10-09_151800_lakefront.png",
+        "2015_chicago_baby_trip/2015-10-10_110700_neighborhood-walk.png",
+        "2015_chicago_baby_trip/2015-10-11_085600_family-breakfast.png",
+        "2017_third_birthday/2017-09-12_162200_blowing-candles.png",
+        "2017_third_birthday/2017-09-12_165100_opening-gifts.png",
+        "2017_third_birthday/2017-09-12_171400_birthday-candid.png",
+        "2018_son_baby/2018-06-24_193200_story-time.png",
+        "2021_gulf_beach_trip/2021-07-10_195400_sunset-walk.png",
+        "2026_present_day/2026-06-07_111500_family-at-home.png",
+    },
+    "Maya Bennett": {
+        "2015_daughter_baby/2015-09-10_153200_daughter-one-year-portrait.png",
+        "2015_chicago_baby_trip/2015-10-09_103400_chicago-riverwalk.png",
+        "2015_chicago_baby_trip/2015-10-09_151800_lakefront.png",
+        "2015_chicago_baby_trip/2015-10-11_085600_family-breakfast.png",
+        "2017_third_birthday/2017-09-12_162200_blowing-candles.png",
+        "2017_third_birthday/2017-09-12_171400_birthday-candid.png",
+        "2018_son_baby/2018-04-22_103600_tummy-time-with-sister.png",
+        "2021_gulf_beach_trip/2021-07-11_101300_collecting-shells.png",
+        "2021_gulf_beach_trip/2021-07-11_112200_chasing-sandpipers.png",
+        "2026_present_day/2026-06-07_111500_family-at-home.png",
+    },
+    "Theo Bennett": {
+        "2018_son_baby/2018-01-14_061800_bottle-with-dad.png",
+        "2018_son_baby/2018-04-22_103600_tummy-time-with-sister.png",
+        "2018_son_baby/2018-06-24_193200_story-time.png",
+        "2018_son_baby/2018-09-15_142800_son-ten-month-portrait.png",
+        "2018_son_baby/2018-09-22_101900_crawling-with-family.png",
+        "2021_gulf_beach_trip/2021-07-10_101800_beach-arrival.png",
+        "2021_gulf_beach_trip/2021-07-11_104800_sand-moat.png",
+        "2021_gulf_beach_trip/2021-07-11_113109_boy-runs-into-waves.png",
+        "2021_gulf_beach_trip/2021-07-11_113119_boy-runs-out.png",
+        "2021_gulf_beach_trip/2021-07-11_173600_sand-drawing.png",
+    },
+}
+
+
+def seed_people(db, people: tuple[PersonSeed, ...], profile_label: str) -> None:
+    existing_names = {
+        name for (name,) in db.session.query(Person.name).all()
+    }
+    added = 0
+    for name, gender, birthdate in people:
+        if name in existing_names:
+            continue
+        db.session.add(Person(name=name, gender=gender, birthdate=birthdate))
+        added += 1
+    db.session.commit()
+    print(f"  Seeded {profile_label} people: {added} added ({len(people)} expected)")
+
+
+def _bbox_iou(left: list[int], right: list[int]) -> float:
+    left_top, left_right, left_bottom, left_left = left
+    right_top, right_right, right_bottom, right_left = right
+    intersection_width = max(0, min(left_right, right_right) - max(left_left, right_left))
+    intersection_height = max(0, min(left_bottom, right_bottom) - max(left_top, right_top))
+    intersection = intersection_width * intersection_height
+    left_area = max(0, left_right - left_left) * max(0, left_bottom - left_top)
+    right_area = max(0, right_right - right_left) * max(0, right_bottom - right_top)
+    union = left_area + right_area - intersection
+    return intersection / union if union else 0.0
+
+
+def seed_bennett_face_assignments(db, photos_dir: Path) -> None:
+    annotations = json.loads(BENNETT_FACE_ASSIGNMENTS_PATH.read_text(encoding="utf-8"))
+    annotations_by_path = defaultdict(list)
+    for annotation in annotations:
+        annotations_by_path[annotation["path"]].append(annotation)
+
+    media_items = db.session.query(MediaItem).filter(MediaItem.media_type == MEDIA_TYPE_PHOTO).all()
+    media_by_path = {
+        Path(media.full_file_path).relative_to(photos_dir).as_posix(): media
+        for media in media_items
+    }
+    people_by_name = {
+        person.name: person for person in db.session.query(Person).all()
+    }
+
+    links: list[tuple[int, int]] = []
+    assigned_paths = defaultdict(set)
+    matched_face_ids: set[int] = set()
+    missing: list[str] = []
+
+    for relative_path, path_annotations in annotations_by_path.items():
+        media = media_by_path.get(relative_path)
+        if media is None:
+            missing.append(f"missing media: {relative_path}")
+            continue
+        available_faces = [face for face in media.faces if face.id not in matched_face_ids]
+        for annotation in path_annotations:
+            candidates = sorted(
+                (
+                    (
+                        _bbox_iou(
+                            annotation["bbox"],
+                            [
+                                face.location_top,
+                                face.location_right,
+                                face.location_bottom,
+                                face.location_left,
+                            ],
+                        ),
+                        face,
+                    )
+                    for face in available_faces
+                ),
+                key=lambda candidate: candidate[0],
+                reverse=True,
+            )
+            if not candidates or candidates[0][0] < 0.75:
+                missing.append(f"unmatched face: {relative_path} {annotation['bbox']}")
+                continue
+            _, face = candidates[0]
+            available_faces.remove(face)
+            matched_face_ids.add(face.id)
+            if annotation["status"] == FACE_STATUS_IGNORED:
+                # Keep ignored ground-truth entries only for validating that
+                # face detection is stable. The demo seed leaves them in the
+                # assignment pool along with every non-selected family face.
+                face.status = FACE_STATUS_UNASSIGNED
+                continue
+            person = people_by_name.get(annotation["person"])
+            if person is None:
+                missing.append(f"missing person: {annotation['person']}")
+                continue
+            selected_paths = BENNETT_SEEDED_FACE_PATHS[person.name]
+            if relative_path in selected_paths and relative_path not in assigned_paths[person.name]:
+                face.status = FACE_STATUS_ASSIGNED
+                links.append((person.id, face.id))
+                assigned_paths[person.name].add(relative_path)
+            else:
+                face.status = FACE_STATUS_UNASSIGNED
+
+    detected_face_ids = {
+        face_id for (face_id,) in db.session.query(Face.id).all()
+    }
+    if missing or matched_face_ids != detected_face_ids:
+        unmatched_detected = sorted(detected_face_ids - matched_face_ids)
+        details = "; ".join(missing + [f"unannotated detected face ids: {unmatched_detected}"])
+        raise RuntimeError(f"Bennett face fixture no longer matches detection output: {details}")
+
+    bulk_link_faces_to_people(db.session, links)
+    for person_name, _gender, _birthdate in BENNETT_PEOPLE:
+        update_person_embedding(people_by_name[person_name].id, db.session)
+
+    counts = Counter(
+        person.name
+        for person_id, _face_id in links
+        for person in [db.session.get(Person, person_id)]
+        if person is not None
+    )
+    expected_counts = {name: 10 for name, _gender, _birthdate in BENNETT_PEOPLE}
+    if dict(counts) != expected_counts:
+        raise RuntimeError(f"Bennett fixture requires exactly 10 seeded faces per person: {dict(counts)}")
+    for person_name, selected_paths in BENNETT_SEEDED_FACE_PATHS.items():
+        if assigned_paths[person_name] != selected_paths:
+            raise RuntimeError(f"Bennett fixture did not seed every selected scene for {person_name}")
+    baby_requirements = {
+        "Maya Bennett": "2015_daughter_baby/",
+        "Theo Bennett": "2018_son_baby/",
+    }
+    for person_name, prefix in baby_requirements.items():
+        if not any(path.startswith(prefix) for path in assigned_paths[person_name]):
+            raise RuntimeError(f"Bennett fixture requires a baby photo for {person_name}")
+    unassigned_count = len(annotations) - len(links)
+    print(
+        f"  Seeded Bennett faces: {dict(counts)}; "
+        f"left unassigned {unassigned_count}"
+    )
+
+
+def seed_media_labels(db) -> None:
+    media_item_ids = [
+        media_id for (media_id,) in
+        db.session.query(MediaItem.id)
+        .filter(MediaItem.media_type == MEDIA_TYPE_PHOTO)
+        .order_by(MediaItem.id)
+        .all()
+    ]
+    labeled = classify_media_items(
+        db.session,
+        media_item_ids,
+        get_clip_threshold(CLASSIFY_LABELS_DEFAULT_THRESHOLD),
+        CLASSIFY_LABELS_DEFAULT_MAX,
+    )
+    print(f"  Seeded classification labels: {len(labeled)} of {len(media_item_ids)} photos labeled")
 
 
 def _load_default_classification_labels() -> list[tuple]:
@@ -292,7 +537,7 @@ def seed_custom_themes(db) -> None:
     print(f"  Seeded custom theme: {slug}")
 
 
-def seed_custom_pages(db) -> None:
+def seed_custom_pages(db, seed_profile: str) -> None:
     """Seed two published custom pages with widgets so the pages nav strip,
     presentation view, and design view have content to exercise."""
     from yaffo.db.models import CustomPage
@@ -326,13 +571,18 @@ def seed_custom_pages(db) -> None:
     ])
     print(f"  Seeded custom page: Favorites Wall (id={page.id})")
 
+    about_text = (
+        "Seeded test library of synthetic Bennett family photos."
+        if seed_profile == SEED_PROFILE_BENNETT
+        else "Seeded peer library of Obama family photos from the Obama Presidential Library."
+    )
     about = pages.create_page(db.session, "About", "")
     pages.save_page_widgets(db.session, about.id, [
         {
             "id": pages.new_widget_id(),
             "title": "About this library",
             "data_query": {},
-            "html": '<div class="about"><p>Seeded test library of Obama-era sample photos.</p></div>',
+            "html": f'<div class="about"><p>{about_text}</p></div>',
             "css": '.about { padding: 8px; }',
             "js": "",
             "grid_x": 0, "grid_y": 0, "grid_w": 12, "grid_h": 2,
@@ -383,6 +633,10 @@ def seed_database() -> int:
     from yaffo.utils.index_photos import index_photo
 
     app = create_app()
+    seed_profile = os.environ.get("YAFFO_SEED_PROFILE", SEED_PROFILE_BENNETT)
+    if seed_profile not in {SEED_PROFILE_BENNETT, SEED_PROFILE_OBAMA}:
+        raise ValueError(f"Unsupported YAFFO_SEED_PROFILE: {seed_profile}")
+
     with app.app_context():
         db.create_all()
 
@@ -406,7 +660,11 @@ def seed_database() -> int:
         seed_classification_labels(db)
         seed_custom_automations(db)
         seed_custom_themes(db)
-        seed_custom_pages(db)
+        seed_custom_pages(db, seed_profile)
+        if seed_profile == SEED_PROFILE_BENNETT:
+            seed_people(db, BENNETT_PEOPLE, "Bennett")
+        else:
+            seed_people(db, OBAMA_PEOPLE, "Obama")
         download_ffmpeg()
         download_exiftool()
         download_insightface()
@@ -415,10 +673,14 @@ def seed_database() -> int:
         # Index photos
         indexed_count = 0
         processed_results = []
-        # rglob, not glob: the sharing sandbox moves a couple of photos into a
-        # subfolder (folder-share grants need one). Sorting stays by BASENAME so
-        # media/face ids keep their order no matter where a file lives.
-        for photo_path in sorted(photos_dir.rglob("*.jpg"), key=lambda path: path.name.lower()):
+        # Bennett is organized into nested event folders and uses PNG, while
+        # the peer's Obama fixture uses JPEG. Index every format the app
+        # supports and sort by basename for deterministic media/face ids.
+        photo_paths = (
+            path for path in photos_dir.rglob("*")
+            if path.is_file() and path.suffix.lower() in PHOTO_EXTENSIONS
+        )
+        for photo_path in sorted(photo_paths, key=lambda path: path.name.lower()):
             try:
                 indexed_photo = index_photo(photo_path, thumbnail_dir)
                 processed_results.append(indexed_photo)
@@ -478,6 +740,10 @@ def seed_database() -> int:
 
 
         db.session.commit()
+
+        if seed_profile == SEED_PROFILE_BENNETT:
+            seed_bennett_face_assignments(db, photos_dir)
+        seed_media_labels(db)
 
         # After indexing: an album needs media items to hold.
         seed_albums(db)
