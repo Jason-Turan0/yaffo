@@ -16,6 +16,15 @@ context:
   - tag: gallery-routes
     attribute: yaffo-gallery
     description: Python routes tagged for gallery feature
+  - tag: timeline-sections-template
+    path: templates/_timeline_sections.html
+    description: Timeline day sections, month dividers and infinite-scroll sentinel
+  - tag: timeline-scrubber-js
+    path: static/media/timeline_scrubber.js
+    description: Turns the scrubber rail into a draggable jump-to-month control
+  - tag: timeline-stream-js
+    path: static/media/timeline_stream.js
+    description: Streams timeline batches through the sentinel and merges continuation sections
 
 scenarios:
   - name: gallery_loads_with_valid_images
@@ -74,3 +83,74 @@ scenarios:
       - When viewing the first page 10 images are shown
       - When viewing the last page only the the remainder of the images are shown
       - Page navigations buttons work correctly
+  # DETERMINISM NOTE: the library view (grid/timeline) is a SERVER-SIDE preference —
+  # any request with ?view=<x> saves <x>, and a bare request renders the saved value.
+  # Tests must therefore (a) always navigate with an explicit ?view= param instead of
+  # relying on the saved state, and (b) run this feature's tests serially in one
+  # worker (test.describe.configure({ mode: 'default' })) so the only test that reads
+  # the saved value (timeline_view_preference_persists) cannot race a writer.
+  - name: timeline_view_shows_day_sections
+    goal: Timeline view groups photos into day sections with month dividers
+    priority: high
+    steps:
+      - Navigate to the home page with ?view=timeline
+      - Wait for the timeline container to be visible
+    verify:
+      - The Timeline toggle button is marked active and the Grid button is not
+      - The page header reports the total photo count (not "Showing N of M")
+      - At least one timeline day section is visible with a day header and item count
+      - Each day section only contains photos taken on that day
+      - Month dividers appear when the month changes between day sections
+      - All photo image sources in the visible sections return HTTP 200
+      - The pagination controls are not shown in timeline view
+  - name: timeline_infinite_scroll_streams_more_photos
+    goal: Scrolling to the bottom of the timeline streams in the next batch of photos
+    priority: high
+    steps:
+      - Navigate to the home page with ?view=timeline&page-size=10 (forces multiple batches)
+      - Count the photos currently rendered in the timeline
+      - Scroll to the bottom of the page so the timeline sentinel is revealed
+      - Wait for the next batch to load and repeat until the sentinel is gone
+    verify:
+      - More photos are rendered after scrolling than before
+      - No day section header is duplicated when a batch continues the same day (continuation sections merge into the previous section)
+      - Scrolling repeatedly eventually renders the full library (photo count matches the header total) and the sentinel disappears
+  - name: timeline_scrubber_jumps_to_date
+    goal: The date scrubber lets the user jump to a specific year/month in the timeline
+    priority: high
+    steps:
+      - Navigate to the home page with ?view=timeline&page-size=10
+      - Wait for the timeline scrubber to be visible
+      - Press the scrubber rail near its bottom (the oldest end); the scrubber JS owns the pointer gesture and navigates to the month at that position
+    verify:
+      - The scrubber rail shows density bars and at least one year label
+      - Year marks are links whose hrefs carry view=timeline and a #month-YYYY-MM anchor (the no-JS fallback)
+      - After the jump the URL carries a #month-YYYY-MM anchor, that month divider is visible, and day sections from that month are rendered
+  - name: timeline_view_preference_persists
+    goal: The selected library view is remembered across visits
+    priority: medium
+    steps:
+      - Navigate to the home page with ?view=timeline (this saves the preference)
+      - Navigate to the home page without any view query parameter
+      - Click the Grid button in the view toggle
+      - Navigate to the home page without any view query parameter again
+    verify:
+      - The bare home page renders in timeline view after the timeline visit
+      - After switching back to Grid the bare home page renders the grid view again
+    cleanup:
+      - Always restore the grid preference (request /?view=grid in a finally block) so other suites that hit '/' bare see the default
+  - name: timeline_respects_filters
+    goal: Filters applied in timeline view constrain the timeline and keep the timeline view active
+    priority: medium
+    steps:
+      - Navigate to the home page with ?view=timeline
+      - Select a year from the Year filter
+      - Click Apply Filters
+      - Click the Clear Filters button (navigates to bare '/', which falls back to the saved timeline preference)
+    verify:
+      - After applying the filter the page stays in timeline view (the filter form carries view=timeline as a hidden input)
+      - All day sections shown are from the selected year
+      - The header photo count matches the number of photos rendered
+      - After clearing the filter the full timeline is shown again in timeline view
+    cleanup:
+      - Restore the grid preference (request /?view=grid)

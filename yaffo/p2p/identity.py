@@ -13,6 +13,7 @@ import base64
 import datetime
 import hashlib
 import ipaddress
+import os
 from dataclasses import dataclass
 from typing import Optional, Protocol
 
@@ -130,6 +131,11 @@ def load_or_create_identity(secret_store: Optional[SecretStore] = None) -> Devic
     re-issued per connection. The certificate is minted fresh each call —
     pinning is by public-key hash, so its serial/validity don't matter.
     """
+    # YAFFO_P2P_EPHEMERAL_IDENTITY=1 (the UI-test sandbox) keeps the key in
+    # memory: throwaway temp-dir instances would otherwise leave one keychain
+    # entry behind per run, since the account name is scoped to the data dir.
+    if secret_store is None and os.environ.get("YAFFO_P2P_EPHEMERAL_IDENTITY") == "1":
+        secret_store = InMemorySecretStore()
     store = secret_store or KeyringSecretStore()
     pem = store.get()
     if pem:

@@ -7,8 +7,8 @@ tags:
 preconditions:
   - Two Yaffo instances are running on this machine, each with its own YAFFO_DATA_DIR, web port, and YAFFO_P2P_PORT, and both with YAFFO_P2P_ENABLED=1
   - Both instances have YAFFO_HUB_URL pointing at an unreachable address, so there is NO hub - the devices find each other over the LAN (mDNS) instead
-  - Instance A ("this device") has the seeded photo library and the seeded album
-  - Instance B ("the peer") has a download directory configured, so it can pull
+  - Instance A ("this device") has the seeded photo library (with two photos carved out into the organized/shared_trip subfolder for folder grants) and the seeded album
+  - Instance B ("the peer") starts WITHOUT a download directory. The UI can set one but never clear one, so the "gallery without a download directory" scenario runs first and a later step sets the directory through the UI to a path the tests control
 
 context:
   - tag: sharing-settings-template
@@ -34,6 +34,7 @@ context:
     description: Routes for pairing, devices, grants, the remote gallery, previews, and transfers
 
 data:
+  - The scenarios are STATEFUL and run in order in one worker (pairing, grants and the download directory persist server-side between tests). Start the environment with `npm run isolatedEnvironment:start:sharing` and run with BASE_URL (instance A) and PEER_URL (instance B) set
   - NO HUB IS REACHABLE. That is deliberate - the devices pair and call over the LAN. Expect the hub chip on Sharing settings to read "Disconnected", and a paired peer's presence chip to read "Local" (NOT "Online" - that would mean the hub)
   - Pairing is the trust anchor - generate a code on one instance, paste it on the other. Both must be running at the same time; codes expire in ~5 minutes and burn on first use
   - Grants are decided LOCALLY and one-directionally - A decides what A shares. Pairing alone grants access to nothing

@@ -25,9 +25,27 @@ permissions:
 
 jobs:
   playwright:
-    name: Playwright UI tests
+    name: Playwright UI tests (${{ matrix.suite }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Every suite except sharing, against the single-instance sandbox.
+          - suite: core
+            start: npm run isolatedEnvironment:start -- --port 5002
+            ready_urls: http://127.0.0.1:5002
+            test: npx playwright test --project=chromium
+            peer_url: ""
+          # The stateful sharing suite, against the two-instance sandbox
+          # (A grants on 5002, B pulls on 5003; LAN pairing, no hub).
+          - suite: sharing
+            start: npm run isolatedEnvironment:start:sharing
+            ready_urls: http://127.0.0.1:5002 http://127.0.0.1:5003
+            test: npx playwright test --project=sharing
+            peer_url: http://127.0.0.1:5003
 
     steps:
       - uses: actions/checkout@v4
@@ -62,9 +80,10 @@ jobs:
         working-directory: yaffo_ui_tests
         env:
           BASE_URL: http://127.0.0.1:5002
+          PEER_URL: ${{ matrix.peer_url }}
         run: |
           mkdir -p reports
-          npm run isolatedEnvironment:start -- --port 5002 > reports/isolated-environment.log 2>&1 &
+          ${{ matrix.start }} > reports/isolated-environment.log 2>&1 &
           SERVER_PID=$!
 
           cleanup() {
@@ -73,26 +92,28 @@ jobs:
           }
           trap cleanup EXIT
 
-          for attempt in {1..60}; do
-            if curl -fsS "$BASE_URL" >/dev/null; then
-              break
-            fi
-            if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-              echo "Isolated environment exited before becoming ready."
-              cat reports/isolated-environment.log
-              exit 1
-            fi
-            sleep 1
+          for url in ${{ matrix.ready_urls }}; do
+            for attempt in {1..120}; do
+              if curl -fsS "$url" >/dev/null; then
+                break
+              fi
+              if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+                echo "Isolated environment exited before becoming ready."
+                cat reports/isolated-environment.log
+                exit 1
+              fi
+              sleep 1
+            done
+            curl -fsS "$url" >/dev/null
           done
 
-          curl -fsS "$BASE_URL" >/dev/null
-          npx playwright test
+          ${{ matrix.test }}
 
       - name: Upload Playwright reports
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: playwright-reports
+          name: playwright-reports-${{ matrix.suite }}
           path: |
             yaffo_ui_tests/reports/
           retention-days: 7

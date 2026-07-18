@@ -12,6 +12,7 @@
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "isolatedEnvironment:start": "tsx lib/services/isolated_runner.ts --port 5002",
+    "isolatedEnvironment:start:sharing": "tsx lib/services/isolated_runner.ts --port 5002 --peer",
     "test:heal": "tsx lib/test_generator/heal_test.ts",
     "test:heal:repo": "tsx lib/test_generator/heal_repo.ts",
     "analyze": "tsx lib/cli/analyze.ts",

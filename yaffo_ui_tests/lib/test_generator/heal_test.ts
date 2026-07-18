@@ -64,7 +64,15 @@ export async function healTest(
         const outputDir = dirname(absoluteTestPath);
 
         console.log(`\n🔧 Starting isolated environment for healing...`);
-        isolatedEnvironment = await startIsolatedEnvironment(port);
+        // The sharing suite needs the two-instance sandbox (a peer to pair with
+        // and pull from). PEER_URL goes into process.env so every downstream
+        // Playwright run — including the orchestrator's re-runs — inherits it
+        // and the config's `sharing` project exists.
+        const withPeer = basename(specPath, ".yaml") === "sharing";
+        isolatedEnvironment = await startIsolatedEnvironment(port, {withPeer});
+        if (isolatedEnvironment.peer) {
+            process.env.PEER_URL = isolatedEnvironment.peer.baseUrl;
+        }
 
         const spec = parseSpecFile(specPath);
         const featureName = spec.feature;

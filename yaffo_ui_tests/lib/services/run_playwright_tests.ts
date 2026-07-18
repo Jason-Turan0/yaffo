@@ -191,9 +191,19 @@ export const runPlaywrightTests = async (
     const timestamp = Date.now();
     const jsonReportPath = join(tmpdir(), `playwright-report-${timestamp}.json`);
 
+    // The sharing suite lives in its own Playwright project, which only exists
+    // when PEER_URL points at the second sandbox instance (see playwright.config.ts).
+    const isSharingSuite = (testFiles ?? []).some((file) => /generated_tests[/\\]sharing[/\\]/.test(resolve(file)));
+    if (isSharingSuite && !process.env.PEER_URL) {
+        throw new Error(
+            "The sharing tests need the two-instance sandbox: start it with { withPeer: true } " +
+            "(or npm run isolatedEnvironment:start:sharing) and set PEER_URL to instance B."
+        );
+    }
+
     const args = [
         "playwright", "test",
-        "--project=chromium",
+        `--project=${isSharingSuite ? "sharing" : "chromium"}`,
         "--reporter=json",
     ];
 

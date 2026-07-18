@@ -28,10 +28,23 @@ export default defineConfig({
     outputDir: 'reports/artifacts',
 
     projects: [
+        // The sharing suite needs the two-instance sandbox (BASE_URL = instance A,
+        // PEER_URL = instance B; `npm run isolatedEnvironment:start:sharing`), so
+        // the default project ignores it and the `sharing` project only exists
+        // when a peer is actually up. Sharing tests are stateful and ordered:
+        // retries would replay a failed test against already-mutated server
+        // state, so they stay at 0 even in CI.
         {
             name: 'chromium',
             use: {...devices['Desktop Chrome']},
-        }
+            testIgnore: /generated_tests\/sharing\//,
+        },
+        ...(process.env.PEER_URL ? [{
+            name: 'sharing',
+            use: {...devices['Desktop Chrome']},
+            testMatch: /generated_tests\/sharing\//,
+            retries: 0,
+        }] : []),
     ],
 
     // Only start webServer if BASE_URL is not set (i.e., not using external server)

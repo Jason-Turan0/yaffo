@@ -415,7 +415,10 @@ def seed_database() -> int:
         # Index photos
         indexed_count = 0
         processed_results = []
-        for photo_path in sorted(photos_dir.glob("*.jpg"), key=lambda path: path.name.lower()):
+        # rglob, not glob: the sharing sandbox moves a couple of photos into a
+        # subfolder (folder-share grants need one). Sorting stays by BASENAME so
+        # media/face ids keep their order no matter where a file lives.
+        for photo_path in sorted(photos_dir.rglob("*.jpg"), key=lambda path: path.name.lower()):
             try:
                 indexed_photo = index_photo(photo_path, thumbnail_dir)
                 processed_results.append(indexed_photo)

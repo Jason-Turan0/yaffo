@@ -1,0 +1,633 @@
+# Demo Environment Plan
+
+Status: proposed
+
+Last reviewed: 2026-07-18
+
+## Recommendation
+
+Build the first Yaffo demo as an **anonymous, resettable sandbox** containing two
+pre-paired Yaffo instances on one Compute Engine VM:
+
+- `demo-a.yaffo.app` — the sharing device, seeded with a small licensed or
+  synthetic library and prepared albums.
+- `demo-b.yaffo.app` — the receiving device, seeded with a different library
+  and an empty download directory.
+- `demo.yaffo.app` — a short walkthrough with links that open A and B in separate
+  tabs.
+- Caddy on the demo VM for automatic HTTPS and routing of the three public
+  hostnames to private containers.
+- The existing `hub.yaffo.app` for P2P signaling, STUN, and encrypted relay
+  fallback.
+- `YAFFO_DEMO_MODE=1` on both app instances. This enables a fail-closed server-side
+  endpoint policy, immutable demo configuration, workload and transfer caps, and
+  an explicit disposable-demo banner.
+- A scheduled restore from golden data directories every day, plus an
+  operator-triggered reset and emergency stop.
+
+This shape demonstrates real Yaffo behavior, including the actual device-key
+identity and P2P transfer path, while keeping the initial hosting and operational
+model understandable. It must not be presented as a multi-user or production
+cloud edition of Yaffo.
+
+The demo is intentionally reachable without a login. Its safety boundary is not
+visitor identity; it is the deliberately restricted capability set exposed by
+demo mode, backed by container isolation, rate and resource limits, disposable
+data, and automatic reset. The unrestricted local application must never be
+reachable from the public hostname.
+
+## Goals and non-goals
+
+The first demo should let a visitor:
+
+1. Browse a realistic but non-sensitive photo and video library.
+2. Use filters, people, labels, locations, favorites, and albums.
+3. See that pairing and sharing grants are different concepts.
+4. Open Device B, browse a share from Device A, preview remote media, select
+   items, and pull them.
+5. See whether the transfer used a local, direct, or relayed path.
+6. Make a few bounded changes while understanding that the sandbox is shared and
+   all changes/downloads disappear at the next visible reset time.
+
+It is not intended to provide:
+
+- storage for visitor uploads or real personal photos;
+- multiple simultaneous, mutually isolated users;
+- an availability or durability SLA;
+- performance benchmarking of face recognition or bulk indexing;
+- proof that NAT traversal works between two independent networks;
+- unrestricted access to the AI builders or paid model APIs.
+
+The existing [`deploy/yaffo_peer`](../../deploy/yaffo_peer/README.md) topology is
+the right tool for real-network and relay validation. It should remain separate
+from the stable product demo.
+
+## Anonymous access model
+
+### Demo mode, not a login
+
+Yaffo sharing correctly has no user accounts. A P2P device authenticates to the
+hub and another device with its ECDSA keypair, and a human establishes trust with
+a one-time pairing code. The public demo should preserve that accountless product
+story instead of adding a visitor login.
+
+The normal web app does assume that anyone who can reach its listening socket is
+the device owner. The public deployment therefore needs a separate runtime
+contract:
+
+- `YAFFO_DEMO_MODE=1` must be read once at startup and cannot be changed through
+  the UI or a request.
+- Every web endpoint and HTTP method must be classified as allowed, limited, or
+  blocked in demo mode. An unclassified new endpoint is blocked by default and
+  fails a CI test until its policy is explicit.
+- Blocked endpoints must fail in the Flask application, not merely disappear from
+  templates or be blocked at the proxy.
+- Dangerous service functions must also reject calls in demo mode when they can
+  be reached by background jobs or another non-route path.
+- `YAFFO_DEMO_ROLE=source|receiver` may narrow the policy further: A is the
+  mostly-read-only sharing source; B is allowed bounded transfer controls.
+- The UI must explain disabled controls rather than silently pretending those
+  product capabilities do not exist.
+
+This is not an authorization system and should not spread into the desktop
+product as one. It is a deployment safety profile for a disposable public
+instance.
+
+### Public ingress and private operator access
+
+Follow the existing `hub.yaffo.app` deployment pattern and keep the public path
+small:
+
+- Reserve one static external IPv4 address for the demo VM.
+- Create `A` records for `demo.yaffo.app`, `demo-a.yaffo.app`, and
+  `demo-b.yaffo.app` at the existing authoritative DNS provider. All three records
+  point to that address.
+- Run Caddy in the deployment and expose only TCP 80 and 443. Caddy obtains and
+  renews public certificates, redirects HTTP to HTTPS, and routes each exact
+  hostname to its private container service.
+- Publish no wildcard DNS record and configure no catch-all application proxy.
+  Requests for unexpected hostnames must not reach Yaffo.
+- Keep the app and walkthrough ports on the private container network. They must
+  never be bound to the VM's public interface.
+
+The public pilot deliberately has no separate CDN, managed WAF, or bot product.
+Demo mode, bounded fixtures, server-side action policy, request and transfer
+quotas, container limits, automatic reset, and an emergency stop remain the
+safety boundary. Add another network service only if observed abuse demonstrates
+a need that these controls do not address.
+
+Keep reset, metrics, logs, SSH, and emergency controls off the public hostnames.
+Operators use IAP TCP forwarding, which applies IAM checks before opening the
+administrative connection. See the [IAP TCP forwarding
+overview](https://docs.cloud.google.com/iap/docs/tcp-forwarding-overview).
+
+## Topology
+
+```text
+anonymous browser
+      |
+      | HTTPS :443
+      v
+Caddy on demo VM static IP
+      |
+      +----------------------+----------------------+
+      |                      |                      |
+      v                      v                      v
+walkthrough              Yaffo A                Yaffo B
+static container         web :5101              web :5102
+                         P2P UDP :5201           P2P UDP :5202
+                         task system: off        task system: off
+                         /data/a only             /data/b only
+                              \                    /
+                               \ WSS + QUIC/UDP   /
+                                v                v
+                               hub.yaffo.app
+                         signaling/STUN/relay
+```
+
+Use one `e2-medium` VM initially. Run the two Yaffo processes in separate
+containers with distinct:
+
+- `YAFFO_DATA_DIR` mounts;
+- web and P2P ports;
+- SQLite application and queue databases;
+- media, thumbnail, temp, download, and log directories;
+- P2P identity key storage;
+- Flask `SECRET_KEY` values;
+- CPU, memory, PID, and writable-volume limits.
+
+Each container must see only its own data and media mounts. Mounting a shared
+`/data` tree into both containers defeats the isolation because Yaffo includes a
+local filesystem picker. Sharing must happen over Yaffo's P2P protocol, not
+through a host directory visible to both containers.
+
+One VM is enough to demonstrate the product workflow, but it does not prove NAT
+traversal. Two app VMs should be used only for a guided network demonstration or
+the existing Tier 2/3 transport tests. Two full app VMs approximately double
+compute and disk cost and add no value to most visitors.
+
+### Machine sizing
+
+The demo should not run the task-queue host, task workers, filesystem watcher, or
+periodic dispatcher. Indexing, face analysis, label classification, automations,
+and AI generation are blocked in demo mode, while thumbnails and previews are
+prepared in the golden fixture. The two always-on Yaffo processes therefore serve
+HTTP, SQLite reads and bounded scratch writes, plus P2P presence, browsing, and
+small transfers.
+
+A local sizing probe on 2026-07-18 measured about 295 MB RSS after one web process
+loaded all 144 routes, before request traffic. Two processes start near 600 MB;
+Linux, Caddy, container overhead, SQLite page cache, Python allocation growth, and
+media responses still require substantial headroom. This is enough evidence to
+reject 1 GB, but not to reserve 16 GB without a deployment benchmark.
+
+Current `us-central1` list-price options are:
+
+| Machine type | Effective CPU | Memory | Compute/month | About 180 hours | Assessment |
+|---|---:|---:|---:|---:|---|
+| `e2-micro` | 0.25 sustained vCPU, short burst | 1 GB | ~$6, possibly covered by an unused Free Tier allotment | ~$1.50 | Too little memory and sustained CPU for two app processes |
+| `e2-small` | 0.5 sustained vCPU, short burst | 2 GB | ~$12 | ~$3 | Could boot, but leaves little failure or traffic headroom |
+| **`e2-medium`** | **1 sustained vCPU, bursts across 2 guest vCPUs** | **4 GB** | **~$24** | **~$6** | **Recommended pilot size with all background work disabled** |
+| `e2-standard-2` | 2 vCPUs | 8 GB | ~$49 | ~$12 | Simple upgrade if shared-core CPU or 4 GB memory is insufficient |
+| `e2-highmem-2` | 2 vCPUs | 16 GB | ~$66 | ~$16 | Memory-heavy alternative; no current demo need |
+| `e2-standard-4` | 4 vCPUs | 16 GB | ~$98 | ~$24 | Conservative production/indexing size; excessive for the proposed demo |
+
+Google documents the shared-core allocations and burst behavior in [E2 machine
+types](https://docs.cloud.google.com/compute/docs/general-purpose-machines#e2_shared-core_machine_types).
+Verify final prices with the [Google Cloud Pricing
+Calculator](https://cloud.google.com/products/calculator).
+
+Start with `e2-medium` and make `machine_type` a Terraform variable. Exercise two
+simultaneous galleries, filters and detail views, one remote preview, one capped
+transfer, reset, and the expected anonymous concurrency. Upgrade to
+`e2-standard-2` if the VM swaps or approaches its memory limit, exhausts its
+shared-core CPU entitlement, or misses the agreed latency target. Do not size for
+indexing or model inference because those actions are absent from this deployment.
+
+### Runtime changes needed
+
+The checked-in [`deploy/gcp`](../../deploy/gcp/README.md) directory is an early
+infrastructure scaffold, not a deployable demo. It creates a private COS VM,
+Artifact Registry, and a disk, but it does not currently build or run Yaffo,
+configure internet egress, expose public HTTPS safely, seed/reset data, or run a
+second instance.
+
+Before deploying, add:
+
+1. A production container image for `linux/amd64`, with runtime assets prefetched
+   during the build or first provisioning rather than downloaded on every reset.
+2. A deployment entrypoint that runs only Waitress and the P2P service. It must
+   not start the task-queue host, task workers, filesystem watcher, or periodic
+   automation dispatcher, and it must not launch runtime asset-download threads
+   because those assets are already in the image. The current `python -m yaffo`
+   path starts those components, so it needs a demo-aware role switch; starting only
+   `create_app()` under Gunicorn would omit P2P and is not sufficient either.
+3. A `YAFFO_WEB_HOST`-style setting so Waitress can bind to a private container
+   interface. It currently binds to `127.0.0.1`; never bind it directly to a
+   public interface.
+4. Per-instance ports and a configurable Waitress thread count, initially four
+   threads per app. Do not express the disabled task system as zero workers: omit
+   the host process entirely, and block job-producing routes before they enqueue.
+5. A stable headless secret store for each P2P key. A dedicated file-backed
+   keyring is acceptable for these disposable demo identities if its volume is
+   isolated and mode `0600`; do not use it for real user identities. Keep identity
+   keys outside the resettable data directory, because the pre-paired database
+   snapshots refer to those identities.
+6. A Caddy configuration for the three exact anonymous hostnames. Run Caddy on
+   the private container network, route each hostname to its intended service,
+   expose only Caddy's TCP 80 and 443 ports on the VM, and persist Caddy's
+   certificate state across container and VM restarts.
+7. Scheduled start/stop, health checks, restore automation, budget alerts, image
+   retention, and log retention.
+
+## Demonstrating sharing
+
+### Default self-service story
+
+Pre-pair the two instances and seed a small number of grants. The walkthrough
+should explain that pairing was performed once during provisioning and did not
+grant access by itself.
+
+Recommended fixture:
+
+- Device A display name: `Family Mac`.
+- Device B display name: `Travel Laptop`.
+- Device A album: `Chicago Weekend`, containing media from more than one folder.
+- Device A folder: `Trips/Chicago`.
+- Device B download directory: `/data/downloads`.
+- Active grants from A to B: the album and the folder, but not A's complete media
+  directory.
+- A few non-granted sibling files so the demo proves that an album or folder grant
+  is scoped rather than equivalent to the whole library.
+
+Walkthrough:
+
+1. In A, open Sharing and show B as paired and online.
+2. Show A's active folder and album grants. Trust and grant mutation controls are
+   explanatory but disabled in the anonymous demo.
+3. Open B in a second tab and select A under **Shared with me**.
+4. Browse and filter the remote album, open a remote preview, and select two small
+   files.
+5. Pull them to B. Show progress, resume/cancel behavior if useful, and the path
+   reported by the transfer panel.
+6. Cancel or resume the bounded transfer if useful, then show where B received the
+   files. Explain revocation with the walkthrough because public visitors cannot
+   alter the pre-paired trust state.
+
+Do not promise that this single-host topology will show a particular network
+path. Every call begins relayed and may upgrade; container networking and GCE NAT
+determine what the UI reports. If the purpose of a session is specifically to
+show relay fallback, use the `HARD` profile in `deploy/yaffo_peer`.
+
+### Pairing demonstration
+
+Pairing codes are short-lived, single-use, and both devices must be online. A
+shared, pre-paired sandbox therefore cannot safely let concurrent visitors repeat
+the pairing ceremony: one visitor can consume a code or revoke the peer for
+everyone.
+
+For a guided pairing demo, use an operator-only deployment or start an alternate
+unpaired snapshot with `YAFFO_DEMO_ALLOW_PAIRING=1` that is reachable only through
+IAP. Generate the code on A, paste it into B, then grant the album. Restore the
+normal pre-paired snapshot afterwards. The public self-service instance should
+use an annotated pairing walkthrough or video and remain paired.
+
+### When per-visitor instance pairs are justified
+
+An isolated sandbox for every visitor would need a control plane that creates a
+pair, gives it a random hostname or signed session, applies CPU and transfer
+quotas, and destroys it after roughly 30 minutes. That eliminates cross-visitor
+interference and makes live pairing safe, but it is a separate product:
+
+- instance lifecycle and routing service;
+- per-session identity and secrets;
+- concurrency limits and a waiting room;
+- reliable TTL cleanup;
+- abuse detection and emergency shutdown;
+- cost proportional to concurrent pairs.
+
+Do not build this until the shared anonymous demo has shown enough use and
+cross-visitor interference to justify it.
+
+## Abusable actions and proposed mitigations
+
+The table below is the initial discussion list, based on the current routes and
+background actions. The policy is intentionally conservative where an action can
+escape the seeded library, create unbounded work, spend money, or break the
+pre-paired sharing story.
+
+| Action surface | Current examples | How it can be abused | Proposed public-demo policy | Mitigation or later option |
+|---|---|---|---|---|
+| Arbitrary filesystem reads and discovery | `/api/fs/list`, `/media-by-path` | Enumerate the container or host mounts; retrieve keys, config, databases, logs, or `/proc` data | **Blocked** | Remove path-addressed media from demo navigation; serve only DB-backed media IDs; mount only instance data; add path and symlink containment as defense in depth |
+| Arbitrary directories and storage reconfiguration | `/api/fs/create-folder`, media-directory add/remove, thumbnail-directory changes, sharing download-directory changes | Create directories, scan unexpected trees, move thumbnails, fill disk, or point the app at sensitive paths | **Blocked** | Bake immutable media/thumbnail/download settings into the golden DB; allow changes only in an operator-only instance |
+| Host process launch | `/api/open-file`, `/api/open-folder` | Spawn `open`, `xdg-open`, or associated applications repeatedly; consume processes or reach host integrations | **Blocked** | Disable routes and hide controls; do not install desktop helpers in the runtime image; enforce PID limits |
+| File deletion, trash, and movement | Duplicate-removal execution; automation actions that trash or move files | Destroy fixtures, write outside intended destinations, fill trash/storage, or race reset | **Blocked** | Mount seed media read-only; omit trash helpers; demonstrate with screenshots or an operator-only disposable copy |
+| LLM credentials and paid generation | LLM API-key set/clear, model selection, page/theme/automation chat | Store a visitor's secret on a shared server, consume an operator key, create cost, generate stored active content, or exhaust workers | **Blocked** | Ship no provider keys; block key and generation routes and background tasks; show pre-generated pages/themes read-only |
+| P2P identity, pairing, trust, and grants | Pairing-code generation, pair, revoke/delete/rename device, grant reconciliation, album share | Pair an attacker's device, grant it data, break A/B, consume pairing nonces, or abuse hub sessions | **Blocked** | Pre-pair A/B and seed grants; expose read-only trust/grant views; use the IAP-only pairing mode for a guided demo |
+| Heavy indexing and classification | Index scan/sync/reindex, per-media reindex, label reclassification, duplicate finding, face analysis | Sustain CPU/RAM load, grow queues, repeatedly load native models, and make browsing unavailable | **Blocked initially** | Use pre-indexed fixtures; later allow one narrowly scoped sample job with a global concurrency lock, hard timeout, cooldown, and daily quota |
+| Automations and scheduled work | Create/configure/run/publish automations and triggers; built-in metadata/file actions | Persist repeated work, mutate files and metadata after the visitor leaves, call external services, or fill the queue | **Blocked** | Disable periodic dispatch and all enabled automations in the golden state; show prepared run history read-only |
+| External lookup calls | Reverse geocoding and any future URL-backed integration | Turn the demo into a request amplifier, hit provider quotas, or create third-party cost | **Blocked initially** | Use pre-resolved fixture locations; later add a cache-only lookup or strict global/provider quota |
+| Full media, preview, and video delivery | `/media/<id>`, posters, remote P2P previews, HTTP Range requests | Scrape or hotlink the fixture set, issue pathological ranges, repeatedly resize previews, and drive network egress | **Limited** | Use small low-resolution licensed fixtures; pre-generate previews; validate ranges; CDN-cache safe responses; per-IP and global byte/request budgets; daily egress kill switch |
+| P2P pulls and relay traffic | Remote browse/preview and transfer pull/continue | Repeat batches, fill B's download volume, monopolize transfer slots, or create metered hub relay egress | **Limited to B** | One active batch globally, small file/count/batch-byte caps, per-IP cooldown, download-volume quota, disable “continue anyway” beyond relay budget, reset downloads every 15–30 minutes |
+| Seeded metadata edits | Favorites, tags, face/person assignments, location changes | Vandalize shared state, create stored text payloads, trigger event tasks, or confuse other visitors | **Limited** | Allow a small curated subset; cap text/counts and mutation rate; escape on output; disable event-driven automations; protect seed people; reset frequently and display the reset time |
+| Album edits | Create/update/delete albums, add/remove/reorder items, set cover | Row spam, very large selections, deletion of the sharing fixture, and cross-visitor interference | **Limited to a scratch album** | Protect seeded albums; allow at most one `Demo Scratchpad` album with bounded name/description and item count; reset frequently |
+| Global application settings | Locale, distance unit, filter configuration, label vocabulary, theme default | Change the experience for every visitor, trigger work, or leave the UI unusable | **Blocked or browser-local** | Move harmless presentation preferences to a signed cookie or local storage for demo mode; keep database-backed global settings immutable |
+| People and other row creation/deletion | Person create/update/delete and similar catalog mutations | Unbounded DB growth, offensive stored names, deletion of fixtures, or expensive embedding recalculation | **Blocked initially** | Consider bounded rename/assignment on designated scratch records only; enforce length/character rules and protected seed IDs |
+| Job and transfer administration | Cancel/delete jobs; cancel/continue/delete transfer records | Interrupt another visitor, hide evidence of abuse, or bypass a transfer budget | **Blocked for general jobs; limited for the single demo transfer** | No public job creation means no public job controls; expose only safe controls on the one capped B transfer batch |
+| Query and search amplification | Large filter lists, repeated facets/autocomplete, custom-page widget queries, extreme pagination | Expensive SQLite queries, large responses, cache busting, and worker/thread starvation | **Limited** | Bound list lengths, page size, text length, and query complexity; set request/DB timeouts; cache stable facets; cap concurrent requests per IP and globally |
+| Stored HTML/CSS/widget content | Custom pages, widget previews/state, generated themes and SVG/CSS assets | Stored XSS, phishing content, CSP bypass attempts, or persistent visual defacement | **Blocked for authoring** | Serve only reviewed, pre-generated content; preserve widget sandboxing; apply a tested CSP and output escaping |
+| Service and host information | Settings/system-info pages, error detail, logs, metrics, health/admin endpoints | Reveal versions, absolute paths, topology, device IDs, workload state, or operational controls | **Blocked or sanitized** | Provide a demo-specific About page; keep detailed health/metrics on localhost or IAP; return generic public errors |
+| Request forgery and cross-site triggering | Every allowed state-changing form or API | Another site can cause visitors' browsers to spend demo resources or mutate shared state even though no login is present | **Blocked without CSRF token** | Apply CSRF to all mutations, validate `Origin`/`Sec-Fetch-Site`, use secure same-site cookies, and reject unsupported content types |
+
+### Policy states and enforcement
+
+- **Allowed** means ordinary browsing of seeded, non-sensitive data. Responses can
+  be cached where correct, but still receive input-size and concurrency limits.
+- **Limited** means the feature is useful to the demo and has an application-level
+  per-IP/session budget plus a global backstop. The anonymous session cookie is a
+  convenience for fair-use accounting, not proof of identity; clients can clear
+  it, so global caps remain mandatory.
+- **Blocked** means Flask returns a consistent `demo_feature_disabled` response
+  before parsing a body or starting work. Templates remove or annotate the
+  control, but the server check is authoritative.
+- **Operator-only** means the capability is absent from public routing and is
+  available only through IAP or a separately started maintenance profile.
+
+Implement the classification as endpoint-and-method metadata rather than a list
+of URL prefixes. Include a test that iterates `app.url_map` and fails whenever a
+new route has no demo policy. Add service-layer guards around filesystem changes,
+LLM calls, task enqueueing, and trust mutation because those have non-route entry
+points.
+
+### Proposed v1 interactive set
+
+Keep the first release useful, not merely view-only:
+
+- allow all normal browsing, filtering, pagination, detail views, people/faces,
+  labels, locations, albums, and reviewed custom-page presentations;
+- allow favorites, bounded tag edits, assignments to designated scratch people,
+  and edits to one protected-size `Demo Scratchpad` album;
+- allow B to browse A's seeded grants, preview remote items, and run one capped
+  transfer batch with cancel/resume;
+- block filesystem/configuration utilities, all indexing and automations, AI and
+  custom-content authoring, global settings, external lookups, P2P trust/grant
+  mutations, and seed-record deletion.
+
+This split is a proposal for discussion. Before implementation, each row should
+be accepted or changed and translated into the endpoint policy table and tests.
+
+## Security requirements
+
+Anonymous visitors control the deliberately small capability set above. Treat
+every allowed request as hostile input and assume per-client limits can be evaded
+with distributed traffic; container and global cost backstops are still required.
+
+### Required before any remote access
+
+1. **Use demo-only data.** Include no personal library, real face embeddings,
+   precise GPS records, API keys, production databases, SSH keys, cloud
+   credentials, or identifiable EXIF metadata. Record the source and license of
+   every fixture.
+2. **Add an application-level demo mode.** Deny risky routes on the server, not
+   only by hiding navigation. At minimum, block the filesystem list/create APIs,
+   `open-file`, `open-folder`, media-directory and thumbnail-directory changes,
+   arbitrary scans, duplicate-file actions, LLM key management and generation,
+   device revoke/delete/rename, and raw path-based media access. Allow only the
+   product mutations the walkthrough needs.
+3. **Contain every filesystem path.** Resolve it and require it to be under the
+   instance's explicit media, thumbnail, download, or temp roots before reading,
+   writing, scanning, or deleting. Add negative traversal and symlink tests. The
+   [OWASP traversal testing guidance](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/05-Authorization_Testing/01-Testing_Directory_Traversal_File_Include)
+   is a useful test inventory.
+4. **Add CSRF protection to all state-changing web requests.** `SameSite=Lax`
+   helps but is not a substitute. Flask's own [security guidance](https://flask.palletsprojects.com/en/stable/web-security/)
+   recommends a token for requests that modify server content.
+5. **Set production Flask values.** Use random, distinct secrets; set secure and
+   HTTP-only cookies; restrict `TRUSTED_HOSTS`; apply `ProxyFix` only for the exact
+   trusted proxy hop; limit request size; and return HSTS,
+   `X-Content-Type-Options`, a tested Content Security Policy, frame restrictions,
+   and a conservative referrer policy.
+6. **Use a production WSGI server with debug disabled.** Waitress already meets
+   the server requirement. Flask explicitly says its development server is not
+   designed to be secure or stable for production; see [Deploying to
+   Production](https://flask.palletsprojects.com/en/stable/deploying/).
+7. **Run containers as non-root.** Use a read-only root filesystem, a size-limited
+   tmpfs, `no-new-privileges`, dropped Linux capabilities, PID/memory/CPU limits,
+   no Docker socket, and only the instance-specific writable mounts.
+8. **Constrain work and spend.** Start no task host, workers, watcher, or periodic
+   dispatcher. Reject job-producing routes before enqueueing, clear any stale
+   queue rows during reset, cap P2P transfer bytes, rate-limit expensive routes
+   per anonymous session and IP, add global concurrency/byte backstops, and omit
+   every paid-model API key.
+9. **Protect the VM.** Use a dedicated least-privilege service account, IAP/OS
+   Login for administration, no public SSH, automatic security updates, and a
+   Shielded VM with Secure Boot after compatibility testing. Shielded VM provides
+   vTPM, measured boot, and integrity monitoring at [no separate
+   charge](https://cloud.google.com/security/products/shielded-vm).
+10. **Make reset reliable.** Stop or drain both apps before replacing SQLite and
+    queue files. Never copy a live SQLite directory. Preserve the stable identity
+    secrets, restore the paired database snapshots and seed media, clear downloads
+    and logs, restart, and run a P2P ping/list/pull smoke test.
+
+### Network policy
+
+- Use a dedicated VPC with no permissive default ingress rules. Do not inherit
+  the default VPC's broad SSH rule. Allow public inbound TCP only on 80 and 443
+  to the tagged demo VM. If SSH is retained, allow TCP 22 only from IAP's
+  published TCP-forwarding range. Do not expose the walkthrough, app, database,
+  metrics, reset, Docker, or P2P container ports directly.
+- Attach one reserved static external IPv4 address to the VM for DNS, inbound
+  HTTPS, and outbound connectivity. The design needs neither Cloud NAT nor a GCP
+  load balancer.
+- Prefetch model and binary assets. After deployment, restrict outbound traffic as
+  far as practical to `hub.yaffo.app`, DNS/NTP, certificate authorities, Google
+  APIs needed by the service account, and update endpoints.
+- Keep the app instances on a private container network. Exposing their P2P UDP
+  ports on the VM is unnecessary for relay-first correctness; use a separate test
+  topology when validating inbound direct paths.
+
+### Operations and incident response
+
+- Health-check the public walkthrough and both app home pages, plus private
+  detailed health, P2P hub connectivity, and a small A-to-B listing request.
+- Alert on container restart loops, disk fullness, elevated application rate-limit
+  rejections, queue depth, long-running jobs, relay byte growth, network egress,
+  and spend.
+- Set budget alerts at 50%, 80%, and 100%, but remember that [Google Cloud budgets
+  do not cap spending automatically](https://docs.cloud.google.com/billing/docs/how-to/budgets).
+  Add an operator-tested emergency stop that disables the public ingress firewall
+  rule and stops the VM.
+- Retain only the logs required for troubleshooting. Avoid logging pairing codes,
+  cookies, secrets, full filesystem paths, or media metadata.
+- Patch monthly and rebuild the image from pinned dependencies. Scan the image in
+  CI or on demand rather than enabling an unexpected paid scanning service.
+- Document how to revoke the paired demo devices in their local trust stores and
+  rotate the file-backed identities, Flask secrets, TLS state, and operator
+  sessions if the VM or image is compromised. The hub has no identity registry
+  or denylist to update.
+
+## Cost estimate
+
+The following is a planning estimate in USD for `us-central1`, using public list
+prices reviewed on 2026-07-18. Taxes, negotiated discounts, build minutes,
+logging, vulnerability scanning, and traffic outside North America are excluded.
+Re-run the [Google Cloud Pricing Calculator](https://cloud.google.com/products/calculator)
+before provisioning.
+
+| Item | Assumption | Always on | About 180 hours/month |
+|---|---:|---:|---:|
+| Compute | One `e2-medium`, about $0.0335/hour | ~$24 | ~$6 |
+| Persistent Disk | 50 GiB `pd-balanced`, about $0.10/GiB-month | ~$5 | ~$5 |
+| External IPv4 | Static address associated with the VM, $0.005/hour | ~$3.65 | ~$3.65 |
+| Artifact Registry | About 5 GiB retained; first 0.5 GiB free, then ~$0.10/GiB-month | ~$0.45 | ~$0.45 |
+| Internet transfer | Example 25 GiB to North America; first 1 GiB free, then $0.12/GiB | ~$2.88 | ~$2.88 |
+| Existing domain | Reuse `yaffo.app` | $0 incremental | $0 incremental |
+| **Estimated demo total** | Round for small logging/build variation | **~$35–45/month** | **~$18–25/month** |
+
+Price references:
+
+- GCP lists `e2-medium` at about $0.0335/hour; see [General-purpose VM
+  pricing](https://cloud.google.com/products/compute/pricing/general-purpose).
+- GCP lists balanced disk at about $0.10/GiB-month in Iowa; see [Disk and image
+  pricing](https://cloud.google.com/compute/disks-image-pricing?hl=en).
+- An in-use VM external IPv4 address is [$0.005/hour](https://cloud.google.com/vpc/network-pricing#ipaddress).
+  Google considers a static address associated with a VM to be in use even while
+  that VM is stopped, so both estimates include a full month.
+- Premium-tier outbound data to North America is [free for the first GiB and
+  $0.12/GiB through 1 TiB](https://cloud.google.com/vpc/network-pricing).
+- Artifact Registry storage is [free for 0.5 GiB, then about
+  $0.10/GiB-month](https://cloud.google.com/artifact-registry/pricing).
+
+Anonymous traffic makes egress the least predictable line item. At the listed
+North America rate, 25 GiB is about $2.88 after the free GiB, 100 GiB is about
+$11.88, and 500 GiB is about $59.88. The headline totals above are therefore a
+low-traffic planning case, not a cap. Enforce daily byte thresholds at the app,
+alert on GCP and hub egress, and automatically disable public ingress when the
+emergency threshold is crossed.
+
+The existing always-on P2P hub is not included because it is shared product
+infrastructure rather than a demo-only resource. Its current design estimate is
+roughly $0–7/month for the VM plus disk and relayed egress; review actual billing
+and `total_bytes_forwarded` before increasing demo traffic.
+
+Do not add a second app VM merely for visual credibility; reserve it for network
+behavior that cannot be shown on one host. Likewise, do not include indexing or
+native model loading in the capacity test for a deployment where those operations
+are disabled.
+
+## Delivery plan
+
+### Phase 0 — decide the operating policy
+
+- Confirm anonymous public access and record exactly which interactive mutations
+  from the abuse table are in v1.
+- Confirm scheduled hours versus 24/7. Use 24/7 if the demo is linked publicly;
+  scheduled availability is mainly a pre-launch or cost-reduction option.
+- Choose and document demo fixtures and licenses.
+- Decide who can reset the sandbox, withdraw public routing, stop it, and receive
+  alerts.
+
+Exit criterion: audience, hours, data ownership, and monthly budget are written
+down.
+
+### Phase 1 — harden the application boundary
+
+- Implement the `YAFFO_DEMO_MODE` and `YAFFO_DEMO_ROLE` policy states and a test
+  that requires every endpoint/method in `app.url_map` to be classified.
+- Add service-layer demo guards around filesystem changes, task enqueueing, LLM
+  calls, and P2P trust/grant mutation.
+- Add path-root enforcement and symlink/traversal tests.
+- Add application-wide CSRF protection and production cookie/host/proxy settings.
+- Make the web bind host configurable.
+- Add per-session, per-IP, and global request/job/transfer/byte limits, plus
+  protected seed records and bounded scratch records.
+- Ensure the UI clearly marks the environment as disposable and shows the next
+  reset time.
+
+Exit criterion: a security review finds no route that can escape an instance's
+mounts, manage paid secrets, start unbounded work, or alter P2P identity/trust
+outside the scripted demo.
+
+### Phase 2 — build the two-instance deployment
+
+- Create the runtime image and a local Compose definition first.
+- Run A and B with separate mounts, ports, secrets, and request-concurrency limits.
+- Add the walkthrough and Caddy hostname routing.
+- Extend Terraform with a dedicated VPC, VM egress, least-privilege service
+  account, Shielded VM options, static external IP, disk, start/stop schedule,
+  firewall, budget, and DNS outputs.
+- Pin image digests in deployment and retain only a small number of versions.
+
+Exit criterion: a clean `terraform apply` plus deploy command produces three
+anonymous public hostnames, private operator controls, and no manually edited VM.
+
+### Phase 3 — fixtures, pairing, and reset
+
+- Import/index both fixture libraries during image or golden-state preparation,
+  not at every boot.
+- Pre-pair stable identities and create the intended grants.
+- Save immutable golden data directories after the queue is drained and SQLite is
+  closed.
+- Implement an idempotent reset every 15–30 minutes and validate it after
+  interruption halfway through.
+
+Exit criterion: reset removes changes/downloads, restores the same paired device
+IDs and grants, and completes a small A-to-B pull.
+
+### Phase 4 — verification and launch
+
+- Run unit/integration tests plus the existing sharing UI specs.
+- Run an anonymous remote-browser smoke test for every walkthrough step.
+- Test CSRF failures, route blocks, traversal and symlink attempts, per-client and
+  global rate limits, resource exhaustion, direct app-port reachability, and
+  public-ingress shutdown.
+- Load-test expected anonymous concurrency plus a controlled abuse burst.
+- Exercise backup/restore, key rotation, emergency stop, and budget notification.
+- Run one real two-network test against the production hub so the demo does not
+  mask a sharing regression.
+
+Exit criterion: the acceptance checklist below passes and an operator other than
+the implementer can run and reset the demo from the runbook.
+
+## Acceptance checklist
+
+- All demo hostnames are anonymously reachable over HTTPS through Caddy; app
+  container ports and operator endpoints are not directly reachable.
+- No real photos, face data, location history, or paid API credentials exist on
+  the VM or in its image.
+- A and B have different device IDs, database files, secrets, mounts, and ports.
+- A and B reconnect to the hub after restart and remain mutually paired.
+- B sees only A's granted folder/album, cannot list a non-granted sibling, and can
+  pull a selected fixture.
+- Revocation prevents future access but does not claim to delete already pulled
+  files; this remains covered by the sharing integration test even though public
+  trust controls are disabled.
+- Blocked routes fail server-side even when requested directly.
+- State-changing requests without a valid CSRF token fail.
+- Every route and method has an explicit allowed, limited, blocked, or
+  operator-only demo policy, and CI fails on an unclassified route.
+- Protected seed records cannot be changed; permitted scratch mutations obey
+  count, length, selection, and rate limits.
+- Neither container can read the other's data or the host filesystem.
+- No task host, worker, watcher, or periodic dispatcher process is running;
+  per-instance memory, CPU, requests, and transfer bytes are capped.
+- Reset is automatic, observable, and proven to restore the golden state.
+- Alerts, budget thresholds, emergency stop, patching, and key rotation have named
+  owners and a tested runbook.
+
+## Decision points after the pilot
+
+After four to six weeks, use privacy-conscious aggregate request metrics,
+walkthrough completion, policy blocks, reset failures, resource peaks, egress,
+and cost data to choose among:
+
+1. Keep the anonymous two-instance sandbox and adjust the allowed feature set.
+2. Replace it with a cheaper read-only static tour if visitors rarely use the live
+   controls.
+3. Add guided unpaired snapshots if live pairing is repeatedly valuable.
+4. Build per-visitor ephemeral pairs only if simultaneous public demand justifies
+   the control-plane and abuse-prevention work.
+
+Do not treat the pilot as evidence that Yaffo itself should gain accounts or
+become multi-tenant. Demo mode constrains one disposable deployment; Yaffo's
+local-first and device-key sharing model remains unchanged.
