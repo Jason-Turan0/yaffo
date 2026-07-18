@@ -309,6 +309,20 @@
     pointer-events: none;
 }
 
+.timeline-scrubber-bubble.is-transient {
+    animation: timeline-scrubber-bubble-fade 1100ms ease-out forwards;
+}
+
+@keyframes timeline-scrubber-bubble-fade {
+    0%, 70% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
 .timeline-scrubber-marker {
     position: absolute;
     right: -1px;

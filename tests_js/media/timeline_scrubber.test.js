@@ -161,4 +161,25 @@ describe('init', () => {
     expect(document.querySelector('.timeline-scrubber-marker').style.top).toBe('100%');
     expect(document.querySelector('.timeline-scrubber-year.is-active')).toBeNull();
   });
+
+  it('briefly shows the visible month while scrolling, then hides it', async () => {
+    fixture();
+    const [newest] = document.querySelectorAll('.timeline-section');
+    newest.getBoundingClientRect = () => ({ bottom: 200 });
+    const scrubber = await loadScrubber();
+    scrubber.init(window.testI18n, config);
+    const bubble = document.querySelector('.timeline-scrubber-bubble');
+
+    expect(bubble.hidden).toBe(true);
+    window.dispatchEvent(new Event('scroll'));
+
+    expect(bubble.hidden).toBe(false);
+    expect(bubble.textContent).toBe('July 2025');
+    expect(bubble.classList.contains('is-transient')).toBe(true);
+
+    bubble.dispatchEvent(new Event('animationend'));
+
+    expect(bubble.hidden).toBe(true);
+    expect(bubble.classList.contains('is-transient')).toBe(false);
+  });
 });

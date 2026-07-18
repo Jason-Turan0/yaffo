@@ -114,6 +114,7 @@ timelineScrubberApi.init = (i18n, config) => {
     const pageSize = parseInt(rail.dataset.pageSize || '25', 10) || 25;
     const monthFormat = new Intl.DateTimeFormat(config.i18n.locale, { month: 'long', year: 'numeric' });
     let suppressClick = false;
+    let pointerActive = false;
 
     // Evenly-spaced-by-time labels can still crowd on a short rail; keep the
     // first of any overlapping run visible and hide the rest.
@@ -140,8 +141,10 @@ timelineScrubberApi.init = (i18n, config) => {
     /** @param {PointerEvent} event */
     const showBubble = (event) => {
         if (!bubble) return;
+        pointerActive = true;
         const fraction = fractionAt(event);
         const month = timelineScrubberApi.monthAtFraction(months, fraction);
+        bubble.classList.remove('is-transient');
         bubble.textContent = monthFormat.format(new Date(month.year, month.month - 1, 1));
         bubble.style.top = `${Math.min(Math.max(fraction, 0), 1) * 100}%`;
         bubble.hidden = false;
@@ -149,6 +152,7 @@ timelineScrubberApi.init = (i18n, config) => {
 
     rail.addEventListener('pointermove', showBubble);
     rail.addEventListener('pointerleave', () => {
+        pointerActive = false;
         if (bubble) bubble.hidden = true;
     });
     rail.addEventListener('pointerdown', (event) => {
@@ -173,9 +177,18 @@ timelineScrubberApi.init = (i18n, config) => {
         }
     });
 
+    bubble?.addEventListener('animationend', () => {
+        if (!bubble.classList.contains('is-transient')) return;
+        bubble.hidden = true;
+        bubble.classList.remove('is-transient');
+    });
+
     let updateRequested = false;
+    let flashRequested = false;
     const updateViewportDate = () => {
         updateRequested = false;
+        const shouldFlash = flashRequested;
+        flashRequested = false;
         if (!marker || !timeline) return;
         const top = navbar instanceof HTMLElement ? navbar.getBoundingClientRect().bottom : 0;
         const sections = timeline.querySelectorAll('.timeline-section');
@@ -187,6 +200,17 @@ timelineScrubberApi.init = (i18n, config) => {
         const percent = date === 'unknown' ? 100 : timelineScrubberApi.railPercentForDate(months, date);
         if (percent === null) return;
         marker.style.top = `${percent}%`;
+        if (shouldFlash && bubble && !pointerActive) {
+            const [year, month] = date.split('-').map(Number);
+            bubble.textContent = year && month
+                ? monthFormat.format(new Date(year, month - 1, 1))
+                : section.querySelector('.timeline-day-label')?.textContent?.trim() || '';
+            bubble.style.top = `${percent}%`;
+            bubble.hidden = false;
+            bubble.classList.remove('is-transient');
+            void bubble.offsetWidth;
+            bubble.classList.add('is-transient');
+        }
         const activeYear = date === 'unknown' ? '' : date.slice(0, 4);
         yearLabels.forEach((label) => {
             const isActive = /** @type {HTMLElement} */ (label).dataset.year === activeYear;
@@ -195,13 +219,15 @@ timelineScrubberApi.init = (i18n, config) => {
                 isActive || /** @type {HTMLElement} */ (label).dataset.crowded !== 'true' ? 'visible' : 'hidden';
         });
     };
-    const requestViewportUpdate = () => {
+    /** @param {boolean} [flash] */
+    const requestViewportUpdate = (flash = false) => {
+        flashRequested ||= flash;
         if (updateRequested) return;
         updateRequested = true;
         window.requestAnimationFrame(updateViewportDate);
     };
 
-    window.addEventListener('scroll', requestViewportUpdate, { passive: true });
-    document.body.addEventListener('htmx:afterSwap', requestViewportUpdate);
+    window.addEventListener('scroll', () => requestViewportUpdate(true), { passive: true });
+    document.body.addEventListener('htmx:afterSwap', () => requestViewportUpdate());
     requestViewportUpdate();
 };
