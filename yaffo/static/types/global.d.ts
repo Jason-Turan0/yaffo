@@ -273,9 +273,23 @@ type FavoriteNamespace = {
     init?(i18n: I18nService, config: AppConfig): void;
 };
 
+type TimelineMonthEntry = {
+    year: number;
+    month: number;
+    count: number;
+    offset: number;
+};
+
+type TimelineScrubberNamespace = {
+    monthAtFraction?: (months: TimelineMonthEntry[], fraction: number) => TimelineMonthEntry;
+    pageForMonth?: (month: TimelineMonthEntry, pageSize: number) => number;
+    init?: (i18n: I18nService, config: AppConfig) => void;
+};
+
 type MediaNamespace = {
     favorite?: FavoriteNamespace;
     initGalleryVideos?: (i18n: I18nService, config: AppConfig) => void;
+    timelineScrubber?: TimelineScrubberNamespace;
 };
 
 type FaceLocation = {

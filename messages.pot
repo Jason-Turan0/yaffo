@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-17 23:08-0500\n"
+"POT-Creation-Date: 2026-07-17 23:33-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -399,14 +399,22 @@ msgstr ""
 msgid "Female"
 msgstr ""
 
-#: yaffo/routes/home.py:76
+#: yaffo/routes/home.py:66 yaffo/templates/albums/add.html:66
+#: yaffo/templates/components/photo_card.html:44
+#: yaffo/templates/components/photo_card.html:68
+#: yaffo/templates/people/faces.html:66 yaffo/templates/sharing/files.html:119
+#: yaffo/templates/sharing/files.html:134
+msgid "Unknown date"
+msgstr ""
+
+#: yaffo/routes/home.py:178
 #, python-format
 msgid ""
 "Media folders are not available: %(directories)s. If they are on an "
 "external drive, make sure the drive is connected."
 msgstr ""
 
-#: yaffo/routes/home.py:108 yaffo/routes/sharing.py:678
+#: yaffo/routes/home.py:215 yaffo/routes/sharing.py:678
 msgid "The tag_name parameter is required"
 msgstr ""
 
@@ -638,7 +646,7 @@ msgstr ""
 msgid "Unknown share"
 msgstr ""
 
-#: yaffo/routes/sharing.py:173 yaffo/templates/index.html:69
+#: yaffo/routes/sharing.py:173 yaffo/templates/components/photo_card.html:39
 #: yaffo/templates/sharing/_device_panel.html:60
 #: yaffo/templates/sharing/_device_panel.html:77
 #: yaffo/templates/sharing/files.html:114
@@ -1266,78 +1274,58 @@ msgstr ""
 msgid "Home - Yaffo"
 msgstr ""
 
-#: yaffo/templates/index.html:20
+#: yaffo/templates/index.html:28
+msgid "Library view"
+msgstr ""
+
+#: yaffo/templates/index.html:31
+msgid "Grid"
+msgstr ""
+
+#: yaffo/templates/index.html:34
+msgid "Timeline"
+msgstr ""
+
+#: yaffo/templates/index.html:37
 msgid "Photo Library"
 msgstr ""
 
-#: yaffo/templates/index.html:22
+#: yaffo/templates/index.html:39
 #, python-format
 msgid "Showing %(shown)s of %(total)s photo"
 msgid_plural "Showing %(shown)s of %(total)s photos"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/templates/albums/add.html:89 yaffo/templates/index.html:28
-#: yaffo/templates/index.html:121
+#: yaffo/templates/albums/add.html:89 yaffo/templates/index.html:45
+#: yaffo/templates/index.html:111
 msgid "No photos found"
 msgstr ""
 
-#: yaffo/templates/index.html:41 yaffo/templates/media/view.html:227
-msgid "Toggle favorite"
-msgstr ""
-
-#: yaffo/templates/albums/add.html:58 yaffo/templates/albums/album.html:108
-#: yaffo/templates/index.html:45
-#, python-format
-msgid "Video from %(date)s"
-msgstr ""
-
-#: yaffo/templates/index.html:52
-msgid "Play video"
-msgstr ""
-
-#: yaffo/templates/albums/add.html:62 yaffo/templates/albums/album.html:112
 #: yaffo/templates/index.html:60
 #, python-format
-msgid "Photo from %(date)s"
+msgid "%(shown)s item"
+msgid_plural "%(shown)s items"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/index.html:83
+msgid "Jump to a date"
+msgstr ""
+
+#: yaffo/templates/index.html:112
+msgid "Try adjusting your filters or check back later."
 msgstr ""
 
 #: yaffo/templates/albums/_base.html:13 yaffo/templates/albums/album.html:33
-#: yaffo/templates/index.html:64 yaffo/templates/people/list.html:24
-#: yaffo/templates/people/list.html:85 yaffo/templates/sharing/files.html:110
+#: yaffo/templates/components/photo_card.html:34
+#: yaffo/templates/people/list.html:24 yaffo/templates/people/list.html:85
+#: yaffo/templates/sharing/files.html:110
 #: yaffo/templates/themes_page/index.html:115
 #: yaffo/templates/themes_page/index.html:127
 #: yaffo/templates/utilities/_base.html:11
 #: yaffo/templates/utilities/automations.html:8
 msgid "Name"
-msgstr ""
-
-#: yaffo/templates/index.html:73 yaffo/templates/sharing/files.html:118
-msgid "Taken"
-msgstr ""
-
-#: yaffo/templates/albums/add.html:66 yaffo/templates/index.html:74
-#: yaffo/templates/index.html:98 yaffo/templates/people/faces.html:66
-#: yaffo/templates/sharing/files.html:119
-#: yaffo/templates/sharing/files.html:134
-msgid "Unknown date"
-msgstr ""
-
-#: yaffo/templates/index.html:78 yaffo/templates/media/view.html:78
-#: yaffo/templates/sharing/files.html:123
-msgid "Location"
-msgstr ""
-
-#: yaffo/templates/index.html:84
-msgid "Coordinates"
-msgstr ""
-
-#: yaffo/templates/index.html:90
-msgid "Labels"
-msgstr ""
-
-#: yaffo/templates/index.html:122
-msgid "Try adjusting your filters or check back later."
 msgstr ""
 
 #: yaffo/templates/albums/_base.html:15
@@ -1419,6 +1407,18 @@ msgstr ""
 #: yaffo/templates/albums/add.html:46 yaffo/templates/albums/album.html:47
 #: yaffo/templates/albums/album.html:123
 msgid "Add photos"
+msgstr ""
+
+#: yaffo/templates/albums/add.html:58 yaffo/templates/albums/album.html:108
+#: yaffo/templates/components/photo_card.html:15
+#, python-format
+msgid "Video from %(date)s"
+msgstr ""
+
+#: yaffo/templates/albums/add.html:62 yaffo/templates/albums/album.html:112
+#: yaffo/templates/components/photo_card.html:30
+#, python-format
+msgid "Photo from %(date)s"
 msgstr ""
 
 #: yaffo/templates/albums/add.html:86
@@ -1664,6 +1664,33 @@ msgstr ""
 
 #: yaffo/templates/components/job_section.html:5
 msgid "Processing in Progress"
+msgstr ""
+
+#: yaffo/templates/components/photo_card.html:11
+#: yaffo/templates/media/view.html:227
+msgid "Toggle favorite"
+msgstr ""
+
+#: yaffo/templates/components/photo_card.html:22
+msgid "Play video"
+msgstr ""
+
+#: yaffo/templates/components/photo_card.html:43
+#: yaffo/templates/sharing/files.html:118
+msgid "Taken"
+msgstr ""
+
+#: yaffo/templates/components/photo_card.html:48
+#: yaffo/templates/media/view.html:78 yaffo/templates/sharing/files.html:123
+msgid "Location"
+msgstr ""
+
+#: yaffo/templates/components/photo_card.html:54
+msgid "Coordinates"
+msgstr ""
+
+#: yaffo/templates/components/photo_card.html:60
+msgid "Labels"
 msgstr ""
 
 #: yaffo/templates/components/selection_bar.html:23

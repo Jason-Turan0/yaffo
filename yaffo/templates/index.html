@@ -13,11 +13,28 @@
     {% from "_sidebar.html" import render_sidebar %}
     {% from "components/pagination.html" import pagination as render_pagination %}
     {% from "components/page_header.html" import page_header %}
+    {% from "components/photo_card.html" import photo_card %}
+
+    {# A view switch must survive a filter submit, so the active view rides the
+       filter form as a hidden input (grid is the default and needs none). #}
+    {% macro view_param_input() %}
+        {% if view != 'grid' %}<input type="hidden" name="view" value="{{ view }}">{% endif %}
+    {% endmacro %}
 
     <div class="main-container-layout">
-        {{ render_sidebar(url_for('index'), filters, filter_layout=filter_layout) }}
+        {{ render_sidebar(url_for('index'), filters, filter_layout=filter_layout, render_hidden_block=view_param_input) }}
         <div class="main-content photo-gallery">
-            {% call page_header(_("Photo Library")) %}
+            {% set header_actions %}
+                <div class="view-toggle" role="group" aria-label="{{ _('Library view') }}">
+                    <a class="btn-secondary btn-sm{% if view == 'grid' %} is-active{% endif %}"
+                       href="{{ view_urls['grid'] }}"
+                       {% if view == 'grid' %}aria-current="true"{% endif %}>{{ _("Grid") }}</a>
+                    <a class="btn-secondary btn-sm{% if view == 'timeline' %} is-active{% endif %}"
+                       href="{{ view_urls['timeline'] }}"
+                       {% if view == 'timeline' %}aria-current="true"{% endif %}>{{ _("Timeline") }}</a>
+                </div>
+            {% endset %}
+            {% call page_header(_("Photo Library"), actions=header_actions) %}
                 {% if media_items|length > 0 %}
                     {% trans trimmed count=media_items|length, shown=media_items|length|format_integer, total=media_count|format_integer %}
                         Showing {{ shown }} of {{ total }} photo
@@ -30,83 +47,61 @@
             {% endcall %}
 
             {% if media_items|length > 0 %}
-                <div class="photo-grid">
-                    {% for media_item in media_items %}
-                        <div class="photo-card"
-                             onclick="window.open('{{ url_for('media_view', media_item_id=media_item.id) }}', '_blank')">
-                            <div class="photo-thumb">
-                                <button type="button" data-icon="favorite" data-photo-id="{{ media_item.id }}"
-                                        class="favorite-toggle {% if media_item.favorite %}is-favorite{% endif %}"
-                                        aria-pressed="{{ 'true' if media_item.favorite else 'false' }}"
-                                        title="{{ _('Toggle favorite') }}" aria-label="{{ _('Toggle favorite') }}"></button>
-                                {% if media_item.media_type == 'video' %}
-                                    <img src="{{ media_item.poster_path and url_for('media_poster', media_item_id=media_item.id) or url_for('static', filename='video_placeholder.svg') }}"
-                                         data-fallback="{{ url_for('static', filename='video_placeholder.svg') }}"
-                                         alt="{{ _('Video from %(date)s', date=media_item.date_taken | format_date('date')) }}">
-                                    {# Play badge only on browser-playable videos (it triggers inline
-                                       play). Non-playable videos show just the poster; the card click
-                                       opens the detail view, which offers "open externally". #}
-                                    {% if is_browser_playable_video(media_item.full_file_path) %}
-                                        <button type="button" class="video-play-badge"
-                                                data-photo-id="{{ media_item.id }}"
-                                                title="{{ _('Play video') }}" aria-label="{{ _('Play video') }}"></button>
-                                    {% endif %}
-                                    {% if media_item.duration_seconds %}
-                                        <span class="video-duration">{{ media_item.duration_seconds | format_duration }}</span>
-                                    {% endif %}
-                                {% else %}
-                                    <img src="{{ url_for('media', media_item_id=media_item.id) }}"
-                                         data-fallback="{{ url_for('placeholder') }}"
-                                         alt="{{ _('Photo from %(date)s', date=media_item.date_taken | format_date('date')) }}">
-                                {% endif %}
-                                <dl class="photo-hover">
-                                    <div class="photo-hover-row">
-                                        <dt>{{ _("Name") }}</dt>
-                                        <dd class="photo-hover-path"
-                                            title="{{ media_item.full_file_path }}">{{ media_item.file_name }}</dd>
-                                    </div>
-                                    <div class="photo-hover-row">
-                                        <dt>{{ _("Folder") }}</dt>
-                                        <dd class="photo-hover-path" title="{{ media_item.folder }}">{{ media_item.folder }}</dd>
-                                    </div>
-                                    <div class="photo-hover-row">
-                                        <dt>{{ _("Taken") }}</dt>
-                                        <dd>{{ media_item.date_taken | format_date('datetime') if media_item.date_taken else _("Unknown date") }}</dd>
-                                    </div>
-                                    {% if media_item.location_name %}
-                                        <div class="photo-hover-row">
-                                            <dt>{{ _("Location") }}</dt>
-                                            <dd>{{ media_item.location_name }}</dd>
-                                        </div>
-                                    {% endif %}
-                                    {% if media_item.latitude is not none and media_item.longitude is not none %}
-                                        <div class="photo-hover-row">
-                                            <dt>{{ _("Coordinates") }}</dt>
-                                            <dd>{{ media_item.latitude | format_coordinate(5) }}, {{ media_item.longitude | format_coordinate(5) }}</dd>
-                                        </div>
-                                    {% endif %}
-                                    {% if media_item.labels %}
-                                        <div class="photo-hover-row">
-                                            <dt>{{ _("Labels") }}</dt>
-                                            <dd>{{ media_item.labels | map(attribute='label.name') | join(', ') }}</dd>
-                                        </div>
-                                    {% endif %}
+                {% if view == 'timeline' %}
+                    <div class="timeline">
+                        {% for group in timeline_groups %}
+                            {% if group.month_start and group.month_label %}
+                                <h2 class="timeline-month-divider">{{ group.month_label }}</h2>
+                            {% endif %}
+                            <section class="timeline-section">
+                                <h3 class="timeline-day-header">
+                                    <span class="timeline-day-label">{{ group.day_label }}</span>
+                                    <span class="timeline-day-count">
+                                        {% trans trimmed count=group.media_items|length, shown=group.media_items|length|format_integer %}
+                                            {{ shown }} item
+                                        {% pluralize %}
+                                            {{ shown }} items
+                                        {% endtrans %}
+                                    </span>
+                                </h3>
+                                <div class="photo-grid">
+                                    {% for media_item in group.media_items %}
+                                        {{ photo_card(media_item) }}
+                                    {% endfor %}
+                                </div>
+                            </section>
+                        {% endfor %}
+                    </div>
 
-                                </dl>
-                            </div>
-                            <div class="photo-info">
-                                <div class="photo-date">{{ media_item.date_taken | format_date("date") if media_item.date_taken else _("Unknown date") }}</div>
-                                {% if media_item.people|length > 0 %}
-                                    <div class="photo-people">
-                                        {% for person in media_item.people %}
-                                            <span class="person-tag">{{ person.name }}</span>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
+                    {% if timeline_year_marks %}
+                        {# The date scrubber: a time-proportional rail (newest at the
+                           top) with one density bar per month — bar length shows how
+                           many photos that month holds. Year marks are plain links
+                           (the no-JS fallback); timeline_scrubber.js turns the rail
+                           into a draggable jump-to-month control using the month
+                           index below. #}
+                        <nav class="timeline-scrubber" id="timeline-scrubber"
+                             aria-label="{{ _('Jump to a date') }}"
+                             data-page-size="{{ pagination.page_size }}">
+                            {% for bar in timeline_bars %}
+                                <span class="timeline-scrubber-bar" aria-hidden="true"
+                                      style="top: {{ bar.top }}%; height: {{ bar.height }}%; width: {{ bar.width }}%"></span>
+                            {% endfor %}
+                            {% for mark in timeline_year_marks %}
+                                <a class="timeline-scrubber-year" style="top: {{ mark.percent }}%"
+                                   href="{{ mark.url }}">{{ mark.year }}</a>
+                            {% endfor %}
+                            <div class="timeline-scrubber-bubble" hidden></div>
+                        </nav>
+                        <script type="application/json" id="timeline-index">{{ timeline_index | tojson }}</script>
+                    {% endif %}
+                {% else %}
+                    <div class="photo-grid">
+                        {% for media_item in media_items %}
+                            {{ photo_card(media_item) }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
 
                 {{ render_pagination(
             pagination.current_page,
@@ -134,6 +129,7 @@
     <script src="{{ url_for('static', filename='filters/filter_config.js') }}"></script>
     <script src="{{ url_for('static', filename='media/favorite.js') }}"></script>
     <script src="{{ url_for('static', filename='media/gallery_video.js') }}"></script>
+    <script src="{{ url_for('static', filename='media/timeline_scrubber.js') }}"></script>
     <script>
         document.addEventListener('yaffo:app-init-complete', (event) => {
             const app = event.detail.app;
@@ -142,6 +138,7 @@
             app.filters.initConfig(app.i18n, window.APP_CONFIG);
             app.media.favorite.init(app.i18n, window.APP_CONFIG);
             app.media.initGalleryVideos(app.i18n, window.APP_CONFIG);
+            app.media.timelineScrubber?.init(app.i18n, window.APP_CONFIG);
         });
     </script>
 {% endblock %}

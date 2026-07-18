@@ -1,13 +1,17 @@
 from pathlib import Path
+from urllib.parse import urlencode
 
 import pydash as py_
 import requests
-from flask import Flask, flash, jsonify, render_template, request
+from flask import Flask, flash, jsonify, render_template, request, url_for
+from flask_babel import format_date as babel_format_date
 from flask_babel import gettext
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from yaffo.db import db
 from yaffo.db.models import (
+    ApplicationSettings,
     Face,
     MediaItem,
     MediaLabel,
@@ -18,6 +22,118 @@ from yaffo.db.repositories.media_filter_repository import apply_media_filters
 from yaffo.routes import filter_config
 from yaffo.routes.filter_panel import build_filters_context, to_media_filters, to_query_params
 from yaffo.utils.context import context
+from yaffo.utils.photo_dates import parse_date_taken
+
+LIBRARY_VIEWS = ("grid", "timeline")
+LIBRARY_VIEW_SETTING = "library_view"
+
+
+def _resolve_library_view(session) -> str:
+    """The view to render: the URL's (persisted as the new preference when it
+    changes) or the saved preference, defaulting to grid. The preference lives in
+    ApplicationSettings like the theme and distance-unit choices."""
+    setting = session.query(ApplicationSettings).filter_by(name=LIBRARY_VIEW_SETTING).first()
+    saved = setting.value if setting and setting.value in LIBRARY_VIEWS else "grid"
+    requested = request.args.get("view")
+    if requested not in LIBRARY_VIEWS:
+        return saved
+    if requested != saved:
+        if setting is None:
+            session.add(ApplicationSettings(name=LIBRARY_VIEW_SETTING, type="string", value=requested))
+        else:
+            setting.value = requested
+        session.commit()
+    return requested
+
+
+def _timeline_groups(media_items: list) -> list[dict]:
+    """The page's items bucketed by calendar day, in the page's (date desc) order.
+    Each group carries pre-formatted, locale-aware labels; a group opens a new
+    month when the month changes (or dates run out), which the template renders
+    as a heavier divider. Undated items collect in one trailing group."""
+    groups: list[dict] = []
+    for media_item in media_items:
+        taken = parse_date_taken(media_item.date_taken)
+        day = taken.date() if taken else None
+        if groups and groups[-1]["date"] == day:
+            groups[-1]["media_items"].append(media_item)
+            continue
+        previous = groups[-1]["date"] if groups else None
+        same_month = (day is not None and previous is not None
+                      and (day.year, day.month) == (previous.year, previous.month))
+        groups.append({
+            "date": day,
+            "day_label": babel_format_date(day, format="full") if day else gettext("Unknown date"),
+            "month_label": babel_format_date(day, "MMMM y") if day else None,
+            "month_start": not same_month,
+            "media_items": [media_item],
+        })
+    return groups
+
+
+# Cap on rendered year labels so a century-spanning library still reads.
+MAX_SCRUBBER_YEAR_LABELS = 20
+
+
+def _timeline_index(filters: dict, page_size: int, base_params: dict) -> tuple[list[dict], list[dict], list[dict]]:
+    """The scrubber's data, built from per-month counts of the whole *filtered*
+    library (newest first). The rail axis is TIME (calendar months, newest at the
+    top), so year labels space evenly instead of bunching in sparse years; each
+    month's count renders as a horizontal density bar at its band. Every month
+    also carries its item offset — offset // page_size is the page where it
+    starts, because the gallery orders by date desc. Returns (month index for
+    the drag JS, density bars, per-year marks for the no-JS fallback links).
+    Undated items are absent: they sort after every dated one."""
+    rows = (
+        apply_media_filters(
+            db.session,
+            db.session.query(MediaItem.year, MediaItem.month, func.count(MediaItem.id)),
+            to_media_filters(filters),
+        )
+        .filter(MediaItem.year.isnot(None))
+        .group_by(MediaItem.year, MediaItem.month)
+        .order_by(MediaItem.year.desc(), MediaItem.month.desc())
+        .all()
+    )
+    if not rows:
+        return [], [], []
+
+    def month_key(year: int, month: int) -> int:
+        return year * 12 + (month or 1)
+
+    newest_key = month_key(rows[0][0], rows[0][1])
+    oldest_key = month_key(rows[-1][0], rows[-1][1])
+    total_months = newest_key - oldest_key + 1
+    max_count = max(count for _y, _m, count in rows)
+
+    months: list[dict] = []
+    bars: list[dict] = []
+    offset = 0
+    for year, month, count in rows:
+        months.append({"year": year, "month": month, "count": count, "offset": offset})
+        bars.append({
+            "top": round((newest_key - month_key(year, month)) / total_months * 100, 3),
+            "height": round(1 / total_months * 100, 3),
+            # Never thinner than 15%: a one-photo month must still leave a visible tick.
+            "width": round(15 + 85 * count / max_count),
+        })
+        offset += count
+
+    # One mark per calendar year in range, at the top of that year's span; the
+    # link lands on the page of the newest photo at or before that point.
+    years = list(range(rows[0][0], rows[-1][0] - 1, -1))
+    step = -(-len(years) // MAX_SCRUBBER_YEAR_LABELS)  # ceil division
+    year_marks: list[dict] = []
+    for year in years[::step]:
+        top_key = min(newest_key, month_key(year, 12))
+        entry = next((m for m in months if month_key(m["year"], m["month"]) <= top_key), months[-1])
+        params = {**base_params, "view": "timeline", "page": entry["offset"] // page_size + 1}
+        year_marks.append({
+            "year": year,
+            "percent": round((newest_key - top_key) / total_months * 100, 2),
+            "url": f"{url_for('index')}?{urlencode(params, doseq=True)}",
+        })
+    return months, bars, year_marks
 
 
 @context("yaffo-gallery")
@@ -67,6 +183,25 @@ def init_home_routes(app: Flask):
         filters["page_sizes"] = [10, 25, 50, 100, 250]
         filters["page_size"] = filter_page_size
 
+        view = _resolve_library_view(db.session)
+        filter_params = to_query_params(filters)
+        base_params = {k: v for k, v in filter_params.items() if v not in (None, "", [])}
+        timeline_groups: list[dict] = []
+        timeline_index: list[dict] = []
+        timeline_bars: list[dict] = []
+        timeline_year_marks: list[dict] = []
+        if view == "timeline":
+            # Pagination links must carry the view, or paging would fall back to grid.
+            filter_params = {**filter_params, "view": "timeline"}
+            timeline_groups = _timeline_groups(media_items)
+            timeline_index, timeline_bars, timeline_year_marks = _timeline_index(
+                filters, filter_page_size, base_params)
+        # The header toggle: same filters, page 1, other view.
+        view_urls = {
+            option: f"{url_for('index')}?{urlencode({**base_params, 'view': option}, doseq=True)}"
+            for option in LIBRARY_VIEWS
+        }
+
         # Surface unavailable media folders (an unplugged external drive makes
         # every photo under it 404) so the gallery explains itself instead of
         # silently showing broken images.
@@ -89,7 +224,13 @@ def init_home_routes(app: Flask):
             "index.html",
             media_items=media_items,
             filters=filters,
-            filter_params=to_query_params(filters),
+            filter_params=filter_params,
+            view=view,
+            view_urls=view_urls,
+            timeline_groups=timeline_groups,
+            timeline_index=timeline_index,
+            timeline_bars=timeline_bars,
+            timeline_year_marks=timeline_year_marks,
             media_count=media_count,
             pagination=pagination,
             filter_layout=filter_config.load_layout(db.session),
