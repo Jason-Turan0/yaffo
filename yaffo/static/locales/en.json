@@ -153,6 +153,10 @@
       "updateFailed": "Failed to update tags",
       "updateSucceeded": "Tags updated successfully",
       "valueOptional": "Tag value (optional)"
+    },
+    "timeline": {
+      "itemCount_one": "{{count}} item",
+      "itemCount_other": "{{count}} items"
     }
   },
   "locations": {

@@ -65,6 +65,9 @@ window.PHOTO_ORGANIZER.media.initGalleryVideos = (i18n, config) => {
     // open-the-detail-view click.
     document.querySelectorAll('button.video-play-badge').forEach((badge) => {
         if (!(badge instanceof HTMLButtonElement)) return;
+        // Idempotent: the timeline re-runs init as batches stream in.
+        if (badge.dataset.playWired) return;
+        badge.dataset.playWired = '1';
         badge.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();

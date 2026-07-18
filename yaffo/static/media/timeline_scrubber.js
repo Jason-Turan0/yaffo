@@ -48,6 +48,24 @@ timelineScrubberApi.monthAtFraction = (months, fraction) => {
 timelineScrubberApi.pageForMonth = (month, pageSize) => Math.floor(month.offset / pageSize) + 1;
 
 /**
+ * The jump destination for a month: its page, plus the #month anchor — the
+ * month's first photo sits mid-page (the page starts at a floor'd offset), so
+ * the anchor scrolls the landing to the month's divider. When only the hash
+ * differs the browser scrolls without a reload.
+ * @param {TimelineMonth} month
+ * @param {number} pageSize
+ * @param {string} href the current location
+ * @returns {string}
+ */
+timelineScrubberApi.jumpUrl = (month, pageSize, href) => {
+    const url = new URL(href);
+    url.searchParams.set('view', 'timeline');
+    url.searchParams.set('page', String(timelineScrubberApi.pageForMonth(month, pageSize)));
+    url.hash = `month-${String(month.year).padStart(4, '0')}-${String(month.month).padStart(2, '0')}`;
+    return url.toString();
+};
+
+/**
  * @param {I18nService} i18n
  * @param {AppConfig} config
  * @returns {void}
@@ -119,10 +137,7 @@ timelineScrubberApi.init = (i18n, config) => {
         rail.releasePointerCapture(event.pointerId);
         suppressClick = true;
         const month = timelineScrubberApi.monthAtFraction(months, fractionAt(event));
-        const url = new URL(window.location.href);
-        url.searchParams.set('view', 'timeline');
-        url.searchParams.set('page', String(timelineScrubberApi.pageForMonth(month, pageSize)));
-        window.location.assign(url.toString());
+        window.location.assign(timelineScrubberApi.jumpUrl(month, pageSize, window.location.href));
     });
     // A pointerup over a year link would also fire the link's click and race our
     // navigation; swallow exactly that one. Keyboard activation never sets the flag.

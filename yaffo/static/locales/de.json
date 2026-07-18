@@ -153,6 +153,10 @@
       "updateFailed": "Tags konnten nicht aktualisiert werden",
       "updateSucceeded": "Tags wurden erfolgreich aktualisiert",
       "valueOptional": "Tag-Wert (optional)"
+    },
+    "timeline": {
+      "itemCount_one": "{{count}} Artikel",
+      "itemCount_other": "{{count}} Artikel"
     }
   },
   "locations": {

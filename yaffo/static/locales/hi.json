@@ -153,6 +153,10 @@
       "updateFailed": "टैग अपडेट करने में विफल",
       "updateSucceeded": "टैग सफलतापूर्वक अपडेट किए गए",
       "valueOptional": "टैग मान (वैकल्पिक)"
+    },
+    "timeline": {
+      "itemCount_one": "{{count}} वस्तु",
+      "itemCount_other": "{{count}} सामान"
     }
   },
   "locations": {

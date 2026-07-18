@@ -153,6 +153,10 @@
       "updateFailed": "فشل تحديث العلامات",
       "updateSucceeded": "تم تحديث العلامات بنجاح",
       "valueOptional": "قيمة العلامة (اختياري)"
+    },
+    "timeline": {
+      "itemCount_one": "{{count}} غرض",
+      "itemCount_other": "{{count}} أغراض"
     }
   },
   "locations": {

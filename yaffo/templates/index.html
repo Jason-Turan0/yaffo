@@ -35,42 +35,29 @@
                 </div>
             {% endset %}
             {% call page_header(_("Photo Library"), actions=header_actions) %}
-                {% if media_items|length > 0 %}
+                {% if media_items|length == 0 %}
+                    {{ _("No photos found") }}
+                {% elif view == 'timeline' %}
+                    {# Infinite scroll makes "showing N" stale the moment it loads;
+                       the timeline reports the total and streams the rest in. #}
+                    {% trans trimmed count=media_count, total=media_count|format_integer %}
+                        {{ total }} photo
+                    {% pluralize %}
+                        {{ total }} photos
+                    {% endtrans %}
+                {% else %}
                     {% trans trimmed count=media_items|length, shown=media_items|length|format_integer, total=media_count|format_integer %}
                         Showing {{ shown }} of {{ total }} photo
                     {% pluralize %}
                         Showing {{ shown }} of {{ total }} photos
                     {% endtrans %}
-                {% else %}
-                    {{ _("No photos found") }}
                 {% endif %}
             {% endcall %}
 
             {% if media_items|length > 0 %}
                 {% if view == 'timeline' %}
                     <div class="timeline">
-                        {% for group in timeline_groups %}
-                            {% if group.month_start and group.month_label %}
-                                <h2 class="timeline-month-divider">{{ group.month_label }}</h2>
-                            {% endif %}
-                            <section class="timeline-section">
-                                <h3 class="timeline-day-header">
-                                    <span class="timeline-day-label">{{ group.day_label }}</span>
-                                    <span class="timeline-day-count">
-                                        {% trans trimmed count=group.media_items|length, shown=group.media_items|length|format_integer %}
-                                            {{ shown }} item
-                                        {% pluralize %}
-                                            {{ shown }} items
-                                        {% endtrans %}
-                                    </span>
-                                </h3>
-                                <div class="photo-grid">
-                                    {% for media_item in group.media_items %}
-                                        {{ photo_card(media_item) }}
-                                    {% endfor %}
-                                </div>
-                            </section>
-                        {% endfor %}
+                        {% include "_timeline_sections.html" %}
                     </div>
 
                     {% if timeline_year_marks %}
@@ -103,6 +90,10 @@
                     </div>
                 {% endif %}
 
+                {# The timeline streams batches through its sentinel instead of
+                   paginating — a page bar under an endless scroll (and beside the
+                   scrubber) would fight both. #}
+                {% if view == 'grid' %}
                 {{ render_pagination(
             pagination.current_page,
             pagination.total_items,
@@ -111,6 +102,7 @@
             url_for('index'),
             filter_params
         ) }}
+                {% endif %}
             {% else %}
                 <div class="empty-state">
                     <h2>{{ _("No photos found") }}</h2>
@@ -130,6 +122,7 @@
     <script src="{{ url_for('static', filename='media/favorite.js') }}"></script>
     <script src="{{ url_for('static', filename='media/gallery_video.js') }}"></script>
     <script src="{{ url_for('static', filename='media/timeline_scrubber.js') }}"></script>
+    <script src="{{ url_for('static', filename='media/timeline_stream.js') }}"></script>
     <script>
         document.addEventListener('yaffo:app-init-complete', (event) => {
             const app = event.detail.app;
@@ -139,6 +132,7 @@
             app.media.favorite.init(app.i18n, window.APP_CONFIG);
             app.media.initGalleryVideos(app.i18n, window.APP_CONFIG);
             app.media.timelineScrubber?.init(app.i18n, window.APP_CONFIG);
+            app.media.timelineStream?.init(app.i18n, window.APP_CONFIG);
         });
     </script>
 {% endblock %}

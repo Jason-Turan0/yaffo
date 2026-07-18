@@ -45,6 +45,10 @@ favoriteApi.init = (i18n, config) => {
 
     document.querySelectorAll('.favorite-toggle[data-photo-id]').forEach((button) => {
         const favoriteButton = /** @type {HTMLButtonElement} */ (button);
+        // Idempotent: the timeline re-runs init as batches stream in, and a
+        // second listener would toggle twice per click.
+        if (favoriteButton.dataset.favoriteWired) return;
+        favoriteButton.dataset.favoriteWired = '1';
         button.addEventListener('click', (event) => {
             event.stopPropagation();
             event.preventDefault();

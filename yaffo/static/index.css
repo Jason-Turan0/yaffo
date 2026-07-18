@@ -211,6 +211,8 @@
     font-weight: var(--font-weight-heading);
     color: var(--color-text);
     margin: 30px 0 5px;
+    /* Anchor target for scrubber jumps: land below the sticky navbar. */
+    scroll-margin-top: calc(var(--navbar-height, 56px) + 10px);
 }
 
 .timeline-month-divider:first-child {
@@ -321,4 +323,10 @@
 
 .timeline-scrubber:hover .timeline-scrubber-bar {
     opacity: 0.5;
+}
+
+/* Infinite-scroll sentinel: invisible, but tall enough that "revealed" fires
+   a comfortable distance before the user hits the bottom. */
+.timeline-sentinel {
+    height: 120px;
 }

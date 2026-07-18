@@ -283,6 +283,12 @@ type TimelineMonthEntry = {
 type TimelineScrubberNamespace = {
     monthAtFraction?: (months: TimelineMonthEntry[], fraction: number) => TimelineMonthEntry;
     pageForMonth?: (month: TimelineMonthEntry, pageSize: number) => number;
+    jumpUrl?: (month: TimelineMonthEntry, pageSize: number, href: string) => string;
+    init?: (i18n: I18nService, config: AppConfig) => void;
+};
+
+type TimelineStreamNamespace = {
+    mergeContinuations?: (timeline: Element, i18n: I18nService) => void;
     init?: (i18n: I18nService, config: AppConfig) => void;
 };
 
@@ -290,6 +296,7 @@ type MediaNamespace = {
     favorite?: FavoriteNamespace;
     initGalleryVideos?: (i18n: I18nService, config: AppConfig) => void;
     timelineScrubber?: TimelineScrubberNamespace;
+    timelineStream?: TimelineStreamNamespace;
 };
 
 type FaceLocation = {

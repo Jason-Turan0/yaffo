@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-17 23:33-0500\n"
+"POT-Creation-Date: 2026-07-18 00:09-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -399,7 +399,7 @@ msgstr ""
 msgid "Female"
 msgstr ""
 
-#: yaffo/routes/home.py:66 yaffo/templates/albums/add.html:66
+#: yaffo/routes/home.py:71 yaffo/templates/albums/add.html:66
 #: yaffo/templates/components/photo_card.html:44
 #: yaffo/templates/components/photo_card.html:68
 #: yaffo/templates/people/faces.html:66 yaffo/templates/sharing/files.html:119
@@ -407,14 +407,14 @@ msgstr ""
 msgid "Unknown date"
 msgstr ""
 
-#: yaffo/routes/home.py:178
+#: yaffo/routes/home.py:238
 #, python-format
 msgid ""
 "Media folders are not available: %(directories)s. If they are on an "
 "external drive, make sure the drive is connected."
 msgstr ""
 
-#: yaffo/routes/home.py:215 yaffo/routes/sharing.py:678
+#: yaffo/routes/home.py:277 yaffo/routes/sharing.py:678
 msgid "The tag_name parameter is required"
 msgstr ""
 
@@ -1160,6 +1160,13 @@ msgstr ""
 msgid "Clear Filters"
 msgstr ""
 
+#: yaffo/templates/_timeline_sections.html:20
+#, python-format
+msgid "%(shown)s item"
+msgid_plural "%(shown)s items"
+msgstr[0] ""
+msgstr[1] ""
+
 #: yaffo/templates/base.html:3 yaffo/templates/pages/widget_frame.html:3
 msgid "Type to search…"
 msgstr ""
@@ -1290,30 +1297,30 @@ msgstr ""
 msgid "Photo Library"
 msgstr ""
 
-#: yaffo/templates/index.html:39
+#: yaffo/templates/albums/add.html:89 yaffo/templates/index.html:39
+#: yaffo/templates/index.html:108
+msgid "No photos found"
+msgstr ""
+
+#: yaffo/templates/index.html:43
+#, python-format
+msgid "%(total)s photo"
+msgid_plural "%(total)s photos"
+msgstr[0] ""
+msgstr[1] ""
+
+#: yaffo/templates/index.html:49
 #, python-format
 msgid "Showing %(shown)s of %(total)s photo"
 msgid_plural "Showing %(shown)s of %(total)s photos"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/templates/albums/add.html:89 yaffo/templates/index.html:45
-#: yaffo/templates/index.html:111
-msgid "No photos found"
-msgstr ""
-
-#: yaffo/templates/index.html:60
-#, python-format
-msgid "%(shown)s item"
-msgid_plural "%(shown)s items"
-msgstr[0] ""
-msgstr[1] ""
-
-#: yaffo/templates/index.html:83
+#: yaffo/templates/index.html:71
 msgid "Jump to a date"
 msgstr ""
 
-#: yaffo/templates/index.html:112
+#: yaffo/templates/index.html:109
 msgid "Try adjusting your filters or check back later."
 msgstr ""
 

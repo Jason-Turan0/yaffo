@@ -46,11 +46,22 @@ def _resolve_library_view(session) -> str:
     return requested
 
 
-def _timeline_groups(media_items: list) -> list[dict]:
-    """The page's items bucketed by calendar day, in the page's (date desc) order.
+# "No item precedes this batch" — distinct from None, which means the preceding
+# item is undated (the undated tail spans batches too and must merge like a day).
+_NO_PREVIOUS_ITEM = object()
+
+
+def _timeline_groups(media_items: list, previous_day=_NO_PREVIOUS_ITEM) -> list[dict]:
+    """The batch's items bucketed by calendar day, in the batch's (date desc) order.
     Each group carries pre-formatted, locale-aware labels; a group opens a new
-    month when the month changes (or dates run out), which the template renders
-    as a heavier divider. Undated items collect in one trailing group."""
+    month when the month changes, which the template renders as a heavier divider.
+    Undated items collect in one trailing group.
+
+    `previous_day` is the day of the item just before this batch (infinite-scroll
+    fragments continue mid-library; None = that item is undated): it seeds the
+    month-divider logic, and a first group continuing that same day — or
+    continuing the undated tail — is marked `continuation` so the template
+    suppresses its header and the client merges it into the section above."""
     groups: list[dict] = []
     for media_item in media_items:
         taken = parse_date_taken(media_item.date_taken)
@@ -58,7 +69,10 @@ def _timeline_groups(media_items: list) -> list[dict]:
         if groups and groups[-1]["date"] == day:
             groups[-1]["media_items"].append(media_item)
             continue
-        previous = groups[-1]["date"] if groups else None
+        if groups:
+            previous = groups[-1]["date"]
+        else:
+            previous = None if previous_day is _NO_PREVIOUS_ITEM else previous_day
         same_month = (day is not None and previous is not None
                       and (day.year, day.month) == (previous.year, previous.month))
         groups.append({
@@ -66,6 +80,7 @@ def _timeline_groups(media_items: list) -> list[dict]:
             "day_label": babel_format_date(day, format="full") if day else gettext("Unknown date"),
             "month_label": babel_format_date(day, "MMMM y") if day else None,
             "month_start": not same_month,
+            "continuation": not groups and previous_day is not _NO_PREVIOUS_ITEM and day == previous_day,
             "media_items": [media_item],
         })
     return groups
@@ -84,22 +99,33 @@ def _timeline_index(filters: dict, page_size: int, base_params: dict) -> tuple[l
     starts, because the gallery orders by date desc. Returns (month index for
     the drag JS, density bars, per-year marks for the no-JS fallback links).
     Undated items are absent: they sort after every dated one."""
-    rows = (
+    # Group on the "YYYY-MM" prefix of date_taken — the SAME value the gallery
+    # orders by — never the year/month columns. Any disagreement between the two
+    # (rows with a year but no date_taken sort into the undated tail, not their
+    # year slot) would drift every older month's offset and land jumps on the
+    # wrong page.
+    month_prefix = func.substr(MediaItem.date_taken, 1, 7)
+    raw_rows = (
         apply_media_filters(
             db.session,
-            db.session.query(MediaItem.year, MediaItem.month, func.count(MediaItem.id)),
+            db.session.query(month_prefix, func.count(MediaItem.id)),
             to_media_filters(filters),
         )
-        .filter(MediaItem.year.isnot(None))
-        .group_by(MediaItem.year, MediaItem.month)
-        .order_by(MediaItem.year.desc(), MediaItem.month.desc())
+        .filter(MediaItem.date_taken.isnot(None))
+        .group_by(month_prefix)
+        .order_by(month_prefix.desc())
         .all()
     )
+    rows = [
+        (int(prefix[:4]), int(prefix[5:7]), count)
+        for prefix, count in raw_rows
+        if prefix and len(prefix) >= 7 and prefix[:4].isdigit() and prefix[5:7].isdigit()
+    ]
     if not rows:
         return [], [], []
 
     def month_key(year: int, month: int) -> int:
-        return year * 12 + (month or 1)
+        return year * 12 + month
 
     newest_key = month_key(rows[0][0], rows[0][1])
     oldest_key = month_key(rows[-1][0], rows[-1][1])
@@ -128,10 +154,12 @@ def _timeline_index(filters: dict, page_size: int, base_params: dict) -> tuple[l
         top_key = min(newest_key, month_key(year, 12))
         entry = next((m for m in months if month_key(m["year"], m["month"]) <= top_key), months[-1])
         params = {**base_params, "view": "timeline", "page": entry["offset"] // page_size + 1}
+        # The month's first photo lands mid-page; the #month anchor scrolls to it.
+        anchor = f"month-{entry['year']:04d}-{entry['month']:02d}"
         year_marks.append({
             "year": year,
             "percent": round((newest_key - top_key) / total_months * 100, 2),
-            "url": f"{url_for('index')}?{urlencode(params, doseq=True)}",
+            "url": f"{url_for('index')}?{urlencode(params, doseq=True)}#{anchor}",
         })
     return months, bars, year_marks
 
@@ -190,10 +218,32 @@ def init_home_routes(app: Flask):
         timeline_index: list[dict] = []
         timeline_bars: list[dict] = []
         timeline_year_marks: list[dict] = []
+        next_fragment_url = None
         if view == "timeline":
-            # Pagination links must carry the view, or paging would fall back to grid.
             filter_params = {**filter_params, "view": "timeline"}
-            timeline_groups = _timeline_groups(media_items)
+            # Only a FRAGMENT continues mid-library: the item just before the
+            # batch seeds day/month continuity so a day split across batches
+            # doesn't repeat its header. A full render at page > 1 (a scrubber
+            # jump) starts fresh — the landing needs its day header and divider.
+            is_fragment = request.args.get("fragment") == "sections"
+            previous_day = _NO_PREVIOUS_ITEM
+            if is_fragment and offset > 0:
+                previous_item = query.limit(1).offset(offset - 1).first()
+                if previous_item:
+                    taken = parse_date_taken(previous_item.date_taken)
+                    previous_day = taken.date() if taken else None
+            timeline_groups = _timeline_groups(media_items, previous_day)
+            if page * filter_page_size < media_count:
+                # The infinite-scroll sentinel's target: same filters, next batch.
+                params = {**base_params, "view": "timeline", "page-size": filter_page_size,
+                          "page": page + 1, "fragment": "sections"}
+                next_fragment_url = f"{url_for('index')}?{urlencode(params, doseq=True)}"
+            if is_fragment:
+                return render_template(
+                    "_timeline_sections.html",
+                    timeline_groups=timeline_groups,
+                    next_fragment_url=next_fragment_url,
+                )
             timeline_index, timeline_bars, timeline_year_marks = _timeline_index(
                 filters, filter_page_size, base_params)
         # The header toggle: same filters, page 1, other view.
@@ -231,6 +281,7 @@ def init_home_routes(app: Flask):
             timeline_index=timeline_index,
             timeline_bars=timeline_bars,
             timeline_year_marks=timeline_year_marks,
+            next_fragment_url=next_fragment_url,
             media_count=media_count,
             pagination=pagination,
             filter_layout=filter_config.load_layout(db.session),

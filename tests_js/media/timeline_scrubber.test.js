@@ -40,6 +40,24 @@ describe('monthAtFraction', () => {
   });
 });
 
+describe('jumpUrl', () => {
+  it('targets the month page and its divider anchor, keeping current filters', async () => {
+    const scrubber = await loadScrubber();
+
+    const url = scrubber.jumpUrl(months[1], 25, 'http://localhost/?year=2024&view=timeline');
+
+    expect(url).toBe('http://localhost/?year=2024&view=timeline&page=2#month-2024-06');
+  });
+
+  it('zero-pads the anchor month', async () => {
+    const scrubber = await loadScrubber();
+
+    const url = scrubber.jumpUrl({ year: 2025, month: 7, count: 30, offset: 0 }, 25, 'http://localhost/');
+
+    expect(url).toContain('#month-2025-07');
+  });
+});
+
 describe('pageForMonth', () => {
   it('computes the 1-based page from the cumulative offset', async () => {
     const scrubber = await loadScrubber();

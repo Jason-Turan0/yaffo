@@ -1,0 +1,41 @@
+{# One batch of timeline day-sections plus, when more of the library remains,
+   the infinite-scroll sentinel htmx swaps for the next batch. The full page
+   (index.html) includes this for the first batch; the fragment response
+   (?fragment=sections) IS this template, so both renders share one source.
+
+   A section marked is-continuation carries on the day the previous batch ended
+   with: its header is suppressed and timeline_stream.js merges its cards into
+   the section above. #}
+{% from "components/photo_card.html" import photo_card %}
+{% for group in timeline_groups %}
+    {% if group.month_start and group.month_label %}
+        {# The id is the scrubber's jump target: a month's first photo sits
+           mid-page (page = offset // page_size), so landing scrolls here. #}
+        <h2 class="timeline-month-divider"
+            id="month-{{ '%04d-%02d' | format(group.date.year, group.date.month) }}">{{ group.month_label }}</h2>
+    {% endif %}
+    <section class="timeline-section{% if group.continuation %} is-continuation{% endif %}"
+             data-date="{{ group.date.isoformat() if group.date else 'unknown' }}">
+        {% if not group.continuation %}
+            <h3 class="timeline-day-header">
+                <span class="timeline-day-label">{{ group.day_label }}</span>
+                <span class="timeline-day-count">
+                    {% trans trimmed count=group.media_items|length, shown=group.media_items|length|format_integer %}
+                        {{ shown }} item
+                    {% pluralize %}
+                        {{ shown }} items
+                    {% endtrans %}
+                </span>
+            </h3>
+        {% endif %}
+        <div class="photo-grid">
+            {% for media_item in group.media_items %}
+                {{ photo_card(media_item) }}
+            {% endfor %}
+        </div>
+    </section>
+{% endfor %}
+{% if next_fragment_url %}
+    <div class="timeline-sentinel" aria-hidden="true"
+         hx-get="{{ next_fragment_url }}" hx-trigger="revealed" hx-swap="outerHTML"></div>
+{% endif %}

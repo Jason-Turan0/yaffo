@@ -153,6 +153,10 @@
       "updateFailed": "Échec de la mise à jour des balises",
       "updateSucceeded": "Balises mises à jour avec succès",
       "valueOptional": "Valeur de la balise (facultatif)"
+    },
+    "timeline": {
+      "itemCount_one": "{{count}} article",
+      "itemCount_other": "{{count}} articles"
     }
   },
   "locations": {

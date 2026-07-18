@@ -12,6 +12,9 @@ let localDateTimesInitialized = false;
 utils.initImageFallbacks = () => {
     document.querySelectorAll('img[data-fallback]').forEach((img) => {
         const image = /** @type {HTMLImageElement} */ (img);
+        // Idempotent: the timeline re-runs this as batches stream in.
+        if (image.dataset.fallbackWired) return;
+        image.dataset.fallbackWired = '1';
         const applyFallback = () => {
             const fallback = image.dataset.fallback;
             if (fallback && image.src !== fallback) {

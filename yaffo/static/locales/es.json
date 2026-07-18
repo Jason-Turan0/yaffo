@@ -153,6 +153,10 @@
       "updateFailed": "No se pudieron actualizar las etiquetas",
       "updateSucceeded": "Etiquetas actualizadas correctamente",
       "valueOptional": "Valor de etiqueta (opcional)"
+    },
+    "timeline": {
+      "itemCount_one": "{{count}} artículo",
+      "itemCount_other": "{{count}} elementos"
     }
   },
   "locations": {
