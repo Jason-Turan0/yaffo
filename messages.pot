@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-12 16:26-0500\n"
+"POT-Creation-Date: 2026-07-17 23:08-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -357,7 +357,7 @@ msgstr ""
 msgid " OR "
 msgstr ""
 
-#: yaffo/routes/faces.py:377 yaffo/routes/filter_config.py:134
+#: yaffo/routes/faces.py:377 yaffo/routes/filter_config.py:123
 msgid "Items must be a list"
 msgstr ""
 
@@ -389,10 +389,6 @@ msgstr ""
 msgid "Could not process faces"
 msgstr ""
 
-#: yaffo/routes/filter_config.py:127
-msgid "Unknown filter page"
-msgstr ""
-
 #: yaffo/routes/filter_panel.py:34 yaffo/templates/people/list.html:40
 #: yaffo/templates/people/list.html:92
 msgid "Male"
@@ -403,7 +399,14 @@ msgstr ""
 msgid "Female"
 msgstr ""
 
-#: yaffo/routes/home.py:96 yaffo/routes/sharing.py:675
+#: yaffo/routes/home.py:76
+#, python-format
+msgid ""
+"Media folders are not available: %(directories)s. If they are on an "
+"external drive, make sure the drive is connected."
+msgstr ""
+
+#: yaffo/routes/home.py:108 yaffo/routes/sharing.py:678
 msgid "The tag_name parameter is required"
 msgstr ""
 
@@ -423,45 +426,45 @@ msgstr ""
 msgid "Could not determine a location name"
 msgstr ""
 
-#: yaffo/routes/media.py:25 yaffo/routes/media.py:179 yaffo/routes/media.py:254
-#: yaffo/routes/media.py:271
+#: yaffo/routes/media.py:37 yaffo/routes/media.py:183 yaffo/routes/media.py:258
+#: yaffo/routes/media.py:275
 msgid "Photo not found"
 msgstr ""
 
-#: yaffo/routes/media.py:29 yaffo/routes/media.py:67 yaffo/routes/media.py:85
-#: yaffo/routes/media.py:185 yaffo/routes/media.py:199
+#: yaffo/routes/media.py:41 yaffo/routes/media.py:75 yaffo/routes/media.py:89
+#: yaffo/routes/media.py:189 yaffo/routes/media.py:203
 msgid "File not found"
 msgstr ""
 
-#: yaffo/routes/media.py:45 yaffo/routes/media.py:48
+#: yaffo/routes/media.py:53 yaffo/routes/media.py:56
 msgid "Poster not found"
 msgstr ""
 
-#: yaffo/routes/media.py:81
+#: yaffo/routes/media.py:85
 msgid "Face not found"
 msgstr ""
 
-#: yaffo/routes/media.py:215
+#: yaffo/routes/media.py:219
 msgid "Could not open file"
 msgstr ""
 
-#: yaffo/routes/media.py:226
+#: yaffo/routes/media.py:230
 msgid "Folder not found"
 msgstr ""
 
-#: yaffo/routes/media.py:242
+#: yaffo/routes/media.py:246
 msgid "Could not open folder"
 msgstr ""
 
-#: yaffo/routes/media.py:279
+#: yaffo/routes/media.py:283
 msgid "Tags must be a list"
 msgstr ""
 
-#: yaffo/routes/media.py:287
+#: yaffo/routes/media.py:291
 msgid "Each tag must be an object"
 msgstr ""
 
-#: yaffo/routes/media.py:294
+#: yaffo/routes/media.py:298
 msgid "Tag name is required"
 msgstr ""
 
@@ -618,211 +621,211 @@ msgstr ""
 msgid "Could not move thumbnail files"
 msgstr ""
 
-#: yaffo/routes/sharing.py:150
+#: yaffo/routes/sharing.py:151
 msgid "Choose a download directory for shared files."
 msgstr ""
 
-#: yaffo/routes/sharing.py:153
+#: yaffo/routes/sharing.py:154
 msgid "Choose a directory, not a file."
 msgstr ""
 
-#: yaffo/routes/sharing.py:157
+#: yaffo/routes/sharing.py:158
 #, python-format
 msgid "Could not create the download directory: %(reason)s"
 msgstr ""
 
-#: yaffo/routes/sharing.py:170 yaffo/routes/sharing.py:179
+#: yaffo/routes/sharing.py:171 yaffo/routes/sharing.py:180
 msgid "Unknown share"
 msgstr ""
 
-#: yaffo/routes/sharing.py:172 yaffo/templates/index.html:69
+#: yaffo/routes/sharing.py:173 yaffo/templates/index.html:69
 #: yaffo/templates/sharing/_device_panel.html:60
 #: yaffo/templates/sharing/_device_panel.html:77
-#: yaffo/templates/sharing/files.html:123
+#: yaffo/templates/sharing/files.html:114
 msgid "Folder"
 msgstr ""
 
-#: yaffo/routes/sharing.py:177
+#: yaffo/routes/sharing.py:178
 msgid "Deleted album"
 msgstr ""
 
-#: yaffo/routes/sharing.py:192
+#: yaffo/routes/sharing.py:193
 msgid "Shared folder"
 msgstr ""
 
-#: yaffo/routes/sharing.py:202 yaffo/routes/sharing.py:402
-#: yaffo/routes/sharing.py:419 yaffo/routes/sharing.py:441
-#: yaffo/routes/sharing.py:592 yaffo/routes/sharing.py:716
-#: yaffo/routes/sharing.py:836 yaffo/routes/sharing.py:849
-#: yaffo/routes/sharing.py:863
+#: yaffo/routes/sharing.py:203 yaffo/routes/sharing.py:403
+#: yaffo/routes/sharing.py:420 yaffo/routes/sharing.py:442
+#: yaffo/routes/sharing.py:593 yaffo/routes/sharing.py:719
+#: yaffo/routes/sharing.py:839 yaffo/routes/sharing.py:852
+#: yaffo/routes/sharing.py:866
 msgid "Device sharing is not running."
 msgstr ""
 
-#: yaffo/routes/sharing.py:233
+#: yaffo/routes/sharing.py:234
 msgid "Some shared folders could not be loaded."
 msgstr ""
 
-#: yaffo/routes/sharing.py:293
+#: yaffo/routes/sharing.py:294
 msgid "Choose a folder inside a configured media directory."
 msgstr ""
 
-#: yaffo/routes/sharing.py:386
+#: yaffo/routes/sharing.py:387
 msgid "Share grant is no longer active."
 msgstr ""
 
-#: yaffo/routes/sharing.py:388
+#: yaffo/routes/sharing.py:389
 msgid "Share grant revoked."
 msgstr ""
 
-#: yaffo/routes/sharing.py:422
+#: yaffo/routes/sharing.py:423
 msgid "Paste a pairing code first."
 msgstr ""
 
-#: yaffo/routes/sharing.py:426
+#: yaffo/routes/sharing.py:427
 #, python-format
 msgid "Pairing failed: %(reason)s"
 msgstr ""
 
-#: yaffo/routes/sharing.py:428
+#: yaffo/routes/sharing.py:429
 #, python-format
 msgid "Could not reach the other device: %(reason)s"
 msgstr ""
 
-#: yaffo/routes/sharing.py:430
+#: yaffo/routes/sharing.py:431
 msgid "Pairing timed out — is the other device online?"
 msgstr ""
 
-#: yaffo/routes/sharing.py:433
+#: yaffo/routes/sharing.py:434
 #, python-format
 msgid "Paired with %(device)s."
 msgstr ""
 
-#: yaffo/routes/sharing.py:450
+#: yaffo/routes/sharing.py:451
 msgid "Device revoked. The other device was notified."
 msgstr ""
 
-#: yaffo/routes/sharing.py:452
+#: yaffo/routes/sharing.py:453
 msgid ""
 "Device revoked. The other device is offline and will find out when it "
 "next tries to connect."
 msgstr ""
 
-#: yaffo/routes/sharing.py:475
+#: yaffo/routes/sharing.py:476
 msgid "Revoke this device before deleting it."
 msgstr ""
 
-#: yaffo/routes/sharing.py:476
+#: yaffo/routes/sharing.py:477
 msgid "Device deleted."
 msgstr ""
 
-#: yaffo/routes/sharing.py:485
+#: yaffo/routes/sharing.py:486
 msgid "Device name cannot be empty."
 msgstr ""
 
-#: yaffo/routes/sharing.py:487 yaffo/routes/sharing.py:509
-#: yaffo/routes/sharing.py:719
+#: yaffo/routes/sharing.py:488 yaffo/routes/sharing.py:510
+#: yaffo/routes/sharing.py:722
 #, python-format
 msgid "%(device)s is not a known device."
 msgstr ""
 
-#: yaffo/routes/sharing.py:488
+#: yaffo/routes/sharing.py:489
 msgid "Device renamed."
 msgstr ""
 
-#: yaffo/routes/sharing.py:500
+#: yaffo/routes/sharing.py:501
 msgid "Download directory saved."
 msgstr ""
 
-#: yaffo/routes/sharing.py:511
+#: yaffo/routes/sharing.py:512
 msgid "Pair this device again before sharing with it."
 msgstr ""
 
-#: yaffo/routes/sharing.py:518
+#: yaffo/routes/sharing.py:519
 msgid "Choose a configured media directory."
 msgstr ""
 
-#: yaffo/routes/sharing.py:528
+#: yaffo/routes/sharing.py:529
 msgid "Choose a folder to share."
 msgstr ""
 
-#: yaffo/routes/sharing.py:548
+#: yaffo/routes/sharing.py:549
 msgid "Choose an album to share."
 msgstr ""
 
-#: yaffo/routes/sharing.py:553
+#: yaffo/routes/sharing.py:554
 msgid "Choose what to share."
 msgstr ""
 
-#: yaffo/routes/sharing.py:556
+#: yaffo/routes/sharing.py:557
 msgid "Share grant added."
 msgstr ""
 
-#: yaffo/routes/sharing.py:594
+#: yaffo/routes/sharing.py:595
 msgid "This device is revoked. Pair it again before browsing shared files."
 msgstr ""
 
-#: yaffo/routes/sharing.py:608
+#: yaffo/routes/sharing.py:609
 #, python-format
 msgid "Could not load shared files: %(reason)s"
 msgstr ""
 
-#: yaffo/routes/sharing.py:610
+#: yaffo/routes/sharing.py:611
 msgid "Loading shared files timed out — is the other device online?"
 msgstr ""
 
-#: yaffo/routes/sharing.py:721
+#: yaffo/routes/sharing.py:724
 msgid "Pair this device again before pulling files from it."
 msgstr ""
 
-#: yaffo/routes/sharing.py:724
+#: yaffo/routes/sharing.py:727
 msgid "Choose a download directory for shared files first."
 msgstr ""
 
-#: yaffo/routes/sharing.py:785
+#: yaffo/routes/sharing.py:788
 msgid "Could not start the download: the shared scope is missing."
 msgstr ""
 
-#: yaffo/routes/sharing.py:797
+#: yaffo/routes/sharing.py:800
 msgid "Select the files to pull first."
 msgstr ""
 
-#: yaffo/routes/sharing.py:817
+#: yaffo/routes/sharing.py:820
 #, python-format
 msgid "Could not start the download: %(reason)s"
 msgstr ""
 
-#: yaffo/routes/sharing.py:819
+#: yaffo/routes/sharing.py:822
 msgid "Queuing the transfer timed out — is device sharing running?"
 msgstr ""
 
-#: yaffo/routes/sharing.py:822
+#: yaffo/routes/sharing.py:825
 msgid "Download queued — everything selected in this view will be pulled."
 msgstr ""
 
-#: yaffo/routes/sharing.py:825
+#: yaffo/routes/sharing.py:828
 #, python-format
 msgid "Pull of %(count)s file queued."
 msgid_plural "Pull of %(count)s files queued."
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/sharing.py:841
+#: yaffo/routes/sharing.py:844
 msgid "Transfer cancelled."
 msgstr ""
 
-#: yaffo/routes/sharing.py:841 yaffo/routes/sharing.py:855
+#: yaffo/routes/sharing.py:844 yaffo/routes/sharing.py:858
 msgid "Transfer is no longer active."
 msgstr ""
 
-#: yaffo/routes/sharing.py:855
+#: yaffo/routes/sharing.py:858
 msgid "Continuing over the relay."
 msgstr ""
 
-#: yaffo/routes/sharing.py:869
+#: yaffo/routes/sharing.py:872
 msgid "Transfer deleted."
 msgstr ""
 
-#: yaffo/routes/sharing.py:871
+#: yaffo/routes/sharing.py:874
 msgid "Cancel or finish this transfer before deleting it."
 msgstr ""
 
@@ -1141,11 +1144,11 @@ msgstr ""
 msgid "Configure filters"
 msgstr ""
 
-#: yaffo/templates/_sidebar.html:28
+#: yaffo/templates/_sidebar.html:33
 msgid "Apply Filters"
 msgstr ""
 
-#: yaffo/templates/_sidebar.html:31
+#: yaffo/templates/_sidebar.html:36
 msgid "Clear Filters"
 msgstr ""
 
@@ -1301,7 +1304,7 @@ msgstr ""
 
 #: yaffo/templates/albums/_base.html:13 yaffo/templates/albums/album.html:33
 #: yaffo/templates/index.html:64 yaffo/templates/people/list.html:24
-#: yaffo/templates/people/list.html:85 yaffo/templates/sharing/files.html:119
+#: yaffo/templates/people/list.html:85 yaffo/templates/sharing/files.html:110
 #: yaffo/templates/themes_page/index.html:115
 #: yaffo/templates/themes_page/index.html:127
 #: yaffo/templates/utilities/_base.html:11
@@ -1309,19 +1312,19 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: yaffo/templates/index.html:73 yaffo/templates/sharing/files.html:127
+#: yaffo/templates/index.html:73 yaffo/templates/sharing/files.html:118
 msgid "Taken"
 msgstr ""
 
 #: yaffo/templates/albums/add.html:66 yaffo/templates/index.html:74
 #: yaffo/templates/index.html:98 yaffo/templates/people/faces.html:66
-#: yaffo/templates/sharing/files.html:128
-#: yaffo/templates/sharing/files.html:143
+#: yaffo/templates/sharing/files.html:119
+#: yaffo/templates/sharing/files.html:134
 msgid "Unknown date"
 msgstr ""
 
 #: yaffo/templates/index.html:78 yaffo/templates/media/view.html:78
-#: yaffo/templates/sharing/files.html:132
+#: yaffo/templates/sharing/files.html:123
 msgid "Location"
 msgstr ""
 
@@ -1408,7 +1411,7 @@ msgid_plural "%(count)s photos added."
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/templates/albums/add.html:43 yaffo/templates/sharing/files.html:78
+#: yaffo/templates/albums/add.html:43 yaffo/templates/sharing/files.html:69
 #, python-format
 msgid "Select all %(count)s matching"
 msgstr ""
@@ -1543,7 +1546,7 @@ msgstr ""
 
 #: yaffo/templates/albums/album.html:137
 #: yaffo/templates/components/modal.html:17
-#: yaffo/templates/filters/_config_modal.html:23
+#: yaffo/templates/filters/_config_modal.html:22
 #: yaffo/templates/pages/design.html:38
 #: yaffo/templates/settings/_llm_api_key.html:19
 #: yaffo/templates/settings/index.html:29
@@ -1816,7 +1819,7 @@ msgid "Hold Shift+Click to select multiple faces at once"
 msgstr ""
 
 #: yaffo/templates/faces/index.html:92
-#: yaffo/templates/filters/_config_modal.html:21
+#: yaffo/templates/filters/_config_modal.html:20
 msgid "Reset to defaults"
 msgstr ""
 
@@ -1932,7 +1935,7 @@ msgstr ""
 msgid "Drag to reorder. Uncheck to hide a filter."
 msgstr ""
 
-#: yaffo/templates/filters/_config_modal.html:23
+#: yaffo/templates/filters/_config_modal.html:22
 msgid "Configure Filters"
 msgstr ""
 
@@ -3145,55 +3148,55 @@ msgstr ""
 msgid "Shared by %(device)s - Sharing - Yaffo"
 msgstr ""
 
-#: yaffo/templates/sharing/files.html:47
+#: yaffo/templates/sharing/files.html:38
 msgid "Back to device"
 msgstr ""
 
-#: yaffo/templates/sharing/files.html:50
+#: yaffo/templates/sharing/files.html:41
 #, python-format
 msgid "Shared by %(device)s"
 msgstr ""
 
-#: yaffo/templates/sharing/files.html:53
+#: yaffo/templates/sharing/files.html:44
 msgid "Unavailable"
 msgstr ""
 
-#: yaffo/templates/sharing/files.html:55
+#: yaffo/templates/sharing/files.html:46
 #, python-format
 msgid "Showing %(shown)s of %(total)s shared file"
 msgid_plural "Showing %(shown)s of %(total)s shared files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/templates/sharing/files.html:61 yaffo/templates/sharing/files.html:160
+#: yaffo/templates/sharing/files.html:52 yaffo/templates/sharing/files.html:151
 msgid "No shared files found"
 msgstr ""
 
-#: yaffo/templates/sharing/files.html:69
+#: yaffo/templates/sharing/files.html:60
 msgid "Could not reach this device"
 msgstr ""
 
-#: yaffo/templates/sharing/files.html:71
+#: yaffo/templates/sharing/files.html:62
 msgid "Try again"
 msgstr ""
 
-#: yaffo/templates/sharing/files.html:82
+#: yaffo/templates/sharing/files.html:73
 msgid "Pull selected"
 msgstr ""
 
-#: yaffo/templates/sharing/files.html:89
+#: yaffo/templates/sharing/files.html:80
 msgid "Choose a download directory before you can pull files from this device."
 msgstr ""
 
-#: yaffo/templates/sharing/files.html:91
+#: yaffo/templates/sharing/files.html:82
 msgid "Set download directory"
 msgstr ""
 
-#: yaffo/templates/sharing/files.html:137
+#: yaffo/templates/sharing/files.html:128
 msgid "Size"
 msgstr ""
 
-#: yaffo/templates/sharing/files.html:161
+#: yaffo/templates/sharing/files.html:152
 msgid "Try adjusting your filters, or check what this device shares with you."
 msgstr ""
 

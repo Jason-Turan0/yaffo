@@ -1,4 +1,4 @@
-{% macro render_sidebar(url, filters, render_filters_block=none, render_actions_block=none, filter_layout=none) %}
+{% macro render_sidebar(url, filters, render_filters_block=none, render_actions_block=none, filter_layout=none, render_hidden_block=none) %}
 <div class="sidebar-container">
      {% if render_actions_block %}
         <div class="sidebar sidebar-actions">
@@ -15,6 +15,11 @@
             {% endif %}
         </div>
         <form method="GET" action="{{ url }}" id="filter-form">
+            {# Coordinates that must ride along with a GET submit (e.g. the remote
+               gallery's scope), regardless of which filters the layout shows. #}
+            {% if render_hidden_block %}
+                {{ render_hidden_block() }}
+            {% endif %}
             {% if filter_layout %}
                 {# Order + visibility come from the saved layout (filter_config). #}
                 {% for entry in filter_layout if entry.visible %}

@@ -89,9 +89,7 @@ window.PHOTO_ORGANIZER.filters.initConfig = (i18n, config) => {
             });
         });
         try {
-            // The layout is saved per page; the modal partial stamps which one.
-            const page = list.dataset.page || 'home';
-            const res = await fetch(config.buildUrl('save_filter_layout', { page }), {
+            const res = await fetch(config.buildUrl('save_filter_layout', {}), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ items }),

@@ -5,6 +5,7 @@
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='filters/location-autocomplete.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='filters/filter_config.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='sharing/sharing.css') }}">
 {% endblock %}
 
@@ -15,32 +16,22 @@
 {% from "components/selection_bar.html" import selection_bar %}
 
     {# The filter form GETs back to this page, so the scope coordinates ride
-       as hidden inputs (a GET submit replaces the querystring). Same filter
-       set and order as the home gallery — but every option list comes from
-       the peer's facets (scoped to the grant), and people/label values are
-       the peer's entity ids echoed back to it. #}
-    {% macro remote_filters() %}
+       as hidden inputs (a GET submit replaces the querystring). The filter list
+       itself comes from the app-wide configurable layout (shared with the home
+       gallery) — but every option list comes from the peer's facets (scoped to
+       the grant), and people/label values are the peer's entity ids echoed
+       back to it. #}
+    {% macro remote_scope_inputs() %}
         <input type="hidden" name="media_dir_id" value="{{ media_dir_id }}">
         <input type="hidden" name="scope" value="{{ scope }}">
         <input type="hidden" name="label" value="{{ label }}">
-        {% include "filters/_year.html" %}
-        {% include "filters/_month.html" %}
-        {% include "filters/_path.html" %}
-        {% include "filters/_people.html" %}
-        {% include "filters/_gender.html" %}
-        {% include "filters/_labels.html" %}
-        {% include "filters/_tags.html" %}
-        {% include "filters/_locations.html" %}
-        {% include "filters/_device.html" %}
-        {% include "filters/_favorite.html" %}
-        {% include "filters/_media_type.html" %}
     {% endmacro %}
 
     {% set scope_url = url_for('sharing_device_files', device_id=device.device_id,
                                media_dir_id=media_dir_id, scope=scope, label=label) %}
 
     <div class="main-container-layout">
-        {{ render_sidebar(scope_url, filters, render_filters_block=remote_filters) }}
+        {{ render_sidebar(scope_url, filters, filter_layout=filter_layout, render_hidden_block=remote_scope_inputs) }}
         <div class="main-content photo-gallery">
             {% set header_actions %}
                 <a class="btn-secondary btn-sm" href="{{ url_for('sharing_device', device_id=device.device_id) }}">
@@ -163,10 +154,14 @@
             {% endif %}
         </div>
     </div>
+
+    {% from "filters/_config_modal.html" import filter_config_modal %}
+    {{ filter_config_modal(filter_layout, filter_default_keys) }}
 {% endblock %}
 
 {% block scripts %}
     <script src="{{ url_for('static', filename='filters/location-autocomplete.js') }}"></script>
+    <script src="{{ url_for('static', filename='filters/filter_config.js') }}"></script>
     <script src="{{ url_for('static', filename='sharing/remote_gallery.js') }}"></script>
     <script>
         document.addEventListener('yaffo:app-init-complete', (event) => {
@@ -193,6 +188,7 @@
                 },
             });
             app.filters.initLocationAutocomplete(app.i18n, window.APP_CONFIG);
+            app.filters.initConfig(app.i18n, window.APP_CONFIG);
         });
     </script>
 {% endblock %}

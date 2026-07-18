@@ -1,4 +1,4 @@
-"""Unit tests for the home filter-layout registry + persistence (filter_config).
+"""Unit tests for the filter-layout registry + persistence (filter_config).
 
 The saved layout (a JSON list of {key, visible}) is merged onto the registry on
 read: known keys keep their saved order/visibility, unknown keys drop, and any
@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from yaffo.db import db
+from yaffo.db.models import ApplicationSettings
 from yaffo.routes import filter_config as fc
 
 pytestmark = pytest.mark.unit
@@ -62,18 +63,12 @@ class TestSaveLoad:
         assert layout["year"] is True  # no longer in the save -> back to default visible
 
 
-class TestPerPageLayouts:
-    """Each page that renders the panel keeps its own saved layout (the setting
-    name is derived from the page key), so configuring one leaves the other alone."""
+class TestSharedLayout:
+    """One layout for the whole app, stored under a single setting key."""
 
-    def test_pages_have_independent_layouts(self, session):
-        fc.save_layout(session, [{"key": "device", "visible": False}], page="locations")
-
-        home = {i.key: i.visible for i in fc.load_layout(session, page="home")}
-        locations = {i.key: i.visible for i in fc.load_layout(session, page="locations")}
-        assert home["device"] is True
-        assert locations["device"] is False
-
-    def test_default_page_is_home(self, session):
+    def test_layout_is_stored_under_the_shared_key(self, session):
         fc.save_layout(session, [{"key": "year", "visible": False}])
-        assert next(i for i in fc.load_layout(session, page="home") if i.key == "year").visible is False
+
+        setting = session.query(ApplicationSettings).filter_by(name=fc.SETTING_NAME).first()
+        assert setting is not None
+        assert next(i for i in fc.load_layout(session) if i.key == "year").visible is False

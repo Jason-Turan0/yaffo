@@ -394,7 +394,6 @@ test.describe('Locations Map', () => {
     await page.locator('#configure-filters-btn').click();
     const modal = page.locator('#configureFiltersModal');
     await expect(modal).toHaveClass(/active/);
-    await expect(page.locator('#filter-config-list')).toHaveAttribute('data-page', 'locations');
 
     const yearRow = page.locator('.filter-config-row[data-key="year"]');
     await expect(yearRow).toBeVisible();
@@ -404,7 +403,7 @@ test.describe('Locations Map', () => {
     await toggle.uncheck();
 
     await Promise.all([
-      page.waitForResponse(response => response.url().includes('/settings/filters/locations') && response.status() === 204),
+      page.waitForResponse(response => response.url().includes('/settings/filters') && response.status() === 204),
       modal.locator('button[type="submit"]').click(),
     ]);
     await page.waitForLoadState('domcontentloaded');
@@ -414,7 +413,7 @@ test.describe('Locations Map', () => {
     await page.locator('#configure-filters-btn').click();
     await page.locator('#filter-config-reset').click();
     await Promise.all([
-      page.waitForResponse(response => response.url().includes('/settings/filters/locations') && response.status() === 204),
+      page.waitForResponse(response => response.url().includes('/settings/filters') && response.status() === 204),
       page.locator('#configureFiltersModal button[type="submit"]').click(),
     ]);
     await page.waitForLoadState('domcontentloaded');

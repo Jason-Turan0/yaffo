@@ -41,6 +41,7 @@ from yaffo.db.models import (
 from yaffo.db.repositories import album_repository, media_dir_repository, p2p_repository
 from yaffo.db.repositories.media_repository import get_distinct_months
 from yaffo.distance_units import distance_to_kilometers
+from yaffo.routes import filter_config
 from yaffo.routes.filter_panel import filter_selections, gender_options, to_query_params
 from yaffo.routes.selection import selection_from_args
 from yaffo.logging_config import get_logger
@@ -653,6 +654,8 @@ def init_sharing_routes(app: Flask):
             album_id=album_id,
             selection=selection,
             page_params=page_params,
+            filter_layout=filter_config.load_layout(db.session),
+            filter_default_keys=filter_config.default_keys(),
             pagination={
                 "current_page": page,
                 "total_items": total,

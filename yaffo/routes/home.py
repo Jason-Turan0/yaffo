@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pydash as py_
 import requests
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, flash, jsonify, render_template, request
 from flask_babel import gettext
 from sqlalchemy.orm import joinedload
 
@@ -13,6 +13,7 @@ from yaffo.db.models import (
     MediaLabel,
     Tag,
 )
+from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.db.repositories.media_filter_repository import apply_media_filters
 from yaffo.routes import filter_config
 from yaffo.routes.filter_panel import build_filters_context, to_media_filters, to_query_params
@@ -65,6 +66,17 @@ def init_home_routes(app: Flask):
 
         filters["page_sizes"] = [10, 25, 50, 100, 250]
         filters["page_size"] = filter_page_size
+
+        # Surface unavailable media folders (an unplugged external drive makes
+        # every photo under it 404) so the gallery explains itself instead of
+        # silently showing broken images.
+        missing_media_dirs = [str(d) for d in get_media_dirs(db.session) if not d.exists()]
+        if missing_media_dirs:
+            flash(gettext(
+                "Media folders are not available: %(directories)s. "
+                "If they are on an external drive, make sure the drive is connected.",
+                directories=", ".join(missing_media_dirs),
+            ), "warning")
 
         pagination = {
             "current_page": page,

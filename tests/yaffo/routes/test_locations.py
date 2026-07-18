@@ -61,8 +61,6 @@ class TestLocationsPageFilterPanel:
         assert 'id="filter-form"' in body
         assert 'id="configure-filters-btn"' in body
         assert 'id="configureFiltersModal"' in body
-        # the layout saves to this page's scope, not home's
-        assert 'data-page="locations"' in body
         assert "initClientFilter" in body
         # the only-unnamed toggle lives in the panel now, not the page header
         assert 'name="unnamed"' in body
@@ -73,7 +71,7 @@ class TestLocationsPageFilterPanel:
 
     def test_locations_layout_controls_sidebar(self, client, app):
         _seed_located_media(app)
-        resp = client.post("/settings/filters/locations", json={"items": [
+        resp = client.post("/settings/filters", json={"items": [
             {"key": "year", "visible": False},
         ]})
         assert resp.status_code == 204

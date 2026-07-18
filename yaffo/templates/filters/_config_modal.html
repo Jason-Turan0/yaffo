@@ -1,12 +1,11 @@
 {# The "Configure Filters" modal shared by every page that renders the
-   configurable sidebar (home gallery, locations map). `page` scopes where the
-   layout is saved — filter_config.js posts it to /settings/filters/<page>. #}
-{% macro filter_config_modal(filter_layout, filter_default_keys, page) %}
+   configurable sidebar. There is ONE layout for the whole app —
+   filter_config.js posts it to /settings/filters. #}
+{% macro filter_config_modal(filter_layout, filter_default_keys) %}
     {% from "components/modal.html" import render_modal %}
     {% macro configure_filters_form() %}
         <p class="filter-config-hint">{{ _("Drag to reorder. Uncheck to hide a filter.") }}</p>
         <div class="filter-config" id="filter-config-list"
-             data-page="{{ page }}"
              data-default-keys="{{ filter_default_keys | join(',') }}">
             {% for entry in filter_layout %}
             <div class="filter-config-row" draggable="true" data-key="{{ entry.key }}">

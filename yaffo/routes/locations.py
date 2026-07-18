@@ -105,7 +105,7 @@ def init_locations_routes(app: Flask):
             locations=locations_data,
             nearby_radius_km=_assign_location_nearby_radius_km(),
             filters=build_filters_context(db.session, request.args),
-            filter_layout=filter_config.load_layout(db.session, page="locations"),
+            filter_layout=filter_config.load_layout(db.session),
             filter_default_keys=filter_config.default_keys(),
         )
 

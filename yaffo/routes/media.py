@@ -13,8 +13,20 @@ from yaffo.background_tasks.events import emit_event
 from yaffo.common import is_browser_playable_video
 from yaffo.db.models import EVENT_MEDIA_MODIFIED, Face, MediaItem, Person, Tag, db
 from yaffo.themes import get_theme
-from yaffo.utils.image import convert_heif
+from yaffo.utils.image import upright_image_from_path
 from yaffo.utils.index_jobs import reindex_media_items
+
+
+def _heic_as_jpeg(file_path: Path):
+    """A .heic file re-encoded as JPEG for the browser. Loads through
+    upright_image_from_path, which survives files whose extension lies about
+    their format (e.g. a JPEG named .heic) and bakes in the EXIF rotation the
+    re-encode would otherwise drop."""
+    img = upright_image_from_path(file_path)
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG")
+    buffer.seek(0)
+    return send_file(buffer, mimetype="image/jpeg")
 
 
 def init_media_routes(app: Flask):
@@ -29,11 +41,7 @@ def init_media_routes(app: Flask):
             return gettext("File not found"), 404
 
         if file_path.suffix.lower() == ".heic":
-            img = convert_heif(file_path)
-            buffer = io.BytesIO()
-            img.save(buffer, format="JPEG")
-            buffer.seek(0)
-            return send_file(buffer, mimetype="image/jpeg")
+            return _heic_as_jpeg(file_path)
         # send_file emits Accept-Ranges and honours the Range header (conditional=True
         # by default), so <video> seeking works against the original file directly.
         return send_file(file_path, conditional=True)
@@ -67,11 +75,7 @@ def init_media_routes(app: Flask):
             return gettext("File not found"), 404
 
         if file_path.suffix.lower() == ".heic":
-            img = convert_heif(file_path)
-            buffer = io.BytesIO()
-            img.save(buffer, format="JPEG")
-            buffer.seek(0)
-            return send_file(buffer, mimetype="image/jpeg")
+            return _heic_as_jpeg(file_path)
         return send_file(file_path)
 
     @app.route("/faces/<int:face_id>")
