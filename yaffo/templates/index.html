@@ -75,9 +75,11 @@
                                       style="top: {{ bar.top }}%; height: {{ bar.height }}%; width: {{ bar.width }}%"></span>
                             {% endfor %}
                             {% for mark in timeline_year_marks %}
-                                <a class="timeline-scrubber-year" style="top: {{ mark.percent }}%"
+                                <a class="timeline-scrubber-year" data-year="{{ mark.year }}"
+                                   style="top: {{ mark.percent }}%"
                                    href="{{ mark.url }}">{{ mark.year }}</a>
                             {% endfor %}
+                            <span class="timeline-scrubber-marker" aria-hidden="true"></span>
                             <div class="timeline-scrubber-bubble" hidden></div>
                         </nav>
                         <script type="application/json" id="timeline-index">{{ timeline_index | tojson }}</script>

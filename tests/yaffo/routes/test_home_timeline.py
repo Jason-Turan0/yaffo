@@ -70,6 +70,8 @@ def test_timeline_scrubber_marks_and_index(client, dated_library):
     # offset 30, which lands on page 2 at the default page size of 25 — plus the
     # month anchor, since that item sits mid-page rather than at its top.
     assert "timeline-scrubber-year" in body
+    assert 'data-year="2025"' in body
+    assert "timeline-scrubber-marker" in body
     assert "page=2#month-2024-06" in body
     # The anchor's target renders on that month's divider.
     assert 'id="month-2025-07"' in body

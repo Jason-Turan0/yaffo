@@ -48,6 +48,27 @@ timelineScrubberApi.monthAtFraction = (months, fraction) => {
 timelineScrubberApi.pageForMonth = (month, pageSize) => Math.floor(month.offset / pageSize) + 1;
 
 /**
+ * Where a viewed date sits on the rail, as a 0-100 percentage of the time axis
+ * (0 = newest). Interpolates within the month band — later days of a month are
+ * NEWER, so day 31 sits at the band's top edge. Returns null for a date the
+ * axis can't place (e.g. the "unknown" tail marker).
+ * @param {TimelineMonth[]} months newest-first
+ * @param {string} isoDate "YYYY-MM-DD"
+ * @returns {number | null}
+ */
+timelineScrubberApi.railPercentForDate = (months, isoDate) => {
+    const [year, month, day] = isoDate.split('-').map(Number);
+    if (!year || !month) return null;
+    const newest = monthKey(months[0]);
+    const oldest = monthKey(months[months.length - 1]);
+    const totalMonths = newest - oldest + 1;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const intraMonth = day ? (daysInMonth - day) / daysInMonth : 0;
+    const raw = ((newest - (year * 12 + month)) + intraMonth) / totalMonths * 100;
+    return Math.min(Math.max(raw, 0), 100);
+};
+
+/**
  * The jump destination for a month: its page, plus the #month anchor — the
  * month's first photo sits mid-page (the page starts at a floor'd offset), so
  * the anchor scrolls the landing to the month's divider. When only the hash
@@ -87,6 +108,9 @@ timelineScrubberApi.init = (i18n, config) => {
     if (!months.length) return;
 
     const bubble = /** @type {HTMLElement | null} */ (rail.querySelector('.timeline-scrubber-bubble'));
+    const marker = /** @type {HTMLElement | null} */ (rail.querySelector('.timeline-scrubber-marker'));
+    const timeline = document.querySelector('.timeline');
+    const yearLabels = rail.querySelectorAll('.timeline-scrubber-year');
     const pageSize = parseInt(rail.dataset.pageSize || '25', 10) || 25;
     const monthFormat = new Intl.DateTimeFormat(config.i18n.locale, { month: 'long', year: 'numeric' });
     let suppressClick = false;
@@ -95,9 +119,10 @@ timelineScrubberApi.init = (i18n, config) => {
     // first of any overlapping run visible and hide the rest.
     if (rail.clientHeight > 0) {
         let lastBottom = -Infinity;
-        rail.querySelectorAll('.timeline-scrubber-year').forEach((label) => {
+        yearLabels.forEach((label) => {
             const rect = label.getBoundingClientRect();
             if (rect.top < lastBottom) {
+                /** @type {HTMLElement} */ (label).dataset.crowded = 'true';
                 /** @type {HTMLElement} */ (label).style.visibility = 'hidden';
             } else {
                 lastBottom = rect.bottom;
@@ -147,4 +172,36 @@ timelineScrubberApi.init = (i18n, config) => {
             event.preventDefault();
         }
     });
+
+    let updateRequested = false;
+    const updateViewportDate = () => {
+        updateRequested = false;
+        if (!marker || !timeline) return;
+        const top = navbar instanceof HTMLElement ? navbar.getBoundingClientRect().bottom : 0;
+        const sections = timeline.querySelectorAll('.timeline-section');
+        const section = Array.from(sections).find((candidate) => candidate.getBoundingClientRect().bottom > top)
+            || sections[sections.length - 1];
+        if (!(section instanceof HTMLElement)) return;
+
+        const date = section.dataset.date || '';
+        const percent = date === 'unknown' ? 100 : timelineScrubberApi.railPercentForDate(months, date);
+        if (percent === null) return;
+        marker.style.top = `${percent}%`;
+        const activeYear = date === 'unknown' ? '' : date.slice(0, 4);
+        yearLabels.forEach((label) => {
+            const isActive = /** @type {HTMLElement} */ (label).dataset.year === activeYear;
+            label.classList.toggle('is-active', isActive);
+            /** @type {HTMLElement} */ (label).style.visibility =
+                isActive || /** @type {HTMLElement} */ (label).dataset.crowded !== 'true' ? 'visible' : 'hidden';
+        });
+    };
+    const requestViewportUpdate = () => {
+        if (updateRequested) return;
+        updateRequested = true;
+        window.requestAnimationFrame(updateViewportDate);
+    };
+
+    window.addEventListener('scroll', requestViewportUpdate, { passive: true });
+    document.body.addEventListener('htmx:afterSwap', requestViewportUpdate);
+    requestViewportUpdate();
 };

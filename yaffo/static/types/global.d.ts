@@ -283,6 +283,7 @@ type TimelineMonthEntry = {
 type TimelineScrubberNamespace = {
     monthAtFraction?: (months: TimelineMonthEntry[], fraction: number) => TimelineMonthEntry;
     pageForMonth?: (month: TimelineMonthEntry, pageSize: number) => number;
+    railPercentForDate?: (months: TimelineMonthEntry[], isoDate: string) => number | null;
     jumpUrl?: (month: TimelineMonthEntry, pageSize: number, href: string) => string;
     init?: (i18n: I18nService, config: AppConfig) => void;
 };

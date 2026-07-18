@@ -12,8 +12,16 @@ const config = { i18n: { locale: 'en' } };
 
 const fixture = () => {
   document.body.innerHTML = `
+    <nav class="navbar"></nav>
+    <div class="timeline">
+      <section class="timeline-section" data-date="2025-07-20"></section>
+      <section class="timeline-section" data-date="2024-06-15"></section>
+      <section class="timeline-section" data-date="unknown"></section>
+    </div>
     <nav id="timeline-scrubber" data-page-size="25">
-      <a class="timeline-scrubber-year" href="/?view=timeline&page=1">2025</a>
+      <a class="timeline-scrubber-year" data-year="2025" href="/?view=timeline&page=1">2025</a>
+      <a class="timeline-scrubber-year" data-year="2024" href="/?view=timeline&page=2">2024</a>
+      <span class="timeline-scrubber-marker"></span>
       <div class="timeline-scrubber-bubble" hidden></div>
     </nav>
     <script type="application/json" id="timeline-index">${JSON.stringify(months)}</script>`;
@@ -58,6 +66,17 @@ describe('jumpUrl', () => {
   });
 });
 
+describe('railPercentForDate', () => {
+  it('maps dates onto the same calendar-month axis and clamps its ends', async () => {
+    const scrubber = await loadScrubber();
+
+    expect(scrubber.railPercentForDate(months, '2025-07-31')).toBe(0);
+    expect(scrubber.railPercentForDate(months, '2024-12-31')).toBe(50);
+    expect(scrubber.railPercentForDate(months, '2023-01-01')).toBe(100);
+    expect(scrubber.railPercentForDate(months, 'unknown')).toBeNull();
+  });
+});
+
 describe('pageForMonth', () => {
   it('computes the 1-based page from the cumulative offset', async () => {
     const scrubber = await loadScrubber();
@@ -70,6 +89,15 @@ describe('pageForMonth', () => {
 });
 
 describe('init', () => {
+  beforeEach(() => {
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
   it('shows a locale month bubble on pointer movement over the rail', async () => {
     fixture();
     const scrubber = await loadScrubber();
@@ -105,5 +133,32 @@ describe('init', () => {
     scrubber.init(window.testI18n, config);
 
     expect(document.documentElement.style.getPropertyValue('--navbar-height')).toBe('64px');
+  });
+
+  it('tracks the topmost viewport date and highlights its year', async () => {
+    fixture();
+    const [newest, older] = document.querySelectorAll('.timeline-section');
+    newest.getBoundingClientRect = () => ({ bottom: -1 });
+    older.getBoundingClientRect = () => ({ bottom: 200 });
+    const scrubber = await loadScrubber();
+
+    scrubber.init(window.testI18n, config);
+
+    expect(document.querySelector('.timeline-scrubber-marker').style.top).toBe('96.42857142857143%');
+    expect(document.querySelector('[data-year="2024"]').classList.contains('is-active')).toBe(true);
+    expect(document.querySelector('[data-year="2025"]').classList.contains('is-active')).toBe(false);
+  });
+
+  it('pins the marker to the bottom for the undated tail after a streamed swap', async () => {
+    fixture();
+    const sections = document.querySelectorAll('.timeline-section');
+    sections.forEach((section) => { section.getBoundingClientRect = () => ({ bottom: -1 }); });
+    const scrubber = await loadScrubber();
+    scrubber.init(window.testI18n, config);
+
+    document.body.dispatchEvent(new Event('htmx:afterSwap'));
+
+    expect(document.querySelector('.timeline-scrubber-marker').style.top).toBe('100%');
+    expect(document.querySelector('.timeline-scrubber-year.is-active')).toBeNull();
   });
 });

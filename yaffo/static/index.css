@@ -283,6 +283,11 @@
     color: var(--color-text);
 }
 
+.timeline-scrubber-year.is-active {
+    color: var(--color-accent);
+    font-weight: var(--font-weight-heading);
+}
+
 /* The newest year's mark sits at the rail's very top (0%); centering on that
    point would push its top half outside the rail, so hang it downward instead. */
 .timeline-scrubber-year:first-of-type {
@@ -302,6 +307,21 @@
     box-shadow: var(--shadow-md);
     white-space: nowrap;
     pointer-events: none;
+}
+
+.timeline-scrubber-marker {
+    position: absolute;
+    right: -1px;
+    z-index: 2;
+    width: 14px;
+    height: 14px;
+    transform: translateY(-50%);
+    background: var(--color-accent);
+    border: 3px solid var(--color-bg);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--color-accent), var(--shadow-md);
+    pointer-events: none;
+    transition: top 160ms ease-out;
 }
 
 @media (max-width: 900px) {
