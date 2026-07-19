@@ -13,24 +13,41 @@
         {% for batch in transfers %}
         <div class="transfer-batch" data-state="{{ batch.state }}">
             <div class="transfer-batch-header">
-                <strong class="transfer-batch-label">{{ batch.label }}</strong>
-                {% if batch.path == 'local' %}
-                <span class="transfer-path-badge transfer-path-local">{{ _("Local network") }}</span>
-                {% elif batch.path == 'direct' %}
-                <span class="transfer-path-badge transfer-path-direct">{{ _("Direct") }}</span>
-                {% elif batch.path == 'relay' %}
-                <span class="transfer-path-badge transfer-path-relay">{{ _("Via relay (metered)") }}</span>
-                {% endif %}
-                <span class="transfer-state-badge transfer-state-{{ batch.state }}">
-                    {% if batch.state == 'collecting' %}{{ _("Collecting file list…") }}
-                    {% elif batch.state == 'running' %}{{ _("Transferring") }}
-                    {% elif batch.state == 'paused_relay_budget' %}{{ _("Paused") }}
-                    {% elif batch.state == 'completed' %}{{ _("Completed") }}
-                    {% elif batch.state == 'completed_with_errors' %}{{ _("Completed with errors") }}
-                    {% elif batch.state == 'failed' %}{{ _("Failed") }}
-                    {% elif batch.state == 'cancelled' %}{{ _("Cancelled") }}
+                <div class="transfer-batch-info">
+                    <strong class="transfer-batch-label">{{ batch.label }}</strong>
+                    {% if batch.path == 'local' %}
+                    <span class="transfer-path-badge transfer-path-local">{{ _("Local network") }}</span>
+                    {% elif batch.path == 'direct' %}
+                    <span class="transfer-path-badge transfer-path-direct">{{ _("Direct") }}</span>
+                    {% elif batch.path == 'relay' %}
+                    <span class="transfer-path-badge transfer-path-relay">{{ _("Via relay (metered)") }}</span>
                     {% endif %}
-                </span>
+                    <span class="transfer-state-badge transfer-state-{{ batch.state }}">
+                        {% if batch.state == 'collecting' %}{{ _("Collecting file list…") }}
+                        {% elif batch.state == 'running' %}{{ _("Transferring") }}
+                        {% elif batch.state == 'paused_relay_budget' %}{{ _("Paused") }}
+                        {% elif batch.state == 'completed' %}{{ _("Completed") }}
+                        {% elif batch.state == 'completed_with_errors' %}{{ _("Completed with errors") }}
+                        {% elif batch.state == 'failed' %}{{ _("Failed") }}
+                        {% elif batch.state == 'cancelled' %}{{ _("Cancelled") }}
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="transfer-batch-actions">
+                    {% if batch.active %}
+                    <button type="button" class="btn-danger btn-sm"
+                            hx-post="{{ url_for('sharing_transfer_cancel', device_id=device.device_id, batch_id=batch.id) }}"
+                            hx-target="#transfers-panel" hx-swap="outerHTML">
+                        {{ _("Cancel") }}
+                    </button>
+                    {% else %}
+                    <button type="button" class="btn-secondary btn-sm"
+                            hx-post="{{ url_for('sharing_transfer_delete', device_id=device.device_id, batch_id=batch.id) }}"
+                            hx-target="#transfers-panel" hx-swap="outerHTML">
+                        {{ _("Dismiss") }}
+                    </button>
+                    {% endif %}
+                </div>
             </div>
 
             {% if batch.files_total %}
@@ -48,11 +65,12 @@
                 {% endif %}
             </div>
             {% if batch.bytes_total %}
-            <div class="transfer-progress-track" role="progressbar"
+            <div class="progress-bar-container" role="progressbar"
                  aria-valuemin="0" aria-valuemax="100"
                  aria-valuenow="{{ ((batch.bytes_done / batch.bytes_total) * 100) | round(1) }}">
-                <div class="transfer-progress-fill" style="width: {{ ((batch.bytes_done / batch.bytes_total) * 100) | round(1) }}%"></div>
+                <div class="progress-bar" style="width: {{ ((batch.bytes_done / batch.bytes_total) * 100) | round(1) }}%"></div>
             </div>
+            <div class="progress-text">{{ (batch.bytes_done / batch.bytes_total) | format_percent(2) }}</div>
             {% endif %}
             {% endif %}
 
@@ -85,30 +103,6 @@
                 <li><strong>{{ failure.name }}</strong>{% if failure.error %} — {{ failure.error }}{% endif %}</li>
                 {% endfor %}
             </ul>
-            {% endif %}
-
-            {% if batch.active %}
-            <div class="transfer-batch-actions">
-                <button type="button" class="btn-danger btn-sm"
-                        hx-post="{{ url_for('sharing_transfer_cancel', device_id=device.device_id, batch_id=batch.id) }}"
-                        hx-target="#transfers-panel" hx-swap="outerHTML">
-                    {{ _("Cancel") }}
-                </button>
-            </div>
-            {% else %}
-            <div class="transfer-batch-actions">
-                {% set delete_message = _('Delete this transfer from the list? Files already downloaded stay on this device.') %}
-                <button type="button" class="btn-danger btn-sm" data-icon="delete"
-                        data-sharing-confirm="delete"
-                        data-confirm-title="{{ _('Delete transfer?') }}"
-                        data-confirm-message="{{ delete_message }}"
-                        data-confirm-text="{{ _('Delete') }}"
-                        hx-post="{{ url_for('sharing_transfer_delete', device_id=device.device_id, batch_id=batch.id) }}"
-                        hx-confirm="{{ delete_message }}"
-                        hx-target="#transfers-panel" hx-swap="outerHTML">
-                    {{ _("Delete") }}
-                </button>
-            </div>
             {% endif %}
         </div>
         {% endfor %}

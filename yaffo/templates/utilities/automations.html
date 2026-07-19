@@ -89,7 +89,7 @@
     <button type="button" class="btn-secondary js-run-files" data-mode="any">{{ _("Run…") }}</button>
     {% if not selected.is_system %}
         <a href="{{ url_for('automations_edit', slug=selected.slug) }}"
-           class="btn-primary" data-icon="edit">{{ _("Edit") }}</a>
+           class="btn-secondary" data-icon="edit">{{ _("Edit") }}</a>
     {% endif %}
     <a href="{{ url_for('automations_edit_triggers', slug=selected.slug) }}"
        class="btn-secondary" data-icon="edit">{{ _("Edit triggers") }}</a>

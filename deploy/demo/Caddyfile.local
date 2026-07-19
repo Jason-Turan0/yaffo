@@ -1,0 +1,25 @@
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	@walkthrough host {$DEMO_WALKTHROUGH_HOST}
+	handle @walkthrough {
+		root * /srv/walkthrough
+		file_server
+	}
+
+	@device_a host {$DEMO_A_HOST}
+	handle @device_a {
+		reverse_proxy demo-a:5101
+	}
+
+	@device_b host {$DEMO_B_HOST}
+	handle @device_b {
+		reverse_proxy demo-b:5102
+	}
+
+	respond "Unknown demo hostname" 404
+}
+

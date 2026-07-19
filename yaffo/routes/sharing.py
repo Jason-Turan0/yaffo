@@ -870,14 +870,9 @@ def init_sharing_routes(app: Flask):
             deleted = service.transfers.delete(batch_id)
         except (P2PServiceError, FutureTimeoutError):
             deleted = False
-        message = (
-            gettext("Transfer deleted.")
-            if deleted
-            else gettext("Cancel or finish this transfer before deleting it.")
-        )
-        return _with_toast(
-            _render_transfers_panel(device_id),
-            message,
-            "success" if deleted else "error",
-            devices_changed=False,
-        )
+        # Dismissing a finished transfer needs no toast — the card disappearing
+        # is the feedback. Still surface it if it unexpectedly couldn't be
+        # dismissed (e.g. it became active again between render and click).
+        if not deleted:
+            return _notify(gettext("Cancel or finish this transfer before deleting it."))
+        return _render_transfers_panel(device_id)

@@ -5,22 +5,24 @@
 
     const originalFetch = window.fetch.bind(window);
     const handledResponses = new WeakSet();
+    const HANDLED_STATUSES = new Set([403, 429]);
+    const HANDLED_CODES = new Set(['demo_feature_disabled', 'csrf_failed', 'demo_rate_limit_exceeded']);
 
-    function dispatchDisabled(message) {
+    function dispatchDisabled(message, code) {
         document.dispatchEvent(new CustomEvent('yaffo:demo-feature-disabled', {
-            detail: { message },
+            detail: { message, code },
         }));
     }
 
     async function inspectFetchResponse(response) {
-        if (response.status !== 403 || handledResponses.has(response)) return;
+        if (!HANDLED_STATUSES.has(response.status) || handledResponses.has(response)) return;
         const contentType = response.headers.get('Content-Type') || '';
         if (!contentType.includes('application/json')) return;
         handledResponses.add(response);
         try {
             const payload = await response.clone().json();
-            if (payload.code === 'demo_feature_disabled' || payload.code === 'csrf_failed') {
-                dispatchDisabled(String(payload.error));
+            if (HANDLED_CODES.has(payload.code)) {
+                dispatchDisabled(String(payload.error), payload.code);
             }
         } catch (error) {
             // The caller still receives the untouched response.
@@ -48,15 +50,15 @@
 
     document.addEventListener('htmx:beforeSwap', (event) => {
         const xhr = event.detail.xhr;
-        if (xhr.status !== 403 || xhr.yaffoDemoHandled) return;
+        if (!HANDLED_STATUSES.has(xhr.status) || xhr.yaffoDemoHandled) return;
         const contentType = xhr.getResponseHeader('Content-Type') || '';
         if (!contentType.includes('application/json')) return;
         try {
             const payload = JSON.parse(xhr.responseText);
-            if (payload.code === 'demo_feature_disabled' || payload.code === 'csrf_failed') {
+            if (HANDLED_CODES.has(payload.code)) {
                 xhr.yaffoDemoHandled = true;
                 event.detail.shouldSwap = false;
-                dispatchDisabled(String(payload.error));
+                dispatchDisabled(String(payload.error), payload.code);
             }
         } catch (error) {
             // Leave unrelated error responses to HTMX's normal handling.
@@ -64,7 +66,12 @@
     });
 
     document.addEventListener('yaffo:demo-feature-disabled', (event) => {
-        window.notification?.info(String(event.detail.message), 5000);
+        const message = String(event.detail.message);
+        if (event.detail.code === 'demo_rate_limit_exceeded') {
+            window.notification?.warning(message, 5000);
+        } else {
+            window.notification?.info(message, 5000);
+        }
     });
 
     const resetTime = document.querySelector('[data-demo-reset-at]');

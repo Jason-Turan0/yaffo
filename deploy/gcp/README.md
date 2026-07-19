@@ -1,72 +1,71 @@
-# GCP Demo Deployment (Terraform)
+# GCP public-demo infrastructure
 
-Infrastructure-as-code to deploy Yaffo as a single-container app on a Compute
-Engine VM. Design and rationale:
-[`docs/deployment/gcp-demo-architecture.md`](../../docs/deployment/gcp-demo-architecture.md).
+This Terraform stack creates the Phase 2 infrastructure for the two-instance
+Yaffo demo. Application delivery is handled separately by
+[`deploy/demo/deploy.sh`](../demo/deploy.sh), so infrastructure and image rollout
+remain independently reviewable.
 
-This is a Terraform configuration. `terraform apply` provisions the environment;
-`terraform destroy` decommissions it.
+It provisions:
 
-## Files
-
-| File | Purpose |
-|---|---|
-| `versions.tf` | Terraform + Google provider version pins and provider config |
-| `variables.tf` | Input variables (project, region, disk/VM sizing) |
-| `main.tf` | The resources: APIs, Artifact Registry repo, data disk, COS VM |
-| `outputs.tf` | Useful values printed after apply (image repo path, IAP command) |
-| `terraform.tfvars.example` | Template for your values — copy to `terraform.tfvars` |
+- one dedicated VPC/subnet with only HTTPS/ACME and IAP SSH ingress;
+- explicit runtime egress for DNS, NTP, HTTPS, metadata HTTP, and the operated
+  hub relay UDP port, followed by a deny-all backstop;
+- one reserved IPv4 address for the three exact public hostnames;
+- one Shielded `e2-medium` Container-Optimized OS VM;
+- one protected persistent disk containing isolated A/B data and identity trees;
+- a least-privilege service account that can pull images and emit logs/metrics;
+- an Artifact Registry repository with digest-based deployment and bounded retention;
+- a daily 7:45 AM–10:00 PM `America/Chicago` instance schedule; and
+- a USD 50 monthly budget with 50%, 80%, 100%, and forecast notifications.
 
 ## Prerequisites
 
-1. **Terraform** (>= 1.5). Install: `brew install terraform` (macOS) or see
-   https://developer.hashicorp.com/terraform/install.
-2. **gcloud CLI** authenticated for Terraform to use:
+1. Terraform 1.5 or newer and the Google Cloud CLI.
+2. Application Default Credentials:
+
    ```bash
    gcloud auth application-default login
    ```
-   (This is separate from `gcloud auth login`; Terraform uses the
-   "application default credentials" it creates.)
-3. A GCP project with **billing enabled**.
 
-## Usage
+3. Project and billing-account permissions for Compute Engine, Artifact
+   Registry, project IAM, Monitoring channels, and Billing Budgets.
+4. The SHA-256 published for the pinned Linux x86-64 Docker Compose release.
+
+## Apply
 
 ```bash
 cd deploy/gcp
-cp terraform.tfvars.example terraform.tfvars   # edit project_id etc.
-
-terraform init      # download the Google provider (first time only)
-terraform plan      # preview what will be created — read this carefully
-terraform apply     # create the resources (type 'yes' to confirm)
+cp terraform.tfvars.example terraform.tfvars
+# Fill in the project, billing account, operator email, and Compose checksum.
+terraform init
+terraform plan
+terraform apply
 ```
 
-After `apply`, see the outputs (or run `terraform output`) for the image repo
-path and the IAP tunnel command.
+Create the three A records printed by `terraform output dns_a_records`. No
+wildcard or catch-all DNS record is used.
 
-The VM is created with **no external IP** on purpose: personal access is via an
-IAP tunnel (a later step), and the demo step adds the public IP + firewall only
-when you want it exposed.
+The VM uses OS Login and has no public SSH rule. Connect with the command from
+`terraform output -raw iap_ssh_command`.
+
+## Deploy the containers
+
+Build and push Yaffo for `linux/amd64`, then deploy immutable image references:
+
+```bash
+./deploy/demo/build-and-push.sh v0.1.0-demo.1
+./deploy/demo/deploy.sh \
+  'us-central1-docker.pkg.dev/PROJECT/yaffo-demo/yaffo-demo@sha256:…' \
+  'caddy:2.10.2-alpine@sha256:…'
+```
+
+The deploy command rejects tag-only references. Caddy publishes 80/443; the A/B
+web and P2P ports remain private to Docker. The Compose plugin installed by the
+startup script is version- and checksum-pinned and is used only as an operator
+tool—it is not mounted into any application container.
 
 ## Teardown
 
-```bash
-terraform destroy
-```
-
-Note: the data disk has `prevent_destroy = true` in `main.tf` as a safety guard,
-so `destroy` will error rather than delete your photos/DBs. To intentionally tear
-the disk down, set that to `false` in `main.tf`, `apply`, then `destroy`.
-
-## State & secrets
-
-- `terraform.tfstate` (records real resource ids) and `terraform.tfvars` (your
-  project id) are **gitignored**. The provider lock file
-  (`.terraform.lock.hcl`) and `terraform.tfvars.example` are committed.
-- For a solo demo, local state is fine. For team use you'd move state to a GCS
-  backend — out of scope here.
-
-## Cost note
-
-The VM and persistent disk bill while they exist. Stop the VM when idle
-(`gcloud compute instances stop <vm_name> --zone <zone>`); the disk still bills
-but compute does not. `terraform destroy` removes the VM and repo entirely.
+`terraform destroy` intentionally stops at the static address and data-disk
+`prevent_destroy` guards. Remove those guards only during an explicit, reviewed
+decommission. Terraform state and real `terraform.tfvars` remain gitignored.

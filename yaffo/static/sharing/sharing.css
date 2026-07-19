@@ -445,19 +445,33 @@
 /* ---- Transfers panel (Phase 6 batch transfers) ---- */
 
 .transfers-panel .transfer-batch {
-    padding: 12px 0;
-    border-top: var(--border-width) solid var(--color-border);
+    background: var(--color-bg);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    margin-top: 15px;
 }
 
 .transfers-panel .transfer-batch:first-of-type {
-    border-top: none;
+    margin-top: 0;
 }
 
 .transfer-batch-header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+}
+
+.transfer-batch-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.transfer-batch-actions {
+    flex: none;
 }
 
 .transfer-batch-label {
@@ -524,18 +538,11 @@
     font-size: var(--font-size-sm);
 }
 
-.transfer-progress-track {
+/* The bar itself reuses .progress-bar-container/.progress-bar/.progress-text
+   from components/job_progress.css, so it picks up every theme's treatment
+   (including classic's animated stripes) instead of a separate, driftable copy. */
+.transfer-progress-meta + .progress-bar-container {
     margin-top: 6px;
-    height: 6px;
-    border-radius: var(--radius-sm);
-    background: var(--color-surface-sunken);
-    border: var(--border-width) solid var(--color-border);
-    overflow: hidden;
-}
-
-.transfer-progress-fill {
-    height: 100%;
-    background: var(--color-accent);
 }
 
 .transfer-active-files {
@@ -565,10 +572,6 @@
     padding-left: 18px;
     color: var(--color-text-secondary);
     font-size: var(--font-size-sm);
-}
-
-.transfer-batch-actions {
-    margin-top: 8px;
 }
 
 /* Sits where the selection bar would be, when there is nowhere to pull files TO. */

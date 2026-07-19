@@ -1,6 +1,6 @@
 # Demo Environment Plan
 
-Status: Phases 0 and 1 complete; Phase 2 next
+Status: Phases 0 and 1 complete; Phase 2 implementation in progress
 
 Last reviewed: 2026-07-18
 
@@ -820,6 +820,33 @@ outside the scripted demo.
   account, Shielded VM options, static external IP, disk, start/stop schedule,
   firewall, budget, and DNS outputs.
 - Pin image digests in deployment and retain only a small number of versions.
+
+Phase 2 implementation progress as of 2026-07-18:
+
+- Complete in source: a multi-stage Python 3.13 runtime image runs as a non-root
+  user, bakes model/binary assets into a read-only layer, and starts the existing
+  demo process profile without workers, watcher, scheduler, or runtime downloads.
+  Headless P2P identity uses a per-instance file-backed key with atomic writes and
+  `0600` permissions instead of a desktop keychain.
+- Complete in source: local and production Compose definitions run source and
+  receiver roles with separate data, fixture, identity, and Flask-secret mounts;
+  four Waitress threads; memory, CPU, PID, capability, and temporary-storage
+  limits; read-only roots; and no published application or P2P ports.
+- Complete in source: Caddy is the only published service, serves the static
+  walkthrough directly, routes only the three exact hostnames, and requires
+  digest-pinned Yaffo and Caddy images in production. Operator scripts cover
+  local initialization, `linux/amd64` image build/push, IAP-only deployment, and
+  emergency public-ingress withdrawal.
+- Complete and statically validated: Terraform now defines the dedicated VPC,
+  bounded egress, IAP-only SSH, least-privilege runtime service account, Shielded
+  VM, static address, protected disk, scheduled daily start/stop, Artifact
+  Registry retention, budget/forecast notifications, and exact DNS outputs.
+- Remaining external rollout: build the full runtime image on a running Docker
+  daemon, supply the published checksum for the pinned Compose binary, run a
+  credentialed `terraform plan/apply`, create the three DNS records, deploy the
+  two containers, and verify public HTTPS. These steps require the target GCP
+  project, billing account, DNS access, and production image digests; they are not
+  performed by repository tests.
 
 Exit criterion: a clean `terraform apply` plus deploy command produces three
 anonymous public hostnames, private operator controls, and no manually edited VM.

@@ -1,17 +1,25 @@
-# Copy to terraform.tfvars and fill in your values:
-#   cp terraform.tfvars.example terraform.tfvars
-# terraform.tfvars is gitignored (it pins your real project id).
-# Anything with a default in variables.tf can be omitted here.
+project_id          = "your-gcp-project-id"
+billing_account_id  = "000000-000000-000000"
+budget_alert_email  = "operator@example.com"
 
-project_id = "your-gcp-project-id"
-region     = "us-central1"
-zone       = "us-central1-a"
+region = "us-central1"
+zone   = "us-central1-a"
+
+walkthrough_domain = "demo.yaffo.app"
+demo_a_domain      = "demo-a.yaffo.app"
+demo_b_domain      = "demo-b.yaffo.app"
+hub_url            = "wss://hub.yaffo.app"
+
+# Copy the checksum published beside this exact release asset. Terraform refuses
+# a placeholder or malformed value, and the VM refuses a mismatched download.
+docker_compose_version                 = "v5.1.4"
+docker_compose_linux_x86_64_sha256     = "replace-with-the-published-64-character-sha256"
 
 # Optional overrides (defaults shown):
-# ar_repo      = "yaffo"
-# disk_name    = "yaffo-data"
-# disk_size_gb = 50
-# disk_type    = "pd-balanced"
-# vm_name      = "yaffo"
-# machine_type = "e2-standard-4"
-# vm_tag       = "yaffo"
+# machine_type          = "e2-medium"
+# disk_size_gb          = 50
+# monthly_budget_usd    = 50
+# image_versions_to_keep = 3
+# vm_start_cron         = "45 7 * * *"
+# vm_stop_cron          = "0 22 * * *"
+# schedule_timezone     = "America/Chicago"

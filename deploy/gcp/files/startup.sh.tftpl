@@ -1,0 +1,65 @@
+#!/bin/bash
+set -euo pipefail
+
+DATA_DEVICE="/dev/disk/by-id/google-${disk_name}"
+DATA_ROOT="/var/lib/yaffo-demo"
+COMPOSE_VERSION="${docker_compose_version}"
+COMPOSE_SHA256="${docker_compose_linux_x86_64_sha256}"
+COMPOSE_PLUGIN="/var/lib/yaffo-demo/bin/docker-compose"
+
+for attempt in $(seq 1 30); do
+    if [[ -b "$DATA_DEVICE" ]]; then
+        break
+    fi
+    sleep 1
+done
+
+if [[ ! -b "$DATA_DEVICE" ]]; then
+    echo "Demo data disk did not appear: $DATA_DEVICE" >&2
+    exit 1
+fi
+
+if ! blkid "$DATA_DEVICE" >/dev/null 2>&1; then
+    mkfs.ext4 -F "$DATA_DEVICE"
+fi
+
+mkdir -p "$DATA_ROOT"
+if ! mountpoint -q "$DATA_ROOT"; then
+    mount -o nodev,nosuid "$DATA_DEVICE" "$DATA_ROOT"
+fi
+
+mkdir -p \
+    "$DATA_ROOT/a" \
+    "$DATA_ROOT/b" \
+    "$DATA_ROOT/bin" \
+    "$DATA_ROOT/deploy" \
+    "$DATA_ROOT/fixtures/a" \
+    "$DATA_ROOT/fixtures/b" \
+    "$DATA_ROOT/identities/a" \
+    "$DATA_ROOT/identities/b" \
+    "$DATA_ROOT/secrets"
+
+chown -R 10001:10001 "$DATA_ROOT/a" "$DATA_ROOT/b" "$DATA_ROOT/identities"
+chmod 0750 "$DATA_ROOT" "$DATA_ROOT/a" "$DATA_ROOT/b" "$DATA_ROOT/identities"
+chmod 0755 "$DATA_ROOT/fixtures" "$DATA_ROOT/fixtures/a" "$DATA_ROOT/fixtures/b"
+chmod 0700 "$DATA_ROOT/secrets"
+
+for name in demo-a-flask-secret demo-b-flask-secret; do
+    secret="$DATA_ROOT/secrets/$name"
+    if [[ ! -f "$secret" ]]; then
+        od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > "$secret"
+    fi
+    chmod 0600 "$secret"
+done
+
+if [[ ! -x "$COMPOSE_PLUGIN" ]]; then
+    temporary="$COMPOSE_PLUGIN.tmp"
+    curl --fail --location --silent --show-error \
+        "https://github.com/docker/compose/releases/download/$COMPOSE_VERSION/docker-compose-linux-x86_64" \
+        --output "$temporary"
+    echo "$COMPOSE_SHA256  $temporary" | sha256sum --check --status
+    chmod 0755 "$temporary"
+    mv "$temporary" "$COMPOSE_PLUGIN"
+fi
+
+echo "Yaffo demo host storage and pinned Compose plugin are ready."

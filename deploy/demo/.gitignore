@@ -1,0 +1,6 @@
+.env
+fixtures/
+runtime/
+secrets/
+!secrets/.gitkeep
+

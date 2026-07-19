@@ -71,11 +71,13 @@ ROOT_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = ROOT_DIR / f"{APP_NAME}.db"
 QUEUE_DB_PATH = ROOT_DIR / f"{APP_NAME}-queue.db"
 
-# App-managed binary/model assets live under ROOT_DIR and are checked/downloaded
-# on app start.
-MODEL_CACHE_DIR = ROOT_DIR / "models"
-EXIFTOOL_DIR = ROOT_DIR / "Image-ExifTool"
-FFMPEG_DIR = ROOT_DIR / "ffmpeg"
+# App-managed binary/model assets normally live under ROOT_DIR. Container images
+# may bake them into a read-only layer and point YAFFO_ASSET_DIR there, keeping the
+# mutable database volume small and preventing runtime network downloads.
+ASSET_DIR = Path(os.environ.get("YAFFO_ASSET_DIR", ROOT_DIR))
+MODEL_CACHE_DIR = ASSET_DIR / "models"
+EXIFTOOL_DIR = ASSET_DIR / "Image-ExifTool"
+FFMPEG_DIR = ASSET_DIR / "ffmpeg"
 
 # Read-only UI resources shipped with the source tree and bundled into the app.
 # Operational assets such as ExifTool, ffmpeg, and ML models are downloaded to

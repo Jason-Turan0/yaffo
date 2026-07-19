@@ -1,7 +1,8 @@
 """Download app-managed binary/model assets on demand.
 
-Assets are stored under ``ROOT_DIR`` so packaged and source installs use the same
-runtime paths:
+Assets are stored under ``ASSET_DIR`` (``ROOT_DIR`` by default) so packaged and
+source installs use the same runtime paths while containers can bake them into a
+read-only image layer:
 
 - ``ROOT_DIR/Image-ExifTool-<latest>``
 - ``ROOT_DIR/models``
@@ -20,7 +21,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-from yaffo.common import FFMPEG_DIR, MODEL_CACHE_DIR, ROOT_DIR
+from yaffo.common import ASSET_DIR, FFMPEG_DIR, MODEL_CACHE_DIR
 from yaffo.logging_config import get_logger
 from yaffo.utils.exiftool_path import EXIFTOOL_DIR_PREFIX, get_exiftool_path
 
@@ -108,7 +109,7 @@ def _exiftool_windows_url(version: str, bits: str) -> str:
 
 
 def _exiftool_dir(version: str) -> Path:
-    return ROOT_DIR / f"{EXIFTOOL_DIR_PREFIX}{version}"
+    return ASSET_DIR / f"{EXIFTOOL_DIR_PREFIX}{version}"
 
 
 def _exiftool_src_dir(version: str) -> Path:

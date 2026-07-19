@@ -1,0 +1,24 @@
+{
+	admin off
+}
+
+{$DEMO_WALKTHROUGH_HOST} {
+	root * /srv/walkthrough
+	header {
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+	}
+	file_server
+}
+
+{$DEMO_A_HOST} {
+	reverse_proxy demo-a:5101
+}
+
+{$DEMO_B_HOST} {
+	reverse_proxy demo-b:5102
+}
+

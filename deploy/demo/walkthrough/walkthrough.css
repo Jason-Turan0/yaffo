@@ -1,0 +1,114 @@
+/* Palette matches the Yaffo app's classic theme tokens
+   (yaffo/static/tokens.css) so the walkthrough looks like the product it's
+   introducing, not a separate marketing site. */
+:root {
+    color-scheme: light;
+    --color-bg: #f8f9fa;
+    --color-surface: #ffffff;
+    --color-text: #212529;
+    --color-text-secondary: #495057;
+    --color-text-muted: #6c757d;
+    --color-border: #dee2e6;
+    --color-border-strong: #ced4da;
+    --color-accent: #007bff;
+    --color-accent-hover: #0056b3;
+    --color-accent-soft: #e7f3ff;
+    --color-accent-soft-text: #004085;
+    --color-on-accent: #ffffff;
+    --radius-md: 8px;
+    --radius-lg: 14px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    color: var(--color-text);
+    background: var(--color-bg);
+    line-height: 1.6;
+}
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+}
+.site-header-inner {
+    width: min(70rem, calc(100% - 2rem));
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: 1rem 0;
+    color: var(--color-text);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+.site-header-inner img { border-radius: 8px; }
+
+main {
+    width: min(70rem, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: clamp(1.5rem, 5vw, 4rem) 0 4rem;
+}
+
+.hero, .steps, .notice {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+}
+
+.hero { padding: clamp(2rem, 6vw, 5rem); }
+
+.eyebrow {
+    margin: 0 0 .75rem;
+    color: var(--color-accent-hover);
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+h1, h2 { margin: 0; line-height: 1.15; letter-spacing: -.02em; font-weight: 700; }
+h1 { max-width: 16ch; font-size: clamp(2.4rem, 6vw, 4.6rem); }
+h2 { max-width: 19ch; font-size: clamp(1.8rem, 3.4vw, 2.6rem); }
+.lede { max-width: 48rem; margin: 1.5rem 0; color: var(--color-text-secondary); font-size: clamp(1.05rem, 2vw, 1.25rem); }
+
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 2rem 0 1rem; }
+.button {
+    display: inline-flex;
+    padding: .7rem 1.1rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    background: var(--color-surface);
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: var(--shadow-sm);
+}
+.button:hover { border-color: var(--color-accent); color: var(--color-accent-hover); }
+.button.primary { border-color: var(--color-accent); color: var(--color-on-accent); background: var(--color-accent); }
+.button.primary:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); color: var(--color-on-accent); }
+.reset { margin: 1.4rem 0 0; color: var(--color-text-muted); font-size: .92rem; }
+
+.steps { margin-top: 1.5rem; padding: clamp(2rem, 5vw, 4rem); }
+.steps ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; padding: 0; margin: 2rem 0 0; list-style: none; counter-reset: steps; }
+.steps li { padding: 1.25rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); counter-increment: steps; }
+.steps li::before { content: counter(steps); display: block; margin-bottom: .75rem; color: var(--color-accent); font-size: 1.6rem; font-weight: 700; }
+.steps strong { display: block; }
+.steps a { color: var(--color-accent-hover); font-weight: 600; text-decoration-thickness: from-font; }
+.steps a:hover { color: var(--color-accent); }
+.notice { margin-top: 1.5rem; padding: 1.25rem 1.5rem; background: var(--color-accent-soft); color: var(--color-accent-soft-text); border-color: var(--color-accent-soft-text); box-shadow: none; }
+.notice strong { color: var(--color-accent-soft-text); }
+
+@media (max-width: 42rem) {
+    .steps ol { grid-template-columns: 1fr; }
+}

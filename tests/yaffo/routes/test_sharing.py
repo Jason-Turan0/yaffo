@@ -107,6 +107,7 @@ class FakeP2PService:
         self.cancelled_batches = []
         self.continued_batches = []
         self.deleted_batches = []
+        self.delete_result = True
         self.peering = self
         self.list_shared = SimpleNamespace(send=self.list_shared)
         self.list_files = SimpleNamespace(send=self.list_shared_files)
@@ -213,7 +214,7 @@ class FakeP2PService:
 
     def delete_transfer(self, batch_id):
         self.deleted_batches.append(batch_id)
-        return True
+        return self.delete_result
 
 
 @pytest.fixture
@@ -1026,7 +1027,7 @@ def test_transfers_fragment_offers_delete_for_inactive_batches(app, client, serv
 
     assert "Cancelled" in body
     assert f"/transfers/batch-1/delete" in body
-    assert "Delete transfer?" in body
+    assert "Dismiss" in body
 
 
 def test_transfers_paused_batch_offers_continue_anyway(app, client, service):
@@ -1085,9 +1086,19 @@ def test_delete_transfer_route(app, client, service):
     resp = client.post(f"/sharing/devices/{PEER_ONLINE}/transfers/batch-1/delete")
 
     assert resp.status_code == 200
-    message, type_ = _notification(resp)
-    assert message == "Transfer deleted." and type_ == "success"
+    assert "HX-Trigger" not in resp.headers  # dismissing needs no toast
     assert service.deleted_batches == ["batch-1"]
+
+
+def test_delete_transfer_route_notifies_on_failure(app, client, service):
+    _seed_devices(app)
+    service.delete_result = False
+
+    resp = client.post(f"/sharing/devices/{PEER_ONLINE}/transfers/batch-1/delete")
+
+    assert resp.status_code == 204
+    message, type_ = _notification(resp)
+    assert "Cancel or finish" in message and type_ == "error"
 
 
 def test_pull_requires_download_directory(app, client, service):

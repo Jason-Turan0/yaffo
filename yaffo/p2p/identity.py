@@ -15,6 +15,7 @@ import hashlib
 import ipaddress
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional, Protocol
 
 import keyring
@@ -78,6 +79,46 @@ class InMemorySecretStore:
         self._value = value
 
 
+class FileSecretStore:
+    """Persistent identity storage for a headless, single-process container.
+
+    The file path is operator-controlled and must live on a per-instance volume.
+    Atomic replacement prevents a torn key if the process is interrupted during
+    first boot; directory and file modes keep the PEM private from other users.
+    """
+
+    def __init__(self, path: str | Path) -> None:
+        self._path = Path(path)
+
+    def get(self) -> Optional[str]:
+        if not self._path.exists():
+            return None
+        if self._path.is_symlink() or not self._path.is_file():
+            raise ValueError("P2P identity path must be a regular file")
+        self._path.chmod(0o600)
+        return self._path.read_text(encoding="ascii")
+
+    def set(self, value: str) -> None:
+        self._path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self._path.parent.chmod(0o700)
+        temporary = self._path.with_name(f".{self._path.name}.tmp")
+        if temporary.is_symlink():
+            raise ValueError("P2P identity temporary path must not be a symlink")
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(temporary, flags, 0o600)
+        try:
+            with os.fdopen(descriptor, "w", encoding="ascii") as stream:
+                stream.write(value)
+                stream.flush()
+                os.fsync(stream.fileno())
+        except BaseException:
+            temporary.unlink(missing_ok=True)
+            raise
+        temporary.chmod(0o600)
+        temporary.replace(self._path)
+        self._path.chmod(0o600)
+
+
 def _device_id_from_pubkey(pubkey_bytes: bytes) -> str:
     """Human-shareable identity: a short, dash-grouped hash of the raw public
     key. This is the whole trust model — there is no CA. Two devices consider
@@ -136,6 +177,8 @@ def load_or_create_identity(secret_store: Optional[SecretStore] = None) -> Devic
     # entry behind per run, since the account name is scoped to the data dir.
     if secret_store is None and os.environ.get("YAFFO_P2P_EPHEMERAL_IDENTITY") == "1":
         secret_store = InMemorySecretStore()
+    if secret_store is None and os.environ.get("YAFFO_P2P_KEY_FILE"):
+        secret_store = FileSecretStore(os.environ["YAFFO_P2P_KEY_FILE"])
     store = secret_store or KeyringSecretStore()
     pem = store.get()
     if pem:

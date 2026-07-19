@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
-from yaffo.common import ROOT_DIR
+from yaffo.common import ASSET_DIR
 from yaffo.utils.platform_checks import IS_WINDOWS_32, IS_WINDOWS_64
 
 
@@ -15,7 +15,7 @@ def _version_key(path: Path) -> tuple[int, ...]:
 
 def _exiftool_dirs() -> list[Path]:
     return sorted(
-        (path for path in ROOT_DIR.glob(f"{EXIFTOOL_DIR_PREFIX}*") if path.is_dir()),
+        (path for path in ASSET_DIR.glob(f"{EXIFTOOL_DIR_PREFIX}*") if path.is_dir()),
         key=_version_key,
         reverse=True,
     )
@@ -25,7 +25,7 @@ def get_exiftool_resource_path() -> Path:
     dirs = _exiftool_dirs()
     if dirs:
         return dirs[0]
-    return ROOT_DIR / "Image-ExifTool"
+    return ASSET_DIR / "Image-ExifTool"
 
 
 def _candidate_paths(resource_path: Path) -> list[Path]:
@@ -44,7 +44,7 @@ def _candidate_paths(resource_path: Path) -> list[Path]:
 
 
 def get_exiftool_path() -> Optional[Path]:
-    """Get the app-managed ExifTool path under ROOT_DIR."""
+    """Get the app-managed ExifTool path under the configured asset directory."""
     for resource_path in _exiftool_dirs():
         for exiftool_path in _candidate_paths(resource_path):
             if exiftool_path.exists():

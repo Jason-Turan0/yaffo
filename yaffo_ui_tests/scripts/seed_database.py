@@ -149,8 +149,10 @@ def _bbox_iou(left: list[int], right: list[int]) -> float:
     return intersection / union if union else 0.0
 
 
-def seed_bennett_face_assignments(db, photos_dir: Path) -> None:
-    annotations = json.loads(BENNETT_FACE_ASSIGNMENTS_PATH.read_text(encoding="utf-8"))
+def seed_bennett_face_assignments(
+    db, photos_dir: Path, assignments_path: Path = BENNETT_FACE_ASSIGNMENTS_PATH
+) -> None:
+    annotations = json.loads(assignments_path.read_text(encoding="utf-8"))
     annotations_by_path = defaultdict(list)
     for annotation in annotations:
         annotations_by_path[annotation["path"]].append(annotation)
@@ -589,6 +591,94 @@ def seed_albums(db) -> None:
     print(f"  Seeded album: Seeded Album ({len(photo_ids)} photos)")
 
 
+def index_media_library(photos_dir: Path, thumbnail_dir: Path) -> int:
+    """Index every supported photo/video under `photos_dir` into MediaItem/Face
+    rows. Shared by the UI-test seed and the demo golden-state seed so both
+    walk EXIF/face-detection/dedup the same way. Returns the count indexed."""
+    from yaffo.db import db
+    from yaffo.db.models import MediaItem
+    from yaffo.utils.index_photos import index_photo
+
+    # Normally created by the Settings UI route when thumbnail_dir is set; seeding
+    # writes the ApplicationSettings row directly, bypassing that, so face/poster
+    # thumbnail writes below would fail with ENOENT on a fresh data dir.
+    thumbnail_dir.mkdir(parents=True, exist_ok=True)
+
+    processed_results = []
+    # Bennett is organized into nested event folders and uses PNG, while
+    # the peer's Obama fixture uses JPEG. Index every format the app
+    # supports and sort by basename for deterministic media/face ids.
+    photo_paths = (
+        path for path in photos_dir.rglob("*")
+        if path.is_file() and path.suffix.lower() in PHOTO_EXTENSIONS
+    )
+    for photo_path in sorted(photo_paths, key=lambda path: path.name.lower()):
+        try:
+            indexed_photo = index_photo(photo_path, thumbnail_dir)
+        except Exception as e:
+            indexed_photo = None
+            print(f"  Error indexing {photo_path.name}: {e}")
+        if indexed_photo is None:
+            continue
+        processed_results.append(indexed_photo)
+        print(f"  Indexed: {photo_path.name}")
+
+    for video_path in sorted(photos_dir.glob("*.mp4"), key=lambda path: path.name.lower()):
+        try:
+            indexed_video = index_video(video_path, thumbnail_dir)
+        except Exception as e:
+            indexed_video = None
+            print(f"  Error indexing {video_path.name}: {e}")
+        if indexed_video is None:
+            continue
+        processed_results.append(indexed_video)
+        print(f"  Indexed: {video_path.name}")
+
+    for index_result in processed_results:
+        media_item = MediaItem()
+        faces_data = index_result["faces_data"]
+        latitude = index_result["latitude"]
+        longitude = index_result["longitude"]
+        location_name = index_result["location_name"]
+        media_item.device = index_result["device"]
+        media_item.latitude = latitude
+        media_item.longitude = longitude
+        media_item.location_name = location_name
+        media_item.date_taken = index_result["date_taken"]
+        media_item.year = index_result["year"]
+        media_item.month = index_result["month"]
+        media_item.full_file_path = index_result["full_file_path"]
+        if index_result.get("media_type") == MEDIA_TYPE_VIDEO:
+            media_item.duration_seconds = index_result.get("duration_seconds")
+            media_item.height = index_result.get("height")
+            media_item.width = index_result.get("width")
+            media_item.video_codec = index_result.get("video_codec")
+            media_item.poster_path = index_result.get("poster_path")
+            media_item.media_type = index_result.get("media_type")
+        media_item.status = MEDIA_STATUS_INDEXED
+        db.session.add(media_item)
+        db.session.flush()
+
+        for face_data in faces_data:
+            face = Face(
+                embedding=serialize_embedding(face_data['embedding']),
+                full_file_path=face_data['full_file_path'],
+                status=FACE_STATUS_UNASSIGNED,
+                media_item_id=media_item.id,
+                location_top=face_data['location_top'],
+                location_right=face_data['location_right'],
+                location_bottom=face_data['location_bottom'],
+                location_left=face_data['location_left'],
+                estimated_age=face_data.get('estimated_age'),
+                gender=face_data.get('gender'),
+                det_score=face_data.get('det_score'),
+            )
+            db.session.add(face)
+
+    db.session.commit()
+    return len(processed_results)
+
+
 def seed_database() -> int:
     """Index test photos and seed the database. Returns count of photos indexed."""
     data_dir = os.environ.get("YAFFO_DATA_DIR")
@@ -603,7 +693,6 @@ def seed_database() -> int:
     from yaffo.app import create_app
     from yaffo.db import db
     from yaffo.db.models import ApplicationSettings, MediaItem
-    from yaffo.utils.index_photos import index_photo
 
     app = create_app()
     seed_profile = os.environ.get("YAFFO_SEED_PROFILE", SEED_PROFILE_BENNETT)
@@ -643,76 +732,7 @@ def seed_database() -> int:
         download_insightface()
         download_clip()
 
-        # Index photos
-        indexed_count = 0
-        processed_results = []
-        # Bennett is organized into nested event folders and uses PNG, while
-        # the peer's Obama fixture uses JPEG. Index every format the app
-        # supports and sort by basename for deterministic media/face ids.
-        photo_paths = (
-            path for path in photos_dir.rglob("*")
-            if path.is_file() and path.suffix.lower() in PHOTO_EXTENSIONS
-        )
-        for photo_path in sorted(photo_paths, key=lambda path: path.name.lower()):
-            try:
-                indexed_photo = index_photo(photo_path, thumbnail_dir)
-                processed_results.append(indexed_photo)
-                print(f"  Indexed: {photo_path.name}")
-            except Exception as e:
-                print(f"  Error indexing {photo_path.name}: {e}")
-
-        for video_path in sorted(photos_dir.glob("*.mp4"), key=lambda path: path.name.lower()):
-            try:
-                indexed_video = index_video(video_path, thumbnail_dir)
-                processed_results.append(indexed_video)
-                print(f"  Indexed: {video_path.name}")
-            except Exception as e:
-                print(f"  Error indexing {video_path.name}: {e}")
-
-
-        for index_result in processed_results:
-            media_item = MediaItem()
-            faces_data = index_result["faces_data"]
-            latitude = index_result["latitude"]
-            longitude = index_result["longitude"]
-            location_name = index_result["location_name"]
-            media_item.device = index_result["device"]
-            media_item.latitude = latitude
-            media_item.longitude = longitude
-            media_item.location_name = location_name
-            media_item.date_taken = index_result["date_taken"]
-            media_item.year = index_result["year"]
-            media_item.month = index_result["month"]
-            media_item.full_file_path = index_result["full_file_path"]
-            if index_result.get("media_type") == MEDIA_TYPE_VIDEO:
-                media_item.duration_seconds = index_result.get("duration_seconds")
-                media_item.height = index_result.get("height")
-                media_item.width = index_result.get("width")
-                media_item.video_codec = index_result.get("video_codec")
-                media_item.poster_path = index_result.get("poster_path")
-                media_item.media_type = index_result.get("media_type")
-            media_item.status = MEDIA_STATUS_INDEXED
-            db.session.add(media_item)
-            db.session.flush()
-
-            for face_data in faces_data:
-                face = Face(
-                    embedding=serialize_embedding(face_data['embedding']),
-                    full_file_path=face_data['full_file_path'],
-                    status=FACE_STATUS_UNASSIGNED,
-                    media_item_id=media_item.id,
-                    location_top=face_data['location_top'],
-                    location_right=face_data['location_right'],
-                    location_bottom=face_data['location_bottom'],
-                    location_left=face_data['location_left'],
-                    estimated_age=face_data.get('estimated_age'),
-                    gender=face_data.get('gender'),
-                    det_score=face_data.get('det_score'),
-                )
-                db.session.add(face)
-
-
-        db.session.commit()
+        indexed_count = index_media_library(photos_dir, thumbnail_dir)
 
         if seed_profile == SEED_PROFILE_BENNETT:
             seed_bennett_face_assignments(db, photos_dir)

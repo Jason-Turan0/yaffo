@@ -1,0 +1,123 @@
+name: yaffo-demo
+
+x-yaffo-service: &yaffo-service
+  image: ${YAFFO_IMAGE:?YAFFO_IMAGE must be an immutable digest reference}
+  pull_policy: always
+  restart: unless-stopped
+  read_only: true
+  user: "10001:10001"
+  cap_drop: ["ALL"]
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 128
+  mem_limit: 1200m
+  cpus: 0.45
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+  networks: [backend]
+  healthcheck:
+    test:
+      - CMD
+      - python
+      - -c
+      - >-
+        import os, urllib.request;
+        urllib.request.urlopen('http://127.0.0.1:' + os.environ['YAFFO_WEB_PORT'] + '/', timeout=5)
+    interval: 15s
+    timeout: 6s
+    retries: 5
+    start_period: 30s
+
+services:
+  demo-a:
+    <<: *yaffo-service
+    environment:
+      YAFFO_DATA_DIR: /data
+      YAFFO_ASSET_DIR: /opt/yaffo-assets
+      YAFFO_DEMO_MODE: "1"
+      YAFFO_DEMO_ROLE: source
+      YAFFO_WEB_HOST: 0.0.0.0
+      YAFFO_WEB_PORT: "5101"
+      YAFFO_WEB_THREADS: "4"
+      YAFFO_P2P_PORT: "5201"
+      YAFFO_P2P_KEY_FILE: /identity/device-key.pem
+      YAFFO_HUB_URL: ${YAFFO_HUB_URL:-wss://hub.yaffo.app}
+      YAFFO_TRUSTED_HOSTS: ${DEMO_A_HOST:?DEMO_A_HOST is required},localhost,127.0.0.1
+      YAFFO_PROXY_HOPS: "1"
+      SECRET_KEY_FILE: /run/secrets/flask-secret
+    volumes:
+      - /var/lib/yaffo-demo/a:/data
+      - /var/lib/yaffo-demo/identities/a:/identity
+      - /var/lib/yaffo-demo/fixtures/a:/data/media:ro
+    secrets:
+      - source: demo-a-flask-secret
+        target: flask-secret
+
+  demo-b:
+    <<: *yaffo-service
+    environment:
+      YAFFO_DATA_DIR: /data
+      YAFFO_ASSET_DIR: /opt/yaffo-assets
+      YAFFO_DEMO_MODE: "1"
+      YAFFO_DEMO_ROLE: receiver
+      YAFFO_WEB_HOST: 0.0.0.0
+      YAFFO_WEB_PORT: "5102"
+      YAFFO_WEB_THREADS: "4"
+      YAFFO_P2P_PORT: "5202"
+      YAFFO_P2P_KEY_FILE: /identity/device-key.pem
+      YAFFO_HUB_URL: ${YAFFO_HUB_URL:-wss://hub.yaffo.app}
+      YAFFO_TRUSTED_HOSTS: ${DEMO_B_HOST:?DEMO_B_HOST is required},localhost,127.0.0.1
+      YAFFO_PROXY_HOPS: "1"
+      SECRET_KEY_FILE: /run/secrets/flask-secret
+    volumes:
+      - /var/lib/yaffo-demo/b:/data
+      - /var/lib/yaffo-demo/identities/b:/identity
+      - /var/lib/yaffo-demo/fixtures/b:/data/media:ro
+    secrets:
+      - source: demo-b-flask-secret
+        target: flask-secret
+
+  caddy:
+    image: ${CADDY_IMAGE:?CADDY_IMAGE must be an immutable digest reference}
+    pull_policy: always
+    restart: unless-stopped
+    read_only: true
+    cap_drop: ["ALL"]
+    cap_add: ["NET_BIND_SERVICE"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 192m
+    cpus: 0.10
+    depends_on:
+      demo-a:
+        condition: service_healthy
+      demo-b:
+        condition: service_healthy
+    environment:
+      DEMO_WALKTHROUGH_HOST: ${DEMO_WALKTHROUGH_HOST:?DEMO_WALKTHROUGH_HOST is required}
+      DEMO_A_HOST: ${DEMO_A_HOST:?DEMO_A_HOST is required}
+      DEMO_B_HOST: ${DEMO_B_HOST:?DEMO_B_HOST is required}
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./walkthrough:/srv/walkthrough:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    networks: [backend]
+
+secrets:
+  demo-a-flask-secret:
+    file: /var/lib/yaffo-demo/secrets/demo-a-flask-secret
+  demo-b-flask-secret:
+    file: /var/lib/yaffo-demo/secrets/demo-b-flask-secret
+
+volumes:
+  caddy-data:
+  caddy-config:
+
+networks:
+  backend:
+

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A guided tour of Yaffo, a photo app that sorts your pictures by person, place, and moment, and lets you share albums directly between your own devices.">
+    <title>Yaffo Photo Organizer Demo</title>
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="walkthrough.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <img src="favicon.svg" alt="Yaffo" width="36" height="36">
+            <span>Yaffo</span>
+        </div>
+    </header>
+    <main>
+        <section class="hero">
+            <h1>Yaffo organizes your photo library on your own devices.</h1>
+            <p class="lede">Yaffo goes through your photos and automatically sorts them by person, place, and label — all without uploading anything to the cloud. This demo runs two paired Yaffo devices, one for the Bennett family and one for the Obama family, so you can also see how to share photos directly between your own devices, safely and privately.</p>
+            <div class="actions">
+                <a class="button primary" data-device-link="a" target="_blank" rel="noopener">Open Bennett Family</a>
+                <a class="button" data-device-link="b" target="_blank" rel="noopener">Open Obama Family</a>
+            </div>
+            <p class="reset">This demo resets every day. Next reset: <strong data-next-reset>calculating…</strong></p>
+        </section>
+
+        <section class="steps" aria-labelledby="tour-heading">
+            <p class="eyebrow">Walkthrough one</p>
+            <h2 id="tour-heading">Organize and share photos</h2>
+            <ol>
+                <li><strong>Browse the library.</strong> On <a data-device-link="a" target="_blank" rel="noopener">Bennett Family</a>, open the timeline, then look through locations, labels, and the Chicago Weekend album.</li>
+                <li><strong>Organize people.</strong> Open <a data-device-link="a" data-device-path="/people" target="_blank" rel="noopener">People</a> to see family members already tagged in their photos, then open <a data-device-link="a" data-device-path="/faces" target="_blank" rel="noopener">Faces</a> to see a few faces Yaffo hasn't matched to a name yet — the same matching happens automatically as new photos come in.</li>
+                <li><strong>See how sharing works.</strong> Open Bennett Family's <a data-device-link="a" data-device-path="/sharing" target="_blank" rel="noopener">Sharing</a> page — the two devices are already connected, and only a few things have been shared, not the whole library.</li>
+                <li><strong>Switch to device sharing for <a data-device-link="b" data-device-path="/sharing/settings"  target="_blank" rel="noopener">Obama Family</a>.</strong> Under Shared with me, open what Bennett Family has shared and try searching and previewing it.</li>
+                <li><strong>Copy a few photos.</strong> Pick the ones that are ready and copy them over — a real transfer straight from one device to the other, not through the cloud.</li>
+            </ol>
+        </section>
+
+        <section class="steps" aria-labelledby="customize-heading">
+            <p class="eyebrow">Walkthrough two</p>
+            <h2 id="customize-heading">Make Yaffo your own</h2>
+            <ol>
+                <li><strong>Change the look.</strong> Open <a data-device-link="a" data-device-path="/themes/test-ocean" target="_blank" rel="noopener">Test Ocean</a> on Bennett Family to see the whole app redesigned around a calm, ocean color palette.</li>
+                <li><strong>See a page built for one trip.</strong> Open the <a data-device-link="a" data-device-path="/pages/1/design" target="_blank" rel="noopener">Florida Trip</a> page to see a page made just for that trip, with one big photo up top and the rest below it.</li>
+                <li><strong>See a smart rule in action.</strong> Open <a data-device-link="a" data-device-path="/utilities/automations/file-favorite-kid-photos/edit" target="_blank" rel="noopener">File favorite kid photos</a> to see a rule that would sort favorite photos of the kids into folders by name and year. It's switched off here, but you can see exactly how it was set up.</li>
+            </ol>
+        </section>
+
+        <aside class="notice">
+            <strong>This demo is shared with other visitors.</strong>
+            Anything you do here may be visible to someone else, and everything is cleared at the next reset. Please don't upload personal photos or treat this as real storage.
+        </aside>
+    </main>
+    <script src="walkthrough.js"></script>
+</body>
+</html>
+

@@ -30,7 +30,7 @@ def test_exiftool_path_uses_windows_64_layout(monkeypatch, tmp_path):
     exe.parent.mkdir(parents=True)
     exe.touch()
 
-    monkeypatch.setattr(exiftool_path, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(exiftool_path, "ASSET_DIR", tmp_path)
     monkeypatch.setattr(exiftool_path, "IS_WINDOWS_64", True)
     monkeypatch.setattr(exiftool_path, "IS_WINDOWS_32", False)
 
@@ -42,7 +42,7 @@ def test_exiftool_path_uses_source_layout(monkeypatch, tmp_path):
     script.parent.mkdir(parents=True)
     script.touch()
 
-    monkeypatch.setattr(exiftool_path, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(exiftool_path, "ASSET_DIR", tmp_path)
     monkeypatch.setattr(exiftool_path, "IS_WINDOWS_64", False)
     monkeypatch.setattr(exiftool_path, "IS_WINDOWS_32", False)
 
@@ -57,7 +57,7 @@ def test_exiftool_path_prefers_latest_installed_version(monkeypatch, tmp_path):
     old.touch()
     latest.touch()
 
-    monkeypatch.setattr(exiftool_path, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(exiftool_path, "ASSET_DIR", tmp_path)
     monkeypatch.setattr(exiftool_path, "IS_WINDOWS_64", False)
     monkeypatch.setattr(exiftool_path, "IS_WINDOWS_32", False)
 
@@ -71,7 +71,7 @@ def test_download_exiftool_windows_normalizes_executable(monkeypatch, tmp_path):
 
     listing = b'<a href="/projects/exiftool/files/exiftool-13.59_64.zip/download">latest</a>'
     payloads = [listing, blob.getvalue()]
-    monkeypatch.setattr(download_assets, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(download_assets, "ASSET_DIR", tmp_path)
     monkeypatch.setattr(download_assets.platform, "machine", lambda: "AMD64")
     monkeypatch.setattr(download_assets, "_fetch", lambda url: payloads.pop(0))
 
