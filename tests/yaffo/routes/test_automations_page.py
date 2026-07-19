@@ -128,6 +128,14 @@ def test_show_renders(app, client):
     assert "Renders" in resp.get_data(as_text=True)
 
 
+def test_new_automation_modal_includes_the_session_csrf_token(app, client):
+    body = client.get("/utilities/automations").get_data(as_text=True)
+    with client.session_transaction() as browser_session:
+        token = browser_session["_yaffo_csrf_token"]
+
+    assert f'name="csrf_token" value="{token}"' in body
+
+
 def test_saved_locale_translates_automation_detail_page(app, client):
     _add(app, name="Automatisierung", description=None, working_code="print('draft')")
     client.post("/settings/locale", data={"locale": "de"})

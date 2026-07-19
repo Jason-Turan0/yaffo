@@ -133,6 +133,8 @@ test.describe('Automations', () => {
     await expect(systemList.locator('a').filter({ hasText: 'Auto-assign faces' })).toBeVisible();
     const customList = nav.locator('h3:has-text("Custom") + ul.panel-nav');
     await expect(customList.locator('a').filter({ hasText: CUSTOM_AUTOMATION_NAME })).toBeVisible();
+    await expect(customList.locator('a').filter({ hasText: 'File favorite kid photos' }))
+      .toBeVisible();
 
     // Selecting the custom automation shows its details and the custom-only actions.
     await openAutomation(page, slug);
@@ -238,69 +240,74 @@ test.describe('Automations', () => {
   });
 
   test('automations_run_now', async ({ page }) => {
-    // tag-recent-imports (seeded custom automation with published code) has a
-    // schedule trigger. Note: file_sync
-    // is a poor target here — it records no run Job when the index is already in
-    // sync. The run is enqueued (202) and lands in Run history once the taskq
-    // worker records its Job (the section self-polls every 5s).
-    await openAutomation(page, 'tag-recent-imports');
-    // Run history is capped at the 10 most recent jobs, so a count comparison
-    // saturates on a long-lived environment; detect the new run as a content
-    // change of the history section instead.
-    const runList = page.locator('#automation-runs');
-    const historyBefore = (await runList.innerText()).trim();
+    // The reviewed seed intentionally starts disabled with no trigger. The Run
+    // control may choose a scope, but cancelling it must leave history untouched.
+    await openAutomation(page, 'file-favorite-kid-photos');
+    await expect(enableToggleButton(page)).toHaveText(/Enable/);
     await page.locator('.js-run-files').click();
-    await Promise.all([
-      page.waitForResponse(response =>
-        response.url().includes('/utilities/automations/tag-recent-imports/run') && response.status() === 202),
-      pickCurrentFolder(page),
-    ]);
-    await expect(page.locator('.notification.visible')).toContainText(/Run started/i);
-    await expect.poll(async () => (await runList.innerText()).trim(), { timeout: 60_000 })
-      .not.toBe(historyBefore);
-    await expect(page.locator('#automation-runs .automation-run-row').first()).toBeVisible();
+    const picker = page.locator('#folder-picker-modal');
+    await expect(picker).toHaveClass(/active/);
+    await picker.locator('#folder-picker-cancel').click();
+    await expect(picker).not.toHaveClass(/active/);
+    await expect(page.locator('#automation-runs .automation-run-row')).toHaveCount(0);
+
+    await page.goto('/utilities/automations/file-favorite-kid-photos/triggers/edit');
+    await expect(page.locator('#automation-triggers .automation-trigger-row')).toHaveCount(0);
+    await expect(page.locator('#automation-triggers .no-data')).toBeVisible();
   });
 
   test('automations_test_dry_run', async ({ page }) => {
-    // The sandbox seeds tag-new-arrivals: a custom automation with published code
-    // and a working draft, so the editor renders the code toggle and Test controls.
-    await page.goto('/utilities/automations/tag-new-arrivals/edit');
-    await expect(page.locator('.js-code-toggle.active')).toHaveAttribute('data-version', 'working');
+    // The seed uses the reviewed _FILE_KIDS_CODE example with published code only.
+    await page.goto('/utilities/automations/file-favorite-kid-photos/edit');
+    await expect(page.locator('.js-code-toggle')).toHaveCount(0);
+    const code = page.locator('.automation-code code');
+    await expect(code).toContainText('Maya Bennett');
+    await expect(code).toContainText('Theo Bennett');
+    await expect(code).toContainText('move_media_items(moves)');
+
+    const conversation = page.locator('#automation-chat-messages');
+    await expect(conversation.locator('.chat-message-user')).toHaveCount(2);
+    await expect(conversation.locator('.chat-message-assistant')).toHaveCount(2);
+    await expect(conversation.locator('.chat-message-user').last()).toContainText('only move once');
+    await expect(conversation.locator('.chat-message-assistant').last())
+      .toContainText('disabled with no trigger');
 
     // Real dry-run over the photos under the picked folder: intercepted host-API
-    // actions are rendered, nothing changes.
+    // actions are rendered, nothing changes. The fresh seed has no favorites, so
+    // the reviewed code truthfully records an empty batched move.
     await page.locator('#automation-test-button').click();
     await pickCurrentFolder(page);
     const result = page.locator('#automation-test-result');
     await expect(result).toBeVisible({ timeout: 15_000 });
     await expect(result).not.toHaveClass(/is-error/);
     await expect(result.locator('.automation-test-meta').first()).toContainText('Testing on');
-    await expect(result).toContainText(/Ran working code · \d+ photos?/);
+    await expect(result).toContainText(/Ran published code · \d+ photos?/);
     await expect(result).toContainText(/Actions \(\d+\)/);
-    await expect(result.locator('tr').filter({ hasText: /Tag \d+ photo/ })).toHaveCount(1);
+    const moveRow = result.locator('tr').filter({ hasText: /Move 0 photo/ });
+    await expect(moveRow).toHaveCount(1);
 
     // Per-action details are hidden until "Show details" is toggled.
-    await expect(result.locator('.test-action-detail').first()).toBeHidden();
+    await expect(moveRow.locator('.test-action-detail')).toBeHidden();
     await result.locator('.automation-test-toggle input').check();
     await expect(result).toHaveClass(/show-details/);
-    await expect(result.locator('.test-action-detail').first()).toContainText('tag_media_items(');
+    await expect(moveRow.locator('.test-action-detail')).toContainText('move_media_items(');
 
     // The sandbox has no AI key for a run that returns a value or fails, so
     // simulate one client-side to verify grouped actions, the captured return
     // value, and the error rendering.
     const failedPayload: DryRunPayload = {
       success: false,
-      code_source: 'working',
+      code_source: 'published',
       context: { media_item_ids: [1, 2, 3] },
       actions: [
-        { name: 'tag_media_items', summary: 'Tag photo 1 with "beach"', args: [[1], 'beach'] },
-        { name: 'tag_media_items', summary: 'Tag photo 2 with "beach"', args: [[2], 'beach'] },
-        { name: 'tag_media_items', summary: 'Tag photo 3 with "beach"', args: [[3], 'beach'] },
+        { name: 'move_media_items', summary: 'Move photo 1 into Maya Bennett/2021', args: [[1]] },
+        { name: 'move_media_items', summary: 'Move photo 2 into Maya Bennett/2021', args: [[2]] },
+        { name: 'move_media_items', summary: 'Move photo 3 into Theo Bennett/2021', args: [[3]] },
       ],
-      value: { tagged: 3 },
+      value: { moved: 3 },
       error: 'RuntimeError: boom',
     };
-    await page.route('**/utilities/automations/tag-new-arrivals/test-files', route => route.fulfill({
+    await page.route('**/utilities/automations/file-favorite-kid-photos/test-files', route => route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(failedPayload),
@@ -312,13 +319,13 @@ test.describe('Automations', () => {
     await expect(result.locator('.automation-test-error')).toContainText('RuntimeError: boom');
 
     // A run of the same action collapses into one row with a count and per-item list.
-    const groupedRow = result.locator('tr').filter({ hasText: 'Tag media items' });
+    const groupedRow = result.locator('tr').filter({ hasText: 'Move media items' });
     await expect(groupedRow.locator('.automation-test-count')).toHaveText('× 3');
     await expect(groupedRow.locator('.automation-test-group li')).toHaveCount(3);
 
     // The captured return value shows behind "Show details".
     await result.locator('.automation-test-toggle input').check();
-    await expect(result.locator('.automation-test-output')).toContainText('"tagged": 3');
+    await expect(result.locator('.automation-test-output')).toContainText('"moved": 3');
   });
 
   test('automations_configure_system_automation', async ({ page }) => {

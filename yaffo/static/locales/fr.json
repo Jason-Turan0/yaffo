@@ -276,6 +276,7 @@
       },
       "test": {
         "actionNames": {
+          "move_media_items": "Déplacer les éléments multimédias",
           "tag_media_items": "Marquer les éléments multimédias"
         },
         "actions": "Actions ({{formattedCount}})",

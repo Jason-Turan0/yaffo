@@ -13,7 +13,7 @@
 {% from "_sidebar.html" import render_sidebar %}
 {% from "components/page_header.html" import page_header %}
 {% from "components/info_modal.html" import render_info_modal %}
-{% from "components/modal.html" import render_modal %}
+{% from "components/modal.html" import render_modal with context %}
 
 {% macro render_modal_keyboard_help() %}
         <h3 class="modal-section-title">{{ _("How This Page Works") }}</h3>
@@ -137,6 +137,7 @@
         {% endmacro %}
         {% macro render_actions() %}
             <form method="POST" action="{{ url_for('faces_assign') }}" id="sidebar-assign-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="face_status" value="ASSIGNED">
 
 

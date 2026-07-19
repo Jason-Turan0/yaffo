@@ -19,6 +19,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from yaffo.p2p.identity import CURVE
+from yaffo.runtime_mode import reject_in_demo
 
 PAIRING_CODE_TTL_SECONDS = 300
 
@@ -57,6 +58,7 @@ class PairingCode:
 
 
 def new_pairing_code(device_id: str, pubkey_b64: str) -> PairingCode:
+    reject_in_demo("P2P pairing")
     nonce = base64.urlsafe_b64encode(os.urandom(16)).decode("ascii")
     return PairingCode(
         v=1,

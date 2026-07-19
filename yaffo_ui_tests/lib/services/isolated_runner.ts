@@ -1,4 +1,5 @@
 import {ChildProcess, execSync, spawn} from "child_process";
+import {randomBytes} from "crypto";
 import {join, resolve} from "path";
 import {cpSync, existsSync, mkdirSync, realpathSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
@@ -33,6 +34,12 @@ export interface IsolatedEnvironmentOptions {
      * instances never write device keys into the real OS keychain.
      */
     withPeer?: boolean;
+    /**
+     * Serve the isolated instances with Yaffo's public-demo boundary enabled.
+     * Instance A uses the source role and an optional instance B uses receiver.
+     * Demo instances intentionally omit the taskq host.
+     */
+    demoMode?: boolean;
 }
 
 export interface TestResult {
@@ -123,6 +130,8 @@ interface StartInstanceOptions {
     seedProfile: "bennett" | "obama";
     /** Include the separate video fixtures in this instance. */
     includeVideos?: boolean;
+    /** Public-demo role. When omitted, the instance runs in normal test mode. */
+    demoRole?: "source" | "receiver";
     /**
      * Env vars for the FLASK process only (the p2p wiring). The seed script and
      * the taskq host also call create_app; giving them YAFFO_P2P_ENABLED too
@@ -146,7 +155,16 @@ export const SHARED_TRIP_PHOTOS = [
 ];
 
 const startInstance = async (options: StartInstanceOptions): Promise<IsolatedInstance> => {
-    const {label, port, tempDir, fixtureDir, seedProfile, includeVideos = false, flaskOnlyEnv = {}} = options;
+    const {
+        label,
+        port,
+        tempDir,
+        fixtureDir,
+        seedProfile,
+        includeVideos = false,
+        demoRole,
+        flaskOnlyEnv = {},
+    } = options;
 
     console.log(`\n🔧 Setting up isolated instance ${label}...`);
     console.log(`   Temp directory: ${tempDir}`);
@@ -177,10 +195,22 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         YAFFO_SEED_PROFILE: seedProfile,
         FLASK_APP: "yaffo.app:create_app",
         FLASK_ENV: "testing",
+        // Demo mode applies to the served app, not fixture construction. These
+        // overrides also prevent an ambient shell variable from changing how
+        // the seed script or normal isolated environments behave.
+        YAFFO_DEMO_MODE: "0",
+        YAFFO_DEMO_ROLE: "",
         VIRTUAL_ENV: join(YAFFO_DIR, "venv"),
         PATH: `${join(YAFFO_DIR, "venv", "bin")}:${process.env.PATH}`,
     };
-    const flaskEnv = {...env, ...flaskOnlyEnv};
+    const demoEnv = demoRole ? {
+        YAFFO_DEMO_MODE: "1",
+        YAFFO_DEMO_ROLE: demoRole,
+        // Demo startup rejects the repository's development secret. Each
+        // disposable instance gets a different process-local signing key.
+        SECRET_KEY: randomBytes(32).toString("hex"),
+    } : {};
+    const flaskEnv = {...env, ...flaskOnlyEnv, ...demoEnv};
 
     const seedScript = "seed_database.py";
     console.log(`\n📦 Seeding instance ${label} (${seedScript})...`);
@@ -194,21 +224,27 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         console.error(`   ⚠️ Warning: ${seedScript} failed: ${e}`);
     }
 
-    // Face assignment (and other write flows) enqueue background tasks; without
-    // the taskq host they'd sit in the queue forever and the UI would never
-    // reflect the change.
-    console.log(`\n⚙️ Starting taskq host for instance ${label}...`);
-    const taskqProcess = spawn(
-        "python",
-        ["-m", "yaffo.taskq.host"],
-        {
-            env,
-            cwd: YAFFO_DIR,
-            stdio: ["ignore", "pipe", "pipe"],
-        }
-    );
+    let taskqProcess: ChildProcess | null = null;
+    if (demoRole) {
+        console.log(`\n🚫 Demo mode: taskq host omitted for instance ${label}`);
+    } else {
+        // Face assignment (and other write flows) enqueue background tasks;
+        // without the taskq host they'd sit in the queue forever and the UI
+        // would never reflect the change.
+        console.log(`\n⚙️ Starting taskq host for instance ${label}...`);
+        taskqProcess = spawn(
+            "python",
+            ["-m", "yaffo.taskq.host"],
+            {
+                env,
+                cwd: YAFFO_DIR,
+                stdio: ["ignore", "pipe", "pipe"],
+            }
+        );
+    }
 
-    console.log(`\n🚀 Starting Flask for instance ${label} on port ${port}...`);
+    const modeLabel = demoRole ? ` in demo mode (${demoRole})` : "";
+    console.log(`\n🚀 Starting Flask for instance ${label}${modeLabel} on port ${port}...`);
     const flaskProcess = spawn(
         "python",
         ["-m", "flask", "run", "--host=127.0.0.1", `--port=${port}`, "--no-reload"],
@@ -235,7 +271,7 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         console.error(`   ❌ Flask (instance ${label}) failed to start. Output:`);
         console.error(flaskOutput);
         flaskProcess.kill();
-        taskqProcess.kill();
+        taskqProcess?.kill();
         throw new Error(`Flask server (instance ${label}) failed to start`);
     }
 
@@ -267,7 +303,7 @@ export const startIsolatedEnvironment = async (
 ): Promise<IsolatedEnvironment> => {
     const timestamp = generateTimestamp();
     const tempDir = join(TEMP_ROOT, `yaffo_test_${timestamp}`);
-    const {withPeer = false} = options;
+    const {withPeer = false, demoMode = false} = options;
 
     // With a peer, BOTH instances run the p2p engine so they can pair over the
     // LAN (mDNS). Ephemeral identities keep device keys out of the OS keychain.
@@ -285,6 +321,7 @@ export const startIsolatedEnvironment = async (
         fixtureDir: PRIMARY_FIXTURE_DIR,
         seedProfile: "bennett",
         includeVideos: true,
+        demoRole: demoMode ? "source" : undefined,
         flaskOnlyEnv: withPeer ? p2pEnv(port) : {},
     });
 
@@ -298,6 +335,7 @@ export const startIsolatedEnvironment = async (
                 tempDir: join(TEMP_ROOT, `yaffo_test_${timestamp}_peer`),
                 fixtureDir: PEER_FIXTURE_DIR,
                 seedProfile: "obama",
+                demoRole: demoMode ? "receiver" : undefined,
                 flaskOnlyEnv: p2pEnv(peerPort),
             });
         } catch (e) {
@@ -310,7 +348,7 @@ export const startIsolatedEnvironment = async (
     const cleanup = async () => {
         console.log(`\n🧹 Cleaning up isolated environment...`);
         await Promise.all([stopInstance(primary), stopInstance(peer)]);
-        console.log(`   ✅ Stopped Flask server(s) and taskq host(s), removed temp dir(s)`);
+        console.log(`   ✅ Stopped isolated process(es), removed temp dir(s)`);
     };
 
     return {
@@ -328,6 +366,7 @@ async function main() {
         ? parseInt(args[portIndex + 1], 10)
         : 5001;
     const withPeer = args.includes("--peer");
+    const demoMode = args.includes("--demo");
     let environment: IsolatedEnvironment | undefined;
     const handleCleanup = async () => {
         if (environment) {
@@ -339,7 +378,7 @@ async function main() {
     process.on('SIGTERM', handleCleanup);
 
     try {
-        environment = await startIsolatedEnvironment(port, {withPeer});
+        environment = await startIsolatedEnvironment(port, {withPeer, demoMode});
         if (environment.peer) {
             console.log(`\nRun the sharing tests with: BASE_URL=${environment.baseUrl} PEER_URL=${environment.peer.baseUrl} npx playwright test generated_tests/sharing/sharing.spec.ts`);
         }

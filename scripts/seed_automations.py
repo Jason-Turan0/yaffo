@@ -51,13 +51,13 @@ move_media_items(moves)
 
 
 # A library-wide organize for the prompt "Take all my favorite photos of my kids
-# Chase and Nathan and put them in their own folders grouped by year". Context-less
+# Maya and Theo and put them in their own folders grouped by year". Context-less
 # (queries the whole library, not ctx), so it's run via Run now. Walks people ->
 # their faces -> the photos those faces are in, keeps the favorites, and batch-moves
 # each into "<Kid>/<Year>" within its media dir. Exercises the favorite filter,
 # report_progress, and the batched move_media_items write.
 _FILE_KIDS_CODE = """\
-people = data_query({"source": "people", "name": {"in": ["Chase", "Nathan"]}})
+people = data_query({"source": "people", "name": {"in": ["Maya Bennett", "Theo Bennett"]}})
 name_by_person = {p["id"]: p["name"] for p in people}
 person_ids = [p["id"] for p in people]
 
@@ -89,7 +89,7 @@ if person_ids:
                 })
             report_progress(i + 1, total)
 
-print("Filing " + str(len(moves)) + " favorite photo(s) of Chase & Nathan into <kid>/<year> folders")
+print("Filing " + str(len(moves)) + " favorite photo(s) of Maya Bennett & Theo Bennett into <kid>/<year> folders")
 move_media_items(moves)
 """
 

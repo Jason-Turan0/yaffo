@@ -28,6 +28,7 @@ from yaffo.taskq.signatures import (
     iter_signatures, links_from_json, links_to_json,
 )
 from yaffo.taskq.store import Store, TaskRow
+from yaffo.runtime_mode import reject_in_demo
 
 _NO_PREV = object()
 
@@ -128,6 +129,7 @@ class TaskQueue:
     # ---- enqueue --------------------------------------------------------
 
     def enqueue(self, pipeline: Pipeline, delay: float = 0) -> Result:
+        reject_in_demo("task enqueueing")
         _assert_json_safe(pipeline.links)
         if self.immediate:
             value = self._run_immediate(pipeline.links, _NO_PREV)

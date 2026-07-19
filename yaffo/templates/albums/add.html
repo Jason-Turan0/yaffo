@@ -99,7 +99,7 @@
    action in step as cards are ticked. #}
 <form id="add-to-album-form" method="POST" data-selection-form
       action="{{ url_for('albums_add_items', album_id=album.id) }}{{ ('?' ~ request.query_string.decode()) if request.query_string else '' }}"
-      hidden></form>
+      hidden><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
 
 {% from "filters/_config_modal.html" import filter_config_modal %}
 {{ filter_config_modal(filter_layout, filter_default_keys) }}

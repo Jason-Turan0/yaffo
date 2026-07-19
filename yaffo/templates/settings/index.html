@@ -15,6 +15,7 @@
     <div class="settings-section">
         <h2>{{ _("Language") }}</h2>
         <form method="POST" action="{{ url_for('settings_locale') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
                 <label for="application-locale">{{ _("Application language") }}</label>
                 <select id="application-locale" name="locale" class="searchable-select" data-search-disabled>
@@ -33,6 +34,7 @@
     <div class="settings-section">
         <h2>{{ _("Units") }}</h2>
         <form method="POST" action="{{ url_for('settings_distance_unit') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
                 <label for="distance-unit">{{ _("Preferred distance unit") }}</label>
                 <select id="distance-unit" name="distance_unit" class="searchable-select" data-search-disabled>

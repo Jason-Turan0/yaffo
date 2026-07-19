@@ -36,8 +36,13 @@ backup_count = 3
 max_model_log_runs = 50
 
 [web]
-# Port for the local web server opened by `python -m yaffo`.
+# Bind host and port for the web server opened by `python -m yaffo`.
+# Keep host at loopback for the desktop app. A container may override it with
+# YAFFO_WEB_HOST after its private network boundary is configured.
+host = "127.0.0.1"
 port = 5001
+# Waitress request threads. Demo containers start with four to bound concurrency.
+threads = 8
 
 [database]
 # SQLite durability vs. write speed (PRAGMA synchronous), paired with WAL.

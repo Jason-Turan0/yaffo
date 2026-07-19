@@ -9,10 +9,21 @@ test.describe.configure({ mode: 'serial', timeout: 120_000 });
 
 const createdPageIds = new Set<number>();
 
+async function csrfToken(page: Page): Promise<string> {
+  const response = await page.request.get('/');
+  expect(response.ok()).toBeTruthy();
+  const token = (await response.text()).match(/name="csrf_token" value="([^"]+)"/)?.[1];
+  expect(token).toBeTruthy();
+  return token!;
+}
+
 // Create a page directly through the create endpoint (the nav's "New page" form
 // posts the same thing) and land on its design view.
 async function createPage(page: Page, title?: string): Promise<number> {
-  const response = await page.request.post('/pages', { form: title ? { title } : {} });
+  const csrf_token = await csrfToken(page);
+  const response = await page.request.post('/pages', {
+    form: { csrf_token, ...(title ? { title } : {}) },
+  });
   expect(response.ok()).toBeTruthy();
   const pageId = Number(new URL(response.url()).pathname.match(/\/pages\/(\d+)/)?.[1]);
   expect(pageId).toBeGreaterThan(0);
@@ -23,7 +34,8 @@ async function createPage(page: Page, title?: string): Promise<number> {
 }
 
 async function deletePageViaApi(page: Page, pageId: number): Promise<void> {
-  await page.request.post(`/pages/${pageId}/delete`).catch(() => {});
+  const csrf_token = await csrfToken(page);
+  await page.request.post(`/pages/${pageId}/delete`, { form: { csrf_token } }).catch(() => {});
   createdPageIds.delete(pageId);
 }
 
@@ -193,27 +205,48 @@ test.describe('Custom Pages', () => {
   });
 
   test('pages_presentation_view_renders_widgets', async ({ page }) => {
-    // The sandbox seeds published pages (e.g. "Favorites Wall") reachable from the
-    // Pages nav dropdown.
+    // The Bennett sandbox has one published showcase page.
     await page.goto('/');
-    const firstPageLink = page.locator('nav li a[href^="/pages/"]').first();
-    await expect(firstPageLink).toBeVisible();
-    await firstPageLink.click();
+    const pageLinks = page.locator('.nav-page-tab');
+    await expect(pageLinks).toHaveCount(1);
+    await expect(pageLinks.first()).toHaveText('Florida Trip');
+    await pageLinks.first().click();
 
-    // Presentation view: static grid, widget iframes, no edit controls.
+    // The hero replaces the ordinary page header, and the template gallery fills
+    // the remainder of the static presentation grid.
     await expect(page.locator('.page-presentation')).toBeVisible();
     const items = page.locator('.grid-stack .grid-stack-item');
-    expect(await items.count()).toBeGreaterThan(0);
+    await expect(items).toHaveCount(2);
+    await expect(items.locator('.widget-title')).toHaveText(['Hero banner', 'Photo gallery']);
+    await expect(items.nth(0)).toHaveAttribute('gs-x', '0');
+    await expect(items.nth(0)).toHaveAttribute('gs-y', '0');
+    await expect(items.nth(0)).toHaveAttribute('gs-w', '12');
+    await expect(items.nth(1)).toHaveAttribute('gs-x', '0');
+    await expect(items.nth(1)).toHaveAttribute('gs-y', '5');
+    await expect(items.nth(1)).toHaveAttribute('gs-w', '12');
     await expect(page.locator('.grid-stack')).toHaveClass(/grid-stack-static/);
     await expect(page.locator('.widget-frame').first()).toBeVisible();
     await expect(page.locator('.widget-edit')).toHaveCount(0);
     await expect(page.locator('.widget-delete')).toHaveCount(0);
+    await expect(page.locator('.page-presentation .page-header')).toHaveCount(0);
 
-    // Title/subtitle render according to the page's show-title setting.
-    const header = page.locator('.page-presentation .page-header');
-    if (await header.count() > 0) {
-      await expect(header.locator('h1, h2').first()).not.toHaveText('');
-    }
+    const heroFrame = page.frameLocator('iframe[title="Hero banner preview"]');
+    await expect(heroFrame.locator('.hero-wrap')).toBeVisible();
+    await expect(heroFrame.locator('#hero-img')).toHaveAttribute('src', /\/media\/\d+/);
+    await expect(heroFrame.locator('#hero-title')).toContainText('Florida');
+
+    const galleryFrame = page.frameLocator('iframe[title="Photo gallery preview"]');
+    await expect(galleryFrame.locator('.gallery-grid .gallery-item')).toHaveCount(13);
+
+    const pageId = Number(new URL(page.url()).pathname.match(/\/pages\/(\d+)/)?.[1]);
+    await page.goto(`/pages/${pageId}/design`);
+    const conversation = page.locator('#conversation-messages');
+    await expect(conversation.locator('.chat-message-user')).toHaveCount(2);
+    await expect(conversation.locator('.chat-message-assistant')).toHaveCount(2);
+    await expect(conversation.locator('.chat-message-user').first()).toContainText('July 2021');
+    await expect(conversation.locator('.chat-message-user').last()).toContainText('feel repetitive');
+    await expect(conversation.locator('.chat-message-assistant').last())
+      .toContainText('scoped both widgets');
   });
 
   test('pages_delete_page', async ({ page }) => {

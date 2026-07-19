@@ -276,6 +276,7 @@
       },
       "test": {
         "actionNames": {
+          "move_media_items": "نقل عناصر الوسائط",
           "tag_media_items": "وضع علامة على عناصر الوسائط"
         },
         "actions": "الإجراءات ({{formattedCount}})",

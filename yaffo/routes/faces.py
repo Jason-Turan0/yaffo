@@ -3,12 +3,16 @@ import threading
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 import numpy as np
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, current_app, render_template, request, jsonify
 from flask_babel import gettext, ngettext
 from sqlalchemy import func
 from sklearn.cluster import DBSCAN
 
-from yaffo.background_tasks.tasks.assign_faces_to_person import assign_faces_to_person
+from yaffo.background_tasks.tasks.assign_faces_to_person import (
+    assign_faces_to_person,
+    assign_faces_to_person_now,
+)
+from yaffo.demo import DEMO_ROLE_RECEIVER, DEMO_ROLE_SOURCE, demo_unsafe_allowed
 from yaffo.logging_config import get_logger
 
 import pydash as _
@@ -26,7 +30,7 @@ from yaffo.domain.compare_utils import load_embedding, calculate_similarity, ui_
 from yaffo.utils.context import context
 from yaffo.utils.photo_dates import parse_date_taken
 
-DEFAULT_THRESHOLD = 85  # UI similarity slider 0-100 (0 = least similar, 100 = most)
+DEFAULT_THRESHOLD = 50  # UI similarity slider 0-100 (0 = least similar, 100 = most)
 DEFAULT_BATCH_SIZE = 2000  # max unassigned faces pulled + clustered per pass
 DEFAULT_MIN_SAMPLE_SIZE = 3
 DEFAULT_GROUP_BY = 'similarity'
@@ -34,6 +38,7 @@ DEFAULT_GROUP_BY = 'similarity'
 # this only caps how many we paint so a 50k batch stays responsive.
 SAMPLE_SIZE = 50
 SHORTCUT_LIMIT = 9
+DEMO_MAX_FACE_ASSIGNMENTS = 50
 FACE_SHORTCUT_PEOPLE_SETTING = "face_shortcut_people"
 
 
@@ -404,14 +409,45 @@ def init_faces_routes(app: Flask):
         return "", 204
 
     @app.route("/api/faces/assign", methods=["POST"])
+    @demo_unsafe_allowed(DEMO_ROLE_SOURCE, DEMO_ROLE_RECEIVER)
     def faces_assign():
         data = request.get_json(silent=True) or {}
         selected_face_ids = data.get("faces", [])
         person_id = data.get("person")
         face_status = data.get("faceStatus")
         try:
+            if not isinstance(selected_face_ids, list) or len(selected_face_ids) > DEMO_MAX_FACE_ASSIGNMENTS:
+                return jsonify({
+                    "success": False,
+                    "message": gettext("Too many faces were selected"),
+                    "code": "face_assignment_limit_exceeded",
+                }), 400
+
+            try:
+                selected_face_ids = list(dict.fromkeys(int(face_id) for face_id in selected_face_ids))
+            except (TypeError, ValueError):
+                return jsonify({
+                    "success": False,
+                    "message": gettext("Faces must contain numeric identifiers"),
+                    "code": "invalid_face_ids",
+                }), 400
+            assignable_face_ids = [
+                face_id
+                for face_id, in (
+                    db.session.query(Face.id)
+                    .filter(Face.id.in_(selected_face_ids), Face.status == FACE_STATUS_UNASSIGNED)
+                    .all()
+                )
+            ]
+            if len(assignable_face_ids) != len(selected_face_ids):
+                return jsonify({
+                    "success": False,
+                    "message": gettext("One or more faces are no longer available"),
+                    "code": "faces_not_available",
+                }), 409
+
             if face_status == FACE_STATUS_IGNORED:
-                db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
+                db.session.query(Face).filter(Face.id.in_(assignable_face_ids)).update(
                     {Face.status: face_status}, synchronize_session=False
                 )
                 db.session.commit()
@@ -427,10 +463,18 @@ def init_faces_routes(app: Flask):
                     "face_ids": selected_face_ids
                 })
 
-            elif selected_face_ids and person_id and face_status == FACE_STATUS_ASSIGNED:
+            elif assignable_face_ids and person_id and face_status == FACE_STATUS_ASSIGNED:
+                try:
+                    person_id = int(person_id)
+                except (TypeError, ValueError):
+                    return jsonify({
+                        "success": False,
+                        "message": gettext("Person not found"),
+                        "code": "person_not_found",
+                    }), 404
                 person: Person | None = (
                     Person.query.options(joinedload(Person.stage_embeddings)).order_by(Person.name).get(
-                        int(person_id)))
+                        person_id))
                 if person is None:
                     error_msg = f'Person {person_id} not found'
                     logger.warn(error_msg)
@@ -440,11 +484,19 @@ def init_faces_routes(app: Flask):
                         "code": "person_not_found",
                     }), 404
 
-                db.session.query(Face).filter(Face.id.in_(selected_face_ids)).update(
-                    {Face.status: FACE_STATUS_PROCESSING}, synchronize_session=False
-                )
-                db.session.commit()
-                assign_faces_to_person(person_id, selected_face_ids)
+                if current_app.config.get("DEMO_MODE"):
+                    assign_faces_to_person_now(
+                        db.session,
+                        person_id,
+                        assignable_face_ids,
+                        emit_change_event=False,
+                    )
+                else:
+                    db.session.query(Face).filter(Face.id.in_(assignable_face_ids)).update(
+                        {Face.status: FACE_STATUS_PROCESSING}, synchronize_session=False
+                    )
+                    db.session.commit()
+                    assign_faces_to_person(person_id, assignable_face_ids)
                 return jsonify({
                     "success": True,
                     "message": ngettext(

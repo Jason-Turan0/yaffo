@@ -276,6 +276,7 @@
       },
       "test": {
         "actionNames": {
+          "move_media_items": "Medienelemente verschieben",
           "tag_media_items": "Medienelemente taggen"
         },
         "actions": "Aktionen ({{formattedCount}})",

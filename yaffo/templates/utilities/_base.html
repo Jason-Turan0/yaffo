@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/modal.html" import render_modal %}
+{% from "components/modal.html" import render_modal with context %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='utilities/_base.css') }}">

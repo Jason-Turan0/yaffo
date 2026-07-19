@@ -1,7 +1,7 @@
 {% extends "utilities/_base.html" %}
 {% from "components/distance_input.html" import distance_input %}
 {% from "components/page_header.html" import page_header %}
-{% from "components/modal.html" import render_modal %}
+{% from "components/modal.html" import render_modal with context %}
 
 {% macro render_edit_automation_form() %}
     <div class="form-group">
@@ -120,7 +120,9 @@
 
 {% if not selected.is_system %}
     <form id="delete-automation-form" method="POST"
-          action="{{ url_for('automations_delete', slug=selected.slug) }}" hidden></form>
+          action="{{ url_for('automations_delete', slug=selected.slug) }}" hidden>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    </form>
     {{ render_modal('editAutomationModal', _('Edit automation'),
                         url_for('automations_update_details', slug=selected.slug),
                         render_edit_automation_form, _('Save')) }}

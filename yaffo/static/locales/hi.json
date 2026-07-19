@@ -276,6 +276,7 @@
       },
       "test": {
         "actionNames": {
+          "move_media_items": "मीडिया आइटम ले जाएँ",
           "tag_media_items": "मीडिया आइटम टैग करें"
         },
         "actions": "क्रियाएँ ({{formattedCount}})",

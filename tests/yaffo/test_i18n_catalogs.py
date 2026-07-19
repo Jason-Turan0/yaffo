@@ -405,6 +405,7 @@ def test_custom_page_grid_uses_gettext_and_localized_javascript():
     assert "pages:delete.message" in detail_source
     assert "pages:widgets.deleteMessage" in grid_source
     assert "pages:chat.cancelMessage" in grid_source
+    assert grid_source.count("if (!response.ok) return;") >= 2
     assert 'gettext("Untitled Page")' in routes
 
 

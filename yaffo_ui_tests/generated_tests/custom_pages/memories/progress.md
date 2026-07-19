@@ -12,7 +12,13 @@
   links. Don't click it.
 - "New page" is a plain form POST to `/pages` (`.nav-new-page`); `pages_detail`
   redirects widget-less pages to `/pages/<id>/design`.
-- Seeded published pages: "Favorites Wall" (`/pages/1`) and "About" (`/pages/2`).
+- Direct Playwright request helpers first GET `/` and submit the rendered
+  `csrf_token`; browser-driven forms and fetches receive it through the app UI.
+- The Bennett sandbox seeds one published page: "Florida Trip" (`/pages/1`),
+  with a full-width Hero banner above a full-width Photo gallery. The Obama peer
+  does not seed a custom page because it has no Florida-trip fixture. Its design
+  view has two user/assistant rounds showing the initial request and the refinement
+  that removed the redundant page heading and constrained the gallery.
 
 ## Design View (`/pages/<id>/design`, .page-design)
 - Metadata: `#page-title` (placeholder/default "Untitled Page"), `#page-subtitle`,

@@ -276,6 +276,7 @@
       },
       "test": {
         "actionNames": {
+          "move_media_items": "Move media items",
           "tag_media_items": "Tag media items"
         },
         "actions": "Actions ({{formattedCount}})",

@@ -276,6 +276,7 @@
       },
       "test": {
         "actionNames": {
+          "move_media_items": "Mover elementos multimedia",
           "tag_media_items": "Etiquetar elementos multimedia"
         },
         "actions": "Acciones ({{formattedCount}})",

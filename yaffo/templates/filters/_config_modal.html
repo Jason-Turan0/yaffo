@@ -2,7 +2,7 @@
    configurable sidebar. There is ONE layout for the whole app —
    filter_config.js posts it to /settings/filters. #}
 {% macro filter_config_modal(filter_layout, filter_default_keys) %}
-    {% from "components/modal.html" import render_modal %}
+    {% from "components/modal.html" import render_modal with context %}
     {% macro configure_filters_form() %}
         <p class="filter-config-hint">{{ _("Drag to reorder. Uncheck to hide a filter.") }}</p>
         <div class="filter-config" id="filter-config-list"

@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+from yaffo.runtime_mode import reject_in_demo
+
 
 @dataclass
 class DirEntry:
@@ -96,6 +98,7 @@ def list_directory(path: Optional[str] = None, mode: str = "folder") -> DirListi
     Always returns sub-folders; in "file" and "any" modes also returns files.
     Hidden entries (dot-prefixed) are skipped. Never raises — permission/IO
     problems come back in `error` with whatever could still be listed."""
+    reject_in_demo("filesystem browsing")
     if mode not in ("folder", "file", "any"):
         mode = "folder"
     directory = _resolve_start(path)

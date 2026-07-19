@@ -28,8 +28,7 @@ data:
   - System automations ship built-in and cannot be edited or deleted; custom ones can
   - The automation detail screen runs automations scoped to a picked file/folder
   - Sandbox Environment does not have API Keys setup so use client side interception to simulate agent interactions
-  - The sandbox seeds two custom automations - tag-recent-imports (enabled, schedule trigger, published code) and tag-new-arrivals (disabled, event trigger, published code plus a working draft)
-  - file_sync records no run Job when the index is already in sync; use tag-recent-imports for run-history assertions
+  - The Bennett sandbox seeds one disabled custom automation, file-favorite-kid-photos, using the reviewed _FILE_KIDS_CODE example with no trigger and a two-round assistant conversation
 
 scenarios:
   - name: automations_list_shows_system_and_custom
@@ -85,14 +84,15 @@ scenarios:
       - Remove the event trigger that was added
 
   - name: automations_run_now
-    goal: The user can run an automation on demand
+    goal: An unconfigured automation cannot run accidentally
     priority: high
     steps:
-      - Select a runnable automation
-      - Click "Run..." and choose the default media directory
+      - Select the seeded file-favorite-kid-photos automation
+      - Confirm it starts disabled and open then cancel the Run scope picker
+      - Open "Edit triggers"
     verify:
-      - The run is enqueued and a "started" success message is displayed
-      - The run appears in the automation's run history
+      - The automation has no configured triggers
+      - No run is added to history
 
   - name: automations_test_dry_run
     goal: The user can dry-run a custom automation and see the actions it would take
@@ -102,6 +102,7 @@ scenarios:
       - Click the Test button and pick a file/folder to scope the run
     verify:
       - The dry-run renders the intercepted host-API actions without changing anything
+      - The exact kids-by-year code and its two-round assistant conversation are visible
       - Actions are grouped with a count and expandable details
       - The captured return value and any error are shown
 

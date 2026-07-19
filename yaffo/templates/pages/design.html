@@ -59,7 +59,9 @@
     </div>
 </div>
 
-<form id="delete-page-form" method="POST" action="{{ url_for('pages_delete', page_id=page.id) }}" hidden></form>
+<form id="delete-page-form" method="POST" action="{{ url_for('pages_delete', page_id=page.id) }}" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+</form>
 {% endblock %}
 
 {% block scripts %}

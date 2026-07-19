@@ -19,6 +19,7 @@
         {% endmacro %}
         {% macro render_actions() %}
             <form method="POST" action="{{ url_for('person_faces_remove', person_id=person.id) }}" id="remove-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div id="selected-faces-container"></div>
                 <button type="button" class="btn btn-danger btn-block" data-icon="delete" id="remove-selected-faces">
                     {{ _("Remove Selected") }}

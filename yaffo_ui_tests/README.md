@@ -219,6 +219,15 @@ npm run generate:test:gemini specs/my_feature.yaml
 ### 3. Run Tests
 
 ```bash
+# Start the seeded isolated app manually
+npm run isolatedEnvironment:start
+
+# Start it with the public-demo boundary (instance A uses the source role)
+npm run isolatedEnvironment:start -- --demo
+
+# Start two demo instances (A is source, B is receiver)
+npm run isolatedEnvironment:start:sharing -- --demo
+
 # Run all generated tests
 npm test
 
@@ -287,6 +296,8 @@ See `playwright.config.ts`:
 | `npm run test:unit` | Run Jest unit tests |
 | `npm run test:ui` | Run tests with Playwright UI |
 | `npm run test:headed` | Run tests in headed browser |
+| `npm run isolatedEnvironment:start [-- --demo]` | Start a seeded isolated app, optionally in source demo mode |
+| `npm run isolatedEnvironment:start:sharing [-- --demo]` | Start isolated A/B apps, optionally as source/receiver demos |
 | `npm run test:heal <test>` | Auto-heal a failing test |
 | `npm run logs` | Browse AI model API logs |
 | `npm run typecheck` | TypeScript type check |

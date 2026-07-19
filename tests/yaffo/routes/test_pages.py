@@ -177,6 +177,9 @@ class TestWidgetFrame:
         resp = client.get(f"/pages/{pid}/widgets/w1/frame")
         assert resp.status_code == 200
         assert "connect-src 'none'" in resp.headers["Content-Security-Policy"]
+        assert "https://tile.openstreetmap.org" in resp.headers["Content-Security-Policy"]
+        assert "frame-ancestors 'self'" in resp.headers["Content-Security-Policy"]
+        assert resp.headers["X-Frame-Options"] == "SAMEORIGIN"
         body = resp.get_data(as_text=True)
         assert "probe" in body  # widget html + js were injected
 

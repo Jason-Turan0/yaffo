@@ -21,6 +21,7 @@ from yaffo.db.models import (
     ShareGrant,
 )
 from yaffo.utils.time import utcnow
+from yaffo.runtime_mode import reject_in_demo
 
 
 # ---- known devices (the trust store) ---------------------------------------
@@ -38,6 +39,7 @@ def upsert_trusted_device(
 ) -> KnownDevice:
     """Record a successful pairing. Re-pairing an existing (possibly revoked)
     row overwrites it back to trusted — a fresh code is fresh human consent."""
+    reject_in_demo("P2P trust changes")
     device = session.get(KnownDevice, device_id)
     if device is None:
         device = KnownDevice(device_id=device_id)
@@ -57,6 +59,7 @@ def mark_device_revoked(session: Session, device_id: str) -> bool:
     notice arrives (the row stays visible so the UI can say why things
     stopped working). Never creates a row; idempotent. Returns whether the
     device was known."""
+    reject_in_demo("P2P trust changes")
     device = session.get(KnownDevice, device_id)
     if device is None:
         return False
@@ -71,6 +74,7 @@ def rename_device(session: Session, device_id: str, display_name: str) -> bool:
     """Display names are peer-supplied at pairing but locally editable (a
     re-pair overwrites with the peer's current name again). Returns whether
     the device was known."""
+    reject_in_demo("P2P trust changes")
     device = session.get(KnownDevice, device_id)
     if device is None:
         return False
@@ -82,6 +86,7 @@ def rename_device(session: Session, device_id: str, display_name: str) -> bool:
 def delete_revoked_device(session: Session, device_id: str) -> bool:
     """Forget a revoked device and its grants. Trusted devices must be revoked
     first so deletion cannot accidentally grant silent future access."""
+    reject_in_demo("P2P trust changes")
     device = session.get(KnownDevice, device_id)
     if device is None or device.trust_state != TRUST_STATE_REVOKED:
         return False
@@ -121,6 +126,7 @@ def create_grant(
     media_dir ⇒ media_dir_id only; folder ⇒ media_dir_id + relative_path;
     album ⇒ album_id only. The other scope columns stay NULL, so a grant can
     never carry a scope it does not mean."""
+    reject_in_demo("P2P grant changes")
     if scope_type not in _GRANT_SHAPES:
         raise ValueError(f"unknown grant scope type: {scope_type!r}")
     needs_dir, needs_path, needs_album = _GRANT_SHAPES[scope_type]
@@ -175,6 +181,7 @@ def list_active_grants(session: Session, peer_device_id: Optional[str] = None) -
 def revoke_grant(session: Session, grant_id: int) -> bool:
     """Soft-revoke (an update, not a delete, so the UI can show history);
     takes effect on the peer's next request. Idempotent."""
+    reject_in_demo("P2P grant changes")
     grant = session.get(ShareGrant, grant_id)
     if grant is None:
         return False

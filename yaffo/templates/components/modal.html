@@ -9,6 +9,7 @@
             <button type="button" class="modal-close" name="cancel" aria-label="{{ _('Close') }}">&times;</button>
         </div>
         <form id="{{id}}Form" {% if posts %}method="POST" action="{{ action_url }}"{% else %}data-js-form{% endif %}>
+            {% if posts %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endif %}
             <div class="modal-body thin-scrollbar">
                 {{ render_modal_form() }}
             </div>

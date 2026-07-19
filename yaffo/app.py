@@ -4,13 +4,16 @@ from pathlib import Path
 from typing import Optional
 
 from flask import Flask, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 from yaffo import themes
 from yaffo.config import get_int as get_config_int
 from yaffo.db import db
 from yaffo.common import DB_PATH
 from yaffo.distance_units import supported_distance_unit_options
+from yaffo.demo import configure_demo, init_demo_boundary
 from yaffo.i18n import init_i18n, select_locale, supported_locale_options, text_direction
 from yaffo.logging_config import get_logger
+from yaffo.security import init_request_security
 from yaffo.template_filters import init_template_filters
 from yaffo.routes.init_routes import init_routes
 
@@ -52,6 +55,27 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None,
     if config:
         app.config.update(config)
 
+    configure_demo(app)
+    trusted_hosts = os.environ.get("YAFFO_TRUSTED_HOSTS", "").split(",")
+    trusted_hosts = [host.strip() for host in trusted_hosts if host.strip()]
+    if trusted_hosts:
+        app.config["TRUSTED_HOSTS"] = trusted_hosts
+
+    try:
+        proxy_hops = int(os.environ.get("YAFFO_PROXY_HOPS", "0"))
+    except ValueError as exc:
+        raise RuntimeError("YAFFO_PROXY_HOPS must be 0 or 1") from exc
+    if proxy_hops not in (0, 1):
+        raise RuntimeError("YAFFO_PROXY_HOPS must be 0 or 1")
+    if proxy_hops:
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app,
+            x_for=proxy_hops,
+            x_proto=proxy_hops,
+            x_host=proxy_hops,
+            x_port=proxy_hops,
+        )
+
     db.init_app(app)
     init_i18n(app)
 
@@ -78,6 +102,8 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None,
 
     init_template_filters(app)
     init_routes(app)
+    init_request_security(app)
+    init_demo_boundary(app)
 
     if startup_error is not None:
         from yaffo.routes.base import render_critical_error

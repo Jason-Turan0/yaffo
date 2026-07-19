@@ -276,6 +276,7 @@
       },
       "test": {
         "actionNames": {
+          "move_media_items": "移动媒体项目",
           "tag_media_items": "标记媒体项目"
         },
         "actions": "行动（{{formattedCount}})",

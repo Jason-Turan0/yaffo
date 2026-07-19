@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='media/view.css') }}">
 {% endblock %}
 
-{% from "components/modal.html" import render_modal %}
+{% from "components/modal.html" import render_modal with context %}
 
 {% block content %}
     <div class="photo-viewer">

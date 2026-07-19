@@ -21,6 +21,7 @@ from keyring.errors import KeyringError, PasswordDeleteError
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings
 from yaffo.site_agents.model_clients import providers
+from yaffo.runtime_mode import demo_mode_enabled, reject_in_demo
 
 _SERVICE = "yaffo"
 _MODEL_SETTING = "llm_model"
@@ -53,6 +54,8 @@ def _read_keychain_key(keychain_key: str) -> Optional[str]:
 def get_api_key(provider_id: str) -> Optional[str]:
     """The key for one provider. Env var wins (also how spawned workers inherit it —
     see prime_subprocess_env); then the cached keychain value."""
+    if demo_mode_enabled():
+        return None
     provider = providers.get_provider(provider_id)
     if provider is None:
         return None
@@ -63,6 +66,7 @@ def get_api_key(provider_id: str) -> Optional[str]:
 
 
 def set_api_key(provider_id: str, key: str) -> None:
+    reject_in_demo("LLM key changes")
     provider = providers.get_provider(provider_id)
     if provider is None:
         return
@@ -71,6 +75,7 @@ def set_api_key(provider_id: str, key: str) -> None:
 
 
 def clear_api_key(provider_id: str) -> None:
+    reject_in_demo("LLM key changes")
     provider = providers.get_provider(provider_id)
     if provider is None:
         return
@@ -86,6 +91,7 @@ def prime_subprocess_env() -> None:
     spawn-started children inherit them via the providers' env vars and never touch
     the keychain themselves. Called by the task host before spawning workers — keychain
     prompts then happen only in the interactive web process and (once) the host."""
+    reject_in_demo("LLM subprocess credentials")
     for provider in providers.PROVIDERS:
         key = get_api_key(provider.id)
         if key:
@@ -123,6 +129,7 @@ def get_model(session=None) -> str:
 
 
 def set_model(model_id: str) -> None:
+    reject_in_demo("LLM model changes")
     if model_id not in _MODEL_IDS:
         return
     row = db.session.query(ApplicationSettings).filter_by(name=_MODEL_SETTING).first()

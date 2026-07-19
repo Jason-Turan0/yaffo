@@ -131,11 +131,12 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
             tab_order: parseInt(/** @type {HTMLInputElement} */ (document.getElementById('page-tab-order')).value, 10) || 0,
             widgets: getWidgets()
         };
-        await fetch(config.buildUrl('pages_update', { page_id: pageId }), {
+        const response = await fetch(config.buildUrl('pages_update', { page_id: pageId }), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
+        if (!response.ok) return;
         window.location.href = config.buildUrl('pages_detail', { page_id: pageId });
     };
 
@@ -403,7 +404,7 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
     };
 
     const publishVersion = async () => {
-        await fetch(
+        const response = await fetch(
             config.buildUrl('pages_version_publish', { page_id: pageId, version_id: generation.versionId }),
             {
                 method: 'POST',
@@ -412,6 +413,7 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
                 body: JSON.stringify({ widgets: getWidgets() })
             }
         );
+        if (!response.ok) return;
         window.location.href = config.buildUrl('pages_detail', { page_id: pageId });
     };
 

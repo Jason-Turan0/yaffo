@@ -4,6 +4,7 @@ from typing import Any
 from flask import (
     Flask,
     jsonify,
+    current_app,
     render_template,
     request,
     redirect,
@@ -23,6 +24,7 @@ from yaffo.db.models import (
 )
 from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.db.repositories.data_query_repository import resolve_data_query, resolve_query
+from yaffo.demo import DEMO_ROLE_RECEIVER, DEMO_ROLE_SOURCE, demo_unsafe_allowed
 from yaffo.logging_config import get_logger
 from yaffo.site_agents import llm_config
 from yaffo.site_agents.serializers import version_status_payload
@@ -155,7 +157,8 @@ def init_pages_routes(app: Flask):
         response = make_response(
             render_template("pages/widget_frame.html", widget=widget, data=data, csp=csp)
         )
-        response.headers["Content-Security-Policy"] = csp
+        response.headers["Content-Security-Policy"] = f"{csp}; frame-ancestors 'self'"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
         return response
 
     @app.route("/pages/<int:page_id>/widgets/preview", methods=["POST"])
@@ -199,11 +202,16 @@ def init_pages_routes(app: Flask):
         return "", 204
 
     @app.route("/pages/<int:page_id>/versions/<int:version_id>/widgets/<widget_id>/query", methods=["POST"])
+    @demo_unsafe_allowed(DEMO_ROLE_SOURCE, DEMO_ROLE_RECEIVER)
     def pages_version_widget_query(page_id: int, version_id: int, widget_id: str):
         """Broker live query for a widget on the displayed version. Data resolution is
         version-independent (it hits the photo library), but the widget existence
         check is scoped to the exact version that asked."""
         _version_on_page(page_id, version_id)
+        if current_app.config.get("DEMO_MODE"):
+            page = page_repo.get_page(db.session, page_id)
+            if page is None or page.published_version_id != version_id:
+                abort(404)
         if page_repo.get_version_widget(db.session, version_id, widget_id) is None:
             abort(404)
         payload = request.get_json(silent=True) or {}

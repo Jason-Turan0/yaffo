@@ -79,7 +79,7 @@
 </div>
 {% endif %}
 
-{% from "components/modal.html" import render_modal  %}
+{% from "components/modal.html" import render_modal with context %}
 {% macro render_modal_person_form(id_prefix) %}
 <div class="form-group">
     <label for="{{ id_prefix }}PersonName">{{ _("Name") }}</label>

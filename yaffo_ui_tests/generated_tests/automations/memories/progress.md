@@ -16,20 +16,17 @@
   (enabled, event, config `threshold` + `assign_multiple_matches`), `export_photo_tag`,
   `assign_location_name`, `geotag_from_neighbors` (disabled — safe for the
   enable/disable toggle test), `classify_labels`, `duplicate_scan` (disabled).
-- Seeded custom automations:
-  - `tag-recent-imports` — enabled, schedule trigger, published code. Records a run
-    Job every manual run → use it for run-history assertions.
-  - `tag-new-arrivals` — disabled, `media_indexed` event trigger, published code AND a
-    working draft → its editor shows the code version toggle and the real Test button.
-    Its dry-run over the media dir yields actions `tag_media_items` ("Tag N photo(s)")
-    and `report_progress`, `value: null`.
+- Seeded custom automation: `file-favorite-kid-photos` — disabled, no trigger,
+  published `_FILE_KIDS_CODE`, and a two-round conversation refining the request.
+  It finds Maya/Theo photos through assigned faces, keeps favorites, files each
+  photo once under `<child>/<year>`, batches moves, and reports progress.
 - No AI API key in the sandbox: the chat generation endpoints must be intercepted
   client-side (`page.route`); the Starlark dry-run (`/test-files`) works for real.
 
 ## Pitfalls Learned While Writing
-- **file_sync records no run Job when the index is already in sync** ("index already
-  in sync; nothing to do") — its handler only creates Jobs when there is work. Never
-  assert run history from a file_sync run.
+- The seeded custom automation intentionally starts disabled with no trigger; the
+  UI test opens and cancels the Run scope picker, confirms the empty trigger list,
+  and verifies that no run is added to history.
 - The Enable/Disable button label has surrounding whitespace/newlines; a
   `hasText: /^(Enable|Disable)$/` filter matches nothing. Use `/^\s*(Enable|Disable)\s*$/`.
   The toggle responds 204 + `HX-Refresh: true` → full page reload.

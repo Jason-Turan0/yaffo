@@ -19,6 +19,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='multi-select.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='notification.css') }}">
+    {% if demo_mode | default(false) %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='demo-mode.css') }}">
+    {% endif %}
     <link rel="stylesheet" href="{{ url_for('static', filename='searchable-select.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/scrollbar.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/chip.css') }}">
@@ -85,11 +88,25 @@
                 locale: {{ current_locale | tojson }},
                 fallbackLocale: "en",
                 resourceUrl: {{ url_for('static', filename='locales/__lng__.json') | tojson }}
-            }
+            },
+            demoMode: {{ (demo_mode | default(false)) | tojson }},
+            csrfToken: {{ csrf_token | tojson }},
+            demoTimezone: {{ (demo_timezone | default(none)) | tojson }}
         };
     </script>
 </head>
 <body>
+{% if demo_mode | default(false) %}
+<aside class="demo-banner" role="status">
+    <strong>{{ _("Public demo") }}</strong>
+    <span>{{ _("This is one shared, disposable sandbox.") }}</span>
+    <span>{{ _("Changes may affect other visitors.") }}</span>
+    <span>
+        {{ _("Next reset:") }}
+        <time datetime="{{ demo_next_reset_at }}" data-demo-reset-at>{{ demo_next_reset_at }}</time>
+    </span>
+</aside>
+{% endif %}
 <nav class="navbar">
     <div class="navbar-container">
         <a href="{{ url_for('index') }}" class="navbar-brand">
@@ -143,6 +160,7 @@
             </ul>
             {% endif %}
             <form method="POST" action="{{ url_for('pages_create') }}" class="nav-new-page-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="nav-link nav-new-page" title="{{ _('New page') }}" aria-label="{{ _('New page') }}">＋ {{ _("New page") }}</button>
             </form>
         </div>
@@ -214,6 +232,10 @@
 <script src="{{ url_for('static', filename='vendor/i18next/25.7.4/i18next.min.js') }}"></script>
 <script src="{{ url_for('static', filename='i18n.js') }}"></script>
 <script src="{{ url_for('static', filename='notification.js') }}"></script>
+<script src="{{ url_for('static', filename='security.js') }}"></script>
+{% if demo_mode | default(false) %}
+<script src="{{ url_for('static', filename='demo-mode.js') }}"></script>
+{% endif %}
 <script src="{{ url_for('static', filename='multi-select.js') }}"></script>
 <script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
 <script src="{{ url_for('static', filename='components/modal.js') }}"></script>

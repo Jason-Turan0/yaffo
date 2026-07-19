@@ -94,10 +94,13 @@ scenarios:
     goal: The published page renders its widgets read-only in the presentation view
     priority: medium
     steps:
-      - Open a published page in its presentation (non-design) view
+      - Open the seeded "Florida Trip" page in its presentation (non-design) view
     verify:
-      - The page title/subtitle render according to the show-title setting
-      - Widgets render their content (iframe) without edit controls
+      - It is the only seeded custom page
+      - A full-width Hero banner widget appears above a full-width Photo gallery widget
+      - The hero and all 13 Florida-trip gallery photos render in their iframes
+      - The design view shows a realistic two-round conversation refining the page
+      - Widgets render without edit controls
       - The grid is static (widgets cannot be dragged or resized)
 
   - name: pages_delete_page

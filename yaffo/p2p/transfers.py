@@ -27,6 +27,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import os
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -47,6 +48,7 @@ from yaffo.p2p.handlers.sharing import (
 )
 from yaffo.p2p.quic_transport import TransportError
 from yaffo.p2p.signaling import CallError
+from yaffo.runtime_mode import demo_mode_enabled
 
 logger = get_logger(__name__, "webapp")
 
@@ -71,6 +73,13 @@ RELAY_THROTTLE_BYTES_PER_SECOND = 4 * 1024 * 1024
 RELAY_BATCH_BUDGET_BYTES = 1 * 2**30
 # Finished batches kept for the status UI.
 MAX_FINISHED_BATCHES_KEPT = 20
+DEMO_TRANSFER_MAX_FILES = int(os.environ.get("YAFFO_DEMO_TRANSFER_MAX_FILES", "5"))
+DEMO_TRANSFER_MAX_BATCH_BYTES = int(
+    os.environ.get("YAFFO_DEMO_TRANSFER_MAX_BATCH_BYTES", str(25 * 1024 * 1024))
+)
+DEMO_DOWNLOAD_VOLUME_BYTES = int(
+    os.environ.get("YAFFO_DEMO_DOWNLOAD_VOLUME_BYTES", str(100 * 1024 * 1024))
+)
 
 STATE_COLLECTING = "collecting"
 STATE_RUNNING = "running"
@@ -315,6 +324,8 @@ class TransferManager:
     # ---- engine-loop side --------------------------------------------------
 
     async def _admit(self, batch: TransferBatch) -> None:
+        if demo_mode_enabled() and any(existing.active for existing in self._batches.values()):
+            raise ValueError("the public demo already has an active transfer")
         batch.resume_event = asyncio.Event()
         self._batches[batch.id] = batch
         self._trim_finished()
@@ -398,6 +409,7 @@ class TransferManager:
         try:
             if not batch.files:
                 await self._collect_files(batch, holder)
+            self._validate_demo_batch(batch)
             if batch.cancelled:
                 raise TransferAborted("cancelled")
             batch.state = STATE_RUNNING
@@ -451,6 +463,24 @@ class TransferManager:
                 len(batch.files),
                 batch.relay_bytes,
             )
+
+    def _validate_demo_batch(self, batch: TransferBatch) -> None:
+        if not demo_mode_enabled():
+            return
+        if len(batch.files) > DEMO_TRANSFER_MAX_FILES:
+            raise TransferAborted(
+                f"demo transfers are limited to {DEMO_TRANSFER_MAX_FILES} files"
+            )
+        batch_bytes = sum(max(0, entry.size) for entry in batch.files)
+        if batch_bytes > DEMO_TRANSFER_MAX_BATCH_BYTES:
+            raise TransferAborted("the selected files exceed the demo transfer-size limit")
+        existing_bytes = sum(
+            path.stat().st_size
+            for path in batch.destination_root.rglob("*")
+            if path.is_file()
+        ) if batch.destination_root.exists() else 0
+        if existing_bytes + batch_bytes > DEMO_DOWNLOAD_VOLUME_BYTES:
+            raise TransferAborted("the demo download directory has reached its quota")
 
     async def _collect_files(self, batch: TransferBatch, holder: _SessionHolder) -> None:
         """Snapshot the manifest for the granted scope + filters by paging

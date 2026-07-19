@@ -1,6 +1,6 @@
 # Demo Environment Plan
 
-Status: Phase 0 accepted; Phase 1 not started
+Status: Phase 0 accepted; Phase 1 in progress
 
 Last reviewed: 2026-07-18
 
@@ -370,7 +370,7 @@ pre-paired sharing story.
 | File deletion, trash, and movement | Duplicate-removal execution; automation actions that trash or move files | Destroy fixtures, write outside intended destinations, fill trash/storage, or race reset | **Blocked** | Mount seed media read-only; omit trash helpers; demonstrate with screenshots or an operator-only disposable copy |
 | LLM credentials and paid generation | LLM API-key set/clear, model selection, page/theme/automation chat | Store a visitor's secret on a shared server, consume an operator key, create cost, generate stored active content, or exhaust workers | **Blocked** | Ship no provider keys; block key and generation routes and background tasks; show pre-generated pages/themes read-only |
 | P2P identity, pairing, trust, and grants | Pairing-code generation, pair, revoke/delete/rename device, grant reconciliation, album share | Pair an attacker's device, grant it data, break A/B, consume pairing nonces, or abuse hub sessions | **Blocked** | Pre-pair A/B and seed grants; expose read-only trust/grant views; use the IAP-only pairing mode for a guided demo |
-| Heavy indexing and classification | Index scan/sync/reindex, per-media reindex, label reclassification, duplicate finding, face analysis | Sustain CPU/RAM load, grow queues, repeatedly load native models, and make browsing unavailable | **Blocked initially** | Use pre-indexed fixtures; later allow one narrowly scoped sample job with a global concurrency lock, hard timeout, cooldown, and daily quota |
+| Heavy indexing and classification | Index sync/reindex, per-media reindex, label reclassification, duplicate finding, face analysis | Sustain CPU/RAM load, grow queues, repeatedly load native models, and make browsing unavailable | **Blocked initially** | Permit only the read-only inventory scan over immutable configured demo directories; use pre-indexed fixtures and require a global concurrency lock, hard timeout, cooldown, and daily quota before allowing any sample mutation job |
 | Automations and scheduled work | Create/configure/run/publish automations and triggers; built-in metadata/file actions | Persist repeated work, mutate files and metadata after the visitor leaves, call external services, or fill the queue | **Blocked** | Disable periodic dispatch and all enabled automations in the golden state; show prepared run history read-only |
 | External lookup calls | Reverse geocoding and any future URL-backed integration | Turn the demo into a request amplifier, hit provider quotas, or create third-party cost | **Blocked initially** | Use pre-resolved fixture locations; later add a cache-only lookup or strict global/provider quota |
 | Full media, preview, and video delivery | `/media/<id>`, posters, remote P2P previews, HTTP Range requests | Scrape or hotlink the fixture set, issue pathological ranges, repeatedly resize previews, and drive network egress | **Limited** | Use small low-resolution licensed fixtures; pre-generate previews; validate ranges; CDN-cache safe responses; per-IP and global byte/request budgets; daily egress kill switch |
@@ -462,10 +462,13 @@ Keep the first release useful while defaulting to read-only:
   persist widget state;
 - allow B to browse A's seeded grants, preview remote items, and start one capped
   transfer batch; let it finish without public cancel/resume/delete controls;
-- block filesystem/configuration utilities, all indexing and automations, AI and
-  custom-content authoring, global settings, external lookups, P2P trust/grant
-  mutations, metadata and album edits, transfer administration, and seed-record
-  deletion.
+- allow all utility GET routes so visitors can view Index Photos, Remove
+  Duplicates, automation details, run history, and editor screens; block every
+  utility POST, including indexing, duplicate actions, automation execution,
+  configuration, and authoring;
+- block other filesystem/configuration APIs, AI and custom-content authoring,
+  global settings, external lookups, P2P trust/grant mutations, metadata and
+  album edits, transfer administration, and seed-record deletion.
 
 This split is the v1 baseline. Expand the central exception set only when a
 specific walkthrough step justifies the additional abuse controls and tests.
@@ -628,6 +631,9 @@ deployment changes.
   Phase 4 acceptance checklist passes.
 - The public demo uses the read-mostly v1 interactive set described above. The
   only unsafe-method exceptions to the Phase 1 fail-closed gate are:
+  - `POST` to the Flask endpoint `faces_assign` on both `source` and `receiver`,
+    limited to 50 currently unassigned faces per request and executed in the web
+    process without enqueueing a task;
   - `POST` to the Flask endpoint `pages_version_widget_query` on both `source`
     and `receiver`, limited to reviewed, published widgets and read-only bounded
     queries;
@@ -743,6 +749,26 @@ down.
   protected seed records and the receiver download-volume limit.
 - Ensure the UI clearly marks the environment as disposable and shows the next
   reset time.
+- Allow face assignment POST methods but execute the shared assignment logic in
+  the web process instead of enqueueing a background task in demo mode.
+
+Phase 1 implementation progress as of 2026-07-18:
+
+- Complete: startup-only mode/role configuration, exact public-read policy,
+  role-scoped unsafe-method exceptions, fail-closed route-map validation, stable
+  JSON/HTML blocked responses, and fetch/HTMX feedback.
+- Complete: disposable/reset banner, global CSRF protection, secure demo cookie
+  and response headers, trusted-host/proxy configuration inputs, configurable
+  Waitress bind host/thread count, and a demo startup path without task workers,
+  watcher, periodic dispatcher, or runtime asset downloads.
+- Complete: service-level task, filesystem-browser, paid-key, pairing, trust,
+  and grant guards; DB-backed media root containment; traversal/symlink tests;
+  synchronous bounded assignment of unassigned faces; request/query cooldowns;
+  and transfer count, byte, active-batch, and receiver-volume caps.
+- Remaining: audit and contain every non-media filesystem consumer, protect seed
+  records outside face assignment, add byte accounting for media/preview delivery,
+  annotate or hide each unavailable control, and complete the security review
+  against the Phase 1 exit criterion.
 
 Exit criterion: a security review finds no route that can escape an instance's
 mounts, manage paid secrets, start unbounded work, or alter P2P identity/trust

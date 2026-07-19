@@ -4,7 +4,7 @@ import platform
 import subprocess
 from pathlib import Path
 
-from flask import Flask, Response, abort, jsonify, render_template, request, send_file, send_from_directory
+from flask import Flask, Response, abort, current_app, jsonify, render_template, request, send_file, send_from_directory
 from flask_babel import gettext
 from sqlalchemy.orm import joinedload
 
@@ -12,9 +12,12 @@ from yaffo import themes
 from yaffo.background_tasks.events import emit_event
 from yaffo.common import is_browser_playable_video
 from yaffo.db.models import EVENT_MEDIA_MODIFIED, Face, MediaItem, Person, Tag, db
+from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.themes import get_theme
 from yaffo.utils.image import upright_image_from_path
 from yaffo.utils.index_jobs import reindex_media_items
+from yaffo.utils.safe_paths import PathOutsideAllowedRoots, resolve_path_in_roots
+from yaffo.utils.settings import get_thumbnail_dir
 
 
 def _heic_as_jpeg(file_path: Path):
@@ -29,6 +32,20 @@ def _heic_as_jpeg(file_path: Path):
     return send_file(buffer, mimetype="image/jpeg")
 
 
+def _demo_contained_media_path(file_path: str | Path) -> tuple[Path, Path | None]:
+    path = Path(file_path)
+    if not current_app.config.get("DEMO_MODE"):
+        return path, None
+    roots = list(get_media_dirs(db.session))
+    thumbnail_dir = get_thumbnail_dir(db.session)
+    if thumbnail_dir is not None:
+        roots.append(thumbnail_dir)
+    try:
+        return resolve_path_in_roots(path, roots)
+    except PathOutsideAllowedRoots:
+        abort(404)
+
+
 def init_media_routes(app: Flask):
     @app.route("/media/<int:media_item_id>")
     def media(media_item_id: int):
@@ -36,7 +53,7 @@ def init_media_routes(app: Flask):
         if not media_item:
             return gettext("Photo not found"), 404
 
-        file_path = Path(media_item.full_file_path)
+        file_path, _root = _demo_contained_media_path(media_item.full_file_path)
         if not file_path.exists():
             return gettext("File not found"), 404
 
@@ -51,7 +68,7 @@ def init_media_routes(app: Flask):
         media_item = db.session.get(MediaItem, media_item_id)
         if not media_item or not media_item.poster_path:
             return gettext("Poster not found"), 404
-        poster_path = Path(media_item.poster_path)
+        poster_path, _root = _demo_contained_media_path(media_item.poster_path)
         if not poster_path.exists():
             return gettext("Poster not found"), 404
         return send_file(poster_path)
@@ -84,7 +101,7 @@ def init_media_routes(app: Flask):
         if not face:
             return gettext("Face not found"), 404
 
-        file_path = Path(face.full_file_path)
+        file_path, _root = _demo_contained_media_path(face.full_file_path)
         if not file_path.exists():
             return gettext("File not found"), 404
 
@@ -114,13 +131,17 @@ def init_media_routes(app: Flask):
         people = sorted(people_set, key=lambda p: p.name)
 
         # Extract folder and filename from absolute path
-        file_path = Path(media_item.full_file_path)
-        folder = str(file_path.parent)
+        file_path, media_root = _demo_contained_media_path(media_item.full_file_path)
+        folder = (
+            str(file_path.parent.relative_to(media_root))
+            if media_root is not None
+            else str(file_path.parent)
+        )
         file_name = file_path.name
 
         # Use absolute paths directly
-        absolute_file_path = str(file_path)
-        absolute_folder_path = folder
+        absolute_file_path = "" if media_root is not None else str(file_path)
+        absolute_folder_path = "" if media_root is not None else folder
 
         # Prepare face data with locations for JavaScript
         faces_with_locations = []

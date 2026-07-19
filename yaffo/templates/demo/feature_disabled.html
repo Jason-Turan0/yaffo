@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="{{ current_locale }}" dir="{{ text_direction }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ _("Public demo · Yaffo") }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='demo-mode.css') }}">
+</head>
+<body class="demo-disabled-page">
+    <main class="demo-disabled-card">
+        <p class="demo-disabled-eyebrow">{{ _("Public demo") }}</p>
+        <h1>{{ _("That feature is unavailable here") }}</h1>
+        <p>{{ message }}</p>
+        <a class="btn btn-primary" href="{{ url_for('index') }}">{{ _("Return to the demo") }}</a>
+    </main>
+</body>
+</html>

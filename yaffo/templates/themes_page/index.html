@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "components/chat_dialog.html" import chat_dialog %}
-{% from "components/modal.html" import render_modal %}
+{% from "components/modal.html" import render_modal with context %}
 {% from "components/page_header.html" import page_header %}
 
 {% block title %}{{ _("Themes - Yaffo") }}{% endblock %}
@@ -135,7 +135,9 @@
 {% endif %}
 
 <form id="delete-theme-form" method="POST"
-      action="{{ url_for('themes_delete', slug=selected_slug) }}" hidden></form>
+      action="{{ url_for('themes_delete', slug=selected_slug) }}" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+</form>
 {% endblock %}
 
 {% block scripts %}

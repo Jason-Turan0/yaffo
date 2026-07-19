@@ -40,6 +40,7 @@ from yaffo.db.models import (
 )
 from yaffo.db.repositories import album_repository, media_dir_repository, p2p_repository
 from yaffo.db.repositories.media_repository import get_distinct_months
+from yaffo.demo import DEMO_ROLE_RECEIVER, demo_unsafe_allowed
 from yaffo.distance_units import distance_to_kilometers
 from yaffo.routes import filter_config
 from yaffo.routes.filter_panel import filter_selections, gender_options, to_query_params
@@ -766,6 +767,7 @@ def init_sharing_routes(app: Flask):
         return _render_transfers_panel(device_id)
 
     @app.route("/sharing/devices/<device_id>/transfers/pull", methods=["POST"])
+    @demo_unsafe_allowed(DEMO_ROLE_RECEIVER)
     def sharing_device_pull_selected(device_id: str):
         """Pull the remote gallery's selection as one background batch.
 

@@ -1,6 +1,6 @@
 {% extends "albums/_base.html" %}
 {% from "components/page_header.html" import page_header %}
-{% from "components/modal.html" import render_modal %}
+{% from "components/modal.html" import render_modal with context %}
 {% from "components/selection_bar.html" import selection_bar %}
 
 {% block title %}{{ _("%(album)s - Albums - Yaffo", album=selected.name) }}{% endblock %}
@@ -127,11 +127,17 @@
 {# The selection rides the action's querystring (data-selection-form keeps it in
    step as cards are ticked), so the server reads the same parameters it rendered. #}
 <form id="remove-from-album-form" method="POST" data-selection-form
-      action="{{ url_for('albums_remove_items', album_id=selected.id) }}" hidden></form>
+      action="{{ url_for('albums_remove_items', album_id=selected.id) }}" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+</form>
 <form id="set-cover-form" method="POST"
-      action="{{ url_for('albums_set_cover', album_id=selected.id) }}" hidden></form>
+      action="{{ url_for('albums_set_cover', album_id=selected.id) }}" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+</form>
 <form id="delete-album-form" method="POST"
-      action="{{ url_for('albums_delete', album_id=selected.id) }}" hidden></form>
+      action="{{ url_for('albums_delete', album_id=selected.id) }}" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+</form>
 {{ render_modal('editAlbumModal', _('Edit album'),
                 url_for('albums_update_details', album_id=selected.id),
                 render_edit_album_form, _('Save')) }}

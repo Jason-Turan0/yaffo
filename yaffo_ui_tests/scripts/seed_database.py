@@ -382,112 +382,75 @@ def seed_classification_labels(db) -> None:
     print(f"  Seeded classification labels: {added} added ({total} total)")
 
 
-def seed_custom_automations(db) -> None:
-    """Seed a couple of custom (AI-authored, Starlark-backed) automations so the
-    automations page has non-system entries with code, triggers, and a chat
-    transcript to exercise."""
+def seed_custom_automations(db, seed_profile: str) -> None:
+    """Seed one reviewed custom automation for the Bennett demo library."""
     from yaffo.background_tasks.automation_sandbox.starlark_runner import validate_starlark
     from yaffo.db.models import (
         Automation,
-        AutomationTrigger,
         Conversation,
         AUTOMATION_STATUS_READY,
         CONVERSATION_TYPE_USER,
         CONVERSATION_TYPE_ASSISTANT,
-        EVENT_MEDIA_INDEXED,
     )
+    from scripts.seed_automations import _FILE_KIDS_CODE
 
-    tag_recent_code = (
-        '# Tag the ten most recently indexed photos so they are easy to find.\n'
-        'rows = data_query({"source": "media_items", "limit": 10})\n'
-        'tag_media_items([{"media_item_id": r["id"], "name": "recent-import"} for r in rows])\n'
-        'print("Tagged %d photos" % len(rows))\n'
-    )
-    tag_arrivals_code = (
-        '# Tag newly indexed photos as they arrive.\n'
-        'ids = ctx["media_item_ids"]\n'
-        'if len(ids) > 0:\n'
-        '    tag_media_items([{"media_item_id": pid, "name": "new-arrival"} for pid in ids])\n'
-        'print("Processed %d new photos" % len(ids))\n'
-    )
-    tag_arrivals_draft = (
-        '# Draft: also report progress while tagging new arrivals.\n'
-        'ids = ctx["media_item_ids"]\n'
-        'if len(ids) > 0:\n'
-        '    tag_media_items([{"media_item_id": pid, "name": "new-arrival"} for pid in ids])\n'
-        '    report_progress(len(ids), len(ids))\n'
-        'print("Processed %d new photos" % len(ids))\n'
-    )
+    for existing in db.session.query(Automation).filter(Automation.is_system.is_(False)).all():
+        db.session.delete(existing)
+    db.session.commit()
 
-    # (slug, name, description, enabled, published, working_draft, triggers, chat)
-    custom_automations = [
+    if seed_profile != SEED_PROFILE_BENNETT:
+        print("  Skipped custom automation: kid-photo filing is Bennett-specific")
+        return
+
+    error = validate_starlark(_FILE_KIDS_CODE)
+    if error:
+        raise ValueError(f"Seed automation file-favorite-kid-photos is invalid: {error}")
+
+    automation = Automation(
+        slug="file-favorite-kid-photos",
+        name="File favorite kid photos",
+        description=(
+            "File favorite photos of Maya and Theo into a folder for each child and year. "
+            "Disabled until it has been reviewed and tested."
+        ),
+        is_system=False,
+        enabled=False,
+        handler=None,
+        published_code=_FILE_KIDS_CODE,
+        working_code=None,
+        status=AUTOMATION_STATUS_READY,
+    )
+    db.session.add(automation)
+    db.session.flush()
+    chat = [
         (
-            "tag-recent-imports",
-            "Tag recent imports",
-            "Every night, tag the ten most recently indexed photos with 'recent-import'.",
-            True,
-            tag_recent_code,
-            None,
-            [("schedule", "0 4 * * *", None)],
-            [
-                (CONVERSATION_TYPE_USER,
-                 "Tag the 10 most recently indexed photos with 'recent-import' every night."),
-                (CONVERSATION_TYPE_ASSISTANT,
-                 "I created an automation that queries the ten most recent photos and tags "
-                 "them 'recent-import'. I scheduled it to run daily at 4:00 AM."),
-            ],
+            CONVERSATION_TYPE_USER,
+            "Organize my favorite photos of Maya and Theo into folders by child and year.",
         ),
         (
-            "tag-new-arrivals",
-            "Tag new arrivals",
-            "When photos are indexed, tag them with 'new-arrival'. Disabled by default.",
-            False,
-            tag_arrivals_code,
-            tag_arrivals_draft,
-            [("event", None, EVENT_MEDIA_INDEXED)],
-            [
-                (CONVERSATION_TYPE_USER, "Tag every newly indexed photo with 'new-arrival'."),
-                (CONVERSATION_TYPE_ASSISTANT,
-                 "Done — the automation reads the indexed photo ids from the trigger context "
-                 "and tags each one 'new-arrival'. I left it disabled so you can review it first."),
-            ],
+            CONVERSATION_TYPE_ASSISTANT,
+            "I built an automation that follows their assigned faces to find each child's "
+            "photos, keeps only favorites, and files them under <child>/<year>.",
+        ),
+        (
+            CONVERSATION_TYPE_USER,
+            "Photos with both kids should only move once. Show progress, and don't run it "
+            "automatically—I want to test it first.",
+        ),
+        (
+            CONVERSATION_TYPE_ASSISTANT,
+            "Updated. Each photo is filed once, moves are batched, progress is reported, "
+            "and the automation is disabled with no trigger so you can review and test it.",
         ),
     ]
-
-    for slug, name, description, enabled, published, draft, triggers, chat in custom_automations:
-        if db.session.query(Automation).filter(Automation.slug == slug).first():
-            continue
-        for label, code in (("published", published), ("working", draft)):
-            error = validate_starlark(code) if code else None
-            if error:
-                raise ValueError(f"Seed automation {slug} has invalid {label} Starlark: {error}")
-        automation = Automation(
-            slug=slug,
-            name=name,
-            description=description,
-            is_system=False,
-            enabled=enabled,
-            handler=None,
-            published_code=published,
-            working_code=draft,
-            status=AUTOMATION_STATUS_READY,
-        )
-        db.session.add(automation)
-        db.session.flush()
-        for trigger_type, cron, event_type in triggers:
-            db.session.add(AutomationTrigger(
-                automation_id=automation.id,
-                trigger_type=trigger_type,
-                enabled=True,
-                cron=cron,
-                event_type=event_type,
-            ))
-        for entry_type, content in chat:
-            db.session.add(Conversation(
-                automation_id=automation.id, type=entry_type, content=content,
-            ))
-        print(f"  Seeded custom automation: {slug} (enabled={enabled})")
+    for entry_type, content in chat:
+        db.session.add(Conversation(
+            automation_id=automation.id,
+            type=entry_type,
+            content=content,
+        ))
     db.session.commit()
+    print("  Seeded custom automation: file-favorite-kid-photos (enabled=False)")
 
 
 def seed_custom_themes(db) -> None:
@@ -538,57 +501,67 @@ def seed_custom_themes(db) -> None:
 
 
 def seed_custom_pages(db, seed_profile: str) -> None:
-    """Seed two published custom pages with widgets so the pages nav strip,
-    presentation view, and design view have content to exercise."""
-    from yaffo.db.models import CustomPage
-    from yaffo.db.repositories import custom_page_repository as pages
+    """Replace the page showcase with the Bennett family's Florida trip.
 
-    if db.session.query(CustomPage).filter(CustomPage.title == "Favorites Wall").first():
+    The Obama peer has no Florida-trip fixture, so it intentionally has no
+    custom page instead of rendering an empty copy of the source's page.
+    """
+    from yaffo.db.models import (
+        CustomPage,
+        CONVERSATION_TYPE_ASSISTANT,
+        CONVERSATION_TYPE_USER,
+    )
+    from yaffo.db.repositories import custom_page_repository as pages
+    from yaffo.site_agents.widget_templates import TEMPLATES_BY_NAME
+
+    for existing_page in db.session.query(CustomPage).all():
+        pages.delete_page(db.session, existing_page.id)
+
+    if seed_profile != SEED_PROFILE_BENNETT:
+        print("  Skipped custom page: Florida Trip is only in the Bennett library")
         return
 
-    page = pages.create_page(db.session, "Favorites Wall", "A seeded page for UI tests")
-    pages.save_page_widgets(db.session, page.id, [
-        {
-            "id": pages.new_widget_id(),
-            "title": "Welcome",
-            "data_query": {},
-            "html": '<div class="welcome"><h2>Welcome to the Favorites Wall</h2>'
-                    '<p>This page was seeded for UI testing.</p></div>',
-            "css": '.welcome { padding: 8px; } .welcome h2 { margin: 0 0 4px; }',
-            "js": "",
-            "grid_x": 0, "grid_y": 0, "grid_w": 6, "grid_h": 2,
-        },
-        {
-            "id": pages.new_widget_id(),
-            "title": "Recent photos",
-            "data_query": {"recent_photos": {"source": "media_items", "limit": 6}},
-            "html": '<div class="recent"><span id="recent-count">0</span> recent photos</div>',
-            "css": '.recent { padding: 8px; font-size: 18px; }',
-            "js": "var rows = (yaffo.data && yaffo.data.recent_photos) || [];\n"
-                  "document.getElementById('recent-count').textContent = String(rows.length);",
-            "grid_x": 6, "grid_y": 0, "grid_w": 6, "grid_h": 2,
-        },
-    ])
-    print(f"  Seeded custom page: Favorites Wall (id={page.id})")
+    trip_filter = {"year": {"eq": 2021}}
+    hero = TEMPLATES_BY_NAME["Hero banner"].to_widget_item(x=0, y=0)
+    hero["data_query"] = {
+        "hero_photo": {"source": "media_items", **trip_filter, "limit": 1}
+    }
+    gallery = TEMPLATES_BY_NAME["Photo gallery"].to_widget_item(x=0, y=hero["h"])
+    gallery["data_query"] = {
+        "photos": {"source": "media_items", **trip_filter, "limit": 50}
+    }
 
-    about_text = (
-        "Seeded test library of synthetic Bennett family photos."
-        if seed_profile == SEED_PROFILE_BENNETT
-        else "Seeded peer library of Obama family photos from the Obama Presidential Library."
+    page = pages.create_page(
+        db.session,
+        "Florida Trip",
+        "Siesta Key, Florida · July 2021",
     )
-    about = pages.create_page(db.session, "About", "")
-    pages.save_page_widgets(db.session, about.id, [
-        {
-            "id": pages.new_widget_id(),
-            "title": "About this library",
-            "data_query": {},
-            "html": f'<div class="about"><p>{about_text}</p></div>',
-            "css": '.about { padding: 8px; }',
-            "js": "",
-            "grid_x": 0, "grid_y": 0, "grid_w": 12, "grid_h": 2,
-        },
-    ])
-    print(f"  Seeded custom page: About (id={about.id})")
+    pages.update_page(db.session, page.id, show_title=False)
+    pages.save_page_widgets(db.session, page.id, [hero, gallery])
+    conversation = [
+        (
+            CONVERSATION_TYPE_USER,
+            "Build a page for our July 2021 Florida trip with one big photo at the top "
+            "and the rest in a gallery below.",
+        ),
+        (
+            CONVERSATION_TYPE_ASSISTANT,
+            "I added a full-width hero and a gallery using the 2021 Siesta Key photos.",
+        ),
+        (
+            CONVERSATION_TYPE_USER,
+            "The page title and hero feel repetitive. Let the hero be the heading, and "
+            "make sure the gallery only includes this trip.",
+        ),
+        (
+            CONVERSATION_TYPE_ASSISTANT,
+            "Done. I hid the separate page heading, kept the hero full-width, and scoped "
+            "both widgets to the Florida trip photos.",
+        ),
+    ]
+    for entry_type, content in conversation:
+        pages.add_message(db.session, page.id, entry_type, content)
+    print(f"  Seeded custom page: Florida Trip (id={page.id})")
 
 
 def seed_albums(db) -> None:
@@ -658,7 +631,7 @@ def seed_database() -> int:
         # sandbox skips by using db.create_all()).
         seed_system_automations(db)
         seed_classification_labels(db)
-        seed_custom_automations(db)
+        seed_custom_automations(db, seed_profile)
         seed_custom_themes(db)
         seed_custom_pages(db, seed_profile)
         if seed_profile == SEED_PROFILE_BENNETT:

@@ -24,9 +24,10 @@ import threading
 import webbrowser
 
 from yaffo.logging_config import get_logger
+from yaffo.config import get as get_config
 from yaffo.config import get_int as get_config_int
 
-HOST = "127.0.0.1"
+HOST = os.environ.get("YAFFO_WEB_HOST") or str(get_config("web", "host", "127.0.0.1"))
 
 
 def _web_port() -> int:
@@ -39,8 +40,19 @@ def _web_port() -> int:
         return get_config_int("web", "port", 5001)
 
 
+def _web_threads() -> int:
+    default = 4 if os.environ.get("YAFFO_DEMO_MODE") == "1" else 8
+    try:
+        value = int(os.environ["YAFFO_WEB_THREADS"])
+    except (KeyError, ValueError):
+        if os.environ.get("YAFFO_DEMO_MODE") == "1":
+            return default
+        return get_config_int("web", "threads", default)
+    return value if value >= 1 else default
+
+
 PORT = _web_port()
-WEB_THREADS = 8
+WEB_THREADS = _web_threads()
 WORKERS = max(2, (os.cpu_count() or 4) - 1)
 RECYCLE = 100
 
@@ -153,15 +165,20 @@ def _run_web() -> None:
         serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
         return
 
-    _start_asset_downloads()
-    procs = _start_background()
-    atexit.register(_stop_background, procs)
-
     from yaffo.p2p.service import start_p2p_service
 
     app = create_app()
     start_p2p_service(app)
     url = f"http://{HOST}:{PORT}"
+
+    if app.config["DEMO_MODE"]:
+        logger.info(f"serving Yaffo demo at {url} without task host, watcher, or asset downloads")
+        serve(app, host=HOST, port=PORT, threads=WEB_THREADS)
+        return
+
+    _start_asset_downloads()
+    procs = _start_background()
+    atexit.register(_stop_background, procs)
     threading.Timer(1.5, lambda: webbrowser.open(url)).start()
 
     try:
