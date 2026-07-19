@@ -32,10 +32,12 @@ save_one() {
     rm -rf "$stage"
     mkdir -p "$golden_dir"
     cp -R "$src" "$stage"
-    # Operational artifacts from this run, not part of the golden state: every
-    # reset should start with clean logs, and a checkpointed DB doesn't need
-    # its WAL/SHM sidecars (SQLite regenerates them as needed).
-    rm -f "$stage"/*.log "$stage"/yaffo.db-wal "$stage"/yaffo.db-shm
+    # yaffo.db-wal/-shm are NOT disposable: SQLite in WAL mode leaves recent
+    # writes there until an auto-checkpoint folds them into yaffo.db, which a
+    # light seeding run may never trigger. Deleting them here silently
+    # dropped all seeded data once (2026-07-19) while leaving orphaned
+    # thumbnail files behind. Only *.log is a true operational artifact.
+    rm -f "$stage"/*.log
 
     rm -rf "$dest"
     mv "$stage" "$dest"

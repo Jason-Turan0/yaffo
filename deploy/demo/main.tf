@@ -228,18 +228,29 @@ resource "google_compute_instance" "demo" {
     scopes = ["cloud-platform"]
   }
 
-  metadata = {
-    block-project-ssh-keys = "TRUE"
-    serial-port-enable     = "FALSE"
-  }
+  # block-project-ssh-keys: don't inherit any project-wide SSH keys, only the
+  # instance-specific one below. ssh-keys is GCE's standard instance-metadata
+  # mechanism (the guest agent provisions the user/home/authorized_keys on
+  # first connect) — this is COS's actual supported path, not deploy/hub's
+  # Debian-only static-user-provisioning approach. Empty admin_ssh_pubkey
+  # skips provisioning (merge with {} below).
+  metadata = merge(
+    {
+      block-project-ssh-keys = "TRUE"
+      serial-port-enable     = "FALSE"
+    },
+    var.admin_ssh_user != "" && var.admin_ssh_pubkey != "" ? {
+      ssh-keys = "${var.admin_ssh_user}:${var.admin_ssh_pubkey}"
+    } : {}
+  )
 
   metadata_startup_script = templatefile("${path.module}/files/startup.sh.tftpl", {
     disk_name                          = var.disk_name
     docker_compose_version             = var.docker_compose_version
     docker_compose_linux_x86_64_sha256 = var.docker_compose_linux_x86_64_sha256
-    admin_ssh_user                     = var.admin_ssh_user
-    admin_ssh_pubkey                   = var.admin_ssh_pubkey
-    registry_host                      = "${var.region}-docker.pkg.dev"
+    restore_golden_script = templatefile("${path.module}/files/restore-golden.sh.tftpl", {
+      registry_host = "${var.region}-docker.pkg.dev"
+    })
   })
 
   shielded_instance_config {

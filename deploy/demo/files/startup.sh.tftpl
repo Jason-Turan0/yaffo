@@ -1,15 +1,16 @@
 #!/bin/bash
 # Yaffo demo VM bootstrap. GCE runs this on EVERY boot (including the daily
 # Cloud Scheduler start), so every step is idempotent. It prepares everything
-# code-independent (disk, secrets, admin access, the pinned Compose plugin)
-# and then — unlike the previous version of this config — actually brings
-# the containers up, authenticating Docker against Artifact Registry first.
+# code-independent (disk, secrets, admin access, the pinned Compose plugin),
+# writes out restore-golden.sh (below), and runs it — which is the actual
+# daily reset: restore both devices from the golden state and bring the
+# containers up, authenticating Docker against Artifact Registry first.
 #
-# The application bundle (compose.prod.yml, Caddyfile, walkthrough, .env)
-# arrives separately via deploy.sh, the same split as deploy/hub. A brand-new
-# VM has no bundle yet on its first boot, so container startup is skipped
-# with a message — expected and harmless; run deploy.sh once, then this
-# script brings the same bundle back up on every subsequent boot.
+# The application bundle (compose.prod.yml, Caddyfile, walkthrough, .env) and
+# the golden state itself arrive separately via deploy.sh/seed-prod.sh/
+# save-golden-prod.sh, the same infra/code split as deploy/hub. A brand-new VM
+# has neither yet on its first boot, so restore-golden.sh's steps are each
+# skipped with a message — expected and harmless.
 set -euo pipefail
 
 DATA_DEVICE="/dev/disk/by-id/google-${disk_name}"
@@ -47,6 +48,7 @@ mkdir -p \
     "$DATA_ROOT/deploy" \
     "$DATA_ROOT/fixtures/a" \
     "$DATA_ROOT/fixtures/b" \
+    "$DATA_ROOT/golden" \
     "$DATA_ROOT/identities/a" \
     "$DATA_ROOT/identities/b" \
     "$DATA_ROOT/secrets"
@@ -59,26 +61,22 @@ chmod 0700 "$DATA_ROOT/secrets"
 for name in demo-a-flask-secret demo-b-flask-secret; do
     secret="$DATA_ROOT/secrets/$name"
     if [[ ! -f "$secret" ]]; then
-        od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > "$secret"
+        { od -An -N32 -tx1 /dev/urandom | tr -d ' \n'; echo; } > "$secret"
     fi
+    chown 10001:10001 "$secret"
     chmod 0600 "$secret"
 done
 
-# --- Admin SSH user (static authorized_keys, independent of the guest agent) --
-# Same lesson as deploy/hub: GCE's metadata-based/OS-Login key lookup has
-# proven unreliable, and a VM you can't SSH into can't be operated.
-%{ if admin_ssh_user != "" && admin_ssh_pubkey != "" ~}
-if ! id '${admin_ssh_user}' >/dev/null 2>&1; then
-  useradd --create-home --shell /bin/bash '${admin_ssh_user}'
-  usermod -aG google-sudoers '${admin_ssh_user}' 2>/dev/null || echo '${admin_ssh_user} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-${admin_ssh_user}
-fi
-ADMIN_HOME=$(getent passwd '${admin_ssh_user}' | cut -d: -f6)
-mkdir -p "$ADMIN_HOME/.ssh"
-grep -qxF '${admin_ssh_pubkey}' "$ADMIN_HOME/.ssh/authorized_keys" 2>/dev/null || echo '${admin_ssh_pubkey}' >> "$ADMIN_HOME/.ssh/authorized_keys"
-chmod 700 "$ADMIN_HOME/.ssh"
-chmod 600 "$ADMIN_HOME/.ssh/authorized_keys"
-chown -R '${admin_ssh_user}:${admin_ssh_user}' "$ADMIN_HOME/.ssh"
-%{ endif ~}
+# --- Admin SSH user ---------------------------------------------------------------
+# Container-Optimized OS has no useradd/getent/sudoers tooling (deploy/hub's
+# static-user-provisioning approach is Debian-only and fails outright here —
+# `set -euo pipefail` turned that failure into "the rest of this script never
+# ran, no containers ever start"). COS's actual supported mechanism is GCE's
+# own instance-metadata `ssh-keys` field: the guest agent (present and
+# running by default on COS) creates the user, home directory, and
+# authorized_keys automatically the first time that user connects. See the
+# `ssh-keys` entry in google_compute_instance.demo's metadata in main.tf —
+# nothing to do here.
 
 # --- Pinned Docker Compose plugin ------------------------------------------------
 # COS ships Docker but no general-purpose package manager, so Compose is
@@ -96,22 +94,14 @@ fi
 
 echo "Yaffo demo host storage, admin access, and pinned Compose plugin are ready."
 
-# --- Bring the containers up -----------------------------------------------------
-# The bundle (compose.prod.yml, Caddyfile, walkthrough, .env) is placed here
-# by deploy.sh, not by this script — Terraform owns infrastructure, deploy.sh
-# owns code delivery, same split as deploy/hub.
-BUNDLE="$DATA_ROOT/deploy/compose.prod.yml"
-if [[ ! -f "$BUNDLE" ]]; then
-    echo "No deploy bundle at $BUNDLE yet — skipping container startup."
-    echo "Run deploy/demo/deploy.sh once to push it, then it starts on every boot."
-    exit 0
-fi
+# --- Golden-state restore + container startup ------------------------------------
+# Written fresh on every boot so it's always current with the Terraform
+# source (same pattern as deploy/hub's Caddyfile/unit-file heredocs). This is
+# the actual daily reset — GCE runs the startup script on every boot,
+# including the scheduled 7:45 AM start.
+cat > "$DATA_ROOT/bin/restore-golden.sh" <<'RESTORE_GOLDEN'
+${restore_golden_script}
+RESTORE_GOLDEN
+chmod 0755 "$DATA_ROOT/bin/restore-golden.sh"
 
-docker-credential-gcr configure-docker --registries='${registry_host}'
-
-cd "$DATA_ROOT/deploy"
-"$COMPOSE_PLUGIN" --env-file .env -f compose.prod.yml pull
-"$COMPOSE_PLUGIN" --env-file .env -f compose.prod.yml up --detach --remove-orphans
-"$COMPOSE_PLUGIN" --env-file .env -f compose.prod.yml ps
-
-echo "Containers started."
+"$DATA_ROOT/bin/restore-golden.sh"

@@ -1,0 +1,70 @@
+#!/bin/sh
+# Restore demo-a/demo-b to the golden state (if one has been saved) and bring
+# the containers up. Written into place by the startup script on every boot
+# (so this is the actual daily reset — GCE runs the startup script on every
+# boot, including the scheduled 7:45 AM start) and runnable on demand via
+# deploy/demo/reset-prod.sh over SSH, without waiting for a reboot.
+#
+# Mirrors deploy/demo/reset-local.sh's atomic staging-swap: safe to interrupt
+# and re-run — each device's swap goes through a staging directory, and the
+# self-heal check below completes (never reverts) any swap a previous run
+# didn't finish. If no golden state has been saved yet (deploy/demo/seed-prod.sh
+# and save-golden-prod.sh haven't run), the restore step is a no-op and
+# whatever is already on the data disk (nothing, on a brand-new disk) is left
+# alone.
+set -eu
+
+DATA_ROOT=/var/lib/yaffo-demo
+COMPOSE_BIN="$DATA_ROOT/bin/docker-compose"
+BUNDLE="$DATA_ROOT/deploy/compose.prod.yml"
+
+compose() {
+    "$COMPOSE_BIN" --env-file "$DATA_ROOT/deploy/.env" -f "$BUNDLE" "$@"
+}
+
+if [ -f "$BUNDLE" ]; then
+    compose stop demo-a demo-b 2>/dev/null || true
+fi
+
+restore_one() {
+    device="$1"
+    golden_src="$DATA_ROOT/golden/$device"
+    live="$DATA_ROOT/$device"
+    stage="$DATA_ROOT/$device.staging"
+
+    if [ ! -d "$golden_src" ]; then
+        echo "No golden/$device saved yet — leaving $live as-is"
+        return 0
+    fi
+
+    if [ -d "$stage" ] && [ ! -e "$live" ]; then
+        mv "$stage" "$live"
+    fi
+    rm -rf "$stage"
+
+    cp -R "$golden_src" "$stage"
+    rm -rf "$live"
+    mv "$stage" "$live"
+    chown -R 10001:10001 "$live"
+    echo "Restored $device from golden"
+}
+
+restore_one a
+restore_one b
+
+if [ ! -f "$BUNDLE" ]; then
+    echo "No deploy bundle at $BUNDLE yet — skipping container startup."
+    echo "Run deploy/demo/deploy.sh once to push it, then it starts on every boot."
+    exit 0
+fi
+
+DOCKER_CONFIG="$DATA_ROOT/deploy/.docker"
+export DOCKER_CONFIG
+mkdir -p "$DOCKER_CONFIG"
+docker-credential-gcr configure-docker --registries='${registry_host}'
+
+compose pull
+compose up --detach --remove-orphans
+compose ps
+
+echo "Containers started."

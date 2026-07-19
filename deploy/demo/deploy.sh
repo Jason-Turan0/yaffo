@@ -60,12 +60,15 @@ gcloud compute ssh "$vm" \
         sudo find /var/lib/yaffo-demo/deploy -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
         sudo tar -xzf /tmp/yaffo-demo-deploy.tar.gz -C /var/lib/yaffo-demo/deploy
         sudo chmod 0600 /var/lib/yaffo-demo/deploy/.env
-        sudo docker-credential-gcr configure-docker --registries='$registry_host'
-        cd /var/lib/yaffo-demo/deploy
-        sudo /var/lib/yaffo-demo/bin/docker-compose --env-file .env -f compose.prod.yml config --quiet
-        sudo /var/lib/yaffo-demo/bin/docker-compose --env-file .env -f compose.prod.yml pull
-        sudo /var/lib/yaffo-demo/bin/docker-compose --env-file .env -f compose.prod.yml up --detach --remove-orphans
-        sudo /var/lib/yaffo-demo/bin/docker-compose --env-file .env -f compose.prod.yml ps
+        DOCKER_CONFIG_DIR=/var/lib/yaffo-demo/deploy/.docker
+        sudo mkdir -p \"\$DOCKER_CONFIG_DIR\"
+        sudo env DOCKER_CONFIG=\"\$DOCKER_CONFIG_DIR\" docker-credential-gcr configure-docker --registries='$registry_host'
+        ENV_FILE=/var/lib/yaffo-demo/deploy/.env
+        BUNDLE=/var/lib/yaffo-demo/deploy/compose.prod.yml
+        sudo env DOCKER_CONFIG=\"\$DOCKER_CONFIG_DIR\" /var/lib/yaffo-demo/bin/docker-compose --env-file \"\$ENV_FILE\" -f \"\$BUNDLE\" config --quiet
+        sudo env DOCKER_CONFIG=\"\$DOCKER_CONFIG_DIR\" /var/lib/yaffo-demo/bin/docker-compose --env-file \"\$ENV_FILE\" -f \"\$BUNDLE\" pull
+        sudo env DOCKER_CONFIG=\"\$DOCKER_CONFIG_DIR\" /var/lib/yaffo-demo/bin/docker-compose --env-file \"\$ENV_FILE\" -f \"\$BUNDLE\" up --detach --remove-orphans
+        sudo /var/lib/yaffo-demo/bin/docker-compose --env-file \"\$ENV_FILE\" -f \"\$BUNDLE\" ps
     "
 
 echo

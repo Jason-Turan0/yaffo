@@ -189,12 +189,29 @@ its data disk is untouched by an instance replacement).
 
 ### Golden state and reset in production
 
-`deploy/demo/seed-local.sh`, `save-golden.sh`, and `reset-local.sh` (above)
-are local-only today — they target `compose.local.yml` and the local
-`runtime/`/`golden/` directories. Seeding and freezing the golden state on the
-production disk (`/var/lib/yaffo-demo/{a,b}`), and wiring the startup script to
-restore it on every boot (the design's actual daily reset mechanism), is not
-yet built. Until then, a fresh or rebooted production VM starts empty.
+`seed-local.sh`/`save-golden.sh`/`reset-local.sh` (above) are local-only —
+they target `compose.local.yml` and the local `runtime/`/`golden/`
+directories. Their production counterparts do the same steps remotely, over
+the same IAP SSH tunnel `deploy.sh` uses, against `/var/lib/yaffo-demo`:
+
+```bash
+./seed-prod.sh          # upload fixture media (once) + seed scripts, seed both devices
+./save-golden-prod.sh   # freeze /var/lib/yaffo-demo/{a,b} as the golden state
+./reset-prod.sh         # restore from golden on demand, without waiting for a reboot
+```
+
+Run these after `deploy.sh` has deployed the containers at least once.
+`seed-prod.sh` only uploads fixture media if it isn't already on the VM, and
+is otherwise safe to re-run. Once a golden state exists, **the VM's startup
+script restores it automatically on every boot** — including the daily
+7:45 AM Cloud Scheduler start — by writing and running
+`/var/lib/yaffo-demo/bin/restore-golden.sh` (rendered from
+[`files/restore-golden.sh.tftpl`](files/restore-golden.sh.tftpl), always kept
+current with the Terraform source). That script is also what `reset-prod.sh`
+triggers directly over SSH, and it's the same atomic staging-swap as
+`reset-local.sh`: safe to interrupt and re-run, self-heals a swap a previous
+run didn't finish. Before any golden state has been saved, it's a no-op and a
+fresh VM just starts empty containers, same as before.
 
 ## Emergency withdrawal
 

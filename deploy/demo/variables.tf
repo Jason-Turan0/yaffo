@@ -96,11 +96,11 @@ variable "image_versions_to_keep" {
 }
 
 # --- Admin SSH access ---------------------------------------------------------
-# The startup script installs this key directly in the admin user's
-# authorized_keys, the same belt-and-braces approach as deploy/hub: GCE's
-# metadata-based SSH / OS Login has proven unreliable in practice, and a VM
-# you can't SSH into can't be operated. Public key material only — safe in
-# tfvars.
+# Pushed as instance metadata (main.tf's `ssh-keys` field); the COS guest
+# agent provisions the user/home/authorized_keys on first connect. Unlike
+# deploy/hub (Debian), COS has no useradd/getent to statically provision a
+# user with — this is COS's actual supported SSH mechanism, not a workaround.
+# Public key material only — safe in tfvars.
 
 variable "admin_ssh_user" {
   type        = string
