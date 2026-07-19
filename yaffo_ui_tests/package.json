@@ -8,6 +8,8 @@
     "generate:test": "tsx lib/test_generator/index.ts --run-tests",
     "generate:test:gemini": "tsx lib/test_generator/index.ts -m gemini-2.5-pro --run-tests",
     "test": "BASE_URL=http://127.0.0.1:5002 playwright test",
+    "seed:build": "tsx lib/services/isolated_runner.ts --build-seed --peer",
+    "test:spec": "tsx scripts/test_spec.ts",
     "test:unit": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
@@ -17,10 +19,10 @@
     "test:heal": "tsx lib/test_generator/heal_test.ts",
     "test:heal:repo": "tsx lib/test_generator/heal_repo.ts",
     "analyze": "tsx lib/cli/analyze.ts",
-    "regenerate": "tsx lib/cli/regenerate.ts",
     "lint": "eslint lib/ generated_tests/",
     "typecheck": "tsc --noEmit",
     "logs": "tsx scripts/browse_api_logs.ts",
+    "validate:specs": "tsx scripts/validate_specs.ts",
     "docker:build:mcp-filesystem": "docker build -t yaffo-mcp-filesystem:latest docker/mcp-filesystem"
   },
   "dependencies": {

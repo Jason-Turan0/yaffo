@@ -44,9 +44,14 @@ function resolveReportJson(options: HealRepoOptions): string {
     }
 
     const reportDir = resolve(options.reportDir || "reports");
+    // Reports are written per-suite (reports/<suite>/results/test-results.json),
+    // so check the suite subdirs as well as the plain layout for back-compat and
+    // for a report-dir already pointed at a single suite.
     const candidates = [
         join(reportDir, "results", "test-results.json"),
         join(reportDir, "test-results.json"),
+        join(reportDir, "core", "results", "test-results.json"),
+        join(reportDir, "sharing", "results", "test-results.json"),
     ];
 
     const found = candidates.find(candidate => existsSync(candidate));

@@ -36,13 +36,15 @@ function inferSpecPath(testFilePath: string): string {
 interface HealOptions {
     port?: number;
     model?: string;
+    /** Serve the restored seed cache instead of re-seeding (CI fan-out). */
+    preseeded?: boolean;
 }
 
 export async function healTest(
     testFilePath: string,
     options: HealOptions = {}
 ): Promise<HealResult> {
-    const {port = 5001, model = "claude-sonnet-4-5"} = options;
+    const {port = 5001, model = "claude-sonnet-4-5", preseeded = false} = options;
     const specPath = inferSpecPath(testFilePath);
     const baseUrl = `http://127.0.0.1:${port}`;
 
@@ -69,7 +71,7 @@ export async function healTest(
         // Playwright run — including the orchestrator's re-runs — inherits it
         // and the config's `sharing` project exists.
         const withPeer = basename(specPath, ".yaml") === "sharing";
-        isolatedEnvironment = await startIsolatedEnvironment(port, {withPeer});
+        isolatedEnvironment = await startIsolatedEnvironment(port, {withPeer, preseeded});
         if (isolatedEnvironment.peer) {
             process.env.PEER_URL = isolatedEnvironment.peer.baseUrl;
         }
@@ -128,6 +130,7 @@ async function main() {
     const model = modelIndex !== -1 && args[modelIndex + 1]
         ? args[modelIndex + 1]
         : "claude-sonnet-4-5";
+    const preseeded = args.includes("--preseeded");
 
     const filteredArgs = args.filter((a, i) =>
         !a.startsWith("--") && !a.startsWith("-") &&
@@ -141,6 +144,7 @@ async function main() {
         console.error("Options:");
         console.error("  -p, --port <port>   Port for isolated Flask server (default: 5001)");
         console.error("  -m, --model <model> Model alias (default: claude-sonnet-4-5)");
+        console.error("  --preseeded         Serve the restored seed cache instead of re-seeding");
         console.error("");
         process.exit(1);
     }
@@ -149,7 +153,7 @@ async function main() {
 
     console.log(`\n🩹 Auto-healing test: ${testFilePath}`);
 
-    const result = await healTest(testFilePath, {port, model});
+    const result = await healTest(testFilePath, {port, model, preseeded});
 
     if (result.success) {
         console.log(`\n✅ Test healed successfully after ${result.iterations} iteration(s)`);

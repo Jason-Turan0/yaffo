@@ -23,30 +23,126 @@ concurrency:
 permissions:
   contents: read
 
+# Shared, symlink-free locations. The seed cache captures the (expensive)
+# indexed data dirs; YAFFO_ASSET_DIR holds the models/binaries once for both
+# profiles instead of duplicating them under each data dir.
+env:
+  SEED_CACHE_PATH: |
+    /tmp/yaffo-seed
+    /tmp/yaffo-assets
+  YAFFO_SEED_CACHE_ROOT: /tmp/yaffo-seed
+  YAFFO_ASSET_DIR: /tmp/yaffo-assets
+
 jobs:
-  playwright:
-    name: Playwright UI tests (${{ matrix.suite }})
+  validate-specs:
+    name: Validate test specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: yaffo_ui_tests/package-lock.json
+      - name: Install UI test dependencies
+        working-directory: yaffo_ui_tests
+        run: npm ci
+      - name: Validate spec YAML
+        working-directory: yaffo_ui_tests
+        run: npm run validate:specs
+
+  list-specs:
+    name: Enumerate spec files
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.list.outputs.matrix }}
+      seed_key: ${{ steps.key.outputs.seed_key }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: yaffo_ui_tests/package-lock.json
+      - name: Install UI test dependencies
+        working-directory: yaffo_ui_tests
+        run: npm ci
+      - name: Build spec matrix
+        id: list
+        working-directory: yaffo_ui_tests
+        run: npx tsx scripts/list_specs.ts --github
+      # Rebuild the seed only when the fixtures, seed script, or the indexing /
+      # face / label / model code that shapes the seeded DB actually change.
+      - name: Compute seed cache key
+        id: key
+        run: |
+          echo "seed_key=seed-${{ runner.os }}-${{ hashFiles(
+            'yaffo_ui_tests/test_data/bennett/**',
+            'yaffo_ui_tests/test_data/obama/images/**',
+            'yaffo_ui_tests/test_data/mp4/**',
+            'yaffo_ui_tests/scripts/seed_database.py',
+            'yaffo_ui_tests/lib/services/isolated_runner.ts',
+            'yaffo/utils/index_photos.py',
+            'yaffo/utils/index_video.py',
+            'yaffo/utils/face_analysis.py',
+            'yaffo/utils/image_classifier.py',
+            'yaffo/download_assets.py',
+            'yaffo/db/models.py',
+            'pyproject.toml'
+          ) }}-v1" >> "$GITHUB_OUTPUT"
+
+  seed-cache:
+    name: Build seed cache
+    needs: list-specs
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore seed cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SEED_CACHE_PATH }}
+          key: ${{ needs.list-specs.outputs.seed_key }}
+      - uses: actions/setup-python@v5
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - uses: actions/setup-node@v4
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: yaffo_ui_tests/package-lock.json
+      - name: Install Python dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          python -m venv venv
+          ./venv/bin/python -m pip install --upgrade pip
+          ./venv/bin/pip install -e '.[dev]'
+      - name: Install UI test dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: yaffo_ui_tests
+        run: npm ci
+      # Seeds both profiles into the canonical cache dirs, running the real
+      # indexing/face/label pipeline. Saved by actions/cache at job end.
+      - name: Build seed (real indexing + labeling)
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: yaffo_ui_tests
+        run: npx tsx lib/services/isolated_runner.ts --build-seed --peer
 
+  playwright:
+    name: ${{ matrix.id }}
+    needs: [validate-specs, list-specs, seed-cache]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          # Every suite except sharing, against the single-instance sandbox.
-          - suite: core
-            start: npm run isolatedEnvironment:start -- --port 5002
-            ready_urls: http://127.0.0.1:5002
-            test: npx playwright test --project=chromium
-            peer_url: ""
-          # The stateful sharing suite, against the two-instance sandbox
-          # (A grants on 5002, B pulls on 5003; LAN pairing, no hub).
-          - suite: sharing
-            start: npm run isolatedEnvironment:start:sharing
-            ready_urls: http://127.0.0.1:5002 http://127.0.0.1:5003
-            test: npx playwright test --project=sharing
-            peer_url: http://127.0.0.1:5003
-
+      matrix: ${{ fromJSON(needs.list-specs.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -76,14 +172,30 @@ jobs:
         working-directory: yaffo_ui_tests
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright tests
+      - name: Restore seed cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.SEED_CACHE_PATH }}
+          key: ${{ needs.list-specs.outputs.seed_key }}
+          fail-on-cache-miss: true
+
+      - name: Run ${{ matrix.spec }}
         working-directory: yaffo_ui_tests
         env:
+          SUITE: ${{ matrix.id }}
           BASE_URL: http://127.0.0.1:5002
-          PEER_URL: ${{ matrix.peer_url }}
+          PEER_URL: ${{ matrix.peer == 'true' && 'http://127.0.0.1:5003' || '' }}
         run: |
           mkdir -p reports
-          ${{ matrix.start }} > reports/isolated-environment.log 2>&1 &
+          PEER_FLAG=""
+          READY_URLS="http://127.0.0.1:5002"
+          if [ "${{ matrix.peer }}" = "true" ]; then
+            PEER_FLAG="--peer"
+            READY_URLS="$READY_URLS http://127.0.0.1:5003"
+          fi
+
+          npx tsx lib/services/isolated_runner.ts --port 5002 --preseeded $PEER_FLAG \
+            > reports/isolated-environment.log 2>&1 &
           SERVER_PID=$!
 
           cleanup() {
@@ -92,7 +204,7 @@ jobs:
           }
           trap cleanup EXIT
 
-          for url in ${{ matrix.ready_urls }}; do
+          for url in $READY_URLS; do
             for attempt in {1..120}; do
               if curl -fsS "$url" >/dev/null; then
                 break
@@ -107,13 +219,12 @@ jobs:
             curl -fsS "$url" >/dev/null
           done
 
-          ${{ matrix.test }}
+          npx playwright test "${{ matrix.spec }}" --project=${{ matrix.project }}
 
-      - name: Upload Playwright reports
+      - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: playwright-reports-${{ matrix.suite }}
-          path: |
-            yaffo_ui_tests/reports/
+          name: playwright-reports-${{ matrix.id }}
+          path: yaffo_ui_tests/reports/
           retention-days: 7

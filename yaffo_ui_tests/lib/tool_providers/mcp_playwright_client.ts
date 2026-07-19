@@ -154,7 +154,7 @@ function buildArgs(options: PlaywrightMcpClientOptions): string[] {
             const videoSize = typeof artifacts.saveVideo === "string"
                 ? artifacts.saveVideo
                 : "1280x720";
-            args.push(`--save-video=${videoSize}`);
+            //args.push(`--save-video=${videoSize}`);
         }
         if (artifacts.saveTrace) {
             args.push("--save-trace");

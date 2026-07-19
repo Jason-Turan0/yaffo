@@ -1,11 +1,11 @@
 .demo-banner {
     align-items: center;
-    background: var(--color-warning-bg, #fff4d6);
-    border-bottom: 1px solid var(--color-warning-border, #d9a441);
-    color: var(--color-text, #1f2933);
+    background: var(--color-warning-soft);
+    border-bottom: 1px solid var(--color-warning-soft-border);
+    color: var(--color-text);
     display: flex;
     flex-wrap: wrap;
-    font-size: 0.875rem;
+    font-size: var(--font-size-base);
     gap: 0.35rem 0.75rem;
     justify-content: center;
     padding: 0.55rem 1rem;
@@ -18,7 +18,7 @@
 
 .demo-disabled-page {
     align-items: center;
-    background: var(--color-background, #f5f7fa);
+    background: var(--color-bg);
     display: flex;
     justify-content: center;
     min-height: 100vh;
@@ -26,17 +26,17 @@
 }
 
 .demo-disabled-card {
-    background: var(--color-surface, #fff);
-    border: 1px solid var(--color-border, #d9e2ec);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 0.75rem;
-    box-shadow: 0 1rem 2.5rem rgb(15 23 42 / 12%);
+    box-shadow: var(--shadow-xl);
     max-width: 34rem;
     padding: 2rem;
     text-align: center;
 }
 
 .demo-disabled-eyebrow {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;

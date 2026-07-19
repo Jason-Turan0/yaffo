@@ -66,6 +66,19 @@ async function removeMembers(page: Page, albumPath: string, ids: string[]): Prom
   await page.waitForURL(/edit=1/);
 }
 
+// Reorder album members by posting the new order via browser-side fetch, which
+// automatically includes the CSRF token (via security.js wrapper).
+async function reorderMembers(page: Page, albumPath: string, orderedIds: string[]): Promise<void> {
+  await page.evaluate(async ({ url, ids }) => {
+    const body = new FormData();
+    ids.forEach((id) => body.append('media_item_id', id));
+    const response = await fetch(url, { method: 'POST', body });
+    if (response.status !== 204) {
+      throw new Error(`Reorder failed with status ${response.status}`);
+    }
+  }, { url: `${albumPath}/reorder`, ids: orderedIds });
+}
+
 test.describe('Albums Feature', () => {
 
   test.beforeEach(async () => {
@@ -344,13 +357,8 @@ test.describe('Albums Feature', () => {
     await page.reload();
     await expect(page.locator('#album-grid .photo-card').first()).toHaveAttribute('data-select-id', draggedId);
 
-    // Cleanup: restore the original order
-    const body = originalOrder.map((id) => `media_item_id=${id}`).join('&');
-    const restore = await page.request.post(`${albumPath}/reorder`, {
-      data: body,
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    });
-    expect(restore.status()).toBe(204);
+    // Cleanup: restore the original order via browser-side fetch (includes CSRF)
+    await reorderMembers(page, albumPath, originalOrder);
     expect(await memberIds(page, albumPath)).toEqual(originalOrder);
   });
 

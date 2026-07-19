@@ -228,7 +228,7 @@ npm run isolatedEnvironment:start -- --demo
 # Start two demo instances (A is source, B is receiver)
 npm run isolatedEnvironment:start:sharing -- --demo
 
-# Run all generated tests
+# Run all generated tests (against an already-running environment)
 npm test
 
 # Run in headed mode (see browser)
@@ -241,6 +241,31 @@ npm run test:ui
 npm run test:unit
 ```
 
+#### Per-spec runs with the seed cache
+
+CI runs each spec file in its own isolated environment restored from a **seed
+cache** — the seeded data dir (indexing, faces, labels, models) built once and
+reused, so the expensive pipeline runs only when its inputs change. You can run
+the same way locally:
+
+```bash
+# Build the seed cache once (real indexing/labeling; seeds A + B). Re-run only
+# after changing fixtures, the seed script, or indexing/model code.
+npm run seed:build
+
+# Run one spec against its own environment restored from the cache. The project
+# (chromium/sharing) and whether a peer is needed are derived from the path.
+npm run test:spec -- generated_tests/albums/albums.spec.ts
+npm run test:spec -- generated_tests/sharing/sharing.spec.ts
+
+# Skip the cache and seed inline instead (no seed:build needed):
+npm run test:spec -- generated_tests/albums/albums.spec.ts --fresh
+```
+
+`test:spec` starts the environment, runs the single spec, and tears it down.
+Its report lands in `reports/<spec-id>/` (e.g. `reports/albums__albums/`), the
+same per-spec layout CI uploads.
+
 ### 4. Self-Heal Failing Tests
 
 ```bash
@@ -249,10 +274,13 @@ npm run test:heal generated_tests/face_assignment/face-assignment.spec.ts
 
 # With custom port for isolated server
 npm run test:heal -- generated_tests/my_feature/my-test.spec.ts -p 5002
+
+# Reuse the seed cache instead of seeding inline (run `npm run seed:build` first)
+npm run test:heal -- generated_tests/my_feature/my-test.spec.ts --preseeded
 ```
 
 The healer will:
-1. Start an isolated Flask environment
+1. Start an isolated Flask environment (two instances for a `sharing` spec)
 2. Run the test to capture failures
 3. **Triage** the failure (classify root cause using tools)
 4. **Fix** if it's a test code defect (reusing investigation context)
@@ -296,12 +324,47 @@ See `playwright.config.ts`:
 | `npm run test:unit` | Run Jest unit tests |
 | `npm run test:ui` | Run tests with Playwright UI |
 | `npm run test:headed` | Run tests in headed browser |
+| `npm run seed:build` | Build the seed cache (seeds A + B once) for `--preseeded` runs |
+| `npm run test:spec -- <spec>` | Run one spec in its own cache-restored environment |
+| `npm run validate:specs` | Verify all `specs/*.yaml` are valid YAML |
 | `npm run isolatedEnvironment:start [-- --demo]` | Start a seeded isolated app, optionally in source demo mode |
 | `npm run isolatedEnvironment:start:sharing [-- --demo]` | Start isolated A/B apps, optionally as source/receiver demos |
-| `npm run test:heal <test>` | Auto-heal a failing test |
+| `npm run test:heal <test> [--preseeded]` | Auto-heal a failing test |
 | `npm run logs` | Browse AI model API logs |
 | `npm run typecheck` | TypeScript type check |
 | `npm run docker:build:mcp-filesystem` | Build MCP filesystem Docker image |
+
+## Continuous integration
+
+Two workflows drive CI (`.github/workflows/`):
+
+**`playwright.yml`** — one environment per spec file:
+
+1. `validate-specs` — every `specs/*.yaml` parses (`npm run validate:specs`).
+2. `list-specs` — enumerates spec files into a fan-out matrix (`scripts/list_specs.ts`)
+   and computes the seed cache key.
+3. `seed-cache` — builds the seed once (real indexing/faces/labels for A + B) and
+   stores it via `actions/cache`, keyed on the fixtures + seed script + indexing /
+   model code. It only rebuilds when those inputs change.
+4. `playwright` — a matrix job **per spec file**: restores the seed cache, starts
+   that spec's own isolated environment (`--preseeded`, plus `--peer` for sharing
+   specs), and runs just that spec with the derived project. Each leg uploads its
+   report as `playwright-reports-<spec-id>`.
+
+Because every spec gets a fresh, isolated instance, cross-file state interference
+is impossible and the core specs run in parallel across jobs.
+
+**`playwright-auto-heal.yml`** — fans out the same way. On a failed Playwright
+run it downloads the per-spec reports, builds a matrix of only the **failed**
+specs (`scripts/failed_spec_matrix.ts`), heals each one in its own cache-restored
+environment (`heal_test.ts --preseeded`), then collects the per-spec patches into
+a single pull request.
+
+The seed cache path is pinned with `YAFFO_SEED_CACHE_ROOT` so the build and
+restore jobs agree on the absolute location — required because the seeded
+database stores absolute media paths (see `seedCacheDir` in
+`lib/services/isolated_runner.ts`). Run the same flow locally with
+`npm run seed:build` then `npm run test:spec -- <spec>`.
 
 ## Spec File Format
 

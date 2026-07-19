@@ -5,16 +5,24 @@ dotenv.config();
 
 const baseURL = process.env.BASE_URL || 'http://127.0.0.1:5001';
 
+// Which suite is running, used to keep each suite's reports in its own tree
+// (reports/core/… vs reports/sharing/…) so artifacts never collide when merged.
+// CI sets SUITE explicitly; locally we infer it from whether a peer is present.
+const suite = process.env.SUITE || (process.env.PEER_URL ? 'sharing' : 'core');
+
 export default defineConfig({
     testDir: './generated_tests',
     fullyParallel: true,
     timeout: 5000,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI === "true" ? 2 : 0,
-    workers: process.env.CI === "true" ? 1 : 2,
+    // The sharing suite is stateful and strictly ordered, so it must stay on a
+    // single worker. The core suite tolerates parallel workers (its files each
+    // clean up after themselves); see the cross-file caveats in the specs.
+    workers: suite === 'sharing' ? 1 : 2,
     reporter: [
-        ['html', {outputFolder: 'reports/html'}],
-        ['json', {outputFile: 'reports/results/test-results.json'}],
+        ['html', {outputFolder: `reports/${suite}/html`}],
+        ['json', {outputFile: `reports/${suite}/results/test-results.json`}],
         ['list'],
     ],
 
@@ -25,7 +33,7 @@ export default defineConfig({
         video: 'retain-on-failure',
     },
 
-    outputDir: 'reports/artifacts',
+    outputDir: `reports/${suite}/artifacts`,
 
     projects: [
         // The sharing suite needs the two-instance sandbox (BASE_URL = instance A,

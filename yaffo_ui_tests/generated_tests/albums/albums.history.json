@@ -1,0 +1,68 @@
+{
+  "testRunHistory": [
+    {
+      "timestamp": "2026-07-19T18:01:53.138Z",
+      "success": false,
+      "summary": {
+        "total": 9,
+        "passed": 8,
+        "failed": 1,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Albums Feature › albums_reorder_members - Dragging a photo reorders the album and the order persists",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m204\u001b[39m\nReceived: \u001b[31m403\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-07-19T18:05:27.996Z",
+      "success": false,
+      "summary": {
+        "total": 9,
+        "passed": 8,
+        "failed": 1,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Albums Feature › albums_reorder_members - Dragging a photo reorders the album and the order persists",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m204\u001b[39m\nReceived: \u001b[31m403\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-07-19T18:08:51.088Z",
+      "success": false,
+      "summary": {
+        "total": 9,
+        "passed": 8,
+        "failed": 1,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Albums Feature › albums_reorder_members - Dragging a photo reorders the album and the order persists",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m204\u001b[39m\nReceived: \u001b[31m403\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-07-19T18:13:30.124Z",
+      "success": false,
+      "summary": {
+        "total": 9,
+        "passed": 8,
+        "failed": 1,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Albums Feature › albums_reorder_members - Dragging a photo reorders the album and the order persists",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m204\u001b[39m\nReceived: \u001b[31m403\u001b[39m"
+        }
+      ]
+    }
+  ]
+}

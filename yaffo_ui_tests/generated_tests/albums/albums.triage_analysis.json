@@ -1,0 +1,8 @@
+{
+  "classification": "test_code_defect",
+  "reasoning": "The test fails consistently at line 353 during cleanup, not during the main test execution. The cleanup code uses `page.request.post()` which is Playwright's API request context that does not include browser session cookies or CSRF tokens. The main test passes because it uses HTML5 drag events that trigger browser JavaScript which calls `fetch()`. The application's security.js wraps all fetch() calls to automatically include the CSRF token from window.APP_CONFIG.csrfToken. The 403 error indicates CSRF protection is working correctly - the test just needs to either: (1) extract and include the CSRF token in API requests, (2) use browser-based form submission for cleanup, or (3) use drag events to restore the original order instead of direct API calls.",
+  "affectedTests": [
+    "Albums Feature › albums_reorder_members - Dragging a photo reorders the album and the order persists"
+  ],
+  "suggestedAction": "Fix the cleanup code in the test to either: (1) Extract the CSRF token from the page using `page.evaluate(() => window.APP_CONFIG.csrfToken)` and include it in the POST request headers as 'X-CSRF-Token', or (2) Use browser-based navigation/form submission that automatically carries the CSRF token, or (3) Restore the original order using the same drag-and-drop mechanism used in the main test instead of a direct API call."
+}

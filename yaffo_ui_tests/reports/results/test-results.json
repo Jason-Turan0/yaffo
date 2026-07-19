@@ -11,7 +11,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 1
+      "actualWorkers": 2
     },
     "preserveOutput": "always",
     "reporter": [
@@ -43,7 +43,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 1
+          "actualWorkers": 2
         },
         "id": "chromium",
         "name": "chromium",
@@ -53,22 +53,6 @@
         ],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
-        ],
-        "timeout": 5000
-      },
-      {
-        "outputDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
-        "id": "sharing",
-        "name": "sharing",
-        "testDir": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests",
-        "testIgnore": [],
-        "testMatch": [
-          "/generated_tests\\/sharing\\//"
         ],
         "timeout": 5000
       }
@@ -83,20 +67,2886 @@
   },
   "suites": [
     {
-      "title": "sharing/sharing.spec.ts",
-      "file": "sharing/sharing.spec.ts",
+      "title": "albums/albums.spec.ts",
+      "file": "albums/albums.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Sharing Feature",
-          "file": "sharing/sharing.spec.ts",
-          "line": 166,
+          "title": "Albums Feature",
+          "file": "albums/albums.spec.ts",
+          "line": 82,
           "column": 6,
           "specs": [
             {
-              "title": "sharing_settings_shows_this_device - The sharing settings page shows this device identity and hub state",
+              "title": "albums_overview_lists_albums_as_tiles - The albums tab opens on an overview of tiles with covers and counts",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 723,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:12.950Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "913f9091e3be69d88d68-919f65943ef7fafad33d",
+              "file": "albums/albums.spec.ts",
+              "line": 88,
+              "column": 3
+            },
+            {
+              "title": "albums_create_and_delete - The user can create an album and delete it again",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 888,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:13.997Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "913f9091e3be69d88d68-8db797727cbd767229ac",
+              "file": "albums/albums.spec.ts",
+              "line": 109,
+              "column": 3
+            },
+            {
+              "title": "albums_edit_details - The user can rename an album, and clashing names are rejected",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1049,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:14.890Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "913f9091e3be69d88d68-8652e9f558bcd23ab6a7",
+              "file": "albums/albums.spec.ts",
+              "line": 140,
+              "column": 3
+            },
+            {
+              "title": "albums_add_photos_by_selection - Two ticked photos are added, and the screen stays on the add screen",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1463,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:15.943Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "913f9091e3be69d88d68-63dad001af076487487e",
+              "file": "albums/albums.spec.ts",
+              "line": 184,
+              "column": 3
+            },
+            {
+              "title": "albums_bulk_add_by_filter - Every photo matching a filter is added, not just the visible page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1583,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:17.411Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "913f9091e3be69d88d68-073c607497d5bcb5c9f3",
+              "file": "albums/albums.spec.ts",
+              "line": 225,
+              "column": 3
+            },
+            {
+              "title": "albums_selection_survives_pagination - A select-all-minus-one selection is kept while paging",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 843,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:18.998Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "913f9091e3be69d88d68-a06a4ca46cdf3176cd6e",
+              "file": "albums/albums.spec.ts",
+              "line": 262,
+              "column": 3
+            },
+            {
+              "title": "albums_edit_mode_remove_and_cover - Edit mode pins a cover and removes members without deleting photos",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1391,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:19.845Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "913f9091e3be69d88d68-bb2c34476fcc80b1769c",
+              "file": "albums/albums.spec.ts",
+              "line": 291,
+              "column": 3
+            },
+            {
+              "title": "albums_reorder_members - Dragging a photo reorders the album and the order persists",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 581,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:21.240Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "913f9091e3be69d88d68-699fae067cd0f88797c0",
+              "file": "albums/albums.spec.ts",
+              "line": 337,
+              "column": 3
+            },
+            {
+              "title": "albums_share_modal_without_paired_devices - With no paired devices the Share modal says so",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 435,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:21.825Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "913f9091e3be69d88d68-686230593a6e7db3ec73",
+              "file": "albums/albums.spec.ts",
+              "line": 365,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "automations/automations.spec.ts",
+      "file": "automations/automations.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Automations",
+          "file": "automations/automations.spec.ts",
+          "line": 117,
+          "column": 6,
+          "specs": [
+            {
+              "title": "automations_list_shows_system_and_custom",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 832,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:12.949Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4be01265488597e7b129-a91c51b23789c75d38dc",
+              "file": "automations/automations.spec.ts",
+              "line": 126,
+              "column": 3
+            },
+            {
+              "title": "automations_enable_disable_toggle",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 619,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:14.106Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4be01265488597e7b129-c3a02e4203ae87ab9ee7",
+              "file": "automations/automations.spec.ts",
+              "line": 161,
+              "column": 3
+            },
+            {
+              "title": "automations_edit_schedule_trigger",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1235,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:14.732Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4be01265488597e7b129-99f142706837e0ddd2f4",
+              "file": "automations/automations.spec.ts",
+              "line": 173,
+              "column": 3
+            },
+            {
+              "title": "automations_add_event_trigger",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 604,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:15.971Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4be01265488597e7b129-3b5c39d13f2ae6510f0d",
+              "file": "automations/automations.spec.ts",
+              "line": 211,
+              "column": 3
+            },
+            {
+              "title": "automations_run_now",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 406,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:16.580Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4be01265488597e7b129-4d6a89c856e7d574411d",
+              "file": "automations/automations.spec.ts",
+              "line": 242,
+              "column": 3
+            },
+            {
+              "title": "automations_test_dry_run",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 993,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:16.990Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4be01265488597e7b129-9f352c365519a4216f27",
+              "file": "automations/automations.spec.ts",
+              "line": 259,
+              "column": 3
+            },
+            {
+              "title": "automations_configure_system_automation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 999,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:17.990Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4be01265488597e7b129-354c5c1d7becee023e9f",
+              "file": "automations/automations.spec.ts",
+              "line": 331,
+              "column": 3
+            },
+            {
+              "title": "automations_create_custom_automation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 3379,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:18.993Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4be01265488597e7b129-519d0c402e6a66d7a9cd",
+              "file": "automations/automations.spec.ts",
+              "line": 355,
+              "column": 3
+            },
+            {
+              "title": "automations_delete_custom_automation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 496,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:22.376Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4be01265488597e7b129-2e34884e5a35dd4d9c2a",
+              "file": "automations/automations.spec.ts",
+              "line": 414,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "custom_pages/custom_pages.spec.ts",
+      "file": "custom_pages/custom_pages.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Custom Pages",
+          "file": "custom_pages/custom_pages.spec.ts",
+          "line": 42,
+          "column": 6,
+          "specs": [
+            {
+              "title": "pages_create_new_page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 658,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:22.275Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ab29448b3942c99027b7-591f87d0e8a004039460",
+              "file": "custom_pages/custom_pages.spec.ts",
+              "line": 53,
+              "column": 3
+            },
+            {
+              "title": "pages_edit_metadata_and_save",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 381,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:22.938Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ab29448b3942c99027b7-4c9a5756506281cc02f8",
+              "file": "custom_pages/custom_pages.spec.ts",
+              "line": 73,
+              "column": 3
+            },
+            {
+              "title": "pages_design_add_widget_manually",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 509,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:23.322Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ab29448b3942c99027b7-e1f9855a65bb1f9e3512",
+              "file": "custom_pages/custom_pages.spec.ts",
+              "line": 103,
+              "column": 3
+            },
+            {
+              "title": "pages_generate_widgets_via_ai_chat",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4390,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:23.835Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ab29448b3942c99027b7-41c59c1b3f9a00f4ce2c",
+              "file": "custom_pages/custom_pages.spec.ts",
+              "line": 133,
+              "column": 3
+            },
+            {
+              "title": "pages_presentation_view_renders_widgets",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1150,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:28.230Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ab29448b3942c99027b7-8ea618946d6a3b84aca9",
+              "file": "custom_pages/custom_pages.spec.ts",
+              "line": 207,
+              "column": 3
+            },
+            {
+              "title": "pages_delete_page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1085,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:29.393Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ab29448b3942c99027b7-21a7ce1db25d348ebae2",
+              "file": "custom_pages/custom_pages.spec.ts",
+              "line": 252,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "face_assignment/face-assignment.spec.ts",
+      "file": "face_assignment/face-assignment.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Face Assignment",
+          "file": "face_assignment/face-assignment.spec.ts",
+          "line": 99,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should be able to create a new person using the quick action section",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2312,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:22.891Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-4a7f48fdd8a050ada969",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 107,
+              "column": 3
+            },
+            {
+              "title": "should be able to assign faces to people",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 344,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n    at createPersonViaApi (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:54:27)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:127:19",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
+                          "column": 27,
+                          "line": 54
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 52 |\u001b[39m     }\n \u001b[90m 53 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 54 |\u001b[39m     expect(response\u001b[33m.\u001b[39mok())\u001b[33m.\u001b[39mtoBeTruthy()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 55 |\u001b[39m     \u001b[36mconst\u001b[39m data \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m response\u001b[33m.\u001b[39mjson()\u001b[33m;\u001b[39m\n \u001b[90m 56 |\u001b[39m     \u001b[36mreturn\u001b[39m { id\u001b[33m:\u001b[39m data\u001b[33m.\u001b[39mperson_id\u001b[33m,\u001b[39m name\u001b[33m:\u001b[39m data\u001b[33m.\u001b[39mname }\u001b[33m;\u001b[39m\n \u001b[90m 57 |\u001b[39m }\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
+                            "column": 27,
+                            "line": 54
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n\n\u001b[0m \u001b[90m 52 |\u001b[39m     }\n \u001b[90m 53 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 54 |\u001b[39m     expect(response\u001b[33m.\u001b[39mok())\u001b[33m.\u001b[39mtoBeTruthy()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 55 |\u001b[39m     \u001b[36mconst\u001b[39m data \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m response\u001b[33m.\u001b[39mjson()\u001b[33m;\u001b[39m\n \u001b[90m 56 |\u001b[39m     \u001b[36mreturn\u001b[39m { id\u001b[33m:\u001b[39m data\u001b[33m.\u001b[39mperson_id\u001b[33m,\u001b[39m name\u001b[33m:\u001b[39m data\u001b[33m.\u001b[39mname }\u001b[33m;\u001b[39m\n \u001b[90m 57 |\u001b[39m }\u001b[0m\n\u001b[2m    at createPersonViaApi (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:54:27)\u001b[22m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts:127:19\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:25.207Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-73e0c-e-to-assign-faces-to-people-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-73e0c-e-to-assign-faces-to-people-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/face_assignment-face-assig-73e0c-e-to-assign-faces-to-people-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/face_assignment/face-assignment.spec.ts",
+                        "column": 27,
+                        "line": 54
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-5555224401f975373e4e",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 126,
+              "column": 3
+            },
+            {
+              "title": "faces are automatically matched to people based on similarity",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:25.570Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-78bff7844cc04832bc36",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 161,
+              "column": 3
+            },
+            {
+              "title": "similar faces are grouped together",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:25.570Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-6fd4dc0c7a9ecdc5f3c4",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 199,
+              "column": 3
+            },
+            {
+              "title": "keyboard shortcuts enable quick face assignment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:25.570Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-b546ac28bfdaba5f72c7",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 224,
+              "column": 3
+            },
+            {
+              "title": "face page navigation works",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:25.570Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "74b764fe8023e3d0b0fe-9f19be366c14c4bf7df0",
+              "file": "face_assignment/face-assignment.spec.ts",
+              "line": 260,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "index_photos/index_photos.spec.ts",
+      "file": "index_photos/index_photos.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Index Photos",
+          "file": "index_photos/index_photos.spec.ts",
+          "line": 82,
+          "column": 6,
+          "specs": [
+            {
+              "title": "index_photos_scan_shows_stats",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 900000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 308,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:25.872Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0fc21eeae9d7cc968f32-f849a84836e7d886ad93",
+              "file": "index_photos/index_photos.spec.ts",
+              "line": 89,
+              "column": 3
+            },
+            {
+              "title": "index_photos_sync_database",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 900000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 4648,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:26.266Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0fc21eeae9d7cc968f32-2af8c1318057487af859",
+              "file": "index_photos/index_photos.spec.ts",
+              "line": 114,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "labels/labels.spec.ts",
+      "file": "labels/labels.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Labels",
+          "file": "labels/labels.spec.ts",
+          "line": 143,
+          "column": 6,
+          "specs": [
+            {
+              "title": "labels_vocabulary_shows_default_labels",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 318,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:30.582Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "285d4c0361ada9db9073-318f64d4e3ce2355112e",
+              "file": "labels/labels.spec.ts",
+              "line": 148,
+              "column": 3
+            },
+            {
+              "title": "labels_vocabulary_add_duplicate_and_remove_label",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1695,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:30.904Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "285d4c0361ada9db9073-bb003ac27ea5120ae935",
+              "file": "labels/labels.spec.ts",
+              "line": 169,
+              "column": 3
+            },
+            {
+              "title": "labels_vocabulary_toggle_label_persists",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1071,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:32.608Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "285d4c0361ada9db9073-b054c0d34b645c8c6340",
+              "file": "labels/labels.spec.ts",
+              "line": 191,
+              "column": 3
+            },
+            {
+              "title": "labels_classify_automation_configurable",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1528,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:33.687Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "285d4c0361ada9db9073-6ef26a25ca9816a19435",
+              "file": "labels/labels.spec.ts",
+              "line": 203,
+              "column": 3
+            },
+            {
+              "title": "labels_reclassify_all_photos_enqueues_background_run",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 451,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:35.223Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "285d4c0361ada9db9073-578ce03998282baffe3c",
+              "file": "labels/labels.spec.ts",
+              "line": 228,
+              "column": 3
+            },
+            {
+              "title": "photo_details_shows_labels_or_no_labels_state",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 625,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:35.682Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "285d4c0361ada9db9073-531189f7a87a504368fd",
+              "file": "labels/labels.spec.ts",
+              "line": 241,
+              "column": 3
+            },
+            {
+              "title": "gallery_filter_by_label_ui_preserves_selected_label_and_match_type",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1067,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:36.312Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "285d4c0361ada9db9073-959ebe8950baad803628",
+              "file": "labels/labels.spec.ts",
+              "line": 258,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "locations/locations.spec.ts",
+      "file": "locations/locations.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Locations Map",
+          "file": "locations/locations.spec.ts",
+          "line": 220,
+          "column": 6,
+          "specs": [
+            {
+              "title": "locations_map_displays_photo_markers",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 729,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:30.932Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-129db1397d9ddad17b68",
+              "file": "locations/locations.spec.ts",
+              "line": 233,
+              "column": 3
+            },
+            {
+              "title": "locations_selection_panel_shows_photo_details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2816,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:31.665Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-a719bf0a96008fc7d0a2",
+              "file": "locations/locations.spec.ts",
+              "line": 258,
+              "column": 3
+            },
+            {
+              "title": "locations_partial_cluster_selection_indicator",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 5738,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 20\u001b[39m\n\u001b[31m+ Received  +  1\u001b[39m\n\n\u001b[32m- Array [\u001b[39m\n\u001b[32m-   1,\u001b[39m\n\u001b[32m-   10,\u001b[39m\n\u001b[32m-   11,\u001b[39m\n\u001b[32m-   12,\u001b[39m\n\u001b[32m-   13,\u001b[39m\n\u001b[32m-   14,\u001b[39m\n\u001b[32m-   2,\u001b[39m\n\u001b[32m-   28,\u001b[39m\n\u001b[32m-   29,\u001b[39m\n\u001b[32m-   3,\u001b[39m\n\u001b[32m-   30,\u001b[39m\n\u001b[32m-   31,\u001b[39m\n\u001b[32m-   4,\u001b[39m\n\u001b[32m-   5,\u001b[39m\n\u001b[32m-   6,\u001b[39m\n\u001b[32m-   7,\u001b[39m\n\u001b[32m-   8,\u001b[39m\n\u001b[32m-   9,\u001b[39m\n\u001b[32m- ]\u001b[39m\n\u001b[31m+ Array []\u001b[39m\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 20\u001b[39m\n\u001b[31m+ Received  +  1\u001b[39m\n\n\u001b[32m- Array [\u001b[39m\n\u001b[32m-   1,\u001b[39m\n\u001b[32m-   10,\u001b[39m\n\u001b[32m-   11,\u001b[39m\n\u001b[32m-   12,\u001b[39m\n\u001b[32m-   13,\u001b[39m\n\u001b[32m-   14,\u001b[39m\n\u001b[32m-   2,\u001b[39m\n\u001b[32m-   28,\u001b[39m\n\u001b[32m-   29,\u001b[39m\n\u001b[32m-   3,\u001b[39m\n\u001b[32m-   30,\u001b[39m\n\u001b[32m-   31,\u001b[39m\n\u001b[32m-   4,\u001b[39m\n\u001b[32m-   5,\u001b[39m\n\u001b[32m-   6,\u001b[39m\n\u001b[32m-   7,\u001b[39m\n\u001b[32m-   8,\u001b[39m\n\u001b[32m-   9,\u001b[39m\n\u001b[32m- ]\u001b[39m\n\u001b[31m+ Array []\u001b[39m\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/locations/locations.spec.ts:336:5",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/locations/locations.spec.ts",
+                          "column": 5,
+                          "line": 336
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 334 |\u001b[39m\n \u001b[90m 335 |\u001b[39m     \u001b[36mawait\u001b[39m clickCluster(page\u001b[33m,\u001b[39m partial\u001b[33m!\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 336 |\u001b[39m     \u001b[36mawait\u001b[39m expect\u001b[33m.\u001b[39mpoll(() \u001b[33m=>\u001b[39m selectedIds(page))\u001b[33m.\u001b[39mtoEqual(partial\u001b[33m!\u001b[39m\u001b[33m.\u001b[39mids)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m     \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 337 |\u001b[39m\n \u001b[90m 338 |\u001b[39m     \u001b[36mconst\u001b[39m full \u001b[33m=\u001b[39m (\u001b[36mawait\u001b[39m clusterSummaries(page))\u001b[33m.\u001b[39mfind(cluster \u001b[33m=>\u001b[39m\n \u001b[90m 339 |\u001b[39m       cluster\u001b[33m.\u001b[39mids\u001b[33m.\u001b[39mlength \u001b[33m===\u001b[39m partial\u001b[33m!\u001b[39m\u001b[33m.\u001b[39mids\u001b[33m.\u001b[39mlength \u001b[33m&&\u001b[39m cluster\u001b[33m.\u001b[39mids\u001b[33m.\u001b[39mevery(id \u001b[33m=>\u001b[39m partial\u001b[33m!\u001b[39m\u001b[33m.\u001b[39mids\u001b[33m.\u001b[39mincludes(id)))\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/locations/locations.spec.ts",
+                            "column": 5,
+                            "line": 336
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 20\u001b[39m\n\u001b[31m+ Received  +  1\u001b[39m\n\n\u001b[32m- Array [\u001b[39m\n\u001b[32m-   1,\u001b[39m\n\u001b[32m-   10,\u001b[39m\n\u001b[32m-   11,\u001b[39m\n\u001b[32m-   12,\u001b[39m\n\u001b[32m-   13,\u001b[39m\n\u001b[32m-   14,\u001b[39m\n\u001b[32m-   2,\u001b[39m\n\u001b[32m-   28,\u001b[39m\n\u001b[32m-   29,\u001b[39m\n\u001b[32m-   3,\u001b[39m\n\u001b[32m-   30,\u001b[39m\n\u001b[32m-   31,\u001b[39m\n\u001b[32m-   4,\u001b[39m\n\u001b[32m-   5,\u001b[39m\n\u001b[32m-   6,\u001b[39m\n\u001b[32m-   7,\u001b[39m\n\u001b[32m-   8,\u001b[39m\n\u001b[32m-   9,\u001b[39m\n\u001b[32m- ]\u001b[39m\n\u001b[31m+ Array []\u001b[39m\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate\n\n\u001b[0m \u001b[90m 334 |\u001b[39m\n \u001b[90m 335 |\u001b[39m     \u001b[36mawait\u001b[39m clickCluster(page\u001b[33m,\u001b[39m partial\u001b[33m!\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 336 |\u001b[39m     \u001b[36mawait\u001b[39m expect\u001b[33m.\u001b[39mpoll(() \u001b[33m=>\u001b[39m selectedIds(page))\u001b[33m.\u001b[39mtoEqual(partial\u001b[33m!\u001b[39m\u001b[33m.\u001b[39mids)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m     \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 337 |\u001b[39m\n \u001b[90m 338 |\u001b[39m     \u001b[36mconst\u001b[39m full \u001b[33m=\u001b[39m (\u001b[36mawait\u001b[39m clusterSummaries(page))\u001b[33m.\u001b[39mfind(cluster \u001b[33m=>\u001b[39m\n \u001b[90m 339 |\u001b[39m       cluster\u001b[33m.\u001b[39mids\u001b[33m.\u001b[39mlength \u001b[33m===\u001b[39m partial\u001b[33m!\u001b[39m\u001b[33m.\u001b[39mids\u001b[33m.\u001b[39mlength \u001b[33m&&\u001b[39m cluster\u001b[33m.\u001b[39mids\u001b[33m.\u001b[39mevery(id \u001b[33m=>\u001b[39m partial\u001b[33m!\u001b[39m\u001b[33m.\u001b[39mids\u001b[33m.\u001b[39mincludes(id)))\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/locations/locations.spec.ts:336:5\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:34.489Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/locations-locations-Locati-13232-cluster-selection-indicator-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/locations-locations-Locati-13232-cluster-selection-indicator-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/locations-locations-Locati-13232-cluster-selection-indicator-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/locations/locations.spec.ts",
+                        "column": 5,
+                        "line": 336
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-651af9ec329a9504c865",
+              "file": "locations/locations.spec.ts",
+              "line": 310,
+              "column": 3
+            },
+            {
+              "title": "locations_filter_sidebar_filters_client_side",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:40.255Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-72c2a27ff0548fdab1ce",
+              "file": "locations/locations.spec.ts",
+              "line": 344,
+              "column": 3
+            },
+            {
+              "title": "locations_clear_filters_client_side",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:40.255Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-529a2ccaddf7db20005e",
+              "file": "locations/locations.spec.ts",
+              "line": 373,
+              "column": 3
+            },
+            {
+              "title": "locations_configure_filter_sidebar",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:40.255Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-40ede2189c551230e424",
+              "file": "locations/locations.spec.ts",
+              "line": 392,
+              "column": 3
+            },
+            {
+              "title": "locations_select_clusters_and_assign_name",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:40.255Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-a3dacc080cd8734753e1",
+              "file": "locations/locations.spec.ts",
+              "line": 423,
+              "column": 3
+            },
+            {
+              "title": "locations_clear_location_names",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:40.255Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-fef8df6ebd4b32bfce0a",
+              "file": "locations/locations.spec.ts",
+              "line": 466,
+              "column": 3
+            },
+            {
+              "title": "locations_recommends_existing_nearby_name",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:40.255Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-1b0520cd23497a23ff7c",
+              "file": "locations/locations.spec.ts",
+              "line": 494,
+              "column": 3
+            },
+            {
+              "title": "locations_reverse_geocode_suggests_name",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:40.255Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-539f0fd04a9b97887931",
+              "file": "locations/locations.spec.ts",
+              "line": 534,
+              "column": 3
+            },
+            {
+              "title": "locations_reverse_geocode_rate_limit_fallback",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:40.255Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7b0654ab6dbf4a4f3df4-22804b3c6dace99b7e17",
+              "file": "locations/locations.spec.ts",
+              "line": 585,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "people/people.spec.ts",
+      "file": "people/people.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "People",
+          "file": "people/people.spec.ts",
+          "line": 119,
+          "column": 6,
+          "specs": [
+            {
+              "title": "people_list_displays_all_people",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 116,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m201\u001b[39m\nReceived: \u001b[31m403\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m201\u001b[39m\nReceived: \u001b[31m403\u001b[39m\n    at createPersonViaApi (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/people/people.spec.ts:26:29)\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/people/people.spec.ts:131:22",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/people/people.spec.ts",
+                          "column": 29,
+                          "line": 26
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 24 |\u001b[39m \u001b[36masync\u001b[39m \u001b[36mfunction\u001b[39m createPersonViaApi(request\u001b[33m:\u001b[39m \u001b[33mAPIRequestContext\u001b[39m\u001b[33m,\u001b[39m name\u001b[33m:\u001b[39m string)\u001b[33m:\u001b[39m \u001b[33mPromise\u001b[39m\u001b[33m<\u001b[39m\u001b[33mnumber\u001b[39m\u001b[33m>\u001b[39m {\n \u001b[90m 25 |\u001b[39m   \u001b[36mconst\u001b[39m response \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m request\u001b[33m.\u001b[39mpost(\u001b[32m'/api/people/create'\u001b[39m\u001b[33m,\u001b[39m { data\u001b[33m:\u001b[39m { name } })\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 26 |\u001b[39m   expect(response\u001b[33m.\u001b[39mstatus())\u001b[33m.\u001b[39mtoBe(\u001b[35m201\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 27 |\u001b[39m   \u001b[36mreturn\u001b[39m (\u001b[36mawait\u001b[39m response\u001b[33m.\u001b[39mjson())\u001b[33m.\u001b[39mperson_id \u001b[36mas\u001b[39m number\u001b[33m;\u001b[39m\n \u001b[90m 28 |\u001b[39m }\n \u001b[90m 29 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/people/people.spec.ts",
+                            "column": 29,
+                            "line": 26
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m201\u001b[39m\nReceived: \u001b[31m403\u001b[39m\n\n\u001b[0m \u001b[90m 24 |\u001b[39m \u001b[36masync\u001b[39m \u001b[36mfunction\u001b[39m createPersonViaApi(request\u001b[33m:\u001b[39m \u001b[33mAPIRequestContext\u001b[39m\u001b[33m,\u001b[39m name\u001b[33m:\u001b[39m string)\u001b[33m:\u001b[39m \u001b[33mPromise\u001b[39m\u001b[33m<\u001b[39m\u001b[33mnumber\u001b[39m\u001b[33m>\u001b[39m {\n \u001b[90m 25 |\u001b[39m   \u001b[36mconst\u001b[39m response \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m request\u001b[33m.\u001b[39mpost(\u001b[32m'/api/people/create'\u001b[39m\u001b[33m,\u001b[39m { data\u001b[33m:\u001b[39m { name } })\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 26 |\u001b[39m   expect(response\u001b[33m.\u001b[39mstatus())\u001b[33m.\u001b[39mtoBe(\u001b[35m201\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 27 |\u001b[39m   \u001b[36mreturn\u001b[39m (\u001b[36mawait\u001b[39m response\u001b[33m.\u001b[39mjson())\u001b[33m.\u001b[39mperson_id \u001b[36mas\u001b[39m number\u001b[33m;\u001b[39m\n \u001b[90m 28 |\u001b[39m }\n \u001b[90m 29 |\u001b[39m\u001b[0m\n\u001b[2m    at createPersonViaApi (/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/people/people.spec.ts:26:29)\u001b[22m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/people/people.spec.ts:131:22\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:37.392Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/people-people-People-people-list-displays-all-people-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/people-people-People-people-list-displays-all-people-chromium/video.webm"
+                        },
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/people-people-People-people-list-displays-all-people-chromium/test-failed-2.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/people-people-People-people-list-displays-all-people-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/people/people.spec.ts",
+                        "column": 29,
+                        "line": 26
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "c1ca871e60f2ce1e469a-faffe0b9bdd330071319",
+              "file": "people/people.spec.ts",
+              "line": 130,
+              "column": 3
+            },
+            {
+              "title": "people_can_add_new_person",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:37.952Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c1ca871e60f2ce1e469a-77edd0da99c0cff56e33",
+              "file": "people/people.spec.ts",
+              "line": 153,
+              "column": 3
+            },
+            {
+              "title": "people_can_edit_person",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:37.952Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c1ca871e60f2ce1e469a-a282e68cad8eebb57f90",
+              "file": "people/people.spec.ts",
+              "line": 180,
+              "column": 3
+            },
+            {
+              "title": "people_can_delete_person",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:37.952Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c1ca871e60f2ce1e469a-dec5737b5b56a55eb377",
+              "file": "people/people.spec.ts",
+              "line": 210,
+              "column": 3
+            },
+            {
+              "title": "people_can_view_and_remove_faces",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:37.952Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c1ca871e60f2ce1e469a-74bd4bec05e6273ded3e",
+              "file": "people/people.spec.ts",
+              "line": 232,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "photo_details/photo-details-face-hover.spec.ts",
+      "file": "photo_details/photo-details-face-hover.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Photo Details - Face Hover Highlights",
+          "file": "photo_details/photo-details-face-hover.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "photo_details_face_hover_highlights",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 782,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:38.367Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4ce30755cb25ec20271-44856b3bef26f6caebb8",
+              "file": "photo_details/photo-details-face-hover.spec.ts",
+              "line": 5,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "photo_details/photo-details-file-info.spec.ts",
+      "file": "photo_details/photo-details-file-info.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Photo Details - File Information",
+          "file": "photo_details/photo-details-file-info.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "photo_details_displays_file_information",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 283,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:39.262Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "099ff410d43e7e9f2ab9-6d6a20d2ba3cc07cef1a",
+              "file": "photo_details/photo-details-file-info.spec.ts",
+              "line": 5,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "photo_details/photo-details-location.spec.ts",
+      "file": "photo_details/photo-details-location.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Photo Details - Location Section",
+          "file": "photo_details/photo-details-location.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "photo_details_location_section_works",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 274,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:39.556Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c5a67b5feb266ff41403-fdad3cf07884d2351aa0",
+              "file": "photo_details/photo-details-location.spec.ts",
+              "line": 5,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "photo_details/photo-details-people-faces.spec.ts",
+      "file": "photo_details/photo-details-people-faces.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Photo Details - People and Faces",
+          "file": "photo_details/photo-details-people-faces.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "photo_details_displays_people_and_faces",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 456,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:39.841Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8ab83a3f8c669ec163c2-c3af01c2bf9dbdf429bd",
+              "file": "photo_details/photo-details-people-faces.spec.ts",
+              "line": 5,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "photo_details/photo-details-tags.spec.ts",
+      "file": "photo_details/photo-details-tags.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Photo Details - Edit Tags",
+          "file": "photo_details/photo-details-tags.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "photo_details_can_edit_tags",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 655,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:40.634Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "677e0399e1ea35087752-cc389d568fce06204844",
+              "file": "photo_details/photo-details-tags.spec.ts",
+              "line": 25,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "photo_gallery/photo_gallery.spec.ts",
+      "file": "photo_gallery/photo_gallery.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Photo Gallery Feature",
+          "file": "photo_gallery/photo_gallery.spec.ts",
+          "line": 34,
+          "column": 6,
+          "specs": [
+            {
+              "title": "gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 525,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:40.308Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-12319756122df01d8746",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 43,
+              "column": 3
+            },
+            {
+              "title": "gallery_loads_with_valid_videos - Gallery displays videos with valid posters and inline playback works",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 960,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:40.838Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-de2324be9d417c59a050",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 66,
+              "column": 3
+            },
+            {
+              "title": "gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 781,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:41.803Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-9d78d8b97cfa643c3db9",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 114,
+              "column": 3
+            },
+            {
+              "title": "gallery_page_navigation_works - Verify that the page navigation works",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 932,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:42.588Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-c2aefbf64dc2ad57a7dd",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 153,
+              "column": 3
+            },
+            {
+              "title": "timeline_view_shows_day_sections - Timeline view groups photos into day sections with month dividers",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 689,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:43.524Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-5b18a4e01029996bc015",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 192,
+              "column": 3
+            },
+            {
+              "title": "timeline_infinite_scroll_streams_more_photos - Revealing the sentinel streams the next batch until the library is exhausted",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1643,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:44.217Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-24b7e212511204784ed2",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 239,
+              "column": 3
+            },
+            {
+              "title": "timeline_scrubber_jumps_to_date - The date scrubber shows density bars and jumps to a month",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 659,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:45.864Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-9a5e9afac0d10966b182",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 271,
+              "column": 3
+            },
+            {
+              "title": "timeline_view_preference_persists - The chosen library view is saved and applied to later visits",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 994,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:46.526Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-067fc7ce5d1c00934b99",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 302,
+              "column": 3
+            },
+            {
+              "title": "timeline_respects_filters - Filters constrain the timeline and keep the timeline view active",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 5000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 947,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:47.524Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "471d0833fad5445aea7e-80fed85cc7e9954162ad",
+              "file": "photo_gallery/photo_gallery.spec.ts",
+              "line": 328,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "remove_duplicates/remove_duplicates.spec.ts",
+      "file": "remove_duplicates/remove_duplicates.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Remove Duplicates",
+          "file": "remove_duplicates/remove_duplicates.spec.ts",
+          "line": 68,
+          "column": 6,
+          "specs": [
+            {
+              "title": "remove_duplicates_scan_finds_groups",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 4498,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [
+                        {
+                          "buffer": ""
+                        }
+                      ],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:41.390Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fb7eb28b206d85df5128-5d444630156895b919fb",
+              "file": "remove_duplicates/remove_duplicates.spec.ts",
+              "line": 75,
+              "column": 3
+            },
+            {
+              "title": "remove_duplicates_review_and_select_photos",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1154,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:45.892Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fb7eb28b206d85df5128-3e38fb5bed6eca40cbc6",
+              "file": "remove_duplicates/remove_duplicates.spec.ts",
+              "line": 134,
+              "column": 3
+            },
+            {
+              "title": "remove_duplicates_change_action_type",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 735,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:47.050Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fb7eb28b206d85df5128-14833b3dcb23a40668da",
+              "file": "remove_duplicates/remove_duplicates.spec.ts",
+              "line": 160,
+              "column": 3
+            },
+            {
+              "title": "remove_duplicates_execute_removal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2495,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:47.793Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fb7eb28b206d85df5128-1bbb0bed1c7074c8a029",
+              "file": "remove_duplicates/remove_duplicates.spec.ts",
+              "line": 185,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "settings/settings.spec.ts",
+      "file": "settings/settings.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Settings",
+          "file": "settings/settings.spec.ts",
+          "line": 49,
+          "column": 6,
+          "specs": [
+            {
+              "title": "settings_add_media_directory",
               "ok": true,
               "tags": [],
               "tests": [
@@ -104,11 +2954,374 @@
                   "timeout": 90000,
                   "annotations": [],
                   "expectedStatus": "passed",
-                  "projectId": "sharing",
-                  "projectName": "sharing",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 459,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:48.481Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dc1399178ccec251116-c1df44f81c78b086c5d7",
+              "file": "settings/settings.spec.ts",
+              "line": 50,
+              "column": 3
+            },
+            {
+              "title": "settings_remove_media_directory",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 202,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/settings/settings.spec.ts:76:27",
+                        "location": {
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/settings/settings.spec.ts",
+                          "column": 27,
+                          "line": 76
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 74 |\u001b[39m     \u001b[36mconst\u001b[39m scratchDir \u001b[33m=\u001b[39m \u001b[32m`${await sandboxRoot(page)}/spec-test-remove-${UNIQ}`\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m 75 |\u001b[39m     \u001b[36mconst\u001b[39m response \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m request\u001b[33m.\u001b[39mpost(\u001b[32m'/api/settings/media-dirs'\u001b[39m\u001b[33m,\u001b[39m { data\u001b[33m:\u001b[39m { directory\u001b[33m:\u001b[39m scratchDir } })\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 76 |\u001b[39m     expect(response\u001b[33m.\u001b[39mok())\u001b[33m.\u001b[39mtoBeTruthy()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 77 |\u001b[39m\n \u001b[90m 78 |\u001b[39m     \u001b[36mawait\u001b[39m openSettings(page)\u001b[33m;\u001b[39m\n \u001b[90m 79 |\u001b[39m     \u001b[36mconst\u001b[39m seededCount \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.media-dir-item'\u001b[39m)\u001b[33m.\u001b[39mcount()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/settings/settings.spec.ts",
+                            "column": 27,
+                            "line": 76
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n\n\u001b[0m \u001b[90m 74 |\u001b[39m     \u001b[36mconst\u001b[39m scratchDir \u001b[33m=\u001b[39m \u001b[32m`${await sandboxRoot(page)}/spec-test-remove-${UNIQ}`\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m 75 |\u001b[39m     \u001b[36mconst\u001b[39m response \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m request\u001b[33m.\u001b[39mpost(\u001b[32m'/api/settings/media-dirs'\u001b[39m\u001b[33m,\u001b[39m { data\u001b[33m:\u001b[39m { directory\u001b[33m:\u001b[39m scratchDir } })\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 76 |\u001b[39m     expect(response\u001b[33m.\u001b[39mok())\u001b[33m.\u001b[39mtoBeTruthy()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 77 |\u001b[39m\n \u001b[90m 78 |\u001b[39m     \u001b[36mawait\u001b[39m openSettings(page)\u001b[33m;\u001b[39m\n \u001b[90m 79 |\u001b[39m     \u001b[36mconst\u001b[39m seededCount \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'.media-dir-item'\u001b[39m)\u001b[33m.\u001b[39mcount()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/settings/settings.spec.ts:76:27\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:48.943Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/settings-settings-Settings-settings-remove-media-directory-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/settings-settings-Settings-settings-remove-media-directory-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/settings-settings-Settings-settings-remove-media-directory-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/settings/settings.spec.ts",
+                        "column": 27,
+                        "line": 76
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "8dc1399178ccec251116-33cf97b1d6e2b699b227",
+              "file": "settings/settings.spec.ts",
+              "line": 71,
+              "column": 3
+            },
+            {
+              "title": "settings_change_language",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:49.163Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8dc1399178ccec251116-f53caf65ac5e77caacee",
+              "file": "settings/settings.spec.ts",
+              "line": 96,
+              "column": 3
+            },
+            {
+              "title": "settings_change_distance_unit",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:49.163Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8dc1399178ccec251116-93bbc29b9dd696173a7b",
+              "file": "settings/settings.spec.ts",
+              "line": 128,
+              "column": 3
+            },
+            {
+              "title": "settings_change_thumbnail_directory",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:49.163Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8dc1399178ccec251116-7caf4a650a87bf7fbea6",
+              "file": "settings/settings.spec.ts",
+              "line": 155,
+              "column": 3
+            },
+            {
+              "title": "settings_manage_classification_labels",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:49.163Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8dc1399178ccec251116-19cafc99c29ecc6e64c3",
+              "file": "settings/settings.spec.ts",
+              "line": 191,
+              "column": 3
+            },
+            {
+              "title": "settings_system_information_displayed",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:49.163Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8dc1399178ccec251116-e7a036a619a167bb5b0d",
+              "file": "settings/settings.spec.ts",
+              "line": 215,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "themes/themes.spec.ts",
+      "file": "themes/themes.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Themes",
+          "file": "themes/themes.spec.ts",
+          "line": 87,
+          "column": 6,
+          "specs": [
+            {
+              "title": "themes_list_shows_system_and_custom",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 252,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:49.402Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4ef17e329074fa3f7df9-6d9b68cf9c57f31d0b12",
+              "file": "themes/themes.spec.ts",
+              "line": 98,
+              "column": 3
+            },
+            {
+              "title": "themes_create_new_theme",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3495,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-19T18:45:49.743Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4ef17e329074fa3f7df9-51a7231cdfee410d9461",
+              "file": "themes/themes.spec.ts",
+              "line": 113,
+              "column": 3
+            },
+            {
+              "title": "themes_rename_theme",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
                       "parallelIndex": 0,
                       "status": "passed",
                       "duration": 547,
@@ -116,7 +3329,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-18T16:47:00.774Z",
+                      "startTime": "2026-07-19T18:45:53.242Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -124,33 +3337,40 @@
                   "status": "expected"
                 }
               ],
-              "id": "0d421ecd07fca4998020-f906908720260f82305e",
-              "file": "sharing/sharing.spec.ts",
-              "line": 180,
+              "id": "4ef17e329074fa3f7df9-d2246437a2771ac041d0",
+              "file": "themes/themes.spec.ts",
+              "line": 161,
               "column": 3
             },
             {
-              "title": "sharing_pair_two_devices_over_the_lan - Two instances pair with no hub and see each other as local devices",
+              "title": "themes_publish_or_discard_draft",
               "ok": true,
               "tags": [],
               "tests": [
                 {
-                  "timeout": 90000,
+                  "timeout": 120000,
                   "annotations": [],
                   "expectedStatus": "passed",
-                  "projectId": "sharing",
-                  "projectName": "sharing",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 5,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 756,
+                      "duration": 747,
                       "errors": [],
                       "stdout": [],
-                      "stderr": [],
+                      "stderr": [
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        }
+                      ],
                       "retry": 0,
-                      "startTime": "2026-07-18T16:47:01.620Z",
+                      "startTime": "2026-07-19T18:45:53.793Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -158,450 +3378,122 @@
                   "status": "expected"
                 }
               ],
-              "id": "0d421ecd07fca4998020-25d8928df3e0133845b4",
-              "file": "sharing/sharing.spec.ts",
-              "line": 199,
+              "id": "4ef17e329074fa3f7df9-ec4f73fee8ed983fe334",
+              "file": "themes/themes.spec.ts",
+              "line": 182,
               "column": 3
             },
             {
-              "title": "sharing_grant_a_media_directory_and_browse_it - A shares a media directory and B browses it with filters",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 90000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "sharing",
-                  "projectName": "sharing",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 23107,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-18T16:47:02.385Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "0d421ecd07fca4998020-b5cbd4811974c2290237",
-              "file": "sharing/sharing.spec.ts",
-              "line": 228,
-              "column": 3
-            },
-            {
-              "title": "sharing_gallery_without_a_download_directory - Without a download directory nothing is selectable, then set one",
+              "title": "themes_set_default_theme",
               "ok": false,
               "tags": [],
               "tests": [
                 {
-                  "timeout": 90000,
+                  "timeout": 120000,
                   "annotations": [],
                   "expectedStatus": "passed",
-                  "projectId": "sharing",
-                  "projectName": "sharing",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 5,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 27043,
+                      "duration": 5734,
                       "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-notice')\nExpected substring: \u001b[32m\"Choose a download directory\"\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-notice')\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-notice')\nExpected substring: \u001b[32m\"Choose a download directory\"\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-notice')\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts:275:26",
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveAttribute\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('html')\nExpected: \u001b[32m\"classic\"\u001b[39m\nReceived: \u001b[31m\"spectestdefault-1784486749395\"\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveAttribute\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('html')\u001b[22m\n\u001b[2m    9 × locator resolved to <html lang=\"en\" dir=\"ltr\" data-file-browser-ready=\"1\" data-select-placeholder=\"Select…\" data-select-search=\"Type to search…\" data-select-no-results=\"No results found\" data-theme=\"spectestdefault-1784486749395\">…</html>\u001b[22m\n\u001b[2m      - unexpected value \"spectestdefault-1784486749395\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveAttribute\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('html')\nExpected: \u001b[32m\"classic\"\u001b[39m\nReceived: \u001b[31m\"spectestdefault-1784486749395\"\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveAttribute\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('html')\u001b[22m\n\u001b[2m    9 × locator resolved to <html lang=\"en\" dir=\"ltr\" data-file-browser-ready=\"1\" data-select-placeholder=\"Select…\" data-select-search=\"Type to search…\" data-select-no-results=\"No results found\" data-theme=\"spectestdefault-1784486749395\">…</html>\u001b[22m\n\u001b[2m      - unexpected value \"spectestdefault-1784486749395\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/themes/themes.spec.ts:229:40",
                         "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts",
-                          "column": 26,
-                          "line": 275
+                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/themes/themes.spec.ts",
+                          "column": 40,
+                          "line": 229
                         },
-                        "snippet": "\u001b[0m \u001b[90m 273 |\u001b[39m     \u001b[90m// The notice asks for a download directory and links to the setting\u001b[39m\n \u001b[90m 274 |\u001b[39m     \u001b[36mconst\u001b[39m notice \u001b[33m=\u001b[39m pageB\u001b[33m.\u001b[39mlocator(\u001b[32m'.remote-notice'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 275 |\u001b[39m     \u001b[36mawait\u001b[39m expect(notice)\u001b[33m.\u001b[39mtoContainText(\u001b[32m'Choose a download directory'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 276 |\u001b[39m     \u001b[36mawait\u001b[39m expect(notice\u001b[33m.\u001b[39mlocator(\u001b[32m'a'\u001b[39m\u001b[33m,\u001b[39m { hasText\u001b[33m:\u001b[39m \u001b[32m'Set download directory'\u001b[39m }))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 277 |\u001b[39m\n \u001b[90m 278 |\u001b[39m     \u001b[90m// No selection is offered: no selection bar, no pull button, grid not selecting\u001b[39m\u001b[0m"
+                        "snippet": "\u001b[0m \u001b[90m 227 |\u001b[39m     }\n \u001b[90m 228 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/people'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 229 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'html'\u001b[39m))\u001b[33m.\u001b[39mtoHaveAttribute(\u001b[32m'data-theme'\u001b[39m\u001b[33m,\u001b[39m originalDefault)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 230 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 231 |\u001b[39m\n \u001b[90m 232 |\u001b[39m   test(\u001b[32m'themes_delete_custom_theme'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
                       },
                       "errors": [
                         {
                           "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts",
-                            "column": 26,
-                            "line": 275
+                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/themes/themes.spec.ts",
+                            "column": 40,
+                            "line": 229
                           },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-notice')\nExpected substring: \u001b[32m\"Choose a download directory\"\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-notice')\u001b[22m\n\n\n\u001b[0m \u001b[90m 273 |\u001b[39m     \u001b[90m// The notice asks for a download directory and links to the setting\u001b[39m\n \u001b[90m 274 |\u001b[39m     \u001b[36mconst\u001b[39m notice \u001b[33m=\u001b[39m pageB\u001b[33m.\u001b[39mlocator(\u001b[32m'.remote-notice'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 275 |\u001b[39m     \u001b[36mawait\u001b[39m expect(notice)\u001b[33m.\u001b[39mtoContainText(\u001b[32m'Choose a download directory'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 276 |\u001b[39m     \u001b[36mawait\u001b[39m expect(notice\u001b[33m.\u001b[39mlocator(\u001b[32m'a'\u001b[39m\u001b[33m,\u001b[39m { hasText\u001b[33m:\u001b[39m \u001b[32m'Set download directory'\u001b[39m }))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 277 |\u001b[39m\n \u001b[90m 278 |\u001b[39m     \u001b[90m// No selection is offered: no selection bar, no pull button, grid not selecting\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts:275:26\u001b[22m"
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveAttribute\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('html')\nExpected: \u001b[32m\"classic\"\u001b[39m\nReceived: \u001b[31m\"spectestdefault-1784486749395\"\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveAttribute\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('html')\u001b[22m\n\u001b[2m    9 × locator resolved to <html lang=\"en\" dir=\"ltr\" data-file-browser-ready=\"1\" data-select-placeholder=\"Select…\" data-select-search=\"Type to search…\" data-select-no-results=\"No results found\" data-theme=\"spectestdefault-1784486749395\">…</html>\u001b[22m\n\u001b[2m      - unexpected value \"spectestdefault-1784486749395\"\u001b[22m\n\n\n\u001b[0m \u001b[90m 227 |\u001b[39m     }\n \u001b[90m 228 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/people'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 229 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'html'\u001b[39m))\u001b[33m.\u001b[39mtoHaveAttribute(\u001b[32m'data-theme'\u001b[39m\u001b[33m,\u001b[39m originalDefault)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 230 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 231 |\u001b[39m\n \u001b[90m 232 |\u001b[39m   test(\u001b[32m'themes_delete_custom_theme'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/themes/themes.spec.ts:229:40\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-18T16:47:25.496Z",
+                      "startTime": "2026-07-19T18:45:54.544Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-1ad56--is-selectable-then-set-one-sharing/test-failed-1.png"
-                        },
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-1ad56--is-selectable-then-set-one-sharing/test-failed-2.png"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/themes-themes-Themes-themes-set-default-theme-chromium/test-failed-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-1ad56--is-selectable-then-set-one-sharing/video.webm"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/themes-themes-Themes-themes-set-default-theme-chromium/video.webm"
                         },
                         {
                           "name": "error-context",
                           "contentType": "text/markdown",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-1ad56--is-selectable-then-set-one-sharing/error-context.md"
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/themes-themes-Themes-themes-set-default-theme-chromium/error-context.md"
+                        },
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/themes-themes-Themes-themes-set-default-theme-chromium/test-failed-2.png"
                         }
                       ],
                       "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts",
-                        "column": 26,
-                        "line": 275
+                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/themes/themes.spec.ts",
+                        "column": 40,
+                        "line": 229
                       }
                     }
                   ],
                   "status": "unexpected"
                 }
               ],
-              "id": "0d421ecd07fca4998020-ad7704ba63e8ee3c3256",
-              "file": "sharing/sharing.spec.ts",
-              "line": 265,
+              "id": "4ef17e329074fa3f7df9-02eb3ef54b8f753dd397",
+              "file": "themes/themes.spec.ts",
+              "line": 209,
               "column": 3
             },
             {
-              "title": "sharing_pull_selected_photos - B selects two photos and pulls them as a background batch",
+              "title": "themes_delete_custom_theme",
               "ok": true,
               "tags": [],
               "tests": [
                 {
-                  "timeout": 90000,
+                  "timeout": 120000,
                   "annotations": [],
                   "expectedStatus": "passed",
-                  "projectId": "sharing",
-                  "projectName": "sharing",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 22364,
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-18T16:47:52.806Z",
+                      "startTime": "2026-07-19T18:46:00.368Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "expected"
+                  "status": "skipped"
                 }
               ],
-              "id": "0d421ecd07fca4998020-0ad2211c6ad2b70e924d",
-              "file": "sharing/sharing.spec.ts",
-              "line": 300,
-              "column": 3
-            },
-            {
-              "title": "sharing_pull_everything_matching - B pulls every photo matching a filter minus one unticked",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 90000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "sharing",
-                  "projectName": "sharing",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 22696,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-18T16:48:15.328Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "0d421ecd07fca4998020-0d20173679f7024dfc0b",
-              "file": "sharing/sharing.spec.ts",
-              "line": 333,
-              "column": 3
-            },
-            {
-              "title": "sharing_grant_a_folder - A shares one subfolder and B sees only its photos",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 90000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "sharing",
-                  "projectName": "sharing",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 22261,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-18T16:48:38.029Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "0d421ecd07fca4998020-4fc672f6de413b9f5fa8",
-              "file": "sharing/sharing.spec.ts",
-              "line": 386,
-              "column": 3
-            },
-            {
-              "title": "sharing_grant_an_album - A shares an album and its membership is resolved per request",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 90000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "sharing",
-                  "projectName": "sharing",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 27163,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.remote-photo-card')\nExpected: \u001b[32m4\u001b[39m\nReceived: \u001b[31m3\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-card')\u001b[22m\n\u001b[2m    2 × locator resolved to 0 elements\u001b[22m\n\u001b[2m      - unexpected value \"0\"\u001b[22m\n\u001b[2m    7 × locator resolved to 3 elements\u001b[22m\n\u001b[2m      - unexpected value \"3\"\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.remote-photo-card')\nExpected: \u001b[32m4\u001b[39m\nReceived: \u001b[31m3\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-card')\u001b[22m\n\u001b[2m    2 × locator resolved to 0 elements\u001b[22m\n\u001b[2m      - unexpected value \"0\"\u001b[22m\n\u001b[2m    7 × locator resolved to 3 elements\u001b[22m\n\u001b[2m      - unexpected value \"3\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts:439:55",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts",
-                          "column": 55,
-                          "line": 439
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 437 |\u001b[39m     \u001b[36mconst\u001b[39m viewLink \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m sharedWithMeView(pageB\u001b[33m,\u001b[39m \u001b[35m/Seeded Album/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 438 |\u001b[39m     \u001b[36mawait\u001b[39m viewLink\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 439 |\u001b[39m     \u001b[36mawait\u001b[39m expect(pageB\u001b[33m.\u001b[39mlocator(\u001b[32m'.remote-photo-card'\u001b[39m))\u001b[33m.\u001b[39mtoHaveCount(\u001b[35m4\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 440 |\u001b[39m     \u001b[36mconst\u001b[39m albumFilesUrl \u001b[33m=\u001b[39m pageB\u001b[33m.\u001b[39murl()\u001b[33m;\u001b[39m\n \u001b[90m 441 |\u001b[39m\n \u001b[90m 442 |\u001b[39m     \u001b[90m// A removes one photo from the album (selection rides the URL in edit mode)\u001b[39m\u001b[0m"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts",
-                            "column": 55,
-                            "line": 439
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.remote-photo-card')\nExpected: \u001b[32m4\u001b[39m\nReceived: \u001b[31m3\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-card')\u001b[22m\n\u001b[2m    2 × locator resolved to 0 elements\u001b[22m\n\u001b[2m      - unexpected value \"0\"\u001b[22m\n\u001b[2m    7 × locator resolved to 3 elements\u001b[22m\n\u001b[2m      - unexpected value \"3\"\u001b[22m\n\n\n\u001b[0m \u001b[90m 437 |\u001b[39m     \u001b[36mconst\u001b[39m viewLink \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m sharedWithMeView(pageB\u001b[33m,\u001b[39m \u001b[35m/Seeded Album/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 438 |\u001b[39m     \u001b[36mawait\u001b[39m viewLink\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 439 |\u001b[39m     \u001b[36mawait\u001b[39m expect(pageB\u001b[33m.\u001b[39mlocator(\u001b[32m'.remote-photo-card'\u001b[39m))\u001b[33m.\u001b[39mtoHaveCount(\u001b[35m4\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 440 |\u001b[39m     \u001b[36mconst\u001b[39m albumFilesUrl \u001b[33m=\u001b[39m pageB\u001b[33m.\u001b[39murl()\u001b[33m;\u001b[39m\n \u001b[90m 441 |\u001b[39m\n \u001b[90m 442 |\u001b[39m     \u001b[90m// A removes one photo from the album (selection rides the URL in edit mode)\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts:439:55\u001b[22m"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-18T16:49:00.295Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-5cc0b-hip-is-resolved-per-request-sharing/test-failed-1.png"
-                        },
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-5cc0b-hip-is-resolved-per-request-sharing/test-failed-2.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-5cc0b-hip-is-resolved-per-request-sharing/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-5cc0b-hip-is-resolved-per-request-sharing/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts",
-                        "column": 55,
-                        "line": 439
-                      }
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "0d421ecd07fca4998020-2ecea798b95f755f7003",
-              "file": "sharing/sharing.spec.ts",
-              "line": 414,
-              "column": 3
-            },
-            {
-              "title": "sharing_revoke_a_grant - Revoking a share stops the peer next request but keeps pulled files",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 90000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "sharing",
-                  "projectName": "sharing",
-                  "results": [
-                    {
-                      "workerIndex": 2,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 26731,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.sharing-shares-nav .sharing-share-nav-item')\nExpected: \u001b[32m0\u001b[39m\nReceived: \u001b[31m1\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.sharing-shares-nav .sharing-share-nav-item')\u001b[22m\n\u001b[2m    9 × locator resolved to 1 element\u001b[22m\n\u001b[2m      - unexpected value \"1\"\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.sharing-shares-nav .sharing-share-nav-item')\nExpected: \u001b[32m0\u001b[39m\nReceived: \u001b[31m1\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.sharing-shares-nav .sharing-share-nav-item')\u001b[22m\n\u001b[2m    9 × locator resolved to 1 element\u001b[22m\n\u001b[2m      - unexpected value \"1\"\u001b[22m\n\n    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts:473:79",
-                        "location": {
-                          "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts",
-                          "column": 79,
-                          "line": 473
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 471 |\u001b[39m     \u001b[36mawait\u001b[39m acceptConfirmDialog(page)\u001b[33m;\u001b[39m\n \u001b[90m 472 |\u001b[39m     \u001b[36mawait\u001b[39m expectToast(page\u001b[33m,\u001b[39m \u001b[35m/Share grant revoked/\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 473 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.sharing-shares-nav .sharing-share-nav-item'\u001b[39m))\u001b[33m.\u001b[39mtoHaveCount(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 474 |\u001b[39m\n \u001b[90m 475 |\u001b[39m     \u001b[90m// B's next attempt is refused: the share is gone from \"Shared With Me\" …\u001b[39m\n \u001b[90m 476 |\u001b[39m     \u001b[36mawait\u001b[39m pageB\u001b[33m.\u001b[39mgoto(\u001b[32m'/sharing/settings'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts",
-                            "column": 79,
-                            "line": 473
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.sharing-shares-nav .sharing-share-nav-item')\nExpected: \u001b[32m0\u001b[39m\nReceived: \u001b[31m1\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.sharing-shares-nav .sharing-share-nav-item')\u001b[22m\n\u001b[2m    9 × locator resolved to 1 element\u001b[22m\n\u001b[2m      - unexpected value \"1\"\u001b[22m\n\n\n\u001b[0m \u001b[90m 471 |\u001b[39m     \u001b[36mawait\u001b[39m acceptConfirmDialog(page)\u001b[33m;\u001b[39m\n \u001b[90m 472 |\u001b[39m     \u001b[36mawait\u001b[39m expectToast(page\u001b[33m,\u001b[39m \u001b[35m/Share grant revoked/\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 473 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'.sharing-shares-nav .sharing-share-nav-item'\u001b[39m))\u001b[33m.\u001b[39mtoHaveCount(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 474 |\u001b[39m\n \u001b[90m 475 |\u001b[39m     \u001b[90m// B's next attempt is refused: the share is gone from \"Shared With Me\" …\u001b[39m\n \u001b[90m 476 |\u001b[39m     \u001b[36mawait\u001b[39m pageB\u001b[33m.\u001b[39mgoto(\u001b[32m'/sharing/settings'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts:473:79\u001b[22m"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-18T16:49:27.794Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-e0269-uest-but-keeps-pulled-files-sharing/test-failed-2.png"
-                        },
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-e0269-uest-but-keeps-pulled-files-sharing/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-e0269-uest-but-keeps-pulled-files-sharing/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/reports/artifacts/sharing-sharing-Sharing-Fe-e0269-uest-but-keeps-pulled-files-sharing/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/jason.turan/projects/yaffo/yaffo_ui_tests/generated_tests/sharing/sharing.spec.ts",
-                        "column": 79,
-                        "line": 473
-                      }
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "0d421ecd07fca4998020-a00a317ae515b15da08f",
-              "file": "sharing/sharing.spec.ts",
-              "line": 459,
-              "column": 3
-            },
-            {
-              "title": "sharing_revoke_a_device - Revoking a device cuts it off and it can then be deleted",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 90000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "sharing",
-                  "projectName": "sharing",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 684,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-18T16:49:55.011Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "0d421ecd07fca4998020-a6c6716b7a39376769fd",
-              "file": "sharing/sharing.spec.ts",
-              "line": 489,
-              "column": 3
-            },
-            {
-              "title": "sharing_duplicate_grant_is_not_created_twice - Granting the same scope twice yields one share",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 90000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "sharing",
-                  "projectName": "sharing",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 1208,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-18T16:49:55.848Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "0d421ecd07fca4998020-e22e2bc1ce828f283c97",
-              "file": "sharing/sharing.spec.ts",
-              "line": 516,
+              "id": "4ef17e329074fa3f7df9-9c2b69a02348dfe2fb6b",
+              "file": "themes/themes.spec.ts",
+              "line": 232,
               "column": 3
             }
           ]
@@ -611,11 +3503,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-18T16:47:00.524Z",
-    "duration": 176552.81,
-    "expected": 8,
-    "skipped": 0,
-    "unexpected": 3,
+    "startTime": "2026-07-19T18:45:12.628Z",
+    "duration": 47747.732,
+    "expected": 59,
+    "skipped": 22,
+    "unexpected": 5,
     "flaky": 0
   }
 }

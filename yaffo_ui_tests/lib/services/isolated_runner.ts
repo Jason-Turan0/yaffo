@@ -16,6 +16,8 @@ export interface IsolatedInstance {
     baseUrl: string;
     flaskProcess: ChildProcess | null;
     taskqProcess: ChildProcess | null;
+    /** Preseeded cache dirs are shared/canonical, so cleanup leaves them intact. */
+    keepData?: boolean;
 }
 
 export interface IsolatedEnvironment extends IsolatedInstance {
@@ -40,6 +42,11 @@ export interface IsolatedEnvironmentOptions {
      * Demo instances intentionally omit the taskq host.
      */
     demoMode?: boolean;
+    /**
+     * Serve the canonical seed-cache data dirs (restored beforehand) instead of
+     * seeding fresh. Skips the expensive indexing/face/label pipeline.
+     */
+    preseeded?: boolean;
 }
 
 export interface TestResult {
@@ -139,6 +146,12 @@ interface StartInstanceOptions {
      * web process — the only one whose engine the sharing UI can use — can lose.
      */
     flaskOnlyEnv?: Record<string, string>;
+    /**
+     * The data dir is already seeded (restored from the seed cache): skip
+     * provisioning and serve it directly. The dir must be at the same absolute
+     * path it was seeded at, and is not deleted on cleanup.
+     */
+    preseeded?: boolean;
 }
 
 export const PRIMARY_FIXTURE_DIR = join(UI_TESTS_DIR, "test_data", "bennett");
@@ -154,20 +167,45 @@ export const SHARED_TRIP_PHOTOS = [
     "2015-10-11_085600_family-breakfast.png",
 ];
 
-const startInstance = async (options: StartInstanceOptions): Promise<IsolatedInstance> => {
-    const {
-        label,
-        port,
-        tempDir,
-        fixtureDir,
-        seedProfile,
-        includeVideos = false,
-        demoRole,
-        flaskOnlyEnv = {},
-    } = options;
+// Baseline env for the seed script, taskq host, and Flask process of an
+// instance. Kept identical between build-seed and serve so a data dir seeded in
+// one job serves correctly in another (the seeded DB stores absolute
+// full_file_path values under YAFFO_DATA_DIR).
+const instanceEnv = (tempDir: string, seedProfile: "bennett" | "obama"): Record<string, string> => ({
+    ...process.env,
+    YAFFO_DATA_DIR: tempDir,
+    YAFFO_SEED_PROFILE: seedProfile,
+    FLASK_APP: "yaffo.app:create_app",
+    FLASK_ENV: "testing",
+    // Demo mode applies to the served app, not fixture construction. These
+    // overrides also prevent an ambient shell variable from changing how
+    // the seed script or normal isolated environments behave.
+    YAFFO_DEMO_MODE: "0",
+    YAFFO_DEMO_ROLE: "",
+    VIRTUAL_ENV: join(YAFFO_DIR, "venv"),
+    PATH: `${join(YAFFO_DIR, "venv", "bin")}:${process.env.PATH}`,
+});
 
-    console.log(`\n🔧 Setting up isolated instance ${label}...`);
-    console.log(`   Temp directory: ${tempDir}`);
+interface ProvisionOptions {
+    label: string;
+    tempDir: string;
+    fixtureDir: string;
+    seedProfile: "bennett" | "obama";
+    includeVideos?: boolean;
+}
+
+/**
+ * Copy fixtures into a data dir and run the (expensive) seed: indexing, face
+ * analysis, and label classification. This is the part the seed cache captures
+ * so per-spec environments can skip it. The resulting data dir is self-contained
+ * and portable only to the SAME absolute path it was built at, because the
+ * seeded DB stores absolute media paths.
+ */
+export const provisionInstanceData = (options: ProvisionOptions): void => {
+    const {label, tempDir, fixtureDir, seedProfile, includeVideos = false} = options;
+
+    console.log(`\n🔧 Provisioning data dir for instance ${label}...`);
+    console.log(`   Data directory: ${tempDir}`);
 
     mkdirSync(join(tempDir, "organized"), {recursive: true});
     mkdirSync(join(tempDir, "thumbnails"), {recursive: true});
@@ -189,20 +227,44 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
     console.log(`   ✅ Created empty database`);
     writeFileSync(join(tempDir, "yaffo-huey.db"), "");
 
-    const env = {
-        ...process.env,
-        YAFFO_DATA_DIR: tempDir,
-        YAFFO_SEED_PROFILE: seedProfile,
-        FLASK_APP: "yaffo.app:create_app",
-        FLASK_ENV: "testing",
-        // Demo mode applies to the served app, not fixture construction. These
-        // overrides also prevent an ambient shell variable from changing how
-        // the seed script or normal isolated environments behave.
-        YAFFO_DEMO_MODE: "0",
-        YAFFO_DEMO_ROLE: "",
-        VIRTUAL_ENV: join(YAFFO_DIR, "venv"),
-        PATH: `${join(YAFFO_DIR, "venv", "bin")}:${process.env.PATH}`,
-    };
+    const seedScript = "seed_database.py";
+    console.log(`\n📦 Seeding instance ${label} (${seedScript})...`);
+    try {
+        execSync(`python "${join(SCRIPTS_DIR, seedScript)}"`, {
+            env: instanceEnv(tempDir, seedProfile),
+            cwd: YAFFO_DIR,
+            stdio: "inherit",
+        });
+    } catch (e) {
+        console.error(`   ⚠️ Warning: ${seedScript} failed: ${e}`);
+    }
+};
+
+const startInstance = async (options: StartInstanceOptions): Promise<IsolatedInstance> => {
+    const {
+        label,
+        port,
+        tempDir,
+        fixtureDir,
+        seedProfile,
+        includeVideos = false,
+        demoRole,
+        flaskOnlyEnv = {},
+        preseeded = false,
+    } = options;
+
+    if (preseeded) {
+        // Serve a data dir that was already seeded (restored from the seed
+        // cache). It must live at the same absolute path it was built at.
+        if (!existsSync(join(tempDir, "yaffo.db"))) {
+            throw new Error(`Preseeded data dir has no yaffo.db: ${tempDir}`);
+        }
+        console.log(`\n♻️  Instance ${label}: serving preseeded data dir ${tempDir}`);
+    } else {
+        provisionInstanceData({label, tempDir, fixtureDir, seedProfile, includeVideos});
+    }
+
+    const env = instanceEnv(tempDir, seedProfile);
     const demoEnv = demoRole ? {
         YAFFO_DEMO_MODE: "1",
         YAFFO_DEMO_ROLE: demoRole,
@@ -211,18 +273,6 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         SECRET_KEY: randomBytes(32).toString("hex"),
     } : {};
     const flaskEnv = {...env, ...flaskOnlyEnv, ...demoEnv};
-
-    const seedScript = "seed_database.py";
-    console.log(`\n📦 Seeding instance ${label} (${seedScript})...`);
-    try {
-        execSync(`python "${join(SCRIPTS_DIR, seedScript)}"`, {
-            env,
-            cwd: YAFFO_DIR,
-            stdio: "inherit",
-        });
-    } catch (e) {
-        console.error(`   ⚠️ Warning: ${seedScript} failed: ${e}`);
-    }
 
     let taskqProcess: ChildProcess | null = null;
     if (demoRole) {
@@ -276,7 +326,7 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
     }
 
     console.log(`   ✅ Instance ${label} is ready at ${baseUrl}`);
-    return {tempDir, port, baseUrl, flaskProcess, taskqProcess};
+    return {tempDir, port, baseUrl, flaskProcess, taskqProcess, keepData: preseeded};
 };
 
 const stopInstance = async (instance: IsolatedInstance | undefined): Promise<void> => {
@@ -292,27 +342,71 @@ const stopInstance = async (instance: IsolatedInstance | undefined): Promise<voi
     // Don't delete the temp dir out from under live processes — they hold
     // the SQLite DBs inside it open (that's a disk I/O error waiting to happen).
     await Promise.all([waitForExit(instance.flaskProcess), waitForExit(instance.taskqProcess)]);
-    if (existsSync(instance.tempDir)) {
+    // Preseeded cache dirs are canonical and reused; only ephemeral temp dirs
+    // are removed.
+    if (!instance.keepData && existsSync(instance.tempDir)) {
         rmSync(instance.tempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
     }
+};
+
+// With a peer, BOTH instances run the p2p engine so they can pair over the LAN
+// (mDNS). Ephemeral identities keep device keys out of the OS keychain.
+const p2pEnv = (webPort: number): Record<string, string> => ({
+    YAFFO_P2P_ENABLED: "1",
+    YAFFO_P2P_PORT: String(quicPortFor(webPort)),
+    YAFFO_HUB_URL: UNREACHABLE_HUB_URL,
+    YAFFO_P2P_EPHEMERAL_IDENTITY: "1",
+});
+
+// Canonical seed-cache locations. The seed writes absolute media paths into the
+// DB, so a cached data dir only serves correctly when restored to the very path
+// it was built at — hence fixed, symlink-free constants rather than temp dirs.
+// YAFFO_SEED_CACHE_ROOT pins the root explicitly (CI) so build and restore jobs
+// agree regardless of TMPDIR; it defaults to a stable path under the temp root.
+const SEED_CACHE_ROOT = process.env.YAFFO_SEED_CACHE_ROOT || join(TEMP_ROOT, "yaffo-seed");
+export const seedCacheDir = (role: "primary" | "peer"): string =>
+    join(SEED_CACHE_ROOT, role === "primary" ? "a" : "b");
+
+/**
+ * Build the seed cache: provision + seed the primary (bennett) data dir, and
+ * optionally the peer (obama) one, into their canonical locations, then return
+ * without serving. Runs the real indexing/face/label pipeline, so the cache is
+ * only rebuilt when its inputs change.
+ */
+export const buildSeedCache = (options: {withPeer?: boolean} = {}): {primary: string; peer?: string} => {
+    const {withPeer = false} = options;
+    const primaryDir = seedCacheDir("primary");
+    rmSync(primaryDir, {recursive: true, force: true});
+    provisionInstanceData({
+        label: "A",
+        tempDir: primaryDir,
+        fixtureDir: PRIMARY_FIXTURE_DIR,
+        seedProfile: "bennett",
+        includeVideos: true,
+    });
+    if (!withPeer) {
+        return {primary: primaryDir};
+    }
+    const peerDir = seedCacheDir("peer");
+    rmSync(peerDir, {recursive: true, force: true});
+    provisionInstanceData({
+        label: "B (peer)",
+        tempDir: peerDir,
+        fixtureDir: PEER_FIXTURE_DIR,
+        seedProfile: "obama",
+    });
+    return {primary: primaryDir, peer: peerDir};
 };
 
 export const startIsolatedEnvironment = async (
     port = 5001,
     options: IsolatedEnvironmentOptions = {},
 ): Promise<IsolatedEnvironment> => {
+    const {withPeer = false, demoMode = false, preseeded = false} = options;
     const timestamp = generateTimestamp();
-    const tempDir = join(TEMP_ROOT, `yaffo_test_${timestamp}`);
-    const {withPeer = false, demoMode = false} = options;
-
-    // With a peer, BOTH instances run the p2p engine so they can pair over the
-    // LAN (mDNS). Ephemeral identities keep device keys out of the OS keychain.
-    const p2pEnv = (webPort: number): Record<string, string> => ({
-        YAFFO_P2P_ENABLED: "1",
-        YAFFO_P2P_PORT: String(quicPortFor(webPort)),
-        YAFFO_HUB_URL: UNREACHABLE_HUB_URL,
-        YAFFO_P2P_EPHEMERAL_IDENTITY: "1",
-    });
+    // Preseeded runs serve the canonical cache dirs directly; a normal run seeds
+    // fresh temp dirs.
+    const tempDir = preseeded ? seedCacheDir("primary") : join(TEMP_ROOT, `yaffo_test_${timestamp}`);
 
     const primary = await startInstance({
         label: "A",
@@ -323,6 +417,7 @@ export const startIsolatedEnvironment = async (
         includeVideos: true,
         demoRole: demoMode ? "source" : undefined,
         flaskOnlyEnv: withPeer ? p2pEnv(port) : {},
+        preseeded,
     });
 
     let peer: IsolatedInstance | undefined;
@@ -332,11 +427,12 @@ export const startIsolatedEnvironment = async (
             peer = await startInstance({
                 label: "B (peer)",
                 port: peerPort,
-                tempDir: join(TEMP_ROOT, `yaffo_test_${timestamp}_peer`),
+                tempDir: preseeded ? seedCacheDir("peer") : join(TEMP_ROOT, `yaffo_test_${timestamp}_peer`),
                 fixtureDir: PEER_FIXTURE_DIR,
                 seedProfile: "obama",
                 demoRole: demoMode ? "receiver" : undefined,
                 flaskOnlyEnv: p2pEnv(peerPort),
+                preseeded,
             });
         } catch (e) {
             await stopInstance(primary);
@@ -348,7 +444,7 @@ export const startIsolatedEnvironment = async (
     const cleanup = async () => {
         console.log(`\n🧹 Cleaning up isolated environment...`);
         await Promise.all([stopInstance(primary), stopInstance(peer)]);
-        console.log(`   ✅ Stopped isolated process(es), removed temp dir(s)`);
+        console.log(`   ✅ Stopped isolated process(es)`);
     };
 
     return {
@@ -367,6 +463,16 @@ async function main() {
         : 5001;
     const withPeer = args.includes("--peer");
     const demoMode = args.includes("--demo");
+    const preseeded = args.includes("--preseeded");
+
+    // Build-seed mode: seed the canonical cache dir(s) and exit without serving.
+    // Used by the CI seed-cache job so per-spec jobs can restore and skip seeding.
+    if (args.includes("--build-seed")) {
+        const {primary, peer} = buildSeedCache({withPeer});
+        console.log(`\n✅ Seed cache built: ${primary}${peer ? ` and ${peer}` : ""}`);
+        process.exit(0);
+    }
+
     let environment: IsolatedEnvironment | undefined;
     const handleCleanup = async () => {
         if (environment) {
@@ -378,7 +484,7 @@ async function main() {
     process.on('SIGTERM', handleCleanup);
 
     try {
-        environment = await startIsolatedEnvironment(port, {withPeer, demoMode});
+        environment = await startIsolatedEnvironment(port, {withPeer, demoMode, preseeded});
         if (environment.peer) {
             console.log(`\nRun the sharing tests with: BASE_URL=${environment.baseUrl} PEER_URL=${environment.peer.baseUrl} npx playwright test generated_tests/sharing/sharing.spec.ts`);
         }

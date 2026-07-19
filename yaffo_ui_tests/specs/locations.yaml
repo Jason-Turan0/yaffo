@@ -32,8 +32,8 @@ context:
 
 data:
   - Bennett photos have GPS metadata and should appear on the map
-  - "2015-10-09_103400_chicago-riverwalk.png" and "2015-10-11_085600_family-breakfast.png" have distinct but nearby Chicago coordinates
-  - "2021-07-10_101800_beach-arrival.png" has distant GPS metadata at Siesta Key Beach
+  - 2015-10-09_103400_chicago-riverwalk.png and 2015-10-11_085600_family-breakfast.png have distinct but nearby Chicago coordinates
+  - 2021-07-10_101800_beach-arrival.png has distant GPS metadata at Siesta Key Beach
   - The home and beach photos are visually distinct locations on the map view
   - Tests resolve fixture images by filename rather than relying on database IDs
   - Located photos may be named or unnamed; unnamed means the location name is null or blank

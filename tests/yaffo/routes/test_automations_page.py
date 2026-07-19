@@ -144,7 +144,7 @@ def test_saved_locale_translates_automation_detail_page(app, client):
     assert "Auslöser bearbeiten" in body
     assert "Noch keine Beschreibung" in body
     assert "Ausführungsverlauf" in body
-    assert 'class="btn-primary" data-icon="edit">Bearbeiten</a>' in body
+    assert 'class="btn-secondary" data-icon="edit">Bearbeiten</a>' in body
     assert 'id="automation-chat"' not in body
     assert "js-code-toggle" not in body
 

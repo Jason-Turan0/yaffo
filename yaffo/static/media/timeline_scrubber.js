@@ -122,7 +122,7 @@ timelineScrubberApi.init = (i18n, config) => {
         let lastBottom = -Infinity;
         yearLabels.forEach((label) => {
             const rect = label.getBoundingClientRect();
-            if (rect.top < lastBottom) {
+            if (lastBottom > rect.top) {
                 /** @type {HTMLElement} */ (label).dataset.crowded = 'true';
                 /** @type {HTMLElement} */ (label).style.visibility = 'hidden';
             } else {
