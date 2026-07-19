@@ -8,8 +8,7 @@ fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/../.." && pwd)"
-terraform_dir="$repo_root/deploy/gcp"
-image_repo="$(terraform -chdir="$terraform_dir" output -raw image_repo)"
+image_repo="$(terraform -chdir="$script_dir" output -raw image_repo)"
 registry_host="${image_repo%%/*}"
 image="${image_repo}/yaffo-demo:$1"
 metadata_file="$(mktemp -t yaffo-demo-build.XXXXXX.json)"

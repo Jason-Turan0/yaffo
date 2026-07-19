@@ -8,17 +8,28 @@ if [[ $# -ne 2 || ! "$1" =~ $digest_reference || ! "$2" =~ $digest_reference ]];
 fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$script_dir/../.." && pwd)"
-terraform_dir="$repo_root/deploy/gcp"
-project="$(terraform -chdir="$terraform_dir" output -raw project_id)"
-vm="$(terraform -chdir="$terraform_dir" output -raw vm_name)"
-zone="$(terraform -chdir="$terraform_dir" output -raw vm_zone)"
-walkthrough_host="$(terraform -chdir="$terraform_dir" output -raw walkthrough_domain)"
-device_a_host="$(terraform -chdir="$terraform_dir" output -raw demo_a_domain)"
-device_b_host="$(terraform -chdir="$terraform_dir" output -raw demo_b_domain)"
-hub_url="$(terraform -chdir="$terraform_dir" output -raw hub_url)"
-image_repo="$(terraform -chdir="$terraform_dir" output -raw image_repo)"
+project="$(terraform -chdir="$script_dir" output -raw project_id)"
+vm="$(terraform -chdir="$script_dir" output -raw vm_name)"
+zone="$(terraform -chdir="$script_dir" output -raw vm_zone)"
+walkthrough_host="$(terraform -chdir="$script_dir" output -raw walkthrough_domain)"
+device_a_host="$(terraform -chdir="$script_dir" output -raw demo_a_domain)"
+device_b_host="$(terraform -chdir="$script_dir" output -raw demo_b_domain)"
+hub_url="$(terraform -chdir="$script_dir" output -raw hub_url)"
+image_repo="$(terraform -chdir="$script_dir" output -raw image_repo)"
 registry_host="${image_repo%%/*}"
+
+# Dedicated passphrase-less automation key (generated once, gitignored; its
+# pubkey ships to the VM via the admin_ssh_pubkey Terraform variable). Personal
+# keys tend to carry passphrases, which fail silently without a TTY — same
+# lesson as deploy/hub.
+KEY="$script_dir/yaffo-demo-admin-key"
+if [[ ! -f "$KEY" ]]; then
+    echo "No automation SSH key at $KEY — generate one and re-apply Terraform:"
+    echo "  ssh-keygen -t ed25519 -N \"\" -f $KEY -C yaffo-demo-automation"
+    echo "  (then set admin_ssh_pubkey in terraform.tfvars to the .pub contents)"
+    exit 1
+fi
+SSH_ARGS=(--project="$project" --zone="$zone" --tunnel-through-iap --ssh-key-file="$KEY")
 
 bundle_dir="$(mktemp -d -t yaffo-demo-deploy.XXXXXX)"
 bundle_archive="$(mktemp -t yaffo-demo-deploy.XXXXXX.tar.gz)"
@@ -37,15 +48,11 @@ printf '%s\n' \
 tar -czf "$bundle_archive" -C "$bundle_dir" .
 
 gcloud compute scp "$bundle_archive" "$vm:/tmp/yaffo-demo-deploy.tar.gz" \
-    --project="$project" \
-    --zone="$zone" \
-    --tunnel-through-iap \
+    "${SSH_ARGS[@]}" \
     --quiet
 
 gcloud compute ssh "$vm" \
-    --project="$project" \
-    --zone="$zone" \
-    --tunnel-through-iap \
+    "${SSH_ARGS[@]}" \
     --quiet \
     --command="
         set -eu

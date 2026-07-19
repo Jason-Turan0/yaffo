@@ -1,6 +1,16 @@
 .env
 fixtures/
 runtime/
+golden/
 secrets/
 !secrets/.gitkeep
+
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfvars
+tfplan
+yaffo-demo-admin-key
+yaffo-demo-admin-key.pub
 

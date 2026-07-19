@@ -8,12 +8,10 @@ if [[ ${1:-} != "--confirm" ]]; then
 fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$script_dir/../.." && pwd)"
-terraform_dir="$repo_root/deploy/gcp"
-project="$(terraform -chdir="$terraform_dir" output -raw project_id)"
-vm="$(terraform -chdir="$terraform_dir" output -raw vm_name)"
-zone="$(terraform -chdir="$terraform_dir" output -raw vm_zone)"
-firewall="$(terraform -chdir="$terraform_dir" output -raw public_firewall_rule)"
+project="$(terraform -chdir="$script_dir" output -raw project_id)"
+vm="$(terraform -chdir="$script_dir" output -raw vm_name)"
+zone="$(terraform -chdir="$script_dir" output -raw vm_zone)"
+firewall="$(terraform -chdir="$script_dir" output -raw public_firewall_rule)"
 
 gcloud compute firewall-rules update "$firewall" --disabled --project="$project" --quiet
 gcloud compute instances stop "$vm" --zone="$zone" --project="$project" --quiet

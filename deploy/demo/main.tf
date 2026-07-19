@@ -1,32 +1,33 @@
-locals {
-  required_apis = toset([
+# Infrastructure for the public two-instance demo VM. See
+# docs/development/demo-environment.md for the product/security design; this
+# file only provisions infrastructure. `deploy.sh` pushes the application
+# bundle separately (like deploy/hub's split) — Terraform never rebuilds or
+# restarts the app on every apply, only on a real infra change.
+#
+# Modeled on deploy/hub, the pattern that has actually been run in
+# production: the default VPC with an explicit tag-scoped SSH deny (instead
+# of a dedicated VPC), a static admin SSH key installed by the startup
+# script (instead of relying on OS Login, which proved unreliable), and an
+# idempotent startup script that finishes the job — including starting the
+# containers, which the previous version of this config never did.
+
+# --- Required APIs ------------------------------------------------------------
+resource "google_project_service" "apis" {
+  for_each = toset([
     "artifactregistry.googleapis.com",
     "billingbudgets.googleapis.com",
     "compute.googleapis.com",
-    "iap.googleapis.com",
+    "iap.googleapis.com", # SSH via IAP tunnel — port 22 is not open to the internet
     "logging.googleapis.com",
     "monitoring.googleapis.com",
   ])
-
-  runtime_roles = toset([
-    "roles/artifactregistry.reader",
-    "roles/logging.logWriter",
-    "roles/monitoring.metricWriter",
-  ])
-}
-
-data "google_project" "current" {
-  project_id = var.project_id
-}
-
-resource "google_project_service" "apis" {
-  for_each = local.required_apis
 
   project            = var.project_id
   service            = each.value
   disable_on_destroy = false
 }
 
+# --- Image registry -------------------------------------------------------------
 resource "google_artifact_registry_repository" "yaffo" {
   location      = var.region
   repository_id = var.ar_repo
@@ -61,6 +62,10 @@ resource "google_artifact_registry_repository" "yaffo" {
 
   depends_on = [google_project_service.apis]
 }
+
+# --- Runtime service account ----------------------------------------------------
+# Least-privilege: pulls the pinned image and emits logs/metrics. No API scope
+# the containers themselves need beyond that.
 resource "google_service_account" "runtime" {
   account_id   = var.service_account_id
   display_name = "Yaffo demo runtime"
@@ -70,29 +75,20 @@ resource "google_service_account" "runtime" {
 }
 
 resource "google_project_iam_member" "runtime" {
-  for_each = local.runtime_roles
+  for_each = toset([
+    "roles/artifactregistry.reader",
+    "roles/logging.logWriter",
+    "roles/monitoring.metricWriter",
+  ])
 
   project = var.project_id
   role    = each.value
   member  = "serviceAccount:${google_service_account.runtime.email}"
 }
 
-resource "google_compute_network" "demo" {
-  name                    = var.network_name
-  auto_create_subnetworks = false
-  routing_mode            = "REGIONAL"
-
-  depends_on = [google_project_service.apis]
-}
-
-resource "google_compute_subnetwork" "demo" {
-  name                     = "${var.network_name}-${var.region}"
-  region                   = var.region
-  network                  = google_compute_network.demo.id
-  ip_cidr_range            = var.subnet_cidr
-  private_ip_google_access = true
-}
-
+# --- Static external IP ---------------------------------------------------------
+# All three hostnames (walkthrough, device A, device B) point here. Reserved
+# separately from the VM so replacing the instance never requires a DNS change.
 resource "google_compute_address" "demo" {
   name   = var.address_name
   region = var.region
@@ -104,98 +100,63 @@ resource "google_compute_address" "demo" {
   depends_on = [google_project_service.apis]
 }
 
-resource "google_compute_firewall" "public_https" {
-  name      = "${var.network_name}-public-https"
-  network   = google_compute_network.demo.id
-  direction = "INGRESS"
+# --- Firewall -------------------------------------------------------------------
+# Default VPC, same as deploy/hub: exactly the surface the demo needs
+# (80/443 for Caddy, IAP-only SSH), plus an explicit tag-scoped deny so this
+# VM doesn't inherit the default VPC's broad default-allow-ssh rule. No
+# custom egress rules — the previous version's egress allow/deny set was
+# never applied against real traffic and added meaningful complexity for
+# unproven benefit; revisit only if observed abuse demonstrates a need.
+resource "google_compute_firewall" "demo_ingress" {
+  name    = "${var.vm_tag}-ingress"
+  network = "default"
 
   allow {
     protocol = "tcp"
     ports    = ["80", "443"]
   }
 
-  source_ranges           = ["0.0.0.0/0"]
-  target_service_accounts = [google_service_account.runtime.email]
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = [var.vm_tag]
+
+  depends_on = [google_project_service.apis]
 }
 
-resource "google_compute_firewall" "iap_ssh" {
-  name      = "${var.network_name}-iap-ssh"
-  network   = google_compute_network.demo.id
-  direction = "INGRESS"
+resource "google_compute_firewall" "demo_iap_ssh" {
+  name    = "${var.vm_tag}-iap-ssh"
+  network = "default"
+  # Beat demo_deny_ssh (1000) so IAP gets through.
+  priority = 900
 
   allow {
     protocol = "tcp"
     ports    = ["22"]
   }
 
-  source_ranges           = ["35.235.240.0/20"]
-  target_service_accounts = [google_service_account.runtime.email]
+  # IAP's published TCP-forwarding range — `gcloud compute ssh --tunnel-through-iap`.
+  source_ranges = ["35.235.240.0/20"]
+  target_tags   = [var.vm_tag]
+
+  depends_on = [google_project_service.apis]
 }
 
-resource "google_compute_firewall" "egress_https" {
-  name      = "${var.network_name}-egress-https"
-  network   = google_compute_network.demo.id
-  direction = "EGRESS"
-  priority  = 900
-
-  allow {
-    protocol = "tcp"
-    ports    = ["443"]
-  }
-
-  destination_ranges      = ["0.0.0.0/0"]
-  target_service_accounts = [google_service_account.runtime.email]
-}
-
-resource "google_compute_firewall" "egress_infrastructure" {
-  name      = "${var.network_name}-egress-infrastructure"
-  network   = google_compute_network.demo.id
-  direction = "EGRESS"
-  priority  = 900
-
-  allow {
-    protocol = "tcp"
-    ports    = ["53"]
-  }
-
-  allow {
-    protocol = "udp"
-    ports    = ["53", "123", tostring(var.hub_relay_udp_port)]
-  }
-
-  destination_ranges      = ["0.0.0.0/0"]
-  target_service_accounts = [google_service_account.runtime.email]
-}
-
-resource "google_compute_firewall" "egress_metadata" {
-  name      = "${var.network_name}-egress-metadata"
-  network   = google_compute_network.demo.id
-  direction = "EGRESS"
-  priority  = 800
-
-  allow {
-    protocol = "tcp"
-    ports    = ["80"]
-  }
-
-  destination_ranges      = ["169.254.169.254/32"]
-  target_service_accounts = [google_service_account.runtime.email]
-}
-
-resource "google_compute_firewall" "egress_deny" {
-  name      = "${var.network_name}-egress-deny"
-  network   = google_compute_network.demo.id
-  direction = "EGRESS"
-  priority  = 65534
+resource "google_compute_firewall" "demo_deny_ssh" {
+  name     = "${var.vm_tag}-deny-ssh"
+  network  = "default"
+  priority = 1000
 
   deny {
-    protocol = "all"
+    protocol = "tcp"
+    ports    = ["22"]
   }
 
-  destination_ranges      = ["0.0.0.0/0"]
-  target_service_accounts = [google_service_account.runtime.email]
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = [var.vm_tag]
+
+  depends_on = [google_project_service.apis]
 }
 
+# --- Persistent data disk --------------------------------------------------------
 resource "google_compute_disk" "data" {
   name = var.disk_name
   type = var.disk_type
@@ -209,6 +170,9 @@ resource "google_compute_disk" "data" {
   depends_on = [google_project_service.apis]
 }
 
+# --- Daily start/stop schedule ---------------------------------------------------
+# The public demo's operating hours (docs/development/demo-environment.md,
+# Phase 0). Startup brings the containers up; see files/startup.sh.tftpl.
 resource "google_compute_resource_policy" "schedule" {
   name   = "${var.vm_name}-daily-schedule"
   region = var.region
@@ -228,6 +192,7 @@ resource "google_compute_resource_policy" "schedule" {
   depends_on = [google_project_service.apis]
 }
 
+# --- The demo VM ------------------------------------------------------------------
 resource "google_compute_instance" "demo" {
   name                      = var.vm_name
   machine_type              = var.machine_type
@@ -251,7 +216,7 @@ resource "google_compute_instance" "demo" {
   }
 
   network_interface {
-    subnetwork = google_compute_subnetwork.demo.id
+    network = "default"
 
     access_config {
       nat_ip = google_compute_address.demo.address
@@ -264,7 +229,6 @@ resource "google_compute_instance" "demo" {
   }
 
   metadata = {
-    enable-oslogin         = "TRUE"
     block-project-ssh-keys = "TRUE"
     serial-port-enable     = "FALSE"
   }
@@ -273,6 +237,9 @@ resource "google_compute_instance" "demo" {
     disk_name                          = var.disk_name
     docker_compose_version             = var.docker_compose_version
     docker_compose_linux_x86_64_sha256 = var.docker_compose_linux_x86_64_sha256
+    admin_ssh_user                     = var.admin_ssh_user
+    admin_ssh_pubkey                   = var.admin_ssh_pubkey
+    registry_host                      = "${var.region}-docker.pkg.dev"
   })
 
   shielded_instance_config {
@@ -293,6 +260,7 @@ resource "google_compute_instance" "demo" {
   ]
 }
 
+# --- Budget --------------------------------------------------------------------
 resource "google_monitoring_notification_channel" "budget_email" {
   display_name = "Yaffo demo budget owner"
   type         = "email"
@@ -301,6 +269,10 @@ resource "google_monitoring_notification_channel" "budget_email" {
   }
 
   depends_on = [google_project_service.apis]
+}
+
+data "google_project" "current" {
+  project_id = var.project_id
 }
 
 resource "google_billing_budget" "demo" {

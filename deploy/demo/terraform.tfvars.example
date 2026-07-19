@@ -1,6 +1,6 @@
-project_id          = "your-gcp-project-id"
-billing_account_id  = "000000-000000-000000"
-budget_alert_email  = "operator@example.com"
+project_id         = "your-gcp-project-id"
+billing_account_id = "000000-000000-000000"
+budget_alert_email = "operator@example.com"
 
 region = "us-central1"
 zone   = "us-central1-a"
@@ -10,10 +10,17 @@ demo_a_domain      = "demo-a.yaffo.app"
 demo_b_domain      = "demo-b.yaffo.app"
 hub_url            = "wss://hub.yaffo.app"
 
+# Dedicated passphrase-less automation key (generated once, gitignored); see
+# README "SSH access". Its pubkey goes here — public key material only, safe
+# in tfvars.
+#   ssh-keygen -t ed25519 -N "" -f deploy/demo/yaffo-demo-admin-key -C yaffo-demo-automation
+admin_ssh_user   = "yaffo-demo-admin"
+admin_ssh_pubkey = "ssh-ed25519 AAAA... yaffo-demo-automation"
+
 # Copy the checksum published beside this exact release asset. Terraform refuses
 # a placeholder or malformed value, and the VM refuses a mismatched download.
-docker_compose_version                 = "v5.1.4"
-docker_compose_linux_x86_64_sha256     = "replace-with-the-published-64-character-sha256"
+docker_compose_version             = "v5.1.4"
+docker_compose_linux_x86_64_sha256 = "replace-with-the-published-64-character-sha256"
 
 # Optional overrides (defaults shown):
 # machine_type          = "e2-medium"

@@ -1,3 +1,6 @@
+# Input variables. Values come from terraform.tfvars (gitignored) or -var flags.
+# Each variable can have a type, default, and description. No default => required.
+
 variable "project_id" {
   type        = string
   description = "GCP project id to deploy into (billing must be enabled)."
@@ -15,7 +18,7 @@ variable "budget_alert_email" {
 
 variable "region" {
   type        = string
-  description = "Region for the subnet, address, repository, and schedule."
+  description = "Region for the address, repository, and schedule."
   default     = "us-central1"
 }
 
@@ -49,22 +52,30 @@ variable "hub_url" {
   default     = "wss://hub.yaffo.app"
 }
 
-variable "hub_relay_udp_port" {
-  type        = number
-  description = "Outbound UDP port used by the operated relay/STUN service."
-  default     = 40000
-}
+# --- Naming: "yaffo-demo" everywhere a name appears --------------------------
 
-variable "network_name" {
+variable "vm_name" {
   type        = string
-  description = "Dedicated VPC name."
+  description = "Demo VM name."
   default     = "yaffo-demo"
 }
 
-variable "subnet_cidr" {
+variable "address_name" {
   type        = string
-  description = "IPv4 CIDR for the dedicated demo subnet."
-  default     = "10.42.0.0/24"
+  description = "Name of the reserved static external IP (all three hostnames point here)."
+  default     = "yaffo-demo-ip"
+}
+
+variable "vm_tag" {
+  type        = string
+  description = "Network tag on the VM, used to target firewall rules."
+  default     = "yaffo-demo"
+}
+
+variable "service_account_id" {
+  type        = string
+  description = "Least-privilege runtime service-account id (pulls images, writes logs/metrics)."
+  default     = "yaffo-demo-runtime"
 }
 
 variable "ar_repo" {
@@ -83,6 +94,40 @@ variable "image_versions_to_keep" {
     error_message = "image_versions_to_keep must be between 1 and 10."
   }
 }
+
+# --- Admin SSH access ---------------------------------------------------------
+# The startup script installs this key directly in the admin user's
+# authorized_keys, the same belt-and-braces approach as deploy/hub: GCE's
+# metadata-based SSH / OS Login has proven unreliable in practice, and a VM
+# you can't SSH into can't be operated. Public key material only — safe in
+# tfvars.
+
+variable "admin_ssh_user" {
+  type        = string
+  description = "Login name for the admin user the startup script provisions."
+  default     = ""
+}
+
+variable "admin_ssh_pubkey" {
+  type        = string
+  description = "OpenSSH public key line for the admin user. Empty = skip provisioning."
+  default     = ""
+}
+
+# --- Sizing --------------------------------------------------------------------
+
+variable "machine_type" {
+  type        = string
+  description = "Demo VM machine type."
+  default     = "e2-medium"
+}
+
+variable "boot_disk_size_gb" {
+  type        = number
+  description = "Container-Optimized OS boot disk size in GiB."
+  default     = 20
+}
+
 variable "disk_name" {
   type        = string
   description = "Persistent disk that stores both isolated demo data trees."
@@ -101,41 +146,7 @@ variable "disk_type" {
   default     = "pd-balanced"
 }
 
-variable "vm_name" {
-  type        = string
-  description = "Demo VM name."
-  default     = "yaffo-demo"
-}
-
-variable "machine_type" {
-  type        = string
-  description = "Demo VM machine type."
-  default     = "e2-medium"
-}
-
-variable "boot_disk_size_gb" {
-  type        = number
-  description = "Container-Optimized OS boot disk size in GiB."
-  default     = 20
-}
-
-variable "vm_tag" {
-  type        = string
-  description = "Network tag used by the demo firewall policy."
-  default     = "yaffo-demo"
-}
-
-variable "service_account_id" {
-  type        = string
-  description = "Least-privilege runtime service-account id."
-  default     = "yaffo-demo-runtime"
-}
-
-variable "address_name" {
-  type        = string
-  description = "Reserved external IPv4 address name."
-  default     = "yaffo-demo-ip"
-}
+# --- Schedule --------------------------------------------------------------------
 
 variable "schedule_timezone" {
   type        = string
@@ -145,7 +156,7 @@ variable "schedule_timezone" {
 
 variable "vm_start_cron" {
   type        = string
-  description = "Daily VM startup cron; startup performs the reset before serving."
+  description = "Daily VM startup cron; startup brings the containers up before serving."
   default     = "45 7 * * *"
 }
 
@@ -154,6 +165,8 @@ variable "vm_stop_cron" {
   description = "Daily VM stop cron."
   default     = "0 22 * * *"
 }
+
+# --- Budget --------------------------------------------------------------------
 
 variable "monthly_budget_usd" {
   type        = number
@@ -165,6 +178,10 @@ variable "monthly_budget_usd" {
     error_message = "monthly_budget_usd must be a positive whole number."
   }
 }
+
+# --- Docker Compose on Container-Optimized OS ----------------------------------
+# COS ships Docker but no general-purpose package manager, so the pinned
+# Compose CLI plugin is fetched and checksummed at boot instead of apt-installed.
 
 variable "docker_compose_version" {
   type        = string
