@@ -21,6 +21,38 @@
         "skipped": 0
       },
       "failedTests": []
+    },
+    {
+      "timestamp": "2026-07-19T20:40:59.190Z",
+      "success": false,
+      "summary": {
+        "total": 11,
+        "passed": 2,
+        "failed": 1,
+        "skipped": 8
+      },
+      "failedTests": [
+        {
+          "testName": "Locations Map › locations_partial_cluster_selection_indicator",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 20\u001b[39m\n\u001b[31m+ Received  +  1\u001b[39m\n\n\u001b[32m- Array [\u001b[39m\n\u001b[32m-   1,\u001b[39m\n\u001b[32m-   10,\u001b[39m\n\u001b[32m-   11,\u001b[39m\n\u001b[32m-   12,\u001b[39m\n\u001b[32m-   13,\u001b[39m\n\u001b[32m-   14,\u001b[39m\n\u001b[32m-   2,\u001b[39m\n\u001b[32m-   28,\u001b[39m\n\u001b[32m-   29,\u001b[39m\n\u001b[32m-   3,\u001b[39m\n\u001b[32m-   30,\u001b[39m\n\u001b[32m-   31,\u001b[39m\n\u001b[32m-   4,\u001b[39m\n\u001b[32m-   5,\u001b[39m\n\u001b[32m-   6,\u001b[39m\n\u001b[32m-   7,\u001b[39m\n\u001b[32m-   8,\u001b[39m\n\u001b[32m-   9,\u001b[39m\n\u001b[32m- ]\u001b[39m\n\u001b[31m+ Array []\u001b[39m\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-07-19T20:42:14.007Z",
+      "success": false,
+      "summary": {
+        "total": 11,
+        "passed": 2,
+        "failed": 1,
+        "skipped": 8
+      },
+      "failedTests": [
+        {
+          "testName": "Locations Map › locations_partial_cluster_selection_indicator",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 20\u001b[39m\n\u001b[31m+ Received  +  1\u001b[39m\n\n\u001b[32m- Array [\u001b[39m\n\u001b[32m-   1,\u001b[39m\n\u001b[32m-   10,\u001b[39m\n\u001b[32m-   11,\u001b[39m\n\u001b[32m-   12,\u001b[39m\n\u001b[32m-   13,\u001b[39m\n\u001b[32m-   14,\u001b[39m\n\u001b[32m-   2,\u001b[39m\n\u001b[32m-   28,\u001b[39m\n\u001b[32m-   29,\u001b[39m\n\u001b[32m-   3,\u001b[39m\n\u001b[32m-   30,\u001b[39m\n\u001b[32m-   31,\u001b[39m\n\u001b[32m-   4,\u001b[39m\n\u001b[32m-   5,\u001b[39m\n\u001b[32m-   6,\u001b[39m\n\u001b[32m-   7,\u001b[39m\n\u001b[32m-   8,\u001b[39m\n\u001b[32m-   9,\u001b[39m\n\u001b[32m- ]\u001b[39m\n\u001b[31m+ Array []\u001b[39m\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate"
+        }
+      ]
     }
   ]
 }

@@ -1,45 +1,6 @@
 {
   "testRunHistory": [
     {
-      "timestamp": "2026-02-08T23:34:22.772Z",
-      "success": true,
-      "summary": {
-        "total": 6,
-        "passed": 6,
-        "failed": 0,
-        "skipped": 0
-      },
-      "failedTests": []
-    },
-    {
-      "timestamp": "2026-02-08T23:37:27.654Z",
-      "success": false,
-      "summary": {
-        "total": 6,
-        "passed": 2,
-        "failed": 4,
-        "skipped": 0
-      },
-      "failedTests": [
-        {
-          "testName": "Face Assignment › should be able to assign faces to people",
-          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.face[data-face-id=\"1\"]')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('.face[data-face-id=\"1\"]')\u001b[22m\n"
-        },
-        {
-          "testName": "Face Assignment › faces are automatically matched to people based on similarity",
-          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.suggestion-group').filter({ hasText: 'Obama' })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.suggestion-group').filter({ hasText: 'Obama' })\u001b[22m\n"
-        },
-        {
-          "testName": "Face Assignment › similar faces are grouped together",
-          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.suggestion-group').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.suggestion-group').first()\u001b[22m\n"
-        },
-        {
-          "testName": "Face Assignment › keyboard shortcuts enable quick face assignment",
-          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m"
-        }
-      ]
-    },
-    {
       "timestamp": "2026-07-01T23:09:21.000Z",
       "success": true,
       "summary": {
@@ -68,6 +29,38 @@
     },
     {
       "timestamp": "2026-07-19T18:18:24.875Z",
+      "success": false,
+      "summary": {
+        "total": 6,
+        "passed": 1,
+        "failed": 1,
+        "skipped": 4
+      },
+      "failedTests": [
+        {
+          "testName": "Face Assignment › should be able to assign faces to people",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-07-19T20:40:08.750Z",
+      "success": false,
+      "summary": {
+        "total": 6,
+        "passed": 1,
+        "failed": 1,
+        "skipped": 4
+      },
+      "failedTests": [
+        {
+          "testName": "Face Assignment › should be able to assign faces to people",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-07-19T20:42:15.752Z",
       "success": false,
       "summary": {
         "total": 6,
