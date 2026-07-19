@@ -9,7 +9,7 @@
  */
 import "dotenv/config";
 import {join, basename, dirname, resolve} from "path";
-import {existsSync, mkdirSync} from "fs";
+import {existsSync, mkdirSync, writeFileSync} from "fs";
 import {autoHealTestOrchestratorFactory, HealResult} from "@lib/test_generator/auto_heal_orchestrator";
 import {runPlaywrightTests} from "@lib/services/run_playwright_tests";
 import {generateTimestampString} from "@lib/test_generator/utils";
@@ -131,11 +131,14 @@ async function main() {
         ? args[modelIndex + 1]
         : "claude-sonnet-4-5";
     const preseeded = args.includes("--preseeded");
+    const assessmentIndex = args.findIndex(a => a === "--assessment-out");
+    const assessmentOut = assessmentIndex !== -1 ? args[assessmentIndex + 1] : undefined;
 
     const filteredArgs = args.filter((a, i) =>
         !a.startsWith("--") && !a.startsWith("-") &&
         (portIndex === -1 || i !== portIndex + 1) &&
-        (modelIndex === -1 || i !== modelIndex + 1)
+        (modelIndex === -1 || i !== modelIndex + 1) &&
+        (assessmentIndex === -1 || i !== assessmentIndex + 1)
     );
 
     if (filteredArgs.length === 0) {
@@ -145,6 +148,7 @@ async function main() {
         console.error("  -p, --port <port>   Port for isolated Flask server (default: 5001)");
         console.error("  -m, --model <model> Model alias (default: claude-sonnet-4-5)");
         console.error("  --preseeded         Serve the restored seed cache instead of re-seeding");
+        console.error("  --assessment-out <path>  Write a machine-readable assessment JSON");
         console.error("");
         process.exit(1);
     }
@@ -154,6 +158,20 @@ async function main() {
     console.log(`\n🩹 Auto-healing test: ${testFilePath}`);
 
     const result = await healTest(testFilePath, {port, model, preseeded});
+
+    // The published assessment (job summary, PR body, issues) is built from this.
+    // Written regardless of outcome so the caller's `|| true` still records it.
+    if (assessmentOut) {
+        writeFileSync(assessmentOut, JSON.stringify({
+            spec: testFilePath,
+            success: result.success,
+            classification: result.classification ?? "unknown",
+            iterations: result.iterations,
+            error: result.error ?? null,
+            logPath: result.logPath,
+        }, null, 2) + "\n");
+        console.log(`   Assessment written to ${assessmentOut}`);
+    }
 
     if (result.success) {
         console.log(`\n✅ Test healed successfully after ${result.iterations} iteration(s)`);

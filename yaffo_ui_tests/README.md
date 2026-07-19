@@ -360,6 +360,14 @@ specs (`scripts/failed_spec_matrix.ts`), heals each one in its own cache-restore
 environment (`heal_test.ts --preseeded`), then collects the per-spec patches into
 a single pull request.
 
+Each heal writes a machine-readable assessment (`heal_test.ts --assessment-out`)
+with its classification (`test_code_defect` / `application_regression` /
+`environment_instability`), which is published to the job summary, summarized in
+the PR body, and — for `application_regression` (a real app bug, no fix) — filed
+as a GitHub issue. Because artifacts expire (90-day max), each run's assessments
+are also archived permanently as an asset on a rolling `auto-heal-history`
+prerelease.
+
 The seed cache path is pinned with `YAFFO_SEED_CACHE_ROOT` so the build and
 restore jobs agree on the absolute location — required because the seeded
 database stores absolute media paths (see `seedCacheDir` in

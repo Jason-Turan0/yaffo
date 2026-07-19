@@ -28,6 +28,7 @@ permissions:
   actions: read
   contents: write
   pull-requests: write
+  issues: write
 
 env:
   SEED_CACHE_PATH: |
@@ -153,7 +154,44 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PRESEEDED_FLAG: ${{ steps.cache.outputs.cache-hit == 'true' && '--preseeded' || '' }}
         run: |
-          npx tsx lib/test_generator/heal_test.ts "${{ matrix.spec }}" $PRESEEDED_FLAG || true
+          mkdir -p reports
+          npx tsx lib/test_generator/heal_test.ts "${{ matrix.spec }}" $PRESEEDED_FLAG \
+            --assessment-out reports/assessment.json || true
+
+      - name: Publish assessment to job summary
+        if: ${{ always() }}
+        working-directory: yaffo_ui_tests
+        run: |
+          F=reports/assessment.json
+          if [ ! -f "$F" ]; then
+            echo "## Auto-heal: ${{ matrix.spec }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "No assessment produced (the healer did not run to completion)." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          success=$(jq -r '.success' "$F")
+          classification=$(jq -r '.classification' "$F")
+          iterations=$(jq -r '.iterations' "$F")
+          error=$(jq -r '.error // ""' "$F")
+          if [ "$success" = "true" ]; then outcome="✅ healed"; else outcome="❌ not healed"; fi
+          {
+            echo "## Auto-heal: ${{ matrix.spec }}"
+            echo ""
+            echo "- **Outcome:** $outcome"
+            echo "- **Classification:** \`$classification\`"
+            echo "- **Iterations:** $iterations"
+            [ -n "$error" ] && echo "- **Assessment:** $error"
+            echo "- **Logs:** download the \`heal-logs-${{ matrix.id }}\` artifact"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload assessment
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: heal-assessment-${{ matrix.id }}
+          path: yaffo_ui_tests/reports/assessment.json
+          if-no-files-found: ignore
+          retention-days: 90
 
       # A single spec's fix touches only its own file, so per-spec patches never
       # conflict when the collector applies them together.
@@ -173,7 +211,7 @@ jobs:
           name: heal-patch-${{ matrix.id }}
           path: patches/${{ matrix.id }}.patch
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 90
 
       - name: Upload auto-heal logs
         uses: actions/upload-artifact@v4
@@ -182,7 +220,7 @@ jobs:
           name: heal-logs-${{ matrix.id }}
           path: yaffo_ui_tests/reports/api_logs/
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 90
 
   open-pr:
     name: Open healing PR
@@ -201,11 +239,65 @@ jobs:
           pattern: heal-patch-*
           path: patches
           merge-multiple: true
+      - name: Download assessments
+        uses: actions/download-artifact@v4
+        with:
+          pattern: heal-assessment-*
+          path: assessments
+      # Artifacts expire (90-day max); a rolling prerelease keeps the assessments
+      # permanently, one asset per run, for later reference.
+      - name: Archive assessments to release
+        env:
+          GH_TOKEN: ${{ secrets.AUTO_HEAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s nullglob globstar
+          files=(assessments/**/assessment.json)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No assessments to archive."
+            exit 0
+          fi
+          out="auto-heal-${RUN_ID}.json"
+          jq -s --arg run "$RUN_ID" --arg sha "$HEAD_SHA" --arg branch "$BASE_BRANCH" \
+            '{run_id: $run, head_sha: $sha, base_branch: $branch, generated_at: now | todate, assessments: .}' \
+            "${files[@]}" > "$out"
+
+          TAG="auto-heal-history"
+          gh release view "$TAG" >/dev/null 2>&1 \
+            || gh release create "$TAG" --prerelease --latest=false \
+                 --title "Auto-heal assessment archive" \
+                 --notes "Durable archive of auto-heal assessments. Each asset is one Playwright run's assessments (artifacts themselves expire after 90 days)."
+          gh release upload "$TAG" "$out" --clobber
+          echo "Archived ${out} to release ${TAG}"
+      - name: File regression issues
+        env:
+          GH_TOKEN: ${{ secrets.AUTO_HEAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s nullglob globstar
+          # An application_regression means the test is correct and the app has a
+          # real bug — no patch to PR, so surface it as an issue instead.
+          for f in assessments/**/assessment.json; do
+            [ "$(jq -r '.classification' "$f")" = "application_regression" ] || continue
+            spec=$(jq -r '.spec' "$f")
+            reason=$(jq -r '.error // "See auto-heal logs."' "$f")
+            title="Auto-heal: application regression in ${spec}"
+            # Idempotent: skip if an open issue with this title already exists.
+            if [ -n "$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number')" ]; then
+              echo "Issue already open for ${spec}"
+              continue
+            fi
+            body=$(printf '%s\n\n%s\n\n%s\n' \
+              "The auto-healer classified \`${spec}\` as an application regression (the test looks correct; the app has a real bug)." \
+              "**Assessment:** ${reason}" \
+              "From Playwright run ${RUN_ID}. See the \`heal-logs-*\` artifacts for the full triage.")
+            gh issue create --title "$title" --body "$body" --label "auto-heal,bug" \
+              || gh issue create --title "$title" --body "$body" \
+              || echo "::warning::Could not create issue for ${spec}"
+          done
       - name: Apply patches and open PR
         env:
           GH_TOKEN: ${{ secrets.AUTO_HEAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          shopt -s nullglob
+          shopt -s nullglob globstar
           applied=0
           for patch in patches/*.patch; do
             [ -s "$patch" ] || continue
@@ -222,6 +314,24 @@ jobs:
             exit 0
           fi
 
+          # Build the PR body from the per-spec assessments.
+          BODY_FILE=$(mktemp)
+          {
+            echo "Auto-generated fixes for failed Playwright spec files from workflow run ${RUN_ID}."
+            echo ""
+            echo "| Spec | Outcome | Classification | Iterations |"
+            echo "| --- | --- | --- | --- |"
+            for f in assessments/**/assessment.json; do
+              spec=$(jq -r '.spec' "$f")
+              iterations=$(jq -r '.iterations' "$f")
+              classification=$(jq -r '.classification' "$f")
+              if [ "$(jq -r '.success' "$f")" = "true" ]; then outcome="✅ healed"; else outcome="❌ not healed"; fi
+              echo "| \`$spec\` | $outcome | \`$classification\` | $iterations |"
+            done
+            echo ""
+            echo "_Per-spec triage logs are in the \`heal-logs-*\` artifacts of run ${RUN_ID}._"
+          } > "$BODY_FILE"
+
           BRANCH="auto-heal/playwright-${RUN_ID}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -233,8 +343,8 @@ jobs:
             --base "$BASE_BRANCH" \
             --head "$BRANCH" \
             --title "Auto-heal Playwright tests" \
-            --body "Auto-generated fixes for ${applied} failed Playwright spec file(s) from workflow run ${RUN_ID}." \
+            --body-file "$BODY_FILE" \
             || gh pr edit "$BRANCH" \
               --base "$BASE_BRANCH" \
               --title "Auto-heal Playwright tests" \
-              --body "Auto-generated fixes for ${applied} failed Playwright spec file(s) from workflow run ${RUN_ID}."
+              --body-file "$BODY_FILE"
