@@ -123,6 +123,7 @@ export class AnthropicModelClient extends BaseModelClient {
         } catch (error) {
             const errorMessage = inspect(error)
             console.error(`Error when calling Anthropic API: ${errorMessage}`);
+            this.lastError = (error instanceof Error ? error.message : String(error)).slice(0, 500);
             return undefined;
         } finally {
             const durationMs = Date.now() - timestamp.getTime();

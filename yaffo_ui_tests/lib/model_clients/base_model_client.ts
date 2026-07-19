@@ -36,6 +36,9 @@ export abstract class BaseModelClient implements ModelClient {
     protected apiCallCount: number = 0;
     protected sdkTools: Record<string, Tool>;
 
+    /** Set by subclasses' callModelApi catch block; surfaced in the heal assessment. */
+    public lastError?: string;
+
     abstract readonly logPrefix: string;
 
     constructor(
@@ -125,6 +128,21 @@ export abstract class BaseModelClient implements ModelClient {
             sessionCacheCreationInputTokens: this.sessionCacheCreationInputTokens,
             sessionCacheReadInputTokens: this.sessionCacheReadInputTokens,
         };
+    }
+
+    public getApiCallCount(): number {
+        return this.apiCallCount;
+    }
+
+    /** Cumulative estimated USD cost from the accumulated session token counts. */
+    public getSessionCost(): number {
+        const pricing = MODEL_PRICING[this.model];
+        if (!pricing) return 0;
+        const toMillions = (tokens: number): number => tokens / 1_000_000;
+        return toMillions(this.sessionInputTokens) * pricing.inputPerMillion
+            + toMillions(this.sessionOutputTokens) * pricing.outputPerMillion
+            + toMillions(this.sessionCacheCreationInputTokens) * pricing.cacheWritePerMillion
+            + toMillions(this.sessionCacheReadInputTokens) * pricing.cacheReadPerMillion;
     }
 
     protected estimateCost(usage: CacheUsage): CostEstimate | undefined {

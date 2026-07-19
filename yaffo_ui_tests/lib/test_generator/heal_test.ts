@@ -14,6 +14,8 @@ import {autoHealTestOrchestratorFactory, HealResult} from "@lib/test_generator/a
 import {runPlaywrightTests} from "@lib/services/run_playwright_tests";
 import {generateTimestampString} from "@lib/test_generator/utils";
 import {startIsolatedEnvironment, IsolatedEnvironment} from "@lib/services/isolated_runner";
+import {isKnownModel, KNOWN_MODEL_ALIASES} from "@lib/model_clients/model_client_factory";
+import {preflightModel, PreflightError} from "@lib/model_clients/preflight";
 import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
 import {GENERATED_TESTS_ROOT, YAFFO_APP_ROOT} from "@lib/types";
 import {recordTestResult} from "@lib/test_generator/test_result_history";
@@ -45,6 +47,29 @@ export async function healTest(
     options: HealOptions = {}
 ): Promise<HealResult> {
     const {port = 5001, model = "claude-sonnet-4-5", preseeded = false} = options;
+    // Fail before starting the (expensive) environment if the alias is unknown.
+    if (!isKnownModel(model)) {
+        throw new Error(`Unknown model alias: ${model}. Known aliases: ${KNOWN_MODEL_ALIASES.join(", ")}`);
+    }
+    // Preflight the provider (key present + a minimal call succeeds) so a missing
+    // key or exhausted balance fails in ~1s instead of after the triage spend.
+    try {
+        await preflightModel(model);
+    } catch (e) {
+        if (e instanceof PreflightError) {
+            return {
+                success: false,
+                testFilePath: resolve(testFilePath),
+                error: e.message,
+                logPath: resolve(join(process.cwd(), "reports", "api_logs")),
+                iterations: 0,
+                classification: "environment_instability",
+                costUsd: 0,
+                apiCalls: 0,
+            };
+        }
+        throw e;
+    }
     const specPath = inferSpecPath(testFilePath);
     const baseUrl = `http://127.0.0.1:${port}`;
 
@@ -110,7 +135,8 @@ export async function healTest(
             await createFilesystemClient(allowedDirectories),
             undefined
         );
-        return await healer.healTest(initialResult, specPath);
+        const healResult = await healer.healTest(initialResult, specPath);
+        return {...healResult, costUsd: healer.getCost(), apiCalls: healer.getApiCallCount()};
 
     } finally {
         if (isolatedEnvironment) {
@@ -155,6 +181,12 @@ async function main() {
 
     const testFilePath = filteredArgs[0];
 
+    if (!isKnownModel(model)) {
+        console.error(`✖ Unknown model alias: ${model}`);
+        console.error(`  Known aliases: ${KNOWN_MODEL_ALIASES.join(", ")}`);
+        process.exit(1);
+    }
+
     console.log(`\n🩹 Auto-healing test: ${testFilePath}`);
 
     const result = await healTest(testFilePath, {port, model, preseeded});
@@ -164,9 +196,12 @@ async function main() {
     if (assessmentOut) {
         writeFileSync(assessmentOut, JSON.stringify({
             spec: testFilePath,
+            model,
             success: result.success,
             classification: result.classification ?? "unknown",
             iterations: result.iterations,
+            cost_usd: result.costUsd ?? null,
+            api_calls: result.apiCalls ?? null,
             error: result.error ?? null,
             logPath: result.logPath,
         }, null, 2) + "\n");

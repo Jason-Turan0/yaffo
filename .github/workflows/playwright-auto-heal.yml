@@ -19,6 +19,10 @@ on:
         description: "Commit SHA from the Playwright run"
         required: true
         type: string
+      model:
+        description: "Model alias for the healer (overrides the HEAL_MODEL repo variable)"
+        required: false
+        type: string
 
 concurrency:
   group: playwright-auto-heal-${{ github.event.workflow_run.id || inputs.run_id }}
@@ -39,6 +43,8 @@ env:
   RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
   HEAD_SHA: ${{ github.event.workflow_run.head_sha || inputs.head_sha }}
   BASE_BRANCH: ${{ github.event.workflow_run.head_branch || inputs.head_branch }}
+  # Manual-run input wins; otherwise the HEAL_MODEL repo/org variable; else default.
+  HEAL_MODEL: ${{ inputs.model || vars.HEAL_MODEL || 'claude-sonnet-4-5' }}
 
 jobs:
   discover:
@@ -152,11 +158,15 @@ jobs:
         working-directory: yaffo_ui_tests
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Only needed when HEAL_MODEL is a gemini-* alias (the healer switches
+          # provider by alias); empty and harmless for claude-* models.
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
           PRESEEDED_FLAG: ${{ steps.cache.outputs.cache-hit == 'true' && '--preseeded' || '' }}
+          HEAL_MODEL: ${{ env.HEAL_MODEL }}
         run: |
           mkdir -p reports
           npx tsx lib/test_generator/heal_test.ts "${{ matrix.spec }}" $PRESEEDED_FLAG \
-            --assessment-out reports/assessment.json || true
+            --model "$HEAL_MODEL" --assessment-out reports/assessment.json || true
 
       - name: Publish assessment to job summary
         if: ${{ always() }}

@@ -24,6 +24,8 @@ interface MockModelClient extends ModelClient {
 
 const createMockModelClient = (): MockModelClient => ({
     addUserMessage: jest.fn(),
+    getSessionCost: jest.fn(() => 0),
+    getApiCallCount: jest.fn(() => 0),
     addToolResultMessage: jest.fn(),
     setSystemPrompt: jest.fn(),
     setOutputSchema: jest.fn(),

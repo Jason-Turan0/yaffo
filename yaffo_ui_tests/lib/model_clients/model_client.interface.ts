@@ -88,6 +88,9 @@ export const toToolResultPart = (result: ToolCallResult): ToolResultPart => {
 export interface ModelClient {
     readonly model: ModelAlias;
 
+    /** The last API error message, if callModelApi failed (it otherwise swallows to undefined). */
+    lastError?: string;
+
     addUserMessage(content: TextPart[]): void;
 
     addToolResultMessage(content: ToolResultPart[]): void;
@@ -97,6 +100,12 @@ export interface ModelClient {
     setSystemPrompt(prompt: string): void;
 
     setOutputSchema(schema: z.ZodType): void;
+
+    /** Estimated USD cost of every call this client has made so far. */
+    getSessionCost(): number;
+
+    /** Number of API calls made so far. */
+    getApiCallCount(): number;
 }
 
 export type ModelClientFactory = (config: ModelClientConfig) => ModelClient;

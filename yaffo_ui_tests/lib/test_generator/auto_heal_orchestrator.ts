@@ -40,6 +40,10 @@ export interface HealResult {
     error?: string;
     iterations: number;
     classification?: FailureClassification;
+    /** Estimated USD spent on model API calls for this heal. */
+    costUsd?: number;
+    /** Number of model API calls made. */
+    apiCalls?: number;
 }
 
 export class AutoHealTestOrchestrator {
@@ -74,6 +78,12 @@ export class AutoHealTestOrchestrator {
             this.toolProviderMap.set(tool.tool.name, tool);
         }
     }
+
+    /** Estimated USD spent on model API calls so far. */
+    getCost = (): number => this.modelClient.getSessionCost();
+
+    /** Number of model API calls made so far. */
+    getApiCallCount = (): number => this.modelClient.getApiCallCount();
 
     healTest = async (testFailures: TestRunResult, specPath: string): Promise<HealResult> => {
         try {
@@ -123,7 +133,9 @@ export class AutoHealTestOrchestrator {
                 return {
                     success: false,
                     testFilePath: this.absoluteTestFilePath,
-                    error: "Heal code generation failed.",
+                    error: this.modelClient.lastError
+                        ? `Heal code generation failed: ${this.modelClient.lastError}`
+                        : "Heal code generation failed.",
                     logPath: this.runLogDir,
                     iterations: this.iterationCount,
                     classification: "test_code_defect",
