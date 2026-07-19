@@ -1,6 +1,6 @@
 # Demo Environment Plan
 
-Status: Phase 0 accepted; Phase 1 in progress
+Status: Phases 0 and 1 complete; Phase 2 next
 
 Last reviewed: 2026-07-18
 
@@ -735,21 +735,21 @@ down.
 
 ### Phase 1 — harden the application boundary
 
-- Implement `YAFFO_DEMO_MODE`, `YAFFO_DEMO_ROLE`, the centralized unsafe-method
+- [x] Implement `YAFFO_DEMO_MODE`, `YAFFO_DEMO_ROLE`, the centralized unsafe-method
   gate, its exact exception set, and the public-read allowlist. Add route-map tests
   that validate the named endpoints and prove everything else fails closed.
-- Add the global `demo_feature_disabled` response handler for `fetch` and HTMX,
+- [x] Add the global `demo_feature_disabled` response handler for `fetch` and HTMX,
   the shared informational toast, and the non-JavaScript HTML fallback.
-- Add service-layer demo guards around filesystem changes, task enqueueing, LLM
+- [x] Add service-layer demo guards around filesystem changes, task enqueueing, LLM
   calls, and P2P trust/grant mutation.
-- Add path-root enforcement and symlink/traversal tests.
-- Add application-wide CSRF protection and production cookie/host/proxy settings.
-- Make the web bind host configurable.
-- Add per-session, per-IP, and global request/query/transfer/byte limits, plus
+- [x] Add path-root enforcement and symlink/traversal tests.
+- [x] Add application-wide CSRF protection and production cookie/host/proxy settings.
+- [x] Make the web bind host configurable.
+- [x] Add per-session, per-IP, and global request/query/transfer/byte limits, plus
   protected seed records and the receiver download-volume limit.
-- Ensure the UI clearly marks the environment as disposable and shows the next
+- [x] Ensure the UI clearly marks the environment as disposable and shows the next
   reset time.
-- Allow face assignment POST methods but execute the shared assignment logic in
+- [x] Allow face assignment POST methods but execute the shared assignment logic in
   the web process instead of enqueueing a background task in demo mode.
 
 Phase 1 implementation progress as of 2026-07-18:
@@ -765,10 +765,46 @@ Phase 1 implementation progress as of 2026-07-18:
   and grant guards; DB-backed media root containment; traversal/symlink tests;
   synchronous bounded assignment of unassigned faces; request/query cooldowns;
   and transfer count, byte, active-batch, and receiver-volume caps.
-- Remaining: audit and contain every non-media filesystem consumer, protect seed
-  records outside face assignment, add byte accounting for media/preview delivery,
-  annotate or hide each unavailable control, and complete the security review
-  against the Phase 1 exit criterion.
+- Complete: the public Index Photos inventory walk is contained to configured
+  roots, rejects symlink escapes, and has file-count, elapsed-time, per-session,
+  per-IP, and global cooldown limits. The remaining public utility GET routes do
+  not walk or mutate the filesystem; filesystem pickers and every utility write
+  remain blocked.
+- Complete: media, poster, face-thumbnail, and remote-preview responses charge
+  their actual `Content-Length` against per-session, per-IP, global-minute, and
+  global-day byte budgets. Range responses charge only the returned range and
+  `HEAD` requests do not consume the byte budget.
+- Complete: seeded P2P identity, trust, and grant records are protected at both
+  the route and repository boundaries. Normal P2P liveness updates may refresh a
+  peer's last-seen value, but cannot replace its key, rename or revoke it, or
+  create/revoke grants. Other seeded data mutations fail at the central route
+  gate, except for the explicitly bounded face-assignment scratch interaction.
+- Complete: unavailable actions remain visible where they help explain the full
+  product, but the global response handler gives one informational toast for
+  rejected `fetch`/HTMX requests and the HTML fallback handles ordinary forms.
+  This avoids demo-only behavior in individual feature screens.
+
+Numeric demo budgets can be overridden at process startup with the corresponding
+`YAFFO_DEMO_*` environment variables. The implemented controls cover request and
+widget-query rates, receiver-transfer and inventory-scan cooldowns, scan file/time
+bounds, and media byte budgets. Invalid or non-positive values fail startup.
+
+Security review completed on 2026-07-18:
+
+- Public media reads resolve database-backed paths beneath configured media or
+  thumbnail roots; path-addressed media and filesystem browsing are not public.
+  The one public recursive inventory scan resolves every candidate beneath its
+  configured root and stops at hard work limits.
+- Public requests cannot enqueue tasks, start model-backed generation, reveal or
+  modify paid keys, run automations/indexing/duplicate actions, or launch host
+  file integrations. Reviewed widget queries, face assignment, and receiver pulls
+  are the only unsafe-method exceptions and retain their feature-specific bounds.
+- Pairing and P2P trust/grant mutation fail at both HTTP and service boundaries;
+  the public sharing exception starts only a bounded receiver transfer against
+  the pre-paired seed.
+- Container mount isolation, private app ports, resource limits, golden fixtures,
+  and the scheduled reset are deployment controls and remain Phase 2–3 work. They
+  do not broaden the completed application boundary.
 
 Exit criterion: a security review finds no route that can escape an instance's
 mounts, manage paid secrets, start unbounded work, or alter P2P identity/trust

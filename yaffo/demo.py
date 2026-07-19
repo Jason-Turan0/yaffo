@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 from flask import Flask, Response, current_app, jsonify, render_template, request, session
 from flask_babel import gettext
-from yaffo.security import csrf_is_valid, csrf_token, request_expects_json
+from yaffo.security import csrf_is_valid, request_expects_json
 
 DEMO_ROLE_SOURCE = "source"
 DEMO_ROLE_RECEIVER = "receiver"
@@ -87,23 +87,26 @@ _STATIC_ENDPOINTS = frozenset(
     {"static", "favicon", "theme_css", "theme_preview_css", "theme_tokens_css"}
 )
 _OSM_TILE_ORIGIN = "https://tile.openstreetmap.org"
+_BYTE_LIMITED_ENDPOINTS = frozenset(
+    {"face_thumbnail", "media", "media_poster", "sharing_device_preview"}
+)
 
 
 class _WindowLimiter:
     def __init__(self) -> None:
-        self._events: dict[str, deque[float]] = defaultdict(deque)
+        self._events: dict[str, deque[tuple[float, int]]] = defaultdict(deque)
         self._lock = threading.Lock()
 
-    def allow(self, key: str, limit: int, window_seconds: int) -> bool:
+    def allow(self, key: str, limit: int, window_seconds: int, cost: int = 1) -> bool:
         now = monotonic_time.monotonic()
         cutoff = now - window_seconds
         with self._lock:
             events = self._events[key]
-            while events and events[0] <= cutoff:
+            while events and events[0][0] <= cutoff:
                 events.popleft()
-            if len(events) >= limit:
+            if sum(event_cost for _timestamp, event_cost in events) + cost > limit:
                 return False
-            events.append(now)
+            events.append((now, cost))
             return True
 
 
@@ -127,18 +130,84 @@ def _parse_bool(value: str | None) -> bool:
     return value == "1"
 
 
+def _env_positive_int(name: str, default: int) -> int:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be a positive integer") from exc
+    if value <= 0:
+        raise RuntimeError(f"{name} must be a positive integer")
+    return value
+
+
 def configure_demo(app: Flask) -> None:
     app.config.setdefault("DEMO_MODE", _parse_bool(os.environ.get("YAFFO_DEMO_MODE")))
     app.config.setdefault("DEMO_ROLE", os.environ.get("YAFFO_DEMO_ROLE"))
     app.config.setdefault("DEMO_TIMEZONE", "America/Chicago")
     app.config.setdefault("DEMO_RESET_TIME", "07:45")
-    app.config.setdefault("DEMO_REQUESTS_PER_SESSION_MINUTE", 180)
-    app.config.setdefault("DEMO_REQUESTS_PER_IP_MINUTE", 360)
-    app.config.setdefault("DEMO_REQUESTS_GLOBAL_MINUTE", 900)
-    app.config.setdefault("DEMO_WIDGET_QUERIES_PER_SESSION_MINUTE", 30)
-    app.config.setdefault("DEMO_WIDGET_QUERIES_PER_IP_MINUTE", 60)
-    app.config.setdefault("DEMO_WIDGET_QUERIES_GLOBAL_MINUTE", 120)
-    app.config.setdefault("DEMO_TRANSFER_COOLDOWN_SECONDS", 300)
+    app.config.setdefault(
+        "DEMO_REQUESTS_PER_SESSION_MINUTE",
+        _env_positive_int("YAFFO_DEMO_REQUESTS_PER_SESSION_MINUTE", 180),
+    )
+    app.config.setdefault(
+        "DEMO_REQUESTS_PER_IP_MINUTE",
+        _env_positive_int("YAFFO_DEMO_REQUESTS_PER_IP_MINUTE", 360),
+    )
+    app.config.setdefault(
+        "DEMO_REQUESTS_GLOBAL_MINUTE",
+        _env_positive_int("YAFFO_DEMO_REQUESTS_GLOBAL_MINUTE", 900),
+    )
+    app.config.setdefault(
+        "DEMO_WIDGET_QUERIES_PER_SESSION_MINUTE",
+        _env_positive_int("YAFFO_DEMO_WIDGET_QUERIES_PER_SESSION_MINUTE", 30),
+    )
+    app.config.setdefault(
+        "DEMO_WIDGET_QUERIES_PER_IP_MINUTE",
+        _env_positive_int("YAFFO_DEMO_WIDGET_QUERIES_PER_IP_MINUTE", 60),
+    )
+    app.config.setdefault(
+        "DEMO_WIDGET_QUERIES_GLOBAL_MINUTE",
+        _env_positive_int("YAFFO_DEMO_WIDGET_QUERIES_GLOBAL_MINUTE", 120),
+    )
+    app.config.setdefault(
+        "DEMO_TRANSFER_COOLDOWN_SECONDS",
+        _env_positive_int("YAFFO_DEMO_TRANSFER_COOLDOWN_SECONDS", 300),
+    )
+    app.config.setdefault(
+        "DEMO_SCAN_COOLDOWN_SECONDS",
+        _env_positive_int("YAFFO_DEMO_SCAN_COOLDOWN_SECONDS", 60),
+    )
+    app.config.setdefault(
+        "DEMO_SCANS_GLOBAL_PER_COOLDOWN",
+        _env_positive_int("YAFFO_DEMO_SCANS_GLOBAL_PER_COOLDOWN", 4),
+    )
+    app.config.setdefault(
+        "DEMO_SCAN_MAX_FILES",
+        _env_positive_int("YAFFO_DEMO_SCAN_MAX_FILES", 10_000),
+    )
+    app.config.setdefault(
+        "DEMO_SCAN_MAX_SECONDS",
+        _env_positive_int("YAFFO_DEMO_SCAN_MAX_SECONDS", 15),
+    )
+    app.config.setdefault(
+        "DEMO_MEDIA_BYTES_PER_SESSION_MINUTE",
+        _env_positive_int("YAFFO_DEMO_MEDIA_BYTES_PER_SESSION_MINUTE", 64 * 1024 * 1024),
+    )
+    app.config.setdefault(
+        "DEMO_MEDIA_BYTES_PER_IP_MINUTE",
+        _env_positive_int("YAFFO_DEMO_MEDIA_BYTES_PER_IP_MINUTE", 128 * 1024 * 1024),
+    )
+    app.config.setdefault(
+        "DEMO_MEDIA_BYTES_GLOBAL_MINUTE",
+        _env_positive_int("YAFFO_DEMO_MEDIA_BYTES_GLOBAL_MINUTE", 512 * 1024 * 1024),
+    )
+    app.config.setdefault(
+        "DEMO_MEDIA_BYTES_GLOBAL_DAY",
+        _env_positive_int("YAFFO_DEMO_MEDIA_BYTES_GLOBAL_DAY", 5 * 1024 * 1024 * 1024),
+    )
 
     if not app.config["DEMO_MODE"]:
         app.config["DEMO_ROLE"] = None
@@ -238,9 +307,83 @@ def _rate_limit_gate() -> Response | None:
                 (f"transfer:ip:{ip_address}", 1, cooldown),
             ]
         )
+    if request.endpoint == "utilities_index_photos_scan":
+        cooldown = current_app.config["DEMO_SCAN_COOLDOWN_SECONDS"]
+        checks.extend(
+            [
+                (f"scan:session:{visitor_id}", 1, cooldown),
+                (f"scan:ip:{ip_address}", 1, cooldown),
+                (
+                    "scan:global",
+                    current_app.config["DEMO_SCANS_GLOBAL_PER_COOLDOWN"],
+                    cooldown,
+                ),
+            ]
+        )
 
     if all(limiter.allow(key, int(limit), window) for key, limit, window in checks):
         return None
+    return _blocked_response(
+        gettext("The public demo is busy. Please wait a moment and try again."),
+        DEMO_RATE_LIMIT_CODE,
+        status=429,
+    )
+
+
+def _response_content_length(response: Response) -> int:
+    raw_length = response.headers.get("Content-Length")
+    if raw_length is None:
+        return 0
+    try:
+        return max(int(raw_length), 0)
+    except ValueError:
+        return 0
+
+
+def _apply_media_byte_limits(response: Response) -> Response:
+    if (
+        request.method == "HEAD"
+        or request.endpoint not in _BYTE_LIMITED_ENDPOINTS
+        or not 200 <= response.status_code < 300
+    ):
+        return response
+    content_length = _response_content_length(response)
+    if content_length == 0:
+        return response
+
+    visitor_id = session.get(_DEMO_SESSION_KEY)
+    if not visitor_id:
+        return response
+    ip_address = request.remote_addr or "unknown"
+    limiter: _WindowLimiter = current_app.extensions["demo_rate_limiter"]
+    checks = [
+        (
+            f"media:session:{visitor_id}",
+            current_app.config["DEMO_MEDIA_BYTES_PER_SESSION_MINUTE"],
+            60,
+        ),
+        (
+            f"media:ip:{ip_address}",
+            current_app.config["DEMO_MEDIA_BYTES_PER_IP_MINUTE"],
+            60,
+        ),
+        (
+            "media:global:minute",
+            current_app.config["DEMO_MEDIA_BYTES_GLOBAL_MINUTE"],
+            60,
+        ),
+        (
+            "media:global:day",
+            current_app.config["DEMO_MEDIA_BYTES_GLOBAL_DAY"],
+            86_400,
+        ),
+    ]
+    if all(
+        limiter.allow(key, int(limit), window, cost=content_length)
+        for key, limit, window in checks
+    ):
+        return response
+    response.close()
     return _blocked_response(
         gettext("The public demo is busy. Please wait a moment and try again."),
         DEMO_RATE_LIMIT_CODE,
@@ -310,6 +453,7 @@ def init_demo_boundary(app: Flask) -> None:
 
     @app.after_request
     def add_demo_security_headers(response: Response) -> Response:
+        response = _apply_media_byte_limits(response)
         external_images = f" {_OSM_TILE_ORIGIN}" if request.endpoint == "locations_list" else ""
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")

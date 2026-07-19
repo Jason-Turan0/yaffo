@@ -10,6 +10,7 @@ from yaffo.db import db
 from yaffo.db.models import MediaItem, MEDIA_STATUS_INDEXED
 from yaffo.utils.file_sync import (
     MediaScan,
+    MediaScanLimitExceeded,
     ORPHAN_MISSING,
     ORPHAN_UNCONFIGURED,
     iter_media_scan,
@@ -121,3 +122,56 @@ def test_empty_media_dirs(session):
     scan = scan_media_dirs(session, [], None)
     assert scan.total_filesystem == 0
     assert scan.unindexed == []
+
+
+def test_scan_rejects_symlinked_media_outside_configured_root(tmp_path, session):
+    media_dir = tmp_path / "organized"
+    media_dir.mkdir()
+    outside = _touch(tmp_path / "private" / "secret.jpg")
+    link = media_dir / "linked.jpg"
+    try:
+        link.symlink_to(outside)
+    except OSError as exc:
+        pytest.skip(f"symlinks unavailable: {exc}")
+
+    media_item = MediaItem(full_file_path=str(link), status=MEDIA_STATUS_INDEXED)
+    session.add(media_item)
+    session.commit()
+    media_item_id = media_item.id
+
+    scan = scan_media_dirs(session, [media_dir], None)
+
+    assert scan.total_filesystem == 0
+    assert scan.unindexed == []
+    assert scan.orphaned == [
+        {"id": media_item_id, "full_path": str(link), "reason": ORPHAN_UNCONFIGURED}
+    ]
+
+
+def test_scan_accepts_media_beneath_a_configured_symlink_root(tmp_path, session):
+    real_root = tmp_path / "real-media"
+    photo = _touch(real_root / "inside.jpg")
+    configured_root = tmp_path / "configured-media"
+    try:
+        configured_root.symlink_to(real_root, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlinks unavailable: {exc}")
+
+    media_item = MediaItem(full_file_path=str(photo), status=MEDIA_STATUS_INDEXED)
+    session.add(media_item)
+    session.commit()
+
+    scan = scan_media_dirs(session, [configured_root], None)
+
+    assert scan.total_filesystem == 1
+    assert scan.unindexed == []
+    assert scan.orphaned == []
+
+
+def test_scan_stops_after_configured_walk_limit(tmp_path, session):
+    media_dir = tmp_path / "organized"
+    _touch(media_dir / "one.jpg")
+    _touch(media_dir / "two.jpg")
+
+    with pytest.raises(MediaScanLimitExceeded):
+        list(iter_media_scan(session, [media_dir], None, max_walked=1))

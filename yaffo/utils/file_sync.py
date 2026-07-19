@@ -1,3 +1,4 @@
+import time as monotonic_time
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -5,7 +6,8 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from yaffo.common import MEDIA_EXTENSIONS
-from yaffo.db.models import MediaItem, MEDIA_STATUS_INDEXED
+from yaffo.db.models import MEDIA_STATUS_INDEXED, MediaItem
+from yaffo.db.repositories.media_dir_repository import get_media_dirs
 from yaffo.logging_config import get_logger
 from yaffo.utils.index_jobs import enqueue_index_jobs
 from yaffo.utils.index_jobs_dto import IndexJobs
@@ -15,7 +17,7 @@ from yaffo.utils.index_photos import (
     is_system_file,
 )
 from yaffo.utils.settings import get_thumbnail_dir
-from yaffo.db.repositories.media_dir_repository import get_media_dirs
+from yaffo.utils.safe_paths import PathOutsideAllowedRoots, resolve_path_in_roots
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -24,6 +26,10 @@ logger = get_logger(__name__, 'background_tasks')
 # table copy so the user can tell a deleted file from a de-configured directory.
 ORPHAN_MISSING = "missing"          # file gone from disk (its media dir still configured)
 ORPHAN_UNCONFIGURED = "unconfigured"  # path no longer under any configured media dir
+
+
+class MediaScanLimitExceeded(RuntimeError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -53,10 +59,41 @@ def _orphan_reason(path: Path, media_dirs: list[Path]) -> str | None:
     (b) it's under a configured dir but the file is gone. Case (b) only counts when
     that dir's root currently exists on disk, so an unmounted drive doesn't get its
     whole subtree marked orphaned and wiped on the next sync."""
-    owning_dir = next((d for d in media_dirs if path.is_relative_to(d)), None)
+    expanded_path = path.expanduser()
+    missing_lexical_owner = next(
+        (
+            media_dir
+            for media_dir in media_dirs
+            if not media_dir.expanduser().exists()
+            and expanded_path.is_relative_to(media_dir.expanduser())
+        ),
+        None,
+    )
+    if missing_lexical_owner is not None:
+        return None
+
+    try:
+        resolved = expanded_path.resolve(strict=False)
+    except OSError:
+        return ORPHAN_UNCONFIGURED
+
+    owning_dir = None
+    for media_dir in media_dirs:
+        try:
+            resolved_root = media_dir.expanduser().resolve(strict=True)
+        except OSError:
+            continue
+        if resolved == resolved_root or resolved_root in resolved.parents:
+            owning_dir = resolved_root
+            break
     if owning_dir is None:
         return ORPHAN_UNCONFIGURED
-    if owning_dir.exists() and not path.exists():
+
+    try:
+        resolved, _root = resolve_path_in_roots(resolved, [owning_dir], must_exist=False)
+    except PathOutsideAllowedRoots:
+        return ORPHAN_UNCONFIGURED
+    if not resolved.exists():
         return ORPHAN_MISSING
     return None
 
@@ -66,6 +103,8 @@ def iter_media_scan(
     media_dirs: list[Path],
     thumbnail_dir: Path | None,
     progress_every: int = 500,
+    max_walked: int | None = None,
+    max_seconds: float | None = None,
 ) -> "Iterator[int | MediaScan]":
     """Walk the media dirs and diff them against the index, yielding the running
     count of photo files found every `progress_every` files walked (so a caller can
@@ -83,11 +122,19 @@ def iter_media_scan(
     filesystem_paths: set[str] = set()
     unindexed: list[dict] = []
     walked = 0
+    started_at = monotonic_time.monotonic()
     for media_dir in media_dirs:
         if not media_dir.exists():
             continue
         for photo_file in media_dir.rglob("*"):
             walked += 1
+            if max_walked is not None and walked > max_walked:
+                raise MediaScanLimitExceeded("media scan file limit exceeded")
+            if (
+                max_seconds is not None
+                and monotonic_time.monotonic() - started_at > max_seconds
+            ):
+                raise MediaScanLimitExceeded("media scan time limit exceeded")
             if walked % progress_every == 0:
                 yield len(filesystem_paths)
             if not photo_file.is_file():
@@ -96,9 +143,13 @@ def iter_media_scan(
                 continue
             if is_system_file(photo_file.name):
                 continue
-            if thumbnail_dir is not None and photo_file.is_relative_to(thumbnail_dir):
+            try:
+                resolved_photo, _root = resolve_path_in_roots(photo_file, [media_dir])
+            except PathOutsideAllowedRoots:
                 continue
-            full_path = str(photo_file)
+            if thumbnail_dir is not None and resolved_photo.is_relative_to(thumbnail_dir.resolve()):
+                continue
+            full_path = str(resolved_photo)
             filesystem_paths.add(full_path)
             if full_path not in indexed_paths:
                 unindexed.append({'filename': photo_file.name, 'full_path': full_path})

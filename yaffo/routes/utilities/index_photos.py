@@ -2,7 +2,7 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, render_template, request, stream_with_context
+from flask import Flask, Response, current_app, jsonify, render_template, request, stream_with_context
 from flask_babel import gettext
 
 from yaffo.db import db
@@ -132,7 +132,15 @@ def init_index_photos_routes(app: Flask):
 
         def generate():
             try:
-                for event in iter_media_scan(db.session, media_dirs, thumbnail_dir):
+                limits = (
+                    {
+                        "max_walked": current_app.config["DEMO_SCAN_MAX_FILES"],
+                        "max_seconds": current_app.config["DEMO_SCAN_MAX_SECONDS"],
+                    }
+                    if current_app.config.get("DEMO_MODE")
+                    else {}
+                )
+                for event in iter_media_scan(db.session, media_dirs, thumbnail_dir, **limits):
                     if isinstance(event, MediaScan):
                         yield json.dumps(asdict(ScanComplete.from_scan(event))) + "\n"
                     else:

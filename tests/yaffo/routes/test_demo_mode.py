@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 
 import pytest
@@ -7,9 +8,20 @@ from flask import Flask
 
 from yaffo.app import create_app
 from yaffo.db import db
-from yaffo.db.models import FACE_STATUS_ASSIGNED, FACE_STATUS_UNASSIGNED, Face, MediaItem, Person
+from yaffo.db.models import (
+    FACE_STATUS_ASSIGNED,
+    FACE_STATUS_UNASSIGNED,
+    GRANT_SCOPE_MEDIA_DIR,
+    TRUST_STATE_TRUSTED,
+    Face,
+    KnownDevice,
+    MediaItem,
+    Person,
+    ShareGrant,
+)
 from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.db.repositories import media_dir_repository
+from yaffo.db.repositories import p2p_repository
 from yaffo.demo import (
     DEMO_PUBLIC_READ_ENDPOINTS,
     DEMO_ROLE_RECEIVER,
@@ -376,6 +388,88 @@ def test_demo_request_limits_have_session_ip_and_global_backstops(demo_app):
     assert "public demo is busy" in response.get_data(as_text=True)
 
 
+def test_demo_inventory_scan_has_cooldown_and_hard_walk_limit(demo_app, tmp_path):
+    media_root = tmp_path / "media"
+    media_root.mkdir()
+    (media_root / "one.jpg").write_bytes(b"one")
+    (media_root / "two.jpg").write_bytes(b"two")
+    demo_app.config["DEMO_SCAN_MAX_FILES"] = 1
+
+    with demo_app.app_context():
+        media_dir_repository.add_media_dir(db.session, str(media_root))
+
+    client = demo_app.test_client()
+    first = client.get("/utilities/index-photos/scan")
+    records = [json.loads(line) for line in first.get_data(as_text=True).splitlines() if line]
+    assert first.status_code == 200
+    assert records[-1]["code"] == "filesystem_scan_failed"
+
+    second = client.get("/utilities/index-photos/scan")
+    assert second.status_code == 429
+
+
+def test_demo_media_delivery_has_session_ip_global_and_daily_byte_budgets(
+    demo_app,
+    tmp_path,
+):
+    media_root = tmp_path / "media"
+    media_root.mkdir()
+    photo = media_root / "inside.jpg"
+    photo.write_bytes(b"123456")
+    demo_app.config["DEMO_MEDIA_BYTES_PER_SESSION_MINUTE"] = 10
+    demo_app.config["DEMO_MEDIA_BYTES_PER_IP_MINUTE"] = 100
+    demo_app.config["DEMO_MEDIA_BYTES_GLOBAL_MINUTE"] = 100
+    demo_app.config["DEMO_MEDIA_BYTES_GLOBAL_DAY"] = 100
+
+    with demo_app.app_context():
+        media_dir_repository.add_media_dir(db.session, str(media_root))
+        item = MediaItem(full_file_path=str(photo))
+        db.session.add(item)
+        db.session.commit()
+        item_id = item.id
+
+    client = demo_app.test_client()
+    assert client.get(f"/media/{item_id}").status_code == 200
+    blocked = client.get(
+        f"/media/{item_id}",
+        headers={"X-Yaffo-Response": "json"},
+    )
+
+    assert blocked.status_code == 429
+    assert blocked.get_json()["code"] == "demo_rate_limit_exceeded"
+
+
+def test_demo_media_byte_budget_counts_ranges_but_not_head_requests(demo_app, tmp_path):
+    media_root = tmp_path / "media"
+    media_root.mkdir()
+    photo = media_root / "inside.jpg"
+    photo.write_bytes(b"1234567890")
+    demo_app.config["DEMO_MEDIA_BYTES_PER_SESSION_MINUTE"] = 7
+
+    with demo_app.app_context():
+        media_dir_repository.add_media_dir(db.session, str(media_root))
+        item = MediaItem(full_file_path=str(photo))
+        db.session.add(item)
+        db.session.commit()
+        item_id = item.id
+
+    client = demo_app.test_client()
+    assert client.head(f"/media/{item_id}").status_code == 200
+    first_range = client.get(
+        f"/media/{item_id}",
+        headers={"Range": "bytes=0-3"},
+    )
+    blocked_range = client.get(
+        f"/media/{item_id}",
+        headers={"Range": "bytes=4-7", "X-Yaffo-Response": "json"},
+    )
+
+    assert first_range.status_code == 206
+    assert first_range.data == b"1234"
+    assert blocked_range.status_code == 429
+    assert blocked_range.get_json()["code"] == "demo_rate_limit_exceeded"
+
+
 def test_service_layer_blocks_tasks_filesystem_pairing_and_paid_keys(
     demo_app,
     monkeypatch,
@@ -401,6 +495,52 @@ def test_service_layer_blocks_tasks_filesystem_pairing_and_paid_keys(
 
         with pytest.raises(DemoModeOperationBlocked):
             demo_task()
+
+
+def test_service_layer_protects_seeded_p2p_trust_and_grants(demo_app):
+    with demo_app.app_context():
+        device = KnownDevice(
+            device_id="AAAA-BBBB-CCCC-DDDD",
+            pubkey="seed-pubkey",
+            display_name="Family Mac",
+            trust_state=TRUST_STATE_TRUSTED,
+        )
+        grant = ShareGrant(
+            peer_device_id=device.device_id,
+            scope_type=GRANT_SCOPE_MEDIA_DIR,
+            media_dir_id="seed-media-dir",
+        )
+        db.session.add_all([device, grant])
+        db.session.commit()
+        grant_id = grant.id
+
+        blocked_calls = [
+            lambda: p2p_repository.upsert_trusted_device(
+                db.session, device.device_id, "replacement", "Attacker"
+            ),
+            lambda: p2p_repository.mark_device_revoked(db.session, device.device_id),
+            lambda: p2p_repository.rename_device(db.session, device.device_id, "Changed"),
+            lambda: p2p_repository.delete_revoked_device(db.session, device.device_id),
+            lambda: p2p_repository.create_grant(
+                db.session,
+                device.device_id,
+                GRANT_SCOPE_MEDIA_DIR,
+                media_dir_id="another-dir",
+            ),
+            lambda: p2p_repository.revoke_grant(db.session, grant_id),
+        ]
+        for call in blocked_calls:
+            with pytest.raises(DemoModeOperationBlocked):
+                call()
+
+        db.session.expire_all()
+        protected_device = db.session.get(KnownDevice, device.device_id)
+        protected_grant = db.session.get(ShareGrant, grant_id)
+        assert protected_device is not None
+        assert protected_device.display_name == "Family Mac"
+        assert protected_device.trust_state == TRUST_STATE_TRUSTED
+        assert protected_grant is not None
+        assert protected_grant.revoked_at is None
 
 
 def test_demo_media_delivery_requires_database_path_under_configured_root(demo_app, tmp_path):
