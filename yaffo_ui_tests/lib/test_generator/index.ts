@@ -6,6 +6,7 @@ import * as fs from "node:fs";
 import {testGeneratorOrchestratorFactory} from "@lib/test_generator/test_generator_orchestrator";
 import {generateTimestampString} from "@lib/test_generator/utils";
 import {ModelAlias} from "@lib/model_clients/model_client.interface";
+import {defaultModel} from "@lib/model_clients/model_client_factory";
 
 const SPECS_DIR = resolve(join(process.cwd(), "specs"));
 const GENERATED_TESTS_DIR = resolve(join(process.cwd(), "generated_tests"));
@@ -25,7 +26,7 @@ interface GenerateOptions {
 
 export async function generateTest(
     specPath: string,
-    options: GenerateOptions = {model: "claude-opus-4-5"}
+    options: GenerateOptions = {model: defaultModel()}
 ) {
     const {runTestEnvironment = false, port = 5001} = options;
 
@@ -76,7 +77,7 @@ const program = new Command()
     .argument("<spec-path>", "path to the YAML spec file")
     .option("-r, --run-tests", "run generated tests against isolated environment", false)
     .option("-p, --port <port>", "port for isolated Flask server", parseInt, 5001)
-    .option("-m, --model <model>", "model alias for test generation", "claude-sonnet-4-5")
+    .option("-m, --model <model>", "model alias (default: MODEL_ALIAS env var, else claude-sonnet-5)", defaultModel())
     .action(async (specPath: string, opts: { runTests: boolean; port: number; model: string }) => {
         console.log(`Generating test from: ${specPath}`);
         await generateTest(specPath, {

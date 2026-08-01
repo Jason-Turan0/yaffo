@@ -84,12 +84,12 @@ comment "  5. Fix the broken selector and re-run the test"
 echo ""
 sleep 3
 
-comment "Running: npm run test:heal generated_tests/photo_gallery/photo_gallery.spec.ts"
+comment "Running: npm run test:heal specs/photo_gallery.yaml"
 echo ""
 sleep 1
 
 cd "$PROJECT_ROOT"
-npm run test:heal generated_tests/photo_gallery/photo_gallery.spec.ts || true
+npm run test:heal specs/photo_gallery.yaml || true
 cd - > /dev/null
 
 sleep 2

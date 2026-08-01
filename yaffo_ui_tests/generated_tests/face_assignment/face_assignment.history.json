@@ -1,17 +1,6 @@
 {
   "testRunHistory": [
     {
-      "timestamp": "2026-02-08T23:34:22.772Z",
-      "success": true,
-      "summary": {
-        "total": 6,
-        "passed": 6,
-        "failed": 0,
-        "skipped": 0
-      },
-      "failedTests": []
-    },
-    {
       "timestamp": "2026-02-08T23:37:27.654Z",
       "success": false,
       "summary": {
@@ -68,6 +57,22 @@
     },
     {
       "timestamp": "2026-07-19T18:18:24.875Z",
+      "success": false,
+      "summary": {
+        "total": 6,
+        "passed": 1,
+        "failed": 1,
+        "skipped": 4
+      },
+      "failedTests": [
+        {
+          "testName": "Face Assignment › should be able to assign faces to people",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-08-01T15:02:36.829Z",
       "success": false,
       "summary": {
         "total": 6,

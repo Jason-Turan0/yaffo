@@ -29,7 +29,7 @@ const createMockModelClient = (): MockModelClient => ({
     addToolResultMessage: jest.fn(),
     setSystemPrompt: jest.fn(),
     setOutputSchema: jest.fn(),
-    model: "claude-sonnet-4-5",
+    model: "claude-sonnet-5",
     callModelApi: jest.fn()
 });
 

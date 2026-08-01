@@ -1,14 +1,15 @@
 /**
  * Repo-level auto-heal entry point.
  *
- * Reads a Playwright JSON report, finds failed generated spec files, and runs
- * the existing single-file healer for each failed file.
+ * Reads a Playwright JSON report, finds failed generated test files, maps them
+ * to their source YAML specs, and runs the per-spec healer for each spec.
  */
 import "dotenv/config";
 import {existsSync, readFileSync} from "fs";
 import {join, resolve} from "path";
 import {Command} from "commander";
-import {healTest} from "@lib/test_generator/heal_test";
+import {healTest, specPathForTestFile} from "@lib/test_generator/heal_test";
+import {defaultModel} from "@lib/model_clients/model_client_factory";
 
 interface PlaywrightJsonReport {
     suites: PlaywrightSuite[];
@@ -96,9 +97,17 @@ export async function healRepo(options: HealRepoOptions): Promise<void> {
         return;
     }
 
-    console.log(`Found ${failedFiles.length} failed spec file(s):`);
+    console.log(`Found ${failedFiles.length} failed test file(s):`);
     for (const file of failedFiles) {
         console.log(`  - ${file}`);
+    }
+
+    // The healer works per YAML spec (one shared environment per feature), so
+    // collapse the failed test files onto their source specs.
+    const specPaths = [...new Set(failedFiles.map(specPathForTestFile))].sort();
+    console.log(`Healing ${specPaths.length} spec(s):`);
+    for (const spec of specPaths) {
+        console.log(`  - ${spec}`);
     }
 
     if (options.dryRun) {
@@ -107,15 +116,17 @@ export async function healRepo(options: HealRepoOptions): Promise<void> {
     }
 
     const failures: string[] = [];
-    for (const file of failedFiles) {
-        console.log(`\nAuto-healing failed spec: ${file}`);
-        const result = await healTest(file, {
+    for (const spec of specPaths) {
+        console.log(`\nAuto-healing spec: ${spec}`);
+        const results = await healTest(spec, {
             port: options.port,
             model: options.model,
         });
 
-        if (!result.success) {
-            failures.push(`${file}: ${result.error || result.classification || "unknown failure"}`);
+        for (const result of results) {
+            if (!result.success) {
+                failures.push(`${result.testFilePath}: ${result.error || result.classification || "unknown failure"}`);
+            }
         }
     }
 
@@ -130,7 +141,7 @@ const program = new Command()
     .option("--report-dir <dir>", "Directory containing Playwright report artifacts", "reports")
     .option("--report-json <path>", "Path to Playwright test-results.json")
     .option("-p, --port <port>", "Port for isolated Flask server", (value) => parseInt(value, 10), 5002)
-    .option("-m, --model <model>", "Model alias", "claude-sonnet-4-5")
+    .option("-m, --model <model>", "Model alias (default: MODEL_ALIAS env var, else claude-sonnet-5)", defaultModel())
     .option("--max-files <count>", "Maximum failed spec files to heal", (value) => parseInt(value, 10))
     .option("--dry-run", "Print failed spec files without invoking auto-heal", false);
 

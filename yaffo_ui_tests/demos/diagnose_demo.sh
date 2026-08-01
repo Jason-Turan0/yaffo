@@ -98,11 +98,11 @@ comment "  5. Classify the root cause"
 echo ""
 sleep 3
 
-comment "Running: npm run test:heal generated_tests/photo_gallery/photo_gallery.spec.ts"
+comment "Running: npm run test:heal specs/photo_gallery.yaml"
 echo ""
 sleep 5
 
-npm run test:heal generated_tests/photo_gallery/photo_gallery.spec.ts || true
+npm run test:heal specs/photo_gallery.yaml || true
 
 # ─────────────────────────────────────────────────────────────────────────────
 banner "Step 4: Review the diagnosis"

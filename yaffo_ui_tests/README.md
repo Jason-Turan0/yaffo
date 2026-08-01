@@ -148,7 +148,7 @@ yaffo_ui_tests/
 
 - Node.js 18+
 - Yaffo application source code (expected at `../../yaffo` relative to this directory)
-- Anthropic API key (required) and/or Google Generative AI API key (for Gemini models)
+- An API key for the model provider you use: Anthropic (default), Google (Gemini), OpenAI (GPT), DeepSeek, Moonshot AI (Kimi), or xAI (Grok)
 
 ### Setup
 
@@ -203,7 +203,7 @@ scenarios:
 ### 2. Generate Playwright Tests
 
 ```bash
-# Generate tests from a spec (uses claude-sonnet-4-5 by default)
+# Generate tests from a spec (uses claude-sonnet-5 by default)
 npm run generate specs/my_feature.yaml
 
 # Generate and run tests in an isolated environment
@@ -269,14 +269,14 @@ same per-spec layout CI uploads.
 ### 4. Self-Heal Failing Tests
 
 ```bash
-# Auto-heal a specific test file
-npm run test:heal generated_tests/face_assignment/face-assignment.spec.ts
+# Auto-heal a feature: runs every generated test for the spec, heals failures
+npm run test:heal specs/face_assignment.yaml
 
 # With custom port for isolated server
-npm run test:heal -- generated_tests/my_feature/my-test.spec.ts -p 5002
+npm run test:heal -- specs/my_feature.yaml -p 5002
 
 # Reuse the seed cache instead of seeding inline (run `npm run seed:build` first)
-npm run test:heal -- generated_tests/my_feature/my-test.spec.ts --preseeded
+npm run test:heal -- specs/my_feature.yaml --preseeded
 ```
 
 The healer will:
@@ -298,6 +298,22 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 # Required for Gemini models
 GOOGLE_GENERATIVE_AI_API_KEY=...
+
+# Required for GPT models
+OPENAI_API_KEY=sk-...
+
+# Required for DeepSeek models
+DEEPSEEK_API_KEY=sk-...
+
+# Required for Kimi models (Moonshot AI)
+MOONSHOT_API_KEY=sk-...
+
+# Required for Grok models (xAI)
+XAI_API_KEY=xai-...
+
+# Model alias generation and healing use when no --model flag is given
+# (any alias from the Supported Models table; default: claude-sonnet-5)
+MODEL_ALIAS=claude-sonnet-5
 
 # Application base URL (default: http://127.0.0.1:5001)
 BASE_URL=http://127.0.0.1:5001
@@ -329,7 +345,7 @@ See `playwright.config.ts`:
 | `npm run validate:specs` | Verify all `specs/*.yaml` are valid YAML |
 | `npm run isolatedEnvironment:start [-- --demo]` | Start a seeded isolated app, optionally in source demo mode |
 | `npm run isolatedEnvironment:start:sharing [-- --demo]` | Start isolated A/B apps, optionally as source/receiver demos |
-| `npm run test:heal <test> [--preseeded]` | Auto-heal a failing test |
+| `npm run test:heal <spec> [--preseeded]` | Auto-heal a feature's failing tests (YAML spec path) |
 | `npm run logs` | Browse AI model API logs |
 | `npm run typecheck` | TypeScript type check |
 | `npm run docker:build:mcp-filesystem` | Build MCP filesystem Docker image |
@@ -419,14 +435,22 @@ scenarios:
 
 | Provider | Model | Alias |
 |----------|-------|-------|
-| Anthropic | Claude Opus 4.5 | `claude-opus-4-5` |
-| Anthropic | Claude Sonnet 4.5 | `claude-sonnet-4-5` |
+| Anthropic | Claude Opus 5 | `claude-opus-5` |
+| Anthropic | Claude Sonnet 5 | `claude-sonnet-5` |
 | Anthropic | Claude Haiku 4.5 | `claude-haiku-4-5` |
 | Google | Gemini 2.0 Flash | `gemini-2.0-flash` |
 | Google | Gemini 2.5 Flash | `gemini-2.5-flash` |
 | Google | Gemini 2.5 Pro | `gemini-2.5-pro` |
+| OpenAI | GPT-5.6 Sol | `gpt-5.6-sol` |
+| OpenAI | GPT-5.6 Terra | `gpt-5.6-terra` |
+| OpenAI | GPT-5.6 Luna | `gpt-5.6-luna` |
+| DeepSeek | DeepSeek V4 Pro | `deepseek-v4-pro` |
+| DeepSeek | DeepSeek V4 Flash | `deepseek-v4-flash` |
+| Moonshot AI | Kimi K3 | `kimi-k3` |
+| xAI | Grok 4.5 | `grok-4.5` |
+| xAI | Grok 4.3 | `grok-4.3` |
 
-Anthropic models support native structured output and prompt caching. Generation defaults to `claude-sonnet-4-5`, healing uses `claude-sonnet-4-5`.
+Anthropic models support native structured output and prompt caching. Generation defaults to `claude-sonnet-5`, healing uses `claude-sonnet-5`.
 
 ## MCP Tool Providers
 

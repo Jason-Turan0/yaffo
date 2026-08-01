@@ -20,7 +20,7 @@ on:
         required: true
         type: string
       model:
-        description: "Model alias for the healer (overrides the HEAL_MODEL repo variable)"
+        description: "Model alias for the healer (overrides the MODEL_ALIAS repo variable)"
         required: false
         type: string
 
@@ -43,8 +43,8 @@ env:
   RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
   HEAD_SHA: ${{ github.event.workflow_run.head_sha || inputs.head_sha }}
   BASE_BRANCH: ${{ github.event.workflow_run.head_branch || inputs.head_branch }}
-  # Manual-run input wins; otherwise the HEAL_MODEL repo/org variable; else default.
-  HEAL_MODEL: ${{ inputs.model || vars.HEAL_MODEL || 'claude-sonnet-4-5' }}
+  # Manual-run input wins; otherwise the MODEL_ALIAS repo/org variable; else default.
+  MODEL_ALIAS: ${{ inputs.model || vars.MODEL_ALIAS || 'claude-sonnet-5' }}
 
 jobs:
   discover:
@@ -82,7 +82,7 @@ jobs:
           path: yaffo_ui_tests/reports/from-playwright
           run-id: ${{ env.RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build failed-spec matrix
+      - name: Build failed-feature matrix
         id: matrix
         working-directory: yaffo_ui_tests
         run: npx tsx scripts/failed_spec_matrix.ts reports/from-playwright --github
@@ -157,57 +157,72 @@ jobs:
       - name: Auto-heal ${{ matrix.spec }}
         working-directory: yaffo_ui_tests
         env:
+          # The healer picks the provider from the MODEL_ALIAS alias; only the
+          # matching key is needed — the rest are empty and harmless.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Only needed when HEAL_MODEL is a gemini-* alias (the healer switches
-          # provider by alias); empty and harmless for claude-* models.
           GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           PRESEEDED_FLAG: ${{ steps.cache.outputs.cache-hit == 'true' && '--preseeded' || '' }}
-          HEAL_MODEL: ${{ env.HEAL_MODEL }}
+          MODEL_ALIAS: ${{ env.MODEL_ALIAS }}
         run: |
-          mkdir -p reports
+          # One healer run per YAML spec: it re-runs every generated test file
+          # for the feature against a shared environment and heals the failures
+          # serially, writing one assessment JSON per test file.
+          mkdir -p reports/assessments
           npx tsx lib/test_generator/heal_test.ts "${{ matrix.spec }}" $PRESEEDED_FLAG \
-            --model "$HEAL_MODEL" --assessment-out reports/assessment.json || true
+            --model "$MODEL_ALIAS" --assessment-out reports/assessments || true
 
-      - name: Publish assessment to job summary
+      - name: Publish assessments to job summary
         if: ${{ always() }}
         working-directory: yaffo_ui_tests
         run: |
-          F=reports/assessment.json
-          if [ ! -f "$F" ]; then
-            echo "## Auto-heal: ${{ matrix.spec }}" >> "$GITHUB_STEP_SUMMARY"
+          shopt -s nullglob
+          files=(reports/assessments/*.json)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "## Auto-heal: ${{ matrix.dir }}" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "No assessment produced (the healer did not run to completion)." >> "$GITHUB_STEP_SUMMARY"
+            echo "No assessments produced (the healer did not run to completion)." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          success=$(jq -r '.success' "$F")
-          classification=$(jq -r '.classification' "$F")
-          iterations=$(jq -r '.iterations' "$F")
-          error=$(jq -r '.error // ""' "$F")
-          if [ "$success" = "true" ]; then outcome="✅ healed"; else outcome="❌ not healed"; fi
-          {
-            echo "## Auto-heal: ${{ matrix.spec }}"
-            echo ""
-            echo "- **Outcome:** $outcome"
-            echo "- **Classification:** \`$classification\`"
-            echo "- **Iterations:** $iterations"
-            [ -n "$error" ] && echo "- **Assessment:** $error"
-            echo "- **Logs:** download the \`heal-logs-${{ matrix.id }}\` artifact"
-          } >> "$GITHUB_STEP_SUMMARY"
+          for F in "${files[@]}"; do
+            spec=$(jq -r '.spec' "$F")
+            success=$(jq -r '.success' "$F")
+            classification=$(jq -r '.classification' "$F")
+            iterations=$(jq -r '.iterations' "$F")
+            error=$(jq -r '.error // ""' "$F")
+            if [ "$success" = "true" ]; then outcome="✅ healed"; else outcome="❌ not healed"; fi
+            {
+              echo "## Auto-heal: $spec"
+              echo ""
+              echo "- **Outcome:** $outcome"
+              echo "- **Classification:** \`$classification\`"
+              echo "- **Iterations:** $iterations"
+              [ -n "$error" ] && echo "- **Assessment:** $error"
+              echo "- **Logs:** download the \`heal-logs-${{ matrix.id }}\` artifact"
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
 
-      - name: Upload assessment
+      - name: Upload assessments
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: heal-assessment-${{ matrix.id }}
-          path: yaffo_ui_tests/reports/assessment.json
+          path: yaffo_ui_tests/reports/assessments/
           if-no-files-found: ignore
           retention-days: 90
 
-      # A single spec's fix touches only its own file, so per-spec patches never
-      # conflict when the collector applies them together.
+      # One job owns each feature directory, so a feature's spec fixes, memory
+      # updates, and sibling edits land in a single patch and the collector can
+      # apply the per-feature patches together without conflicts.
       - name: Capture healed diff
         run: |
           mkdir -p patches
+          # Intent-to-add so files the healer created (new memories, new specs)
+          # appear in the diff — plain `git diff` skips untracked files.
+          git add --intent-to-add yaffo_ui_tests/generated_tests
           git diff -- yaffo_ui_tests/generated_tests > "patches/${{ matrix.id }}.patch"
           if [ -s "patches/${{ matrix.id }}.patch" ]; then
             echo "Captured changes for ${{ matrix.id }}"
@@ -261,7 +276,7 @@ jobs:
           GH_TOKEN: ${{ secrets.AUTO_HEAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           shopt -s nullglob globstar
-          files=(assessments/**/assessment.json)
+          files=(assessments/**/*.json)
           if [ ${#files[@]} -eq 0 ]; then
             echo "No assessments to archive."
             exit 0
@@ -285,7 +300,7 @@ jobs:
           shopt -s nullglob globstar
           # An application_regression means the test is correct and the app has a
           # real bug — no patch to PR, so surface it as an issue instead.
-          for f in assessments/**/assessment.json; do
+          for f in assessments/**/*.json; do
             [ "$(jq -r '.classification' "$f")" = "application_regression" ] || continue
             spec=$(jq -r '.spec' "$f")
             reason=$(jq -r '.error // "See auto-heal logs."' "$f")
@@ -331,7 +346,7 @@ jobs:
             echo ""
             echo "| Spec | Outcome | Classification | Iterations |"
             echo "| --- | --- | --- | --- |"
-            for f in assessments/**/assessment.json; do
+            for f in assessments/**/*.json; do
               spec=$(jq -r '.spec' "$f")
               iterations=$(jq -r '.iterations' "$f")
               classification=$(jq -r '.classification' "$f")

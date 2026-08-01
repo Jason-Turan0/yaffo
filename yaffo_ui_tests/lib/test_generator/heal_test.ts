@@ -1,20 +1,23 @@
 /**
  * Auto-Heal Test - Attempts to fix failing Playwright tests using a fresh Claude context
  *
+ * Takes a YAML spec file; every generated test file for that spec is run and,
+ * if failing, healed serially against one shared isolated environment.
+ *
  * Usage:
- *   npx tsx lib/test_generator/heal_test.ts <test-file-path> [options]
+ *   npx tsx lib/test_generator/heal_test.ts <spec-file-path> [options]
  *
  * Options:
  *   -p, --port <port>  Port for Flask server (default: 5001)
  */
 import "dotenv/config";
-import {join, basename, dirname, resolve} from "path";
-import {existsSync, mkdirSync, writeFileSync} from "fs";
+import {join, basename, dirname, relative, resolve} from "path";
+import {existsSync, mkdirSync, readdirSync, statSync, writeFileSync} from "fs";
 import {autoHealTestOrchestratorFactory, HealResult} from "@lib/test_generator/auto_heal_orchestrator";
 import {runPlaywrightTests} from "@lib/services/run_playwright_tests";
 import {generateTimestampString} from "@lib/test_generator/utils";
 import {startIsolatedEnvironment, IsolatedEnvironment} from "@lib/services/isolated_runner";
-import {isKnownModel, KNOWN_MODEL_ALIASES} from "@lib/model_clients/model_client_factory";
+import {defaultModel, isKnownModel, KNOWN_MODEL_ALIASES} from "@lib/model_clients/model_client_factory";
 import {preflightModel, PreflightError} from "@lib/model_clients/preflight";
 import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
 import {GENERATED_TESTS_ROOT, YAFFO_APP_ROOT} from "@lib/types";
@@ -22,17 +25,31 @@ import {recordTestResult} from "@lib/test_generator/test_result_history";
 import {parseSpecFile} from "@lib/test_generator/prompt/spec_parser";
 import {ModelAlias} from "@lib/model_clients/model_client.interface";
 
-const SPECS_DIR = resolve(join(process.cwd(), "specs"));
+export const SPECS_DIR = resolve(join(process.cwd(), "specs"));
 
-function inferSpecPath(testFilePath: string): string {
-    const testDir = dirname(resolve(testFilePath));
-    const featureName = basename(testDir);
-    const specFile = join(SPECS_DIR, `${featureName}.yaml`);
-    //TODO handle nested specfiles
-    if (!existsSync(specFile)) {
-        throw new Error(`Spec file not found: ${specFile}`);
+/** generated_tests directory a YAML spec's tests live in (specs/foo.yaml → generated_tests/foo). */
+export function testDirForSpec(specFilePath: string): string {
+    const rel = relative(SPECS_DIR, resolve(specFilePath)).replace(/\.ya?ml$/, "");
+    return join(GENERATED_TESTS_ROOT, rel);
+}
+
+/** Inverse mapping: the YAML spec a generated test file was created from. */
+export function specPathForTestFile(testFilePath: string): string {
+    const rel = relative(GENERATED_TESTS_ROOT, dirname(resolve(testFilePath)));
+    return join(SPECS_DIR, `${rel}.yaml`);
+}
+
+function collectTestFiles(dir: string): string[] {
+    const found: string[] = [];
+    for (const entry of readdirSync(dir)) {
+        const full = resolve(dir, entry);
+        if (statSync(full).isDirectory()) {
+            found.push(...collectTestFiles(full));
+        } else if (full.endsWith(".spec.ts")) {
+            found.push(full);
+        }
     }
-    return specFile;
+    return found.sort();
 }
 
 interface HealOptions {
@@ -43,53 +60,51 @@ interface HealOptions {
 }
 
 export async function healTest(
-    testFilePath: string,
+    specFilePath: string,
     options: HealOptions = {}
-): Promise<HealResult> {
-    const {port = 5001, model = "claude-sonnet-4-5", preseeded = false} = options;
+): Promise<HealResult[]> {
+    const {port = 5001, model = defaultModel(), preseeded = false} = options;
     // Fail before starting the (expensive) environment if the alias is unknown.
     if (!isKnownModel(model)) {
         throw new Error(`Unknown model alias: ${model}. Known aliases: ${KNOWN_MODEL_ALIASES.join(", ")}`);
     }
+    const specPath = resolve(specFilePath);
+    if (!existsSync(specPath)) {
+        throw new Error(`Spec file not found: ${specPath}`);
+    }
+    const testDir = testDirForSpec(specPath);
+    if (!existsSync(testDir)) {
+        throw new Error(`No generated tests directory for spec ${specPath} (expected ${testDir})`);
+    }
+    const testFiles = collectTestFiles(testDir);
+    if (testFiles.length === 0) {
+        throw new Error(`No generated test files found under ${testDir}`);
+    }
+
     // Preflight the provider (key present + a minimal call succeeds) so a missing
     // key or exhausted balance fails in ~1s instead of after the triage spend.
     try {
         await preflightModel(model);
     } catch (e) {
         if (e instanceof PreflightError) {
-            return {
+            return testFiles.map((testFile) => ({
                 success: false,
-                testFilePath: resolve(testFilePath),
+                testFilePath: testFile,
                 error: e.message,
                 logPath: resolve(join(process.cwd(), "reports", "api_logs")),
                 iterations: 0,
                 classification: "environment_instability",
                 costUsd: 0,
                 apiCalls: 0,
-            };
+            }));
         }
         throw e;
     }
-    const specPath = inferSpecPath(testFilePath);
-    const baseUrl = `http://127.0.0.1:${port}`;
 
+    const baseUrl = `http://127.0.0.1:${port}`;
     let isolatedEnvironment: IsolatedEnvironment | null = null;
 
     try {
-        const absoluteTestPath = resolve(testFilePath);
-        if (!existsSync(absoluteTestPath)) {
-            throw new Error(`Test file not found: ${absoluteTestPath}`);
-        }
-
-        const testName = basename(absoluteTestPath, ".spec.ts");
-        const runId = generateTimestampString();
-        const logPath = resolve(join(process.cwd(), "reports", "api_logs", `heal_${testName}`, runId));
-        if (!existsSync(logPath)) {
-            mkdirSync(logPath, {recursive: true});
-        }
-
-        const outputDir = dirname(absoluteTestPath);
-
         console.log(`\n🔧 Starting isolated environment for healing...`);
         // The sharing suite needs the two-instance sandbox (a peer to pair with
         // and pull from). PEER_URL goes into process.env so every downstream
@@ -103,41 +118,53 @@ export async function healTest(
 
         const spec = parseSpecFile(specPath);
         const featureName = spec.feature;
+        const results: HealResult[] = [];
 
-        console.log(`\n🧪 Running initial test to capture failures...`);
-        const initialResult = await runPlaywrightTests(baseUrl, [absoluteTestPath]);
+        for (const absoluteTestPath of testFiles) {
+            const testName = basename(absoluteTestPath, ".spec.ts");
+            const runId = generateTimestampString();
+            const logPath = resolve(join(process.cwd(), "reports", "api_logs", `heal_${testName}`, runId));
+            if (!existsSync(logPath)) {
+                mkdirSync(logPath, {recursive: true});
+            }
+            const outputDir = dirname(absoluteTestPath);
 
-        if (initialResult.success) {
-            console.log(`\n✅ Test already passes - no healing needed.`);
+            console.log(`\n🧪 Running initial test to capture failures: ${testName}`);
+            const initialResult = await runPlaywrightTests(baseUrl, [absoluteTestPath]);
             recordTestResult(outputDir, featureName, initialResult);
-            return {
-                success: true,
-                testFilePath: absoluteTestPath,
+
+            if (initialResult.success) {
+                console.log(`\n✅ ${testName} already passes - no healing needed.`);
+                results.push({
+                    success: true,
+                    testFilePath: absoluteTestPath,
+                    logPath,
+                    iterations: 0,
+                });
+                continue;
+            }
+
+            console.log(`\n❌ ${testName} failed with ${initialResult.summary.failed} failure(s)`);
+            console.log(`\n🩹 Starting auto-heal process...`);
+
+            const allowedDirectories = [YAFFO_APP_ROOT, GENERATED_TESTS_ROOT, outputDir, isolatedEnvironment.tempDir];
+            // Fresh clients per file — the orchestrator disconnects its tool
+            // providers when a heal finishes.
+            const healer = await autoHealTestOrchestratorFactory(
+                absoluteTestPath,
                 logPath,
-                iterations: 0,
-            };
+                outputDir,
+                model as ModelAlias,
+                baseUrl,
+                allowedDirectories,
+                await createFilesystemClient(allowedDirectories),
+                undefined
+            );
+            const healResult = await healer.healTest(initialResult, specPath);
+            results.push({...healResult, costUsd: healer.getCost(), apiCalls: healer.getApiCallCount()});
         }
 
-        recordTestResult(outputDir, featureName, initialResult);
-
-        console.log(`\n❌ Test failed with ${initialResult.summary.failed} failure(s)`);
-        console.log(`\n🩹 Starting auto-heal process...`);
-
-
-        const allowedDirectories = [YAFFO_APP_ROOT, GENERATED_TESTS_ROOT, outputDir, isolatedEnvironment.tempDir];
-        const healer = await autoHealTestOrchestratorFactory(
-            absoluteTestPath,
-            logPath,
-            outputDir,
-            model as ModelAlias,
-            baseUrl,
-            allowedDirectories,
-            await createFilesystemClient(allowedDirectories),
-            undefined
-        );
-        const healResult = await healer.healTest(initialResult, specPath);
-        return {...healResult, costUsd: healer.getCost(), apiCalls: healer.getApiCallCount()};
-
+        return results;
     } finally {
         if (isolatedEnvironment) {
             await isolatedEnvironment.cleanup();
@@ -155,7 +182,7 @@ async function main() {
     const modelIndex = args.findIndex(a => a === "--model" || a === "-m");
     const model = modelIndex !== -1 && args[modelIndex + 1]
         ? args[modelIndex + 1]
-        : "claude-sonnet-4-5";
+        : defaultModel();
     const preseeded = args.includes("--preseeded");
     const assessmentIndex = args.findIndex(a => a === "--assessment-out");
     const assessmentOut = assessmentIndex !== -1 ? args[assessmentIndex + 1] : undefined;
@@ -168,18 +195,18 @@ async function main() {
     );
 
     if (filteredArgs.length === 0) {
-        console.error("Usage: npx tsx lib/test_generator/heal_test.ts <test-file-path> [options]");
+        console.error("Usage: npx tsx lib/test_generator/heal_test.ts <spec-file-path> [options]");
         console.error("");
         console.error("Options:");
         console.error("  -p, --port <port>   Port for isolated Flask server (default: 5001)");
-        console.error("  -m, --model <model> Model alias (default: claude-sonnet-4-5)");
+        console.error("  -m, --model <model> Model alias (default: MODEL_ALIAS env var, else claude-sonnet-5)");
         console.error("  --preseeded         Serve the restored seed cache instead of re-seeding");
-        console.error("  --assessment-out <path>  Write a machine-readable assessment JSON");
+        console.error("  --assessment-out <dir>  Write one machine-readable assessment JSON per test file");
         console.error("");
         process.exit(1);
     }
 
-    const testFilePath = filteredArgs[0];
+    const specFilePath = filteredArgs[0];
 
     if (!isKnownModel(model)) {
         console.error(`✖ Unknown model alias: ${model}`);
@@ -187,42 +214,53 @@ async function main() {
         process.exit(1);
     }
 
-    console.log(`\n🩹 Auto-healing test: ${testFilePath}`);
+    console.log(`\n🩹 Auto-healing spec: ${specFilePath}`);
 
-    const result = await healTest(testFilePath, {port, model, preseeded});
+    const results = await healTest(specFilePath, {port, model, preseeded});
 
-    // The published assessment (job summary, PR body, issues) is built from this.
-    // Written regardless of outcome so the caller's `|| true` still records it.
+    // The published assessments (job summary, PR body, issues) are built from
+    // these. Written regardless of outcome so the caller's `|| true` still
+    // records them.
     if (assessmentOut) {
-        writeFileSync(assessmentOut, JSON.stringify({
-            spec: testFilePath,
-            model,
-            success: result.success,
-            classification: result.classification ?? "unknown",
-            iterations: result.iterations,
-            cost_usd: result.costUsd ?? null,
-            api_calls: result.apiCalls ?? null,
-            error: result.error ?? null,
-            logPath: result.logPath,
-        }, null, 2) + "\n");
-        console.log(`   Assessment written to ${assessmentOut}`);
+        mkdirSync(assessmentOut, {recursive: true});
+        for (const result of results) {
+            const testName = basename(result.testFilePath, ".spec.ts");
+            const outPath = join(assessmentOut, `${testName}.json`);
+            writeFileSync(outPath, JSON.stringify({
+                spec: relative(process.cwd(), result.testFilePath),
+                spec_file: specFilePath,
+                model,
+                success: result.success,
+                classification: result.classification ?? (result.success ? "already_passing" : "unknown"),
+                iterations: result.iterations,
+                cost_usd: result.costUsd ?? null,
+                api_calls: result.apiCalls ?? null,
+                error: result.error ?? null,
+                logPath: result.logPath,
+            }, null, 2) + "\n");
+            console.log(`   Assessment written to ${outPath}`);
+        }
     }
 
-    if (result.success) {
-        console.log(`\n✅ Test healed successfully after ${result.iterations} iteration(s)`);
-        console.log(`   Log path: ${result.logPath}`);
-        process.exit(0);
-    } else if (result.classification === "application_regression") {
-        console.error(`\n🐛 Application regression detected: ${result.error}`);
-        console.error(`   The test is correct — the application has a bug.`);
-        console.error(`   Log path: ${result.logPath}`);
-        process.exit(1);
-    } else {
-        console.error(`\n❌ Auto-heal failed: ${result.error}`);
-        console.error(`   Iterations attempted: ${result.iterations}`);
-        console.error(`   Log path: ${result.logPath}`);
-        process.exit(1);
+    let anyFailed = false;
+    for (const result of results) {
+        const testName = basename(result.testFilePath, ".spec.ts");
+        if (result.success) {
+            console.log(`\n✅ ${testName}: healed/passing after ${result.iterations} iteration(s)`);
+            console.log(`   Log path: ${result.logPath}`);
+        } else if (result.classification === "application_regression") {
+            anyFailed = true;
+            console.error(`\n🐛 ${testName}: application regression detected: ${result.error}`);
+            console.error(`   The test is correct — the application has a bug.`);
+            console.error(`   Log path: ${result.logPath}`);
+        } else {
+            anyFailed = true;
+            console.error(`\n❌ ${testName}: auto-heal failed: ${result.error}`);
+            console.error(`   Iterations attempted: ${result.iterations}`);
+            console.error(`   Log path: ${result.logPath}`);
+        }
     }
+    process.exit(anyFailed ? 1 : 0);
 }
 
 const isDirectRun = process.argv[1]?.includes("heal_test");

@@ -49,13 +49,13 @@ export interface CostEstimate {
 }
 
 export const MODEL_PRICING: Partial<Record<ModelAlias, ModelPricing>> = {
-    "claude-opus-4-5": {
+    "claude-opus-5": {
         inputPerMillion: 5.00,
         outputPerMillion: 25.00,
         cacheWritePerMillion: 6.25,
         cacheReadPerMillion: 0.50,
     },
-    "claude-sonnet-4-5": {
+    "claude-sonnet-5": {
         inputPerMillion: 3.00,
         outputPerMillion: 15.00,
         cacheWritePerMillion: 3.75,
@@ -84,6 +84,56 @@ export const MODEL_PRICING: Partial<Record<ModelAlias, ModelPricing>> = {
         outputPerMillion: 10.00,
         cacheWritePerMillion: 0,
         cacheReadPerMillion: 0.125,
+    },
+    // OpenAI, DeepSeek, Kimi, and Grok cache automatically with no write
+    // premium, so cacheWritePerMillion is 0 (same convention as Gemini).
+    "gpt-5.6-sol": {
+        inputPerMillion: 5.00,
+        outputPerMillion: 30.00,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.50,
+    },
+    "gpt-5.6-terra": {
+        inputPerMillion: 2.00,
+        outputPerMillion: 12.00,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.20,
+    },
+    "gpt-5.6-luna": {
+        inputPerMillion: 0.20,
+        outputPerMillion: 1.20,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.02,
+    },
+    "deepseek-v4-pro": {
+        inputPerMillion: 0.435,
+        outputPerMillion: 0.87,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.003625,
+    },
+    "deepseek-v4-flash": {
+        inputPerMillion: 0.14,
+        outputPerMillion: 0.28,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.0028,
+    },
+    "kimi-k3": {
+        inputPerMillion: 3.00,
+        outputPerMillion: 15.00,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.30,
+    },
+    "grok-4.5": {
+        inputPerMillion: 2.00,
+        outputPerMillion: 6.00,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.30,
+    },
+    "grok-4.3": {
+        inputPerMillion: 1.25,
+        outputPerMillion: 2.50,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.20,
     },
 };
 

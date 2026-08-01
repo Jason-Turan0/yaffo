@@ -17,19 +17,22 @@ export type {
 };
 
 export type ModelAlias =
-    | "claude-opus-4-5"
-    | "claude-sonnet-4-5"
+    | "claude-opus-5"
+    | "claude-sonnet-5"
     | "claude-haiku-4-5"
-    | "gpt-4o"
-    | "gpt-4o-mini"
-    | "gpt-4-turbo"
+    | "gpt-5.6-sol"
+    | "gpt-5.6-terra"
+    | "gpt-5.6-luna"
     | "gemini-2.0-flash"
     | "gemini-2.5-flash"
     | "gemini-2.5-pro"
-    | "deepseek-chat"
-    | "deepseek-reasoner";
+    | "deepseek-v4-pro"
+    | "deepseek-v4-flash"
+    | "kimi-k3"
+    | "grok-4.5"
+    | "grok-4.3";
 
-export type ModelProvider = "anthropic" | "openai" | "google" | "deepseek";
+export type ModelProvider = "anthropic" | "openai" | "google" | "deepseek" | "moonshot" | "xai";
 
 export interface ToolCallResult {
     type: "tool_result";

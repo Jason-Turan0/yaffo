@@ -16,6 +16,7 @@ PATTERNS=(
 # Files to always skip
 SKIP_FILES=(
     ".env.example"
+    "yaffo_ui_tests/.env.example"
     "pre-commit"
     "*.md"
 )

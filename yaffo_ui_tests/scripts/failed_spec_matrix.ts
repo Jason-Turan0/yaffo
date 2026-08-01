@@ -1,19 +1,25 @@
 /**
- * Emit a fan-out matrix of the spec files that FAILED, read from one or more
- * Playwright JSON reports. Used by the auto-heal workflow to heal each failed
- * spec in its own environment.
+ * Emit a fan-out matrix of the FEATURE DIRECTORIES containing spec files that
+ * FAILED, read from one or more Playwright JSON reports. Used by the auto-heal
+ * workflow to heal one feature per job — all failed files in a feature heal
+ * serially inside that job, so per-feature files (memories/, sibling specs)
+ * never end up in two conflicting patches.
  *
  * Walks a directory tree for every `test-results.json` (each per-spec CI job
  * uploads its own report), collects spec files with an "unexpected" test, and
- * prints the same matrix shape as list_specs.ts (id/spec/project/peer).
+ * groups them by their containing directory. Matrix entries carry:
+ *   - id:      filesystem/artifact-safe identifier for the feature dir
+ *   - spec:    the feature's YAML spec (specs/<feature>.yaml) — heal_test input
+ *   - dir:     feature directory relative to yaffo_ui_tests
+ *   - project/peer: same semantics as list_specs.ts (uniform per directory)
  *
  * Usage:
  *   tsx scripts/failed_spec_matrix.ts <reports-dir> [--github]
  */
 import {appendFileSync, readdirSync, readFileSync, statSync} from "node:fs";
-import {join, resolve} from "node:path";
+import {dirname, join, relative, resolve} from "node:path";
 
-import {emitMatrix, SPEC_ROOT} from "./list_specs";
+import {SPEC_ROOT, toEntry, UI_TESTS_DIR} from "./list_specs";
 
 interface PlaywrightSuite {
     file?: string;
@@ -22,6 +28,14 @@ interface PlaywrightSuite {
 }
 interface PlaywrightReport {
     suites?: PlaywrightSuite[];
+}
+
+interface FeatureEntry {
+    id: string;
+    spec: string;
+    dir: string;
+    project: "chromium" | "sharing";
+    peer: "true" | "false";
 }
 
 function findReports(dir: string): string[] {
@@ -57,6 +71,34 @@ function failedSpecsFromReport(reportPath: string): Set<string> {
     return failed;
 }
 
+/** Group failed spec files by feature directory and emit one entry per dir. */
+function emitFeatureMatrix(absPaths: string[], emitGithub: boolean): void {
+    const byDir = new Map<string, string[]>();
+    for (const absPath of absPaths) {
+        const dir = dirname(absPath);
+        byDir.set(dir, [...(byDir.get(dir) ?? []), absPath]);
+    }
+    const include: FeatureEntry[] = [...byDir.entries()]
+        .map(([dir, files]) => {
+            // project/peer derive from the path prefix, so any file works.
+            const {project, peer} = toEntry(files[0]);
+            return {
+                id: relative(SPEC_ROOT, dir).replace(/[^a-zA-Z0-9]+/g, "__"),
+                // Inverse of the generator's specs/<rel>.yaml → generated_tests/<rel>.
+                spec: join("specs", `${relative(SPEC_ROOT, dir)}.yaml`),
+                dir: relative(UI_TESTS_DIR, dir),
+                project,
+                peer,
+            };
+        })
+        .sort((a, b) => a.id.localeCompare(b.id));
+    const json = JSON.stringify({include});
+    process.stdout.write(json + "\n");
+    if (emitGithub && process.env.GITHUB_OUTPUT) {
+        appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${json}\n`);
+    }
+}
+
 function main(): void {
     const args = process.argv.slice(2);
     const emitGithub = args.includes("--github");
@@ -70,7 +112,7 @@ function main(): void {
         }
     }
 
-    emitMatrix([...failed].sort(), emitGithub);
+    emitFeatureMatrix([...failed].sort(), emitGithub);
     if (emitGithub && process.env.GITHUB_OUTPUT) {
         appendFileSync(process.env.GITHUB_OUTPUT, `has_failures=${failed.size > 0}\n`);
     }

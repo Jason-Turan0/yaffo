@@ -15,7 +15,7 @@ import {inspect} from "node:util";
 import _ from 'lodash';
 import {BaseModelClient} from "@lib/model_clients/base_model_client";
 
-export type AnthropicModelAlias = "claude-opus-4-5" | "claude-sonnet-4-5" | "claude-haiku-4-5";
+export type AnthropicModelAlias = "claude-opus-5" | "claude-sonnet-5" | "claude-haiku-4-5";
 
 export class AnthropicModelClient extends BaseModelClient {
     readonly logPrefix = "claude";
@@ -104,7 +104,9 @@ export class AnthropicModelClient extends BaseModelClient {
                 },
                 messages: this.buildMessagesWithCache(),
                 tools: this.sdkTools,
-                maxOutputTokens: 8192,
+                // Claude 5 models think by default and thinking counts against
+                // this cap, so leave headroom beyond the visible response.
+                maxOutputTokens: 16000,
                 output: Output.object({schema: this.outputSchema}),
                 providerOptions: {
                     anthropic: {
