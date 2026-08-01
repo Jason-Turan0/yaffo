@@ -315,6 +315,10 @@ XAI_API_KEY=xai-...
 # (any alias from the Supported Models table; default: claude-sonnet-5)
 MODEL_ALIAS=claude-sonnet-5
 
+# Model-turn budget per test file for auto-heal (default: 50); also
+# settable per run with --max-iterations
+HEAL_MAX_ITERATIONS=50
+
 # Application base URL (default: http://127.0.0.1:5001)
 BASE_URL=http://127.0.0.1:5001
 ```

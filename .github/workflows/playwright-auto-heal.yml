@@ -167,6 +167,8 @@ jobs:
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           PRESEEDED_FLAG: ${{ steps.cache.outputs.cache-hit == 'true' && '--preseeded' || '' }}
           MODEL_ALIAS: ${{ env.MODEL_ALIAS }}
+          # Optional repo/org variable; empty falls back to the healer's default (50).
+          HEAL_MAX_ITERATIONS: ${{ vars.HEAL_MAX_ITERATIONS }}
         run: |
           # One healer run per YAML spec: it re-runs every generated test file
           # for the feature against a shared environment and heals the failures

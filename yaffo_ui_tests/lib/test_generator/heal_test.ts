@@ -13,7 +13,7 @@
 import "dotenv/config";
 import {join, basename, dirname, relative, resolve} from "path";
 import {existsSync, mkdirSync, readdirSync, statSync, writeFileSync} from "fs";
-import {autoHealTestOrchestratorFactory, HealResult} from "@lib/test_generator/auto_heal_orchestrator";
+import {autoHealTestOrchestratorFactory, DEFAULT_MAX_HEAL_ITERATIONS, HealResult} from "@lib/test_generator/auto_heal_orchestrator";
 import {runPlaywrightTests} from "@lib/services/run_playwright_tests";
 import {generateTimestampString} from "@lib/test_generator/utils";
 import {startIsolatedEnvironment, IsolatedEnvironment} from "@lib/services/isolated_runner";
@@ -52,21 +52,35 @@ function collectTestFiles(dir: string): string[] {
     return found.sort();
 }
 
+/**
+ * Default heal iteration budget: the HEAL_MAX_ITERATIONS environment variable
+ * (from the shell or .env) when it parses to a positive integer, else 50.
+ */
+export function defaultMaxIterations(): number {
+    const fromEnv = Number.parseInt(process.env.HEAL_MAX_ITERATIONS ?? "", 10);
+    return Number.isInteger(fromEnv) && fromEnv > 0 ? fromEnv : DEFAULT_MAX_HEAL_ITERATIONS;
+}
+
 interface HealOptions {
     port?: number;
     model?: string;
     /** Serve the restored seed cache instead of re-seeding (CI fan-out). */
     preseeded?: boolean;
+    /** Model-turn budget per test file (default: HEAL_MAX_ITERATIONS env var, else 50). */
+    maxIterations?: number;
 }
 
 export async function healTest(
     specFilePath: string,
     options: HealOptions = {}
 ): Promise<HealResult[]> {
-    const {port = 5001, model = defaultModel(), preseeded = false} = options;
+    const {port = 5001, model = defaultModel(), preseeded = false, maxIterations = defaultMaxIterations()} = options;
     // Fail before starting the (expensive) environment if the alias is unknown.
     if (!isKnownModel(model)) {
         throw new Error(`Unknown model alias: ${model}. Known aliases: ${KNOWN_MODEL_ALIASES.join(", ")}`);
+    }
+    if (!Number.isInteger(maxIterations) || maxIterations < 1) {
+        throw new Error(`maxIterations must be a positive integer, got: ${maxIterations}`);
     }
     const specPath = resolve(specFilePath);
     if (!existsSync(specPath)) {
@@ -158,7 +172,8 @@ export async function healTest(
                 baseUrl,
                 allowedDirectories,
                 await createFilesystemClient(allowedDirectories),
-                undefined
+                undefined,
+                maxIterations
             );
             const healResult = await healer.healTest(initialResult, specPath);
             results.push({...healResult, costUsd: healer.getCost(), apiCalls: healer.getApiCallCount()});
@@ -186,12 +201,17 @@ async function main() {
     const preseeded = args.includes("--preseeded");
     const assessmentIndex = args.findIndex(a => a === "--assessment-out");
     const assessmentOut = assessmentIndex !== -1 ? args[assessmentIndex + 1] : undefined;
+    const maxIterationsIndex = args.findIndex(a => a === "--max-iterations");
+    const maxIterations = maxIterationsIndex !== -1 && args[maxIterationsIndex + 1]
+        ? parseInt(args[maxIterationsIndex + 1], 10)
+        : defaultMaxIterations();
 
     const filteredArgs = args.filter((a, i) =>
         !a.startsWith("--") && !a.startsWith("-") &&
         (portIndex === -1 || i !== portIndex + 1) &&
         (modelIndex === -1 || i !== modelIndex + 1) &&
-        (assessmentIndex === -1 || i !== assessmentIndex + 1)
+        (assessmentIndex === -1 || i !== assessmentIndex + 1) &&
+        (maxIterationsIndex === -1 || i !== maxIterationsIndex + 1)
     );
 
     if (filteredArgs.length === 0) {
@@ -202,6 +222,7 @@ async function main() {
         console.error("  -m, --model <model> Model alias (default: MODEL_ALIAS env var, else claude-sonnet-5)");
         console.error("  --preseeded         Serve the restored seed cache instead of re-seeding");
         console.error("  --assessment-out <dir>  Write one machine-readable assessment JSON per test file");
+        console.error("  --max-iterations <n>    Model-turn budget per test file (default: HEAL_MAX_ITERATIONS env var, else 50)");
         console.error("");
         process.exit(1);
     }
@@ -216,7 +237,12 @@ async function main() {
 
     console.log(`\n🩹 Auto-healing spec: ${specFilePath}`);
 
-    const results = await healTest(specFilePath, {port, model, preseeded});
+    if (!Number.isInteger(maxIterations) || maxIterations < 1) {
+        console.error(`✖ --max-iterations must be a positive integer`);
+        process.exit(1);
+    }
+
+    const results = await healTest(specFilePath, {port, model, preseeded, maxIterations});
 
     // The published assessments (job summary, PR body, issues) are built from
     // these. Written regardless of outcome so the caller's `|| true` still

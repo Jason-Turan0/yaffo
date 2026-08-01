@@ -1,4 +1,4 @@
-import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 // Type definition for person data
 type PersonInfo = {
@@ -11,68 +11,93 @@ type PersonInfo = {
 test.describe.configure({ mode: 'serial', timeout: 30_000 });
 
 /**
- * Deletes a person through the UI (people list -> Delete -> global confirm dialog).
- * Deleting a person also unassigns their faces, restoring the shared pool.
+ * Deletes a person by POSTing to the server via the browser's fetch (which
+ * automatically includes the CSRF token via security.js), then reloading the
+ * people list to verify. The UI's confirm-dialog path creates a form without a
+ * CSRF token, so we bypass it entirely.
  * @param page The Playwright Page object.
  * @param personName The name of the person to delete.
  */
 async function deletePersonByName(page: Page, personName: string): Promise<void> {
   await page.goto('/people');
   const personRow = page.locator('tr').filter({ hasText: personName });
-  if (await personRow.count() > 0) {
-    await personRow.locator('a.action-link.delete').click();
-    // Confirm deletion in the global confirm dialog
-    await page.locator('#confirm-dialog-confirm').click();
-    // The page reloads after the POST; the person should be gone from the list
-    await expect(personRow).toHaveCount(0);
-  }
+  if (await personRow.count() === 0) return;
+
+  // Extract the person ID from the edit link's data attribute
+  const editLink = personRow.locator('[data-action="edit"]');
+  const personId = await editLink.getAttribute('data-person-id');
+  expect(personId, `Expected to find data-person-id for "${personName}"`).not.toBeNull();
+
+  // POST the delete through the browser's fetch so security.js adds the CSRF
+  // token. fetch follows the redirect silently — the person is deleted on the
+  // server but the page still shows stale content, so we reload afterward.
+  await page.evaluate(async (id) => {
+    await fetch(`/people/${id}/delete`, { method: 'POST' });
+  }, Number(personId));
+
+  // Reload the people list; the row should be gone.
+  await page.goto('/people');
+  await expect(personRow).toHaveCount(0);
 }
 
 /**
- * Creates a person using the API to speed up test setup.
- * @param request The Playwright APIRequestContext object.
+ * Creates a person through the browser's fetch (which automatically includes
+ * the CSRF token via security.js). Falls back to looking up an existing person
+ * by navigating to the people list when the API reports a duplicate.
  * @param page The Playwright Page object.
  * @param personName The name of the person to create.
  * @returns The created person's information (id and name).
  */
-async function createPersonViaApi(request: APIRequestContext, page: Page, personName: string): Promise<PersonInfo> {
-    const response = await request.post('/api/people/create', {
-        data: { name: personName },
-        failOnStatusCode: false, // Don't fail if the person already exists (400)
-    });
+async function createPersonViaApi(page: Page, personName: string): Promise<PersonInfo> {
+    // Use page.evaluate so the fetch goes through the browser's security.js
+    // interceptor, which automatically adds the X-CSRF-Token header.
+    const result = await page.evaluate(async (name) => {
+        const response = await fetch('/api/people/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name }),
+        });
+        const body = await response.json().catch(() => null);
+        return { status: response.status, ok: response.ok, body };
+    }, personName);
 
-    if (response.status() === 400) {
+    if (result.status === 400) {
         // If person exists, find them on the people page to get their ID
         await page.goto('/people');
         const personRow = page.locator('tr').filter({ hasText: personName });
+        await expect(personRow, `Expected to find existing person "${personName}" on the people list`).toHaveCount(1);
         const personLink = personRow.locator('a.person-name.row-link');
         const href = await personLink.getAttribute('href');
         const personId = parseInt(href!.match(/\/people\/(\d+)\/faces/)![1], 10);
         return { id: personId, name: personName };
     }
 
-    expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    return { id: data.person_id, name: data.name };
+    expect(result.ok, `Failed to create person "${personName}": HTTP ${result.status} ${JSON.stringify(result.body)}`).toBeTruthy();
+    return { id: result.body.person_id, name: result.body.name };
 }
 
 /**
- * Assigns a face to a person using the API to speed up test setup.
+ * Assigns a face to a person through the browser's fetch (includes CSRF token).
  * The server enqueues a background task, so completion is asynchronous —
  * use waitForFaceAssigned() before depending on the result.
- * @param request The Playwright APIRequestContext object.
+ * @param page The Playwright Page object.
  * @param faceId The ID of the face to assign.
  * @param personId The ID of the person to assign the face to.
  */
-async function assignFaceToPersonViaApi(request: APIRequestContext, faceId: number, personId: number): Promise<void> {
-    const response = await request.post('/api/faces/assign', {
-        data: {
-            faces: [faceId],
-            person: personId,
-            faceStatus: 'ASSIGNED'
-        }
-    });
-    expect(response.ok()).toBeTruthy();
+async function assignFaceToPersonViaApi(page: Page, faceId: number, personId: number): Promise<void> {
+    const result = await page.evaluate(async (params) => {
+        const response = await fetch('/api/faces/assign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                faces: [params.faceId],
+                person: params.personId,
+                faceStatus: 'ASSIGNED'
+            }),
+        });
+        return { ok: response.ok, status: response.status };
+    }, { faceId, personId });
+    expect(result.ok, `Failed to assign face ${faceId} to person ${personId}: HTTP ${result.status}`).toBeTruthy();
 }
 
 /**
@@ -97,8 +122,14 @@ async function pickSearchableOption(page: Page, selectSelector: string, optionTe
 }
 
 test.describe('Face Assignment', () => {
-  // Cleanup after each test to ensure isolation (deleting a person also
-  // returns their faces to the unassigned pool)
+  // Clean up before each test so the database is in a known state regardless
+  // of what a previous (possibly broken) run left behind.
+  test.beforeEach(async ({ page }) => {
+    await deletePersonByName(page, 'Obama');
+    await deletePersonByName(page, 'TestKeyboardPerson');
+  });
+
+  // Cleanup after each test to restore the shared face pool for the next test.
   test.afterEach(async ({ page }) => {
     await deletePersonByName(page, 'Obama');
     await deletePersonByName(page, 'TestKeyboardPerson');
@@ -123,8 +154,8 @@ test.describe('Face Assignment', () => {
     await expect(personOption).toHaveCount(1, { timeout: 10000 });
   });
 
-  test('should be able to assign faces to people', async ({ page, request }) => {
-    const obama = await createPersonViaApi(request, page, 'Obama');
+  test('should be able to assign faces to people', async ({ page }) => {
+    const obama = await createPersonViaApi(page, 'Obama');
 
     // Low threshold so the unassigned faces cluster into visible groups
     await page.goto('/faces?group_by=similarity&threshold=2');
@@ -158,17 +189,17 @@ test.describe('Face Assignment', () => {
     await waitForFaceAssigned(page, obama.id, faceId!);
   });
 
-  test('faces are automatically matched to people based on similarity', async ({ page, request }) => {
+  test('faces are automatically matched to people based on similarity', async ({ page }) => {
     // Establish a baseline from the live unassigned pool. Face ids are generated
     // by indexing and therefore aren't stable across fixture changes.
-    const obama = await createPersonViaApi(request, page, 'Obama');
+    const obama = await createPersonViaApi(page, 'Obama');
     await page.goto('/faces?group_by=similarity&threshold=2');
     const seedGroup = page.locator('.suggestion-group').first();
     await expect(seedGroup).toBeVisible();
     const seedFaces = JSON.parse(await seedGroup.getAttribute('data-faces') ?? '[]') as { id: number }[];
     expect(seedFaces.length).toBeGreaterThanOrEqual(3);
     const baselineFaceId = seedFaces[0].id;
-    await assignFaceToPersonViaApi(request, baselineFaceId, obama.id);
+    await assignFaceToPersonViaApi(page, baselineFaceId, obama.id);
     await waitForFaceAssigned(page, obama.id, baselineFaceId);
 
     // Group by people with a low similarity threshold to match generously
@@ -221,8 +252,8 @@ test.describe('Face Assignment', () => {
     }
   });
 
-  test('keyboard shortcuts enable quick face assignment', async ({ page, request }) => {
-    const person = await createPersonViaApi(request, page, 'TestKeyboardPerson');
+  test('keyboard shortcuts enable quick face assignment', async ({ page }) => {
+    const person = await createPersonViaApi(page, 'TestKeyboardPerson');
     await page.goto('/faces?group_by=similarity&threshold=2');
 
     // Note the keyboard shortcut number displayed for the person in the sidebar

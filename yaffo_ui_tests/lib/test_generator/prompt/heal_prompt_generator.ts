@@ -21,6 +21,7 @@ export class HealPromptGenerator {
 
     constructor(
         private baseUrl: string,
+        private maxIterations: number,
     ) {
         this.specPromptGenerator = new SpecPromptGenerator();
     }
@@ -67,6 +68,24 @@ export class HealPromptGenerator {
             "        Maximize speed by making independent tool calls in parallel.",
             "    </use_parallel_tool_calls>",
             "</tool_policy>",
+            "",
+            "<iteration_budget>",
+            `    You have a budget of ${this.maxIterations} iterations (model turns) for the entire triage-and-fix session.`,
+            "    You will receive a warning when only a few iterations remain. Once warned, stop exploring,",
+            "    commit to the most promising fix, and produce your final response in the required output format.",
+            "</iteration_budget>",
+        ].join("\n");
+    }
+
+    /** Injected as a user turn when the iteration budget is nearly exhausted. */
+    buildIterationBudgetWarning(currentIteration: number): string {
+        const remaining = this.maxIterations - currentIteration;
+        return [
+            "<iteration_budget_warning>",
+            `    You are on iteration ${currentIteration} of ${this.maxIterations} — only ${remaining} iteration(s) remain before the healer stops.`,
+            "    Stop exploring. Commit to the most promising fix now and produce your final response",
+            "    in the required output format before the budget runs out.",
+            "</iteration_budget_warning>",
         ].join("\n");
     }
 
@@ -196,6 +215,7 @@ export class HealPromptGenerator {
 
 export const healPromptGeneratorFactory = (
     baseUrl: string,
+    maxIterations: number,
 ): HealPromptGenerator => {
-    return new HealPromptGenerator(baseUrl);
+    return new HealPromptGenerator(baseUrl, maxIterations);
 };

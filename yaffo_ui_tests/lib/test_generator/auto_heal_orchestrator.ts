@@ -46,9 +46,10 @@ export interface HealResult {
     apiCalls?: number;
 }
 
+export const DEFAULT_MAX_HEAL_ITERATIONS = 50;
+
 export class AutoHealTestOrchestrator {
     private iterationCount = 0;
-    private maxIterations = 50;
     private maxRetries = 3;
     private maxEnvironmentRetries = 3;
     private toolProviderMap: Map<string, { tool: RawToolDefinition; toolProvider: ToolProvider }> = new Map();
@@ -66,6 +67,7 @@ export class AutoHealTestOrchestrator {
         private toolProviders: ToolProvider[],
         private typeScriptValidator: TypeScriptValidator = new DefaultTypeScriptValidator(),
         private playwrightTestRunner: PlaywrightTestRunner = runPlaywrightTests,
+        private maxIterations: number = DEFAULT_MAX_HEAL_ITERATIONS,
     ) {
         const tools = toolProviders.flatMap(toolProvider =>
             toolProvider.getTools().map((tool) => ({tool, toolProvider}))
@@ -168,6 +170,7 @@ export class AutoHealTestOrchestrator {
 
             while (this.iterationCount < this.maxIterations) {
                 this.iterationCount++;
+                this.maybeWarnIterationBudget();
                 const response = await this.modelClient.callModelApi();
                 if (!response) {
                     console.warn("   ⚠️ Triage returned no response, defaulting to heal");
@@ -206,6 +209,21 @@ export class AutoHealTestOrchestrator {
         } catch (e) {
             console.warn(`   ⚠️ Triage failed: ${e instanceof Error ? e.message : String(e)}, defaulting to heal`);
             return null;
+        }
+    };
+
+    /**
+     * When the iteration budget is nearly exhausted, tell the model so it can
+     * wrap up deliberately instead of being cut off mid-investigation. Injected
+     * only for the final few turns to avoid budget-anxious early wrap-ups.
+     */
+    private maybeWarnIterationBudget = (): void => {
+        const remaining = this.maxIterations - this.iterationCount;
+        const warnAt = Math.min(5, Math.max(1, this.maxIterations - 1));
+        if (remaining <= warnAt) {
+            this.modelClient.addUserMessage([
+                toTextPart(this.promptGenerator.buildIterationBudgetWarning(this.iterationCount)),
+            ]);
         }
     };
 
@@ -265,6 +283,7 @@ export class AutoHealTestOrchestrator {
         let generatedJson: string | null = null;
         while (this.iterationCount < this.maxIterations) {
             this.iterationCount++;
+            this.maybeWarnIterationBudget();
             const response = await this.modelClient.callModelApi();
 
             if (!response) {
@@ -521,7 +540,8 @@ export const autoHealTestOrchestratorFactory = async (
     baseUrl: string,
     allowedDirectories: string[],
     fileMcpClient: ToolProvider,
-    mcpPlaywrightClient: ToolProvider | undefined
+    mcpPlaywrightClient: ToolProvider | undefined,
+    maxIterations: number = DEFAULT_MAX_HEAL_ITERATIONS
 ): Promise<AutoHealTestOrchestrator> => {
     const playwrightClient = mcpPlaywrightClient == null ? await createPlaywrightClient({
         headless: true,
@@ -537,7 +557,7 @@ export const autoHealTestOrchestratorFactory = async (
 
     const toolProviders: ToolProvider[] = [fileMcpClient, playwrightClient, memoryTool];
 
-    const promptGenerator = healPromptGeneratorFactory(baseUrl);
+    const promptGenerator = healPromptGeneratorFactory(baseUrl, maxIterations);
     const rawTools = toolProviders.flatMap(provider => provider.getTools());
     const modelClient = createModelClient(
         runLogDir,
@@ -556,7 +576,10 @@ export const autoHealTestOrchestratorFactory = async (
         modelClient,
         promptGenerator,
         allowedDirectories,
-        toolProviders
+        toolProviders,
+        undefined,
+        undefined,
+        maxIterations
     );
 };
 

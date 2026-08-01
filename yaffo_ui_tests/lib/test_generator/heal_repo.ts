@@ -8,7 +8,7 @@ import "dotenv/config";
 import {existsSync, readFileSync} from "fs";
 import {join, resolve} from "path";
 import {Command} from "commander";
-import {healTest, specPathForTestFile} from "@lib/test_generator/heal_test";
+import {defaultMaxIterations, healTest, specPathForTestFile} from "@lib/test_generator/heal_test";
 import {defaultModel} from "@lib/model_clients/model_client_factory";
 
 interface PlaywrightJsonReport {
@@ -36,6 +36,7 @@ interface HealRepoOptions {
     port: number;
     model: string;
     maxFiles?: number;
+    maxIterations?: number;
     dryRun?: boolean;
 }
 
@@ -121,6 +122,7 @@ export async function healRepo(options: HealRepoOptions): Promise<void> {
         const results = await healTest(spec, {
             port: options.port,
             model: options.model,
+            maxIterations: options.maxIterations,
         });
 
         for (const result of results) {
@@ -143,6 +145,7 @@ const program = new Command()
     .option("-p, --port <port>", "Port for isolated Flask server", (value) => parseInt(value, 10), 5002)
     .option("-m, --model <model>", "Model alias (default: MODEL_ALIAS env var, else claude-sonnet-5)", defaultModel())
     .option("--max-files <count>", "Maximum failed spec files to heal", (value) => parseInt(value, 10))
+    .option("--max-iterations <count>", "Model-turn budget per test file (default: HEAL_MAX_ITERATIONS env var, else 50)", (value) => parseInt(value, 10), defaultMaxIterations())
     .option("--dry-run", "Print failed spec files without invoking auto-heal", false);
 
 const isDirectRun = process.argv[1]?.includes("heal_repo");
