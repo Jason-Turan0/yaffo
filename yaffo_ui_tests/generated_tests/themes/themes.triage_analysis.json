@@ -1,0 +1,13 @@
+{
+  "classification": "environment_instability",
+  "reasoning": "The Playwright browser (chrome-for-testing) is not installed in this environment, confirmed by the browser_navigate tool returning 'Browser chrome-for-testing is not installed'. The test summary shows 0 total tests, meaning the test runner failed before any tests could be discovered or executed. All test selectors were verified against the actual application templates (themes_page/index.html, base.html, chat_dialog.html, modal.html, settings/index.html) and routes (routes/themes_page.py, routes/base.py) — every element ID, class, and interaction pattern matches. The test was previously green (6/6) per the progress documentation. No test code defects were identified.",
+  "affectedTests": [
+    "themes_list_shows_system_and_custom",
+    "themes_create_new_theme",
+    "themes_rename_theme",
+    "themes_publish_or_discard_draft",
+    "themes_set_default_theme",
+    "themes_delete_custom_theme"
+  ],
+  "suggestedAction": "Install the Playwright browser by running 'npx @playwright/mcp install-browser chrome-for-testing' (or 'npx playwright install chromium') in the test environment, then re-run the test suite. The test code itself requires no changes — all selectors, route intercepts, and assertions align with the current application."
+}

@@ -200,21 +200,29 @@ async function mockReverseGeocode(page: Page, name: string): Promise<void> {
 async function clearAllLocationNames(page: Page): Promise<void> {
   await openMap(page);
   const ids = await allFeatureIds(page);
-  const response = await page.request.post('/locations/bulk-update', {
-    data: { media_item_ids: ids, clear: true },
-    failOnStatusCode: false,
-  });
-  expect(response.ok()).toBe(true);
+  const result = await page.evaluate(async (mediaItemIds) => {
+    const response = await fetch('/locations/bulk-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ media_item_ids: mediaItemIds, clear: true }),
+    });
+    return { ok: response.ok, status: response.status };
+  }, ids);
+  expect(result.ok, `clearAllLocationNames failed: HTTP ${result.status}`).toBe(true);
 }
 
 async function assignAllLocationNames(page: Page, name: string): Promise<void> {
   await openMap(page);
   const ids = await allFeatureIds(page);
-  const response = await page.request.post('/locations/bulk-update', {
-    data: { media_item_ids: ids, location_name: name },
-    failOnStatusCode: false,
-  });
-  expect(response.ok()).toBe(true);
+  const result = await page.evaluate(async ({ mediaItemIds, locationName }) => {
+    const response = await fetch('/locations/bulk-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ media_item_ids: mediaItemIds, location_name: locationName }),
+    });
+    return { ok: response.ok, status: response.status };
+  }, { mediaItemIds: ids, locationName: name });
+  expect(result.ok, `assignAllLocationNames failed: HTTP ${result.status}`).toBe(true);
 }
 
 test.describe('Locations Map', () => {
@@ -345,9 +353,15 @@ test.describe('Locations Map', () => {
     await clearAllLocationNames(page);
     await openMap(page);
     const ids = await allFeatureIds(page);
-    await page.request.post('/locations/bulk-update', {
-      data: { media_item_ids: [ids[0]], location_name: 'Named Filter Fixture' },
-    });
+    const nameResult = await page.evaluate(async (mediaItemId) => {
+      const response = await fetch('/locations/bulk-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ media_item_ids: [mediaItemId], location_name: 'Named Filter Fixture' }),
+      });
+      return { ok: response.ok, status: response.status };
+    }, ids[0]);
+    expect(nameResult.ok, `Naming filter fixture failed: HTTP ${nameResult.status}`).toBe(true);
     await openMap(page);
 
     await clickFirstCluster(page);
@@ -432,9 +446,6 @@ test.describe('Locations Map', () => {
     await expect(panel.locator('.mass-assignment-info')).toContainText(String(photoIds.length));
     await expect(panel.locator('.btn-recommended')).toBeVisible();
 
-    // Set the value and submit in one browser task. With a larger clustered
-    // fixture, a late recommendation refresh can otherwise clear the input
-    // between a separate fill and click.
     const [response] = await Promise.all([
       page.waitForResponse(resp => resp.url().includes('/locations/bulk-update')),
       page.evaluate((locationName) => {
@@ -459,7 +470,10 @@ test.describe('Locations Map', () => {
     expect(names.every(({ featureName, payloadName }: { featureName: string; payloadName: string }) =>
       featureName === TEST_LOCATION_NAME && payloadName === TEST_LOCATION_NAME)).toBe(true);
 
-    const detailHtml = await (await page.request.get(`/media/view/${photoIds[0]}`)).text();
+    const detailHtml = await page.evaluate(async (url) => {
+      const response = await fetch(url);
+      return response.text();
+    }, `/media/view/${photoIds[0]}`);
     expect(detailHtml).toContain(TEST_LOCATION_NAME);
   });
 
@@ -487,7 +501,10 @@ test.describe('Locations Map', () => {
     await page.getByRole('button', { name: /Apply Filters/i }).click();
     await expect.poll(() => featureCounts(page)).toEqual(counts);
 
-    const detailHtml = await (await page.request.get(`/media/view/${photoIds[0]}`)).text();
+    const detailHtml = await page.evaluate(async (url) => {
+      const response = await fetch(url);
+      return response.text();
+    }, `/media/view/${photoIds[0]}`);
     expect(detailHtml).not.toContain(TEST_LOCATION_NAME);
   });
 
@@ -498,11 +515,15 @@ test.describe('Locations Map', () => {
     const selectedChicagoId = await featureIdByImageName(page, SELECTED_CHICAGO_IMAGE);
     expect(selectedChicagoId).not.toBe(namedChicagoId);
 
-    const assignResponse = await page.request.post('/locations/bulk-update', {
-      data: { media_item_ids: [namedChicagoId], location_name: CHICAGO_LOCATION_NAME },
-      failOnStatusCode: false,
-    });
-    expect(assignResponse.ok()).toBe(true);
+    const assignResult = await page.evaluate(async ({ mediaItemId, locationName }) => {
+      const response = await fetch('/locations/bulk-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ media_item_ids: [mediaItemId], location_name: locationName }),
+      });
+      return { ok: response.ok, status: response.status };
+    }, { mediaItemId: namedChicagoId, locationName: CHICAGO_LOCATION_NAME });
+    expect(assignResult.ok, `Naming Chicago image failed: HTTP ${assignResult.status}`).toBe(true);
 
     let reverseGeocodeCalls = 0;
     await page.route('**/locations/reverse-geocode', route => {

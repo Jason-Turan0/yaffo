@@ -1,0 +1,18 @@
+{
+  "classification": "test_code_defect",
+  "reasoning": "The test evaluation shows 0 total / 0 passed / 0 failed / 0 skipped, indicating no tests were discovered by the Playwright runner. The file was regenerated on Aug 01 2026 at 17:30:03, just before the failing run at 17:31:43, while previous runs on Jul 2 (5 and 6 tests) and Jul 5 (11 tests) were successful. This points to a compilation-level defect in the regenerated test code that prevents test discovery. Additionally, the test code shares the same CSRF-bypass pattern identified in three other triaged test suites (albums, face_assignment, people): `page.request.post()` uses Playwright's APIRequestContext which bypasses the browser's session and CSRF token injection (security.js). The application's `security.py` correctly enforces CSRF on all non-safe methods, so these API calls would return 403. The spec goals can be achieved with the running application (the /locations route, /locations/bulk-update endpoint, and template all exist and match expectations; seed data contains the referenced images), so this is a test defect, not an application regression.",
+  "affectedTests": [
+    "locations_map_displays_photo_markers",
+    "locations_selection_panel_shows_photo_details",
+    "locations_partial_cluster_selection_indicator",
+    "locations_filter_sidebar_filters_client_side",
+    "locations_clear_filters_client_side",
+    "locations_configure_filter_sidebar",
+    "locations_select_clusters_and_assign_name",
+    "locations_clear_location_names",
+    "locations_recommends_existing_nearby_name",
+    "locations_reverse_geocode_suggests_name",
+    "locations_reverse_geocode_rate_limit_fallback"
+  ],
+  "suggestedAction": "1) Fix the TypeScript compilation issue preventing test discovery — verify that `import { test, expect, Page } from '@playwright/test'` compiles under the current TypeScript configuration; if `verbatimModuleSyntax` is enabled, change to `import { test, expect } from '@playwright/test'; import type { Page } from '@playwright/test';`. 2) Replace all `page.request.post()` calls with browser-mediated approaches: either use `page.evaluate()` with `fetch()` so the browser's `security.js` interceptor adds the CSRF token (following the pattern in face-assignment.spec.ts), or use the UI-driven approach already employed by the main `locations_select_clusters_and_assign_name` test. Affected locations: `clearAllLocationNames`, `assignAllLocationNames`, the inline `page.request.post` in `locations_filter_sidebar_filters_client_side`, the `page.request.post` in `locations_recommends_existing_nearby_name`, and the `page.request.get` verification calls. 3) Re-run typecheck (`npx tsc --noEmit`) and the full suite to confirm all 11 tests pass."
+}

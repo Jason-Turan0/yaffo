@@ -1,0 +1,26 @@
+{
+  "testRunHistory": [
+    {
+      "timestamp": "2026-08-01T17:32:01.175Z",
+      "success": false,
+      "summary": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "skipped": 0
+      },
+      "failedTests": []
+    },
+    {
+      "timestamp": "2026-08-01T17:33:32.543Z",
+      "success": false,
+      "summary": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "skipped": 0
+      },
+      "failedTests": []
+    }
+  ]
+}

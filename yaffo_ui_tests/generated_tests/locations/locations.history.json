@@ -21,6 +21,28 @@
         "skipped": 0
       },
       "failedTests": []
+    },
+    {
+      "timestamp": "2026-08-01T17:31:43.242Z",
+      "success": false,
+      "summary": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "skipped": 0
+      },
+      "failedTests": []
+    },
+    {
+      "timestamp": "2026-08-01T17:46:39.140Z",
+      "success": false,
+      "summary": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "skipped": 0
+      },
+      "failedTests": []
     }
   ]
 }
