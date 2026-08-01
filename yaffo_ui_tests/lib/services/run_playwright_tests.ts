@@ -288,16 +288,37 @@ export const runPlaywrightTests = async (
     });
 };
 
-// Run if executed directly
+/**
+ * Run if executed directly — the way to run specs through the OS sandbox
+ * by hand. `npm test` and `npm run test:spec` spawn Playwright themselves and
+ * are NOT sandboxed; only this path, the generator and the healer are.
+ *
+ *   npm run test:sandboxed -- [--url <baseUrl>] [spec...]
+ *   npx tsx lib/services/run_playwright_tests.ts [--url <baseUrl>] [spec...]
+ *
+ * The base URL comes from --url, else BASE_URL (which the npm script points at
+ * the isolated environment), else the default port. With no spec arguments
+ * every generated test runs. Exits non-zero if any test fails, so it composes
+ * in scripts.
+ */
 const isDirectRun = process.argv[1]?.includes("run_playwright_tests");
 if (isDirectRun) {
-    runPlaywrightTests('http://127.0.0.1:5001').catch((e) => {
-        console.error(`Fatal error: ${e instanceof Error ? e.message : String(e)}`);
-        process.exit(1);
-    }).then(
-        result => {
-            //console.log(JSON.stringify(result, null, 2));
+    const args = process.argv.slice(2);
+    const urlIndex = args.findIndex((a) => a === "--url" || a === "-u");
+    const baseUrl = urlIndex !== -1 && args[urlIndex + 1]
+        ? args[urlIndex + 1]
+        : process.env.BASE_URL || "http://127.0.0.1:5001";
+    // Skip the value that belongs to --url, but only when --url was actually
+    // given: urlIndex of -1 would otherwise exclude the first spec argument.
+    const testFiles = args.filter((a, i) => !a.startsWith("-") && !(urlIndex !== -1 && i === urlIndex + 1));
+
+    runPlaywrightTests(baseUrl, testFiles.length > 0 ? testFiles : undefined)
+        .then((result) => {
             console.log(formatTestResultsAsXml(result));
-        }
-    );
+            process.exit(result.success ? 0 : 1);
+        })
+        .catch((e) => {
+            console.error(`Fatal error: ${e instanceof Error ? e.message : String(e)}`);
+            process.exit(1);
+        });
 }

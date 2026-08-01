@@ -1,13 +1,27 @@
-import {describe, expect, it} from "@jest/globals";
-import {buildSeatbeltProfile, detectSandboxKind, wrapWithSandbox} from "@lib/services/test_sandbox";
+import {beforeEach, describe, expect, it} from "@jest/globals";
+import {platform} from "os";
+import {
+    buildSeatbeltProfile,
+    detectSandboxKind,
+    probeSandbox,
+    resetSandboxProbeCache,
+    wrapWithSandbox
+} from "@lib/services/test_sandbox";
 
 const detect = (
     env: NodeJS.ProcessEnv,
     osPlatform: NodeJS.Platform,
-    available: string[] = ["bwrap", "sandbox-exec"],
+    usable: string[] = ["bwrap", "sandbox-exec"],
     warn: (message: string) => void = () => {
     },
-) => detectSandboxKind({env, osPlatform, isAvailable: (binary) => available.includes(binary), warn});
+) => detectSandboxKind({
+    env,
+    osPlatform,
+    probe: (kind) => usable.includes(kind)
+        ? {ok: true}
+        : {ok: false, error: "bwrap: setting up uid map: Permission denied"},
+    warn,
+});
 
 describe("detectSandboxKind", () => {
     it("picks sandbox-exec on macOS and bwrap on Linux", () => {
@@ -25,10 +39,12 @@ describe("detectSandboxKind", () => {
         expect(warnings).toHaveLength(1);
     });
 
-    it("falls back to none with a warning when the detected binary is missing", () => {
+    it("falls back to none with a warning when the detected sandbox cannot start", () => {
         const warnings: string[] = [];
         expect(detect({}, "linux", [], (message) => warnings.push(message))).toBe("none");
-        expect(warnings[0]).toContain("bwrap");
+        expect(warnings[0]).toContain("setting up uid map");
+        // The warning has to say how to fix it, not just that it broke.
+        expect(warnings[0]).toContain("apparmor_restrict_unprivileged_userns");
     });
 
     it("honours an explicit sandbox request", () => {
@@ -37,7 +53,10 @@ describe("detectSandboxKind", () => {
     });
 
     it("throws rather than silently downgrading an explicit request", () => {
-        expect(() => detect({TEST_SANDBOX: "bwrap"}, "linux", [])).toThrow(/not on PATH/);
+        // A bwrap that is installed but blocked by AppArmor must not degrade to
+        // an unsandboxed run just because the binary exists.
+        expect(() => detect({TEST_SANDBOX: "bwrap"}, "linux", []))
+            .toThrow(/setting up uid map[\s\S]*apparmor_restrict_unprivileged_userns/);
     });
 
     it("disables the sandbox on the off switches", () => {
@@ -73,6 +92,38 @@ describe("wrapWithSandbox", () => {
 
     it("returns the command untouched when there is no sandbox", () => {
         expect(wrapWithSandbox({...base, kind: "none"})).toEqual(["npx", ["playwright", "test"]]);
+    });
+});
+
+describe("probeSandbox", () => {
+    // `bwrap` is on PATH on the CI runner, so the probe is what distinguishes
+    // "installed" from "actually able to create a user namespace".
+    const fakeRun = (status: number, stderr = "") =>
+        ((): {status: number; stderr: string} => ({status, stderr})) as never;
+
+    beforeEach(() => resetSandboxProbeCache());
+
+    it("reports ok when the sandbox runs `true` successfully", () => {
+        const kind = platform() === "darwin" ? "sandbox-exec" : "bwrap";
+        expect(probeSandbox(kind, fakeRun(0))).toEqual({ok: true});
+    });
+
+    it("surfaces the sandbox's own stderr when it cannot start", () => {
+        const kind = platform() === "darwin" ? "sandbox-exec" : "bwrap";
+        expect(probeSandbox(kind, fakeRun(1, "bwrap: setting up uid map: Permission denied\n")))
+            .toEqual({ok: false, error: "bwrap: setting up uid map: Permission denied"});
+    });
+
+    it("caches the verdict so a heal does not re-probe on every test run", () => {
+        const kind = platform() === "darwin" ? "sandbox-exec" : "bwrap";
+        let calls = 0;
+        const counting = ((): {status: number; stderr: string} => {
+            calls++;
+            return {status: 0, stderr: ""};
+        }) as never;
+        probeSandbox(kind, counting);
+        probeSandbox(kind, counting);
+        expect(calls).toBe(1);
     });
 });
 

@@ -35,7 +35,9 @@ export function convertRawToolsToSdkTools(rawTools: RawToolDefinition[]): Record
 export abstract class BaseModelClient implements ModelClient {
     protected userMessages: (UserMessage | UserToolMessage)[] = [];
     protected assistantMessages: { index: number; message: ModelMessage }[] = [];
+    /** Uncached input tokens only — see CacheUsage for why the buckets are disjoint. */
     protected sessionInputTokens: number = 0;
+    protected sessionTotalInputTokens: number = 0;
     protected sessionOutputTokens: number = 0;
     protected sessionCacheReadInputTokens: number = 0;
     protected sessionCacheCreationInputTokens: number = 0;
@@ -114,22 +116,33 @@ export abstract class BaseModelClient implements ModelClient {
     }
 
     protected trackUsage(usage: LanguageModelUsage): CacheUsage {
-        const inputTokens = usage.inputTokens ?? 0;
         const outputTokens = usage.outputTokens ?? 0;
         const cacheReadTokens = usage.inputTokenDetails?.cacheReadTokens ?? 0;
         const cacheWriteTokens = usage.inputTokenDetails?.cacheWriteTokens ?? 0;
+        // usage.inputTokens is the WHOLE prompt — the cache buckets are inside
+        // it, not additional to it. Accumulating it alongside them would bill
+        // and report every cached token twice, which for a cache-heavy agent
+        // loop overstates input by an order of magnitude. Track the uncached
+        // remainder so the three buckets stay disjoint; noCacheTokens is the
+        // provider's own figure where it reports one.
+        const totalInputTokens = usage.inputTokens ?? 0;
+        const inputTokens = usage.inputTokenDetails?.noCacheTokens
+            ?? Math.max(0, totalInputTokens - cacheReadTokens - cacheWriteTokens);
 
         this.sessionInputTokens += inputTokens;
+        this.sessionTotalInputTokens += totalInputTokens;
         this.sessionOutputTokens += outputTokens;
         this.sessionCacheReadInputTokens += cacheReadTokens;
         this.sessionCacheCreationInputTokens += cacheWriteTokens;
 
         return {
             inputTokens,
+            totalInputTokens,
             outputTokens,
             cacheCreationInputTokens: cacheWriteTokens,
             cacheReadInputTokens: cacheReadTokens,
             sessionInputTokens: this.sessionInputTokens,
+            sessionTotalInputTokens: this.sessionTotalInputTokens,
             sessionOutputTokens: this.sessionOutputTokens,
             sessionCacheCreationInputTokens: this.sessionCacheCreationInputTokens,
             sessionCacheReadInputTokens: this.sessionCacheReadInputTokens,
@@ -140,7 +153,11 @@ export abstract class BaseModelClient implements ModelClient {
         return this.apiCallCount;
     }
 
-    /** Cumulative token counts across every call this client has made. */
+    /**
+     * Cumulative token counts across every call this client has made. The input
+     * figure is the uncached remainder, so the four counts sum to totalTokens
+     * without counting a cached token in two buckets.
+     */
     public getSessionTokens(): SessionTokenUsage {
         return {
             inputTokens: this.sessionInputTokens,

@@ -8,6 +8,7 @@
     "generate:test": "tsx lib/test_generator/index.ts --run-tests",
     "generate:test:gemini": "tsx lib/test_generator/index.ts -m gemini-2.5-pro --run-tests",
     "test": "BASE_URL=http://127.0.0.1:5002 playwright test",
+    "test:sandboxed": "BASE_URL=http://127.0.0.1:5002 tsx lib/services/run_playwright_tests.ts",
     "seed:build": "tsx lib/services/isolated_runner.ts --build-seed --peer",
     "test:spec": "tsx scripts/test_spec.ts",
     "test:unit": "NODE_OPTIONS='--experimental-vm-modules' jest",

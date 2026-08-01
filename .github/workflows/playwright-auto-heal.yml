@@ -137,6 +137,20 @@ jobs:
       - name: Install system libraries
         # bubblewrap sandboxes the generated-test execution (TEST_SANDBOX=bwrap).
         run: sudo apt-get update && sudo apt-get install -y libgl1 libglib2.0-0 bubblewrap
+
+      - name: Enable unprivileged user namespaces for bubblewrap
+        # ubuntu-latest is 24.04, which ships
+        # kernel.apparmor_restrict_unprivileged_userns=1. That denies bwrap's
+        # uid_map write ("bwrap: setting up uid map: Permission denied") on every
+        # spawn, so the heal step would fail to run a single test.
+        run: |
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          # Prove the sandbox actually starts here rather than 20 minutes into a heal.
+          bwrap --ro-bind / / --dev /dev --proc /proc --unshare-pid --die-with-parent true
+          echo "bubblewrap can create user namespaces"
+
       - name: Install Python dependencies
         run: |
           python -m venv venv
@@ -209,8 +223,11 @@ jobs:
             cost_raw=$(jq -r '.cost_usd // ""' "$F")
             cost=""
             [ -n "$cost_raw" ] && cost=$(printf '$%.4f' "$cost_raw")
+            # The four buckets are disjoint and sum to totalTokens: "uncached in"
+            # excludes cache reads/writes, so this does not double-count a
+            # cached prompt the way the provider dashboards would flag.
             tokens=$(jq -r 'if .tokens == null then "" else
-              "\(.tokens.totalTokens) total — \(.tokens.inputTokens) in / \(.tokens.outputTokens) out / \(.tokens.cacheReadTokens) cache read / \(.tokens.cacheWriteTokens) cache write"
+              "\(.tokens.totalTokens) total — \(.tokens.inputTokens) uncached in / \(.tokens.outputTokens) out / \(.tokens.cacheReadTokens) cache read / \(.tokens.cacheWriteTokens) cache write"
               end' "$F")
             # The triage the model produced before healing (assessment field
             # triage_analysis, mirrored in generated_tests/*/*.triage_analysis.json).
@@ -428,7 +445,7 @@ jobs:
                 }
                 | "| **Total** | | | | **$\(.cost * 10000 | round / 10000)** | **\(.tokens)** | **\(.calls)** |",
                   "",
-                  "_Token split: \(.input) in / \(.output) out / \(.cacheRead) cache read / \(.cacheWrite) cache write. Cost is estimated from the model price table at run time._"' \
+                  "_Token split: \(.input) uncached in / \(.output) out / \(.cacheRead) cache read / \(.cacheWrite) cache write — disjoint buckets that sum to the total. Cost is estimated from the model price table at run time._"' \
                 "${assessment_files[@]}"
             fi
             echo ""

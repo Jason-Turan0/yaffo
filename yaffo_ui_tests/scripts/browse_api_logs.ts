@@ -40,7 +40,10 @@ interface ApiLogEntry {
     };
     success: boolean;
     cacheUsage?: {
+        /** Uncached input only; totalInputTokens is the whole prompt. */
         inputTokens: number;
+        totalInputTokens?: number;
+        cacheReadInputTokens?: number;
         outputTokens: number;
     };
     costEstimate?: {
@@ -307,7 +310,12 @@ const printApiCallDetail = async (ctx: DetailContext): Promise<DetailNavigation>
     console.log(`Stop Reason: ${data.response?.stop_reason || 'N/A'}`);
 
     if (data.cacheUsage) {
-        console.log(`Tokens: ${data.cacheUsage.inputTokens} in / ${data.cacheUsage.outputTokens} out`);
+        // inputTokens is the uncached remainder, so show the whole prompt too —
+        // otherwise a heavily cached call looks like it sent almost nothing.
+        const {inputTokens, totalInputTokens, cacheReadInputTokens, outputTokens} = data.cacheUsage;
+        const prompt = totalInputTokens ?? inputTokens;
+        const cached = cacheReadInputTokens ? ` (${cacheReadInputTokens} cached)` : "";
+        console.log(`Tokens: ${prompt} in${cached} / ${outputTokens} out`);
     }
     if (data.costEstimate?.call) {
         console.log(`Cost: $${data.costEstimate.call.totalCost.toFixed(4)}`);

@@ -16,6 +16,7 @@
 import {existsSync, realpathSync} from "fs";
 import {delimiter, dirname, isAbsolute, join} from "path";
 import {platform} from "os";
+import {spawnSync} from "child_process";
 
 export type SandboxKind = "bwrap" | "sandbox-exec" | "none";
 
@@ -36,10 +37,59 @@ export const isOnPath = (name: string, pathEnv = process.env.PATH ?? ""): boolea
         .some((dir) => existsSync(join(dir, name)));
 };
 
+export interface ProbeResult {
+    ok: boolean;
+    /** Why the sandbox is unusable — the tool's own stderr where there is any. */
+    error?: string;
+}
+
+/**
+ * Being on PATH is not enough: bwrap needs unprivileged user namespaces, which
+ * Ubuntu 24.04 and later deny by default under AppArmor
+ * (kernel.apparmor_restrict_unprivileged_userns=1) — bwrap then fails at
+ * "setting up uid map: Permission denied" on every spawn. Run the real wrapper
+ * over `true` once and cache the verdict.
+ */
+const probeCache = new Map<SandboxKind, ProbeResult>();
+
+export const probeSandbox = (
+    kind: Exclude<SandboxKind, "none">,
+    run: typeof spawnSync = spawnSync,
+): ProbeResult => {
+    const cached = probeCache.get(kind);
+    if (cached) return cached;
+
+    let result: ProbeResult;
+    if (!isOnPath(SANDBOX_BINARY[kind])) {
+        result = {ok: false, error: `"${SANDBOX_BINARY[kind]}" is not on PATH`};
+    } else {
+        const [command, args] = wrapWithSandbox({kind, command: "true", args: [], writableRoots: []});
+        const probe = run(command, args, {encoding: "utf-8", timeout: 30_000});
+        result = probe.status === 0
+            ? {ok: true}
+            : {ok: false, error: (probe.stderr || probe.error?.message || `exit ${probe.status}`).toString().trim()};
+    }
+
+    probeCache.set(kind, result);
+    return result;
+};
+
+/** Test seam: forget cached probe verdicts. */
+export const resetSandboxProbeCache = (): void => probeCache.clear();
+
+/** Remediation hint for a sandbox that is installed but cannot start. */
+const remediation = (kind: Exclude<SandboxKind, "none">): string =>
+    kind === "bwrap"
+        ? `bubblewrap needs unprivileged user namespaces. On Ubuntu 24.04+ enable them with: ` +
+          `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 ` +
+          `(install with: sudo apt-get install -y bubblewrap)`
+        : `sandbox-exec ships with macOS; this platform is probably not macOS.`;
+
 export interface DetectOptions {
     env?: NodeJS.ProcessEnv;
     osPlatform?: NodeJS.Platform;
-    isAvailable?: (binary: string) => boolean;
+    /** Verify a sandbox can actually start, not merely that it is installed. */
+    probe?: (kind: Exclude<SandboxKind, "none">) => ProbeResult;
     warn?: (message: string) => void;
 }
 
@@ -54,7 +104,7 @@ export interface DetectOptions {
 export const detectSandboxKind = ({
                                       env = process.env,
                                       osPlatform = platform(),
-                                      isAvailable = (binary) => isOnPath(binary),
+                                      probe = (kind) => probeSandbox(kind),
                                       warn = (message) => console.warn(message),
                                   }: DetectOptions = {}): SandboxKind => {
     const requested = env.TEST_SANDBOX?.trim().toLowerCase();
@@ -67,12 +117,11 @@ export const detectSandboxKind = ({
                 `Expected one of: auto, bwrap, sandbox-exec, none.`
             );
         }
-        if (!isAvailable(SANDBOX_BINARY[requested])) {
+        const {ok, error} = probe(requested);
+        if (!ok) {
             throw new Error(
-                `TEST_SANDBOX=${requested} was requested but "${SANDBOX_BINARY[requested]}" is not on PATH. ` +
-                (requested === "bwrap"
-                    ? `Install it with: sudo apt-get install -y bubblewrap`
-                    : `sandbox-exec ships with macOS; this platform is probably not macOS.`)
+                `TEST_SANDBOX=${requested} was requested but the sandbox cannot start: ${error}\n` +
+                remediation(requested)
             );
         }
         return requested;
@@ -88,10 +137,11 @@ export const detectSandboxKind = ({
         warn(`⚠️  No OS sandbox available for platform "${osPlatform}"; running generated tests unsandboxed.`);
         return "none";
     }
-    if (!isAvailable(SANDBOX_BINARY[auto])) {
+    const {ok, error} = probe(auto);
+    if (!ok) {
         warn(
-            `⚠️  "${SANDBOX_BINARY[auto]}" not found on PATH; running generated tests unsandboxed. ` +
-            (auto === "bwrap" ? `Install it with: sudo apt-get install -y bubblewrap` : "")
+            `⚠️  ${auto} cannot start (${error}); running generated tests unsandboxed.\n` +
+            `   ${remediation(auto)}`
         );
         return "none";
     }

@@ -13,14 +13,29 @@ export interface ConversationTurn {
     toolResults?: Array<{ toolUseId: string; result: unknown; truncated?: boolean }>;
 }
 
+/**
+ * Token counts for one call plus the running session totals.
+ *
+ * The three input buckets are disjoint: the AI SDK reports `usage.inputTokens`
+ * as the *total* prompt size with `cacheReadTokens`/`cacheWriteTokens` as
+ * subsets of it (DeepSeek's `prompt_tokens` includes cache hits; the Anthropic
+ * provider sums the three itself). `inputTokens` here is the uncached remainder
+ * only — adding it to the two cache buckets reconstructs the total, which is
+ * what `totalInputTokens` holds.
+ */
 export interface CacheUsage {
     cacheCreationInputTokens: number;
     cacheReadInputTokens: number;
+    /** Uncached input tokens — excludes both cache buckets. */
     inputTokens: number;
+    /** Whole prompt: uncached + cache read + cache write. */
+    totalInputTokens: number;
     outputTokens: number;
     sessionCacheCreationInputTokens: number;
     sessionCacheReadInputTokens: number;
+    /** Session uncached input tokens — excludes both cache buckets. */
     sessionInputTokens: number;
+    sessionTotalInputTokens: number;
     sessionOutputTokens: number;
 }
 
