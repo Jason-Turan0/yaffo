@@ -314,10 +314,6 @@ test.describe('Locations Map', () => {
 
     test.skip(!multiCluster, 'Sandbox needs at least one multi-photo cluster for partial cluster rendering.');
 
-    // Programmatically set a partial selection and open the panel.  Adding
-    // the `active` class to #selection-panel starts a 0.3 s CSS transition
-    // that shrinks the flex map, so the OpenLayers render frame produced by
-    // renderSync() below is built at an intermediate size.
     await page.evaluate((clusterIds: number[]) => {
       const api = (window as any).PHOTO_ORGANIZER.locations.map;
       api.selectedPhotoIds.clear();
@@ -325,17 +321,6 @@ test.describe('Locations Map', () => {
       api.updateSelectionPanel();
       api.map.renderSync();
     }, multiCluster!.ids);
-
-    // Let the CSS transition finish, tell OpenLayers about the real element
-    // size, and wait for a fresh render frame so that forEachFeatureAtPixel
-    // hit detection uses coordinates that match the current viewport.
-    await page.waitForTimeout(400);
-    await page.evaluate(() => {
-      const api = (window as any).PHOTO_ORGANIZER.locations.map;
-      api.map.updateSize();
-      api.map.renderSync();
-    });
-    await waitForMapRender(page);
 
     const partial = (await clusterSummaries(page)).find(cluster =>
       cluster.ids.length === multiCluster!.ids.length && cluster.ids.every(id => multiCluster!.ids.includes(id)));
