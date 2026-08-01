@@ -24,12 +24,14 @@ async function pickSearchableOption(page: Page, selectSelector: string, optionTe
 }
 
 // The sandbox root, derived from the Database Path shown in System Information
-// (<root>/yaffo.db) — scratch directories for these tests live under it.
+// (<root>/yaffo.db). Matches the code whose text ends with "/yaffo.db" rather
+// than the label text, so this works regardless of the current UI locale.
 async function sandboxRoot(page: Page): Promise<string> {
   await openSettings(page);
-  const dbPath = (await page.locator('.system-path-item')
-    .filter({ has: page.getByText('Database Path:', { exact: true }) })
-    .locator('code').first().textContent())!.trim();
+  const dbPath = (await page.locator('.system-path-item code')
+    .filter({ hasText: /\/yaffo\.db$/ })
+    .first()
+    .textContent())!.trim();
   return dbPath.replace(/\/[^/]+$/, '');
 }
 
@@ -47,6 +49,25 @@ async function removeMediaDirViaUI(page: Page, path: string): Promise<void> {
 }
 
 test.describe('Settings', () => {
+  // Reset the locale to English before any test runs. The locale is stored
+  // in the database (ApplicationSettings table) and persists across test
+  // runs. A previous suite failure may have left it on a non-English value,
+  // which would break the English text assertions throughout this suite.
+  // Using page.evaluate routes the POST through the browser's overridden
+  // fetch(), so security.js injects the X-CSRF-Token header automatically.
+  test.beforeAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    await page.goto('/settings');
+    await page.evaluate(async () => {
+      await fetch('/settings/locale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ locale: 'en' }).toString(),
+      });
+    });
+    await page.close();
+  });
+
   test('settings_add_media_directory', async ({ page }) => {
     const scratchDir = `${await sandboxRoot(page)}/spec-test-media-${UNIQ}`;
 
@@ -68,14 +89,22 @@ test.describe('Settings', () => {
     await removeMediaDirViaUI(page, scratchDir);
   });
 
-  test('settings_remove_media_directory', async ({ page, request }) => {
+  test('settings_remove_media_directory', async ({ page }) => {
     // Never remove the seeded library directory — other suites depend on it. Add a
-    // scratch directory and remove that one.
+    // scratch directory through the browser UI and remove that one.
     const scratchDir = `${await sandboxRoot(page)}/spec-test-remove-${UNIQ}`;
-    const response = await request.post('/api/settings/media-dirs', { data: { directory: scratchDir } });
-    expect(response.ok()).toBeTruthy();
 
-    await openSettings(page);
+    // Add the scratch directory via the browser UI so the CSRF token injected by
+    // security.js is included in the POST (the Playwright APIRequestContext does
+    // not share the browser session and cannot satisfy the CSRF check on its own).
+    await page.locator('#new-media-dir').fill(scratchDir);
+    await Promise.all([
+      page.waitForResponse(response =>
+        response.url().includes('/api/settings/media-dirs') && response.request().method() === 'POST'),
+      page.locator('[data-action="add-media-dir"]').click(),
+    ]);
+    await expect(mediaDirItem(page, scratchDir)).toHaveCount(1);
+
     const seededCount = await page.locator('.media-dir-item').count();
     await mediaDirItem(page, scratchDir).locator('[data-action="remove-media-dir"]').click();
 
@@ -113,8 +142,18 @@ test.describe('Settings', () => {
         await expect(page.locator('.page-header')).toContainText('Ajustes');
       }
     } finally {
-      // Restore immediately via a direct form POST.
-      await page.request.post('/settings/locale', { form: { locale: original } });
+      // Restore via the browser's fetch() so security.js injects the CSRF
+      // token automatically. The page.request APIRequestContext shares cookies
+      // but does not auto-populate the csrf_token form field, so it fails the
+      // CSRF check. Using page.evaluate routes through the overridden fetch
+      // which adds the X-CSRF-Token header.
+      await page.evaluate(async (locale) => {
+        await fetch('/settings/locale', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ locale }).toString(),
+        });
+      }, original);
     }
 
     // The saved locale persists across navigation — verified with the restored
