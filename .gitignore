@@ -100,3 +100,6 @@ site/
 
 # Vitest frontend coverage output
 tests_js/coverage/
+
+# JUnit XML from pytest/vitest, published as check runs by the Checks workflow
+/reports/

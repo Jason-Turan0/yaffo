@@ -17,6 +17,12 @@ jobs:
   frontend:
     name: Frontend (type-check + unit tests)
     runs-on: ubuntu-latest
+    # Job-level permissions replace the top-level block wholesale, so
+    # contents: read has to be restated alongside the checks: write that
+    # test-reporter needs to publish its check run.
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v4
 
@@ -31,13 +37,33 @@ jobs:
       - name: Type-check JavaScript
         run: npm run typecheck:js
 
-      # Vitest + jsdom unit tests of the first-party browser modules.
+      # Vitest + jsdom unit tests of the first-party browser modules. The junit
+      # reporter runs alongside the default one, so the console output in the
+      # step log is unchanged.
       - name: Unit tests
-        run: npm run test:unit
+        run: npm run test:unit -- --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
+
+      - name: Publish frontend test report
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
+        if: ${{ !cancelled() }}
+        # A fork PR gets a read-only token and cannot create check runs; the
+        # step log still carries the failures, so never fail the job here.
+        continue-on-error: true
+        with:
+          name: Frontend unit tests
+          path: reports/vitest-junit.xml
+          # Vitest emits standard JUnit XML.
+          reporter: java-junit
+          # The test step already failed the job on a red test; this publishes.
+          fail-on-error: false
+          fail-on-empty: false
 
   python:
     name: Python (unit tests)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v4
 
@@ -60,4 +86,16 @@ jobs:
       - name: Unit tests
         env:
           PYTHONPATH: .
-        run: pytest -m unit
+        run: pytest -m unit --junitxml=reports/pytest-junit.xml
+
+      - name: Publish Python test report
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        with:
+          name: Python unit tests
+          path: reports/pytest-junit.xml
+          # dorny's parser for pytest's --junitxml output.
+          reporter: python-xunit
+          fail-on-error: false
+          fail-on-empty: false
