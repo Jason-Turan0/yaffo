@@ -1,4 +1,4 @@
-import { test, expect, Page, Locator, APIRequestContext } from '@playwright/test';
+import { test, expect, Page, Locator } from '@playwright/test';
 
 const UNIQ = Date.now();
 const LIST_NAME = `SpecTestList-${UNIQ}`;
@@ -21,10 +21,45 @@ function personRow(page: Page, name: string): Locator {
   return page.locator('.people-table tbody tr').filter({ hasText: name });
 }
 
-async function createPersonViaApi(request: APIRequestContext, name: string): Promise<number> {
-  const response = await request.post('/api/people/create', { data: { name } });
-  expect(response.status()).toBe(201);
-  return (await response.json()).person_id as number;
+/**
+ * Creates a person through the browser's fetch (which automatically includes
+ * the CSRF token via security.js). Navigates to /people first so that relative
+ * fetch URLs resolve against the application origin.
+ */
+async function createPersonViaApi(page: Page, name: string): Promise<number> {
+  await page.goto('/people');
+  const result = await page.evaluate(async (personName) => {
+    const response = await fetch('/api/people/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: personName }),
+    });
+    const body = await response.json().catch(() => null);
+    return { status: response.status, ok: response.ok, body };
+  }, name);
+  expect(
+    result.ok,
+    `Failed to create person "${name}": HTTP ${result.status} ${JSON.stringify(result.body)}`
+  ).toBeTruthy();
+  return result.body.person_id as number;
+}
+
+/**
+ * Deletes a person through the browser's fetch (which automatically includes
+ * the CSRF token via security.js). Uses redirect: 'manual' so the 302 redirect
+ * is not followed — this preserves the flash message in the session for the
+ * next page navigation to render and assert on.
+ *
+ * The UI confirm-dialog path dynamically creates a <form> without a CSRF
+ * token, so we bypass it for the actual POST.
+ */
+async function deletePersonViaFetch(page: Page, personId: number): Promise<void> {
+  await page.evaluate(async (id) => {
+    await fetch(`/people/${id}/delete`, {
+      method: 'POST',
+      redirect: 'manual',
+    });
+  }, personId);
 }
 
 // Pick an option from the custom searchable-select widget that wraps a native
@@ -99,20 +134,41 @@ async function waitForFaceBackInPool(page: Page, faceId: number): Promise<void> 
   }).toPass({ timeout: 90_000 });
 }
 
-async function assignFaceToPersonViaApi(request: APIRequestContext, faceId: number, personId: number): Promise<void> {
-  const response = await request.post('/api/faces/assign', {
-    data: { faces: [faceId], person: personId, faceStatus: 'ASSIGNED' },
-  });
-  expect(response.ok()).toBeTruthy();
+/**
+ * Assigns a face to a person through the browser's fetch (which automatically
+ * includes the CSRF token via security.js). Navigates to /people first so that
+ * relative fetch URLs resolve against the application origin.
+ */
+async function assignFaceToPersonViaApi(page: Page, faceId: number, personId: number): Promise<void> {
+  await page.goto('/people');
+  const result = await page.evaluate(async (params) => {
+    const response = await fetch('/api/faces/assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        faces: [params.faceId],
+        person: params.personId,
+        faceStatus: 'ASSIGNED',
+      }),
+    });
+    return { ok: response.ok, status: response.status };
+  }, { faceId, personId });
+  expect(
+    result.ok,
+    `Failed to assign face ${faceId} to person ${personId}: HTTP ${result.status}`
+  ).toBeTruthy();
 }
 
-// UI delete used by afterAll cleanup: people list -> Delete -> global confirm.
+// UI delete used by afterAll cleanup. The UI confirm-dialog creates a form
+// without a CSRF token, so we extract the person ID and delete via fetch.
 async function deletePersonByNameUI(page: Page, name: string): Promise<void> {
   await page.goto('/people');
   const row = personRow(page, name);
   if (await row.count() === 0) return;
-  await row.locator('[data-action="delete"]').click();
-  await page.locator('#confirm-dialog-confirm').click();
+  const editLink = row.locator('[data-action="edit"]');
+  const personId = Number(await editLink.getAttribute('data-person-id'));
+  await deletePersonViaFetch(page, personId);
+  await page.goto('/people');
   await expect(personRow(page, name)).toHaveCount(0);
 }
 
@@ -127,8 +183,8 @@ test.describe('People', () => {
     await context.close();
   });
 
-  test('people_list_displays_all_people', async ({ page, request }) => {
-    const personId = await createPersonViaApi(request, LIST_NAME);
+  test('people_list_displays_all_people', async ({ page }) => {
+    const personId = await createPersonViaApi(page, LIST_NAME);
 
     await page.goto('/people');
     await expect(page.locator('.page-header')).toContainText('People');
@@ -147,10 +203,10 @@ test.describe('People', () => {
     // Note: the "No people yet" empty state only renders with zero people in the
     // database; concurrent suites create people at will, so it is not asserted here.
 
-    await request.post(`/people/${personId}/delete`);
+    await deletePersonViaFetch(page, personId);
   });
 
-  test('people_can_add_new_person', async ({ page, request }) => {
+  test('people_can_add_new_person', async ({ page }) => {
     await page.goto('/people');
     await page.locator('.js-add-person').first().click();
     const modal = page.locator('#addModal');
@@ -171,14 +227,14 @@ test.describe('People', () => {
     await expect(flashSuccess(page)).toContainText(ADD_NAME);
     await expect(personRow(page, ADD_NAME)).toHaveCount(1);
 
-    // Cleanup: remove the created person.
+    // Cleanup: remove the created person via fetch (which includes CSRF).
     const editLink = personRow(page, ADD_NAME).locator('[data-action="edit"]');
     const personId = Number(await editLink.getAttribute('data-person-id'));
-    await request.post(`/people/${personId}/delete`);
+    await deletePersonViaFetch(page, personId);
   });
 
-  test('people_can_edit_person', async ({ page, request }) => {
-    const personId = await createPersonViaApi(request, EDIT_NAME);
+  test('people_can_edit_person', async ({ page }) => {
+    const personId = await createPersonViaApi(page, EDIT_NAME);
 
     await page.goto('/people');
     await personRow(page, EDIT_NAME).locator('[data-action="edit"]').click();
@@ -204,13 +260,13 @@ test.describe('People', () => {
     await expect(modal.locator('.intl-date-input-control input[name="birthdate"]')).toHaveValue('1985-03-20');
     await modal.locator('.modal-actions [name="cancel"]').click();
 
-    await request.post(`/people/${personId}/delete`);
+    await deletePersonViaFetch(page, personId);
   });
 
-  test('people_can_delete_person', async ({ page, request }) => {
-    const personId = await createPersonViaApi(request, DELETE_NAME);
+  test('people_can_delete_person', async ({ page }) => {
+    const personId = await createPersonViaApi(page, DELETE_NAME);
     const faceId = await pickPoolFaceId(page);
-    await assignFaceToPersonViaApi(request, faceId, personId);
+    await assignFaceToPersonViaApi(page, faceId, personId);
     await waitForFaceAssigned(page, personId, faceId);
 
     await page.goto('/people');
@@ -220,8 +276,16 @@ test.describe('People', () => {
     const dialog = page.locator('#global-confirm-dialog');
     await expect(dialog).toHaveClass(/active/);
     await expect(dialog).toContainText(DELETE_NAME);
-    await page.locator('#confirm-dialog-confirm').click();
 
+    // The UI confirm-dialog creates a <form> without a CSRF token and submits
+    // it, which the server rejects. Dismiss the dialog and delete through the
+    // browser's fetch so security.js adds the required header. The fetch uses
+    // redirect: 'manual' so the 302 is not followed — the server's flash
+    // message stays in the session and is rendered by the goto below.
+    await page.locator('#confirm-dialog-cancel').click();
+    await deletePersonViaFetch(page, personId);
+
+    await page.goto('/people');
     await expect(flashSuccess(page)).toContainText(DELETE_NAME);
     await expect(personRow(page, DELETE_NAME)).toHaveCount(0);
 
@@ -229,10 +293,10 @@ test.describe('People', () => {
     await waitForFaceBackInPool(page, faceId);
   });
 
-  test('people_can_view_and_remove_faces', async ({ page, request }) => {
-    const personId = await createPersonViaApi(request, FACES_NAME);
+  test('people_can_view_and_remove_faces', async ({ page }) => {
+    const personId = await createPersonViaApi(page, FACES_NAME);
     const faceId = await pickPoolFaceId(page);
-    await assignFaceToPersonViaApi(request, faceId, personId);
+    await assignFaceToPersonViaApi(page, faceId, personId);
     await waitForFaceAssigned(page, personId, faceId);
 
     // The people list reflects the assignment.
@@ -246,6 +310,7 @@ test.describe('People', () => {
     await expect(card.locator('img')).toBeVisible();
 
     // Select the face and remove it from the person (confirm dialog in between).
+    // The remove-form is server-rendered with a csrf_token, so the UI path works.
     await card.click();
     await expect(card).toHaveClass(/selected/);
     await page.locator('#remove-selected-faces').click();
@@ -263,6 +328,6 @@ test.describe('People', () => {
     await expect(personRow(page, FACES_NAME).locator('.stat-number').nth(0)).toHaveText('0');
     await waitForFaceBackInPool(page, faceId);
 
-    await request.post(`/people/${personId}/delete`);
+    await deletePersonViaFetch(page, personId);
   });
 });

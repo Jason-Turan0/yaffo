@@ -1,0 +1,6 @@
+Fix plan for people.spec.ts:
+1. Remove APIRequestContext from imports (line 1)
+2. Rewrite createPersonViaApi: (request, name) → (page, name), use page.evaluate + fetch
+3. Rewrite assignFaceToPersonViaApi: (request, faceId, personId) → (page, faceId, personId), use page.evaluate + fetch
+4. Replace all request.post(`/people/${personId}/delete`) with page.evaluate((id) => fetch(`/people/${id}/delete`, {method:'POST'}), personId)
+5. Remove `request` from test function destructuring params

@@ -1,0 +1,8 @@
+{
+  "classification": "test_code_defect",
+  "reasoning": "The test uses `page.request.post('/themes/${originalDefault}/default')` to restore the original default theme in the `finally` block. This API-level POST does not include a CSRF token (X-CSRF-Token header), which the server's `protect_unsafe_request` before_request handler requires for all non-safe HTTP methods. The server returns 403, and the default theme is never restored. When the test subsequently navigates to `/people` and asserts `data-theme` equals 'classic', it finds the custom theme slug still set. In contrast, the 'Make default' button click in the `try` block works because it uses htmx, which automatically injects the CSRF token (configured in `security.js`). The same CSRF issue affects `deleteThemeViaApi`, but that function swallows errors via `.catch(() => {})` and tests don't verify its success, so those calls fail silently without causing test failures.",
+  "affectedTests": [
+    "Themes › themes_set_default_theme"
+  ],
+  "suggestedAction": "Replace the `page.request.post` call in the `finally` block with a page-navigation approach: navigate to `/themes/${originalDefault}`, click the 'Make default' button (which uses htmx with CSRF token), and wait for the HX-Refresh page reload. Alternatively, extract the CSRF token from `window.APP_CONFIG.csrfToken` via `page.evaluate()` and include it as an `X-CSRF-Token` header in the `page.request.post` call. The same fix should be applied to `deleteThemeViaApi` to ensure actual cleanup occurs."
+}

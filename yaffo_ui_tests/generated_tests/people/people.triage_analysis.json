@@ -1,0 +1,12 @@
+{
+  "classification": "test_code_defect",
+  "reasoning": "The test uses Playwright's APIRequestContext (request.post()) to call /api/people/create, which makes a raw HTTP request outside the browser. The server's CSRF protection (security.py protect_unsafe_request) requires an X-CSRF-Token header for non-safe methods, which the browser normally injects via security.js intercepting window.fetch. Since APIRequestContext bypasses the browser, no CSRF token is sent, and the server returns 403. The face-assignment.spec.ts correctly uses page.evaluate() with window.fetch for the same API endpoints. The spec goals (creating people via the API) are achievable — the test just uses the wrong mechanism to call them.",
+  "affectedTests": [
+    "People › people_list_displays_all_people",
+    "People › people_can_add_new_person",
+    "People › people_can_edit_person",
+    "People › people_can_delete_person",
+    "People › people_can_view_and_remove_faces"
+  ],
+  "suggestedAction": "Replace the request.post()-based createPersonViaApi and assignFaceToPersonViaApi helpers with page.evaluate()-based implementations that use window.fetch (mirroring the pattern in face-assignment.spec.ts). Change function signatures from (request: APIRequestContext, ...) to (page: Page, ...). Update all call sites accordingly."
+}

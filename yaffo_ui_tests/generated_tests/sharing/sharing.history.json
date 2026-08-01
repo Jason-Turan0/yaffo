@@ -1,0 +1,36 @@
+{
+  "testRunHistory": [
+    {
+      "timestamp": "2026-08-01T15:51:42.336Z",
+      "success": false,
+      "summary": {
+        "total": 12,
+        "passed": 11,
+        "failed": 1,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Sharing Feature › sharing_revoke_a_device - Revoking a device cuts it off and it can then be deleted",
+          "error": "Error: page.goto: net::ERR_ABORTED at http://127.0.0.1:5001/sharing/settings\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/sharing/settings\", waiting until \"load\"\u001b[22m\n"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-08-01T15:52:11.122Z",
+      "success": false,
+      "summary": {
+        "total": 12,
+        "passed": 11,
+        "failed": 1,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Sharing Feature › sharing_revoke_a_device - Revoking a device cuts it off and it can then be deleted",
+          "error": "Error: page.goto: net::ERR_ABORTED at http://127.0.0.1:5001/sharing/settings\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/sharing/settings\", waiting until \"load\"\u001b[22m\n"
+        }
+      ]
+    }
+  ]
+}

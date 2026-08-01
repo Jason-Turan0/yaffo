@@ -16,6 +16,13 @@ function notification(page: Page): Locator {
   return page.locator('.notification.visible');
 }
 
+// Read the CSRF token that security.js injects into window.APP_CONFIG and sends as
+// the X-CSRF-Token header on every fetch(). page.request does NOT go through that
+// interceptor, so callers must pass the token explicitly.
+async function csrfToken(page: Page): Promise<string> {
+  return page.evaluate(() => (window as any).APP_CONFIG.csrfToken);
+}
+
 // Pick an option from the searchable-select widget wrapping a hidden native select.
 async function pickSearchableOption(page: Page, selectSelector: string, optionText: string): Promise<void> {
   const wrapper = page.locator(`${selectSelector} + .searchable-select-wrapper`);
@@ -68,11 +75,23 @@ test.describe('Settings', () => {
     await removeMediaDirViaUI(page, scratchDir);
   });
 
-  test('settings_remove_media_directory', async ({ page, request }) => {
+  test('settings_remove_media_directory', async ({ page }) => {
     // Never remove the seeded library directory — other suites depend on it. Add a
     // scratch directory and remove that one.
     const scratchDir = `${await sandboxRoot(page)}/spec-test-remove-${UNIQ}`;
-    const response = await request.post('/api/settings/media-dirs', { data: { directory: scratchDir } });
+
+    // The standalone Playwright request fixture is an isolated API context without
+    // browser cookies — the Flask CSRF guard (security.py) rejects it with a 403.
+    // Use page.request instead (shares the browser's session cookie) and inject
+    // the X-CSRF-Token header that static/security.js adds to every page fetch.
+    const token = await csrfToken(page);
+    const response = await page.request.post('/api/settings/media-dirs', {
+      data: JSON.stringify({ directory: scratchDir }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': token,
+      },
+    });
     expect(response.ok()).toBeTruthy();
 
     await openSettings(page);
@@ -113,8 +132,13 @@ test.describe('Settings', () => {
         await expect(page.locator('.page-header')).toContainText('Ajustes');
       }
     } finally {
-      // Restore immediately via a direct form POST.
-      await page.request.post('/settings/locale', { form: { locale: original } });
+      // Restore immediately via a direct form POST. page.request does NOT go
+      // through security.js's fetch interceptor, so inject the CSRF token.
+      const token = await csrfToken(page);
+      await page.request.post('/settings/locale', {
+        form: { locale: original },
+        headers: { 'X-CSRF-Token': token },
+      });
     }
 
     // The saved locale persists across navigation — verified with the restored

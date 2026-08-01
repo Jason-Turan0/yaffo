@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import path from 'node:path';
+import * as path from 'node:path';
 
 const UNIQ = Date.now();
 const CREATE_LABEL = `SpecTestTheme-${UNIQ}`;
@@ -46,8 +46,16 @@ async function createTheme(page: Page, label: string): Promise<string> {
   return slug;
 }
 
+// Delete a custom theme via API. Extracts the CSRF token from the current page
+// so the POST passes the server's CSRF validation (htmx sends this header
+// automatically for page interactions, but page.request.post does not).
 async function deleteThemeViaApi(page: Page, slug: string): Promise<void> {
-  await page.request.post(`/themes/${slug}/delete`).catch(() => {});
+  try {
+    const csrfToken = await page.evaluate(() => (window as any).APP_CONFIG?.csrfToken).catch(() => undefined);
+    await page.request.post(`/themes/${slug}/delete`, {
+      headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {}
+    });
+  } catch {}
 }
 
 // Inject a READY working draft into a custom theme's ApplicationSettings row —
@@ -89,8 +97,14 @@ test.describe('Themes', () => {
     const baseURL = process.env.BASE_URL || 'http://127.0.0.1:5001';
     const context = await browser.newContext({ baseURL });
     const page = await context.newPage();
-    for (const slug of createdSlugs.values()) {
-      await deleteThemeViaApi(page, slug);
+    // Navigate first to establish a session and obtain a CSRF token, without
+    // which the server's before_request CSRF guard rejects unsafe requests.
+    await page.goto('/themes');
+    const csrfToken = await page.evaluate(() => (window as any).APP_CONFIG.csrfToken);
+    for (const slug of Array.from(createdSlugs.values())) {
+      await page.request.post(`/themes/${slug}/delete`, {
+        headers: { 'X-CSRF-Token': csrfToken }
+      }).catch(() => {});
     }
     await context.close();
   });
@@ -222,7 +236,14 @@ test.describe('Themes', () => {
       await page.goto('/people');
       await expect(page.locator('html')).toHaveAttribute('data-theme', slug);
     } finally {
-      await page.request.post(`/themes/${originalDefault}/default`);
+      // Restore the original default. Unlike the htmx-driven "Make default" click
+      // above, page.request.post does not automatically include the CSRF token —
+      // the server's before_request CSRF guard rejects the POST with a 403.
+      // Extract the token from the page and send it as an X-CSRF-Token header.
+      const csrfToken = await page.evaluate(() => (window as any).APP_CONFIG.csrfToken);
+      await page.request.post(`/themes/${originalDefault}/default`, {
+        headers: { 'X-CSRF-Token': csrfToken }
+      });
       await deleteThemeViaApi(page, slug);
     }
     await page.goto('/people');

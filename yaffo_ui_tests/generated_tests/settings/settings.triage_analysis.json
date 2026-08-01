@@ -1,0 +1,8 @@
+{
+  "classification": "test_code_defect",
+  "reasoning": "The test `settings_remove_media_directory` fails at line 76 where `request.post('/api/settings/media-dirs', { data: { directory: scratchDir } })` returns a non-OK response. The Flask route `add_media_dir` uses `request.get_json(silent=True)` which requires `Content-Type: application/json`. Playwright's `data` parameter with a plain object has version-dependent serialization: in Playwright >= 1.33 it serializes as JSON (works), but in older versions it serializes as `application/x-www-form-urlencoded` (breaks). When form-encoded, `request.get_json()` returns None, `new_dir` becomes empty, and the route returns 400 'Directory path is required'. The application API itself works correctly — the first test (`settings_add_media_directory`) passes by using the page UI, whose JavaScript explicitly sets `Content-Type: application/json` and `JSON.stringify()` on the body. The spec goals are achievable with the current application; the test code is fragile across Playwright versions. The fix is to explicitly serialize the JSON body and set the Content-Type header, matching what the frontend JavaScript does.",
+  "affectedTests": [
+    "Settings › settings_remove_media_directory"
+  ],
+  "suggestedAction": "Replace `request.post(url, { data: { directory: scratchDir } })` with `request.post(url, { data: JSON.stringify({ directory: scratchDir }), headers: { 'Content-Type': 'application/json' } })` or use `page.request.post()` with the same explicit JSON headers to match how the frontend JavaScript (`static/settings/index.js`) sends the request. This ensures the Flask route's `request.get_json(silent=True)` receives valid JSON regardless of Playwright version."
+}
