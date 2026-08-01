@@ -15,6 +15,13 @@ const baseURL = process.env.BASE_URL || 'http://127.0.0.1:5001';
 // CI sets SUITE explicitly; locally we infer it from whether a peer is present.
 const suite = process.env.SUITE || (process.env.PEER_URL ? 'sharing' : 'core');
 
+// Whether THIS run is the sharing suite. Keyed on PEER_URL, not on the suite
+// name: CI sets SUITE to the matrix id ("sharing__sharing"), so an equality
+// check against 'sharing' silently fails there and the ordered, stateful
+// sharing specs would run on parallel workers. PEER_URL is set if and only if
+// the two-instance environment is up, which is exactly the sharing suite.
+const isSharingRun = !!process.env.PEER_URL;
+
 export default defineConfig({
     testDir: './generated_tests',
     fullyParallel: true,
@@ -24,7 +31,7 @@ export default defineConfig({
     // The sharing suite is stateful and strictly ordered, so it must stay on a
     // single worker. The core suite tolerates parallel workers (its files each
     // clean up after themselves); see the cross-file caveats in the specs.
-    workers: suite === 'sharing' ? 1 : 2,
+    workers: isSharingRun ? 1 : 2,
     reporter: [
         ['html', {outputFolder: `reports/${suite}/html`}],
         ['json', {outputFile: `reports/${suite}/results/test-results.json`}],

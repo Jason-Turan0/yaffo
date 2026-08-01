@@ -253,7 +253,14 @@ jobs:
           # result table to the job summary, and the `github` reporter turns
           # each failure into an inline annotation on the PR diff — so a red
           # build is readable without downloading the report artifact.
-          npx tsx lib/services/run_playwright_tests.ts --reporter "json,html,list,github,junit" --title "${{ matrix.id }}" "${{ matrix.spec }}"
+          # --json-out is load-bearing: the auto-heal workflow discovers which
+          # specs failed by scanning this artifact for test-results.json, and a
+          # CLI --reporter overrides the config's json outputFile.
+          npx tsx lib/services/run_playwright_tests.ts \
+            --reporter "json,html,list,github,junit" \
+            --title "${{ matrix.id }}" \
+            --json-out "reports/${{ matrix.id }}/results/test-results.json" \
+            "${{ matrix.spec }}"
 
       # Publishes a browsable per-test check run (the CodeBuild "test report"
       # equivalent). Pinned to the commit behind v3.0.0 rather than a mutable

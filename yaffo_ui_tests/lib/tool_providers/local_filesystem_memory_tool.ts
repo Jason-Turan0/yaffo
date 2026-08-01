@@ -146,17 +146,51 @@ class LocalFilesystemMemoryTool implements ToolProvider {
         return Promise.resolve();
     }
 
+    /**
+     * Real path of a target that may not exist yet, via its nearest existing
+     * ancestor. path.resolve only normalises `..` textually — it does not
+     * follow symlinks, so containment has to be judged on real paths.
+     */
+    private realpathDeep(target: string): string {
+        let existing = path.resolve(target);
+        const tail: string[] = [];
+        while (!fs.existsSync(existing)) {
+            tail.unshift(path.basename(existing));
+            const parent = path.dirname(existing);
+            if (parent === existing) break;
+            existing = parent;
+        }
+        return path.join(fs.realpathSync(existing), ...tail);
+    }
+
+    /**
+     * Map a `/memories/...` tool path to a real filesystem path, or throw.
+     *
+     * Two independent gates, because this is the only write whose path the
+     * model controls and it sits beside generated_tests/_support (the reviewed
+     * fs helpers) and the application source:
+     *   1. no `..` segments at all — traversal is never legitimate here;
+     *   2. the real path (symlinks followed, both sides) is inside the real
+     *      memories root. A symlink committed under memories/ would otherwise
+     *      redirect a write anywhere on disk, since fs follows it on write.
+     */
     private validatePath(memoryPath: string): string {
         if (!memoryPath.startsWith('/memories')) {
             throw new Error(`Path must start with /memories, got: ${memoryPath}`);
         }
 
         const relativePath = memoryPath.slice('/memories'.length).replace(/^\//, '');
+        if (relativePath.split(/[\\/]/).some((segment) => segment === '..')) {
+            throw new Error(`Path ${memoryPath} may not contain '..' segments`);
+        }
+
         const fullPath = relativePath ? path.join(this.memoriesPath, relativePath) : this.memoriesPath;
 
-        const resolvedPath = path.resolve(fullPath);
-        const resolvedRoot = path.resolve(this.memoriesPath);
-        if (!resolvedPath.startsWith(resolvedRoot)) {
+        const resolvedPath = this.realpathDeep(fullPath);
+        const resolvedRoot = this.realpathDeep(this.memoriesPath);
+        // Separator-anchored, so a sibling like "…/memories-evil" cannot pass
+        // as a prefix match of "…/memories".
+        if (resolvedPath !== resolvedRoot && !resolvedPath.startsWith(resolvedRoot + path.sep)) {
             throw new Error(`Path ${memoryPath} would escape /memories directory`);
         }
 

@@ -1,7 +1,7 @@
-import {join, relative, resolve} from "path";
+import {dirname, join, relative, resolve} from "path";
 import {tmpdir} from "os";
 import {spawn} from "child_process";
-import {appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync} from "fs";
+import {appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync} from "fs";
 import {TestResult, TestRunResult} from "@lib/services/isolated_runner";
 import {detectSandboxKind, wrapWithSandbox, writableRootsFor} from "@lib/services/test_sandbox";
 
@@ -297,6 +297,14 @@ export interface RunOptions {
      * summary below is parsed from it.
      */
     reporters?: string;
+    /**
+     * Copy the raw Playwright JSON report here before the temp copy is deleted.
+     * The auto-heal workflow discovers failed specs by scanning the uploaded
+     * artifact for `test-results.json`, and a CLI --reporter overrides the
+     * config's json outputFile — so CI has to name that path explicitly or
+     * nothing downstream can see which specs failed.
+     */
+    jsonReportOut?: string;
 }
 
 export const runPlaywrightTests = async (
@@ -308,6 +316,11 @@ export const runPlaywrightTests = async (
 
     const timestamp = Date.now();
     const jsonReportPath = join(tmpdir(), `playwright-report-${timestamp}.json`);
+    // Resolved out here on purpose: inside the Promise below, `resolve` is the
+    // promise's own resolver, not path.resolve.
+    const jsonReportDestination = options.jsonReportOut
+        ? resolve(UI_TESTS_DIR, options.jsonReportOut)
+        : undefined;
 
     // The sharing suite lives in its own Playwright project, which only exists
     // when PEER_URL points at the second sandbox instance (see playwright.config.ts).
@@ -403,7 +416,10 @@ export const runPlaywrightTests = async (
         testProcess.on("close", (code) => {
             const exitCode = code ?? 1;
             const {tests, summary} = parsePlaywrightJson(jsonReportPath);
-            //console.log(fs.readFileSync(jsonReportPath, "utf8"));
+            if (jsonReportDestination && existsSync(jsonReportPath)) {
+                mkdirSync(dirname(jsonReportDestination), {recursive: true});
+                copyFileSync(jsonReportPath, jsonReportDestination);
+            }
             if (existsSync(jsonReportPath)) {
                 rmSync(jsonReportPath, {force: true});
             }
@@ -425,7 +441,7 @@ export const runPlaywrightTests = async (
  * are NOT sandboxed; only this path, the generator and the healer are.
  *
  *   npm run test:sandboxed -- [--url <baseUrl>] [--reporter <list>] [spec...]
- *   npx tsx lib/services/run_playwright_tests.ts [--url <baseUrl>] [spec...]
+ *   npx tsx lib/services/run_playwright_tests.ts [--json-out <file>] [spec...]
  *
  * The base URL comes from --url, else BASE_URL (which the npm script points at
  * the isolated environment), else the default port. With no spec arguments
@@ -454,11 +470,12 @@ if (isDirectRun) {
     const baseUrl = flagValue("--url", "-u") || process.env.BASE_URL || "http://127.0.0.1:5001";
     const reporters = flagValue("--reporter", "-r");
     const title = flagValue("--title");
+    const jsonReportOut = flagValue("--json-out");
     const testFiles = args.filter((a, i) => !consumed.has(i) && !a.startsWith("-"));
 
     const summaryTitle = title || testFiles.map(relativeSpec).join(", ") || "Playwright results";
 
-    runPlaywrightTests(baseUrl, testFiles.length > 0 ? testFiles : undefined, {reporters})
+    runPlaywrightTests(baseUrl, testFiles.length > 0 ? testFiles : undefined, {reporters, jsonReportOut})
         .then((result) => {
             console.log(formatTestResultsAsXml(result));
             const stepSummary = process.env.GITHUB_STEP_SUMMARY;
