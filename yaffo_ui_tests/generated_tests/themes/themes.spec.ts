@@ -45,8 +45,22 @@ async function createTheme(page: Page, label: string): Promise<string> {
   return slug;
 }
 
-async function deleteThemeViaApi(page: Page, slug: string): Promise<void> {
-  await page.request.post(`/themes/${slug}/delete`).catch(() => {});
+// Delete a custom theme through the browser UI (so the CSRF token embedded in
+// the page is included).  If the theme is already gone the attempt is silently
+// ignored.
+async function deleteThemeViaBrowser(page: Page, slug: string): Promise<void> {
+  try {
+    await page.goto(`/themes/${slug}`);
+    await page.locator('#delete-theme-button').click();
+    const dialog = page.locator('#global-confirm-dialog');
+    await expect(dialog).toHaveClass(/active/);
+    await Promise.all([
+      page.waitForURL(/\/themes\//),
+      page.locator('#confirm-dialog-confirm').click(),
+    ]);
+  } catch {
+    // Theme may not exist or already be deleted — that's fine.
+  }
 }
 
 // Inject a READY working draft into a custom theme's ApplicationSettings row —
@@ -72,8 +86,8 @@ test.describe('Themes', () => {
     const baseURL = process.env.BASE_URL || 'http://127.0.0.1:5001';
     const context = await browser.newContext({ baseURL });
     const page = await context.newPage();
-    for (const slug of createdSlugs.values()) {
-      await deleteThemeViaApi(page, slug);
+    for (const slug of Array.from(createdSlugs.values())) {
+      await deleteThemeViaBrowser(page, slug);
     }
     await context.close();
   });
@@ -138,7 +152,7 @@ test.describe('Themes', () => {
     await reloaded;
     await expect(page.locator('.page-header')).toContainText(CREATE_LABEL);
 
-    await deleteThemeViaApi(page, slug);
+    await deleteThemeViaBrowser(page, slug);
   });
 
   test('themes_rename_theme', async ({ page }) => {
@@ -159,7 +173,7 @@ test.describe('Themes', () => {
     await expect(customThemesNav(page).locator('a').filter({ hasText: RENAME_SOURCE_LABEL })).toHaveCount(0);
     createdSlugs.set(RENAMED_LABEL, new URL(page.url()).pathname.split('/').pop()!);
 
-    await deleteThemeViaApi(page, createdSlugs.get(RENAMED_LABEL)!);
+    await deleteThemeViaBrowser(page, createdSlugs.get(RENAMED_LABEL)!);
   });
 
   test('themes_publish_or_discard_draft', async ({ page }) => {
@@ -186,7 +200,7 @@ test.describe('Themes', () => {
     expect(css).toContain('#111111');
     expect(css).not.toContain('#222222');
 
-    await deleteThemeViaApi(page, slug);
+    await deleteThemeViaBrowser(page, slug);
   });
 
   test('themes_set_default_theme', async ({ page }) => {
@@ -205,8 +219,13 @@ test.describe('Themes', () => {
       await page.goto('/people');
       await expect(page.locator('html')).toHaveAttribute('data-theme', slug);
     } finally {
-      await page.request.post(`/themes/${originalDefault}/default`);
-      await deleteThemeViaApi(page, slug);
+      // Restore the original default via the browser UI so the CSRF token embedded
+      // in the page is included.  Navigate to the original-default theme page,
+      // click its "Make default" button, and wait for the HX-Refresh reload.
+      await page.goto(`/themes/${originalDefault}`);
+      await page.getByRole('button', { name: 'Make default' }).click();
+      await expect(page.locator('.themes-sidebar h2')).toHaveText('Themes', { timeout: 15_000 });
+      await deleteThemeViaBrowser(page, slug);
     }
     await page.goto('/people');
     await expect(page.locator('html')).toHaveAttribute('data-theme', originalDefault);

@@ -1,0 +1,36 @@
+{
+  "testRunHistory": [
+    {
+      "timestamp": "2026-08-01T19:18:12.257Z",
+      "success": false,
+      "summary": {
+        "total": 6,
+        "passed": 4,
+        "failed": 1,
+        "skipped": 1
+      },
+      "failedTests": [
+        {
+          "testName": "Themes › themes_set_default_theme",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveAttribute\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('html')\nExpected: \u001b[32m\"classic\"\u001b[39m\nReceived: \u001b[31m\"spectestdefault-1785611850447\"\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveAttribute\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('html')\u001b[22m\n\u001b[2m    9 × locator resolved to <html lang=\"en\" dir=\"ltr\" data-file-browser-ready=\"1\" data-select-placeholder=\"Select…\" data-select-search=\"Type to search…\" data-select-no-results=\"No results found\" data-theme=\"spectestdefault-1785611850447\">…</html>\u001b[22m\n\u001b[2m      - unexpected value \"spectestdefault-1785611850447\"\u001b[22m\n"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-08-01T19:28:14.723Z",
+      "success": false,
+      "summary": {
+        "total": 6,
+        "passed": 4,
+        "failed": 1,
+        "skipped": 1
+      },
+      "failedTests": [
+        {
+          "testName": "Themes › themes_set_default_theme",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveAttribute\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('html')\nExpected: \u001b[32m\"classic\"\u001b[39m\nReceived: \u001b[31m\"spectestdefault-1785611850447\"\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveAttribute\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('html')\u001b[22m\n\u001b[2m    9 × locator resolved to <html lang=\"en\" dir=\"ltr\" data-file-browser-ready=\"1\" data-select-placeholder=\"Select…\" data-select-search=\"Type to search…\" data-select-no-results=\"No results found\" data-theme=\"spectestdefault-1785611850447\">…</html>\u001b[22m\n\u001b[2m      - unexpected value \"spectestdefault-1785611850447\"\u001b[22m\n"
+        }
+      ]
+    }
+  ]
+}

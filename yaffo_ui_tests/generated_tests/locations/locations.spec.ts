@@ -40,6 +40,10 @@ async function waitForMapRender(page: Page): Promise<void> {
   }));
 }
 
+async function csrfToken(page: Page): Promise<string> {
+  return page.evaluate(() => (window as any).APP_CONFIG.csrfToken as string);
+}
+
 async function featureCounts(page: Page): Promise<MapCounts> {
   return page.evaluate(() => {
     const api = (window as any).PHOTO_ORGANIZER.locations.map;
@@ -197,24 +201,33 @@ async function mockReverseGeocode(page: Page, name: string): Promise<void> {
   }));
 }
 
+/**
+ * Post JSON to a server endpoint with the CSRF token from the page.
+ * page.request.post bypasses security.js's fetch wrapper, so the
+ * X-CSRF-Token header must be added explicitly.
+ */
+async function apiPost(page: Page, url: string, data: Record<string, unknown>): Promise<{ ok: boolean; status: number }> {
+  const token = await csrfToken(page);
+  const response = await page.request.post(url, {
+    data,
+    headers: { 'X-CSRF-Token': token },
+    failOnStatusCode: false,
+  });
+  return { ok: response.ok(), status: response.status() };
+}
+
 async function clearAllLocationNames(page: Page): Promise<void> {
   await openMap(page);
   const ids = await allFeatureIds(page);
-  const response = await page.request.post('/locations/bulk-update', {
-    data: { media_item_ids: ids, clear: true },
-    failOnStatusCode: false,
-  });
-  expect(response.ok()).toBe(true);
+  const response = await apiPost(page, '/locations/bulk-update', { media_item_ids: ids, clear: true });
+  expect(response.ok, `clearAllLocationNames failed with status ${response.status}`).toBe(true);
 }
 
 async function assignAllLocationNames(page: Page, name: string): Promise<void> {
   await openMap(page);
   const ids = await allFeatureIds(page);
-  const response = await page.request.post('/locations/bulk-update', {
-    data: { media_item_ids: ids, location_name: name },
-    failOnStatusCode: false,
-  });
-  expect(response.ok()).toBe(true);
+  const response = await apiPost(page, '/locations/bulk-update', { media_item_ids: ids, location_name: name });
+  expect(response.ok, `assignAllLocationNames failed with status ${response.status}`).toBe(true);
 }
 
 test.describe('Locations Map', () => {
@@ -322,6 +335,12 @@ test.describe('Locations Map', () => {
       api.map.renderSync();
     }, multiCluster!.ids);
 
+    // Wait for the selection-panel CSS transition (0.3s) and the map flex
+    // transition (0.3s) to complete so the map settles at its new size
+    // before we compute pixel coordinates for clickCluster.
+    await page.waitForTimeout(500);
+    await waitForMapRender(page);
+
     const partial = (await clusterSummaries(page)).find(cluster =>
       cluster.ids.length === multiCluster!.ids.length && cluster.ids.every(id => multiCluster!.ids.includes(id)));
     expect(partial).toBeTruthy();
@@ -345,9 +364,7 @@ test.describe('Locations Map', () => {
     await clearAllLocationNames(page);
     await openMap(page);
     const ids = await allFeatureIds(page);
-    await page.request.post('/locations/bulk-update', {
-      data: { media_item_ids: [ids[0]], location_name: 'Named Filter Fixture' },
-    });
+    await apiPost(page, '/locations/bulk-update', { media_item_ids: [ids[0]], location_name: 'Named Filter Fixture' });
     await openMap(page);
 
     await clickFirstCluster(page);
@@ -498,11 +515,11 @@ test.describe('Locations Map', () => {
     const selectedChicagoId = await featureIdByImageName(page, SELECTED_CHICAGO_IMAGE);
     expect(selectedChicagoId).not.toBe(namedChicagoId);
 
-    const assignResponse = await page.request.post('/locations/bulk-update', {
-      data: { media_item_ids: [namedChicagoId], location_name: CHICAGO_LOCATION_NAME },
-      failOnStatusCode: false,
+    const assignResponse = await apiPost(page, '/locations/bulk-update', {
+      media_item_ids: [namedChicagoId],
+      location_name: CHICAGO_LOCATION_NAME,
     });
-    expect(assignResponse.ok()).toBe(true);
+    expect(assignResponse.ok, `assign Chicago name failed with status ${assignResponse.status}`).toBe(true);
 
     let reverseGeocodeCalls = 0;
     await page.route('**/locations/reverse-geocode', route => {

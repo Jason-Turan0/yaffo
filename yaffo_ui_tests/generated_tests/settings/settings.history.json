@@ -1,0 +1,36 @@
+{
+  "testRunHistory": [
+    {
+      "timestamp": "2026-08-01T19:17:54.727Z",
+      "success": false,
+      "summary": {
+        "total": 7,
+        "passed": 1,
+        "failed": 1,
+        "skipped": 5
+      },
+      "failedTests": [
+        {
+          "testName": "Settings › settings_remove_media_directory",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-08-01T19:19:07.070Z",
+      "success": false,
+      "summary": {
+        "total": 7,
+        "passed": 1,
+        "failed": 1,
+        "skipped": 5
+      },
+      "failedTests": [
+        {
+          "testName": "Settings › settings_remove_media_directory",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m"
+        }
+      ]
+    }
+  ]
+}
