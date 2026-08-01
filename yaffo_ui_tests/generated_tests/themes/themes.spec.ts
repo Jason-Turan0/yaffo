@@ -45,8 +45,20 @@ async function createTheme(page: Page, label: string): Promise<string> {
   return slug;
 }
 
+// Delete a custom theme through the API, including the CSRF token that the
+// server requires for unsafe requests.  The sandbox runs with CSRF protection
+// enabled; raw `page.request.post` does not go through the browser's fetch
+// interceptor (security.js) that normally attaches the token, so we must
+// extract it from the page and pass it ourselves.
 async function deleteThemeViaApi(page: Page, slug: string): Promise<void> {
-  await page.request.post(`/themes/${slug}/delete`).catch(() => {});
+  try {
+    const csrfToken: string = await page.evaluate(() => (window as any).APP_CONFIG.csrfToken);
+    await page.request.post(`/themes/${slug}/delete`, {
+      headers: { 'X-CSRF-Token': csrfToken },
+    });
+  } catch {
+    // Best-effort cleanup – ignore failures.
+  }
 }
 
 // Inject a READY working draft into a custom theme's ApplicationSettings row —
@@ -72,6 +84,9 @@ test.describe('Themes', () => {
     const baseURL = process.env.BASE_URL || 'http://127.0.0.1:5001';
     const context = await browser.newContext({ baseURL });
     const page = await context.newPage();
+    // Navigate first so the page has window.APP_CONFIG.csrfToken available for
+    // deleteThemeViaApi (which extracts it via page.evaluate).
+    await page.goto('/themes');
     for (const slug of createdSlugs.values()) {
       await deleteThemeViaApi(page, slug);
     }
@@ -205,7 +220,13 @@ test.describe('Themes', () => {
       await page.goto('/people');
       await expect(page.locator('html')).toHaveAttribute('data-theme', slug);
     } finally {
-      await page.request.post(`/themes/${originalDefault}/default`);
+      // Restore the original default via the API.  The server requires a CSRF
+      // token for unsafe requests; extract it from the page (set by base.html)
+      // because page.request.post bypasses the browser fetch interceptor.
+      const csrfToken: string = await page.evaluate(() => (window as any).APP_CONFIG.csrfToken);
+      await page.request.post(`/themes/${originalDefault}/default`, {
+        headers: { 'X-CSRF-Token': csrfToken },
+      });
       await deleteThemeViaApi(page, slug);
     }
     await page.goto('/people');

@@ -1,0 +1,8 @@
+{
+  "classification": "test_code_defect",
+  "reasoning": "The `sharing_device_delete` server endpoint returns a 204 with `HX-Redirect: /sharing/settings`. When the test clicks the Delete button and then accepts the confirm dialog, HTMX sends the POST and receives the redirect header. HTMX immediately initiates a client-side navigation to `/sharing/settings`. But the test — without waiting for this navigation to complete — calls `page.goto('/sharing/settings')` on line 561. Two concurrent navigations to the same URL cause `net::ERR_ABORTED`. The test needs to wait for the HTMX-initiated redirect to land (`page.waitForURL`) rather than issuing its own competing navigation. The Revoke button (above it) does NOT trigger a redirect — it uses `hx-target`/`hx-swap` to re-render in-place — so only the Delete step has this race.",
+  "affectedTests": [
+    "Sharing Feature › sharing_revoke_a_device - Revoking a device cuts it off and it can then be deleted"
+  ],
+  "suggestedAction": "Replace `await page.goto('/sharing/settings')` on line 561 with `await page.waitForURL('**/sharing/settings')` so the test waits for the HTMX `HX-Redirect` to complete instead of racing it with its own navigation."
+}
