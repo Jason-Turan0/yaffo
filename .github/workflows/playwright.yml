@@ -140,6 +140,12 @@ jobs:
     needs: [validate-specs, list-specs, seed-cache]
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Job-level permissions replace the top-level block wholesale, so
+    # contents: read has to be restated. checks: write lets test-reporter
+    # publish the per-spec check run.
+    permissions:
+      contents: read
+      checks: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.list-specs.outputs.matrix) }}
@@ -172,6 +178,19 @@ jobs:
         working-directory: yaffo_ui_tests
         run: npx playwright install --with-deps chromium
 
+      - name: Install and enable bubblewrap
+        # The specs are AI-generated, so they run confined (TEST_SANDBOX=bwrap):
+        # read-only filesystem outside tmp and reports. ubuntu-latest is 24.04,
+        # which ships kernel.apparmor_restrict_unprivileged_userns=1 and would
+        # otherwise deny bwrap's uid_map write on every spawn.
+        run: |
+          sudo apt-get update && sudo apt-get install -y bubblewrap
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          bwrap --ro-bind / / --dev /dev --proc /proc --unshare-pid --die-with-parent true
+          echo "bubblewrap can create user namespaces"
+
       - name: Restore seed cache
         uses: actions/cache/restore@v4
         with:
@@ -185,6 +204,15 @@ jobs:
           SUITE: ${{ matrix.id }}
           BASE_URL: http://127.0.0.1:5002
           PEER_URL: ${{ matrix.peer == 'true' && 'http://127.0.0.1:5003' || '' }}
+          # Run the specs inside bubblewrap. Pinned rather than auto-detected so
+          # a runner image without a working bwrap fails loudly instead of
+          # quietly running generated code unconfined.
+          TEST_SANDBOX: bwrap
+          # A CLI --reporter drops the config's reporter options, so name the
+          # html and junit output paths explicitly (relative to yaffo_ui_tests).
+          # Both land under reports/, which is writable inside the sandbox.
+          PLAYWRIGHT_HTML_OUTPUT_DIR: reports/${{ matrix.id }}/html
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: reports/${{ matrix.id }}/junit.xml
         run: |
           mkdir -p reports
           PEER_FLAG=""
@@ -219,7 +247,33 @@ jobs:
             curl -fsS "$url" >/dev/null
           done
 
-          npx playwright test "${{ matrix.spec }}" --project=${{ matrix.project }}
+          # Via the runner, not `npx playwright test` directly: the runner is
+          # what applies the OS sandbox and the env scrub. It derives the
+          # project from the spec path the same way the matrix does, appends a
+          # result table to the job summary, and the `github` reporter turns
+          # each failure into an inline annotation on the PR diff — so a red
+          # build is readable without downloading the report artifact.
+          npx tsx lib/services/run_playwright_tests.ts --reporter "json,html,list,github,junit" --title "${{ matrix.id }}" "${{ matrix.spec }}"
+
+      # Publishes a browsable per-test check run (the CodeBuild "test report"
+      # equivalent). Pinned to the commit behind v3.0.0 rather than a mutable
+      # tag: this job restores the seed cache and runs generated code, so a
+      # retagged third-party action must not silently change under it.
+      - name: Publish test report
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
+        if: ${{ !cancelled() }}
+        # A fork PR gets a read-only token and cannot create check runs; the
+        # job summary and artifact still cover that case, so never fail here.
+        continue-on-error: true
+        with:
+          name: Tests (${{ matrix.id }})
+          path: yaffo_ui_tests/reports/${{ matrix.id }}/junit.xml
+          reporter: java-junit
+          # The run step already failed the job on a red test; this step exists
+          # to publish, not to re-fail. fail-on-empty likewise: a crash before
+          # any test ran is already reported by the step that crashed.
+          fail-on-error: false
+          fail-on-empty: false
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

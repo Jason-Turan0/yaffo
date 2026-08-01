@@ -55,6 +55,8 @@ export interface HealResult {
     apiCalls?: number;
     /** Token counts behind `costUsd`, broken out by kind. */
     tokenUsage?: SessionTokenUsage;
+    /** The Playwright run the spec ended on, published as the CI test report. */
+    finalTestRun?: TestRunResult;
 }
 
 export const DEFAULT_MAX_HEAL_ITERATIONS = 50;
@@ -65,6 +67,7 @@ export class AutoHealTestOrchestrator {
     private maxEnvironmentRetries = 3;
     private toolProviderMap: Map<string, { tool: RawToolDefinition; toolProvider: ToolProvider }> = new Map();
     private featureName: string = "";
+    private lastTestRun?: TestRunResult;
 
     constructor(
         private absoluteTestFilePath: string,
@@ -101,7 +104,17 @@ export class AutoHealTestOrchestrator {
     /** Token counts across the model API calls made so far. */
     getTokenUsage = (): SessionTokenUsage => this.modelClient.getSessionTokens();
 
+    /**
+     * The most recent Playwright run for this spec — the initial failures if
+     * triage declined to heal, otherwise the last verification run. This is the
+     * state the tests ended in, which is what CI publishes as a test report.
+     */
+    getLastTestRun = (): TestRunResult | undefined => this.lastTestRun;
+
     healTest = async (testFailures: TestRunResult, specPath: string): Promise<HealResult> => {
+        // Baseline: if triage declines to heal, these failures are the final
+        // state and the only thing there is to report.
+        this.lastTestRun = testFailures;
         try {
             const testCode = readFileSync(this.absoluteTestFilePath, "utf-8");
             const spec = parseSpecFile(specPath);
@@ -579,7 +592,8 @@ export class AutoHealTestOrchestrator {
 
     private runPlaywrightTest = async (filePath: string): Promise<TestRunResult> => {
         console.log(`\n🔍 Running healed playwright test...`);
-        return await this.playwrightTestRunner(this.baseUrl, [filePath]);
+        this.lastTestRun = await this.playwrightTestRunner(this.baseUrl, [filePath]);
+        return this.lastTestRun;
     };
 
     private recordAnalysisResult = (analysisResult: HealAnalysisResponse) => {

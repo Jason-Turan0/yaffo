@@ -14,7 +14,7 @@ import "dotenv/config";
 import {join, basename, dirname, relative, resolve} from "path";
 import {existsSync, mkdirSync, readdirSync, statSync, writeFileSync} from "fs";
 import {autoHealTestOrchestratorFactory, DEFAULT_MAX_HEAL_ITERATIONS, HealResult} from "@lib/test_generator/auto_heal_orchestrator";
-import {runPlaywrightTests} from "@lib/services/run_playwright_tests";
+import {formatTestResultsAsJUnit, runPlaywrightTests} from "@lib/services/run_playwright_tests";
 import {generateTimestampString} from "@lib/test_generator/utils";
 import {startIsolatedEnvironment, IsolatedEnvironment} from "@lib/services/isolated_runner";
 import {defaultModel, isKnownModel, KNOWN_MODEL_ALIASES} from "@lib/model_clients/model_client_factory";
@@ -154,6 +154,7 @@ export async function healTest(
                     testFilePath: absoluteTestPath,
                     logPath,
                     iterations: 0,
+                    finalTestRun: initialResult,
                 });
                 continue;
             }
@@ -181,6 +182,7 @@ export async function healTest(
                 costUsd: healer.getCost(),
                 apiCalls: healer.getApiCallCount(),
                 tokenUsage: healer.getTokenUsage(),
+                finalTestRun: healer.getLastTestRun() ?? initialResult,
             });
         }
 
@@ -206,6 +208,8 @@ async function main() {
     const preseeded = args.includes("--preseeded");
     const assessmentIndex = args.findIndex(a => a === "--assessment-out");
     const assessmentOut = assessmentIndex !== -1 ? args[assessmentIndex + 1] : undefined;
+    const junitIndex = args.findIndex(a => a === "--junit-out");
+    const junitOut = junitIndex !== -1 ? args[junitIndex + 1] : undefined;
     const maxIterationsIndex = args.findIndex(a => a === "--max-iterations");
     const maxIterations = maxIterationsIndex !== -1 && args[maxIterationsIndex + 1]
         ? parseInt(args[maxIterationsIndex + 1], 10)
@@ -216,6 +220,7 @@ async function main() {
         (portIndex === -1 || i !== portIndex + 1) &&
         (modelIndex === -1 || i !== modelIndex + 1) &&
         (assessmentIndex === -1 || i !== assessmentIndex + 1) &&
+        (junitIndex === -1 || i !== junitIndex + 1) &&
         (maxIterationsIndex === -1 || i !== maxIterationsIndex + 1)
     );
 
@@ -227,6 +232,7 @@ async function main() {
         console.error("  -m, --model <model> Model alias (default: MODEL_ALIAS env var, else claude-sonnet-5)");
         console.error("  --preseeded         Serve the restored seed cache instead of re-seeding");
         console.error("  --assessment-out <dir>  Write one machine-readable assessment JSON per test file");
+        console.error("  --junit-out <dir>       Write one JUnit XML per test file (post-heal state, for CI reporting)");
         console.error("  --max-iterations <n>    Model-turn budget per test file (default: HEAL_MAX_ITERATIONS env var, else 50)");
         console.error("");
         process.exit(1);
@@ -279,6 +285,20 @@ async function main() {
                 triage_analysis: result.triageAnalysis ?? null,
             }, null, 2) + "\n");
             console.log(`   Assessment written to ${outPath}`);
+        }
+    }
+
+    // One JUnit report per test file, holding the run the spec ended on — the
+    // healer re-runs each spec many times, so Playwright's own junit reporter
+    // would leave only the last iteration of the last file behind.
+    if (junitOut) {
+        mkdirSync(junitOut, {recursive: true});
+        for (const result of results) {
+            if (!result.finalTestRun) continue;
+            const testName = basename(result.testFilePath, ".spec.ts");
+            const outPath = join(junitOut, `${testName}.xml`);
+            writeFileSync(outPath, formatTestResultsAsJUnit(result.finalTestRun, testName));
+            console.log(`   JUnit report written to ${outPath}`);
         }
     }
 

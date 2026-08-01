@@ -111,6 +111,11 @@ jobs:
     if: ${{ needs.discover.outputs.has_failures == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Narrower than the workflow default: this job only reads the repo and
+    # publishes a check run. checks: write is what test-reporter needs.
+    permissions:
+      contents: read
+      checks: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
@@ -195,9 +200,10 @@ jobs:
           # One healer run per YAML spec: it re-runs every generated test file
           # for the feature against a shared environment and heals the failures
           # serially, writing one assessment JSON per test file.
-          mkdir -p reports/assessments
+          mkdir -p reports/assessments reports/junit
           npx tsx lib/test_generator/heal_test.ts "${{ matrix.spec }}" $PRESEEDED_FLAG \
-            --model "$MODEL_ALIAS" --assessment-out reports/assessments || true
+            --model "$MODEL_ALIAS" --assessment-out reports/assessments \
+            --junit-out reports/junit || true
 
       - name: Publish assessments to job summary
         if: ${{ always() }}
@@ -268,12 +274,42 @@ jobs:
             | "\n**Job total:** $\(.cost * 10000 | round / 10000) over \(.calls) API call(s), \(.tokens) tokens\n"' \
             "${files[@]}" >> "$GITHUB_STEP_SUMMARY"
 
+      # Per-test detail for the state each spec ended in, browsable as a check
+      # run instead of only readable by downloading an artifact. Same pin as
+      # playwright.yml — the commit behind v3.0.0, not a mutable tag.
+      - name: Publish post-heal test report
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
+        if: ${{ always() }}
+        # Publishing must never fail the heal (which is best-effort anyway, note
+        # the `|| true` on the heal step itself).
+        continue-on-error: true
+        with:
+          name: Post-heal tests (${{ matrix.id }})
+          path: yaffo_ui_tests/reports/junit/*.xml
+          reporter: java-junit
+          # A spec the healer could not fix is expected to be red here; that is
+          # reported through the assessment, not by failing this step. Empty is
+          # normal too — the healer may have died before any run completed.
+          fail-on-error: false
+          fail-on-empty: false
+
+      # Kept to exactly the assessments directory: open-pr globs this artifact's
+      # contents, so its layout must not gain a nesting level.
       - name: Upload assessments
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: heal-assessment-${{ matrix.id }}
           path: yaffo_ui_tests/reports/assessments/
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Upload post-heal JUnit reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: heal-junit-${{ matrix.id }}
+          path: yaffo_ui_tests/reports/junit/
           if-no-files-found: ignore
           retention-days: 90
 
