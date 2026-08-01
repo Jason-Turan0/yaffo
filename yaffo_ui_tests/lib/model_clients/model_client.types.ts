@@ -24,6 +24,16 @@ export interface CacheUsage {
     sessionOutputTokens: number;
 }
 
+/** Token counts accumulated across every API call a client has made. */
+export interface SessionTokenUsage {
+    inputTokens: number;
+    outputTokens: number;
+    cacheWriteTokens: number;
+    cacheReadTokens: number;
+    /** Sum of the four counts above. */
+    totalTokens: number;
+}
+
 export interface ModelPricing {
     inputPerMillion: number;
     outputPerMillion: number;

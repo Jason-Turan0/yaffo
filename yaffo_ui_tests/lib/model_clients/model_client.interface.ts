@@ -5,7 +5,7 @@ import {
 } from "ai";
 import type {LanguageModelUsage, FinishReason} from "ai";
 import type {z} from "zod";
-import {ToolCall} from "@lib/model_clients/model_client.types";
+import {SessionTokenUsage, ToolCall} from "@lib/model_clients/model_client.types";
 import {AssistantModelMessage, TextPart, ToolResultPart} from "@ai-sdk/provider-utils";
 
 export type {
@@ -106,6 +106,9 @@ export interface ModelClient {
 
     /** Estimated USD cost of every call this client has made so far. */
     getSessionCost(): number;
+
+    /** Token counts accumulated over every call this client has made so far. */
+    getSessionTokens(): SessionTokenUsage;
 
     /** Number of API calls made so far. */
     getApiCallCount(): number;

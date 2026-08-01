@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-import fs from 'node:fs';
 import path from 'node:path';
+import { copyPhotoWithUniqueMarker, findAnyPhotoIn, removeTempFile } from '../_support/sandbox-fs';
 
 const UNIQ = Date.now();
 const SPEC_FILE_STEM = `spec-index-${UNIQ}`;
@@ -22,14 +22,9 @@ async function readMediaDir(page: Page): Promise<string> {
   return dir;
 }
 
-function findAnyPhoto(dir: string): string {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true, recursive: true })) {
-    if (entry.isFile() && /\.(jpe?g|png|heic)$/i.test(entry.name)) {
-      return path.join(entry.parentPath ?? (entry as { path?: string }).path ?? dir, entry.name);
-    }
-  }
-  throw new Error(`No supported photo found under ${dir}`);
-}
+// Photo discovery goes through the reviewed _support helper (generated tests
+// may not touch fs directly).
+const findAnyPhoto = findAnyPhotoIn;
 
 async function openIndexPhotos(page: Page): Promise<void> {
   await page.goto('/utilities/index-photos');
@@ -83,7 +78,7 @@ test.describe('Index Photos', () => {
   test.afterAll(() => {
     // If a test failed mid-flight, remove the dropped file so the next full sync
     // returns the sandbox to baseline.
-    if (copiedFile && fs.existsSync(copiedFile)) fs.unlinkSync(copiedFile);
+    removeTempFile(copiedFile);
   });
 
   test('index_photos_scan_shows_stats', async ({ page }) => {
@@ -118,8 +113,7 @@ test.describe('Index Photos', () => {
     const source = findAnyPhoto(mediaDir);
     copiedFilename = `${SPEC_FILE_STEM}${path.extname(source).toLowerCase()}`;
     copiedFile = path.join(mediaDir, copiedFilename);
-    fs.copyFileSync(source, copiedFile);
-    fs.appendFileSync(copiedFile, Buffer.from(`spec-${UNIQ}`));
+    copyPhotoWithUniqueMarker(source, copiedFile, `spec-${UNIQ}`);
 
     // The scan reports the new file as unindexed and shows it in the results table.
     await openIndexPhotos(page);
@@ -136,7 +130,7 @@ test.describe('Index Photos', () => {
 
     // Now delete the file from disk: the next scan reports the database row as
     // orphaned with its reason, and syncing clears it.
-    fs.unlinkSync(copiedFile);
+    removeTempFile(copiedFile);
     copiedFile = null;
     await openIndexPhotos(page);
     await waitForScanDone(page);

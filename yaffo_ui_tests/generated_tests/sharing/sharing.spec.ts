@@ -1,7 +1,7 @@
 import { test, expect, Page, BrowserContext, Locator } from '@playwright/test';
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { listFilesRecursive, listSubdirectories, resetTempDir } from '../_support/sandbox-fs';
 
 // Two-instance suite: `page` (Playwright's fixture, BASE_URL) is instance A —
 // the seeded library that GRANTS shares; `pageB` (created per test against
@@ -37,16 +37,9 @@ const SHARED_TRIP_PHOTOS = [
 let idA = '';
 let idB = '';
 
-function walkFiles(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-  const results: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) results.push(...walkFiles(full));
-    else results.push(full);
-  }
-  return results;
-}
+// Recursive file listing via the reviewed _support helper (generated tests may
+// not touch fs directly).
+const walkFiles = listFilesRecursive;
 
 // The global toast (static/notification.js): one div.notification that gains
 // `visible` plus a type class, then hides itself after a few seconds.
@@ -288,8 +281,7 @@ test.describe('Sharing Feature', () => {
 
     // Restore/set B's download directory (spec cleanup) — to a path this suite
     // controls, so later tests can assert on the pulled files
-    rmSync(DOWNLOAD_DIR, { recursive: true, force: true });
-    mkdirSync(DOWNLOAD_DIR, { recursive: true });
+    resetTempDir(DOWNLOAD_DIR);
     await notice.locator('a', { hasText: 'Set download directory' }).click();
     await pageB.locator('#shared-download-dir').fill(DOWNLOAD_DIR);
     await pageB.locator('.share-download-dir-form button[type="submit"]').click();
@@ -332,7 +324,7 @@ test.describe('Sharing Feature', () => {
       expect(name).not.toBeNull();
       expect(pulledFiles.some((file) => file.endsWith(`/${name}`)), `${name} under ${DOWNLOAD_DIR}`).toBe(true);
     }
-    const deviceFolders = readdirSync(DOWNLOAD_DIR).filter((entry) => statSync(join(DOWNLOAD_DIR, entry)).isDirectory());
+    const deviceFolders = listSubdirectories(DOWNLOAD_DIR);
     expect(deviceFolders.length).toBeGreaterThan(0);
   });
 

@@ -1,7 +1,5 @@
 import { test, expect, Page, Locator } from '@playwright/test';
-import { execFileSync } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
+import { buildDuplicateImageCorpus, countEntriesIn, removeTempDirs } from '../_support/sandbox-fs';
 
 const UNIQ = Date.now();
 const GROUP_COUNT = 12; // > page size (10) so pagination is exercised
@@ -26,26 +24,10 @@ async function sandboxRoot(page: Page): Promise<string> {
 // GROUP_COUNT pairs of identical files. Duplicate detection groups by exact
 // perceptual hash (imagehash.phash), so each group's source must be VISUALLY
 // distinct — copies of one image with different bytes appended all land in a
-// single group. Generate per-group random-noise JPEGs with the server venv's
-// Python/PIL (same interpreter the isolated environment runs on).
+// single group. The _support helper copies GROUP_COUNT distinct test_data
+// photographs into the scan dir, each twice (real photos have distinct phashes).
 function buildDuplicateCorpus(): void {
-  fs.mkdirSync(scanDir, { recursive: true });
-  fs.mkdirSync(destDir, { recursive: true });
-  const venvPython = path.resolve('..', 'venv', 'bin', 'python');
-  const script = [
-    'import random, sys',
-    'from PIL import Image',
-    'outdir, n = sys.argv[1], int(sys.argv[2])',
-    'for g in range(n):',
-    '    random.seed(g * 9973 + 7)',
-    '    img = Image.new("RGB", (64, 64))',
-    '    img.putdata([(random.randrange(256), random.randrange(256), random.randrange(256)) for _ in range(64 * 64)])',
-    '    img.save(f"{outdir}/dup-{g}-a.jpg", quality=95)',
-  ].join('\n');
-  execFileSync(venvPython, ['-c', script, scanDir, String(GROUP_COUNT)]);
-  for (let group = 0; group < GROUP_COUNT; group += 1) {
-    fs.copyFileSync(path.join(scanDir, `dup-${group}-a.jpg`), path.join(scanDir, `dup-${group}-b.jpg`));
-  }
+  buildDuplicateImageCorpus(scanDir, destDir, GROUP_COUNT);
 }
 
 function headerStat(page: Page, label: string): Locator {
@@ -67,9 +49,7 @@ async function pickSearchableOption(page: Page, selectSelector: string, optionTe
 
 test.describe('Remove Duplicates', () => {
   test.afterAll(() => {
-    for (const dir of [scanDir, destDir]) {
-      if (dir && fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
-    }
+    removeTempDirs(scanDir, destDir);
   });
 
   test('remove_duplicates_scan_finds_groups', async ({ page }) => {
@@ -211,8 +191,8 @@ test.describe('Remove Duplicates', () => {
 
     // The marked copies land in the destination folder; one copy per group stays.
     await expect(async () => {
-      expect(fs.readdirSync(destDir)).toHaveLength(GROUP_COUNT);
-      expect(fs.readdirSync(scanDir)).toHaveLength(GROUP_COUNT);
+      expect(countEntriesIn(destDir)).toBe(GROUP_COUNT);
+      expect(countEntriesIn(scanDir)).toBe(GROUP_COUNT);
     }).toPass({ timeout: 120_000, intervals: [2_000] });
   });
 });

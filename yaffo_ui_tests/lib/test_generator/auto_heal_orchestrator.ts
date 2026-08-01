@@ -12,6 +12,7 @@ import {
     HealAnalysisResponse
 } from "@lib/model_clients/model_client.response.types";
 import {parseJsonResponse, GeneratedTestResponseSchema} from "@lib/test_generator/prompt/json_parser";
+import {auditGeneratedCode} from "@lib/test_generator/code_safety";
 import {TypeScriptValidator, DefaultTypeScriptValidator} from "@lib/services/typescript_validator";
 import {createModelClient, supportsNativeStructuredOutput} from "@lib/model_clients/model_client_factory";
 import {zodToJsonSchema} from "zod-to-json-schema";
@@ -26,6 +27,7 @@ import {
     toTextPart,
     toToolResultPart
 } from "@lib/model_clients/model_client.interface";
+import {SessionTokenUsage} from "@lib/model_clients/model_client.types";
 import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesystem_memory_tool";
 import {runPlaywrightTests, PlaywrightTestRunner} from "@lib/services/run_playwright_tests";
 import {loadTestResultHistory, recordTestResult} from "@lib/test_generator/test_result_history";
@@ -40,10 +42,19 @@ export interface HealResult {
     error?: string;
     iterations: number;
     classification?: FailureClassification;
+    /**
+     * The triage the model produced before healing — the same payload written to
+     * <feature>.triage_analysis.json. Carried on the result so the published
+     * assessments (job summary, PR body, regression issues) can report the
+     * reasoning and suggested action, not just the classification.
+     */
+    triageAnalysis?: HealAnalysisResponse;
     /** Estimated USD spent on model API calls for this heal. */
     costUsd?: number;
     /** Number of model API calls made. */
     apiCalls?: number;
+    /** Token counts behind `costUsd`, broken out by kind. */
+    tokenUsage?: SessionTokenUsage;
 }
 
 export const DEFAULT_MAX_HEAL_ITERATIONS = 50;
@@ -87,6 +98,9 @@ export class AutoHealTestOrchestrator {
     /** Number of model API calls made so far. */
     getApiCallCount = (): number => this.modelClient.getApiCallCount();
 
+    /** Token counts across the model API calls made so far. */
+    getTokenUsage = (): SessionTokenUsage => this.modelClient.getSessionTokens();
+
     healTest = async (testFailures: TestRunResult, specPath: string): Promise<HealResult> => {
         try {
             const testCode = readFileSync(this.absoluteTestFilePath, "utf-8");
@@ -123,6 +137,7 @@ export class AutoHealTestOrchestrator {
                         logPath: this.runLogDir,
                         iterations: this.iterationCount,
                         classification: analysisResult.classification,
+                        triageAnalysis: analysisResult,
                     };
                 }
             }
@@ -141,12 +156,17 @@ export class AutoHealTestOrchestrator {
                     logPath: this.runLogDir,
                     iterations: this.iterationCount,
                     classification: "test_code_defect",
+                    triageAnalysis: analysisResult ?? undefined,
                 };
             }
 
             const result = await this.validateHealedCode(generatedJson);
             recordTestResult(this.outputDir, this.featureName, testFailures);
-            return {...result, classification: analysisResult?.classification ?? "test_code_defect"};
+            return {
+                ...result,
+                classification: analysisResult?.classification ?? "test_code_defect",
+                triageAnalysis: analysisResult ?? undefined,
+            };
         } finally {
             for (const toolProvider of this.toolProviders) {
                 await toolProvider.disconnect();
@@ -339,6 +359,29 @@ export class AutoHealTestOrchestrator {
                 continue;
             }
 
+            // Audit the generated code while it is still data — before it
+            // touches disk or runs. Violations loop back to the model like
+            // schema errors do.
+            const auditViolations = auditGeneratedCode(parsedResponse.files[0]?.code || "", {
+                filePath: this.absoluteTestFilePath,
+            });
+            if (auditViolations.length > 0) {
+                retryCount++;
+                this.addCodeAuditErrorMessage(auditViolations);
+                const correctedJson = await this.generateHealedCode();
+                if (!correctedJson) {
+                    return {
+                        success: false,
+                        testFilePath: this.absoluteTestFilePath,
+                        error: `Generated code failed the safety audit: ${auditViolations.join("; ")}`,
+                        logPath: this.runLogDir,
+                        iterations: this.iterationCount,
+                    };
+                }
+                currentJson = correctedJson;
+                continue;
+            }
+
             const writtenPath = this.writeHealedFile(parsedResponse);
             const typeErrors = this.typeCheckFile(writtenPath);
 
@@ -394,6 +437,23 @@ export class AutoHealTestOrchestrator {
             logPath: this.runLogDir,
             iterations: this.iterationCount,
         };
+    };
+
+    private addCodeAuditErrorMessage = (violations: string[]): void => {
+        violations.forEach(v => console.log(`   ⛔ ${v}`));
+        const auditFixPrompt = [
+            "<code_safety_audit>",
+            "    <status>failed</status>",
+            "    <violations>",
+            ...violations.map(v => `        <violation>${v}</violation>`),
+            "    </violations>",
+            "</code_safety_audit>",
+            "",
+            "<instructions>The generated test code was rejected by a static safety audit.",
+            "Rewrite the fix without the flagged imports/constructs — tests interact with the",
+            "application through Playwright APIs, not through Node system modules.</instructions>",
+        ].join("\n");
+        this.modelClient.addUserMessage([toTextPart(auditFixPrompt)]);
     };
 
     private addSchemaErrorMessage = (schemaErrors: string[], currentJson: string): void => {
@@ -523,7 +583,11 @@ export class AutoHealTestOrchestrator {
     };
 
     private recordAnalysisResult = (analysisResult: HealAnalysisResponse) => {
-        const savePath = join(this.outputDir, `${this.featureName}.triage_analysis.json`);
+        // Named after the spec file, not the feature: a feature directory can
+        // hold several spec files and the healer runs them one at a time, so a
+        // feature-keyed name would leave only the last spec's triage on disk.
+        const specName = basename(this.absoluteTestFilePath, ".spec.ts");
+        const savePath = join(this.outputDir, `${specName}.triage_analysis.json`);
         try {
             writeFileSync(savePath, JSON.stringify(analysisResult, null, 2));
         } catch (e) {

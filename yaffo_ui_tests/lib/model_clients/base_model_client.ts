@@ -12,7 +12,13 @@ import {
     ModelMessage, UserMessage, UserToolMessage, ModelAlias,
 } from "@lib/model_clients/model_client.interface";
 import {RawToolDefinition} from "@lib/tool_providers/toolprovider.types";
-import {ApiLogEntry, CacheUsage, CostEstimate, MODEL_PRICING} from "@lib/model_clients/model_client.types";
+import {
+    ApiLogEntry,
+    CacheUsage,
+    CostEstimate,
+    MODEL_PRICING,
+    SessionTokenUsage
+} from "@lib/model_clients/model_client.types";
 import _ from 'lodash';
 
 export function convertRawToolsToSdkTools(rawTools: RawToolDefinition[]): Record<string, Tool> {
@@ -132,6 +138,18 @@ export abstract class BaseModelClient implements ModelClient {
 
     public getApiCallCount(): number {
         return this.apiCallCount;
+    }
+
+    /** Cumulative token counts across every call this client has made. */
+    public getSessionTokens(): SessionTokenUsage {
+        return {
+            inputTokens: this.sessionInputTokens,
+            outputTokens: this.sessionOutputTokens,
+            cacheWriteTokens: this.sessionCacheCreationInputTokens,
+            cacheReadTokens: this.sessionCacheReadInputTokens,
+            totalTokens: this.sessionInputTokens + this.sessionOutputTokens
+                + this.sessionCacheCreationInputTokens + this.sessionCacheReadInputTokens,
+        };
     }
 
     /** Cumulative estimated USD cost from the accumulated session token counts. */

@@ -1,0 +1,12 @@
+{
+  "classification": "test_code_defect",
+  "reasoning": "The test uses Playwright's APIRequestContext (the 'request' fixture) to make POST API calls like `request.post('/api/people/create', ...)` and `request.post('/api/faces/assign', ...)`. The application has CSRF protection enabled via `security.py`'s `@app.before_request protect_unsafe_request`, which blocks all non-safe HTTP methods (POST, PUT, DELETE) unless a valid `X-CSRF-Token` header or `csrf_token` form field is present. The browser's `static/security.js` intercepts `window.fetch()` and automatically injects the `X-CSRF-Token` header from `window.APP_CONFIG.csrfToken`, but Playwright's `APIRequestContext` bypasses the browser entirely and does not include any CSRF token. This causes every API POST to return 403 instead of 201. The face_assignment test suite (`face-assignment.spec.ts`) correctly avoids this by using `page.evaluate()` with `fetch()` for all API calls, which routes through `security.js`'s interceptor. The failure is 100% reproducible across all 3 test runs (identical error at the same line). This is not an application regression (CSRF protection is working as designed) and not an environment issue (the app is correctly configured).",
+  "affectedTests": [
+    "People › people_list_displays_all_people",
+    "People › people_can_add_new_person",
+    "People › people_can_edit_person",
+    "People › people_can_delete_person",
+    "People › people_can_view_and_remove_faces"
+  ],
+  "suggestedAction": "Rewrite createPersonViaApi and assignFaceToPersonViaApi to accept Page instead of APIRequestContext and use page.evaluate() with fetch() (following the pattern in face-assignment.spec.ts). Replace all inline request.post(...) cleanup calls with page.evaluate()-based fetch calls. Remove the APIRequestContext import and the request fixture from test function signatures."
+}

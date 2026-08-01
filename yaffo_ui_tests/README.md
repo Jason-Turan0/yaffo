@@ -126,7 +126,7 @@ yaffo_ui_tests/
 │   │   ├── face-assignment.spec.ts
 │   │   ├── {SPEC}.json     # Generation metadata
 │   │   ├── {SPEC}.history.json  # Test run history
-│   │   ├── {SPEC}.triage_analysis.json  # Analysis from test failure analysis
+│   │   ├── face-assignment.triage_analysis.json  # Failure triage, one per spec file
 │   │   └── memories/               # AI investigation notes
 ├── lib/                             # Framework library code
 │   ├── test_generator/

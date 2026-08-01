@@ -1,6 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { execFileSync } from 'node:child_process';
-import path from 'node:path';
+import { injectReadyThemeDraft } from '../_support/theme-draft';
 
 const UNIQ = Date.now();
 const CREATE_LABEL = `SpecTestTheme-${UNIQ}`;
@@ -51,28 +50,12 @@ async function deleteThemeViaApi(page: Page, slug: string): Promise<void> {
 }
 
 // Inject a READY working draft into a custom theme's ApplicationSettings row —
-// exactly the state a finished generation leaves — using the server venv's
-// Python (the DB is WAL-mode SQLite shared with the local Flask process). The
-// sandbox has no AI key, so this is the only way to reach the publish/discard UI.
+// exactly the state a finished generation leaves. The sandbox has no AI key,
+// so this is the only way to reach the publish/discard UI. The privileged DB
+// write lives in the reviewed _support helper (generated tests may not run
+// subprocesses themselves).
 function injectThemeDraft(slug: string, marker: string): void {
-  const venvPython = path.resolve('..', 'venv', 'bin', 'python');
-  const script = [
-    'import json, sqlite3, sys',
-    'db_path, slug, marker = sys.argv[1], sys.argv[2], sys.argv[3]',
-    'conn = sqlite3.connect(db_path, timeout=30)',
-    'name = f"custom_theme:{slug}"',
-    'row = conn.execute("SELECT value FROM application_settings WHERE name = ?", (name,)).fetchone()',
-    'theme = json.loads(row[0])',
-    'theme["status"] = "READY"',
-    'theme["working_theme"] = {',
-    '    "tokens_css": f"[data-theme=\\"{slug}\\"] {{\\n    --color-bg: {marker};\\n}}\\n",',
-    '    "skin_css": "", "favicon_svg": "", "placeholder_svg": "",',
-    '}',
-    'conn.execute("UPDATE application_settings SET value = ? WHERE name = ?", (json.dumps(theme), name))',
-    'conn.commit()',
-    'conn.close()',
-  ].join('\n');
-  execFileSync(venvPython, ['-c', script, sandboxDbPath, slug, marker]);
+  injectReadyThemeDraft(sandboxDbPath, slug, marker);
 }
 
 async function publishedTokensCss(page: Page, slug: string): Promise<string> {

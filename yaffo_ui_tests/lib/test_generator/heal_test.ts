@@ -176,7 +176,12 @@ export async function healTest(
                 maxIterations
             );
             const healResult = await healer.healTest(initialResult, specPath);
-            results.push({...healResult, costUsd: healer.getCost(), apiCalls: healer.getApiCallCount()});
+            results.push({
+                ...healResult,
+                costUsd: healer.getCost(),
+                apiCalls: healer.getApiCallCount(),
+                tokenUsage: healer.getTokenUsage(),
+            });
         }
 
         return results;
@@ -261,8 +266,17 @@ async function main() {
                 iterations: result.iterations,
                 cost_usd: result.costUsd ?? null,
                 api_calls: result.apiCalls ?? null,
+                // Token counts behind cost_usd. Cost is an estimate from
+                // MODEL_PRICING, so publish the raw counts alongside it —
+                // they stay meaningful if the price table drifts.
+                tokens: result.tokenUsage ?? null,
                 error: result.error ?? null,
                 logPath: result.logPath,
+                // The full triage the model wrote to <feature>.triage_analysis.json.
+                // Inlined here (rather than left as a sibling file) so the job
+                // summary, PR body and regression issues can quote the reasoning
+                // and suggested action without re-reading generated_tests/.
+                triage_analysis: result.triageAnalysis ?? null,
             }, null, 2) + "\n");
             console.log(`   Assessment written to ${outPath}`);
         }

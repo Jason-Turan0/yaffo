@@ -1,7 +1,12 @@
 import {defineConfig, devices} from '@playwright/test';
 import dotenv from 'dotenv';
 
-dotenv.config();
+// The heal/generation runners spawn this process with a scrubbed env allowlist
+// and set SKIP_DOTENV so .env (which holds provider API keys) is not re-loaded
+// into the process that executes model-generated test code.
+if (!process.env.SKIP_DOTENV) {
+    dotenv.config();
+}
 
 const baseURL = process.env.BASE_URL || 'http://127.0.0.1:5001';
 
@@ -31,6 +36,11 @@ export default defineConfig({
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',
+        // Under bubblewrap Chromium can't create its own nested sandbox
+        // namespaces; bwrap is the outer sandbox instead. (The runner sets
+        // TEST_SANDBOX to the sandbox it actually resolved — macOS runs under
+        // sandbox-exec, where Seatbelt profiles do nest, so it keeps its own.)
+        ...(process.env.TEST_SANDBOX === 'bwrap' ? {launchOptions: {chromiumSandbox: false}} : {}),
     },
 
     outputDir: `reports/${suite}/artifacts`,

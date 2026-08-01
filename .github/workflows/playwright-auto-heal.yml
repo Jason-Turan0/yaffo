@@ -119,6 +119,9 @@ jobs:
         with:
           ref: ${{ env.HEAD_SHA }}
           token: ${{ secrets.AUTO_HEAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          # The heal job never pushes; don't leave the token in .git/config
+          # where generated test code could read it.
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
@@ -132,7 +135,8 @@ jobs:
           cache-dependency-path: yaffo_ui_tests/package-lock.json
 
       - name: Install system libraries
-        run: sudo apt-get update && sudo apt-get install -y libgl1 libglib2.0-0
+        # bubblewrap sandboxes the generated-test execution (TEST_SANDBOX=bwrap).
+        run: sudo apt-get update && sudo apt-get install -y libgl1 libglib2.0-0 bubblewrap
       - name: Install Python dependencies
         run: |
           python -m venv venv
@@ -169,6 +173,10 @@ jobs:
           MODEL_ALIAS: ${{ env.MODEL_ALIAS }}
           # Optional repo/org variable; empty falls back to the healer's default (50).
           HEAL_MAX_ITERATIONS: ${{ vars.HEAL_MAX_ITERATIONS }}
+          # The runner auto-detects a sandbox per platform (bwrap on Linux,
+          # sandbox-exec on macOS); pinning it here makes CI fail loudly if
+          # bubblewrap is missing rather than run generated code unwrapped.
+          TEST_SANDBOX: bwrap
         run: |
           # One healer run per YAML spec: it re-runs every generated test file
           # for the feature against a shared environment and heals the failures
@@ -195,6 +203,20 @@ jobs:
             classification=$(jq -r '.classification' "$F")
             iterations=$(jq -r '.iterations' "$F")
             error=$(jq -r '.error // ""' "$F")
+            # Spend for this spec. cost_usd is an estimate from MODEL_PRICING,
+            # so report the token counts that produced it alongside.
+            api_calls=$(jq -r '.api_calls // ""' "$F")
+            cost_raw=$(jq -r '.cost_usd // ""' "$F")
+            cost=""
+            [ -n "$cost_raw" ] && cost=$(printf '$%.4f' "$cost_raw")
+            tokens=$(jq -r 'if .tokens == null then "" else
+              "\(.tokens.totalTokens) total — \(.tokens.inputTokens) in / \(.tokens.outputTokens) out / \(.tokens.cacheReadTokens) cache read / \(.tokens.cacheWriteTokens) cache write"
+              end' "$F")
+            # The triage the model produced before healing (assessment field
+            # triage_analysis, mirrored in generated_tests/*/*.triage_analysis.json).
+            reasoning=$(jq -r '.triage_analysis.reasoning // ""' "$F")
+            suggested=$(jq -r '.triage_analysis.suggestedAction // ""' "$F")
+            affected=$(jq -r '(.triage_analysis.affectedTests // []) | map("- `" + . + "`") | join("\n")' "$F")
             if [ "$success" = "true" ]; then outcome="✅ healed"; else outcome="❌ not healed"; fi
             {
               echo "## Auto-heal: $spec"
@@ -202,10 +224,32 @@ jobs:
               echo "- **Outcome:** $outcome"
               echo "- **Classification:** \`$classification\`"
               echo "- **Iterations:** $iterations"
+              [ -n "$cost" ] && echo "- **Estimated cost:** $cost over ${api_calls:-?} API call(s)"
+              [ -n "$tokens" ] && echo "- **Tokens:** $tokens"
               [ -n "$error" ] && echo "- **Assessment:** $error"
               echo "- **Logs:** download the \`heal-logs-${{ matrix.id }}\` artifact"
+              if [ -n "$reasoning" ] || [ -n "$suggested" ] || [ -n "$affected" ]; then
+                echo ""
+                echo "<details><summary>Triage analysis</summary>"
+                echo ""
+                [ -n "$reasoning" ] && { echo "**Reasoning:** $reasoning"; echo ""; }
+                [ -n "$affected" ] && { echo "**Affected tests:**"; echo ""; echo "$affected"; echo ""; }
+                [ -n "$suggested" ] && { echo "**Suggested action:** $suggested"; echo ""; }
+                echo "</details>"
+                # A raw-HTML block runs to the next blank line; without this the
+                # following spec's "## Auto-heal" heading is swallowed into it.
+                echo ""
+              fi
             } >> "$GITHUB_STEP_SUMMARY"
           done
+          # What this job spent in total (a feature can hold several spec files).
+          jq -s -r '{
+              cost: (map(.cost_usd // 0) | add),
+              calls: (map(.api_calls // 0) | add),
+              tokens: (map(.tokens.totalTokens // 0) | add)
+            }
+            | "\n**Job total:** $\(.cost * 10000 | round / 10000) over \(.calls) API call(s), \(.tokens) tokens\n"' \
+            "${files[@]}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload assessments
         if: ${{ always() }}
@@ -306,15 +350,25 @@ jobs:
             [ "$(jq -r '.classification' "$f")" = "application_regression" ] || continue
             spec=$(jq -r '.spec' "$f")
             reason=$(jq -r '.error // "See auto-heal logs."' "$f")
+            # Triage detail from <feature>.triage_analysis.json, inlined into the
+            # assessment — the reasoning and repro surface are what a human needs
+            # to act on the bug, so put them in the issue rather than an artifact.
+            reasoning=$(jq -r '.triage_analysis.reasoning // ""' "$f")
+            suggested=$(jq -r '.triage_analysis.suggestedAction // ""' "$f")
+            affected=$(jq -r '(.triage_analysis.affectedTests // []) | map("- `" + . + "`") | join("\n")' "$f")
             title="Auto-heal: application regression in ${spec}"
             # Idempotent: skip if an open issue with this title already exists.
             if [ -n "$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number')" ]; then
               echo "Issue already open for ${spec}"
               continue
             fi
-            body=$(printf '%s\n\n%s\n\n%s\n' \
+            body=$(printf '%s\n\n%s\n' \
               "The auto-healer classified \`${spec}\` as an application regression (the test looks correct; the app has a real bug)." \
-              "**Assessment:** ${reason}" \
+              "**Assessment:** ${reason}")
+            [ -n "$reasoning" ] && body=$(printf '%s\n\n### Triage analysis\n\n%s\n' "$body" "$reasoning")
+            [ -n "$affected" ] && body=$(printf '%s\n\n**Affected tests:**\n\n%s\n' "$body" "$affected")
+            [ -n "$suggested" ] && body=$(printf '%s\n\n**Suggested action:** %s\n' "$body" "$suggested")
+            body=$(printf '%s\n\n%s\n' "$body" \
               "From Playwright run ${RUN_ID}. See the \`heal-logs-*\` artifacts for the full triage.")
             gh issue create --title "$title" --body "$body" --label "auto-heal,bug" \
               || gh issue create --title "$title" --body "$body" \
@@ -341,20 +395,65 @@ jobs:
             exit 0
           fi
 
-          # Build the PR body from the per-spec assessments.
+          # Build the PR body from the per-spec assessments. Collected once:
+          # `jq -s` with no file arguments would block on stdin, so every use
+          # below is guarded on this array being non-empty.
+          assessment_files=(assessments/**/*.json)
           BODY_FILE=$(mktemp)
           {
             echo "Auto-generated fixes for failed Playwright spec files from workflow run ${RUN_ID}."
             echo ""
-            echo "| Spec | Outcome | Classification | Iterations |"
-            echo "| --- | --- | --- | --- |"
-            for f in assessments/**/*.json; do
+            echo "| Spec | Outcome | Classification | Iterations | Est. cost | Tokens | API calls |"
+            echo "| --- | --- | --- | --- | ---: | ---: | ---: |"
+            for f in "${assessment_files[@]}"; do
               spec=$(jq -r '.spec' "$f")
               iterations=$(jq -r '.iterations' "$f")
               classification=$(jq -r '.classification' "$f")
+              cost=$(jq -r 'if .cost_usd == null then "—" else "$\(.cost_usd * 10000 | round / 10000)" end' "$f")
+              tokens=$(jq -r '.tokens.totalTokens // "—"' "$f")
+              calls=$(jq -r '.api_calls // "—"' "$f")
               if [ "$(jq -r '.success' "$f")" = "true" ]; then outcome="✅ healed"; else outcome="❌ not healed"; fi
-              echo "| \`$spec\` | $outcome | \`$classification\` | $iterations |"
+              echo "| \`$spec\` | $outcome | \`$classification\` | $iterations | $cost | $tokens | $calls |"
             done
+            # Run-level spend, summed over every feature job's assessments.
+            if [ ${#assessment_files[@]} -gt 0 ]; then
+              jq -s -r '{
+                  cost: ((map(.cost_usd // 0) | add) // 0),
+                  calls: ((map(.api_calls // 0) | add) // 0),
+                  input: ((map(.tokens.inputTokens // 0) | add) // 0),
+                  output: ((map(.tokens.outputTokens // 0) | add) // 0),
+                  cacheRead: ((map(.tokens.cacheReadTokens // 0) | add) // 0),
+                  cacheWrite: ((map(.tokens.cacheWriteTokens // 0) | add) // 0),
+                  tokens: ((map(.tokens.totalTokens // 0) | add) // 0)
+                }
+                | "| **Total** | | | | **$\(.cost * 10000 | round / 10000)** | **\(.tokens)** | **\(.calls)** |",
+                  "",
+                  "_Token split: \(.input) in / \(.output) out / \(.cacheRead) cache read / \(.cacheWrite) cache write. Cost is estimated from the model price table at run time._"' \
+                "${assessment_files[@]}"
+            fi
+            echo ""
+            # Why each spec was changed: the triage_analysis the healer wrote
+            # before editing. Collapsed per spec so the table stays readable.
+            echo "## Triage analysis"
+            echo ""
+            any_triage=0
+            for f in "${assessment_files[@]}"; do
+              [ "$(jq -r 'has("triage_analysis") and .triage_analysis != null' "$f")" = "true" ] || continue
+              any_triage=1
+              spec=$(jq -r '.spec' "$f")
+              classification=$(jq -r '.triage_analysis.classification // .classification' "$f")
+              reasoning=$(jq -r '.triage_analysis.reasoning // ""' "$f")
+              suggested=$(jq -r '.triage_analysis.suggestedAction // ""' "$f")
+              affected=$(jq -r '(.triage_analysis.affectedTests // []) | map("- `" + . + "`") | join("\n")' "$f")
+              echo "<details><summary><code>${spec}</code> — <code>${classification}</code></summary>"
+              echo ""
+              [ -n "$reasoning" ] && { echo "**Reasoning:** $reasoning"; echo ""; }
+              [ -n "$affected" ] && { echo "**Affected tests:**"; echo ""; echo "$affected"; echo ""; }
+              [ -n "$suggested" ] && { echo "**Suggested action:** $suggested"; echo ""; }
+              echo "</details>"
+              echo ""
+            done
+            [ "$any_triage" -eq 0 ] && echo "_No triage analysis recorded (every spec was already passing)._"
             echo ""
             echo "_Per-spec triage logs are in the \`heal-logs-*\` artifacts of run ${RUN_ID}._"
           } > "$BODY_FILE"

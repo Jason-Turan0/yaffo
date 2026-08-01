@@ -1,8 +1,9 @@
 import {join, resolve} from "path";
 import {tmpdir} from "os";
 import {spawn} from "child_process";
-import fs, {existsSync, readFileSync, rmSync} from "fs";
+import {existsSync, mkdirSync, readFileSync, realpathSync, rmSync} from "fs";
 import {TestResult, TestRunResult} from "@lib/services/isolated_runner";
+import {detectSandboxKind, wrapWithSandbox, writableRootsFor} from "@lib/services/test_sandbox";
 
 const UI_TESTS_DIR = resolve(process.cwd());
 const GENERATED_TESTS_DIR = resolve(join(UI_TESTS_DIR, 'generated_tests'));
@@ -211,14 +212,46 @@ export const runPlaywrightTests = async (
         args.push(...testFiles);
     }
 
-    const env = {
-        ...process.env,
-        BASE_URL: baseUrl,
-        PLAYWRIGHT_JSON_OUTPUT_NAME: jsonReportPath,
-    };
+    // The spawned process runs model-generated test code, so pass an explicit
+    // env allowlist instead of inheriting process.env — provider API keys and
+    // CI credentials must never reach it. SKIP_DOTENV stops playwright.config
+    // from re-loading .env (and the keys in it) inside the test process.
+    const SPAWN_ENV_ALLOWLIST = [
+        "PATH", "HOME", "SHELL", "TMPDIR", "USER", "LOGNAME", "LANG", "LC_ALL", "TERM",
+        "CI", "SUITE", "PEER_URL", "TEST_SANDBOX", "PLAYWRIGHT_BROWSERS_PATH",
+    ];
+    const env: NodeJS.ProcessEnv = {};
+    for (const key of SPAWN_ENV_ALLOWLIST) {
+        if (process.env[key] !== undefined) env[key] = process.env[key];
+    }
+    env.BASE_URL = baseUrl;
+    env.PLAYWRIGHT_JSON_OUTPUT_NAME = jsonReportPath;
+    env.SKIP_DOTENV = "1";
+
+    // Wrap the run in whatever OS sandbox this platform offers (bwrap on Linux,
+    // sandbox-exec on macOS): filesystem read-only except the paths tests
+    // legitimately write. Network stays shared so tests can reach the sandbox
+    // app on host loopback — egress is covered by the env scrub + code audit
+    // rather than the sandbox. TEST_SANDBOX overrides the detection.
+    const sandboxKind = detectSandboxKind();
+    // Playwright writes into reports/ from the first moment; the dir has to
+    // exist before it can be made writable inside the sandbox.
+    mkdirSync(join(UI_TESTS_DIR, "reports"), {recursive: true});
+    const writableRoots = writableRootsFor(UI_TESTS_DIR, {tempRoot: realpathSync(tmpdir())});
+    // Pass the resolved kind down so playwright.config.ts knows whether
+    // Chromium can still create its own nested sandbox.
+    env.TEST_SANDBOX = sandboxKind;
+    console.log(`   sandbox: ${sandboxKind}`);
+
+    const [command, commandArgs] = wrapWithSandbox({
+        kind: sandboxKind,
+        command: "npx",
+        args,
+        writableRoots,
+    });
 
     return new Promise((resolve) => {
-        const testProcess = spawn("npx", args, {
+        const testProcess = spawn(command, commandArgs, {
             env,
             cwd: UI_TESTS_DIR,
             stdio: ["ignore", "pipe", "pipe"],
