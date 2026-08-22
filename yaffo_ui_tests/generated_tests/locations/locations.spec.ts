@@ -197,24 +197,34 @@ async function mockReverseGeocode(page: Page, name: string): Promise<void> {
   }));
 }
 
+/** Post a bulk-update to the server using the browser's own fetch so the
+ *  Content-Type and body serialisation match what the server expects. */
+async function bulkUpdate(
+  page: Page,
+  body: { media_item_ids: number[]; location_name?: string; clear?: boolean },
+): Promise<boolean> {
+  return page.evaluate(async (payload) => {
+    const response = await fetch('/locations/bulk-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return response.ok;
+  }, body);
+}
+
 async function clearAllLocationNames(page: Page): Promise<void> {
   await openMap(page);
   const ids = await allFeatureIds(page);
-  const response = await page.request.post('/locations/bulk-update', {
-    data: { media_item_ids: ids, clear: true },
-    failOnStatusCode: false,
-  });
-  expect(response.ok()).toBe(true);
+  const ok = await bulkUpdate(page, { media_item_ids: ids, clear: true });
+  expect(ok, 'Failed to clear all location names via bulk-update').toBe(true);
 }
 
 async function assignAllLocationNames(page: Page, name: string): Promise<void> {
   await openMap(page);
   const ids = await allFeatureIds(page);
-  const response = await page.request.post('/locations/bulk-update', {
-    data: { media_item_ids: ids, location_name: name },
-    failOnStatusCode: false,
-  });
-  expect(response.ok()).toBe(true);
+  const ok = await bulkUpdate(page, { media_item_ids: ids, location_name: name });
+  expect(ok, `Failed to assign "${name}" to all photos via bulk-update`).toBe(true);
 }
 
 test.describe('Locations Map', () => {
@@ -322,6 +332,13 @@ test.describe('Locations Map', () => {
       api.map.renderSync();
     }, multiCluster!.ids);
 
+    // Wait for the CSS transition on the selection panel and map to complete
+    // before reading pixel coordinates. The panel opens with a 300 ms
+    // transition (.selection-panel.active, #map { transition: flex 0.3s ease })
+    // and clusterSummaries reads getPixelFromCoordinate whose output depends on
+    // the current map viewport size.
+    await page.waitForTimeout(400);
+
     const partial = (await clusterSummaries(page)).find(cluster =>
       cluster.ids.length === multiCluster!.ids.length && cluster.ids.every(id => multiCluster!.ids.includes(id)));
     expect(partial).toBeTruthy();
@@ -345,9 +362,7 @@ test.describe('Locations Map', () => {
     await clearAllLocationNames(page);
     await openMap(page);
     const ids = await allFeatureIds(page);
-    await page.request.post('/locations/bulk-update', {
-      data: { media_item_ids: [ids[0]], location_name: 'Named Filter Fixture' },
-    });
+    await bulkUpdate(page, { media_item_ids: [ids[0]], location_name: 'Named Filter Fixture' });
     await openMap(page);
 
     await clickFirstCluster(page);
@@ -498,11 +513,8 @@ test.describe('Locations Map', () => {
     const selectedChicagoId = await featureIdByImageName(page, SELECTED_CHICAGO_IMAGE);
     expect(selectedChicagoId).not.toBe(namedChicagoId);
 
-    const assignResponse = await page.request.post('/locations/bulk-update', {
-      data: { media_item_ids: [namedChicagoId], location_name: CHICAGO_LOCATION_NAME },
-      failOnStatusCode: false,
-    });
-    expect(assignResponse.ok()).toBe(true);
+    const ok = await bulkUpdate(page, { media_item_ids: [namedChicagoId], location_name: CHICAGO_LOCATION_NAME });
+    expect(ok, 'Failed to assign nearby Chicago name').toBe(true);
 
     let reverseGeocodeCalls = 0;
     await page.route('**/locations/reverse-geocode', route => {
