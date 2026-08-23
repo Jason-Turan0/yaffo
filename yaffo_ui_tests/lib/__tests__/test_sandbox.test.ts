@@ -96,8 +96,9 @@ describe("wrapWithSandbox", () => {
 });
 
 describe("probeSandbox", () => {
-    // `bwrap` is on PATH on the CI runner, so the probe is what distinguishes
-    // "installed" from "actually able to create a user namespace".
+    // Treat the binary as installed so these unit tests exercise the process probe
+    // independently of the tools present on the machine running Jest.
+    const onPath = () => true;
     const fakeRun = (status: number, stderr = "") =>
         ((): {status: number; stderr: string} => ({status, stderr})) as never;
 
@@ -105,13 +106,28 @@ describe("probeSandbox", () => {
 
     it("reports ok when the sandbox runs `true` successfully", () => {
         const kind = platform() === "darwin" ? "sandbox-exec" : "bwrap";
-        expect(probeSandbox(kind, fakeRun(0))).toEqual({ok: true});
+        expect(probeSandbox(kind, fakeRun(0), onPath)).toEqual({ok: true});
     });
 
     it("surfaces the sandbox's own stderr when it cannot start", () => {
         const kind = platform() === "darwin" ? "sandbox-exec" : "bwrap";
-        expect(probeSandbox(kind, fakeRun(1, "bwrap: setting up uid map: Permission denied\n")))
+        expect(probeSandbox(kind, fakeRun(1, "bwrap: setting up uid map: Permission denied\n"), onPath))
             .toEqual({ok: false, error: "bwrap: setting up uid map: Permission denied"});
+    });
+
+    it("reports a missing sandbox binary before trying to run it", () => {
+        const kind = platform() === "darwin" ? "sandbox-exec" : "bwrap";
+        let calls = 0;
+        const counting = ((): {status: number; stderr: string} => {
+            calls++;
+            return {status: 0, stderr: ""};
+        }) as never;
+
+        expect(probeSandbox(kind, counting, () => false)).toEqual({
+            ok: false,
+            error: `"${kind}" is not on PATH`,
+        });
+        expect(calls).toBe(0);
     });
 
     it("caches the verdict so a heal does not re-probe on every test run", () => {
@@ -121,8 +137,8 @@ describe("probeSandbox", () => {
             calls++;
             return {status: 0, stderr: ""};
         }) as never;
-        probeSandbox(kind, counting);
-        probeSandbox(kind, counting);
+        probeSandbox(kind, counting, onPath);
+        probeSandbox(kind, counting, onPath);
         expect(calls).toBe(1);
     });
 });
