@@ -42,7 +42,7 @@ Common filters include:
 - **Favorites:** show only favorited media.
 - **Media Type:** show photos only or videos only.
 
-Click **Apply Search** to update the gallery.
+Click **Apply Filters** to update the gallery.
 
 ## Match Any or All
 
