@@ -1,3 +1,4 @@
+import {existsSync, mkdirSync, readdirSync, rmSync} from "fs";
 import {join, resolve} from "path";
 
 /**
@@ -36,6 +37,23 @@ export const GUIDE_DIR = resolve(
 export const STAGING_DIR = resolve(
     process.env.DOCS_STAGING_DIR || join(process.cwd(), ".doc-staging"));
 
+/**
+ * Where captures land. A subdirectory of staging, because a capture run **empties**
+ * this directory before it starts, and it must only ever delete its own output.
+ *
+ * It used to be `STAGING_DIR` itself, which also holds `generate-logs/` and
+ * `heal-logs/`. The capture gate therefore deleted the run's own log directory
+ * mid-flight, and the next API call died with
+ * `ENOENT: ... .doc-staging/generate-logs/1_gemini_api.json`.
+ *
+ * `DOCS_CAPTURE_DIR` overrides it directly, and is what the container is given. It has
+ * to be its own variable rather than reusing `DOCS_STAGING_DIR`: passing the capture
+ * path as the staging path makes this line append `captures` to it a second time, and
+ * the container then writes to `captures/captures/` while the host reads `captures/`.
+ */
+export const CAPTURE_DIR = resolve(
+    process.env.DOCS_CAPTURE_DIR || join(STAGING_DIR, "captures"));
+
 /** The sandbox to drive. Its own variable because BASE_URL is overloaded in this repo. */
 export const BASE_URL = process.env.DOCS_BASE_URL || "http://127.0.0.1:5002";
 
@@ -45,3 +63,45 @@ export const splitPage = (page: string): [string, string] =>
 
 /** A page's folder under the content tree. */
 export const pageDir = (page: string): string => join(CONTENT_DIR, ...splitPage(page));
+
+/**
+ * How many past runs of each kind to keep. Enough to compare a failure against the run
+ * before it; bounded because each run writes every request and response in full.
+ */
+const KEEP_RUNS = 20;
+
+/**
+ * A fresh log directory for this run, under `generate-logs/` or `heal-logs/`.
+ *
+ * Per-run rather than shared, because `apiCallCount` restarts at zero every run: with
+ * one flat directory, a rerun silently overwrote the previous run's `0_*.json`,
+ * `1_*.json` and so on. Two people reading "call 9" were then looking at different
+ * runs through the same filename — which happened, mid-investigation, and cost real
+ * time before anyone noticed the logs had been swapped underneath them.
+ *
+ * The name sorts chronologically as a string, so `ls` is oldest-first and the newest
+ * run is the last line.
+ */
+export const newRunLogDir = (kind: "generate-logs" | "heal-logs"): string => {
+    const root = join(STAGING_DIR, kind);
+    mkdirSync(root, {recursive: true});
+    pruneRunLogs(root);
+
+    // 2026-08-23T07-41-57-805Z — ISO order, no colons, safe on every filesystem.
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const dir = join(root, stamp);
+    mkdirSync(dir, {recursive: true});
+    return dir;
+};
+
+/** Drop the oldest runs, keeping the most recent KEEP_RUNS. */
+const pruneRunLogs = (root: string): void => {
+    if (!existsSync(root)) return;
+    const runs = readdirSync(root, {withFileTypes: true})
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort();                                  // Timestamps sort chronologically.
+    for (const stale of runs.slice(0, Math.max(0, runs.length - KEEP_RUNS + 1))) {
+        rmSync(join(root, stale), {recursive: true, force: true});
+    }
+};

@@ -18,9 +18,20 @@ describe("runToolLoop on an empty final answer", () => {
     // Regression: a DeepSeek generate turn spent all 16000 output tokens on hidden
     // reasoning and returned "". That reached the caller as "response was not JSON",
     // which points at the prompt rather than at the output budget.
-    it("blames the output budget, not the JSON", async () => {
-        await expect(runToolLoop(fakeClient([{text: ""}]), [])).rejects.toThrow(
-            /returned no text.*setMaxOutputTokens/s);
+    it("blames the output budget when the budget ran out", async () => {
+        await expect(runToolLoop(fakeClient([{text: "", finishReason: "length"}]), []))
+            .rejects.toThrow(/returned no text.*setMaxOutputTokens/s);
+    });
+
+    // Saying "raise the budget" for every empty response sent a retry after the cap for
+    // an answer Gemini had discarded as a malformed function call — the cap was already
+    // correct at 48000 and raising it would have changed nothing.
+    it("does not blame the budget for a failure that is not truncation", async () => {
+        const error: Error = await runToolLoop(
+            fakeClient([{text: "", finishReason: "error"}]), [])
+            .then(() => { throw new Error("expected a rejection"); }, (e: Error) => e);
+        expect(error.message).toContain("finishReason: error");
+        expect(error.message).not.toContain("setMaxOutputTokens");
     });
 
     it("reports the finish reason when the provider gave one", async () => {

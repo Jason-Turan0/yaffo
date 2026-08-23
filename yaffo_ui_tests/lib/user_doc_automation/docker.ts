@@ -11,7 +11,7 @@ const CONTAINER_CWD = `${CONTAINER_REPO}/yaffo_ui_tests`;
  * Staging inside the container. A sibling of the content tree, matching the host — see
  * the note on STAGING_DIR in paths.ts for why it is not a child of it.
  */
-const CONTAINER_STAGING = `${CONTAINER_CWD}/.doc-staging`;
+const CONTAINER_STAGING = `${CONTAINER_CWD}/.doc-staging/captures`;
 
 /**
  * The host address, seen from inside the container. On macOS a container cannot reach
@@ -38,7 +38,12 @@ export const containerBaseUrl = (baseUrl: string): string =>
 export interface CaptureContainerOptions {
     /** Repo root on the host — the parent of yaffo_ui_tests. */
     repoDir: string;
-    /** Staging directory on the host. Bind-mounted writable; everything else is read-only. */
+    /**
+     * Capture output directory on the host. Bind-mounted writable; everything else is
+     * read-only. Deliberately the captures subdirectory rather than all of staging —
+     * a capture empties this before it starts, and the run's API logs are staging's
+     * other occupant.
+     */
     stagingDir: string;
     /** The app to capture, as the *host* addresses it. Rewritten for the container. */
     baseUrl: string;
@@ -88,7 +93,8 @@ export const buildCaptureArgs = (options: CaptureContainerOptions): string[] => 
     ...addHostArgs(),
     // Only what capture needs. Notably absent: every provider key.
     "-e", `DOCS_BASE_URL=${containerBaseUrl(options.baseUrl)}`,
-    "-e", `DOCS_STAGING_DIR=${CONTAINER_STAGING}`,
+    // The capture directory itself, not staging — see CAPTURE_DIR in paths.ts.
+    "-e", `DOCS_CAPTURE_DIR=${CONTAINER_STAGING}`,
     "-e", "SKIP_DOTENV=1",
     // tsx and Chromium both want a writable home; the repo mount is read-only.
     "-e", "HOME=/tmp",

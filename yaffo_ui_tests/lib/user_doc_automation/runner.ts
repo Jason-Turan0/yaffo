@@ -11,6 +11,7 @@ import {toWebp} from "./encode";
 import {createObserver, PAGE_HEADER, RUN_HEADER, takeServerObservation} from "./observe";
 import type {Observation} from "./observe";
 import {mediaIdByFilename} from "./media_lookup";
+import {blockOsSideEffects} from "./side_effects";
 import {settle} from "./settle";
 import type {Walkthrough} from "./types";
 
@@ -107,6 +108,12 @@ const captureOne = async (
     const runId = randomUUID();
     const observer = createObserver(walkthrough.page, baseUrl);
     const context = await browser.newContext({
+        // Relative URLs resolve against this, the same as `playwright.config.ts` does
+        // for generated specs. Without it `page.waitForURL("/")` never matches — the
+        // page really is at "/", but the pattern has nothing to resolve against, and
+        // under a containerized capture the address is `host.docker.internal` anyway.
+        // A walkthrough written in the idiom of the Playwright specs should just work.
+        baseURL: baseUrl,
         // Fixed so a shot never changes because the machine's settings differ.
         deviceScaleFactor: DEVICE_SCALE_FACTOR,
         locale: "en-US",
@@ -117,6 +124,9 @@ const captureOne = async (
         extraHTTPHeaders: {[PAGE_HEADER]: walkthrough.page, [RUN_HEADER]: runId},
     });
     observer.attach(context);
+    // Before any walkthrough code runs: clicking "Open File" would otherwise launch
+    // Preview on the machine running the capture.
+    await blockOsSideEffects(context);
 
     const shots: RawShot[] = [];
     let error: string | undefined;
@@ -167,6 +177,7 @@ const captureOne = async (
                         await page.goto(`${baseUrl}${path}`, {waitUntil: "domcontentloaded"});
                         await settle(page);
                     },
+                    mediaIdByFilename: (filename) => mediaIdByFilename(baseUrl, filename),
                 });
             } finally {
                 await page.close();

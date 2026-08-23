@@ -13,7 +13,7 @@
  * where it runs, not what it does.
  */
 import {scrubProcessEnv} from "./env";
-import {BASE_URL, CONTENT_DIR, STAGING_DIR} from "./paths";
+import {BASE_URL, CAPTURE_DIR, CONTENT_DIR} from "./paths";
 
 
 // Before any walkthrough is imported: walkthroughs are model-generated code, and
@@ -36,7 +36,7 @@ const main = async (): Promise<void> => {
 
     console.log(`Capturing ${walkthroughs.length} walkthrough(s) from ${BASE_URL}`);
     const results = await captureWalkthroughs(walkthroughs, {
-        baseUrl: BASE_URL, stagingDir: STAGING_DIR,
+        baseUrl: BASE_URL, stagingDir: CAPTURE_DIR,
     });
 
     let failed = 0;

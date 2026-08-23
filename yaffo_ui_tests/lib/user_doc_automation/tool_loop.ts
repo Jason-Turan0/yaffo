@@ -36,11 +36,20 @@ export const runToolLoop = async (
                 // thousands of characters, and the full text is already in the API log.
                 // Deliberately reported, not returned — see ModelResponse.reasoningText.
                 const thinking = response.reasoningText?.trim();
+
+                // Only blame the budget when the budget is what ran out. Saying so
+                // unconditionally sent a retry after `setMaxOutputTokens` for a
+                // response that had actually been discarded as a malformed function
+                // call — the cap was set correctly and raising it would change nothing.
+                const truncated = response.finishReason === "length";
+                const advice = truncated
+                    ? " — raise the output budget with setMaxOutputTokens."
+                    : ".";
                 throw new Error(
                     "the model returned no text" +
                     (response.finishReason ? ` (finishReason: ${response.finishReason})` : "") +
                     (reasoning ? `, spending ${reasoning} tokens on reasoning` : "") +
-                    " — raise the output budget with setMaxOutputTokens." +
+                    advice +
                     (thinking ? `\n   last thought before it stopped: …${thinking.slice(-300)}` : ""));
             }
             return response.text;

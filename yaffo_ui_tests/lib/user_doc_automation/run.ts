@@ -23,7 +23,7 @@ import {DOCS_CAPTURE_IMAGE, dockerAvailable, runCaptureContainer, snapshotDocker
 import {existsSync, readFileSync, writeFileSync} from "fs";
 import {join, resolve} from "path";
 import {loadWalkthroughs} from "./load";
-import {BASE_URL, CONTENT_DIR, GUIDE_DIR, STAGING_DIR} from "./paths";
+import {BASE_URL, CAPTURE_DIR, CONTENT_DIR, GUIDE_DIR} from "./paths";
 import {processResults, RAW_FILENAME, runWalkthroughs} from "./runner";
 import type {RawResult, WalkthroughResult} from "./runner";
 
@@ -92,10 +92,10 @@ const main = async (): Promise<void> => {
         // its top-level code, and keeping model-generated code out of this process is
         // most of the reason the container exists.
         console.log(`Capturing in ${DOCS_CAPTURE_IMAGE} against ${BASE_URL}`);
-        console.log(`  staging: ${STAGING_DIR}${promote ? "  (promoting changes)" : ""}\n`);
+        console.log(`  staging: ${CAPTURE_DIR}${promote ? "  (promoting changes)" : ""}\n`);
         const code = runCaptureContainer({
             repoDir: resolve(join(process.cwd(), "..")),
-            stagingDir: STAGING_DIR,
+            stagingDir: CAPTURE_DIR,
             baseUrl: BASE_URL,
             pages: only,
             dockerEnv: DOCKER_ENV,
@@ -104,14 +104,14 @@ const main = async (): Promise<void> => {
 
         // The container wrote these through the shared staging mount, so the host is
         // reading the very same files rather than a copy.
-        const rawPath = join(STAGING_DIR, RAW_FILENAME);
+        const rawPath = join(CAPTURE_DIR, RAW_FILENAME);
         if (!existsSync(rawPath)) {
             console.error(`The container produced no ${RAW_FILENAME}.`);
             process.exit(1);
         }
         const raw = JSON.parse(readFileSync(rawPath, "utf8")) as {results: RawResult[]};
         results = processResults(raw.results, {
-            guideDir: GUIDE_DIR, stagingDir: STAGING_DIR, promote,
+            guideDir: GUIDE_DIR, stagingDir: CAPTURE_DIR, promote,
         });
     } else {
         const walkthroughs = await loadWalkthroughs(CONTENT_DIR, only);
@@ -120,9 +120,9 @@ const main = async (): Promise<void> => {
             process.exit(1);
         }
         console.log(`Running ${walkthroughs.length} walkthrough(s) against ${BASE_URL}`);
-        console.log(`  staging: ${STAGING_DIR}${promote ? "  (promoting changes)" : ""}\n`);
+        console.log(`  staging: ${CAPTURE_DIR}${promote ? "  (promoting changes)" : ""}\n`);
         results = await runWalkthroughs(walkthroughs, {
-            baseUrl: BASE_URL, guideDir: GUIDE_DIR, stagingDir: STAGING_DIR, promote,
+            baseUrl: BASE_URL, guideDir: GUIDE_DIR, stagingDir: CAPTURE_DIR, promote,
         });
     }
 

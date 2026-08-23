@@ -3,7 +3,7 @@ import {addHostArgs, buildCaptureArgs, containerBaseUrl, snapshotDockerEnv,
 import {CAPTURE_ENV_ALLOWLIST} from "../user_doc_automation/env";
 
 const args = (over: Partial<Parameters<typeof buildCaptureArgs>[0]> = {}): string[] =>
-    buildCaptureArgs({repoDir: "/repo", stagingDir: "/repo/yaffo_ui_tests/.doc-staging",
+    buildCaptureArgs({repoDir: "/repo", stagingDir: "/repo/yaffo_ui_tests/.doc-staging/captures",
                       baseUrl: "http://127.0.0.1:5002", ...over});
 
 describe("containerBaseUrl", () => {
@@ -50,7 +50,8 @@ describe("buildCaptureArgs", () => {
         const mounts = args().filter((a, i, all) => all[i - 1] === "-v");
         const writable = mounts.filter((m) => m.includes(":") && !m.endsWith(":ro"));
         expect(writable).toEqual(
-            ["/repo/yaffo_ui_tests/.doc-staging:/app/yaffo_ui_tests/.doc-staging"]);
+            ["/repo/yaffo_ui_tests/.doc-staging/captures:" +
+             "/app/yaffo_ui_tests/.doc-staging/captures"]);
     });
 
     it("masks the host's node_modules, which is built for darwin", () => {

@@ -32,9 +32,9 @@ import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 // The sandbox to drive. Deliberately its own variable: BASE_URL is overloaded in
 // this repo — .env points it at the dev app on :5000 for other tooling, and a docs
 // run against the wrong instance fails in confusing ways.
-import {BASE_URL, CONTENT_DIR, GUIDE_DIR, STAGING_DIR} from "./paths";
+import {BASE_URL, CAPTURE_DIR, CONTENT_DIR, GUIDE_DIR, newRunLogDir, STAGING_DIR} from "./paths";
 
-const REPORT = join(STAGING_DIR, "report.json");
+const REPORT = join(CAPTURE_DIR, "report.json");
 
 const MARK: Record<Triage["classification"], string> = {
     intended_change: "✅",
@@ -134,8 +134,9 @@ const main = async (): Promise<void> => {
         return;
     }
 
-    const runLogDir = join(STAGING_DIR, "heal-logs");
-    mkdirSync(runLogDir, {recursive: true});
+    // Its own directory per run — see newRunLogDir.
+    const runLogDir = newRunLogDir("heal-logs");
+    console.log(`   logs: ${runLogDir}`);
     console.log(`Triaging ${pending.length} changed shot(s)` +
         (proseOnly.length ? `, and ${proseOnly.length} page(s) flagged by renamed controls` : "") + "\n");
 
@@ -160,7 +161,7 @@ const main = async (): Promise<void> => {
     for (const {result, shot} of pending) {
         const evidence = buildEvidence(result, shot, {
             guideDir: GUIDE_DIR,
-            stagingDir: STAGING_DIR,
+            stagingDir: CAPTURE_DIR,
             walkthroughSource: walkthroughSource(result.page),
             walkthroughPath: walkthroughPath(result.page),
             covers: covers(result.page),
@@ -171,7 +172,8 @@ const main = async (): Promise<void> => {
         const [area, name] = [result.page.slice(0, result.page.indexOf("/")),
                               result.page.slice(result.page.indexOf("/") + 1)];
         const memory = apply
-            ? localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name, "memories"))
+            // The factory appends "memories" itself; give it the page directory.
+            ? localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name))
             : undefined;
         const pageProviders = memory ? [...providers, memory] : providers;
 
@@ -210,6 +212,7 @@ const main = async (): Promise<void> => {
                 } else {
                     console.log("   → no edits returned");
                 }
+                if (outcome.attempts > 1) console.log(`   (${outcome.attempts} attempts)`);
                 for (const failure of outcome.failures) {
                     console.error(`   ‼️  ${failure.split("\n")[0]}`);
                 }
@@ -240,7 +243,8 @@ const main = async (): Promise<void> => {
         }
 
         const [area, name] = [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
-        const memory = localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name, "memories"));
+        // The factory appends "memories" itself; give it the page directory.
+        const memory = localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name));
         const evidence = proseEvidence(page, changes);
         try {
             const session = openSession(evidence, {
@@ -252,6 +256,7 @@ const main = async (): Promise<void> => {
             if (outcome.fix?.explanation) console.log(`   → ${outcome.fix.explanation}`);
             for (const file of outcome.written) console.log(`      wrote ${file}`);
             if (!outcome.written.length) console.log("      (no file changes returned)");
+            if (outcome.attempts > 1) console.log(`   (${outcome.attempts} attempts)`);
             for (const failure of outcome.failures) console.error(`   ‼️  ${failure.split("\n")[0]}`);
             if (outcome.reverted) console.error("   → edits reverted; gates failed");
         } catch (e) {

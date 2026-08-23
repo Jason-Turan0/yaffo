@@ -5,6 +5,7 @@ import {z} from "zod";
 import {toTextPart} from "@lib/model_clients/model_client.interface";
 import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import {parseAnswer, runToolLoop} from "./tool_loop";
+import {revertPage, runGates} from "./gates";
 import type {Evidence} from "./evidence";
 import type {Session} from "./triage";
 
@@ -53,6 +54,8 @@ export type Fix = z.infer<typeof FixSchema>;
 
 export interface FixResult {
     fix?: Fix;
+    /** Model turns spent, including the first. 1 means it was right first time. */
+    attempts: number;
     /** Paths actually written. */
     written: string[];
     /** Failed correctness gates. Empty means the change is safe to leave in place. */
@@ -63,6 +66,25 @@ export interface FixResult {
 
 /** Model turns to allow before giving up, so a confused session cannot loop forever. */
 const MAX_TOOL_ROUNDS = 12;
+
+/** How many times to hand gate failures back before giving up, after the first try. */
+export const MAX_FIX_ATTEMPTS = 3;
+
+/**
+ * Ask for a corrected answer, in the same session so the model still has the evidence,
+ * the tools it used, and its own previous attempt in context. The same shape the test
+ * generator uses, and for the same reason: a compiler error is information the model
+ * can act on, not a reason to throw the whole turn away.
+ */
+const buildRetryPrompt = (failures: string[]): string => `
+What you returned did not pass. Fix it and return the complete files again.
+
+${failures.map((failure) => `- ${failure}`).join("\n")}
+
+Return the same JSON shape as before, with every file you want written — whole files,
+not fragments. Change only what these failures require; the rest of your answer was
+accepted.
+`.trim();
 
 const REPO = resolve(join(process.cwd(), ".."));
 
@@ -136,22 +158,14 @@ Return an empty "files" list if nothing needs changing.
 `.trim();
 
 /**
- * Correctness gates. Deliberately not style gates: nothing counts changed lines or
- * checks whether headings moved.
+ * Correctness gates. Now the same set generation runs — see `gates.ts`.
+ *
+ * Healing used to check only that the site built and the walkthrough compiled. It never
+ * executed the walkthrough, so a heal that reframed a shot onto the wrong element
+ * passed cleanly, and the next capture run promoted it.
  */
-const validate = (evidence: Evidence, walkthroughTouched: boolean): string[] => {
-    const failures: string[] = [];
-
-    const docs = run("venv/bin/mkdocs", ["build", "--strict", "--site-dir", "/tmp/docs-fix-check"]);
-    if (!docs.ok) failures.push(`mkdocs build --strict failed:\n${docs.output.slice(-800)}`);
-
-    if (walkthroughTouched) {
-        const types = run("npx", ["tsc", "--noEmit"], join(REPO, "yaffo_ui_tests"));
-        if (!types.ok) failures.push(`walkthrough does not typecheck:\n${types.output.slice(-800)}`);
-    }
-
-    return failures;
-};
+const validate = (evidence: Evidence, options: FixOptions): string[] =>
+    runGates(evidence.page, {useDocker: options.useDocker});
 
 /** The two trees the agent owns. Anything outside them is refused, not clamped. */
 const OWNED = ["docs/guide/", "yaffo_ui_tests/user_doc_automation/"];
@@ -165,8 +179,12 @@ export interface FixOptions {
     toolProviders: ToolProvider[];
     /** The sandbox the agent can inspect while deciding what to write. */
     baseUrl: string;
-    /** Roll the working tree back when a gate fails. */
+    /** Roll the working tree back when a gate fails, after the retries are spent. */
     revertOnFailure?: boolean;
+    /** Overrides MAX_FIX_ATTEMPTS, mainly for tests. */
+    maxFixAttempts?: number;
+    /** Run the verification capture in a container, matching how CI captures. */
+    useDocker?: boolean;
 }
 
 
@@ -225,31 +243,53 @@ export const applyFix = async (
     client.setOutputSchema(FixSchema);
     client.addUserMessage([toTextPart(buildPrompt(evidence, options.baseUrl))]);
 
+    const maxAttempts = (options.maxFixAttempts ?? MAX_FIX_ATTEMPTS) + 1;
     let fix: Fix | undefined;
-    let answerErrors: string[] = [];
-    try {
-        const answer = await runToolLoop(client, options.toolProviders);
-        const parsed = parseAnswer(FixSchema, answer);
-        fix = parsed.value;
-        answerErrors = parsed.errors;
-    } catch (e) {
-        // A session that runs out of turns is a failed fix, not a crash: the gates and
-        // the revert below still have to run.
-        answerErrors = [e instanceof Error ? e.message : String(e)];
-    }
+    let failures: string[] = [];
+    let written: string[] = [];
+    let attempts = 0;
 
-    const failures: string[] = answerErrors.map((e) => `malformed response: ${e}`);
-    const written: string[] = [];
-    for (const file of fix?.files ?? []) {
-        if (!isOwned(file.filename)) {
-            failures.push(`refused to write outside the agent's trees: ${file.filename}`);
-            continue;
+    // Ask, write, check, hand any failure back. Reverting on the first gate failure
+    // discards a turn that has already done all the expensive work — reading the page,
+    // driving the app, deciding what changed — over something the model can usually
+    // correct in one more round.
+    while (attempts < maxAttempts) {
+        attempts++;
+        fix = undefined;
+        let answerErrors: string[] = [];
+        try {
+            const answer = await runToolLoop(client, options.toolProviders);
+            const parsed = parseAnswer(FixSchema, answer);
+            fix = parsed.value;
+            answerErrors = parsed.errors;
+        } catch (e) {
+            // A session that runs out of turns is a failed fix, not a crash: the gates
+            // and the revert below still have to run.
+            answerErrors = [e instanceof Error ? e.message : String(e)];
         }
-        writeFileSync(resolve(REPO, file.filename), file.code);
-        written.push(file.filename);
-    }
 
-    failures.push(...validate(evidence, written.some((f) => f.endsWith(".ts"))));
+        failures = answerErrors.map((e) => `malformed response: ${e}`);
+        written = [];
+        for (const file of fix?.files ?? []) {
+            if (!isOwned(file.filename)) {
+                failures.push(`refused to write outside the agent's trees: ${file.filename}`);
+                continue;
+            }
+            writeFileSync(resolve(REPO, file.filename), file.code);
+            written.push(file.filename);
+        }
+
+        failures.push(...validate(evidence, options));
+
+        if (!failures.length) break;
+
+        if (attempts < maxAttempts) {
+            console.log(`   ↻ attempt ${attempts} failed; handing ${failures.length} ` +
+                `failure(s) back to the model`);
+            for (const failure of failures) console.log(`      - ${failure.split("\n")[0]}`);
+            client.addUserMessage([toTextPart(buildRetryPrompt(failures))]);
+        }
+    }
 
     // Only once the gates pass: a catalog that recorded reverted content would claim
     // the page holds something it does not.
@@ -257,11 +297,12 @@ export const applyFix = async (
 
     let reverted = false;
     if (failures.length && written.length && options.revertOnFailure !== false) {
-        // The files are tracked, so restoring them is exact — no need to reconstruct
-        // what the agent overwrote.
-        for (const file of written) run("git", ["checkout", "--", file]);
+        // Verification promotes, so this has to take the images back out as well as the
+        // files the agent wrote. Tracked paths are restored rather than deleted, so a
+        // page that already existed comes back exactly as it was.
+        revertPage(evidence.page, written);
         reverted = true;
     }
 
-    return {fix, written, failures, reverted};
+    return {fix, written, failures, reverted, attempts};
 };

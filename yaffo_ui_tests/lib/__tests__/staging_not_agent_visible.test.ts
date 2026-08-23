@@ -34,3 +34,28 @@ describe("staging is out of the agent's reach", () => {
         expect(isInside(CONTENT_DIR, CONTENT_DIR)).toBe(false);
     });
 });
+
+import {CAPTURE_DIR} from "../user_doc_automation/paths";
+
+/**
+ * A capture run empties its output directory before it starts. That directory must
+ * therefore contain nothing but capture output.
+ *
+ * It used to be STAGING_DIR itself, which also holds `generate-logs/` and `heal-logs/`.
+ * The capture gate deleted the running session's own log directory mid-flight, and the
+ * next API call died with `ENOENT: ... .doc-staging/generate-logs/1_gemini_api.json`.
+ */
+describe("capture only deletes its own output", () => {
+    it("captures into a subdirectory, not into staging itself", () => {
+        expect(CAPTURE_DIR).not.toBe(STAGING_DIR);
+        expect(isInside(STAGING_DIR, CAPTURE_DIR)).toBe(true);
+    });
+
+    it.each(["generate-logs", "heal-logs"])("leaves %s outside what it clears", (logs) => {
+        expect(isInside(CAPTURE_DIR, `${STAGING_DIR}${sep}${logs}`)).toBe(false);
+    });
+
+    it("is still out of the agent's reach, like the rest of staging", () => {
+        expect(isInside(CONTENT_DIR, CAPTURE_DIR)).toBe(false);
+    });
+});

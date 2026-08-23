@@ -22,10 +22,11 @@ import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 import {YAFFO_APP_ROOT} from "@lib/types";
 import {captureEnv} from "./env";
 import {snapshotDockerEnv} from "./docker";
-import {BASE_URL, CONTENT_DIR, GUIDE_DIR, REPO, STAGING_DIR} from "./paths";
+import {BASE_URL, CONTENT_DIR, GUIDE_DIR, newRunLogDir, REPO, STAGING_DIR} from "./paths";
 import {verifyBrowserTool} from "./preflight";
 import {describeSandboxFacts, gatherSandboxFacts} from "./sandbox_facts";
-import {generateWalkthrough, requiredShots} from "./generate";
+import {generateWalkthrough} from "./generate";
+import {revertPage, runGates} from "./gates";
 
 // The sandbox to drive. Deliberately its own variable: BASE_URL is overloaded in
 // this repo — .env points it at the dev app on :5000 for other tooling, and a docs
@@ -83,43 +84,8 @@ const capture = (
     }
 };
 
-const verify = (page: string, useDocker = false): string[] => {
-    const failures: string[] = [];
-    try {
-        execFileSync("npx", ["tsc", "--noEmit"], {cwd: process.cwd(), stdio: "pipe"});
-    } catch (e) {
-        const err = e as {stdout?: string};
-        return [`does not typecheck:\n${(err.stdout ?? "").slice(-800)}`];
-    }
-
-    const captured = capture(page, false, useDocker);
-    if (!captured.ok) return [`capture failed:\n${captured.output.slice(-800)}`];
-
-    // Read the markdown as it now stands, not as it was: the agent may have rewritten
-    // it, and it is the new references that have to be satisfied.
-    const [area, name] = split(page);
-    const markdown = readFileSync(join(GUIDE_DIR, `${page}.md`), "utf8");
-    const wanted = requiredShots(markdown);
-    if (!wanted.length) failures.push("the page references no screenshots");
-
-    for (const shot of wanted) {
-        const staged = join(STAGING_DIR, area, "assets", name, shot.filename);
-        if (!existsSync(staged)) failures.push(`references ${shot.filename}, which the walkthrough does not produce`);
-    }
-
-    // The page has to build. This is what catches a reference that resolves nowhere,
-    // including one pointing at the wrong relative path.
-    try {
-        execFileSync(join(REPO, "venv", "bin", "mkdocs"),
-            ["build", "--strict", "--site-dir", "/tmp/docs-generate-check"],
-            {cwd: REPO, stdio: "pipe"});
-    } catch (e) {
-        const err = e as {stdout?: string; stderr?: string};
-        failures.push(`mkdocs build --strict failed:\n${((err.stdout ?? "") + (err.stderr ?? "")).slice(-600)}`);
-    }
-
-    return failures;
-};
+const verify = (page: string, useDocker = false): string[] =>
+    runGates(page, {useDocker});
 
 const main = async (): Promise<void> => {
     const args = process.argv.slice(2);
@@ -137,8 +103,10 @@ const main = async (): Promise<void> => {
         return;
     }
 
-    const runLogDir = join(STAGING_DIR, "generate-logs");
-    mkdirSync(runLogDir, {recursive: true});
+    // Its own directory per run: API call numbering restarts at zero, so a shared one
+    // means each rerun overwrites the last run's logs.
+    const runLogDir = newRunLogDir("generate-logs");
+    console.log(`   logs: ${runLogDir}`);
 
     // The app source is readable too: selectors and routes are what the agent needs to
     // work out how to reach a view.
@@ -161,8 +129,13 @@ const main = async (): Promise<void> => {
         for (const page of targets) {
             console.log(`\n📝 ${page}`);
             const [area, name] = split(page);
-            const memoriesDir = join(CONTENT_DIR, area, name, "memories");
-            const memory = localFilesystemMemoryToolFactory(memoriesDir);
+            // The factory appends "memories" to what it is given, so this is the page
+            // directory, not the memories directory — passing the latter nests them as
+            // `photo-details/memories/memories/`, and `hasMemories` below then never
+            // sees the notes an earlier run left.
+            const pageDir = join(CONTENT_DIR, area, name);
+            const memoriesDir = join(pageDir, "memories");
+            const memory = localFilesystemMemoryToolFactory(pageDir);
 
             const result = await generateWalkthrough(page, {
                 model, runLogDir, baseUrl: BASE_URL, guideDir: GUIDE_DIR, contentDir: CONTENT_DIR,
@@ -170,43 +143,36 @@ const main = async (): Promise<void> => {
                 toolProviders: [...providers, memory],
                 covers: spec.pages?.[page]?.covers,
                 hasMemories: existsSync(memoriesDir) && readdirSync(memoriesDir).length > 0,
+                // The gates run inside the generate loop rather than after it, so a
+                // compile error or a walkthrough that captures nothing goes back to the
+                // model to fix while it still has the page and its own answer in
+                // context — the same shape as the test generator's retry.
+                verify: (written) => {
+                    for (const file of written) console.log(`   wrote ${file}`);
+                    return verify(page, useDocker);
+                },
             });
 
-            for (const error of result.errors) console.error(`   ‼️  ${error}`);
-            if (!result.written.length) {
-                failed++;
-                continue;
+            if (result.attempts > 1) {
+                console.log(`   (${result.attempts} attempts)`);
             }
-            for (const file of result.written) console.log(`   wrote ${file}`);
 
-            const failures = verify(page, useDocker);
-            if (failures.length) {
+            const failures = result.errors;
+            if (failures.length || !result.written.length) {
                 failed++;
                 for (const failure of failures) console.error(`   ‼️  ${failure}`);
+                if (!result.written.length) continue;
                 // Rejected output is not a starting point: leaving a walkthrough that
                 // captures the wrong thing would let the next run promote it, and a
-                // half-written page would ship. Tracked files are restored rather than
-                // deleted, so an existing page comes back intact.
-                for (const file of result.written) {
-                    const tracked = spawnSync("git", ["ls-files", "--error-unmatch", file],
-                        {cwd: REPO}).status === 0;
-                    if (tracked) spawnSync("git", ["checkout", "--", file], {cwd: REPO});
-                    else rmSync(resolve(REPO, file), {force: true});
-                }
+                // half-written page would ship. Verification promotes, so the images it
+                // produced have to come back out too.
+                revertPage(page, result.written);
                 console.error("   → rolled back");
             } else {
-                // Generation is not finished until the guide holds what the walkthrough
-                // produces. Verification captured to staging only, so the guide would
-                // otherwise keep whatever screenshot was there before — and the next
-                // capture run would immediately report it as changed. This also writes
-                // the page's lockfile.
-                const promoted = capture(page, true, useDocker);
-                if (promoted.ok) {
-                    console.log(`   ✅ captures every shot ${page}.md references, and promoted them`);
-                } else {
-                    failed++;
-                    console.error(`   ‼️  verified but could not promote:\n${promoted.output.slice(-400)}`);
-                }
+                // No second promote: the capture gate already ran with --promote, which
+                // is what let mkdocs resolve the images, and which also wrote the
+                // lockfile. Promoting again here would just repeat the same work.
+                console.log(`   ✅ captures every shot ${page}.md references, and promoted them`);
             }
         }
     } finally {

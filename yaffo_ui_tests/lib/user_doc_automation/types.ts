@@ -15,15 +15,29 @@ export interface RowRule {
     count: number;
 }
 
-/** What a `goto` resolver is given to work out its path. */
-export interface GotoContext {
-    baseUrl: string;
+/**
+ * Runtime lookups a walkthrough needs but cannot derive from source.
+ *
+ * Available to a shot's `goto` *and* to `flows`: a flow that drives the detail view
+ * needs to reach an item exactly as a shot does, and offering the lookup in only one
+ * of the two is a trap — a generated walkthrough was rejected by the typechecker for
+ * reaching for it in `flows`, which was the reasonable thing to want.
+ */
+export interface SandboxLookups {
     /**
      * The id of the media item with this filename, via the gallery's `?path=` filter.
      * Mirrors `findMediaIdByFilename` in `generated_tests/_support/media-test-data.ts`,
      * which the Playwright specs already use for the same reason.
+     *
+     * Always resolve an id this way. Ids are assigned at index time and change on
+     * every reseed; filenames do not.
      */
     mediaIdByFilename: (filename: string) => Promise<number>;
+}
+
+/** What a `goto` resolver is given to work out its path. */
+export interface GotoContext extends SandboxLookups {
+    baseUrl: string;
 }
 
 export interface Shot {
@@ -58,7 +72,7 @@ export interface Shot {
     setup?: (page: Page) => Promise<void>;
 }
 
-export interface FlowContext {
+export interface FlowContext extends SandboxLookups {
     /** Open a path and wait for it to settle. */
     visit: (path: string) => Promise<void>;
     page: Page;

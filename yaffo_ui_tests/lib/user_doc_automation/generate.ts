@@ -207,13 +207,50 @@ export interface GenerateOptions {
     hasMemories: boolean;
     /** Runtime facts about the sandbox, rendered into the prompt. */
     sandboxFacts?: string;
+    /**
+     * Correctness gates. Failures are handed back to the model to fix rather than
+     * ending the run; see `Verify`.
+     */
+    verify?: Verify;
+    /** Overrides MAX_FIX_ATTEMPTS, mainly for tests. */
+    maxFixAttempts?: number;
 }
 
 export interface GenerateResult {
     generated?: Generated;
     written: string[];
     errors: string[];
+    /** Model turns spent, including the first. 1 means it was right first time. */
+    attempts: number;
 }
+
+/**
+ * Correctness gates, run against what was just written. Empty means it passed.
+ *
+ * Returning failures rather than throwing is what lets them be handed back to the
+ * model: the generator's job is to produce something that compiles and captures, and
+ * a compiler error is information it can act on, not a reason to give up.
+ */
+export type Verify = (written: string[]) => string[] | Promise<string[]>;
+
+/** How many times to hand failures back before giving up, after the first attempt. */
+export const MAX_FIX_ATTEMPTS = 3;
+
+/**
+ * Ask for a corrected answer, in the same session so the model still has the page, the
+ * tools it used, and its own previous attempt in context. Mirrors
+ * `addCompileErrorMessage` in the test generator, for the same reason: a fresh session
+ * would have to rediscover everything before it could fix anything.
+ */
+const buildFixPrompt = (failures: string[]): string => `
+What you returned did not pass. Fix it and return the complete files again.
+
+${failures.map((failure) => `- ${failure}`).join("\n")}
+
+Return the same JSON shape as before, with every file you want written — whole files,
+not fragments. Change only what these failures require; the rest of your answer was
+accepted.
+`.trim();
 
 const REPO = resolve(join(process.cwd(), ".."));
 
@@ -223,7 +260,9 @@ export const generateWalkthrough = async (
 ): Promise<GenerateResult> => {
     const [area, name] = [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
     const markdownPath = join(options.guideDir, `${page}.md`);
-    if (!existsSync(markdownPath)) return {written: [], errors: [`no such page: ${page}.md`]};
+    if (!existsSync(markdownPath)) {
+        return {written: [], errors: [`no such page: ${page}.md`], attempts: 0};
+    }
 
     const markdown = readFileSync(markdownPath, "utf8");
     const target = relative(REPO, join(options.contentDir, area, name, `${name}.ts`));
@@ -232,7 +271,8 @@ export const generateWalkthrough = async (
     const model = visionModelFor(requested);
     if (!supportsVision(model)) {
         // Framing a screenshot is a visual judgement, so the same rule as triage.
-        return {written: [], errors: [`${model} cannot see, so it cannot judge framing`]};
+        return {written: [], errors: [`${model} cannot see, so it cannot judge framing`],
+                attempts: 0};
     }
 
     const schemaHint = supportsNativeStructuredOutput(model)
@@ -272,34 +312,64 @@ export const generateWalkthrough = async (
             : "Empty so far. Record anything worth not rediscovering.",
     }))]);
 
+    const maxAttempts = (options.maxFixAttempts ?? MAX_FIX_ATTEMPTS) + 1;
     let generated: Generated | undefined;
     let errors: string[] = [];
-    try {
-        const answer = await runToolLoop(client, options.toolProviders, MAX_GENERATE_ROUNDS);
-        const parsed = parseAnswer(GenerateSchema, answer);
-        generated = parsed.value;
-        errors = parsed.errors;
-    } catch (e) {
-        errors = [e instanceof Error ? e.message : String(e)];
-    }
+    let written: string[] = [];
+    let attempts = 0;
 
-    const written: string[] = [];
-    for (const file of generated?.files ?? []) {
-        const absolute = resolve(REPO, file.filename);
-        const owned = absolute.startsWith(join(options.contentDir, area, name))
-            || absolute === resolve(markdownPath);
-        if (!owned) {
-            errors.push(`refused to write outside the page's own files: ${file.filename}`);
-            continue;
+    // Ask, write, check, and hand any failure back — the same loop the test generator
+    // runs. A compile error or a walkthrough that captures nothing is information the
+    // model can act on, and it still has the page, the tools, and its own previous
+    // answer in context. Erroring out instead throws all of that away and leaves a
+    // reverted tree for a human to start over from.
+    while (attempts < maxAttempts) {
+        attempts++;
+        generated = undefined;
+        errors = [];
+
+        try {
+            const answer = await runToolLoop(client, options.toolProviders, MAX_GENERATE_ROUNDS);
+            const parsed = parseAnswer(GenerateSchema, answer);
+            generated = parsed.value;
+            errors = parsed.errors;
+        } catch (e) {
+            errors = [e instanceof Error ? e.message : String(e)];
         }
-        mkdirSync(dirname(absolute), {recursive: true});
-        writeFileSync(absolute, file.code);
-        written.push(file.filename);
+
+        written = [];
+        for (const file of generated?.files ?? []) {
+            const absolute = resolve(REPO, file.filename);
+            const owned = absolute.startsWith(join(options.contentDir, area, name))
+                || absolute === resolve(markdownPath);
+            if (!owned) {
+                errors.push(`refused to write outside the page's own files: ${file.filename}`);
+                continue;
+            }
+            mkdirSync(dirname(absolute), {recursive: true});
+            writeFileSync(absolute, file.code);
+            written.push(file.filename);
+        }
+
+        // The gates only mean anything once something was written.
+        if (!errors.length && written.length && options.verify) {
+            errors = await options.verify(written);
+        }
+
+        if (!errors.length) break;
+
+        if (attempts < maxAttempts) {
+            console.log(`   ↻ attempt ${attempts} failed; handing ${errors.length} ` +
+                `failure(s) back to the model`);
+            for (const failure of errors) console.log(`      - ${failure.split("\n")[0]}`);
+            client.addUserMessage([toTextPart(buildFixPrompt(errors))]);
+        }
     }
 
     // Seed the catalog the same way a generated test's is seeded, so the fix turn has
-    // something to keep in step.
-    if (generated && written.length) {
+    // something to keep in step. Only on success: a catalog describing files that are
+    // about to be reverted would claim the page holds something it does not.
+    if (generated && written.length && !errors.length) {
         const catalog = {
             files: generated.files.filter((file) => written.includes(file.filename)),
             pageContext: generated.pageContext ?? "",
@@ -310,5 +380,5 @@ export const generateWalkthrough = async (
             JSON.stringify(catalog, null, 4) + "\n");
     }
 
-    return {generated, written, errors};
+    return {generated, written, errors, attempts};
 };

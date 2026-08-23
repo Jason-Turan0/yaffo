@@ -5,7 +5,7 @@
  * `user_doc_automation/_support`, a deliberately small surface.
  */
 export {defineWalkthrough} from "./types";
-export type {FlowContext, RowRule, Shot, Viewport, Walkthrough} from "./types";
+export type {FlowContext, GotoContext, RowRule, SandboxLookups, Shot, Viewport, Walkthrough} from "./types";
 export {settle} from "./settle";
 export {PAD, paddedBox, resolveClip, resolveIgnoreRegions, rowCut} from "./framing";
 export type {Box} from "./framing";

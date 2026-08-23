@@ -2,7 +2,7 @@ import {
     generateText, jsonSchema, Tool, ToolResultPart, ToolModelMessage, UserModelMessage,
 } from "ai";
 import type {LanguageModelUsage} from "ai";
-import {writeFileSync} from "fs";
+import {mkdirSync, writeFileSync} from "fs";
 import {join} from "path";
 import type {z} from "zod";
 import type {JSONSchema7, TextPart} from "ai";
@@ -277,6 +277,10 @@ export abstract class BaseModelClient implements ModelClient {
 
     protected writeApiLog(entry: ApiLogEntry): void {
         const logPath = join(this.runLogDir, `${this.apiCallCount}_${this.logPrefix}_api.json`);
+        // Recreated per write: a run can outlive its log directory. The docs pipeline
+        // clears staging between capture runs, and losing the transcript should never
+        // be what ends a session that is otherwise going fine.
+        mkdirSync(this.runLogDir, {recursive: true});
         writeFileSync(logPath, JSON.stringify(redactSecrets(entry), null, 2));
     }
 }
