@@ -47,8 +47,16 @@ const catalogue = (ref: string | null, path: string): string | null => {
         return ref === null
             ? readFileSync(join(REPO, path), "utf8")
             : execFileSync("git", ["show", `${ref}:${path}`],
-                {cwd: REPO, encoding: "utf8", maxBuffer: 8 * 1024 * 1024});
+                {
+                    cwd: REPO,
+                    encoding: "utf8",
+                    maxBuffer: 8 * 1024 * 1024,
+                    stdio: ["ignore", "pipe", "pipe"],
+                });
     } catch {
+        const source = ref === null ? "the working tree" : `watermark ${ref}`;
+        console.warn(`String catalogue ${path} is unavailable at ${source}; ` +
+            "skipping its quoted-string comparison.");
         return null;   // absent at that commit, or not a valid ref
     }
 };

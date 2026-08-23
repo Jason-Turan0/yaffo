@@ -71,8 +71,10 @@ const describeDiff = (shot: ShotResult): string => {
     const diff = shot.diff;
     if (!diff) return "No comparison was recorded.";
     if (diff.reason === "size") {
-        return `Reframed: the capture changed size, so pixels were not compared. ` +
-            `Now ${shot.width}x${shot.height}.`;
+        const before = diff.baselineSize?.join("x") ?? "unknown";
+        const after = diff.candidateSize?.join("x") ?? "unknown";
+        return `Reframed: ${before} became ${after}; ${diff.diffPixels} pixels differ ` +
+            "after top-left alignment.";
     }
     const box = diff.box
         ? `bounded by ${box_(diff.box)}`

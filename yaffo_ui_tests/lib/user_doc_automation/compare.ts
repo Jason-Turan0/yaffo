@@ -6,8 +6,8 @@ export type CompareStatus = "changed" | "unchanged";
 
 export interface CompareResult {
     status: CompareStatus;
-    /** Pixels exceeding the colour tolerance, or null when the sizes differ. */
-    diffPixels: number | null;
+    /** Pixels exceeding the colour tolerance, including pixels present on only one canvas. */
+    diffPixels: number;
     /** Fraction of the image that differs. */
     ratio?: number;
     /** Bounding box of the difference, useful for pointing a reviewer at it. */
@@ -16,6 +16,9 @@ export interface CompareResult {
     diffImage?: string | null;
     /** "size" when the shot was reframed rather than repainted. */
     reason?: string;
+    /** Physical pixel dimensions when the two images have different sizes. */
+    baselineSize?: [number, number];
+    candidateSize?: [number, number];
 }
 
 /**

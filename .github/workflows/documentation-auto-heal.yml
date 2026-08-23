@@ -149,6 +149,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.HEAD_SHA }}
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -212,6 +213,7 @@ jobs:
         working-directory: yaffo_ui_tests
         run: npm run docs:capture:docker -- "${{ matrix.page }}"
       - name: Upload initial capture evidence
+        id: capture_artifact
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -314,6 +316,7 @@ jobs:
             "user_doc_automation/${PAGE}" \
             > "patches/${{ matrix.id }}.patch"
       - name: Upload documentation patch
+        id: patch_artifact
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -322,6 +325,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
       - name: Upload healing evidence
+        id: healing_artifact
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -332,6 +336,33 @@ jobs:
             yaffo_ui_tests/.doc-staging/captures/report.json
           if-no-files-found: ignore
           retention-days: 90
+      - name: Publish artifact links to job summary
+        if: ${{ always() }}
+        env:
+          HEALING_ARTIFACT_URL: ${{ steps.healing_artifact.outputs.artifact-url }}
+          PATCH_ARTIFACT_URL: ${{ steps.patch_artifact.outputs.artifact-url }}
+          CAPTURE_ARTIFACT_URL: ${{ steps.capture_artifact.outputs.artifact-url }}
+        run: |
+          {
+            echo ""
+            echo "#### Artifacts"
+            echo ""
+            if [ -n "$HEALING_ARTIFACT_URL" ]; then
+              echo "- [Healing evidence and logs]($HEALING_ARTIFACT_URL)"
+            else
+              echo "- Healing evidence and logs: not produced"
+            fi
+            if [ -n "$PATCH_ARTIFACT_URL" ]; then
+              echo "- [Documentation patch]($PATCH_ARTIFACT_URL)"
+            else
+              echo "- Documentation patch: not produced"
+            fi
+            if [ -n "$CAPTURE_ARTIFACT_URL" ]; then
+              echo "- [Capture evidence]($CAPTURE_ARTIFACT_URL)"
+            else
+              echo "- Capture evidence: not produced"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Stop isolated documentation environment
         if: ${{ always() }}
         working-directory: yaffo_ui_tests

@@ -69,14 +69,20 @@ describe("compareShots", () => {
         ])).toMatchObject({status: "unchanged", diffPixels: 0});
     });
 
-    it("returns size changes without trying to align pixels", () => {
+    it("aligns size changes and writes their review overlay", () => {
         const baseline = image("baseline.webp", 20, 20, [0, 0, 0]);
-        const candidate = image("candidate.webp", 30, 20, [0, 0, 0]);
-        expect(compareShots(baseline, candidate)).toMatchObject({
+        const candidate = image("candidate.webp", 20, 21, [0, 0, 0]);
+        const overlay = join(testDir, "size-difference.png");
+        expect(compareShots(baseline, candidate, [], overlay)).toMatchObject({
             status: "changed",
             reason: "size",
-            diffPixels: null,
+            baselineSize: [20, 20],
+            candidateSize: [20, 21],
+            diffPixels: 20,
+            box: {x: 0, y: 20, width: 20, height: 1},
+            diffImage: overlay,
         });
+        expect(existsSync(overlay)).toBe(true);
     });
 
     it("writes the requested review overlay for a material change", () => {

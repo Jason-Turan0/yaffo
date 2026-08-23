@@ -1,9 +1,10 @@
-import {beforeEach, describe, expect, it, jest} from "@jest/globals";
+import {afterEach, beforeEach, describe, expect, it, jest} from "@jest/globals";
 
 const execFileSync = jest.fn<(
     file: string, args: string[], options: Record<string, unknown>
 ) => string>();
 const readFileSync = jest.fn<(path: string, encoding: string) => string>();
+let warn: jest.SpiedFunction<typeof console.warn>;
 
 await jest.unstable_mockModule("child_process", () => ({execFileSync}));
 await jest.unstable_mockModule("fs", () => ({readFileSync}));
@@ -18,7 +19,10 @@ const afterJson = JSON.stringify({common: {apply: "Apply", save: "Save"}});
 beforeEach(() => {
     execFileSync.mockReset();
     readFileSync.mockReset();
+    warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
 });
+
+afterEach(() => warn.mockRestore());
 
 describe("changedStrings catalogue loading", () => {
     it("compares a committed watermark with working-tree English catalogues", () => {
@@ -36,7 +40,11 @@ describe("changedStrings catalogue loading", () => {
             ["show", "verified-sha:messages.pot"],
             ["show", "verified-sha:yaffo/static/locales/en.json"],
         ]);
+        expect(execFileSync.mock.calls[0][2]).toEqual(expect.objectContaining({
+            stdio: ["ignore", "pipe", "pipe"],
+        }));
         expect(readFileSync).toHaveBeenCalledTimes(2);
+        expect(warn).not.toHaveBeenCalled();
     });
 
     it("reads both sides through git when an explicit head is supplied", () => {
@@ -62,6 +70,16 @@ describe("changedStrings catalogue loading", () => {
         });
 
         expect(changedStrings("missing-ref")).toEqual([]);
+        expect(warn.mock.calls.map(([message]) => message)).toEqual([
+            "String catalogue messages.pot is unavailable at watermark missing-ref; " +
+                "skipping its quoted-string comparison.",
+            "String catalogue yaffo/static/locales/en.json is unavailable at watermark missing-ref; " +
+                "skipping its quoted-string comparison.",
+            "String catalogue messages.pot is unavailable at the working tree; " +
+                "skipping its quoted-string comparison.",
+            "String catalogue yaffo/static/locales/en.json is unavailable at the working tree; " +
+                "skipping its quoted-string comparison.",
+        ]);
     });
 
     it("limits detection to the two English source catalogues", () => {

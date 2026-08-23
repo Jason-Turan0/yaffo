@@ -99,14 +99,20 @@ describe("buildEvidence", () => {
         expect(evidence.overlayPath).toBeUndefined();
     });
 
-    it("describes a reframed shot without a pixel count", () => {
+    it("describes the aligned pixel comparison for a reframed shot", () => {
         const evidence = buildEvidence(result(), shot({
             width: 900,
             height: 600,
-            diff: {status: "changed", reason: "size", diffPixels: null},
+            diff: {
+                status: "changed",
+                reason: "size",
+                diffPixels: 1800,
+                baselineSize: [1800, 1198],
+                candidateSize: [1800, 1200],
+            },
         }), options());
         expect(evidence.diffSummary).toBe(
-            "Reframed: the capture changed size, so pixels were not compared. Now 900x600."
+            "Reframed: 1800x1198 became 1800x1200; 1800 pixels differ after top-left alignment."
         );
     });
 

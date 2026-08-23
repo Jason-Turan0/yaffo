@@ -47,9 +47,9 @@ def _zero_ignored(delta: np.ndarray, regions: list[dict]) -> None:
             delta[y0:y1, x0:x1] = 0
 
 
-def _write_diff(base: Image.Image, mask: np.ndarray, path: str) -> None:
+def _write_diff(base: np.ndarray, mask: np.ndarray, path: str) -> None:
     """Dimmed baseline with differing pixels in magenta, for review in a PR."""
-    faded = (np.asarray(base.convert("RGB")).astype(np.float32) * 0.25 + 191).astype(np.uint8)
+    faded = (base.astype(np.float32) * 0.25 + 191).astype(np.uint8)
     faded[mask] = (255, 0, 255)
     Image.fromarray(faded).save(path)
 
@@ -65,27 +65,38 @@ def main() -> int:
     baseline = Image.open(args.baseline).convert("RGB")
     candidate = Image.open(args.candidate).convert("RGB")
 
-    if baseline.size != candidate.size:
-        # A reframed shot is a change by definition, and the pixel maths would not
-        # line up anyway.
-        print(json.dumps({
-            "status": "changed",
-            "reason": "size",
-            "baselineSize": list(baseline.size),
-            "candidateSize": list(candidate.size),
-            "diffPixels": None,
-        }))
-        return 0
+    baseline_pixels = np.asarray(baseline)
+    candidate_pixels = np.asarray(candidate)
+    width = max(baseline.width, candidate.width)
+    height = max(baseline.height, candidate.height)
 
-    delta = np.abs(
-        np.asarray(baseline).astype(np.int16) - np.asarray(candidate).astype(np.int16)
-    ).max(axis=2)
+    # Top-left alignment preserves the page coordinate system. White padding is only
+    # the review canvas; presence masks ensure every pixel belonging to just one image
+    # counts as changed even when that pixel itself is white.
+    baseline_canvas = np.full((height, width, 3), 255, dtype=np.uint8)
+    candidate_canvas = np.full((height, width, 3), 255, dtype=np.uint8)
+    baseline_canvas[:baseline.height, :baseline.width] = baseline_pixels
+    candidate_canvas[:candidate.height, :candidate.width] = candidate_pixels
+
+    baseline_present = np.zeros((height, width), dtype=bool)
+    candidate_present = np.zeros((height, width), dtype=bool)
+    baseline_present[:baseline.height, :baseline.width] = True
+    candidate_present[:candidate.height, :candidate.width] = True
+    overlap = baseline_present & candidate_present
+
+    delta = np.zeros((height, width), dtype=np.int16)
+    delta[overlap] = np.abs(
+        baseline_canvas[overlap].astype(np.int16)
+        - candidate_canvas[overlap].astype(np.int16)
+    ).max(axis=1)
+    delta[baseline_present ^ candidate_present] = 255
     _zero_ignored(delta, json.loads(args.ignore))
 
     mask = delta > COLOR_THRESHOLD
     diff_pixels = int(mask.sum())
-    total = int(delta.size)
-    changed = diff_pixels > MAX_DIFF_PIXELS
+    total = int((baseline_present | candidate_present).sum())
+    size_changed = baseline.size != candidate.size
+    changed = size_changed or diff_pixels > MAX_DIFF_PIXELS
 
     box = None
     if diff_pixels:
@@ -97,16 +108,23 @@ def main() -> int:
         }
 
     if changed and args.diff_out:
-        _write_diff(baseline, mask, args.diff_out)
+        _write_diff(baseline_canvas, mask, args.diff_out)
 
-    print(json.dumps({
+    result = {
         "status": "changed" if changed else "unchanged",
         "diffPixels": diff_pixels,
         "totalPixels": total,
         "ratio": round(diff_pixels / total, 8),
         "box": box,
         "diffImage": args.diff_out if (changed and args.diff_out) else None,
-    }))
+    }
+    if size_changed:
+        result.update({
+            "reason": "size",
+            "baselineSize": list(baseline.size),
+            "candidateSize": list(candidate.size),
+        })
+    print(json.dumps(result))
     return 0
 
 

@@ -199,8 +199,8 @@ Playwright's `toHaveScreenshot` does via pixelmatch:
 - a flat budget of differing pixels (`MAX_DIFF_PIXELS = 100`), comfortably under the
   ~670 a one-word label change produces;
 - ignore regions zeroed on the pixel copy only, never on the published image;
-- a size mismatch short-circuiting to changed with `reason: "size"`, since a reframed
-  shot is a change and the pixel maths would not line up anyway;
+- differently sized images aligned at their top-left on a shared canvas, with pixels
+  present in only one image counted as changed and `reason: "size"` retained;
 - a magenta-on-dimmed **diff overlay** written beside the staged shot, so a reviewer
   sees where it moved rather than only that it did.
 
