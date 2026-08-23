@@ -23,6 +23,8 @@ const runWalkthroughs = jest.fn<(
     walkthroughs: unknown[],
     options: unknown
 ) => Promise<unknown[]>>();
+const currentHead = jest.fn<() => string>();
+const dependencyHashes = jest.fn<(...args: unknown[]) => Record<string, string | null>>();
 
 snapshotDockerEnv.mockReturnValue({DOCKER_HOST: "unix:///initial.sock"});
 
@@ -34,6 +36,7 @@ await jest.unstable_mockModule("../docker", () => ({
     snapshotDockerEnv,
 }));
 await jest.unstable_mockModule("../load", () => ({loadWalkthroughs}));
+await jest.unstable_mockModule("../dependency_changes", () => ({currentHead, dependencyHashes}));
 await jest.unstable_mockModule("../paths", () => ({
     BASE_URL, CAPTURE_DIR, CONTENT_DIR, GUIDE_DIR,
 }));
@@ -84,6 +87,8 @@ beforeEach(() => {
     for (const mock of [
         dockerAvailable, runCaptureContainer, loadWalkthroughs, processResults, runWalkthroughs,
     ]) mock.mockReset();
+    currentHead.mockReset().mockReturnValue("feature-head-sha");
+    dependencyHashes.mockReset().mockReturnValue({"yaffo/routes/home.py": "route-hash"});
     dockerAvailable.mockReturnValue(true);
     runCaptureContainer.mockReturnValue(0);
     processResults.mockReturnValue([]);
@@ -196,6 +201,13 @@ describe("local capture", () => {
     it("writes promoted lockfiles with geometry, observations, and committed hashes", async () => {
         const pageDir = join(CONTENT_DIR, "library", "browsing");
         mkdirSync(pageDir, {recursive: true});
+        write(join(CONTENT_DIR, "spec.yaml"), [
+            "pages:",
+            "  library/browsing:",
+            "    also_depends_on:",
+            "      - pyproject.toml",
+            "",
+        ].join("\n"));
         const committedTarget = "library/assets/browsing/committed.webp";
         const missingTarget = "library/assets/browsing/missing.webp";
         const committedBytes = "committed image bytes";
@@ -219,8 +231,9 @@ describe("local capture", () => {
         const lock = JSON.parse(readFileSync(join(pageDir, "browsing.lock.json"), "utf8"));
         expect(lock).toEqual({
             page: "library/browsing",
-            lastVerifiedSha: null,
+            lastVerifiedSha: "feature-head-sha",
             observed: observed(),
+            dependencyHashes: {"yaffo/routes/home.py": "route-hash"},
             shots: {
                 [committedTarget]: {
                     width: 640,
@@ -230,6 +243,8 @@ describe("local capture", () => {
                 [missingTarget]: {width: 320, height: 200, sha256: null},
             },
         });
+        expect(dependencyHashes).toHaveBeenCalledWith(
+            observed(), ["pyproject.toml"], HOST_REPO);
         expect(log).toHaveBeenCalledWith("\n2 shot(s) new or changed and promoted.");
     });
 

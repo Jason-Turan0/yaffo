@@ -23,7 +23,9 @@ import {DOCS_CAPTURE_IMAGE, dockerAvailable, runCaptureContainer, snapshotDocker
 import {existsSync, readFileSync, writeFileSync} from "fs";
 import {join, resolve} from "path";
 import {pathToFileURL} from "url";
+import {parse as parseYaml} from "yaml";
 import {loadWalkthroughs} from "./load";
+import {currentHead, dependencyHashes} from "./dependency_changes";
 import {BASE_URL, CAPTURE_DIR, CONTENT_DIR, GUIDE_DIR} from "./paths";
 import {processResults, RAW_FILENAME, runWalkthroughs} from "./runner";
 import type {RawResult, WalkthroughResult} from "./runner";
@@ -39,11 +41,21 @@ import type {RawResult, WalkthroughResult} from "./runner";
 // Taken before the scrub below removes them: the docker CLI needs its own settings to
 // find the daemon, and they must not end up in what a walkthrough runs with.
 const DOCKER_ENV = snapshotDockerEnv();
+const REPO = resolve(join(process.cwd(), ".."));
 
 // Before anything else, and in particular before any walkthrough is imported:
 // walkthroughs are model-generated code, and nothing they run should be able to
 // read a provider key out of the ambient environment.
 scrubProcessEnv({DOCS_BASE_URL: BASE_URL});
+
+const declaredDependencies = (page: string): string[] => {
+    const specPath = join(CONTENT_DIR, "spec.yaml");
+    if (!existsSync(specPath)) return [];
+    const spec = parseYaml(readFileSync(specPath, "utf8")) as {
+        pages?: Record<string, {also_depends_on?: string[]}>;
+    };
+    return spec.pages?.[page]?.also_depends_on ?? [];
+};
 
 /**
  * The page's fingerprint: what its walkthrough touched, and what its shots looked
@@ -57,9 +69,12 @@ const writeLockfile = (result: WalkthroughResult): void => {
     if (!existsSync(dir)) return;
     const lock = {
         page: result.page,
-        // Set once the watermark lands; until then every diff is against HEAD.
-        lastVerifiedSha: null as string | null,
+        // Capture runs from the exact feature commit being documented. The generated
+        // healing commit comes later, so no caller-supplied SHA is needed here.
+        lastVerifiedSha: currentHead(),
         observed: result.observation,
+        dependencyHashes: dependencyHashes(
+            result.observation, declaredDependencies(result.page), REPO),
         shots: Object.fromEntries(result.shots.map((shot) => [
             shot.target,
             {
@@ -97,7 +112,7 @@ export const main = async (
         console.log(`Capturing in ${DOCS_CAPTURE_IMAGE} against ${BASE_URL}`);
         console.log(`  staging: ${CAPTURE_DIR}${promote ? "  (promoting changes)" : ""}\n`);
         const code = runCaptureContainer({
-            repoDir: resolve(join(process.cwd(), "..")),
+            repoDir: REPO,
             stagingDir: CAPTURE_DIR,
             baseUrl: BASE_URL,
             pages: only,

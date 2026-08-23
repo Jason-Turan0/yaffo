@@ -4,6 +4,7 @@ import {tmpdir} from "os";
 import {dirname, join} from "path";
 import {detect, main, runCli} from "../detect";
 import type {DetectionOptions} from "../detect";
+import type {DependencyChange, PageLock} from "../dependency_changes";
 import type {StringChange} from "../strings";
 
 let root: string;
@@ -31,9 +32,10 @@ const markdown = (page: string, text: string): void => {
     write(join(guideDir, `${page}.md`), text);
 };
 
-const lock = (page: string, lastVerifiedSha: string | null): void => {
+const lock = (page: string, lastVerifiedSha: string | null, over: Partial<PageLock> = {}): void => {
     const [area, name] = page.split("/");
-    write(join(contentDir, area, name, `${name}.lock.json`), JSON.stringify({lastVerifiedSha}));
+    write(join(contentDir, area, name, `${name}.lock.json`),
+        JSON.stringify({lastVerifiedSha, ...over}));
 };
 
 beforeEach(() => {
@@ -56,7 +58,13 @@ afterEach(() => {
 const options = (
     findChanges: (base: string) => StringChange[],
     over: Partial<DetectionOptions> = {}
-): DetectionOptions => ({contentDir, guideDir, changedStrings: findChanges, ...over});
+): DetectionOptions => ({
+    contentDir,
+    guideDir,
+    changedStrings: findChanges,
+    changedDependencies: () => [],
+    ...over,
+});
 
 describe("detect", () => {
     it("caches catalogue diffs per watermark and flags only quoted changes", () => {
@@ -78,7 +86,7 @@ describe("detect", () => {
             base === "sha-a" ? [apply] : [{was: "Save", source: "messages.pot"}]);
 
         expect(detect(options(findChanges))).toEqual({
-            flagged: [{page: "area/one", changes: [apply]}],
+            flagged: [{page: "area/one", changes: [apply], dependencies: []}],
             scanned: 3,
             unwatermarked: 1,
         });
@@ -96,8 +104,8 @@ describe("detect", () => {
 
         expect(detect(options(findChanges, {overrideBase: "explicit-sha"}))).toEqual({
             flagged: [
-                {page: "area/one", changes: [change]},
-                {page: "area/two", changes: [change]},
+                {page: "area/one", changes: [change], dependencies: []},
+                {page: "area/two", changes: [change], dependencies: []},
             ],
             scanned: 2,
             unwatermarked: 0,
@@ -124,6 +132,31 @@ describe("detect", () => {
         expect(findChanges).not.toHaveBeenCalled();
     });
 
+    it("flags a page when a stored dependency hash no longer matches", () => {
+        write(join(contentDir, "spec.yaml"), [
+            "pages:",
+            "  area/page:",
+            "    also_depends_on: [pyproject.toml]",
+            "",
+        ].join("\n"));
+        lock("area/page", "sha", {observed: {routes: ["yaffo/routes/home.py"]}});
+        markdown("area/page", "# Page");
+        const dependency: DependencyChange = {
+            path: "yaffo/routes/home.py", before: "old-hash", after: "new-hash",
+        };
+        const findDependencies = jest.fn<(
+            lock: PageLock, alsoDependsOn: string[]
+        ) => DependencyChange[]>(() => [dependency]);
+
+        expect(detect(options(() => [], {changedDependencies: findDependencies}))).toEqual({
+            flagged: [{page: "area/page", changes: [], dependencies: [dependency]}],
+            scanned: 1,
+            unwatermarked: 0,
+        });
+        expect(findDependencies).toHaveBeenCalledWith(
+            expect.objectContaining({lastVerifiedSha: "sha"}), ["pyproject.toml"]);
+    });
+
     it("treats an omitted pages map as an empty detection set", () => {
         write(join(contentDir, "spec.yaml"), "version: 1\n");
         expect(detect(options(() => []))).toEqual({
@@ -138,9 +171,9 @@ describe("detection CLI", () => {
         lock("area/clean", "sha");
         expect(main([], options(() => []))).toBe(0);
         expect(log).toHaveBeenCalledWith(
-            "✅ 1 page(s) checked — none quotes a string the app has changed.");
+            "✅ 1 page(s) checked — no relevant dependency or quoted-string changes.");
         expect(log).toHaveBeenCalledWith(
-            "1 page(s) skipped: no watermark yet (never promoted).");
+            "1 page(s) skipped by quoted-string detection: no watermark yet (never promoted).");
     });
 
     it("prints replacement and removal details and returns the stale-docs status", () => {
@@ -159,7 +192,21 @@ describe("detection CLI", () => {
         expect(log).toHaveBeenCalledWith(
             '   "Save" no longer exists  (messages.pot)');
         expect(log).toHaveBeenCalledWith(
-            "\n1 page(s) quote text the app no longer shows.");
+            "\n1 page(s) need documentation regeneration.");
+    });
+
+    it("prints dependency changes and returns the regeneration status", () => {
+        spec("area/page");
+        lock("area/page", "sha");
+        const dependency: DependencyChange = {
+            path: "yaffo/templates/base.html", before: "before", after: "after",
+        };
+
+        expect(main([], options(() => [], {changedDependencies: () => [dependency]}))).toBe(2);
+        expect(log).toHaveBeenCalledWith(
+            "   dependency changed: yaffo/templates/base.html");
+        expect(log).toHaveBeenCalledWith(
+            "\n1 page(s) need documentation regeneration.");
     });
 
     it("parses --base and uses the following argument as the override", () => {

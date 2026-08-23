@@ -19,6 +19,9 @@ const changedStrings = jest.fn<(base: string) => Array<Record<string, unknown>>>
 const changesQuotedBy = jest.fn<(
     markdown: string, changes: Array<Record<string, unknown>>
 ) => Array<Record<string, unknown>>>();
+const changedDependencies = jest.fn<(
+    lock: Record<string, unknown>, alsoDependsOn?: string[]
+) => Array<Record<string, unknown>>>();
 const createFilesystemClient = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 const createPlaywrightClient = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 const localFilesystemMemoryToolFactory = jest.fn<(pageDir: string) => unknown>();
@@ -28,6 +31,7 @@ await jest.unstable_mockModule("../index", () => ({
     applyFix, buildEvidence, openSession, triageShot,
 }));
 await jest.unstable_mockModule("../strings", () => ({changedStrings, changesQuotedBy}));
+await jest.unstable_mockModule("../dependency_changes", () => ({changedDependencies}));
 await jest.unstable_mockModule("@lib/tool_providers/mcp_filesystem_client", () => ({
     createFilesystemClient,
 }));
@@ -111,7 +115,8 @@ beforeEach(() => {
     memory = {disconnect: jest.fn(async () => undefined)};
     for (const mock of [
         applyFix, buildEvidence, openSession, triageShot, changedStrings, changesQuotedBy,
-        createFilesystemClient, createPlaywrightClient, localFilesystemMemoryToolFactory,
+        changedDependencies, createFilesystemClient, createPlaywrightClient,
+        localFilesystemMemoryToolFactory,
         newRunLogDir,
     ]) mock.mockReset();
     buildEvidence.mockImplementation((rawResult, rawShot, options) => ({
@@ -124,6 +129,7 @@ beforeEach(() => {
     openSession.mockReturnValue({client: {}, model: "vision-model"});
     changedStrings.mockReturnValue([]);
     changesQuotedBy.mockReturnValue([]);
+    changedDependencies.mockReturnValue([]);
     createFilesystemClient.mockResolvedValue(filesystem);
     createPlaywrightClient.mockResolvedValue(browser);
     localFilesystemMemoryToolFactory.mockReturnValue(memory);
@@ -274,6 +280,26 @@ describe("heal CLI", () => {
         expect(error).toHaveBeenCalledWith(expect.stringContaining("gates unavailable"));
         expect(filesystem.disconnect).toHaveBeenCalledTimes(1);
         expect(browser.disconnect).toHaveBeenCalledTimes(1);
+    });
+
+    it("starts a fix turn when only a dependency fingerprint changed", async () => {
+        write(join(CONTENT_DIR, "area", "page", "page.lock.json"),
+            JSON.stringify({dependencyHashes: {"yaffo/templates/base.html": "old"}}));
+        writeReport([]);
+        changedDependencies.mockReturnValue([{
+            path: "yaffo/templates/base.html", before: "old", after: "new",
+        }]);
+
+        await expect(main(["--apply"])).resolves.toBe(0);
+
+        expect(openSession).toHaveBeenCalledWith(expect.objectContaining({
+            page: "area/page",
+            diffSummary: expect.stringContaining("dependency fingerprints changed"),
+            codeDiff: expect.stringContaining("yaffo/templates/base.html"),
+            stringChanges: [],
+        }), expect.objectContaining({toolProviders: [filesystem, browser, memory]}));
+        expect(applyFix).toHaveBeenCalled();
+        expect(changedStrings).not.toHaveBeenCalled();
     });
 
     it("disconnects initialized providers and lets the wrapper report uncaught failures", async () => {

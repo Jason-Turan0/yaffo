@@ -25,6 +25,8 @@ import {createPlaywrightClient} from "@lib/tool_providers/mcp_playwright_client"
 import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesystem_memory_tool";
 import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import type {ModelAlias} from "@lib/model_clients/model_client.interface";
+import {changedDependencies} from "./dependency_changes";
+import type {DependencyChange, PageLock} from "./dependency_changes";
 
 // Authored spec, generated walkthroughs, and transient staging live in the
 // content tree; this module is infrastructure and lives under lib/.
@@ -44,17 +46,16 @@ const MARK: Record<Triage["classification"], string> = {
     environment_instability: "🌫️",
 };
 
-const spec = (): {pages?: Record<string, {covers?: string}>} =>
+const spec = (): {pages?: Record<string, {covers?: string; also_depends_on?: string[]}>} =>
     parseYaml(readFileSync(join(CONTENT_DIR, "spec.yaml"), "utf8"));
 
 const covers = (page: string): string | undefined => spec()?.pages?.[page]?.covers;
 
-/** The commit this page was last confirmed to match; null until it has been promoted. */
-const watermark = (page: string): string | null => {
+const pageLock = (page: string): PageLock | null => {
     const [area, name] = [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
     const lock = join(CONTENT_DIR, area, name, `${name}.lock.json`);
     if (!existsSync(lock)) return null;
-    return JSON.parse(readFileSync(lock, "utf8")).lastVerifiedSha ?? null;
+    return JSON.parse(readFileSync(lock, "utf8")) as PageLock;
 };
 
 const walkthroughPath = (page: string): string => {
@@ -71,18 +72,26 @@ const walkthroughSource = (page: string): string => {
  * An evidence packet for a page with no changed screenshot. Same shape as the visual
  * one so the fix turn needs no special case, with the image fields left empty.
  */
-const proseEvidence = (page: string, changes: StringChange[]) => ({
+const proseEvidence = (
+    page: string,
+    changes: StringChange[],
+    dependencies: DependencyChange[]
+) => ({
     page,
     target: "",
     baselinePath: "",
     candidatePath: "",
-    diffSummary: "No screenshot changed. This page names a control the app has renamed.",
+    diffSummary: dependencies.length
+        ? "No screenshot changed, but one or more page dependency fingerprints changed."
+        : "No screenshot changed. This page names a control the app has renamed.",
     markdown: readFileSync(join(GUIDE_DIR, `${page}.md`), "utf8"),
     markdownPath: join(GUIDE_DIR, `${page}.md`),
     walkthroughPath: walkthroughPath(page),
     covers: covers(page),
     walkthroughSource: walkthroughSource(page),
-    codeDiff: "(not gathered: this page was flagged by a catalogue change, not a code diff)",
+    codeDiff: dependencies.length
+        ? `Dependency contents changed:\n${dependencies.map(({path}) => `- ${path}`).join("\n")}`
+        : "(not gathered: this page was flagged by a catalogue change, not a code diff)",
     stringChanges: changes,
 });
 
@@ -100,13 +109,18 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
     const pending = results.flatMap((result) =>
         result.shots.filter((shot) => shot.status !== "unchanged").map((shot) => ({result, shot})));
 
-    // Detector B, per page. A renamed toast or button label may move no pixels at all,
-    // so a page can be stale with nothing staged against it — without this, that whole
-    // class of staleness never reaches the agent.
+    // Cheap per-page checks. A renamed label or changed prose dependency may move no
+    // pixels at all, so a page can be stale with nothing staged against it.
     const stringChanges = new Map<string, StringChange[]>();
+    const dependencyChanges = new Map<string, DependencyChange[]>();
     const diffCache = new Map<string, StringChange[]>();
-    for (const page of Object.keys(spec().pages ?? {})) {
-        const base = watermark(page);
+    for (const [page, entry] of Object.entries(spec().pages ?? {})) {
+        const lock = pageLock(page);
+        if (lock) {
+            const changed = changedDependencies(lock, entry.also_depends_on ?? []);
+            if (changed.length) dependencyChanges.set(page, changed);
+        }
+        const base = lock?.lastVerifiedSha ?? null;
         if (!base) continue;
         if (!diffCache.has(base)) diffCache.set(base, changedStrings(base));
         const changes = diffCache.get(base) as StringChange[];
@@ -117,8 +131,8 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
         if (quoted.length) stringChanges.set(page, quoted);
     }
 
-    // Pages Detector B flagged that no staged shot already covers.
-    const proseOnly = [...stringChanges.keys()]
+    // Pages a non-visual check flagged that no staged shot already covers.
+    const proseOnly = [...new Set([...stringChanges.keys(), ...dependencyChanges.keys()])]
         .filter((page) => !pending.some(({result}) => result.page === page));
 
     for (const result of results.filter((r) => r.error)) {
@@ -231,12 +245,16 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
             console.log();
         }
 
-        // Pages stale only because a control was renamed. There is no screenshot to
-        // classify — the catalogue diff already establishes the staleness — so these skip
-        // triage and go straight to the fix turn.
+        // Pages selected without a changed screenshot. The mechanical dependency or
+        // catalogue comparison already establishes drift, so these skip visual triage
+        // and go straight to the fix turn.
         for (const page of proseOnly) {
-            const changes = stringChanges.get(page) as StringChange[];
+            const changes = stringChanges.get(page) ?? [];
+            const dependencies = dependencyChanges.get(page) ?? [];
             console.log(`✏️  ${page}`);
+            for (const dependency of dependencies) {
+                console.log(`   dependency changed: ${dependency.path}`);
+            }
             for (const change of changes) {
                 console.log(change.now !== undefined
                     ? `   "${change.was}" is now "${change.now}"`
@@ -250,7 +268,7 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
             const [area, name] = [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
             // The factory appends "memories" itself; give it the page directory.
             const memory = localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name));
-            const evidence = proseEvidence(page, changes);
+            const evidence = proseEvidence(page, changes, dependencies);
             try {
                 const session = openSession(evidence, {
                     model, runLogDir, toolProviders: [...providers, memory],

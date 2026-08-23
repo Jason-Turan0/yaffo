@@ -30,10 +30,11 @@ Keep the published user guide (`docs/guide/**`, MkDocs Material, deployed by
 `.github/workflows/docs.yml`) in step with the app, without a human remembering to
 re-shoot screenshots after every UI change.
 
-A push to `master` evaluates the current state of the docs against the current
-state of the app and, when something has gone stale, opens a PR containing both
-regenerated screenshots and updated prose. It never pushes to `master` and never
-auto-merges.
+The documentation checks run against the head commit of a feature branch's PR. When
+something has gone stale, the healer creates an auto-generated branch from that exact
+commit and opens a second PR containing both regenerated screenshots and updated prose.
+The healing PR targets the originating feature branch, not `master`; the automation
+never pushes directly to either branch and never auto-merges.
 
 The same entry point runs locally, so a stale shot can be fixed and reviewed
 without waiting for CI.
@@ -74,7 +75,7 @@ guarantees, and *What the agent owns* sets out the boundary.
 
 ```mermaid
 flowchart TD
-    push([push to master]) --> detectors{"staleness detectors<br/>(no model calls)"}
+    push([feature-branch PR check]) --> detectors{"staleness detectors<br/>(no model calls)"}
     detectors -->|nothing fired| stop([exit, no PR])
     detectors -->|pages flagged| sandbox["isolated sandbox<br/>seeded fixture + taskq"]
     sandbox --> capture["run walkthroughs (containerized)<br/>images -> staging"]
@@ -82,7 +83,8 @@ flowchart TD
     capture --> pdiff{"pixel diff<br/>vs committed"}
     pdiff -->|unchanged| stop
     pdiff -->|changed| agent["agent: heal walkthroughs,<br/>edit prose"]
-    agent --> pr([PR on docs/auto-refresh])
+    agent --> branch[auto-generated heal branch<br/>from feature HEAD_SHA]
+    branch --> pr([healing PR<br/>base: feature HEAD_BRANCH])
     pr --> watermark["bump per-page<br/>last_verified_sha"]
 ```
 
@@ -255,33 +257,33 @@ same functions run inside `docs:heal` (see *The agentic loop*).
 ### The watermark
 
 A bot-owned `lastVerifiedSha` per page, stored in that page's lockfile (see *Bot
-state*) rather than in the markdown, which stays clean. It does two jobs:
+state*) rather than in the markdown, which stays clean. It has one narrow job:
 
-- **Bounds the model's input** to `git diff <lastVerifiedSha>..HEAD -- <that page's deps>`
-  rather than "the repository".
-- **Breaks the retrigger loop.** Push produces a PR; merging the PR is another push.
-  After the merge each touched page's watermark is the merge commit, so the next run
-  finds nothing new.
+- **Bounds Detector B's catalogue comparison** so it can identify a quoted string that
+  disappeared or changed. Dependency selection does not use Git history; it compares
+  per-file content hashes stored in the same lockfile.
 
 Written by `docs:capture --promote`, because that is the moment the guide starts
-holding what the app produces — not at capture, which only stages. A dirty working tree
-makes it approximate: the uncommitted change is already in the promoted screenshot but
-is not yet in any commit.
+holding what the app produces — not at capture, which only stages. The capture records
+the checkout's current `HEAD` itself; there is no caller-supplied SHA argument. A dirty
+working tree makes the catalogue window approximate, but dependency fingerprints still
+describe the exact files on disk that were captured.
 
-**A page with no watermark is skipped, not reported clean.** Until a page has been
-generated and promoted there is nothing to diff from, and saying so is more honest than
-implying it was checked. Today that means Detector B is silent on 16 of 17 pages.
+**A page with no watermark is skipped only by Detector B, not reported wholly clean.**
+Its dependency hashes can still be checked without a commit reference. Today Detector B
+is silent on 16 of 17 pages.
 
 ## Scoping: the observed dependency set
 
-Which source files back which page, so a push can be intersected against them and only
-the affected pages reviewed.
+Which source files back which page, so only affected pages are reviewed. Each successful
+capture stores the SHA-256 of every observed and hand-declared dependency. The cheap
+check hashes those files in the checked-out feature branch and compares the values
+directly with the lockfile. A mismatch selects the page for regeneration without walking
+Git history or requiring a workflow-supplied commit SHA.
 
-Not a detector. It never reports that anything is stale — a detector fires, and this
-answers "which pages does that concern?" once one has. It is what bounds the model's
-input to `git diff <lastVerifiedSha>..HEAD` over one page's dependencies rather than
-the whole repository, and it is the reason that diff is affordable to hand to a model
-at all.
+A documentation-only healing merge changes neither the application files nor their
+hashes, so it does not retrigger the page. A changed shared dependency such as
+`base.html` legitimately selects every page that observed it.
 
 **Scoping also covers incompleteness**, which is why there is no third detector for it.
 An earlier draft proposed one: comparing a page's charter against the app's surface to
@@ -311,6 +313,10 @@ second output of that page's walkthrough** rather than hand-maintained. Because 
 generated by deterministically driving the app it cannot drift the way a hand-written
 mapping does, and re-running the same walkthrough against the same commit yields the same
 set.
+
+The lockfile stores both the dependency paths and their SHA-256 content hashes. The path
+defines scope; the hash answers whether that dependency still matches the successful
+capture. Missing files hash as `null`, so deletion is a detectable change too.
 
 ### What to record
 
@@ -623,10 +629,13 @@ It holds everything the automation knows about that page after its last successf
 run, and is written by `docs:capture --promote` — only on promote, because the shot
 hashes are a record of what the guide actually holds:
 
-- **`lastVerifiedSha`** — the watermark that bounds the model's input and breaks the
-  retrigger loop.
+- **`lastVerifiedSha`** — the base used only by the quoted-string catalogue comparison.
+  It is derived from the checkout automatically.
 - **`routes` / `templates` / `static` / `urls`** — the observed dependency set, the
   input to scoping.
+- **`dependencyHashes`** — SHA-256 values for the observed dependencies plus
+  `also_depends_on`; compared directly with the checked-out feature branch to select
+  pages for regeneration.
 - **`shots`** — each image's hash *as the automation last wrote it*. Not for the diff,
   which always has both images and compares pixels, but to detect a committed
   screenshot changing **outside** the pipeline. "Someone replaced this by hand" is a
@@ -635,9 +644,9 @@ hashes are a record of what the guide actually holds:
 - **`serverObserver`** — whether the observer answered, so an empty dependency set
   cannot be misread as "this page touched nothing".
 
-`lastVerifiedSha` is written as an explicit `null` until the watermark lands, rather
-than omitted: a present-but-empty field says the slot exists and is unfilled, where an
-absent one just looks like an older format.
+Older lockfiles without `dependencyHashes` select their pages once. The next successful
+promotion writes the initial fingerprint snapshot, after which unchanged files compare
+cleanly.
 
 Three reasons for one file per page rather than a single shared state file:
 
@@ -694,8 +703,8 @@ Two things the agent still does not do. It does not adopt a screenshot classifie
 finds staleness it cannot confidently resolve, such as a described workflow that no
 longer matches any observable flow, it says so in the PR body instead of guessing.
 
-Every change lands as a PR on a long-lived branch and is reviewed. Nothing is
-auto-merged.
+Every change lands as a PR from an auto-generated healing branch into the originating
+feature branch and is reviewed. Nothing is auto-merged.
 
 ## The agentic loop
 
@@ -732,7 +741,7 @@ is a regression report, not a screenshot of broken thumbnails.
 | `test`, `test:sandboxed` | **`docs:capture`** — deterministic run; `--promote` writes into the guide | Built, as `npm run docs:capture` |
 | `generate` | **`docs:generate`** — writes a walkthrough for a page that has none | 14 of 16 app-backed pages still need one |
 | `test:heal` | **`docs:heal`** — act on what the detectors found; `--apply` writes | Built, as `npm run docs:heal` |
-| — | **`docs:detect`** — Detector B alone, without a sandbox | Built, as `npm run docs:detect` |
+| — | **`docs:detect`** — dependency fingerprints plus Detector B, without a sandbox | Built, as `npm run docs:detect` |
 | `validate:specs` | **`docs:validate`** — the guide and its automation agree | Built, as `npm run docs:validate` |
 | `test:heal:repo` | **`docs:heal:repo`** — the same across every flagged page, for CI | Not built |
 
@@ -878,14 +887,22 @@ required bones: seed cache at `/tmp/yaffo-seed`, asset cache at `/tmp/yaffo-asse
 a `MODEL_ALIAS` variable, `contents: write` plus `pull-requests: write`, and a
 discover → matrix → PR structure.
 
-- `on: push: [master]` with `paths-ignore: [docs/**, tests/**, yaffo_ui_tests/**]`,
-  plus `workflow_dispatch`. No schedule: a docs change always has a commit behind it,
-  so push covers it, and `workflow_dispatch` handles the rest by hand. A recurring job
-  would mostly spend a sandbox boot to conclude nothing moved.
-- Concurrency group with `cancel-in-progress: true` — a newer `master` supersedes an
-  in-flight run.
-- **One long-lived branch** (`docs/auto-refresh`), force-pushed, reusing a single PR.
-  Otherwise open PRs accumulate.
+- Run as a check on `pull_request` events targeting `master`, plus
+  `workflow_dispatch` for manual recovery. The workflow checks out the feature
+  branch's exact `HEAD_SHA`, not the merge commit synthesized by GitHub. A recurring
+  job would mostly spend a sandbox boot to conclude nothing moved.
+- Carry the originating feature branch as `HEAD_BRANCH` and use it as the base branch
+  of the healing PR. For manual runs, require both `head_branch` and `head_sha` inputs.
+- Concurrency is scoped to `HEAD_BRANCH`, with `cancel-in-progress: true`, so a newer
+  commit on the same feature branch supersedes an in-flight check without cancelling
+  checks for unrelated feature branches.
+- Create a run-specific branch such as `auto-heal/docs-${RUN_ID}` from `HEAD_SHA` and
+  open its PR against `HEAD_BRANCH`. Never commit or push healing changes directly to
+  the feature branch. Close or supersede an older open documentation-healing PR for
+  the same feature branch when a newer run replaces it.
+- Only create healing branches for same-repository feature branches. Fork PRs still
+  run the read-only checks, but do not receive model secrets or repository write
+  credentials.
 - Reuse the existing seed cache so the sandbox boot stays cheap. A seeded data dir
   remains at the absolute path where it was built because the DB stores absolute
   media paths. The docs fixture is seeded directly into its final stable

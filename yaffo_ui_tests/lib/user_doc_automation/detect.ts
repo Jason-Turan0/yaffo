@@ -16,6 +16,8 @@ import {existsSync, readFileSync} from "fs";
 import {join, resolve} from "path";
 import {pathToFileURL} from "url";
 import {parse as parseYaml} from "yaml";
+import {changedDependencies} from "./dependency_changes";
+import type {DependencyChange, PageLock} from "./dependency_changes";
 import {changedStrings, changesQuotedBy} from "./strings";
 import type {StringChange} from "./strings";
 
@@ -26,11 +28,11 @@ const GUIDE_DIR = resolve(process.env.GUIDE_DIR || join(REPO, "docs", "guide"));
 const split = (page: string): [string, string] =>
     [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
 
-const watermark = (page: string, contentDir: string): string | null => {
+const pageLock = (page: string, contentDir: string): PageLock | null => {
     const [area, name] = split(page);
     const lock = join(contentDir, area, name, `${name}.lock.json`);
     if (!existsSync(lock)) return null;
-    return JSON.parse(readFileSync(lock, "utf8")).lastVerifiedSha ?? null;
+    return JSON.parse(readFileSync(lock, "utf8")) as PageLock;
 };
 
 const describe = (change: StringChange): string =>
@@ -43,10 +45,11 @@ export interface DetectionOptions {
     guideDir?: string;
     overrideBase?: string;
     changedStrings?: (base: string) => StringChange[];
+    changedDependencies?: (lock: PageLock, alsoDependsOn: string[]) => DependencyChange[];
 }
 
 export interface DetectionResult {
-    flagged: Array<{page: string; changes: StringChange[]}>;
+    flagged: Array<{page: string; changes: StringChange[]; dependencies: DependencyChange[]}>;
     scanned: number;
     unwatermarked: number;
 }
@@ -55,35 +58,41 @@ export const detect = (options: DetectionOptions = {}): DetectionResult => {
     const contentDir = options.contentDir ?? CONTENT_DIR;
     const guideDir = options.guideDir ?? GUIDE_DIR;
     const findChanges = options.changedStrings ?? changedStrings;
+    const findDependencyChanges = options.changedDependencies ?? changedDependencies;
 
     const spec = parseYaml(readFileSync(join(contentDir, "spec.yaml"), "utf8"));
-    const pages: string[] = Object.keys(spec.pages ?? {});
+    const pages: Record<string, {also_depends_on?: string[]}> = spec.pages ?? {};
 
     // Diffs are cached per base: pages sharing a watermark share the catalogue
     // comparison, which is the expensive half.
     const byBase = new Map<string, StringChange[]>();
-    const flagged: Array<{page: string; changes: StringChange[]}> = [];
+    const flagged: DetectionResult["flagged"] = [];
     let unwatermarked = 0;
 
-    for (const page of pages) {
-        const base = options.overrideBase ?? watermark(page, contentDir);
+    for (const [page, entry] of Object.entries(pages)) {
+        const lock = pageLock(page, contentDir);
+        const base = options.overrideBase ?? lock?.lastVerifiedSha ?? null;
+        const dependencies = lock
+            ? findDependencyChanges(lock, entry.also_depends_on ?? [])
+            : [];
+        let changes: StringChange[] = [];
         if (!base) {
             // A page never promoted has nothing to diff from. Saying so is more useful
             // than silently reporting it clean.
             unwatermarked++;
-            continue;
+        } else {
+            if (!byBase.has(base)) byBase.set(base, findChanges(base));
+            changes = byBase.get(base) as StringChange[];
         }
-        if (!byBase.has(base)) byBase.set(base, findChanges(base));
-        const changes = byBase.get(base) as StringChange[];
-        if (!changes.length) continue;
 
         const markdownPath = join(guideDir, `${page}.md`);
-        if (!existsSync(markdownPath)) continue;
-        const quoted = changesQuotedBy(readFileSync(markdownPath, "utf8"), changes);
-        if (quoted.length) flagged.push({page, changes: quoted});
+        const quoted = changes.length && existsSync(markdownPath)
+            ? changesQuotedBy(readFileSync(markdownPath, "utf8"), changes)
+            : [];
+        if (quoted.length || dependencies.length) flagged.push({page, changes: quoted, dependencies});
     }
 
-    const scanned = pages.length - unwatermarked;
+    const scanned = Object.keys(pages).length - unwatermarked;
     return {flagged, scanned, unwatermarked};
 };
 
@@ -95,16 +104,20 @@ export const main = (
     const overrideBase = baseArg !== -1 ? args[baseArg + 1] : undefined;
     const {flagged, scanned, unwatermarked} = detect({...options, overrideBase});
     if (!flagged.length) {
-        console.log(`✅ ${scanned} page(s) checked — none quotes a string the app has changed.`);
+        console.log(`✅ ${scanned} page(s) checked — no relevant dependency or quoted-string changes.`);
     } else {
-        for (const {page, changes} of flagged) {
+        for (const {page, changes, dependencies} of flagged) {
             console.log(`\n${page}`);
+            for (const dependency of dependencies) {
+                console.log(`   dependency changed: ${dependency.path}`);
+            }
             for (const change of changes) console.log(`   ${describe(change)}`);
         }
-        console.log(`\n${flagged.length} page(s) quote text the app no longer shows.`);
+        console.log(`\n${flagged.length} page(s) need documentation regeneration.`);
     }
     if (unwatermarked) {
-        console.log(`${unwatermarked} page(s) skipped: no watermark yet (never promoted).`);
+        console.log(`${unwatermarked} page(s) skipped by quoted-string detection: ` +
+            "no watermark yet (never promoted).");
     }
     return flagged.length ? 2 : 0;
 };
