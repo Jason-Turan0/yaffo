@@ -4,3 +4,4 @@ __pycache__/
 # A sibling of user_doc_automation/ so it is not inside the tree granted to the
 # agent's filesystem tool.
 .doc-staging/
+/coverage*

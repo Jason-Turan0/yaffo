@@ -42,12 +42,12 @@ export const GenerateSchema = z.object({
             "yaffo_ui_tests/user_doc_automation/{area}/{page}/{page}.ts"),
         code: z.string().describe("The complete file contents"),
         description: z.string().optional().describe("What this file does"),
-    })).describe("The walkthrough, and any helper it needs"),
+    }).strict()).describe("The walkthrough, and any helper it needs"),
     pageContext: z.string().optional().describe(
         "What a future run should know about this page: state that must be pinned, " +
         "controls that cannot be driven the obvious way, fixture quirks"),
     explanation: z.string().optional().describe("How the walkthrough was arrived at"),
-    confidence: z.number().optional().describe("Confidence, from 0 (low) to 1 (high)"),
+    confidence: z.number().min(0).max(1).optional().describe("Confidence, from 0 (low) to 1 (high)"),
 }).strict();
 
 export type Generated = z.infer<typeof GenerateSchema>;
@@ -316,6 +316,7 @@ export const generateWalkthrough = async (
     let generated: Generated | undefined;
     let errors: string[] = [];
     let written: string[] = [];
+    const touched = new Set<string>();
     let attempts = 0;
 
     // Ask, write, check, and hand any failure back — the same loop the test generator
@@ -340,7 +341,8 @@ export const generateWalkthrough = async (
         written = [];
         for (const file of generated?.files ?? []) {
             const absolute = resolve(REPO, file.filename);
-            const owned = absolute.startsWith(join(options.contentDir, area, name))
+            const pageDir = join(options.contentDir, area, name);
+            const owned = absolute.startsWith(`${pageDir}/`)
                 || absolute === resolve(markdownPath);
             if (!owned) {
                 errors.push(`refused to write outside the page's own files: ${file.filename}`);
@@ -349,6 +351,7 @@ export const generateWalkthrough = async (
             mkdirSync(dirname(absolute), {recursive: true});
             writeFileSync(absolute, file.code);
             written.push(file.filename);
+            touched.add(file.filename);
         }
 
         // The gates only mean anything once something was written.
@@ -380,5 +383,5 @@ export const generateWalkthrough = async (
             JSON.stringify(catalog, null, 4) + "\n");
     }
 
-    return {generated, written, errors, attempts};
+    return {generated, written: [...touched], errors, attempts};
 };

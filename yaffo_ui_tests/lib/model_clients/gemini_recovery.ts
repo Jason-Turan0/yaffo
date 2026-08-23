@@ -16,21 +16,23 @@
  *
  * Returns the answer text, or undefined when there is nothing to recover.
  */
-export const recoverMalformedFunctionCall = (rawBody: string | undefined): string | undefined => {
-    if (!rawBody) return undefined;
+interface GeminiCandidate {
+    finishReason?: string;
+    finishMessage?: string;
+    content?: {parts?: Array<{text?: string}>};
+}
 
-    let parsed: unknown;
+const candidateFrom = (rawBody: string | undefined): GeminiCandidate | undefined => {
+    if (!rawBody) return undefined;
     try {
-        parsed = JSON.parse(rawBody);
+        return (JSON.parse(rawBody) as {candidates?: GeminiCandidate[]}).candidates?.[0];
     } catch {
         return undefined;
     }
+};
 
-    const candidate = (parsed as {candidates?: Array<{
-        finishReason?: string;
-        finishMessage?: string;
-        content?: {parts?: Array<{text?: string}>};
-    }>})?.candidates?.[0];
+export const recoverMalformedFunctionCall = (rawBody: string | undefined): string | undefined => {
+    const candidate = candidateFrom(rawBody);
     if (candidate?.finishReason !== "MALFORMED_FUNCTION_CALL") return undefined;
 
     // Never override a real answer: only step in when the candidate carries no content.

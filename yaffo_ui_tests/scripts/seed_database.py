@@ -222,7 +222,13 @@ def seed_bennett_face_assignments(
                 face.status = FACE_STATUS_UNASSIGNED
 
     detected_face_ids = {
-        face_id for (face_id,) in db.session.query(Face.id).all()
+        face_id
+        for (face_id,) in (
+            db.session.query(Face.id)
+            .join(MediaItem, Face.media_item_id == MediaItem.id)
+            .filter(MediaItem.media_type == MEDIA_TYPE_PHOTO)
+            .all()
+        )
     }
     if missing or matched_face_ids != detected_face_ids:
         unmatched_detected = sorted(detected_face_ids - matched_face_ids)
@@ -623,7 +629,8 @@ def index_media_library(photos_dir: Path, thumbnail_dir: Path) -> int:
         processed_results.append(indexed_photo)
         print(f"  Indexed: {photo_path.name}")
 
-    for video_path in sorted(photos_dir.glob("*.mp4"), key=lambda path: path.name.lower()):
+    video_glob = "**/*.mp4" if os.environ.get("YAFFO_SEED_RECURSIVE_VIDEOS") == "1" else "*.mp4"
+    for video_path in sorted(photos_dir.glob(video_glob), key=lambda path: path.name.lower()):
         try:
             indexed_video = index_video(video_path, thumbnail_dir)
         except Exception as e:
@@ -687,7 +694,7 @@ def seed_database() -> int:
         sys.exit(1)
 
     data_dir = Path(data_dir)
-    photos_dir = data_dir / "organized"
+    photos_dir = data_dir / "Family Photos"
     thumbnail_dir = data_dir / "thumbnails"
 
     from yaffo.app import create_app

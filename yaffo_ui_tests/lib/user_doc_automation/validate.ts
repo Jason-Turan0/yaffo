@@ -11,6 +11,7 @@
 import "dotenv/config";
 import {existsSync, readFileSync, readdirSync, statSync} from "fs";
 import {join, relative, resolve} from "path";
+import {pathToFileURL} from "url";
 import {parse as parseYaml} from "yaml";
 
 const CONTENT_DIR = resolve(join(process.cwd(), "user_doc_automation"));
@@ -19,9 +20,15 @@ const GUIDE_DIR = resolve(process.env.GUIDE_DIR || join(REPO, "docs", "guide"));
 
 const IMAGE_SUFFIXES = [".png", ".webp", ".jpg", ".jpeg", ".svg", ".gif"];
 
-interface Problem {
+export interface Problem {
     check: string;
     detail: string;
+}
+
+export interface ValidationOptions {
+    contentDir?: string;
+    repoDir?: string;
+    guideDir?: string;
 }
 
 const split = (page: string): [string, string] =>
@@ -33,18 +40,21 @@ const walk = (dir: string): string[] =>
         return statSync(full).isDirectory() ? walk(full) : [full];
     });
 
-const guidePages = (): string[] =>
-    walk(GUIDE_DIR).filter((f) => f.endsWith(".md"))
-        .map((f) => relative(GUIDE_DIR, f).replace(/\.md$/, ""));
+const guidePages = (guideDir: string): string[] =>
+    walk(guideDir).filter((f) => f.endsWith(".md"))
+        .map((f) => relative(guideDir, f).replace(/\.md$/, ""));
 
 const imagesIn = (markdown: string): string[] =>
     [...markdown.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
 
-const main = (): void => {
-    const spec = parseYaml(readFileSync(join(CONTENT_DIR, "spec.yaml"), "utf8"));
+export const validate = (options: ValidationOptions = {}): Problem[] => {
+    const contentDir = options.contentDir ?? CONTENT_DIR;
+    const repoDir = options.repoDir ?? REPO;
+    const guideDir = options.guideDir ?? GUIDE_DIR;
+    const spec = parseYaml(readFileSync(join(contentDir, "spec.yaml"), "utf8"));
     const pages: Record<string, {walkthrough?: boolean; also_depends_on?: string[]}> = spec.pages ?? {};
     const problems: Problem[] = [];
-    const onDisk = guidePages();
+    const onDisk = guidePages(guideDir);
 
     // 1. The spec and the guide describe the same set of pages.
     for (const page of Object.keys(pages)) {
@@ -57,11 +67,11 @@ const main = (): void => {
     const referenced = new Set<string>();
     for (const page of onDisk) {
         const [area, name] = split(page);
-        const markdown = readFileSync(join(GUIDE_DIR, `${page}.md`), "utf8");
-        const expected = resolve(GUIDE_DIR, area, "assets", name);
+        const markdown = readFileSync(join(guideDir, `${page}.md`), "utf8");
+        const expected = resolve(guideDir, area, "assets", name);
 
         for (const reference of imagesIn(markdown)) {
-            const image = resolve(GUIDE_DIR, area, reference);
+            const image = resolve(guideDir, area, reference);
             referenced.add(image);
             // 2. Every reference resolves.
             if (!existsSync(image)) {
@@ -76,7 +86,7 @@ const main = (): void => {
         }
 
         // 4. A page's walkthrough exists exactly when the spec says it should.
-        const walkthrough = join(CONTENT_DIR, area, name, `${name}.ts`);
+        const walkthrough = join(contentDir, area, name, `${name}.ts`);
         const declared = pages[page]?.walkthrough;
         if (declared === false && existsSync(walkthrough)) {
             problems.push({check: "walkthrough", detail: `${page} is marked walkthrough: false but one exists`});
@@ -84,10 +94,10 @@ const main = (): void => {
     }
 
     // 5. Nothing captured is left unreferenced.
-    for (const file of walk(GUIDE_DIR)) {
+    for (const file of walk(guideDir)) {
         if (!IMAGE_SUFFIXES.some((suffix) => file.endsWith(suffix))) continue;
         if (!referenced.has(resolve(file))) {
-            problems.push({check: "images", detail: `${relative(GUIDE_DIR, file)} is referenced by no page`});
+            problems.push({check: "images", detail: `${relative(guideDir, file)} is referenced by no page`});
         }
     }
 
@@ -98,7 +108,7 @@ const main = (): void => {
 
         // 6. A hand-declared dependency has to exist.
         for (const dependency of declared) {
-            if (!existsSync(join(REPO, dependency))) {
+            if (!existsSync(join(repoDir, dependency))) {
                 problems.push({check: "depends", detail: `${page} declares ${dependency}, which does not exist`});
             }
         }
@@ -108,7 +118,7 @@ const main = (): void => {
         //    left unchecked it silently becomes a second, stale dependency list beside
         //    the observed one. As the observer records more (see the lockfile's layer 4),
         //    entries here should be deleted rather than left to rot.
-        const lockPath = join(CONTENT_DIR, area, name, `${name}.lock.json`);
+        const lockPath = join(contentDir, area, name, `${name}.lock.json`);
         if (!existsSync(lockPath)) continue;
         const observed = JSON.parse(readFileSync(lockPath, "utf8")).observed ?? {};
         const seen = new Set<string>([
@@ -124,13 +134,39 @@ const main = (): void => {
         }
     }
 
+    return problems;
+};
+
+export const main = (options: ValidationOptions = {}): number => {
+    const problems = validate(options);
     if (!problems.length) {
-        console.log(`✅ ${onDisk.length} pages, ${referenced.size} images — no problems.`);
-        return;
+        const pageCount = guidePages(options.guideDir ?? GUIDE_DIR).length;
+        const referenced = new Set<string>();
+        for (const page of guidePages(options.guideDir ?? GUIDE_DIR)) {
+            const [area] = split(page);
+            const markdown = readFileSync(join(options.guideDir ?? GUIDE_DIR, `${page}.md`), "utf8");
+            for (const reference of imagesIn(markdown)) {
+                referenced.add(resolve(options.guideDir ?? GUIDE_DIR, area, reference));
+            }
+        }
+        console.log(`✅ ${pageCount} pages, ${referenced.size} images — no problems.`);
+        return 0;
     }
     for (const problem of problems) console.error(`  [${problem.check}] ${problem.detail}`);
     console.error(`\n${problems.length} problem(s).`);
-    process.exit(1);
+    return 1;
 };
 
-main();
+export const runCli = (options: ValidationOptions = {}): void => {
+    try {
+        process.exitCode = main(options);
+    } catch (e) {
+        console.error(e);
+        process.exitCode = 1;
+    }
+};
+
+const isDirectRun = process.argv[1] !== undefined &&
+    import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+
+if (isDirectRun) runCli();

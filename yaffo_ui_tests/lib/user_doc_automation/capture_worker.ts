@@ -14,6 +14,8 @@
  */
 import {scrubProcessEnv} from "./env";
 import {BASE_URL, CAPTURE_DIR, CONTENT_DIR} from "./paths";
+import {resolve} from "path";
+import {pathToFileURL} from "url";
 
 
 // Before any walkthrough is imported: walkthroughs are model-generated code, and
@@ -23,15 +25,15 @@ import {BASE_URL, CAPTURE_DIR, CONTENT_DIR} from "./paths";
 scrubProcessEnv({DOCS_BASE_URL: BASE_URL});
 
 
-const main = async (): Promise<void> => {
+export const main = async (args: string[] = process.argv.slice(2)): Promise<number> => {
     const {loadWalkthroughs} = await import("./load");
     const {captureWalkthroughs} = await import("./runner");
 
-    const only = process.argv.slice(2).filter((a) => !a.startsWith("-"));
+    const only = args.filter((a) => !a.startsWith("-"));
     const walkthroughs = await loadWalkthroughs(CONTENT_DIR, only);
     if (!walkthroughs.length) {
         console.error(only.length ? `No walkthrough for: ${only.join(", ")}` : "No walkthroughs found");
-        process.exit(1);
+        return 1;
     }
 
     console.log(`Capturing ${walkthroughs.length} walkthrough(s) from ${BASE_URL}`);
@@ -47,10 +49,19 @@ const main = async (): Promise<void> => {
             console.error(`  ! ${result.error}`);
         }
     }
-    if (failed) process.exit(1);
+    return failed ? 1 : 0;
 };
 
-main().catch((e) => {
-    console.error(e);
-    process.exit(1);
-});
+const isDirectRun = process.argv[1] !== undefined &&
+    import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+
+export const runCli = async (args: string[] = process.argv.slice(2)): Promise<void> => {
+    try {
+        process.exitCode = await main(args);
+    } catch (e) {
+        console.error(e);
+        process.exitCode = 1;
+    }
+};
+
+if (isDirectRun) void runCli();

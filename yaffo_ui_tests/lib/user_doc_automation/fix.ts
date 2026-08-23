@@ -1,4 +1,3 @@
-import {execFileSync} from "child_process";
 import {existsSync, readFileSync, writeFileSync} from "fs";
 import {join, resolve} from "path";
 import {z} from "zod";
@@ -46,7 +45,7 @@ export const FixSchema = z.object({
         "Every file to write. Empty when the page is already accurate."),
     explanation: z.string().optional().describe(
         "One line for the PR body, plus anything deliberately left unchanged"),
-    confidence: z.number().optional().describe(
+    confidence: z.number().min(0).max(1).optional().describe(
         "Confidence in the edit, from 0 (low) to 1 (high)"),
 }).strict();
 
@@ -87,15 +86,6 @@ accepted.
 `.trim();
 
 const REPO = resolve(join(process.cwd(), ".."));
-
-const run = (command: string, args: string[], cwd = REPO): {ok: boolean; output: string} => {
-    try {
-        return {ok: true, output: execFileSync(command, args, {cwd, encoding: "utf8", stdio: "pipe"})};
-    } catch (e) {
-        const err = e as {stdout?: string; stderr?: string; message?: string};
-        return {ok: false, output: `${err.stdout ?? ""}${err.stderr ?? ""}` || err.message || "failed"};
-    }
-};
 
 const buildPrompt = (evidence: Evidence, baseUrl: string): string => `
 The change is intended, so bring the page into line with it.
@@ -247,6 +237,7 @@ export const applyFix = async (
     let fix: Fix | undefined;
     let failures: string[] = [];
     let written: string[] = [];
+    const touched = new Set<string>();
     let attempts = 0;
 
     // Ask, write, check, hand any failure back. Reverting on the first gate failure
@@ -277,6 +268,7 @@ export const applyFix = async (
             }
             writeFileSync(resolve(REPO, file.filename), file.code);
             written.push(file.filename);
+            touched.add(file.filename);
         }
 
         failures.push(...validate(evidence, options));
@@ -296,13 +288,13 @@ export const applyFix = async (
     if (!failures.length && fix && written.length) updateCatalog(evidence.page, written, fix);
 
     let reverted = false;
-    if (failures.length && written.length && options.revertOnFailure !== false) {
+    if (failures.length && touched.size && options.revertOnFailure !== false) {
         // Verification promotes, so this has to take the images back out as well as the
         // files the agent wrote. Tracked paths are restored rather than deleted, so a
         // page that already existed comes back exactly as it was.
-        revertPage(evidence.page, written);
+        revertPage(evidence.page, [...touched]);
         reverted = true;
     }
 
-    return {fix, written, failures, reverted, attempts};
+    return {fix, written: [...touched], failures, reverted, attempts};
 };

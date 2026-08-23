@@ -14,6 +14,7 @@
 import "dotenv/config";
 import {copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync} from "fs";
 import {dirname, join, resolve} from "path";
+import {pathToFileURL} from "url";
 import {parse as parseYaml} from "yaml";
 import {applyFix, buildEvidence, openSession, triageShot} from "./index";
 import {changedStrings, changesQuotedBy} from "./strings";
@@ -85,15 +86,14 @@ const proseEvidence = (page: string, changes: StringChange[]) => ({
     stringChanges: changes,
 });
 
-const main = async (): Promise<void> => {
-    const args = process.argv.slice(2);
+export const main = async (args: string[] = process.argv.slice(2)): Promise<number> => {
     const apply = args.includes("--apply");
     const modelArg = args.indexOf("--model");
     const model = modelArg !== -1 ? (args[modelArg + 1] as ModelAlias) : undefined;
 
     if (!existsSync(REPORT)) {
         console.error(`No capture to triage at ${REPORT}.\nRun: npm run docs:capture`);
-        process.exit(1);
+        return 1;
     }
     const results = JSON.parse(readFileSync(REPORT, "utf8")).results as WalkthroughResult[];
 
@@ -131,7 +131,7 @@ const main = async (): Promise<void> => {
         console.log(results.some((r) => r.error)
             ? "\nNo changed shots to triage."
             : "Nothing to triage — every shot matched what is committed.");
-        return;
+        return 0;
     }
 
     // Its own directory per run — see newRunLogDir.
@@ -147,135 +147,151 @@ const main = async (): Promise<void> => {
     //
     // Only opened under --apply, since triage alone needs no tools.
     const providers: ToolProvider[] = [];
-    if (apply) {
-        providers.push(await createFilesystemClient([GUIDE_DIR, CONTENT_DIR], {readonly: false}));
-        providers.push(await createPlaywrightClient({
-            headless: true,
-            baseUrl: BASE_URL,
-            browser: "chromium",
-            artifacts: {outputDir: runLogDir, saveVideo: false, saveSession: false},
-        }));
-    }
-
-    const verdicts: Array<{page: string; target: string; triage: Triage}> = [];
-    for (const {result, shot} of pending) {
-        const evidence = buildEvidence(result, shot, {
-            guideDir: GUIDE_DIR,
-            stagingDir: CAPTURE_DIR,
-            walkthroughSource: walkthroughSource(result.page),
-            walkthroughPath: walkthroughPath(result.page),
-            covers: covers(result.page),
-            stringChanges: stringChanges.get(result.page) ?? [],
-        });
-
-        // Memory is per page — the same scoping the generator uses for a feature.
-        const [area, name] = [result.page.slice(0, result.page.indexOf("/")),
-                              result.page.slice(result.page.indexOf("/") + 1)];
-        const memory = apply
-            // The factory appends "memories" itself; give it the page directory.
-            ? localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name))
-            : undefined;
-        const pageProviders = memory ? [...providers, memory] : providers;
-
-        let session;
-        try {
-            session = await triageShot(evidence, {model, runLogDir, toolProviders: pageProviders});
-        } catch (e) {
-            console.error(`  ❌ ${shot.target}: ${e instanceof Error ? e.message : String(e)}`);
-            continue;
-        }
-        const triage: Triage = session.triage;
-        verdicts.push({page: result.page, target: shot.target, triage});
-
-        console.log(`${MARK[triage.classification]} ${shot.target}`);
-        console.log(`   ${triage.classification} (${triage.confidence} confidence) — ${triage.summary}`);
-        console.log(`   ${triage.reasoning.replace(/\n/g, "\n   ")}`);
-        for (const impact of triage.proseImpact) {
-            console.log(`   prose: "${impact.quote}"\n          ${impact.issue}`);
+    try {
+        if (apply) {
+            providers.push(await createFilesystemClient([GUIDE_DIR, CONTENT_DIR], {readonly: false}));
+            providers.push(await createPlaywrightClient({
+                headless: true,
+                baseUrl: BASE_URL,
+                browser: "chromium",
+                artifacts: {outputDir: runLogDir, saveVideo: false, saveSession: false},
+            }));
         }
 
-        if (triage.recommendedAction === "promote") {
-            const committed = join(GUIDE_DIR, shot.target);
-            if (apply) {
-                // Promote first: the fix turn reads the page against the screenshot
-                // that is actually going to ship.
-                mkdirSync(dirname(committed), {recursive: true});
-                copyFileSync(shot.staged, committed);
-                console.log("   → promoted");
+        const verdicts: Array<{page: string; target: string; triage: Triage}> = [];
+        let failed = 0;
+        for (const {result, shot} of pending) {
+            const evidence = buildEvidence(result, shot, {
+                guideDir: GUIDE_DIR,
+                stagingDir: CAPTURE_DIR,
+                walkthroughSource: walkthroughSource(result.page),
+                walkthroughPath: walkthroughPath(result.page),
+                covers: covers(result.page),
+                stringChanges: stringChanges.get(result.page) ?? [],
+            });
 
-                const outcome = await applyFix(session, evidence, {toolProviders: pageProviders, baseUrl: BASE_URL});
-                if (outcome.fix) {
-                    if (outcome.fix.explanation) console.log(`   → ${outcome.fix.explanation}`);
-                    for (const file of outcome.written) console.log(`      wrote ${file}`);
-                    if (!outcome.written.length) console.log("      (no file changes returned)");
-                    
-                } else {
-                    console.log("   → no edits returned");
-                }
-                if (outcome.attempts > 1) console.log(`   (${outcome.attempts} attempts)`);
-                for (const failure of outcome.failures) {
-                    console.error(`   ‼️  ${failure.split("\n")[0]}`);
-                }
-                if (outcome.reverted) console.error("   → edits reverted; gates failed");
-            } else {
-                console.log("   → would promote and update the page (re-run with --apply)");
+            // Memory is per page — the same scoping the generator uses for a feature.
+            const [area, name] = [result.page.slice(0, result.page.indexOf("/")),
+                                  result.page.slice(result.page.indexOf("/") + 1)];
+            const memory = apply
+                // The factory appends "memories" itself; give it the page directory.
+                ? localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name))
+                : undefined;
+            const pageProviders = memory ? [...providers, memory] : providers;
+
+            let session;
+            try {
+                session = await triageShot(evidence, {model, runLogDir, toolProviders: pageProviders});
+            } catch (e) {
+                console.error(`  ❌ ${shot.target}: ${e instanceof Error ? e.message : String(e)}`);
+                failed++;
+                continue;
             }
-        } else {
-            console.log(`   → ${triage.recommendedAction}: left for a human, nothing written`);
+            const triage: Triage = session.triage;
+            verdicts.push({page: result.page, target: shot.target, triage});
+
+            console.log(`${MARK[triage.classification]} ${shot.target}`);
+            console.log(`   ${triage.classification} (${triage.confidence} confidence) — ${triage.summary}`);
+            console.log(`   ${triage.reasoning.replace(/\n/g, "\n   ")}`);
+            for (const impact of triage.proseImpact) {
+                console.log(`   prose: "${impact.quote}"\n          ${impact.issue}`);
+            }
+
+            if (triage.recommendedAction === "promote") {
+                const committed = join(GUIDE_DIR, shot.target);
+                if (apply) {
+                    // Promote first: the fix turn reads the page against the screenshot
+                    // that is actually going to ship.
+                    mkdirSync(dirname(committed), {recursive: true});
+                    copyFileSync(shot.staged, committed);
+                    console.log("   → promoted");
+
+                    const outcome = await applyFix(session, evidence, {
+                        toolProviders: pageProviders,
+                        baseUrl: BASE_URL,
+                    });
+                    if (outcome.fix) {
+                        if (outcome.fix.explanation) console.log(`   → ${outcome.fix.explanation}`);
+                        for (const file of outcome.written) console.log(`      wrote ${file}`);
+                        if (!outcome.written.length) console.log("      (no file changes returned)");
+                    } else {
+                        console.log("   → no edits returned");
+                    }
+                    if (outcome.attempts > 1) console.log(`   (${outcome.attempts} attempts)`);
+                    for (const failure of outcome.failures) {
+                        console.error(`   ‼️  ${failure.split("\n")[0]}`);
+                    }
+                    if (outcome.reverted) console.error("   → edits reverted; gates failed");
+                } else {
+                    console.log("   → would promote and update the page (re-run with --apply)");
+                }
+            } else {
+                console.log(`   → ${triage.recommendedAction}: left for a human, nothing written`);
+            }
+            console.log();
         }
-        console.log();
+
+        // Pages stale only because a control was renamed. There is no screenshot to
+        // classify — the catalogue diff already establishes the staleness — so these skip
+        // triage and go straight to the fix turn.
+        for (const page of proseOnly) {
+            const changes = stringChanges.get(page) as StringChange[];
+            console.log(`✏️  ${page}`);
+            for (const change of changes) {
+                console.log(change.now !== undefined
+                    ? `   "${change.was}" is now "${change.now}"`
+                    : `   "${change.was}" no longer exists`);
+            }
+            if (!apply) {
+                console.log("   → would update the page (re-run with --apply)\n");
+                continue;
+            }
+
+            const [area, name] = [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
+            // The factory appends "memories" itself; give it the page directory.
+            const memory = localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name));
+            const evidence = proseEvidence(page, changes);
+            try {
+                const session = openSession(evidence, {
+                    model, runLogDir, toolProviders: [...providers, memory],
+                });
+                const outcome = await applyFix(session, evidence, {
+                    toolProviders: [...providers, memory], baseUrl: BASE_URL,
+                });
+                if (outcome.fix?.explanation) console.log(`   → ${outcome.fix.explanation}`);
+                for (const file of outcome.written) console.log(`      wrote ${file}`);
+                if (!outcome.written.length) console.log("      (no file changes returned)");
+                if (outcome.attempts > 1) console.log(`   (${outcome.attempts} attempts)`);
+                for (const failure of outcome.failures) console.error(`   ‼️  ${failure.split("\n")[0]}`);
+                if (outcome.reverted) console.error("   → edits reverted; gates failed");
+            } catch (e) {
+                console.error(`   ❌ ${e instanceof Error ? e.message : String(e)}`);
+                failed++;
+            }
+            console.log();
+        }
+
+        writeFileSync(join(STAGING_DIR, "triage.json"),
+            JSON.stringify({triagedAt: new Date().toISOString(), verdicts}, null, 2));
+
+        const blocking = verdicts.filter((v) => v.triage.classification !== "intended_change");
+        console.log(`${verdicts.length} triaged, ${blocking.length} needing a human.`);
+        return blocking.length ? 2 : failed ? 1 : 0;
+    } finally {
+        await Promise.all(providers.map((provider) => provider.disconnect()));
     }
-
-    // Pages stale only because a control was renamed. There is no screenshot to
-    // classify — the catalogue diff already establishes the staleness — so these skip
-    // triage and go straight to the fix turn.
-    for (const page of proseOnly) {
-        const changes = stringChanges.get(page) as StringChange[];
-        console.log(`✏️  ${page}`);
-        for (const change of changes) {
-            console.log(change.now !== undefined
-                ? `   "${change.was}" is now "${change.now}"`
-                : `   "${change.was}" no longer exists`);
-        }
-        if (!apply) {
-            console.log("   → would update the page (re-run with --apply)\n");
-            continue;
-        }
-
-        const [area, name] = [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
-        // The factory appends "memories" itself; give it the page directory.
-        const memory = localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name));
-        const evidence = proseEvidence(page, changes);
-        try {
-            const session = openSession(evidence, {
-                model, runLogDir, toolProviders: [...providers, memory],
-            });
-            const outcome = await applyFix(session, evidence, {
-                toolProviders: [...providers, memory], baseUrl: BASE_URL,
-            });
-            if (outcome.fix?.explanation) console.log(`   → ${outcome.fix.explanation}`);
-            for (const file of outcome.written) console.log(`      wrote ${file}`);
-            if (!outcome.written.length) console.log("      (no file changes returned)");
-            if (outcome.attempts > 1) console.log(`   (${outcome.attempts} attempts)`);
-            for (const failure of outcome.failures) console.error(`   ‼️  ${failure.split("\n")[0]}`);
-            if (outcome.reverted) console.error("   → edits reverted; gates failed");
-        } catch (e) {
-            console.error(`   ❌ ${e instanceof Error ? e.message : String(e)}`);
-        }
-        console.log();
-    }
-
-    await Promise.all(providers.map((provider) => provider.disconnect()));
-
-    writeFileSync(join(STAGING_DIR, "triage.json"),
-        JSON.stringify({triagedAt: new Date().toISOString(), verdicts}, null, 2));
-
-    const blocking = verdicts.filter((v) => v.triage.classification !== "intended_change");
-    console.log(`${verdicts.length} triaged, ${blocking.length} needing a human.`);
-    if (blocking.length) process.exit(2);
 };
 
-main().catch((e) => {
-    console.error(e);
-    process.exit(1);
-});
+export const runCli = async (args: string[] = process.argv.slice(2)): Promise<void> => {
+    try {
+        process.exitCode = await main(args);
+    } catch (e) {
+        console.error(e);
+        process.exitCode = 1;
+    }
+};
+
+const isDirectRun = process.argv[1] !== undefined &&
+    import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+
+if (isDirectRun) void runCli();

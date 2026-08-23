@@ -47,6 +47,8 @@ export interface IsolatedEnvironmentOptions {
      * seeding fresh. Skips the expensive indexing/face/label pipeline.
      */
     preseeded?: boolean;
+    /** Serve the reproducible documentation fixture instead of the UI-test seed. */
+    docsFixture?: boolean;
 }
 
 export interface TestResult {
@@ -84,6 +86,15 @@ export interface TestRunResult {
 const UI_TESTS_DIR = resolve(process.cwd());
 const YAFFO_DIR = resolve(join(UI_TESTS_DIR, ".."));
 const SCRIPTS_DIR = join(UI_TESTS_DIR, "scripts");
+
+/**
+ * Fixed across macOS and Linux so paths rendered by Settings have identical pixels.
+ * The cache is restored here before serving; unlike ordinary test sandboxes it is not
+ * an ephemeral timestamped directory.
+ */
+export const DOCS_DATA_DIR = process.env.YAFFO_DOCS_DATA_DIR ||
+    (process.platform === "win32" ? join(TEMP_ROOT, "yaffo-docs") : "/tmp/yaffo-docs");
+export const DOCS_MEDIA_DIR = join(DOCS_DATA_DIR, "Family Photos");
 
 // UDP ports for the p2p QUIC transport, well away from the web ports.
 const quicPortFor = (webPort: number): number => webPort + 10_000;
@@ -131,7 +142,7 @@ interface StartInstanceOptions {
     label: string;
     port: number;
     tempDir: string;
-    /** Fixture directory copied into organized before running the full seed. */
+    /** Fixture directory copied into Family Photos before running the full seed. */
     fixtureDir: string;
     /** Selects fixture-specific database records created by the seed script. */
     seedProfile: "bennett" | "obama";
@@ -192,6 +203,10 @@ interface ProvisionOptions {
     fixtureDir: string;
     seedProfile: "bennett" | "obama";
     includeVideos?: boolean;
+    /** Index videos nested in the photo fixture, used by the docs composition. */
+    recursiveVideos?: boolean;
+    /** Fail fixture construction instead of preserving the UI-test runner's warning. */
+    strictSeed?: boolean;
 }
 
 /**
@@ -202,12 +217,14 @@ interface ProvisionOptions {
  * seeded DB stores absolute media paths.
  */
 export const provisionInstanceData = (options: ProvisionOptions): void => {
-    const {label, tempDir, fixtureDir, seedProfile, includeVideos = false} = options;
+    const {label, tempDir, fixtureDir, seedProfile, includeVideos = false,
+           recursiveVideos = false, strictSeed = false} = options;
+    const mediaDir = join(tempDir, "Family Photos");
 
     console.log(`\n🔧 Provisioning data dir for instance ${label}...`);
     console.log(`   Data directory: ${tempDir}`);
 
-    mkdirSync(join(tempDir, "organized"), {recursive: true});
+    mkdirSync(mediaDir, {recursive: true});
     mkdirSync(join(tempDir, "thumbnails"), {recursive: true});
     mkdirSync(join(tempDir, "temp"), {recursive: true});
     mkdirSync(join(tempDir, "duplicates"), {recursive: true});
@@ -215,11 +232,11 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
     if (!existsSync(fixtureDir)) {
         throw new Error(`Fixture directory does not exist: ${fixtureDir}`);
     }
-    cpSync(fixtureDir, join(tempDir, "organized"), {recursive: true});
+    cpSync(fixtureDir, mediaDir, {recursive: true});
     console.log(`   ✅ Copied photo fixture: ${fixtureDir}`);
     if (includeVideos) {
         const testVideoDir = join(UI_TESTS_DIR, "test_data", "mp4");
-        cpSync(testVideoDir, join(tempDir, "organized"), {recursive: true});
+        cpSync(testVideoDir, mediaDir, {recursive: true});
         console.log(`   ✅ Copied video fixtures`);
     }
 
@@ -231,13 +248,36 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
     console.log(`\n📦 Seeding instance ${label} (${seedScript})...`);
     try {
         execSync(`python "${join(SCRIPTS_DIR, seedScript)}"`, {
-            env: instanceEnv(tempDir, seedProfile),
+            env: {
+                ...instanceEnv(tempDir, seedProfile),
+                YAFFO_SEED_RECURSIVE_VIDEOS: recursiveVideos ? "1" : "0",
+            },
             cwd: YAFFO_DIR,
             stdio: "inherit",
         });
     } catch (e) {
         console.error(`   ⚠️ Warning: ${seedScript} failed: ${e}`);
+        if (strictSeed) throw e;
     }
+};
+
+/**
+ * Build the docs-grade fixture without the synthetic duplicate-test videos. The
+ * Bennett fixture already contains a short real beach video, so capture still covers
+ * video cards and playback while the gallery remains presentable.
+ */
+export const buildDocumentationFixture = (dataDir = DOCS_DATA_DIR): string => {
+    rmSync(dataDir, {recursive: true, force: true});
+    provisionInstanceData({
+        label: "docs",
+        tempDir: dataDir,
+        fixtureDir: PRIMARY_FIXTURE_DIR,
+        seedProfile: "bennett",
+        includeVideos: false,
+        recursiveVideos: true,
+        strictSeed: true,
+    });
+    return dataDir;
 };
 
 const startInstance = async (options: StartInstanceOptions): Promise<IsolatedInstance> => {
@@ -378,8 +418,12 @@ export const seedCacheDir = (role: "primary" | "peer"): string =>
  * without serving. Runs the real indexing/face/label pipeline, so the cache is
  * only rebuilt when its inputs change.
  */
-export const buildSeedCache = (options: {withPeer?: boolean} = {}): {primary: string; peer?: string} => {
-    const {withPeer = false} = options;
+export const buildSeedCache = (options: {withPeer?: boolean; docsFixture?: boolean} = {}): {primary: string; peer?: string} => {
+    const {withPeer = false, docsFixture = false} = options;
+    if (docsFixture) {
+        if (withPeer) throw new Error("The documentation fixture does not have a peer instance");
+        return {primary: buildDocumentationFixture()};
+    }
     const primaryDir = seedCacheDir("primary");
     rmSync(primaryDir, {recursive: true, force: true});
     provisionInstanceData({
@@ -407,12 +451,19 @@ export const startIsolatedEnvironment = async (
     port = 5001,
     options: IsolatedEnvironmentOptions = {},
 ): Promise<IsolatedEnvironment> => {
-    const {withPeer = false, demoMode = false, preseeded = false} = options;
+    const {withPeer = false, demoMode = false, preseeded = false, docsFixture = false} = options;
+    if (docsFixture && withPeer) {
+        throw new Error("The documentation fixture does not have a peer instance");
+    }
+    if (docsFixture && !preseeded) {
+        throw new Error("Build the documentation fixture first, then serve it with preseeded=true");
+    }
     const timestamp = generateTimestamp();
     // Preseeded runs serve the canonical cache dirs directly; a normal run seeds
     // fresh temp dirs.
-    const tempDir = preseeded ? seedCacheDir("primary") : join(TEMP_ROOT, `yaffo_test_${timestamp}`);
-
+    const tempDir = docsFixture
+        ? DOCS_DATA_DIR
+        : preseeded ? seedCacheDir("primary") : join(TEMP_ROOT, `yaffo_test_${timestamp}`);
     const primary = await startInstance({
         label: "A",
         port,
@@ -469,11 +520,12 @@ async function main() {
     const withPeer = args.includes("--peer");
     const demoMode = args.includes("--demo");
     const preseeded = args.includes("--preseeded");
+    const docsFixture = args.includes("--docs");
 
     // Build-seed mode: seed the canonical cache dir(s) and exit without serving.
     // Used by the CI seed-cache job so per-spec jobs can restore and skip seeding.
     if (args.includes("--build-seed")) {
-        const {primary, peer} = buildSeedCache({withPeer});
+        const {primary, peer} = buildSeedCache({withPeer, docsFixture});
         console.log(`\n✅ Seed cache built: ${primary}${peer ? ` and ${peer}` : ""}`);
         process.exit(0);
     }
@@ -489,7 +541,7 @@ async function main() {
     process.on('SIGTERM', handleCleanup);
 
     try {
-        environment = await startIsolatedEnvironment(port, {withPeer, demoMode, preseeded});
+        environment = await startIsolatedEnvironment(port, {withPeer, demoMode, preseeded, docsFixture});
         if (environment.peer) {
             console.log(`\nRun the sharing tests with: BASE_URL=${environment.baseUrl} PEER_URL=${environment.peer.baseUrl} npx playwright test generated_tests/sharing/sharing.spec.ts`);
         }

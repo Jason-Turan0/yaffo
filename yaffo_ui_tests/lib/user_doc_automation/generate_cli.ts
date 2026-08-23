@@ -10,9 +10,9 @@
  * none, because the next capture run would promote it.
  */
 import "dotenv/config";
-import {execFileSync, spawnSync} from "child_process";
-import {existsSync, mkdirSync, readFileSync, readdirSync, rmSync} from "fs";
+import {existsSync, readFileSync, readdirSync} from "fs";
 import {join, resolve} from "path";
+import {pathToFileURL} from "url";
 import {parse as parseYaml} from "yaml";
 import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
 import {createPlaywrightClient} from "@lib/tool_providers/mcp_playwright_client";
@@ -20,9 +20,7 @@ import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesy
 import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 import {YAFFO_APP_ROOT} from "@lib/types";
-import {captureEnv} from "./env";
-import {snapshotDockerEnv} from "./docker";
-import {BASE_URL, CONTENT_DIR, GUIDE_DIR, newRunLogDir, REPO, STAGING_DIR} from "./paths";
+import {BASE_URL, CONTENT_DIR, GUIDE_DIR, newRunLogDir} from "./paths";
 import {verifyBrowserTool} from "./preflight";
 import {describeSandboxFacts, gatherSandboxFacts} from "./sandbox_facts";
 import {generateWalkthrough} from "./generate";
@@ -35,7 +33,7 @@ import {revertPage, runGates} from "./gates";
 const split = (page: string): [string, string] =>
     [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
 
-const pagesNeedingOne = (spec: Record<string, {walkthrough?: boolean}>): string[] =>
+export const pagesNeedingOne = (spec: Record<string, {walkthrough?: boolean}>): string[] =>
     Object.entries(spec)
         .filter(([page, entry]) => {
             if (entry.walkthrough === false) return false;   // no surface, by design
@@ -44,54 +42,13 @@ const pagesNeedingOne = (spec: Record<string, {walkthrough?: boolean}>): string[
         })
         .map(([page]) => page);
 
-/**
- * Run the generated walkthrough and confirm it produced what the page asks for.
- *
- * This is the gate that matters. Typechecking only proves the file compiles; capturing
- * proves it reaches the right view. A walkthrough that compiles but frames the wrong
- * element would otherwise be promoted by the next run.
- */
-/** Run the page's walkthrough. Without `promote` nothing under docs/ is touched. */
-const capture = (
-    page: string,
-    promote: boolean,
-    useDocker = false
-): {ok: boolean; output: string} => {
-    const args = ["tsx", "lib/user_doc_automation/run.ts", page];
-    if (promote) args.push("--promote");
-    if (useDocker) args.push("--docker");
-    try {
-        return {ok: true, output: execFileSync("npx", args, {
-            cwd: process.cwd(),
-            stdio: "pipe",
-            encoding: "utf8",
-            // An allowlist, not the ambient environment: this child executes the
-            // walkthrough the model just wrote, and dotenv has already loaded every
-            // provider key into this process.
-            //
-            // The docker CLI's own settings ride alongside when containerizing, since
-            // the allowlist deliberately omits them — but only into this child, which
-            // is the launcher. They never reach the container, and so never reach the
-            // walkthrough.
-            env: {
-                ...captureEnv(process.env, {DOCS_BASE_URL: BASE_URL}),
-                ...(useDocker ? snapshotDockerEnv(process.env) : {}),
-            },
-        })};
-    } catch (e) {
-        const err = e as {stdout?: string; stderr?: string};
-        return {ok: false, output: (err.stdout ?? "") + (err.stderr ?? "")};
-    }
-};
-
 const verify = (page: string, useDocker = false): string[] =>
     runGates(page, {useDocker});
 
-const main = async (): Promise<void> => {
-    const args = process.argv.slice(2);
+export const main = async (args: string[] = process.argv.slice(2)): Promise<number> => {
     const modelArg = args.indexOf("--model");
     const model = modelArg !== -1 ? (args[modelArg + 1] as ModelAlias) : undefined;
-    const named = args.filter((a) => !a.startsWith("-") && a !== args[modelArg + 1]);
+    const named = args.filter((a, index) => !a.startsWith("-") && index !== modelArg + 1);
     // Containerize the capture this run shells out to, so a walkthrough is verified
     // and promoted from the same renderer CI will use.
     const useDocker = args.includes("--docker");
@@ -100,7 +57,7 @@ const main = async (): Promise<void> => {
     const targets = named.length ? named : pagesNeedingOne(spec.pages);
     if (!targets.length) {
         console.log("Every page already has a walkthrough.");
-        return;
+        return 0;
     }
 
     // Its own directory per run: API call numbering restarts at zero, so a shared one
@@ -118,14 +75,14 @@ const main = async (): Promise<void> => {
         }),
     ];
 
-    // Fail here rather than letting the agent discover a dead browser mid-run.
-    await verifyBrowserTool(providers, BASE_URL);
-
-    // Runtime state the agent would otherwise try to derive from source, and cannot.
-    const facts = describeSandboxFacts(await gatherSandboxFacts(BASE_URL));
-
     let failed = 0;
     try {
+        // Fail here rather than letting the agent discover a dead browser mid-run.
+        await verifyBrowserTool(providers, BASE_URL);
+
+        // Runtime state the agent would otherwise try to derive from source, and cannot.
+        const facts = describeSandboxFacts(await gatherSandboxFacts(BASE_URL));
+
         for (const page of targets) {
             console.log(`\n📝 ${page}`);
             const [area, name] = split(page);
@@ -179,10 +136,19 @@ const main = async (): Promise<void> => {
         await Promise.all(providers.map((provider) => provider.disconnect()));
     }
 
-    if (failed) process.exit(1);
+    return failed ? 1 : 0;
 };
 
-main().catch((e) => {
-    console.error(e);
-    process.exit(1);
-});
+export const runCli = async (args: string[] = process.argv.slice(2)): Promise<void> => {
+    try {
+        process.exitCode = await main(args);
+    } catch (e) {
+        console.error(e);
+        process.exitCode = 1;
+    }
+};
+
+const isDirectRun = process.argv[1] !== undefined &&
+    import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+
+if (isDirectRun) void runCli();

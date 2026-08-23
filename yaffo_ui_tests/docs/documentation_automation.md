@@ -5,9 +5,10 @@
 >
 > Working today. Infrastructure in `yaffo_ui_tests/lib/user_doc_automation/`
 > (settle, framing, WebP encode, pixel comparison, dependency observation, runner,
-> evidence, triage, and the two entry points); authored and generated content in
-> `yaffo_ui_tests/user_doc_automation/` (`spec.yaml` covering 17 pages, and one
-> reference walkthrough, `library-basics/browsing-filtering/`); the server-side
+> evidence, triage, containerized capture, and the entry points); authored and
+> generated content in `yaffo_ui_tests/user_doc_automation/` (`spec.yaml` covering
+> 17 pages, and two reference walkthroughs, `library-basics/browsing-filtering/`
+> and `reference-maintenance/settings/`); the server-side
 > observer at `yaffo/doc_observer.py`. A run captures to staging, pixel-diffs against
 > what is committed, records that page's routes, templates, and static assets, and
 > `docs:heal` classifies whatever changed.
@@ -18,9 +19,10 @@
 > checks the guide and its automation against each other. Both detectors are built, as
 > is the per-page watermark.
 >
-> Not built: the GitHub workflow, `docs:heal:repo`, and containerized capture.
+> Not built: the GitHub workflow, `docs:heal:repo`, the reproducible documentation
+> fixture, and 14 of the 16 app-backed page walkthroughs.
 >
-> Last updated: 2026-08-22
+> Last updated: 2026-08-23
 
 ## Goal
 
@@ -268,7 +270,7 @@ is not yet in any commit.
 
 **A page with no watermark is skipped, not reported clean.** Until a page has been
 generated and promoted there is nothing to diff from, and saying so is more honest than
-implying it was checked. Today that means Detector B is silent on 15 of 17 pages.
+implying it was checked. Today that means Detector B is silent on 16 of 17 pages.
 
 ## Scoping: the observed dependency set
 
@@ -728,7 +730,7 @@ is a regression report, not a screenshot of broken thumbnails.
 | Test framework | Docs | State |
 |---|---|---|
 | `test`, `test:sandboxed` | **`docs:capture`** — deterministic run; `--promote` writes into the guide | Built, as `npm run docs:capture` |
-| `generate` | **`docs:generate`** — writes a walkthrough for a page that has none | 16 of 17 pages still need one |
+| `generate` | **`docs:generate`** — writes a walkthrough for a page that has none | 14 of 16 app-backed pages still need one |
 | `test:heal` | **`docs:heal`** — act on what the detectors found; `--apply` writes | Built, as `npm run docs:heal` |
 | — | **`docs:detect`** — Detector B alone, without a sandbox | Built, as `npm run docs:detect` |
 | `validate:specs` | **`docs:validate`** — the guide and its automation agree | Built, as `npm run docs:validate` |
@@ -884,11 +886,10 @@ discover → matrix → PR structure.
   in-flight run.
 - **One long-lived branch** (`docs/auto-refresh`), force-pushed, reusing a single PR.
   Otherwise open PRs accumulate.
-- Reuse the existing seed cache so the sandbox boot stays cheap. Note the current
-  constraint that a seeded data dir is portable only to the absolute path it was
-  built at, because the DB stores absolute media paths; a repath step (a small
-  `UPDATE` over `media_items.full_file_path` plus the `media_dirs` setting) removes
-  that limitation and is needed anyway — see *Fixture work* below.
+- Reuse the existing seed cache so the sandbox boot stays cheap. A seeded data dir
+  remains at the absolute path where it was built because the DB stores absolute
+  media paths. The docs fixture is seeded directly into its final stable
+  `Family Photos` directory, so restoring it at that canonical path needs no repair.
 - **Collect the diff overlays before anything else runs.** Every run begins by
   wiping the staging directory, so an overlay survives only until the next
   invocation. Upload them as artifacts, or attach them to the PR, in the same job
@@ -929,7 +930,7 @@ already splits `lib/` from `specs/` and `generated_tests/`.
 ```text
 yaffo_ui_tests/
 ├── lib/user_doc_automation/        infrastructure — hand-written, not generated
-│   ├── run.ts, heal.ts             entry points (npm run docs:capture / docs:heal)
+│   ├── docs_capture.ts, heal.ts    entry points (npm run docs:capture / docs:heal)
 │   ├── capture_worker.ts           the browser half alone — what runs in the container
 │   ├── docker.ts                   container argv, host alias, env boundary
 │   ├── runner.ts                   captureWalkthroughs / processResults, split at the seam
@@ -1067,12 +1068,10 @@ run unattended.
     11:31 local capture. A fixture builder should write `DateTimeOriginal` via
     exiftool instead. See the naive-wall-clock discussion in
     `docs/development/video.md`.
-- **A presentable library path.** Shots of Settings and the detail page displayed the
-  sandbox temp directory
-  (`/private/var/folders/.../T/yaffo_test_20260822_145238/organized`). The library was
-  relocated to `/Users/Shared/Family Photos` and the DB repathed. `/Users/Shared` is
-  the useful trick: real, writable, and containing no username. The container will
-  need an equivalent stable mount point.
+- **A presentable library path.** Shots of Settings and the detail page must not show
+  an ephemeral sandbox directory or username. The documentation fixture is seeded
+  directly under the canonical `Family Photos` directory, which is also the path the
+  container mounts and serves.
 
 ## Open decisions
 

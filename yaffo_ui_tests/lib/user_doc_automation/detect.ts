@@ -14,6 +14,7 @@
 import "dotenv/config";
 import {existsSync, readFileSync} from "fs";
 import {join, resolve} from "path";
+import {pathToFileURL} from "url";
 import {parse as parseYaml} from "yaml";
 import {changedStrings, changesQuotedBy} from "./strings";
 import type {StringChange} from "./strings";
@@ -25,9 +26,9 @@ const GUIDE_DIR = resolve(process.env.GUIDE_DIR || join(REPO, "docs", "guide"));
 const split = (page: string): [string, string] =>
     [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
 
-const watermark = (page: string): string | null => {
+const watermark = (page: string, contentDir: string): string | null => {
     const [area, name] = split(page);
-    const lock = join(CONTENT_DIR, area, name, `${name}.lock.json`);
+    const lock = join(contentDir, area, name, `${name}.lock.json`);
     if (!existsSync(lock)) return null;
     return JSON.parse(readFileSync(lock, "utf8")).lastVerifiedSha ?? null;
 };
@@ -37,12 +38,25 @@ const describe = (change: StringChange): string =>
         ? `"${change.was}" is now "${change.now}"  (${change.key})`
         : `"${change.was}" no longer exists  (${change.source}${change.key ? `: ${change.key}` : ""})`;
 
-const main = (): void => {
-    const args = process.argv.slice(2);
-    const baseArg = args.indexOf("--base");
-    const override = baseArg !== -1 ? args[baseArg + 1] : undefined;
+export interface DetectionOptions {
+    contentDir?: string;
+    guideDir?: string;
+    overrideBase?: string;
+    changedStrings?: (base: string) => StringChange[];
+}
 
-    const spec = parseYaml(readFileSync(join(CONTENT_DIR, "spec.yaml"), "utf8"));
+export interface DetectionResult {
+    flagged: Array<{page: string; changes: StringChange[]}>;
+    scanned: number;
+    unwatermarked: number;
+}
+
+export const detect = (options: DetectionOptions = {}): DetectionResult => {
+    const contentDir = options.contentDir ?? CONTENT_DIR;
+    const guideDir = options.guideDir ?? GUIDE_DIR;
+    const findChanges = options.changedStrings ?? changedStrings;
+
+    const spec = parseYaml(readFileSync(join(contentDir, "spec.yaml"), "utf8"));
     const pages: string[] = Object.keys(spec.pages ?? {});
 
     // Diffs are cached per base: pages sharing a watermark share the catalogue
@@ -52,24 +66,34 @@ const main = (): void => {
     let unwatermarked = 0;
 
     for (const page of pages) {
-        const base = override ?? watermark(page);
+        const base = options.overrideBase ?? watermark(page, contentDir);
         if (!base) {
             // A page never promoted has nothing to diff from. Saying so is more useful
             // than silently reporting it clean.
             unwatermarked++;
             continue;
         }
-        if (!byBase.has(base)) byBase.set(base, changedStrings(base));
+        if (!byBase.has(base)) byBase.set(base, findChanges(base));
         const changes = byBase.get(base) as StringChange[];
         if (!changes.length) continue;
 
-        const markdownPath = join(GUIDE_DIR, `${page}.md`);
+        const markdownPath = join(guideDir, `${page}.md`);
         if (!existsSync(markdownPath)) continue;
         const quoted = changesQuotedBy(readFileSync(markdownPath, "utf8"), changes);
         if (quoted.length) flagged.push({page, changes: quoted});
     }
 
     const scanned = pages.length - unwatermarked;
+    return {flagged, scanned, unwatermarked};
+};
+
+export const main = (
+    args: string[] = process.argv.slice(2),
+    options: Omit<DetectionOptions, "overrideBase"> = {}
+): number => {
+    const baseArg = args.indexOf("--base");
+    const overrideBase = baseArg !== -1 ? args[baseArg + 1] : undefined;
+    const {flagged, scanned, unwatermarked} = detect({...options, overrideBase});
     if (!flagged.length) {
         console.log(`✅ ${scanned} page(s) checked — none quotes a string the app has changed.`);
     } else {
@@ -82,7 +106,22 @@ const main = (): void => {
     if (unwatermarked) {
         console.log(`${unwatermarked} page(s) skipped: no watermark yet (never promoted).`);
     }
-    if (flagged.length) process.exit(2);
+    return flagged.length ? 2 : 0;
 };
 
-main();
+export const runCli = (
+    args: string[] = process.argv.slice(2),
+    options: Omit<DetectionOptions, "overrideBase"> = {}
+): void => {
+    try {
+        process.exitCode = main(args, options);
+    } catch (e) {
+        console.error(e);
+        process.exitCode = 1;
+    }
+};
+
+const isDirectRun = process.argv[1] !== undefined &&
+    import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+
+if (isDirectRun) runCli();

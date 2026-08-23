@@ -71,7 +71,7 @@ export const capturesWhatThePageReferences = (
 ): string[] => {
     // --promote: the images have to be in the guide for mkdocs to resolve them. This
     // also writes the page's lockfile, which is the other half of a finished capture.
-    const args = ["tsx", "lib/user_doc_automation/run.ts", page, "--promote"];
+    const args = ["tsx", "lib/user_doc_automation/docs_capture.ts", page, "--promote"];
     if (options.useDocker) args.push("--docker");
 
     // An allowlist, not the ambient environment: this child executes the walkthrough

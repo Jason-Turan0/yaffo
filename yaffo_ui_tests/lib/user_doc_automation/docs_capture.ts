@@ -22,6 +22,7 @@ import {scrubProcessEnv} from "./env";
 import {DOCS_CAPTURE_IMAGE, dockerAvailable, runCaptureContainer, snapshotDockerEnv} from "./docker";
 import {existsSync, readFileSync, writeFileSync} from "fs";
 import {join, resolve} from "path";
+import {pathToFileURL} from "url";
 import {loadWalkthroughs} from "./load";
 import {BASE_URL, CAPTURE_DIR, CONTENT_DIR, GUIDE_DIR} from "./paths";
 import {processResults, RAW_FILENAME, runWalkthroughs} from "./runner";
@@ -75,18 +76,20 @@ const writeLockfile = (result: WalkthroughResult): void => {
     writeFileSync(join(dir, `${name}.lock.json`), JSON.stringify(lock, null, 4) + "\n");
 };
 
-const main = async (): Promise<void> => {
-    const args = process.argv.slice(2);
+export const main = async (
+    args: string[] = process.argv.slice(2),
+    dockerEnv: Record<string, string> = DOCKER_ENV
+): Promise<number> => {
     const promote = args.includes("--promote");
     const useDocker = args.includes("--docker");
     const only = args.filter((a) => !a.startsWith("-"));
 
     let results: WalkthroughResult[];
     if (useDocker) {
-        if (!dockerAvailable(DOCKER_ENV)) {
+        if (!dockerAvailable(dockerEnv)) {
             console.error("Docker is not reachable. Start Docker Desktop or Rancher Desktop, " +
                 "then `npm run docker:build:docs-capture`. See README.md#docker.");
-            process.exit(1);
+            return 1;
         }
         // The host never imports the walkthroughs in this mode: loading a module runs
         // its top-level code, and keeping model-generated code out of this process is
@@ -98,16 +101,16 @@ const main = async (): Promise<void> => {
             stagingDir: CAPTURE_DIR,
             baseUrl: BASE_URL,
             pages: only,
-            dockerEnv: DOCKER_ENV,
+            dockerEnv,
         });
-        if (code !== 0) process.exit(code);
+        if (code !== 0) return code;
 
         // The container wrote these through the shared staging mount, so the host is
         // reading the very same files rather than a copy.
         const rawPath = join(CAPTURE_DIR, RAW_FILENAME);
         if (!existsSync(rawPath)) {
             console.error(`The container produced no ${RAW_FILENAME}.`);
-            process.exit(1);
+            return 1;
         }
         const raw = JSON.parse(readFileSync(rawPath, "utf8")) as {results: RawResult[]};
         results = processResults(raw.results, {
@@ -117,7 +120,7 @@ const main = async (): Promise<void> => {
         const walkthroughs = await loadWalkthroughs(CONTENT_DIR, only);
         if (!walkthroughs.length) {
             console.error(only.length ? `No walkthrough for: ${only.join(", ")}` : "No walkthroughs found");
-            process.exit(1);
+            return 1;
         }
         console.log(`Running ${walkthroughs.length} walkthrough(s) against ${BASE_URL}`);
         console.log(`  staging: ${CAPTURE_DIR}${promote ? "  (promoting changes)" : ""}\n`);
@@ -153,10 +156,19 @@ const main = async (): Promise<void> => {
 
     const changed = results.flatMap((r) => r.shots).filter((s) => s.status !== "unchanged");
     console.log(`\n${changed.length} shot(s) new or changed${promote ? " and promoted" : ""}.`);
-    if (failed) process.exit(1);
+    return failed ? 1 : 0;
 };
 
-main().catch((e) => {
-    console.error(e);
-    process.exit(1);
-});
+const isDirectRun = process.argv[1] !== undefined &&
+    import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+
+export const runCli = async (args: string[] = process.argv.slice(2)): Promise<void> => {
+    try {
+        process.exitCode = await main(args);
+    } catch (e) {
+        console.error(e);
+        process.exitCode = 1;
+    }
+};
+
+if (isDirectRun) void runCli();
