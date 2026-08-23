@@ -31,6 +31,94 @@
           "error": "Error: page.goto: net::ERR_ABORTED at http://127.0.0.1:5001/sharing/settings\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/sharing/settings\", waiting until \"load\"\u001b[22m\n"
         }
       ]
+    },
+    {
+      "timestamp": "2026-08-23T22:56:05.535Z",
+      "success": false,
+      "summary": {
+        "total": 12,
+        "passed": 4,
+        "failed": 8,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Sharing Feature › sharing_grant_a_media_directory_and_browse_it - A shares a media directory and B browses it with filters",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-photo-grid')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-grid')\u001b[22m\n"
+        },
+        {
+          "testName": "Sharing Feature › sharing_gallery_without_a_download_directory - Without a download directory nothing is selectable, then set one",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-photo-grid')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-grid')\u001b[22m\n"
+        },
+        {
+          "testName": "Sharing Feature › sharing_pull_selected_photos - B selects two photos and pulls them as a background batch",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-photo-grid.is-selecting')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-grid.is-selecting')\u001b[22m\n"
+        },
+        {
+          "testName": "Sharing Feature › sharing_pull_everything_matching - B pulls every photo matching a filter minus one unticked",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-photo-grid.is-selecting')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-grid.is-selecting')\u001b[22m\n"
+        },
+        {
+          "testName": "Sharing Feature › sharing_grant_a_folder - A shares one subfolder and B sees only its photos",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.remote-photo-card')\nExpected: \u001b[32m4\u001b[39m\nReceived: \u001b[31m0\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-card')\u001b[22m\n\u001b[2m    9 × locator resolved to 0 elements\u001b[22m\n\u001b[2m      - unexpected value \"0\"\u001b[22m\n"
+        },
+        {
+          "testName": "Sharing Feature › sharing_grant_an_album - A shares an album and its membership is resolved per request",
+          "error": "\u001b[31mTest timeout of 90000ms exceeded.\u001b[39m"
+        },
+        {
+          "testName": "Sharing Feature › sharing_album_share_modal_toggle - The album Share modal shares with a device and un-shares it again",
+          "error": "\u001b[31mTest timeout of 90000ms exceeded.\u001b[39m"
+        },
+        {
+          "testName": "Sharing Feature › sharing_revoke_a_grant - Revoking a share stops the peer next request but keeps pulled files",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-photo-grid')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-grid')\u001b[22m\n"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-08-23T23:04:42.106Z",
+      "success": false,
+      "summary": {
+        "total": 12,
+        "passed": 4,
+        "failed": 8,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Sharing Feature › sharing_grant_a_media_directory_and_browse_it - A shares a media directory and B browses it with filters",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-photo-grid')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-grid')\u001b[22m\n"
+        },
+        {
+          "testName": "Sharing Feature › sharing_gallery_without_a_download_directory - Without a download directory nothing is selectable, then set one",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-photo-grid')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-grid')\u001b[22m\n"
+        },
+        {
+          "testName": "Sharing Feature › sharing_pull_selected_photos - B selects two photos and pulls them as a background batch",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-photo-grid.is-selecting')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-grid.is-selecting')\u001b[22m\n"
+        },
+        {
+          "testName": "Sharing Feature › sharing_pull_everything_matching - B pulls every photo matching a filter minus one unticked",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-photo-grid.is-selecting')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-grid.is-selecting')\u001b[22m\n"
+        },
+        {
+          "testName": "Sharing Feature › sharing_grant_a_folder - A shares one subfolder and B sees only its photos",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.remote-photo-card')\nExpected: \u001b[32m4\u001b[39m\nReceived: \u001b[31m0\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-card')\u001b[22m\n\u001b[2m    9 × locator resolved to 0 elements\u001b[22m\n\u001b[2m      - unexpected value \"0\"\u001b[22m\n"
+        },
+        {
+          "testName": "Sharing Feature › sharing_grant_an_album - A shares an album and its membership is resolved per request",
+          "error": "\u001b[31mTest timeout of 90000ms exceeded.\u001b[39m"
+        },
+        {
+          "testName": "Sharing Feature › sharing_album_share_modal_toggle - The album Share modal shares with a device and un-shares it again",
+          "error": "\u001b[31mTest timeout of 90000ms exceeded.\u001b[39m"
+        },
+        {
+          "testName": "Sharing Feature › sharing_revoke_a_grant - Revoking a share stops the peer next request but keeps pulled files",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.remote-photo-grid')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.remote-photo-grid')\u001b[22m\n"
+        }
+      ]
     }
   ]
 }
