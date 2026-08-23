@@ -2,6 +2,7 @@ import {execFileSync} from "child_process";
 import {existsSync, readFileSync} from "fs";
 import {join, resolve} from "path";
 import type {ShotResult, WalkthroughResult} from "./runner";
+import type {StringChange} from "./strings";
 
 /**
  * Everything triage needs to classify one changed shot, and nothing else.
@@ -30,8 +31,12 @@ export interface Evidence {
     walkthroughSource: string;
     /** Diff of the page's observed dependencies only. */
     codeDiff: string;
-    /** Diff of the user-visible string catalogue (Oracle B). */
-    catalogDiff: string;
+    /**
+     * Strings this page quotes that the app has stopped saying, from Detector B.
+     * Structured rather than a raw diff: the model is told which quoted control
+     * changed and, where the catalogue allows, what replaced it.
+     */
+    stringChanges: StringChange[];
 }
 
 const REPO = resolve(join(process.cwd(), ".."));
@@ -85,6 +90,8 @@ export interface EvidenceOptions {
     walkthroughSource: string;
     walkthroughPath: string;
     covers?: string;
+    /** From Detector B, for the page being healed. */
+    stringChanges?: StringChange[];
 }
 
 export const buildEvidence = (
@@ -106,7 +113,6 @@ export const buildEvidence = (
         covers: options.covers,
         walkthroughSource: options.walkthroughSource,
         codeDiff: truncate(dependencyDiff(result.observation), 12_000),
-        catalogDiff: truncate(git(["diff", "HEAD", "--", "messages.pot"]).trim()
-            || "(no changes to the message catalogue)", 4_000),
+        stringChanges: options.stringChanges ?? [],
     };
 };

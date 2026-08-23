@@ -4,16 +4,27 @@
  *   npm run isolatedEnvironment:start
  *   npm run docs:capture
  *   npm run docs:capture -- --promote library-basics/browsing-filtering
+ *   npm run docs:capture -- --docker
  *
  * Captures land in .staging/ and are compared against what is committed. Nothing
  * touches docs/ unless --promote is passed, so a plain run can answer "is anything
  * stale?" without dirtying the tree.
+ *
+ * `--docker` moves the browser half into a container. The committed screenshots are
+ * compared per-pixel, and macOS and Linux disagree on font metrics — which changes
+ * line wrapping, which moves layout. Captured on a laptop and again in CI, the same
+ * page differs every time and the comparison is noise. The container pins the
+ * rendering stack so the two agree. Encoding and comparison stay on the host either
+ * way: they need Pillow and NumPy from the project virtualenv.
  */
 import {createHash} from "crypto";
-import {existsSync, readFileSync, readdirSync, writeFileSync} from "fs";
+import {scrubProcessEnv} from "./env";
+import {DOCS_CAPTURE_IMAGE, dockerAvailable, runCaptureContainer, snapshotDockerEnv} from "./docker";
+import {existsSync, readFileSync, writeFileSync} from "fs";
 import {join, resolve} from "path";
-import {runWalkthroughs} from "./index";
-import type {Walkthrough, WalkthroughResult} from "./index";
+import {loadWalkthroughs} from "./load";
+import {processResults, RAW_FILENAME, runWalkthroughs} from "./runner";
+import type {RawResult, WalkthroughResult} from "./runner";
 
 // Resolved from the working directory, like isolated_runner.ts and the rest of the
 // harness: every entry point here is run from yaffo_ui_tests/.
@@ -24,30 +35,17 @@ const CONTENT_DIR = resolve(join(process.cwd(), "user_doc_automation"));
 // this repo — .env points it at the dev app on :5000 for other tooling, and a docs
 // run against the wrong instance fails in confusing ways.
 const BASE_URL = process.env.DOCS_BASE_URL || "http://127.0.0.1:5002";
+
+// Taken before the scrub below removes them: the docker CLI needs its own settings to
+// find the daemon, and they must not end up in what a walkthrough runs with.
+const DOCKER_ENV = snapshotDockerEnv();
+
+// Before anything else, and in particular before any walkthrough is imported:
+// walkthroughs are model-generated code, and nothing they run should be able to
+// read a provider key out of the ambient environment.
+scrubProcessEnv({DOCS_BASE_URL: BASE_URL});
 const GUIDE_DIR = resolve(process.env.GUIDE_DIR || join(CONTENT_DIR, "..", "..", "docs", "guide"));
 const STAGING_DIR = join(CONTENT_DIR, ".staging");
-
-/**
- * Walkthroughs live one folder per page, mirroring the guide:
- * `user_doc_automation/{area}/{page}/{page}.ts` — alongside that page's catalog,
- * lockfile, and memories, the way `generated_tests/{feature}/` is laid out.
- */
-const load = async (only: string[]): Promise<Walkthrough[]> => {
-    const loaded: Walkthrough[] = [];
-    for (const area of readdirSync(CONTENT_DIR, {withFileTypes: true})) {
-        if (!area.isDirectory() || area.name.startsWith("_") || area.name.startsWith(".")) continue;
-        const areaDir = join(CONTENT_DIR, area.name);
-        for (const page of readdirSync(areaDir, {withFileTypes: true})) {
-            if (!page.isDirectory()) continue;
-            const module = join(areaDir, page.name, `${page.name}.ts`);
-            if (!existsSync(module)) continue;
-            const walkthrough = (await import(module)).default as Walkthrough | undefined;
-            if (!walkthrough?.page) throw new Error(`${module} has no default walkthrough export`);
-            if (!only.length || only.includes(walkthrough.page)) loaded.push(walkthrough);
-        }
-    }
-    return loaded;
-};
 
 /**
  * The page's fingerprint: what its walkthrough touched, and what its shots looked
@@ -83,20 +81,53 @@ const writeLockfile = (result: WalkthroughResult): void => {
 const main = async (): Promise<void> => {
     const args = process.argv.slice(2);
     const promote = args.includes("--promote");
+    const useDocker = args.includes("--docker");
     const only = args.filter((a) => !a.startsWith("-"));
 
-    const walkthroughs = await load(only);
-    if (!walkthroughs.length) {
-        console.error(only.length ? `No walkthrough for: ${only.join(", ")}` : "No walkthroughs found");
-        process.exit(1);
+    let results: WalkthroughResult[];
+    if (useDocker) {
+        if (!dockerAvailable(DOCKER_ENV)) {
+            console.error("Docker is not reachable. Start Docker Desktop or Rancher Desktop, " +
+                "then `npm run docker:build:docs-capture`. See README.md#docker.");
+            process.exit(1);
+        }
+        // The host never imports the walkthroughs in this mode: loading a module runs
+        // its top-level code, and keeping model-generated code out of this process is
+        // most of the reason the container exists.
+        console.log(`Capturing in ${DOCS_CAPTURE_IMAGE} against ${BASE_URL}`);
+        console.log(`  staging: ${STAGING_DIR}${promote ? "  (promoting changes)" : ""}\n`);
+        const code = runCaptureContainer({
+            repoDir: resolve(join(process.cwd(), "..")),
+            stagingDir: STAGING_DIR,
+            baseUrl: BASE_URL,
+            pages: only,
+            dockerEnv: DOCKER_ENV,
+        });
+        if (code !== 0) process.exit(code);
+
+        // The container wrote these through the shared staging mount, so the host is
+        // reading the very same files rather than a copy.
+        const rawPath = join(STAGING_DIR, RAW_FILENAME);
+        if (!existsSync(rawPath)) {
+            console.error(`The container produced no ${RAW_FILENAME}.`);
+            process.exit(1);
+        }
+        const raw = JSON.parse(readFileSync(rawPath, "utf8")) as {results: RawResult[]};
+        results = processResults(raw.results, {
+            guideDir: GUIDE_DIR, stagingDir: STAGING_DIR, promote,
+        });
+    } else {
+        const walkthroughs = await loadWalkthroughs(CONTENT_DIR, only);
+        if (!walkthroughs.length) {
+            console.error(only.length ? `No walkthrough for: ${only.join(", ")}` : "No walkthroughs found");
+            process.exit(1);
+        }
+        console.log(`Running ${walkthroughs.length} walkthrough(s) against ${BASE_URL}`);
+        console.log(`  staging: ${STAGING_DIR}${promote ? "  (promoting changes)" : ""}\n`);
+        results = await runWalkthroughs(walkthroughs, {
+            baseUrl: BASE_URL, guideDir: GUIDE_DIR, stagingDir: STAGING_DIR, promote,
+        });
     }
-
-    console.log(`Running ${walkthroughs.length} walkthrough(s) against ${BASE_URL}`);
-    console.log(`  staging: ${STAGING_DIR}${promote ? "  (promoting changes)" : ""}\n`);
-
-    const results = await runWalkthroughs(walkthroughs, {
-        baseUrl: BASE_URL, guideDir: GUIDE_DIR, stagingDir: STAGING_DIR, promote,
-    });
 
     let failed = 0;
     for (const result of results) {

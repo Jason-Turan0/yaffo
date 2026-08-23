@@ -14,10 +14,11 @@
 >
 > Also working: `docs:generate` writes a page and its walkthrough from the page's
 > charter, gated on the two agreeing; `docs:heal` triages a change and updates the page;
-> `docs:validate` checks the guide and its automation against each other.
+> `docs:detect` reports pages quoting controls the app has renamed; `docs:validate`
+> checks the guide and its automation against each other. Both detectors are built, as
+> is the per-page watermark.
 >
-> Not built: the staleness oracles beyond A, the watermark, and the workflow. Those
-> parts below are still design.
+> Not built: the GitHub workflow, `docs:heal:repo`, and containerized capture.
 >
 > Last updated: 2026-08-22
 
@@ -71,9 +72,9 @@ guarantees, and *What the agent owns* sets out the boundary.
 
 ```mermaid
 flowchart TD
-    push([push to master]) --> oracles{"staleness oracles<br/>(no model calls)"}
-    oracles -->|nothing fired| stop([exit, no PR])
-    oracles -->|pages flagged| sandbox["isolated sandbox<br/>seeded fixture + taskq"]
+    push([push to master]) --> detectors{"staleness detectors<br/>(no model calls)"}
+    detectors -->|nothing fired| stop([exit, no PR])
+    detectors -->|pages flagged| sandbox["isolated sandbox<br/>seeded fixture + taskq"]
     sandbox --> capture["run walkthroughs (containerized)<br/>images -> staging"]
     capture --> obs[("{page}.lock.json<br/>routes - templates - static")]
     capture --> pdiff{"pixel diff<br/>vs committed"}
@@ -85,38 +86,89 @@ flowchart TD
 
 ## Local / CI parity
 
-The capture must be **containerized** — the official Playwright image
-(`mcr.microsoft.com/playwright:v1.x-jammy`), used identically on a laptop and on the
-runner.
+Capture is **containerized**: the official Playwright image, pinned to the
+`@playwright/test` version in `package.json`, used identically on a laptop and on the
+runner. `npm run docs:capture:docker`.
 
-Without this, "runnable in both places" is not achievable. macOS and Ubuntu have
+Without this, "runnable in both places" is not achievable. macOS and Linux have
 different font stacks; different font metrics change text wrapping; changed wrapping
 moves layout. Every CI run would detect a change from the last local commit and vice
-versa, and the pixel diff would be pure noise. Containerising makes the two
-byte-identical.
+versa, and the pixel diff would be pure noise.
 
-Docker is already used for the demo deployment, so this is not a new tool in the
-stack. The app can keep running on the host with the browser in the container
-pointing at `host.docker.internal`, which leaves the existing sandbox untouched.
+Measured on `library-basics/browsing-filtering` against one sandbox:
+
+| | `gallery-home` | `gallery-filter-sidebar` |
+|---|---|---|
+| container, run A vs run B | 0 px differ | 0 px differ |
+| container vs macOS host | 1392×**777** vs 1392×**782** | 312×**1326** vs 312×**1359** |
+
+Two container runs are byte-identical; the host renders the same page 5 px and 33 px
+taller. That is the whole argument for the container, and it is why the Playwright
+suite's `sandbox-exec`/`bwrap` confinement is not a substitute — that is about
+*safety*, and this is about *reproducibility*. Docs capture needs both.
 
 **Accepted trade-off:** committed screenshots are Linux-rendered, not macOS-rendered.
-For a pipx-installed product documented on a web page this is judged acceptable; it
-is the reason capture cannot simply run natively on a Mac.
+For a pipx-installed product documented on a web page this is judged acceptable; it is
+the reason capture cannot simply run natively on a Mac.
+
+### Where the boundary sits
+
+Only the browser half runs in the container. It stops at PNG and writes `raw.json`;
+the host reads it back and does WebP encoding, pixel comparison, and promotion.
+
+The seam is forced by tooling: encoding and comparison use Pillow and NumPy from the
+project virtualenv, which is not in the Playwright image and should not be added to it.
+`runner.ts` splits accordingly — `captureWalkthroughs` (containerizable) and
+`processResults` (host) — with `runWalkthroughs` composing both, so a plain
+`docs:capture` and a `--docker` one run the same code.
+
+The staged PNG's path is not carried in `raw.json`. It is a pure function of the
+staging directory and the shot's target, so each side recomputes it against its own
+paths rather than translating a container path back — the file is the same file either
+way, reached through the shared mount.
+
+### What the container is given
+
+| | |
+|---|---|
+| repo | mounted **read-only** at `/app` |
+| `.staging` | the one writable mount — walkthroughs write nowhere else |
+| `node_modules` | anonymous volume, so the image's Linux build masks the host's darwin one |
+| network | *not* `none`: capture exists to drive a running app |
+| environment | allowlist only (`env.ts`) — no provider key, no `DOCKER_HOST` |
+
+`DOCKER_HOST` is excluded deliberately rather than incidentally: the daemon socket is
+root on the host, so a walkthrough that could read it would make the container
+pointless. It is snapshotted for the launcher before `scrubProcessEnv` runs and never
+enters the capture environment.
+
+The app stays on the host, reached at `host.docker.internal`. Two consequences:
+
+* The sandbox must bind beyond loopback — `YAFFO_SANDBOX_HOST=0.0.0.0`, opt-in because
+  it exposes the sandbox on the LAN. A container cannot see the host's loopback, and
+  `--network host` on macOS joins the Linux VM rather than the Mac.
+* `--add-host host.docker.internal:host-gateway` is added **only on Linux**. Docker
+  Desktop and Rancher Desktop already resolve the alias to the Mac; overriding it with
+  `host-gateway` points at the bridge gateway *inside the VM* and every connection is
+  refused.
 
 ## Determining what is stale
 
 Handing a model the commit diff and asking what to update fails on cost and
 precision: most pushes touch nothing user-visible, the diff is unbounded, and the
 same push can produce different answers on different runs. Staleness is instead
-detected mechanically by independent oracles, and the model is invoked only on what
-they flag. When none fire, the job exits without a model call — which is what makes a
-push-triggered job affordable.
+detected mechanically by independent **detectors**, and the model is invoked only on
+what they flag. When none fire, the job exits without a model call — which is what
+makes a push-triggered job affordable.
 
-Oracles A–C are **diff-triggered**: they fire when something that was true becomes
-false. Oracle D is a **standing property** and answers a different question, so it
-runs on a different cadence.
+Both detectors are **diff-triggered**: they fire when something that was true becomes
+false.
 
-### Oracle A — visual (ground truth for screenshots)
+Scoping is a separate concern and deliberately not in this list: the observed
+dependency set never *fires*, it is what a diff is intersected *against* to decide
+which pages a change concerns. See *Scoping: the observed dependency set* below.
+
+### Detector A — visual (ground truth for screenshots)
 
 Re-capture, then compare against the committed image **pixel by pixel**. This is
 observation rather than inference: if pixels moved, the UI moved. It catches changes
@@ -165,52 +217,87 @@ The flow is capture to staging → compare against committed → promote only wh
 changed, matching Playwright's own baseline/actual/diff triad. `--promote` is what
 copies staged shots into the guide.
 
-### Oracle B — user-visible string diff (precise, prose-focused)
+### Detector B — user-visible string diff (precise, prose-focused)
 
-`messages.pot` is committed and holds **861 msgids** — effectively every
-user-facing string in the app, because the UI is fully internationalized.
+A page instructing the reader to click **Apply Filters** when the app no longer has
+that control is *provably* stale. This is a set intersection — no sandbox, no model —
+and it catches prose rot that screenshots miss entirely.
 
-```
-git diff <watermark>..HEAD -- messages.pot
-```
+**Two catalogues, because the app renders text from two places**, and they diff
+differently enough to warrant separate handling:
 
-Added, removed, and changed strings fall out directly. Grep the guide for the
-removed ones: a page instructing the reader to click **Apply Filters** when that
-msgid no longer exists is *provably* stale. This is a set intersection — no model
-call — and it catches prose rot that screenshots miss entirely, such as a renamed
-button or changed hint text.
+| Source | Strings | A rename looks like |
+|---|---|---|
+| `messages.pot` | 774 server-rendered | a msgid disappearing, with nothing linking it to its replacement |
+| `static/locales/en.json` | 237 client-side | a **value change under a stable key**, so both sides are recoverable |
 
-### Oracle C — observed dependencies (scoping)
+Only the English sources are read. The other six locales are downstream translations;
+a change to `de.json` cannot make an English page wrong. That asymmetry is worth the
+extra extractor: the JSON side can tell the agent *what to write instead*, where
+gettext can only report a disappearance.
 
-Which source files back which page, so a push can be intersected against them. See
-the next section; this one is detailed enough to warrant its own.
+**Additions are ignored.** A new string is a new feature — an incompleteness question,
+which scoping answers by flagging pages whose dependencies changed. This detector only
+asks "does the guide quote something the app no longer says?"
 
-### Oracle D — coverage gaps (not diff-triggered)
+**Matching is confined to emphasised spans** — `**Apply Filters**` and `` `dog` `` —
+not the whole page. Measured across the guide: bare substring matching finds 162 hits,
+emphasis finds 111, and nearly all the excess is words like *All*, *Year*, and *Move*
+appearing in ordinary prose. A control written in bold is precisely the one a reader is
+told to click, so the stricter rule is both more precise and better targeted.
 
-Oracles A–C all detect staleness. None detects **incompleteness**: something new that
-was never documented at all. Nothing goes stale when the app grows a sixth Settings
-section — the reference page just becomes wrong by omission, and no diff of any
-existing artifact reveals it.
-
-The input is a per-page **charter** (see *Spec, walkthroughs, and state*): what the page is
-obliged to cover, as distinct from what it currently says. The agent compares the
-charter against the app's actual surface — route inventory, settings keys, filter
-definitions, the message catalog — and reports what is missing.
-
-Because this is a standing property rather than a diff, it runs on the weekly
-scheduled run rather than on every push; a coverage gap does not appear or disappear
-with a single commit.
+Built as `lib/user_doc_automation/strings.ts`, with `diffCatalogues` kept pure and the
+git reads confined to `changedStrings`. `npm run docs:detect` runs it standalone; the
+same functions run inside `docs:heal` (see *The agentic loop*).
 
 ### The watermark
 
-A bot-owned `last_verified_sha` per page, stored in that page's lockfile (see *Bot
+A bot-owned `lastVerifiedSha` per page, stored in that page's lockfile (see *Bot
 state*) rather than in the markdown, which stays clean. It does two jobs:
 
-- **Bounds the model's input** to `git diff <last_verified>..HEAD -- <that page's deps>`
+- **Bounds the model's input** to `git diff <lastVerifiedSha>..HEAD -- <that page's deps>`
   rather than "the repository".
 - **Breaks the retrigger loop.** Push produces a PR; merging the PR is another push.
   After the merge each touched page's watermark is the merge commit, so the next run
   finds nothing new.
+
+Written by `docs:capture --promote`, because that is the moment the guide starts
+holding what the app produces — not at capture, which only stages. A dirty working tree
+makes it approximate: the uncommitted change is already in the promoted screenshot but
+is not yet in any commit.
+
+**A page with no watermark is skipped, not reported clean.** Until a page has been
+generated and promoted there is nothing to diff from, and saying so is more honest than
+implying it was checked. Today that means Detector B is silent on 15 of 17 pages.
+
+## Scoping: the observed dependency set
+
+Which source files back which page, so a push can be intersected against them and only
+the affected pages reviewed.
+
+Not a detector. It never reports that anything is stale — a detector fires, and this
+answers "which pages does that concern?" once one has. It is what bounds the model's
+input to `git diff <lastVerifiedSha>..HEAD` over one page's dependencies rather than
+the whole repository, and it is the reason that diff is affordable to hand to a model
+at all.
+
+**Scoping also covers incompleteness**, which is why there is no third detector for it.
+An earlier draft proposed one: comparing a page's charter against the app's surface to
+catch something new that was never documented, on the grounds that nothing goes *stale*
+when the app grows a sixth Settings section. But that section is added by editing
+`yaffo/templates/settings/index.html`, which is already in that page's dependency set —
+so scoping flags the page, and Detector A fires as well because the shot changes.
+Regenerating against the charter then covers the new section. A separate detector would
+have found only what scoping and A had already surfaced.
+
+Two limits worth naming, since they are what such a detector *would* have been for:
+
+- **A pre-existing gap does not drift into view.** Something undocumented since before
+  the automation existed changes no dependency and moves no pixels, so nothing flags it.
+  That is a one-time backfill audit against the charters, not a recurring check.
+- **A wholly new feature needing its own page is invisible.** No existing page depends
+  on it, no existing shot shows it, and it has no charter to compare against. Deciding
+  the guide needs a new page remains a human judgement.
 
 ## The observed-dependency lockfile
 
@@ -284,7 +371,7 @@ other. Static assets bucket naturally in the browser-side request log.
 
 - **It is reactive.** The lockfile records what was touched at the *last* capture, so
   a brand-new code path is absent until it has been captured once. This is acceptable
-  because Oracle A re-captures and pixel-diffs regardless: the lockfile is an
+  because Detector A re-captures and pixel-diffs regardless: the lockfile is an
   optimization for scoping prose review, **not** the safety net. It should not be
   treated as one.
 - **Shared files flag everything.** `base.html` is in every page's dependency set, so
@@ -419,7 +506,7 @@ Three consequences:
 - **Shot identity is the image path**, so renaming an image appears as delete + add.
 - **A page's dependency set is only as good as its walkthrough's coverage.** A walkthrough that
   drives three of a page's five described flows records dependencies for three. This
-  is the practical limit on Oracle C, and it argues for walkthroughs that walk the page's
+  is the practical limit on scoping, and it argues for walkthroughs that walk the page's
   whole surface even where they capture nothing.
 
 ### Non-reproducible regions
@@ -439,7 +526,7 @@ Three ways to handle it, best first:
    The walkthrough resolves it to a box and emits it beside the image; the differ
    zeroes that rectangle before counting differing pixels. Implemented and verified:
    a change inside an ignore region reports 0 differing pixels.
-3. **Exclude the shot.** Last resort, because it blinds the oracle to *every* change on
+3. **Exclude the shot.** Last resort, because it blinds the detector to *every* change on
    that page — a new panel or a restyled marker would go undetected forever.
 
 Two constraints on option 2. **The published image must never be masked**: Playwright's
@@ -478,11 +565,11 @@ pages:
       - yaffo/launcher.py
 ```
 
-- **`covers`** is the charter Oracle D needs. The page's own intro says what it *does*
-  cover; the charter says what it is *obliged* to cover, and the gap between them is
-  the entire signal. Charters are written to name an *enumerable* surface wherever one
-  exists ("every section", "the built-in theme list") so the check has something
-  concrete to compare against.
+- **`covers`** is the page's charter: what it is *obliged* to cover, as distinct from
+  what it currently says. This is the specification `docs:generate` writes against, and
+  what regeneration measures a rewritten page by. Charters name an *enumerable* surface
+  wherever one exists ("every section", "the built-in theme list") so there is something
+  concrete to check the page against.
 - **`walkthrough`** is a boolean: the module's path is derivable from the page id, so
   naming it would be redundant. `false` only where a page has no app surface at all and
   never will — currently just `reference-maintenance/uninstalling`, which is entirely a
@@ -537,7 +624,7 @@ hashes are a record of what the guide actually holds:
 - **`lastVerifiedSha`** — the watermark that bounds the model's input and breaks the
   retrigger loop.
 - **`routes` / `templates` / `static` / `urls`** — the observed dependency set, the
-  input to Oracle C.
+  input to scoping.
 - **`shots`** — each image's hash *as the automation last wrote it*. Not for the diff,
   which always has both images and compares pixels, but to detect a committed
   screenshot changing **outside** the pipeline. "Someone replaced this by hand" is a
@@ -642,7 +729,9 @@ is a regression report, not a screenshot of broken thumbnails.
 |---|---|---|
 | `test`, `test:sandboxed` | **`docs:capture`** — deterministic run; `--promote` writes into the guide | Built, as `npm run docs:capture` |
 | `generate` | **`docs:generate`** — writes a walkthrough for a page that has none | 16 of 17 pages still need one |
-| `test:heal` | **`docs:heal`** — triage a capture's changes; `--apply` promotes | Built, as `npm run docs:heal` |
+| `test:heal` | **`docs:heal`** — act on what the detectors found; `--apply` writes | Built, as `npm run docs:heal` |
+| — | **`docs:detect`** — Detector B alone, without a sandbox | Built, as `npm run docs:detect` |
+| `validate:specs` | **`docs:validate`** — the guide and its automation agree | Built, as `npm run docs:validate` |
 | `test:heal:repo` | **`docs:heal:repo`** — the same across every flagged page, for CI | Not built |
 
 Generate and heal stay separate for the same reason they are separate in the test
@@ -662,10 +751,33 @@ reviewable. It is also what the plumbing built so far exists to produce.
 - The page markdown, plus its `covers` charter from `spec.yaml`.
 - A **bounded** code diff: `git diff <lastVerifiedSha>..HEAD` scoped to that page's
   lockfile dependencies — never the whole repository.
-- The message-catalog diff, from Oracle B.
+- The controls this page names that the app has renamed, from Detector B —
+  structured (`was`, and `now` where the catalogue allows), not a raw diff. An
+  earlier version passed `git diff HEAD -- messages.pot`, which covered only half
+  the sources, ignored the watermark, and left the model to work out for itself
+  which strings had gone and whether the page quoted any.
 
 Output: a classification and a line for the PR body — plus, on `intended_change`, the
 edits themselves.
+
+### Two ways in
+
+A page reaches the agent by either detector, and they need different handling:
+
+- **A changed screenshot** (Detector A) goes through triage first, because a pixel diff
+  is ambiguous — intended, regression, or flake — and only the first is safe to adopt.
+- **A renamed control** (Detector B) goes **straight to the fix turn**. There is no
+  screenshot to classify and no ambiguity to resolve: the string is gone and the page
+  quotes it. Triage would be a model call that could only agree.
+
+The second matters because that class of staleness is otherwise invisible. Renaming a
+toast or a button label rendered client-side moves no pixels, so capture reports nothing
+and, without this, the page is never looked at. Verified: renaming
+`settings.applicationLanguage` in `en.json` produced `0 shot(s) new or changed` and
+still flagged and fixed the Settings page.
+
+This is why `applyFix` takes a plain `Session` rather than a `TriageSession` — the fix
+turn never needed the verdict, only the live client.
 
 ### How the fix turn works
 
@@ -765,8 +877,9 @@ a `MODEL_ALIAS` variable, `contents: write` plus `pull-requests: write`, and a
 discover → matrix → PR structure.
 
 - `on: push: [master]` with `paths-ignore: [docs/**, tests/**, yaffo_ui_tests/**]`,
-  plus `workflow_dispatch`, plus a weekly `schedule` as a backstop for drift the
-  oracles miss.
+  plus `workflow_dispatch`. No schedule: a docs change always has a commit behind it,
+  so push covers it, and `workflow_dispatch` handles the rest by hand. A recurring job
+  would mostly spend a sandbox boot to conclude nothing moved.
 - Concurrency group with `cancel-in-progress: true` — a newer `master` supersedes an
   in-flight run.
 - **One long-lived branch** (`docs/auto-refresh`), force-pushed, reusing a single PR.
@@ -808,7 +921,11 @@ already splits `lib/` from `specs/` and `generated_tests/`.
 yaffo_ui_tests/
 ├── lib/user_doc_automation/        infrastructure — hand-written, not generated
 │   ├── run.ts, heal.ts             entry points (npm run docs:capture / docs:heal)
-│   ├── runner.ts                   drives walkthroughs, stages, compares, promotes
+│   ├── capture_worker.ts           the browser half alone — what runs in the container
+│   ├── docker.ts                   container argv, host alias, env boundary
+│   ├── runner.ts                   captureWalkthroughs / processResults, split at the seam
+│   ├── load.ts                     walkthrough discovery, shared host and container
+│   ├── env.ts                      the capture environment allowlist
 │   ├── settle.ts, framing.ts       capture mechanics
 │   ├── encode.ts, python.ts        WebP encoding via the venv's Pillow
 │   ├── compare.ts, imagediff.py    pixel comparison and the diff overlay
@@ -859,6 +976,24 @@ npm run docs:capture
 
 Add `--promote` to copy changed shots into the guide, and a page id to run one
 walkthrough. Without `--promote` nothing under `docs/` is touched.
+
+For a reproducible capture — which is what CI runs, and what a promoted image should
+come from — build the image once and use the container:
+
+```shell
+npm run docker:build:docs-capture
+```
+
+```shell
+YAFFO_DOC_OBSERVER=1 YAFFO_SANDBOX_HOST=0.0.0.0 npm run isolatedEnvironment:start
+```
+
+```shell
+npm run docs:capture:docker
+```
+
+Same walkthroughs, same output, same flags. The sandbox has to bind `0.0.0.0` because a
+container cannot reach the host's loopback; see *Local / CI parity* above.
 
 > `scripts/capture_docs_screenshots.ts` is the superseded proof of concept: five
 > shots for `getting-started.md`, predating the framework. It still works and still

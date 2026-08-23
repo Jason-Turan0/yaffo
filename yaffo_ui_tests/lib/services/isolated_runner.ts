@@ -297,7 +297,12 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
     console.log(`\n🚀 Starting Flask for instance ${label}${modeLabel} on port ${port}...`);
     const flaskProcess = spawn(
         "python",
-        ["-m", "flask", "run", "--host=127.0.0.1", `--port=${port}`, "--no-reload"],
+        // Loopback by default. Containerized docs capture sets YAFFO_SANDBOX_HOST=0.0.0.0
+        // so the container can reach the app through host.docker.internal — on macOS a
+        // container cannot see the host's loopback, and --network host joins the Linux
+        // VM rather than the Mac. Opt-in, because 0.0.0.0 exposes the sandbox on the LAN.
+        ["-m", "flask", "run", `--host=${process.env.YAFFO_SANDBOX_HOST || "127.0.0.1"}`,
+         `--port=${port}`, "--no-reload"],
         {
             env: flaskEnv,
             cwd: YAFFO_DIR,

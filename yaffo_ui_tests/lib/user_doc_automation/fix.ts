@@ -6,7 +6,7 @@ import {toTextPart} from "@lib/model_clients/model_client.interface";
 import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import {parseAnswer, runToolLoop} from "./tool_loop";
 import type {Evidence} from "./evidence";
-import type {TriageSession} from "./triage";
+import type {Session} from "./triage";
 
 /**
  * The fix turn: having classified a change as intended, bring the page into line with
@@ -101,6 +101,14 @@ returned as your answer and written for you (see *Your answer* below).
    The walkthrough that captures this page's screenshots, including which shots exist
    and how each is framed.
 
+${evidence.stringChanges.length ? `## Controls this page names that the app has renamed
+
+${evidence.stringChanges.map((c) => c.now !== undefined
+    ? `- the page says **${c.was}**; the app now says **${c.now}**`
+    : `- the page says **${c.was}**, which the app no longer has`).join("\n")}
+
+Each of these is a control the reader is told to use by a name that no longer exists.
+` : ""}
 ## What matters
 
 - Anything the page says that the new screenshot contradicts must be corrected —
@@ -209,7 +217,7 @@ const updateCatalog = (page: string, written: string[], fix: Fix): void => {
 };
 
 export const applyFix = async (
-    session: TriageSession,
+    session: Session,
     evidence: Evidence,
     options: FixOptions
 ): Promise<FixResult> => {

@@ -90,7 +90,12 @@ const buildPrompt = (evidence: Evidence): string => [
     section("Page markdown", evidence.markdown),
     section("Walkthrough that captured it", evidence.walkthroughSource),
     section("Changes to this page's observed dependencies", evidence.codeDiff),
-    section("Changes to the user-visible string catalogue", evidence.catalogDiff),
+    evidence.stringChanges.length
+        ? section("Controls this page names that the app has renamed",
+            evidence.stringChanges.map((c) => c.now !== undefined
+                ? `- "${c.was}" is now "${c.now}"`
+                : `- "${c.was}" no longer exists`).join("\n"))
+        : "",
     "\nThe images follow: the committed baseline, the new capture, then the diff overlay.",
 ].join("");
 
@@ -108,12 +113,38 @@ export interface TriageOptions {
     toolProviders?: ToolProvider[];
 }
 
-/** A classified shot, plus the live session the fix turn continues. */
-export interface TriageSession {
-    triage: Triage;
+/** A live model session. The fix turn continues one of these. */
+export interface Session {
     client: ModelClient;
     model: ModelAlias;
 }
+
+/** A classified shot, plus the session that classified it. */
+export interface TriageSession extends Session {
+    triage: Triage;
+}
+
+/**
+ * Open a session for a page with nothing visual to classify.
+ *
+ * Detector B flags a page when it quotes a control the app has renamed, and a rename
+ * that only touches a toast or a button label may move no pixels at all — so there is
+ * no shot to look at and nothing for triage to decide. The staleness is already
+ * established by the catalogue diff; the session goes straight to the fix turn.
+ */
+export const openSession = (evidence: Evidence, options: TriageOptions): Session => {
+    const requested = options.model ?? (DEFAULT_MODEL as ModelAlias);
+    const model = visionModelFor(requested);
+    const client = createModelClient(
+        options.runLogDir, model, SYSTEM_PROMPT,
+        (options.toolProviders ?? []).flatMap((provider) => provider.getTools()),
+        TriageSchema,
+    );
+    // The page and its evidence still have to be in context; only the images and the
+    // classification step are skipped.
+    client.addUserMessage([toTextPart(buildPrompt(evidence))]);
+    return {client, model};
+};
 
 export const triageShot = async (
     evidence: Evidence,

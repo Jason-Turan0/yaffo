@@ -20,6 +20,8 @@
     "test:heal": "tsx lib/test_generator/heal_test.ts",
     "test:heal:repo": "tsx lib/test_generator/heal_repo.ts",
     "docs:capture": "tsx lib/user_doc_automation/run.ts",
+    "docs:capture:docker": "tsx lib/user_doc_automation/run.ts -- --docker",
+    "docs:detect": "tsx lib/user_doc_automation/detect.ts",
     "docs:generate": "tsx lib/user_doc_automation/generate_cli.ts",
     "docs:heal": "tsx lib/user_doc_automation/heal.ts",
     "docs:validate": "tsx lib/user_doc_automation/validate.ts",
@@ -28,7 +30,8 @@
     "typecheck": "tsc --noEmit",
     "logs": "tsx scripts/browse_api_logs.ts",
     "validate:specs": "tsx scripts/validate_specs.ts",
-    "docker:build:mcp-filesystem": "docker build -t yaffo-mcp-filesystem:latest docker/mcp-filesystem"
+    "docker:build:mcp-filesystem": "docker build -t yaffo-mcp-filesystem:latest docker/mcp-filesystem",
+    "docker:build:docs-capture": "docker build -t yaffo-docs-capture:latest -f docker/docs-capture/Dockerfile ."
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.27",

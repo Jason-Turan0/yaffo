@@ -149,6 +149,7 @@ yaffo_ui_tests/
 - Node.js 18+
 - Yaffo application source code (expected at `../../yaffo` relative to this directory)
 - An API key for the model provider you use: Anthropic (default), Google (Gemini), OpenAI (GPT), DeepSeek, Moonshot AI (Kimi), or xAI (Grok)
+- Docker — required by `npm run generate`, optional elsewhere. See [Docker](#docker) below.
 
 ### Setup
 
@@ -455,6 +456,147 @@ scenarios:
 | xAI | Grok 4.3 | `grok-4.3` |
 
 Anthropic models support native structured output and prompt caching. Generation defaults to `claude-sonnet-5`, healing uses `claude-sonnet-5`.
+
+## Docker
+
+Docker does two jobs here: it confines the parts of this harness that hand filesystem
+access to a model, and it pins screenshot rendering so a guide image does not depend on
+which machine captured it.
+
+### What needs it
+
+| Uses Docker | Why |
+|---|---|
+| `npm run generate` | Passes `useDocker: true`, so the MCP filesystem server the model reads source through runs in a container with the repo mounted **read-only** and `--network none` |
+| `npm run test:heal` | No. Runs the filesystem server directly via `npx` |
+| `npm run docs:capture:docker` | Runs the browser half in a container so screenshots are reproducible |
+| `npm run docs:capture` | No. Captures on the host — fine locally, but see the drift below |
+
+Everything except `generate` and `docs:capture:docker` works without Docker installed.
+
+### Why docs capture is containerized when the Playwright suite is not
+
+The test suite confines generated specs with `sandbox-exec` (macOS) or `bwrap` (Linux),
+which is cheaper and enough for *safety*. Docs capture has a second requirement the
+tests do not: its output is a committed image, compared per-pixel on the next run, so it
+has to be reproducible.
+
+macOS and Linux disagree on font metrics. That changes line wrapping, which moves
+layout. Measured on `library-basics/browsing-filtering` against the same sandbox:
+
+| | `gallery-home` | `gallery-filter-sidebar` |
+|---|---|---|
+| container, run A vs run B | **0 px differ** | **0 px differ** |
+| container vs macOS host | 1392×**777** vs 1392×**782** | 312×**1326** vs 312×**1359** |
+
+Two container runs are byte-identical. The same page captured on the host is a
+different size, so every CI run would report every shot as reframed and the comparison
+would be noise. The container pins the whole rendering stack — Chromium build, fonts,
+freetype — so the two agree.
+
+Encoding and comparison stay on the host either way: they use Pillow and NumPy from the
+project virtualenv, which is not in the Playwright image and should not be.
+
+### Install
+
+**macOS** — [Docker Desktop](https://www.docker.com/products/docker-desktop/), or
+[Rancher Desktop](https://rancherdesktop.io/) with the container engine set to
+**dockerd (moby)** rather than containerd. Either way the daemon has to be *running*,
+not merely installed:
+
+```bash
+docker info
+```
+
+A `Cannot connect to the Docker daemon` or `dial unix /var/run/docker.sock` error means
+the desktop app is not started.
+
+**Linux** — Docker Engine from your distribution, plus your user in the `docker` group so
+the harness can talk to the socket without `sudo`:
+
+```bash
+sudo usermod -aG docker "$USER"    # log out and back in for this to take effect
+```
+
+### Build the images
+
+Both are local and have to be built once:
+
+```bash
+npm run docker:build:mcp-filesystem
+npm run docker:build:docs-capture
+```
+
+`yaffo-mcp-filesystem` is `node:22-slim` with `@modelcontextprotocol/server-filesystem`
+pinned, running as a non-root user. Rebuild it if that pin changes.
+
+`yaffo-docs-capture` is the official Playwright image with this project's
+`node_modules` installed inside it, pinned to the `@playwright/test` version in
+`package.json` — **bump both together**, or the browser in the image stops matching the
+one the harness expects. `node_modules` is built into the image rather than mounted
+because the host's is compiled for darwin and will not execute on Linux; the run masks
+the mounted one with an anonymous volume.
+
+Verify:
+
+```bash
+docker image inspect yaffo-mcp-filesystem:latest yaffo-docs-capture:latest --format '{{.Id}}'
+```
+
+### Running a containerized capture
+
+The container reaches the app through `host.docker.internal`, and **a container cannot
+see the host's loopback**. The sandbox therefore has to bind beyond `127.0.0.1`:
+
+```bash
+YAFFO_SANDBOX_HOST=0.0.0.0 npm run isolatedEnvironment:start
+```
+
+```bash
+npm run docs:capture:docker
+npm run docs:capture:docker -- --promote library-basics/browsing-filtering
+```
+
+`YAFFO_SANDBOX_HOST` defaults to `127.0.0.1` and is opt-in because `0.0.0.0` puts the
+sandbox on your LAN. `--network host` is not an alternative on macOS: it joins the Linux
+VM's network namespace, not your Mac's.
+
+The container gets the repo mounted **read-only** with exactly one writable hole, at
+`user_doc_automation/.staging`. Walkthroughs are model-generated code and staging is the
+only place they have any business writing; images are promoted into `docs/guide/` by the
+host, after they have been compared. Its environment is an allowlist (see
+`lib/user_doc_automation/env.ts`) that carries no provider key and, deliberately, no
+`DOCKER_HOST` — the daemon socket is root on the host, and handing it to generated code
+would make the container pointless.
+
+### How the filesystem container is run
+
+Worth knowing when debugging a path the model claims it cannot read. Each allowed
+directory is mounted at `/data/0`, `/data/1`, … in the order given, and the client
+translates paths in both directions, so the model sees container paths while the harness
+works in host paths.
+
+```
+docker run --rm -i --network none -v <hostDir>:/data/0:ro … yaffo-mcp-filesystem:latest /data/0 …
+```
+
+- `--network none` — the server has no reason to reach the network, and the code it
+  serves was written by a model.
+- `:ro` — mounts are read-only unless `readonly: false` is passed. Note that
+  `getTools()` filters out the write tools **regardless** of that flag, so the model is
+  never offered one; generated artifacts come back as its answer and the harness writes
+  them.
+
+### Troubleshooting
+
+| Symptom | Cause |
+|---|---|
+| `dial unix /var/run/docker.sock` | Daemon not running — start Docker Desktop |
+| `Unable to find image 'yaffo-…:latest'` | Build it — see [Build the images](#build-the-images) |
+| Capture fails with `ECONNREFUSED` | Sandbox bound to loopback; restart it with `YAFFO_SANDBOX_HOST=0.0.0.0` |
+| Every shot reports `reframed` | Baselines were captured on the host; re-promote once from a container run |
+| Model reports a file missing that exists | A path outside `allowedDirectories` is not mounted, so it does not exist inside the container |
+| `permission denied` on the socket (Linux) | User not in the `docker` group |
 
 ## MCP Tool Providers
 

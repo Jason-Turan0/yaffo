@@ -20,6 +20,7 @@ import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesy
 import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 import {YAFFO_APP_ROOT} from "@lib/types";
+import {captureEnv} from "./env";
 import {generateWalkthrough, requiredShots} from "./generate";
 
 const REPO = resolve(join(process.cwd(), ".."));
@@ -59,9 +60,10 @@ const capture = (page: string, promote: boolean): {ok: boolean; output: string} 
             cwd: process.cwd(),
             stdio: "pipe",
             encoding: "utf8",
-            // Passed explicitly: the child would otherwise inherit .env's BASE_URL and
-            // capture against the wrong instance.
-            env: {...process.env, DOCS_BASE_URL: BASE_URL},
+            // An allowlist, not the ambient environment: this child executes the
+            // walkthrough the model just wrote, and dotenv has already loaded every
+            // provider key into this process.
+            env: captureEnv(process.env, {DOCS_BASE_URL: BASE_URL}),
         })};
     } catch (e) {
         const err = e as {stdout?: string; stderr?: string};

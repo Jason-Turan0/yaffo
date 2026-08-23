@@ -1,7 +1,7 @@
 import {chromium} from "@playwright/test";
 import type {Browser} from "@playwright/test";
 import {randomUUID} from "crypto";
-import {copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync} from "fs";
+import {copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync} from "fs";
 import {dirname, join} from "path";
 import {compareShots} from "./compare";
 import type {CompareResult} from "./compare";
@@ -21,14 +21,37 @@ export const DEVICE_SCALE_FACTOR = 2;
 
 export type ShotStatus = "new" | "changed" | "unchanged";
 
-export interface ShotResult {
+/**
+ * A shot as it comes off the browser: a PNG and the geometry needed to judge it.
+ *
+ * This is the half that can run in a container. Everything downstream of it — WebP
+ * encoding, pixel comparison, promotion into the guide — needs the project virtualenv
+ * for Pillow and NumPy, which the Playwright image does not have and should not grow.
+ * So the boundary sits exactly here, and this struct is what crosses it.
+ *
+ * The PNG's path is deliberately *not* a field. It is a pure function of the staging
+ * directory and the target, so the host recomputes it against its own paths rather
+ * than translating a container path back — the file is the same file either way,
+ * reached through a bind mount.
+ */
+export interface RawShot {
     /** Path relative to docs/guide — the shot's identity. */
     target: string;
-    staged: string;
-    status: ShotStatus;
     width: number;
     height: number;
     ignore: Box[];
+}
+
+export interface RawResult {
+    page: string;
+    shots: RawShot[];
+    observation: Observation;
+    error?: string;
+}
+
+export interface ShotResult extends RawShot {
+    staged: string;
+    status: ShotStatus;
     /** Pixel comparison against the committed image. Absent for a new shot. */
     diff?: CompareResult;
 }
@@ -40,15 +63,24 @@ export interface WalkthroughResult {
     error?: string;
 }
 
-export interface RunOptions {
+export interface CaptureOptions {
     baseUrl: string;
+    /** Where captures land before anything is compared. Never docs/. */
+    stagingDir: string;
+}
+
+export interface ProcessOptions {
     /** docs/guide */
     guideDir: string;
-    /** Where captures land before anything is compared. Never docs/. */
     stagingDir: string;
     /** Copy changed and new shots into the guide. */
     promote?: boolean;
 }
+
+export type RunOptions = CaptureOptions & ProcessOptions;
+
+/** Where `capture` leaves its raw output for `process` to pick up. */
+export const RAW_FILENAME = "raw.json";
 
 /**
  * A page's assets always live at docs/guide/{area}/assets/{page}/. There are no
@@ -59,12 +91,16 @@ const targetFor = (pageId: string, filename: string): string => {
     return join(area, "assets", name, filename);
 };
 
-const runOne = async (
+/** The PNG a capture writes for a target. Recomputed on each side of the boundary. */
+const stagedPngFor = (stagingDir: string, target: string): string =>
+    join(stagingDir, target).replace(/\.webp$/, ".png");
+
+const captureOne = async (
     browser: Browser,
     walkthrough: Walkthrough,
-    options: RunOptions
-): Promise<WalkthroughResult> => {
-    const {baseUrl, guideDir, stagingDir} = options;
+    options: CaptureOptions
+): Promise<RawResult> => {
+    const {baseUrl, stagingDir} = options;
     // A fresh id per run, so this walkthrough's server-side records are its own and
     // collecting them cannot disturb anything else running against the same app.
     const runId = randomUUID();
@@ -81,7 +117,7 @@ const runOne = async (
     });
     observer.attach(context);
 
-    const shots: ShotResult[] = [];
+    const shots: RawShot[] = [];
     let error: string | undefined;
     try {
         for (const [filename, shot] of Object.entries(walkthrough.shots)) {
@@ -99,36 +135,16 @@ const runOne = async (
                 const ignore = await resolveIgnoreRegions(page, shot, clip);
 
                 const target = targetFor(walkthrough.page, filename);
-                const stagedPng = join(stagingDir, target).replace(/\.webp$/, ".png");
+                const stagedPng = stagedPngFor(stagingDir, target);
                 mkdirSync(dirname(stagedPng), {recursive: true});
                 await page.screenshot({path: stagedPng, clip, scale: "device"});
-                const staged = toWebp(stagedPng);
-
-                const committed = join(guideDir, target);
-                let status: ShotStatus = "new";
-                let diff: CompareResult | undefined;
-                if (existsSync(committed)) {
-                    // The diff overlay sits beside the staged shot so a reviewer can
-                    // see *where* it moved, not just that it did.
-                    diff = compareShots(committed, staged, ignore,
-                        staged.replace(/\.webp$/, ".diff.png"));
-                    status = diff.status;
-                }
 
                 shots.push({
                     target,
-                    staged,
-                    status,
                     width: Math.round(clip?.width ?? shot.viewport.width),
                     height: Math.round(clip?.height ?? shot.viewport.height),
                     ignore,
-                    diff,
                 });
-
-                if (options.promote && status !== "unchanged") {
-                    mkdirSync(dirname(committed), {recursive: true});
-                    copyFileSync(staged, committed);
-                }
             } finally {
                 await page.close();
             }
@@ -159,26 +175,82 @@ const runOne = async (
     return {page: walkthrough.page, shots, observation: observer.result(server), error};
 };
 
-export const runWalkthroughs = async (
+/**
+ * Drive the browser and leave PNGs in staging. Safe to run in a container; needs
+ * nothing but Node, Chromium, and a route to the app.
+ */
+export const captureWalkthroughs = async (
     walkthroughs: Walkthrough[],
-    options: RunOptions
-): Promise<WalkthroughResult[]> => {
-    rmSync(options.stagingDir, {recursive: true, force: true});
+    options: CaptureOptions
+): Promise<RawResult[]> => {
+    // Emptied rather than removed: under a containerized capture this directory is a
+    // bind mount whose parent is mounted read-only, and a mount point cannot be
+    // unlinked no matter how writable its contents are.
     mkdirSync(options.stagingDir, {recursive: true});
+    for (const entry of readdirSync(options.stagingDir)) {
+        rmSync(join(options.stagingDir, entry), {recursive: true, force: true});
+    }
 
     const browser = await chromium.launch();
-    const results: WalkthroughResult[] = [];
+    const results: RawResult[] = [];
     try {
         for (const walkthrough of walkthroughs) {
-            results.push(await runOne(browser, walkthrough, options));
+            results.push(await captureOne(browser, walkthrough, options));
         }
     } finally {
         await browser.close();
     }
 
     writeFileSync(
-        join(options.stagingDir, "report.json"),
+        join(options.stagingDir, RAW_FILENAME),
+        JSON.stringify({capturedAt: new Date().toISOString(), results}, null, 2)
+    );
+    return results;
+};
+
+/**
+ * Encode, compare against what is committed, and optionally promote. Host-side: this
+ * is the half that needs the virtualenv.
+ */
+export const processResults = (
+    raw: RawResult[],
+    options: ProcessOptions
+): WalkthroughResult[] => {
+    const {guideDir, stagingDir} = options;
+    const results = raw.map((result) => ({
+        ...result,
+        shots: result.shots.map((shot): ShotResult => {
+            const staged = toWebp(stagedPngFor(stagingDir, shot.target));
+            const committed = join(guideDir, shot.target);
+
+            let status: ShotStatus = "new";
+            let diff: CompareResult | undefined;
+            if (existsSync(committed)) {
+                // The diff overlay sits beside the staged shot so a reviewer can see
+                // *where* it moved, not just that it did.
+                diff = compareShots(committed, staged, shot.ignore,
+                    staged.replace(/\.webp$/, ".diff.png"));
+                status = diff.status;
+            }
+
+            if (options.promote && status !== "unchanged") {
+                mkdirSync(dirname(committed), {recursive: true});
+                copyFileSync(staged, committed);
+            }
+            return {...shot, staged, status, diff};
+        }),
+    }));
+
+    writeFileSync(
+        join(stagingDir, "report.json"),
         JSON.stringify({generatedAt: new Date().toISOString(), results}, null, 2)
     );
     return results;
 };
+
+/** Capture and process in one process. The default when not containerized. */
+export const runWalkthroughs = async (
+    walkthroughs: Walkthrough[],
+    options: RunOptions
+): Promise<WalkthroughResult[]> =>
+    processResults(await captureWalkthroughs(walkthroughs, options), options);

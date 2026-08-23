@@ -15,7 +15,9 @@ import "dotenv/config";
 import {copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync} from "fs";
 import {dirname, join, resolve} from "path";
 import {parse as parseYaml} from "yaml";
-import {applyFix, buildEvidence, triageShot} from "./index";
+import {applyFix, buildEvidence, openSession, triageShot} from "./index";
+import {changedStrings, changesQuotedBy} from "./strings";
+import type {StringChange} from "./strings";
 import type {Triage, WalkthroughResult} from "./index";
 import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
 import {createPlaywrightClient} from "@lib/tool_providers/mcp_playwright_client";
@@ -43,9 +45,17 @@ const MARK: Record<Triage["classification"], string> = {
     environment_instability: "🌫️",
 };
 
-const covers = (page: string): string | undefined => {
-    const spec = parseYaml(readFileSync(join(CONTENT_DIR, "spec.yaml"), "utf8"));
-    return spec?.pages?.[page]?.covers;
+const spec = (): {pages?: Record<string, {covers?: string}>} =>
+    parseYaml(readFileSync(join(CONTENT_DIR, "spec.yaml"), "utf8"));
+
+const covers = (page: string): string | undefined => spec()?.pages?.[page]?.covers;
+
+/** The commit this page was last confirmed to match; null until it has been promoted. */
+const watermark = (page: string): string | null => {
+    const [area, name] = [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
+    const lock = join(CONTENT_DIR, area, name, `${name}.lock.json`);
+    if (!existsSync(lock)) return null;
+    return JSON.parse(readFileSync(lock, "utf8")).lastVerifiedSha ?? null;
 };
 
 const walkthroughPath = (page: string): string => {
@@ -57,6 +67,25 @@ const walkthroughSource = (page: string): string => {
     const path = walkthroughPath(page);
     return existsSync(path) ? readFileSync(path, "utf8") : "(no walkthrough on file)";
 };
+
+/**
+ * An evidence packet for a page with no changed screenshot. Same shape as the visual
+ * one so the fix turn needs no special case, with the image fields left empty.
+ */
+const proseEvidence = (page: string, changes: StringChange[]) => ({
+    page,
+    target: "",
+    baselinePath: "",
+    candidatePath: "",
+    diffSummary: "No screenshot changed. This page names a control the app has renamed.",
+    markdown: readFileSync(join(GUIDE_DIR, `${page}.md`), "utf8"),
+    markdownPath: join(GUIDE_DIR, `${page}.md`),
+    walkthroughPath: walkthroughPath(page),
+    covers: covers(page),
+    walkthroughSource: walkthroughSource(page),
+    codeDiff: "(not gathered: this page was flagged by a catalogue change, not a code diff)",
+    stringChanges: changes,
+});
 
 const main = async (): Promise<void> => {
     const args = process.argv.slice(2);
@@ -73,13 +102,34 @@ const main = async (): Promise<void> => {
     const pending = results.flatMap((result) =>
         result.shots.filter((shot) => shot.status !== "unchanged").map((shot) => ({result, shot})));
 
+    // Detector B, per page. A renamed toast or button label may move no pixels at all,
+    // so a page can be stale with nothing staged against it — without this, that whole
+    // class of staleness never reaches the agent.
+    const stringChanges = new Map<string, StringChange[]>();
+    const diffCache = new Map<string, StringChange[]>();
+    for (const page of Object.keys(spec().pages ?? {})) {
+        const base = watermark(page);
+        if (!base) continue;
+        if (!diffCache.has(base)) diffCache.set(base, changedStrings(base));
+        const changes = diffCache.get(base) as StringChange[];
+        if (!changes.length) continue;
+        const markdownPath = join(GUIDE_DIR, `${page}.md`);
+        if (!existsSync(markdownPath)) continue;
+        const quoted = changesQuotedBy(readFileSync(markdownPath, "utf8"), changes);
+        if (quoted.length) stringChanges.set(page, quoted);
+    }
+
+    // Pages Detector B flagged that no staged shot already covers.
+    const proseOnly = [...stringChanges.keys()]
+        .filter((page) => !pending.some(({result}) => result.page === page));
+
     for (const result of results.filter((r) => r.error)) {
         // A walkthrough that threw produced no images, so there is nothing to look at;
         // it is a defect by construction rather than something to classify.
         console.log(`🔧 ${result.page}\n   walkthrough failed: ${result.error}`);
     }
 
-    if (!pending.length) {
+    if (!pending.length && !proseOnly.length) {
         console.log(results.some((r) => r.error)
             ? "\nNo changed shots to triage."
             : "Nothing to triage — every shot matched what is committed.");
@@ -88,7 +138,8 @@ const main = async (): Promise<void> => {
 
     const runLogDir = join(STAGING_DIR, "heal-logs");
     mkdirSync(runLogDir, {recursive: true});
-    console.log(`Triaging ${pending.length} changed shot(s)\n`);
+    console.log(`Triaging ${pending.length} changed shot(s)` +
+        (proseOnly.length ? `, and ${proseOnly.length} page(s) flagged by renamed controls` : "") + "\n");
 
     // The same three providers the test generator gets, for the same reasons: the
     // filesystem to read the page and its walkthrough, Playwright to inspect the
@@ -115,6 +166,7 @@ const main = async (): Promise<void> => {
             walkthroughSource: walkthroughSource(result.page),
             walkthroughPath: walkthroughPath(result.page),
             covers: covers(result.page),
+            stringChanges: stringChanges.get(result.page) ?? [],
         });
 
         // Memory is per page — the same scoping the generator uses for a feature.
@@ -169,6 +221,43 @@ const main = async (): Promise<void> => {
             }
         } else {
             console.log(`   → ${triage.recommendedAction}: left for a human, nothing written`);
+        }
+        console.log();
+    }
+
+    // Pages stale only because a control was renamed. There is no screenshot to
+    // classify — the catalogue diff already establishes the staleness — so these skip
+    // triage and go straight to the fix turn.
+    for (const page of proseOnly) {
+        const changes = stringChanges.get(page) as StringChange[];
+        console.log(`✏️  ${page}`);
+        for (const change of changes) {
+            console.log(change.now !== undefined
+                ? `   "${change.was}" is now "${change.now}"`
+                : `   "${change.was}" no longer exists`);
+        }
+        if (!apply) {
+            console.log("   → would update the page (re-run with --apply)\n");
+            continue;
+        }
+
+        const [area, name] = [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
+        const memory = localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name, "memories"));
+        const evidence = proseEvidence(page, changes);
+        try {
+            const session = openSession(evidence, {
+                model, runLogDir, toolProviders: [...providers, memory],
+            });
+            const outcome = await applyFix(session, evidence, {
+                toolProviders: [...providers, memory], baseUrl: BASE_URL,
+            });
+            if (outcome.fix?.explanation) console.log(`   → ${outcome.fix.explanation}`);
+            for (const file of outcome.written) console.log(`      wrote ${file}`);
+            if (!outcome.written.length) console.log("      (no file changes returned)");
+            for (const failure of outcome.failures) console.error(`   ‼️  ${failure.split("\n")[0]}`);
+            if (outcome.reverted) console.error("   → edits reverted; gates failed");
+        } catch (e) {
+            console.error(`   ❌ ${e instanceof Error ? e.message : String(e)}`);
         }
         console.log();
     }
