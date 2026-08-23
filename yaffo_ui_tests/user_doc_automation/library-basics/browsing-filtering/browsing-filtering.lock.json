@@ -1,6 +1,6 @@
 {
     "page": "library-basics/browsing-filtering",
-    "lastVerifiedSha": "b5235d8a0beac375ca5b63700b499de97ac99f99",
+    "lastVerifiedSha": "bb54b62f8ca2a72fc10a9f1b4ce5909fcec38dcd",
     "observed": {
         "page": "library-basics/browsing-filtering",
         "urls": [
@@ -212,7 +212,7 @@
         "library-basics/assets/browsing-filtering/gallery-home.webp": {
             "width": 1392,
             "height": 777,
-            "sha256": "5eca908b08cbb7b972e4d422d6a4f4b9d84092ee479e0f9a7988bf88bdcb80c5"
+            "sha256": "e2d0faddc39b44fc3ccf68f521e56346f9d6afbc27cfcd18807a7cbb4a6128a7"
         },
         "library-basics/assets/browsing-filtering/gallery-filter-sidebar.webp": {
             "width": 312,

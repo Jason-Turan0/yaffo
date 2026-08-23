@@ -168,6 +168,30 @@ def test_scan_accepts_media_beneath_a_configured_symlink_root(tmp_path, session)
     assert scan.orphaned == []
 
 
+def test_scan_matches_an_indexed_symlink_path_to_its_canonical_file(tmp_path, session):
+    real_root = tmp_path / "real-media"
+    _touch(real_root / "inside.jpg")
+    configured_root = tmp_path / "configured-media"
+    try:
+        configured_root.symlink_to(real_root, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlinks unavailable: {exc}")
+
+    session.add(MediaItem(
+        full_file_path=str(configured_root / "inside.jpg"),
+        status=MEDIA_STATUS_INDEXED,
+    ))
+    session.commit()
+
+    scan = scan_media_dirs(session, [configured_root], None)
+
+    assert scan.total_filesystem == 1
+    assert scan.total_imported == 1
+    assert scan.total_indexed == 1
+    assert scan.unindexed == []
+    assert scan.orphaned == []
+
+
 def test_scan_stops_after_configured_walk_limit(tmp_path, session):
     media_dir = tmp_path / "organized"
     _touch(media_dir / "one.jpg")

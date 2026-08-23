@@ -243,6 +243,59 @@ jobs:
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           echo "### ${{ matrix.page }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Documentation healer exit code: $code" >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish model triage to job summary
+        if: ${{ always() }}
+        working-directory: yaffo_ui_tests
+        run: |
+          TRIAGE=.doc-staging/triage.json
+          if [ ! -f "$TRIAGE" ]; then
+            {
+              echo ""
+              echo "No structured model triage was produced."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          count=$(jq '.verdicts | length' "$TRIAGE")
+          if [ "$count" -eq 0 ]; then
+            {
+              echo ""
+              echo "No model verdict was available."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          for ((index=0; index<count; index++)); do
+            target=$(jq -r ".verdicts[$index].target" "$TRIAGE")
+            classification=$(jq -r ".verdicts[$index].triage.classification" "$TRIAGE")
+            confidence=$(jq -r ".verdicts[$index].triage.confidence" "$TRIAGE")
+            action=$(jq -r ".verdicts[$index].triage.recommendedAction" "$TRIAGE")
+            summary=$(jq -r ".verdicts[$index].triage.summary" "$TRIAGE")
+            reasoning=$(jq -r ".verdicts[$index].triage.reasoning" "$TRIAGE")
+            case "$classification" in
+              intended_change) mark="✅" ;;
+              walkthrough_defect) mark="🔧" ;;
+              application_regression) mark="🐛" ;;
+              environment_instability) mark="🌫️" ;;
+              *) mark="•" ;;
+            esac
+            {
+              echo ""
+              echo "#### $mark \`$target\`"
+              echo ""
+              echo "- **Classification:** \`$classification\`"
+              echo "- **Confidence:** $confidence"
+              echo "- **Recommended action:** \`$action\`"
+              echo "- **Summary:** $summary"
+              echo ""
+              echo "<details><summary>Model rationale</summary>"
+              echo ""
+              echo "$reasoning"
+              echo ""
+              echo "</details>"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
       - name: Capture documentation patch
         if: ${{ always() }}
         working-directory: yaffo_ui_tests

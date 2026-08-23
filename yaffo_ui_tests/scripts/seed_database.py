@@ -16,12 +16,9 @@ from collections import Counter, defaultdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from onnxruntime.transformers.profile_result_processor import process_results
-
 from yaffo.background_tasks.tasks.classify_labels_automation import classify_media_items
 from yaffo.common import MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO, PHOTO_EXTENSIONS
 from yaffo.db.models import (
-    Tag,
     Face,
     MediaItem,
     Person,
@@ -693,7 +690,10 @@ def seed_database() -> int:
         print("Error: YAFFO_DATA_DIR environment variable not set")
         sys.exit(1)
 
-    data_dir = Path(data_dir)
+    # Store the same canonical spelling used by the filesystem scanner. On macOS,
+    # /tmp is a symlink to /private/tmp; mixing those spellings makes one physical
+    # file look like two different media items when the first sync runs.
+    data_dir = Path(data_dir).expanduser().resolve()
     photos_dir = data_dir / "Family Photos"
     thumbnail_dir = data_dir / "thumbnails"
 
