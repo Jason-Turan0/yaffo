@@ -38,7 +38,8 @@ thumbnails to be generated.
 
 ## AI Generation
 
-Powers Yaffo's AI features, such as the [page builder](../create-customize/custom-pages.md),
+Powers Yaffo's AI features, such as the
+[page builder](../create-customize/custom-pages.md),
 [theme designer](../create-customize/themes.md), and custom
 [automations](../create-customize/automations.md).
 

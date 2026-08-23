@@ -12,8 +12,12 @@
 > what is committed, records that page's routes, templates, and static assets, and
 > `docs:heal` classifies whatever changed.
 >
-> Not built: the staleness oracles beyond A, the watermark, the agent, and the
-> workflow. Those parts below are still design.
+> Also working: `docs:generate` writes a page and its walkthrough from the page's
+> charter, gated on the two agreeing; `docs:heal` triages a change and updates the page;
+> `docs:validate` checks the guide and its automation against each other.
+>
+> Not built: the staleness oracles beyond A, the watermark, and the workflow. Those
+> parts below are still design.
 >
 > Last updated: 2026-08-22
 
@@ -236,6 +240,13 @@ Layers 1–3 cover what makes a *screenshot* change and are what shipped. Layer 
 catches a different class — logic that alters displayed *values* without touching any
 template — and is noisy enough (filter to `yaffo/`, begin measurement after boot,
 reset between runs) that it waits until the first real miss justifies it.
+
+The misses are already visible, as entries in `also_depends_on`. `filter_config.py`
+holds the canonical filter list and executes on every gallery render, but the only
+route it registers is the *save* endpoint, which a read-only walkthrough never hits —
+so layer 1 does not record it and someone had to declare it by hand. The same is true
+of `common.py`, `models.py`, and `themes.py`. Each is an argument for layer 4, and each
+should disappear from the spec when it arrives.
 
 For `browsing-filtering` a run records 3 route modules, 21 templates, and 70 static
 files. The observer is dev-only: `init_doc_observer` returns immediately unless
@@ -490,7 +501,24 @@ Nothing shot-shaped survives in the spec, including non-reproducible content —
 **Validation.** The spec is checkable against the tree without running anything: every
 page in the spec exists and vice versa, every referenced image exists and sits under
 its own page's assets directory, no image is unreferenced, and every
-`also_depends_on` path resolves. That belongs in CI alongside the reference check above.
+`also_depends_on` path resolves. Implemented as `npm run docs:validate`, described
+below.
+
+### Validation
+
+`npm run docs:validate` checks the guide and its automation against each other. It is
+entirely mechanical — no sandbox, no model — so it is cheap enough to run on every push,
+and it catches drift that otherwise accumulates in silence:
+
+1. the spec and the guide describe the same set of pages;
+2. every image reference resolves;
+3. and points inside its own page's assets directory — there are no shared images, so a
+   reference reaching elsewhere means the layout has drifted;
+4. a walkthrough exists exactly where the spec says one should;
+5. no captured image is left unreferenced — this is the check that would have caught
+   `faces-review.png`, unreferenced in the repo for months;
+6. every `also_depends_on` path exists;
+7. and none of them is something the walkthrough already observes.
 
 ### Bot state is never hand-edited
 
@@ -645,32 +673,81 @@ Triage and fix are **one model session**, as in `auto_heal_orchestrator.ts`: the
 stays alive after classifying, so the fix turn still has the screenshots and evidence
 in context rather than re-sending three images.
 
-The agent edits through the filesystem tool rather than returning patch data.
-`mcp_filesystem_client.ts` already takes `allowedDirectories`, so writes are scoped to
-the page being healed and its assets.
+**Tools are read-only; artifacts come back as results.** The agent gets the same three
+providers as the test generator — filesystem, browser, and memory — but writes nothing
+with them. `FilesystemMcpClient.getTools()` filters `WRITE_TOOLS` unconditionally, so
+generated artifacts arrive as the model's answer and the orchestrator writes them.
+`FixSchema` therefore mirrors `GeneratedTestResponseSchema`:
+`files: [{filename, code, description}]` plus `explanation` and `confidence`.
 
-Handing back structured `{find, replace}` pairs was considered and rejected. The guide
-is hard-wrapped at 80 columns, so a quoted sentence spans line breaks and substituting
-a word of different length leaves the paragraph needing a reflow that a
-single-sentence replacement cannot perform. A tool lets the agent read the file, make
-the edit, and rewrap — which is what a person would do.
+Note the flag is a trap: `createFilesystemClient(dirs, {readonly: false})` looks like it
+enables writing and does not. `callTool` honours it, `getTools` ignores it, so the model
+is simply never offered a write tool — and an agent that has been told to edit will
+report edits it had no way to make.
+
+**Whole files, not patches.** Structured `{find, replace}` pairs were considered and
+rejected: the guide is hard-wrapped at 80 columns, so a quoted sentence spans line
+breaks, and substituting a word of different length leaves the paragraph needing a
+reflow a single-sentence replacement cannot perform. A whole file lets the agent rewrap
+— which is what a person would do. Partial content overwrites the rest with nothing, so
+the prompt says so explicitly.
+
+**Absolute paths, not a search.** The page and its walkthrough are named by absolute
+path in the prompt. Without that the agent spends its turns on `search_files` and
+`list_directory` orienting itself; supplying them cut a run from fourteen turns to five.
+
+**The catalog is maintained, not written once.** After the gates pass, `{page}.json` is
+updated with what was actually written — the same thing `auto_heal_orchestrator`'s
+`updateJsonFile` does for a healed test. Both artifacts the agent owns are entries: the
+walkthrough *and* the page markdown. Entries are keyed by repo-relative path (the two
+live in different trees, so bare basenames will not do) and **upserted**, because a
+page can get its first fix before anything ever generated a catalog entry for its
+markdown. It runs only when no gate failed, so the catalog can never record content
+that was then reverted.
+
+The catalog records what the automation last produced, not what is on disk now. A human
+editing the page afterwards leaves it describing the previous generation, which is the
+honest thing for it to say.
 
 ### Reuse, and the one real gap
 
-Reused as-is: `lib/model_clients/` (provider abstraction and `MODEL_ALIAS`),
-`lib/tool_providers/mcp_filesystem_client.ts` for edits,
-`lib/tool_providers/mcp_playwright_client.ts` for `docs:generate` to explore the app,
-`lib/test_generator/code_safety.ts` as guards on model-written code, and
-`lib/services/typescript_validator.ts` so a healed walkthrough must typecheck before it
-is trusted. The two-phase triage-then-fix-in-one-session pattern from
-`auto_heal_orchestrator.ts` ports unchanged.
+The agent is given the same three providers the test generator builds, for the same
+reasons:
 
-**The gap: the conversation type is text-only.** The clients are built on the Vercel AI
-SDK, whose `UserModelMessage` supports image parts natively, but
-`ConversationTurn.content` in `lib/model_clients/model_client.types.ts` is typed
-`string | Array<{type: string; text?: string}>`. Triage cannot classify a visual change
-without seeing the overlay, so widening that type to carry image parts is a
-prerequisite rather than a refinement. It is small and localised.
+- **`mcp_filesystem_client.ts`** — read the page, its walkthrough, and its catalog.
+- **`mcp_playwright_client.ts`** — the running sandbox, so the agent can check how
+  something actually looks before describing it, or work out how a shot should be
+  framed. It is documenting a live site, so it needs to see one.
+- **`local_filesystem_memory_tool.ts`** — scoped to that page's `memories/`, the same
+  way the generator scopes memory to a feature. Read first, so a run starts from what
+  earlier runs learned; written when something is worth not rediscovering.
+
+Also reused: `lib/model_clients/` (provider abstraction and `MODEL_ALIAS`),
+`lib/test_generator/prompt/json_parser.ts` for tolerant JSON extraction, and
+`lib/services/typescript_validator.ts` so a changed walkthrough must typecheck. The
+two-phase triage-then-fix-in-one-session pattern from `auto_heal_orchestrator.ts` ports
+unchanged.
+
+**The gap that was closed: the conversation type was text-only.** The clients are built
+on the Vercel AI SDK, whose user turns support image parts, but `UserMessage.content`
+was typed `TextPart[]`, so triage could not see the overlay it was asked to classify.
+Widened to `TextPart | FilePart`, with a `toImagePart` helper — a `file` part carrying
+an `image/*` media type, since the SDK deprecated the older `image` part.
+
+Closing it surfaced two more worth knowing:
+
+- **Not every model can see.** DeepSeek's general models accept a request containing
+  images, discard them, and answer from the surrounding text sounding just as
+  confident. `MODEL_VISION_SUPPORT` records which models receive images and
+  `visionModelFor` substitutes DeepSeek's vision model, routed through the
+  OpenAI-compatible provider because `@ai-sdk/deepseek` strips image parts before
+  sending. Triage refuses outright if the resolved model still cannot see.
+- **Every turn with tools needs a loop.** Once tools are available the model will
+  reasonably call one before answering, so a caller expecting JSON on the first
+  response gets an empty string. `runToolLoop` drives both turns, and `parseAnswer`
+  returns errors rather than throwing — `safeParse` guards the shape, but `JSON.parse`
+  on prose or a truncated response throws, and a throw there would skip the validation
+  gates and leave a half-written tree.
 
 ### Flake detection comes free
 
@@ -756,8 +833,12 @@ history, and `memories/`. The area/page nesting comes from the guide itself, so
 
 The catalog carries the same payload the test generator writes —
 `files: [{filename, code, description}]` plus narrative fields — with `pageContext`
-standing in for `testContext`. It is where the things worth not rediscovering live:
-why a shot pins `?view=grid`, that the sidebar's selects ignore `selectOption`.
+standing in for `testContext`, holding the things worth not rediscovering: why a shot
+pins `?view=grid`, that the sidebar's selects ignore `selectOption`.
+
+Both artifacts the agent owns are entries: the walkthrough **and** the page markdown,
+each keyed by repo-relative path because they live in different trees. The fix turn
+keeps it in step — see *How the fix turn works*.
 
 The `_support` directory is deliberately thin: it re-exports `defineWalkthrough` and
 the shot types from `lib/`, so generated walkthroughs depend on a small stable local

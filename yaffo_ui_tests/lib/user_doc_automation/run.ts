@@ -20,7 +20,10 @@ import type {Walkthrough, WalkthroughResult} from "./index";
 // Authored spec, generated walkthroughs, and transient staging live in the
 // content tree; this module is infrastructure and lives under lib/.
 const CONTENT_DIR = resolve(join(process.cwd(), "user_doc_automation"));
-const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:5002";
+// The sandbox to drive. Deliberately its own variable: BASE_URL is overloaded in
+// this repo — .env points it at the dev app on :5000 for other tooling, and a docs
+// run against the wrong instance fails in confusing ways.
+const BASE_URL = process.env.DOCS_BASE_URL || "http://127.0.0.1:5002";
 const GUIDE_DIR = resolve(process.env.GUIDE_DIR || join(CONTENT_DIR, "..", "..", "docs", "guide"));
 const STAGING_DIR = join(CONTENT_DIR, ".staging");
 
