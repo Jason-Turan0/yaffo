@@ -2,15 +2,10 @@ name: Playwright
 
 on:
   pull_request:
-    paths:
-      - ".github/workflows/playwright.yml"
-      - "pyproject.toml"
-      - "yaffo/**"
-      - "yaffo_ui_tests/**"
-  push:
     branches: [master]
     paths:
       - ".github/workflows/playwright.yml"
+      - ".github/workflows/playwright-auto-heal.yml"
       - "pyproject.toml"
       - "yaffo/**"
       - "yaffo_ui_tests/**"

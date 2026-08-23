@@ -1,6 +1,14 @@
 name: Docs
 
 on:
+  pull_request:
+    branches: [master]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/docs.yml"
+  # A push to master is the post-merge deployment. Pull requests only build
+  # the site, so proposed documentation is validated before it is published.
   push:
     branches: [master]
     paths:
@@ -9,20 +17,20 @@ on:
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
-# Allow the workflow to publish to GitHub Pages via OIDC.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# One concurrent deploy; don't cancel an in-progress publish.
+# Keep each PR build independent while serializing post-merge Pages deploys.
 concurrency:
-  group: pages
+  group: docs-${{ github.event.pull_request.number || 'pages' }}
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,13 +39,21 @@ jobs:
       - run: pip install mkdocs-material==9.6.21
       - run: mkdocs build --strict
       - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
           path: site
 
   deploy:
     needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    # The PR build is read-only. Only this post-merge/manual job receives the
+    # GitHub Pages and OIDC permissions needed to publish the built artifact.
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

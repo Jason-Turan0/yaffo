@@ -1,9 +1,9 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
+  pull_request:
+    branches: [master]
+    types: [closed]
   workflow_dispatch:
     inputs:
       bump:
@@ -25,8 +25,14 @@ on:
         default: true
         type: boolean
 
+# Version bumps and tags write to master, so merged releases must be serialized.
+concurrency:
+  group: release-master
+  cancel-in-progress: false
+
 jobs:
   release-context:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -36,6 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: master
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
@@ -43,11 +50,12 @@ jobs:
           python-version: "3.13"
 
       - name: Bump VERSION and create release tag
-        id: manual
-        if: github.event_name == 'workflow_dispatch'
+        id: context
         env:
-          BUMP_PART: ${{ inputs.bump }}
-          VERSION_INPUT: ${{ inputs.version }}
+          # Every merged PR is a patch release. A manual run can still select a
+          # different increment or supply an exact version.
+          BUMP_PART: ${{ inputs.bump || 'patch' }}
+          VERSION_INPUT: ${{ inputs.version || '' }}
         run: |
           set -euo pipefail
 
@@ -70,45 +78,8 @@ jobs:
           git add VERSION
           git commit -m "Release $tag_name"
           git tag "$tag_name"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "HEAD:master"
           git push origin "$tag_name"
-
-          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Verify tag matches VERSION
-        id: tagged
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          set -euo pipefail
-
-          file_version="$(cat VERSION)"
-          tag_version="${GITHUB_REF_NAME#v}"
-          if [ "$file_version" != "$tag_version" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME (=$tag_version) != VERSION file ($file_version)"
-            exit 1
-          fi
-
-          echo "tag_name=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
-          echo "version=$file_version" >> "$GITHUB_OUTPUT"
-
-      - name: Publish release context
-        id: context
-        env:
-          MANUAL_TAG: ${{ steps.manual.outputs.tag_name }}
-          MANUAL_VERSION: ${{ steps.manual.outputs.version }}
-          TAGGED_TAG: ${{ steps.tagged.outputs.tag_name }}
-          TAGGED_VERSION: ${{ steps.tagged.outputs.version }}
-        run: |
-          set -euo pipefail
-
-          tag_name="${MANUAL_TAG:-$TAGGED_TAG}"
-          version="${MANUAL_VERSION:-$TAGGED_VERSION}"
-
-          if [ -z "$tag_name" ] || [ -z "$version" ]; then
-            echo "::error::Unable to determine release version/tag"
-            exit 1
-          fi
 
           echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -200,7 +171,11 @@ jobs:
       - build-python
       - github-release
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || inputs.publish_pypi
+    if: >-
+      ${{
+        (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+        inputs.publish_pypi
+      }}
     # Trusted Publishing (OIDC) — no PyPI token stored in the repo.
     # The matching PyPI trusted publisher is already configured.
     environment:
