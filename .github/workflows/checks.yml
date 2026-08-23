@@ -30,6 +30,10 @@ jobs:
           node-version: "20"
           cache: npm
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
       - run: npm ci
 
       - name: Lint JavaScript
@@ -43,7 +47,7 @@ jobs:
       # reporter runs alongside the default one, so the console output in the
       # step log is unchanged.
       - name: Unit tests
-        run: npm run test:unit -- --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
+        run: npm run test:unit:cov -- --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
 
       - name: Publish frontend test report
         uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
@@ -59,6 +63,22 @@ jobs:
           # The test step already failed the job on a red test; this publishes.
           fail-on-error: false
           fail-on-empty: false
+
+      - name: Upload frontend coverage report
+        id: frontend_coverage
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: frontend-coverage
+          path: tests_js/coverage/
+          if-no-files-found: warn
+
+      - name: Add frontend coverage to job summary
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          COVERAGE_ARTIFACT_URL: ${{ steps.frontend_coverage.outputs.artifact-url }}
+        run: python scripts/coverage_summary.py javascript tests_js/coverage/coverage-summary.json --artifact-url "$COVERAGE_ARTIFACT_URL" >> "$GITHUB_STEP_SUMMARY"
 
   ui-test-tooling:
     name: UI test tooling (unit tests)
@@ -124,3 +144,22 @@ jobs:
           reporter: python-xunit
           fail-on-error: false
           fail-on-empty: false
+
+      - name: Upload Python coverage report
+        id: python_coverage
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: python-coverage
+          path: |
+            htmlcov/
+            coverage.xml
+            reports/python-coverage.json
+          if-no-files-found: warn
+
+      - name: Add Python coverage to job summary
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          COVERAGE_ARTIFACT_URL: ${{ steps.python_coverage.outputs.artifact-url }}
+        run: python scripts/coverage_summary.py python reports/python-coverage.json --artifact-url "$COVERAGE_ARTIFACT_URL" >> "$GITHUB_STEP_SUMMARY"

@@ -16,7 +16,7 @@ export default defineConfig({
       include: ['yaffo/static/**/*.js'],
       // Vendored libraries (htmx/OpenLayers/gridstack/i18next) are not ours to test.
       exclude: ['yaffo/static/vendor/**'],
-      reporter: ['text', 'html', 'lcov'],
+      reporter: ['text', 'html', 'lcov', 'json-summary'],
       reportsDirectory: 'tests_js/coverage',
       // Add a floor once Phase 1 lands, e.g. thresholds: { lines: 60 }.
     },
