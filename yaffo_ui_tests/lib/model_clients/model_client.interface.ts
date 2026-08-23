@@ -1,12 +1,12 @@
 import {
     ModelMessage,
     Tool,
-    LanguageModel, TypedToolCall, ToolSet, ToolModelMessage, UserModelMessage, ToolContent,
+    LanguageModel, TypedToolCall, ToolSet,
 } from "ai";
 import type {LanguageModelUsage, FinishReason} from "ai";
 import type {z} from "zod";
-import {SessionTokenUsage, ToolCall} from "@lib/model_clients/model_client.types";
-import {AssistantModelMessage, FilePart, TextPart, ToolResultPart} from "@ai-sdk/provider-utils";
+import {SessionTokenUsage} from "@lib/model_clients/model_client.types";
+import {FilePart, TextPart, ToolResultPart} from "@ai-sdk/provider-utils";
 
 export type {
     ModelMessage,

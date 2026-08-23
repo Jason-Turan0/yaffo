@@ -63,9 +63,6 @@ export interface FixResult {
     reverted: boolean;
 }
 
-/** Model turns to allow before giving up, so a confused session cannot loop forever. */
-const MAX_TOOL_ROUNDS = 12;
-
 /** How many times to hand gate failures back before giving up, after the first try. */
 export const MAX_FIX_ATTEMPTS = 3;
 

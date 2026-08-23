@@ -357,7 +357,7 @@ export class AutoHealTestOrchestrator {
 
             if (schemaErrors.length > 0) {
                 retryCount++;
-                this.addSchemaErrorMessage(schemaErrors, currentJson);
+                this.addSchemaErrorMessage(schemaErrors);
                 const correctedJson = await this.generateHealedCode();
                 if (!correctedJson) {
                     return {
@@ -469,7 +469,7 @@ export class AutoHealTestOrchestrator {
         this.modelClient.addUserMessage([toTextPart(auditFixPrompt)]);
     };
 
-    private addSchemaErrorMessage = (schemaErrors: string[], currentJson: string): void => {
+    private addSchemaErrorMessage = (schemaErrors: string[]): void => {
         schemaErrors.forEach(err => console.log(`   - ${err}`));
         const schemaFixPrompt = [
             "<schema_validation>",

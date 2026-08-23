@@ -384,7 +384,7 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
             const body = await response.json();
             await applyStatus(body);
             if (body.status === STATUS.IN_PROGRESS) generation.pollTimer = setTimeout(poll, POLL_INTERVAL_MS);
-        } catch (error) {
+        } catch {
             generation.pollTimer = setTimeout(poll, POLL_RETRY_MS);
         }
     };
@@ -469,7 +469,7 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
             }
             const { version_id } = await response.json();
             enterRunning(version_id);
-        } catch (error) {
+        } catch {
             pagesGridWindow.notification.error(t('components:chat.startFailed'));
             messageInput.value = message;
         }

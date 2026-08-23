@@ -1,6 +1,6 @@
 from datetime import date
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_babel import gettext
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload, aliased

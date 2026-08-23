@@ -24,7 +24,7 @@
             if (HANDLED_CODES.has(payload.code)) {
                 dispatchDisabled(String(payload.error), payload.code);
             }
-        } catch (error) {
+        } catch {
             // The caller still receives the untouched response.
         }
     }
@@ -60,7 +60,7 @@
                 event.detail.shouldSwap = false;
                 dispatchDisabled(String(payload.error), payload.code);
             }
-        } catch (error) {
+        } catch {
             // Leave unrelated error responses to HTMX's normal handling.
         }
     });

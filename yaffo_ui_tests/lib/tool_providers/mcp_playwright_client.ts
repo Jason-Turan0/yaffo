@@ -43,8 +43,6 @@ export interface McpTool {
     inputSchema: Record<string, unknown>;
 }
 
-const MAX_TOOL_RESULT_CHARS = 30000;
-
 const EXCLUDED_TOOLS = [
     "browser_install",
     "browser_pdf_save",
@@ -99,7 +97,7 @@ export class PlaywrightMcpClient implements ToolProvider {
         const result = await this.client.callTool({name, arguments: args});
 
         const contentArray = result?.content as Array<{ type: string; text?: string }> | undefined;
-        let contentText: string = contentArray
+        const contentText: string = contentArray
             ?.filter(block => block.type === 'text')
             .map(block => block.text || '')
             .join('\n') || '';
@@ -149,12 +147,6 @@ function buildArgs(options: PlaywrightMcpClientOptions): string[] {
     if (artifacts) {
         if (artifacts.outputDir) {
             args.push(`--output-dir=${artifacts.outputDir}`);
-        }
-        if (artifacts.saveVideo) {
-            const videoSize = typeof artifacts.saveVideo === "string"
-                ? artifacts.saveVideo
-                : "1280x720";
-            //args.push(`--save-video=${videoSize}`);
         }
         if (artifacts.saveTrace) {
             args.push("--save-trace");

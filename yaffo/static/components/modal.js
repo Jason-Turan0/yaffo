@@ -29,7 +29,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.modal =
                 modalElement.classList.remove('active');
             }
             cancelElements.forEach((cancelElement) => {
-                cancelElement.addEventListener('click', (e) => {
+                cancelElement.addEventListener('click', () => {
                     close();
                 })
             });

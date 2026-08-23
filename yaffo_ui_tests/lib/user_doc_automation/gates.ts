@@ -4,7 +4,7 @@ import {join} from "path";
 import {captureEnv} from "./env";
 import {snapshotDockerEnv} from "./docker";
 import {requiredShots} from "./generate";
-import {BASE_URL, GUIDE_DIR, REPO, STAGING_DIR, splitPage} from "./paths";
+import {BASE_URL, GUIDE_DIR, REPO, splitPage} from "./paths";
 
 /**
  * The correctness gates, shared by generation and healing.

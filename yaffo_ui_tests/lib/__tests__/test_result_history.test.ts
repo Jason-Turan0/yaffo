@@ -1,4 +1,4 @@
-import {jest, beforeAll, afterAll, describe, it, expect} from '@jest/globals';
+import {beforeAll, afterAll, describe, it, expect} from '@jest/globals';
 import {mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync} from 'fs';
 import {join} from 'path';
 import {tmpdir} from 'os';

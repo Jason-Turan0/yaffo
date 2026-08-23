@@ -104,7 +104,7 @@ automations.initAutomationRunNow = (runUrl, config, defaultPath = null, i18n) =>
                 const data = await response.json().catch(() => ({}));
                 automationsWindow.notification.error(data.error || i18n.t('utilities:automations.run.startFailed'));
             }
-        } catch (error) {
+        } catch {
             automationsWindow.notification.error(i18n.t('utilities:automations.run.startFailed'));
         } finally {
             button.disabled = false;

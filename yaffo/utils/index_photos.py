@@ -1,8 +1,6 @@
 
-import tempfile
 from dataclasses import dataclass
 import uuid
-import platform
 import subprocess
 import json
 from pathlib import Path
@@ -10,7 +8,7 @@ from typing import List, Optional, Callable, Tuple, Dict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from PIL.Image import Image as PIL_Image
-from PIL import Image, ImageOps
+from PIL import ImageOps
 
 import piexif
 from sqlalchemy.orm import Session
@@ -30,6 +28,7 @@ from yaffo.utils.image import (
 )
 from yaffo.utils.face_analysis import detect_faces
 from yaffo.utils.exiftool_path import get_exiftool_path
+from yaffo.utils.settings import get_thumbnail_dir
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -284,7 +283,7 @@ def get_exif_tags(img: PIL_Image) -> List[Dict[str, str]]:
                     if isinstance(value, bytes):
                         try:
                             value = value.decode('utf-8', errors='ignore').strip('\x00')
-                        except:
+                        except Exception:
                             value = str(value)
                     elif isinstance(value, tuple) and len(value) == 2:
                         numerator, denominator = value
@@ -303,12 +302,12 @@ def get_exif_tags(img: PIL_Image) -> List[Dict[str, str]]:
                             "tag_name": tag_name,
                             "tag_value": value
                         })
-                except:
+                except Exception:
                     logger.warning(f"Failed to extract tag value from {ifd_name}: {value}")
                     continue
         return tags
     except Exception:
-        logger.warning(f"Failed to extract tag value from image")
+        logger.warning("Failed to extract tag value from image")
         return []
 
 def index_photo(photo_path: Path, thumbnail_dir: Path) -> Optional[dict]:
@@ -419,13 +418,16 @@ def index_photos_batch(
     indexed_count = 0
     error_count = 0
     cancelled = False
+    thumbnail_dir = get_thumbnail_dir(session)
+    if thumbnail_dir is None:
+        raise RuntimeError("Thumbnail directory is not configured")
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(index_photo, Path(p), THUMBNAIL_DIR): p for p in photo_paths}
+        futures = {executor.submit(index_photo, Path(p), thumbnail_dir): p for p in photo_paths}
 
         for i, future in enumerate(as_completed(futures)):
             if should_cancel and should_cancel():
-                print(f"Cancellation requested, stopping processing...")
+                print("Cancellation requested, stopping processing...")
                 cancelled = True
                 for f in futures:
                     if not f.done():

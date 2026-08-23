@@ -1,5 +1,5 @@
 import {afterAll, afterEach, beforeEach, describe, expect, it, jest} from "@jest/globals";
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "fs";
+import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
 import {dirname, join} from "path";
 

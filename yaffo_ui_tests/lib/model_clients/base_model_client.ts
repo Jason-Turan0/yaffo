@@ -5,7 +5,7 @@ import type {LanguageModelUsage} from "ai";
 import {mkdirSync, writeFileSync} from "fs";
 import {join} from "path";
 import type {z} from "zod";
-import type {JSONSchema7, TextPart} from "ai";
+import type {JSONSchema7} from "ai";
 import {
     ModelClient,
     ModelResponse,

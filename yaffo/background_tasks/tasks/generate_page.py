@@ -31,8 +31,8 @@ from yaffo.db.repositories import custom_page_repository as page_repo
 from yaffo.i18n import DEFAULT_LOCALE, get_saved_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents import llm_config
-from yaffo.site_agents.agent import create_theme_builder_agent, create_page_builder_agent
-from yaffo.site_agents.prompt_generator import build_user_message, build_system_prompt
+from yaffo.site_agents.agent import create_page_builder_agent
+from yaffo.site_agents.prompt_generator import build_user_message
 from yaffo.site_agents.serializers import widget_draft
 
 logger = get_logger(__name__, 'background_tasks')
@@ -61,7 +61,10 @@ def run_generation(
     or script. `should_cancel` defaults to polling the version's status."""
     widget_errors = widget_errors or {}
     if should_cancel is None:
-        should_cancel = lambda: get_version_status(version_id) == PAGE_VERSION_STATUS_CANCELLED
+        def default_should_cancel() -> bool:
+            return get_version_status(version_id) == PAGE_VERSION_STATUS_CANCELLED
+
+        should_cancel = default_should_cancel
 
     version = page_repo.get_version(session, version_id)
     if version is None:

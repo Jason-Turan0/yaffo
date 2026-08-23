@@ -25,7 +25,6 @@ from __future__ import annotations
 import os
 import sys
 import threading
-from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, Optional
 

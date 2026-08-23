@@ -39,15 +39,14 @@ const initI18n = async (config) => {
 
     /** @type {TranslationCatalog} */
     let catalog;
-    /** @type {TranslationCatalog} */
-    let fallbackCatalog;
     try {
         catalog = await loadCatalog(resourceUrl);
     } catch (error) {
         console.error(error);
         catalog = {};
     }
-    fallbackCatalog = locale === config.fallbackLocale ? catalog : await loadCatalog(fallbackUrl);
+    /** @type {TranslationCatalog} */
+    const fallbackCatalog = locale === config.fallbackLocale ? catalog : await loadCatalog(fallbackUrl);
 
     /** @type {I18nextLike} */
     const i18next = window.i18next;

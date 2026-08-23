@@ -345,7 +345,7 @@ const initIndexPhotos = (opts, i18n, config) => {
             }
             const tail = buffer.trim();
             if (tail) handleRecord(/** @type {ScanRecord} */ (JSON.parse(tail)));
-        } catch (error) {
+        } catch {
             setStatus('');
             window.notification.error(i18n.t('utilities:indexPhotos.scan.failed'));
         }

@@ -7,7 +7,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
  * @param {string} absoluteFilePath
  * @param {string} absoluteFolderPath
  * @param {I18nService} i18n
- * @param {AppConfig} config
+ * @param {AppConfig} _config
  * @returns {PhotoViewApi}
  */
 window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
@@ -15,7 +15,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
     absoluteFilePath,
     absoluteFolderPath,
     i18n,
-    config
+    _config
 ) => {
     /** @type {HTMLCanvasElement | null} */
     let canvas = null;

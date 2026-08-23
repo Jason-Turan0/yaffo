@@ -1,7 +1,7 @@
 import { test, expect, Page, BrowserContext, Locator } from '@playwright/test';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { listFilesRecursive, listSubdirectories, resetTempDir } from '../_support/sandbox-fs';
+import { listFilesRecursive, resetTempDir } from '../_support/sandbox-fs';
 
 // Two-instance suite: `page` (Playwright's fixture, BASE_URL) is instance A —
 // the seeded library that GRANTS shares; `pageB` (created per test against
@@ -309,7 +309,7 @@ test.describe('Sharing Feature', () => {
     await expect(pageB.locator('.remote-photo-grid')).toHaveClass(/is-selecting/);
   });
 
-  test('sharing_pull_selected_photos - B selects two photos and pulls them as a background batch', async ({ page }) => {
+  test('sharing_pull_selected_photos - B selects two photos and pulls them as a background batch', async () => {
     const viewLink = await sharedWithMeView(pageB, /.+/);
     await viewLink.click();
     await expect(pageB.locator('.remote-photo-grid.is-selecting')).toBeVisible();
@@ -329,7 +329,7 @@ test.describe('Sharing Feature', () => {
     await expectBatchCompleted(pageB, 2);
   });
 
-  test('sharing_pull_everything_matching - B pulls every photo matching a filter minus one unticked', async ({ page }) => {
+  test('sharing_pull_everything_matching - B pulls every photo matching a filter minus one unticked', async () => {
     const viewLink = await sharedWithMeView(pageB, /.+/);
     await viewLink.click();
     await expect(pageB.locator('.remote-photo-grid.is-selecting')).toBeVisible();

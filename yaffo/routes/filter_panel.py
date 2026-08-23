@@ -112,7 +112,7 @@ def build_filters_context(session: Session, args: MultiDict) -> dict:
 
     labels = (
         session.query(ClassificationLabel)
-        .filter(ClassificationLabel.enabled == True)
+        .filter(ClassificationLabel.enabled.is_(True))
         .order_by(func.lower(ClassificationLabel.name))
         .all()
     )

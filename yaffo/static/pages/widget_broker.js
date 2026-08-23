@@ -68,14 +68,14 @@ window.PHOTO_ORGANIZER.pages.initWidgetBroker = (pageId, getVersionId, config) =
     const brokerResult = async (event, msg, endpoint, body) => {
         const frame = senderFrame(event);
         if (!frame || !frame.dataset.widgetId) return;
-        let data = null;
+        let data;
         try {
             const response = await fetch(
                 config.buildUrl(endpoint, { page_id: pageId, version_id: getVersionId(), widget_id: frame.dataset.widgetId }),
                 { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
             );
             data = (await response.json()).data;
-        } catch (e) {
+        } catch {
             data = null;
         }
         frame.contentWindow?.postMessage({ type: 'yaffo:result', requestId: msg.requestId, data }, '*');
