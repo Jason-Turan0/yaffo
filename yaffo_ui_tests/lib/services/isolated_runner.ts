@@ -1,8 +1,9 @@
-import {ChildProcess, execSync, spawn} from "child_process";
+import {ChildProcess, execFileSync, execSync, spawn} from "child_process";
 import {randomBytes} from "crypto";
 import {join, resolve} from "path";
 import {cpSync, existsSync, mkdirSync, realpathSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
+import {createServer} from "net";
 
 // Resolved temp root: on macOS tmpdir() is /var/folders/… but /var is a symlink
 // to /private/var. The p2p grant query prefix-matches media_dir.path.resolve()
@@ -47,6 +48,12 @@ export interface IsolatedEnvironmentOptions {
      * seeding fresh. Skips the expensive indexing/face/label pipeline.
      */
     preseeded?: boolean;
+    /**
+     * Copy the preseeded cache into disposable data dirs before serving it.
+     * Concurrent local suites need this: unlike CI jobs, local processes share
+     * a filesystem and must not write to the same cached SQLite database.
+     */
+    copyPreseeded?: boolean;
     /** Serve the reproducible documentation fixture instead of the UI-test seed. */
     docsFixture?: boolean;
 }
@@ -138,6 +145,21 @@ const waitForServer = async (url: string, maxAttempts = 30): Promise<boolean> =>
     return false;
 };
 
+/** Refuse to mistake an already-running local app for the process just spawned. */
+export const isTcpPortAvailable = (port: number): Promise<boolean> => new Promise((resolvePromise) => {
+    const server = createServer();
+    server.unref();
+    server.once("error", () => resolvePromise(false));
+    server.listen({host: "127.0.0.1", port, exclusive: true}, () => {
+        server.close(() => resolvePromise(true));
+    });
+});
+
+const portInUseError = (port: number): Error => new Error(
+    `Port ${port} is already in use; choose another sandbox range with ` +
+    "TEST_SANDBOX_BASE_PORT or --base-port"
+);
+
 interface StartInstanceOptions {
     label: string;
     port: number;
@@ -163,6 +185,10 @@ interface StartInstanceOptions {
      * path it was seeded at, and is not deleted on cleanup.
      */
     preseeded?: boolean;
+    /** Delete this already-seeded data dir when the instance stops. */
+    disposableData?: boolean;
+    /** Optional immutable model/binary root shared by copied seed sandboxes. */
+    assetDir?: string;
 }
 
 export const PRIMARY_FIXTURE_DIR = join(UI_TESTS_DIR, "test_data", "bennett");
@@ -182,7 +208,11 @@ export const SHARED_TRIP_PHOTOS = [
 // instance. Kept identical between build-seed and serve so a data dir seeded in
 // one job serves correctly in another (the seeded DB stores absolute
 // full_file_path values under YAFFO_DATA_DIR).
-const instanceEnv = (tempDir: string, seedProfile: "bennett" | "obama"): Record<string, string> => ({
+const instanceEnv = (
+    tempDir: string,
+    seedProfile: "bennett" | "obama",
+    assetDir?: string,
+): Record<string, string> => ({
     ...process.env,
     YAFFO_DATA_DIR: tempDir,
     YAFFO_SEED_PROFILE: seedProfile,
@@ -193,6 +223,7 @@ const instanceEnv = (tempDir: string, seedProfile: "bennett" | "obama"): Record<
     // the seed script or normal isolated environments behave.
     YAFFO_DEMO_MODE: "0",
     YAFFO_DEMO_ROLE: "",
+    ...(assetDir ? {YAFFO_ASSET_DIR: assetDir} : {}),
     VIRTUAL_ENV: join(YAFFO_DIR, "venv"),
     PATH: `${join(YAFFO_DIR, "venv", "bin")}:${process.env.PATH}`,
 });
@@ -291,7 +322,13 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         demoRole,
         flaskOnlyEnv = {},
         preseeded = false,
+        disposableData = false,
+        assetDir,
     } = options;
+
+    if (!(await isTcpPortAvailable(port))) {
+        throw portInUseError(port);
+    }
 
     if (preseeded) {
         // Serve a data dir that was already seeded (restored from the seed
@@ -304,7 +341,7 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         provisionInstanceData({label, tempDir, fixtureDir, seedProfile, includeVideos});
     }
 
-    const env = instanceEnv(tempDir, seedProfile);
+    const env = instanceEnv(tempDir, seedProfile, assetDir);
     const demoEnv = demoRole ? {
         YAFFO_DEMO_MODE: "1",
         YAFFO_DEMO_ROLE: demoRole,
@@ -362,16 +399,23 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
     console.log(`   Waiting for Flask (instance ${label}) to be ready...`);
 
     const isReady = await waitForServer(baseUrl);
-    if (!isReady) {
+    // A different process on the requested port can make the HTTP probe pass;
+    // the child itself must still be alive before this is our environment.
+    await new Promise(r => setTimeout(r, 50));
+    if (!isReady || flaskProcess.exitCode !== null || flaskProcess.signalCode !== null) {
         console.error(`   ❌ Flask (instance ${label}) failed to start. Output:`);
         console.error(flaskOutput);
         flaskProcess.kill();
         taskqProcess?.kill();
+        await Promise.all([waitForExit(flaskProcess), waitForExit(taskqProcess)]);
+        if (disposableData && existsSync(tempDir)) {
+            rmSync(tempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
+        }
         throw new Error(`Flask server (instance ${label}) failed to start`);
     }
 
     console.log(`   ✅ Instance ${label} is ready at ${baseUrl}`);
-    return {tempDir, port, baseUrl, flaskProcess, taskqProcess, keepData: preseeded};
+    return {tempDir, port, baseUrl, flaskProcess, taskqProcess, keepData: preseeded && !disposableData};
 };
 
 const stopInstance = async (instance: IsolatedInstance | undefined): Promise<void> => {
@@ -413,6 +457,23 @@ export const seedCacheDir = (role: "primary" | "peer"): string =>
     join(SEED_CACHE_ROOT, role === "primary" ? "a" : "b");
 
 /**
+ * Make a writable, disposable copy of one canonical seed cache. The clone
+ * helper also rebases the absolute paths stored in yaffo.db from the cache
+ * root to the clone root.
+ */
+export const copySeedCache = (role: "primary" | "peer", destination: string): string => {
+    const source = seedCacheDir(role);
+    if (!existsSync(join(source, "yaffo.db"))) {
+        throw new Error(`Preseeded data dir has no yaffo.db: ${source}`);
+    }
+    execFileSync("python", [join(SCRIPTS_DIR, "clone_seed_cache.py"), source, destination], {
+        cwd: YAFFO_DIR,
+        stdio: "inherit",
+    });
+    return destination;
+};
+
+/**
  * Build the seed cache: provision + seed the primary (bennett) data dir, and
  * optionally the peer (obama) one, into their canonical locations, then return
  * without serving. Runs the real indexing/face/label pipeline, so the cache is
@@ -451,46 +512,92 @@ export const startIsolatedEnvironment = async (
     port = 5001,
     options: IsolatedEnvironmentOptions = {},
 ): Promise<IsolatedEnvironment> => {
-    const {withPeer = false, demoMode = false, preseeded = false, docsFixture = false} = options;
+    const {
+        withPeer = false,
+        demoMode = false,
+        preseeded = false,
+        copyPreseeded = false,
+        docsFixture = false,
+    } = options;
     if (docsFixture && withPeer) {
         throw new Error("The documentation fixture does not have a peer instance");
     }
     if (docsFixture && !preseeded) {
         throw new Error("Build the documentation fixture first, then serve it with preseeded=true");
     }
-    const timestamp = generateTimestamp();
+    if (copyPreseeded && !preseeded) {
+        throw new Error("copyPreseeded requires preseeded=true");
+    }
+    if (copyPreseeded && docsFixture) {
+        throw new Error("The documentation fixture cannot be copied as a UI-test seed cache");
+    }
+    // Check the whole web-port slot before copying a potentially large cache.
+    // startInstance checks again immediately before spawn to close the race as
+    // much as a bind-probe can without holding the port itself.
+    if (!(await isTcpPortAvailable(port))) {
+        throw portInUseError(port);
+    }
+    if (withPeer && !(await isTcpPortAvailable(port + 1))) {
+        throw portInUseError(port + 1);
+    }
+    const runId = `${generateTimestamp()}_${randomBytes(4).toString("hex")}`;
     // Preseeded runs serve the canonical cache dirs directly; a normal run seeds
     // fresh temp dirs.
-    const tempDir = docsFixture
+    let tempDir = docsFixture
         ? DOCS_DATA_DIR
-        : preseeded ? seedCacheDir("primary") : join(TEMP_ROOT, `yaffo_test_${timestamp}`);
-    const primary = await startInstance({
-        label: "A",
-        port,
-        tempDir,
-        fixtureDir: PRIMARY_FIXTURE_DIR,
-        seedProfile: "bennett",
-        includeVideos: true,
-        demoRole: demoMode ? "source" : undefined,
-        flaskOnlyEnv: withPeer ? p2pEnv(port) : {},
-        preseeded,
-    });
+        : preseeded ? seedCacheDir("primary") : join(TEMP_ROOT, `yaffo_test_${runId}`);
+    if (copyPreseeded) {
+        tempDir = copySeedCache("primary", join(TEMP_ROOT, `yaffo_test_${runId}`));
+    }
+
+    let primary: IsolatedInstance;
+    try {
+        primary = await startInstance({
+            label: "A",
+            port,
+            tempDir,
+            fixtureDir: PRIMARY_FIXTURE_DIR,
+            seedProfile: "bennett",
+            includeVideos: true,
+            demoRole: demoMode ? "source" : undefined,
+            flaskOnlyEnv: withPeer ? p2pEnv(port) : {},
+            preseeded,
+            disposableData: copyPreseeded,
+            assetDir: copyPreseeded ? seedCacheDir("primary") : undefined,
+        });
+    } catch (error) {
+        if (copyPreseeded && existsSync(tempDir)) {
+            rmSync(tempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
+        }
+        throw error;
+    }
 
     let peer: IsolatedInstance | undefined;
     if (withPeer) {
         const peerPort = port + 1;
+        let peerTempDir = preseeded
+            ? seedCacheDir("peer")
+            : join(TEMP_ROOT, `yaffo_test_${runId}_peer`);
         try {
+            if (copyPreseeded) {
+                peerTempDir = copySeedCache("peer", join(TEMP_ROOT, `yaffo_test_${runId}_peer`));
+            }
             peer = await startInstance({
                 label: "B (peer)",
                 port: peerPort,
-                tempDir: preseeded ? seedCacheDir("peer") : join(TEMP_ROOT, `yaffo_test_${timestamp}_peer`),
+                tempDir: peerTempDir,
                 fixtureDir: PEER_FIXTURE_DIR,
                 seedProfile: "obama",
                 demoRole: demoMode ? "receiver" : undefined,
                 flaskOnlyEnv: p2pEnv(peerPort),
                 preseeded,
+                disposableData: copyPreseeded,
+                assetDir: copyPreseeded ? seedCacheDir("peer") : undefined,
             });
         } catch (e) {
+            if (copyPreseeded && existsSync(peerTempDir)) {
+                rmSync(peerTempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
+            }
             await stopInstance(primary);
             throw e;
         }

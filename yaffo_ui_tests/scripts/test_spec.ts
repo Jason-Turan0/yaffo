@@ -50,7 +50,11 @@ async function main(): Promise<void> {
 
     let environment;
     try {
-        environment = await startIsolatedEnvironment(port, {withPeer, preseeded: !fresh});
+        environment = await startIsolatedEnvironment(port, {
+            withPeer,
+            preseeded: !fresh,
+            copyPreseeded: !fresh,
+        });
     } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
         if (/preseeded/i.test(message)) {

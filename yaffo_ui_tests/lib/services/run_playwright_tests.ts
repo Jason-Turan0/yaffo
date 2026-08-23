@@ -1,6 +1,7 @@
 import {dirname, join, relative, resolve} from "path";
 import {tmpdir} from "os";
 import {spawn} from "child_process";
+import {randomUUID} from "crypto";
 import {appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync} from "fs";
 import {TestResult, TestRunResult} from "@lib/services/isolated_runner";
 import {detectSandboxKind, wrapWithSandbox, writableRootsFor} from "@lib/services/test_sandbox";
@@ -305,6 +306,10 @@ export interface RunOptions {
      * nothing downstream can see which specs failed.
      */
     jsonReportOut?: string;
+    /** Per-run values such as SUITE and PEER_URL; safe for concurrent callers. */
+    environment?: NodeJS.ProcessEnv;
+    /** Stop the spawned Playwright process when the enclosing suite run is interrupted. */
+    signal?: AbortSignal;
 }
 
 export const runPlaywrightTests = async (
@@ -314,8 +319,7 @@ export const runPlaywrightTests = async (
 ): Promise<TestRunResult> => {
     console.log(`\n🧪 Running Playwright tests...`);
 
-    const timestamp = Date.now();
-    const jsonReportPath = join(tmpdir(), `playwright-report-${timestamp}.json`);
+    const jsonReportPath = join(tmpdir(), `playwright-report-${randomUUID()}.json`);
     // Resolved out here on purpose: inside the Promise below, `resolve` is the
     // promise's own resolver, not path.resolve.
     const jsonReportDestination = options.jsonReportOut
@@ -325,7 +329,8 @@ export const runPlaywrightTests = async (
     // The sharing suite lives in its own Playwright project, which only exists
     // when PEER_URL points at the second sandbox instance (see playwright.config.ts).
     const isSharingSuite = (testFiles ?? []).some((file) => /generated_tests[/\\]sharing[/\\]/.test(resolve(file)));
-    if (isSharingSuite && !process.env.PEER_URL) {
+    const sourceEnv = {...process.env, ...options.environment};
+    if (isSharingSuite && !sourceEnv.PEER_URL) {
         throw new Error(
             "The sharing tests need the two-instance sandbox: start it with { withPeer: true } " +
             "(or npm run isolatedEnvironment:start:sharing) and set PEER_URL to instance B."
@@ -366,7 +371,7 @@ export const runPlaywrightTests = async (
     ];
     const env: NodeJS.ProcessEnv = {};
     for (const key of SPAWN_ENV_ALLOWLIST) {
-        if (process.env[key] !== undefined) env[key] = process.env[key];
+        if (sourceEnv[key] !== undefined) env[key] = sourceEnv[key];
     }
     env.BASE_URL = baseUrl;
     env.PLAYWRIGHT_JSON_OUTPUT_NAME = jsonReportPath;
@@ -402,19 +407,11 @@ export const runPlaywrightTests = async (
         });
 
         let output = "";
-        testProcess.stdout?.on("data", (data) => {
-            const text = data.toString();
-            output += text;
-            process.stdout.write(text);
-        });
-        testProcess.stderr?.on("data", (data) => {
-            const text = data.toString();
-            output += text;
-            process.stderr.write(text);
-        });
-
-        testProcess.on("close", (code) => {
-            const exitCode = code ?? 1;
+        let settled = false;
+        const finish = (exitCode: number) => {
+            if (settled) return;
+            settled = true;
+            options.signal?.removeEventListener("abort", abort);
             const {tests, summary} = parsePlaywrightJson(jsonReportPath);
             if (jsonReportDestination && existsSync(jsonReportPath)) {
                 mkdirSync(dirname(jsonReportDestination), {recursive: true});
@@ -431,7 +428,27 @@ export const runPlaywrightTests = async (
                 summary,
                 tests,
             });
+        };
+        const abort = () => testProcess.kill("SIGTERM");
+        options.signal?.addEventListener("abort", abort, {once: true});
+        if (options.signal?.aborted) abort();
+
+        testProcess.stdout?.on("data", (data) => {
+            const text = data.toString();
+            output += text;
+            process.stdout.write(text);
         });
+        testProcess.stderr?.on("data", (data) => {
+            const text = data.toString();
+            output += text;
+            process.stderr.write(text);
+        });
+
+        testProcess.on("error", (error) => {
+            output += `${error.message}\n`;
+            finish(1);
+        });
+        testProcess.on("close", (code) => finish(code ?? 1));
     });
 };
 

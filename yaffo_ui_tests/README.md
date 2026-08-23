@@ -348,6 +348,7 @@ See `playwright.config.ts`:
 | `npm run seed:build` | Build the seed cache (seeds A + B once) for `--preseeded` runs |
 | `npm run test:spec -- <spec>` | Run one spec in its own cache-restored environment |
 | `npm run validate:specs` | Verify all `specs/*.yaml` are valid YAML |
+| `npm run test:sandboxed [-- <directory-or-spec> ...]` | Run generated-test directories concurrently, each against a disposable copy of the seed sandbox |
 | `npm run isolatedEnvironment:start [-- --demo]` | Start a seeded isolated app, optionally in source demo mode |
 | `npm run isolatedEnvironment:start:sharing [-- --demo]` | Start isolated A/B apps, optionally as source/receiver demos |
 | `npm run test:heal <spec> [--preseeded]` | Auto-heal a feature's failing tests (YAML spec path) |
@@ -392,8 +393,14 @@ prerelease.
 The seed cache path is pinned with `YAFFO_SEED_CACHE_ROOT` so the build and
 restore jobs agree on the absolute location — required because the seeded
 database stores absolute media paths (see `seedCacheDir` in
-`lib/services/isolated_runner.ts`). Run the same flow locally with
-`npm run seed:build` then `npm run test:spec -- <spec>`.
+`lib/services/isolated_runner.ts`). Run the local fan-out with `npm run
+seed:build` followed by `npm run test:sandboxed`. It groups specs by their
+containing directory, gives each directory a disposable copy of the cached
+database/media tree, and cleans that copy after the directory finishes. Set
+`TEST_SANDBOX_CONCURRENCY` to change the number of simultaneous directories
+(default `5`), or pass one or more directories/specs after `--` to run a subset.
+If the default port range is occupied, set `TEST_SANDBOX_BASE_PORT` or pass
+`--base-port <port>` after `--`.
 
 ## Spec File Format
 
