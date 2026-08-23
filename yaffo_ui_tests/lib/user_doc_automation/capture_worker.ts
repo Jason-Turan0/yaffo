@@ -13,9 +13,8 @@
  * where it runs, not what it does.
  */
 import {scrubProcessEnv} from "./env";
-import {resolve, join} from "path";
+import {BASE_URL, CONTENT_DIR, STAGING_DIR} from "./paths";
 
-const BASE_URL = process.env.DOCS_BASE_URL || "http://127.0.0.1:5002";
 
 // Before any walkthrough is imported: walkthroughs are model-generated code, and
 // nothing they run should be able to read a provider key out of the environment.
@@ -23,8 +22,6 @@ const BASE_URL = process.env.DOCS_BASE_URL || "http://127.0.0.1:5002";
 // this stays so a host-side run is confined the same way.
 scrubProcessEnv({DOCS_BASE_URL: BASE_URL});
 
-const CONTENT_DIR = resolve(join(process.cwd(), "user_doc_automation"));
-const STAGING_DIR = process.env.DOCS_STAGING_DIR || join(CONTENT_DIR, ".staging");
 
 const main = async (): Promise<void> => {
     const {loadWalkthroughs} = await import("./load");

@@ -22,7 +22,29 @@ export const runToolLoop = async (
     for (let round = 0; round < maxRounds; round++) {
         const response = await client.callModelApi();
         if (!response) throw new Error(client.lastError ?? "the model returned no response");
-        if (!response.toolCalls.length) return response.text;
+        if (!response.toolCalls.length) {
+            // An empty final answer is nearly always the output budget being consumed by
+            // hidden reasoning rather than a malformed reply. Say so: left alone it
+            // reaches the caller as "response was not JSON", which sends the reader
+            // looking at the prompt instead of at the cap.
+            if (!response.text?.trim()) {
+                // Not on LanguageModelUsage in this SDK version, but present on the
+                // wire for reasoning providers and worth reporting when it is there.
+                const reasoning = (response.usage as {reasoningTokens?: number} | undefined)
+                    ?.reasoningTokens;
+                // The tail of the thinking, never the whole thing: it can run to tens of
+                // thousands of characters, and the full text is already in the API log.
+                // Deliberately reported, not returned — see ModelResponse.reasoningText.
+                const thinking = response.reasoningText?.trim();
+                throw new Error(
+                    "the model returned no text" +
+                    (response.finishReason ? ` (finishReason: ${response.finishReason})` : "") +
+                    (reasoning ? `, spending ${reasoning} tokens on reasoning` : "") +
+                    " — raise the output budget with setMaxOutputTokens." +
+                    (thinking ? `\n   last thought before it stopped: …${thinking.slice(-300)}` : ""));
+            }
+            return response.text;
+        }
 
         const results: ToolCallResult[] = [];
         for (const call of response.toolCalls) {

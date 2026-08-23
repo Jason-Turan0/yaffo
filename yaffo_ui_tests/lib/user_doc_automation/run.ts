@@ -23,6 +23,7 @@ import {DOCS_CAPTURE_IMAGE, dockerAvailable, runCaptureContainer, snapshotDocker
 import {existsSync, readFileSync, writeFileSync} from "fs";
 import {join, resolve} from "path";
 import {loadWalkthroughs} from "./load";
+import {BASE_URL, CONTENT_DIR, GUIDE_DIR, STAGING_DIR} from "./paths";
 import {processResults, RAW_FILENAME, runWalkthroughs} from "./runner";
 import type {RawResult, WalkthroughResult} from "./runner";
 
@@ -30,11 +31,9 @@ import type {RawResult, WalkthroughResult} from "./runner";
 // harness: every entry point here is run from yaffo_ui_tests/.
 // Authored spec, generated walkthroughs, and transient staging live in the
 // content tree; this module is infrastructure and lives under lib/.
-const CONTENT_DIR = resolve(join(process.cwd(), "user_doc_automation"));
 // The sandbox to drive. Deliberately its own variable: BASE_URL is overloaded in
 // this repo — .env points it at the dev app on :5000 for other tooling, and a docs
 // run against the wrong instance fails in confusing ways.
-const BASE_URL = process.env.DOCS_BASE_URL || "http://127.0.0.1:5002";
 
 // Taken before the scrub below removes them: the docker CLI needs its own settings to
 // find the daemon, and they must not end up in what a walkthrough runs with.
@@ -44,8 +43,6 @@ const DOCKER_ENV = snapshotDockerEnv();
 // walkthroughs are model-generated code, and nothing they run should be able to
 // read a provider key out of the ambient environment.
 scrubProcessEnv({DOCS_BASE_URL: BASE_URL});
-const GUIDE_DIR = resolve(process.env.GUIDE_DIR || join(CONTENT_DIR, "..", "..", "docs", "guide"));
-const STAGING_DIR = join(CONTENT_DIR, ".staging");
 
 /**
  * The page's fingerprint: what its walkthrough touched, and what its shots looked

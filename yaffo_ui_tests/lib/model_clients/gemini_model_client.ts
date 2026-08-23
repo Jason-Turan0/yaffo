@@ -57,9 +57,7 @@ export class GeminiModelClient extends BaseModelClient {
 
             cacheUsage = this.trackUsage(result.usage);
             const response = this.convertToModelResponse(result);
-            if (result.text) {
-                console.log(`   🤖 ${result.text.slice(0, 200)}`);
-            }
+            this.logResponsePreview(result.text, result.reasoningText);
             this.storeAssistantMessages(result);
             return response;
         } catch (error) {

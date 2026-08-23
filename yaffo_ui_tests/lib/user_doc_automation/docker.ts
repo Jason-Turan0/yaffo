@@ -7,7 +7,11 @@ export const DOCS_CAPTURE_IMAGE = "yaffo-docs-capture:latest";
 /** Where the repo is mounted inside the container. */
 const CONTAINER_REPO = "/app";
 const CONTAINER_CWD = `${CONTAINER_REPO}/yaffo_ui_tests`;
-const CONTAINER_STAGING = `${CONTAINER_CWD}/user_doc_automation/.staging`;
+/**
+ * Staging inside the container. A sibling of the content tree, matching the host — see
+ * the note on STAGING_DIR in paths.ts for why it is not a child of it.
+ */
+const CONTAINER_STAGING = `${CONTAINER_CWD}/.doc-staging`;
 
 /**
  * The host address, seen from inside the container. On macOS a container cannot reach

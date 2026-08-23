@@ -21,16 +21,15 @@ import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 import {YAFFO_APP_ROOT} from "@lib/types";
 import {captureEnv} from "./env";
+import {snapshotDockerEnv} from "./docker";
+import {BASE_URL, CONTENT_DIR, GUIDE_DIR, REPO, STAGING_DIR} from "./paths";
+import {verifyBrowserTool} from "./preflight";
+import {describeSandboxFacts, gatherSandboxFacts} from "./sandbox_facts";
 import {generateWalkthrough, requiredShots} from "./generate";
 
-const REPO = resolve(join(process.cwd(), ".."));
-const CONTENT_DIR = resolve(join(process.cwd(), "user_doc_automation"));
-const GUIDE_DIR = resolve(process.env.GUIDE_DIR || join(CONTENT_DIR, "..", "..", "docs", "guide"));
-const STAGING_DIR = join(CONTENT_DIR, ".staging");
 // The sandbox to drive. Deliberately its own variable: BASE_URL is overloaded in
 // this repo — .env points it at the dev app on :5000 for other tooling, and a docs
 // run against the wrong instance fails in confusing ways.
-const BASE_URL = process.env.DOCS_BASE_URL || "http://127.0.0.1:5002";
 
 const split = (page: string): [string, string] =>
     [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
@@ -52,9 +51,14 @@ const pagesNeedingOne = (spec: Record<string, {walkthrough?: boolean}>): string[
  * element would otherwise be promoted by the next run.
  */
 /** Run the page's walkthrough. Without `promote` nothing under docs/ is touched. */
-const capture = (page: string, promote: boolean): {ok: boolean; output: string} => {
+const capture = (
+    page: string,
+    promote: boolean,
+    useDocker = false
+): {ok: boolean; output: string} => {
     const args = ["tsx", "lib/user_doc_automation/run.ts", page];
     if (promote) args.push("--promote");
+    if (useDocker) args.push("--docker");
     try {
         return {ok: true, output: execFileSync("npx", args, {
             cwd: process.cwd(),
@@ -63,7 +67,15 @@ const capture = (page: string, promote: boolean): {ok: boolean; output: string} 
             // An allowlist, not the ambient environment: this child executes the
             // walkthrough the model just wrote, and dotenv has already loaded every
             // provider key into this process.
-            env: captureEnv(process.env, {DOCS_BASE_URL: BASE_URL}),
+            //
+            // The docker CLI's own settings ride alongside when containerizing, since
+            // the allowlist deliberately omits them — but only into this child, which
+            // is the launcher. They never reach the container, and so never reach the
+            // walkthrough.
+            env: {
+                ...captureEnv(process.env, {DOCS_BASE_URL: BASE_URL}),
+                ...(useDocker ? snapshotDockerEnv(process.env) : {}),
+            },
         })};
     } catch (e) {
         const err = e as {stdout?: string; stderr?: string};
@@ -71,7 +83,7 @@ const capture = (page: string, promote: boolean): {ok: boolean; output: string} 
     }
 };
 
-const verify = (page: string): string[] => {
+const verify = (page: string, useDocker = false): string[] => {
     const failures: string[] = [];
     try {
         execFileSync("npx", ["tsc", "--noEmit"], {cwd: process.cwd(), stdio: "pipe"});
@@ -80,7 +92,7 @@ const verify = (page: string): string[] => {
         return [`does not typecheck:\n${(err.stdout ?? "").slice(-800)}`];
     }
 
-    const captured = capture(page, false);
+    const captured = capture(page, false, useDocker);
     if (!captured.ok) return [`capture failed:\n${captured.output.slice(-800)}`];
 
     // Read the markdown as it now stands, not as it was: the agent may have rewritten
@@ -114,6 +126,9 @@ const main = async (): Promise<void> => {
     const modelArg = args.indexOf("--model");
     const model = modelArg !== -1 ? (args[modelArg + 1] as ModelAlias) : undefined;
     const named = args.filter((a) => !a.startsWith("-") && a !== args[modelArg + 1]);
+    // Containerize the capture this run shells out to, so a walkthrough is verified
+    // and promoted from the same renderer CI will use.
+    const useDocker = args.includes("--docker");
 
     const spec = parseYaml(readFileSync(join(CONTENT_DIR, "spec.yaml"), "utf8"));
     const targets = named.length ? named : pagesNeedingOne(spec.pages);
@@ -135,6 +150,12 @@ const main = async (): Promise<void> => {
         }),
     ];
 
+    // Fail here rather than letting the agent discover a dead browser mid-run.
+    await verifyBrowserTool(providers, BASE_URL);
+
+    // Runtime state the agent would otherwise try to derive from source, and cannot.
+    const facts = describeSandboxFacts(await gatherSandboxFacts(BASE_URL));
+
     let failed = 0;
     try {
         for (const page of targets) {
@@ -145,6 +166,7 @@ const main = async (): Promise<void> => {
 
             const result = await generateWalkthrough(page, {
                 model, runLogDir, baseUrl: BASE_URL, guideDir: GUIDE_DIR, contentDir: CONTENT_DIR,
+                sandboxFacts: facts,
                 toolProviders: [...providers, memory],
                 covers: spec.pages?.[page]?.covers,
                 hasMemories: existsSync(memoriesDir) && readdirSync(memoriesDir).length > 0,
@@ -157,7 +179,7 @@ const main = async (): Promise<void> => {
             }
             for (const file of result.written) console.log(`   wrote ${file}`);
 
-            const failures = verify(page);
+            const failures = verify(page, useDocker);
             if (failures.length) {
                 failed++;
                 for (const failure of failures) console.error(`   ‼️  ${failure}`);
@@ -178,7 +200,7 @@ const main = async (): Promise<void> => {
                 // otherwise keep whatever screenshot was there before — and the next
                 // capture run would immediately report it as changed. This also writes
                 // the page's lockfile.
-                const promoted = capture(page, true);
+                const promoted = capture(page, true, useDocker);
                 if (promoted.ok) {
                     console.log(`   ✅ captures every shot ${page}.md references, and promoted them`);
                 } else {

@@ -132,7 +132,7 @@ way, reached through the shared mount.
 | | |
 |---|---|
 | repo | mounted **read-only** at `/app` |
-| `.staging` | the one writable mount — walkthroughs write nowhere else |
+| `.doc-staging` | the one writable mount — walkthroughs write nowhere else |
 | `node_modules` | anonymous volume, so the image's Linux build masks the host's darwin one |
 | network | *not* `none`: capture exists to drive a running app |
 | environment | allowlist only (`env.ts`) — no provider key, no `DOCKER_HOST` |
@@ -898,7 +898,16 @@ discover → matrix → PR structure.
 
 ### Staging layout
 
-A run writes only into `user_doc_automation/.staging/` (gitignored):
+Staging is a **sibling** of `user_doc_automation/`, not a child, and that placement is
+load-bearing. The generate agent's filesystem tool is granted `user_doc_automation/`,
+and a run's API logs — full prompts, reasoning, and responses — are written into
+staging. While it lived at `user_doc_automation/.staging` a run could read back its own
+transcript, and one was caught doing it: *"the generate-logs filenames are
+`0_deepseek_api.json` … Let me read one to understand what they contain. Maybe they have
+prompts that reveal media IDs."* Nothing in staging is input to the agent; it is all
+output about the agent. `staging_not_agent_visible.test.ts` pins the property.
+
+A run writes only into `yaffo_ui_tests/.doc-staging/` (gitignored):
 
 ```text
 .staging/
@@ -908,7 +917,7 @@ A run writes only into `user_doc_automation/.staging/` (gitignored):
     └── {shot}.diff.png                            only when that shot changed
 ```
 
-Paths under `.staging/` mirror their destination under `docs/guide/`, so promoting is
+Paths under `.doc-staging/` mirror their destination under `docs/guide/`, so promoting is
 a copy rather than a mapping. The overlay sits beside the shot it explains, and its
 absence is itself information: no overlay means nothing moved.
 
@@ -926,16 +935,17 @@ yaffo_ui_tests/
 │   ├── runner.ts                   captureWalkthroughs / processResults, split at the seam
 │   ├── load.ts                     walkthrough discovery, shared host and container
 │   ├── env.ts                      the capture environment allowlist
+│   ├── paths.ts                    every path in one place, incl. the staging rule
 │   ├── settle.ts, framing.ts       capture mechanics
 │   ├── encode.ts, python.ts        WebP encoding via the venv's Pillow
 │   ├── compare.ts, imagediff.py    pixel comparison and the diff overlay
 │   ├── observe.ts                  client half of the dependency recorder
 │   ├── evidence.ts, triage.ts, fix.ts   the agentic loop
 │   └── types.ts, index.ts
+├── .doc-staging/                   transient output, gitignored — see below
 └── user_doc_automation/            authored and generated content
     ├── spec.yaml                   hand-authored: charters and extra dependencies
     ├── _support/                   the import surface generated walkthroughs use
-    ├── .staging/                   transient, gitignored
     └── {area}/{page}/              one folder per guide page
         ├── {page}.ts               the walkthrough — generated, bot-maintained
         ├── {page}.json             page catalog: the generation payload

@@ -125,16 +125,15 @@ export class SdkProviderModelClient extends BaseModelClient {
                 system: this.systemPrompt,
                 messages: this.buildOrderedMessages(),
                 tools: this.sdkTools,
-                // Reasoning models spend part of this cap on hidden reasoning
-                // tokens, so leave headroom beyond the visible response.
-                maxOutputTokens: 16000,
+                // Covers hidden reasoning tokens as well as the visible response on a
+                // reasoning model, and reasoning is spent first. Raise it per turn with
+                // setMaxOutputTokens when a lot of text has to come back.
+                maxOutputTokens: this.maxOutputTokens,
             });
 
             cacheUsage = this.trackUsage(result.usage);
             const response = this.convertToModelResponse(result);
-            if (result.text) {
-                console.log(`   🤖 ${result.text.slice(0, 200)}`);
-            }
+            this.logResponsePreview(result.text, result.reasoningText);
             this.storeAssistantMessages(result);
             return response;
         } catch (error) {

@@ -12,6 +12,12 @@ import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import {parseAnswer, runToolLoop} from "./tool_loop";
 
+/**
+ * Output budget for a generate turn. Two whole files plus the reasoning that decides
+ * what goes in them; the default is sized for a short structured answer.
+ */
+export const GENERATE_MAX_OUTPUT_TOKENS = 48000;
+
 /** Generation reads far more of the app than a fix does, so it gets more turns. */
 const MAX_GENERATE_ROUNDS = 45;
 
@@ -90,6 +96,7 @@ const buildPrompt = (options: {
     types: string;
     target: string;
     baseUrl: string;
+    sandboxFacts: string;
     memoryNote: string;
     appRoot: string;
     markdownPath: string;
@@ -139,6 +146,9 @@ ${options.types}
 \`\`\`typescript
 ${options.reference}
 \`\`\`
+
+
+${options.sandboxFacts}
 
 ## Tools — all read-only
 
@@ -195,6 +205,8 @@ export interface GenerateOptions {
     covers?: string;
     /** Whether this page's memories already hold anything. */
     hasMemories: boolean;
+    /** Runtime facts about the sandbox, rendered into the prompt. */
+    sandboxFacts?: string;
 }
 
 export interface GenerateResult {
@@ -233,6 +245,11 @@ export const generateWalkthrough = async (
         options.toolProviders.flatMap((provider) => provider.getTools()),
         GenerateSchema,
     );
+    // This turn returns two complete files — a guide page and its walkthrough — and on
+    // a reasoning model the budget is spent on hidden reasoning first. At the default
+    // a DeepSeek run was observed burning all 16000 tokens on reasoning and returning
+    // an empty string, which then surfaced as "response was not JSON".
+    client.setMaxOutputTokens(GENERATE_MAX_OUTPUT_TOKENS);
 
     client.addUserMessage([toTextPart(buildPrompt({
         page,
@@ -249,6 +266,7 @@ export const generateWalkthrough = async (
         markdownTarget: relative(REPO, markdownPath),
         area,
         name,
+        sandboxFacts: options.sandboxFacts ?? "",
         memoryNote: options.hasMemories
             ? "**Read them first** — earlier runs left notes on this page."
             : "Empty so far. Record anything worth not rediscovering.",

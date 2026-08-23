@@ -3,7 +3,7 @@ import {addHostArgs, buildCaptureArgs, containerBaseUrl, snapshotDockerEnv,
 import {CAPTURE_ENV_ALLOWLIST} from "../user_doc_automation/env";
 
 const args = (over: Partial<Parameters<typeof buildCaptureArgs>[0]> = {}): string[] =>
-    buildCaptureArgs({repoDir: "/repo", stagingDir: "/repo/yaffo_ui_tests/user_doc_automation/.staging",
+    buildCaptureArgs({repoDir: "/repo", stagingDir: "/repo/yaffo_ui_tests/.doc-staging",
                       baseUrl: "http://127.0.0.1:5002", ...over});
 
 describe("containerBaseUrl", () => {
@@ -34,6 +34,14 @@ describe("addHostArgs", () => {
 });
 
 describe("buildCaptureArgs", () => {
+    // Staging must stay a sibling of the content tree, never a child: the agent's
+    // filesystem tool is granted user_doc_automation/, and a run's own API logs live
+    // in staging. A generate run was observed reading back its own prompts.
+    it("keeps staging outside the tree granted to the agent", () => {
+        const staging = args().find((a) => a.includes(".doc-staging")) ?? "";
+        expect(staging).not.toContain("user_doc_automation");
+    });
+
     it("mounts the repo read-only", () => {
         expect(args()).toContain("/repo:/app:ro");
     });
@@ -41,8 +49,8 @@ describe("buildCaptureArgs", () => {
     it("leaves exactly one writable hole, at staging", () => {
         const mounts = args().filter((a, i, all) => all[i - 1] === "-v");
         const writable = mounts.filter((m) => m.includes(":") && !m.endsWith(":ro"));
-        expect(writable).toEqual(["/repo/yaffo_ui_tests/user_doc_automation/.staging:" +
-            "/app/yaffo_ui_tests/user_doc_automation/.staging"]);
+        expect(writable).toEqual(
+            ["/repo/yaffo_ui_tests/.doc-staging:/app/yaffo_ui_tests/.doc-staging"]);
     });
 
     it("masks the host's node_modules, which is built for darwin", () => {

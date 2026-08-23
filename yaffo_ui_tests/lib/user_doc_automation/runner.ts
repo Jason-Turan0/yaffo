@@ -10,6 +10,7 @@ import {resolveClip, resolveIgnoreRegions} from "./framing";
 import {toWebp} from "./encode";
 import {createObserver, PAGE_HEADER, RUN_HEADER, takeServerObservation} from "./observe";
 import type {Observation} from "./observe";
+import {mediaIdByFilename} from "./media_lookup";
 import {settle} from "./settle";
 import type {Walkthrough} from "./types";
 
@@ -124,7 +125,13 @@ const captureOne = async (
             const page = await context.newPage();
             try {
                 await page.setViewportSize(shot.viewport);
-                await page.goto(`${baseUrl}${shot.goto}`, {waitUntil: "domcontentloaded"});
+                const path = typeof shot.goto === "string"
+                    ? shot.goto
+                    : await shot.goto({
+                        baseUrl,
+                        mediaIdByFilename: (filename) => mediaIdByFilename(baseUrl, filename),
+                    });
+                await page.goto(`${baseUrl}${path}`, {waitUntil: "domcontentloaded"});
                 await settle(page);
                 if (shot.setup) {
                     await shot.setup(page);

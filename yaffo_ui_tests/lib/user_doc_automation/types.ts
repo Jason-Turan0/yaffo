@@ -15,6 +15,17 @@ export interface RowRule {
     count: number;
 }
 
+/** What a `goto` resolver is given to work out its path. */
+export interface GotoContext {
+    baseUrl: string;
+    /**
+     * The id of the media item with this filename, via the gallery's `?path=` filter.
+     * Mirrors `findMediaIdByFilename` in `generated_tests/_support/media-test-data.ts`,
+     * which the Playwright specs already use for the same reason.
+     */
+    mediaIdByFilename: (filename: string) => Promise<number>;
+}
+
 export interface Shot {
     /**
      * Viewport the page lays out in. Must be tall enough for `clip` to lay out
@@ -22,8 +33,17 @@ export interface Shot {
      * silently truncates the shot rather than failing.
      */
     viewport: Viewport;
-    /** Path to open. Include any query that pins server-persisted state. */
-    goto: string;
+    /**
+     * Path to open. Include any query that pins server-persisted state.
+     *
+     * A function when the path depends on runtime state — most often a media item id,
+     * which is assigned at index time and changes whenever the fixture is reseeded.
+     * Resolve it from something stable instead, the way the Playwright specs do:
+     *
+     *     goto: ({mediaIdByFilename}) =>
+     *         mediaIdByFilename(PRIMARY_DETAIL_IMAGE).then((id) => `/media/view/${id}`)
+     */
+    goto: string | ((context: GotoContext) => string | Promise<string>);
     /** Element whose box defines the crop. Omit for a plain viewport shot. */
     clip?: string;
     /** Trim the crop to N complete rows of a grid. */

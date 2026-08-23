@@ -16,6 +16,15 @@ export type {
     FinishReason,
 };
 
+/**
+ * Default per-call output budget.
+ *
+ * On a reasoning model this covers hidden reasoning tokens as well as the visible
+ * answer, and reasoning is spent first — so a turn that must emit a lot of text needs
+ * this raised, not just enough room for the text itself.
+ */
+export const DEFAULT_MAX_OUTPUT_TOKENS = 16000;
+
 export type ModelAlias =
     | "claude-opus-5"
     | "claude-sonnet-5"
@@ -103,6 +112,15 @@ export interface ToolCallResult {
 
 export interface ModelResponse {
     text: string;
+    /**
+     * The model's hidden thinking, on providers that expose it.
+     *
+     * Diagnostic only — never a substitute for `text`. The two are separated by the
+     * provider on purpose, and the one case where `text` is empty while this is full
+     * is a truncated turn: promoting this to the answer would feed prose to a caller
+     * expecting JSON and turn a clean failure into a plausible wrong result.
+     */
+    reasoningText?: string;
     finishReason: FinishReason;
     toolCalls: TypedToolCall<ToolSet>[];
     usage: LanguageModelUsage;
@@ -183,6 +201,15 @@ export interface ModelClient {
     setSystemPrompt(prompt: string): void;
 
     setOutputSchema(schema: z.ZodType): void;
+    /**
+     * Raise the per-call output budget for a turn that has a lot to say.
+     *
+     * On a reasoning model this cap covers hidden reasoning *and* the visible answer,
+     * and the reasoning is spent first. A turn asked to return two complete files can
+     * burn the whole default on thinking and return an empty string — which surfaces
+     * downstream as "response was not JSON", naming the wrong problem entirely.
+     */
+    setMaxOutputTokens(tokens: number): void;
 
     /** Estimated USD cost of every call this client has made so far. */
     getSessionCost(): number;

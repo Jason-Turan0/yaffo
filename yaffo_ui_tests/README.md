@@ -557,6 +557,17 @@ npm run docs:capture:docker
 npm run docs:capture:docker -- --promote library-basics/browsing-filtering
 ```
 
+Generation takes the same flag. It shells out to the capture above, so `--docker` makes
+the walkthrough it just wrote get verified *and* promoted from the same renderer CI
+uses — otherwise the first CI run reframes every shot the generator produced:
+
+```bash
+npm run docs:generate -- --docker library-basics/photo-details
+```
+
+`docs:heal` needs no flag: it reads the staging a prior capture produced rather than
+capturing itself.
+
 `YAFFO_SANDBOX_HOST` defaults to `127.0.0.1` and is opt-in because `0.0.0.0` puts the
 sandbox on your LAN. `--network host` is not an alternative on macOS: it joins the Linux
 VM's network namespace, not your Mac's.
@@ -616,7 +627,11 @@ The framework gives the AI model access to three tool providers via MCP:
 npm run test:unit
 ```
 
-Tests are in `lib/__tests__/` using Jest with `ts-jest`.
+Tests are in `lib/__tests__/` using Jest with `ts-jest`, in ESM mode. Run them through
+the npm script, not a bare `jest` — the script sets
+`NODE_OPTIONS='--experimental-vm-modules'`, without which ts-jest falls back to
+CommonJS and every suite using `import.meta` fails with a misleading `TS1343` that
+looks like a tsconfig problem. `jest.config.js` checks for the flag and says so.
 
 ### Type Checking
 
