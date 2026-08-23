@@ -9,10 +9,11 @@
  * touches docs/ unless --promote is passed, so a plain run can answer "is anything
  * stale?" without dirtying the tree.
  */
-import {readdirSync} from "fs";
+import {createHash} from "crypto";
+import {existsSync, readFileSync, readdirSync, writeFileSync} from "fs";
 import {join, resolve} from "path";
 import {runWalkthroughs} from "./index";
-import type {Walkthrough} from "./index";
+import type {Walkthrough, WalkthroughResult} from "./index";
 
 // Resolved from the working directory, like isolated_runner.ts and the rest of the
 // harness: every entry point here is run from yaffo_ui_tests/.
@@ -23,17 +24,57 @@ const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:5002";
 const GUIDE_DIR = resolve(process.env.GUIDE_DIR || join(CONTENT_DIR, "..", "..", "docs", "guide"));
 const STAGING_DIR = join(CONTENT_DIR, ".staging");
 
+/**
+ * Walkthroughs live one folder per page, mirroring the guide:
+ * `user_doc_automation/{area}/{page}/{page}.ts` — alongside that page's catalog,
+ * lockfile, and memories, the way `generated_tests/{feature}/` is laid out.
+ */
 const load = async (only: string[]): Promise<Walkthrough[]> => {
-    const dir = join(CONTENT_DIR, "walkthroughs");
     const loaded: Walkthrough[] = [];
-    for (const entry of readdirSync(dir).sort()) {
-        if (!entry.endsWith(".ts")) continue;
-        const module = await import(join(dir, entry));
-        const walkthrough = module.default as Walkthrough | undefined;
-        if (!walkthrough?.page) throw new Error(`${entry} has no default walkthrough export`);
-        if (!only.length || only.includes(walkthrough.page)) loaded.push(walkthrough);
+    for (const area of readdirSync(CONTENT_DIR, {withFileTypes: true})) {
+        if (!area.isDirectory() || area.name.startsWith("_") || area.name.startsWith(".")) continue;
+        const areaDir = join(CONTENT_DIR, area.name);
+        for (const page of readdirSync(areaDir, {withFileTypes: true})) {
+            if (!page.isDirectory()) continue;
+            const module = join(areaDir, page.name, `${page.name}.ts`);
+            if (!existsSync(module)) continue;
+            const walkthrough = (await import(module)).default as Walkthrough | undefined;
+            if (!walkthrough?.page) throw new Error(`${module} has no default walkthrough export`);
+            if (!only.length || only.includes(walkthrough.page)) loaded.push(walkthrough);
+        }
     }
     return loaded;
+};
+
+/**
+ * The page's fingerprint: what its walkthrough touched, and what its shots looked
+ * like when they were last written. Committed beside the walkthrough so a diff shows
+ * which page's dependencies moved.
+ */
+const writeLockfile = (result: WalkthroughResult): void => {
+    const [area, name] = [result.page.slice(0, result.page.indexOf("/")),
+                          result.page.slice(result.page.indexOf("/") + 1)];
+    const dir = join(CONTENT_DIR, area, name);
+    if (!existsSync(dir)) return;
+    const lock = {
+        page: result.page,
+        // Set once the watermark lands; until then every diff is against HEAD.
+        lastVerifiedSha: null as string | null,
+        observed: result.observation,
+        shots: Object.fromEntries(result.shots.map((shot) => [
+            shot.target,
+            {
+                width: shot.width,
+                height: shot.height,
+                // Detects a committed screenshot being replaced outside this pipeline;
+                // the staleness comparison itself is per-pixel, not by hash.
+                sha256: existsSync(join(GUIDE_DIR, shot.target))
+                    ? createHash("sha256").update(readFileSync(join(GUIDE_DIR, shot.target))).digest("hex")
+                    : null,
+            },
+        ])),
+    };
+    writeFileSync(join(dir, `${name}.lock.json`), JSON.stringify(lock, null, 4) + "\n");
 };
 
 const main = async (): Promise<void> => {
@@ -56,6 +97,7 @@ const main = async (): Promise<void> => {
 
     let failed = 0;
     for (const result of results) {
+        if (promote) writeLockfile(result);
         console.log(`${result.page}`);
         for (const shot of result.shots) {
             const mark = {new: "+", changed: "~", unchanged: "="}[shot.status];

@@ -7,7 +7,7 @@
 > (settle, framing, WebP encode, pixel comparison, dependency observation, runner,
 > evidence, triage, and the two entry points); authored and generated content in
 > `yaffo_ui_tests/user_doc_automation/` (`spec.yaml` covering 17 pages, and one
-> reference walkthrough, `walkthroughs/browsing-filtering.ts`); the server-side
+> reference walkthrough, `library-basics/browsing-filtering/`); the server-side
 > observer at `yaffo/doc_observer.py`. A run captures to staging, pixel-diffs against
 > what is committed, records that page's routes, templates, and static assets, and
 > `docs:heal` classifies whatever changed.
@@ -59,9 +59,9 @@ reproduce or audit.
 **Prose is not deterministic.** No script generates markdown. The agent edits `.md`
 files directly, so the same input can yield different wording. What replaces
 reproducibility is *boundedness*: the input is limited to one page's dependency
-diff, the instruction is minimal-diff, and a human reviews the PR. Do not blur these
-two under "the bot updates the script" — they carry different guarantees, and
-*What the agent may change* constrains them accordingly.
+diff, the edit is scoped to one page, and a human reviews the PR before it merges. Do
+not blur these two under "the bot updates the script" — they carry different
+guarantees, and *What the agent owns* sets out the boundary.
 
 ## Pipeline
 
@@ -71,7 +71,7 @@ flowchart TD
     oracles -->|nothing fired| stop([exit, no PR])
     oracles -->|pages flagged| sandbox["isolated sandbox<br/>seeded fixture + taskq"]
     sandbox --> capture["run walkthroughs (containerized)<br/>images -> staging"]
-    capture --> obs[("lockfiles/{area}/{page}.json<br/>routes - templates - static")]
+    capture --> obs[("{page}.lock.json<br/>routes - templates - static")]
     capture --> pdiff{"pixel diff<br/>vs committed"}
     pdiff -->|unchanged| stop
     pdiff -->|changed| agent["agent: heal walkthroughs,<br/>edit prose"]
@@ -210,8 +210,8 @@ state*) rather than in the markdown, which stays clean. It does two jobs:
 
 ## The observed-dependency lockfile
 
-Committed at `user_doc_automation/lockfiles/{area}/{page}.json`, one per guide page
-(see *Bot state* for what else each holds).
+Committed at `user_doc_automation/{area}/{page}/{page}.lock.json`, in that page's own
+folder (see *Bot state* for what else it holds).
 
 The set of source files whose change could alter a given page, **produced as the
 second output of that page's walkthrough** rather than hand-maintained. Because it is
@@ -364,7 +364,7 @@ That check would have caught `faces-review.png`, which sat unreferenced for mont
 
 ### One walkthrough per page
 
-`yaffo_ui_tests/user_doc_automation/walkthroughs/{walkthrough}.ts`
+`yaffo_ui_tests/user_doc_automation/{area}/{page}/{page}.ts`
 
 The walkthrough is the deterministic driver for a page. **Every page has one**, including
 pages that own no screenshots, because a walkthrough has two outputs and only the first is
@@ -472,8 +472,10 @@ pages:
   the entire signal. Charters are written to name an *enumerable* surface wherever one
   exists ("every section", "the built-in theme list") so the check has something
   concrete to compare against.
-- **`walkthrough`** names the module under `walkthroughs/`. `null` only where a page has
-  no app surface at all.
+- **`walkthrough`** is a boolean: the module's path is derivable from the page id, so
+  naming it would be redundant. `false` only where a page has no app surface at all and
+  never will — currently just `reference-maintenance/uninstalling`, which is entirely a
+  terminal workflow.
 - **`also_depends_on`** is the escape hatch for prose with no observable dependency.
   `getting-started.md` documents `pipx install yaffo` and `yaffo setup`; no walkthrough will
   ever touch `yaffo/setup.py`. A page property, not a shot property, and small because
@@ -492,15 +494,17 @@ its own page's assets directory, no image is unreferenced, and every
 
 ### Bot state is never hand-edited
 
-One committed snapshot per guide page, mirroring the guide's own shape:
+One committed snapshot per guide page, in that page's own folder:
 
 ```text
-user_doc_automation/lockfiles/{area}/{page}.json
+user_doc_automation/{area}/{page}/{page}.lock.json
 ```
 
 So `docs/guide/library-basics/browsing-filtering.md` is described by
-`user_doc_automation/lockfiles/library-basics/browsing-filtering.json`. Each holds
-everything the automation knows about that page after its last successful run:
+`user_doc_automation/library-basics/browsing-filtering/browsing-filtering.lock.json`.
+It holds everything the automation knows about that page after its last successful
+run, and is written by `docs:capture --promote` — only on promote, because the shot
+hashes are a record of what the guide actually holds:
 
 - **`lastVerifiedSha`** — the watermark that bounds the model's input and breaks the
   retrigger loop.
@@ -514,6 +518,10 @@ everything the automation knows about that page after its last successful run:
 - **`serverObserver`** — whether the observer answered, so an empty dependency set
   cannot be misread as "this page touched nothing".
 
+`lastVerifiedSha` is written as an explicit `null` until the watermark lands, rather
+than omitted: a present-but-empty field says the slot exists and is unfilled, where an
+absent one just looks like an older format.
+
 Three reasons for one file per page rather than a single shared state file:
 
 - **Diffs stay legible.** A run that touches one page changes one small file, so the
@@ -523,28 +531,51 @@ Three reasons for one file per page rather than a single shared state file:
   updates.
 - **It lives with the automation, not the site.** `docs/` is published; a bot-owned
   JSON blob there is both noise and a thing MkDocs has to be told to ignore.
+- **It sits beside what it describes.** The lockfile, the walkthrough that produced
+  it, that page's catalog, and its memories are one folder, so everything about a page
+  moves, reviews, and is deleted together.
 
 Written only by the automation. A human editing one by hand is corrupting a record of
 what was observed, not configuring anything — the hand-authored knobs are in
 `spec.yaml`.
 
-## What the agent may change
+## What the agent owns
 
-Both artifacts are in scope, under different constraints.
+The agent has autonomy over two artifacts per page: **the markdown** and **the
+walkthrough** — the walkthrough being both the deterministic capture script and the
+page's image catalogue. It may rewrite prose, add a section, rename or add or remove a
+screenshot, and change how a shot is framed.
 
-**Screenshots.** Regenerated wholesale from walkthroughs. If a walkthrough no longer works, the
-agent repairs the walkthrough; it never hand-produces an image.
+That breadth is deliberate. The output is a PR that a person reads before it merges,
+and a reviewer is better placed than any automated rule to judge whether a change was
+warranted or well written. Constraining the agent to, say, a two-word diff would only
+stop it from doing the right thing when a renamed feature genuinely needs a new
+heading.
 
-**Prose.** Edited directly, bounded by the watermark diff for that page and the oracle
-that fired, and instructed to make the smallest edit that restores accuracy — a
-renamed button should produce a two-word diff, not a rewritten section. The agent may
-correct names, labels, counts, and described behaviour. It may not restructure a page,
-change its headings, or alter its scope; those are authorial decisions that belong in
-a human-written commit.
+Because the walkthrough owns the image catalogue, a new screenshot is one coherent
+change rather than a three-way coordination problem: the markdown reference, the
+walkthrough entry, and the captured file all land in the same commit. They have to —
+`mkdocs build --strict` fails on a reference with no file behind it.
 
-Where the agent identifies staleness it cannot confidently fix — a described workflow
-that no longer matches any observable flow — it reports it in the PR body rather than
-guessing.
+### Gates are for correctness, not taste
+
+Automated checks exist to stop a broken PR, not an opinionated one. A change passes
+when:
+
+- `mkdocs build --strict` succeeds — every image reference resolves;
+- the walkthrough typechecks;
+- re-capturing against the edited walkthrough succeeds;
+- every referenced image exists and every image on disk is referenced.
+
+Nothing checks how many lines moved, whether headings changed, or whether the wording
+is the wording a human would have picked. This mirrors the test healer, where
+`typescript_validator` gates whether generated code is *valid* and nothing gates
+whether it is *tasteful*.
+
+Two things the agent still does not do. It does not adopt a screenshot classified as
+`application_regression` — a broken UI is reported, never documented. And where it
+finds staleness it cannot confidently resolve, such as a described workflow that no
+longer matches any observable flow, it says so in the PR body instead of guessing.
 
 Every change lands as a PR on a long-lived branch and is reviewed. Nothing is
 auto-merged.
@@ -605,7 +636,24 @@ reviewable. It is also what the plumbing built so far exists to produce.
   lockfile dependencies — never the whole repository.
 - The message-catalog diff, from Oracle B.
 
-Output: a classification, the edits, and a line for the PR body.
+Output: a classification and a line for the PR body — plus, on `intended_change`, the
+edits themselves.
+
+### How the fix turn works
+
+Triage and fix are **one model session**, as in `auto_heal_orchestrator.ts`: the client
+stays alive after classifying, so the fix turn still has the screenshots and evidence
+in context rather than re-sending three images.
+
+The agent edits through the filesystem tool rather than returning patch data.
+`mcp_filesystem_client.ts` already takes `allowedDirectories`, so writes are scoped to
+the page being healed and its assets.
+
+Handing back structured `{find, replace}` pairs was considered and rejected. The guide
+is hard-wrapped at 80 columns, so a quoted sentence spans line breaks and substituting
+a word of different length leaves the paragraph needing a reflow that a
+single-sentence replacement cannot perform. A tool lets the agent read the file, make
+the edit, and rewrap — which is what a person would do.
 
 ### Reuse, and the one real gap
 
@@ -688,15 +736,28 @@ yaffo_ui_tests/
 │   ├── encode.ts, python.ts        WebP encoding via the venv's Pillow
 │   ├── compare.ts, imagediff.py    pixel comparison and the diff overlay
 │   ├── observe.ts                  client half of the dependency recorder
-│   ├── evidence.ts, triage.ts      the agentic loop
+│   ├── evidence.ts, triage.ts, fix.ts   the agentic loop
 │   └── types.ts, index.ts
 └── user_doc_automation/            authored and generated content
     ├── spec.yaml                   hand-authored: charters and extra dependencies
     ├── _support/                   the import surface generated walkthroughs use
-    ├── walkthroughs/{name}.ts      generated, bot-maintained
-    ├── lockfiles/{area}/{page}.json  generated snapshots
-    └── .staging/                   transient, gitignored
+    ├── .staging/                   transient, gitignored
+    └── {area}/{page}/              one folder per guide page
+        ├── {page}.ts               the walkthrough — generated, bot-maintained
+        ├── {page}.json             page catalog: the generation payload
+        ├── {page}.lock.json        fingerprint: dependencies and shot hashes
+        └── memories/               investigation notes the agent keeps
 ```
+
+**One folder per page** mirrors `generated_tests/{feature}/`, which holds the same
+four things: the generated code, the `{feature}.json` catalog it came from, a run
+history, and `memories/`. The area/page nesting comes from the guide itself, so
+`docs/guide/library-basics/browsing-filtering.md` and its folder have the same shape.
+
+The catalog carries the same payload the test generator writes —
+`files: [{filename, code, description}]` plus narrative fields — with `pageContext`
+standing in for `testContext`. It is where the things worth not rediscovering live:
+why a shot pins `?view=grid`, that the sidebar's selects ignore `selectOption`.
 
 The `_support` directory is deliberately thin: it re-exports `defineWalkthrough` and
 the shot types from `lib/`, so generated walkthroughs depend on a small stable local
@@ -721,7 +782,7 @@ walkthrough. Without `--promote` nothing under `docs/` is touched.
 > `scripts/capture_docs_screenshots.ts` is the superseded proof of concept: five
 > shots for `getting-started.md`, predating the framework. It still works and still
 > holds those five shot definitions, so it should be converted into
-> `walkthroughs/getting-started.ts` rather than deleted.
+> `start-here/getting-started/getting-started.ts` rather than deleted.
 
 The capture techniques that mattered, in order of payoff:
 

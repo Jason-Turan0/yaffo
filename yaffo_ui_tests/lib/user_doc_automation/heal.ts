@@ -15,9 +15,12 @@ import "dotenv/config";
 import {copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync} from "fs";
 import {dirname, join, resolve} from "path";
 import {parse as parseYaml} from "yaml";
-import {buildEvidence} from "./index";
+import {applyFix, buildEvidence, triageShot} from "./index";
 import type {Triage, WalkthroughResult} from "./index";
-import {triageShot} from "./index";
+import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";
+import {createPlaywrightClient} from "@lib/tool_providers/mcp_playwright_client";
+import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesystem_memory_tool";
+import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 
 // Authored spec, generated walkthroughs, and transient staging live in the
@@ -25,6 +28,9 @@ import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 const CONTENT_DIR = resolve(join(process.cwd(), "user_doc_automation"));
 const GUIDE_DIR = resolve(process.env.GUIDE_DIR || join(CONTENT_DIR, "..", "..", "docs", "guide"));
 const STAGING_DIR = join(CONTENT_DIR, ".staging");
+// The sandbox the walkthroughs were captured against; the agent inspects the same
+// instance when deciding how a shot should be framed.
+const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:5002";
 const REPORT = join(STAGING_DIR, "report.json");
 
 const MARK: Record<Triage["classification"], string> = {
@@ -39,11 +45,14 @@ const covers = (page: string): string | undefined => {
     return spec?.pages?.[page]?.covers;
 };
 
+const walkthroughPath = (page: string): string => {
+    const [area, name] = [page.slice(0, page.indexOf("/")), page.slice(page.indexOf("/") + 1)];
+    return join(CONTENT_DIR, area, name, `${name}.ts`);
+};
+
 const walkthroughSource = (page: string): string => {
-    const spec = parseYaml(readFileSync(join(CONTENT_DIR, "spec.yaml"), "utf8"));
-    const name = spec?.pages?.[page]?.walkthrough;
-    const path = name ? join(CONTENT_DIR, "walkthroughs", `${name}.ts`) : undefined;
-    return path && existsSync(path) ? readFileSync(path, "utf8") : "(no walkthrough on file)";
+    const path = walkthroughPath(page);
+    return existsSync(path) ? readFileSync(path, "utf8") : "(no walkthrough on file)";
 };
 
 const main = async (): Promise<void> => {
@@ -78,23 +87,49 @@ const main = async (): Promise<void> => {
     mkdirSync(runLogDir, {recursive: true});
     console.log(`Triaging ${pending.length} changed shot(s)\n`);
 
+    // The same three providers the test generator gets, for the same reasons: the
+    // filesystem to read the page and its walkthrough, Playwright to inspect the
+    // running app when deciding how a shot should be framed, and memory so what it
+    // learns about a page outlives the run.
+    //
+    // Only opened under --apply, since triage alone needs no tools.
+    const providers: ToolProvider[] = [];
+    if (apply) {
+        providers.push(await createFilesystemClient([GUIDE_DIR, CONTENT_DIR], {readonly: false}));
+        providers.push(await createPlaywrightClient({
+            headless: true,
+            baseUrl: BASE_URL,
+            browser: "chromium",
+            artifacts: {outputDir: runLogDir, saveVideo: false, saveSession: false},
+        }));
+    }
+
     const verdicts: Array<{page: string; target: string; triage: Triage}> = [];
     for (const {result, shot} of pending) {
         const evidence = buildEvidence(result, shot, {
             guideDir: GUIDE_DIR,
             stagingDir: STAGING_DIR,
             walkthroughSource: walkthroughSource(result.page),
+            walkthroughPath: walkthroughPath(result.page),
             covers: covers(result.page),
         });
 
-        let triage: Triage | undefined;
+        // Memory is per page — the same scoping the generator uses for a feature.
+        const [area, name] = [result.page.slice(0, result.page.indexOf("/")),
+                              result.page.slice(result.page.indexOf("/") + 1)];
+        const memory = apply
+            ? localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name, "memories"))
+            : undefined;
+        const pageProviders = memory ? [...providers, memory] : providers;
+
+        let session;
         try {
-            triage = await triageShot(evidence, {model, runLogDir});
+            session = await triageShot(evidence, {model, runLogDir, toolProviders: pageProviders});
         } catch (e) {
             console.error(`  ❌ ${shot.target}: ${e instanceof Error ? e.message : String(e)}`);
             continue;
         }
-        if (!triage) continue;
+        const triage: Triage = session.triage;
         verdicts.push({page: result.page, target: shot.target, triage});
 
         console.log(`${MARK[triage.classification]} ${shot.target}`);
@@ -107,17 +142,35 @@ const main = async (): Promise<void> => {
         if (triage.recommendedAction === "promote") {
             const committed = join(GUIDE_DIR, shot.target);
             if (apply) {
+                // Promote first: the fix turn reads the page against the screenshot
+                // that is actually going to ship.
                 mkdirSync(dirname(committed), {recursive: true});
                 copyFileSync(shot.staged, committed);
                 console.log("   → promoted");
+
+                const outcome = await applyFix(session, evidence, {toolProviders: pageProviders, baseUrl: BASE_URL});
+                if (outcome.fix) {
+                    if (outcome.fix.explanation) console.log(`   → ${outcome.fix.explanation}`);
+                    for (const file of outcome.written) console.log(`      wrote ${file}`);
+                    if (!outcome.written.length) console.log("      (no file changes returned)");
+                    
+                } else {
+                    console.log("   → no edits returned");
+                }
+                for (const failure of outcome.failures) {
+                    console.error(`   ‼️  ${failure.split("\n")[0]}`);
+                }
+                if (outcome.reverted) console.error("   → edits reverted; gates failed");
             } else {
-                console.log("   → would promote (re-run with --apply)");
+                console.log("   → would promote and update the page (re-run with --apply)");
             }
         } else {
             console.log(`   → ${triage.recommendedAction}: left for a human, nothing written`);
         }
         console.log();
     }
+
+    await Promise.all(providers.map((provider) => provider.disconnect()));
 
     writeFileSync(join(STAGING_DIR, "triage.json"),
         JSON.stringify({triagedAt: new Date().toISOString(), verdicts}, null, 2));

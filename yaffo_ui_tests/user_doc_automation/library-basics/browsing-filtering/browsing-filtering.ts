@@ -12,7 +12,7 @@
  * the only way their source files enter the dependency set, which is why a page
  * that shows no images at all still gets a walkthrough.
  */
-import {defineWalkthrough} from "../_support";
+import {defineWalkthrough} from "../../_support";
 
 export default defineWalkthrough({
     page: "library-basics/browsing-filtering",

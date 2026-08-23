@@ -6,7 +6,8 @@
 #   * what a screenshot depicts   -> the alt text in the markdown
 #   * which images a page owns    -> grep that page for image references
 #   * where an image is stored    -> always docs/guide/{area}/assets/{page}/
-#   * how to capture a shot       -> walkthroughs/{walkthrough}.ts, bot-generated
+#   * how to capture a shot       -> {area}/{page}/{page}.ts, bot-generated
+#   * what a page depends on      -> {area}/{page}/{page}.lock.json, recorded on capture
 #
 # There are no shared images. Every image belongs to exactly one page, even when
 # two pages show the same view; each page's walkthrough captures its own copy. This
@@ -26,8 +27,9 @@ version: 1
 #
 #   covers           the page's obligation, not its current contents. Oracle D
 #                    compares this against the app's real surface to find gaps.
-#   walkthrough      module under walkthroughs/; null only if the page has no
-#                    observable surface at all.
+#   walkthrough      true when the page has a walkthrough folder at
+#                    {area}/{page}/; false only where the page has no observable
+#                    surface at all and never will.
 #   also_depends_on  source files the prose describes but no walkthrough can reach.
 pages:
 
@@ -37,7 +39,7 @@ pages:
       setup helper, launching, the tray icon on each OS, adding media folders,
       running the first index, and a first look at the gallery and detail view.
       A tour: it shows the same views the deeper pages cover, in its own shots.
-    walkthrough: getting-started
+    walkthrough: true
     also_depends_on:
       - yaffo/setup.py        # `yaffo setup`, asset download, desktop shortcut
       - yaffo/launcher.py     # `yaffo`, tray icon, default port
@@ -48,7 +50,7 @@ pages:
       Every term the rest of the guide uses without defining - library, media
       item, index, face, person, label, tag, favorite, album, custom page,
       automation, theme. A new first-class concept in the model is a gap.
-    walkthrough: concepts
+    walkthrough: true
     also_depends_on:
       - yaffo/db/models.py    # the entities the glossary names
 
@@ -57,7 +59,7 @@ pages:
       The whole indexing lifecycle: adding media folders, scanning, syncing new
       and changed and orphaned files, watching background jobs, re-indexing after
       changes, and the list of supported media formats.
-    walkthrough: indexing-library
+    walkthrough: true
     also_depends_on:
       - yaffo/common.py       # PHOTO_EXTENSIONS / VIDEO_EXTENSIONS back "Supported Media"
 
@@ -66,7 +68,7 @@ pages:
       Every filter group in the sidebar, any/all matching, clearing filters,
       configuring which groups are visible, the grid and timeline views, and what
       to do when results look wrong. A new filter is a gap.
-    walkthrough: browsing-filtering
+    walkthrough: true
     also_depends_on:
       - yaffo/routes/filter_config.py   # the canonical filter group list
 
@@ -76,20 +78,20 @@ pages:
       non-playable video, file information, opening the original file or folder,
       favoriting, location, people and faces, labels, tags, and the keyboard
       shortcut.
-    walkthrough: photo-details
+    walkthrough: true
 
   library-basics/organizing-photos:
     covers: >-
       How filters, favorites, tags, people, labels, locations, duplicate review,
       and custom pages relate to one another, plus one practical end-to-end
       workflow. A hub page: it explains relationships rather than screens.
-    walkthrough: organizing-photos
+    walkthrough: true
 
   organize-review/faces-and-people:
     covers: >-
       What the face review page shows, creating people, reviewing one person's
       faces, and automatic assignment. Background for the assignment workflow.
-    walkthrough: faces-and-people
+    walkthrough: true
 
   organize-review/assigning-faces:
     covers: >-
@@ -97,14 +99,14 @@ pages:
       faces are grouped and the similarity threshold, assigning a cluster,
       working through several clusters, quick assignment, ignoring faces, and
       refreshing between passes.
-    walkthrough: assigning-faces
+    walkthrough: true
 
   organize-review/labels:
     covers: >-
       How classification works, managing the vocabulary, adding custom labels,
       re-classifying, filtering by label, and reviewing labels on a photo. The
       shipped default vocabulary is enumerable and must stay accurate.
-    walkthrough: labels
+    walkthrough: true
     also_depends_on:
       - yaffo/scripts/db/migrations/000_MIGRATION_20260620_INIT.py  # seeded vocabulary
 
@@ -113,27 +115,27 @@ pages:
       The map: markers and clusters, selecting photos, previewing a selection,
       assigning and clearing location names, recommendations, filtering the map,
       and the empty state.
-    walkthrough: locations
+    walkthrough: true
 
   organize-review/duplicates:
     covers: >-
       How duplicate detection works, starting a scan, reviewing groups, choosing
       an action, removing selected duplicates, the safety checklist, and the
       no-duplicates-found case.
-    walkthrough: duplicates
+    walkthrough: true
 
   create-customize/custom-pages:
     covers: >-
       Creating a page, working with widgets, and publishing and presenting it.
       The set of available widget types is enumerable and must stay complete.
-    walkthrough: custom-pages
+    walkthrough: true
 
   create-customize/themes:
     covers: >-
       Choosing a theme, designing one by description, and publishing, renaming,
       and deleting it. The built-in theme list must match THEMES; a new shipped
       theme is a gap.
-    walkthrough: themes
+    walkthrough: true
     also_depends_on:
       - yaffo/themes.py       # THEMES is the authoritative built-in list
 
@@ -142,7 +144,7 @@ pages:
       Every system automation, creating a custom automation, testing before
       publishing, the trigger types, and running and reviewing runs. A newly
       seeded system automation or trigger type is a gap.
-    walkthrough: automations
+    walkthrough: true
     also_depends_on:
       - yaffo/scripts/db/migrations/000_MIGRATION_20260620_INIT.py  # seeded system automations
 
@@ -150,21 +152,21 @@ pages:
     covers: >-
       Every section of the Settings screen, in the order they appear on screen.
       A new section is a gap.
-    walkthrough: settings
+    walkthrough: true
 
   reference-maintenance/troubleshooting:
     covers: >-
       The common failure modes and how to narrow them down: photos not appearing,
       stuck or slow jobs, wrong faces or labels or duplicates, map and location
       lookups failing, and AI features failing.
-    walkthrough: troubleshooting
+    walkthrough: true
 
   reference-maintenance/uninstalling:
     covers: >-
       Quitting Yaffo, running the uninstall helper, the keep-or-remove user data
       decision, removing the Python package, and what reinstalling restores.
     # No observable surface: the whole page is a terminal workflow.
-    walkthrough: null
+    walkthrough: false
     also_depends_on:
       - yaffo/setup.py        # the uninstall helper
       - yaffo/shortcuts.py    # desktop shortcut removal

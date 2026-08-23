@@ -21,6 +21,10 @@ export interface Evidence {
     diffSummary: string;
     /** The page's markdown, prose and image captions together. */
     markdown: string;
+    /** Absolute path to the page, so the agent is never left hunting for it. */
+    markdownPath: string;
+    /** Absolute path to the walkthrough that captured this shot. */
+    walkthroughPath: string;
     /** The page's obligation, from spec.yaml. */
     covers?: string;
     walkthroughSource: string;
@@ -79,6 +83,7 @@ export interface EvidenceOptions {
     guideDir: string;
     stagingDir: string;
     walkthroughSource: string;
+    walkthroughPath: string;
     covers?: string;
 }
 
@@ -96,6 +101,8 @@ export const buildEvidence = (
         overlayPath: shot.diff?.diffImage ?? undefined,
         diffSummary: describeDiff(shot),
         markdown: existsSync(markdownPath) ? readFileSync(markdownPath, "utf8") : "(page not found)",
+        markdownPath,
+        walkthroughPath: options.walkthroughPath,
         covers: options.covers,
         walkthroughSource: options.walkthroughSource,
         codeDiff: truncate(dependencyDiff(result.observation), 12_000),

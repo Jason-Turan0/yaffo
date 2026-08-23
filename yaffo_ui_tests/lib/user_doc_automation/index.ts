@@ -20,4 +20,6 @@ export type {ShotResult, WalkthroughResult} from "./runner";
 export {buildEvidence} from "./evidence";
 export type {Evidence, EvidenceOptions} from "./evidence";
 export {triageShot, TriageSchema, TRIAGE_CLASSES} from "./triage";
-export type {Triage, TriageOptions} from "./triage";
+export type {Triage, TriageOptions, TriageSession} from "./triage";
+export {applyFix, FixSchema} from "./fix";
+export type {Fix, FixOptions, FixResult} from "./fix";

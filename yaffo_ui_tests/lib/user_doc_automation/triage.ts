@@ -6,7 +6,6 @@ import {
     DEFAULT_MODEL,
     supportsNativeStructuredOutput,
 } from "@lib/model_clients/model_client_factory";
-import {extractJson} from "@lib/test_generator/prompt/json_parser";
 import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 import {
     supportsVision,
@@ -14,7 +13,10 @@ import {
     toTextPart,
     visionModelFor,
 } from "@lib/model_clients/model_client.interface";
+import type {ModelClient} from "@lib/model_clients/model_client.interface";
+import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import type {Evidence} from "./evidence";
+import {parseAnswer, runToolLoop} from "./tool_loop";
 
 /**
  * What kind of change this is — not "why did it break".
@@ -74,6 +76,9 @@ the change undermines — a renamed control, a changed count, a described elemen
 longer present. Quote the sentence exactly as it appears. Report nothing if the prose still
 holds; do not invent problems.
 
+If a memory tool is available, read this page's notes before classifying: they record
+what earlier runs learned, including shots already known to be unstable.
+
 Be concrete and brief. Prefer "low" confidence over a confident guess.`;
 
 const section = (title: string, body: string): string => `\n## ${title}\n\n${body}\n`;
@@ -95,12 +100,25 @@ const imagePart = (path: string) =>
 export interface TriageOptions {
     model?: ModelAlias;
     runLogDir: string;
+    /**
+     * Tools for investigation and for the fix turn. Supplied at construction because
+     * the client takes its tools once, and the fix turn continues this same session
+     * so the model still has the screenshots in context.
+     */
+    toolProviders?: ToolProvider[];
+}
+
+/** A classified shot, plus the live session the fix turn continues. */
+export interface TriageSession {
+    triage: Triage;
+    client: ModelClient;
+    model: ModelAlias;
 }
 
 export const triageShot = async (
     evidence: Evidence,
     options: TriageOptions
-): Promise<Triage | undefined> => {
+): Promise<TriageSession> => {
     const requested = options.model ?? (DEFAULT_MODEL as ModelAlias);
     // Triage classifies a picture. A model that cannot receive one does not fail — it
     // answers from the surrounding text and sounds just as certain, which is worse
@@ -125,7 +143,7 @@ export const triageShot = async (
         options.runLogDir,
         model,
         systemPrompt,
-        [],            // no tools: the whole evidence packet is in the prompt
+        (options.toolProviders ?? []).flatMap((provider) => provider.getTools()),
         TriageSchema,
     );
 
@@ -142,15 +160,10 @@ export const triageShot = async (
             : []),
     ]);
 
-    const response = await client.callModelApi();
-    if (!response) {
-        throw new Error(client.lastError ?? "the model returned no response");
+    const answer = await runToolLoop(client, options.toolProviders ?? []);
+    const parsed = parseAnswer(TriageSchema, answer);
+    if (!parsed.value) {
+        throw new Error(`unusable triage response — ${parsed.errors.join("; ")}`);
     }
-    // Tolerant extraction: a non-native provider may wrap the JSON in prose or a
-    // fenced block.
-    const parsed = TriageSchema.safeParse(JSON.parse(extractJson(response.text)));
-    if (!parsed.success) {
-        throw new Error(`unparseable triage response: ${parsed.error.message}`);
-    }
-    return parsed.data;
+    return {triage: parsed.value, client, model};
 };
