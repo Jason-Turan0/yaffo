@@ -57,6 +57,26 @@ jobs:
           fail-on-error: false
           fail-on-empty: false
 
+  ui-test-tooling:
+    name: UI test tooling (unit tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: yaffo_ui_tests/package-lock.json
+
+      - name: Install UI test dependencies
+        working-directory: yaffo_ui_tests
+        run: npm ci
+
+      - name: Unit tests under lib
+        working-directory: yaffo_ui_tests
+        run: npm run test:unit -- --runInBand lib
+
   python:
     name: Python (unit tests)
     runs-on: ubuntu-latest

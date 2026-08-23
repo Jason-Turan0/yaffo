@@ -27,7 +27,7 @@ describe("generation and healing run the same gates", () => {
     it("the shared gates actually execute the walkthrough", () => {
         // Typechecking proves the file compiles; only running it proves it reaches the
         // right view. This is the gate healing was missing.
-        expect(source("gates.ts")).toMatch(/lib\/user_doc_automation\/run\.ts/);
+        expect(source("gates.ts")).toMatch(/lib\/user_doc_automation\/docs_capture\.ts/);
     });
 
     // mkdocs --strict aborts on an image it cannot resolve, and it resolves against
