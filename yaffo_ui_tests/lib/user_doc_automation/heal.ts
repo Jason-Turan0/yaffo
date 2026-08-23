@@ -4,6 +4,7 @@
  *   npm run docs:capture           # capture, compare, stage
  *   npm run docs:heal              # triage what changed
  *   npm run docs:heal -- --apply   # …and act on it
+ *   npm run docs:heal -- --page library-basics/browsing-filtering --apply --docker
  *
  * Reads the staging report rather than recapturing, so triage always judges the same
  * images a human can open. Without --apply nothing is written.
@@ -25,6 +26,7 @@ import {createPlaywrightClient} from "@lib/tool_providers/mcp_playwright_client"
 import {localFilesystemMemoryToolFactory} from "@lib/tool_providers/local_filesystem_memory_tool";
 import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
 import type {ModelAlias} from "@lib/model_clients/model_client.interface";
+import {YAFFO_APP_ROOT} from "@lib/types";
 import {changedDependencies} from "./dependency_changes";
 import type {DependencyChange, PageLock} from "./dependency_changes";
 
@@ -97,6 +99,13 @@ const proseEvidence = (
 
 export const main = async (args: string[] = process.argv.slice(2)): Promise<number> => {
     const apply = args.includes("--apply");
+    const useDocker = args.includes("--docker");
+    const pageArg = args.indexOf("--page");
+    const selectedPage = pageArg !== -1 ? args[pageArg + 1] : undefined;
+    if (pageArg !== -1 && !selectedPage) {
+        console.error("--page requires a page id");
+        return 1;
+    }
     const modelArg = args.indexOf("--model");
     const model = modelArg !== -1 ? (args[modelArg + 1] as ModelAlias) : undefined;
 
@@ -104,7 +113,14 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
         console.error(`No capture to triage at ${REPORT}.\nRun: npm run docs:capture`);
         return 1;
     }
-    const results = JSON.parse(readFileSync(REPORT, "utf8")).results as WalkthroughResult[];
+    let results = JSON.parse(readFileSync(REPORT, "utf8")).results as WalkthroughResult[];
+    if (selectedPage) {
+        results = results.filter((result) => result.page === selectedPage);
+        if (!results.length) {
+            console.error(`Capture report has no result for ${selectedPage}.`);
+            return 1;
+        }
+    }
 
     const pending = results.flatMap((result) =>
         result.shots.filter((shot) => shot.status !== "unchanged").map((shot) => ({result, shot})));
@@ -115,6 +131,7 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
     const dependencyChanges = new Map<string, DependencyChange[]>();
     const diffCache = new Map<string, StringChange[]>();
     for (const [page, entry] of Object.entries(spec().pages ?? {})) {
+        if (selectedPage && page !== selectedPage) continue;
         const lock = pageLock(page);
         if (lock) {
             const changed = changedDependencies(lock, entry.also_depends_on ?? []);
@@ -163,7 +180,8 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
     const providers: ToolProvider[] = [];
     try {
         if (apply) {
-            providers.push(await createFilesystemClient([GUIDE_DIR, CONTENT_DIR], {readonly: false}));
+            providers.push(await createFilesystemClient(
+                [YAFFO_APP_ROOT, GUIDE_DIR, CONTENT_DIR], {readonly: false}));
             providers.push(await createPlaywrightClient({
                 headless: true,
                 baseUrl: BASE_URL,
@@ -223,6 +241,7 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
                     const outcome = await applyFix(session, evidence, {
                         toolProviders: pageProviders,
                         baseUrl: BASE_URL,
+                        useDocker,
                     });
                     if (outcome.fix) {
                         if (outcome.fix.explanation) console.log(`   → ${outcome.fix.explanation}`);
@@ -235,7 +254,10 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
                     for (const failure of outcome.failures) {
                         console.error(`   ‼️  ${failure.split("\n")[0]}`);
                     }
-                    if (outcome.reverted) console.error("   → edits reverted; gates failed");
+                    if (outcome.reverted) {
+                        console.error("   → edits reverted; gates failed");
+                        failed++;
+                    }
                 } else {
                     console.log("   → would promote and update the page (re-run with --apply)");
                 }
@@ -274,14 +296,17 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
                     model, runLogDir, toolProviders: [...providers, memory],
                 });
                 const outcome = await applyFix(session, evidence, {
-                    toolProviders: [...providers, memory], baseUrl: BASE_URL,
+                    toolProviders: [...providers, memory], baseUrl: BASE_URL, useDocker,
                 });
                 if (outcome.fix?.explanation) console.log(`   → ${outcome.fix.explanation}`);
                 for (const file of outcome.written) console.log(`      wrote ${file}`);
                 if (!outcome.written.length) console.log("      (no file changes returned)");
                 if (outcome.attempts > 1) console.log(`   (${outcome.attempts} attempts)`);
                 for (const failure of outcome.failures) console.error(`   ‼️  ${failure.split("\n")[0]}`);
-                if (outcome.reverted) console.error("   → edits reverted; gates failed");
+                if (outcome.reverted) {
+                    console.error("   → edits reverted; gates failed");
+                    failed++;
+                }
             } catch (e) {
                 console.error(`   ❌ ${e instanceof Error ? e.message : String(e)}`);
                 failed++;

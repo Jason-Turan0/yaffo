@@ -15,12 +15,15 @@
 >
 > Also working: `docs:generate` writes a page and its walkthrough from the page's
 > charter, gated on the two agreeing; `docs:heal` triages a change and updates the page;
-> `docs:detect` reports pages quoting controls the app has renamed; `docs:validate`
-> checks the guide and its automation against each other. Both detectors are built, as
-> is the per-page watermark.
+> `docs:detect` reports dependency fingerprints and quoted controls that changed;
+> `docs:validate` checks the guide and its automation against each other;
+> `docs:heal:repo` emits the GitHub fan-out matrix, limited to pages that already have
+> both a walkthrough and lockfile. Both detectors, the per-page watermark, and the
+> reproducible documentation fixture are built.
 >
-> Not built: the GitHub workflow, `docs:heal:repo`, the reproducible documentation
-> fixture, and 14 of the 16 app-backed page walkthroughs.
+> The GitHub fan-out and generated-PR workflow is built as
+> `.github/workflows/documentation-auto-heal.yml`. Not built: 14 of the 16
+> app-backed page walkthroughs.
 >
 > Last updated: 2026-08-23
 
@@ -743,7 +746,7 @@ is a regression report, not a screenshot of broken thumbnails.
 | `test:heal` | **`docs:heal`** — act on what the detectors found; `--apply` writes | Built, as `npm run docs:heal` |
 | — | **`docs:detect`** — dependency fingerprints plus Detector B, without a sandbox | Built, as `npm run docs:detect` |
 | `validate:specs` | **`docs:validate`** — the guide and its automation agree | Built, as `npm run docs:validate` |
-| `test:heal:repo` | **`docs:heal:repo`** — the same across every flagged page, for CI | Not built |
+| `test:heal:repo` | **`docs:heal:repo`** — emit eligible pages as a GitHub fan-out matrix | Built, as `npm run docs:heal:repo` |
 
 Generate and heal stay separate for the same reason they are separate in the test
 framework: different inputs. Generate works from *intent* — the markdown's image

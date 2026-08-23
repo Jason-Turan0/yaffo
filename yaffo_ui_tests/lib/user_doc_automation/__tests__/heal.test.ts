@@ -10,6 +10,7 @@ const STAGING_DIR = join(root, "staging");
 const CAPTURE_DIR = join(STAGING_DIR, "captures");
 const RUN_LOG_DIR = join(STAGING_DIR, "heal-logs", "run");
 const BASE_URL = "http://app.test:5002";
+const APP_ROOT = join(root, "app");
 
 const applyFix = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 const buildEvidence = jest.fn<(...args: unknown[]) => unknown>();
@@ -41,6 +42,7 @@ await jest.unstable_mockModule("@lib/tool_providers/mcp_playwright_client", () =
 await jest.unstable_mockModule("@lib/tool_providers/local_filesystem_memory_tool", () => ({
     localFilesystemMemoryToolFactory,
 }));
+await jest.unstable_mockModule("@lib/types", () => ({YAFFO_APP_ROOT: APP_ROOT}));
 await jest.unstable_mockModule("../paths", () => ({
     BASE_URL, CAPTURE_DIR, CONTENT_DIR, GUIDE_DIR, newRunLogDir, STAGING_DIR,
 }));
@@ -155,6 +157,11 @@ describe("heal CLI", () => {
         expect(triageShot).not.toHaveBeenCalled();
     });
 
+    it("requires a value after --page", async () => {
+        await expect(main(["--page"])).resolves.toBe(1);
+        expect(error).toHaveBeenCalledWith("--page requires a page id");
+    });
+
     it("returns cleanly when every capture is unchanged", async () => {
         writeReport([result({shots: [shot({status: "unchanged"})]})]);
 
@@ -218,10 +225,10 @@ describe("heal CLI", () => {
         write(changed.staged as string, "new image");
         writeReport([result({shots: [changed]})]);
 
-        await expect(main(["--apply", "--model", "vision-model"])).resolves.toBe(0);
+        await expect(main(["--apply", "--docker", "--model", "vision-model"])).resolves.toBe(0);
 
         expect(createFilesystemClient).toHaveBeenCalledWith(
-            [GUIDE_DIR, CONTENT_DIR], {readonly: false});
+            [APP_ROOT, GUIDE_DIR, CONTENT_DIR], {readonly: false});
         expect(createPlaywrightClient).toHaveBeenCalledWith(expect.objectContaining({
             baseUrl: BASE_URL,
             artifacts: expect.objectContaining({outputDir: RUN_LOG_DIR}),
@@ -229,10 +236,29 @@ describe("heal CLI", () => {
         expect(localFilesystemMemoryToolFactory).toHaveBeenCalledWith(
             join(CONTENT_DIR, "area", "page"));
         expect(applyFix).toHaveBeenCalledWith(expect.objectContaining({triage: intended}),
-            expect.anything(), expect.objectContaining({baseUrl: BASE_URL}));
+            expect.anything(), expect.objectContaining({baseUrl: BASE_URL, useDocker: true}));
         expect(readFileSync(join(GUIDE_DIR, changed.target as string), "utf8")).toBe("new image");
         expect(filesystem.disconnect).toHaveBeenCalledTimes(1);
         expect(browser.disconnect).toHaveBeenCalledTimes(1);
+    });
+
+    it("limits capture results and dependency checks to --page", async () => {
+        writeSpec([
+            "  area/page: {covers: First}",
+            "  area/other: {covers: Second}",
+            "",
+        ].join("\n"));
+        for (const page of ["page", "other"]) {
+            write(join(CONTENT_DIR, "area", page, `${page}.lock.json`), "{}");
+        }
+        writeReport([result(), result({page: "area/other"})]);
+
+        await expect(main(["--page", "area/page"])).resolves.toBe(0);
+
+        expect(triageShot).toHaveBeenCalledTimes(1);
+        expect(buildEvidence).toHaveBeenCalledWith(
+            expect.objectContaining({page: "area/page"}), expect.anything(), expect.anything());
+        expect(changedDependencies).toHaveBeenCalledTimes(1);
     });
 
     it("caches catalogue diffs by watermark and handles prose-only pages", async () => {
@@ -300,6 +326,20 @@ describe("heal CLI", () => {
         }), expect.objectContaining({toolProviders: [filesystem, browser, memory]}));
         expect(applyFix).toHaveBeenCalled();
         expect(changedStrings).not.toHaveBeenCalled();
+    });
+
+    it("fails the run when correctness gates revert a fix", async () => {
+        const changed = shot();
+        write(changed.staged as string, "new image");
+        writeReport([result({shots: [changed]})]);
+        applyFix.mockResolvedValue({
+            ...outcome,
+            failures: ["capture failed"],
+            reverted: true,
+        });
+
+        await expect(main(["--apply"])).resolves.toBe(1);
+        expect(error).toHaveBeenCalledWith("   → edits reverted; gates failed");
     });
 
     it("disconnects initialized providers and lets the wrapper report uncaught failures", async () => {
