@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it} from "@jest/globals";
 import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
 import {join} from "path";
-import {dockerAvailable, runCaptureContainer} from "../docker";
+import {dockerAvailable, hostUserArgs, runCaptureContainer} from "../docker";
 
 let testDir: string;
 let fakeDocker: string;
@@ -35,6 +35,16 @@ describe("dockerAvailable", () => {
     });
 });
 
+describe("hostUserArgs", () => {
+    it("keeps bind-mounted capture output owned by the invoking Linux user", () => {
+        expect(hostUserArgs({uid: 1001, gid: 121})).toEqual(["--user", "1001:121"]);
+    });
+
+    it("omits the option on platforms without POSIX user ids", () => {
+        expect(hostUserArgs({})).toEqual([]);
+    });
+});
+
 describe("runCaptureContainer", () => {
     it("creates staging, returns Docker's status, and preserves daemon settings", () => {
         const stagingDir = join(testDir, "nested", "captures");
@@ -61,6 +71,9 @@ describe("runCaptureContainer", () => {
             expect(readFileSync(`${output}.secret`, "utf8")).toBe("");
             const argv = readFileSync(output, "utf8").trim().split("\n");
             expect(argv.slice(0, 3)).toEqual(["run", "--rm", "--init"]);
+            if (typeof process.getuid === "function" && typeof process.getgid === "function") {
+                expect(argv).toContain(`${process.getuid()}:${process.getgid()}`);
+            }
             expect(argv).toContain("DOCS_BASE_URL=http://host.docker.internal:5002");
             expect(argv.slice(-1)).toEqual(["library/browsing"]);
         } finally {

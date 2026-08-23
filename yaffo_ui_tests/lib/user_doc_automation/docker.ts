@@ -31,6 +31,19 @@ export const HOST_ALIAS = "host.docker.internal";
 export const addHostArgs = (platform: NodeJS.Platform = process.platform): string[] =>
     platform === "linux" ? ["--add-host", `${HOST_ALIAS}:host-gateway`] : [];
 
+/**
+ * Run the container as the invoking user so bind-mounted captures stay writable by
+ * the host-side encoder. Docker Desktop masks this ownership boundary, but native
+ * Linux otherwise leaves root-owned page directories behind and Pillow cannot write
+ * the WebP files beside the captured PNGs.
+ */
+export const hostUserArgs = (identity: {uid?: number; gid?: number} = {
+    uid: typeof process.getuid === "function" ? process.getuid() : undefined,
+    gid: typeof process.getgid === "function" ? process.getgid() : undefined,
+}): string[] => identity.uid === undefined || identity.gid === undefined
+    ? []
+    : ["--user", `${identity.uid}:${identity.gid}`];
+
 /** Point a loopback URL at the host as the container sees it. */
 export const containerBaseUrl = (baseUrl: string): string =>
     baseUrl.replace(/\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0)\b/, `//${HOST_ALIAS}`);
@@ -86,6 +99,7 @@ export const snapshotDockerEnv = (source: NodeJS.ProcessEnv = process.env): Reco
  */
 export const buildCaptureArgs = (options: CaptureContainerOptions): string[] => [
     "run", "--rm", "--init",
+    ...hostUserArgs(),
     "-v", `${options.repoDir}:${CONTAINER_REPO}:ro`,
     "-v", `${CONTAINER_CWD}/node_modules`,
     "-v", `${options.stagingDir}:${CONTAINER_STAGING}`,
