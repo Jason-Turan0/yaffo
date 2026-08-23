@@ -4,7 +4,7 @@ Indexing is how Yaffo learns what photos and videos are in your library. Yaffo
 does not move your originals into a special folder. Instead, you choose media
 folders, and Yaffo builds a local index from those files.
 
-![Index photos utility](../assets/screenshots/utilities-index-photos.png)
+![Index photos utility](assets/indexing-library/utilities-index-photos.webp)
 
 ## Add Media Folders
 

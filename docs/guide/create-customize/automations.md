@@ -6,7 +6,7 @@ Yaffo keeps a library tidy without you clicking through the same steps by hand.
 
 Open **Utilities** → **Automations**.
 
-![The Automations page with the system and custom list, and a selected automation's details and run history](../assets/screenshots/automations-list.png)
+![The Automations page with the system and custom list, and a selected automation's details and run history](assets/automations/automations-list.png)
 
 The sidebar lists automations in two groups, **System** and **Custom**. Select
 one to see its description, actions, and run history on the right. A green **ON**

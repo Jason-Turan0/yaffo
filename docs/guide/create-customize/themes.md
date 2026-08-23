@@ -6,7 +6,7 @@ look you want.
 
 Open **Themes** from the top navigation.
 
-![The Themes page listing system and custom themes](../assets/screenshots/themes-list.png)
+![The Themes page listing system and custom themes](assets/themes/themes-list.png)
 
 ## Choose a Theme
 
@@ -26,7 +26,7 @@ Click **New theme** and give it a name, such as `Midnight`, `Pastel`, or
 `Forest`. A new theme starts from the Classic look, and you shape it through a
 conversation.
 
-![The theme editor with the design conversation and Make default, Rename, and Delete actions](../assets/screenshots/theme-editor.png)
+![The theme editor with the design conversation and Make default, Rename, and Delete actions](assets/themes/theme-editor.png)
 
 In the **Conversation** panel, describe how the theme should look and click
 **Send**. For example:

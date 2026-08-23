@@ -110,6 +110,12 @@ export const MODEL_PRICING: Partial<Record<ModelAlias, ModelPricing>> = {
         cacheWritePerMillion: 0,
         cacheReadPerMillion: 0.125,
     },
+    "gemini-3.6-flash": {
+        inputPerMillion: 0.30,
+        outputPerMillion: 2.50,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.03,
+    },
     // OpenAI, DeepSeek, Kimi, and Grok cache automatically with no write
     // premium, so cacheWritePerMillion is 0 (same convention as Gemini).
     "gpt-5.6-sol": {
@@ -137,6 +143,14 @@ export const MODEL_PRICING: Partial<Record<ModelAlias, ModelPricing>> = {
         cacheReadPerMillion: 0.003625,
     },
     "deepseek-v4-flash": {
+        inputPerMillion: 0.14,
+        outputPerMillion: 0.28,
+        cacheWritePerMillion: 0,
+        cacheReadPerMillion: 0.0028,
+    },
+    // Assumed to match flash; the vision model's rates were not confirmed, so cost
+    // reporting for it is an estimate.
+    "deepseek-v4-flash-vision-exp": {
         inputPerMillion: 0.14,
         outputPerMillion: 0.28,
         cacheWritePerMillion: 0,

@@ -4,7 +4,7 @@ Labels are automatic categories Yaffo can assign to photos, such as `dog`,
 `beach`, `wedding`, or `city skyline`. They help you find photos by content even
 when you did not tag them manually.
 
-![Photo labels settings](../assets/screenshots/settings-labels.png)
+![Photo labels settings](assets/labels/settings-labels.png)
 
 ## How Labels Work
 

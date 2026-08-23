@@ -3,7 +3,7 @@
 The duplicate utility helps find photos and videos that appear to be the same or
 nearly the same. Use it as a review workflow, not as an automatic delete button.
 
-![Remove duplicates utility](../assets/screenshots/utilities-remove-duplicates.png)
+![Remove duplicates utility](assets/duplicates/utilities-remove-duplicates.png)
 
 ## How Duplicate Detection Works
 

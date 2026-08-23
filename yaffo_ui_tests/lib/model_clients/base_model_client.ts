@@ -9,7 +9,7 @@ import type {JSONSchema7, TextPart} from "ai";
 import {
     ModelClient,
     ModelResponse,
-    ModelMessage, UserMessage, UserToolMessage, ModelAlias,
+    ModelMessage, UserContentPart, UserMessage, UserToolMessage, ModelAlias,
 } from "@lib/model_clients/model_client.interface";
 import {RawToolDefinition} from "@lib/tool_providers/toolprovider.types";
 import {
@@ -20,6 +20,7 @@ import {
     SessionTokenUsage
 } from "@lib/model_clients/model_client.types";
 import _ from 'lodash';
+import {redactSecrets} from "@lib/model_clients/redact";
 
 export function convertRawToolsToSdkTools(rawTools: RawToolDefinition[]): Record<string, Tool> {
     const tools: Record<string, Tool> = {};
@@ -59,7 +60,7 @@ export abstract class BaseModelClient implements ModelClient {
         this.sdkTools = convertRawToolsToSdkTools(rawTools);
     }
 
-    addUserMessage(content: TextPart[]): void {
+    addUserMessage(content: UserContentPart[]): void {
         this.userMessages.push({role: 'user', content: content, index: this.getNextIndex()});
     }
 
@@ -92,7 +93,7 @@ export abstract class BaseModelClient implements ModelClient {
             if (message.role === 'user') {
                 const mappedMessage: UserModelMessage = {
                     role: message.role,
-                    content: [...message.content] as TextPart[],
+                    content: [...message.content] as UserContentPart[],
                 };
                 return {index: message.index, message: mappedMessage};
             }
@@ -244,6 +245,6 @@ export abstract class BaseModelClient implements ModelClient {
 
     protected writeApiLog(entry: ApiLogEntry): void {
         const logPath = join(this.runLogDir, `${this.apiCallCount}_${this.logPrefix}_api.json`);
-        writeFileSync(logPath, JSON.stringify(entry, null, 2));
+        writeFileSync(logPath, JSON.stringify(redactSecrets(entry), null, 2));
     }
 }

@@ -4,7 +4,7 @@ The **Locations** page shows photos and videos that have GPS coordinates. It is
 useful for reviewing where photos were taken and assigning human-readable
 location names.
 
-![Locations map](../assets/screenshots/locations-map.png)
+![Locations map](assets/locations/locations-map.png)
 
 ## Map Markers and Clusters
 
@@ -20,7 +20,7 @@ Photos without GPS coordinates do not appear on the map.
 
 Click a marker or cluster to open the selection panel.
 
-![Locations selection panel](../assets/screenshots/locations-selection-panel.png)
+![Locations selection panel](assets/locations/locations-selection-panel.png)
 
 The panel shows:
 

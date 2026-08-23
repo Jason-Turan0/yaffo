@@ -3,7 +3,7 @@
 Yaffo detects faces during indexing and lets you assign those faces to people.
 After that, you can browse a person's faces or filter the library by people.
 
-![The Faces page: cluster of unassigned faces with the actions and filters sidebar](../assets/screenshots/faces-assign-01-overview.png)
+![The Faces page: cluster of unassigned faces with the actions and filters sidebar](assets/faces-and-people/faces-review.png)
 
 This page explains the concepts. For the hands-on, step-by-step workflow of
 clearing the unassigned pile, see [Assigning Faces](assigning-faces.md).
@@ -37,7 +37,7 @@ this in practice.
 
 Open **People** to create and manage people.
 
-![People list](../assets/screenshots/people-list.png)
+![People list](assets/faces-and-people/people-list.png)
 
 Each person can have:
 

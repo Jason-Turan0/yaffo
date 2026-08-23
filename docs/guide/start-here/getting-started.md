@@ -64,7 +64,7 @@ or quit the background app:
 Open **Settings** and add one or more media directories. These are the folders
 Yaffo scans for photos and videos.
 
-![Settings overview](../assets/screenshots/settings-overview.png)
+![The Settings page showing Language, Units, and Media Directories](assets/getting-started/settings-overview.webp)
 
 Yaffo stores its own database, thumbnails, logs, and temporary files separately
 from your photo folders. Your original photo folders remain where they are.
@@ -73,11 +73,13 @@ from your photo folders. Your original photo folders remain where they are.
 
 Go to **Utilities** → **Index Photos**.
 
-![Index photos utility](../assets/screenshots/utilities-index-photos.png)
+![The Index Photos utility, showing library counts after a scan](assets/getting-started/utilities-index-photos.webp)
 
-Yaffo scans the configured folders and shows which files are new, already
-indexed, or no longer present. Start the sync to import new files into the
-library index.
+Yaffo compares the files on disk with what is already in the database and
+reports five counts: total on the filesystem, imported, indexed, not yet indexed,
+and orphaned (rows whose file has gone). When those agree, the page says
+everything is in sync. When they do not, start the sync to import the new files
+and drop the orphaned rows.
 
 Indexing may take a while for large libraries. During indexing, Yaffo creates
 thumbnails, reads metadata, detects faces, prepares labels, and records location
@@ -86,23 +88,25 @@ data when GPS metadata is available.
 ## Browse Your Library
 
 After indexing, go to **Home**. Your library appears as a grid of photos and
-videos.
+videos, newest first. Videos show a play badge and their duration on the card;
+photos show any people Yaffo has recognized.
 
-![Photo library](../assets/screenshots/gallery-home.png)
+![The Home photo library: filter sidebar beside a grid of indexed photos and videos](assets/getting-started/gallery-home.webp)
 
 Use the filter sidebar to narrow the library by date, people, labels, tags,
 location, favorites, media type, device, and file path.
 
-![Gallery filter sidebar](../assets/screenshots/gallery-filter-sidebar.png)
+![The filter sidebar with Year, Month, People, Label, and Location filters](assets/getting-started/gallery-filter-sidebar.webp)
 
 ## Open a Photo
 
 Click a photo to open its detail page.
 
-![Media detail page](../assets/screenshots/media-detail.png)
+![A photo's detail page with its preview, file and location metadata, assigned people, detected faces, and labels](assets/getting-started/media-detail.webp)
 
-The detail page shows the media preview, metadata, people, labels, tags, and
-location information. This is where you review and correct what Yaffo found.
+The detail page shows the preview alongside file information, capture date and
+device, the resolved location, the people assigned to it, each detected face, and
+any automatic labels. This is where you review and correct what Yaffo found.
 
 ## What Yaffo Adds
 

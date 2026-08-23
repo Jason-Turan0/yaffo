@@ -3,7 +3,7 @@
 The photo detail page is where you review one photo or video closely. Open it by
 clicking a card in the gallery.
 
-![Media detail page](../assets/screenshots/media-detail.png)
+![Media detail page](assets/photo-details/media-detail.webp)
 
 ## Review the Preview
 

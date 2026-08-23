@@ -197,12 +197,18 @@ def init_home_routes(app: Flask):
 
         # Get unique people from photos (for display in cards)
         for media_item in media_items:
-            # Create a set of unique people across all faces in the photo
-            media_item.people = list({
-                person
-                for face in media_item.faces
-                for person in face.people
-            })
+            # Unique people across all the photo's faces, by name. Sorted, not just
+            # de-duplicated: set iteration order follows id() hashing, so an unsorted
+            # list reshuffles the name chips on every reload. Matches how the detail
+            # view orders the same people.
+            media_item.people = sorted(
+                {
+                    person
+                    for face in media_item.faces
+                    for person in face.people
+                },
+                key=lambda person: person.name,
+            )
             # Split the stored path into name + folder for the hover details
             file_path = Path(media_item.full_file_path) if media_item.full_file_path else None
             media_item.file_name = file_path.name if file_path else ""

@@ -6,7 +6,7 @@ index media.
 
 ## Architecture
 
-The app package is `yaffo/`, not `photo_organizer/`.
+The app package is `yaffo/`
 
 - Flask web app: `yaffo/app.py`
 - Database: SQLAlchemy with SQLite in `yaffo/db/`

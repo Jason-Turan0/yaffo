@@ -16,7 +16,7 @@ Open **Faces** from the top navigation. The page has two parts:
 The header reports how much work is left, for example
 *Showing 74 of 74 unassigned faces*.
 
-![The Faces page: cluster of unassigned faces with the actions and filters sidebar](../assets/screenshots/faces-assign-01-overview.png)
+![The Faces page: cluster of unassigned faces with the actions and filters sidebar](assets/assigning-faces/faces-assign-01-overview.png)
 
 ## Choose How Faces Are Grouped
 
@@ -32,7 +32,7 @@ Use the **Filters** panel to control grouping before you assign anything.
 - **Faces to analyze** — how many unassigned faces to pull in and cluster at a
   time.
 
-![Grouping and assignment controls in the sidebar, with the similarity threshold at 25%](../assets/screenshots/faces-assign-02-controls.png)
+![Grouping and assignment controls in the sidebar, with the similarity threshold at 25%](assets/assigning-faces/faces-assign-02-controls.png)
 
 ## Assign a Cluster
 
@@ -41,32 +41,32 @@ With a cluster in front of you, assign it in three steps.
 **1. Pick the person.** Choose someone from **Assign to Person**. The selector is
 searchable, so you can type to filter a long list.
 
-![The Assign to Person selector open with the list of people](../assets/screenshots/faces-assign-03-pick-person.png)
+![The Assign to Person selector open with the list of people](assets/assigning-faces/faces-assign-03-pick-person.png)
 
 **2. Refine the selection.** Every face in the cluster starts selected (a blue
 border). Click any face that does not belong to remove it from the assignment —
 blurry, partial, or clearly-different faces. Here the first face, a low-quality
 partial, has been deselected.
 
-![The cluster with the person chosen and one low-quality face deselected](../assets/screenshots/faces-assign-04-refine.png)
+![The cluster with the person chosen and one low-quality face deselected](assets/assigning-faces/faces-assign-04-refine.png)
 
 **3. Assign.** Click **Assign Selected**. Yaffo confirms the assignment and moves
 straight to the next cluster so you can keep going.
 
-![A success message confirms the assignment and the next cluster loads](../assets/screenshots/faces-assign-05-next-cluster.png)
+![A success message confirms the assignment and the next cluster loads](assets/assigning-faces/faces-assign-05-next-cluster.png)
 
 ## Work Through Multiple Clusters
 
 Because Yaffo advances automatically, review is a rhythm: assign the current
 cluster, then assign the next one — usually a *different* person.
 
-![The next cluster selected, ready to assign to a different person](../assets/screenshots/faces-assign-06-assign-second.png)
+![The next cluster selected, ready to assign to a different person](assets/assigning-faces/faces-assign-06-assign-second.png)
 
 Each assignment removes those faces from the pile. After clearing two clusters
 here, the unassigned count has dropped from 74 to 57, and the next person's
 cluster is ready.
 
-![The unassigned count has dropped after assigning two clusters](../assets/screenshots/faces-assign-07-progress.png)
+![The unassigned count has dropped after assigning two clusters](assets/assigning-faces/faces-assign-07-progress.png)
 
 Two buttons on each cluster help you keep moving:
 

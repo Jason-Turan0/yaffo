@@ -8,14 +8,19 @@ import type {z} from "zod";
 import {
     ModelClient,
     ModelResponse,
+    supportsVision,
 } from "@lib/model_clients/model_client.interface";
+import type {ModelAlias} from "@lib/model_clients/model_client.interface";
 import {RawToolDefinition} from "@lib/tool_providers/toolprovider.types";
 import {CacheUsage} from "@lib/model_clients/model_client.types";
 import {inspect} from "node:util";
 import {BaseModelClient} from "@lib/model_clients/base_model_client";
 
 export type OpenAiModelAlias = "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna";
-export type DeepSeekModelAlias = "deepseek-v4-pro" | "deepseek-v4-flash";
+export type DeepSeekModelAlias =
+    | "deepseek-v4-pro"
+    | "deepseek-v4-flash"
+    | "deepseek-v4-flash-vision-exp";
 export type MoonshotModelAlias = "kimi-k3";
 export type XaiModelAlias = "grok-4.5" | "grok-4.3";
 
@@ -57,7 +62,20 @@ export function createSdkProviderModel(
         case "openai":
             return createOpenAI({apiKey: process.env.OPENAI_API_KEY, fetch: fetchImpl})(model);
         case "deepseek":
-            return createDeepSeek({apiKey: process.env.DEEPSEEK_API_KEY, fetch: fetchImpl})(model);
+            // The dedicated @ai-sdk/deepseek provider silently drops image parts:
+            // a request carrying one arrives at the API as a plain string, so a
+            // vision model answers as though nothing was attached. DeepSeek's API is
+            // OpenAI-compatible and that provider does forward images, so vision
+            // models route through it. Verified against deepseek-v4-flash-vision-exp.
+            // See https://api-docs.deepseek.com/guides/vision/
+            return supportsVision(model as ModelAlias)
+                ? createOpenAICompatible({
+                    name: "deepseek",
+                    baseURL: "https://api.deepseek.com/v1",
+                    apiKey: process.env.DEEPSEEK_API_KEY,
+                    fetch: fetchImpl,
+                })(model)
+                : createDeepSeek({apiKey: process.env.DEEPSEEK_API_KEY, fetch: fetchImpl})(model);
         case "xai":
             return createXai({apiKey: process.env.XAI_API_KEY, fetch: fetchImpl})(model);
         case "moonshot":

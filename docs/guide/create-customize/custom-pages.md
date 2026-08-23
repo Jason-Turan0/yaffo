@@ -5,14 +5,14 @@ navigation, next to **Home**, **Faces**, and the rest. Instead of laying out a
 page by hand, you describe what you want and an assistant drafts the building
 blocks — **widgets** — for you.
 
-![A finished custom page with a heading and a photo widget](../assets/screenshots/custom-page-view.png)
+![A finished custom page with a heading and a photo widget](assets/custom-pages/custom-page-view.png)
 
 ## Create a Page
 
 Click **+ New page** in the top navigation. Yaffo creates an empty page and opens
 it in the design view, where you can name it and start adding content.
 
-![The page design view with title fields, the Add widget button, and the assistant panel](../assets/screenshots/custom-page-design.png)
+![The page design view with title fields, the Add widget button, and the assistant panel](assets/custom-pages/custom-page-design.png)
 
 The design view has three parts:
 

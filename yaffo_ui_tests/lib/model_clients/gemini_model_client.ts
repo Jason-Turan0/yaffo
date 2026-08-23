@@ -10,7 +10,11 @@ import {CacheUsage} from "@lib/model_clients/model_client.types";
 import {inspect} from "node:util";
 import {BaseModelClient} from "@lib/model_clients/base_model_client";
 
-export type GeminiModelAlias = "gemini-2.0-flash" | "gemini-2.5-flash" | "gemini-2.5-pro";
+export type GeminiModelAlias =
+    | "gemini-2.0-flash"
+    | "gemini-2.5-flash"
+    | "gemini-2.5-pro"
+    | "gemini-3.6-flash";
 
 export class GeminiModelClient extends BaseModelClient {
     readonly logPrefix = "gemini";

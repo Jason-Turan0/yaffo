@@ -19,6 +19,8 @@
     "isolatedEnvironment:start:sharing": "tsx lib/services/isolated_runner.ts --port 5002 --peer",
     "test:heal": "tsx lib/test_generator/heal_test.ts",
     "test:heal:repo": "tsx lib/test_generator/heal_repo.ts",
+    "docs:capture": "tsx lib/user_doc_automation/run.ts",
+    "docs:heal": "tsx lib/user_doc_automation/heal.ts",
     "analyze": "tsx lib/cli/analyze.ts",
     "lint": "eslint lib/ generated_tests/",
     "typecheck": "tsc --noEmit",

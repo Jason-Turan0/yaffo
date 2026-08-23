@@ -3,7 +3,7 @@
 This page lists the options on the **Settings** screen. Open **Settings** from
 the top navigation.
 
-![The Settings page showing Language, Units, and Media Directories](../assets/screenshots/settings-overview.png)
+![The Settings page showing Language, Units, and Media Directories](assets/settings/settings-overview.webp)
 
 Most sections have their own **Save** button — changes take effect when you save
 that section.

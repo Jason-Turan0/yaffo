@@ -21,6 +21,7 @@
     "generated_tests/**/*.ts",
     "fixtures/**/*.ts",
     "scripts/**/*.ts",
+    "user_doc_automation/**/*.ts",
     "playwright.config.ts"
   ],
   "exclude": [
