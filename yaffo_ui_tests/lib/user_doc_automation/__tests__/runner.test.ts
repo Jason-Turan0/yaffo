@@ -17,7 +17,8 @@ const resolveClip = jest.fn<(page: unknown, shot: unknown) => Promise<Box | unde
 const resolveIgnoreRegions = jest.fn<(
     page: unknown,
     shot: unknown,
-    clip: Box | undefined
+    clip: Box | undefined,
+    deviceScaleFactor: number
 ) => Promise<Box[]>>();
 const toWebp = jest.fn<(pngPath: string) => string>();
 const observerAttach = jest.fn<(context: unknown) => void>();
@@ -198,6 +199,13 @@ describe("captureWalkthroughs", () => {
         expect(mediaIdByFilename).toHaveBeenCalledWith(
             "http://app.test:5002", "flow-photo.jpg");
         expect(setup).toHaveBeenCalledWith(clippedPage);
+        expect(resolveIgnoreRegions).toHaveBeenNthCalledWith(
+            1,
+            clippedPage,
+            walkthrough.shots["clipped.webp"],
+            {x: 10, y: 20, width: 500.4, height: 240.6},
+            DEVICE_SCALE_FACTOR
+        );
         expect(settle).toHaveBeenCalledTimes(4);
         expect(clippedPage.screenshot).toHaveBeenCalledWith({
             path: join(stagingDir, "library", "assets", "browsing", "clipped.png"),

@@ -8,6 +8,10 @@ export default defineWalkthrough({
             viewport: {width: 1400, height: 2200},
             goto: "/settings",
             clip: ".main-content",
+            // These values legitimately vary by host: macOS canonicalizes /tmp to
+            // /private/tmp, and generated thumbnail bytes vary slightly by platform.
+            // Keep them visible in the guide while excluding them from pixel comparison.
+            ignoreRegions: [".media-dir-path", "#current-thumbnail-dir", "#thumbnail-size"],
             setup: async (page) => {
                 // Wait for thumbnail stats stream to settle so count and size are rendered
                 await page.waitForFunction(() => {

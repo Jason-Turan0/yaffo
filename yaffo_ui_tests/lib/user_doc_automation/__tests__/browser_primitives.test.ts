@@ -128,7 +128,7 @@ describe("clip and ignore-region resolution", () => {
         })).resolves.toEqual({x: 84, y: 34, width: 332, height: 91});
     });
 
-    it("resolves ignored boxes relative to the captured crop and skips hidden elements", async () => {
+    it("converts ignored CSS boxes to device pixels relative to the captured crop", async () => {
         const page = boxPage({
             "#clock": {x: 120, y: 80, width: 40, height: 20},
             "#hidden": null,
@@ -139,8 +139,8 @@ describe("clip and ignore-region resolution", () => {
             ignoreRegions: ["#clock", "#hidden"],
         };
         await expect(resolveIgnoreRegions(
-            page, shot, {x: 100, y: 50, width: 300, height: 200}
-        )).resolves.toEqual([{x: 20, y: 30, width: 40, height: 20}]);
+            page, shot, {x: 100, y: 50, width: 300, height: 200}, 2
+        )).resolves.toEqual([{x: 40, y: 60, width: 80, height: 40}]);
     });
 });
 

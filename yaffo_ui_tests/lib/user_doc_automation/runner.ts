@@ -149,7 +149,7 @@ const captureOne = async (
                 }
 
                 const clip = await resolveClip(page, shot);
-                const ignore = await resolveIgnoreRegions(page, shot, clip);
+                const ignore = await resolveIgnoreRegions(page, shot, clip, DEVICE_SCALE_FACTOR);
 
                 const target = targetFor(walkthrough.page, filename);
                 const stagedPng = stagedPngFor(stagingDir, target);

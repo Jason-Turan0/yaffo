@@ -78,14 +78,16 @@ export const resolveClip = async (page: Page, shot: Shot): Promise<Box | undefin
 };
 
 /**
- * Boxes to exclude from comparison, expressed relative to the captured image's
- * own origin so a differ can mask them without knowing about the clip. The
- * published image is never masked.
+ * Boxes to exclude from comparison, expressed in the captured image's physical
+ * pixels and relative to its origin. Playwright reports element geometry in CSS
+ * pixels, so the device scale must be applied before the differ sees these boxes.
+ * The published image is never masked.
  */
 export const resolveIgnoreRegions = async (
     page: Page,
     shot: Shot,
-    clip: Box | undefined
+    clip: Box | undefined,
+    deviceScaleFactor: number
 ): Promise<Box[]> => {
     if (!shot.ignoreRegions?.length) return [];
     const origin = clip ?? {x: 0, y: 0, width: 0, height: 0};
@@ -93,7 +95,12 @@ export const resolveIgnoreRegions = async (
     for (const selector of shot.ignoreRegions) {
         const box = await page.locator(selector).first().boundingBox();
         if (!box) continue;
-        boxes.push({x: box.x - origin.x, y: box.y - origin.y, width: box.width, height: box.height});
+        boxes.push({
+            x: (box.x - origin.x) * deviceScaleFactor,
+            y: (box.y - origin.y) * deviceScaleFactor,
+            width: box.width * deviceScaleFactor,
+            height: box.height * deviceScaleFactor,
+        });
     }
     return boxes;
 };

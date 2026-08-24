@@ -3,8 +3,10 @@ import {execFileSync} from "child_process";
 import {existsSync, mkdtempSync, rmSync} from "fs";
 import {tmpdir} from "os";
 import {join} from "path";
+import type {Page} from "@playwright/test";
 import {compareShots} from "../compare";
 import {toWebp, WEBP_QUALITY} from "../encode";
+import {resolveIgnoreRegions} from "../framing";
 import {VENV_PYTHON} from "../python";
 
 let testDir: string;
@@ -30,6 +32,21 @@ const image = (
         "Image.new('RGB',(int(sys.argv[2]),int(sys.argv[3]))," +
         "tuple(map(int,sys.argv[4].split(',')))).save(sys.argv[1])",
         path, String(width), String(height), color.join(","),
+    ]);
+    return path;
+};
+
+const imageWithRect = (
+    name: string,
+    rect: [number, number, number, number]
+): string => {
+    const path = image(name, 80, 80, [0, 0, 0]);
+    execFileSync(VENV_PYTHON, [
+        "-c",
+        "import sys;from PIL import Image,ImageDraw;" +
+        "im=Image.open(sys.argv[1]);ImageDraw.Draw(im).rectangle(" +
+        "tuple(map(int,sys.argv[2].split(','))),fill=(255,255,255));im.save(sys.argv[1])",
+        path, rect.join(","),
     ]);
     return path;
 };
@@ -67,6 +84,28 @@ describe("compareShots", () => {
         expect(compareShots(baseline, candidate, [
             {x: 0, y: 0, width: 20, height: 20},
         ])).toMatchObject({status: "unchanged", diffPixels: 0});
+    });
+
+    it("ignores a DOM region at the capture's 2x device scale", async () => {
+        const baseline = image("baseline.webp", 80, 80, [0, 0, 0]);
+        // CSS box {x: 10, y: 12, width: 20, height: 10} at 2x device scale.
+        const candidate = imageWithRect("candidate.webp", [20, 24, 59, 43]);
+        const page = {
+            locator: () => ({first: () => ({boundingBox: async () => ({
+                x: 10, y: 12, width: 20, height: 10,
+            })})}),
+        } as unknown as Page;
+        const ignore = await resolveIgnoreRegions(page, {
+            viewport: {width: 40, height: 40},
+            goto: "/",
+            ignoreRegions: ["#volatile"],
+        }, undefined, 2);
+
+        expect(compareShots(baseline, candidate)).toMatchObject({status: "changed"});
+        expect(compareShots(baseline, candidate, ignore)).toMatchObject({
+            status: "unchanged",
+            diffPixels: 0,
+        });
     });
 
     it("aligns size changes and writes their review overlay", () => {
