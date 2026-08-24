@@ -344,7 +344,7 @@ jobs:
           path: |
             yaffo_ui_tests/.doc-staging/triage.json
             yaffo_ui_tests/.doc-staging/heal-logs/
-            yaffo_ui_tests/.doc-staging/captures/report.json
+            yaffo_ui_tests/.doc-staging/captures/
           if-no-files-found: ignore
           retention-days: 90
       - name: Publish artifact links to job summary
@@ -402,6 +402,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
+      actions: read
       contents: write
       pull-requests: write
     steps:
@@ -416,6 +417,12 @@ jobs:
           pattern: docs-patch-*
           path: patches
           merge-multiple: true
+      - name: Download healing evidence
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: docs-heal-*
+          path: healing-evidence
       - name: Apply documentation patches
         id: patches
         run: |
@@ -461,8 +468,36 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AUTO_HEAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
+          shopt -s nullglob globstar
           BRANCH="auto-heal/docs-${RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           BODY_FILE=$(mktemp)
+          ARTIFACTS_FILE=$(mktemp)
+          TRIAGE_FILES=(healing-evidence/**/triage.json)
+          API_LOG_FILES=(healing-evidence/**/heal-logs/**/*_api.json)
+
+          # Each API log records both the cost for that call and the cumulative
+          # session cost. Sum only call costs so tool-using sessions are not
+          # counted repeatedly.
+          total_cost=0
+          priced_calls=0
+          if [ ${#API_LOG_FILES[@]} -gt 0 ]; then
+            total_cost=$(jq -s -r \
+              '[.[] | .costEstimate.call.totalCost? | numbers] | add // 0' \
+              "${API_LOG_FILES[@]}")
+            priced_calls=$(jq -s -r \
+              '[.[] | .costEstimate.call.totalCost? | numbers] | length' \
+              "${API_LOG_FILES[@]}")
+          fi
+          formatted_cost=$(printf '$%.4f' "$total_cost")
+
+          # upload-artifact exposes these URLs only inside each matrix job. Look
+          # up the completed run's artifact IDs so the PR can link to every
+          # per-page artifact that was actually produced.
+          if ! gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
+            > "$ARTIFACTS_FILE"; then
+            echo '{"artifacts":[]}' > "$ARTIFACTS_FILE"
+          fi
           {
             echo "Auto-generated user-guide updates for feature branch \`${HEAD_BRANCH}\`."
             echo ""
@@ -471,7 +506,73 @@ jobs:
             echo "Source commit: \`${HEAD_SHA}\`"
             echo "Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo ""
-            echo "Review the committed screenshots and the per-page \`docs-capture-*\` and \`docs-heal-*\` artifacts before merging."
+            echo "## Model usage"
+            echo ""
+            echo "- **Model alias:** \`${MODEL_ALIAS}\`"
+            echo "- **Total estimated cost:** ${formatted_cost} (${priced_calls} of ${#API_LOG_FILES[@]} logged API calls included usage data)"
+            echo ""
+            echo "_Cost is estimated from the model price table at run time._"
+            echo ""
+            echo "## Model reasoning"
+            echo ""
+            any_reasoning=0
+            for triage_file in "${TRIAGE_FILES[@]}"; do
+              while IFS= read -r verdict; do
+                any_reasoning=1
+                page=$(jq -r '.page' <<< "$verdict")
+                target=$(jq -r '.target // ""' <<< "$verdict")
+                classification=$(jq -r '.triage.classification' <<< "$verdict")
+                confidence=$(jq -r '.triage.confidence' <<< "$verdict")
+                action=$(jq -r '.triage.recommendedAction' <<< "$verdict")
+                summary=$(jq -r '.triage.summary' <<< "$verdict")
+                reasoning=$(jq -r '.triage.reasoning' <<< "$verdict")
+                resolved=$(jq -r '.resolved // false' <<< "$verdict")
+                label="$page"
+                [ -n "$target" ] && label="$label — $target"
+                echo "<details><summary><code>${label}</code> — <code>${classification}</code></summary>"
+                echo ""
+                echo "- **Confidence:** ${confidence}"
+                echo "- **Recommended action:** \`${action}\`"
+                [ "$resolved" = "true" ] && echo "- **Status:** repaired and verified"
+                echo "- **Summary:** ${summary}"
+                echo ""
+                echo "**Reasoning:**"
+                echo ""
+                echo "$reasoning"
+                echo ""
+                echo "</details>"
+                echo ""
+              done < <(jq -c '.verdicts[]?' "$triage_file")
+            done
+            [ "$any_reasoning" -eq 0 ] && echo "_No structured model reasoning was produced._"
+            echo ""
+            echo "## Artifacts"
+            echo ""
+            artifact_count=$(jq -r '
+              [.artifacts[]
+                | select(.expired == false)
+                | select(.name | test("^docs-(capture|heal|patch)-"))]
+              | sort_by(.name, .created_at)
+              | group_by(.name)
+              | map(last)
+              | length' "$ARTIFACTS_FILE")
+            if [ "$artifact_count" -gt 0 ]; then
+              jq -r \
+                --arg base "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts/" \
+                '[.artifacts[]
+                  | select(.expired == false)
+                  | select(.name | test("^docs-(capture|heal|patch)-"))]
+                | sort_by(.name, .created_at)
+                | group_by(.name)
+                | map(last)
+                | .[]
+                | "- [\(.name)](\($base)\(.id))"' \
+                "$ARTIFACTS_FILE"
+            else
+              echo "- [Artifacts for this workflow run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+            fi
+            echo ""
+            echo "_Artifacts expire according to their configured retention period._"
           } > "$BODY_FILE"
 
           git config user.name "github-actions[bot]"

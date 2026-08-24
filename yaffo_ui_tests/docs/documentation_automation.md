@@ -1,38 +1,43 @@
-# Documentation Automation — Plan
+# Documentation Automation
 
-> **Status: partly built.** Screenshot capture and prose updates are both in scope
-> and ship together, not as separate phases.
+> **Status: built and running, one page short.** Screenshot capture and prose updates
+> are both in scope and ship together, not as separate phases. This document is now a
+> description of a working pipeline rather than a proposal; the few things that remain
+> unbuilt are named as such, in *Remaining work* at the end.
 >
-> Working today. Infrastructure in `yaffo_ui_tests/lib/user_doc_automation/`
-> (settle, framing, WebP encode, pixel comparison, dependency observation, runner,
-> evidence, triage, containerized capture, and the entry points); authored and
-> generated content in `yaffo_ui_tests/user_doc_automation/` (`spec.yaml` covering
-> 17 pages, and fifteen walkthroughs, `start-here/getting-started/`,
-> `start-here/concepts/`,
-> `library-basics/indexing-library/`, `library-basics/browsing-filtering/`,
-> `library-basics/photo-details/`, `library-basics/organizing-photos/`,
-> `organize-review/faces-and-people/`, `organize-review/assigning-faces/`,
-> `organize-review/labels/`, `organize-review/locations/`,
-> `organize-review/duplicates/`, `create-customize/custom-pages/`,
-> `create-customize/themes/`, `reference-maintenance/settings/`, and
-> `reference-maintenance/troubleshooting/`); the
-> server-side observer at `yaffo/doc_observer.py`. A run captures to staging,
-> pixel-diffs against what is committed, records that page's routes, templates, and
-> static assets, and `docs:heal` classifies whatever changed.
+> **Infrastructure** — `yaffo_ui_tests/lib/user_doc_automation/`, 34 modules: capture
+> mechanics (settle, framing, WebP encode, pixel comparison), the containerized capture
+> worker and its host half, dependency observation, both detectors, the correctness
+> gates, the agentic loop (evidence, triage, fix, tool loop, preflight, sandbox facts),
+> and six entry points. The server-side observer is `yaffo/doc_observer.py`.
 >
-> Also working: `docs:generate` writes a page and its walkthrough from the page's
-> charter, gated on the two agreeing; `docs:heal` triages a change and updates the page;
-> `docs:detect` reports dependency fingerprints and quoted controls that changed;
-> `docs:validate` checks the guide and its automation against each other;
-> `docs:heal:repo` emits the GitHub fan-out matrix, limited to pages that already have
-> both a walkthrough and lockfile. Both detectors, the per-page watermark, and the
-> reproducible documentation fixture are built.
+> **Content** — `yaffo_ui_tests/user_doc_automation/`: `spec.yaml` covering all 17 guide
+> pages, and **15 walkthroughs capturing 30 committed screenshots**, each with its
+> catalog (`{page}.json`) and lockfile (`{page}.lock.json`). Every walkthrough has been
+> promoted at least once, so all 15 carry a watermark and a dependency fingerprint.
 >
-> The GitHub fan-out and generated-PR workflow is built as
-> `.github/workflows/documentation-auto-heal.yml`. Not built: 1 of the 16
-> app-backed page walkthroughs.
+> **Entry points**, all working: `docs:capture` (deterministic capture, `--promote`
+> writes into the guide, `--docker` containerizes, `--defer-errors` hands a thrown
+> walkthrough to healing); `docs:generate` (writes a page and its walkthrough from the
+> page's charter, gated on the two agreeing); `docs:heal` (triage and repair);
+> `docs:detect` (dependency fingerprints plus quoted-string changes, no sandbox);
+> `docs:validate` (guide and automation agree); `docs:heal:repo` (GitHub fan-out
+> matrix). The reproducible documentation fixture is scripted as `docs:fixture:build`
+> and served by `isolatedEnvironment:start:docs`.
 >
-> Last updated: 2026-08-23
+> **CI** — `.github/workflows/documentation-auto-heal.yml` runs the whole thing on
+> feature-branch PRs: discover → cached fixture build → per-page fan-out (capture, heal,
+> patch) → one aggregated healing PR against the feature branch. It has produced merged
+> PRs (#12).
+>
+> **Tests** — 224 Jest tests across 26 suites in
+> `lib/user_doc_automation/__tests__/`, plus 30 pytest tests covering the differ and the
+> observer.
+>
+> **Not built:** the `create-customize/automations` walkthrough — 1 of the 16 app-backed
+> pages, still carrying a hand-made PNG. See *Remaining work*.
+>
+> Last updated: 2026-08-24
 
 ## Goal
 
@@ -85,18 +90,35 @@ guarantees, and *What the agent owns* sets out the boundary.
 
 ```mermaid
 flowchart TD
-    push([feature-branch PR check]) --> detectors{"staleness detectors<br/>(no model calls)"}
-    detectors -->|nothing fired| stop([exit, no PR])
-    detectors -->|pages flagged| sandbox["isolated sandbox<br/>seeded fixture + taskq"]
-    sandbox --> capture["run walkthroughs (containerized)<br/>images -> staging"]
+    push([feature-branch PR check]) --> discover["discover: pages with a<br/>walkthrough and a lockfile"]
+    discover --> fixture[("cached documentation<br/>fixture")]
+    fixture --> sandbox["one sandbox per page<br/>seeded fixture + taskq"]
+    sandbox --> capture["run that walkthrough (containerized)<br/>images -> staging"]
     capture --> obs[("{page}.lock.json<br/>routes - templates - static")]
-    capture --> pdiff{"pixel diff<br/>vs committed"}
-    pdiff -->|unchanged| stop
-    pdiff -->|changed| agent["agent: heal walkthroughs,<br/>edit prose"]
-    agent --> branch[auto-generated heal branch<br/>from feature HEAD_SHA]
-    branch --> pr([healing PR<br/>base: feature HEAD_BRANCH])
-    pr --> watermark["bump per-page<br/>last_verified_sha"]
+    capture --> detectors{"detectors, in docs:heal<br/>(no model calls)"}
+    detectors -->|nothing fired| stop([no patch from this page])
+    detectors -->|diff, rename, or throw| agent["agent: triage,<br/>heal walkthrough, edit prose"]
+    agent --> gate["gates: typecheck,<br/>re-capture + promote, mkdocs --strict"]
+    gate --> patch["git diff --binary<br/>page, assets, lockfile"]
+    stop --> collect
+    patch --> collect["open-pr: apply every patch,<br/>revalidate the aggregate"]
+    collect --> pr([one healing PR from a branch<br/>at HEAD_SHA, base HEAD_BRANCH])
 ```
+
+The per-page watermark and dependency fingerprint are not a separate step: the gate's
+re-capture runs with `--promote`, which is what rewrites that page's lockfile, so the
+bumped `lastVerifiedSha` travels in the same patch as the prose and the images.
+
+**Note where the detectors sit.** The original design put them *before* the sandbox, so
+that a run with nothing stale would cost no boot. As built, CI fans out every page that
+has a walkthrough and a lockfile, and the detectors run inside each page's `docs:heal`
+against a capture that already happened. `heal_repo.ts` says why: dependency hashes are
+cheap to compare during discovery, but visual drift is only knowable after a walkthrough
+runs, and skipping capture on a hash match would blind the pipeline to exactly the
+changes Detector A exists for. The cost of that choice is a sandbox boot per eligible
+page per run — 15 of them today; the cache on the fixture is what keeps it affordable.
+`docs:detect` is the cheap pre-filter and is available locally, but CI does not
+currently gate on it.
 
 ## Local / CI parity
 
@@ -172,8 +194,9 @@ Handing a model the commit diff and asking what to update fails on cost and
 precision: most pushes touch nothing user-visible, the diff is unbounded, and the
 same push can produce different answers on different runs. Staleness is instead
 detected mechanically by independent **detectors**, and the model is invoked only on
-what they flag. When none fire, the job exits without a model call — which is what
-makes a push-triggered job affordable.
+what they flag. When none fire, the run makes no model call at all — which is what
+makes a push-triggered job affordable. (As built this saves the *model* call, not the
+sandbox boot; see the note under *Pipeline*.)
 
 Both detectors are **diff-triggered**: they fire when something that was true becomes
 false.
@@ -280,8 +303,19 @@ working tree makes the catalogue window approximate, but dependency fingerprints
 describe the exact files on disk that were captured.
 
 **A page with no watermark is skipped only by Detector B, not reported wholly clean.**
-Its dependency hashes can still be checked without a commit reference. Today Detector B
-is silent on 16 of 17 pages.
+Its dependency hashes can still be checked without a commit reference.
+
+All 15 pages that have a walkthrough have now been promoted at least once, so each
+carries a watermark and a dependency fingerprint (75–180 hashed files per page).
+`docs:detect` reports exactly that today:
+
+```text
+✅ 15 page(s) checked — no relevant dependency or quoted-string changes.
+2 page(s) skipped by quoted-string detection: no watermark yet (never promoted).
+```
+
+The two skipped pages are `create-customize/automations` (no walkthrough yet) and
+`reference-maintenance/uninstalling` (no app surface, `walkthrough: false`).
 
 ## Scoping: the observed dependency set
 
@@ -499,8 +533,19 @@ Determinism comes from the walkthrough being the committed artifact. The same wa
 same container, and the same seeded fixture produce the same images *and* the same
 dependency set. Nothing about either output is inferred from a heuristic.
 
-Only `reference-maintenance/uninstalling` has `walkthrough: null` — it is entirely a
+Only `reference-maintenance/uninstalling` has `walkthrough: false` — it is entirely a
 terminal workflow with no app surface to drive.
+
+Two of the 15 built walkthroughs capture nothing and exist purely for their dependency
+set: `start-here/concepts` (180 hashed dependencies) and
+`library-basics/organizing-photos` (162) — the two widest fingerprints in the tree,
+which is the argument for the design working as intended. The remaining 13 capture 30
+screenshots between them, from 1 each up to 5 for `getting-started` and
+`assigning-faces`.
+
+`create-customize/automations` is declared `walkthrough: true` but does not have one
+yet — the only page where the spec and the tree disagree, and the reason
+`docs:heal:repo` skips it. See *Remaining work*.
 
 ### Walkthroughs are generated, committed, and editable
 
@@ -554,11 +599,31 @@ And an element mask is coarse — masking `.ol-viewport` also hides the markers
 OpenLayers draws from our own data, which are meaningful and stable. That coarseness
 is the practical argument for fixing this with option 1.
 
-**Most instability should not be declared at all.** The double-capture flake check
-already measures it: capture twice, and a shot whose two captures disagree is unstable
-by observation, whichever shot it turns out to be. A declaration is only worth adding
-for a known, permanent cause — and then it earns its keep as a cross-check, since a
-shot declared unstable but measured stable is a signal the declaration can go.
+**Option 2 is what actually shipped**, in five shots across five walkthroughs, and the
+map is not the largest reason for it:
+
+| Walkthrough | Ignored | Why |
+|---|---|---|
+| `locations` | `.ol-viewport` | live OSM tiles |
+| `settings` | `.media-dir-path`, `#current-thumbnail-dir`, `#thumbnail-size` | host-dependent path spelling; thumbnail bytes vary by platform |
+| `getting-started` | `.media-dir-path` | same |
+| `duplicates` | `input[name=directory]` | same |
+| `photo-details` | the folder row of file information | same |
+
+The recurring cause is that macOS canonicalizes `/tmp` to `/private/tmp` while the Linux
+container spells it `/tmp`, so the fixture's own path renders differently on the two
+machines the pipeline is meant to agree on. The value stays **visible** in the published
+image — a reader should see where their library lives — and is excluded from comparison
+only. This is the one place where local and CI capture are not byte-identical by
+construction, and ignoring the region is what bridges it.
+
+**Most instability should not have to be declared at all.** The intended mechanism is
+the double-capture flake check: capture twice, and a shot whose two captures disagree is
+unstable by observation, whichever shot it turns out to be. That check is **not built**
+(see *Remaining work*), so today instability is declared by hand or not caught at all. A
+declaration is only worth adding for a known, permanent cause — and once the check
+exists it earns its keep as a cross-check, since a shot declared unstable but measured
+stable is a signal the declaration can go.
 
 ### The hand-authored spec
 
@@ -571,13 +636,13 @@ pages:
     covers: >-
       Every section of the Settings screen, in the order they appear on screen.
       A new section is a gap.
-    walkthrough: settings
+    walkthrough: true
 
   start-here/getting-started:
     covers: >-
       Install through first indexed photos ... A tour: it shows the same views
       the deeper pages cover, in its own shots.
-    walkthrough: getting-started
+    walkthrough: true
     also_depends_on:
       - yaffo/setup.py
       - yaffo/launcher.py
@@ -619,11 +684,24 @@ and it catches drift that otherwise accumulates in silence:
 2. every image reference resolves;
 3. and points inside its own page's assets directory — there are no shared images, so a
    reference reaching elsewhere means the layout has drifted;
-4. a walkthrough exists exactly where the spec says one should;
+4. no walkthrough exists for a page marked `walkthrough: false`;
 5. no captured image is left unreferenced — this is the check that would have caught
    `faces-review.png`, unreferenced in the repo for months;
 6. every `also_depends_on` path exists;
 7. and none of them is something the walkthrough already observes.
+
+Check 4 is deliberately one-directional. A page marked `walkthrough: true` with no file
+is not a validation failure but a work item: that is precisely the state
+`docs:generate` consumes, and failing validation on it would make CI red for every page
+not yet generated. `docs:heal:repo` reports it instead, by skipping the page and saying
+why. Today the whole set is clean:
+
+```text
+✅ 17 pages, 31 images — no problems.
+```
+
+The 31st image is `automations-list.png`, the one remaining hand-made shot — referenced,
+in the right directory, and therefore valid; it is simply not produced by anything.
 
 ### Bot state is never hand-edited
 
@@ -641,18 +719,19 @@ hashes are a record of what the guide actually holds:
 
 - **`lastVerifiedSha`** — the base used only by the quoted-string catalogue comparison.
   It is derived from the checkout automatically.
-- **`routes` / `templates` / `static` / `urls`** — the observed dependency set, the
-  input to scoping.
+- **`observed`** — `routes` / `templates` / `static` / `urls`, the observed dependency
+  set and the input to scoping, plus **`serverObserver`**: whether the observer answered,
+  so an empty dependency set cannot be misread as "this page touched nothing".
 - **`dependencyHashes`** — SHA-256 values for the observed dependencies plus
   `also_depends_on`; compared directly with the checked-out feature branch to select
-  pages for regeneration.
-- **`shots`** — each image's hash *as the automation last wrote it*. Not for the diff,
-  which always has both images and compares pixels, but to detect a committed
-  screenshot changing **outside** the pipeline. "Someone replaced this by hand" is a
-  different question from "is it stale", and a stored hash is the only thing that
-  answers it.
-- **`serverObserver`** — whether the observer answered, so an empty dependency set
-  cannot be misread as "this page touched nothing".
+  pages for regeneration. In practice 75–180 entries per page.
+- **`shots`** — keyed by guide-relative path, each holding `width`, `height`, and the
+  image's `sha256` *as the automation last wrote it*. Not for the diff, which always has
+  both images and compares pixels, but to detect a committed screenshot changing
+  **outside** the pipeline. "Someone replaced this by hand" is a different question from
+  "is it stale", and a stored hash is the only thing that answers it. A page with no
+  shots — `concepts`, `organizing-photos` — writes `shots: {}` and is still fully
+  fingerprinted.
 
 Older lockfiles without `dependencyHashes` select their pages once. The next successful
 promotion writes the initial fingerprint snapshot, after which unchanged files compare
@@ -708,6 +787,24 @@ is the wording a human would have picked. This mirrors the test healer, where
 `typescript_validator` gates whether generated code is *valid* and nothing gates
 whether it is *tasteful*.
 
+Built as `gates.ts`, shared by generation and healing — which they were not at first.
+Generation ran the walkthrough and checked what it produced; healing only typechecked
+it, so a heal that reframed a shot onto the wrong element passed every gate it faced.
+`runGates` now runs one ordered sequence for both: typecheck first because it is
+cheapest and nothing downstream can run without it, then capture, then
+`mkdocs build --strict`.
+
+**The capture gate promotes, and the ordering is a requirement rather than a
+preference.** `mkdocs --strict` treats a missing image as fatal, so a page that
+references a *new* screenshot cannot build until that screenshot is in `docs/guide/` —
+capturing to staging and then asking mkdocs to find it in the guide fails every time,
+and passes only for pages whose images already existed, which is exactly how the gap
+went unnoticed. The consequence is that a *rejected* answer has already written images,
+so `revertPage` restores every tracked file it touched (the markdown, the walkthrough,
+the lockfile, the catalog) and deletes the ones the run created. `memories/` is
+deliberately exempt: notes an agent left are the one thing meant to survive a failed
+attempt.
+
 Two things the agent still does not do. It does not adopt a screenshot classified as
 `application_regression` — a broken UI is reported, never documented. And where it
 finds staleness it cannot confidently resolve, such as a described workflow that no
@@ -746,14 +843,29 @@ is a regression report, not a screenshot of broken thumbnails.
 
 ### Commands
 
-| Test framework | Docs | State |
+All six are built. Each is `npm run <name>` from `yaffo_ui_tests/`.
+
+| Test framework | Docs | Flags |
 |---|---|---|
-| `test`, `test:sandboxed` | **`docs:capture`** — deterministic run; `--promote` writes into the guide | Built, as `npm run docs:capture` |
-| `generate` | **`docs:generate`** — writes a walkthrough for a page that has none | 1 of 16 app-backed pages still needs one |
-| `test:heal` | **`docs:heal`** — act on what the detectors found; `--apply` writes | Built, as `npm run docs:heal` |
-| — | **`docs:detect`** — dependency fingerprints plus Detector B, without a sandbox | Built, as `npm run docs:detect` |
-| `validate:specs` | **`docs:validate`** — the guide and its automation agree | Built, as `npm run docs:validate` |
-| `test:heal:repo` | **`docs:heal:repo`** — emit eligible pages as a GitHub fan-out matrix | Built, as `npm run docs:heal:repo` |
+| `test`, `test:sandboxed` | **`docs:capture`** — deterministic run | `--promote` writes into the guide, `--docker` containerizes, `--defer-errors` lets a thrown walkthrough reach `docs:heal` instead of failing the run, bare arguments select pages |
+| `generate` | **`docs:generate`** — writes a page's walkthrough from its charter | `--docker`; a page id, or every page still missing one |
+| `test:heal` | **`docs:heal`** — act on what the detectors found | `--apply` writes, `--page <id>`, `--docker`, `--model <alias>` |
+| — | **`docs:detect`** — dependency fingerprints plus Detector B, without a sandbox | `--base <sha>` overrides the per-page watermark |
+| `validate:specs` | **`docs:validate`** — the guide and its automation agree | — |
+| `test:heal:repo` | **`docs:heal:repo`** — emit eligible pages as a GitHub fan-out matrix | `--github` writes `$GITHUB_OUTPUT`; a page id restricts it |
+
+Two supporting scripts complete the set: `docs:fixture:build` builds the reproducible
+documentation fixture, and `isolatedEnvironment:start:docs` serves it with the observer
+enabled and bound beyond loopback.
+
+`--defer-errors` is worth calling out because it inverts the usual rule. A walkthrough
+that throws is normally a hard failure, but in CI's *discovery* capture it is evidence —
+a broken selector is exactly what healing exists to repair — so that one capture defers
+errors and the verification captures inside the gates stay strict.
+
+`docs:heal` exits 2 when a verdict is left unresolved and 1 when a fix failed its gates,
+which is what makes the CI step's exit code meaningful. `docs:detect` exits 2 when it
+flags a page.
 
 Generate and heal stay separate for the same reason they are separate in the test
 framework: different inputs. Generate works from *intent* — the markdown's image
@@ -887,47 +999,142 @@ Closing it surfaced two more worth knowing:
   on prose or a truncated response throws, and a throw there would skip the validation
   gates and leave a half-written tree.
 
-### Flake detection comes free
+### Stop the agent searching for what the pipeline can just tell it
+
+Two modules exist for one reason: a model handed a search problem will search, at
+length, and the searching is where the turns go.
+
+**`sandbox_facts.ts` — hand over the runtime state.** A generate run for
+`library-basics/photo-details` was observed spending roughly forty rounds on a single
+question: how to reach a media item that exists. It read route modules, templates,
+`common.py`, lockfiles, `raw.json`, the fixture-seeding code, and finally its own API
+logs — because the answer is runtime state and no file contains it. The fix is not a
+better prompt about how to search; it is to ask the running app before the agent starts
+and put the answer in the prompt. Two rules on what gets handed over:
+
+- **Filenames, never ids.** Ids are assigned at index time and change on every reseed,
+  so a walkthrough built on one documents whichever item lands at that number next time.
+  Reporting an id even "for orientation" just puts the unstable value in front of the
+  model. `mediaIdByFilename` is offered as a *lookup* instead, in both `goto` and
+  `flows` — offering it in only one was a trap that a generated walkthrough hit.
+- **Basenames, never absolute paths.** The fixture root is a temp directory; the leading
+  path is precisely the sort of value that looks stable in a prompt and is not.
+  The synthetic `1mb-example-video-file*` test patterns are filtered out too: a
+  screenshot of one reads as a broadcast test card rather than a photo library.
+
+**`preflight.ts` — prove the browser works before handing it over.** The Playwright MCP
+server connects and advertises its 24 tools whether or not it can actually launch a
+browser; the failure appears only in the *result* of the first navigate, and the server
+reports it in the result body rather than by throwing. A model given that does not stop
+— it improvises, and the forty-round run above is what improvising looks like. Preflight
+navigates once, fails loudly with the command that fixes it, and refuses to start.
+
+**`side_effects.ts` — stub what reaches outside the browser.** `/api/open-file` and
+`/api/open-folder` shell out to `open`/`xdg-open`/`os.startfile` against the real file.
+The guide documents both controls, so a `photo-details` walkthrough reasonably clicks
+them — and every capture run then opens Preview windows on whoever is running it, or
+spawns processes on a CI runner. They are stubbed to the same `{"success": true}` a real
+call returns rather than aborted, so the UI still reaches the state the shot is meant to
+show; aborting would surface an error toast and document a failure.
+
+### Flake detection does not come free — yet
 
 The test framework feeds `{feature}.history.json` — the last five results — to the
-model for trend analysis. The per-page lockfile should carry recent shot statuses the
-same way. A shot that reports changed on every run is a flake signal, and that is how
-an unstable shot gets quarantined automatically instead of somebody having to declare
-it (see *Non-reproducible regions*).
+model for trend analysis. The per-page lockfile was meant to carry recent shot statuses
+the same way, so that a shot reporting changed on every run is quarantined by
+observation instead of by declaration (see *Non-reproducible regions*).
 
-## Workflow shape
+**This is not built.** The lockfile carries `shots` as a single hash per image — what
+the automation last wrote — not a history, and nothing counts consecutive changes. It is
+the one piece of the original design that the working pipeline still lacks, and it is
+listed under *Remaining work*.
 
-Model it on `.github/workflows/playwright-auto-heal.yml`, which already has the
-required bones: seed cache at `/tmp/yaffo-seed`, asset cache at `/tmp/yaffo-assets`,
-a `MODEL_ALIAS` variable, `contents: write` plus `pull-requests: write`, and a
-discover → matrix → PR structure.
+## The workflow
 
-- Run as a check on `pull_request` events targeting `master`, plus
-  `workflow_dispatch` for manual recovery. The workflow checks out the feature
-  branch's exact `HEAD_SHA`, not the merge commit synthesized by GitHub. A recurring
-  job would mostly spend a sandbox boot to conclude nothing moved.
-- Carry the originating feature branch as `HEAD_BRANCH` and use it as the base branch
-  of the healing PR. For manual runs, require both `head_branch` and `head_sha` inputs.
-- Concurrency is scoped to `HEAD_BRANCH`, with `cancel-in-progress: true`, so a newer
-  commit on the same feature branch supersedes an in-flight check without cancelling
-  checks for unrelated feature branches.
-- Create a run-specific branch such as `auto-heal/docs-${RUN_ID}` from `HEAD_SHA` and
-  open its PR against `HEAD_BRANCH`. Never commit or push healing changes directly to
-  the feature branch. Close or supersede an older open documentation-healing PR for
-  the same feature branch when a newer run replaces it.
-- Only create healing branches for same-repository feature branches. Fork PRs still
-  run the read-only checks, but do not receive model secrets or repository write
-  credentials.
-- Reuse the existing seed cache so the sandbox boot stays cheap. A seeded data dir
-  remains at the absolute path where it was built because the DB stores absolute
-  media paths. The docs fixture is seeded directly into its final stable
-  `Family Photos` directory, so restoring it at that canonical path needs no repair.
-- **Collect the diff overlays before anything else runs.** Every run begins by
-  wiping the staging directory, so an overlay survives only until the next
-  invocation. Upload them as artifacts, or attach them to the PR, in the same job
-  that produced them; otherwise the evidence for a change is destroyed by the run
-  that follows. The report's `shots[].diff.diffImage` gives the paths, so the step
-  does not have to re-derive them.
+Built as `.github/workflows/documentation-auto-heal.yml`, following
+`playwright-auto-heal.yml`'s bones: a `MODEL_ALIAS` variable, `contents: write` plus
+`pull-requests: write` confined to the final job, and a discover → matrix → PR
+structure. Three jobs plus a fixture-cache job.
+
+**`discover`** runs `docs:heal:repo -- --github` to emit the page matrix, and computes
+the fixture cache key from the fixture data, the seeding script, the indexing and
+face/label pipelines, and `pyproject.toml` — so the expensive seed is rebuilt only when
+something that changes its content changes.
+
+**`seed-cache`** restores or builds the documentation fixture via `docs:fixture:build`,
+caching `/tmp/yaffo-docs` and `/tmp/yaffo-assets`. A seeded data dir is portable only to
+the absolute path it was built at, because the DB stores absolute media paths — the docs
+fixture is built directly at its canonical location, so restoring it needs no repair.
+
+**`heal`** fans out one runner per page (`max-parallel` from `vars.DOCS_MAX_PARALLEL`,
+default 5), each with its own sandbox — which is what *Concurrency* requires, since
+walkthroughs write shared app state. Per page it starts
+`isolated_runner.ts --port 5002 --preseeded --docs` with `YAFFO_DOC_OBSERVER=1` and
+`YAFFO_SANDBOX_HOST=0.0.0.0`, polls the base URL for up to 180s, runs `docs:validate`,
+then `docs:capture:docker -- --defer-errors <page>`, then
+`docs:heal -- --page <page> --apply --docker --model $MODEL_ALIAS`. It holds
+`contents: read` and no write credential at all.
+
+**`open-pr`** is the only job with write permission. It downloads every page's patch,
+applies them, re-runs `npm run typecheck`, `docs:validate`, and `mkdocs build --strict`
+over the *aggregate*, then pushes `auto-heal/docs-${RUN_ID}-${GITHUB_RUN_ATTEMPT}` and
+opens one PR against `HEAD_BRANCH`, closing any older open `auto-heal/docs-*` PR on the
+same base as superseded.
+
+Points worth keeping in view:
+
+- The trigger is `pull_request` against `master` (path-filtered to the app, the guide,
+  the automation, and the fixture) plus `workflow_dispatch`, which requires both
+  `head_branch` and `head_sha`. The checkout uses the feature branch's exact `HEAD_SHA`,
+  never GitHub's synthesized merge commit.
+- Concurrency is scoped to `HEAD_BRANCH` with `cancel-in-progress: true`, so a newer
+  commit supersedes an in-flight check without touching unrelated branches.
+- Fork PRs are excluded from both `heal` and `open-pr` by an explicit
+  `head.repo.full_name == github.repository` guard, so no fork receives model secrets or
+  write credentials.
+- **Patches, not commits, cross the job boundary.** Each `heal` job produces
+  `git diff --binary` over that page's markdown, assets, and automation folder —
+  untracked files added with `--intent-to-add` first, so a brand-new screenshot is in the
+  binary patch. Only `open-pr` can write to the repository. This is what lets 15 runners
+  produce one reviewable PR without any of them holding a token.
+- **Evidence is uploaded in the job that produced it**, because every run wipes the
+  staging directory. The initial capture is preserved before healing starts; the heal
+  artifact then preserves the complete latest capture directory after the repair and
+  verification gates have run. All three uploads use `if: always()` so a partial
+  failure still leaves whatever evidence it produced.
+- The model's verdicts are rendered into the **job summary** from `triage.json` — one
+  block per shot with classification, confidence, recommended action, whether it was
+  repaired, and a collapsed rationale — so a reviewer can read what the model concluded
+  without downloading an artifact.
+- **The PR body carries the same evidence, plus what the run cost.** `open-pr`
+  downloads every page's `docs-heal-*` artifact and assembles three sections: *Model
+  usage* (the alias, and the summed `costEstimate.call.totalCost` across every logged API
+  call, with the count of calls that actually reported usage); *Model reasoning* (a
+  collapsed block per verdict, keyed by page and shot); and *Artifacts* (direct links to
+  every non-expired `docs-capture-*`, `docs-heal-*`, and `docs-patch-*`, looked up
+  through the Actions API because `upload-artifact` exposes its URL only inside the job
+  that produced it — hence the `actions: read` permission). Only call costs are summed,
+  never the cumulative session figure the logs also carry, so a tool-using session is
+  not counted several times over.
+
+### Workflow artifacts
+
+Every matrix page uses a filesystem-safe `{id}` formed from its page path; for example,
+`organize-review/duplicates` becomes `organize__review__duplicates`. A successful page
+job can therefore produce these artifacts:
+
+| Artifact | Retention | Contents |
+|---|---:|---|
+| `docs-capture-{id}` | 30 days | The **initial** `.doc-staging/captures/` tree: `raw.json`, `report.json`, candidate `.webp` files, and, for every detected change, the committed `.baseline.webp` plus magenta `.diff.png`. Also includes `reports/isolated-environment.log`. This is uploaded before the model runs, so it preserves the evidence that triggered healing. |
+| `docs-patch-{id}` | 30 days | `{id}.patch`, a Git binary patch containing that page's proposed guide markdown, screenshots, walkthrough, catalog, lockfile, and page memories when those paths changed. The collector applies all non-empty page patches to build the aggregate PR. |
+| `docs-heal-{id}` | 90 days | `triage.json`; timestamped `heal-logs/` containing the model API transcripts and per-call token/cost accounting; and the complete latest `captures/` tree, including `raw.json`, `report.json`, candidate screenshots, baselines, and diff overlays. After a repair reaches verification, these captures are the **post-heal** comparison and explain any screenshot the verification gate promoted. |
+
+The initial and post-heal capture sets are deliberately separate. A walkthrough can
+capture pixel-identical screenshots and then fail later in its flow; repairing that
+failure runs a second capture during verification. If that second run detects even a
+small visual change, its baseline, candidate, and overlay belong in `docs-heal-{id}`, not
+in the already-uploaded `docs-capture-{id}`. The PR body links every artifact that was
+actually created for the run.
 
 ### Staging layout
 
@@ -938,19 +1145,34 @@ staging. While it lived at `user_doc_automation/.staging` a run could read back 
 transcript, and one was caught doing it: *"the generate-logs filenames are
 `0_deepseek_api.json` … Let me read one to understand what they contain. Maybe they have
 prompts that reveal media IDs."* Nothing in staging is input to the agent; it is all
-output about the agent. `staging_not_agent_visible.test.ts` pins the property.
+output about the agent. `paths.ts` is the single definition of both directories, and
+`paths.test.ts` pins the sibling relationship.
 
 A run writes only into `yaffo_ui_tests/.doc-staging/` (gitignored):
 
 ```text
-.staging/
-├── report.json                                    every shot's status, diff, and deps
-└── {area}/assets/{page}/
-    ├── {shot}.webp                                the candidate capture
-    └── {shot}.diff.png                            only when that shot changed
+.doc-staging/
+├── captures/                                      wiped at the start of every run
+│   ├── raw.json                                   what the container produced
+│   ├── report.json                                every shot's status, diff, and deps
+│   └── {area}/assets/{page}/
+│       ├── {shot}.webp                            the candidate capture
+│       ├── {shot}.baseline.webp                   committed image, only when changed
+│       └── {shot}.diff.png                        magenta overlay, only when changed
+├── triage.json                                    verdicts, for CI's job summary
+├── generate-logs/{timestamp}/                     full prompts and responses
+└── heal-logs/{timestamp}/                         the last 20 runs of each
 ```
 
-Paths under `.doc-staging/` mirror their destination under `docs/guide/`, so promoting is
+Captures live in their own subdirectory for a reason that cost a debugging session:
+a capture run **empties** its directory before starting, and while that directory was
+staging itself, the run deleted its own in-flight log directory and the next API call
+died with `ENOENT: … .doc-staging/generate-logs/1_gemini_api.json`. Log directories are
+also per-run and timestamped rather than flat, because the API call counter restarts at
+zero every run — with one flat directory a rerun silently overwrote the previous run's
+`0_*.json`, and two people reading "call 9" were looking at different runs.
+
+Paths under `captures/` mirror their destination under `docs/guide/`, so promoting is
 a copy rather than a mapping. The overlay sits beside the shot it explains, and its
 absence is itself information: no overlay means nothing moved.
 
@@ -962,7 +1184,12 @@ already splits `lib/` from `specs/` and `generated_tests/`.
 ```text
 yaffo_ui_tests/
 ├── lib/user_doc_automation/        infrastructure — hand-written, not generated
-│   ├── docs_capture.ts, heal.ts    entry points (npm run docs:capture / docs:heal)
+│   ├── docs_capture.ts             entry point: capture, compare, promote
+│   ├── generate_cli.ts, generate.ts     entry point: write a missing walkthrough + page
+│   ├── heal.ts                     entry point: triage what changed, then repair
+│   ├── detect.ts                   entry point: Detector B + dependency hashes, no sandbox
+│   ├── validate.ts                 entry point: guide and automation agree
+│   ├── heal_repo.ts                entry point: the GitHub fan-out matrix
 │   ├── capture_worker.ts           the browser half alone — what runs in the container
 │   ├── docker.ts                   container argv, host alias, env boundary
 │   ├── runner.ts                   captureWalkthroughs / processResults, split at the seam
@@ -973,7 +1200,16 @@ yaffo_ui_tests/
 │   ├── encode.ts, python.ts        WebP encoding via the venv's Pillow
 │   ├── compare.ts, imagediff.py    pixel comparison and the diff overlay
 │   ├── observe.ts                  client half of the dependency recorder
+│   ├── dependency_changes.ts       lockfile hashes vs the working tree
+│   ├── strings.ts                  the two string catalogues and their diff (Detector B)
+│   ├── side_effects.ts             stub /api/open-file & open-folder for the run
+│   ├── media_lookup.ts             resolve a media id from a stable filename
+│   ├── sandbox_facts.ts            runtime facts handed to the agent up front
+│   ├── preflight.ts                prove the browser tool works before the agent starts
+│   ├── gates.ts                    the correctness gates, shared by generate and heal
+│   ├── tool_loop.ts                drive a turn until the model stops calling tools
 │   ├── evidence.ts, triage.ts, fix.ts   the agentic loop
+│   ├── __tests__/                  26 Jest suites, 224 tests
 │   └── types.ts, index.ts
 ├── .doc-staging/                   transient output, gitignored — see below
 └── user_doc_automation/            authored and generated content
@@ -1005,43 +1241,54 @@ the shot types from `lib/`, so generated walkthroughs depend on a small stable l
 path rather than reaching into the framework. This mirrors `generated_tests/_support`,
 which plays the same role for generated specs.
 
-## What is built
+## Running it
 
-Run the sandbox, then the walkthroughs. Both from `yaffo_ui_tests/`:
+Build the fixture once, then serve it and capture. All from `yaffo_ui_tests/`:
 
 ```shell
-YAFFO_DOC_OBSERVER=1 npm run isolatedEnvironment:start
+npm run docs:fixture:build
+```
+
+```shell
+npm run isolatedEnvironment:start:docs
 ```
 
 ```shell
 npm run docs:capture
 ```
 
-Add `--promote` to copy changed shots into the guide, and a page id to run one
-walkthrough. Without `--promote` nothing under `docs/` is touched.
+`isolatedEnvironment:start:docs` is the docs sandbox: it sets `YAFFO_DOC_OBSERVER=1` and
+`YAFFO_SANDBOX_HOST=0.0.0.0` and serves the documentation fixture preseeded on port 5002,
+so one script covers both the containerized and the local case. Add `--promote` to copy
+changed shots into the guide, and a page id to run one walkthrough. Without `--promote`
+nothing under `docs/` is touched.
 
 For a reproducible capture — which is what CI runs, and what a promoted image should
-come from — build the image once and use the container:
+come from — build the image once and add `--docker`:
 
 ```shell
 npm run docker:build:docs-capture
 ```
 
 ```shell
-YAFFO_DOC_OBSERVER=1 YAFFO_SANDBOX_HOST=0.0.0.0 npm run isolatedEnvironment:start
-```
-
-```shell
 npm run docs:capture:docker
 ```
 
-Same walkthroughs, same output, same flags. The sandbox has to bind `0.0.0.0` because a
+Same walkthroughs, same output, same flags. The sandbox binds `0.0.0.0` because a
 container cannot reach the host's loopback; see *Local / CI parity* above.
 
+The cheap checks need no sandbox at all and are worth running before booting one:
+
+```shell
+npm run docs:validate && npm run docs:detect
+```
+
 > `scripts/capture_docs_screenshots.ts` is the superseded proof of concept: five
-> shots for `getting-started.md`, predating the framework. It still works and still
-> holds those five shot definitions, so it should be converted into
-> `start-here/getting-started/getting-started.ts` rather than deleted.
+> shots for `getting-started.md`, predating the framework. Its five shots are now
+> `start-here/getting-started/getting-started.ts` — `settings-overview`,
+> `utilities-index-photos`, `gallery-home`, `gallery-filter-sidebar`, and
+> `media-detail` — so the conversion is done and the script can be deleted. Nothing
+> references it.
 
 The capture techniques that mattered, in order of payoff:
 
@@ -1064,16 +1311,27 @@ The capture techniques that mattered, in order of payoff:
 of PNG on shots containing photographs. Across the five shots: 8.3 MB → 0.85 MB.
 Conversion shells out to the venv's Pillow, already a project dependency.
 
-**Tests.** `tests/user_doc_automation/test_imagediff.py` covers the comparison —
-both ends of the sensitivity range (a caption change is caught, a sub-tolerance
-colour shift and a sub-budget pixel count are not), ignore regions suppressing a
-change without blinding the rest of the shot, reframing, and that the overlay is
-written only when changed and highlights the right pixels.
+**Tests.** Two suites, one per language, both run in CI.
+
+*Python — 30 tests.* `tests/user_doc_automation/test_imagediff.py` covers the
+comparison: both ends of the sensitivity range (a caption change is caught, a
+sub-tolerance colour shift and a sub-budget pixel count are not), ignore regions
+suppressing a change without blinding the rest of the shot, reframing, and that the
+overlay is written only when changed and highlights the right pixels.
 `tests/yaffo/test_doc_observer.py` covers the observer — run isolation,
 consume-on-read, eviction, the unattributed bucket, registration being a no-op
 without the env flag, path filtering, and an end-to-end pass through `create_app`
 asserting real routes and *included* templates are recorded with nothing from
-site-packages. 30 tests.
+site-packages.
+
+*TypeScript — 224 tests across 26 suites* in `lib/user_doc_automation/__tests__/`, run
+with `npm run test:unit`. One suite per module, covering every entry point
+(`docs_capture`, `heal`, `detect`, `validate`, `heal_repo`, `generate_cli`), the
+host/container seam (`runner`, `capture_worker`, `docker_execution`, `load`), the
+guarantees that are easy to break silently (`paths` — including the staging sibling
+rule, `environment` — the env allowlist, `strings_io`, `dependency_changes`), and the
+agentic loop (`evidence`, `triage`, `fix`, `gates`, `tool_loop`, `preflight`,
+`sandbox_collection`, `image_adapters`, `media_lookup`).
 
 **A bug the pipeline found on its first real run.** `gallery-home` reported changed on
 an unchanged machine with an unchanged fixture. The cause was not capture:
@@ -1084,40 +1342,77 @@ A user reloading Home saw the same thing. Fixed by sorting on name, matching wha
 detail view already did. This is the class of defect the automation exists to catch,
 and it would otherwise have produced a spurious PR on every run forever.
 
-## Fixture work still required
+## The documentation fixture
 
-The POC exposed that a docs-grade library is a different artifact from a test
-fixture. Both of the following were done by hand and need scripting before this can
-run unattended.
+The POC exposed that a docs-grade library is a different artifact from a test fixture,
+and everything that was done by hand for it is now scripted. The composition lives in
+`buildDocumentationFixture` in `lib/services/isolated_runner.ts` and runs as
+`npm run docs:fixture:build`; CI caches its output keyed on the fixture data, the seed
+script, and the indexing pipelines.
 
-- **A real video.** The bennett library's only videos were the
-  `1mb-example-video-file*.mp4` test-pattern pair, which dominated the gallery shot.
-  A 4.4s clip was generated from the beach burst frames with the bundled ffmpeg and
-  added to the fixture. The test pair must **stay** — `remove_duplicates` depends on
-  it — so the docs run needs its own fixture *composition*, not merely a patched
-  folder.
-  - Note: ffmpeg writes `creation_time` as UTC, so exiftool reported 16:31 for an
-    11:31 local capture. A fixture builder should write `DateTimeOriginal` via
-    exiftool instead. See the naive-wall-clock discussion in
+- **A real video, in the library.** The bennett fixture's only videos were the
+  `1mb-example-video-file*.mp4` test-pattern pair, which dominated the gallery shot. A
+  4.4s clip generated from the beach burst frames is now committed at
+  `test_data/bennett/2021_gulf_beach_trip/2021-07-11_113104_boy-and-the-waves.mp4`, and
+  the docs composition indexes videos **recursively** (`YAFFO_SEED_RECURSIVE_VIDEOS=1`)
+  so it is picked up where it sits, while omitting the test-pattern pair entirely. The
+  test pair stays where it is for the Playwright suite, which needs it.
+  - Note retained: ffmpeg writes `creation_time` as UTC, so exiftool reported 16:31 for
+    an 11:31 local capture. Anything regenerating that clip should write
+    `DateTimeOriginal` via exiftool instead. See the naive-wall-clock discussion in
     `docs/development/video.md`.
-- **A presentable library path.** Shots of Settings and the detail page must not show
-  an ephemeral sandbox directory or username. The documentation fixture is seeded
-  directly under the canonical `Family Photos` directory, which is also the path the
-  container mounts and serves.
+- **Duplicates without polluting the gallery.** Duplicate review needs something to
+  find, but duplicates inside `Family Photos` would appear in every other page's shots.
+  The builder stages two pairs of real images in a sibling `Duplicate Scan Samples/`
+  directory, outside the indexed library. The duplicates walkthrough points the utility
+  at that directory explicitly; every other page still sees one canonical copy of each
+  photo.
+- **A presentable library path.** The fixture is built directly at
+  `/tmp/yaffo-docs/Family Photos` (overridable with `YAFFO_DOCS_DATA_DIR`), the same
+  path the container mounts and CI restores to — so Settings and the detail page show a
+  plausible folder rather than an ephemeral sandbox directory or a username. `paths.ts`
+  canonicalizes it, because macOS spells that root `/private/tmp` and the seeded DB
+  stores resolved absolute paths.
 
-## Open decisions
+The one thing this does not fix is the *spelling* of that path across platforms, which
+is why five walkthroughs carry an `ignoreRegions` entry for it — see
+*Non-reproducible regions*.
 
-- **Flake insurance.** A single flaky capture produces a spurious PR. Recommend
-  capturing flagged shots twice and requiring the difference to reproduce before
-  acting. Less urgent than first thought — unchanged shots currently compare at
-  exactly 0 differing pixels, not merely "close to 0" — but it is what would
-  auto-quarantine an unstable shot without anyone having to declare it.
-- **Caching OSM tiles.** Serving a fixed tile set locally is the preferred fix for
-  `locations-map` (see *Non-reproducible regions*); the open question is only whether
-  to vendor tiles into the fixture or run a small caching proxy in the container.
+## Remaining work
+
+Everything below is genuinely unbuilt, in rough order of how much it would cost to
+leave alone.
+
+- **The `create-customize/automations` walkthrough.** The last of the 16 app-backed
+  pages. It is the only guide page still carrying a hand-made screenshot
+  (`automations-list.png`, not a WebP), and `docs:heal:repo` skips it for exactly that
+  reason: *"missing walkthrough; missing lockfile"*. Until it exists, the automations
+  page is outside the pipeline entirely — no watermark, no dependency fingerprint,
+  neither detector watching it. `npm run docs:generate -- create-customize/automations`
+  is the intended route.
+- **Flake insurance (the double-capture check).** A single flaky capture produces a
+  spurious PR, and nothing currently prevents that. Capture flagged shots twice and
+  require the difference to reproduce before acting. Less urgent than first thought —
+  unchanged shots compare at exactly 0 differing pixels, not merely "close to 0" — but
+  it is what would auto-quarantine an unstable shot without anyone having to declare it,
+  and it is what *Flake detection* and *Non-reproducible regions* both assume. Needs the
+  lockfile to carry per-shot status history, which it does not yet.
+- **Caching OSM tiles.** `locations-map` is handled today by ignoring `.ol-viewport`,
+  which also blinds the diff to the markers drawn from our own data. Serving a fixed
+  tile set locally is the real fix; the open question is only whether to vendor tiles
+  into the fixture or run a small caching proxy in the container.
+- **Layer 4 of dependency observation** — `coverage.py` scoped to `yaffo/`, to catch
+  logic that changes displayed values without touching a template. The misses are
+  already visible as `also_depends_on` entries in `spec.yaml`; each should disappear
+  when this lands. Deferred until a real miss justifies the noise.
 - **Video shots and codecs.** Playwright's bundled Chromium lacks some proprietary
-  codecs, so shots involving playback may need `channel: 'chrome'`.
+  codecs, so a shot of actual playback may need `channel: 'chrome'`. No walkthrough
+  captures mid-playback today, so this has not been forced.
 - **Per-shot library state.** Different shots want different states — Index Photos
-  reads best with files pending, the gallery wants everything indexed. Currently the
-  prose was adjusted to match a single fixture state; supporting per-shot state means
-  walkthroughs carry DB setup, which is a meaningful step up in complexity.
+  reads best with files pending, the gallery wants everything indexed. Partly addressed
+  in practice: a shot's `setup` can drive the app into the state it needs through the
+  UI, which is how `duplicates` runs a real scan before capturing its results. What is
+  still missing is *fixture*-level state — files pending on disk — which would mean
+  walkthroughs carrying DB or filesystem setup, a meaningful step up in complexity.
+- **Delete `scripts/capture_docs_screenshots.ts`.** Fully superseded by
+  `start-here/getting-started/getting-started.ts` and referenced by nothing.
