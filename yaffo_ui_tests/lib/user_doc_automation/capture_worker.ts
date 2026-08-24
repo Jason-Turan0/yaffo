@@ -41,15 +41,17 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
         baseUrl: BASE_URL, stagingDir: CAPTURE_DIR,
     });
 
-    let failed = 0;
     for (const result of results) {
         console.log(`  ${result.page}: ${result.shots.length} shot(s)`);
         if (result.error) {
-            failed++;
             console.error(`  ! ${result.error}`);
         }
     }
-    return failed ? 1 : 0;
+    // A thrown walkthrough is captured evidence, not a worker infrastructure
+    // failure. Returning success lets the host consume raw.json, encode any partial
+    // shots, and write report.json for the healer. Failures before raw.json is written
+    // still reach runCli's catch and exit nonzero.
+    return 0;
 };
 
 const isDirectRun = process.argv[1] !== undefined &&

@@ -13,6 +13,8 @@ import type {StringChange} from "./strings";
  */
 export interface Evidence {
     page: string;
+    /** Present when capture threw before the walkthrough completed. */
+    walkthroughError?: string;
     /** Guide-relative path of the shot, e.g. library-basics/assets/…/gallery-home.webp */
     target: string;
     baselinePath: string;

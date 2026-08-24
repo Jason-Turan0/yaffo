@@ -127,6 +127,30 @@ const proseEvidence = (
     stringChanges: changes,
 });
 
+const walkthroughFailureEvidence = (result: WalkthroughResult) => ({
+    page: result.page,
+    target: "",
+    baselinePath: "",
+    candidatePath: "",
+    walkthroughError: result.error as string,
+    diffSummary: `Walkthrough failed before capture completed:\n${result.error}`,
+    markdown: readFileSync(join(GUIDE_DIR, `${result.page}.md`), "utf8"),
+    markdownPath: join(GUIDE_DIR, `${result.page}.md`),
+    walkthroughPath: walkthroughPath(result.page),
+    covers: covers(result.page),
+    walkthroughSource: walkthroughSource(result.page),
+    codeDiff: "(capture failed; inspect the walkthrough and running app)",
+    stringChanges: [],
+});
+
+interface Verdict {
+    page: string;
+    target: string;
+    triage: Triage;
+    /** True when a non-promote action was completed and passed every gate. */
+    resolved?: boolean;
+}
+
 export const main = async (args: string[] = process.argv.slice(2)): Promise<number> => {
     const apply = args.includes("--apply");
     const useDocker = args.includes("--docker");
@@ -152,8 +176,14 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
         }
     }
 
-    const pending = results.flatMap((result) =>
-        result.shots.filter((shot) => shot.status !== "unchanged").map((shot) => ({result, shot})));
+    const failedCaptures = results.filter((result) => result.error);
+    // Do not promote partial shots from a walkthrough that later failed. Repair and
+    // verify the whole walkthrough first; its gate will perform a clean promotion.
+    const pending = results.flatMap((result) => result.error
+        ? []
+        : result.shots
+            .filter((shot) => shot.status !== "unchanged")
+            .map((shot) => ({result, shot})));
 
     // Cheap per-page checks. A renamed label or changed prose dependency may move no
     // pixels at all, so a page can be stale with nothing staged against it.
@@ -180,18 +210,11 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
 
     // Pages a non-visual check flagged that no staged shot already covers.
     const proseOnly = [...new Set([...stringChanges.keys(), ...dependencyChanges.keys()])]
-        .filter((page) => !pending.some(({result}) => result.page === page));
+        .filter((page) => !pending.some(({result}) => result.page === page))
+        .filter((page) => !failedCaptures.some((result) => result.page === page));
 
-    for (const result of results.filter((r) => r.error)) {
-        // A walkthrough that threw produced no images, so there is nothing to look at;
-        // it is a defect by construction rather than something to classify.
-        console.log(`🔧 ${result.page}\n   walkthrough failed: ${result.error}`);
-    }
-
-    if (!pending.length && !proseOnly.length) {
-        console.log(results.some((r) => r.error)
-            ? "\nNo changed shots to triage."
-            : "Nothing to triage — every shot matched what is committed.");
+    if (!pending.length && !proseOnly.length && !failedCaptures.length) {
+        console.log("Nothing to triage — every shot matched what is committed.");
         return 0;
     }
 
@@ -199,7 +222,8 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
     const runLogDir = newRunLogDir("heal-logs");
     console.log(`   logs: ${runLogDir}`);
     console.log(`Triaging ${pending.length} changed shot(s)` +
-        (proseOnly.length ? `, and ${proseOnly.length} page(s) flagged by renamed controls` : "") + "\n");
+        (proseOnly.length ? `, ${proseOnly.length} page(s) flagged by renamed controls` : "") +
+        (failedCaptures.length ? `, and ${failedCaptures.length} failed walkthrough(s)` : "") + "\n");
 
     // The same three providers the test generator gets, for the same reasons: the
     // filesystem to read the page and its walkthrough, Playwright to inspect the
@@ -220,8 +244,67 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
             }));
         }
 
-        const verdicts: Array<{page: string; target: string; triage: Triage}> = [];
+        const verdicts: Verdict[] = [];
         let failed = 0;
+        for (const result of failedCaptures) {
+            const evidence = walkthroughFailureEvidence(result);
+            const triage: Triage = {
+                classification: "walkthrough_defect",
+                confidence: "high",
+                summary: "The documentation walkthrough failed before capture completed.",
+                reasoning: result.error as string,
+                proseImpact: [],
+                recommendedAction: "fix_walkthrough",
+            };
+            const verdict: Verdict = {
+                page: result.page,
+                target: walkthroughPath(result.page),
+                triage,
+            };
+            verdicts.push(verdict);
+            console.log(`🔧 ${result.page}`);
+            console.log(`   walkthrough failed: ${result.error}`);
+
+            if (!apply) {
+                console.log("   → would send the failure to the repair agent (re-run with --apply)\n");
+                continue;
+            }
+
+            const [area, name] = [result.page.slice(0, result.page.indexOf("/")),
+                                  result.page.slice(result.page.indexOf("/") + 1)];
+            const memory = localFilesystemMemoryToolFactory(join(CONTENT_DIR, area, name));
+            const pageProviders = [...providers, memory];
+            try {
+                const session = openSession(evidence, {
+                    model, runLogDir, toolProviders: pageProviders,
+                });
+                const outcome = await applyFix(session, evidence, {
+                    toolProviders: pageProviders, baseUrl: BASE_URL, useDocker,
+                });
+                if (outcome.fix?.explanation) {
+                    console.log(`   → ${outcome.fix.explanation}`);
+                    triage.reasoning += `\n\nRepair agent: ${outcome.fix.explanation}`;
+                }
+                for (const file of outcome.written) console.log(`      wrote ${file}`);
+                if (!outcome.written.length) console.log("      (no file changes returned)");
+                if (outcome.attempts > 1) console.log(`   (${outcome.attempts} attempts)`);
+                for (const failure of outcome.failures) {
+                    console.error(`   ‼️  ${failure.split("\n")[0]}`);
+                }
+                verdict.resolved = !outcome.failures.length && !outcome.reverted;
+                if (verdict.resolved) {
+                    console.log("   → repaired and verified");
+                } else {
+                    console.error("   → walkthrough remains unresolved");
+                    failed++;
+                }
+            } catch (e) {
+                console.error(`   ❌ ${e instanceof Error ? e.message : String(e)}`);
+                failed++;
+            }
+            console.log();
+        }
+
         for (const {result, shot} of pending) {
             const evidence = buildEvidence(result, shot, {
                 guideDir: GUIDE_DIR,
@@ -350,11 +433,12 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
         writeFileSync(join(STAGING_DIR, "triage.json"),
             JSON.stringify({triagedAt: new Date().toISOString(), verdicts}, null, 2));
 
-        // Classification explains the source; action decides whether a human is
-        // needed. Minor environment noise can therefore promote without pretending
-        // it was an intentional product change.
-        const blocking = verdicts.filter((v) => v.triage.recommendedAction !== "promote");
-        console.log(`${verdicts.length} triaged, ${blocking.length} needing a human.`);
+        // Classification explains the source; action and resolution decide whether a
+        // human is needed. Minor environment noise can promote without pretending it
+        // was intentional, while a repaired walkthrough retains its honest class.
+        const blocking = verdicts.filter((v) =>
+            v.triage.recommendedAction !== "promote" && !v.resolved);
+        console.log(`${verdicts.length} triaged, ${blocking.length} unresolved.`);
         return blocking.length ? 2 : failed ? 1 : 0;
     } finally {
         await Promise.all(providers.map((provider) => provider.disconnect()));

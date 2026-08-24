@@ -1,6 +1,6 @@
 import {afterAll, afterEach, beforeEach, describe, expect, it, jest} from "@jest/globals";
 import {createHash} from "crypto";
-import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "fs";
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
 import {dirname, join, resolve} from "path";
 
@@ -202,6 +202,17 @@ describe("local capture", () => {
         expect(error).toHaveBeenCalledWith("  ! second failed");
     });
 
+    it("does not write a promoted lockfile for a partial walkthrough", async () => {
+        const pageDir = join(CONTENT_DIR, "library", "browsing");
+        mkdirSync(pageDir, {recursive: true});
+        loadWalkthroughs.mockResolvedValue([{page: "library/browsing"}]);
+        runWalkthroughs.mockResolvedValue([result({error: "flow timed out"})]);
+
+        await expect(main(["--promote", "library/browsing"], {})).resolves.toBe(1);
+
+        expect(existsSync(join(pageDir, "browsing.lock.json"))).toBe(false);
+    });
+
     it("writes promoted lockfiles with geometry, observations, and committed hashes", async () => {
         const pageDir = join(CONTENT_DIR, "library", "browsing");
         mkdirSync(pageDir, {recursive: true});
@@ -306,6 +317,26 @@ describe("Docker capture", () => {
         });
         expect(loadWalkthroughs).not.toHaveBeenCalled();
         expect(log).toHaveBeenCalledWith(expect.stringContaining("yaffo-docs-capture:latest"));
+    });
+
+    it("processes a Docker walkthrough failure into a host report before returning failure", async () => {
+        const rawResults = [{
+            page: "library/browsing",
+            shots: [],
+            observation: observed(),
+            error: "locator.waitFor timed out",
+        }];
+        write(join(CAPTURE_DIR, "raw.json"), JSON.stringify({results: rawResults}));
+        processResults.mockReturnValue([result({error: "locator.waitFor timed out"})]);
+
+        await expect(main(["--docker", "library/browsing"], dockerEnv)).resolves.toBe(1);
+
+        expect(processResults).toHaveBeenCalledWith(rawResults, {
+            guideDir: GUIDE_DIR,
+            stagingDir: CAPTURE_DIR,
+            promote: false,
+        });
+        expect(error).toHaveBeenCalledWith("  ! locator.waitFor timed out");
     });
 
     it("lets malformed container output reach the direct-run error handler", async () => {

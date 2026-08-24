@@ -151,6 +151,19 @@ describe("openSession", () => {
         expect(prompt).not.toContain("What this page is obliged to cover");
         expect(prompt).not.toContain("Controls this page names");
     });
+
+    it("describes a thrown walkthrough as non-visual repair evidence", () => {
+        openSession(evidence({
+            target: "",
+            walkthroughError: "locator.waitFor timed out",
+            diffSummary: "Walkthrough failed before capture completed.",
+        }), {runLogDir: "/logs"});
+
+        const prompt = (client.addUserMessage.mock.calls[0][0][0] as {text: string}).text;
+        expect(prompt).toContain("failed before it completed");
+        expect(prompt).toContain("walkthrough defect to repair");
+        expect(prompt).not.toContain("The images follow");
+    });
 });
 
 describe("triageShot", () => {

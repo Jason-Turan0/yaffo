@@ -125,6 +125,18 @@ describe("applyFix", () => {
         expect(runGates).toHaveBeenCalledWith(PAGE, {useDocker: undefined});
     });
 
+    it("instructs the agent to repair a capture failure instead of changing the guide", async () => {
+        await applyFix({client} as never, evidence({
+            target: "",
+            walkthroughError: "locator('#dialog.active') timed out",
+        }), options());
+
+        const prompt = (client.addUserMessage.mock.calls[0][0][0] as {text: string}).text;
+        expect(prompt).toContain("Repair the walkthrough");
+        expect(prompt).toContain("locator('#dialog.active') timed out");
+        expect(prompt).toContain("Do not change the guide prose or its screenshots");
+    });
+
     it("writes both owned trees and updates an existing artifact catalog", async () => {
         const catalog = `yaffo_ui_tests/user_doc_automation/${AREA}/page/page.json`;
         write(catalog, JSON.stringify({

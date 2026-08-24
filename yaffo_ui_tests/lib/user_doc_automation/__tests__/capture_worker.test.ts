@@ -76,7 +76,7 @@ describe("capture worker main", () => {
         expect(captureWalkthroughs).not.toHaveBeenCalled();
     });
 
-    it("reports every walkthrough failure and returns a failing status", async () => {
+    it("reports walkthrough failures as captured evidence without failing the worker", async () => {
         loadWalkthroughs.mockResolvedValue([
             {page: "library/good"}, {page: "library/bad"}, {page: "library/worse"},
         ]);
@@ -86,7 +86,7 @@ describe("capture worker main", () => {
             {page: "library/worse", shots: [{}], error: "navigation failed"},
         ]);
 
-        await expect(main([])).resolves.toBe(1);
+        await expect(main([])).resolves.toBe(0);
 
         expect(log).toHaveBeenCalledWith("  library/good: 2 shot(s)");
         expect(error).toHaveBeenCalledWith("  ! selector missing");

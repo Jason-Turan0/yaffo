@@ -211,7 +211,14 @@ jobs:
         run: npm run docs:validate
       - name: Capture ${{ matrix.page }}
         working-directory: yaffo_ui_tests
-        run: npm run docs:capture:docker -- "${{ matrix.page }}"
+        run: |
+          # A walkthrough timeout is evidence for docs:heal, not a reason to skip it.
+          # docs:capture still exits nonzero so verification gates remain strict.
+          set +e
+          npm run docs:capture:docker -- "${{ matrix.page }}"
+          code=$?
+          set -e
+          echo "Initial documentation capture exit code: $code" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload initial capture evidence
         id: capture_artifact
         if: ${{ always() }}
@@ -272,6 +279,7 @@ jobs:
             classification=$(jq -r ".verdicts[$index].triage.classification" "$TRIAGE")
             confidence=$(jq -r ".verdicts[$index].triage.confidence" "$TRIAGE")
             action=$(jq -r ".verdicts[$index].triage.recommendedAction" "$TRIAGE")
+            resolved=$(jq -r ".verdicts[$index].resolved // false" "$TRIAGE")
             summary=$(jq -r ".verdicts[$index].triage.summary" "$TRIAGE")
             reasoning=$(jq -r ".verdicts[$index].triage.reasoning" "$TRIAGE")
             case "$classification" in
@@ -288,6 +296,9 @@ jobs:
               echo "- **Classification:** \`$classification\`"
               echo "- **Confidence:** $confidence"
               echo "- **Recommended action:** \`$action\`"
+              if [ "$resolved" = "true" ]; then
+                echo "- **Status:** repaired and verified"
+              fi
               echo "- **Summary:** $summary"
               echo ""
               echo "<details><summary>Model rationale</summary>"

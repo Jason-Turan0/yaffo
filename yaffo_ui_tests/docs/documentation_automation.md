@@ -782,13 +782,18 @@ edits themselves.
 
 ### Two ways in
 
-A page reaches the agent by either detector, and they need different handling:
+A page reaches the agent through either detector or through a failed capture, and they
+need different handling:
 
 - **A changed screenshot** (Detector A) goes through triage first, because a pixel diff
   is ambiguous — intended, regression, or flake — and only the first is safe to adopt.
 - **A renamed control** (Detector B) goes **straight to the fix turn**. There is no
   screenshot to classify and no ambiguity to resolve: the string is gone and the page
   quotes it. Triage would be a model call that could only agree.
+- **A walkthrough that throws** also goes **straight to the fix turn**. The worker
+  preserves the exception in `raw.json`, the host includes it in `report.json`, and the
+  initial GitHub capture step continues into healing. The repair is accepted only when
+  the full walkthrough re-captures successfully through the normal gates.
 
 The second matters because that class of staleness is otherwise invisible. Renaming a
 toast or a button label rendered client-side moves no pixels, so capture reports nothing

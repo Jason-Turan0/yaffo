@@ -85,7 +85,15 @@ accepted.
 const REPO = resolve(join(process.cwd(), ".."));
 
 const buildPrompt = (evidence: Evidence, baseUrl: string): string => `
-The change is intended, so bring the page into line with it.
+${evidence.walkthroughError
+        ? `The documentation walkthrough failed before capture completed. Repair the walkthrough so
+it reaches and captures the intended state. Do not change the guide prose or its screenshots merely
+to hide the failure.
+
+Capture error:
+
+${evidence.walkthroughError}`
+        : "The documentation evidence is valid, so bring the page into line with it."}
 
 ## Tools — all read-only
 

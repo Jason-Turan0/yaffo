@@ -97,7 +97,12 @@ Be concrete and brief. Prefer "low" confidence over a confident guess.`;
 const section = (title: string, body: string): string => `\n## ${title}\n\n${body}\n`;
 
 const buildPrompt = (evidence: Evidence): string => [
-    `A screenshot on the guide page "${evidence.page}" changed.`,
+    evidence.walkthroughError
+        ? `The capture walkthrough for guide page "${evidence.page}" failed before it completed. ` +
+            "This is a walkthrough defect to repair, not a screenshot change to classify."
+        : evidence.target
+            ? `A screenshot on the guide page "${evidence.page}" changed.`
+            : `The guide page "${evidence.page}" was flagged by a non-visual dependency check.`,
     section("Shot", `${evidence.target}\n${evidence.diffSummary}`),
     evidence.covers ? section("What this page is obliged to cover", evidence.covers) : "",
     section("Page markdown", evidence.markdown),
@@ -109,7 +114,9 @@ const buildPrompt = (evidence: Evidence): string => [
                 ? `- "${c.was}" is now "${c.now}"`
                 : `- "${c.was}" no longer exists`).join("\n"))
         : "",
-    "\nThe images follow: the committed baseline, the new capture, then the diff overlay.",
+    evidence.target
+        ? "\nThe images follow: the committed baseline, the new capture, then the diff overlay."
+        : "",
 ].join("");
 
 const imagePart = (path: string) =>

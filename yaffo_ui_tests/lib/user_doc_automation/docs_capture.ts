@@ -146,7 +146,9 @@ export const main = async (
 
     let failed = 0;
     for (const result of results) {
-        if (promote) writeLockfile(result);
+        // A partial capture is not a verified page state and must never advance its
+        // dependency or screenshot watermark. The healer repairs and re-captures it.
+        if (promote && !result.error) writeLockfile(result);
         console.log(`${result.page}`);
         for (const shot of result.shots) {
             const mark = {new: "+", changed: "~", unchanged: "="}[shot.status];

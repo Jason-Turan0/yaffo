@@ -224,6 +224,65 @@ describe("heal CLI", () => {
         expect(newRunLogDir).not.toHaveBeenCalled();
     });
 
+    it("reports a failed walkthrough as unresolved in dry-run mode", async () => {
+        writeReport([result({shots: [], error: "locator.waitFor timed out"})]);
+
+        await expect(main([])).resolves.toBe(2);
+
+        expect(openSession).not.toHaveBeenCalled();
+        expect(log).toHaveBeenCalledWith(
+            "   → would send the failure to the repair agent (re-run with --apply)\n");
+        const saved = JSON.parse(readFileSync(join(STAGING_DIR, "triage.json"), "utf8"));
+        expect(saved.verdicts[0]).toMatchObject({
+            triage: {
+                classification: "walkthrough_defect",
+                recommendedAction: "fix_walkthrough",
+            },
+        });
+        expect(saved.verdicts[0]).not.toHaveProperty("resolved");
+    });
+
+    it("sends a failed walkthrough to the agent and accepts a gated repair", async () => {
+        writeReport([result({shots: [], error: "locator.waitFor timed out"})]);
+
+        await expect(main(["--apply", "--docker", "--model", "vision-model"]))
+            .resolves.toBe(0);
+
+        expect(openSession).toHaveBeenCalledWith(expect.objectContaining({
+            page: "area/page",
+            target: "",
+            walkthroughError: "locator.waitFor timed out",
+            diffSummary: expect.stringContaining("Walkthrough failed before capture completed"),
+        }), expect.objectContaining({
+            model: "vision-model",
+            toolProviders: [filesystem, browser, memory],
+        }));
+        expect(applyFix).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+            walkthroughError: "locator.waitFor timed out",
+        }), expect.objectContaining({useDocker: true}));
+        expect(triageShot).not.toHaveBeenCalled();
+        expect(log).toHaveBeenCalledWith("   → repaired and verified");
+        const saved = JSON.parse(readFileSync(join(STAGING_DIR, "triage.json"), "utf8"));
+        expect(saved.verdicts[0]).toMatchObject({
+            resolved: true,
+            triage: {
+                classification: "walkthrough_defect",
+                reasoning: expect.stringContaining("Repair agent: Updated the prose."),
+            },
+        });
+    });
+
+    it("keeps a failed walkthrough unresolved when the repair gates fail", async () => {
+        writeReport([result({shots: [], error: "locator.waitFor timed out"})]);
+        applyFix.mockResolvedValue({...outcome, failures: ["capture failed"], reverted: true});
+
+        await expect(main(["--apply", "--docker"])).resolves.toBe(2);
+
+        expect(error).toHaveBeenCalledWith("   → walkthrough remains unresolved");
+        const saved = JSON.parse(readFileSync(join(STAGING_DIR, "triage.json"), "utf8"));
+        expect(saved.verdicts[0].resolved).toBe(false);
+    });
+
     it("triages a changed shot in dry-run mode and records its verdict", async () => {
         writeReport([result()]);
 
