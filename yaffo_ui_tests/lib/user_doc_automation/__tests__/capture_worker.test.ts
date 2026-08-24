@@ -9,6 +9,7 @@ await jest.unstable_mockModule("../paths", () => ({
     BASE_URL: "http://app.test:5002",
     CAPTURE_DIR: "/staging/captures",
     CONTENT_DIR: "/content",
+    DOCS_DATA_DIR: "/canonical/yaffo-docs",
 }));
 await jest.unstable_mockModule("../load", () => ({loadWalkthroughs}));
 await jest.unstable_mockModule("../runner", () => ({captureWalkthroughs}));
@@ -35,7 +36,10 @@ afterEach(() => {
 
 describe("capture worker initialization", () => {
     it("scrubs the environment before any generated walkthrough is loaded", () => {
-        expect(initialScrubCalls).toEqual([[{DOCS_BASE_URL: "http://app.test:5002"}]]);
+        expect(initialScrubCalls).toEqual([[{
+            DOCS_BASE_URL: "http://app.test:5002",
+            YAFFO_DOCS_DATA_DIR: "/canonical/yaffo-docs",
+        }]]);
         expect(loadWalkthroughs).not.toHaveBeenCalled();
     });
 });

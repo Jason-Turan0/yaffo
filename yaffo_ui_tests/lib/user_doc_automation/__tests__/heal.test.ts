@@ -47,7 +47,12 @@ await jest.unstable_mockModule("../paths", () => ({
     BASE_URL, CAPTURE_DIR, CONTENT_DIR, GUIDE_DIR, newRunLogDir, STAGING_DIR,
 }));
 
-const {main, runCli} = await import("../heal");
+const {
+    acceptMinorEnvironmentVariation,
+    main,
+    MINOR_VARIATION_MAX_RATIO,
+    runCli,
+} = await import("../heal");
 
 let filesystem: {disconnect: jest.Mock<() => Promise<void>>};
 let browser: {disconnect: jest.Mock<() => Promise<void>>};
@@ -87,11 +92,19 @@ const writeReport = (results: unknown[]): void => {
 
 const intended = {
     classification: "intended_change",
-    confidence: "high",
+    confidence: "high" as const,
     summary: "The app changed intentionally.",
     reasoning: "The new control matches the implementation.",
     proseImpact: [{quote: "Old label", issue: "It is now New label"}],
     recommendedAction: "promote",
+};
+const environmentInstability = {
+    ...intended,
+    classification: "environment_instability" as const,
+    summary: "Minor renderer variation.",
+    reasoning: "Only anti-aliased text edges changed.",
+    proseImpact: [],
+    recommendedAction: "quarantine" as const,
 };
 const outcome = {
     fix: {files: [], explanation: "Updated the prose."},
@@ -148,6 +161,46 @@ afterEach(() => {
 
 afterAll(() => {
     rmSync(root, {recursive: true, force: true});
+});
+
+describe("minor environment variation policy", () => {
+    const diff = (over: Record<string, unknown> = {}) => shot({
+        diff: {
+            status: "changed",
+            diffPixels: 80,
+            ratio: MINOR_VARIATION_MAX_RATIO,
+            box: {x: 10, y: 10, width: 20, height: 8},
+            ...over,
+        },
+    });
+
+    it("promotes a semantic-free variation at the pixel limit", () => {
+        const accepted = acceptMinorEnvironmentVariation(
+            environmentInstability, diff() as never);
+
+        expect(accepted.recommendedAction).toBe("promote");
+        expect(accepted.classification).toBe("environment_instability");
+        expect(accepted.reasoning).toContain("within the 0.1% limit");
+    });
+
+    it("keeps material, reframed, and prose-affecting variations quarantined", () => {
+        expect(acceptMinorEnvironmentVariation(
+            environmentInstability,
+            diff({ratio: MINOR_VARIATION_MAX_RATIO + 0.000001}) as never
+        ).recommendedAction).toBe("quarantine");
+        expect(acceptMinorEnvironmentVariation(
+            environmentInstability,
+            diff({reason: "size"}) as never
+        ).recommendedAction).toBe("quarantine");
+        expect(acceptMinorEnvironmentVariation(
+            {...environmentInstability, proseImpact: [{quote: "Old", issue: "Changed"}]},
+            diff() as never
+        ).recommendedAction).toBe("quarantine");
+        expect(acceptMinorEnvironmentVariation(
+            {...environmentInstability, recommendedAction: "report_regression"},
+            diff() as never
+        ).recommendedAction).toBe("report_regression");
+    });
 });
 
 describe("heal CLI", () => {
@@ -207,6 +260,28 @@ describe("heal CLI", () => {
 
         expect(log).toHaveBeenCalledWith(
             "   → report_regression: left for a human, nothing written");
+    });
+
+    it("accepts a minor environment variation without requiring a human", async () => {
+        writeReport([result({shots: [shot({
+            diff: {
+                status: "changed",
+                diffPixels: 40,
+                ratio: 0.0005,
+                box: {x: 1, y: 2, width: 3, height: 4},
+            },
+        })]})]);
+        triageShot.mockResolvedValue({triage: environmentInstability});
+
+        await expect(main([])).resolves.toBe(0);
+
+        expect(log).toHaveBeenCalledWith(
+            "   → would promote and update the page (re-run with --apply)");
+        const saved = JSON.parse(readFileSync(join(STAGING_DIR, "triage.json"), "utf8"));
+        expect(saved.verdicts[0].triage).toMatchObject({
+            classification: "environment_instability",
+            recommendedAction: "promote",
+        });
     });
 
     it("returns failure when a changed shot cannot be triaged", async () => {

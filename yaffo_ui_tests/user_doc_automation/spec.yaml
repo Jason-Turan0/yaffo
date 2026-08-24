@@ -154,6 +154,12 @@ pages:
       Creating a page, working with widgets, and publishing and presenting it.
       The set of available widget types is enumerable and must stay complete.
     walkthrough: true
+    also_depends_on:
+      - yaffo/site_agents/widget_templates.py  # the complete built-in widget catalog
+      - yaffo/db/repositories/custom_page_repository.py  # page/version publishing semantics
+      - yaffo/background_tasks/tasks/generate_page.py  # durable assistant generation
+      - yaffo/site_agents/llm_config.py  # provider and API-key requirements
+      - yaffo_ui_tests/scripts/seed_database.py  # the published Florida Trip fixture
 
   create-customize/themes:
     covers: >-

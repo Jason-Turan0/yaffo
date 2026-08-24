@@ -131,6 +131,8 @@ describe("openSession", () => {
             [{name: "read_file"}, {name: "browser_navigate"}],
             TriageSchema,
         );
+        expect(createModelClient.mock.calls[0][2]).toContain("at most 0.1% of pixels changed");
+        expect(createModelClient.mock.calls[0][2]).toContain("recommend promote");
         const prompt = (client.addUserMessage.mock.calls[0][0][0] as {text: string}).text;
         expect(prompt).toContain("What this page is obliged to cover");
         expect(prompt).toContain('"Apply Filters" is now "Apply"');

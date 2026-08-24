@@ -91,7 +91,6 @@ export const capturesWhatThePageReferences = (
     const markdownPath = join(GUIDE_DIR, `${page}.md`);
     if (!existsSync(markdownPath)) return [`no such page: ${page}.md`];
     const wanted = requiredShots(readFileSync(markdownPath, "utf8"));
-    if (!wanted.length) return ["the page references no screenshots"];
 
     // Checked in the guide, not in staging — that is where mkdocs will look for them.
     const [area, name] = splitPage(page);

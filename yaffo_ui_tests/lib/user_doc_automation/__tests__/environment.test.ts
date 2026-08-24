@@ -16,6 +16,7 @@ describe("captureEnv", () => {
         const source = {
             PATH: "/usr/bin",
             DOCS_BASE_URL: "http://127.0.0.1:5002",
+            YAFFO_DOCS_DATA_DIR: "/private/tmp/yaffo-docs",
             ANTHROPIC_API_KEY: "secret",
             GITHUB_TOKEN: "secret",
             UNRELATED: "value",
@@ -24,6 +25,7 @@ describe("captureEnv", () => {
         expect(captureEnv(source)).toEqual({
             PATH: "/usr/bin",
             DOCS_BASE_URL: "http://127.0.0.1:5002",
+            YAFFO_DOCS_DATA_DIR: "/private/tmp/yaffo-docs",
             SKIP_DOTENV: "1",
         });
     });

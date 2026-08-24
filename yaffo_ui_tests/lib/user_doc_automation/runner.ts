@@ -245,10 +245,16 @@ export const processResults = (
             let diff: CompareResult | undefined;
             if (existsSync(committed)) {
                 // The diff overlay sits beside the staged shot so a reviewer can see
-                // *where* it moved, not just that it did.
-                diff = compareShots(committed, staged, shot.ignore,
-                    staged.replace(/\.webp$/, ".diff.png"));
+                // *where* it moved, not just that it did. When an overlay is written,
+                // preserve the committed image beside it before promotion can replace
+                // that file. The capture artifact then contains the candidate, baseline,
+                // and overlay as one self-contained review set.
+                const diffOut = staged.replace(/\.webp$/, ".diff.png");
+                diff = compareShots(committed, staged, shot.ignore, diffOut);
                 status = diff.status;
+                if (diff.diffImage && existsSync(diff.diffImage)) {
+                    copyFileSync(committed, staged.replace(/\.webp$/, ".baseline.webp"));
+                }
             }
 
             if (options.promote && status !== "unchanged") {

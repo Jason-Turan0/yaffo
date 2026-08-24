@@ -1,6 +1,7 @@
 import {spawnSync} from "child_process";
 import {mkdirSync} from "fs";
 import {captureEnv} from "./env";
+import {DOCS_DATA_DIR} from "./paths";
 
 export const DOCS_CAPTURE_IMAGE = "yaffo-docs-capture:latest";
 
@@ -109,6 +110,9 @@ export const buildCaptureArgs = (options: CaptureContainerOptions): string[] => 
     "-e", `DOCS_BASE_URL=${containerBaseUrl(options.baseUrl)}`,
     // The capture directory itself, not staging — see CAPTURE_DIR in paths.ts.
     "-e", `DOCS_CAPTURE_DIR=${CONTAINER_STAGING}`,
+    // This is a host application path, not a container path. Walkthroughs pass it
+    // back through the UI when a docs flow needs one of the fixture directories.
+    "-e", `YAFFO_DOCS_DATA_DIR=${DOCS_DATA_DIR}`,
     "-e", "SKIP_DOTENV=1",
     // tsx and Chromium both want a writable home; the repo mount is read-only.
     "-e", "HOME=/tmp",

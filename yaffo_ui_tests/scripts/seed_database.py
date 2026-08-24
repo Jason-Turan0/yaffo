@@ -526,7 +526,10 @@ def seed_custom_pages(db, seed_profile: str) -> None:
         print("  Skipped custom page: Florida Trip is only in the Bennett library")
         return
 
-    trip_filter = {"year": {"eq": 2021}}
+    trip_filter = {
+        "year": {"eq": 2021},
+        "media_type": {"eq": "photo"},
+    }
     hero = TEMPLATES_BY_NAME["Hero banner"].to_widget_item(x=0, y=0)
     hero["data_query"] = {
         "hero_photo": {"source": "media_items", **trip_filter, "limit": 1}

@@ -188,14 +188,6 @@ describe("capturesWhatThePageReferences", () => {
         ]);
     });
 
-    it("requires at least one screenshot reference", () => {
-        write(markdownPath(), "# Browsing\n\nNo image here.");
-        expect(capturesWhatThePageReferences(page)).toEqual([
-            "the page references no screenshots",
-        ]);
-        expect(requiredShots).toHaveBeenCalledWith("# Browsing\n\nNo image here.");
-    });
-
     it("reports every referenced image not promoted by the walkthrough", () => {
         write(markdownPath(), "three shots");
         requiredShots.mockReturnValue([

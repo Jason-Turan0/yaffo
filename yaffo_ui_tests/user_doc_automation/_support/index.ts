@@ -8,6 +8,9 @@
  *
  * Helpers shared across walkthroughs belong here too, once any exist.
  */
+import {join} from "path";
+import {DOCS_DATA_DIR} from "@lib/user_doc_automation/paths";
+
 export {defineWalkthrough} from "@lib/user_doc_automation/types";
 export type {FlowContext, GotoContext, RowRule, SandboxLookups, Shot, Viewport, Walkthrough} from "@lib/user_doc_automation/types";
 /**
@@ -15,3 +18,6 @@ export type {FlowContext, GotoContext, RowRule, SandboxLookups, Shot, Viewport, 
  * change on every reseed. The same fixture file the Playwright specs pin against.
  */
 export {PRIMARY_DETAIL_IMAGE} from "@lib/user_doc_automation/sandbox_facts";
+
+/** Resolve a path in the host application's canonical documentation fixture. */
+export const docsFixturePath = (...parts: string[]): string => join(DOCS_DATA_DIR, ...parts);

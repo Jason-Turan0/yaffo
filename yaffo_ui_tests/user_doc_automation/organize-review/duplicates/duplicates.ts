@@ -6,11 +6,11 @@
  * Playwright, so no fixture file is trashed, moved, or deleted.
  */
 import type {Page} from "@playwright/test";
-import {defineWalkthrough} from "../../_support";
+import {defineWalkthrough, docsFixturePath} from "../../_support";
 
-const DUPLICATE_SAMPLES = "/tmp/yaffo-docs/Duplicate Scan Samples";
-const UNIQUE_SAMPLES = "/tmp/yaffo-docs/Family Photos/2015_daughter_baby";
-const REVIEW_DESTINATION = "/tmp/yaffo-docs/Duplicate Review";
+const DUPLICATE_SAMPLES = docsFixturePath("Duplicate Scan Samples");
+const UNIQUE_SAMPLES = docsFixturePath("Family Photos", "2015_daughter_baby");
+const REVIEW_DESTINATION = docsFixturePath("Duplicate Review");
 
 const stabilizeShot = async (page: Page): Promise<void> => {
     // A click leaves the mouse at the old viewport coordinates after navigation,
@@ -130,6 +130,9 @@ export default defineWalkthrough({
             viewport: {width: 1400, height: 1000},
             goto: "/utilities/remove-duplicates",
             clip: "#remove-duplicates-form",
+            // The real canonical path remains visible, but macOS spells the shared
+            // temp root /private/tmp while Linux spells it /tmp.
+            ignoreRegions: ["input[name=directory]"],
             setup: async (page) => {
                 await cleanUpPriorScans(page);
                 await configureDirectory(page, DUPLICATE_SAMPLES, 4);

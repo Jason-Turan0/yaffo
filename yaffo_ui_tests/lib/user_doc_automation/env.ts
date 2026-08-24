@@ -21,8 +21,9 @@ export const CAPTURE_ENV_ALLOWLIST = [
     // The sandbox this run resolved to, so Playwright knows whether Chromium can
     // nest its own.
     "TEST_SANDBOX",
-    // Which instance to capture against, and where the guide is.
-    "DOCS_BASE_URL", "GUIDE_DIR",
+    // Which instance to capture against, where the guide is, and the canonical
+    // host path of its fixture (walkthroughs may submit fixture paths to the app).
+    "DOCS_BASE_URL", "GUIDE_DIR", "YAFFO_DOCS_DATA_DIR",
 ];
 
 /** The allowlisted subset of an environment, plus any explicit additions. */

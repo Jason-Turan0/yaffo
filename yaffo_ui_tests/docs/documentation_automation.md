@@ -7,13 +7,13 @@
 > (settle, framing, WebP encode, pixel comparison, dependency observation, runner,
 > evidence, triage, containerized capture, and the entry points); authored and
 > generated content in `yaffo_ui_tests/user_doc_automation/` (`spec.yaml` covering
-> 17 pages, and twelve walkthroughs, `start-here/getting-started/`,
+> 17 pages, and thirteen walkthroughs, `start-here/getting-started/`,
 > `start-here/concepts/`,
 > `library-basics/indexing-library/`, `library-basics/browsing-filtering/`,
 > `library-basics/photo-details/`, `library-basics/organizing-photos/`,
 > `organize-review/faces-and-people/`, `organize-review/assigning-faces/`,
 > `organize-review/labels/`, `organize-review/locations/`,
-> `organize-review/duplicates/`, and
+> `organize-review/duplicates/`, `create-customize/custom-pages/`, and
 > `reference-maintenance/settings/`); the
 > server-side observer at `yaffo/doc_observer.py`. A run captures to staging,
 > pixel-diffs against what is committed, records that page's routes, templates, and
@@ -28,7 +28,7 @@
 > reproducible documentation fixture are built.
 >
 > The GitHub fan-out and generated-PR workflow is built as
-> `.github/workflows/documentation-auto-heal.yml`. Not built: 4 of the 16
+> `.github/workflows/documentation-auto-heal.yml`. Not built: 3 of the 16
 > app-backed page walkthroughs.
 >
 > Last updated: 2026-08-23
@@ -736,7 +736,7 @@ Four classes, against the three in `lib/test_generator/heal_analysis.ts`:
 | `intended_change` | Promote the shot, review the prose. **The happy path.** |
 | `walkthrough_defect` | Selector gone, timeout, wrong state pinned, page moved. Fix the walkthrough and re-capture. The direct analogue of `test_code_defect`. |
 | `application_regression` | The UI changed in a way that looks broken. **Report it; do not document it.** |
-| `environment_instability` | Flake, non-reproducible region, fixture drift. Quarantine; leave the docs alone. |
+| `environment_instability` | Flake, non-reproducible region, fixture drift, or renderer noise. Promote a semantically unchanged, non-reframed variation affecting at most 0.1% of pixels; quarantine material content or state drift. |
 
 The third class is the one a naive design omits, and it is the one that keeps the
 automation honest. A bot that accepts every pixel change will eventually enshrine a
@@ -748,7 +748,7 @@ is a regression report, not a screenshot of broken thumbnails.
 | Test framework | Docs | State |
 |---|---|---|
 | `test`, `test:sandboxed` | **`docs:capture`** — deterministic run; `--promote` writes into the guide | Built, as `npm run docs:capture` |
-| `generate` | **`docs:generate`** — writes a walkthrough for a page that has none | 4 of 16 app-backed pages still need one |
+| `generate` | **`docs:generate`** — writes a walkthrough for a page that has none | 3 of 16 app-backed pages still need one |
 | `test:heal` | **`docs:heal`** — act on what the detectors found; `--apply` writes | Built, as `npm run docs:heal` |
 | — | **`docs:detect`** — dependency fingerprints plus Detector B, without a sandbox | Built, as `npm run docs:detect` |
 | `validate:specs` | **`docs:validate`** — the guide and its automation agree | Built, as `npm run docs:validate` |

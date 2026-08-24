@@ -48,6 +48,36 @@ const MARK: Record<Triage["classification"], string> = {
     environment_instability: "🌫️",
 };
 
+/**
+ * Environment noise below this fraction may become the new baseline when the model
+ * confirms that it has no semantic or prose impact. 0.001 is 0.1% of the image.
+ */
+export const MINOR_VARIATION_MAX_RATIO = 0.001;
+
+export const acceptMinorEnvironmentVariation = (
+    triage: Triage,
+    shot: WalkthroughResult["shots"][number]
+): Triage => {
+    const diff = shot.diff;
+    if (
+        triage.classification !== "environment_instability" ||
+        triage.recommendedAction !== "quarantine" ||
+        triage.proseImpact.length > 0 ||
+        diff?.reason === "size" ||
+        diff?.ratio === undefined ||
+        diff.ratio > MINOR_VARIATION_MAX_RATIO
+    ) return triage;
+
+    return {
+        ...triage,
+        recommendedAction: "promote",
+        reasoning: `${triage.reasoning}\n` +
+            `Accepted as a minor environment variation: ` +
+            `${(diff.ratio * 100).toFixed(4)}% of pixels changed, within the 0.1% limit, ` +
+            "with no reframing or prose impact.",
+    };
+};
+
 const spec = (): {pages?: Record<string, {covers?: string; also_depends_on?: string[]}>} =>
     parseYaml(readFileSync(join(CONTENT_DIR, "spec.yaml"), "utf8"));
 
@@ -219,7 +249,10 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
                 failed++;
                 continue;
             }
-            const triage: Triage = session.triage;
+            const triage = acceptMinorEnvironmentVariation(session.triage, shot);
+            // The fix turn continues this session, so give it the effective action
+            // rather than the model's pre-policy recommendation.
+            session.triage = triage;
             verdicts.push({page: result.page, target: shot.target, triage});
 
             console.log(`${MARK[triage.classification]} ${shot.target}`);
@@ -317,7 +350,10 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
         writeFileSync(join(STAGING_DIR, "triage.json"),
             JSON.stringify({triagedAt: new Date().toISOString(), verdicts}, null, 2));
 
-        const blocking = verdicts.filter((v) => v.triage.classification !== "intended_change");
+        // Classification explains the source; action decides whether a human is
+        // needed. Minor environment noise can therefore promote without pretending
+        // it was an intentional product change.
+        const blocking = verdicts.filter((v) => v.triage.recommendedAction !== "promote");
         console.log(`${verdicts.length} triaged, ${blocking.length} needing a human.`);
         return blocking.length ? 2 : failed ? 1 : 0;
     } finally {

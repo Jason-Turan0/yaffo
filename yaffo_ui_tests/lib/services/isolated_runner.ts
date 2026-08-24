@@ -4,6 +4,7 @@ import {join, resolve} from "path";
 import {cpSync, existsSync, mkdirSync, realpathSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
 import {createServer} from "net";
+import {DOCS_DATA_DIR as AUTOMATION_DOCS_DATA_DIR} from "../user_doc_automation/paths";
 
 // Resolved temp root: on macOS tmpdir() is /var/folders/… but /var is a symlink
 // to /private/var. The p2p grant query prefix-matches media_dir.path.resolve()
@@ -99,8 +100,7 @@ const SCRIPTS_DIR = join(UI_TESTS_DIR, "scripts");
  * The cache is restored here before serving; unlike ordinary test sandboxes it is not
  * an ephemeral timestamped directory.
  */
-export const DOCS_DATA_DIR = process.env.YAFFO_DOCS_DATA_DIR ||
-    (process.platform === "win32" ? join(TEMP_ROOT, "yaffo-docs") : "/tmp/yaffo-docs");
+export const DOCS_DATA_DIR = AUTOMATION_DOCS_DATA_DIR;
 export const DOCS_MEDIA_DIR = join(DOCS_DATA_DIR, "Family Photos");
 export const DOCS_DUPLICATE_SCAN_DIR = join(DOCS_DATA_DIR, "Duplicate Scan Samples");
 

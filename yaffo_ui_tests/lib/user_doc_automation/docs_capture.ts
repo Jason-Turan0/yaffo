@@ -26,7 +26,7 @@ import {pathToFileURL} from "url";
 import {parse as parseYaml} from "yaml";
 import {loadWalkthroughs} from "./load";
 import {currentHead, dependencyHashes} from "./dependency_changes";
-import {BASE_URL, CAPTURE_DIR, CONTENT_DIR, GUIDE_DIR} from "./paths";
+import {BASE_URL, CAPTURE_DIR, CONTENT_DIR, DOCS_DATA_DIR, GUIDE_DIR} from "./paths";
 import {processResults, RAW_FILENAME, runWalkthroughs} from "./runner";
 import type {RawResult, WalkthroughResult} from "./runner";
 
@@ -46,7 +46,7 @@ const REPO = resolve(join(process.cwd(), ".."));
 // Before anything else, and in particular before any walkthrough is imported:
 // walkthroughs are model-generated code, and nothing they run should be able to
 // read a provider key out of the ambient environment.
-scrubProcessEnv({DOCS_BASE_URL: BASE_URL});
+scrubProcessEnv({DOCS_BASE_URL: BASE_URL, YAFFO_DOCS_DATA_DIR: DOCS_DATA_DIR});
 
 const declaredDependencies = (page: string): string[] => {
     const specPath = join(CONTENT_DIR, "spec.yaml");

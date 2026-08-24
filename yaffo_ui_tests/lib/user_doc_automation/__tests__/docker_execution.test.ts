@@ -3,6 +3,7 @@ import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync}
 import {tmpdir} from "os";
 import {join} from "path";
 import {dockerAvailable, hostUserArgs, runCaptureContainer} from "../docker";
+import {DOCS_DATA_DIR} from "../paths";
 
 let testDir: string;
 let fakeDocker: string;
@@ -75,6 +76,7 @@ describe("runCaptureContainer", () => {
                 expect(argv).toContain(`${process.getuid()}:${process.getgid()}`);
             }
             expect(argv).toContain("DOCS_BASE_URL=http://host.docker.internal:5002");
+            expect(argv).toContain(`YAFFO_DOCS_DATA_DIR=${DOCS_DATA_DIR}`);
             expect(argv.slice(-1)).toEqual(["library/browsing"]);
         } finally {
             if (previousSecret === undefined) delete process.env.ANTHROPIC_API_KEY;

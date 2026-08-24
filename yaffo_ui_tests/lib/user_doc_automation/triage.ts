@@ -69,7 +69,20 @@ Classify as exactly one of:
   belongs. Never adopt a screenshot of a bug into the manual.
 - environment_instability — the difference comes from the test fixture or environment
   rather than the product: different seeded media, non-reproducible content such as live
-  map tiles, or noise that would differ again on the next run.
+  map tiles, or renderer noise that may differ again on the next run.
+
+Choose the recommended action independently from the classification:
+
+- promote for intended changes.
+- fix_walkthrough for a walkthrough defect.
+- report_regression for an application regression.
+- For environment_instability, distinguish harmless variation from material drift. If
+  at most 0.1% of pixels changed, the shot was not reframed, the visible meaning and
+  content are unchanged, and no prose is affected, recommend promote: accepting a tiny
+  anti-aliasing, shadow, generated-thumbnail, or similarly localized variation is safer
+  than blocking the documentation indefinitely. Recommend quarantine when fixture
+  content, counts, labels, media, layout, or a meaningful visual state changed, or when
+  the variation is broad enough that adopting one run would merely flip the next run.
 
 Then check the page's prose against the new screenshot. Report any sentence whose accuracy
 the change undermines — a renamed control, a changed count, a described element that is no

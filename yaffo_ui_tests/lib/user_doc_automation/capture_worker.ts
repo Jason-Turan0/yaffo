@@ -13,7 +13,7 @@
  * where it runs, not what it does.
  */
 import {scrubProcessEnv} from "./env";
-import {BASE_URL, CAPTURE_DIR, CONTENT_DIR} from "./paths";
+import {BASE_URL, CAPTURE_DIR, CONTENT_DIR, DOCS_DATA_DIR} from "./paths";
 import {resolve} from "path";
 import {pathToFileURL} from "url";
 
@@ -22,7 +22,7 @@ import {pathToFileURL} from "url";
 // nothing they run should be able to read a provider key out of the environment.
 // The container narrows this further — it is handed an allowlist to begin with — but
 // this stays so a host-side run is confined the same way.
-scrubProcessEnv({DOCS_BASE_URL: BASE_URL});
+scrubProcessEnv({DOCS_BASE_URL: BASE_URL, YAFFO_DOCS_DATA_DIR: DOCS_DATA_DIR});
 
 
 export const main = async (args: string[] = process.argv.slice(2)): Promise<number> => {

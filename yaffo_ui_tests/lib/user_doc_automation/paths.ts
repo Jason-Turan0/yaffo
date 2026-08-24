@@ -1,5 +1,6 @@
-import {existsSync, mkdirSync, readdirSync, rmSync} from "fs";
-import {join, resolve} from "path";
+import {existsSync, mkdirSync, readdirSync, realpathSync, rmSync} from "fs";
+import {tmpdir} from "os";
+import {basename, dirname, join, resolve} from "path";
 
 /**
  * Every path the docs pipeline uses, in one place.
@@ -56,6 +57,32 @@ export const CAPTURE_DIR = resolve(
 
 /** The sandbox to drive. Its own variable because BASE_URL is overloaded in this repo. */
 export const BASE_URL = process.env.DOCS_BASE_URL || "http://127.0.0.1:5002";
+
+/**
+ * Canonical host path of the reproducible documentation fixture.
+ *
+ * macOS exposes `/tmp` through a `/private/tmp` symlink. The seed intentionally
+ * stores resolved paths in SQLite, so walkthroughs must use that same spelling when
+ * they submit fixture directories back to the app. This value is passed unchanged
+ * into the Linux capture container; resolving it inside the container would describe
+ * the container's filesystem instead of the host application being driven.
+ */
+const canonicalHostPath = (value: string): string => {
+    const absolute = resolve(value);
+    if (existsSync(absolute)) return realpathSync(absolute);
+    const parent = dirname(absolute);
+    // The fixture itself may not exist yet during `docs:fixture:build`, but its
+    // temp parent does. Resolving the parent still removes macOS's /tmp alias.
+    return existsSync(parent)
+        ? join(realpathSync(parent), basename(absolute))
+        : absolute;
+};
+const defaultDocsDataDir = join(
+    process.platform === "win32" ? tmpdir() : "/tmp",
+    "yaffo-docs"
+);
+export const DOCS_DATA_DIR = canonicalHostPath(
+    process.env.YAFFO_DOCS_DATA_DIR || defaultDocsDataDir);
 
 /** `{area}/{page}` -> its two parts. */
 export const splitPage = (page: string): [string, string] =>

@@ -347,7 +347,36 @@ describe("processResults", () => {
             status: "unchanged",
             diff: {status: "unchanged", diffPixels: 0},
         });
+        expect(existsSync(staged.replace(/\.webp$/, ".baseline.webp"))).toBe(false);
         expect(readFileSync(committed, "utf8")).toBe("committed baseline");
+    });
+
+    it("copies the committed baseline beside a generated diff", () => {
+        const target = "library/assets/browsing/gallery.webp";
+        const committed = join(guideDir, target);
+        mkdirSync(dirname(committed), {recursive: true});
+        writeFileSync(committed, "committed baseline", "utf8");
+        compareShots.mockImplementation((_baseline, _candidate, _ignore, diffOut) => {
+            if (!diffOut) throw new Error("Expected a diff output path");
+            writeFileSync(diffOut, "diff overlay", "utf8");
+            return {
+                status: "changed",
+                diffPixels: 200,
+                ratio: 0.01,
+                box: {x: 1, y: 2, width: 3, height: 4},
+                diffImage: diffOut,
+            };
+        });
+
+        const [processed] = processResults([raw()], {guideDir, stagingDir, promote: true});
+        const staged = join(stagingDir, target);
+
+        expect(processed.shots[0].status).toBe("changed");
+        expect(readFileSync(staged.replace(/\.webp$/, ".baseline.webp"), "utf8"))
+            .toBe("committed baseline");
+        expect(readFileSync(staged.replace(/\.webp$/, ".diff.png"), "utf8"))
+            .toBe("diff overlay");
+        expect(readFileSync(committed, "utf8")).toContain("encoded:");
     });
 
     it("promotes a changed candidate only when requested", () => {

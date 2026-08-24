@@ -11,6 +11,7 @@ const CONTENT_DIR = join(UI_TESTS, "user_doc_automation");
 const CAPTURE_DIR = join(UI_TESTS, ".doc-staging", "captures");
 const GUIDE_DIR = join(REPO, "docs", "guide");
 const BASE_URL = "http://app.test:5002";
+const DOCS_DATA_DIR = "/canonical/yaffo-docs";
 const HOST_REPO = resolve(join(process.cwd(), ".."));
 
 const scrubProcessEnv = jest.fn<(extra?: Record<string, string>) => void>();
@@ -38,7 +39,7 @@ await jest.unstable_mockModule("../docker", () => ({
 await jest.unstable_mockModule("../load", () => ({loadWalkthroughs}));
 await jest.unstable_mockModule("../dependency_changes", () => ({currentHead, dependencyHashes}));
 await jest.unstable_mockModule("../paths", () => ({
-    BASE_URL, CAPTURE_DIR, CONTENT_DIR, GUIDE_DIR,
+    BASE_URL, CAPTURE_DIR, CONTENT_DIR, DOCS_DATA_DIR, GUIDE_DIR,
 }));
 await jest.unstable_mockModule("../runner", () => ({
     processResults,
@@ -111,7 +112,10 @@ describe("run initialization", () => {
     it("snapshots Docker settings before scrubbing generated-code credentials", () => {
         expect(initialization.dockerEnv).toEqual({DOCKER_HOST: "unix:///initial.sock"});
         expect(initialization.snapshotOrder).toBeLessThan(initialization.scrubOrder);
-        expect(initialization.scrubArgs).toEqual([{DOCS_BASE_URL: BASE_URL}]);
+        expect(initialization.scrubArgs).toEqual([{
+            DOCS_BASE_URL: BASE_URL,
+            YAFFO_DOCS_DATA_DIR: DOCS_DATA_DIR,
+        }]);
     });
 });
 
