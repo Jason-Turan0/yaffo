@@ -102,6 +102,7 @@ const SCRIPTS_DIR = join(UI_TESTS_DIR, "scripts");
 export const DOCS_DATA_DIR = process.env.YAFFO_DOCS_DATA_DIR ||
     (process.platform === "win32" ? join(TEMP_ROOT, "yaffo-docs") : "/tmp/yaffo-docs");
 export const DOCS_MEDIA_DIR = join(DOCS_DATA_DIR, "Family Photos");
+export const DOCS_DUPLICATE_SCAN_DIR = join(DOCS_DATA_DIR, "Duplicate Scan Samples");
 
 // UDP ports for the p2p QUIC transport, well away from the web ports.
 const quicPortFor = (webPort: number): number => webPort + 10_000;
@@ -296,6 +297,11 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
  * Build the docs-grade fixture without the synthetic duplicate-test videos. The
  * Bennett fixture already contains a short real beach video, so capture still covers
  * video cards and playback while the gallery remains presentable.
+ *
+ * Duplicate review needs something useful to find, but putting duplicates inside
+ * Family Photos would pollute the gallery and index. Stage two pairs of real images
+ * beside the indexed library instead: the utility can scan them explicitly, while
+ * every other guide page continues to see one canonical copy of each photo.
  */
 export const buildDocumentationFixture = (dataDir = DOCS_DATA_DIR): string => {
     rmSync(dataDir, {recursive: true, force: true});
@@ -308,6 +314,23 @@ export const buildDocumentationFixture = (dataDir = DOCS_DATA_DIR): string => {
         recursiveVideos: true,
         strictSeed: true,
     });
+    const mediaDir = join(dataDir, "Family Photos");
+    const duplicateDir = join(dataDir, "Duplicate Scan Samples");
+    mkdirSync(duplicateDir, {recursive: true});
+    const samples = [
+        {
+            source: join(mediaDir, "2017_third_birthday", "2017-09-12_162200_blowing-candles.png"),
+            names: ["01-birthday-a.png", "01-birthday-b.png"],
+        },
+        {
+            source: join(mediaDir, "2021_gulf_beach_trip", "2021-07-10_134200_family-sandcastle.png"),
+            names: ["02-beach-a.png", "02-beach-b.png"],
+        },
+    ];
+    for (const sample of samples) {
+        for (const name of sample.names) cpSync(sample.source, join(duplicateDir, name));
+    }
+    console.log(`   ✅ Staged ${samples.length} duplicate-review groups outside the indexed library`);
     return dataDir;
 };
 

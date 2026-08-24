@@ -142,13 +142,16 @@ def test_a_change_within_the_pixel_budget_is_tolerated(tmp_path):
     assert result["status"] == "unchanged"
 
 
-def test_a_reframed_shot_is_changed_without_pixel_maths(tmp_path):
+def test_a_reframed_shot_reports_pixels_present_only_in_the_larger_image(tmp_path):
     base = _save(_canvas(600, 400), tmp_path / "a.webp")
     smaller = _save(_canvas(500, 400), tmp_path / "b.webp")
     result = _run(base, smaller)
     assert result["status"] == "changed"
     assert result["reason"] == "size"
-    assert result["diffPixels"] is None
+    assert result["baselineSize"] == [600, 400]
+    assert result["candidateSize"] == [500, 400]
+    assert result["diffPixels"] == 100 * 400
+    assert result["box"] == {"x": 500, "y": 0, "width": 100, "height": 400}
 
 
 def test_diff_overlay_is_written_only_when_changed(tmp_path):

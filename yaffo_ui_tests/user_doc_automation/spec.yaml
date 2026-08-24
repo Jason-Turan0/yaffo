@@ -25,8 +25,8 @@ version: 1
 # screenshots: the walkthrough still drives the flows the page describes, so the
 # runtime dependency set is recorded either way.
 #
-#   covers           the page's obligation, not its current contents. Oracle D
-#                    compares this against the app's real surface to find gaps.
+#   covers           the page's obligation, not its current contents. This is
+#                    compared this against the app's real surface to find gaps.
 #   walkthrough      true when the page has a walkthrough folder at
 #                    {area}/{page}/; false only where the page has no observable
 #                    surface at all and never will.
@@ -62,6 +62,11 @@ pages:
     walkthrough: true
     also_depends_on:
       - yaffo/common.py       # PHOTO_EXTENSIONS / VIDEO_EXTENSIONS back "Supported Media"
+      - yaffo/utils/file_sync.py  # scan, orphan, and sync semantics
+      - yaffo/utils/index_jobs.py # import and reindex job creation
+      - yaffo/background_tasks/watcher.py  # live filesystem changes
+      - yaffo/background_tasks/tasks/file_sync.py  # scheduled reconciliation
+      - yaffo/scripts/db/migrations/000_MIGRATION_20260620_INIT.py  # hourly schedule
 
   library-basics/browsing-filtering:
     covers: >-
@@ -79,19 +84,28 @@ pages:
       favoriting, location, people and faces, labels, tags, and the keyboard
       shortcut.
     walkthrough: true
+    also_depends_on:
+      - yaffo/common.py  # playable versus externally opened video containers
+      - yaffo/background_tasks/tasks/export_photo_tag.py  # optional metadata export
 
   library-basics/organizing-photos:
     covers: >-
       How filters, favorites, tags, people, labels, locations, duplicate review,
-      and custom pages relate to one another, plus one practical end-to-end
+      albums, and custom pages relate to one another, plus one practical end-to-end
       workflow. A hub page: it explains relationships rather than screens.
     walkthrough: true
+    also_depends_on:
+      - yaffo/db/models.py  # the entities and relationships this hub explains
 
   organize-review/faces-and-people:
     covers: >-
       What the face review page shows, creating people, reviewing one person's
       faces, and automatic assignment. Background for the assignment workflow.
     walkthrough: true
+    also_depends_on:
+      - yaffo/domain/life_stages.py  # why a person's birthdate improves matching
+      - yaffo/background_tasks/tasks/auto_assign_faces_automation.py  # assignment policy
+      - yaffo/scripts/db/migrations/000_MIGRATION_20260620_INIT.py  # built-in trigger and defaults
 
   organize-review/assigning-faces:
     covers: >-
@@ -109,6 +123,9 @@ pages:
     walkthrough: true
     also_depends_on:
       - yaffo/scripts/db/migrations/000_MIGRATION_20260620_INIT.py  # seeded vocabulary
+      - yaffo/background_tasks/automation_config.py  # confidence and per-photo limits
+      - yaffo/background_tasks/tasks/classify_labels_automation.py  # offline classification policy
+      - yaffo/db/repositories/classification_repository.py  # enabled vocabulary and assignments
 
   organize-review/locations:
     covers: >-
@@ -116,6 +133,10 @@ pages:
       assigning and clearing location names, recommendations, filtering the map,
       and the empty state.
     walkthrough: true
+    also_depends_on:
+      - yaffo/routes/filter_config.py  # the canonical filter group list
+      - yaffo/background_tasks/automation_config.py  # nearby-name radius semantics
+      - yaffo/utils/reverse_geocode.py  # external recommendation fallback
 
   organize-review/duplicates:
     covers: >-
@@ -123,6 +144,10 @@ pages:
       an action, removing selected duplicates, the safety checklist, and the
       no-duplicates-found case.
     walkthrough: true
+    also_depends_on:
+      - yaffo/background_tasks/tasks/find_duplicates.py  # perceptual-hash grouping policy
+      - yaffo/background_tasks/tasks/remove_duplicates.py  # trash/delete/move behavior
+      - yaffo_ui_tests/lib/services/isolated_runner.ts  # docs-only duplicate sample composition
 
   create-customize/custom-pages:
     covers: >-

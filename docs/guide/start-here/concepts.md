@@ -4,6 +4,12 @@ This page defines the terms used throughout the Yaffo guide.
 
 ## Library
 
+**Library**
+
+The collection of photos and videos Yaffo has indexed, together with the
+metadata it records about them. The library points to your originals; it does
+not replace or relocate them.
+
 **Media item**  
 A photo or video that Yaffo knows about. Media items come from the folders you
 add in Settings.
@@ -12,11 +18,12 @@ add in Settings.
 A folder Yaffo scans for photos and videos. Yaffo does not require your media to
 live inside its own data folder; it indexes the folders you choose.
 
-**Indexed**  
-A media item is indexed when Yaffo has recorded it in the local database and
-processed enough information to show it in the library. Indexing can include
-thumbnail generation, metadata extraction, face detection, automatic labels, and
-location data.
+**Index / indexed**
+
+The index is Yaffo's local record of the files in your media directories and the
+metadata it has processed for them. A media item is indexed when that record is
+ready to appear in the library. Indexing can include thumbnail generation,
+metadata extraction, face detection, automatic labels, and location data.
 
 **Thumbnail**  
 A smaller preview image Yaffo creates for fast browsing. Thumbnails are stored in
@@ -52,6 +59,11 @@ yet.
 
 **Favorite**  
 A simple marker for photos or videos you want to find again quickly.
+
+**Album**
+
+A collection you curate by hand. Albums keep chosen media items together in
+your preferred order and can be shared with another Yaffo device.
 
 ## Workflows
 

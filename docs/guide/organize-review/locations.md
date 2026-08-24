@@ -4,36 +4,41 @@ The **Locations** page shows photos and videos that have GPS coordinates. It is
 useful for reviewing where photos were taken and assigning human-readable
 location names.
 
-![Locations map](assets/locations/locations-map.png)
+![The Locations page with its filter sidebar and clustered map markers](assets/locations/locations-map.webp)
 
 ## Map Markers and Clusters
 
-Each marker represents one or more located media items. When several items are
-close together, Yaffo groups them into a cluster.
+Each marker represents one or more located media items. When several markers are
+close together at the current zoom level, Yaffo groups them into a numbered
+cluster. Zooming in can split a cluster into smaller groups or individual
+markers.
 
-Use normal map controls to pan and zoom. Zooming in can split clusters into
-smaller groups or individual points.
+Use the **+** and **-** controls, the mouse wheel, or normal touch gestures to
+zoom. Drag the map to pan.
 
 Photos without GPS coordinates do not appear on the map.
 
 ## Select Photos on the Map
 
-Click a marker or cluster to open the selection panel.
+Click a marker or cluster to select every photo it represents and open the
+selection panel. A plain click starts a new selection. Hold **Shift** while
+clicking to add or remove another cluster, or hold **Shift** and drag a box around
+several markers.
 
-![Locations selection panel](assets/locations/locations-selection-panel.png)
+![The location selection panel with previews, recommendations, assignment controls, and selected clusters](assets/locations/locations-selection-panel.webp)
 
 The panel shows:
 
 - the selected photo count;
 - a preview image;
-- thumbnails or a selector when multiple photos are selected;
+- a thumbnail strip and selector when multiple photos are selected;
 - current location-name breakdown;
 - recommended location actions;
 - custom assignment controls;
 - clear-selection and clear-name actions.
 
-Use **Shift** with click or drag to build a larger selection from multiple
-clusters.
+Click an empty part of the map, the close button, or **Clear Selection** to start
+over.
 
 ## Preview the Selection
 
@@ -57,9 +62,10 @@ without requiring a full page reload.
 
 Yaffo can suggest a location name in two ways:
 
-- If nearby photos already share one location name, Yaffo recommends that name.
-- If no unique nearby name is available, Yaffo can use reverse geocoding to
-  suggest a name from the selected coordinates.
+- If the photos within the configured nearby radius have exactly one saved
+  location name, Yaffo recommends that name.
+- Otherwise, Yaffo sends the center of the selection to its reverse-geocoding
+  service and may suggest the returned place name.
 
 Recommendations are meant to speed up assignment. Review the suggestion before
 applying it.
@@ -74,8 +80,9 @@ human-readable name stored in Yaffo.
 
 ## Filter the Map
 
-The Locations page uses the same style of filter sidebar as the gallery, but it
-filters map markers in the browser.
+The Locations page uses the same style of filter sidebar as the gallery. Click
+**Apply Filters** to filter the already-loaded map markers in the browser; the
+page does not reload or recenter the map.
 
 Useful filters include:
 
@@ -83,9 +90,9 @@ Useful filters include:
   need names.
 - **Locations:** show photos with specific assigned names.
 - **Proximity Search:** find photos near a place.
-- **Year**, **Month**, **People**, **Labels**, **Tags**, **Device**, **Favorites**,
-  and **Media Type:** narrow map markers by the same library metadata used in the
-  gallery.
+- **Year**, **Month**, **File**, **People**, **Gender**, **Labels**, **Tags**,
+  **Device**, **Favorites**, **Media Type**, and **Shape:** narrow map markers by
+  the same library metadata used in the gallery.
 
 Click **Clear Filters** to restore the full located set.
 
@@ -97,5 +104,5 @@ If the map has no markers:
 - run indexing after adding new photos;
 - clear active filters;
 - check that the selected media folders are configured;
-- remember that photos with location names but no GPS coordinates cannot appear
-  on the map.
+- remember that a saved location name by itself is not enough: the item must also
+  have GPS coordinates to appear on the map.

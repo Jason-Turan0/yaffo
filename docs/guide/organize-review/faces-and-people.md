@@ -3,7 +3,7 @@
 Yaffo detects faces during indexing and lets you assign those faces to people.
 After that, you can browse a person's faces or filter the library by people.
 
-![The Faces page: cluster of unassigned faces with the actions and filters sidebar](assets/faces-and-people/faces-review.png)
+![The Faces page showing a cluster of unassigned faces with assignment controls](assets/faces-and-people/faces-review.webp)
 
 This page explains the concepts. For the hands-on, step-by-step workflow of
 clearing the unassigned pile, see [Assigning Faces](assigning-faces.md).
@@ -37,7 +37,7 @@ this in practice.
 
 Open **People** to create and manage people.
 
-![People list](assets/faces-and-people/people-list.png)
+![The People page showing each person's details and assigned-face counts](assets/faces-and-people/people-list.webp)
 
 Each person can have:
 
@@ -45,8 +45,8 @@ Each person can have:
 - an optional gender;
 - an optional birthdate.
 
-Birthdate and gender can help improve face recognition accuracy when they are
-known, but they are not required.
+A birthdate helps Yaffo compare a person's faces from similar life stages. Gender
+is used by the gallery's gender filter. Neither field is required.
 
 You can also create a person on the fly while assigning faces, using the
 **Create Person** box in the Faces sidebar.
@@ -66,6 +66,15 @@ that face assignment.
 
 ## Automatic Assignment
 
-As your people catalog improves, Yaffo can assign matching faces in the
-background. You should still review results, especially early in a new library
-when each person has only a few examples.
+The built-in **Auto-assign faces** automation runs when a photo is indexed. It
+compares each detected face with your known people and assigns a face when one
+person clears the configured match threshold.
+
+By default, a face that strongly matches more than one person stays unassigned
+for you to review. You can instead enable **Assign when multiple people match**
+to choose the highest-scoring match. A higher threshold makes fewer, more
+confident assignments.
+
+Open **Utilities** → **Automations** → **Auto-assign faces** to enable or disable
+the automation and change those settings. Review automatic results periodically,
+especially while each person has only a few examples.

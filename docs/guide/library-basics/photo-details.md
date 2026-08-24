@@ -3,7 +3,7 @@
 The photo detail page is where you review one photo or video closely. Open it by
 clicking a card in the gallery.
 
-![Media detail page](assets/photo-details/media-detail.webp)
+![A photo detail page with file information, location, people, detected faces, and labels](assets/photo-details/media-detail.webp)
 
 ## Review the Preview
 
@@ -40,14 +40,21 @@ Use **Open Folder** to open the folder that contains the original file.
 These actions use your local operating system. If the file or folder no longer
 exists, Yaffo shows an error instead of opening it.
 
+## Reindex One Item
+
+Use **Reindex** when the selected file's metadata, thumbnail, labels, or detected
+faces need to be rebuilt. Reindexing rereads the original file and detects its
+faces again. Existing face-to-person assignments for this item are removed, so
+Yaffo asks you to confirm before starting the background job.
+
 ## Mark a Favorite
 
 Use the heart button on the preview to toggle favorite status. Favorites can be
 used later in gallery filters.
 
-Favorite status is stored in Yaffo's database. If an automation exports tags or
-metadata, it may also write that change back to the file depending on your
-automation setup.
+Favorite status is stored in Yaffo's database. If the **Export photo tag**
+automation's favorite option is enabled, Yaffo also writes a `Favorite` keyword
+to the file.
 
 ## Review Location Information
 
@@ -68,6 +75,8 @@ person to open that person's face page.
 
 The **Faces** section shows detected face thumbnails. Hover over a face thumbnail
 to highlight that face in the main photo when face coordinates are available.
+Click a face thumbnail to open the reassignment control, then choose a person and
+apply the change.
 
 Use the [Faces & People](../organize-review/faces-and-people.md) guide for
 assigning, correcting, and reviewing people.
