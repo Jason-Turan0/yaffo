@@ -202,6 +202,15 @@ describe("local capture", () => {
         expect(error).toHaveBeenCalledWith("  ! second failed");
     });
 
+    it("can defer recorded walkthrough failures to the healer", async () => {
+        loadWalkthroughs.mockResolvedValue([{page: "library/browsing"}]);
+        runWalkthroughs.mockResolvedValue([result({error: "flow timed out"})]);
+
+        await expect(main(["--defer-errors", "library/browsing"], {})).resolves.toBe(0);
+
+        expect(log).toHaveBeenCalledWith("1 walkthrough failure(s) recorded for docs:heal.");
+    });
+
     it("does not write a promoted lockfile for a partial walkthrough", async () => {
         const pageDir = join(CONTENT_DIR, "library", "browsing");
         mkdirSync(pageDir, {recursive: true});
@@ -337,6 +346,24 @@ describe("Docker capture", () => {
             promote: false,
         });
         expect(error).toHaveBeenCalledWith("  ! locator.waitFor timed out");
+    });
+
+    it("defers a processed Docker walkthrough failure when requested", async () => {
+        const rawResults = [{
+            page: "library/browsing",
+            shots: [],
+            observation: observed(),
+            error: "locator.waitFor timed out",
+        }];
+        write(join(CAPTURE_DIR, "raw.json"), JSON.stringify({results: rawResults}));
+        processResults.mockReturnValue([result({error: "locator.waitFor timed out"})]);
+
+        await expect(main([
+            "--docker", "--defer-errors", "library/browsing",
+        ], dockerEnv)).resolves.toBe(0);
+
+        expect(processResults).toHaveBeenCalledWith(rawResults, expect.anything());
+        expect(log).toHaveBeenCalledWith("1 walkthrough failure(s) recorded for docs:heal.");
     });
 
     it("lets malformed container output reach the direct-run error handler", async () => {

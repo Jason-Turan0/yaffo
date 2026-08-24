@@ -211,14 +211,9 @@ jobs:
         run: npm run docs:validate
       - name: Capture ${{ matrix.page }}
         working-directory: yaffo_ui_tests
-        run: |
-          # A walkthrough timeout is evidence for docs:heal, not a reason to skip it.
-          # docs:capture still exits nonzero so verification gates remain strict.
-          set +e
-          npm run docs:capture:docker -- "${{ matrix.page }}"
-          code=$?
-          set -e
-          echo "Initial documentation capture exit code: $code" >> "$GITHUB_STEP_SUMMARY"
+        # A walkthrough timeout is evidence for docs:heal, not a reason to skip it.
+        # Only this discovery capture defers errors; repair gates remain strict.
+        run: npm run docs:capture:docker -- --defer-errors "${{ matrix.page }}"
       - name: Upload initial capture evidence
         id: capture_artifact
         if: ${{ always() }}

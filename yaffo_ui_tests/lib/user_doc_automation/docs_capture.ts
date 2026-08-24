@@ -97,6 +97,9 @@ export const main = async (
 ): Promise<number> => {
     const promote = args.includes("--promote");
     const useDocker = args.includes("--docker");
+    // The GitHub discovery capture hands walkthrough defects to docs:heal. This is
+    // deliberately opt-in: verification captures omit it and remain strict.
+    const deferErrors = args.includes("--defer-errors");
     const only = args.filter((a) => !a.startsWith("-"));
 
     let results: WalkthroughResult[];
@@ -173,7 +176,10 @@ export const main = async (
 
     const changed = results.flatMap((r) => r.shots).filter((s) => s.status !== "unchanged");
     console.log(`\n${changed.length} shot(s) new or changed${promote ? " and promoted" : ""}.`);
-    return failed ? 1 : 0;
+    if (failed && deferErrors) {
+        console.log(`${failed} walkthrough failure(s) recorded for docs:heal.`);
+    }
+    return failed && !deferErrors ? 1 : 0;
 };
 
 const isDirectRun = process.argv[1] !== undefined &&

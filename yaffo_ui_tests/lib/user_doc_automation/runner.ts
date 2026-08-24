@@ -184,7 +184,9 @@ const captureOne = async (
             }
         }
     } catch (e) {
-        error = e instanceof Error ? e.message : String(e);
+        // Playwright's message says only which primitive timed out. Its stack carries
+        // the generated walkthrough file and line the repair agent actually needs.
+        error = e instanceof Error ? (e.stack ?? e.message) : String(e);
     } finally {
         await context.close();
     }

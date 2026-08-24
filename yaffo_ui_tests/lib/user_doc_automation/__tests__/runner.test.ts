@@ -253,7 +253,7 @@ describe("captureWalkthroughs", () => {
         const page = pageFake();
         const {browser, context} = browserFake(page);
         launch.mockResolvedValue(browser);
-        const setup = jest.fn(async () => { throw "fixture was not ready"; });
+        const setup = jest.fn(async () => { throw new Error("fixture was not ready"); });
         const walkthrough: Walkthrough = {
             page: "library/broken",
             shots: {
@@ -270,7 +270,8 @@ describe("captureWalkthroughs", () => {
             stagingDir,
         });
 
-        expect(captured.error).toBe("fixture was not ready");
+        expect(captured.error).toContain("Error: fixture was not ready");
+        expect(captured.error).toContain("runner.test.ts");
         expect(captured.shots).toEqual([]);
         expect(page.screenshot).not.toHaveBeenCalled();
         expect(page.close).toHaveBeenCalledTimes(1);
