@@ -82,8 +82,8 @@ See [Locations & Map](../organize-review/locations.md).
 
 ## Use Duplicate Review for Cleanup
 
-The duplicate utility helps find photos that look the same or nearly the same.
-Review duplicate groups before removing anything.
+The duplicate utility helps find photos and videos that look the same or nearly
+the same. Review duplicate groups before removing anything.
 
 Use duplicate review when the organizing question is "which copies can I clean
 up?"

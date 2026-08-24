@@ -1,6 +1,6 @@
 {
     "page": "library-basics/organizing-photos",
-    "lastVerifiedSha": "83df67b62df0f2c59edafbe46768e4fe6586ed41",
+    "lastVerifiedSha": "8389d4cc9d7fb0cdc03c8ee327461f60c80df3dd",
     "observed": {
         "page": "library-basics/organizing-photos",
         "urls": [
@@ -13,8 +13,8 @@
             "/media/:id/poster",
             "/media/view/:id",
             "/pages/:id",
-            "/pages/:id/widgets/b052f4fedf694c69a63bc7addf525c14/frame",
-            "/pages/:id/widgets/e23e4a83e64e42b5a5ae8a815eb694ce/frame",
+            "/pages/:id/widgets/8e6665ca1cb44a8698a8c33cfbe878ae/frame",
+            "/pages/:id/widgets/a6bfc9c61ccf457f9f700a5ca9266b3c/frame",
             "/people",
             "/placeholder",
             "/settings",
@@ -206,7 +206,7 @@
         "yaffo/routes/people.py": "266e792ab2d3fada4a8cf7114189d7ce7fa153ea94d31c49c57c71f79a215514",
         "yaffo/routes/settings.py": "1ae859d0effbc6b77a357d9867b43ca6980bd2b007754dd14897c7018a3d3123",
         "yaffo/routes/utilities/index_photos.py": "0434255638cb282fbb1992bce2f1f531753e8292ec305784e461ce5b436088c6",
-        "yaffo/routes/utilities/remove_duplicates.py": "7e0aab9081700cf76a19d5ae825811c5d183f12fae2c4a66e331ad40a243c1de",
+        "yaffo/routes/utilities/remove_duplicates.py": "569ac38e5991467da7e1b33fe902bd16da813f8527cb88d38e2626bd5c448e03",
         "yaffo/static/action-links.css": "fb3fd8e47c18993d826f7d34f8ccb24dc1aeb18a9aacb45c3a4fc41a901a4300",
         "yaffo/static/albums/albums.css": "7dd6dd9bbad6d7e9ed14c70245174adf8ac79bb10d8b74228db3f40ccdf2644c",
         "yaffo/static/albums/albums.js": "860317f1a3ff6236aaf45d352ffbfdd5001d932b96d9e8a99c801e0af5736d54",
