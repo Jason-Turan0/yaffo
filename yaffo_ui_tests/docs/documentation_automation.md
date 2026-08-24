@@ -7,14 +7,15 @@
 > (settle, framing, WebP encode, pixel comparison, dependency observation, runner,
 > evidence, triage, containerized capture, and the entry points); authored and
 > generated content in `yaffo_ui_tests/user_doc_automation/` (`spec.yaml` covering
-> 17 pages, and thirteen walkthroughs, `start-here/getting-started/`,
+> 17 pages, and fifteen walkthroughs, `start-here/getting-started/`,
 > `start-here/concepts/`,
 > `library-basics/indexing-library/`, `library-basics/browsing-filtering/`,
 > `library-basics/photo-details/`, `library-basics/organizing-photos/`,
 > `organize-review/faces-and-people/`, `organize-review/assigning-faces/`,
 > `organize-review/labels/`, `organize-review/locations/`,
-> `organize-review/duplicates/`, `create-customize/custom-pages/`, and
-> `reference-maintenance/settings/`); the
+> `organize-review/duplicates/`, `create-customize/custom-pages/`,
+> `create-customize/themes/`, `reference-maintenance/settings/`, and
+> `reference-maintenance/troubleshooting/`); the
 > server-side observer at `yaffo/doc_observer.py`. A run captures to staging,
 > pixel-diffs against what is committed, records that page's routes, templates, and
 > static assets, and `docs:heal` classifies whatever changed.
@@ -28,7 +29,7 @@
 > reproducible documentation fixture are built.
 >
 > The GitHub fan-out and generated-PR workflow is built as
-> `.github/workflows/documentation-auto-heal.yml`. Not built: 3 of the 16
+> `.github/workflows/documentation-auto-heal.yml`. Not built: 1 of the 16
 > app-backed page walkthroughs.
 >
 > Last updated: 2026-08-23
@@ -748,7 +749,7 @@ is a regression report, not a screenshot of broken thumbnails.
 | Test framework | Docs | State |
 |---|---|---|
 | `test`, `test:sandboxed` | **`docs:capture`** — deterministic run; `--promote` writes into the guide | Built, as `npm run docs:capture` |
-| `generate` | **`docs:generate`** — writes a walkthrough for a page that has none | 3 of 16 app-backed pages still need one |
+| `generate` | **`docs:generate`** — writes a walkthrough for a page that has none | 1 of 16 app-backed pages still needs one |
 | `test:heal` | **`docs:heal`** — act on what the detectors found; `--apply` writes | Built, as `npm run docs:heal` |
 | — | **`docs:detect`** — dependency fingerprints plus Detector B, without a sandbox | Built, as `npm run docs:detect` |
 | `validate:specs` | **`docs:validate`** — the guide and its automation agree | Built, as `npm run docs:validate` |
