@@ -1,6 +1,6 @@
 {
     "page": "start-here/getting-started",
-    "lastVerifiedSha": "83df67b62df0f2c59edafbe46768e4fe6586ed41",
+    "lastVerifiedSha": "73e38203f2fec96cee76ffd45491ec038124e577",
     "observed": {
         "page": "start-here/getting-started",
         "urls": [
@@ -294,7 +294,7 @@
         "start-here/assets/getting-started/media-detail.webp": {
             "width": 1392,
             "height": 1122,
-            "sha256": "a36ec102f462c03cf5d8d18386659e649c57feb1c8ff6ea91212b166fbfe2814"
+            "sha256": "dd51ecb4f601b57ac7cfa4b857c688b471faa84259c259c53db1fbbd32dbd47a"
         }
     }
 }
