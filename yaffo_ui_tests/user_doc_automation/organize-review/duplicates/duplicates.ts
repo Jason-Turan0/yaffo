@@ -63,7 +63,14 @@ const configureDirectory = async (
     const input = page.locator("#remove-duplicates-form input[name=directory]").first();
     await input.waitFor();
     await input.fill(directory);
-    await input.dispatchEvent("change");
+    // A programmatically filled input does not reliably fire the HTMX change trigger
+    // that refreshes the media count, so rescan explicitly — the app's deterministic
+    // way to recompute the count, matching what the flows do before a scan.
+    const rescan = page.waitForResponse((response) =>
+        response.url().includes("/utilities/remove-duplicates-form")
+    );
+    await page.locator("#rescan-directories").click();
+    await rescan;
     await page.waitForFunction((expected) => {
         const cards = Array.from(document.querySelectorAll("#remove-duplicates-form .stat-card"));
         const total = cards.find((card) => card.textContent?.includes("Total Media"));

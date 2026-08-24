@@ -1,6 +1,6 @@
 {
     "page": "organize-review/duplicates",
-    "lastVerifiedSha": "c6ab432141ce3dd95c22f5915095e7db2fd30000",
+    "lastVerifiedSha": "ed3e99de3d79fc8d68e9c99c7e046d2070af58a3",
     "observed": {
         "page": "organize-review/duplicates",
         "urls": [
@@ -9,11 +9,11 @@
             "/themes/classic/theme.css",
             "/utilities/remove-duplicates",
             "/utilities/remove-duplicates-form",
-            "/utilities/remove-duplicates/action-change/7df8c9f6-9e93-439c-b34b-721d47e61499",
-            "/utilities/remove-duplicates/execute/7df8c9f6-9e93-439c-b34b-721d47e61499",
-            "/utilities/remove-duplicates/results/6b0ecac9-1371-4daf-8067-0cdd7cd0e6f4",
-            "/utilities/remove-duplicates/results/7d72d5ee-29c0-4333-9049-89f0b035a1e8",
-            "/utilities/remove-duplicates/results/7df8c9f6-9e93-439c-b34b-721d47e61499",
+            "/utilities/remove-duplicates/action-change/261ec0ce-0328-4c74-ac8d-f1e6ffdbb392",
+            "/utilities/remove-duplicates/execute/261ec0ce-0328-4c74-ac8d-f1e6ffdbb392",
+            "/utilities/remove-duplicates/results/261ec0ce-0328-4c74-ac8d-f1e6ffdbb392",
+            "/utilities/remove-duplicates/results/701e73c5-f3ec-45a5-8a1a-af5c4ce483b8",
+            "/utilities/remove-duplicates/results/d5292555-8c93-465e-9463-f51ef64c102a",
             "/utilities/remove-duplicates/start",
             "/utilities/remove-duplicates/toggle-photo"
         ],
@@ -211,7 +211,7 @@
         "organize-review/assets/duplicates/duplicate-results.webp": {
             "width": 1122,
             "height": 1225,
-            "sha256": "1dfe93b8f56c65e0e0a94af504b324d0a436106868c28115f01a834d682c20d4"
+            "sha256": "a13f13588f5f54d471f670f7b4a0be74bbb1a971661a210ad627949cc753f23f"
         }
     }
 }
