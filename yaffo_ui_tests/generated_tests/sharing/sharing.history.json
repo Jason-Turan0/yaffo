@@ -31,6 +31,38 @@
           "error": "Error: page.goto: net::ERR_ABORTED at http://127.0.0.1:5001/sharing/settings\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5001/sharing/settings\", waiting until \"load\"\u001b[22m\n"
         }
       ]
+    },
+    {
+      "timestamp": "2026-08-24T02:45:13.613Z",
+      "success": false,
+      "summary": {
+        "total": 12,
+        "passed": 11,
+        "failed": 1,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Sharing Feature › sharing_grant_a_media_directory_and_browse_it - A shares a media directory and B browses it with filters",
+          "error": "Error: Preview \"/sharing/devices/CYZY-IGHZ-FL5N-HVDU/preview?media_item_id=31&v=1787539175.4770026\" failed with 502\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-08-24T02:52:19.926Z",
+      "success": false,
+      "summary": {
+        "total": 12,
+        "passed": 11,
+        "failed": 1,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Sharing Feature › sharing_grant_a_media_directory_and_browse_it - A shares a media directory and B browses it with filters",
+          "error": "Error: Preview \"/sharing/devices/CYZY-IGHZ-FL5N-HVDU/preview?media_item_id=31&v=1787539175.4770026\" failed with 502\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m"
+        }
+      ]
     }
   ]
 }
