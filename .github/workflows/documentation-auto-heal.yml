@@ -317,15 +317,20 @@ jobs:
           AREA="${PAGE%%/*}"
           NAME="${PAGE#*/}"
           mkdir -p patches
-          git add --intent-to-add -- \
-            "../docs/guide/${PAGE}.md" \
-            "../docs/guide/${AREA}/assets/${NAME}" \
+          paths=(
+            "../docs/guide/${PAGE}.md"
+            "../docs/guide/${AREA}/assets/${NAME}"
             "user_doc_automation/${PAGE}"
-          git diff --binary -- \
-            "../docs/guide/${PAGE}.md" \
-            "../docs/guide/${AREA}/assets/${NAME}" \
-            "user_doc_automation/${PAGE}" \
-            > "patches/${{ matrix.id }}.patch"
+          )
+
+          # `git diff` already includes tracked edits and deletions. Add only actual
+          # untracked files with intent-to-add so they appear in the binary patch;
+          # an absent assets directory is valid for a page with `shots: {}`.
+          while IFS= read -r -d '' file; do
+            git add --intent-to-add -- "$file"
+          done < <(git ls-files --others --exclude-standard -z -- "${paths[@]}")
+
+          git diff --binary -- "${paths[@]}" > "patches/${{ matrix.id }}.patch"
       - name: Upload documentation patch
         id: patch_artifact
         if: ${{ always() }}
