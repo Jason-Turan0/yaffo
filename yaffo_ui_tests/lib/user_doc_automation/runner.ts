@@ -21,7 +21,7 @@ import type {Walkthrough} from "./types";
  */
 export const DEVICE_SCALE_FACTOR = 2;
 
-export type ShotStatus = "new" | "changed" | "unchanged";
+export type ShotStatus = "new" | "changed" | "unchanged" | "unstable";
 
 /**
  * A shot as it comes off the browser: a PNG and the geometry needed to judge it.
@@ -56,6 +56,15 @@ export interface ShotResult extends RawShot {
     status: ShotStatus;
     /** Pixel comparison against the committed image. Absent for a new shot. */
     diff?: CompareResult;
+    /** Result of recapturing an initially changed or new shot. */
+    stability?: {
+        status: "reproduced" | "unstable";
+        /** Comparison of the first and second candidates. */
+        diff?: CompareResult;
+        /** Preserved second candidate when the two captures disagree. */
+        repeated?: string;
+        reason?: string;
+    };
 }
 
 export interface WalkthroughResult {
@@ -69,6 +78,8 @@ export interface CaptureOptions {
     baseUrl: string;
     /** Where captures land before anything is compared. Never docs/. */
     stagingDir: string;
+    /** A stability recapture needs shots only; dependency flows ran in the first pass. */
+    skipFlows?: boolean;
 }
 
 export interface ProcessOptions {
@@ -83,6 +94,7 @@ export type RunOptions = CaptureOptions & ProcessOptions;
 
 /** Where `capture` leaves its raw output for `process` to pick up. */
 export const RAW_FILENAME = "raw.json";
+export const STABILITY_DIRNAME = ".recheck";
 
 /**
  * A page's assets always live at docs/guide/{area}/assets/{page}/. There are no
@@ -167,7 +179,7 @@ const captureOne = async (
             }
         }
 
-        if (walkthrough.flows) {
+        if (walkthrough.flows && !options.skipFlows) {
             const page = await context.newPage();
             try {
                 await page.setViewportSize({width: 1400, height: 1100});
@@ -274,9 +286,120 @@ export const processResults = (
     return results;
 };
 
+/** Pages whose first pass found something that must reproduce before acting on it. */
+export const pagesNeedingStability = (results: WalkthroughResult[]): string[] =>
+    results
+        .filter((result) => !result.error && result.shots.some((shot) =>
+            shot.status === "new" || shot.status === "changed"))
+        .map((result) => result.page);
+
+/**
+ * Confirm that initially changed candidates repeat, then optionally promote the second
+ * capture. A disagreement is preserved as evidence and never becomes the new baseline.
+ */
+export const finalizeStability = (
+    initial: WalkthroughResult[],
+    repeated: WalkthroughResult[],
+    options: ProcessOptions
+): WalkthroughResult[] => {
+    const repeatedByPage = new Map(repeated.map((result) => [result.page, result]));
+    const results = initial.map((result): WalkthroughResult => {
+        if (result.error) return result;
+        const repeatedResult = repeatedByPage.get(result.page);
+        const shots = result.shots.map((shot): ShotResult => {
+            if (shot.status !== "new" && shot.status !== "changed") return shot;
+
+            const second = repeatedResult?.shots.find((candidate) => candidate.target === shot.target);
+            if (!second) {
+                return {
+                    ...shot,
+                    status: "unstable",
+                    stability: {
+                        status: "unstable",
+                        reason: repeatedResult?.error ?? "stability recapture did not produce this shot",
+                    },
+                };
+            }
+
+            const repeatDiffOut = shot.staged.replace(/\.webp$/, ".repeat.diff.png");
+            const stabilityDiff = compareShots(shot.staged, second.staged, shot.ignore, repeatDiffOut);
+            const sameBaselineOutcome = second.status === shot.status;
+            if (repeatedResult?.error || stabilityDiff.status !== "unchanged" || !sameBaselineOutcome) {
+                const repeatedPath = shot.staged.replace(/\.webp$/, ".repeat.webp");
+                copyFileSync(second.staged, repeatedPath);
+                return {
+                    ...shot,
+                    status: "unstable",
+                    stability: {
+                        status: "unstable",
+                        diff: stabilityDiff,
+                        repeated: repeatedPath,
+                        ...(repeatedResult?.error ? {reason: repeatedResult.error} : {}),
+                    },
+                };
+            }
+
+            // Playwright keeps the last of two matching captures. Do the same, then
+            // regenerate the baseline diff so every artifact describes what may ship.
+            copyFileSync(second.staged, shot.staged);
+            const committed = join(options.guideDir, shot.target);
+            let status: ShotStatus = "new";
+            let diff: CompareResult | undefined;
+            if (existsSync(committed)) {
+                const diffOut = shot.staged.replace(/\.webp$/, ".diff.png");
+                diff = compareShots(committed, shot.staged, shot.ignore, diffOut);
+                status = diff.status;
+                if (diff.diffImage && existsSync(diff.diffImage)) {
+                    copyFileSync(committed, shot.staged.replace(/\.webp$/, ".baseline.webp"));
+                }
+            }
+            return {
+                ...shot,
+                status,
+                diff,
+                stability: {status: "reproduced", diff: stabilityDiff},
+            };
+        });
+        if (options.promote && !shots.some((shot) => shot.status === "unstable")) {
+            for (const shot of shots) {
+                if (shot.status !== "new" && shot.status !== "changed") continue;
+                const committed = join(options.guideDir, shot.target);
+                mkdirSync(dirname(committed), {recursive: true});
+                copyFileSync(shot.staged, committed);
+            }
+        }
+        return {...result, shots};
+    });
+
+    writeFileSync(
+        join(options.stagingDir, "report.json"),
+        JSON.stringify({generatedAt: new Date().toISOString(), results}, null, 2)
+    );
+    return results;
+};
+
 /** Capture and process in one process. The default when not containerized. */
 export const runWalkthroughs = async (
     walkthroughs: Walkthrough[],
     options: RunOptions
-): Promise<WalkthroughResult[]> =>
-    processResults(await captureWalkthroughs(walkthroughs, options), options);
+): Promise<WalkthroughResult[]> => {
+    const initial = processResults(await captureWalkthroughs(walkthroughs, options), {
+        ...options,
+        promote: false,
+    });
+    const pages = new Set(pagesNeedingStability(initial));
+    if (!pages.size) return initial;
+
+    const repeatedDir = join(options.stagingDir, STABILITY_DIRNAME);
+    const repeatedWalkthroughs = walkthroughs.filter((walkthrough) => pages.has(walkthrough.page));
+    const repeated = processResults(await captureWalkthroughs(repeatedWalkthroughs, {
+        ...options,
+        stagingDir: repeatedDir,
+        skipFlows: true,
+    }), {
+        guideDir: options.guideDir,
+        stagingDir: repeatedDir,
+        promote: false,
+    });
+    return finalizeStability(initial, repeated, options);
+};

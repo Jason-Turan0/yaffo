@@ -119,10 +119,9 @@ def test_change_outside_an_ignore_region_still_counts(tmp_path):
     assert result["box"]["x"] >= 390
 
 
-def test_colour_shift_below_the_tolerance_is_ignored(tmp_path):
-    """Absorbs encoder jitter: a shift smaller than COLOR_THRESHOLD is not a change
-    even though every pixel differs."""
-    shift = imagediff.COLOR_THRESHOLD - 4
+def test_colour_shift_below_the_perceived_tolerance_is_ignored(tmp_path):
+    """Absorbs encoder jitter even though every raw RGB pixel differs."""
+    shift = 20
     base = _canvas(300, 200, (120, 120, 120))
     nudged = _canvas(300, 200, (120 + shift, 120 + shift, 120 + shift))
     result = _run(_save(base, tmp_path / "a.webp"), _save(nudged, tmp_path / "b.webp"))

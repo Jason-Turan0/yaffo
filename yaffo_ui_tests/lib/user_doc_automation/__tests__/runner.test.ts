@@ -48,6 +48,8 @@ await jest.unstable_mockModule("../settle", () => ({settle}));
 const {
     captureWalkthroughs,
     DEVICE_SCALE_FACTOR,
+    finalizeStability,
+    pagesNeedingStability,
     processResults,
     RAW_FILENAME,
     runWalkthroughs,
@@ -295,6 +297,25 @@ describe("captureWalkthroughs", () => {
         })).rejects.toThrow("Chromium context failed");
         expect(browser.close).toHaveBeenCalledTimes(1);
     });
+
+    it("skips dependency-only flows during a stability recapture", async () => {
+        const {browser, context} = browserFake();
+        launch.mockResolvedValue(browser);
+        const flows = jest.fn(async () => undefined);
+
+        await captureWalkthroughs([{
+            page: "library/browsing",
+            shots: {},
+            flows,
+        }], {
+            baseUrl: "http://app.test",
+            stagingDir,
+            skipFlows: true,
+        });
+
+        expect(flows).not.toHaveBeenCalled();
+        expect(context.newPage).not.toHaveBeenCalled();
+    });
 });
 
 describe("processResults", () => {
@@ -412,6 +433,97 @@ describe("processResults", () => {
     });
 });
 
+describe("stability recapture", () => {
+    const result = (staged: string, status: "new" | "changed" | "unchanged") => ({
+        page: "library/browsing",
+        shots: [{
+            target: "library/assets/browsing/gallery.webp",
+            width: 1400,
+            height: 800,
+            ignore: [],
+            staged,
+            status,
+            ...(status === "changed"
+                ? {diff: {status: "changed" as const, diffPixels: 200}}
+                : {}),
+        }],
+        observation,
+    });
+
+    it("selects only successful pages with initially actionable shots", () => {
+        expect(pagesNeedingStability([
+            result("/one.webp", "changed"),
+            {...result("/two.webp", "new"), page: "library/new"},
+            {...result("/three.webp", "changed"), page: "library/broken", error: "failed"},
+            {...result("/four.webp", "unchanged"), page: "library/same"},
+        ])).toEqual(["library/browsing", "library/new"]);
+    });
+
+    it("promotes the second candidate when the change reproduces", () => {
+        const target = "library/assets/browsing/gallery.webp";
+        const committed = join(guideDir, target);
+        const first = join(stagingDir, target);
+        const second = join(stagingDir, ".recheck", target);
+        for (const [path, content] of [[committed, "baseline"], [first, "first"], [second, "second"]]) {
+            mkdirSync(dirname(path), {recursive: true});
+            writeFileSync(path, content, "utf8");
+        }
+        compareShots
+            .mockReturnValueOnce({status: "unchanged", diffPixels: 0})
+            .mockReturnValueOnce({status: "changed", diffPixels: 220});
+
+        const [final] = finalizeStability(
+            [result(first, "changed")],
+            [result(second, "changed")],
+            {guideDir, stagingDir, promote: true}
+        );
+
+        expect(final.shots[0]).toMatchObject({
+            status: "changed",
+            staged: first,
+            stability: {status: "reproduced", diff: {status: "unchanged", diffPixels: 0}},
+        });
+        expect(readFileSync(first, "utf8")).toBe("second");
+        expect(readFileSync(committed, "utf8")).toBe("second");
+        expect(compareShots).toHaveBeenNthCalledWith(1,
+            first, second, [], first.replace(/\.webp$/, ".repeat.diff.png"));
+        expect(compareShots).toHaveBeenNthCalledWith(2,
+            committed, first, [], first.replace(/\.webp$/, ".diff.png"));
+    });
+
+    it("quarantines two candidates that disagree and preserves both", () => {
+        const target = "library/assets/browsing/gallery.webp";
+        const committed = join(guideDir, target);
+        const first = join(stagingDir, target);
+        const second = join(stagingDir, ".recheck", target);
+        for (const [path, content] of [[committed, "baseline"], [first, "first"], [second, "second"]]) {
+            mkdirSync(dirname(path), {recursive: true});
+            writeFileSync(path, content, "utf8");
+        }
+        compareShots.mockReturnValue({status: "changed", diffPixels: 180});
+
+        const [final] = finalizeStability(
+            [result(first, "changed")],
+            [result(second, "changed")],
+            {guideDir, stagingDir, promote: true}
+        );
+
+        expect(final.shots[0]).toMatchObject({
+            status: "unstable",
+            stability: {
+                status: "unstable",
+                diff: {status: "changed", diffPixels: 180},
+                repeated: first.replace(/\.webp$/, ".repeat.webp"),
+            },
+        });
+        expect(readFileSync(first, "utf8")).toBe("first");
+        expect(readFileSync(first.replace(/\.webp$/, ".repeat.webp"), "utf8")).toBe("second");
+        expect(readFileSync(committed, "utf8")).toBe("baseline");
+        const report = JSON.parse(readFileSync(join(stagingDir, "report.json"), "utf8"));
+        expect(report.results[0].shots[0].status).toBe("unstable");
+    });
+});
+
 describe("runWalkthroughs", () => {
     it("composes capture and processing for an empty walkthrough set", async () => {
         const {browser} = browserFake();
@@ -426,5 +538,44 @@ describe("runWalkthroughs", () => {
         expect(browser.close).toHaveBeenCalledTimes(1);
         expect(existsSync(join(stagingDir, RAW_FILENAME))).toBe(true);
         expect(existsSync(join(stagingDir, "report.json"))).toBe(true);
+    });
+
+    it("recaptures only after an initial mismatch and promotes the repeated candidate", async () => {
+        const firstPage = pageFake();
+        const secondPage = pageFake();
+        const firstBrowser = browserFake(firstPage);
+        const secondBrowser = browserFake(secondPage);
+        launch
+            .mockResolvedValueOnce(firstBrowser.browser)
+            .mockResolvedValueOnce(secondBrowser.browser);
+        const target = "library/assets/browsing/gallery.webp";
+        const committed = join(guideDir, target);
+        mkdirSync(dirname(committed), {recursive: true});
+        writeFileSync(committed, "baseline", "utf8");
+        compareShots
+            .mockReturnValueOnce({status: "changed", diffPixels: 150})
+            .mockReturnValueOnce({status: "changed", diffPixels: 150})
+            .mockReturnValueOnce({status: "unchanged", diffPixels: 0})
+            .mockReturnValueOnce({status: "changed", diffPixels: 150});
+
+        const [processed] = await runWalkthroughs([{
+            page: "library/browsing",
+            shots: {"gallery.webp": {viewport: {width: 800, height: 600}, goto: "/"}},
+        }], {
+            baseUrl: "http://app.test",
+            stagingDir,
+            guideDir,
+            promote: true,
+        });
+
+        expect(launch).toHaveBeenCalledTimes(2);
+        expect(secondPage.screenshot).toHaveBeenCalledWith(expect.objectContaining({
+            path: join(stagingDir, ".recheck", "library", "assets", "browsing", "gallery.png"),
+        }));
+        expect(processed.shots[0]).toMatchObject({
+            status: "changed",
+            stability: {status: "reproduced"},
+        });
+        expect(readFileSync(committed, "utf8")).toContain(join(stagingDir, ".recheck"));
     });
 });

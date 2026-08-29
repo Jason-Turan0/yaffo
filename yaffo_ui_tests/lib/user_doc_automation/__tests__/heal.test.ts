@@ -224,6 +224,33 @@ describe("heal CLI", () => {
         expect(newRunLogDir).not.toHaveBeenCalled();
     });
 
+    it("quarantines a non-reproducing shot without a model call", async () => {
+        writeReport([result({shots: [shot({
+            status: "unstable",
+            stability: {
+                status: "unstable",
+                diff: {status: "changed", diffPixels: 37},
+                repeated: join(CAPTURE_DIR, "area", "assets", "page", "gallery.repeat.webp"),
+            },
+        })]})]);
+
+        await expect(main(["--apply", "--model", "vision-model"])).resolves.toBe(2);
+
+        expect(triageShot).not.toHaveBeenCalled();
+        expect(openSession).not.toHaveBeenCalled();
+        expect(applyFix).not.toHaveBeenCalled();
+        const saved = JSON.parse(readFileSync(join(STAGING_DIR, "triage.json"), "utf8"));
+        expect(saved.verdicts[0]).toMatchObject({
+            target: shot().target,
+            triage: {
+                classification: "environment_instability",
+                confidence: "high",
+                recommendedAction: "quarantine",
+                reasoning: expect.stringContaining("37 pixel(s) differed"),
+            },
+        });
+    });
+
     it("reports a failed walkthrough as unresolved in dry-run mode", async () => {
         writeReport([result({shots: [], error: "locator.waitFor timed out"})]);
 

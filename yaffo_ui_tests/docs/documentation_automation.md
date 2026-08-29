@@ -30,14 +30,14 @@
 > patch) → one aggregated healing PR against the feature branch. It has produced merged
 > PRs (#12).
 >
-> **Tests** — 224 Jest tests across 26 suites in
+> **Tests** — 236 Jest tests across 27 suites in
 > `lib/user_doc_automation/__tests__/`, plus 30 pytest tests covering the differ and the
 > observer.
 >
 > **Not built:** the `create-customize/automations` walkthrough — 1 of the 16 app-backed
 > pages, still carrying a hand-made PNG. See *Remaining work*.
 >
-> Last updated: 2026-08-24
+> Last updated: 2026-08-29
 
 ## Goal
 
@@ -224,18 +224,21 @@ Implemented in `lib/user_doc_automation/imagediff.py` (Pillow + NumPy, both alre
 dependencies, so no npm package needing its own WebP decoder). It mirrors what
 Playwright's `toHaveScreenshot` does via pixelmatch:
 
-- a per-channel colour tolerance (`COLOR_THRESHOLD = 24`) to absorb encoder ringing
-  around text;
-- a flat budget of differing pixels (`MAX_DIFF_PIXELS = 100`), comfortably under the
-  ~670 a one-word label change produces;
+- Playwright's perceived YIQ colour distance (`PERCEPTUAL_THRESHOLD = 0.2`) plus its
+  anti-alias edge detector, instead of a max-channel delta that over-counts harmless
+  glyph and WebP variation;
+- a flat budget of differing pixels (`MAX_DIFF_PIXELS = 100`), under the measured 113
+  for a one-digit count change and 781 for a short control-label change;
 - ignore regions zeroed on the pixel copy only, never on the published image;
 - differently sized images aligned at their top-left on a shared canvas, with pixels
   present in only one image counted as changed and `reason: "size"` retained;
 - a magenta-on-dimmed **diff overlay** written beside the staged shot, so a reviewer
   sees where it moved rather than only that it did.
 
-Measured: identical shots report 0 differing pixels, a changed caption reports 686 in
-a 143×17 box, and the same change inside an ignore region reports 0.
+Measured: identical shots report 0 differing pixels, a one-digit count change reports
+113 in a 16×22 box, and the same change inside an ignore region reports 0. The
+semantically identical image pair from PR #15, which the old max-channel comparator
+counted as 294 changed pixels, reports 72 and stays below the artifact budget.
 
 This also sharpens why containerization is not optional. Cross-machine font
 antialiasing perturbs *every glyph on the page*, far more than the ~0.015% a real
@@ -617,13 +620,16 @@ image — a reader should see where their library lives — and is excluded from
 only. This is the one place where local and CI capture are not byte-identical by
 construction, and ignoring the region is what bridges it.
 
-**Most instability should not have to be declared at all.** The intended mechanism is
-the double-capture flake check: capture twice, and a shot whose two captures disagree is
-unstable by observation, whichever shot it turns out to be. That check is **not built**
-(see *Remaining work*), so today instability is declared by hand or not caught at all. A
-declaration is only worth adding for a known, permanent cause — and once the check
-exists it earns its keep as a cross-check, since a shot declared unstable but measured
-stable is a signal the declaration can go.
+**Most instability does not have to be declared at all.** When a first capture is new
+or changed, the worker immediately captures that page's shots again, skipping its
+dependency-only flows. The two candidates must agree under the same comparator before
+the second one can be promoted. A disagreement marks the shot `unstable`, preserves the
+second candidate and their diff, leaves the committed guide and page lockfile alone,
+and produces a mechanical `environment_instability` verdict without a model call.
+
+A declaration is still worthwhile for a known, permanent cause: it prevents the first
+comparison from firing on every run. The double capture instead catches undeclared and
+intermittent instability by observation.
 
 ### The hand-authored spec
 
@@ -1037,17 +1043,16 @@ spawns processes on a CI runner. They are stubbed to the same `{"success": true}
 call returns rather than aborted, so the UI still reaches the state the shot is meant to
 show; aborting would surface an error toast and document a failure.
 
-### Flake detection does not come free — yet
+### Flake detection and history are separate
 
-The test framework feeds `{feature}.history.json` — the last five results — to the
-model for trend analysis. The per-page lockfile was meant to carry recent shot statuses
-the same way, so that a shot reporting changed on every run is quarantined by
-observation instead of by declaration (see *Non-reproducible regions*).
+The within-run flake check needs no history. It is conditional: an unchanged first pass
+costs nothing extra; a new or changed shot causes a shots-only second pass for that page.
+The candidates are compared before promotion, and a mismatch is quarantined.
 
-**This is not built.** The lockfile carries `shots` as a single hash per image — what
-the automation last wrote — not a history, and nothing counts consecutive changes. It is
-the one piece of the original design that the working pipeline still lacks, and it is
-listed under *Remaining work*.
+The test framework's `{feature}.history.json` still has a different use: trend analysis
+across separate CI runs. The page lockfile continues to carry only the single committed
+shot hash. Cross-run status history is not needed to stop one flaky capture from
+producing a patch, though it could later help identify recurring instability.
 
 ## The workflow
 
@@ -1125,7 +1130,7 @@ job can therefore produce these artifacts:
 
 | Artifact | Retention | Contents |
 |---|---:|---|
-| `docs-capture-{id}` | 30 days | The **initial** `.doc-staging/captures/` tree: `raw.json`, `report.json`, candidate `.webp` files, and, for every detected change, the committed `.baseline.webp` plus magenta `.diff.png`. Also includes `reports/isolated-environment.log`. This is uploaded before the model runs, so it preserves the evidence that triggered healing. |
+| `docs-capture-{id}` | 30 days | The **initial** `.doc-staging/captures/` tree: `raw.json`, `report.json`, candidate `.webp` files, and, for every detected change, the committed `.baseline.webp` plus magenta `.diff.png`. A conditional `.recheck/` holds the shots-only second pass; an unstable shot also preserves `{shot}.repeat.webp` and `{shot}.repeat.diff.png` beside the first candidate. Also includes `reports/isolated-environment.log`. This is uploaded before the model runs, so it preserves the evidence that triggered healing. |
 | `docs-patch-{id}` | 30 days | `{id}.patch`, a Git binary patch containing that page's proposed guide markdown, screenshots, walkthrough, catalog, lockfile, and page memories when those paths changed. The collector applies all non-empty page patches to build the aggregate PR. |
 | `docs-heal-{id}` | 90 days | `triage.json`; timestamped `heal-logs/` containing the model API transcripts and per-call token/cost accounting; and the complete latest `captures/` tree, including `raw.json`, `report.json`, candidate screenshots, baselines, and diff overlays. After a repair reaches verification, these captures are the **post-heal** comparison and explain any screenshot the verification gate promoted. |
 
@@ -1155,10 +1160,13 @@ A run writes only into `yaffo_ui_tests/.doc-staging/` (gitignored):
 ├── captures/                                      wiped at the start of every run
 │   ├── raw.json                                   what the container produced
 │   ├── report.json                                every shot's status, diff, and deps
+│   ├── .recheck/                                  conditional shots-only second capture
 │   └── {area}/assets/{page}/
 │       ├── {shot}.webp                            the candidate capture
 │       ├── {shot}.baseline.webp                   committed image, only when changed
-│       └── {shot}.diff.png                        magenta overlay, only when changed
+│       ├── {shot}.diff.png                        magenta overlay, only when changed
+│       ├── {shot}.repeat.webp                     second candidate, only when unstable
+│       └── {shot}.repeat.diff.png                 candidate-to-candidate instability
 ├── triage.json                                    verdicts, for CI's job summary
 ├── generate-logs/{timestamp}/                     full prompts and responses
 └── heal-logs/{timestamp}/                         the last 20 runs of each
@@ -1209,7 +1217,7 @@ yaffo_ui_tests/
 │   ├── gates.ts                    the correctness gates, shared by generate and heal
 │   ├── tool_loop.ts                drive a turn until the model stops calling tools
 │   ├── evidence.ts, triage.ts, fix.ts   the agentic loop
-│   ├── __tests__/                  26 Jest suites, 224 tests
+│   ├── __tests__/                  27 Jest suites, 236 tests
 │   └── types.ts, index.ts
 ├── .doc-staging/                   transient output, gitignored — see below
 └── user_doc_automation/            authored and generated content
@@ -1324,7 +1332,7 @@ without the env flag, path filtering, and an end-to-end pass through `create_app
 asserting real routes and *included* templates are recorded with nothing from
 site-packages.
 
-*TypeScript — 224 tests across 26 suites* in `lib/user_doc_automation/__tests__/`, run
+*TypeScript — 236 tests across 27 suites* in `lib/user_doc_automation/__tests__/`, run
 with `npm run test:unit`. One suite per module, covering every entry point
 (`docs_capture`, `heal`, `detect`, `validate`, `heal_repo`, `generate_cli`), the
 host/container seam (`runner`, `capture_worker`, `docker_execution`, `load`), the
@@ -1390,13 +1398,6 @@ leave alone.
   page is outside the pipeline entirely — no watermark, no dependency fingerprint,
   neither detector watching it. `npm run docs:generate -- create-customize/automations`
   is the intended route.
-- **Flake insurance (the double-capture check).** A single flaky capture produces a
-  spurious PR, and nothing currently prevents that. Capture flagged shots twice and
-  require the difference to reproduce before acting. Less urgent than first thought —
-  unchanged shots compare at exactly 0 differing pixels, not merely "close to 0" — but
-  it is what would auto-quarantine an unstable shot without anyone having to declare it,
-  and it is what *Flake detection* and *Non-reproducible regions* both assume. Needs the
-  lockfile to carry per-shot status history, which it does not yet.
 - **Caching OSM tiles.** `locations-map` is handled today by ignoring `.ol-viewport`,
   which also blinds the diff to the markers drawn from our own data. Serving a fixed
   tile set locally is the real fix; the open question is only whether to vendor tiles

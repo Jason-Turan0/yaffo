@@ -93,6 +93,21 @@ describe("runCaptureContainer", () => {
         })).toBe(1);
     });
 
+    it("passes the shots-only flag to a stability capture worker", () => {
+        const output = join(testDir, "stability-argv.txt");
+        expect(runCaptureContainer({
+            repoDir: "/repo",
+            stagingDir: join(testDir, "stability"),
+            baseUrl: "http://app.test",
+            pages: ["library/browsing"],
+            shotsOnly: true,
+            dockerEnv: {PATH: testDir, DOCKER_TEST_OUTPUT: output},
+        })).toBe(0);
+
+        const argv = readFileSync(output, "utf8").trim().split("\n");
+        expect(argv.slice(-2)).toEqual(["--shots-only", "library/browsing"]);
+    });
+
     it("throws process-launch errors directly", () => {
         expect(() => runCaptureContainer({
             repoDir: "/repo",

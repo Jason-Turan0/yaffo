@@ -63,7 +63,14 @@ const configureDirectory = async (
     const input = page.locator("#remove-duplicates-form input[name=directory]").first();
     await input.waitFor();
     await input.fill(directory);
-    await input.dispatchEvent("change");
+    // The input's own "change" trigger is not reliable when the field is populated
+    // programmatically, so rescan explicitly and await the re-rendered form — the
+    // same pattern the flow uses to refresh the media count.
+    const rescan = page.waitForResponse((response) =>
+        response.url().includes("/utilities/remove-duplicates-form")
+    );
+    await page.locator("#rescan-directories").click();
+    await rescan;
     await page.waitForFunction((expected) => {
         const cards = Array.from(document.querySelectorAll("#remove-duplicates-form .stat-card"));
         const total = cards.find((card) => card.textContent?.includes("Total Media"));

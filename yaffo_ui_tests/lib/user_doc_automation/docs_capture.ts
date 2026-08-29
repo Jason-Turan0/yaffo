@@ -27,7 +27,14 @@ import {parse as parseYaml} from "yaml";
 import {loadWalkthroughs} from "./load";
 import {currentHead, dependencyHashes} from "./dependency_changes";
 import {BASE_URL, CAPTURE_DIR, CONTENT_DIR, DOCS_DATA_DIR, GUIDE_DIR} from "./paths";
-import {processResults, RAW_FILENAME, runWalkthroughs} from "./runner";
+import {
+    finalizeStability,
+    pagesNeedingStability,
+    processResults,
+    RAW_FILENAME,
+    runWalkthroughs,
+    STABILITY_DIRNAME,
+} from "./runner";
 import type {RawResult, WalkthroughResult} from "./runner";
 
 // Resolved from the working directory, like isolated_runner.ts and the rest of the
@@ -132,8 +139,35 @@ export const main = async (
         }
         const raw = JSON.parse(readFileSync(rawPath, "utf8")) as {results: RawResult[]};
         results = processResults(raw.results, {
-            guideDir: GUIDE_DIR, stagingDir: CAPTURE_DIR, promote,
+            guideDir: GUIDE_DIR, stagingDir: CAPTURE_DIR, promote: false,
         });
+        const stabilityPages = pagesNeedingStability(results);
+        if (stabilityPages.length) {
+            const repeatedDir = join(CAPTURE_DIR, STABILITY_DIRNAME);
+            const repeatedCode = runCaptureContainer({
+                repoDir: REPO,
+                stagingDir: repeatedDir,
+                baseUrl: BASE_URL,
+                pages: stabilityPages,
+                shotsOnly: true,
+                dockerEnv,
+            });
+            if (repeatedCode !== 0) return repeatedCode;
+            const repeatedRawPath = join(repeatedDir, RAW_FILENAME);
+            if (!existsSync(repeatedRawPath)) {
+                console.error(`The stability container produced no ${RAW_FILENAME}.`);
+                return 1;
+            }
+            const repeatedRaw = JSON.parse(readFileSync(repeatedRawPath, "utf8")) as {
+                results: RawResult[];
+            };
+            const repeated = processResults(repeatedRaw.results, {
+                guideDir: GUIDE_DIR, stagingDir: repeatedDir, promote: false,
+            });
+            results = finalizeStability(results, repeated, {
+                guideDir: GUIDE_DIR, stagingDir: CAPTURE_DIR, promote,
+            });
+        }
     } else {
         const walkthroughs = await loadWalkthroughs(CONTENT_DIR, only);
         if (!walkthroughs.length) {
@@ -151,11 +185,15 @@ export const main = async (
     for (const result of results) {
         // A partial capture is not a verified page state and must never advance its
         // dependency or screenshot watermark. The healer repairs and re-captures it.
-        if (promote && !result.error) writeLockfile(result);
+        if (promote && !result.error && !result.shots.some((shot) => shot.status === "unstable")) {
+            writeLockfile(result);
+        }
         console.log(`${result.page}`);
         for (const shot of result.shots) {
-            const mark = {new: "+", changed: "~", unchanged: "="}[shot.status];
-            const detail = shot.diff?.reason === "size"
+            const mark = {new: "+", changed: "~", unchanged: "=", unstable: "?"}[shot.status];
+            const detail = shot.status === "unstable"
+                ? "  did not reproduce"
+                : shot.diff?.reason === "size"
                 ? "  reframed"
                 : shot.diff?.diffPixels
                     ? `  ${shot.diff.diffPixels} px differ`
@@ -174,8 +212,23 @@ export const main = async (
         }
     }
 
-    const changed = results.flatMap((r) => r.shots).filter((s) => s.status !== "unchanged");
-    console.log(`\n${changed.length} shot(s) new or changed${promote ? " and promoted" : ""}.`);
+    const shots = results.flatMap((result) => result.shots);
+    const changed = shots.filter((shot) => shot.status === "new" || shot.status === "changed");
+    const unstable = shots.filter((shot) => shot.status === "unstable");
+    const promoted = promote
+        ? results
+            .filter((result) => !result.error && !result.shots.some((shot) =>
+                shot.status === "unstable"))
+            .flatMap((result) => result.shots)
+            .filter((shot) => shot.status === "new" || shot.status === "changed").length
+        : 0;
+    const promotion = promote
+        ? promoted === changed.length ? " and promoted" : `; ${promoted} promoted`
+        : "";
+    console.log(`\n${changed.length} shot(s) new or changed${promotion}.`);
+    if (unstable.length) {
+        console.log(`${unstable.length} unstable shot(s) quarantined after the change did not reproduce.`);
+    }
     if (failed && deferErrors) {
         console.log(`${failed} walkthrough failure(s) recorded for docs:heal.`);
     }
