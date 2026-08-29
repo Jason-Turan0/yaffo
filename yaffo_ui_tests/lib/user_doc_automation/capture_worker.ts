@@ -30,6 +30,7 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
     const {captureWalkthroughs} = await import("./runner");
 
     const only = args.filter((a) => !a.startsWith("-"));
+    const shotsOnly = args.includes("--shots-only");
     const walkthroughs = await loadWalkthroughs(CONTENT_DIR, only);
     if (!walkthroughs.length) {
         console.error(only.length ? `No walkthrough for: ${only.join(", ")}` : "No walkthroughs found");
@@ -38,7 +39,9 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
 
     console.log(`Capturing ${walkthroughs.length} walkthrough(s) from ${BASE_URL}`);
     const results = await captureWalkthroughs(walkthroughs, {
-        baseUrl: BASE_URL, stagingDir: CAPTURE_DIR,
+        baseUrl: BASE_URL,
+        stagingDir: CAPTURE_DIR,
+        ...(shotsOnly ? {skipFlows: true} : {}),
     });
 
     for (const result of results) {

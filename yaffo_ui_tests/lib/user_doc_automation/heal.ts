@@ -177,12 +177,15 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
     }
 
     const failedCaptures = results.filter((result) => result.error);
+    const unstableCaptures = results.flatMap((result) => result.shots
+        .filter((shot) => shot.status === "unstable")
+        .map((shot) => ({result, shot})));
     // Do not promote partial shots from a walkthrough that later failed. Repair and
     // verify the whole walkthrough first; its gate will perform a clean promotion.
     const pending = results.flatMap((result) => result.error
         ? []
         : result.shots
-            .filter((shot) => shot.status !== "unchanged")
+            .filter((shot) => shot.status === "new" || shot.status === "changed")
             .map((shot) => ({result, shot})));
 
     // Cheap per-page checks. A renamed label or changed prose dependency may move no
@@ -213,7 +216,7 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
         .filter((page) => !pending.some(({result}) => result.page === page))
         .filter((page) => !failedCaptures.some((result) => result.page === page));
 
-    if (!pending.length && !proseOnly.length && !failedCaptures.length) {
+    if (!pending.length && !proseOnly.length && !failedCaptures.length && !unstableCaptures.length) {
         console.log("Nothing to triage — every shot matched what is committed.");
         return 0;
     }
@@ -223,7 +226,8 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
     console.log(`   logs: ${runLogDir}`);
     console.log(`Triaging ${pending.length} changed shot(s)` +
         (proseOnly.length ? `, ${proseOnly.length} page(s) flagged by renamed controls` : "") +
-        (failedCaptures.length ? `, and ${failedCaptures.length} failed walkthrough(s)` : "") + "\n");
+        (failedCaptures.length ? `, ${failedCaptures.length} failed walkthrough(s)` : "") +
+        (unstableCaptures.length ? `, ${unstableCaptures.length} unstable shot(s)` : "") + "\n");
 
     // The same three providers the test generator gets, for the same reasons: the
     // filesystem to read the page and its walkthrough, Playwright to inspect the
@@ -246,6 +250,28 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
 
         const verdicts: Verdict[] = [];
         let failed = 0;
+        for (const {result, shot} of unstableCaptures) {
+            const diff = shot.stability?.diff;
+            const detail = diff
+                ? `${diff.diffPixels} pixel(s) differed between the two candidates`
+                : shot.stability?.reason ?? "the second capture did not produce the shot";
+            verdicts.push({
+                page: result.page,
+                target: shot.target,
+                triage: {
+                    classification: "environment_instability",
+                    confidence: "high",
+                    summary: "The screenshot change did not reproduce on an immediate recapture.",
+                    reasoning: `${detail}. The committed image was left unchanged.`,
+                    proseImpact: [],
+                    recommendedAction: "quarantine",
+                },
+            });
+            console.log(`🌫️ ${shot.target}`);
+            console.log(`   environment_instability (high confidence) — change did not reproduce`);
+            console.log(`   ${detail}; committed image left unchanged\n`);
+        }
+
         for (const result of failedCaptures) {
             const evidence = walkthroughFailureEvidence(result);
             const triage: Triage = {

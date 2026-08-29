@@ -76,6 +76,21 @@ describe("capture worker main", () => {
         expect(captureWalkthroughs).not.toHaveBeenCalled();
     });
 
+    it("skips flows when invoked for a stability recapture", async () => {
+        const walkthroughs = [{page: "library/browsing", shots: {}}];
+        loadWalkthroughs.mockResolvedValue(walkthroughs);
+        captureWalkthroughs.mockResolvedValue([{page: "library/browsing", shots: []}]);
+
+        await expect(main(["--shots-only", "library/browsing"])).resolves.toBe(0);
+
+        expect(loadWalkthroughs).toHaveBeenCalledWith("/content", ["library/browsing"]);
+        expect(captureWalkthroughs).toHaveBeenCalledWith(walkthroughs, {
+            baseUrl: "http://app.test:5002",
+            stagingDir: "/staging/captures",
+            skipFlows: true,
+        });
+    });
+
     it("reports walkthrough failures as captured evidence without failing the worker", async () => {
         loadWalkthroughs.mockResolvedValue([
             {page: "library/good"}, {page: "library/bad"}, {page: "library/worse"},

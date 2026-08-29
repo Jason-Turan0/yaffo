@@ -6,8 +6,10 @@ export type CompareStatus = "changed" | "unchanged";
 
 export interface CompareResult {
     status: CompareStatus;
-    /** Pixels exceeding the colour tolerance, including pixels present on only one canvas. */
+    /** Perceptually different non-AA pixels, including pixels present on only one canvas. */
     diffPixels: number;
+    /** Pixels in the union of the two image canvases. */
+    totalPixels?: number;
     /** Fraction of the image that differs. */
     ratio?: number;
     /** Bounding box of the difference, useful for pointing a reviewer at it. */

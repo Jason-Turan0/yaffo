@@ -63,6 +63,8 @@ export interface CaptureContainerOptions {
     baseUrl: string;
     /** Page ids to capture; empty means every walkthrough. */
     pages?: string[];
+    /** Skip dependency-only flows during a stability recapture. */
+    shotsOnly?: boolean;
     /**
      * The docker CLI's own settings, snapshotted before the environment was scrubbed.
      *
@@ -119,6 +121,7 @@ export const buildCaptureArgs = (options: CaptureContainerOptions): string[] => 
     "-e", "TMPDIR=/tmp",
     DOCS_CAPTURE_IMAGE,
     "npx", "tsx", "lib/user_doc_automation/capture_worker.ts",
+    ...(options.shotsOnly ? ["--shots-only"] : []),
     ...(options.pages ?? []),
 ];
 

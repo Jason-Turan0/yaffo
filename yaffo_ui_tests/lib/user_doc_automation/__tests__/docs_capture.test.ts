@@ -20,6 +20,10 @@ const runCaptureContainer = jest.fn<(options: unknown) => number>();
 const snapshotDockerEnv = jest.fn<() => Record<string, string>>();
 const loadWalkthroughs = jest.fn<(contentDir: string, only?: string[]) => Promise<unknown[]>>();
 const processResults = jest.fn<(raw: unknown[], options: unknown) => unknown[]>();
+const pagesNeedingStability = jest.fn<(results: unknown[]) => string[]>();
+const finalizeStability = jest.fn<(
+    initial: unknown[], repeated: unknown[], options: unknown
+) => unknown[]>();
 const runWalkthroughs = jest.fn<(
     walkthroughs: unknown[],
     options: unknown
@@ -42,9 +46,12 @@ await jest.unstable_mockModule("../paths", () => ({
     BASE_URL, CAPTURE_DIR, CONTENT_DIR, DOCS_DATA_DIR, GUIDE_DIR,
 }));
 await jest.unstable_mockModule("../runner", () => ({
+    finalizeStability,
+    pagesNeedingStability,
     processResults,
     RAW_FILENAME: "raw.json",
     runWalkthroughs,
+    STABILITY_DIRNAME: ".recheck",
 }));
 
 const {main, runCli} = await import("../docs_capture");
@@ -86,13 +93,16 @@ beforeEach(() => {
     mkdirSync(CAPTURE_DIR, {recursive: true});
     mkdirSync(GUIDE_DIR, {recursive: true});
     for (const mock of [
-        dockerAvailable, runCaptureContainer, loadWalkthroughs, processResults, runWalkthroughs,
+        dockerAvailable, runCaptureContainer, loadWalkthroughs, processResults,
+        pagesNeedingStability, finalizeStability, runWalkthroughs,
     ]) mock.mockReset();
     currentHead.mockReset().mockReturnValue("feature-head-sha");
     dependencyHashes.mockReset().mockReturnValue({"yaffo/routes/home.py": "route-hash"});
     dockerAvailable.mockReturnValue(true);
     runCaptureContainer.mockReturnValue(0);
     processResults.mockReturnValue([]);
+    pagesNeedingStability.mockReturnValue([]);
+    finalizeStability.mockImplementation((initial) => initial);
     runWalkthroughs.mockResolvedValue([]);
     log = jest.spyOn(console, "log").mockImplementation(() => undefined);
     error = jest.spyOn(console, "error").mockImplementation(() => undefined);
@@ -322,10 +332,51 @@ describe("Docker capture", () => {
         expect(processResults).toHaveBeenCalledWith(rawResults, {
             guideDir: GUIDE_DIR,
             stagingDir: CAPTURE_DIR,
-            promote: true,
+            promote: false,
         });
         expect(loadWalkthroughs).not.toHaveBeenCalled();
         expect(log).toHaveBeenCalledWith(expect.stringContaining("yaffo-docs-capture:latest"));
+    });
+
+    it("recaptures only changed Docker pages before promotion", async () => {
+        const initialRaw = [{page: "library/browsing", shots: [], observation: observed()}];
+        const repeatedRaw = [{page: "library/browsing", shots: [], observation: observed()}];
+        const initial = [result({shots: [{status: "changed"}]})];
+        const repeated = [result({shots: [{status: "changed"}]})];
+        const final = [result({shots: [{status: "changed", stability: {status: "reproduced"}}]})];
+        write(join(CAPTURE_DIR, "raw.json"), JSON.stringify({results: initialRaw}));
+        runCaptureContainer
+            .mockReturnValueOnce(0)
+            .mockImplementationOnce((options: unknown) => {
+                const capture = options as {stagingDir: string};
+                write(join(capture.stagingDir, "raw.json"), JSON.stringify({results: repeatedRaw}));
+                return 0;
+            });
+        processResults.mockReturnValueOnce(initial).mockReturnValueOnce(repeated);
+        pagesNeedingStability.mockReturnValue(["library/browsing"]);
+        finalizeStability.mockReturnValue(final);
+
+        await expect(main(["--docker", "--promote", "library/browsing"], dockerEnv))
+            .resolves.toBe(0);
+
+        expect(runCaptureContainer).toHaveBeenNthCalledWith(2, {
+            repoDir: HOST_REPO,
+            stagingDir: join(CAPTURE_DIR, ".recheck"),
+            baseUrl: BASE_URL,
+            pages: ["library/browsing"],
+            shotsOnly: true,
+            dockerEnv,
+        });
+        expect(processResults).toHaveBeenNthCalledWith(2, repeatedRaw, {
+            guideDir: GUIDE_DIR,
+            stagingDir: join(CAPTURE_DIR, ".recheck"),
+            promote: false,
+        });
+        expect(finalizeStability).toHaveBeenCalledWith(initial, repeated, {
+            guideDir: GUIDE_DIR,
+            stagingDir: CAPTURE_DIR,
+            promote: true,
+        });
     });
 
     it("processes a Docker walkthrough failure into a host report before returning failure", async () => {
