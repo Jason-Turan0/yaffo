@@ -240,11 +240,16 @@ test.describe('Sharing Feature', () => {
     const total = Number(totalText.match(/of ([\d,]+) shared/)?.[1]?.replace(/,/g, ''));
     expect(total).toBeGreaterThan(0);
 
-    // Previews are live p2p calls back to A — the preview endpoint serves bytes
-    const previewSrc = await pageB.locator('.remote-photo-card img').first().getAttribute('data-preview-src');
-    expect(previewSrc).not.toBeNull();
-    const previewResponse = await pageB.request.get(previewSrc!, { failOnStatusCode: false });
-    expect(previewResponse.ok(), `Preview "${previewSrc}" failed with ${previewResponse.status()}`).toBe(true);
+    // Previews are live p2p calls back to A. Observe the browser's bounded queue and
+    // retry rather than adding an unqueued request that competes with the UI loads.
+    const preview = pageB.locator('.remote-photo-card img').first();
+    await expect.poll(() => preview.evaluate((image: HTMLImageElement) => {
+      const expectedSrc = new URL(image.dataset.previewSrc!, document.baseURI).href;
+      return image.dataset.previewState === 'done'
+        && image.currentSrc === expectedSrc
+        && image.complete
+        && image.naturalWidth > 0;
+    }), { timeout: 30_000 }).toBe(true);
 
     // The filter sidebar is built from A's facets; filtering narrows the results
     const yearSelect = pageB.locator('select#year-select');

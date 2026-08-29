@@ -194,7 +194,18 @@ export default defineWalkthrough({
             await page.unrouteAll({behavior: "wait"});
 
             // Delete through the visible confirmation flow and verify its tab is gone.
-            await page.locator(".nav-page-edit").click();
+            await Promise.all([
+                page.waitForURL(new RegExp(`/pages/${temporaryPageId}/design$`), {
+                    waitUntil: "domcontentloaded",
+                }),
+                page.locator(".nav-page-edit").click(),
+            ]);
+            await page.waitForFunction(() => {
+                const app = (window as typeof window & {
+                    PHOTO_ORGANIZER?: {pages?: {detail?: {confirmDelete?: unknown}}};
+                }).PHOTO_ORGANIZER;
+                return typeof app?.pages?.detail?.confirmDelete === "function";
+            });
             await page.locator("#delete-page-button").click();
             await page.locator("#global-confirm-dialog.active").waitFor();
             await Promise.all([
