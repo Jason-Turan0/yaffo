@@ -1,9 +1,10 @@
 # Documentation Automation
 
-> **Status: built and running, one page short.** Screenshot capture and prose updates
-> are both in scope and ship together, not as separate phases. This document is now a
-> description of a working pipeline rather than a proposal; the few things that remain
-> unbuilt are named as such, in *Remaining work* at the end.
+> **Status: built and running with complete app-backed guide coverage.** Screenshot
+> capture and prose updates are both in scope and ship together, not as separate
+> phases. This document is now a description of a working pipeline rather than a
+> proposal; the few things that remain unbuilt are named as such, in *Remaining work*
+> at the end.
 >
 > **Infrastructure** — `yaffo_ui_tests/lib/user_doc_automation/`, 34 modules: capture
 > mechanics (settle, framing, WebP encode, pixel comparison), the containerized capture
@@ -12,9 +13,9 @@
 > and six entry points. The server-side observer is `yaffo/doc_observer.py`.
 >
 > **Content** — `yaffo_ui_tests/user_doc_automation/`: `spec.yaml` covering all 17 guide
-> pages, and **15 walkthroughs capturing 30 committed screenshots**, each with its
+> pages, and **16 walkthroughs capturing 33 committed screenshots**, each with its
 > catalog (`{page}.json`) and lockfile (`{page}.lock.json`). Every walkthrough has been
-> promoted at least once, so all 15 carry a watermark and a dependency fingerprint.
+> promoted at least once, so all 16 carry a watermark and a dependency fingerprint.
 >
 > **Entry points**, all working: `docs:capture` (deterministic capture, `--promote`
 > writes into the guide, `--docker` containerizes, `--defer-errors` hands a thrown
@@ -34,8 +35,9 @@
 > `lib/user_doc_automation/__tests__/`, plus 30 pytest tests covering the differ and the
 > observer.
 >
-> **Not built:** the `create-customize/automations` walkthrough — 1 of the 16 app-backed
-> pages, still carrying a hand-made PNG. See *Remaining work*.
+> **Coverage:** all 16 app-backed pages have a walkthrough, catalog, promoted images,
+> watermark, and dependency fingerprint. The only page without a walkthrough is the
+> terminal-only `reference-maintenance/uninstalling` page.
 >
 > Last updated: 2026-08-29
 
@@ -116,7 +118,7 @@ against a capture that already happened. `heal_repo.ts` says why: dependency has
 cheap to compare during discovery, but visual drift is only knowable after a walkthrough
 runs, and skipping capture on a hash match would blind the pipeline to exactly the
 changes Detector A exists for. The cost of that choice is a sandbox boot per eligible
-page per run — 15 of them today; the cache on the fixture is what keeps it affordable.
+page per run — 16 of them today; the cache on the fixture is what keeps it affordable.
 `docs:detect` is the cheap pre-filter and is available locally, but CI does not
 currently gate on it.
 
@@ -308,17 +310,17 @@ describe the exact files on disk that were captured.
 **A page with no watermark is skipped only by Detector B, not reported wholly clean.**
 Its dependency hashes can still be checked without a commit reference.
 
-All 15 pages that have a walkthrough have now been promoted at least once, so each
+All 16 pages that have a walkthrough have now been promoted at least once, so each
 carries a watermark and a dependency fingerprint (75–180 hashed files per page).
 `docs:detect` reports exactly that today:
 
 ```text
-✅ 15 page(s) checked — no relevant dependency or quoted-string changes.
-2 page(s) skipped by quoted-string detection: no watermark yet (never promoted).
+✅ 16 page(s) checked — no relevant dependency or quoted-string changes.
+1 page(s) skipped by quoted-string detection: no watermark yet (never promoted).
 ```
 
-The two skipped pages are `create-customize/automations` (no walkthrough yet) and
-`reference-maintenance/uninstalling` (no app surface, `walkthrough: false`).
+The skipped page is `reference-maintenance/uninstalling` (no app surface,
+`walkthrough: false`).
 
 ## Scoping: the observed dependency set
 
@@ -539,16 +541,17 @@ dependency set. Nothing about either output is inferred from a heuristic.
 Only `reference-maintenance/uninstalling` has `walkthrough: false` — it is entirely a
 terminal workflow with no app surface to drive.
 
-Two of the 15 built walkthroughs capture nothing and exist purely for their dependency
+Two of the 16 built walkthroughs capture nothing and exist purely for their dependency
 set: `start-here/concepts` (180 hashed dependencies) and
 `library-basics/organizing-photos` (162) — the two widest fingerprints in the tree,
-which is the argument for the design working as intended. The remaining 13 capture 30
+which is the argument for the design working as intended. The remaining 14 capture 33
 screenshots between them, from 1 each up to 5 for `getting-started` and
 `assigning-faces`.
 
-`create-customize/automations` is declared `walkthrough: true` but does not have one
-yet — the only page where the spec and the tree disagree, and the reason
-`docs:heal:repo` skips it. See *Remaining work*.
+`create-customize/automations` uses the seeded, disabled **File favorite kid photos**
+automation for three stable shots and a real dry-run. Its flow creates and removes a
+temporary custom automation while covering details, assistant generation, schedules,
+events, system restrictions, and deletion.
 
 ### Walkthroughs are generated, committed, and editable
 
@@ -703,11 +706,8 @@ not yet generated. `docs:heal:repo` reports it instead, by skipping the page and
 why. Today the whole set is clean:
 
 ```text
-✅ 17 pages, 31 images — no problems.
+✅ 17 pages, 33 images — no problems.
 ```
-
-The 31st image is `automations-list.png`, the one remaining hand-made shot — referenced,
-in the right directory, and therefore valid; it is simply not produced by anything.
 
 ### Bot state is never hand-edited
 
@@ -1100,7 +1100,7 @@ Points worth keeping in view:
 - **Patches, not commits, cross the job boundary.** Each `heal` job produces
   `git diff --binary` over that page's markdown, assets, and automation folder —
   untracked files added with `--intent-to-add` first, so a brand-new screenshot is in the
-  binary patch. Only `open-pr` can write to the repository. This is what lets 15 runners
+  binary patch. Only `open-pr` can write to the repository. This is what lets 16 runners
   produce one reviewable PR without any of them holding a token.
 - **Evidence is uploaded in the job that produced it**, because every run wipes the
   staging directory. The initial capture is preserved before healing starts; the heal
@@ -1391,13 +1391,6 @@ is why five walkthroughs carry an `ignoreRegions` entry for it — see
 Everything below is genuinely unbuilt, in rough order of how much it would cost to
 leave alone.
 
-- **The `create-customize/automations` walkthrough.** The last of the 16 app-backed
-  pages. It is the only guide page still carrying a hand-made screenshot
-  (`automations-list.png`, not a WebP), and `docs:heal:repo` skips it for exactly that
-  reason: *"missing walkthrough; missing lockfile"*. Until it exists, the automations
-  page is outside the pipeline entirely — no watermark, no dependency fingerprint,
-  neither detector watching it. `npm run docs:generate -- create-customize/automations`
-  is the intended route.
 - **Caching OSM tiles.** `locations-map` is handled today by ignoring `.ol-viewport`,
   which also blinds the diff to the markers drawn from our own data. Serving a fixed
   tile set locally is the real fix; the open question is only whether to vendor tiles
