@@ -13,10 +13,9 @@ Open **Faces** from the top navigation. The page has two parts:
 - The **sidebar** holds the **Actions** panel (assign or ignore faces, create a
   person) and the **Filters** panel (how faces are grouped).
 
-The header reports how much work is left, for example
-*Showing 74 of 74 unassigned faces*.
+The header reports how much work is left.
 
-![The Faces page: cluster of unassigned faces with the actions and filters sidebar](../assets/screenshots/faces-assign-01-overview.png)
+![The Faces page showing an unassigned face cluster and its review sidebar](assets/assigning-faces/faces-assign-01-overview.webp)
 
 ## Choose How Faces Are Grouped
 
@@ -26,13 +25,14 @@ Use the **Filters** panel to control grouping before you assign anything.
   together, which is the best way to make a first pass. **People** instead
   matches faces to people you already have.
 - **Similarity Threshold** — how strict grouping is. Higher values make tighter,
-  cleaner groups; lower values make larger, looser ones. The screenshots here
-  use a low threshold of **25%**, which pulls each person's faces into one big
-  cluster so you can assign a lot at once.
+  cleaner groups; lower values make larger, looser ones. Start with the default
+  **50%**, then adjust it as you learn what works for the current batch.
 - **Faces to analyze** — how many unassigned faces to pull in and cluster at a
-  time.
+  time. This is the batch size, not the number of thumbnails shown at once.
 
-![Grouping and assignment controls in the sidebar, with the similarity threshold at 25%](../assets/screenshots/faces-assign-02-controls.png)
+After changing a filter, click **Apply Filters**.
+
+![The Actions and Filters panels used while reviewing unassigned faces](assets/assigning-faces/faces-assign-02-controls.webp)
 
 ## Assign a Cluster
 
@@ -41,53 +41,47 @@ With a cluster in front of you, assign it in three steps.
 **1. Pick the person.** Choose someone from **Assign to Person**. The selector is
 searchable, so you can type to filter a long list.
 
-![The Assign to Person selector open with the list of people](../assets/screenshots/faces-assign-03-pick-person.png)
+![The Assign to Person selector open with the Bennett family choices](assets/assigning-faces/faces-assign-03-pick-person.webp)
 
-**2. Refine the selection.** Every face in the cluster starts selected (a blue
-border). Click any face that does not belong to remove it from the assignment —
-blurry, partial, or clearly-different faces. Here the first face, a low-quality
-partial, has been deselected.
+**2. Refine the selection.** Every face in the cluster starts selected, marked by
+a blue border and checkmark. Click any face that does not belong to remove it
+from the assignment. Use **Clear selection** when you would rather start with
+nothing selected and add individual faces back.
 
-![The cluster with the person chosen and one low-quality face deselected](../assets/screenshots/faces-assign-04-refine.png)
+![A face cluster with its first face removed from the current selection](assets/assigning-faces/faces-assign-04-refine.webp)
 
 **3. Assign.** Click **Assign Selected**. Yaffo confirms the assignment and moves
 straight to the next cluster so you can keep going.
 
-![A success message confirms the assignment and the next cluster loads](../assets/screenshots/faces-assign-05-next-cluster.png)
-
 ## Work Through Multiple Clusters
 
-Because Yaffo advances automatically, review is a rhythm: assign the current
-cluster, then assign the next one — usually a *different* person.
-
-![The next cluster selected, ready to assign to a different person](../assets/screenshots/faces-assign-06-assign-second.png)
-
-Each assignment removes those faces from the pile. After clearing two clusters
-here, the unassigned count has dropped from 74 to 57, and the next person's
-cluster is ready.
-
-![The unassigned count has dropped after assigning two clusters](../assets/screenshots/faces-assign-07-progress.png)
+Because Yaffo advances automatically, review becomes a rhythm: assign the
+current cluster, then review the next one—often for a different person. The
+header count updates when Yaffo loads the next batch.
 
 Two buttons on each cluster help you keep moving:
 
 - **Skip cluster** leaves the cluster unassigned and jumps to the next one.
-- **Shuffle** swaps in a different sample of faces from the same cluster, useful
-  for large clusters where only some faces are shown at once.
+- **Shuffle** swaps in a different sample from the same cluster. It is available
+  only when a cluster contains more faces than the current thumbnail page.
 
 ## Quick Assignment
 
 Once a cluster is obviously one person, you can assign it without touching the
 sidebar:
 
-- **Assign to _Name_** buttons appear on a cluster when Yaffo already has a
-  strong guess. Click one to assign the whole selected group in a single step.
+- In **Group by People** mode, **Assign to _Name_** buttons appear when Yaffo has
+  a strong guess. Click one to assign the selected faces in a single step.
 - **Keyboard shortcuts** speed up repeated assignment. The sidebar lists a number
-  key for each of your top people; select faces and press that number to assign
-  them. Other shortcuts:
+  key for each displayed person; select faces and press that number to assign
+  them. Use the gear beside **Keyboard Shortcuts** to choose and order those
+  people. Other shortcuts:
     - **Shift + Click** — select a range of faces.
     - **Enter** — assign selected faces to the chosen person.
     - **i** or **0** — ignore selected faces.
     - **?** — open the on-page help.
+
+![A people-grouped cluster with a one-click assignment suggestion](assets/assigning-faces/faces-assign-05-quick-assign.webp)
 
 ## Ignore Faces
 
@@ -105,8 +99,8 @@ It does not affect the original photo.
 ## Refresh Between Passes
 
 When the biggest clusters are gone and only loose, mixed groups remain, reload
-the page. Yaffo re-clusters the remaining unassigned faces into tighter, cleaner
-groups for the next pass. Lowering the **Similarity Threshold** further can also
-pull the stragglers together. As your catalog of people grows, a background task
-also assigns obvious matches on its own, so the pile keeps shrinking even between
-review sessions.
+the page. Yaffo clusters the current unassigned pile again for the next pass.
+Lowering the **Similarity Threshold** can pull stragglers together, but review
+looser groups more carefully. As your catalog of people grows, the built-in
+**Auto-assign faces** automation can also assign confident matches when new
+photos are indexed.

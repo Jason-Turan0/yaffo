@@ -5,10 +5,10 @@ window.PHOTO_ORGANIZER.people = window.PHOTO_ORGANIZER.people || {};
 
 /**
  * @param {I18nService} i18n
- * @param {AppConfig} config
+ * @param {AppConfig} _config
  * @returns {PeopleFacesApi}
  */
-window.PHOTO_ORGANIZER.people.initFaces = (i18n, config) => {
+window.PHOTO_ORGANIZER.people.initFaces = (i18n, _config) => {
     const tooltip = document.createElement('div');
     tooltip.className = 'tooltip';
     document.body.appendChild(tooltip);
@@ -21,7 +21,7 @@ window.PHOTO_ORGANIZER.people.initFaces = (i18n, config) => {
         const range = document.getElementById(rangeId);
         const value = document.getElementById(valueId);
         if (!(range instanceof HTMLInputElement) || !value) return;
-        range?.addEventListener('input', (event) => {
+        range?.addEventListener('input', () => {
             value.textContent = i18n.percent(Number(range.value) / 100);
         });
     };

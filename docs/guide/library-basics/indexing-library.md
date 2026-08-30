@@ -4,7 +4,7 @@ Indexing is how Yaffo learns what photos and videos are in your library. Yaffo
 does not move your originals into a special folder. Instead, you choose media
 folders, and Yaffo builds a local index from those files.
 
-![Index photos utility](../assets/screenshots/utilities-index-photos.png)
+![The Index Photos utility showing library counts and an in-sync result](assets/indexing-library/utilities-index-photos.webp)
 
 ## Add Media Folders
 
@@ -37,10 +37,11 @@ The page shows several counts:
 
 Scanning is a read-only comparison step. It tells you what needs to be synced.
 
-## Sync New or Changed Files
+## Sync New Files and Remove Orphans
 
 When the scan finds work to do, click **Sync Database**. Yaffo starts background
-jobs to import new files, remove orphaned database records, and process media.
+jobs to import files at new paths, remove orphaned database records, and process
+media.
 
 During indexing, Yaffo may:
 
@@ -68,15 +69,15 @@ reopen the app or quit it.
 Yaffo has two automatic ways to notice library changes while the app is running:
 
 - A watcher process monitors configured media directories and reacts when files
-  are added, changed, or removed.
-- A background sync job runs about once an hour and performs the same kind of
-  folder-to-database reconciliation as the manual sync.
+  are added, modified, moved, or removed.
+- The built-in **File sync** automation runs at the start of every hour. It finds
+  new paths and orphaned database records, like the scan on the indexing utility.
 
 These automatic checks are useful for normal day-to-day changes, such as copying
 new photos into a watched folder.
 
 You can still run the indexing utility manually whenever you want an immediate
-check. Manual sync is useful when you:
+check. **Sync Database** is useful when you:
 
 - add new photos or videos to a configured folder;
 - remove files from a configured folder;
@@ -84,15 +85,28 @@ check. Manual sync is useful when you:
 - move a library folder;
 - want Yaffo to clean up orphaned database records.
 
+Use **Reindex Library** when files were modified in place while Yaffo was not
+running, or when an indexing change requires Yaffo to rebuild derived data for
+items it already knows. Reindexing rereads every indexed file and rebuilds its
+metadata, thumbnails, labels, and detected faces. Because faces are detected
+again, all existing face-to-person assignments are removed. Yaffo asks you to
+confirm before starting the job.
+
 Some operations, such as changing the automatic label vocabulary, have their own
 reprocessing controls. Use the indexing utility for file-system changes or when
 you do not want to wait for the watcher or hourly sync.
 
 ## Supported Media
 
-Yaffo is designed for photo and video libraries. Exact format support depends on
-the image, video, and metadata tools bundled with the app. Common photo formats
-and browser-playable videos are the safest choices.
+Yaffo indexes these file extensions:
+
+- **Photos:** `.jpg`, `.jpeg`, `.png`, and `.heic`.
+- **Videos:** `.mp4`, `.mov`, `.m4v`, `.avi`, `.mkv`, `.wmv`, and `.flv`.
+
+MP4, MOV, and M4V videos can play inline when their codec is supported by the
+browser. Yaffo still indexes the other video containers for metadata, posters,
+and faces, but opens them in an external application instead of playing them in
+the detail view.
 
 If a file does not appear after indexing, check that:
 

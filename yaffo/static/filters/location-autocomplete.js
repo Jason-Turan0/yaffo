@@ -153,7 +153,7 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
         }
     };
 
-    searchInput.addEventListener('input', (e) => {
+    searchInput.addEventListener('input', () => {
         const query = searchInput.value.trim();
 
         clearTimeout(debounceTimer);
@@ -171,7 +171,7 @@ window.PHOTO_ORGANIZER.filters.initLocationAutocomplete = (i18n, appConfig) => {
         }, 300);
     });
 
-    searchInput.addEventListener('focus', (e) => {
+    searchInput.addEventListener('focus', () => {
         const query = searchInput.value.trim();
         if (query.length >= 2 && suggestionsContainer.children.length > 0) {
             suggestionsContainer.classList.add('active');

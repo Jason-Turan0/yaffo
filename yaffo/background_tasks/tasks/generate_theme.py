@@ -60,7 +60,10 @@ def run_theme_generation(
     Split out from the task wrapper so it can be driven directly from a test or
     script. `should_cancel` defaults to polling the theme's status."""
     if should_cancel is None:
-        should_cancel = lambda: get_theme_status(slug) != PAGE_VERSION_STATUS_IN_PROGRESS
+        def default_should_cancel() -> bool:
+            return get_theme_status(slug) != PAGE_VERSION_STATUS_IN_PROGRESS
+
+        should_cancel = default_should_cancel
 
     theme = themes.get_custom_theme(slug, session)
     if theme is None:

@@ -149,6 +149,7 @@ yaffo_ui_tests/
 - Node.js 18+
 - Yaffo application source code (expected at `../../yaffo` relative to this directory)
 - An API key for the model provider you use: Anthropic (default), Google (Gemini), OpenAI (GPT), DeepSeek, Moonshot AI (Kimi), or xAI (Grok)
+- Docker — required by `npm run generate`, optional elsewhere. See [Docker](#docker) below.
 
 ### Setup
 
@@ -347,6 +348,7 @@ See `playwright.config.ts`:
 | `npm run seed:build` | Build the seed cache (seeds A + B once) for `--preseeded` runs |
 | `npm run test:spec -- <spec>` | Run one spec in its own cache-restored environment |
 | `npm run validate:specs` | Verify all `specs/*.yaml` are valid YAML |
+| `npm run test:sandboxed [-- <directory-or-spec> ...]` | Run generated-test directories concurrently, each against a disposable copy of the seed sandbox |
 | `npm run isolatedEnvironment:start [-- --demo]` | Start a seeded isolated app, optionally in source demo mode |
 | `npm run isolatedEnvironment:start:sharing [-- --demo]` | Start isolated A/B apps, optionally as source/receiver demos |
 | `npm run test:heal <spec> [--preseeded]` | Auto-heal a feature's failing tests (YAML spec path) |
@@ -391,8 +393,14 @@ prerelease.
 The seed cache path is pinned with `YAFFO_SEED_CACHE_ROOT` so the build and
 restore jobs agree on the absolute location — required because the seeded
 database stores absolute media paths (see `seedCacheDir` in
-`lib/services/isolated_runner.ts`). Run the same flow locally with
-`npm run seed:build` then `npm run test:spec -- <spec>`.
+`lib/services/isolated_runner.ts`). Run the local fan-out with `npm run
+seed:build` followed by `npm run test:sandboxed`. It groups specs by their
+containing directory, gives each directory a disposable copy of the cached
+database/media tree, and cleans that copy after the directory finishes. Set
+`TEST_SANDBOX_CONCURRENCY` to change the number of simultaneous directories
+(default `5`), or pass one or more directories/specs after `--` to run a subset.
+If the default port range is occupied, set `TEST_SANDBOX_BASE_PORT` or pass
+`--base-port <port>` after `--`.
 
 ## Spec File Format
 
@@ -456,6 +464,158 @@ scenarios:
 
 Anthropic models support native structured output and prompt caching. Generation defaults to `claude-sonnet-5`, healing uses `claude-sonnet-5`.
 
+## Docker
+
+Docker does two jobs here: it confines the parts of this harness that hand filesystem
+access to a model, and it pins screenshot rendering so a guide image does not depend on
+which machine captured it.
+
+### What needs it
+
+| Uses Docker | Why |
+|---|---|
+| `npm run generate` | Passes `useDocker: true`, so the MCP filesystem server the model reads source through runs in a container with the repo mounted **read-only** and `--network none` |
+| `npm run test:heal` | No. Runs the filesystem server directly via `npx` |
+| `npm run docs:capture:docker` | Runs the browser half in a container so screenshots are reproducible |
+| `npm run docs:capture` | No. Captures on the host — fine locally, but see the drift below |
+
+Everything except `generate` and `docs:capture:docker` works without Docker installed.
+
+### Why docs capture is containerized when the Playwright suite is not
+
+The test suite confines generated specs with `sandbox-exec` (macOS) or `bwrap` (Linux),
+which is cheaper and enough for *safety*. Docs capture has a second requirement the
+tests do not: its output is a committed image, compared per-pixel on the next run, so it
+has to be reproducible.
+
+macOS and Linux disagree on font metrics. That changes line wrapping, which moves
+layout. Measured on `library-basics/browsing-filtering` against the same sandbox:
+
+| | `gallery-home` | `gallery-filter-sidebar` |
+|---|---|---|
+| container, run A vs run B | **0 px differ** | **0 px differ** |
+| container vs macOS host | 1392×**777** vs 1392×**782** | 312×**1326** vs 312×**1359** |
+
+Two container runs are byte-identical. The same page captured on the host is a
+different size, so every CI run would report every shot as reframed and the comparison
+would be noise. The container pins the whole rendering stack — Chromium build, fonts,
+freetype — so the two agree.
+
+Encoding and comparison stay on the host either way: they use Pillow and NumPy from the
+project virtualenv, which is not in the Playwright image and should not be.
+
+### Install
+
+**macOS** — [Docker Desktop](https://www.docker.com/products/docker-desktop/), or
+[Rancher Desktop](https://rancherdesktop.io/) with the container engine set to
+**dockerd (moby)** rather than containerd. Either way the daemon has to be *running*,
+not merely installed:
+
+```bash
+docker info
+```
+
+A `Cannot connect to the Docker daemon` or `dial unix /var/run/docker.sock` error means
+the desktop app is not started.
+
+**Linux** — Docker Engine from your distribution, plus your user in the `docker` group so
+the harness can talk to the socket without `sudo`:
+
+```bash
+sudo usermod -aG docker "$USER"    # log out and back in for this to take effect
+```
+
+### Build the images
+
+Both are local and have to be built once:
+
+```bash
+npm run docker:build:mcp-filesystem
+npm run docker:build:docs-capture
+```
+
+`yaffo-mcp-filesystem` is `node:22-slim` with `@modelcontextprotocol/server-filesystem`
+pinned, running as a non-root user. Rebuild it if that pin changes.
+
+`yaffo-docs-capture` is the official Playwright image with this project's
+`node_modules` installed inside it, pinned to the `@playwright/test` version in
+`package.json` — **bump both together**, or the browser in the image stops matching the
+one the harness expects. `node_modules` is built into the image rather than mounted
+because the host's is compiled for darwin and will not execute on Linux; the run masks
+the mounted one with an anonymous volume.
+
+Verify:
+
+```bash
+docker image inspect yaffo-mcp-filesystem:latest yaffo-docs-capture:latest --format '{{.Id}}'
+```
+
+### Running a containerized capture
+
+The container reaches the app through `host.docker.internal`, and **a container cannot
+see the host's loopback**. The sandbox therefore has to bind beyond `127.0.0.1`:
+
+```bash
+YAFFO_SANDBOX_HOST=0.0.0.0 npm run isolatedEnvironment:start
+```
+
+```bash
+npm run docs:capture:docker
+npm run docs:capture:docker -- --promote library-basics/browsing-filtering
+```
+
+Generation takes the same flag. It shells out to the capture above, so `--docker` makes
+the walkthrough it just wrote get verified *and* promoted from the same renderer CI
+uses — otherwise the first CI run reframes every shot the generator produced:
+
+```bash
+npm run docs:generate -- --docker library-basics/photo-details
+```
+
+`docs:heal` needs no flag: it reads the staging a prior capture produced rather than
+capturing itself.
+
+`YAFFO_SANDBOX_HOST` defaults to `127.0.0.1` and is opt-in because `0.0.0.0` puts the
+sandbox on your LAN. `--network host` is not an alternative on macOS: it joins the Linux
+VM's network namespace, not your Mac's.
+
+The container gets the repo mounted **read-only** with exactly one writable hole, at
+`user_doc_automation/.staging`. Walkthroughs are model-generated code and staging is the
+only place they have any business writing; images are promoted into `docs/guide/` by the
+host, after they have been compared. Its environment is an allowlist (see
+`lib/user_doc_automation/env.ts`) that carries no provider key and, deliberately, no
+`DOCKER_HOST` — the daemon socket is root on the host, and handing it to generated code
+would make the container pointless.
+
+### How the filesystem container is run
+
+Worth knowing when debugging a path the model claims it cannot read. Each allowed
+directory is mounted at `/data/0`, `/data/1`, … in the order given, and the client
+translates paths in both directions, so the model sees container paths while the harness
+works in host paths.
+
+```
+docker run --rm -i --network none -v <hostDir>:/data/0:ro … yaffo-mcp-filesystem:latest /data/0 …
+```
+
+- `--network none` — the server has no reason to reach the network, and the code it
+  serves was written by a model.
+- `:ro` — mounts are read-only unless `readonly: false` is passed. Note that
+  `getTools()` filters out the write tools **regardless** of that flag, so the model is
+  never offered one; generated artifacts come back as its answer and the harness writes
+  them.
+
+### Troubleshooting
+
+| Symptom | Cause |
+|---|---|
+| `dial unix /var/run/docker.sock` | Daemon not running — start Docker Desktop |
+| `Unable to find image 'yaffo-…:latest'` | Build it — see [Build the images](#build-the-images) |
+| Capture fails with `ECONNREFUSED` | Sandbox bound to loopback; restart it with `YAFFO_SANDBOX_HOST=0.0.0.0` |
+| Every shot reports `reframed` | Baselines were captured on the host; re-promote once from a container run |
+| Model reports a file missing that exists | A path outside `allowedDirectories` is not mounted, so it does not exist inside the container |
+| `permission denied` on the socket (Linux) | User not in the `docker` group |
+
 ## MCP Tool Providers
 
 The framework gives the AI model access to three tool providers via MCP:
@@ -474,7 +634,11 @@ The framework gives the AI model access to three tool providers via MCP:
 npm run test:unit
 ```
 
-Tests are in `lib/__tests__/` using Jest with `ts-jest`.
+Tests are in `lib/__tests__/` using Jest with `ts-jest`, in ESM mode. Run them through
+the npm script, not a bare `jest` — the script sets
+`NODE_OPTIONS='--experimental-vm-modules'`, without which ts-jest falls back to
+CommonJS and every suite using `import.meta` fails with a misleading `TS1343` that
+looks like a tsconfig problem. `jest.config.js` checks for the flag and says so.
 
 ### Type Checking
 

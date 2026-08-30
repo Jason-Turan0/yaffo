@@ -6,7 +6,7 @@ Yaffo keeps a library tidy without you clicking through the same steps by hand.
 
 Open **Utilities** → **Automations**.
 
-![The Automations page with the system and custom list, and a selected automation's details and run history](../assets/screenshots/automations-list.png)
+![The Automations page with the system and custom list, and a selected automation's details and run history](assets/automations/automations-list.webp)
 
 The sidebar lists automations in two groups, **System** and **Custom**. Select
 one to see its description, actions, and run history on the right. A green **ON**
@@ -57,6 +57,8 @@ The test is a safe dry-run:
   without actually changing anything.
 - Nothing is written and no run is recorded in the automation's history.
 
+![A custom automation editor showing its conversation, published code, and safe dry-run result](assets/automations/automation-test.webp)
+
 You can test either the working **draft** or the currently **published** code, so
 you can check a change before publishing it. Once the results look right, use
 **Publish draft** to make it live.
@@ -69,6 +71,8 @@ one — or several:
 - **Schedule** — run on a repeating clock, set with a cron expression (for
   example, every night at 2 AM). Yaffo validates the expression as you type.
 - **Event** — run when something happens in Yaffo, such as a photo being indexed.
+
+![The trigger editor with a new hourly schedule ready to save](assets/automations/automation-triggers.webp)
 
 An automation with no triggers stays idle until you add one.
 

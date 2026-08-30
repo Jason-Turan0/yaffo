@@ -6,7 +6,7 @@
 // confirmation survives the navigation that would otherwise wipe the toast.
 const NOTIFICATION_FLASH_KEY = 'app-notification-flash';
 
-class Notification {
+class AppNotification {
     constructor() {
         // Create notification element if it doesn't exist
         if (!document.getElementById('app-notification')) {
@@ -71,7 +71,7 @@ class Notification {
     flash(message, type = 'success', duration = 3000) {
         try {
             sessionStorage.setItem(NOTIFICATION_FLASH_KEY, JSON.stringify({ message, type, duration }));
-        } catch (e) {
+        } catch {
             // sessionStorage unavailable — fall back to an immediate toast.
             this.show(message, type, duration);
         }
@@ -79,18 +79,19 @@ class Notification {
 
     /** Show and clear any flash queued by a prior flash() call. */
     showPendingFlash() {
-        let raw = null;
+        /** @type {string | null} */
+        let raw;
         try {
             raw = sessionStorage.getItem(NOTIFICATION_FLASH_KEY);
             if (raw) sessionStorage.removeItem(NOTIFICATION_FLASH_KEY);
-        } catch (e) {
+        } catch {
             return;
         }
         if (!raw) return;
         try {
             const { message, type, duration } = JSON.parse(raw);
             this.show(String(message), type, Number(duration));
-        } catch (e) {
+        } catch {
             // Ignore a malformed flash payload.
         }
     }
@@ -130,7 +131,7 @@ class Notification {
 }
 
 // Create global notification instance
-window.notification = new Notification();
+window.notification = new AppNotification();
 
 // Backward compatibility: also expose as a function
 /**

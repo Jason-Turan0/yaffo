@@ -19,12 +19,14 @@ interface MockModelClient extends ModelClient {
     callModelApi: MockFn;
     setSystemPrompt: MockFn;
     setOutputSchema: MockFn;
+    setMaxOutputTokens: MockFn;
     getSessionTokens: MockFn;
     model: ModelAlias;
 }
 
 const createMockModelClient = (): MockModelClient => ({
     addUserMessage: jest.fn(),
+    setMaxOutputTokens: jest.fn(),
     getSessionCost: jest.fn(() => 0),
     getSessionTokens: jest.fn(() => ({
         inputTokens: 0,

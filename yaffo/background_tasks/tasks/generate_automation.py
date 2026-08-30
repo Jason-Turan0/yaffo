@@ -59,7 +59,10 @@ def run_automation_generation(
     """Run the agent against a custom automation and persist its conversation /
     status. Split out from the task wrapper so it can be driven from a test."""
     if should_cancel is None:
-        should_cancel = lambda: get_automation_status(slug) != AUTOMATION_STATUS_IN_PROGRESS
+        def default_should_cancel() -> bool:
+            return get_automation_status(slug) != AUTOMATION_STATUS_IN_PROGRESS
+
+        should_cancel = default_should_cancel
 
     automation = repo.get_by_slug(session, slug)
     if automation is None:

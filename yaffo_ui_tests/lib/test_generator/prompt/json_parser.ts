@@ -40,7 +40,7 @@ export const extractJson = (text: string): string => {
         // not pure JSON — try to extract from ```json ``` fenced blocks
     }
 
-    const match = trimmed.match(/```json\s*([\s\S]*?)```/);
+    const match = trimmed.match(/```json\s*([\s\S]*)```/);
     if (match) {
         return match[1].trim();
     }

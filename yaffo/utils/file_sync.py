@@ -115,7 +115,8 @@ def iter_media_scan(
     scan. `scan_media_dirs` consumes this for callers that just want the result."""
     db_photos = session.query(MediaItem.id, MediaItem.full_file_path, MediaItem.status).all()
     indexed_paths = {
-        path for _id, path, status in db_photos
+        str(Path(path).expanduser().resolve(strict=False))
+        for _id, path, status in db_photos
         if status == MEDIA_STATUS_INDEXED
     }
 

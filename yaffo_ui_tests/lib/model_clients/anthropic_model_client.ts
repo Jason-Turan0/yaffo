@@ -106,7 +106,10 @@ export class AnthropicModelClient extends BaseModelClient {
                 tools: this.sdkTools,
                 // Claude 5 models think by default and thinking counts against
                 // this cap, so leave headroom beyond the visible response.
-                maxOutputTokens: 16000,
+                // Covers hidden reasoning tokens as well as the visible response on a
+                // reasoning model, and reasoning is spent first. Raise it per turn with
+                // setMaxOutputTokens when a lot of text has to come back.
+                maxOutputTokens: this.maxOutputTokens,
                 output: Output.object({schema: this.outputSchema}),
                 providerOptions: {
                     anthropic: {
@@ -117,9 +120,7 @@ export class AnthropicModelClient extends BaseModelClient {
 
             cacheUsage = this.trackUsage(result.usage);
             const response = this.convertToModelResponse(result);
-            if (result.text) {
-                console.log(`   🤖 ${result.text.slice(0, 200)}`);
-            }
+            this.logResponsePreview(result.text, result.reasoningText);
             this.storeAssistantMessages(result);
             return response;
         } catch (error) {

@@ -6,6 +6,8 @@ first.
 
 ## Photos Do Not Appear
 
+![The Index Photos utility showing the diagnostic library counts](assets/troubleshooting/index-photos-status.webp)
+
 If photos are missing from the library:
 
 - **Check your media directories.** Open **Settings** and confirm the folder
@@ -61,6 +63,8 @@ results as your library grows.
   [Locations & Map](../organize-review/locations.md).
 
 ## AI Features Do Not Work
+
+![The AI Generation settings showing the selected model and API-key status](assets/troubleshooting/ai-generation-status.webp)
 
 The page builder, theme designer, and custom automations need AI generation to be
 configured.

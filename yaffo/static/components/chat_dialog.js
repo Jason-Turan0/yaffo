@@ -160,7 +160,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
             const body = /** @type {ChatStatusBody} */ (await response.json());
             applyStatus(body);
             if (isRunning()) pollTimer = setTimeout(poll, pollIntervalMs);
-        } catch (error) {
+        } catch {
             pollTimer = setTimeout(poll, pollRetryMs);
         }
     };
@@ -195,7 +195,7 @@ window.PHOTO_ORGANIZER.COMPONENTS.initChatDialog = (id, options) => {
                 return;
             }
             enterRunning();
-        } catch (error) {
+        } catch {
             window.notification.error(i18n.t('components:chat.startFailed'));
             messageInput.value = message;
         }

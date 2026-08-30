@@ -1,8 +1,10 @@
-import {ChildProcess, execSync, spawn} from "child_process";
+import {ChildProcess, execFileSync, execSync, spawn} from "child_process";
 import {randomBytes} from "crypto";
 import {join, resolve} from "path";
 import {cpSync, existsSync, mkdirSync, realpathSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
+import {createServer} from "net";
+import {DOCS_DATA_DIR as AUTOMATION_DOCS_DATA_DIR} from "../user_doc_automation/paths";
 
 // Resolved temp root: on macOS tmpdir() is /var/folders/… but /var is a symlink
 // to /private/var. The p2p grant query prefix-matches media_dir.path.resolve()
@@ -47,6 +49,14 @@ export interface IsolatedEnvironmentOptions {
      * seeding fresh. Skips the expensive indexing/face/label pipeline.
      */
     preseeded?: boolean;
+    /**
+     * Copy the preseeded cache into disposable data dirs before serving it.
+     * Concurrent local suites need this: unlike CI jobs, local processes share
+     * a filesystem and must not write to the same cached SQLite database.
+     */
+    copyPreseeded?: boolean;
+    /** Serve the reproducible documentation fixture instead of the UI-test seed. */
+    docsFixture?: boolean;
 }
 
 export interface TestResult {
@@ -84,6 +94,15 @@ export interface TestRunResult {
 const UI_TESTS_DIR = resolve(process.cwd());
 const YAFFO_DIR = resolve(join(UI_TESTS_DIR, ".."));
 const SCRIPTS_DIR = join(UI_TESTS_DIR, "scripts");
+
+/**
+ * Fixed across macOS and Linux so paths rendered by Settings have identical pixels.
+ * The cache is restored here before serving; unlike ordinary test sandboxes it is not
+ * an ephemeral timestamped directory.
+ */
+export const DOCS_DATA_DIR = AUTOMATION_DOCS_DATA_DIR;
+export const DOCS_MEDIA_DIR = join(DOCS_DATA_DIR, "Family Photos");
+export const DOCS_DUPLICATE_SCAN_DIR = join(DOCS_DATA_DIR, "Duplicate Scan Samples");
 
 // UDP ports for the p2p QUIC transport, well away from the web ports.
 const quicPortFor = (webPort: number): number => webPort + 10_000;
@@ -127,11 +146,26 @@ const waitForServer = async (url: string, maxAttempts = 30): Promise<boolean> =>
     return false;
 };
 
+/** Refuse to mistake an already-running local app for the process just spawned. */
+export const isTcpPortAvailable = (port: number): Promise<boolean> => new Promise((resolvePromise) => {
+    const server = createServer();
+    server.unref();
+    server.once("error", () => resolvePromise(false));
+    server.listen({host: "127.0.0.1", port, exclusive: true}, () => {
+        server.close(() => resolvePromise(true));
+    });
+});
+
+const portInUseError = (port: number): Error => new Error(
+    `Port ${port} is already in use; choose another sandbox range with ` +
+    "TEST_SANDBOX_BASE_PORT or --base-port"
+);
+
 interface StartInstanceOptions {
     label: string;
     port: number;
     tempDir: string;
-    /** Fixture directory copied into organized before running the full seed. */
+    /** Fixture directory copied into Family Photos before running the full seed. */
     fixtureDir: string;
     /** Selects fixture-specific database records created by the seed script. */
     seedProfile: "bennett" | "obama";
@@ -152,6 +186,10 @@ interface StartInstanceOptions {
      * path it was seeded at, and is not deleted on cleanup.
      */
     preseeded?: boolean;
+    /** Delete this already-seeded data dir when the instance stops. */
+    disposableData?: boolean;
+    /** Optional immutable model/binary root shared by copied seed sandboxes. */
+    assetDir?: string;
 }
 
 export const PRIMARY_FIXTURE_DIR = join(UI_TESTS_DIR, "test_data", "bennett");
@@ -171,7 +209,11 @@ export const SHARED_TRIP_PHOTOS = [
 // instance. Kept identical between build-seed and serve so a data dir seeded in
 // one job serves correctly in another (the seeded DB stores absolute
 // full_file_path values under YAFFO_DATA_DIR).
-const instanceEnv = (tempDir: string, seedProfile: "bennett" | "obama"): Record<string, string> => ({
+const instanceEnv = (
+    tempDir: string,
+    seedProfile: "bennett" | "obama",
+    assetDir?: string,
+): Record<string, string> => ({
     ...process.env,
     YAFFO_DATA_DIR: tempDir,
     YAFFO_SEED_PROFILE: seedProfile,
@@ -182,6 +224,7 @@ const instanceEnv = (tempDir: string, seedProfile: "bennett" | "obama"): Record<
     // the seed script or normal isolated environments behave.
     YAFFO_DEMO_MODE: "0",
     YAFFO_DEMO_ROLE: "",
+    ...(assetDir ? {YAFFO_ASSET_DIR: assetDir} : {}),
     VIRTUAL_ENV: join(YAFFO_DIR, "venv"),
     PATH: `${join(YAFFO_DIR, "venv", "bin")}:${process.env.PATH}`,
 });
@@ -192,6 +235,10 @@ interface ProvisionOptions {
     fixtureDir: string;
     seedProfile: "bennett" | "obama";
     includeVideos?: boolean;
+    /** Index videos nested in the photo fixture, used by the docs composition. */
+    recursiveVideos?: boolean;
+    /** Fail fixture construction instead of preserving the UI-test runner's warning. */
+    strictSeed?: boolean;
 }
 
 /**
@@ -202,12 +249,14 @@ interface ProvisionOptions {
  * seeded DB stores absolute media paths.
  */
 export const provisionInstanceData = (options: ProvisionOptions): void => {
-    const {label, tempDir, fixtureDir, seedProfile, includeVideos = false} = options;
+    const {label, tempDir, fixtureDir, seedProfile, includeVideos = false,
+           recursiveVideos = false, strictSeed = false} = options;
+    const mediaDir = join(tempDir, "Family Photos");
 
     console.log(`\n🔧 Provisioning data dir for instance ${label}...`);
     console.log(`   Data directory: ${tempDir}`);
 
-    mkdirSync(join(tempDir, "organized"), {recursive: true});
+    mkdirSync(mediaDir, {recursive: true});
     mkdirSync(join(tempDir, "thumbnails"), {recursive: true});
     mkdirSync(join(tempDir, "temp"), {recursive: true});
     mkdirSync(join(tempDir, "duplicates"), {recursive: true});
@@ -215,11 +264,11 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
     if (!existsSync(fixtureDir)) {
         throw new Error(`Fixture directory does not exist: ${fixtureDir}`);
     }
-    cpSync(fixtureDir, join(tempDir, "organized"), {recursive: true});
+    cpSync(fixtureDir, mediaDir, {recursive: true});
     console.log(`   ✅ Copied photo fixture: ${fixtureDir}`);
     if (includeVideos) {
         const testVideoDir = join(UI_TESTS_DIR, "test_data", "mp4");
-        cpSync(testVideoDir, join(tempDir, "organized"), {recursive: true});
+        cpSync(testVideoDir, mediaDir, {recursive: true});
         console.log(`   ✅ Copied video fixtures`);
     }
 
@@ -231,13 +280,58 @@ export const provisionInstanceData = (options: ProvisionOptions): void => {
     console.log(`\n📦 Seeding instance ${label} (${seedScript})...`);
     try {
         execSync(`python "${join(SCRIPTS_DIR, seedScript)}"`, {
-            env: instanceEnv(tempDir, seedProfile),
+            env: {
+                ...instanceEnv(tempDir, seedProfile),
+                YAFFO_SEED_RECURSIVE_VIDEOS: recursiveVideos ? "1" : "0",
+            },
             cwd: YAFFO_DIR,
             stdio: "inherit",
         });
     } catch (e) {
         console.error(`   ⚠️ Warning: ${seedScript} failed: ${e}`);
+        if (strictSeed) throw e;
     }
+};
+
+/**
+ * Build the docs-grade fixture without the synthetic duplicate-test videos. The
+ * Bennett fixture already contains a short real beach video, so capture still covers
+ * video cards and playback while the gallery remains presentable.
+ *
+ * Duplicate review needs something useful to find, but putting duplicates inside
+ * Family Photos would pollute the gallery and index. Stage two pairs of real images
+ * beside the indexed library instead: the utility can scan them explicitly, while
+ * every other guide page continues to see one canonical copy of each photo.
+ */
+export const buildDocumentationFixture = (dataDir = DOCS_DATA_DIR): string => {
+    rmSync(dataDir, {recursive: true, force: true});
+    provisionInstanceData({
+        label: "docs",
+        tempDir: dataDir,
+        fixtureDir: PRIMARY_FIXTURE_DIR,
+        seedProfile: "bennett",
+        includeVideos: false,
+        recursiveVideos: true,
+        strictSeed: true,
+    });
+    const mediaDir = join(dataDir, "Family Photos");
+    const duplicateDir = join(dataDir, "Duplicate Scan Samples");
+    mkdirSync(duplicateDir, {recursive: true});
+    const samples = [
+        {
+            source: join(mediaDir, "2017_third_birthday", "2017-09-12_162200_blowing-candles.png"),
+            names: ["01-birthday-a.png", "01-birthday-b.png"],
+        },
+        {
+            source: join(mediaDir, "2021_gulf_beach_trip", "2021-07-10_134200_family-sandcastle.png"),
+            names: ["02-beach-a.png", "02-beach-b.png"],
+        },
+    ];
+    for (const sample of samples) {
+        for (const name of sample.names) cpSync(sample.source, join(duplicateDir, name));
+    }
+    console.log(`   ✅ Staged ${samples.length} duplicate-review groups outside the indexed library`);
+    return dataDir;
 };
 
 const startInstance = async (options: StartInstanceOptions): Promise<IsolatedInstance> => {
@@ -251,7 +345,13 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         demoRole,
         flaskOnlyEnv = {},
         preseeded = false,
+        disposableData = false,
+        assetDir,
     } = options;
+
+    if (!(await isTcpPortAvailable(port))) {
+        throw portInUseError(port);
+    }
 
     if (preseeded) {
         // Serve a data dir that was already seeded (restored from the seed
@@ -264,7 +364,7 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
         provisionInstanceData({label, tempDir, fixtureDir, seedProfile, includeVideos});
     }
 
-    const env = instanceEnv(tempDir, seedProfile);
+    const env = instanceEnv(tempDir, seedProfile, assetDir);
     const demoEnv = demoRole ? {
         YAFFO_DEMO_MODE: "1",
         YAFFO_DEMO_ROLE: demoRole,
@@ -297,7 +397,12 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
     console.log(`\n🚀 Starting Flask for instance ${label}${modeLabel} on port ${port}...`);
     const flaskProcess = spawn(
         "python",
-        ["-m", "flask", "run", "--host=127.0.0.1", `--port=${port}`, "--no-reload"],
+        // Loopback by default. Containerized docs capture sets YAFFO_SANDBOX_HOST=0.0.0.0
+        // so the container can reach the app through host.docker.internal — on macOS a
+        // container cannot see the host's loopback, and --network host joins the Linux
+        // VM rather than the Mac. Opt-in, because 0.0.0.0 exposes the sandbox on the LAN.
+        ["-m", "flask", "run", `--host=${process.env.YAFFO_SANDBOX_HOST || "127.0.0.1"}`,
+         `--port=${port}`, "--no-reload"],
         {
             env: flaskEnv,
             cwd: YAFFO_DIR,
@@ -317,16 +422,23 @@ const startInstance = async (options: StartInstanceOptions): Promise<IsolatedIns
     console.log(`   Waiting for Flask (instance ${label}) to be ready...`);
 
     const isReady = await waitForServer(baseUrl);
-    if (!isReady) {
+    // A different process on the requested port can make the HTTP probe pass;
+    // the child itself must still be alive before this is our environment.
+    await new Promise(r => setTimeout(r, 50));
+    if (!isReady || flaskProcess.exitCode !== null || flaskProcess.signalCode !== null) {
         console.error(`   ❌ Flask (instance ${label}) failed to start. Output:`);
         console.error(flaskOutput);
         flaskProcess.kill();
         taskqProcess?.kill();
+        await Promise.all([waitForExit(flaskProcess), waitForExit(taskqProcess)]);
+        if (disposableData && existsSync(tempDir)) {
+            rmSync(tempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
+        }
         throw new Error(`Flask server (instance ${label}) failed to start`);
     }
 
     console.log(`   ✅ Instance ${label} is ready at ${baseUrl}`);
-    return {tempDir, port, baseUrl, flaskProcess, taskqProcess, keepData: preseeded};
+    return {tempDir, port, baseUrl, flaskProcess, taskqProcess, keepData: preseeded && !disposableData};
 };
 
 const stopInstance = async (instance: IsolatedInstance | undefined): Promise<void> => {
@@ -368,13 +480,34 @@ export const seedCacheDir = (role: "primary" | "peer"): string =>
     join(SEED_CACHE_ROOT, role === "primary" ? "a" : "b");
 
 /**
+ * Make a writable, disposable copy of one canonical seed cache. The clone
+ * helper also rebases the absolute paths stored in yaffo.db from the cache
+ * root to the clone root.
+ */
+export const copySeedCache = (role: "primary" | "peer", destination: string): string => {
+    const source = seedCacheDir(role);
+    if (!existsSync(join(source, "yaffo.db"))) {
+        throw new Error(`Preseeded data dir has no yaffo.db: ${source}`);
+    }
+    execFileSync("python", [join(SCRIPTS_DIR, "clone_seed_cache.py"), source, destination], {
+        cwd: YAFFO_DIR,
+        stdio: "inherit",
+    });
+    return destination;
+};
+
+/**
  * Build the seed cache: provision + seed the primary (bennett) data dir, and
  * optionally the peer (obama) one, into their canonical locations, then return
  * without serving. Runs the real indexing/face/label pipeline, so the cache is
  * only rebuilt when its inputs change.
  */
-export const buildSeedCache = (options: {withPeer?: boolean} = {}): {primary: string; peer?: string} => {
-    const {withPeer = false} = options;
+export const buildSeedCache = (options: {withPeer?: boolean; docsFixture?: boolean} = {}): {primary: string; peer?: string} => {
+    const {withPeer = false, docsFixture = false} = options;
+    if (docsFixture) {
+        if (withPeer) throw new Error("The documentation fixture does not have a peer instance");
+        return {primary: buildDocumentationFixture()};
+    }
     const primaryDir = seedCacheDir("primary");
     rmSync(primaryDir, {recursive: true, force: true});
     provisionInstanceData({
@@ -402,39 +535,92 @@ export const startIsolatedEnvironment = async (
     port = 5001,
     options: IsolatedEnvironmentOptions = {},
 ): Promise<IsolatedEnvironment> => {
-    const {withPeer = false, demoMode = false, preseeded = false} = options;
-    const timestamp = generateTimestamp();
+    const {
+        withPeer = false,
+        demoMode = false,
+        preseeded = false,
+        copyPreseeded = false,
+        docsFixture = false,
+    } = options;
+    if (docsFixture && withPeer) {
+        throw new Error("The documentation fixture does not have a peer instance");
+    }
+    if (docsFixture && !preseeded) {
+        throw new Error("Build the documentation fixture first, then serve it with preseeded=true");
+    }
+    if (copyPreseeded && !preseeded) {
+        throw new Error("copyPreseeded requires preseeded=true");
+    }
+    if (copyPreseeded && docsFixture) {
+        throw new Error("The documentation fixture cannot be copied as a UI-test seed cache");
+    }
+    // Check the whole web-port slot before copying a potentially large cache.
+    // startInstance checks again immediately before spawn to close the race as
+    // much as a bind-probe can without holding the port itself.
+    if (!(await isTcpPortAvailable(port))) {
+        throw portInUseError(port);
+    }
+    if (withPeer && !(await isTcpPortAvailable(port + 1))) {
+        throw portInUseError(port + 1);
+    }
+    const runId = `${generateTimestamp()}_${randomBytes(4).toString("hex")}`;
     // Preseeded runs serve the canonical cache dirs directly; a normal run seeds
     // fresh temp dirs.
-    const tempDir = preseeded ? seedCacheDir("primary") : join(TEMP_ROOT, `yaffo_test_${timestamp}`);
+    let tempDir = docsFixture
+        ? DOCS_DATA_DIR
+        : preseeded ? seedCacheDir("primary") : join(TEMP_ROOT, `yaffo_test_${runId}`);
+    if (copyPreseeded) {
+        tempDir = copySeedCache("primary", join(TEMP_ROOT, `yaffo_test_${runId}`));
+    }
 
-    const primary = await startInstance({
-        label: "A",
-        port,
-        tempDir,
-        fixtureDir: PRIMARY_FIXTURE_DIR,
-        seedProfile: "bennett",
-        includeVideos: true,
-        demoRole: demoMode ? "source" : undefined,
-        flaskOnlyEnv: withPeer ? p2pEnv(port) : {},
-        preseeded,
-    });
+    let primary: IsolatedInstance;
+    try {
+        primary = await startInstance({
+            label: "A",
+            port,
+            tempDir,
+            fixtureDir: PRIMARY_FIXTURE_DIR,
+            seedProfile: "bennett",
+            includeVideos: true,
+            demoRole: demoMode ? "source" : undefined,
+            flaskOnlyEnv: withPeer ? p2pEnv(port) : {},
+            preseeded,
+            disposableData: copyPreseeded,
+            assetDir: copyPreseeded ? seedCacheDir("primary") : undefined,
+        });
+    } catch (error) {
+        if (copyPreseeded && existsSync(tempDir)) {
+            rmSync(tempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
+        }
+        throw error;
+    }
 
     let peer: IsolatedInstance | undefined;
     if (withPeer) {
         const peerPort = port + 1;
+        let peerTempDir = preseeded
+            ? seedCacheDir("peer")
+            : join(TEMP_ROOT, `yaffo_test_${runId}_peer`);
         try {
+            if (copyPreseeded) {
+                peerTempDir = copySeedCache("peer", join(TEMP_ROOT, `yaffo_test_${runId}_peer`));
+            }
             peer = await startInstance({
                 label: "B (peer)",
                 port: peerPort,
-                tempDir: preseeded ? seedCacheDir("peer") : join(TEMP_ROOT, `yaffo_test_${timestamp}_peer`),
+                tempDir: peerTempDir,
                 fixtureDir: PEER_FIXTURE_DIR,
                 seedProfile: "obama",
                 demoRole: demoMode ? "receiver" : undefined,
                 flaskOnlyEnv: p2pEnv(peerPort),
                 preseeded,
+                disposableData: copyPreseeded,
+                assetDir: copyPreseeded ? seedCacheDir("peer") : undefined,
             });
         } catch (e) {
+            if (copyPreseeded && existsSync(peerTempDir)) {
+                rmSync(peerTempDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
+            }
             await stopInstance(primary);
             throw e;
         }
@@ -464,11 +650,12 @@ async function main() {
     const withPeer = args.includes("--peer");
     const demoMode = args.includes("--demo");
     const preseeded = args.includes("--preseeded");
+    const docsFixture = args.includes("--docs");
 
     // Build-seed mode: seed the canonical cache dir(s) and exit without serving.
     // Used by the CI seed-cache job so per-spec jobs can restore and skip seeding.
     if (args.includes("--build-seed")) {
-        const {primary, peer} = buildSeedCache({withPeer});
+        const {primary, peer} = buildSeedCache({withPeer, docsFixture});
         console.log(`\n✅ Seed cache built: ${primary}${peer ? ` and ${peer}` : ""}`);
         process.exit(0);
     }
@@ -484,7 +671,7 @@ async function main() {
     process.on('SIGTERM', handleCleanup);
 
     try {
-        environment = await startIsolatedEnvironment(port, {withPeer, demoMode, preseeded});
+        environment = await startIsolatedEnvironment(port, {withPeer, demoMode, preseeded, docsFixture});
         if (environment.peer) {
             console.log(`\nRun the sharing tests with: BASE_URL=${environment.baseUrl} PEER_URL=${environment.peer.baseUrl} npx playwright test generated_tests/sharing/sharing.spec.ts`);
         }

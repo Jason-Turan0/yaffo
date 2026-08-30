@@ -1,5 +1,5 @@
 import {join, basename} from "path";
-import {writeFileSync, existsSync, readFileSync, unlinkSync, mkdirSync} from "fs";
+import {writeFileSync, existsSync, readFileSync, unlinkSync} from "fs";
 import {GenerationResult} from "@lib/test_generator/index.types";
 import {Spec} from "@lib/test_generator/prompt/spec_parser.types";
 import {createFilesystemClient} from "@lib/tool_providers/mcp_filesystem_client";

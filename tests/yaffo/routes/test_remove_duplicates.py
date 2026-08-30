@@ -25,6 +25,17 @@ def test_collect_media_paths_includes_photos_and_videos(monkeypatch, tmp_path):
     assert paths == {str(photo), str(video)}
 
 
+def test_collect_media_paths_is_sorted_for_stable_default_keepers(monkeypatch, tmp_path):
+    later = tmp_path / "z-photo.jpg"
+    earlier = tmp_path / "a-photo.jpg"
+    later.touch()
+    earlier.touch()
+    monkeypatch.setattr(mod, "get_thumbnail_dir", lambda: None)
+    monkeypatch.setattr(mod, "is_system_file", lambda name: False)
+
+    assert mod.collect_media_paths([str(tmp_path)]) == [str(earlier), str(later)]
+
+
 def test_collect_media_paths_supports_all_cataloged_video_extensions(monkeypatch, tmp_path):
     videos = [tmp_path / f"clip{extension}" for extension in (".mp4", ".mov", ".m4v", ".avi", ".mkv", ".wmv", ".flv")]
     for video in videos:

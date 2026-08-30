@@ -3,7 +3,7 @@
 The **Home** page is the main photo library view. It shows indexed photos and
 videos as a grid, with filters on the left.
 
-![Photo library](../assets/screenshots/gallery-home.png)
+![Photo library](assets/browsing-filtering/gallery-home.webp)
 
 ## Browse the Gallery
 
@@ -24,7 +24,7 @@ Click a card to open the media detail page.
 
 The filter sidebar narrows the gallery to matching media.
 
-![Gallery filter sidebar](../assets/screenshots/gallery-filter-sidebar.png)
+![Gallery filter sidebar](assets/browsing-filtering/gallery-filter-sidebar.webp)
 
 Common filters include:
 

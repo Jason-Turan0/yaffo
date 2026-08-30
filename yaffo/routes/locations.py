@@ -3,7 +3,7 @@ from flask import Flask, render_template, jsonify, request
 from flask_babel import gettext
 from sqlalchemy.orm import selectinload
 
-from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG, config_value
+from yaffo.background_tasks.automation_config import AUTOMATION_CONFIG
 from yaffo.common import shape_for_dimensions
 from yaffo.db import db
 from yaffo.db.models import (

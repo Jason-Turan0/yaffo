@@ -7,10 +7,11 @@ from flask import Flask, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 from yaffo import themes
 from yaffo.config import get_int as get_config_int
-from yaffo.db import db
 from yaffo.common import DB_PATH
-from yaffo.distance_units import supported_distance_unit_options
+from yaffo.db import db
 from yaffo.demo import configure_demo, init_demo_boundary
+from yaffo.distance_units import supported_distance_unit_options
+from yaffo.doc_observer import init_doc_observer
 from yaffo.i18n import init_i18n, select_locale, supported_locale_options, text_direction
 from yaffo.logging_config import get_logger
 from yaffo.security import init_request_security
@@ -104,6 +105,9 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None,
     init_routes(app)
     init_request_security(app)
     init_demo_boundary(app)
+    # Dev-only, and a no-op unless YAFFO_DOC_OBSERVER=1. Registered after the routes
+    # so app.view_functions is populated when it resolves an endpoint to a module.
+    init_doc_observer(app)
 
     if startup_error is not None:
         from yaffo.routes.base import render_critical_error

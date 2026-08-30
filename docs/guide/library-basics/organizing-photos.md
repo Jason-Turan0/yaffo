@@ -1,8 +1,8 @@
 # Organizing Photos
 
 Yaffo gives you several ways to organize a library without moving your original
-files: filters, favorites, tags, people, labels, locations, and custom pages.
-This page explains how those pieces fit together.
+files: filters, favorites, tags, people, labels, locations, albums, and custom
+pages. This page explains how those pieces fit together.
 
 ## Start with Indexing
 
@@ -82,13 +82,23 @@ See [Locations & Map](../organize-review/locations.md).
 
 ## Use Duplicate Review for Cleanup
 
-The duplicate utility helps find photos that look the same or nearly the same.
-Review duplicate groups before removing anything.
+The duplicate utility helps find photos and videos that look the same or nearly
+the same. Review duplicate groups before removing anything.
 
 Use duplicate review when the organizing question is "which copies can I clean
 up?"
 
 See [Finding Duplicates](../organize-review/duplicates.md).
+
+## Use Albums for Curated Collections
+
+Albums keep an exact set of media items together in an order you choose. Unlike
+a filtered gallery, an album's membership does not change when new matching
+photos are indexed. Add or remove items yourself when the collection changes.
+
+Use an album when the organizing question is "which exact photos belong in this
+collection?" Albums work well for a portfolio, a trip selection, or photos you
+want to share with another Yaffo device.
 
 ## Use Custom Pages for Saved Views
 
@@ -110,4 +120,5 @@ For a new library, a good first pass is:
 4. Add tags for events or projects that matter to you.
 5. Review GPS-backed photos on the map and assign location names.
 6. Run duplicate review before deleting anything.
-7. Create custom pages for views you want to keep.
+7. Build albums for exact sets of photos you want to keep together.
+8. Create custom pages when those photos need a reusable presentation.

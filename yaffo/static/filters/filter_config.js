@@ -96,7 +96,7 @@ window.PHOTO_ORGANIZER.filters.initConfig = (i18n, config) => {
             });
             if (!res.ok) throw new Error('save failed');
             window.location.reload();
-        } catch (err) {
+        } catch {
             window.notification.error(i18n.t('media:filters.saveFailed'));
         }
     });

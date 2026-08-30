@@ -1,0 +1,220 @@
+import {readFileSync} from "fs";
+import {z} from "zod";
+import {zodToJsonSchema} from "zod-to-json-schema";
+import {
+    createModelClient,
+    DEFAULT_MODEL,
+    supportsNativeStructuredOutput,
+} from "@lib/model_clients/model_client_factory";
+import type {ModelAlias} from "@lib/model_clients/model_client.interface";
+import {
+    supportsVision,
+    toImagePart,
+    toTextPart,
+    visionModelFor,
+} from "@lib/model_clients/model_client.interface";
+import type {ModelClient} from "@lib/model_clients/model_client.interface";
+import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
+import type {Evidence} from "./evidence";
+import {parseAnswer, runToolLoop} from "./tool_loop";
+
+/**
+ * What kind of change this is — not "why did it break".
+ *
+ * The asymmetry with test healing: here a diff is usually *correct*. The UI changed
+ * on purpose and the docs should follow. Classification exists mainly to separate
+ * that ordinary case from the three that must not be documented.
+ */
+export const TRIAGE_CLASSES = [
+    "intended_change",
+    "walkthrough_defect",
+    "application_regression",
+    "environment_instability",
+] as const;
+
+export const TriageSchema = z.object({
+    classification: z.enum(TRIAGE_CLASSES),
+    confidence: z.enum(["high", "medium", "low"]),
+    /** One line, for the run output and the PR body. */
+    summary: z.string(),
+    /** What in the images or diffs led to the classification. */
+    reasoning: z.string(),
+    /** Sentences in the page whose accuracy the change undermines. */
+    proseImpact: z.array(z.object({
+        quote: z.string(),
+        issue: z.string(),
+    })),
+    recommendedAction: z.enum(["promote", "fix_walkthrough", "report_regression", "quarantine"]),
+});
+
+export type Triage = z.infer<typeof TriageSchema>;
+
+const SYSTEM_PROMPT = `You triage screenshot changes for a user guide that documents a
+local photo-organizer app called Yaffo.
+
+A screenshot has been recaptured and differs from the one committed in the guide. Decide
+what kind of change it is. Look at the images — the baseline, the new capture, and an
+overlay that paints the differing pixels magenta over a dimmed copy of the baseline.
+
+Classify as exactly one of:
+
+- intended_change — the app's UI legitimately changed and the guide should adopt the new
+  screenshot. This is the ordinary case. Choose it when the new capture looks correct and
+  the change is consistent with the code diff you were given.
+- walkthrough_defect — the capture script no longer drives the app correctly: it landed on
+  the wrong page or state, a filter or view is not what the shot intends, content is
+  missing because a selector or wait broke. The app is fine; the capture is wrong.
+- application_regression — the new capture shows something broken: an error state, missing
+  or broken images, collapsed or overlapping layout, placeholder content where real content
+  belongs. Never adopt a screenshot of a bug into the manual.
+- environment_instability — the difference comes from the test fixture or environment
+  rather than the product: different seeded media, non-reproducible content such as live
+  map tiles, or renderer noise that may differ again on the next run.
+
+Choose the recommended action independently from the classification:
+
+- promote for intended changes.
+- fix_walkthrough for a walkthrough defect.
+- report_regression for an application regression.
+- For environment_instability, distinguish harmless variation from material drift. If
+  at most 0.1% of pixels changed, the shot was not reframed, the visible meaning and
+  content are unchanged, and no prose is affected, recommend promote: accepting a tiny
+  anti-aliasing, shadow, generated-thumbnail, or similarly localized variation is safer
+  than blocking the documentation indefinitely. Recommend quarantine when fixture
+  content, counts, labels, media, layout, or a meaningful visual state changed, or when
+  the variation is broad enough that adopting one run would merely flip the next run.
+
+Then check the page's prose against the new screenshot. Report any sentence whose accuracy
+the change undermines — a renamed control, a changed count, a described element that is no
+longer present. Quote the sentence exactly as it appears. Report nothing if the prose still
+holds; do not invent problems.
+
+If a memory tool is available, read this page's notes before classifying: they record
+what earlier runs learned, including shots already known to be unstable.
+
+Be concrete and brief. Prefer "low" confidence over a confident guess.`;
+
+const section = (title: string, body: string): string => `\n## ${title}\n\n${body}\n`;
+
+const buildPrompt = (evidence: Evidence): string => [
+    evidence.walkthroughError
+        ? `The capture walkthrough for guide page "${evidence.page}" failed before it completed. ` +
+            "This is a walkthrough defect to repair, not a screenshot change to classify."
+        : evidence.target
+            ? `A screenshot on the guide page "${evidence.page}" changed.`
+            : `The guide page "${evidence.page}" was flagged by a non-visual dependency check.`,
+    section("Shot", `${evidence.target}\n${evidence.diffSummary}`),
+    evidence.covers ? section("What this page is obliged to cover", evidence.covers) : "",
+    section("Page markdown", evidence.markdown),
+    section("Walkthrough that captured it", evidence.walkthroughSource),
+    section("Changes to this page's observed dependencies", evidence.codeDiff),
+    evidence.stringChanges.length
+        ? section("Controls this page names that the app has renamed",
+            evidence.stringChanges.map((c) => c.now !== undefined
+                ? `- "${c.was}" is now "${c.now}"`
+                : `- "${c.was}" no longer exists`).join("\n"))
+        : "",
+    evidence.target
+        ? "\nThe images follow: the committed baseline, the new capture, then the diff overlay."
+        : "",
+].join("");
+
+const imagePart = (path: string) =>
+    toImagePart(new Uint8Array(readFileSync(path)), path.endsWith(".png") ? "image/png" : "image/webp");
+
+export interface TriageOptions {
+    model?: ModelAlias;
+    runLogDir: string;
+    /**
+     * Tools for investigation and for the fix turn. Supplied at construction because
+     * the client takes its tools once, and the fix turn continues this same session
+     * so the model still has the screenshots in context.
+     */
+    toolProviders?: ToolProvider[];
+}
+
+/** A live model session. The fix turn continues one of these. */
+export interface Session {
+    client: ModelClient;
+    model: ModelAlias;
+}
+
+/** A classified shot, plus the session that classified it. */
+export interface TriageSession extends Session {
+    triage: Triage;
+}
+
+/**
+ * Open a session for a page with nothing visual to classify.
+ *
+ * Detector B flags a page when it quotes a control the app has renamed, and a rename
+ * that only touches a toast or a button label may move no pixels at all — so there is
+ * no shot to look at and nothing for triage to decide. The staleness is already
+ * established by the catalogue diff; the session goes straight to the fix turn.
+ */
+export const openSession = (evidence: Evidence, options: TriageOptions): Session => {
+    const requested = options.model ?? (DEFAULT_MODEL as ModelAlias);
+    const model = visionModelFor(requested);
+    const client = createModelClient(
+        options.runLogDir, model, SYSTEM_PROMPT,
+        (options.toolProviders ?? []).flatMap((provider) => provider.getTools()),
+        TriageSchema,
+    );
+    // The page and its evidence still have to be in context; only the images and the
+    // classification step are skipped.
+    client.addUserMessage([toTextPart(buildPrompt(evidence))]);
+    return {client, model};
+};
+
+export const triageShot = async (
+    evidence: Evidence,
+    options: TriageOptions
+): Promise<TriageSession> => {
+    const requested = options.model ?? (DEFAULT_MODEL as ModelAlias);
+    // Triage classifies a picture. A model that cannot receive one does not fail — it
+    // answers from the surrounding text and sounds just as certain, which is worse
+    // than an error. DeepSeek splits vision into a separate model, so substitute it
+    // rather than refusing outright.
+    const model = visionModelFor(requested);
+    if (model !== requested) {
+        console.log(`  ${requested} cannot receive images; using ${model} instead.`);
+    }
+    if (!supportsVision(model)) {
+        throw new Error(
+            `${model} cannot receive images, so it would classify this change without ` +
+            `seeing it. Choose a model marked true in MODEL_VISION_SUPPORT.`);
+    }
+
+    const systemPrompt = supportsNativeStructuredOutput(model)
+        ? SYSTEM_PROMPT
+        : `${SYSTEM_PROMPT}\n\nRespond with JSON matching this schema and nothing else:\n` +
+          `${JSON.stringify(zodToJsonSchema(TriageSchema), null, 2)}`;
+
+    const client = createModelClient(
+        options.runLogDir,
+        model,
+        systemPrompt,
+        (options.toolProviders ?? []).flatMap((provider) => provider.getTools()),
+        TriageSchema,
+    );
+
+    // Each image is labelled by the text part before it, so the model is never left
+    // guessing which capture it is looking at.
+    client.addUserMessage([
+        toTextPart(buildPrompt(evidence)),
+        toTextPart("Committed baseline:"),
+        imagePart(evidence.baselinePath),
+        toTextPart("New capture:"),
+        imagePart(evidence.candidatePath),
+        ...(evidence.overlayPath
+            ? [toTextPart("Diff overlay (magenta = changed pixels):"), imagePart(evidence.overlayPath)]
+            : []),
+    ]);
+
+    const answer = await runToolLoop(client, options.toolProviders ?? []);
+    const parsed = parseAnswer(TriageSchema, answer);
+    if (!parsed.value) {
+        throw new Error(`unusable triage response — ${parsed.errors.join("; ")}`);
+    }
+    return {triage: parsed.value, client, model};
+};

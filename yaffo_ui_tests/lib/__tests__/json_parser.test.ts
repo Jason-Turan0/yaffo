@@ -1,6 +1,4 @@
 import {parseJsonResponse} from '../test_generator/prompt/json_parser';
-import {join} from "path";
-import fs from "fs";
 
 describe('parseJsonResponse', () => {
     it('should parse clean JSON directly', () => {
@@ -66,5 +64,19 @@ describe('parseJsonResponse', () => {
         expect(response).not.toBeNull();
         expect(schemaErrors).toHaveLength(0);
         expect(response?.files[0].filename).toBe('nav.spec.ts');
+    });
+
+    it('should keep nested Markdown fences inside a generated file', () => {
+        const code = '# Install\n\n```shell\npipx install yaffo\n```';
+        const json = JSON.stringify({
+            files: [{filename: 'getting-started.spec.ts', code}],
+            confidence: 1,
+        });
+        const wrapped = 'Generated files:\n\n```json\n' + json + '\n```';
+
+        const {response, schemaErrors} = parseJsonResponse(wrapped);
+        expect(response).not.toBeNull();
+        expect(schemaErrors).toHaveLength(0);
+        expect(response?.files[0].code).toBe(code);
     });
 });

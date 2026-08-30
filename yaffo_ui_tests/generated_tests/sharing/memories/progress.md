@@ -6,7 +6,7 @@
 - `npm run isolatedEnvironment:start:sharing` → instance A (seeded library + album) on 5002, instance B (empty peer) on 5003. Both run the p2p engine (LAN/mDNS only; hub `ws://127.0.0.1:9` is deliberately unreachable → hub chip "Disconnected", presence chips "Local").
 - Run: `BASE_URL=http://127.0.0.1:5002 PEER_URL=http://127.0.0.1:5003 npx playwright test generated_tests/sharing/sharing.spec.ts`
 - THE SUITE IS STATEFUL AND ORDERED (`mode: 'default'`, one worker). Every full run needs a FRESH sandbox — pairing, grants, and B's download directory persist. Individual tests are not standalone.
-- A has `organized/shared_trip/` with the two SHARED_TRIP_PHOTOS (carved out by the runner; seed indexes with rglob in basename order so ids stay stable).
+- A has `Family Photos/shared_trip/` with the two SHARED_TRIP_PHOTOS (carved out by the runner; seed indexes with rglob in basename order so ids stay stable).
 - The peer seed intentionally does NOT set a download directory: the UI can set one but NEVER clear one (empty value rejected), so the no-download-dir scenario must run before any test sets it. Tests set it to `join(tmpdir(),'yaffo_ui_test_downloads')` so node fs can assert on pulled files.
 
 ## Environment bugs found and fixed while building this (do not re-investigate)

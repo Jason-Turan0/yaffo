@@ -1,0 +1,2 @@
+# Captures land here before anything is compared; nothing in it is committed.
+.staging/

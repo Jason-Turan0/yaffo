@@ -1,5 +1,4 @@
 import json
-import threading
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 import numpy as np
@@ -18,15 +17,14 @@ from yaffo.logging_config import get_logger
 import pydash as _
 from sqlalchemy.orm import joinedload
 from yaffo.db.models import db, Face, Person, PersonFace, FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, \
-    FACE_STATUS_ASSIGNED, MediaItem, MEDIA_STATUS_INDEXED, EVENT_MEDIA_MODIFIED, FACE_STATUS_PROCESSING, \
+    FACE_STATUS_ASSIGNED, MediaItem, FACE_STATUS_PROCESSING, \
     ApplicationSettings
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-from yaffo.db.repositories.person_repository import update_person_embedding, get_similarity_bounds
+from yaffo.db.repositories.person_repository import get_similarity_bounds
 from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
-from yaffo.domain.compare_utils import load_embedding, calculate_similarity, ui_threshold_to_similarity, \
-    DEFAULT_SIMILARITY_FLOOR, DEFAULT_SIMILARITY_CEIL, similarity_to_ui_percent
+from yaffo.domain.compare_utils import load_embedding, ui_threshold_to_similarity
 from yaffo.utils.context import context
 from yaffo.utils.photo_dates import parse_date_taken
 

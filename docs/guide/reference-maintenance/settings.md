@@ -3,7 +3,7 @@
 This page lists the options on the **Settings** screen. Open **Settings** from
 the top navigation.
 
-![The Settings page showing Language, Units, and Media Directories](../assets/screenshots/settings-overview.png)
+![The Settings page showing Language, Units, and Media Directories](assets/settings/settings-overview.webp)
 
 Most sections have their own **Save** button — changes take effect when you save
 that section.
@@ -38,7 +38,8 @@ thumbnails to be generated.
 
 ## AI Generation
 
-Powers Yaffo's AI features, such as the [page builder](../create-customize/custom-pages.md),
+Powers Yaffo's AI features, such as the
+[page builder](../create-customize/custom-pages.md),
 [theme designer](../create-customize/themes.md), and custom
 [automations](../create-customize/automations.md).
 

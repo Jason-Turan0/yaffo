@@ -16,12 +16,9 @@ from collections import Counter, defaultdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from onnxruntime.transformers.profile_result_processor import process_results
-
 from yaffo.background_tasks.tasks.classify_labels_automation import classify_media_items
 from yaffo.common import MEDIA_TYPE_PHOTO, MEDIA_TYPE_VIDEO, PHOTO_EXTENSIONS
 from yaffo.db.models import (
-    Tag,
     Face,
     MediaItem,
     Person,
@@ -222,7 +219,13 @@ def seed_bennett_face_assignments(
                 face.status = FACE_STATUS_UNASSIGNED
 
     detected_face_ids = {
-        face_id for (face_id,) in db.session.query(Face.id).all()
+        face_id
+        for (face_id,) in (
+            db.session.query(Face.id)
+            .join(MediaItem, Face.media_item_id == MediaItem.id)
+            .filter(MediaItem.media_type == MEDIA_TYPE_PHOTO)
+            .all()
+        )
     }
     if missing or matched_face_ids != detected_face_ids:
         unmatched_detected = sorted(detected_face_ids - matched_face_ids)
@@ -523,7 +526,10 @@ def seed_custom_pages(db, seed_profile: str) -> None:
         print("  Skipped custom page: Florida Trip is only in the Bennett library")
         return
 
-    trip_filter = {"year": {"eq": 2021}}
+    trip_filter = {
+        "year": {"eq": 2021},
+        "media_type": {"eq": "photo"},
+    }
     hero = TEMPLATES_BY_NAME["Hero banner"].to_widget_item(x=0, y=0)
     hero["data_query"] = {
         "hero_photo": {"source": "media_items", **trip_filter, "limit": 1}
@@ -623,7 +629,8 @@ def index_media_library(photos_dir: Path, thumbnail_dir: Path) -> int:
         processed_results.append(indexed_photo)
         print(f"  Indexed: {photo_path.name}")
 
-    for video_path in sorted(photos_dir.glob("*.mp4"), key=lambda path: path.name.lower()):
+    video_glob = "**/*.mp4" if os.environ.get("YAFFO_SEED_RECURSIVE_VIDEOS") == "1" else "*.mp4"
+    for video_path in sorted(photos_dir.glob(video_glob), key=lambda path: path.name.lower()):
         try:
             indexed_video = index_video(video_path, thumbnail_dir)
         except Exception as e:
@@ -686,8 +693,11 @@ def seed_database() -> int:
         print("Error: YAFFO_DATA_DIR environment variable not set")
         sys.exit(1)
 
-    data_dir = Path(data_dir)
-    photos_dir = data_dir / "organized"
+    # Store the same canonical spelling used by the filesystem scanner. On macOS,
+    # /tmp is a symlink to /private/tmp; mixing those spellings makes one physical
+    # file look like two different media items when the first sync runs.
+    data_dir = Path(data_dir).expanduser().resolve()
+    photos_dir = data_dir / "Family Photos"
     thumbnail_dir = data_dir / "thumbnails"
 
     from yaffo.app import create_app

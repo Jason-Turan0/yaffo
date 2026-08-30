@@ -256,7 +256,7 @@ settings.init = (initialMediaDirs, i18n, config) => {
             }
             const tail = buffer.trim();
             if (tail) handleStatsRecord(JSON.parse(tail));
-        } catch (error) {
+        } catch {
             const sizeEl = document.getElementById('thumbnail-size');
             if (sizeEl) sizeEl.textContent = '—';
             settingsWindow.notification.error(i18n.t('settings:thumbnail.countFailed'));

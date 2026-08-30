@@ -10,9 +10,13 @@ import {
 } from "@lib/model_clients/sdk_provider_model_client";
 
 const ANTHROPIC_MODELS: Set<string> = new Set<string>(["claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"]);
-const GEMINI_MODELS: Set<string> = new Set<string>(["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro"]);
+const GEMINI_MODELS: Set<string> = new Set<string>([
+    "gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.6-flash",
+]);
 const OPENAI_MODELS: Set<string> = new Set<string>(["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]);
-const DEEPSEEK_MODELS: Set<string> = new Set<string>(["deepseek-v4-pro", "deepseek-v4-flash"]);
+const DEEPSEEK_MODELS: Set<string> = new Set<string>([
+    "deepseek-v4-pro", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp",
+]);
 const MOONSHOT_MODELS: Set<string> = new Set<string>(["kimi-k3"]);
 const XAI_MODELS: Set<string> = new Set<string>(["grok-4.5", "grok-4.3"]);
 

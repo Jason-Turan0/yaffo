@@ -157,7 +157,7 @@ test.describe('Themes', () => {
   });
 
   test('themes_rename_theme', async ({ page }) => {
-    const slug = await createTheme(page, RENAME_SOURCE_LABEL);
+    await createTheme(page, RENAME_SOURCE_LABEL);
 
     await page.locator('#rename-theme-button').click();
     const modal = page.locator('#renameThemeModal');
@@ -234,7 +234,7 @@ test.describe('Themes', () => {
   });
 
   test('themes_delete_custom_theme', async ({ page }) => {
-    const slug = await createTheme(page, DELETE_LABEL);
+    await createTheme(page, DELETE_LABEL);
 
     await page.locator('#delete-theme-button').click();
     const dialog = page.locator('#global-confirm-dialog');

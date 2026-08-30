@@ -44,7 +44,10 @@ def collect_media_paths(directory_paths: list[str]) -> list[str]:
                 continue
             found_paths.add(str(p))
 
-    return list(found_paths)
+    # The first item in every result group is the default keeper. Filesystem
+    # traversal order is platform-dependent, so sort here to keep that choice —
+    # and the rendered group order — stable across runs.
+    return sorted(found_paths)
 
 
 def count_media_items_in_directory(directory_paths: list[str]) -> int:

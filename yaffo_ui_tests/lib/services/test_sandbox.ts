@@ -55,12 +55,13 @@ const probeCache = new Map<SandboxKind, ProbeResult>();
 export const probeSandbox = (
     kind: Exclude<SandboxKind, "none">,
     run: typeof spawnSync = spawnSync,
+    onPath: (name: string) => boolean = isOnPath,
 ): ProbeResult => {
     const cached = probeCache.get(kind);
     if (cached) return cached;
 
     let result: ProbeResult;
-    if (!isOnPath(SANDBOX_BINARY[kind])) {
+    if (!onPath(SANDBOX_BINARY[kind])) {
         result = {ok: false, error: `"${SANDBOX_BINARY[kind]}" is not on PATH`};
     } else {
         const [command, args] = wrapWithSandbox({kind, command: "true", args: [], writableRoots: []});

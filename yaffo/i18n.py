@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
 from flask import has_request_context, request
 from flask_babel import Babel, Domain, get_domain, get_locale

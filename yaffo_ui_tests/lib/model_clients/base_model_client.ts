@@ -2,16 +2,17 @@ import {
     generateText, jsonSchema, Tool, ToolResultPart, ToolModelMessage, UserModelMessage,
 } from "ai";
 import type {LanguageModelUsage} from "ai";
-import {writeFileSync} from "fs";
+import {mkdirSync, writeFileSync} from "fs";
 import {join} from "path";
 import type {z} from "zod";
-import type {JSONSchema7, TextPart} from "ai";
+import type {JSONSchema7} from "ai";
 import {
     ModelClient,
     ModelResponse,
-    ModelMessage, UserMessage, UserToolMessage, ModelAlias,
+    ModelMessage, UserContentPart, UserMessage, UserToolMessage, ModelAlias,
 } from "@lib/model_clients/model_client.interface";
 import {RawToolDefinition} from "@lib/tool_providers/toolprovider.types";
+import {DEFAULT_MAX_OUTPUT_TOKENS} from "./model_client.interface";
 import {
     ApiLogEntry,
     CacheUsage,
@@ -20,6 +21,7 @@ import {
     SessionTokenUsage
 } from "@lib/model_clients/model_client.types";
 import _ from 'lodash';
+import {redactSecrets} from "@lib/model_clients/redact";
 
 export function convertRawToolsToSdkTools(rawTools: RawToolDefinition[]): Record<string, Tool> {
     const tools: Record<string, Tool> = {};
@@ -59,13 +61,19 @@ export abstract class BaseModelClient implements ModelClient {
         this.sdkTools = convertRawToolsToSdkTools(rawTools);
     }
 
-    addUserMessage(content: TextPart[]): void {
+    addUserMessage(content: UserContentPart[]): void {
         this.userMessages.push({role: 'user', content: content, index: this.getNextIndex()});
     }
 
     addToolResultMessage(content: ToolResultPart[]): void {
         this.userMessages.push({role: 'tool', content: content, index: this.getNextIndex()});
     }
+
+    /**
+     * Per-call output budget. Covers hidden reasoning tokens as well as the visible
+     * answer on a reasoning model, and the reasoning is spent first.
+     */
+    protected maxOutputTokens: number = DEFAULT_MAX_OUTPUT_TOKENS;
 
     abstract callModelApi(): Promise<ModelResponse | undefined>;
 
@@ -75,6 +83,10 @@ export abstract class BaseModelClient implements ModelClient {
 
     setOutputSchema(schema: z.ZodType): void {
         this.outputSchema = schema;
+    }
+
+    setMaxOutputTokens(tokens: number): void {
+        this.maxOutputTokens = tokens;
     }
 
     protected getNextIndex = (): number => {
@@ -92,7 +104,7 @@ export abstract class BaseModelClient implements ModelClient {
             if (message.role === 'user') {
                 const mappedMessage: UserModelMessage = {
                     role: message.role,
-                    content: [...message.content] as TextPart[],
+                    content: [...message.content] as UserContentPart[],
                 };
                 return {index: message.index, message: mappedMessage};
             }
@@ -216,16 +228,15 @@ export abstract class BaseModelClient implements ModelClient {
 
     protected convertToModelResponse(result: Awaited<ReturnType<typeof generateText>>): ModelResponse {
         let text: string | undefined = undefined;
-        let output: unknown | undefined;
         try {
             text = result.text;
-            console.log(result.text);
         } catch {
             text = "";
         }
 
         return {
             text: text,
+            reasoningText: result.reasoningText,
             finishReason: result.finishReason,
             toolCalls: result.toolCalls,
             usage: result.usage,
@@ -242,8 +253,34 @@ export abstract class BaseModelClient implements ModelClient {
         }
     }
 
+    /**
+     * One line per call, so a long tool-using run stays legible.
+     *
+     * Falls back to the model's thinking when it returned no answer — which is most
+     * rounds of a tool-using turn, where the model emits only tool calls. Without the
+     * fallback those rounds print nothing and the run looks hung.
+     *
+     * Showing reasoning here is *display only*. It is never returned as the answer;
+     * see the note on `ModelResponse.reasoningText` for why that distinction matters.
+     */
+    protected logResponsePreview(text?: string, reasoningText?: string): void {
+        const answer = text?.trim();
+        if (answer) {
+            console.log(`   🤖 ${answer.slice(0, 200)}`);
+            return;
+        }
+        // The tail, not the head: the end of a thought is what led to the tool call
+        // about to run, which is the useful part while watching a run.
+        const thinking = reasoningText?.trim();
+        if (thinking) console.log(`   💭 …${thinking.slice(-200)}`);
+    }
+
     protected writeApiLog(entry: ApiLogEntry): void {
         const logPath = join(this.runLogDir, `${this.apiCallCount}_${this.logPrefix}_api.json`);
-        writeFileSync(logPath, JSON.stringify(entry, null, 2));
+        // Recreated per write: a run can outlive its log directory. The docs pipeline
+        // clears staging between capture runs, and losing the transcript should never
+        // be what ends a session that is otherwise going fine.
+        mkdirSync(this.runLogDir, {recursive: true});
+        writeFileSync(logPath, JSON.stringify(redactSecrets(entry), null, 2));
     }
 }
