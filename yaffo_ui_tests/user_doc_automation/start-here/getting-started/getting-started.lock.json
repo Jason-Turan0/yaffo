@@ -1,6 +1,6 @@
 {
     "page": "start-here/getting-started",
-    "lastVerifiedSha": "8389d4cc9d7fb0cdc03c8ee327461f60c80df3dd",
+    "lastVerifiedSha": "d14739e238d6d8b9cffe8ca33d5af396770ef429",
     "observed": {
         "page": "start-here/getting-started",
         "urls": [
@@ -145,7 +145,7 @@
         "serverObserver": "recorded"
     },
     "dependencyHashes": {
-        "pyproject.toml": "3490f36beb1116c5a806dd182dbcfab9c4118dd5f184eed6d5f82f5e058c4fe8",
+        "pyproject.toml": "0effc7384d325411501ca40c566d33dcbf7bf6c5b6c6ae44893dbbfb37592015",
         "yaffo/launcher.py": "4e93fb2e329c9231b8f06697c2a86b8d24695960987cbe4b26e1e238d4b71be7",
         "yaffo/routes/base.py": "877715be2bf8c86be81310e332cab934a3f2fccc7812314e786eb6665b62c02b",
         "yaffo/routes/home.py": "e2d7e7da389a50131a9b574a8d3d87aa39ca7f7b2e85f0f3241c320e6bc88147",
