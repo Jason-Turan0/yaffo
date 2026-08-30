@@ -42,7 +42,16 @@ plugins:
   - search
   - glightbox
 
+# Publishes yaffo/static/tokens.css and the darkroom theme's tokens into the
+# build so the docs palette is generated from the app's own values.
+hooks:
+  - hooks/design_tokens.py
+
+# Order matters: the classic :root contract, then darkroom's override block
+# (equal specificity, so it has to come second), then the Material bridge.
 extra_css:
+  - stylesheets/yaffo-tokens.css
+  - stylesheets/yaffo-tokens-darkroom.css
   - stylesheets/extra.css
 
 markdown_extensions:
