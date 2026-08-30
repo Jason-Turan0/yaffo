@@ -1,6 +1,8 @@
 # Responsive website plan
 
-Status: **Proposed**
+Status: **In progress — shared shell and Home pilot implemented**
+
+Last updated: **2026-08-30**
 
 This plan covers every server-rendered Yaffo page, shared component, built-in
 theme, supported locale, and client-side interaction. The goal is one adaptive
@@ -26,35 +28,88 @@ The work is complete when:
   preserve their visual identity at every supported width; and
 - automated responsive checks prevent new overflow and interaction regressions.
 
-## Current-state audit
+## Current implementation status
 
-The base template already declares a responsive viewport, and a few areas have
-narrow-screen rules: the timeline scrubber at 900 px, media detail at 768 px,
-custom-page design at 900 px, pagination at 640 px, and sharing controls at
-720 px. These are isolated adaptations rather than a site-wide layout system.
-In particular, the global navigation and the recurring 250–280 px sidebar
-layouts do not yet have a narrow-screen contract.
+The responsive foundation is now running in the application, but the rollout is
+not complete. The shell and Home page are the reference implementation. Other
+page families have smoke coverage and several targeted adaptations, but they
+have not all received a complete interaction, locale, and theme review.
+
+| Area | Status | Evidence and remaining gap |
+| --- | --- | --- |
+| Guardrails | **In progress** | `generated_tests/responsive/responsive.spec.ts` has 20 passing Chromium cases covering 320, 390, 768, 1024, and 1440 px, overflow diagnostics, short landscape, doubled root text, RTL, coarse pointers, and resize behavior. Representative visual baselines, long-locale fixtures, reduced motion, and the complete cross-theme matrix remain. |
+| Application shell | **Implemented, needs hardening** | Mobile Menu is accessible, mutually exclusive with page actions, hidden on desktop, closed on first paint, and preserves the Pages behavior. Full keyboard/focus auditing, safe-area handling, and visual review across all themes/locales remain. |
+| Home filters | **Pilot complete** | Filters is a peer of Menu, uses the same navbar panel host, preserves the live form DOM across breakpoints, removes desktop `.sidebar` chrome on mobile, has an active state, and supports touch filter reordering. Do not migrate other pages to this pattern until the product owner explicitly confirms the Home pilot. |
+| Home header and pagination | **Implemented** | Grid/Timeline is vertically centered. Pagination keeps text on desktop and uses one inline row of themed 44 px icon controls on mobile. Next-page navigation no longer flashes the menu. |
+| Shared components | **Partial** | Narrow layouts exist for common containers, tables, modals, forms, actions, and pagination. Popovers, searchable controls, notifications, on-screen-keyboard behavior, focus trapping, and every shared component still need systematic review. |
+| Core workflows | **Partial** | Album/widget explicit order controls, coarse-pointer face previews, people cards, media/detail route containment, and location resize behavior are covered. Complete workflow-level reviews are still outstanding. |
+| Validation | **Partial** | Responsive Playwright, UI-test TypeScript, ESLint, i18n, and design-token checks pass. The full Playwright suite has not been run for this milestone. The app-wide JavaScript typecheck still has a pre-existing `yaffo/static/pages/grid.js:234` `Element.focus()` typing failure. |
+
+Current milestone estimate: the shared foundation and first vertical slice are
+substantially complete; most page-family rollout and cross-cutting hardening
+remain. Passing route containment is a smoke signal, not completion of that page
+family.
+
+## Conventions established by the Home pilot
+
+- On narrow screens, page-specific actions such as **Filters** are peers of
+  **Menu** in the main navbar. Do not put page panels inside the Menu panel and
+  do not create nested collapse panels.
+- A page may register multiple peer actions. Only one of Menu or any page panel
+  may be expanded at a time. Drive state with `aria-expanded`; Escape and
+  outside click close the active surface and restore focus where appropriate.
+- The Home implementation is a pilot. Confirm with the product owner before
+  applying this panel model elsewhere in the app.
+- Reuse the existing panel DOM. Move it into the navbar host at the responsive
+  breakpoint and restore it to a marker on desktop so entered values, selected
+  options, and component state survive resize.
+- Closed mobile UI must be correct in CSS before JavaScript initializes. This
+  prevents Menu or panel content from flashing during full-page navigation.
+- A mobile filter panel renders its contents without desktop `.sidebar`
+  background, padding, radius, or shadow. Avoid empty framing and nested scroll
+  regions.
+- Menu and page-action buttons use an 8 px gap, at least a 44 px target, a clear
+  theme-token active state, and theme-aware icons following
+  `docs/development/icons.md` (shared outline mask plus neobrutalist override).
+- Shared pagination retains localized text labels on desktop and renders only
+  accessible First/Previous/Next/Last icons at 640 px and below. All controls
+  stay on one row at the 320 px minimum width.
+- Drag interactions need a real touch path and a keyboard/direct-control
+  alternative where practical. Touch reordering uses Pointer Events, captures
+  the pointer on a stable ancestor rather than the moving row, reserves a 44 px
+  handle, and is tested with Chrome's real emulated touch stream rather than
+  only synthetic DOM events.
+- Keep structural responsive CSS in the shared or owning page/component
+  stylesheet. Themes skin states with tokens and icon art; they do not define a
+  separate responsive layout.
+
+## Current-state audit and remaining risks
+
+The original audit found isolated narrow-screen rules without a site-wide
+contract. The branch now has a shared responsive layer, adaptive navigation,
+and route-level containment coverage. The table is retained as the rollout
+inventory; its risk column now describes what remains rather than the original
+starting state.
 
 | Area | Current risk | Primary files |
 | --- | --- | --- |
-| Application shell | Nine top-level destinations, the Pages control, and the custom-page strip compete for one row; sticky height is consumed by several other layouts. | `yaffo/templates/base.html`, `yaffo/static/base.css`, `yaffo/static/pages/nav.css`, `yaffo/static/nav.js` |
-| Shared layout and controls | Sidebars stay fixed width and sticky; headers, action groups, forms, tables, notifications, overlays, and modal footers can exceed narrow widths. | `yaffo/templates/_sidebar.html`, `yaffo/templates/components/`, `yaffo/static/sidebar.css`, `yaffo/static/form.css`, `yaffo/static/table.css`, `yaffo/static/button.css`, `yaffo/static/components/` |
-| Library and albums | The gallery grid has adaptive tracks but a 250 px floor; filters, album navigation, selection actions, the timeline scrubber, and drag affordances need touch-safe alternatives. | `yaffo/templates/index.html`, `yaffo/templates/_timeline_sections.html`, `yaffo/templates/albums/`, `yaffo/static/index.css`, `yaffo/static/albums/albums.css`, `yaffo/static/media/` |
+| Application shell | The narrow Menu and page-panel host are implemented. Remaining work is focus/scroll-lock hardening, safe areas, long locales, and visual verification of every theme decoration. | `yaffo/templates/base.html`, `yaffo/static/base.css`, `yaffo/static/pages/nav.css`, `yaffo/static/nav.js`, `yaffo/static/responsive.css` |
+| Shared layout and controls | The responsive layer covers common containment and touch targets, and Home proves the peer-panel model. Remaining pages must not inherit the older generated nested-collapse behavior without review; overlays, pickers, notifications, and keyboard/viewport edge cases remain. | `yaffo/templates/_sidebar.html`, `yaffo/templates/components/`, `yaffo/static/sidebar.css`, `yaffo/static/form.css`, `yaffo/static/table.css`, `yaffo/static/button.css`, `yaffo/static/components/`, `yaffo/static/responsive.js` |
+| Library and albums | Home filters, header, pagination, and basic grid containment are implemented; album/widget direct order controls exist. Timeline scrubber alternatives, full media states, album dialogs/selections, and end-to-end state preservation still need review. | `yaffo/templates/index.html`, `yaffo/templates/_timeline_sections.html`, `yaffo/templates/albums/`, `yaffo/static/index.css`, `yaffo/static/albums/albums.css`, `yaffo/static/media/` |
 | Media detail | The existing 768 px stack is a useful start, but fixed viewport-height calculations, nested scrolling, metadata actions, face tools, video states, and landscape phones need verification. | `yaffo/templates/media/view.html`, `yaffo/static/media/view.css`, `yaffo/static/media/view.js` |
-| Faces and people | Face assignment has dense sidebar actions and a 320 px hover preview; the people list is an unwrapped six-column table. | `yaffo/templates/faces/`, `yaffo/templates/people/`, `yaffo/static/faces/index.css`, `yaffo/static/people/` |
-| Locations | The map, filter sidebar, 380 px selection panel, hover/click affordances, and dynamic map sizing currently assume desktop space. | `yaffo/templates/locations/list.html`, `yaffo/static/locations/list.css`, `yaffo/static/locations/list.js` |
+| Faces and people | Coarse pointers can open face previews and the people table becomes labeled cards. Assignment workflows, shortcut ordering, dialogs, long content, and all focus/selection states remain. | `yaffo/templates/faces/`, `yaffo/templates/people/`, `yaffo/static/faces/index.css`, `yaffo/static/people/` |
+| Locations | Map resize and narrow selection-panel containment are covered. The intended bottom-sheet interaction, full touch/focus parity, map-state preservation, and all assignment flows remain. | `yaffo/templates/locations/list.html`, `yaffo/static/locations/list.css`, `yaffo/static/locations/list.js` |
 | Utilities | Utility navigation remains a fixed sidebar; stats, scan results, duplicate review, automation headers, code views, trigger editors, and run tables are dense. | `yaffo/templates/utilities/`, `yaffo/static/utilities/` |
 | Sharing | Sharing navigation is fixed width. Pairing, device, grant, transfer, and remote-file controls adapt unevenly; the remote gallery inherits the library concerns. | `yaffo/templates/sharing/`, `yaffo/static/sharing/sharing.css`, `yaffo/static/sharing/` |
 | Settings and themes | Path rows and file-browser forms contain long unbreakable values; theme and utility navigation repeat the fixed-sidebar pattern. | `yaffo/templates/settings/`, `yaffo/templates/themes_page/`, `yaffo/static/settings/index.css`, `yaffo/static/themes_page/index.css` |
-| Custom pages | The editor stacks below 900 px, but GridStack behavior, resize handles, widget iframes, presentation mode, and generated widget content need an explicit small-screen policy. | `yaffo/templates/pages/`, `yaffo/static/pages/detail.css`, `yaffo/static/pages/grid.js` |
+| Custom pages | The editor stacks and explicit move/resize controls have responsive coverage. GridStack policies, widget iframe sizing, presentation reading order, generated content, and the existing JavaScript typing failure remain. | `yaffo/templates/pages/`, `yaffo/static/pages/detail.css`, `yaffo/static/pages/grid.js` |
 | Error and demo states | Standalone error/security/demo pages must share the same width, zoom, safe-area, and long-copy guarantees. | `yaffo/templates/404.html`, `yaffo/templates/500.html`, `yaffo/templates/db_error.html`, `yaffo/templates/security/`, `yaffo/templates/demo/`, `yaffo/static/error.css`, `yaffo/static/demo-mode.css` |
 | Themes and localization | Theme skins override structural selectors, while German, Hindi, and Arabic expose wrapping and direction assumptions that English does not. | `yaffo/static/themes/`, `yaffo/static/locales/`, `yaffo/translations/` |
 
-Before implementation, capture representative desktop and narrow screenshots
-for every row above and log each failure as one of: viewport overflow, clipped
+For every unfinished row, capture representative desktop and narrow screenshots
+before changing it and log each failure as one of: viewport overflow, clipped
 content, unreachable interaction, undersized target, broken reading order, or
-lost state. This establishes a reproducible baseline and avoids fixing only the
-most visible pages.
+lost state. Route smoke tests alone do not replace this workflow audit.
 
 ## Support contract
 
@@ -103,31 +158,33 @@ panels so mobile browser chrome does not hide controls.
 
 ### 2. Make the application navigation adaptive
 
-- Add an accessible menu button to `base.html`. At narrow widths, place the
-  top-level destinations and Pages controls in a disclosed menu or drawer; do
-  not depend on horizontal scrolling to discover primary navigation.
-- Preserve the active destination, custom-page edit action, New Page action,
-  and the persisted Pages expanded/collapsed preference.
-- In `nav.js`, manage `aria-expanded`, focus entry/return, Escape and outside
-  dismissal, body scroll locking, resize across the breakpoint, and the
-  published `--navbar-height` value. Closing or resizing the menu must not leave
-  hidden items focusable.
-- Keep the wide navigation visually unchanged and ensure all theme-specific nav
-  decorations tolerate wrapped or drawer presentation.
+- **Implemented:** `base.html` has an accessible mobile Menu; Home adds Filters
+  through the page-action block. The top-level destinations, Pages controls,
+  active destination, custom-page actions, and Pages preference remain intact.
+- **Implemented:** `nav.js` enforces mutual exclusion, moves/restores live panel
+  DOM, manages `aria-expanded`, Escape/outside dismissal, focus entry/return,
+  breakpoint changes, and the published navbar-height variables.
+- **Remaining:** audit body scroll behavior, safe-area insets, hidden focusable
+  content, and every theme/locale. Keep the wide navigation visually unchanged.
+- **Approval gate:** do not add page panels beyond Home until the Home behavior
+  is explicitly approved for app-wide rollout.
 
-### 3. Create one narrow-screen sidebar pattern
+### 3. Create one narrow-screen page-panel pattern
 
-- Give filter, album, utility, sharing, and theme sidebars a common responsive
-  DOM contract and initializer. On wide screens they remain sticky sidebars; on
-  narrow screens they become an in-flow disclosure or modal sheet opened by a
-  labeled button.
-- Show an applied-filter count and keep Clear/Apply actions reachable without
-  scrolling the whole page. Preserve form state when opening, closing, or
-  crossing the breakpoint.
-- Support Escape, focus return, backdrop dismissal, browser history/back when a
-  sheet changes the visible UI state, and `aria-controls`/`aria-expanded`.
-- Recalculate sticky offsets from the real navbar height. Avoid nested page
-  scroll regions on narrow screens unless the component is a dialog or sheet.
+- Use Home as the reference: page sections are labeled peer buttons beside
+  Menu, not nested disclosures inside the page or Menu. A page may expose more
+  than one section, but only one page panel or Menu is visible at a time.
+- Keep the wide sticky sidebar presentation and move the same live DOM into the
+  shared navbar panel host on narrow screens. Preserve form/component state
+  across open, close, resize, and rotation.
+- Define how pages with Actions plus Filters map those sections to peer buttons.
+  Applied-filter counts and compact Clear/Apply affordances remain open design
+  work and should be settled in the shared contract before mass migration.
+- Support Escape, focus return, outside dismissal, and
+  `aria-controls`/`aria-expanded`. Evaluate browser history/back only if a panel
+  becomes a sheet or otherwise represents navigation state.
+- Recalculate sticky offsets from the measured navbar height. Avoid nested page
+  scroll regions; mobile page panels should drop desktop sidebar framing.
 
 ### 4. Harden shared components
 
@@ -161,83 +218,96 @@ together.
 
 ### Phase 0: Baseline and guardrails
 
-1. Add a responsive Playwright project or dedicated responsive specs under
+1. **Done:** add dedicated responsive specs under
    `yaffo_ui_tests/generated_tests/responsive/` using the seeded application.
-2. Add helpers that assert `scrollWidth <= clientWidth`, identify overflowing
-   descendants, check that open dialogs/sheets fit the visual viewport, and
-   exercise viewport resize without reloading.
-3. Capture baselines for every page family in classic English, then stress the
-   shared shell with German and Arabic and the most structurally divergent
-   built-in themes.
-4. Turn the support contract above into a review checklist so new responsive
-   failures are not accepted as known debt during the rollout.
+2. **Partial:** overflow diagnostics and resize-without-reload coverage exist.
+   Add reusable dialog/sheet viewport and hidden-focusable helpers, then move
+   page-family cases out of the growing shared spec into owned spec files.
+3. **Remaining:** capture baselines for every page family in classic English,
+   then stress the shared shell with German and Arabic and the most structurally
+   divergent built-in themes.
+4. **Remaining:** turn the support contract above into a review checklist so
+   new responsive failures are not accepted as known debt during the rollout.
 
 ### Phase 1: Shell and shared components
 
-1. Implement adaptive primary/custom-page navigation.
-2. Implement the shared responsive sidebar/disclosure pattern and migrate
-   `_sidebar.html`, albums, utilities, sharing, and themes to it.
-3. Update global containers, page headers, action groups, forms, tables,
-   pagination, modals, notifications, overlays, search/multi-select controls,
-   selection bars, job progress, chat, and the file/folder pickers.
-4. Verify standalone error, CSRF, database-error, and demo-disabled screens.
+1. **Implemented, hardening remains:** adaptive primary/custom-page navigation.
+2. **Home pilot implemented; approval required:** replace the old generic
+   nested sidebar/disclosure rollout with the peer page-panel contract. After
+   approval, migrate albums, utilities, sharing, themes, and other pages one
+   page family at a time.
+3. **Partial:** global containers, page headers, action groups, forms, tables,
+   pagination, modal layout, and touch targets have initial rules. Complete the
+   notification, overlay, search/multi-select, selection bar, job progress,
+   chat, file/folder picker, focus-trap, and on-screen-keyboard audits.
+4. **Remaining:** verify standalone error, CSRF, database-error, demo-disabled,
+   and other shell-light screens.
 
-This phase must land before page-specific fixes so later work uses one stable
-responsive vocabulary.
+The shared contract and a page-family change must not be edited concurrently by
+different agents. Freeze shared behavior first, then let page owners consume it.
 
 ### Phase 2: Core photo workflows
 
-1. **Library grid and timeline:** use fluid card tracks down to one column,
-   preserve aspect ratios, keep favorite/video controls touchable, move or
-   collapse filters through the shared sidebar pattern, and give the timeline
-   scrubber a narrow-screen alternative that does not cover content.
-2. **Albums:** adapt overview tiles, detail/edit actions, add-photo filters,
+1. **Library grid and timeline — partial:** Home filters, grid containment,
+   view switch, pagination, favorite/video touch containment, and basic timeline
+   layout exist. Finish the timeline scrubber alternative, streaming/rotation
+   state, media loading behavior, and full workflow/theme/locale review.
+2. **Albums — partial:** direct move controls and basic route containment exist.
+   Finish overview tiles, detail/edit actions, add-photo filters,
    selection mode, cover/share dialogs, and drag reordering. Provide explicit
    move controls or another keyboard/touch path so drag is never the only way to
    reorder.
-3. **Media detail:** refine the existing stacked layout for portrait and
-   landscape, use dynamic viewport units, keep the media visible while metadata
-   is reachable, and verify faces, people, tags, favorites, location editing,
-   missing-media states, and video playback.
-4. **Remote gallery:** reuse the completed library behavior and then verify
-   download-directory and remote-preview states.
+3. **Media detail — partial:** route containment exists. Refine the stacked
+   layout for portrait and landscape, use dynamic viewport units, keep the media
+   visible while metadata is reachable, and verify faces, people, tags,
+   favorites, location editing, missing-media states, and video playback.
+4. **Remote gallery — remaining:** reuse the completed library behavior and
+   verify download-directory and remote-preview states.
 
 ### Phase 3: Organization and administration
 
-1. **Faces:** collapse the assignment sidebar, scale the face grid fluidly,
-   replace hover-only source previews on coarse pointers, and keep selection and
-   keyboard shortcuts coherent when the layout changes.
-2. **People:** provide a narrow card presentation for the six-column list,
-   adapt add/edit dialogs, and verify a person's face gallery and filters.
-3. **Settings:** stack file-browser/path controls, wrap long filesystem paths,
-   adapt label chips and API-key controls, and keep destructive actions distinct.
-4. **Utilities:** adapt index-photo stats/results and remove-duplicate review;
-   keep result tables or photo groups locally scrollable without hiding their
-   actions.
-5. **Themes:** migrate navigation to the shared sidebar, wrap draft/publish
+1. **Faces — partial:** the grid is contained and coarse pointers can open
+   source previews. Finish the assignment panel design, shortcut reordering,
+   selection, dialogs, and keyboard behavior.
+2. **People — partial:** the six-column list has a labeled mobile card
+   presentation. Finish add/edit dialogs, person face gallery, filters, and long
+   content.
+3. **Settings — remaining:** stack file-browser/path controls, wrap long
+   filesystem paths, adapt label chips and API-key controls, and keep destructive
+   actions distinct.
+4. **Utilities — remaining:** adapt index-photo stats/results and
+   remove-duplicate review; keep result tables or photo groups locally
+   scrollable without hiding their actions.
+5. **Themes — remaining and approval-gated for panel migration:** migrate
+   navigation to the peer-panel contract, wrap draft/publish
    actions, and verify theme generation chat at all target widths.
 
 ### Phase 4: Spatial and authoring workflows
 
-1. **Locations:** make the map the primary narrow-screen surface; present the
+1. **Locations — partial:** container resize and selection-panel smoke coverage
+   exist. Make the map the primary narrow-screen surface; present the
    selected-cluster details as a bottom sheet or full-width panel, expose all
    hover behavior through click/focus, call the OpenLayers size update after
    every layout transition, and preserve map center, zoom, selection, and
    unsaved assignment state across resize.
-2. **Automations:** stack editor/chat/code areas, adapt trigger builders and code
-   toggles, contain code and test-result tables, and keep the full action set
-   discoverable in long locales.
-3. **Custom pages:** define GridStack column counts and minimum widget heights
+2. **Automations — remaining:** stack editor/chat/code areas, adapt trigger
+   builders and code toggles, contain code and test-result tables, and keep the
+   full action set discoverable in long locales.
+3. **Custom pages — partial:** explicit move/resize controls and narrow route
+   containment exist. Define GridStack column counts and minimum widget heights
    for wide, intermediate, and narrow canvases. In design mode, disable or adapt
    drag/resize gestures that conflict with page scrolling and provide explicit
    move/resize controls. In presentation mode, reflow widgets in reading order.
    Ensure widget iframes receive their actual container size and require
-   generated widget HTML to be internally responsive.
-4. **Sharing:** finish pairing QR/code, device/grant forms, file pulls, transfer
-   status, and long device/path content after the shared navigation and table
-   patterns are stable.
+   generated widget HTML to be internally responsive. Resolve the existing
+   `pages/grid.js` JavaScript typing failure while this area is owned.
+4. **Sharing — remaining:** finish pairing QR/code, device/grant forms, file
+   pulls, transfer status, and long device/path content after the shared
+   navigation and table patterns are stable.
 
 ### Phase 5: Cross-cutting hardening
+
+All Phase 5 items remain milestone exit work:
 
 1. Run every responsive smoke case across all built-in themes. Remove structural
    theme overrides or add narrowly scoped compatibility rules where a decorative
@@ -252,6 +322,81 @@ responsive vocabulary.
    resize loops; debounce only work that measurement shows is costly.
 5. Update developer documentation with the final sidebar, navigation,
    breakpoint, table, and testing conventions so future pages inherit them.
+
+## Parallel execution plan
+
+### Shared gates and ownership
+
+The page-family work is parallelizable only if shared files have one owner.
+Agents must not independently evolve the shell contract while also migrating
+pages against it.
+
+1. **S0 — Product decision (shared gate):** review the completed Home pilot and
+   explicitly approve, revise, or reject peer navbar panels for the rest of the
+   app. Until this decision is recorded, agents may audit other sidebars and fix
+   page-local layout problems, but must not migrate their navigation/panels.
+2. **S1 — Freeze the shared contract (one agent, serialized):** after S0, define
+   the registration contract for multiple page actions, Actions-plus-Filters
+   ordering, active state, focus behavior, DOM restoration, panel scrolling,
+   applied-filter counts, and breakpoint behavior. Reconcile the legacy generic
+   `.responsive-panel-toggle` initializer with the approved model instead of
+   leaving two competing mobile navigation systems.
+3. **S2 — Shared component hardening (one shared owner):** own changes to
+   `yaffo/templates/base.html`, `yaffo/templates/_sidebar.html`,
+   `yaffo/static/nav.js`, `yaffo/static/responsive.js`,
+   `yaffo/static/responsive.css`, `yaffo/static/base.css`, shared component
+   templates/styles/scripts, icon registration, and
+   `yaffo/static/types/global.d.ts`. Page agents report a shared-component need
+   to this owner rather than patching these files concurrently.
+4. **S3 — Shared test infrastructure (one owner, may run alongside S2):** extract
+   overflow, viewport-fit, hidden-focusable, touch-drag, and resize helpers from
+   the monolithic responsive spec. Establish one spec per page family so page
+   agents do not all edit `generated_tests/responsive/responsive.spec.ts`.
+
+S1 must precede any non-Home panel migration. S2 shared primitives must land
+before a page agent consumes them. S3 can proceed in parallel because its file
+ownership is limited to test helpers and new spec scaffolding.
+
+### Independent page-family tasks
+
+After the relevant shared primitive is stable, each row below can be assigned
+to an independent agent. Each agent owns its page templates, page-specific CSS
+and JavaScript, fixtures, and a dedicated responsive spec. Page-local rules stay
+in the owning stylesheet; edits to the shared file set above go through S2.
+
+| Task | Independent scope and acceptance target | Primary ownership | Shared dependency |
+| --- | --- | --- | --- |
+| **P1 — Library, timeline, and media detail** | Finish grid/timeline behavior, scrubber alternative, rotation/state preservation, loading, video, metadata, faces/tags/location editing, and portrait/landscape visual review. | `yaffo/templates/index.html`, `yaffo/templates/_timeline_sections.html`, `yaffo/templates/media/`, `yaffo/static/index.css`, `yaffo/static/media/`, new library/media responsive spec | Uses the already-approved Home panel pilot; coordinate any shared pagination/modal changes through S2. |
+| **P2 — Albums** | Complete overview, detail/edit, add-photo filters, selection, cover/share dialogs, and keyboard/touch reorder paths at every contract viewport. | `yaffo/templates/albums/`, `yaffo/static/albums/`, new albums responsive spec | Panel migration waits for S0/S1; shared selection/modal issues go to S2. |
+| **P3 — Faces and people** | Finish assignment actions, shortcut reordering, selection, dialogs, person galleries, filters, long names, and keyboard/coarse-pointer parity. | `yaffo/templates/faces/`, `yaffo/templates/people/`, `yaffo/static/faces/`, `yaffo/static/people/`, new faces/people responsive spec | Panel migration waits for S0/S1; shared table/card or touch-drag changes go to S2. |
+| **P4 — Locations** | Deliver the narrow map plus bottom-sheet/full-width selection experience, click/focus equivalents, reliable OpenLayers resizing, and center/zoom/selection/unsaved-state preservation. | `yaffo/templates/locations/`, `yaffo/static/locations/`, new locations responsive spec | Sheet/modal contract and any shared panel entry point come from S1/S2. |
+| **P5 — Utilities and automations** | Adapt utility navigation, stats/results, duplicate review, automation editor/chat/code, trigger builders, run tables, and long-locale action discovery. | `yaffo/templates/utilities/`, `yaffo/static/utilities/`, automation templates/styles/scripts, new utilities/automations responsive specs | Navigation migration waits for S0/S1; code/table/chat primitives come from S2. |
+| **P6 — Sharing and remote gallery** | Complete pairing, QR/code, device/grant forms, remote filters/previews, file pulls, transfers, pagination, and long device/path behavior. | `yaffo/templates/sharing/`, `yaffo/static/sharing/`, new sharing responsive spec | Reuse final Library behavior from P1; navigation/table/picker primitives come from S1/S2. |
+| **P7 — Settings, themes, and standalone states** | Adapt paths, file browser, labels, API keys, destructive actions, theme draft/publish/chat, and error/security/demo screens; perform long-copy checks. | `yaffo/templates/settings/`, `yaffo/templates/themes_page/`, standalone templates, `yaffo/static/settings/`, `yaffo/static/themes_page/`, `yaffo/static/error.css`, `yaffo/static/demo-mode.css`, dedicated specs | Theme navigation migration waits for S0/S1; shared file-browser/modal/chat issues go to S2. Do not modify theme skins except for page-specific verified compatibility fixes. |
+| **P8 — Custom pages and widgets** | Finalize GridStack breakpoints, design-mode gesture policy, direct controls, presentation reading order, iframe sizing, and generated-widget responsiveness; fix the existing `grid.js:234` typing error. | `yaffo/templates/pages/`, `yaffo/static/pages/detail.css`, `yaffo/static/pages/grid.js`, widget templates/runtime, new custom-pages responsive spec | Shared direct-control/icon patterns come from S2; otherwise independent. |
+
+P1–P8 should each ship as a vertical slice: implementation, desktop regression,
+responsive tests, keyboard/coarse-pointer checks, relevant locale/theme review,
+and before/after screenshots. An agent must not mark a task complete merely
+because its route passes the overflow smoke matrix.
+
+### Shared integration and milestone exit
+
+After the parallel page tasks merge, one integration owner performs work that
+cannot be safely partitioned:
+
+1. resolve shared CSS cascade and breakpoint conflicts introduced by combined
+   page work;
+2. run the complete Playwright suite plus app/UI TypeScript, ESLint, i18n, and
+   design-token checks;
+3. run the full built-in-theme and English/German/Arabic visual matrix at the
+   contract viewports, including 200% text, RTL, reduced motion, short
+   landscape, and on-screen-keyboard cases;
+4. verify cross-page shell behavior, navbar height, focus restoration, browser
+   back/forward behavior where applicable, and no first-paint flashes; and
+5. update this document's status table and conventions after shared behavior is
+   proven, then remove obsolete responsive paths rather than retaining two
+   systems.
 
 ## Verification strategy
 

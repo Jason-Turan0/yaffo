@@ -6,7 +6,7 @@ window.PHOTO_ORGANIZER.COMPONENTS = window.PHOTO_ORGANIZER.COMPONENTS || {};
 window.PHOTO_ORGANIZER.COMPONENTS.initResponsivePanels = () => {
     const narrow = window.matchMedia('(max-width: 1200px)');
     const selectors = [
-        '.main-container-layout > .sidebar-container',
+        '.main-container-layout > .sidebar-container:not([data-responsive-nav-panel])',
         '.albums-container > .albums-sidebar',
         '.utilities-container > .utilities-sidebars',
         '.sharing-container > .sharing-sidebar',

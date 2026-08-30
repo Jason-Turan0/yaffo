@@ -99,20 +99,213 @@ test.describe('Responsive layout', () => {
     await expect(toggle).toBeFocused();
   });
 
-  test('responsive sidebars preserve their controls across resize', async ({ page }) => {
+  test('mobile navigation and page panels are closed before JavaScript initializes', async ({ browser }) => {
+    const context = await browser.newContext({
+      baseURL: BASE_URL,
+      viewport: { width: 390, height: 844 },
+      javaScriptEnabled: false,
+    });
+    const page = await context.newPage();
+    await page.goto('/?page=2');
+
+    await expect(page.locator('#nav-menu-toggle')).toBeVisible();
+    await expect(page.locator('#navbar-primary')).toBeHidden();
+    await expect(page.locator('#navbar-pages-bar')).toBeHidden();
+    await expect(page.locator('#home-filters')).toBeHidden();
+    await context.close();
+  });
+
+  test('home filters and menu use mutually exclusive navbar panels', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
 
-    const toggle = page.locator('.responsive-panel-toggle');
-    await expect(toggle).toBeVisible();
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const menuToggle = page.locator('#nav-menu-toggle');
+    const filterToggle = page.locator('#nav-filters-toggle');
+    await expect(filterToggle).toBeVisible();
+    await expect(menuToggle).toBeVisible();
+    await expect(filterToggle).toHaveAttribute('data-icon', 'filter');
+    await expect(menuToggle).toHaveAttribute('data-icon', 'menu');
+    expect(await filterToggle.evaluate((element) => element.parentElement?.className))
+      .toBe(await menuToggle.evaluate((element) => element.parentElement?.className));
+    const toggleGap = await page.evaluate(() => {
+      const filters = document.getElementById('nav-filters-toggle')!.getBoundingClientRect();
+      const menu = document.getElementById('nav-menu-toggle')!.getBoundingClientRect();
+      return menu.left - filters.right;
+    });
+    expect(toggleGap).toBeGreaterThanOrEqual(8);
+    await expect(page.locator('.responsive-panel-toggle')).toHaveCount(0);
+    await expect(page.locator('#home-filters')).toBeHidden();
+    const filterClosedBackground = await filterToggle.evaluate((element) =>
+      getComputedStyle(element).backgroundColor);
+    const menuClosedBackground = await menuToggle.evaluate((element) =>
+      getComputedStyle(element).backgroundColor);
+
+    await filterToggle.click();
+    await expect(filterToggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(menuToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(await filterToggle.evaluate((element) =>
+      getComputedStyle(element).backgroundColor)).not.toBe(filterClosedBackground);
     await expect(page.locator('#filter-form')).toBeVisible();
+    await expect(page.locator('.navbar-nav')).toBeHidden();
+    await expect(page.locator('#home-filters .sidebar')).toHaveCSS('padding', '0px');
+    await expect(page.locator('#home-filters .sidebar')).toHaveCSS('box-shadow', 'none');
+    await page.locator('#filter-form').evaluate((form) => {
+      const input = document.createElement('input');
+      input.id = 'responsive-panel-state';
+      input.value = 'preserved';
+      form.append(input);
+    });
+
+    await menuToggle.click();
+    await expect(menuToggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(filterToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(await menuToggle.evaluate((element) =>
+      getComputedStyle(element).backgroundColor)).not.toBe(menuClosedBackground);
+    await expect(filterToggle).toHaveCSS('background-color', filterClosedBackground);
+    await expect(page.locator('#filter-form')).toBeHidden();
+    await expect(page.locator('.navbar-nav')).toBeVisible();
+
+    await filterToggle.click();
+    await expect(filterToggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(menuToggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('#responsive-panel-state')).toHaveValue('preserved');
+    await page.keyboard.press('Escape');
+    await expect(filterToggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(filterToggle).toBeFocused();
 
     await page.setViewportSize({ width: 1440, height: 900 });
-    await expect(toggle).toBeHidden();
+    await expect(filterToggle).toBeHidden();
+    await expect(menuToggle).toBeHidden();
     await expect(page.locator('#filter-form')).toBeVisible();
+    await expect(page.locator('.main-container-layout > #home-filters')).toBeVisible();
     await expectNoPageOverflow(page);
+  });
+
+  test('home view toggle is vertically centered in its header', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/?view=grid&page-size=10');
+
+    const centers = await page.evaluate(() => {
+      const main = document.querySelector('.photo-gallery .page-header-main')!.getBoundingClientRect();
+      const actions = document.querySelector('.photo-gallery .page-header-actions')!.getBoundingClientRect();
+      const links = Array.from(document.querySelectorAll<HTMLElement>('.view-toggle a'));
+      return {
+        main: main.top + main.height / 2,
+        actions: actions.top + actions.height / 2,
+        linkTops: links.map(link => link.getBoundingClientRect().top),
+        linkHeights: links.map(link => link.getBoundingClientRect().height),
+      };
+    });
+    expect(Math.abs(centers.main - centers.actions)).toBeLessThanOrEqual(1);
+    expect(new Set(centers.linkTops).size).toBe(1);
+    expect(new Set(centers.linkHeights).size).toBe(1);
+  });
+
+  test('configure filters supports touch drag reordering', async ({ browser }) => {
+    const context = await browser.newContext({
+      baseURL: BASE_URL,
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+    });
+    const page = await context.newPage();
+    await page.goto('/?view=grid&page-size=10');
+    await page.locator('#nav-filters-toggle').click();
+    await page.locator('#configure-filters-btn').click();
+
+    const modal = page.locator('#configureFiltersModal');
+    const list = modal.locator('#filter-config-list');
+    const rows = list.locator('.filter-config-row');
+    await expect(modal).toHaveClass(/active/);
+    expect(await rows.count()).toBeGreaterThan(1);
+
+    const originalOrder = await rows.evaluateAll((elements) =>
+      elements.map(element => (element as HTMLElement).dataset.key));
+    const handle = rows.first().locator('.filter-config-handle');
+    const firstBox = await handle.boundingBox();
+    const secondBox = await rows.nth(1).boundingBox();
+    expect(firstBox).not.toBeNull();
+    expect(secondBox).not.toBeNull();
+    expect(firstBox!.width).toBeGreaterThanOrEqual(44);
+    expect(firstBox!.height).toBeGreaterThanOrEqual(44);
+
+    const cdp = await context.newCDPSession(page);
+    const x = firstBox!.x + firstBox!.width / 2;
+    const startY = firstBox!.y + firstBox!.height / 2;
+    const endY = secondBox!.y + secondBox!.height;
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x, y: startY, radiusX: 2, radiusY: 2, force: 1, id: 1 }],
+    });
+    for (let step = 1; step <= 8; step += 1) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{
+          x,
+          y: startY + ((endY - startY) * step / 8),
+          radiusX: 2,
+          radiusY: 2,
+          force: 1,
+          id: 1,
+        }],
+      });
+    }
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+
+    await expect.poll(() => rows.evaluateAll((elements) =>
+      elements.map(element => (element as HTMLElement).dataset.key))).toEqual([
+      originalOrder[1],
+      originalOrder[0],
+      ...originalOrder.slice(2),
+    ]);
+    await expect(list.locator('.filter-config-row.dragging')).toHaveCount(0);
+    await modal.getByRole('button', { name: 'Cancel' }).click();
+    await context.close();
+  });
+
+  test('home pagination uses one icon row on mobile and text on desktop', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/?view=grid&page-size=10');
+
+    const buttons = page.locator('.page-navigation .page-btn');
+    await expect(buttons).toHaveCount(4);
+    await expect(buttons.nth(0)).toHaveAttribute('aria-label', 'First');
+    await expect(buttons.nth(1)).toHaveAttribute('aria-label', 'Previous');
+    await expect(buttons.nth(2)).toHaveAttribute('aria-label', 'Next');
+    await expect(buttons.nth(3)).toHaveAttribute('aria-label', 'Last');
+    await expect(page.locator('.page-btn-label').first()).toBeHidden();
+
+    const mobileLayout = await buttons.evaluateAll((elements) => elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      const icon = getComputedStyle(element, '::before');
+      return {
+        top: rect.top,
+        width: rect.width,
+        iconDisplay: icon.display,
+        maskImage: icon.maskImage,
+        backgroundImage: icon.backgroundImage,
+      };
+    }));
+    expect(Math.max(...mobileLayout.map(button => button.top))
+      - Math.min(...mobileLayout.map(button => button.top))).toBeLessThanOrEqual(1);
+    for (const button of mobileLayout) {
+      expect(button.width).toBe(44);
+      expect(button.iconDisplay).not.toBe('none');
+      expect(button.maskImage !== 'none' || button.backgroundImage !== 'none').toBe(true);
+    }
+    await expectNoPageOverflow(page);
+
+    await buttons.nth(2).click();
+    await expect(page).toHaveURL(/(?:\?|&)page=2(?:&|$)/);
+    await expect(page.locator('#navbar-primary')).toBeHidden();
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect(page.locator('.page-btn-label').first()).toBeVisible();
+    expect(await buttons.first().evaluate(element =>
+      getComputedStyle(element, '::before').display)).toBe('none');
   });
 
   test('people rows become labeled cards on narrow screens', async ({ page }) => {
@@ -134,7 +327,7 @@ test.describe('Responsive layout', () => {
       isMobile: true,
     });
     const page = await context.newPage();
-    await page.goto('/faces');
+    await page.goto('/faces?group_by=similarity&threshold=2');
 
     const face = page.locator('.face').first();
     const preview = face.locator('.face-preview-button');

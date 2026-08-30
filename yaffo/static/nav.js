@@ -17,14 +17,34 @@ window.PHOTO_ORGANIZER.COMPONENTS.initNavPagesBar = () => {
     const bar = /** @type {HTMLElement | null} */ (
         document.getElementById('navbar-pages-bar')
     );
-    if (!navbar || !toggle || !bar || !menuToggle || !primary) return;
+    const contextHost = /** @type {HTMLElement | null} */ (
+        document.getElementById('navbar-context-panels')
+    );
+    if (!navbar || !toggle || !bar || !menuToggle || !primary || !contextHost) return;
 
     const STORAGE_KEY = 'yaffo.pagesBarHidden';
     const narrow = window.matchMedia('(max-width: 1200px)');
+    const contextEntries = Array.from(
+        document.querySelectorAll('[data-nav-panel-toggle]')
+    ).flatMap((candidate) => {
+        if (!(candidate instanceof HTMLButtonElement)) return [];
+        const panelId = candidate.getAttribute('aria-controls');
+        const panel = panelId ? document.getElementById(panelId) : null;
+        if (!panel) return [];
+        const marker = document.createComment(`nav panel: ${panelId}`);
+        panel.before(marker);
+        return [{ toggle: candidate, panel, marker }];
+    });
 
     // Sticky panels offset themselves from the navbar's real height (it varies
     // by theme and with the pages strip shown/hidden), published as a variable.
     const syncNavbarHeight = () => {
+        const navbarBar = navbar.querySelector('.navbar-container');
+        if (navbarBar) {
+            document.documentElement.style.setProperty(
+                '--navbar-bar-height', `${navbarBar.getBoundingClientRect().height}px`
+            );
+        }
         document.documentElement.style.setProperty('--navbar-height', navbar.offsetHeight + 'px');
     };
 
@@ -48,7 +68,44 @@ window.PHOTO_ORGANIZER.COMPONENTS.initNavPagesBar = () => {
         syncNavbarHeight();
     };
 
-    const syncMode = () => applyMenu(false);
+    const syncContextHost = () => {
+        const hasOpenPanel = contextEntries.some(
+            (entry) => entry.toggle.getAttribute('aria-expanded') === 'true'
+        );
+        contextHost.hidden = !hasOpenPanel;
+        navbar.classList.toggle('is-context-open', hasOpenPanel);
+        syncNavbarHeight();
+    };
+
+    /**
+     * @param {{ toggle: HTMLButtonElement, panel: HTMLElement, marker: Comment }} entry
+     * @param {boolean} open
+     */
+    const applyContextPanel = (entry, open) => {
+        const isOpen = narrow.matches && open;
+        entry.toggle.hidden = !narrow.matches;
+        entry.toggle.setAttribute('aria-expanded', String(isOpen));
+        entry.toggle.classList.toggle('is-open', isOpen);
+        entry.panel.hidden = narrow.matches && !isOpen;
+    };
+
+    const closeContextPanels = () => {
+        contextEntries.forEach((entry) => applyContextPanel(entry, false));
+        syncContextHost();
+    };
+
+    const syncMode = () => {
+        applyMenu(false);
+        contextEntries.forEach((entry) => {
+            applyContextPanel(entry, false);
+            if (narrow.matches) {
+                contextHost.appendChild(entry.panel);
+            } else if (entry.marker.parentNode) {
+                entry.marker.parentNode.insertBefore(entry.panel, entry.marker.nextSibling);
+            }
+        });
+        syncContextHost();
+    };
 
     apply(localStorage.getItem(STORAGE_KEY) === '1');
 
@@ -59,28 +116,55 @@ window.PHOTO_ORGANIZER.COMPONENTS.initNavPagesBar = () => {
     });
 
     menuToggle.addEventListener('click', () => {
-        applyMenu(!navbar.classList.contains('is-menu-open'));
+        const open = !navbar.classList.contains('is-menu-open');
+        if (open) closeContextPanels();
+        applyMenu(open);
         if (navbar.classList.contains('is-menu-open')) {
             primary.querySelector('a')?.focus();
         }
     });
 
+    contextEntries.forEach((entry) => {
+        entry.toggle.addEventListener('click', () => {
+            const open = entry.toggle.getAttribute('aria-expanded') !== 'true';
+            applyMenu(false);
+            contextEntries.forEach((candidate) => {
+                applyContextPanel(candidate, candidate === entry && open);
+            });
+            syncContextHost();
+        });
+    });
+
     document.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape' || !navbar.classList.contains('is-menu-open')) return;
-        applyMenu(false);
-        menuToggle.focus();
+        if (event.key !== 'Escape') return;
+        if (navbar.classList.contains('is-menu-open')) {
+            applyMenu(false);
+            menuToggle.focus();
+            return;
+        }
+        const openContext = contextEntries.find(
+            (entry) => entry.toggle.getAttribute('aria-expanded') === 'true'
+        );
+        if (!openContext) return;
+        closeContextPanels();
+        openContext.toggle.focus();
     });
 
     document.addEventListener('click', (event) => {
-        if (!narrow.matches || !navbar.classList.contains('is-menu-open')) return;
+        if (!narrow.matches) return;
+        const hasOpenContext = contextEntries.some(
+            (entry) => entry.toggle.getAttribute('aria-expanded') === 'true'
+        );
+        if (!navbar.classList.contains('is-menu-open') && !hasOpenContext) return;
         if (navbar.contains(/** @type {Node} */ (event.target))) return;
         applyMenu(false);
+        closeContextPanels();
     });
 
     narrow.addEventListener('change', syncMode);
-    applyMenu(false);
+    syncMode();
 
     window.addEventListener('resize', syncNavbarHeight);
 
-    return { syncNavbarHeight, applyMenu };
+    return { syncNavbarHeight, applyMenu, closeContextPanels };
 };

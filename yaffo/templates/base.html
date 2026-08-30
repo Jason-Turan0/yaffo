@@ -113,9 +113,9 @@
         <a href="{{ url_for('index') }}" class="navbar-brand">
             YAFFO!
         </a>
-        <button type="button" id="nav-menu-toggle" class="nav-menu-toggle"
+        {% block nav_context_toggles %}{% endblock %}
+        <button type="button" id="nav-menu-toggle" class="nav-menu-toggle" data-icon="menu"
                 aria-expanded="false" aria-controls="navbar-primary">
-            <span class="nav-menu-icon" aria-hidden="true"></span>
             <span>{{ _("Menu") }}</span>
         </button>
         <div class="navbar-primary" id="navbar-primary">
@@ -148,6 +148,7 @@
         </button>
         </div>
     </div>
+    <div class="navbar-context-panels" id="navbar-context-panels" hidden></div>
     {# Custom pages live on their own bookmarks-style strip; the toggle above
        collapses it (persisted per browser in localStorage by nav.js). #}
     <div class="navbar-pages-bar" id="navbar-pages-bar">

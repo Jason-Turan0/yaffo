@@ -187,8 +187,13 @@
     border-radius: var(--radius-pill);
 }
 /* View toggle (Grid | Timeline) in the page header */
+.photo-gallery .page-header-actions {
+    align-self: center;
+}
+
 .view-toggle {
     display: inline-flex;
+    align-items: stretch;
     gap: 0;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
@@ -196,6 +201,9 @@
 }
 
 .view-toggle a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     border-radius: 0;
 }

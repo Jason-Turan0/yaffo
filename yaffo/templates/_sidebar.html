@@ -1,5 +1,6 @@
-{% macro render_sidebar(url, filters, render_filters_block=none, render_actions_block=none, filter_layout=none, render_hidden_block=none) %}
-<div class="sidebar-container">
+{% macro render_sidebar(url, filters, render_filters_block=none, render_actions_block=none, filter_layout=none, render_hidden_block=none, responsive_nav_panel_id=none) %}
+<div class="sidebar-container"
+     {% if responsive_nav_panel_id %}id="{{ responsive_nav_panel_id }}" data-responsive-nav-panel{% endif %}>
      {% if render_actions_block %}
         <div class="sidebar sidebar-actions">
             <h2>{{ _("Actions") }}</h2>

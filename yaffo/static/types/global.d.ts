@@ -65,6 +65,10 @@ type NavPagesBarApi = {
     syncNavbarHeight(): void;
 };
 
+type ResponsivePanelsApi = {
+    sync(): void;
+};
+
 type ModalControl = {
     element: HTMLElement;
     formElement: HTMLFormElement | null;
@@ -260,6 +264,8 @@ type PhotoOrganizerComponents = {
     initChatDialog?: (id: string, options: ChatDialogOptions) => ChatDialogApi | null;
     initNavPagesBar?: () => NavPagesBarApi | undefined;
     navPagesBar?: NavPagesBarApi;
+    initResponsivePanels?: () => ResponsivePanelsApi;
+    responsivePanels?: ResponsivePanelsApi;
     intlDateInput?: IntlDateInputApi;
     multiSelect?: MultiSelectApi;
     searchableSelect?: SearchableSelectApi;

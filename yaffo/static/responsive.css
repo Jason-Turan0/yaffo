@@ -1,7 +1,8 @@
 /* Shared adaptive layout. Theme stylesheets provide the visual skin; this file
    is loaded last so every built-in and runtime theme follows one layout model. */
 
-.nav-menu-toggle,
+button.nav-menu-toggle[data-icon],
+button.nav-context-toggle[data-icon],
 .responsive-panel-toggle {
     display: none;
 }
@@ -88,8 +89,21 @@
 }
 
 @media (max-width: 1200px) {
+    /* Page panels are rendered in their desktop location by the server. Keep
+       them closed on the first paint; nav.js moves the live DOM into the navbar
+       host and removes `hidden` only after the user opens its peer action. */
+    [data-responsive-nav-panel] {
+        display: none;
+    }
+
+    .navbar-context-panels > [data-responsive-nav-panel]:not([hidden]) {
+        display: flex;
+    }
+
     .navbar-container {
         flex-wrap: wrap;
+        column-gap: 8px;
+        row-gap: 0;
         padding-inline: 16px;
     }
 
@@ -98,7 +112,8 @@
         margin-inline: 0;
     }
 
-    .nav-menu-toggle {
+    button.nav-menu-toggle[data-icon],
+    button.nav-context-toggle[data-icon] {
         display: inline-flex;
         min-height: 44px;
         align-items: center;
@@ -111,37 +126,52 @@
         cursor: pointer;
     }
 
-    .nav-menu-icon,
-    .nav-menu-icon::before,
-    .nav-menu-icon::after {
-        display: block;
-        width: 18px;
-        height: 2px;
-        border-radius: var(--radius-pill);
-        background: currentColor;
-        content: "";
+    button.nav-menu-toggle[data-icon][aria-expanded="true"],
+    button.nav-context-toggle[data-icon][aria-expanded="true"] {
+        border-color: var(--color-accent);
+        background: var(--color-accent);
+        color: var(--color-on-accent);
+        box-shadow: var(--shadow-accent);
     }
 
-    .nav-menu-icon {
-        position: relative;
+    .navbar-context-panels {
+        max-height: calc(100dvh - var(--navbar-bar-height, 56px));
+        overflow-y: auto;
+        padding: 0 16px 16px;
     }
 
-    .nav-menu-icon::before,
-    .nav-menu-icon::after {
-        position: absolute;
-        inset-inline-start: 0;
+    .navbar-context-panels > .sidebar-container {
+        max-width: 1400px;
+        margin: 0 auto;
     }
 
-    .nav-menu-icon::before { top: -6px; }
-    .nav-menu-icon::after { top: 6px; }
+    .navbar-context-panels .sidebar {
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        overflow: visible;
+    }
+
+    .navbar-context-panels .sidebar-header {
+        justify-content: flex-end;
+    }
+
+    .navbar-context-panels .sidebar-header h2 {
+        display: none;
+    }
 
     .navbar-primary {
         order: 3;
-        display: flex;
+        display: none;
         flex: 0 0 100%;
         align-items: stretch;
         flex-direction: column;
         padding-block-end: 10px;
+    }
+
+    .navbar.is-menu-open .navbar-primary {
+        display: flex;
     }
 
     .navbar-nav {
@@ -395,12 +425,12 @@
     }
 
     .page-navigation {
-        flex-wrap: wrap;
-        gap: 4px;
+        flex-wrap: nowrap;
+        gap: clamp(4px, 2vw, 8px);
     }
 
     .page-navigation .page-btn {
-        flex: 1 1 auto;
+        flex: 0 0 44px;
     }
 
     .navbar-pages-bar .navbar-container {
