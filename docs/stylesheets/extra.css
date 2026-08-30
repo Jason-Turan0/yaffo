@@ -177,6 +177,37 @@
   letter-spacing: var(--yaffo-brand-spacing);
 }
 
+/*
+ * Brand lockup — mark size and its distance to the wordmark.
+ *
+ * The app sets these in themes/classic.css .navbar-brand: a 24px mark with an
+ * 8px gap. Material stacks three separate spacings between the two instead —
+ * .md-logo's .4rem padding, its .2rem margin, and a 1rem margin-left on
+ * .md-header__title — for 32px, four times the app's gap. Padding is kept
+ * symmetric so the dark-mode background swap below stays centred.
+ */
+:root {
+  --yaffo-logo-size: 1.4rem;
+}
+
+.md-header__button.md-logo {
+  margin: 0.2rem;
+  padding: 0.2rem;
+}
+
+.md-header__button.md-logo img {
+  height: var(--yaffo-logo-size);
+  width: var(--yaffo-logo-size);
+}
+
+[dir="ltr"] .md-header__title {
+  margin-left: 0;
+}
+
+[dir="rtl"] .md-header__title {
+  margin-right: 0;
+}
+
 /* Darkroom ships its own amber aperture mark, so swap the logo with the scheme.
  * (The favicon can't follow — a browser tab gets one icon — so it stays blue.) */
 [data-md-color-scheme="slate"] .md-logo img {
@@ -184,7 +215,8 @@
 }
 
 [data-md-color-scheme="slate"] .md-logo {
-  background: url("../assets/yaffo-mark-darkroom.svg") center / 24px 24px no-repeat;
+  background: url("../assets/yaffo-mark-darkroom.svg") center /
+    var(--yaffo-logo-size) var(--yaffo-logo-size) no-repeat;
 }
 
 /* The search field sits on the header; Material's translucent-white fill
