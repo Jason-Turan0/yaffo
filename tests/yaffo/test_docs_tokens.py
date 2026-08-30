@@ -1,13 +1,21 @@
 """Drift guard for the documentation palette.
 
-The MkDocs site does not restate the app's colours: hooks/design_tokens.py
-publishes yaffo/static/tokens.css (and the darkroom theme's override block) into
-the build, and docs/stylesheets/extra.css maps Material's --md-* variables onto
-those tokens. These tests keep that arrangement honest — the docs stylesheet is
-outside STATIC_DIR, so test_design_tokens.py does not see it.
+docs/stylesheets/extra.css maps Material's --md-* variables onto Yaffo's design
+tokens, but MkDocs only publishes files underneath docs_dir, so it cannot import
+yaffo/static/tokens.css — the values are copied in by hand. Each copied
+declaration carries the token it came from in a trailing comment:
+
+    --md-default-bg-color: #f8f9fa;   /* --color-bg */
+
+These tests treat that comment as the contract and fail when the copy and the
+token disagree, so a colour change in the app cannot silently leave the docs
+behind. This file is outside STATIC_DIR, so test_design_tokens.py does not
+see it.
+
+Declarations with no annotation are values the app has no token for (Material's
+translucent overlays, the footer bar) and are deliberately unchecked.
 """
 
-import ast
 import re
 from pathlib import Path
 
@@ -17,84 +25,133 @@ pytestmark = pytest.mark.unit
 
 ROOT = Path(__file__).resolve().parents[2]
 BRIDGE = ROOT / "docs" / "stylesheets" / "extra.css"
-HOOK = ROOT / "hooks" / "design_tokens.py"
 CLASSIC_TOKENS = ROOT / "yaffo" / "static" / "tokens.css"
 DARKROOM_TOKENS = ROOT / "yaffo" / "static" / "themes" / "darkroom" / "tokens.css"
 
-# Kept in step with RAW_COLOR in test_design_tokens.py rather than imported from
-# it: nothing else in the suite imports across test modules, and bare `pytest`
-# (how CI invokes it) puts tests/yaffo on sys.path, not the repository root.
-RAW_COLOR = re.compile(
-    r"#[0-9a-fA-F]{3,8}\b"           # hex literals
-    r"|\b(?:rgb|rgba|hsl|hsla)\("    # functional color literals
-    r"|(?<![-\w])(?:white|black)(?![-\w])",  # named colors
+# `--md-thing: value;   /* --token-name maybe some prose */`
+ANNOTATED = re.compile(
+    r"^\s*[a-z-]+\s*:\s*(?P<value>[^;]+);\s*/\*\s*(?P<token>--[a-z0-9-]+)"
 )
-
-DECLARATION = re.compile(r"^\s*(--[a-z0-9-]+)\s*:", re.MULTILINE)
-COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
-# Material's own variables and the locals this file defines for itself; every
-# other var(--…) reference must resolve to an app token.
-LOCAL_PREFIXES = ("--md-", "--yaffo-")
+DECLARATION = re.compile(r"(--[a-z0-9-]+)\s*:\s*([^;]+);")
+VAR = re.compile(r"var\(\s*(--[a-z0-9-]+)\s*\)")
 
 
-def _hook_constant(name: str) -> str:
-    """Read a string constant out of the hook without importing it (the hook
-    imports mkdocs, which is only installed with the `docs` extra)."""
-    module = ast.parse(HOOK.read_text())
-    for node in module.body:
-        if isinstance(node, ast.Assign) and any(
-            isinstance(t, ast.Name) and t.id == name for t in node.targets
-        ):
-            assert isinstance(node.value, ast.Constant)
-            return node.value.value
-    raise AssertionError(f"{HOOK.name} no longer defines {name}")
+def _tokens(path: Path) -> dict[str, str]:
+    """Both token files are a single block of custom properties (the app's own
+    drift guard keeps them that way), so a flat scan is enough."""
+    return dict(DECLARATION.findall(path.read_text()))
 
 
-def _without_comments(css: str) -> str:
-    """Blank out comment bodies, keeping newlines so line numbers still line up.
+def _resolve(name: str, table: dict[str, str], depth: int = 0) -> str | None:
+    """Tokens may point at other tokens — --color-navbar-bg is var(--color-surface)."""
+    value = table.get(name)
+    if value is None or depth > 8:
+        return value
+    return VAR.sub(lambda m: _resolve(m.group(1), table, depth + 1) or m.group(0), value)
 
-    Unlike the app's guard this file has to explain colour decisions in prose
-    ("too heavy on white"), and a line-based scan would read that as a value.
+
+def _normalise(value: str) -> str:
+    return re.sub(r"\s+", " ", value).strip().lower()
+
+
+def _dark_by_line(text: str) -> dict[int, bool]:
+    """Map each line to whether it sits inside a slate-scoped block.
+
+    Walks the file tracking brace depth so multi-line selectors and nested
+    @media blocks are attributed correctly; comments are blanked first (keeping
+    newlines) so braces in prose cannot unbalance the stack.
     """
-    return COMMENT.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), css)
+    code = re.sub(
+        r"/\*.*?\*/", lambda m: re.sub(r"[^\n]", " ", m.group(0)), text, flags=re.S
+    )
+    stack: list[str] = []
+    buffer = ""
+    line = 1
+    dark: dict[int, bool] = {}
+    for char in code:
+        if char == "\n":
+            dark[line] = any("slate" in header for header in stack)
+            line += 1
+            buffer += " "
+        elif char == "{":
+            stack.append(buffer.strip())
+            buffer = ""
+        elif char == "}":
+            if stack:
+                stack.pop()
+            buffer = ""
+        elif char == ";":
+            buffer = ""
+        else:
+            buffer += char
+    dark[line] = any("slate" in header for header in stack)
+    return dark
 
 
-def test_bridge_declares_no_raw_colors() -> None:
-    """The docs palette must come from tokens, exactly like app stylesheets."""
-    source = _without_comments(BRIDGE.read_text())
-    violations = [
-        f"  line {number}: {line.strip()}"
-        for number, line in enumerate(source.splitlines(), start=1)
-        if RAW_COLOR.search(line)
-    ]
+def _annotated_declarations() -> list[tuple[int, str, str, bool]]:
+    """(line number, declared value, token name, is_dark) for each annotated line.
+
+    Values that are themselves var() references are skipped: they cannot drift,
+    because they resolve through the mapping rather than copying a literal.
+    """
+    text = BRIDGE.read_text()
+    dark = _dark_by_line(text)
+    found: list[tuple[int, str, str, bool]] = []
+    for number, line in enumerate(text.splitlines(), start=1):
+        match = ANNOTATED.match(line)
+        if match and "var(" not in match.group("value"):
+            found.append(
+                (number, match.group("value"), match.group("token"), dark.get(number, False))
+            )
+    return found
+
+
+def test_annotations_are_present() -> None:
+    """Guard the mechanism itself: the comments are the only link to the app."""
+    assert len(_annotated_declarations()) > 50, (
+        "docs/stylesheets/extra.css has lost its /* --token */ annotations; "
+        "they are what ties the copied values back to the app's tokens"
+    )
+
+
+def test_annotated_values_match_the_app_tokens() -> None:
+    classic = _tokens(CLASSIC_TOKENS)
+    darkroom = {**classic, **_tokens(DARKROOM_TOKENS)}
+
+    violations = []
+    for number, value, token, is_dark in _annotated_declarations():
+        table = darkroom if is_dark else classic
+        expected = _resolve(token, table)
+        if expected is None:
+            continue  # reported by the test below
+        if _normalise(value) != _normalise(expected):
+            theme = "darkroom" if is_dark else "classic"
+            violations.append(
+                f"  line {number}: {token} is {_normalise(expected)} in {theme}, "
+                f"but the docs use {_normalise(value)}"
+            )
+
     assert not violations, (
-        "docs/stylesheets/extra.css contains raw color values; map Material's "
-        "--md-* variables onto var(--…) tokens instead:\n" + "\n".join(violations)
+        "docs/stylesheets/extra.css has drifted from the app's design tokens; "
+        "update the copied values (or the /* --token */ comment if the mapping "
+        "changed):\n" + "\n".join(violations)
     )
 
 
-def test_bridge_only_references_defined_tokens() -> None:
-    """A renamed or deleted token would otherwise leave var() unresolved, which
-    fails silently in the browser rather than at build time."""
-    defined = set(DECLARATION.findall(CLASSIC_TOKENS.read_text()))
-    referenced = {
-        name
-        for name in re.findall(r"var\((--[a-z0-9-]+)", BRIDGE.read_text())
-        if not name.startswith(LOCAL_PREFIXES)
-    }
-    assert referenced, "the docs bridge should reference the app's design tokens"
-    assert not referenced - defined, (
-        "docs/stylesheets/extra.css references tokens that "
-        f"{CLASSIC_TOKENS.name} no longer defines: {sorted(referenced - defined)}"
-    )
+def test_annotations_name_real_tokens() -> None:
+    """Scheme-aware on purpose: a token deleted from the classic contract is
+    still "known" if darkroom happens to define it, which would let a rename slip
+    past the value check (it skips what it cannot resolve). Darkroom inherits
+    :root, so its table is the union; classic's is not."""
+    classic = _tokens(CLASSIC_TOKENS)
+    darkroom = {**classic, **_tokens(DARKROOM_TOKENS)}
 
-
-def test_hook_can_rescope_the_darkroom_block() -> None:
-    """The hook rewrites darkroom's selector to Material's slate scheme. If the
-    app renames its theme hook, the docs' dark palette would stop matching
-    anything — the build raises, and this catches it sooner."""
-    selector = _hook_constant("DARKROOM_SELECTOR")
-    assert selector in DARKROOM_TOKENS.read_text(), (
-        f"{DARKROOM_TOKENS.relative_to(ROOT)} no longer contains {selector!r}; "
-        "update DARKROOM_SELECTOR in hooks/design_tokens.py"
+    missing = [
+        f"  line {number}: {token} (checked against {'darkroom' if is_dark else 'classic'})"
+        for number, _, token, is_dark in _annotated_declarations()
+        if _resolve(token, darkroom if is_dark else classic) is None
+    ]
+    assert not missing, (
+        "docs/stylesheets/extra.css is annotated with tokens the app no longer "
+        "defines:\n" + "\n".join(missing)
     )

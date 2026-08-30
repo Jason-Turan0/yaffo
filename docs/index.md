@@ -1,6 +1,6 @@
 # YAFFO
 
-YAFFO (Yet Another Foto File Organizer)  is a photo organization tool that uses EXIF metadata, face recognition,
+YAFFO (Yet Another Family Foto Organizer)  is a photo organization tool that uses EXIF metadata, face recognition,
 duplicate detection, and offline ML classification to organize and index media.
 
 ## Motivation
