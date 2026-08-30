@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install mkdocs-material==9.6.21
+      - run: pip install mkdocs-material==9.7.7 mkdocs-glightbox==0.5.2
       - run: mkdocs build --strict
       - uses: actions/configure-pages@v5
         if: github.event_name != 'pull_request'

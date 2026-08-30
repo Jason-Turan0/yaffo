@@ -452,7 +452,7 @@ jobs:
         if: steps.patches.outputs.has_changes == 'true'
         run: |
           python -m venv venv
-          ./venv/bin/pip install mkdocs-material==9.6.21
+          ./venv/bin/pip install mkdocs-material==9.7.7 mkdocs-glightbox==0.5.2
           cd yaffo_ui_tests
           npm ci
       - name: Validate aggregated documentation changes

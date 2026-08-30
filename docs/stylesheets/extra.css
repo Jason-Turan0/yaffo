@@ -1,0 +1,404 @@
+/*
+ * Yaffo palette for Material.
+ *
+ * This file holds no colour values of its own. hooks/design_tokens.py publishes
+ * the application's own token files into the build —
+ *
+ *   yaffo/static/tokens.css                  -> :root                (classic)
+ *   yaffo/static/themes/darkroom/tokens.css  -> [data-md-color-scheme="slate"]
+ *
+ * — and everything below maps Material's --md-* variables onto those tokens, so
+ * a colour change in the app reaches the docs on the next build.
+ *
+ * Both token blocks land on the same element (<html>), so a single mapping
+ * covers both schemes: --color-bg resolves to the darkroom value on a slate
+ * page and the classic one otherwise, and the var() references here resolve
+ * with it. Only the handful of things the two themes genuinely disagree about
+ * need a per-scheme rule, and those are collected in one block below.
+ *
+ * Material applies data-md-color-scheme at runtime rather than at build time,
+ * so classic is keyed with :not([...="slate"]) instead of ="default" — an
+ * attribute-less <html> on first paint must still get the light palette.
+ */
+
+/* ================================================================ bridge === */
+
+:root {
+  /* Surfaces */
+  --md-default-bg-color: var(--color-bg);
+
+  /* Material declares these three but does not currently consume them; they are
+   * the translucent ramp of the page background, so build them as one. */
+  --md-default-bg-color--light: color-mix(in srgb, var(--color-bg) 70%, transparent);
+  --md-default-bg-color--lighter: color-mix(in srgb, var(--color-bg) 30%, transparent);
+  --md-default-bg-color--lightest: color-mix(in srgb, var(--color-bg) 12%, transparent);
+
+  /* Text ramp. Material's is an alpha ladder; the app has real tokens for each
+   * rung, which are better tuned than a fade would be. */
+  --md-default-fg-color: var(--color-text);
+  --md-default-fg-color--light: var(--color-text-muted);
+  --md-default-fg-color--lighter: var(--color-text-faint);
+  --md-default-fg-color--lightest: var(--color-border);
+
+  /* Interactive accent: hovers, focus, active nav item, search highlight. */
+  --md-typeset-a-color: var(--color-accent);
+  --md-accent-fg-color: var(--color-accent);
+  --md-accent-fg-color--transparent: var(--color-accent-soft);
+  --md-accent-bg-color: var(--color-on-accent);
+  --md-accent-bg-color--light: var(--color-on-accent);
+
+  /* Header/nav chrome. The app's chrome is neutral — --color-navbar-bg is the
+   * surface in classic and a frosted charcoal in darkroom — never an
+   * accent-coloured bar, which is Material's default. */
+  --md-primary-fg-color: var(--color-surface);
+  --md-primary-fg-color--light: var(--color-surface-hover);
+  --md-primary-fg-color--dark: var(--color-border);
+  --md-primary-bg-color: var(--color-text);
+  --md-primary-bg-color--light: var(--color-text-muted);
+
+  --md-code-fg-color: var(--color-text);
+
+  /* Footer. The app has no footer to copy, so it inverts the page. */
+  --md-footer-bg-color: var(--color-text);
+  --md-footer-bg-color--dark: var(--color-text-secondary);
+  --md-footer-fg-color: var(--color-surface);
+  --md-footer-fg-color--light: var(--color-text-faint);
+  --md-footer-fg-color--lighter: var(--color-text-muted);
+
+  --md-shadow-z1: var(--shadow-sm);
+  --md-shadow-z2: var(--shadow-md);
+  --md-shadow-z3: var(--shadow-lg);
+
+  /* Locals consumed by the layout rules further down. */
+  --yaffo-radius-sm: var(--radius-sm);
+  --yaffo-radius-md: var(--radius-md);
+  --yaffo-surface: var(--color-surface);
+  --yaffo-border: var(--color-border);
+  --yaffo-header-bg: var(--color-navbar-bg);
+  --yaffo-header-shadow: var(--shadow-navbar);
+
+  /* The search field must read against the navbar, which sits at the surface in
+   * classic and at the page background in darkroom. --color-surface-hover is
+   * one step off the surface either way, so it separates in both. */
+  --yaffo-search-bg: var(--color-surface-hover);
+  --yaffo-search-bg-hover: var(--color-border);
+
+  --yaffo-info: var(--color-info);
+  --yaffo-success: var(--color-success);
+  --yaffo-warning: var(--color-warning);
+  --yaffo-danger: var(--color-danger);
+
+  /* Not a token: Material sizes its logo in rem against a 125% root, where the
+   * app uses a fixed 24px. 1.2rem matches the app exactly. */
+  --yaffo-logo-size: 1.4rem;
+}
+
+/* ====================================================== theme exceptions === */
+/*
+ * Everything the two themes disagree about, in one place. These are skin
+ * decisions rather than token values — the app expresses them in
+ * themes/classic.css and themes/darkroom.css, which are structural stylesheets
+ * the docs cannot reuse directly.
+ */
+
+:root:not([data-md-color-scheme="slate"]) {
+  /* Classic panels are elevated, not outlined (base.css .page-header). */
+  --yaffo-panel-border: none;
+  --yaffo-panel-shadow: var(--shadow-sm);
+
+  --yaffo-header-blur: none;
+  --yaffo-brand-color: inherit;
+  --yaffo-brand-spacing: normal;
+
+  /* On white, the sunken surface is too heavy behind code; the subtle border
+   * tone reads better and is still clearly recessed. */
+  --md-code-bg-color: var(--color-border-subtle);
+
+  /* Classic's accent only reaches ~4:1 on white, so body links take its darker
+   * hover tone and brighten to the accent proper on hover. Darkroom's amber is
+   * ~8.8:1 on its page background and needs no such swap. */
+  --md-typeset-a-color: var(--color-accent-hover);
+}
+
+[data-md-color-scheme="slate"] {
+  /* "Structure comes from borders, not shadows" — themes/darkroom.css. */
+  --yaffo-panel-border: 1px solid var(--color-border);
+  --yaffo-panel-shadow: none;
+
+  --yaffo-header-blur: blur(8px);        /* skin: frosted navbar */
+  --yaffo-brand-color: var(--color-accent);
+  --yaffo-brand-spacing: 0.18em;         /* skin: .navbar-brand */
+
+  /* Dark code must recede, so it takes the sunken surface rather than a border
+   * tone (which is lighter than the panel here). */
+  --md-code-bg-color: var(--color-surface-sunken);
+}
+
+/* ====================================================== shared chrome ===== */
+
+/* A neutral header separates from the page by shadow (classic) or a hairline
+ * (darkroom), never by colour. */
+.md-header {
+  background-color: var(--yaffo-header-bg);
+  box-shadow: var(--yaffo-header-shadow);
+  -webkit-backdrop-filter: var(--yaffo-header-blur);
+  backdrop-filter: var(--yaffo-header-blur);
+}
+
+/* Darkroom sets the wordmark in spaced amber; classic leaves it alone. */
+.md-header__topic:first-child > .md-ellipsis {
+  color: var(--yaffo-brand-color);
+  letter-spacing: var(--yaffo-brand-spacing);
+}
+
+/*
+ * Brand lockup — mark size and its distance to the wordmark.
+ *
+ * The app sets these in themes/classic.css .navbar-brand: a 24px mark with an
+ * 8px gap. Material stacks three separate spacings between the two instead —
+ * .md-logo's .4rem padding, its .2rem margin, and a 1rem margin-left on
+ * .md-header__title — for 32px, four times the app's gap. Padding is kept
+ * symmetric so the dark-mode background swap below stays centred.
+ */
+.md-header__button.md-logo {
+  margin: 0.2rem;
+  padding: 0.2rem;
+}
+
+.md-header__button.md-logo img {
+  height: var(--yaffo-logo-size);
+  width: var(--yaffo-logo-size);
+}
+
+[dir="ltr"] .md-header__title {
+  margin-left: 0;
+}
+
+[dir="rtl"] .md-header__title {
+  margin-right: 0;
+}
+
+/* Darkroom ships its own amber aperture mark, so swap the logo with the scheme.
+ * (The favicon can't follow — a browser tab gets one icon — so it stays blue.) */
+[data-md-color-scheme="slate"] .md-logo img {
+  visibility: hidden;
+}
+
+[data-md-color-scheme="slate"] .md-logo {
+  background: url("../assets/yaffo-mark-darkroom.svg") center /
+    var(--yaffo-logo-size) var(--yaffo-logo-size) no-repeat;
+}
+
+/* The search field sits on the header; Material's translucent-white fill
+ * vanishes on a light header, so use the app's own surfaces. */
+.md-search__form {
+  background-color: var(--yaffo-search-bg);
+  border-radius: var(--yaffo-radius-sm);
+}
+
+.md-search__form:hover {
+  background-color: var(--yaffo-search-bg-hover);
+}
+
+/* ============================================================== panel ===== */
+/*
+ * Material's layout is flat: --md-default-bg-color paints the page and the
+ * article alike, and there is no surface/panel variable to override. Yaffo puts
+ * body text on a raised panel instead (base.css .page-header et al: surface +
+ * --radius-md + --shadow-sm, and a hairline instead of the shadow in darkroom),
+ * so the content column is rebuilt as that panel here.
+ *
+ * The navigation and table-of-contents columns get the same treatment, matching
+ * the app's own sticky sidebar panel (sidebar.css .sidebar: surface, --radius-md,
+ * --shadow-sm, internal scroll).
+ */
+
+.md-content {
+  background-color: var(--yaffo-surface);
+  border: var(--yaffo-panel-border);
+  border-radius: var(--yaffo-radius-md);
+  box-shadow: var(--yaffo-panel-shadow);
+  padding: 0.4rem;
+}
+
+/* Full-bleed on phones — a floating card wastes width that narrow screens need,
+ * and the app drops its panel insets at the same point. */
+@media screen and (max-width: 44.9375em) {
+  .md-content {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+    padding: 0;
+  }
+}
+
+/* Search results are a panel too, not page background. */
+.md-search__output {
+  background-color: var(--yaffo-surface);
+}
+
+/*
+ * Sidebar panels.
+ *
+ * The panel goes on .md-sidebar__scrollwrap, NOT .md-sidebar. At desktop widths
+ * Material gives .md-sidebar `height: 0` (so a sticky column adds no page
+ * height) and lets its content overflow, so painting that element yields a bare
+ * sliver of padding rather than a box. The scrollwrap is the element that gets a
+ * real pixel height — assigned by Material's own sidebar script — and it already
+ * carries `overflow-y: auto`, so it clips to the radius and scrolls internally
+ * exactly like the app's .sidebar does.
+ *
+ * That script sizes it as `viewport - 2 * scrollwrap.offsetTop`, which is
+ * measured at runtime, so the padding added here is absorbed rather than
+ * overflowing.
+ *
+ * Both are scoped to the widths where the column really is a sidebar: below
+ * them the nav becomes a slide-in drawer (which paints its own background) and
+ * the TOC folds inline, and neither should be boxed.
+ */
+
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    background-color: var(--yaffo-surface);
+    border: var(--yaffo-panel-border);
+    border-radius: var(--yaffo-radius-md);
+    box-shadow: var(--yaffo-panel-shadow);
+    margin: 0 0.4rem;
+    padding: 0.6rem 0.4rem;
+  }
+}
+
+@media screen and (min-width: 60em) {
+  .md-sidebar--secondary .md-sidebar__scrollwrap {
+    background-color: var(--yaffo-surface);
+    border: var(--yaffo-panel-border);
+    border-radius: var(--yaffo-radius-md);
+    box-shadow: var(--yaffo-panel-shadow);
+    margin: 0 0.4rem;
+    padding: 0.6rem 0.4rem;
+  }
+}
+
+/*
+ * Align the three panel tops.
+ *
+ * .md-sidebar carries `padding: 1.2rem 0`, so a sidebar panel starts 1.2rem
+ * below the top of the flex row while .md-content starts flush with it — an
+ * offset that was invisible until the columns grew backgrounds. The content is
+ * pushed down to meet them rather than the sidebars pulled up, because that
+ * padding doubles as the gap under the header once the sidebars go sticky.
+ */
+@media screen and (min-width: 60em) {
+  .md-content {
+    margin-top: 1.2rem;
+  }
+}
+
+/*
+ * Sidebar headings.
+ *
+ * Material makes these sticky and paints them with --md-default-bg-color plus a
+ * matching box-shadow halo, so the heading masks the links scrolling underneath.
+ * With the page background grey and the panel at the surface, that halo drew a
+ * grey smear across the top of each panel — so both have to follow the panel
+ * surface instead. The muted default colour is dropped too: the app's own panel
+ * headings (sidebar.css .sidebar h2) use --color-text, not a muted grey.
+ */
+.md-sidebar .md-nav__title {
+  color: var(--md-default-fg-color);
+}
+
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary .md-nav__title {
+    background: var(--yaffo-surface);
+    box-shadow: 0 0 0.4rem 0.4rem var(--yaffo-surface);
+  }
+}
+
+@media screen and (min-width: 60em) {
+  .md-sidebar--secondary .md-nav__title {
+    background: var(--yaffo-surface);
+    box-shadow: 0 0 0.4rem 0.4rem var(--yaffo-surface);
+  }
+}
+
+/* ============================================================== shape ===== */
+
+.md-typeset pre > code,
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: var(--yaffo-radius-md);
+}
+
+.md-typeset code {
+  border-radius: var(--yaffo-radius-sm);
+}
+
+/* Screenshots read as hairline-framed cards in the app; match that. */
+.md-typeset img {
+  border: 1px solid var(--yaffo-border);
+  border-radius: var(--yaffo-radius-md);
+}
+
+/* Darkroom leans on borders rather than elevation. */
+[data-md-color-scheme="slate"] .md-typeset .admonition,
+[data-md-color-scheme="slate"] .md-typeset details {
+  box-shadow: none;
+  border: 1px solid var(--yaffo-border);
+}
+
+/* ======================================================== admonitions ===== */
+/* Material's callouts, recoloured to the active theme's status tokens. */
+
+.md-typeset .admonition.note,
+.md-typeset .admonition.info,
+.md-typeset details.note,
+.md-typeset details.info {
+  border-color: var(--yaffo-info);
+}
+
+.md-typeset .note > .admonition-title,
+.md-typeset .info > .admonition-title,
+.md-typeset .note > summary,
+.md-typeset .info > summary {
+  background-color: color-mix(in srgb, var(--yaffo-info) 12%, transparent);
+}
+
+.md-typeset .admonition.tip,
+.md-typeset .admonition.success,
+.md-typeset details.tip,
+.md-typeset details.success {
+  border-color: var(--yaffo-success);
+}
+
+.md-typeset .tip > .admonition-title,
+.md-typeset .success > .admonition-title,
+.md-typeset .tip > summary,
+.md-typeset .success > summary {
+  background-color: color-mix(in srgb, var(--yaffo-success) 12%, transparent);
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-color: var(--yaffo-warning);
+}
+
+.md-typeset .warning > .admonition-title,
+.md-typeset .warning > summary {
+  background-color: color-mix(in srgb, var(--yaffo-warning) 12%, transparent);
+}
+
+.md-typeset .admonition.danger,
+.md-typeset .admonition.failure,
+.md-typeset details.danger,
+.md-typeset details.failure {
+  border-color: var(--yaffo-danger);
+}
+
+.md-typeset .danger > .admonition-title,
+.md-typeset .failure > .admonition-title,
+.md-typeset .danger > summary,
+.md-typeset .failure > summary {
+  background-color: color-mix(in srgb, var(--yaffo-danger) 12%, transparent);
+}
