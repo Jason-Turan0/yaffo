@@ -44,7 +44,7 @@ until it feels right.
 While you are editing, your changes are a working draft layered over the last
 published version:
 
-- **Publish** applies the draft so it becomes the theme everyone sees.
+- **Save draft** makes the draft live, so it becomes the theme everyone sees.
 - **Discard** throws the draft away and returns to the last published version.
 
 From a theme's editor you can also:
