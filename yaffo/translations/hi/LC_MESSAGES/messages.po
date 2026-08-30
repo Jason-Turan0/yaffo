@@ -3753,3 +3753,30 @@ msgstr "गंतव्य फ़ोल्डर चुनें"
 msgid "Remove Selected Duplicates"
 msgstr "चयनित डुप्लिकेट हटाएँ"
 
+#: yaffo/templates/base.html:119 yaffo/templates/base.html:122
+msgid "Menu"
+msgstr "मेन्यू"
+
+#: yaffo/templates/albums/album.html:97
+msgid "Move earlier"
+msgstr "पहले ले जाएँ"
+
+#: yaffo/templates/albums/album.html:98
+msgid "Move later"
+msgstr "बाद में ले जाएँ"
+
+#: yaffo/templates/pages/_widget.html:10
+msgid "Move widget up"
+msgstr "विजेट ऊपर ले जाएँ"
+
+#: yaffo/templates/pages/_widget.html:11
+msgid "Move widget down"
+msgstr "विजेट नीचे ले जाएँ"
+
+#: yaffo/templates/pages/_widget.html:12
+msgid "Make widget shorter"
+msgstr "विजेट की ऊँचाई घटाएँ"
+
+#: yaffo/templates/pages/_widget.html:13
+msgid "Make widget taller"
+msgstr "विजेट की ऊँचाई बढ़ाएँ"

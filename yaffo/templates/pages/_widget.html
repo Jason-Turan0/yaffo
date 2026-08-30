@@ -6,6 +6,12 @@
             {% if editable %}
             <input type="text" class="widget-title-input" value="{{ widget.title }}" aria-label="{{ _('Widget title') }}" hidden>
             <button type="button" class="widget-edit" aria-label="{{ _('Edit title') }}">✎</button>
+            <span class="widget-order-controls">
+                <button type="button" class="widget-order widget-order-up" aria-label="{{ _('Move widget up') }}">↑</button>
+                <button type="button" class="widget-order widget-order-down" aria-label="{{ _('Move widget down') }}">↓</button>
+                <button type="button" class="widget-order widget-size-shorter" aria-label="{{ _('Make widget shorter') }}">−</button>
+                <button type="button" class="widget-order widget-size-taller" aria-label="{{ _('Make widget taller') }}">＋</button>
+            </span>
             <button type="button" class="widget-delete" data-widget-id="{{ widget.id }}" aria-label="{{ _('Delete widget') }}">×</button>
             {% endif %}
         </div>

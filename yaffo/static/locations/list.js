@@ -43,6 +43,18 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         })
     });
 
+    const mapElement = document.getElementById('map');
+    let mapResizeFrame = 0;
+    const syncMapSize = () => {
+        window.cancelAnimationFrame(mapResizeFrame);
+        mapResizeFrame = window.requestAnimationFrame(() => map.updateSize());
+    };
+    if (mapElement && 'ResizeObserver' in window) {
+        const resizeObserver = new ResizeObserver(syncMapSize);
+        resizeObserver.observe(mapElement);
+    }
+    window.addEventListener('resize', syncMapSize);
+
     const allFeatures = locations.map(location => {
         return new ol.Feature({
             geometry: new ol.geom.Point(
@@ -878,6 +890,9 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         clientPredicate = predicate;
         refreshFeatures();
     };
+
+    const selectionPanel = document.getElementById('selection-panel');
+    selectionPanel?.addEventListener('transitionend', syncMapSize);
 
     return { map, vectorSource, selectedPhotoIds, updateSelectionPanel, setClientFilter };
 };

@@ -149,9 +149,10 @@ facesNamespace.initAssignment = (
             const right = Math.min(naturalWidth, region.right + padX);
             const bottom = Math.min(naturalHeight, region.bottom + padY);
 
-            const scale = Math.min(PREVIEW_SIZE / naturalWidth, PREVIEW_SIZE / naturalHeight);
-            const offsetX = (PREVIEW_SIZE - naturalWidth * scale) / 2;
-            const offsetY = (PREVIEW_SIZE - naturalHeight * scale) / 2;
+            const previewSize = preview.clientWidth || PREVIEW_SIZE;
+            const scale = Math.min(previewSize / naturalWidth, previewSize / naturalHeight);
+            const offsetX = (previewSize - naturalWidth * scale) / 2;
+            const offsetY = (previewSize - naturalHeight * scale) / 2;
             box.style.left = offsetX + left * scale + 'px';
             box.style.top = offsetY + top * scale + 'px';
             box.style.width = (right - left) * scale + 'px';
@@ -229,6 +230,14 @@ facesNamespace.initAssignment = (
                 + `<img src="${thumbUrl(face.id)}" data-fallback="${placeholderUrl}" width="100" height="100">`
                 + `</div>`;
         }).join('');
+        grid.querySelectorAll('.face').forEach((faceEl) => {
+            const previewButton = document.createElement('button');
+            previewButton.type = 'button';
+            previewButton.className = 'face-preview-button';
+            previewButton.setAttribute('aria-label', i18n.t('faces:assignment.preview'));
+            previewButton.textContent = 'ⓘ';
+            faceEl.appendChild(previewButton);
+        });
         facesWindow.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
         /** @type {HTMLElement} */ (activeGroup.querySelector('.sample-range')).textContent =
             shown.length
@@ -343,9 +352,82 @@ facesNamespace.initAssignment = (
 
     // --- Click handling on the active cluster (delegated; the grid is re-rendered on every shuffle) ---
     const clusters = /** @type {HTMLElement} */ (document.getElementById('clusters'));
+    const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)');
+
+    /** @param {HTMLElement} faceEl */
+    const showTooltip = (faceEl) => {
+        const rawSimilarity = faceEl.dataset.similarity;
+        const similarity = rawSimilarity ? Number(rawSimilarity) : NaN;
+        const date = (faceEl.dataset.date
+            && facesWindow.PHOTO_ORGANIZER.utils?.date?.format(faceEl.dataset.date))
+            || i18n.t('common:unknown');
+        const hasSimilarity = Number.isFinite(similarity);
+        const similarityText = hasSimilarity
+            ? i18n.percent(similarity, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : '';
+        const tooltipParts = [];
+        const source = faceEl.dataset.source;
+        if (source) {
+            tooltipParts.push(buildPreview(source, parseRegion(faceEl.dataset.region)));
+        } else if (faceEl.dataset.mediaType === 'video') {
+            const note = document.createElement('div');
+            note.className = 'face-preview-note';
+            note.textContent = i18n.t('faces:assignment.videoPreviewUnavailable');
+            tooltipParts.push(note);
+        }
+        if (hasSimilarity) {
+            tooltipParts.push(document.createTextNode(
+                i18n.t('common:similarityValue', { value: similarityText })
+            ));
+            tooltipParts.push(document.createElement('br'));
+        }
+        tooltipParts.push(document.createTextNode(i18n.t('common:dateValue', { value: date })));
+        tooltip.replaceChildren(...tooltipParts);
+        tooltip.dataset.faceId = faceEl.dataset.faceId || '';
+        tooltip.classList.add('visible');
+
+        if (coarsePointer.matches) {
+            tooltip.classList.remove('tooltip-below');
+            tooltip.style.removeProperty('left');
+            tooltip.style.removeProperty('top');
+            tooltip.style.removeProperty('transform');
+            return;
+        }
+
+        // With a preview image the tooltip is tall enough to run off the top of
+        // the viewport, so it flips below the face when it will not fit above.
+        const rect = faceEl.getBoundingClientRect();
+        const below = rect.top < tooltip.offsetHeight + 10;
+        tooltip.classList.toggle('tooltip-below', below);
+        tooltip.style.left = rect.left + rect.width / 2 + 'px';
+        tooltip.style.top = below
+            ? rect.bottom + window.scrollY + 10 + 'px'
+            : rect.top + window.scrollY - 10 + 'px';
+        tooltip.style.transform = below ? 'translate(-50%, 0)' : 'translate(-50%, -100%)';
+    };
+
+    const hideTooltip = () => {
+        tooltip.classList.remove('visible');
+        delete tooltip.dataset.faceId;
+    };
 
     clusters.addEventListener('click', (e) => {
         const origin = e.target instanceof Element ? e.target : null;
+
+        const previewButton = origin?.closest('.face-preview-button');
+        if (previewButton) {
+            e.preventDefault();
+            e.stopPropagation();
+            const faceEl = /** @type {HTMLElement | null} */ (previewButton.closest('.face'));
+            if (!faceEl) return;
+            if (tooltip.classList.contains('visible')
+                && tooltip.dataset.faceId === faceEl.dataset.faceId) {
+                hideTooltip();
+            } else {
+                showTooltip(faceEl);
+            }
+            return;
+        }
 
         // Select-all chip: takes the whole cluster, or clears it once it is whole.
         if (origin?.closest('.cluster-select-all')) {
@@ -422,53 +504,28 @@ facesNamespace.initAssignment = (
         }
     });
 
-    // Tooltip on hover (delegated)
+    // Tooltip on hover for precise pointers. Coarse pointers use the explicit
+    // per-face preview button above so selecting and previewing stay distinct.
     clusters.addEventListener('mouseover', (e) => {
+        if (coarsePointer.matches) return;
         const origin = e.target instanceof Element ? e.target : null;
         const faceEl = /** @type {HTMLElement | null} */ (origin?.closest('.face') ?? null);
         if (!faceEl) return;
-        const rawSimilarity = faceEl.dataset.similarity;
-        const similarity = rawSimilarity ? Number(rawSimilarity) : NaN;
-        const date = (faceEl.dataset.date
-            && facesWindow.PHOTO_ORGANIZER.utils?.date?.format(faceEl.dataset.date))
-            || i18n.t('common:unknown');
-        const hasSimilarity = Number.isFinite(similarity);
-        const similarityText = hasSimilarity
-            ? i18n.percent(similarity, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-            : '';
-        const tooltipParts = [];
-        const source = faceEl.dataset.source;
-        if (source) {
-            tooltipParts.push(buildPreview(source, parseRegion(faceEl.dataset.region)));
-        } else if (faceEl.dataset.mediaType === 'video') {
-            const note = document.createElement('div');
-            note.className = 'face-preview-note';
-            note.textContent = i18n.t('faces:assignment.videoPreviewUnavailable');
-            tooltipParts.push(note);
-        }
-        if (hasSimilarity) {
-            tooltipParts.push(document.createTextNode(
-                i18n.t('common:similarityValue', { value: similarityText })
-            ));
-            tooltipParts.push(document.createElement('br'));
-        }
-        tooltipParts.push(document.createTextNode(i18n.t('common:dateValue', { value: date })));
-        tooltip.replaceChildren(...tooltipParts);
-        tooltip.classList.add('visible');
-        // With a preview image the tooltip is tall enough to run off the top of the
-        // viewport, so it flips below the face when it won't fit above.
-        const rect = faceEl.getBoundingClientRect();
-        const below = rect.top < tooltip.offsetHeight + 10;
-        tooltip.classList.toggle('tooltip-below', below);
-        tooltip.style.left = rect.left + rect.width / 2 + 'px';
-        tooltip.style.top = below
-            ? rect.bottom + window.scrollY + 10 + 'px'
-            : rect.top + window.scrollY - 10 + 'px';
-        tooltip.style.transform = below ? 'translate(-50%, 0)' : 'translate(-50%, -100%)';
+        showTooltip(faceEl);
     });
     clusters.addEventListener('mouseout', (e) => {
+        if (coarsePointer.matches) return;
         const origin = e.target instanceof Element ? e.target : null;
-        if (origin?.closest('.face')) tooltip.classList.remove('visible');
+        if (origin?.closest('.face')) hideTooltip();
+    });
+    document.addEventListener('click', (e) => {
+        const origin = e.target instanceof Element ? e.target : null;
+        if (coarsePointer.matches && !origin?.closest('.face-preview-button, .face-tooltip')) {
+            hideTooltip();
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') hideTooltip();
     });
 
     // Threshold slider display

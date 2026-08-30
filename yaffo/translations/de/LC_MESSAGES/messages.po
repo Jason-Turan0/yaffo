@@ -3794,3 +3794,30 @@ msgstr "Zielordner auswählen"
 msgid "Remove Selected Duplicates"
 msgstr "Ausgewählte Duplikate entfernen"
 
+#: yaffo/templates/base.html:119 yaffo/templates/base.html:122
+msgid "Menu"
+msgstr "Menü"
+
+#: yaffo/templates/albums/album.html:97
+msgid "Move earlier"
+msgstr "Früher verschieben"
+
+#: yaffo/templates/albums/album.html:98
+msgid "Move later"
+msgstr "Später verschieben"
+
+#: yaffo/templates/pages/_widget.html:10
+msgid "Move widget up"
+msgstr "Widget nach oben"
+
+#: yaffo/templates/pages/_widget.html:11
+msgid "Move widget down"
+msgstr "Widget nach unten"
+
+#: yaffo/templates/pages/_widget.html:12
+msgid "Make widget shorter"
+msgstr "Widget niedriger machen"
+
+#: yaffo/templates/pages/_widget.html:13
+msgid "Make widget taller"
+msgstr "Widget höher machen"

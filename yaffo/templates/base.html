@@ -47,6 +47,7 @@
 
 
     {% block extra_styles %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     <script src="{{ url_for('static', filename='vendor/htmx/2.0.4/htmx.min.js') }}"></script>
     <script>
         // Listen for htmx notification events
@@ -112,7 +113,13 @@
         <a href="{{ url_for('index') }}" class="navbar-brand">
             YAFFO!
         </a>
-        <ul class="navbar-nav">
+        <button type="button" id="nav-menu-toggle" class="nav-menu-toggle"
+                aria-expanded="false" aria-controls="navbar-primary">
+            <span class="nav-menu-icon" aria-hidden="true"></span>
+            <span>{{ _("Menu") }}</span>
+        </button>
+        <div class="navbar-primary" id="navbar-primary">
+        <ul class="navbar-nav" aria-label="{{ _('Menu') }}">
             <li><a href="{{ url_for('index') }}" data-icon="library" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">{{ _("Home") }}</a>
             </li>
             <li><a href="{{ url_for('albums_index') }}" data-icon="albums"
@@ -139,6 +146,7 @@
                 aria-expanded="true" aria-controls="navbar-pages-bar">
             {{ _("Pages") }} <span class="nav-pages-toggle-arrow" aria-hidden="true">▾</span>
         </button>
+        </div>
     </div>
     {# Custom pages live on their own bookmarks-style strip; the toggle above
        collapses it (persisted per browser in localStorage by nav.js). #}
@@ -248,6 +256,7 @@
 <script src="{{ url_for('static', filename='components/folder_picker.js') }}"></script>
 <script src="{{ url_for('static', filename='components/file_browser.js') }}"></script>
 <script src="{{ url_for('static', filename='components/intl_date_input.js') }}"></script>
+<script src="{{ url_for('static', filename='responsive.js') }}"></script>
 <script src="{{ url_for('static', filename='utils.js') }}"></script>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 
