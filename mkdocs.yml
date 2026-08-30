@@ -8,24 +8,42 @@ copyright: Copyright &copy; Jason Turan
 
 theme:
   name: material
+  # Use the system font stack, matching the app's --font-body (and dropping the
+  # Google Fonts dependency Material pulls in by default).
+  font: false
+  logo: assets/yaffo-mark.svg
+  favicon: assets/yaffo-mark.svg
   features:
     - navigation.sections
+    - navigation.path
     - navigation.top
     - navigation.instant
+    - search.suggest
     - search.highlight
     - content.code.copy
     - toc.follow
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
+      primary: yaffo
+      accent: yaffo
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
+      primary: yaffo
+      accent: yaffo
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
+
+plugins:
+  - search
+  - glightbox
+
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - admonition

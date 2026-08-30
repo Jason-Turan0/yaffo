@@ -1,0 +1,402 @@
+/*
+ * Yaffo palette for Material.
+ *
+ * Light  = the app's default "classic" theme (yaffo/static/tokens.css).
+ * Dark   = the app's "darkroom" theme    (yaffo/static/themes/darkroom/tokens.css
+ *                                         + themes/darkroom.css).
+ *
+ * The token name behind each value is noted so the two stay traceable; if a
+ * token changes in the app, change it here too.
+ *
+ * Two structural points carried over from the app, both of which Material does
+ * NOT do by default:
+ *   - Chrome is neutral. --color-navbar-bg is --color-surface in classic and a
+ *     frosted charcoal in darkroom; neither is an accent-coloured bar.
+ *   - In darkroom, "structure comes from borders, not shadows" (see the skin's
+ *     header comment), so panels there get hairlines instead of elevation.
+ *
+ * Material applies data-md-color-scheme / -primary / -accent at runtime, not at
+ * build time, so the light values are anchored on :root as well — otherwise the
+ * page flashes stock Material indigo before the palette script runs. The dark
+ * blocks are more specific, so they still win.
+ */
+
+/* ================================================= light — classic theme === */
+
+:root,
+[data-md-color-scheme="default"] {
+  /* Surfaces */
+  --md-default-bg-color: #f8f9fa;              /* --color-bg */
+  --md-default-bg-color--light: #ffffff;       /* --color-surface */
+  --md-default-bg-color--lighter: #ffffff;
+  --md-default-bg-color--lightest: #ffffff;
+
+  /* Text ramp */
+  --md-default-fg-color: #212529;              /* --color-text */
+  --md-default-fg-color--light: #6c757d;       /* --color-text-muted */
+  --md-default-fg-color--lighter: #adb5bd;     /* --color-text-faint */
+  --md-default-fg-color--lightest: #dee2e6;    /* --color-border */
+
+  /* Links. #007BFF only reaches ~4:1 on white, so body links use the darker
+   * hover tone and brighten to the accent proper on hover. */
+  --md-typeset-a-color: #0056b3;               /* --color-accent-hover */
+
+  /* Code — the app's sunken surface, not Material's tinted default */
+  --md-code-bg-color: #f1f3f5;                 /* --color-border-subtle */
+  --md-code-fg-color: #212529;                 /* --color-text */
+
+  /* Footer: a neutral dark bar; the app has no footer to copy */
+  --md-footer-bg-color: #212529;               /* --color-text */
+  --md-footer-bg-color--dark: #16181b;
+  --md-footer-fg-color: #ffffff;
+  --md-footer-fg-color--light: #adb5bd;
+  --md-footer-fg-color--lighter: #6c757d;
+
+  --md-shadow-z1: 0 1px 3px rgba(0, 0, 0, 0.1);    /* --shadow-sm */
+  --md-shadow-z2: 0 2px 8px rgba(0, 0, 0, 0.1);    /* --shadow-md */
+  --md-shadow-z3: 0 4px 12px rgba(0, 0, 0, 0.15);  /* --shadow-lg */
+
+  /* Locals consumed by the shared rules at the bottom of this file. */
+  --yaffo-radius-sm: 4px;                      /* --radius-sm */
+  --yaffo-radius-md: 8px;                      /* --radius-md */
+  --yaffo-border: #dee2e6;                     /* --color-border */
+  --yaffo-surface: #ffffff;                    /* --color-surface */
+  --yaffo-panel-border: none;                  /* classic panels use shadow only */
+  --yaffo-panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);  /* --shadow-sm */
+  --yaffo-header-bg: #ffffff;                  /* --color-navbar-bg */
+  --yaffo-header-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);  /* --shadow-navbar */
+  --yaffo-header-blur: none;
+  --yaffo-brand-color: inherit;
+  --yaffo-brand-spacing: normal;
+  --yaffo-search-bg: #f8f9fa;                  /* --color-bg */
+  --yaffo-search-bg-hover: #e9ecef;            /* --color-disabled-bg */
+  --yaffo-info: #17a2b8;                       /* --color-info */
+  --yaffo-success: #28a745;                    /* --color-success */
+  --yaffo-warning: #ffc107;                    /* --color-warning */
+  --yaffo-danger: #dc3545;                     /* --color-danger */
+}
+
+/* Header/nav chrome: white surface, dark text — matches --color-navbar-bg. */
+:root,
+[data-md-color-primary="yaffo"] {
+  --md-primary-fg-color: #ffffff;              /* --color-surface */
+  --md-primary-fg-color--light: #f8f9fa;       /* --color-surface-hover */
+  --md-primary-fg-color--dark: #dee2e6;        /* --color-border */
+  --md-primary-bg-color: #212529;              /* --color-text, on the header */
+  --md-primary-bg-color--light: #6c757d;       /* --color-text-muted */
+}
+
+/* Interactive accent: hovers, focus, active nav item, search highlight. */
+:root,
+[data-md-color-accent="yaffo"] {
+  --md-accent-fg-color: #007bff;               /* --color-accent */
+  --md-accent-fg-color--transparent: rgba(0, 123, 255, 0.1);
+  --md-accent-bg-color: #ffffff;               /* --color-on-accent */
+  --md-accent-bg-color--light: rgba(255, 255, 255, 0.7);
+}
+
+/* ================================================ dark — darkroom theme === */
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #101216;              /* --color-bg */
+  --md-default-bg-color--light: #181b21;       /* --color-surface */
+  --md-default-bg-color--lighter: #1f232b;     /* --color-surface-hover */
+  --md-default-bg-color--lightest: #2a2f39;    /* --color-border */
+
+  --md-default-fg-color: #e8eaed;              /* --color-text */
+  --md-default-fg-color--light: #9aa1ac;       /* --color-text-muted */
+  --md-default-fg-color--lighter: #5f6672;     /* --color-text-faint */
+  --md-default-fg-color--lightest: #2a2f39;    /* --color-border */
+
+  /* Amber safelight — darkroom's accent, ~8.8:1 on the page background. */
+  --md-typeset-a-color: #e8a33d;               /* --color-accent */
+
+  --md-code-bg-color: #13161b;                 /* --color-surface-sunken */
+  --md-code-fg-color: #e8eaed;                 /* --color-text */
+
+  --md-footer-bg-color: #0b0d10;
+  --md-footer-bg-color--dark: #08090b;
+  --md-footer-fg-color: #e8eaed;
+  --md-footer-fg-color--light: #9aa1ac;
+  --md-footer-fg-color--lighter: #5f6672;
+
+  --md-shadow-z1: 0 1px 3px rgba(0, 0, 0, 0.4);    /* --shadow-sm */
+  --md-shadow-z2: 0 2px 8px rgba(0, 0, 0, 0.45);   /* --shadow-md */
+  --md-shadow-z3: 0 4px 14px rgba(0, 0, 0, 0.5);   /* --shadow-lg */
+
+  --yaffo-radius-sm: 6px;                      /* --radius-sm (darkroom) */
+  --yaffo-radius-md: 10px;                     /* --radius-md (darkroom) */
+  --yaffo-border: #2a2f39;                     /* --color-border */
+  --yaffo-surface: #181b21;                    /* --color-surface */
+  --yaffo-panel-border: 1px solid #2a2f39;     /* skin: hairlines carry structure */
+  --yaffo-panel-shadow: none;
+  --yaffo-header-bg: rgba(16, 18, 22, 0.92);   /* --color-navbar-bg */
+  --yaffo-header-shadow: 0 1px 0 #2a2f39;      /* --shadow-navbar (a hairline) */
+  --yaffo-header-blur: blur(8px);              /* skin: frosted navbar */
+  --yaffo-brand-color: #e8a33d;                /* skin: amber wordmark */
+  --yaffo-brand-spacing: 0.18em;               /* skin: .navbar-brand */
+  --yaffo-search-bg: #181b21;                  /* --color-surface */
+  --yaffo-search-bg-hover: #1f232b;            /* --color-surface-hover */
+  --yaffo-info: #5aa7d6;                       /* --color-info */
+  --yaffo-success: #4caf6e;                    /* --color-success */
+  --yaffo-warning: #d9b13b;                    /* --color-warning */
+  --yaffo-danger: #e05d52;                     /* --color-danger */
+}
+
+[data-md-color-scheme="slate"],
+[data-md-color-scheme="slate"][data-md-color-primary="yaffo"] {
+  --md-primary-fg-color: #181b21;              /* --color-surface */
+  --md-primary-fg-color--light: #1f232b;       /* --color-surface-hover */
+  --md-primary-fg-color--dark: #101216;        /* --color-bg */
+  --md-primary-bg-color: #e8eaed;              /* --color-text */
+  --md-primary-bg-color--light: #9aa1ac;       /* --color-text-muted */
+}
+
+[data-md-color-scheme="slate"],
+[data-md-color-scheme="slate"][data-md-color-accent="yaffo"] {
+  --md-accent-fg-color: #e8a33d;               /* --color-accent */
+  --md-accent-fg-color--transparent: rgba(232, 163, 61, 0.14);  /* --color-accent-soft */
+  --md-accent-bg-color: #1a1205;               /* --color-on-accent (dark ink on amber) */
+  --md-accent-bg-color--light: rgba(26, 18, 5, 0.7);
+}
+
+/* ====================================================== shared chrome ===== */
+
+/* A neutral header separates from the page by shadow (classic) or a hairline
+ * (darkroom), never by colour. */
+.md-header {
+  background-color: var(--yaffo-header-bg);
+  box-shadow: var(--yaffo-header-shadow);
+  -webkit-backdrop-filter: var(--yaffo-header-blur);
+  backdrop-filter: var(--yaffo-header-blur);
+}
+
+/* Darkroom sets the wordmark in spaced amber; classic leaves it alone. */
+.md-header__topic:first-child > .md-ellipsis {
+  color: var(--yaffo-brand-color);
+  letter-spacing: var(--yaffo-brand-spacing);
+}
+
+/* Darkroom ships its own amber aperture mark, so swap the logo with the scheme.
+ * (The favicon can't follow — a browser tab gets one icon — so it stays blue.) */
+[data-md-color-scheme="slate"] .md-logo img {
+  visibility: hidden;
+}
+
+[data-md-color-scheme="slate"] .md-logo {
+  background: url("../assets/yaffo-mark-darkroom.svg") center / 24px 24px no-repeat;
+}
+
+/* The search field sits on the header; Material's translucent-white fill
+ * vanishes on a light header, so use the app's own surfaces. */
+.md-search__form {
+  background-color: var(--yaffo-search-bg);
+  border-radius: var(--yaffo-radius-sm);
+}
+
+.md-search__form:hover {
+  background-color: var(--yaffo-search-bg-hover);
+}
+
+/* ============================================================== panel ===== */
+/*
+ * Material's layout is flat: --md-default-bg-color paints the page and the
+ * article alike, and there is no surface/panel variable to override. Yaffo puts
+ * body text on a raised panel instead (base.css .page-header et al: surface +
+ * --radius-md + --shadow-sm, and a hairline instead of the shadow in darkroom),
+ * so the content column is rebuilt as that panel here.
+ *
+ * The navigation and table-of-contents columns get the same treatment, matching
+ * the app's own sticky sidebar panel (sidebar.css .sidebar: surface, --radius-md,
+ * --shadow-sm, internal scroll).
+ */
+
+.md-content {
+  background-color: var(--yaffo-surface);
+  border: var(--yaffo-panel-border);
+  border-radius: var(--yaffo-radius-md);
+  box-shadow: var(--yaffo-panel-shadow);
+  padding: 0.4rem;
+}
+
+/* Full-bleed on phones — a floating card wastes width that narrow screens need,
+ * and the app drops its panel insets at the same point. */
+@media screen and (max-width: 44.9375em) {
+  .md-content {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+    padding: 0;
+  }
+}
+
+/* Search results are a panel too, not page background. */
+.md-search__output {
+  background-color: var(--yaffo-surface);
+}
+
+/*
+ * Sidebar panels.
+ *
+ * The panel goes on .md-sidebar__scrollwrap, NOT .md-sidebar. At desktop widths
+ * Material gives .md-sidebar `height: 0` (so a sticky column adds no page
+ * height) and lets its content overflow, so painting that element yields a bare
+ * sliver of padding rather than a box. The scrollwrap is the element that gets a
+ * real pixel height — assigned by Material's own sidebar script — and it already
+ * carries `overflow-y: auto`, so it clips to the radius and scrolls internally
+ * exactly like the app's .sidebar does.
+ *
+ * That script sizes it as `viewport - 2 * scrollwrap.offsetTop`, which is
+ * measured at runtime, so the padding added here is absorbed rather than
+ * overflowing.
+ *
+ * Both are scoped to the widths where the column really is a sidebar: below
+ * them the nav becomes a slide-in drawer (which paints its own background) and
+ * the TOC folds inline, and neither should be boxed.
+ */
+
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    background-color: var(--yaffo-surface);
+    border: var(--yaffo-panel-border);
+    border-radius: var(--yaffo-radius-md);
+    box-shadow: var(--yaffo-panel-shadow);
+    margin: 0 0.4rem;
+    padding: 0.6rem 0.4rem;
+  }
+}
+
+@media screen and (min-width: 60em) {
+  .md-sidebar--secondary .md-sidebar__scrollwrap {
+    background-color: var(--yaffo-surface);
+    border: var(--yaffo-panel-border);
+    border-radius: var(--yaffo-radius-md);
+    box-shadow: var(--yaffo-panel-shadow);
+    margin: 0 0.4rem;
+    padding: 0.6rem 0.4rem;
+  }
+}
+
+/*
+ * Align the three panel tops.
+ *
+ * .md-sidebar carries `padding: 1.2rem 0`, so a sidebar panel starts 1.2rem
+ * below the top of the flex row while .md-content starts flush with it — an
+ * offset that was invisible until the columns grew backgrounds. The content is
+ * pushed down to meet them rather than the sidebars pulled up, because that
+ * padding doubles as the gap under the header once the sidebars go sticky.
+ */
+@media screen and (min-width: 60em) {
+  .md-content {
+    margin-top: 1.2rem;
+  }
+}
+
+/*
+ * Sidebar headings.
+ *
+ * Material makes these sticky and paints them with --md-default-bg-color plus a
+ * matching box-shadow halo, so the heading masks the links scrolling underneath.
+ * With the page background now grey and the panel white, that halo drew a grey
+ * smear across the top of each panel — so both have to follow the panel surface
+ * instead. The muted default colour is dropped too: the app's own panel headings
+ * (sidebar.css .sidebar h2) use --color-text, not a muted grey.
+ */
+.md-sidebar .md-nav__title {
+  color: var(--md-default-fg-color);            /* --color-text */
+}
+
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary .md-nav__title {
+    background: var(--yaffo-surface);
+    box-shadow: 0 0 0.4rem 0.4rem var(--yaffo-surface);
+  }
+}
+
+@media screen and (min-width: 60em) {
+  .md-sidebar--secondary .md-nav__title {
+    background: var(--yaffo-surface);
+    box-shadow: 0 0 0.4rem 0.4rem var(--yaffo-surface);
+  }
+}
+
+/* ============================================================== shape ===== */
+
+.md-typeset pre > code,
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: var(--yaffo-radius-md);
+}
+
+.md-typeset code {
+  border-radius: var(--yaffo-radius-sm);
+}
+
+/* Screenshots read as hairline-framed cards in the app; match that. */
+.md-typeset img {
+  border: 1px solid var(--yaffo-border);
+  border-radius: var(--yaffo-radius-md);
+}
+
+/* Darkroom leans on borders rather than elevation. */
+[data-md-color-scheme="slate"] .md-typeset .admonition,
+[data-md-color-scheme="slate"] .md-typeset details {
+  box-shadow: none;
+  border: 1px solid var(--yaffo-border);
+}
+
+/* ======================================================== admonitions ===== */
+/* Material's callouts, recoloured to the active theme's status tokens. */
+
+.md-typeset .admonition.note,
+.md-typeset .admonition.info,
+.md-typeset details.note,
+.md-typeset details.info {
+  border-color: var(--yaffo-info);
+}
+
+.md-typeset .note > .admonition-title,
+.md-typeset .info > .admonition-title,
+.md-typeset .note > summary,
+.md-typeset .info > summary {
+  background-color: color-mix(in srgb, var(--yaffo-info) 12%, transparent);
+}
+
+.md-typeset .admonition.tip,
+.md-typeset .admonition.success,
+.md-typeset details.tip,
+.md-typeset details.success {
+  border-color: var(--yaffo-success);
+}
+
+.md-typeset .tip > .admonition-title,
+.md-typeset .success > .admonition-title,
+.md-typeset .tip > summary,
+.md-typeset .success > summary {
+  background-color: color-mix(in srgb, var(--yaffo-success) 12%, transparent);
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-color: var(--yaffo-warning);
+}
+
+.md-typeset .warning > .admonition-title,
+.md-typeset .warning > summary {
+  background-color: color-mix(in srgb, var(--yaffo-warning) 12%, transparent);
+}
+
+.md-typeset .admonition.danger,
+.md-typeset .admonition.failure,
+.md-typeset details.danger,
+.md-typeset details.failure {
+  border-color: var(--yaffo-danger);
+}
+
+.md-typeset .danger > .admonition-title,
+.md-typeset .failure > .admonition-title,
+.md-typeset .danger > summary,
+.md-typeset .failure > summary {
+  background-color: color-mix(in srgb, var(--yaffo-danger) 12%, transparent);
+}
