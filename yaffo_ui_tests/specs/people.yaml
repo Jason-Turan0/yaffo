@@ -22,6 +22,15 @@ context:
   - tag: face_assignment
     attribute: yaffo-face_assignment
     description: Shared context — people are the assignment target for detected faces
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - The Bennett seed creates Marcus Bennett, Elena Bennett, Maya Bennett, and Theo Bennett
@@ -100,3 +109,26 @@ scenarios:
       - After removing, the face count for that person decreases
       - A success message is displayed
       - The removed face becomes available again on the face assignment page
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P3 — people). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: people_rows_become_labeled_cards_on_narrow_screens
+    goal: The six-column people table stays readable without a horizontal scroll
+    priority: high
+    steps:
+      - Load the people list at 390x844
+    verify:
+      - Each cell carries its column name as a data-label so the card reads as a labelled record
+      - No data is hidden merely to make the row fit
+      - Any remaining tabular surface scrolls inside its own container, never the page
+  - name: person_faces_exposes_actions_and_filters_as_peers
+    goal: A person's face gallery follows the same two-panel contract as the faces page
+    priority: medium
+    steps:
+      - Open a person's faces page at 390x844
+    verify:
+      - Actions and Filters each have their own peer navbar button, Actions first
+      - The page does not scroll horizontally
+      - Long person names wrap rather than widening the header

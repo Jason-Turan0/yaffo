@@ -2,8 +2,7 @@
    is loaded last so every built-in and runtime theme follows one layout model. */
 
 button.nav-menu-toggle[data-icon],
-button.nav-context-toggle[data-icon],
-.responsive-panel-toggle {
+button.nav-context-toggle[data-icon] {
     display: none;
 }
 
@@ -92,19 +91,29 @@ button.nav-context-toggle[data-icon],
     /* Page panels are rendered in their desktop location by the server. Keep
        them closed on the first paint; nav.js moves the live DOM into the navbar
        host and removes `hidden` only after the user opens its peer action. */
-    [data-responsive-nav-panel] {
+    [data-nav-panel] {
         display: none;
     }
 
-    .navbar-context-panels > [data-responsive-nav-panel]:not([hidden]) {
-        display: flex;
+    .navbar-context-panels > [data-nav-panel]:not([hidden]) {
+        display: block;
+    }
+
+    /* A sidebar column whose every section is a registered panel is empty once
+       nav.js has moved them into the navbar. It must go out of the layout, not
+       merely render at zero height: a flex item still earns the parent's gap,
+       which would leave a dead band above the content on every narrow page. */
+    .sidebar-container:not(:has(> :not([data-nav-panel]))),
+    .utilities-sidebars:not(:has(> :not([data-nav-panel]))) {
+        display: none;
     }
 
     .navbar-container {
         flex-wrap: wrap;
         column-gap: 8px;
         row-gap: 0;
-        padding-inline: 16px;
+        padding-inline-start: calc(16px + env(safe-area-inset-left));
+        padding-inline-end: calc(16px + env(safe-area-inset-right));
     }
 
     .navbar-brand {
@@ -134,17 +143,41 @@ button.nav-context-toggle[data-icon],
         box-shadow: var(--shadow-accent);
     }
 
-    .navbar-context-panels {
-        max-height: calc(100dvh - var(--navbar-bar-height, 56px));
-        overflow-y: auto;
-        padding: 0 16px 16px;
+    /* How many filters are narrowing the view behind a closed panel. Inherits
+       currentColor so it flips with the button's own open/closed state. */
+    .nav-context-count {
+        min-width: 20px;
+        padding: 0 6px;
+        border: var(--border-width) solid currentColor;
+        border-radius: 999px;
+        font-size: var(--font-size-sm);
+        font-variant-numeric: tabular-nums;
+        line-height: 18px;
+        text-align: center;
     }
 
-    .navbar-context-panels > .sidebar-container {
+    .nav-context-count[hidden] {
+        display: none;
+    }
+
+    .navbar-context-panels {
+        max-height: calc(100vh - var(--navbar-bar-height, 56px));
+        max-height: calc(100dvh - var(--navbar-bar-height, 56px));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+        padding-inline-start: calc(16px + env(safe-area-inset-left));
+        padding-inline-end: calc(16px + env(safe-area-inset-right));
+    }
+
+    .navbar-context-panels > .sidebar {
         max-width: 1400px;
         margin: 0 auto;
     }
 
+    /* A panel in the navbar drops the desktop card: framing a panel that is
+       already inside one reads as an empty box, and its padding plus the host's
+       makes a second scroll region out of a list that should just flow. */
     .navbar-context-panels .sidebar {
         padding: 0;
         border-radius: 0;
@@ -157,7 +190,9 @@ button.nav-context-toggle[data-icon],
         justify-content: flex-end;
     }
 
-    .navbar-context-panels .sidebar-header h2 {
+    /* The peer button already names the panel. */
+    .navbar-context-panels .sidebar-header h2,
+    .navbar-context-panels > .sidebar > h2 {
         display: none;
     }
 
@@ -221,24 +256,6 @@ button.nav-context-toggle[data-icon],
         min-height: 0;
     }
 
-    .responsive-panel-toggle {
-        display: flex;
-        width: 100%;
-        min-height: 44px;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-block-end: 12px;
-    }
-
-    .responsive-panel-toggle-icon {
-        transition: transform 0.2s ease;
-    }
-
-    .responsive-panel-toggle.is-open .responsive-panel-toggle-icon {
-        transform: rotate(180deg);
-    }
-
     .sidebar-container,
     .albums-sidebar,
     .utilities-sidebars,
@@ -278,18 +295,25 @@ button.nav-context-toggle[data-icon],
 
     .modal-content {
         width: calc(100% - 32px);
+        max-height: calc(100vh - 32px);
         max-height: calc(100dvh - 32px);
         padding: 22px;
     }
 
-    .notification {
-        inset-inline: 16px;
-        inset-block-start: 16px;
-        max-width: none;
+    /* Dropdowns are anchored to their own control's box, so they cannot overflow
+       sideways — but a fixed 200px list plus the on-screen keyboard leaves no
+       room to see the options on a short viewport. */
+    .multi-select-options,
+    .searchable-select-dropdown {
+        max-height: min(200px, 45dvh);
     }
 
-    .overlay {
-        max-width: calc(100vw - 24px);
+    .notification {
+        inset-inline: 16px;
+        inset-inline-start: calc(16px + env(safe-area-inset-left));
+        inset-inline-end: calc(16px + env(safe-area-inset-right));
+        inset-block-start: calc(16px + env(safe-area-inset-top));
+        max-width: none;
     }
 
     .stats-grid,

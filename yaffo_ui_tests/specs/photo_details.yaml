@@ -13,6 +13,15 @@ context:
   - tag: photo-view-template
     path: templates/media/view.html
     description: Photo details view template with sidebar and main image
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 data:
   - Test image "2015-09-10_153200_daughter-one-year-portrait.png" has location data and should be used for filename, location, and tag tests
   - Tests resolve fixture images by filename rather than relying on database IDs
@@ -80,3 +89,27 @@ scenarios:
       - Face canvas overlay becomes visible
       - The corresponding face region is highlighted on the main photo
       - Moving mouse away clears the highlight
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P1 — media detail). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: photo_details_stacks_media_above_metadata
+    goal: On a narrow screen the photo stays visible with its details reachable below
+    priority: high
+    steps:
+      - Open a photo's detail page at 390x844
+    verify:
+      - The page does not scroll horizontally
+      - The media container renders above the details sidebar
+      - Metadata, faces, tags and the favourite control all remain reachable
+  - name: photo_details_survives_rotation
+    goal: Rotating to a short landscape viewport keeps the photo usable
+    priority: medium
+    steps:
+      - Open a photo's detail page at 390x844
+      - Resize to 844x390 without reloading
+    verify:
+      - No page-level horizontal overflow appears
+      - The media container is still visible and no control is clipped
+      - Viewport-height calculations use dynamic units so browser chrome cannot hide the actions

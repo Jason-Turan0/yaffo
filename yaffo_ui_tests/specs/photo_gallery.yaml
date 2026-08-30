@@ -25,6 +25,18 @@ context:
   - tag: timeline-stream-js
     path: static/media/timeline_stream.js
     description: Streams timeline batches through the sentinel and merges continuation sections
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (move/restore live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-sidebar-template
+    path: templates/_sidebar.html
+    description: Filter sidebar; Actions and Filters register as separate panels
 
 scenarios:
   - name: gallery_loads_with_valid_images
@@ -154,3 +166,142 @@ scenarios:
       - After clearing the filter the full timeline is shown again in timeline view
     cleanup:
       - Restore the grid preference (request /?view=grid)
+  # ---------------------------------------------------------------------------
+  # Responsive coverage. Home is the reference implementation of the shared
+  # shell (docs/development/responsive.md), so the shell contract is verified
+  # here; every other page family verifies its own panels in its own spec.
+  # Shared helpers live in generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: gallery_fits_every_contract_viewport
+    goal: The gallery and the shell around it never scroll the page sideways
+    priority: high
+    steps:
+      - Load the home page at 320x568, 390x844, 768x1024, 1024x768 and 1440x900
+      - At each size record any element wider than the document
+    verify:
+      - The document scroll width equals its client width at every size
+      - The navbar is visible at every size
+      - A failure names the offending elements, not just the fact of the overflow
+  - name: gallery_menu_is_reachable_on_a_narrow_screen
+    goal: Every primary destination stays reachable once the navbar collapses
+    priority: high
+    steps:
+      - Load the home page at 390x844
+      - Open the Menu button
+      - Press Escape
+    verify:
+      - Before opening, the collapsed menu is hidden and takes up no layout space
+      - Opening reveals all nine primary destinations
+      - Escape closes the menu
+  - name: gallery_filters_use_a_peer_navbar_panel
+    goal: Filters is a peer of Menu, not a disclosure nested inside the page or the Menu
+    priority: high
+    steps:
+      - Load the home page at 390x844
+      - Open Filters, then open Menu, then open Filters again
+      - Type a value into the filter form, then resize to 1440x900
+    verify:
+      - The Filters button sits beside Menu in the same navbar row, at least 8px apart, each at least 44px tall
+      - Only one of Menu or Filters is open at a time
+      - The open panel carries a themed active state distinct from its closed background
+      - The panel drops the desktop sidebar padding and box-shadow while it is in the navbar
+      - Escape closes the panel
+      - After resizing to desktop both toggles are hidden, the sidebar is back in the page, and the typed value survived
+  - name: gallery_narrow_ui_is_closed_before_javascript_runs
+    goal: Navigating between pages never flashes the menu or a filter panel open
+    priority: high
+    steps:
+      - Load the home page at 390x844 with JavaScript disabled
+    verify:
+      - The Menu button is visible
+      - The primary navigation, the custom-pages strip and the filter panel are all hidden by CSS alone
+  - name: gallery_filters_button_counts_applied_filters
+    goal: A closed Filters button says how many filters are narrowing the view
+    priority: medium
+    steps:
+      - Load the home page at 390x844 with no filters
+      - Load it again with a favourite filter, two person values and a page number
+    verify:
+      - With no filters applied the count badge is hidden
+      - With filters applied the badge reads 2 - a multi-valued filter counts once and a pagination parameter does not count at all
+  - name: gallery_pagination_is_one_icon_row_on_mobile
+    goal: Pagination stays on a single reachable row at the minimum width
+    priority: high
+    steps:
+      - Load the home page at 390x844 with a page size of 10
+      - Click Next
+      - Resize to 1440x900
+    verify:
+      - All four controls (First, Previous, Next, Last) share one row, are 44px wide, and show an icon instead of text
+      - Paging to the next page does not leave the menu open
+      - At desktop width the text labels return and the icons are hidden
+  - name: gallery_filter_configurator_fits_a_narrow_viewport
+    goal: The configure-filters dialog is usable at the minimum width
+    priority: high
+    steps:
+      - Load the home page at 320x568, open Filters, then open Configure filters
+      - Press Escape
+    verify:
+      - The dialog fits inside the viewport with an edge gutter
+      - The modal body is the only scroll region, contains its own overscroll, and its action row wraps
+      - Escape closes the dialog and leaves the filter panel open behind it
+  - name: gallery_filter_order_can_be_changed_by_touch
+    goal: Reordering filters works with a real touch drag, not only a mouse
+    priority: medium
+    steps:
+      - Load the home page in a coarse-pointer context at 390x844
+      - Open Filters, then Configure filters
+      - Drag the first row's handle below the second row using a real emulated touch stream
+    verify:
+      - The drag handle is at least 44x44
+      - The first two rows swap order and no row is left in the dragging state
+  - name: gallery_survives_rtl_zoom_and_short_landscape
+    goal: The shell stays contained in the awkward viewport and locale cases
+    priority: medium
+    steps:
+      - Load the home page at 390x844 and switch the document direction to rtl
+      - Load it at 844x390 and double the root font size
+      - Open the Menu at each
+    verify:
+      - Neither case introduces page-level horizontal overflow
+      - The Menu opens and its destinations are visible in both cases
+  - name: gallery_shell_holds_up_in_every_built_in_theme
+    goal: Theme skins decorate the narrow shell without changing its geometry
+    priority: medium
+    steps:
+      - At 390x844, load each built-in theme (classic, darkroom, memphis, neobrutalist, photos-app, scrapbook)
+    verify:
+      - Each theme renders with no page-level horizontal overflow
+      - The active theme is reflected on the html element
+  - name: every_page_registers_its_panels_the_same_way
+    goal: There is one narrow-screen navigation system, not two
+    priority: high
+    steps:
+      - At 390x844, visit each primary page family
+    verify:
+      - No page renders a generated .responsive-panel-toggle disclosure (the legacy initializer is retired)
+      - Every element marked data-nav-panel has an id and exactly one peer button pointing at it
+      - The number of registered panels equals the number of peer buttons on every page
+  - name: gallery_choosing_a_filter_value_keeps_the_panel_open
+    goal: Picking a value inside the mobile filter panel does not dismiss the panel
+    priority: high
+    steps:
+      - Load the home page at 390x844 and open Filters
+      - Open the Year select and choose a year
+    verify:
+      - The Filters panel is still open and the panel button still reports itself as open
+      - The chosen year is applied to the underlying select
+      - REGRESSION - the searchable select rebuilds its option list on change, which detaches the
+        clicked node while the click is still bubbling; the navbar's outside-click dismissal must
+        judge the click by its event path, not by whether the target is still in the document
+  - name: gallery_filter_controls_sit_inline_with_their_labels
+    goal: Checkbox and radio filter controls line up with their own text
+    priority: medium
+    steps:
+      - Load the home page at 390x844, open Filters, and open a multi-select filter
+    verify:
+      - A multi-select option renders as a flex row with its checkbox vertically centred against its text and an 8px gap
+      - A match-type option ("Any of these" / "All of these") renders as a flex row with its radio vertically centred against its text and a 5px gap
+      - REGRESSION - the sidebar's field-label rule must not match labels that a component renders
+        inside a filter group, or it outranks their own layout and they collapse to block flow
+

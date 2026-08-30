@@ -55,6 +55,7 @@ button[data-icon]::before {
 [data-icon="locations"]::before { -webkit-mask-image: url("/static/themes/classic/icon-locations.svg"); mask-image: url("/static/themes/classic/icon-locations.svg"); }
 [data-icon="utilities"]::before { -webkit-mask-image: url("/static/themes/classic/icon-utilities.svg"); mask-image: url("/static/themes/classic/icon-utilities.svg"); }
 [data-icon="settings"]::before { -webkit-mask-image: url("/static/themes/classic/icon-settings.svg"); mask-image: url("/static/themes/classic/icon-settings.svg"); }
+[data-icon="actions"]::before { -webkit-mask-image: url("/static/themes/classic/icon-actions.svg"); mask-image: url("/static/themes/classic/icon-actions.svg"); }
 [data-icon="filter"]::before { -webkit-mask-image: url("/static/themes/classic/icon-filter.svg"); mask-image: url("/static/themes/classic/icon-filter.svg"); }
 [data-icon="menu"]::before { -webkit-mask-image: url("/static/themes/classic/icon-menu.svg"); mask-image: url("/static/themes/classic/icon-menu.svg"); }
 [data-icon="filter-config"]::before { -webkit-mask-image: url("/static/themes/classic/icon-settings.svg"); mask-image: url("/static/themes/classic/icon-settings.svg"); }

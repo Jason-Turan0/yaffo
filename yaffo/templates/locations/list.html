@@ -11,11 +11,17 @@
 {% endblock %}
 
 {% from "components/page_header.html" import page_header %}
+{% from "components/nav_panel.html" import sidebar_toggles %}
+
+{% block nav_context_toggles %}
+    {{ sidebar_toggles('locations', filter_count=applied_filter_count(request.args)) }}
+{% endblock %}
 
 {% block content %}
 {% from "_sidebar.html" import render_sidebar %}
 <div class="main-container-layout">
-    {{ render_sidebar(url_for('locations_list'), filters, filter_layout=filter_layout) }}
+    {{ render_sidebar(url_for('locations_list'), filters, filter_layout=filter_layout,
+                  panel_prefix='locations') }}
     <div class="main-content locations-container">
         {% call page_header(_("Photo Locations")) %}
             {% trans %}Hold <kbd>Shift</kbd> and click or drag to select multiple clusters{% endtrans %}

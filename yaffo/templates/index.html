@@ -9,11 +9,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='filters/filter_config.css') }}">
 {% endblock %}
 
+{% from "components/nav_panel.html" import sidebar_toggles %}
 {% block nav_context_toggles %}
-    <button type="button" id="nav-filters-toggle" class="nav-context-toggle" data-icon="filter"
-            aria-expanded="false" aria-controls="home-filters" data-nav-panel-toggle>
-        {{ _("Filters") }}
-    </button>
+    {{ sidebar_toggles('home', filter_count=applied_filter_count(request.args)) }}
 {% endblock %}
 
 {% block content %}
@@ -34,7 +32,7 @@
             filters,
             filter_layout=filter_layout,
             render_hidden_block=view_param_input,
-            responsive_nav_panel_id="home-filters"
+            panel_prefix="home"
         ) }}
         <div class="main-content photo-gallery">
             {% set header_actions %}

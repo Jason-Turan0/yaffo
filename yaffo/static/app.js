@@ -30,7 +30,6 @@ app.COMPONENTS.initAll = () => {
     const i18n = /** @type {I18nService} */ (app.i18n);
 
     components.navPagesBar = components.initNavPagesBar?.();
-    components.responsivePanels = components.initResponsivePanels?.();
     components.fileBrowser?.init?.();
     components.multiSelect?.initAll?.();
     components.searchableSelect?.initAll?.(i18n);

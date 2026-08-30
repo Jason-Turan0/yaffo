@@ -14,6 +14,11 @@
 {% from "components/page_header.html" import page_header %}
 {% from "components/info_modal.html" import render_info_modal %}
 {% from "components/modal.html" import render_modal with context %}
+{% from "components/nav_panel.html" import sidebar_toggles %}
+
+{% block nav_context_toggles %}
+    {{ sidebar_toggles('faces', has_actions=true, filter_count=applied_filter_count(request.args)) }}
+{% endblock %}
 
 {% macro render_modal_keyboard_help() %}
         <h3 class="modal-section-title">{{ _("How This Page Works") }}</h3>
@@ -195,7 +200,8 @@
                 <div id="sidebar-face-checkboxes"></div>
             </form>
         {% endmacro %}
-        {{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions) }}
+        {{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions,
+                        panel_prefix='faces') }}
         <div class="main-content" data-unassigned-count="{{ unassigned_face_count }}">
             {% call page_header(_("Unassigned Faces")) %}
                 {% trans count=faces|length, shown=faces|length|format_integer, total=unassigned_face_count|format_integer %}Showing {{ shown }} of {{ total }} unassigned face{% pluralize %}Showing {{ shown }} of {{ total }} unassigned faces{% endtrans %}

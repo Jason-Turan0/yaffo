@@ -29,6 +29,15 @@ context:
   - tag: locations-route-tests
     path: tests/yaffo/routes/test_locations.py
     description: Server-side expectations for payload fields, sidebar rendering, nearby radius config, bulk update, and geocode rate limits
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - Bennett photos have GPS metadata and should appear on the map
@@ -199,3 +208,39 @@ scenarios:
       - The panel remains usable for quick-assign existing names, custom assignment, clear selection, and clear names
       - Additional panel renders do not issue more reverse-geocode requests after the rate limit is detected
       - Multiple recommended buttons are not rendered for the same selection
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P4 — locations). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: locations_filter_panel_uses_a_peer_navbar_panel
+    goal: The map's filter sidebar follows the shared panel contract
+    priority: high
+    steps:
+      - Load the locations page at 390x844
+      - Open Filters, enter a value, press Escape, reopen, then resize to 1440x900
+    verify:
+      - Filters is a peer of Menu with an applied-filter count badge and is closed on first paint
+      - Escape closes it
+      - The entered value survives the resize back to desktop
+  - name: locations_map_follows_narrow_container_resizes
+    goal: OpenLayers is told its new size after every layout change
+    priority: high
+    steps:
+      - Load the locations page at 768x1024
+      - Resize to 390x844 without reloading
+      - Select a cluster and open the selection panel
+    verify:
+      - The map reports a non-zero size at the first viewport
+      - After the resize the map's own size matches its container's client width
+      - The selection panel becomes active, is visible, and does not widen the page
+  - name: locations_map_state_survives_a_resize_through_the_breakpoint
+    goal: Crossing the breakpoint never silently resets the user's view of the map
+    priority: high
+    steps:
+      - Load the locations page at 1440x900 and record the map centre and zoom
+      - Resize to 390x844 and wait for the map to pick up its new size
+    verify:
+      - The map centre is unchanged
+      - The zoom level is unchanged
+      - No reload was required

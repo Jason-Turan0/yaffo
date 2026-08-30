@@ -84,7 +84,9 @@
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-sm);
     max-height: 45vh;
+    max-height: 45dvh;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .folder-picker-item {

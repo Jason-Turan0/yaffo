@@ -9,6 +9,11 @@
 {% from "filters/_similarity.html" import similarity_filter %}
 {% from "components/pagination.html" import pagination as render_pagination %}
 {% from "components/page_header.html" import page_header %}
+{% from "components/nav_panel.html" import sidebar_toggles %}
+
+{% block nav_context_toggles %}
+    {{ sidebar_toggles('person-faces', has_actions=true, filter_count=applied_filter_count(request.args)) }}
+{% endblock %}
 
 
 {% block content %}
@@ -27,7 +32,8 @@
             </form>
         {% endmacro %}
 
-        {{ render_sidebar(url_for('person_faces', person_id=person.id), filters, render_filters, render_actions) }}
+        {{ render_sidebar(url_for('person_faces', person_id=person.id), filters,
+                        render_filters, render_actions, panel_prefix='person-faces') }}
         <div class="main-content">
             {% set header_actions %}
                 <a href="{{ url_for('people_list') }}" class="action-link">← {{ _("Back to People") }}</a>

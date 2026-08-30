@@ -1,13 +1,18 @@
-{% macro render_sidebar(url, filters, render_filters_block=none, render_actions_block=none, filter_layout=none, render_hidden_block=none, responsive_nav_panel_id=none) %}
-<div class="sidebar-container"
-     {% if responsive_nav_panel_id %}id="{{ responsive_nav_panel_id }}" data-responsive-nav-panel{% endif %}>
+{# The shared filter sidebar. `panel_prefix` opts the page into the narrow-screen
+   peer-panel contract (components/nav_panel.html): Actions and Filters each
+   become their own registered panel, so each gets its own navbar button instead
+   of one button hiding two unrelated sections behind it. The page must render
+   the matching toggles with `sidebar_toggles(panel_prefix, ...)`. #}
+{% macro render_sidebar(url, filters, render_filters_block=none, render_actions_block=none, filter_layout=none, render_hidden_block=none, panel_prefix=none) %}
+<div class="sidebar-container">
      {% if render_actions_block %}
-        <div class="sidebar sidebar-actions">
+        <div class="sidebar sidebar-actions"
+             {% if panel_prefix %}id="{{ panel_prefix }}-actions" data-nav-panel{% endif %}>
             <h2>{{ _("Actions") }}</h2>
             {{ render_actions_block() }}
         </div>
     {% endif %}
-    <div class="sidebar">
+    <div class="sidebar" {% if panel_prefix %}id="{{ panel_prefix }}-filters" data-nav-panel{% endif %}>
         <div class="sidebar-header">
             <h2>{{ _("Filters") }}</h2>
             {% if filter_layout %}

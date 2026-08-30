@@ -10,6 +10,15 @@ context:
   - tag: face_assignment
     attribute: yaffo-face_assignment
     description: Context for face assignment feature
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 data:
   - The Bennett fixture leaves detected faces unassigned so the assignment workflow has a realistic pool
   - Tests discover faces from the current similarity groups because indexed face ids are not fixture-stable
@@ -105,3 +114,48 @@ scenarios:
       - When viewing the last page only the the remainder of the faces are shown
       - Page navigations buttons work correctly
       - Filters are maintained when selecting page controls
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P3 — faces). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: faces_exposes_actions_and_filters_as_separate_peers
+    goal: A page with both Actions and Filters gets one peer button each, in that order
+    priority: high
+    steps:
+      - Load the faces page at 390x844
+      - Open Actions, then Filters
+    verify:
+      - Actions and Filters are both peers of Menu, with Actions first
+      - Opening one closes the other and closes Menu
+      - Neither panel scrolls the page horizontally
+      - The Filters button carries an applied-filter count badge
+  - name: faces_filter_panel_preserves_state_across_a_resize
+    goal: The faces filter panel follows the shared panel contract end to end
+    priority: high
+    steps:
+      - Load the faces page at 390x844, open Filters, enter a value
+      - Press Escape, reopen, then resize to 1440x900
+    verify:
+      - Escape closes the panel
+      - At desktop width both toggles are hidden and the sidebar is back in the page
+      - The entered value survived the move
+  - name: faces_source_preview_opens_with_a_coarse_pointer
+    goal: The hover-only face source preview has a touch equivalent
+    priority: high
+    steps:
+      - Load the faces page in a coarse-pointer context at 390x844
+      - Tap the preview control on the first face, then tap it again
+    verify:
+      - The preview control is visible on a coarse pointer
+      - Tapping shows the source preview and tapping again hides it
+      - The face's selected state is unchanged by opening the preview
+      - The preview does not push the page wider than the viewport
+  - name: faces_group_by_radios_sit_inline_with_their_labels
+    goal: The Group by radio options line up with their own text
+    priority: medium
+    steps:
+      - Load the faces page at 390x844 and open the Filters panel
+    verify:
+      - Each Group by radio option renders as a flex row with its radio vertically centred against its text and an 8px gap
+

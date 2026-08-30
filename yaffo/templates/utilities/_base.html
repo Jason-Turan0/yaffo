@@ -29,10 +29,16 @@
     </ul>
 {% endmacro %}
 
+{% from "components/nav_panel.html" import nav_panel_toggle %}
+{% block nav_context_toggles %}
+    {{ nav_panel_toggle('utilities-nav', _("Utilities"), 'utilities') }}
+    {{ nav_panel_toggle('automations-nav', _("Automations"), 'sync') }}
+{% endblock %}
+
 {% block content %}
     <div class="utilities-container">
         <div class="utilities-sidebars">
-            <nav class="sidebar utilities-sidebar">
+            <nav class="sidebar utilities-sidebar" id="utilities-nav" data-nav-panel>
                 <h2>{{ _("Utilities") }}</h2>
                 <ul class="panel-nav">
                     <li>
@@ -49,7 +55,7 @@
                     </li>
                 </ul>
             </nav>
-            <nav class="sidebar utilities-sidebar">
+            <nav class="sidebar utilities-sidebar" id="automations-nav" data-nav-panel>
                 <h2>{{ _("Automations") }}</h2>
                 <h3 class="automations-nav-heading">{{ _("System") }}</h3>
                 {% if system_automations %}

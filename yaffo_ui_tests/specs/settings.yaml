@@ -17,6 +17,15 @@ context:
   - tag: settings-js
     path: static/settings/index.js
     description: Client wiring for adding/removing media dirs and streaming thumbnail stats
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - Removing the last media directory should be allowed but leaves indexing with nothing to scan
@@ -118,3 +127,28 @@ scenarios:
       - Build Version and Build Timestamp are displayed
       - Database Path and Task Queue Database Path are shown
       - ExifTool, FFmpeg, Face Recognition, and Image Classification model paths are listed (or "Not found")
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P7 — settings). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: settings_long_paths_wrap_instead_of_widening_the_page
+    goal: Filesystem paths and API keys stay inside the viewport
+    priority: high
+    steps:
+      - Load the settings page at 320x568
+    verify:
+      - System and current path values wrap anywhere rather than overflowing
+      - The page does not scroll horizontally
+      - Destructive actions stay visually distinct from the rest once the rows stack
+  - name: settings_folder_picker_fits_a_narrow_viewport
+    goal: The shared folder/file picker is usable on a narrow screen
+    priority: high
+    steps:
+      - Load the settings page at 390x844 and open a folder picker
+      - Press Escape
+    verify:
+      - The picker fits inside the viewport with an edge gutter
+      - The entry list scrolls inside itself using dynamic viewport units and contains its own overscroll
+      - Long paths in the picker bar wrap or ellipsise rather than widening the dialog
+      - Escape closes the picker

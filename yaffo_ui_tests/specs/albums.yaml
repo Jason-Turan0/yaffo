@@ -29,6 +29,15 @@ context:
   - tag: selection-bar
     path: static/components/selection_bar.js
     description: The shared selection component used by the album's edit mode and the add screen
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - The primary sandbox seeds one album, "Seeded Album", with 4 photos, and a 33-item Bennett library (31 photos + 2 videos)
@@ -158,3 +167,48 @@ scenarios:
     verify:
       - The Share modal opens but lists no devices - it says to pair a device on the Sharing tab first
       - No album in this environment carries a "Shared" chip
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P2 — albums). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: albums_nav_uses_a_peer_navbar_panel
+    goal: The album list collapses into a peer navbar button, like every other page panel
+    priority: high
+    steps:
+      - Load the albums overview at 390x844
+      - Open the Albums panel, then Menu, then Albums again
+      - Press Escape, then resize to 1440x900
+    verify:
+      - The Albums button is a peer of Menu and the panel is closed on first paint
+      - Only one of Menu or Albums is open at a time
+      - Escape closes the panel
+      - At desktop width the button is hidden and the sidebar is back in the page with its state intact
+  - name: albums_bulk_add_filters_use_a_peer_navbar_panel
+    goal: The bulk-add screen's filter sidebar follows the same panel contract
+    priority: high
+    steps:
+      - Open an album's Add photos screen at 390x844
+      - Open Filters, enter a value, and resize to 1440x900
+    verify:
+      - Filters is a peer of Menu with an applied-filter count badge
+      - The entered value survives the resize because the live form DOM is moved, not re-rendered
+  - name: albums_detail_and_edit_fit_a_narrow_viewport
+    goal: Album detail, edit mode and their actions stay contained at narrow widths
+    priority: high
+    steps:
+      - Open an album, then open it again with ?edit=1, at 390x844
+    verify:
+      - Neither view scrolls the page horizontally
+      - The header actions wrap rather than overflowing
+      - A sticky selection bar clears the sticky navbar instead of sliding underneath it
+  - name: albums_photos_reorder_without_dragging
+    goal: Reordering album photos never requires a drag gesture
+    priority: high
+    steps:
+      - Open an album with ?edit=1 at 390x844
+      - Reveal the first photo card's reorder controls and use its move-forward control, then move it back
+    verify:
+      - A card exposes reorder controls without needing a hover-only affordance
+      - Each move posts to the reorder endpoint and the rendered order changes to match
+      - Moving back restores the original order

@@ -63,10 +63,12 @@ type ConfirmDialogApi = (options: ConfirmDialogOptions) => Promise<boolean>;
 
 type NavPagesBarApi = {
     syncNavbarHeight(): void;
-};
-
-type ResponsivePanelsApi = {
-    sync(): void;
+    applyMenu(open: boolean): void;
+    closeContextPanels(): void;
+    /** Re-park every registered panel on the correct side of the breakpoint. */
+    syncMode(): void;
+    /** The one media query that means "the shell is narrow". */
+    NARROW_QUERY: string;
 };
 
 type ModalControl = {
@@ -264,8 +266,6 @@ type PhotoOrganizerComponents = {
     initChatDialog?: (id: string, options: ChatDialogOptions) => ChatDialogApi | null;
     initNavPagesBar?: () => NavPagesBarApi | undefined;
     navPagesBar?: NavPagesBarApi;
-    initResponsivePanels?: () => ResponsivePanelsApi;
-    responsivePanels?: ResponsivePanelsApi;
     intlDateInput?: IntlDateInputApi;
     multiSelect?: MultiSelectApi;
     searchableSelect?: SearchableSelectApi;
