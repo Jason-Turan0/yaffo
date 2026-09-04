@@ -39,12 +39,12 @@ The assistant redesigns the theme and the page updates so you can see the result
 Keep the conversation going to refine it — adjust colors, contrast, or spacing
 until it feels right.
 
-## Publish, Rename, and Delete
+## Save draft, Rename, and Delete
 
 While you are editing, your changes are a working draft layered over the last
 published version:
 
-- **Publish** applies the draft so it becomes the theme everyone sees.
+- **Save draft** applies the draft so it becomes the theme everyone sees.
 - **Discard** throws the draft away and returns to the last published version.
 
 From a theme's editor you can also:
