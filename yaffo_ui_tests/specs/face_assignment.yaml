@@ -119,6 +119,24 @@ scenarios:
   # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
   # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
   # ---------------------------------------------------------------------------
+  - name: faces_route_renders_without_horizontal_overflow_at_every_contract_width
+    goal: A clustered faces view is contained by the viewport rather than by its content
+    priority: high
+    steps:
+      - Load /faces?group_by=similarity&threshold=2 at 320, 390, 768, 1024 and 1440 px
+      - Load it again at 844x390
+    verify:
+      - No element extends past the document width at any of those widths
+      - The short-landscape case is contained too, with the cluster header, actions and pager all present
+  - name: faces_actions_panel_satisfies_the_peer_panel_contract
+    goal: The faces assignment panel obeys the shared peer-panel contract end to end
+    priority: high
+    steps:
+      - Load the faces page at 390x844 and drive the shared panel-contract helper against faces-actions
+    verify:
+      - The Actions panel is closed on first paint and its toggle reports aria-expanded=false
+      - Its toggle is a peer of Menu and is mutually exclusive with it
+      - The live panel DOM is restored to the page at 1440x900, keeping anything it contained
   - name: faces_exposes_actions_and_filters_as_separate_peers
     goal: A page with both Actions and Filters gets one peer button each, in that order
     priority: high
@@ -130,6 +148,15 @@ scenarios:
       - Opening one closes the other and closes Menu
       - Neither panel scrolls the page horizontally
       - The Filters button carries an applied-filter count badge
+  - name: faces_top_nav_controls_fit_an_iphone_se_width
+    goal: Actions, Filters and Menu stay on the top navbar row at 375px without sacrificing their touch targets
+    priority: high
+    steps:
+      - Load the faces page at 375x667
+    verify:
+      - Actions, Filters and Menu are icon-only and share one row
+      - Each button retains its accessible name and a 44px touch target
+      - Every button stays inside the navbar and the page does not scroll horizontally
   - name: faces_filter_panel_preserves_state_across_a_resize
     goal: The faces filter panel follows the shared panel contract end to end
     priority: high
@@ -140,17 +167,21 @@ scenarios:
       - Escape closes the panel
       - At desktop width both toggles are hidden and the sidebar is back in the page
       - The entered value survived the move
-  - name: faces_source_preview_opens_with_a_coarse_pointer
-    goal: The hover-only face source preview has a touch equivalent
+  - name: faces_source_preview_uses_phone_modal_and_larger_popovers
+    goal: The face source preview is a centered modal only on phones and a popover on larger screens
     priority: high
     steps:
-      - Load the faces page in a coarse-pointer context at 390x844
-      - Tap the preview control on the first face, then tap it again
+      - At 390x844, tap a preview control, close the modal, scroll, and open another preview
+      - At 768x1024 with touch, tap a preview control
+      - At 1440x900 with a fine pointer, hover a face
     verify:
-      - The preview control is visible on a coarse pointer
-      - Tapping shows the source preview and tapping again hides it
+      - On the phone, tapping opens a viewport-contained dialog with a close control
+      - The phone modal is fixed and centered in the current viewport at both scroll positions
+      - On the tablet, tapping opens an anchored popover and leaves the modal closed
+      - On the desktop, hovering opens an anchored popover and leaves the modal closed
       - The face's selected state is unchanged by opening the preview
-      - The preview does not push the page wider than the viewport
+      - Closing the phone modal restores focus to the preview control
+      - Neither presentation pushes the page wider than the viewport
   - name: faces_group_by_radios_sit_inline_with_their_labels
     goal: The Group by radio options line up with their own text
     priority: medium
@@ -158,4 +189,41 @@ scenarios:
       - Load the faces page at 390x844 and open the Filters panel
     verify:
       - Each Group by radio option renders as a flex row with its radio vertically centred against its text and an 8px gap
-
+  - name: faces_cluster_pager_keeps_all_five_controls_on_one_row_at_320px
+    goal: The per-cluster pager collapses to icon controls instead of widening the page
+    priority: high
+    steps:
+      - Load the faces page at 320x568 with a clustered view
+    verify:
+      - All five cluster pager controls share a single row
+      - The text labels are dropped in favour of the shared pagination icons
+      - Each control is still at least a 44px target
+      - The page does not scroll horizontally
+  - name: faces_shortcut_people_can_be_reordered_with_explicit_move_controls
+    goal: Reordering the keyboard-shortcut people never depends on a drag
+    priority: high
+    steps:
+      - Load the faces page at 390x844, open Actions, and open the keyboard-shortcuts dialog
+      - Press the Move earlier control on the second row
+    verify:
+      - The dialog fits inside the viewport
+      - The second row moves ahead of the first
+      - Move earlier is disabled on the first row and Move later on the last, rather than doing nothing
+  - name: faces_shortcut_people_can_be_reordered_with_a_real_touch_drag
+    goal: The shortcut handle reorders under a genuine touch stream, not only a mouse
+    priority: high
+    steps:
+      - Open the keyboard-shortcuts dialog in a coarse-pointer context at 390x844
+      - Drag the first row's handle past the second row using emulated touch events
+    verify:
+      - The dragged row lands after the row it was dragged past
+      - The gesture works without any HTML5 drag-and-drop event, which touch never produces
+  - name: faces_help_dialog_contains_its_own_scrolling_at_320px
+    goal: The help dialog is a contained surface, not a source of page overflow
+    priority: medium
+    steps:
+      - Load the faces page at 320x568 and press ? to open the help dialog
+    verify:
+      - The dialog fits inside the viewport
+      - The dialog body never scrolls sideways and does not hand its overflow to the document
+      - The page does not scroll horizontally

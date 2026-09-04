@@ -37,6 +37,9 @@ context:
   - tag: responsive-sidebar-template
     path: templates/_sidebar.html
     description: Filter sidebar; Actions and Filters register as separate panels
+  - tag: gallery-styles
+    path: static/index.css
+    description: Grid, timeline and scrubber layout, plus the touch/narrow jump control that replaces the drag rail
 
 scenarios:
   - name: gallery_loads_with_valid_images
@@ -304,4 +307,62 @@ scenarios:
       - A match-type option ("Any of these" / "All of these") renders as a flex row with its radio vertically centred against its text and a 5px gap
       - REGRESSION - the sidebar's field-label rule must not match labels that a component renders
         inside a filter group, or it outranks their own layout and they collapse to block flow
-
+  - name: gallery_timeline_offers_a_touch_safe_jump_control
+    goal: A thumb can reach a date in the timeline without the drag rail
+    priority: high
+    steps:
+      - Load the timeline in a coarse-pointer context at 390x844
+      - Scroll the timeline down
+    verify:
+      - REGRESSION - the scrubber rail was simply hidden below 900px, leaving a touch screen
+        with no way to jump to a date at all; a drag on a 44px strip pinned to the window edge
+        must never be the only path
+      - The drag rail is hidden and a row of per-year jump links is shown in its place
+      - Each jump link is at least 44x44
+      - The jump row is its own horizontal scroller, so a long-running library does not widen the page
+      - The row sticks below the navbar and is still on screen after the timeline is scrolled
+  - name: gallery_timeline_jump_control_lands_below_the_sticky_navbar
+    goal: Tapping a year lands on that month, clear of the sticky chrome
+    priority: high
+    steps:
+      - Load the timeline with a page size of 10 in a coarse-pointer context at 390x844
+      - Tap the oldest year in the jump row
+    verify:
+      - The URL carries a #month-YYYY-MM anchor and that month's divider is rendered
+      - REGRESSION - the server-rendered year links omitted page-size, so with a non-default page
+        size they navigated to a page the server paginated differently and the anchor pointed at
+        nothing (the JS drag path never hit this - it builds its URL from the current location)
+      - The divider lands below the sticky navbar AND the jump row stuck under it
+  - name: gallery_timeline_fits_every_contract_viewport
+    goal: Timeline day sections stay contained at every supported width
+    priority: high
+    steps:
+      - Load the timeline at 320x568, 390x844, 768x1024, 1024x768 and 1440x900
+      - At 390x844, scroll the timeline
+    verify:
+      - No page-level horizontal overflow at any size, and day sections render at each
+      - The sticky day header clears the navbar and the jump row stuck below it, instead of sliding under them
+  - name: gallery_timeline_streaming_survives_rotation
+    goal: Photos streamed into the timeline are not lost when the device rotates
+    priority: high
+    steps:
+      - Load the timeline at 390x844 with a page size of 10
+      - Reveal the sentinel so the next batch streams in
+      - Rotate to 844x390 without reloading
+    verify:
+      - The photo count after rotation equals the count that had streamed in
+      - No page-level horizontal overflow in the rotated layout
+      - No section is left in the continuation state
+  - name: gallery_card_details_have_a_coarse_pointer_path
+    goal: Card affordances that depend on hover still work on a touch screen
+    priority: high
+    steps:
+      - Load the grid in a coarse-pointer context at 390x844
+      - Tap the favourite heart on the first card twice
+    verify:
+      - The hover detail overlay is not rendered on a coarse pointer - it either never opens or
+        opens on tap and sticks over the thumbnail it describes; the card's own tap target opens
+        the detail page, which shows the same information
+      - REGRESSION - the favourite heart was faded in by card hover, so on a touch screen the only
+        way to favourite from the grid was an invisible 40px target
+      - The heart is visible, is at least 44x44, and toggles on tap and back again

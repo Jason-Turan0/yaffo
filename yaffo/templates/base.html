@@ -120,8 +120,9 @@
         </a>
         {% block nav_context_toggles %}{% endblock %}
         <button type="button" id="nav-menu-toggle" class="nav-menu-toggle" data-icon="menu"
+                aria-label="{{ _('Menu') }}"
                 aria-expanded="false" aria-controls="navbar-primary">
-            <span>{{ _("Menu") }}</span>
+            <span class="nav-menu-toggle-label">{{ _("Menu") }}</span>
         </button>
         <div class="navbar-primary" id="navbar-primary">
         <ul class="navbar-nav" aria-label="{{ _('Menu') }}">

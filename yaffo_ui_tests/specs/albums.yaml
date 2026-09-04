@@ -172,6 +172,15 @@ scenarios:
   # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
   # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
   # ---------------------------------------------------------------------------
+  - name: albums_routes_fit_every_contract_viewport
+    goal: Every albums route renders without page-level horizontal overflow at each contract width
+    priority: high
+    steps:
+      - Load the overview, an album, that album in edit mode, and its Add photos screen
+      - Repeat at 320, 390, 768, 1024 and 1440 px, and again at 844x390 landscape
+    verify:
+      - No route makes the document wider than the viewport at any contract width
+      - Landscape phone height does not reintroduce overflow on the album or its edit mode
   - name: albums_nav_uses_a_peer_navbar_panel
     goal: The album list collapses into a peer navbar button, like every other page panel
     priority: high
@@ -193,6 +202,7 @@ scenarios:
     verify:
       - Filters is a peer of Menu with an applied-filter count badge
       - The entered value survives the resize because the live form DOM is moved, not re-rendered
+      - At 320 px the screen's selection bar and pagination row still fit inside the viewport
   - name: albums_detail_and_edit_fit_a_narrow_viewport
     goal: Album detail, edit mode and their actions stay contained at narrow widths
     priority: high
@@ -212,3 +222,54 @@ scenarios:
       - A card exposes reorder controls without needing a hover-only affordance
       - Each move posts to the reorder endpoint and the rendered order changes to match
       - Moving back restores the original order
+      - Each move control is at least a 44x44 px touch target
+  - name: albums_touch_drag_alone_never_reorders_the_album
+    goal: A finger drag cannot reorder an album, so the move controls are the touch reorder path
+    priority: high
+    steps:
+      - Open an album with ?edit=1 in a coarse-pointer context at 390x844
+      - Drag the last photo onto the first with a real emulated touch stream
+      - Then move the same photo with its move-earlier control
+    verify:
+      - The touch drag leaves the order untouched, because reordering is wired to HTML5 drag-and-drop, which touch never emits
+      - The move control does reorder it, so the touch-safe alternative is the one that works
+    cleanup:
+      - Restore the original order
+  - name: albums_long_album_name_does_not_widen_the_page
+    goal: A long unbreakable album name wraps instead of setting the width of the document
+    priority: high
+    steps:
+      - Create an album whose name is one long unbroken word
+      - Load the overview, the album, its edit mode and its Add photos screen at 320 and 390 px
+    verify:
+      - No screen scrolls sideways - the title wraps inside the page header
+      - The sidebar entry for the album truncates rather than widening the panel
+    cleanup:
+      - Delete the long-named album
+  - name: albums_header_title_is_not_crushed_by_its_own_actions
+    goal: At tablet width the album title keeps a readable column instead of collapsing behind five action buttons
+    priority: medium
+    steps:
+      - Open an album at 768x1024
+    verify:
+      - The title's own text fits inside the title column rather than spilling out of it
+      - The header actions wrap onto their own row instead of taking the whole width
+  - name: albums_edit_selection_and_add_filters_survive_a_resize
+    goal: A selection and a chosen filter survive a resize through the breakpoint without a reload
+    priority: high
+    steps:
+      - In edit mode at 390x844, tick two photos, then resize to 1440x900
+      - On the Add photos screen at 390x844, pick a year inside the Filters panel, then resize to 1440x900
+    verify:
+      - Both photos are still ticked and the selection is still on the URL, with no navigation
+      - The chosen year is still selected after the panel is restored to the page
+  - name: albums_dialogs_fit_the_viewport_and_scroll_their_own_body
+    goal: The album dialogs stay inside a 320 px viewport and contain their own overflow
+    priority: high
+    steps:
+      - At 320x568 open Edit details, Share, and the Delete confirmation
+      - Type a very long description into the Edit details dialog
+    verify:
+      - Every dialog fits inside the viewport
+      - The dialog body is the scroll region - the document never scrolls sideways behind it
+      - The New album dialog is reachable from inside the Albums panel at narrow widths

@@ -10,7 +10,8 @@
                     aria-pressed="{{ 'true' if media_item.favorite else 'false' }}"
                     title="{{ _('Toggle favorite') }}" aria-label="{{ _('Toggle favorite') }}"></button>
             {% if media_item.media_type == 'video' %}
-                <img src="{{ media_item.poster_path and url_for('media_poster', media_item_id=media_item.id) or url_for('static', filename='video_placeholder.svg') }}"
+                <img loading="lazy" decoding="async"
+                     src="{{ media_item.poster_path and url_for('media_poster', media_item_id=media_item.id) or url_for('static', filename='video_placeholder.svg') }}"
                      data-fallback="{{ url_for('static', filename='video_placeholder.svg') }}"
                      alt="{{ _('Video from %(date)s', date=media_item.date_taken | format_date('date')) }}">
                 {# Play badge only on browser-playable videos (it triggers inline
@@ -25,7 +26,8 @@
                     <span class="video-duration">{{ media_item.duration_seconds | format_duration }}</span>
                 {% endif %}
             {% else %}
-                <img src="{{ url_for('media', media_item_id=media_item.id) }}"
+                <img loading="lazy" decoding="async"
+                     src="{{ url_for('media', media_item_id=media_item.id) }}"
                      data-fallback="{{ url_for('placeholder') }}"
                      alt="{{ _('Photo from %(date)s', date=media_item.date_taken | format_date('date')) }}">
             {% endif %}

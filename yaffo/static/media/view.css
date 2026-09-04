@@ -1,6 +1,10 @@
 .photo-viewer {
     display: flex;
+    /* Dynamic viewport units so mobile browser chrome collapsing/expanding does
+       not leave the pane taller than the space actually on screen. The vh line
+       stays as the fallback for engines without dvh. */
     height: calc(100vh - 60px);
+    height: calc(100dvh - 60px);
     width: 100%;
     background: var(--color-bg);
 }
@@ -21,6 +25,7 @@
     top: calc(var(--navbar-height, 64px) + 16px);
     box-shadow: var(--shadow-sm);
     max-height: calc(100vh - var(--navbar-height, 64px) - 36px);
+    max-height: calc(100dvh - var(--navbar-height, 64px) - 36px);
 }
 
 .sidebar-header {
@@ -204,6 +209,7 @@
        scrolls. width:auto keeps the aspect ratio. */
     max-width: 100%;
     max-height: calc(100vh - 150px);
+    max-height: calc(100dvh - 150px);
     width: auto;
     height: auto;
     object-fit: contain;
@@ -504,23 +510,119 @@
     justify-content: flex-end;
 }
 
-@media (max-width: 768px) {
+/* Narrow viewers: one column, media first, and the DOCUMENT does the scrolling.
+   The desktop presentation is a sticky card whose .sidebar-content is its own
+   scroller beside a fixed-height media pane; keeping that under 900px produced
+   two nested scroll regions in a 390px-wide column, where the metadata could
+   only be reached by scrolling inside a 40vh box that looked like the page.
+   So the framing is dropped rather than shrunk.
+   900px is the shared boundary: below it the 350px sidebar leaves the media
+   less room than the metadata beside it. */
+@media (max-width: 900px) {
     .photo-viewer {
         flex-direction: column;
+        height: auto;
+        min-height: calc(100vh - var(--navbar-height, 64px));
+        min-height: calc(100dvh - var(--navbar-height, 64px));
+    }
+
+    /* The media leads: the photo is the reason the page was opened, and the
+       details read as a caption below it. */
+    .photo-container {
+        order: 1;
+        height: auto;
+        overflow: visible;
+        /* Keep the media a substantial share of the stack even before the image
+           loads, so the details do not jump up into its place. */
+        min-height: 52vh;
+        min-height: 52dvh;
+    }
+
+    .photo-header {
+        flex-wrap: wrap;
+        gap: 8px;
     }
 
     .photo-sidebar {
+        order: 2;
         width: 100%;
-        height: 40vh;
-        max-height: 400px;
+        height: auto;
+        max-height: none;
+        position: static;
+        overflow: visible;
+        padding: 0;
+        box-shadow: none;
+        border-inline-end: 0;
     }
 
-    .photo-container {
-        height: 60vh;
+    .sidebar-header {
+        padding-inline: 0;
+        background: none;
     }
 
+    /* flex: 1 + overflow-y: auto is what made this a nested scroller. */
+    .sidebar-content {
+        flex: none;
+        overflow: visible;
+        padding-inline: 0;
+    }
+
+    .photo-wrapper {
+        overflow: visible;
+        padding-inline: 0;
+    }
+
+    /* Leave the top of the details on screen under the photo, so it is obvious
+       there is more to scroll to rather than the photo filling the viewport. */
     .photo-main {
-        max-height: calc(60vh - 80px);
+        max-height: 62vh;
+        max-height: 62dvh;
+    }
+
+    .detail-actions {
+        flex-wrap: wrap;
+    }
+}
+
+/* Landscape phones (844x390 and friends): same stack, but the media is
+   width-bound there, so a taller cap costs nothing and the details tighten up
+   to keep the scroll short. */
+@media (max-width: 900px) and (max-height: 520px) {
+    .photo-main {
+        max-height: 78vh;
+        max-height: 78dvh;
+    }
+
+    .detail-section {
+        margin-bottom: 18px;
+    }
+}
+
+/* The shared heart is a 40px chip sized for a mouse. */
+@media (hover: none), (pointer: coarse) {
+    .photo-image-container .favorite-toggle {
+        width: 44px;
+        height: 44px;
+    }
+
+    /* A person chip is the only way from this photo into that person, and the
+       shared coarse-pointer rules do not reach a bare <a>. */
+    .person-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+    }
+}
+
+/* Two text inputs and an Add button cannot share a row inside a 320px sheet. */
+@media (max-width: 640px) {
+    .tag-add-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tag-add-row .btn {
+        width: 100%;
     }
 }
 /* Classification labels (read-only chips) */

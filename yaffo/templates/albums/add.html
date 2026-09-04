@@ -24,7 +24,9 @@
 <div class="main-container-layout">
     {{ render_sidebar(url_for('albums_add', album_id=album.id), filters,
                   filter_layout=filter_layout, panel_prefix='album-add') }}
-    <div class="main-content photo-gallery">
+    {# albums-add-content is this screen's hook for albums.css: the layout is
+       home's, but the long-album-name rules are the albums family's. #}
+    <div class="main-content photo-gallery albums-add-content">
         {% set header_actions %}
             <a class="btn-primary" href="{{ url_for('albums_show', album_id=album.id) }}">{{ _("Done") }}</a>
         {% endset %}

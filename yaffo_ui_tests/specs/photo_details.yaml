@@ -22,6 +22,12 @@ context:
   - tag: responsive-shell
     path: static/responsive.css
     description: Shared adaptive layout; owns the narrow-screen rules every page inherits
+  - tag: photo-view-styles
+    path: static/media/view.css
+    description: Viewer layout; owns the narrow stack, the dynamic viewport units and the coarse-pointer target sizes
+  - tag: photo-view-js
+    path: static/media/view.js
+    description: Face highlighting on the overlay canvas (hover and tap), redrawn when the photo is resized
 data:
   - Test image "2015-09-10_153200_daughter-one-year-portrait.png" has location data and should be used for filename, location, and tag tests
   - Tests resolve fixture images by filename rather than relying on database IDs
@@ -103,6 +109,9 @@ scenarios:
       - The page does not scroll horizontally
       - The media container renders above the details sidebar
       - Metadata, faces, tags and the favourite control all remain reachable
+      - REGRESSION - the sidebar kept its desktop framing at narrow widths (a 40vh sticky card whose
+        content pane was its own scroller), so the metadata could only be reached by scrolling inside
+        a box that looked like the page; the document is now the only scroller
   - name: photo_details_survives_rotation
     goal: Rotating to a short landscape viewport keeps the photo usable
     priority: medium
@@ -113,3 +122,77 @@ scenarios:
       - No page-level horizontal overflow appears
       - The media container is still visible and no control is clipped
       - Viewport-height calculations use dynamic units so browser chrome cannot hide the actions
+  - name: photo_details_fits_every_contract_viewport
+    goal: The detail route never scrolls the page sideways
+    priority: high
+    steps:
+      - Open a photo's detail page at 320, 390, 768, 1024 and 1440 px wide
+    verify:
+      - The document scroll width equals its client width at every size
+      - The media is visible at every size
+  - name: photo_details_face_highlight_works_with_a_coarse_pointer
+    goal: A tap maps a face thumbnail onto the photo, as hovering does with a mouse
+    priority: high
+    steps:
+      - Open a photo with detected faces in a coarse-pointer context at 390x844
+      - Tap the first face thumbnail
+    verify:
+      - REGRESSION - the face box was drawn only from the thumbnail's mouseenter, which a touch
+        screen never fires, so the whole face-to-photo mapping was unreachable with a coarse pointer
+      - The thumbnail is marked highlighted and the overlay canvas is painted
+  - name: photo_details_face_highlight_survives_rotation
+    goal: Rotating the device redraws the face box instead of silently dropping it
+    priority: medium
+    steps:
+      - Tap a face thumbnail at 390x844 in a coarse-pointer context
+      - Rotate to 844x390 without reloading
+    verify:
+      - REGRESSION - resizing the canvas to the photo's new rendered size wipes it, so a rotation
+        left the thumbnail marked highlighted with no box on the photo
+      - The thumbnail is still highlighted and the overlay is painted again at the new scale
+  - name: photo_details_tag_editor_fits_a_narrow_viewport
+    goal: The tag dialog is usable at the minimum width
+    priority: high
+    steps:
+      - Open a photo's detail page at 320x568 and click Edit Tags
+    verify:
+      - The dialog fits inside the viewport and the page does not overflow
+      - REGRESSION - the two tag inputs and the Add button shared one flex row, so at 320px each
+        input collapsed to a few pixels; the row stacks instead
+      - The modal body is the only scroll region
+  - name: photo_details_long_path_does_not_widen_the_page
+    goal: A deep unbroken folder path wraps rather than widening the page
+    priority: medium
+    steps:
+      - Open a photo's detail page at 320x568
+      - Replace the folder value with a 300-character path that has nothing to wrap at
+    verify:
+      - The document scroll width still equals its client width
+  - name: photo_details_video_fits_a_narrow_viewport
+    goal: A video detail page contains its player at a narrow width
+    priority: medium
+    steps:
+      - Open a seeded video's detail page at 390x844
+    verify:
+      - The player (or the missing-media notice) is visible and fits inside the viewport
+      - No page-level horizontal overflow and no nested scroll region
+  - name: photo_details_missing_video_state_fits_a_narrow_viewport
+    goal: A video that disappeared from disk still has a usable detail page
+    priority: medium
+    steps:
+      - Open a seeded video's detail page at 390x844
+      - Temporarily move its source file out of the way and reload the same page
+    verify:
+      - The missing-media notice and filename are visible
+      - The notice fits inside the viewport
+      - No page-level horizontal overflow and no nested scroll region
+  - name: photo_details_metadata_actions_are_touch_sized
+    goal: Every metadata action on the viewer is operable with a finger
+    priority: medium
+    steps:
+      - Open a photo with faces in a coarse-pointer context at 390x844
+    verify:
+      - REGRESSION - a person chip is the only route from this photo to that person, and the shared
+        coarse-pointer sizing does not reach a bare anchor, so it stayed a 28px pill on a touch screen
+      - Person links, Open File, Open Folder, Reindex, Edit Tags and View on Map are all at least 44px tall
+      - The page does not scroll horizontally

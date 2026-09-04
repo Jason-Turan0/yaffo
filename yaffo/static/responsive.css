@@ -10,10 +10,6 @@ button.nav-context-toggle[data-icon] {
     display: none;
 }
 
-.face-preview-button {
-    display: none;
-}
-
 .widget-order-controls {
     display: inline-flex;
     opacity: 0;
@@ -383,45 +379,6 @@ button.nav-context-toggle[data-icon] {
     }
 }
 
-@media (max-width: 768px) {
-    .photo-viewer {
-        min-height: calc(100dvh - var(--navbar-height, 64px));
-        height: auto;
-    }
-
-    .photo-container {
-        order: 1;
-        height: auto;
-        min-height: 52dvh;
-    }
-
-    .photo-sidebar {
-        order: 2;
-        width: 100%;
-        height: auto;
-        max-height: none;
-        position: static;
-    }
-
-    .photo-header {
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .photo-wrapper {
-        min-height: 45dvh;
-        padding-inline: 0;
-    }
-
-    .photo-main {
-        max-height: 65dvh;
-    }
-
-    .cluster-assign {
-        grid-template-columns: 1fr;
-    }
-}
-
 @media (max-width: 640px) {
     .main-container {
         padding: 10px;
@@ -492,6 +449,16 @@ button.nav-context-toggle[data-icon] {
     .page-header-actions .btn-secondary,
     .page-header-actions .btn-danger {
         width: 100%;
+    }
+
+    /* Stacking them full-width is not enough: they still render 37px tall,
+       under the contract's 44px minimum touch target. */
+    .page-header-actions .btn,
+    .page-header-actions .btn-primary,
+    .page-header-actions .btn-secondary,
+    .page-header-actions .btn-danger,
+    .selection-bar [data-selection-action] {
+        min-height: 44px;
     }
 
     .page-header-actions,
@@ -642,6 +609,41 @@ button.nav-context-toggle[data-icon] {
 
 }
 
+/* Three peer controls (Actions, Filters, Menu) cannot reliably keep their
+   localized labels on the first row of an iPhone SE-sized navbar. Preserve the
+   44px touch targets and accessible names, but use the existing icons as the
+   visible labels at the smallest phone widths. */
+@media (max-width: 400px) {
+    .navbar-container {
+        column-gap: 6px;
+    }
+
+    button.nav-menu-toggle[data-icon],
+    button.nav-context-toggle[data-icon] {
+        position: relative;
+        flex: 0 0 44px;
+        width: 44px;
+        min-width: 44px;
+        gap: 0;
+        padding: 8px;
+    }
+
+    .nav-menu-toggle-label,
+    .nav-context-toggle-label {
+        display: none;
+    }
+
+    .nav-context-count:not([hidden]) {
+        position: absolute;
+        inset-block-start: 1px;
+        inset-inline-end: 1px;
+        min-width: 16px;
+        padding-inline: 3px;
+        font-size: var(--font-size-xs);
+        line-height: 14px;
+    }
+}
+
 @media (hover: none), (pointer: coarse) {
     .btn,
     .btn-primary,
@@ -661,45 +663,6 @@ button.nav-context-toggle[data-icon] {
     .album-tile:hover,
     .face-card:hover {
         transform: none;
-    }
-
-    .face-preview-button {
-        position: absolute;
-        inset-inline-end: 6px;
-        inset-block-end: 6px;
-        z-index: 3;
-        display: inline-flex;
-        width: 44px;
-        height: 44px;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-        border: var(--border-width) solid var(--color-border-strong);
-        border-radius: var(--radius-pill);
-        background: var(--color-surface);
-        color: var(--color-text);
-        box-shadow: var(--shadow-sm);
-    }
-
-    .face-tooltip {
-        position: fixed;
-        inset: auto 12px 12px;
-        width: auto;
-        max-height: calc(100dvh - 24px);
-        overflow: auto;
-        transform: none !important;
-        white-space: normal;
-    }
-
-    .face-tooltip.visible {
-        pointer-events: auto;
-    }
-
-    .face-tooltip .face-source-preview {
-        width: min(320px, 100%);
-        height: auto;
-        aspect-ratio: 1 / 1;
-        margin-inline: auto;
     }
 
     .album-reorder-controls {

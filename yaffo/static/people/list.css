@@ -1,0 +1,59 @@
+/* People list. The six-column table is the desktop presentation; below the shared
+   640px boundary `responsive.css` re-reads the same markup as labelled cards using
+   each cell's `data-label` — no column is dropped, because hiding data to make a
+   row fit is not an option (docs/development/responsive.md, "Harden shared
+   components"). What is owned here is the containment that keeps either
+   presentation from widening the page. */
+
+.people-table {
+    /* Between the card breakpoint and desktop the six columns can still out-measure
+       a tablet, so the table scrolls inside its own box rather than the document.
+       Above 640px this is the visible affordance; at card widths there is nothing
+       to scroll, so it costs nothing. */
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* A person's name is user data and can be a single unbroken run of characters.
+   `anywhere` lets it break mid-word instead of setting the column's minimum width
+   — which is what makes a long name widen the whole page. */
+.people-table .person-name {
+    display: inline-block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.people-table td {
+    min-width: 0;
+}
+
+.people-table .stat-number {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+/* Row actions wrap before they push the row wider, and keep a real gap so the two
+   links are separable targets under a thumb. */
+.people-table .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+}
+
+@media (max-width: 640px) {
+    /* Card mode: the actions cell is the one row that reads better as full-width
+       controls than as a label/value pair, so let it use the whole card width. */
+    .people-table td[data-label] > .actions {
+        gap: 12px;
+    }
+}
+
+@media (hover: none), (pointer: coarse) {
+    .people-table .actions .action-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+    }
+}

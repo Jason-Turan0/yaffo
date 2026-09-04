@@ -24,3 +24,42 @@
 - Tag rows are inputs, so `hasText` can't find them → use `.last()` after count check.
 - UI tag deletion flakiness from the old per-tag API era → moot; the wholesale PUT replaced that API.
 - 2026-07: all specs migrated to the /media/view routes and the new tags API.
+
+## Responsive coverage (2026-09-04) — 15/15 passing (5 pre-existing + 10 new)
+
+- New file `photo-details-responsive.spec.ts`; shared assertions come from
+  `generated_tests/_support/responsive.ts`. Run the family with
+  `npm run test:spec -- generated_tests/photo_details --port <yours>` (a
+  directory works — the runner just hands the path to Playwright).
+- **Layout below 900px**: `.photo-viewer` stacks, `.photo-container` is ordered
+  *above* `.photo-sidebar` (the sidebar is first in source order), the sidebar
+  drops `position: sticky`, its max-height and its `.sidebar-content` scroller,
+  and the document becomes the only scroller. Assert that with a computed
+  `overflow-y` + `scrollHeight > clientHeight` sweep over
+  `.photo-viewer/.photo-container/.photo-wrapper/.photo-sidebar/.sidebar-content`.
+- `responsive.css` (shared) also carries a `max-width: 768px` block for
+  `.photo-*`, and it loads AFTER `media/view.css`, so at ≤768 its values win on
+  ties (`.photo-main` 65dvh there, 62dvh from view.css between 768 and 900).
+- Viewport-bound heights are `vh` then `dvh` (the fallback pair). The rotation
+  test guards that by counting `dvh` rules in the `media/view.css` sheet through
+  `document.styleSheets` — same-origin, so `cssRules` is readable.
+- **Face highlighting**: `mouseenter` still draws the box, and a `click` now does
+  too (`initializeFaceTapHighlighting` in `view.js`), which is the coarse-pointer
+  path; the same click also opens the reassign overlay from `face-reassign.js`.
+  `updateCanvasSize` redraws the remembered face after a resize, because sizing a
+  canvas wipes it.
+- GOTCHA: a mouse-driven highlight is cleared by the `mouseleave` that the
+  *reflow itself* fires when the thumbnail moves out from under the cursor — so
+  any resize/rotation case must run in a touch context (`withTouchContext`) and
+  use `tap()`, not `hover()`.
+- `.tag-add-row` stacks at ≤640px; `#tagsModal .modal-body` is the only scroll
+  region in the dialog.
+- Videos for the narrow-player case are found with `/?media-type=video`; the
+  detail markup is `video.photo-main`, or `img.photo-main` + `.video-unplayable`
+  for a format the browser can't play, or `.media-missing` when the file is gone.
+- Touch target sizing: `responsive.css`'s coarse-pointer rule covers `.btn`,
+  `.action-button`, `button`, `input`, `select` and friends — but NOT a bare
+  `<a>`, which is why `.person-link` needed its own 44px minimum in `view.css`.
+- The missing-video state is exercised by temporarily moving one seeded video's
+  source inside the disposable environment, reloading its detail route, and
+  restoring the source in a `finally` block.

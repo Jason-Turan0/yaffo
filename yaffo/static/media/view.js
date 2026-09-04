@@ -23,6 +23,8 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
     let ctx = null;
     /** @type {HTMLImageElement | null} */
     let mainPhoto = null;
+    /** The face currently drawn on the overlay, so a resize can redraw it. @type {number | null} */
+    let highlightedFaceId = null;
 
     const initializeFaceHighlighting = () => {
         const canvasElement = document.getElementById('faceCanvas');
@@ -40,11 +42,35 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
         updateCanvasSize();
     };
 
+    /**
+     * The face box is drawn from the sidebar thumbnail's mouseenter, which a
+     * coarse pointer never fires — so on touch the overlay was unreachable.
+     * A tap highlights as well; on a mouse it is a no-op because hover already
+     * drew the same box. Wired outside the canvas guard so it stays harmless on
+     * pages with no overlay (videos), where highlightFace returns early.
+     * @returns {void}
+     */
+    const initializeFaceTapHighlighting = () => {
+        document.querySelectorAll('.face-thumbnail').forEach((thumbnail) => {
+            thumbnail.addEventListener('click', () => {
+                if (!(thumbnail instanceof HTMLElement)) return;
+                const faceId = parseInt(thumbnail.dataset.faceId || '', 10);
+                if (Number.isNaN(faceId)) return;
+                clearHighlights();
+                highlightFace(faceId);
+            });
+        });
+    };
+
     const updateCanvasSize = () => {
         if (!canvas || !mainPhoto) return;
 
         canvas.width = mainPhoto.offsetWidth;
         canvas.height = mainPhoto.offsetHeight;
+        // Sizing a canvas wipes it, and the rendered photo changes size on every
+        // rotation and breakpoint crossing. Redraw whatever is still marked
+        // highlighted in the sidebar so the box does not silently disappear.
+        if (highlightedFaceId !== null) highlightFace(highlightedFaceId);
     };
 
     const highlightFace = (/** @type {number} */ faceId) => {
@@ -89,6 +115,8 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
             ctx.fillText(names, x + padding, y - 10);
         }
 
+        highlightedFaceId = faceId;
+
         const thumbnail = document.querySelector(`.face-thumbnail[data-face-id="${faceId}"]`);
         if (thumbnail) {
             thumbnail.classList.add('highlighted');
@@ -96,6 +124,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
     };
 
     const clearHighlights = () => {
+        highlightedFaceId = null;
         if (ctx && canvas) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
@@ -190,6 +219,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoView = (
     });
 
     initializeFaceHighlighting();
+    initializeFaceTapHighlighting();
 
     return {
         highlightFace,

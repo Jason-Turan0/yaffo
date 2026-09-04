@@ -70,14 +70,14 @@
             </tbody>
         </table>
     </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>{{ _("No people yet") }}</h2>
+        <p>{{ _("Add your first person to start organizing photos.") }}</p>
+        <button type="button" class="btn-primary btn-add js-add-person" data-icon="add">{{ _("Add Person") }}</button>
+    </div>
+    {% endif %}
 </div>
-{% else %}
-<div class="empty-state">
-    <h2>{{ _("No people yet") }}</h2>
-    <p>{{ _("Add your first person to start organizing photos.") }}</p>
-    <button type="button" class="btn-primary btn-add js-add-person" data-icon="add">{{ _("Add Person") }}</button>
-</div>
-{% endif %}
 
 {% from "components/modal.html" import render_modal with context %}
 {% macro render_modal_person_form(id_prefix) %}

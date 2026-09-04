@@ -21,6 +21,7 @@
 {% macro nav_panel_toggle(panel_id, label, icon='filter', count=0) %}
 <button type="button" class="nav-context-toggle" id="{{ panel_id }}-toggle"
         data-icon="{{ icon }}" data-nav-panel-toggle
+        aria-label="{{ label }}"
         aria-controls="{{ panel_id }}" aria-expanded="false">
     <span class="nav-context-toggle-label">{{ label }}</span>
     {# The applied-filter count is server-rendered so it never pops in after

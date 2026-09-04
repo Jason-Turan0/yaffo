@@ -37,7 +37,7 @@ facesWindow.PHOTO_ORGANIZER = facesWindow.PHOTO_ORGANIZER || {};
 const facesNamespace = facesWindow.PHOTO_ORGANIZER.faces =
     /** @type {FacesNamespace} */ (facesWindow.PHOTO_ORGANIZER.faces || {});
 
-// Edge length of the source-photo preview in the hover tooltip, in CSS pixels.
+// Edge length of the source-photo preview in either presentation, in CSS pixels.
 const PREVIEW_SIZE = 320;
 // Breathing room around the detection box, as a fraction of its own size — a box
 // drawn tight to the crop reads as if it's cutting the face off.
@@ -65,9 +65,35 @@ facesNamespace.initAssignment = (
     i18n,
     config
 ) => {
-    const tooltip = document.createElement('div');
-    tooltip.className = 'tooltip face-tooltip';
-    document.body.appendChild(tooltip);
+    const previewModal = document.createElement('div');
+    previewModal.className = 'modal face-preview-modal';
+    previewModal.setAttribute('role', 'dialog');
+    previewModal.setAttribute('aria-modal', 'true');
+    previewModal.setAttribute('aria-labelledby', 'face-preview-modal-title');
+
+    const previewModalContent = document.createElement('div');
+    previewModalContent.className = 'modal-content';
+    const previewHeader = document.createElement('div');
+    previewHeader.className = 'modal-header';
+    const previewTitle = document.createElement('h2');
+    previewTitle.id = 'face-preview-modal-title';
+    previewTitle.textContent = i18n.t('faces:assignment.preview');
+    const previewClose = document.createElement('button');
+    previewClose.type = 'button';
+    previewClose.className = 'modal-close face-preview-modal-close';
+    previewClose.setAttribute('aria-label', i18n.t('common:close'));
+    previewClose.textContent = '×';
+    previewHeader.append(previewTitle, previewClose);
+    const previewBody = document.createElement('div');
+    previewBody.className = 'modal-body face-preview-modal-body';
+    previewModalContent.append(previewHeader, previewBody);
+    previewModal.appendChild(previewModalContent);
+    document.body.appendChild(previewModal);
+    const previewTooltip = document.createElement('div');
+    previewTooltip.className = 'tooltip face-tooltip';
+    document.body.appendChild(previewTooltip);
+    /** @type {HTMLElement | null} */
+    let previewOpener = null;
 
     const groups = /** @type {HTMLElement[]} */ (Array.from(document.querySelectorAll('.suggestion-group')));
     /** @type {HTMLElement | null} */
@@ -92,7 +118,7 @@ facesNamespace.initAssignment = (
     const thumbUrl = (id) => config.buildUrl('face_thumbnail', { face_id: id });
     const placeholderUrl = config.urls.placeholder;
 
-    // The hover preview shows the photo the face was cropped from. A video's /media
+    // The preview modal shows the photo the face was cropped from. A video's /media
     // route returns the raw clip and its poster frame is rarely the frame the face
     // came from, so video-sourced faces get a "no preview" note instead of an image.
     /** @param {FaceRecord} face */
@@ -352,10 +378,14 @@ facesNamespace.initAssignment = (
 
     // --- Click handling on the active cluster (delegated; the grid is re-rendered on every shuffle) ---
     const clusters = /** @type {HTMLElement} */ (document.getElementById('clusters'));
-    const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)');
+    const phoneViewport = window.matchMedia?.('(max-width: 640px)') ?? { matches: false };
+    const precisePointer = window.matchMedia?.('(hover: hover) and (pointer: fine)') ?? { matches: true };
 
-    /** @param {HTMLElement} faceEl */
-    const showTooltip = (faceEl) => {
+    /**
+     * @param {HTMLElement} faceEl
+     * @returns {Node[]}
+     */
+    const previewPartsFor = (faceEl) => {
         const rawSimilarity = faceEl.dataset.similarity;
         const similarity = rawSimilarity ? Number(rawSimilarity) : NaN;
         const date = (faceEl.dataset.date
@@ -365,51 +395,98 @@ facesNamespace.initAssignment = (
         const similarityText = hasSimilarity
             ? i18n.percent(similarity, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
             : '';
-        const tooltipParts = [];
+        const previewParts = [];
         const source = faceEl.dataset.source;
         if (source) {
-            tooltipParts.push(buildPreview(source, parseRegion(faceEl.dataset.region)));
+            previewParts.push(buildPreview(source, parseRegion(faceEl.dataset.region)));
         } else if (faceEl.dataset.mediaType === 'video') {
             const note = document.createElement('div');
             note.className = 'face-preview-note';
             note.textContent = i18n.t('faces:assignment.videoPreviewUnavailable');
-            tooltipParts.push(note);
+            previewParts.push(note);
         }
         if (hasSimilarity) {
-            tooltipParts.push(document.createTextNode(
+            previewParts.push(document.createTextNode(
                 i18n.t('common:similarityValue', { value: similarityText })
             ));
-            tooltipParts.push(document.createElement('br'));
+            previewParts.push(document.createElement('br'));
         }
-        tooltipParts.push(document.createTextNode(i18n.t('common:dateValue', { value: date })));
-        tooltip.replaceChildren(...tooltipParts);
-        tooltip.dataset.faceId = faceEl.dataset.faceId || '';
-        tooltip.classList.add('visible');
+        previewParts.push(document.createTextNode(i18n.t('common:dateValue', { value: date })));
+        return previewParts;
+    };
 
-        if (coarsePointer.matches) {
-            tooltip.classList.remove('tooltip-below');
-            tooltip.style.removeProperty('left');
-            tooltip.style.removeProperty('top');
-            tooltip.style.removeProperty('transform');
-            return;
-        }
+    /** @param {HTMLElement} faceEl */
+    const showTooltip = (faceEl) => {
+        previewTooltip.replaceChildren(...previewPartsFor(faceEl));
+        previewTooltip.dataset.faceId = faceEl.dataset.faceId || '';
+        previewTooltip.classList.add('visible');
 
-        // With a preview image the tooltip is tall enough to run off the top of
-        // the viewport, so it flips below the face when it will not fit above.
-        const rect = faceEl.getBoundingClientRect();
-        const below = rect.top < tooltip.offsetHeight + 10;
-        tooltip.classList.toggle('tooltip-below', below);
-        tooltip.style.left = rect.left + rect.width / 2 + 'px';
-        tooltip.style.top = below
-            ? rect.bottom + window.scrollY + 10 + 'px'
-            : rect.top + window.scrollY - 10 + 'px';
-        tooltip.style.transform = below ? 'translate(-50%, 0)' : 'translate(-50%, -100%)';
+        const anchor = faceEl.getBoundingClientRect();
+        const tooltipWidth = previewTooltip.offsetWidth;
+        const tooltipHeight = previewTooltip.offsetHeight;
+        const gutter = 12;
+        const gap = 10;
+        const maximumCenter = Math.max(
+            tooltipWidth / 2 + gutter,
+            window.innerWidth - tooltipWidth / 2 - gutter
+        );
+        const centerX = Math.min(
+            Math.max(anchor.left + anchor.width / 2, tooltipWidth / 2 + gutter),
+            maximumCenter
+        );
+        const spaceAbove = anchor.top - gutter;
+        const spaceBelow = window.innerHeight - anchor.bottom - gutter;
+        const below = spaceAbove < tooltipHeight + gap && spaceBelow > spaceAbove;
+        const unclampedTop = below
+            ? anchor.bottom + gap
+            : anchor.top - tooltipHeight - gap;
+        const viewportTop = Math.min(
+            Math.max(unclampedTop, gutter),
+            Math.max(gutter, window.innerHeight - tooltipHeight - gutter)
+        );
+
+        previewTooltip.classList.toggle('tooltip-below', below);
+        previewTooltip.style.left = centerX + window.scrollX + 'px';
+        previewTooltip.style.top = viewportTop + window.scrollY + 'px';
+        previewTooltip.style.transform = 'translateX(-50%)';
     };
 
     const hideTooltip = () => {
-        tooltip.classList.remove('visible');
-        delete tooltip.dataset.faceId;
+        previewTooltip.classList.remove('visible', 'tooltip-below');
+        previewTooltip.style.removeProperty('left');
+        previewTooltip.style.removeProperty('top');
+        previewTooltip.style.removeProperty('transform');
+        delete previewTooltip.dataset.faceId;
     };
+
+    /**
+     * @param {HTMLElement} faceEl
+     * @param {HTMLElement} opener
+     */
+    const showModal = (faceEl, opener) => {
+        hideTooltip();
+        const previewParts = previewPartsFor(faceEl);
+        previewBody.replaceChildren(...previewParts);
+        previewModal.dataset.faceId = faceEl.dataset.faceId || '';
+        previewOpener = opener;
+        previewModal.classList.add('active');
+        document.body.classList.add('face-preview-modal-open');
+        previewClose.focus();
+    };
+
+    const hideModal = () => {
+        if (!previewModal.classList.contains('active')) return;
+        previewModal.classList.remove('active');
+        document.body.classList.remove('face-preview-modal-open');
+        delete previewModal.dataset.faceId;
+        previewOpener?.focus();
+        previewOpener = null;
+    };
+
+    previewClose.addEventListener('click', hideModal);
+    previewModal.addEventListener('click', (event) => {
+        if (event.target === previewModal) hideModal();
+    });
 
     clusters.addEventListener('click', (e) => {
         const origin = e.target instanceof Element ? e.target : null;
@@ -420,8 +497,15 @@ facesNamespace.initAssignment = (
             e.stopPropagation();
             const faceEl = /** @type {HTMLElement | null} */ (previewButton.closest('.face'));
             if (!faceEl) return;
-            if (tooltip.classList.contains('visible')
-                && tooltip.dataset.faceId === faceEl.dataset.faceId) {
+            if (phoneViewport.matches) {
+                if (previewModal.classList.contains('active')
+                    && previewModal.dataset.faceId === faceEl.dataset.faceId) {
+                    hideModal();
+                } else {
+                    showModal(faceEl, /** @type {HTMLElement} */ (previewButton));
+                }
+            } else if (previewTooltip.classList.contains('visible')
+                && previewTooltip.dataset.faceId === faceEl.dataset.faceId) {
                 hideTooltip();
             } else {
                 showTooltip(faceEl);
@@ -504,28 +588,32 @@ facesNamespace.initAssignment = (
         }
     });
 
-    // Tooltip on hover for precise pointers. Coarse pointers use the explicit
-    // per-face preview button above so selecting and previewing stay distinct.
+    // Desktop/fine-pointer previews follow hover. Tablets retain the explicit
+    // preview button and use the same anchored popover rather than a dialog.
     clusters.addEventListener('mouseover', (e) => {
-        if (coarsePointer.matches) return;
+        if (phoneViewport.matches || !precisePointer.matches) return;
         const origin = e.target instanceof Element ? e.target : null;
         const faceEl = /** @type {HTMLElement | null} */ (origin?.closest('.face') ?? null);
-        if (!faceEl) return;
-        showTooltip(faceEl);
+        if (faceEl) showTooltip(faceEl);
     });
     clusters.addEventListener('mouseout', (e) => {
-        if (coarsePointer.matches) return;
+        if (phoneViewport.matches || !precisePointer.matches) return;
         const origin = e.target instanceof Element ? e.target : null;
         if (origin?.closest('.face')) hideTooltip();
     });
     document.addEventListener('click', (e) => {
         const origin = e.target instanceof Element ? e.target : null;
-        if (coarsePointer.matches && !origin?.closest('.face-preview-button, .face-tooltip')) {
+        if (!origin?.closest('.face-preview-button, .face-tooltip')) hideTooltip();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            hideModal();
             hideTooltip();
         }
     });
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') hideTooltip();
+    phoneViewport.addEventListener?.('change', () => {
+        hideModal();
+        hideTooltip();
     });
 
     // Threshold slider display
@@ -654,9 +742,29 @@ facesNamespace.initAssignment = (
         shortcutConfigTrigger.addEventListener('click', () => shortcutConfigModal.open());
     }
 
+    /**
+     * Shortcut reordering. Two paths, deliberately:
+     *
+     *  - a Pointer Events drag on the handle, which HTML5 drag-and-drop cannot
+     *    give us because touch never produces `dragstart` at all. The pointer is
+     *    captured on the LIST, a stable ancestor, rather than on the row being
+     *    dragged — the row is re-inserted mid-gesture, and capture on it would
+     *    end the stream (docs/development/responsive.md, panel contract).
+     *  - explicit Move earlier / Move later buttons, so drag is never the only
+     *    way to change the order.
+     */
+    /** Re-evaluates the disabled state of the Move earlier/later buttons. */
+    let refreshShortcutMoveButtons = () => {};
+
     if (shortcutConfigList) {
+        const configList = shortcutConfigList;
         /** @type {HTMLElement | null} */
         let draggedShortcutRow = null;
+
+        /** @returns {HTMLElement[]} */
+        const shortcutRows = () => /** @type {HTMLElement[]} */ (
+            Array.from(configList.querySelectorAll('.shortcut-config-row'))
+        );
 
         /**
          * @param {number} y
@@ -664,7 +772,7 @@ facesNamespace.initAssignment = (
          */
         const rowAfterPoint = (y) => {
             const rows = /** @type {HTMLElement[]} */ (
-                Array.from(shortcutConfigList.querySelectorAll('.shortcut-config-row:not(.dragging)'))
+                Array.from(configList.querySelectorAll('.shortcut-config-row:not(.dragging)'))
             );
             /** @type {{ offset: number, row: HTMLElement | null }} */
             const initialClosest = { offset: Number.NEGATIVE_INFINITY, row: null };
@@ -675,22 +783,71 @@ facesNamespace.initAssignment = (
             }, initialClosest).row;
         };
 
-        shortcutConfigList.addEventListener('dragstart', (e) => {
-            if (!(e.target instanceof Element)) return;
-            draggedShortcutRow = /** @type {HTMLElement | null} */ (e.target.closest('.shortcut-config-row'));
-            if (draggedShortcutRow) draggedShortcutRow.classList.add('dragging');
+        /** @param {HTMLElement} row @param {number} offset */
+        const moveRow = (row, offset) => {
+            const rows = shortcutRows();
+            const target = rows[rows.indexOf(row) + offset];
+            if (!(target instanceof HTMLElement)) return;
+            if (offset < 0) configList.insertBefore(row, target);
+            else configList.insertBefore(target, row);
+            updateMoveButtons();
+        };
+
+        // The first row cannot move earlier and the last cannot move later; a
+        // disabled control says so instead of silently doing nothing.
+        const updateMoveButtons = () => {
+            const rows = shortcutRows();
+            rows.forEach((row, index) => {
+                const up = row.querySelector('.shortcut-config-move-btn[data-move="up"]');
+                const down = row.querySelector('.shortcut-config-move-btn[data-move="down"]');
+                if (up instanceof HTMLButtonElement) up.disabled = index === 0;
+                if (down instanceof HTMLButtonElement) down.disabled = index === rows.length - 1;
+            });
+        };
+        refreshShortcutMoveButtons = updateMoveButtons;
+        updateMoveButtons();
+
+        configList.addEventListener('click', (e) => {
+            const origin = e.target instanceof Element ? e.target : null;
+            const button = /** @type {HTMLElement | null} */ (
+                origin?.closest('.shortcut-config-move-btn') ?? null
+            );
+            if (!button) return;
+            e.preventDefault();
+            const row = /** @type {HTMLElement | null} */ (button.closest('.shortcut-config-row'));
+            if (row) moveRow(row, button.dataset.move === 'up' ? -1 : 1);
         });
-        shortcutConfigList.addEventListener('dragend', () => {
-            if (draggedShortcutRow) draggedShortcutRow.classList.remove('dragging');
-            draggedShortcutRow = null;
+
+        configList.addEventListener('pointerdown', (e) => {
+            const origin = e.target instanceof Element ? e.target : null;
+            if (!origin?.closest('.filter-config-handle')) return;
+            draggedShortcutRow = /** @type {HTMLElement | null} */ (
+                origin.closest('.shortcut-config-row')
+            );
+            if (!draggedShortcutRow) return;
+            draggedShortcutRow.classList.add('dragging');
+            configList.setPointerCapture(e.pointerId);
+            e.preventDefault();
         });
-        shortcutConfigList.addEventListener('dragover', (e) => {
+
+        configList.addEventListener('pointermove', (e) => {
             if (!draggedShortcutRow) return;
             e.preventDefault();
             const after = rowAfterPoint(e.clientY);
-            if (after == null) shortcutConfigList.appendChild(draggedShortcutRow);
-            else shortcutConfigList.insertBefore(draggedShortcutRow, after);
+            if (after == null) configList.appendChild(draggedShortcutRow);
+            else if (after !== draggedShortcutRow) configList.insertBefore(draggedShortcutRow, after);
         });
+
+        /** @param {PointerEvent} e */
+        const endShortcutDrag = (e) => {
+            if (!draggedShortcutRow) return;
+            draggedShortcutRow.classList.remove('dragging');
+            draggedShortcutRow = null;
+            if (configList.hasPointerCapture?.(e.pointerId)) configList.releasePointerCapture(e.pointerId);
+            updateMoveButtons();
+        };
+        configList.addEventListener('pointerup', endShortcutDrag);
+        configList.addEventListener('pointercancel', endShortcutDrag);
     }
 
     /** @param {PersonShortcut[]} peopleList */
@@ -716,6 +873,7 @@ facesNamespace.initAssignment = (
         });
         const remainingRows = rows.filter(row => !selectedIds.has(row.dataset.personId || ''));
         shortcutConfigList.replaceChildren(...selectedRows, ...remainingRows);
+        refreshShortcutMoveButtons();
     };
 
     const selectedShortcutPeopleFromConfig = () => {

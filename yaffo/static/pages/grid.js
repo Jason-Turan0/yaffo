@@ -211,7 +211,7 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
             grid._writePosAttr(target.el, target);
             grid._updateContainerHeight();
             grid._triggerChangeEvent();
-            current.el?.querySelector('.widget-order')?.focus();
+            /** @type {HTMLElement | null} */ (current.el?.querySelector('.widget-order') ?? null)?.focus();
         };
 
         el.querySelectorAll('.widget-order').forEach((button) => {
@@ -231,7 +231,9 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
             const nextHeight = Math.max(node.minH || 1, node.h + offset);
             if (nextHeight === node.h) return;
             grid.update(el, { h: nextHeight });
-            el.querySelector(offset < 0 ? '.widget-size-shorter' : '.widget-size-taller')?.focus();
+            /** @type {HTMLElement | null} */ (
+                el.querySelector(offset < 0 ? '.widget-size-shorter' : '.widget-size-taller')
+            )?.focus();
         };
         el.querySelector('.widget-size-shorter')?.addEventListener('click', (event) => {
             event.stopPropagation();

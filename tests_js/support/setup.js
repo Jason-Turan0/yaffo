@@ -48,6 +48,21 @@ const stubCatalogFetch = (catalogs) => {
 
 beforeEach(() => {
   window.testI18n = createTestI18n();
+  // jsdom implements no matchMedia. nav.js keys the whole narrow-shell contract
+  // off one media query, so without this every module that reads it at init
+  // throws and takes its test file down with it.
+  if (!window.matchMedia) {
+    window.matchMedia = (query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    });
+  }
   window.APP_CONFIG = {
     i18n: {
       locale: 'en-US',

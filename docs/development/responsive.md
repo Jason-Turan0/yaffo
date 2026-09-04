@@ -1,8 +1,8 @@
 # Responsive website plan
 
-Status: **In progress — shared gates closed; page-family rollout ready to split**
+Status: **In progress — P1–P4 complete; P5–P8 and milestone hardening remain**
 
-Last updated: **2026-08-30**
+Last updated: **2026-09-04**
 
 This plan covers every server-rendered Yaffo page, shared component, built-in
 theme, supported locale, and client-side interaction. The goal is one adaptive
@@ -48,18 +48,18 @@ have not all received a complete interaction, locale, and theme review.
 
 | Area | Status | Evidence and remaining gap |
 | --- | --- | --- |
-| Guardrails | **In progress** | Responsive coverage is defined as scenarios inside each page family's `yaffo_ui_tests/specs/*.yaml`, with shared assertions extracted to `generated_tests/_support/responsive.ts` (overflow diagnostics, viewport fit, panel contract, touch drag). **The Playwright code for those scenarios has not been generated yet — every page family owns generating, committing and passing its own** (see "Test coverage" in the definition of done). Representative visual baselines, long-locale fixtures, and the complete cross-theme matrix remain. |
+| Guardrails | **In progress** | Responsive coverage is defined as scenarios inside each page family's `yaffo_ui_tests/specs/*.yaml`, with shared assertions extracted to `generated_tests/_support/responsive.ts` (overflow diagnostics, viewport fit, panel contract, touch drag). Runnable coverage is committed and passing for P1–P4; P5–P8 still have responsive scenarios without corresponding Playwright implementations. Representative visual baselines, long-locale fixtures, and the complete cross-theme matrix remain. |
 | Application shell | **Implemented** | Mobile Menu is mutually exclusive with page actions, hidden on desktop, closed on first paint, and preserves the Pages behavior. Escape ownership between a panel and a dialog opened inside it, safe-area insets, and on-screen-keyboard handling are in. Visual review across all themes/locales remains. |
 | Page panels | **Contract frozen; every sidebar migrated** | The Home pilot was approved for app-wide rollout on 2026-08-30. All eleven page sidebars now register through `components/nav_panel.html`, the legacy `.responsive-panel-toggle` initializer and `static/responsive.js` are deleted, and the applied-filter count badge is server-rendered. Page owners refine *content* inside their panels; the contract itself is S2-owned. |
 | Home header and pagination | **Implemented** | Grid/Timeline is vertically centered. Pagination keeps text on desktop and uses one inline row of themed 44 px icon controls on mobile. Next-page navigation no longer flashes the menu. |
 | Shared components | **Hardened** | Narrow layouts exist for common containers, tables, modals, forms, actions, and pagination. Notifications, overlays, tooltips and dropdowns are clamped to the viewport and use logical properties; the selection bar clears the sticky navbar; viewport-bound surfaces use dynamic units and safe-area insets. Per-component visual review across themes remains. |
-| Core workflows | **Partial** | Album/widget explicit order controls, coarse-pointer face previews, people cards, media/detail route containment, and location resize behavior are covered. Complete workflow-level reviews are still outstanding. |
-| Validation | **Partial** | UI-test TypeScript, ESLint, spec validation, and design-token checks pass. The generated Playwright code for the new responsive scenarios does not exist yet. The app-wide JavaScript typecheck still has a pre-existing `yaffo/static/pages/grid.js:234` `Element.focus()` typing failure (owned by P8). |
+| Core workflows | **P1–P4 complete** | Library/timeline, media detail, albums, faces, people, and locations have page-family responsive implementations and interaction-level Playwright coverage. Remote gallery, utilities, settings/themes, sharing, automations, and custom pages remain under P5–P8. |
+| Validation | **P1–P4 passing** | On 2026-09-04 the current tree passed 115/115 isolated Playwright tests across gallery, media detail, albums, faces, people, and locations. UI-test TypeScript, both ESLint configurations, spec validation, the application JavaScript typecheck, frontend unit tests, Python tests, and design-token checks pass. The complete Playwright suite remains the milestone integration gate after P5–P8. |
 
-Current milestone estimate: the shared foundation and first vertical slice are
-substantially complete; most page-family rollout and cross-cutting hardening
-remain. Passing route containment is a smoke signal, not completion of that page
-family.
+Current milestone estimate: the shared foundation and the first four page-family
+tasks are complete. P5–P8 and all cross-cutting Phase 5 work remain. Passing
+route containment is only a smoke signal; P1–P4 are closed by their interaction,
+touch, resize-state, long-content, and scroll-ownership coverage.
 
 ## The shared panel contract
 
@@ -108,6 +108,9 @@ current selection, so it is the likelier destination once items are picked.
 - Menu and page-action buttons use an 8 px gap, at least a 44 px target, a clear
   theme-token active state, and theme-aware icons following
   `docs/development/icons.md` (shared outline mask plus neobrutalist override).
+  At 400 px and below, their visible text is hidden so Actions, Filters, and
+  Menu fit on one navbar row; the 44 px targets and explicit accessible names
+  remain, and an applied-filter badge is positioned inside its button.
 - Shared pagination retains localized text labels on desktop and renders
   First/Previous/Next/Last icons at 640 px and below. All controls stay on one
   row at the 320 px minimum width.
@@ -137,14 +140,14 @@ starting state.
 | --- | --- | --- |
 | Application shell | The narrow Menu and page-panel host are implemented, with Escape ownership and safe areas. Remaining work is long locales and visual verification of every theme decoration. | `yaffo/templates/base.html`, `yaffo/static/base.css`, `yaffo/static/pages/nav.css`, `yaffo/static/nav.js`, `yaffo/static/responsive.css` |
 | Shared layout and controls | The responsive layer covers common containment and touch targets, every page registers its panels through the one contract, and overlays, pickers, notifications, and viewport edge cases are handled. Per-theme visual review remains. | `yaffo/templates/_sidebar.html`, `yaffo/templates/components/nav_panel.html`, `yaffo/templates/components/`, `yaffo/static/sidebar.css`, `yaffo/static/form.css`, `yaffo/static/table.css`, `yaffo/static/button.css`, `yaffo/static/components/` |
-| Library and albums | Home filters, header, pagination, and basic grid containment are implemented; album/widget direct order controls exist. Timeline scrubber alternatives, full media states, album dialogs/selections, and end-to-end state preservation still need review. | `yaffo/templates/index.html`, `yaffo/templates/_timeline_sections.html`, `yaffo/templates/albums/`, `yaffo/static/index.css`, `yaffo/static/albums/albums.css`, `yaffo/static/media/` |
-| Media detail | The existing 768 px stack is a useful start, but fixed viewport-height calculations, nested scrolling, metadata actions, face tools, video states, and landscape phones need verification. | `yaffo/templates/media/view.html`, `yaffo/static/media/view.css`, `yaffo/static/media/view.js` |
-| Faces and people | Coarse pointers can open face previews and the people table becomes labeled cards. Assignment workflows, shortcut ordering, dialogs, long content, and selection states remain. | `yaffo/templates/faces/`, `yaffo/templates/people/`, `yaffo/static/faces/index.css`, `yaffo/static/people/` |
-| Locations | Map resize and narrow selection-panel containment are covered. The intended bottom-sheet interaction, touch parity for hover-only behaviour, map-state preservation, and all assignment flows remain. | `yaffo/templates/locations/list.html`, `yaffo/static/locations/list.css`, `yaffo/static/locations/list.js` |
+| Library and albums | P1/P2 complete: the library has a touch-safe timeline jump path, rotation-safe streaming, coarse-pointer card behavior, and responsive pagination; albums cover every route, selection, filters, dialogs, long titles, and direct touch-sized reorder controls. The remote gallery remains P6. | `yaffo/templates/index.html`, `yaffo/templates/_timeline_sections.html`, `yaffo/templates/albums/`, `yaffo/static/index.css`, `yaffo/static/albums/albums.css`, `yaffo/static/media/` |
+| Media detail | P1 complete: portrait/landscape stacking, dynamic viewport units, document-owned scrolling, touch face highlighting and redraw, metadata actions, tag editing, video playback, and missing-video states are covered. | `yaffo/templates/media/view.html`, `yaffo/static/media/view.css`, `yaffo/static/media/view.js` |
+| Faces and people | P3 complete: source previews use a viewport-fixed centered modal on phones and anchored popovers on tablets/desktops, Actions/Filters remain separate panels, and assignment state, shortcut reordering, cluster pagination, dialogs, people cards, person galleries, and long names are covered. | `yaffo/templates/faces/`, `yaffo/templates/people/`, `yaffo/static/faces/index.css`, `yaffo/static/people/` |
+| Locations | P4 complete: the existing selection DOM becomes a centered assignment modal below 900 px, every hover-only fact has a touch path, OpenLayers is resized after layout changes, and map, selection, and unsaved assignment state survive rotation and breakpoint changes. | `yaffo/templates/locations/list.html`, `yaffo/static/locations/list.css`, `yaffo/static/locations/list.js` |
 | Utilities | Utility navigation remains a fixed sidebar; stats, scan results, duplicate review, automation headers, code views, trigger editors, and run tables are dense. | `yaffo/templates/utilities/`, `yaffo/static/utilities/` |
 | Sharing | Sharing navigation is fixed width. Pairing, device, grant, transfer, and remote-file controls adapt unevenly; the remote gallery inherits the library concerns. | `yaffo/templates/sharing/`, `yaffo/static/sharing/sharing.css`, `yaffo/static/sharing/` |
 | Settings and themes | Path rows and file-browser forms contain long unbreakable values; theme and utility navigation repeat the fixed-sidebar pattern. | `yaffo/templates/settings/`, `yaffo/templates/themes_page/`, `yaffo/static/settings/index.css`, `yaffo/static/themes_page/index.css` |
-| Custom pages | The editor stacks and explicit move/resize controls have responsive coverage. GridStack policies, widget iframe sizing, presentation reflow order, generated content, and the existing JavaScript typing failure remain. | `yaffo/templates/pages/`, `yaffo/static/pages/detail.css`, `yaffo/static/pages/grid.js` |
+| Custom pages | The editor stacks and explicit move/resize controls exist. GridStack policies, widget iframe sizing, presentation reflow order, generated content, and the page-family responsive Playwright scenarios remain. | `yaffo/templates/pages/`, `yaffo/static/pages/detail.css`, `yaffo/static/pages/grid.js` |
 | Error and demo states | Standalone error/security/demo pages must share the same width, zoom, safe-area, and long-copy guarantees. | `yaffo/templates/404.html`, `yaffo/templates/500.html`, `yaffo/templates/db_error.html`, `yaffo/templates/security/`, `yaffo/templates/demo/`, `yaffo/static/error.css`, `yaffo/static/demo-mode.css` |
 | Themes and localization | Theme skins override structural selectors, while German, Hindi, and Arabic expose wrapping and direction assumptions that English does not. | `yaffo/static/themes/`, `yaffo/static/locales/`, `yaffo/translations/` |
 
@@ -268,9 +271,9 @@ together.
    `yaffo_ui_tests/specs/*.yaml`, against the seeded application. There is no
    standalone responsive feature — see "Verification strategy".
 2. **Done:** overflow diagnostics, viewport-fit, the peer-panel contract, real
-   touch drag, and coarse-pointer contexts are
-   reusable helpers in `generated_tests/_support/responsive.ts`. The Playwright
-   code for the new scenarios still has to be generated per family.
+   touch drag, and coarse-pointer contexts are reusable helpers in
+   `generated_tests/_support/responsive.ts`. Runnable page-family code is present
+   for P1–P4; P5–P8 still have to implement their scenarios.
 3. **Remaining:** capture baselines for every page family in classic English,
    then stress the shared shell with German and Arabic and the most structurally
    divergent built-in themes.
@@ -296,30 +299,29 @@ different agents. The contract is now frozen, so page owners consume it.
 
 ### Phase 2: Core photo workflows
 
-1. **Library grid and timeline — partial:** Home filters, grid containment,
-   view switch, pagination, favorite/video touch containment, and basic timeline
-   layout exist. Finish the timeline scrubber alternative, streaming/rotation
-   state, media loading behavior, and full workflow/theme/locale review.
-2. **Albums — partial:** direct move controls and basic route containment exist.
-   Finish overview tiles, detail/edit actions, add-photo filters,
-   selection mode, cover/share dialogs, and drag reordering. Provide explicit
-   move controls or another touch-safe path so drag is never the only way to
-   reorder.
-3. **Media detail — partial:** route containment exists. Refine the stacked
-   layout for portrait and landscape, use dynamic viewport units, keep the media
-   visible while metadata is reachable, and verify faces, people, tags,
-   favorites, location editing, missing-media states, and video playback.
+1. **Library grid and timeline — done (P1):** Home filters, grid containment,
+   view switch, pagination, favorite/video touch containment, the touch-safe
+   timeline jump control, streamed state across rotation, and sticky landing
+   offsets are implemented and covered.
+2. **Albums — done (P2):** overview, detail/edit, add-photo filters, selection,
+   cover/share dialogs, long content, resize-state preservation, and explicit
+   44 px move controls are implemented and covered. HTML drag remains the mouse
+   path; direct controls are the touch-safe alternative.
+3. **Media detail — done (P1):** portrait and landscape stacking, dynamic
+   viewport units, document-owned scrolling, faces/people/tags/favorites,
+   touch face highlighting, metadata actions, video playback, and missing-video
+   states are implemented and covered.
 4. **Remote gallery — remaining:** reuse the completed library behavior and
    verify download-directory and remote-preview states.
 
 ### Phase 3: Organization and administration
 
-1. **Faces — partial:** the grid is contained and coarse pointers can open
-   source previews. Finish the assignment panel design, shortcut reordering,
-   selection, and dialogs.
-2. **People — partial:** the six-column list has a labeled mobile card
-   presentation. Finish add/edit dialogs, person face gallery, filters, and long
-   content.
+1. **Faces — done (P3):** the grid is contained; coarse pointers can open source
+   previews; Actions and Filters are separate peers; assignment state, cluster
+   pagination, shortcut reordering, selection, and dialogs are covered.
+2. **People — done (P3):** the six-column list becomes labeled mobile cards;
+   add/edit dialogs, person face galleries, filters, resize-state preservation,
+   coarse-pointer controls, and long names are covered.
 3. **Settings — remaining:** stack file-browser/path controls, wrap long
    filesystem paths, adapt label chips and API-key controls, and keep destructive
    actions distinct.
@@ -332,12 +334,11 @@ different agents. The contract is now frozen, so page owners consume it.
 
 ### Phase 4: Spatial and authoring workflows
 
-1. **Locations — partial:** container resize and selection-panel smoke coverage
-   exist. Make the map the primary narrow-screen surface; present the
-   selected-cluster details as a bottom sheet or full-width panel, expose all
-   hover behavior through a coarse-pointer path, call the OpenLayers size update after
-   every layout transition, and preserve map center, zoom, selection, and
-   unsaved assignment state across resize.
+1. **Locations — done (P4):** the map remains the primary narrow-screen surface
+   and the existing selection panel becomes a centered, backdrop modal.
+   Hover-only information has a coarse-pointer path, OpenLayers receives size
+   updates after layout transitions, and center, zoom, selection, and unsaved
+   assignment state survive resize and rotation.
 2. **Automations — remaining:** stack editor/chat/code areas, adapt trigger
    builders and code toggles, contain code and test-result tables, and keep the
    full action set discoverable in long locales.
@@ -347,8 +348,7 @@ different agents. The contract is now frozen, so page owners consume it.
    drag/resize gestures that conflict with page scrolling and provide explicit
    move/resize controls. In presentation mode, reflow widgets in source order.
    Ensure widget iframes receive their actual container size and require
-   generated widget HTML to be internally responsive. Resolve the existing
-   `pages/grid.js` JavaScript typing failure while this area is owned.
+   generated widget HTML to be internally responsive.
 4. **Sharing — remaining:** finish pairing QR/code, device/grant forms, file
    pulls, transfer status, and long device/path content after the shared
    navigation and table patterns are stable.
@@ -404,7 +404,7 @@ below can now be split across independent agents. What each gate settled:
    panel-contract, touch-drag, and touch-context helpers are
    extracted to `generated_tests/_support/responsive.ts`. Responsive scenarios
    are written into each page family's own spec, so no two page agents edit the
-   same file. The Playwright code for those scenarios still has to be generated.
+   same file. P1–P4 have runnable implementations; P5–P8 remain outstanding.
 
 **Ownership going forward.** These files stay with the shared owner; a page
 agent reports a need against them rather than patching them from a page task:
@@ -417,20 +417,20 @@ and `yaffo_ui_tests/generated_tests/_support/responsive.ts`.
 
 ### Independent page-family tasks
 
-The shared gates are closed, so every row below can be assigned now. Each agent
-owns its page templates, page-specific CSS and JavaScript, fixtures, and the
-responsive scenarios already written into its own `yaffo_ui_tests/specs/*.yaml`
-— plus generating and healing the Playwright code for them. Page-local rules
-stay in the owning stylesheet; edits to the shared file set above go through the
-shared owner. Every page's panel is already registered; what remains per family
-is the *content and interaction* inside it.
+The shared gates are closed, so every unfinished row below can be assigned now.
+Each owner has its page templates, page-specific CSS and JavaScript, fixtures,
+responsive scenarios in `yaffo_ui_tests/specs/*.yaml`, and corresponding
+Playwright code. Page-local rules stay in the owning stylesheet; edits to the
+shared file set above go through the shared owner. Every page's panel is already
+registered; what remains for P5–P8 is the *content and interaction* inside it,
+plus implementing and maintaining runnable coverage for its scenarios.
 
 | Task | Independent scope and acceptance target | Primary ownership | Shared dependency |
 | --- | --- | --- | --- |
-| **P1 — Library, timeline, and media detail** | Finish grid/timeline behavior, scrubber alternative, rotation/state preservation, loading, video, metadata, faces/tags/location editing, and portrait/landscape visual review. | `yaffo/templates/index.html`, `yaffo/templates/_timeline_sections.html`, `yaffo/templates/media/`, `yaffo/static/index.css`, `yaffo/static/media/` | Panels registered. Coordinate shared pagination/modal changes through the shared owner. Spec: `specs/photo_gallery.yaml`, `specs/photo_details.yaml`. |
-| **P2 — Albums** | Complete overview, detail/edit, add-photo filters, selection, cover/share dialogs, and touch-safe reorder paths at every contract viewport. | `yaffo/templates/albums/`, `yaffo/static/albums/` | Panels registered (`albums-nav`, `album-add-filters`). Shared selection/modal issues go to the shared owner. Spec: `specs/albums.yaml`. |
-| **P3 — Faces and people** | Finish assignment actions, shortcut reordering, selection, dialogs, person galleries, filters, long names, and coarse-pointer parity. | `yaffo/templates/faces/`, `yaffo/templates/people/`, `yaffo/static/faces/`, `yaffo/static/people/` | Panels registered (`faces-actions`/`faces-filters`, `person-faces-*`). Shared table/card or touch-drag changes go to the shared owner. Specs: `specs/face_assignment.yaml`, `specs/people.yaml`. |
-| **P4 — Locations** | Deliver the narrow map plus bottom-sheet/full-width selection experience, coarse-pointer equivalents for hover-only behaviour, reliable OpenLayers resizing, and center/zoom/selection/unsaved-state preservation. | `yaffo/templates/locations/`, `yaffo/static/locations/` | Panel registered (`locations-filters`). The bottom-sheet variant is still an open shared question — raise it with the shared owner before inventing one. Spec: `specs/locations.yaml`. |
+| **P1 — Library, timeline, and media detail — COMPLETE** | Grid/timeline behavior, scrubber alternative, rotation/state preservation, loading, video and missing-video states, metadata, faces/tags, and portrait/landscape behavior are implemented. Current isolated suites: gallery 27/27 and media detail 15/15. | `yaffo/templates/index.html`, `yaffo/templates/_timeline_sections.html`, `yaffo/templates/media/`, `yaffo/static/index.css`, `yaffo/static/media/` | Panels registered. Shared pagination/modal changes landed through integration. Specs: `specs/photo_gallery.yaml`, `specs/photo_details.yaml`. |
+| **P2 — Albums — COMPLETE** | Overview, detail/edit, add-photo filters, selection, cover/share dialogs, long content, and mouse/touch-safe reorder paths pass at the contract viewports. Current isolated suite: 19/19. | `yaffo/templates/albums/`, `yaffo/static/albums/` | Panels registered (`albums-nav`, `album-add-filters`). Shared header and touch-target fixes landed through integration. Spec: `specs/albums.yaml`. |
+| **P3 — Faces and people — COMPLETE** | Assignment actions, phone-modal/tablet-and-desktop-popover source previews, shortcut reordering, selection, dialogs, person galleries, filters, long names, pointer parity, and the three-control 375 px navbar are covered. Current isolated suites: faces 20 scenarios and people 15/15. | `yaffo/templates/faces/`, `yaffo/templates/people/`, `yaffo/static/faces/`, `yaffo/static/people/` | Panels registered (`faces-actions`/`faces-filters`, `person-faces-*`). Specs: `specs/face_assignment.yaml`, `specs/people.yaml`. |
+| **P4 — Locations — COMPLETE** | The narrow map plus centered assignment modal, coarse-pointer equivalents, reliable OpenLayers resizing, and center/zoom/selection/unsaved-state preservation are covered. Current isolated suite: 21/21. | `yaffo/templates/locations/`, `yaffo/static/locations/` | Panel registered (`locations-filters`). The narrow presentation reuses the existing selection DOM as a viewport-contained modal. Spec: `specs/locations.yaml`. |
 | **P5 — Utilities and automations** | Adapt utility navigation, stats/results, duplicate review, automation editor/chat/code, trigger builders, run tables, and long-locale action discovery. | `yaffo/templates/utilities/`, `yaffo/static/utilities/`, automation templates/styles/scripts | Panels registered (`utilities-nav`, `automations-nav`). Code/table/chat primitives come from the shared owner. Specs: `specs/index_photos.yaml`, `specs/remove_duplicates.yaml`, `specs/automations.yaml`. |
 | **P6 — Sharing and remote gallery** | Complete pairing, QR/code, device/grant forms, remote filters/previews, file pulls, transfers, pagination, and long device/path behavior. | `yaffo/templates/sharing/`, `yaffo/static/sharing/` | Panels registered (`sharing-sidebar`, `remote-files-filters`). Reuse final library behaviour from P1. Spec: `specs/sharing.yaml`. |
 | **P7 — Settings, themes, and standalone states** | Adapt paths, file browser, labels, API keys, destructive actions, theme draft/publish/chat, and error/security/demo screens; perform long-copy checks. | `yaffo/templates/settings/`, `yaffo/templates/themes_page/`, standalone templates, `yaffo/static/settings/`, `yaffo/static/themes_page/`, `yaffo/static/error.css`, `yaffo/static/demo-mode.css` | Panel registered (`themes-nav`). Shared file-browser/modal/chat issues go to the shared owner. Do not modify theme skins except for page-specific verified compatibility fixes. Specs: `specs/settings.yaml`, `specs/themes.yaml`. |
@@ -453,25 +453,7 @@ integration owner's job, after the parallel tasks merge.
    `yaffo_ui_tests/specs/<feature>.yaml` (a starting set is already there).
    Inspect the spec afterwards and confirm each new scenario names the behaviour
    it is asserting, not just the route it visits.
-2. **Regenerate the tests from it**, from `yaffo_ui_tests`:
-
-   ```
-   npm run generate:test specs/<feature>.yaml
-   ```
-
-   That generates the code *and* runs it. It writes three artifacts per feature,
-   and all three are part of the change — an agent that commits one without the
-   others leaves the next regeneration working from stale context:
-   - `generated_tests/<feature>/<feature>.spec.ts` — the runnable tests;
-   - `generated_tests/<feature>/<feature>.json` — generation metadata, whose
-     `files[].code` must match the committed `.spec.ts`;
-   - `generated_tests/<feature>/memories/progress.md` — the context discovered
-     while generating (seeded data, ordering constraints, selector gotchas).
-     Update it with what this round learned.
-
-   Do not hand-author the `.spec.ts`. If a generated test is wrong, heal it —
-   `npm run test:heal specs/<feature>.yaml` — and commit the healed output.
-3. **The family's Playwright spec passes in isolation**, against a clean
+2. **The family's Playwright spec passes in isolation**, against a clean
    environment:
 
    ```
@@ -483,7 +465,7 @@ integration owner's job, after the parallel tasks merge.
    cache once and let runs restore from it; `--fresh` re-runs the whole
    indexing, face-detection and labelling pipeline on every invocation and is
    not the normal path.
-4. **The unit tests pass**, for whatever the change actually touched:
+3. **The unit tests pass**, for whatever the change actually touched:
    - `npx vitest run` (from the repo root) whenever any `yaffo/static/**`
      JavaScript changed — the Playwright suite does not cover these;
    - `npm run typecheck:js` and `npm run lint` (repo root) for the same;
@@ -492,7 +474,7 @@ integration owner's job, after the parallel tasks merge.
      changed — it is the drift guard that rejects raw colours in stylesheets;
    - `npx tsc --noEmit`, `npm run lint`, and `npm run validate:specs` from
      `yaffo_ui_tests` for spec and helper changes.
-5. **No shared file is edited from a page task.** Changes to the shared set
+4. **No shared file is edited from a page task.** Changes to the shared set
    listed under "Ownership going forward" go through the shared owner.
 
 ### Shared integration and milestone exit
@@ -522,10 +504,11 @@ Add focused responsive coverage rather than replaying every destructive or
 long-running end-to-end scenario at every viewport.
 
 Responsive coverage is written the same way as every other suite here: as
-**scenarios in the owning page family's `yaffo_ui_tests/specs/*.yaml`**, from
-which the generator produces the Playwright code. There is no standalone
-"responsive" feature — a page's narrow-screen behaviour is part of that page's
-spec, which is also what keeps the P1–P8 tasks independent. Assertions that
+**scenarios in the owning page family's `yaffo_ui_tests/specs/*.yaml`**, with
+runnable Playwright code committed under the corresponding `generated_tests/`
+directory. There is no standalone "responsive" feature — a page's narrow-screen
+behaviour is part of that page's spec, which is also what keeps the P1–P8 tasks
+independent. Assertions that
 belong to the *contract* rather than to one page live in
 `generated_tests/_support/responsive.ts` (overflow diagnostics, viewport fit,
 the peer-panel contract, real touch drag) and are imported by the generated
@@ -618,5 +601,5 @@ section is about *what the tests have to assert*.
 5. **The family's pre-existing behaviour scenarios still pass.** Responsive work
    must not be bought by weakening the tests that were already there.
 
-The milestone is not complete while any family's responsive scenarios are still
-unimplemented in `generated_tests/`.
+The milestone is not complete while P5–P8 responsive scenarios are still
+unimplemented in `generated_tests/` or while the Phase 5 matrix remains open.

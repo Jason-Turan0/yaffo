@@ -26,3 +26,80 @@ Hardcoded face-id sets from the dlib era (OBAMA_FACE_IDS etc.) are INVALID — t
 
 ## Concurrency
 These tests share one server-side unassigned-face pool and create/delete people, so the describe block runs in `serial` mode with a 30s timeout (the global Playwright timeout is 5s).
+
+## 2026-08-30 — responsive rollout (P3: faces and people)
+
+### Status: PASSING (18/18) — 6 pre-existing behaviour tests plus a 12-test `Face Assignment — responsive` describe
+
+Hand-written, not generated and not healed. Shared assertions are imported from
+`generated_tests/_support/responsive.ts`; re-implementing an overflow or panel
+check there would fork the contract.
+
+### Panel contract on this page
+- `/faces` registers TWO panels through `_sidebar.html`: `#faces-actions` and
+  `#faces-filters`, with peer buttons `#faces-actions-toggle` and
+  `#faces-filters-toggle`. Actions is declared first (it acts on the current
+  selection). `expectPanelContract` works against either.
+- **Gotcha:** the Menu button is `#nav-menu-toggle` and does NOT carry
+  `data-nav-panel-toggle`. An ordering assertion has to select
+  `'[data-nav-panel-toggle], #nav-menu-toggle'` — querying only the former
+  silently drops Menu and the "Menu sorts last" check passes vacuously.
+- The applied-filter badge is `#faces-filters-toggle [data-nav-panel-count]` and
+  is server-rendered. `applied_filter_count` counts `group_by` and `threshold`,
+  so `/faces?group_by=similarity&threshold=2` shows `2`.
+- Panels are moved, not re-rendered, so `#threshold-range` and a half-typed
+  `#create-person-name` both survive a resize from 390 to 1440 without a reload.
+- Escape closes the open panel; `nav.js` steps aside while a `.modal.active` is
+  up, which is why the shortcut dialog can be opened from inside the Actions
+  panel and dismissed on its own.
+
+### Bugs found and fixed (each has a scenario naming the cause)
+- **iPhone SE navbar.** At 375px the localized Actions, Filters and Menu labels
+  could make the top controls wrap or overflow. At ≤400px those controls now
+  render as 44px icon buttons; explicit `aria-label` values retain their names,
+  and the applied-filter count is positioned inside the Filters target.
+- **Cluster pager.** `templates/faces/index.html` rendered five full-text buttons
+  (`« First`, `‹ Previous`, …) that could not share a row at 320px, so the footer
+  widened the page. They now use the shared pagination markup — `data-icon` plus
+  a `.page-btn-label` span — which `components/pagination.css` collapses to 44px
+  icon controls at ≤640px.
+- **Shortcut reordering.** The rows used HTML5 drag-and-drop (`draggable="true"`,
+  `dragstart`/`dragover`). Touch produces none of those events, so the handle was
+  decorative on a phone. It is Pointer Events now, with the pointer captured on
+  the LIST (`#shortcut-config-list`) rather than on the moving row — capture on
+  the row ends the stream the moment the row is re-inserted. Each row also has
+  explicit `.shortcut-config-move-btn[data-move="up"|"down"]` controls, disabled
+  at the ends of the list.
+- **`.main-content { overflow-y: auto }`** in `faces/index.css` made the column an
+  implicit horizontal scroller, hiding containment failures. Replaced with
+  `min-width: 0`, which is what actually stops a wide cluster from setting the
+  page width (a flex item's automatic minimum is its content size).
+
+### Testing notes
+- `touchDrag(context, page, from, to)` from the shared helper dispatches a real
+  CDP touch stream. It only works inside `withTouchContext` (`hasTouch`,
+  `isMobile`). `.filter-config-handle` already carries `touch-action: none`, so
+  the drag does not turn into a scroll.
+- In a touch context use `.tap()`, not `.click()`, for the panel toggle and the
+  `#configure-shortcuts-btn` — `click()` works but `tap()` is what the contract
+  is actually about.
+- The help dialog opens with `page.keyboard.press('?')`; the handler bails when
+  focus is on an INPUT/TEXTAREA/SELECT, so press it straight after `goto`.
+- `.face-preview-modal` and `.face-tooltip` are created once on init and live on
+  `document.body`. At widths up to 640px, the explicit 44px preview button opens
+  the modal; the face stylesheet pins it to all four viewport edges and centers
+  it independently of the clicked face and document scroll. Above 640px, touch
+  tablets open an anchored popover from the button and fine-pointer desktops
+  open that popover on hover. Closing the phone modal restores focus to its
+  opener, and neither preview path changes face selection.
+- Previewing must NOT change the face's `selected` state — previewing and
+  selecting remain separate actions.
+
+### Unit-test trap (vitest)
+`yaffo/static/faces/index.js` read `window.matchMedia` unguarded at init. jsdom
+implements no `matchMedia` at all, so **all 20** `tests_js/faces/index.test.js`
+cases were failing with `window.matchMedia is not a function` before this work —
+it is not a Playwright-visible failure. The call is now guarded and falls back to
+the fine-pointer branch. `tests_js/support/setup.js` still provides no
+`matchMedia`, so `tests_js/pages/grid.test.js` (and any other module reading it)
+fails the same way; that is a shared-setup gap, not a page bug.
