@@ -1,94 +1,6 @@
 {
   "testRunHistory": [
     {
-      "timestamp": "2026-02-14T15:03:09.865Z",
-      "success": false,
-      "summary": {
-        "total": 3,
-        "passed": 2,
-        "failed": 1,
-        "skipped": 0
-      },
-      "failedTests": [
-        {
-          "testName": "Photo Gallery Feature \u203a gallery_page_navigation_works - Verify that the page navigation works",
-          "error": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-14T15:32:15.057Z",
-      "success": false,
-      "summary": {
-        "total": 3,
-        "passed": 0,
-        "failed": 3,
-        "skipped": 0
-      },
-      "failedTests": [
-        {
-          "testName": "Photo Gallery Feature \u203a gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
-          "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
-        },
-        {
-          "testName": "Photo Gallery Feature \u203a gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
-          "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
-        },
-        {
-          "testName": "Photo Gallery Feature \u203a gallery_page_navigation_works - Verify that the page navigation works",
-          "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-14T15:33:19.867Z",
-      "success": false,
-      "summary": {
-        "total": 3,
-        "passed": 0,
-        "failed": 3,
-        "skipped": 0
-      },
-      "failedTests": [
-        {
-          "testName": "Photo Gallery Feature \u203a gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
-          "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
-        },
-        {
-          "testName": "Photo Gallery Feature \u203a gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
-          "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
-        },
-        {
-          "testName": "Photo Gallery Feature \u203a gallery_page_navigation_works - Verify that the page navigation works",
-          "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-14T15:48:12.177Z",
-      "success": false,
-      "summary": {
-        "total": 3,
-        "passed": 0,
-        "failed": 3,
-        "skipped": 0
-      },
-      "failedTests": [
-        {
-          "testName": "Photo Gallery Feature \u203a gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
-          "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
-        },
-        {
-          "testName": "Photo Gallery Feature \u203a gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
-          "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
-        },
-        {
-          "testName": "Photo Gallery Feature \u203a gallery_page_navigation_works - Verify that the page navigation works",
-          "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
-        }
-      ]
-    },
-    {
       "timestamp": "2026-02-14T15:51:36.348Z",
       "success": false,
       "summary": {
@@ -99,15 +11,15 @@
       },
       "failedTests": [
         {
-          "testName": "Photo Gallery Feature \u203a gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
+          "testName": "Photo Gallery Feature › gallery_loads_with_valid_images - Gallery displays photos and all image sources are valid (no broken links)",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         },
         {
-          "testName": "Photo Gallery Feature \u203a gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
+          "testName": "Photo Gallery Feature › gallery_filter_year_works - Should be able to find photos by filtering for year on the gallery page",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         },
         {
-          "testName": "Photo Gallery Feature \u203a gallery_page_navigation_works - Verify that the page navigation works",
+          "testName": "Photo Gallery Feature › gallery_page_navigation_works - Verify that the page navigation works",
           "error": "\u001b[31mTest timeout of 5000ms exceeded while running \"beforeEach\" hook.\u001b[39m"
         }
       ]
@@ -133,6 +45,38 @@
         "skipped": 0
       },
       "failedTests": []
+    },
+    {
+      "timestamp": "2026-09-04T21:30:42.798Z",
+      "success": false,
+      "summary": {
+        "total": 27,
+        "passed": 26,
+        "failed": 1,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Photo Gallery Feature - Responsive › gallery_filters_use_a_peer_navbar_panel - Filters is a peer of Menu, not a disclosure inside it",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m8\u001b[39m\nReceived:    \u001b[31m6\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-09-04T21:33:36.080Z",
+      "success": false,
+      "summary": {
+        "total": 27,
+        "passed": 26,
+        "failed": 1,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Photo Gallery Feature - Responsive › gallery_filters_use_a_peer_navbar_panel - Filters is a peer of Menu, not a disclosure inside it",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m8\u001b[39m\nReceived:    \u001b[31m6\u001b[39m"
+        }
+      ]
     }
   ]
 }
