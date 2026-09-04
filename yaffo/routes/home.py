@@ -153,7 +153,13 @@ def _timeline_index(filters: dict, page_size: int, base_params: dict) -> tuple[l
     for year in years[::step]:
         top_key = min(newest_key, month_key(year, 12))
         entry = next((m for m in months if month_key(m["year"], m["month"]) <= top_key), months[-1])
-        params = {**base_params, "view": "timeline", "page": entry["offset"] // page_size + 1}
+        # page-size rides along: the page number below is computed with THIS
+        # request's page size, so a link that omits it lands on a page the
+        # server paginates differently and the #month anchor points at nothing.
+        # (The drag path never hit this — its JS builds the URL from the current
+        # location, which already carries the size.)
+        params = {**base_params, "view": "timeline", "page-size": page_size,
+                  "page": entry["offset"] // page_size + 1}
         # The month's first photo lands mid-page; the #month anchor scrolls to it.
         anchor = f"month-{entry['year']:04d}-{entry['month']:02d}"
         year_marks.append({

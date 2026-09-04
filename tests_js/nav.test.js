@@ -2,10 +2,19 @@ import { loadModule } from './support/load_module.js';
 
 const loadNav = async () => (await loadModule('nav.js')).COMPONENTS.initNavPagesBar;
 
+// The shell contract (docs/development/responsive.md, "The shared panel
+// contract") makes the Menu toggle, the primary destination list and the
+// context-panel host required peers of the pages bar: initNavPagesBar returns
+// early without them, so the fixture has to carry the whole navbar.
 const fixture = () => {
   document.body.innerHTML = `
     <nav class="navbar">
-      <button id="nav-pages-toggle"></button>
+      <div class="navbar-container">
+        <button id="nav-menu-toggle" aria-expanded="false"></button>
+        <div id="navbar-primary"><a href="/">Home</a></div>
+        <button id="nav-pages-toggle"></button>
+      </div>
+      <div id="navbar-context-panels" hidden></div>
       <div id="navbar-pages-bar"></div>
     </nav>`;
   const navbar = document.querySelector('.navbar');
@@ -81,4 +90,5 @@ describe('initNavPagesBar', () => {
 
     expect(document.documentElement.style.getPropertyValue('--navbar-height')).toBe('88px');
   });
+
 });

@@ -187,8 +187,13 @@
     border-radius: var(--radius-pill);
 }
 /* View toggle (Grid | Timeline) in the page header */
+.photo-gallery .page-header-actions {
+    align-self: center;
+}
+
 .view-toggle {
     display: inline-flex;
+    align-items: stretch;
     gap: 0;
     border: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-sm);
@@ -196,6 +201,9 @@
 }
 
 .view-toggle a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     border-radius: 0;
 }
@@ -338,9 +346,87 @@
     transition: top 160ms ease-out;
 }
 
-@media (max-width: 900px) {
+/* The scrubber's direct-control alternative: one link per year, hidden while the
+   rail is usable. See the note in index.html — a drag on a 44px edge strip is
+   never allowed to be the only way to reach a date. */
+.timeline-jump {
+    display: none;
+}
+
+@media (max-width: 900px), (hover: none), (pointer: coarse) {
     .timeline-scrubber {
         display: none;
+    }
+
+    /* Declared on the page container, not on the bar, because the sticky day
+       headers below have to clear the bar and cannot inherit from a sibling. */
+    .photo-gallery {
+        --timeline-jump-height: 52px;
+    }
+
+    .timeline-jump {
+        position: sticky;
+        top: var(--navbar-height, 56px);
+        z-index: 6;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: var(--timeline-jump-height);
+        margin-bottom: 10px;
+        /* Its own scroller: a century of years must not widen the document. */
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+        background: var(--color-bg);
+    }
+
+    .timeline-jump-year {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 56px;
+        min-height: 44px;
+        padding-inline: 12px;
+        border: var(--border-width) solid var(--color-border-strong);
+        border-radius: var(--radius-pill);
+        background: var(--color-surface);
+        color: var(--color-text);
+        font-size: var(--font-size-sm);
+        text-decoration: none;
+    }
+
+    .timeline-jump-year:hover,
+    .timeline-jump-year:focus-visible {
+        border-color: var(--color-accent);
+        color: var(--color-accent);
+    }
+
+    .timeline-day-header {
+        top: calc(var(--navbar-height, 56px) + var(--timeline-jump-height, 52px));
+    }
+
+    .timeline-month-divider {
+        scroll-margin-top: calc(
+            var(--navbar-height, 56px) + var(--timeline-jump-height, 52px) + 10px
+        );
+    }
+}
+
+/* A hover overlay on a touch screen either never opens or opens and sticks after
+   a tap, covering the very thumbnail it describes. The card's tap target already
+   leads to the detail page, which shows all of it. */
+@media (hover: none), (pointer: coarse) {
+    .photo-hover {
+        display: none;
+    }
+
+    /* The heart is faded in by card hover, an event a touch screen never
+       delivers — so on a phone the only way to favourite from the grid was an
+       invisible 40px target. Show it, and make it a real one. */
+    .photo-card .favorite-toggle {
+        opacity: 1;
+        width: 44px;
+        height: 44px;
     }
 }
 

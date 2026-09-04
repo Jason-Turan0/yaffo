@@ -32,26 +32,26 @@
             <tbody>
             {% for person in people %}
             <tr>
-                <td>
+                <td data-label="{{ _('Name') }}">
                     <a href="{{ url_for('person_faces', person_id=person.id) }}"
                        class="person-name row-link">{{ person.name or _("Unnamed") }}</a>
                 </td>
-                <td>
+                <td data-label="{{ _('Gender') }}">
                     {% if person.gender == 1 %}{{ _("Male") }}
                     {% elif person.gender == 0 %}{{ _("Female") }}
                     {% else %}—{% endif %}
                 </td>
-                <td>
+                <td data-label="{{ _('Born') }}">
                     {% if person.birthdate %}{{ person.birthdate | format_date("date") }}
                     {% else %}—{% endif %}
                 </td>
-                <td>
+                <td data-label="{{ _('Faces') }}">
                     <span class="stat-number">{{ person.num_faces | format_integer }}</span>
                 </td>
-                <td>
+                <td data-label="{{ _('Photos') }}">
                     <span class="stat-number">{{ person.num_photos | format_integer }}</span>
                 </td>
-                <td>
+                <td data-label="{{ _('Actions') }}">
                     <div class="actions">
                         <a href="#" class="action-link"
                            data-action="edit"
@@ -70,14 +70,14 @@
             </tbody>
         </table>
     </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>{{ _("No people yet") }}</h2>
+        <p>{{ _("Add your first person to start organizing photos.") }}</p>
+        <button type="button" class="btn-primary btn-add js-add-person" data-icon="add">{{ _("Add Person") }}</button>
+    </div>
+    {% endif %}
 </div>
-{% else %}
-<div class="empty-state">
-    <h2>{{ _("No people yet") }}</h2>
-    <p>{{ _("Add your first person to start organizing photos.") }}</p>
-    <button type="button" class="btn-primary btn-add js-add-person" data-icon="add">{{ _("Add Person") }}</button>
-</div>
-{% endif %}
 
 {% from "components/modal.html" import render_modal with context %}
 {% macro render_modal_person_form(id_prefix) %}

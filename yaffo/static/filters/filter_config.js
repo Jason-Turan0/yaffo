@@ -57,6 +57,54 @@ window.PHOTO_ORGANIZER.filters.initConfig = (i18n, config) => {
         else list.insertBefore(dragged, after);
     });
 
+    // HTML drag events are not consistently emitted by touch browsers. A drag
+    // that starts on the handle uses Pointer Events instead; checkbox taps and
+    // page scrolling elsewhere in the modal keep their normal behavior.
+    /** @type {number | null} */
+    let touchPointerId = null;
+
+    list.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' || !e.isPrimary || !(e.target instanceof Element)) return;
+        const handle = e.target.closest('.filter-config-handle');
+        const row = handle?.closest('.filter-config-row');
+        if (!(handle instanceof HTMLElement) || !(row instanceof HTMLElement)) return;
+
+        e.preventDefault();
+        dragged = row;
+        touchPointerId = e.pointerId;
+        dragged.classList.add('dragging');
+        try {
+            // Capture on the list, not the handle: re-inserting the dragged row
+            // can make Chrome release capture held by one of that row's children.
+            list.setPointerCapture(e.pointerId);
+        } catch {
+            // Synthetic pointer events used by tests do not create capturable
+            // pointers, but real touch and pen input does.
+        }
+    });
+
+    list.addEventListener('pointermove', (e) => {
+        if (e.pointerId !== touchPointerId || !dragged) return;
+        e.preventDefault();
+        const after = rowAfterPoint(e.clientY);
+        if (after == null) list.appendChild(dragged);
+        else list.insertBefore(dragged, after);
+    });
+
+    const finishTouchDrag = (/** @type {PointerEvent} */ e) => {
+        if (e.pointerId !== touchPointerId) return;
+        if (dragged) dragged.classList.remove('dragging');
+        if (list.hasPointerCapture(e.pointerId)) {
+            list.releasePointerCapture(e.pointerId);
+        }
+        dragged = null;
+        touchPointerId = null;
+    };
+
+    list.addEventListener('pointerup', finishTouchDrag);
+    list.addEventListener('pointercancel', finishTouchDrag);
+    list.addEventListener('lostpointercapture', finishTouchDrag);
+
     // --- reset to defaults: registry order, all visible ---
     resetBtn?.addEventListener('click', () => {
         /** @type {Record<string, HTMLElement>} */

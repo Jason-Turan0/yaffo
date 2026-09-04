@@ -3,7 +3,12 @@ import { loadModule } from './support/load_module.js';
 const setupBaseDom = () => {
   document.body.innerHTML = `
     <nav class="navbar">
-      <button id="nav-pages-toggle"></button>
+      <div class="navbar-container">
+        <button id="nav-menu-toggle" aria-expanded="false"></button>
+        <div id="navbar-primary"><a href="/">Home</a></div>
+        <button id="nav-pages-toggle"></button>
+      </div>
+      <div id="navbar-context-panels" hidden></div>
       <div id="navbar-pages-bar"></div>
     </nav>
     <div class="alert">

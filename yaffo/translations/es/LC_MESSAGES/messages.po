@@ -3780,3 +3780,30 @@ msgstr "Seleccionar carpeta de destino"
 msgid "Remove Selected Duplicates"
 msgstr "Eliminar duplicados seleccionados"
 
+#: yaffo/templates/base.html:119 yaffo/templates/base.html:122
+msgid "Menu"
+msgstr "Menú"
+
+#: yaffo/templates/albums/album.html:97
+msgid "Move earlier"
+msgstr "Mover antes"
+
+#: yaffo/templates/albums/album.html:98
+msgid "Move later"
+msgstr "Mover después"
+
+#: yaffo/templates/pages/_widget.html:10
+msgid "Move widget up"
+msgstr "Mover widget hacia arriba"
+
+#: yaffo/templates/pages/_widget.html:11
+msgid "Move widget down"
+msgstr "Mover widget hacia abajo"
+
+#: yaffo/templates/pages/_widget.html:12
+msgid "Make widget shorter"
+msgstr "Reducir la altura del widget"
+
+#: yaffo/templates/pages/_widget.html:13
+msgid "Make widget taller"
+msgstr "Aumentar la altura del widget"

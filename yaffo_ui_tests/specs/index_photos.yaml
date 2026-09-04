@@ -18,6 +18,15 @@ context:
   - tag: index-photos-js
     path: static/utilities/index_photos.js
     description: Client wiring — NDJSON scan streaming and sync
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - The scan streams progress records then a final summary of counts and unindexed/orphaned lists
@@ -61,3 +70,29 @@ scenarios:
       - A "No Media Directories Configured" message is shown
       - A "Go to Settings" link/button is offered
       - The scan does not run and the stats stay empty
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P5 — utilities). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: utilities_nav_sections_are_separate_peer_panels
+    goal: The two utility navigation sections each get their own peer navbar button
+    priority: high
+    steps:
+      - Load the Index Photos page at 390x844
+      - Open the Utilities panel, then the Automations panel
+    verify:
+      - Utilities and Automations are both peers of Menu and both closed on first paint
+      - Opening one closes the other
+      - Escape closes the open panel
+      - Neither panel scrolls the page horizontally
+  - name: index_photos_stats_and_results_fit_a_narrow_viewport
+    goal: The live stats grid and scan results stay contained at the minimum width
+    priority: high
+    steps:
+      - Load the Index Photos page at 320x568
+      - Run a scan and let the results render
+    verify:
+      - The page never scrolls horizontally
+      - The stats grid reflows instead of overflowing
+      - Result lists scroll inside their own container while their actions stay visible

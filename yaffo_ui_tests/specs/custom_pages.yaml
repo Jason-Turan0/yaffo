@@ -23,6 +23,15 @@ context:
   - tag: pages-routes
     path: routes/pages.py
     description: Routes for page CRUD, widget preview, version status/publish/cancel, and chat
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - A page edits exactly one version — the working draft if one exists, else the published version
@@ -113,3 +122,35 @@ scenarios:
     verify:
       - A confirmation dialog is shown before deleting
       - After confirming, the page is removed and no longer appears in navigation
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P8 — custom pages). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: custom_page_canvas_drops_to_one_column
+    goal: The widget grid reflows to a single column on a narrow canvas
+    priority: high
+    steps:
+      - Open a custom page and its design view at 390x844
+    verify:
+      - Neither view scrolls the page horizontally
+      - The grid reports a single column
+      - The canvas is in direct-controls mode so drag gestures do not fight page scrolling
+  - name: custom_page_widgets_move_and_resize_without_dragging
+    goal: Every drag gesture on the canvas has an explicit control equivalent
+    priority: high
+    steps:
+      - Open a custom page's design view at 390x844
+      - Use a widget's taller control, then its shorter control, then its move-down control
+    verify:
+      - Taller increases the widget height by one row and shorter restores it
+      - Move-down changes the widget order
+      - The canvas never scrolls the page horizontally
+  - name: custom_page_widgets_receive_their_real_container_size
+    goal: Widget iframes are sized to the space they actually occupy
+    priority: medium
+    steps:
+      - Open a custom page in presentation mode at 390x844 and at 1440x900
+    verify:
+      - Each widget iframe's measured width matches its container at both sizes
+      - Widgets reflow in reading order once the canvas is a single column

@@ -1,0 +1,41 @@
+{# Narrow-screen page panels — the one adaptive navigation pattern in the app.
+
+   Contract (docs/development/responsive.md, "Shared panel contract"):
+
+   - A page panel is any element carrying `data-nav-panel` and an `id`. It keeps
+     its desktop presentation (a sticky `.sidebar`, usually) and is skinned down
+     to bare content by `responsive.css` while it lives in the navbar.
+   - Its peer button carries `data-nav-panel-toggle` and `aria-controls="<id>"`
+     and is rendered into base.html's `nav_context_toggles` block, so the closed
+     narrow state is already correct on first paint, before nav.js runs.
+   - Below the shared breakpoint nav.js moves the *live* panel DOM into
+     `#navbar-context-panels` and restores it to its desktop slot above the
+     breakpoint, so entered values and component state survive a resize.
+   - Only one of Menu or one page panel is open at a time; Menu always sorts
+     last, after every page toggle.
+
+   Declare toggles in reading order. A page with both Actions and Filters
+   declares Actions first: it acts on the current selection, so it is the
+   likelier destination once photos are picked. #}
+
+{% macro nav_panel_toggle(panel_id, label, icon='filter', count=0) %}
+<button type="button" class="nav-context-toggle" id="{{ panel_id }}-toggle"
+        data-icon="{{ icon }}" data-nav-panel-toggle
+        aria-label="{{ label }}"
+        aria-controls="{{ panel_id }}" aria-expanded="false">
+    <span class="nav-context-toggle-label">{{ label }}</span>
+    {# The applied-filter count is server-rendered so it never pops in after
+       hydration; nav.js keeps it in step when a panel is swapped by htmx. #}
+    <span class="nav-context-count" data-nav-panel-count
+          {% if not count %}hidden{% endif %}>{{ count }}</span>
+</button>
+{% endmacro %}
+
+{# The toggles for a `_sidebar.html` panel pair. `panel_prefix` must match the
+   value passed to `render_sidebar`. #}
+{% macro sidebar_toggles(panel_prefix, has_actions=false, filter_count=0) %}
+    {% if has_actions %}
+        {{ nav_panel_toggle(panel_prefix ~ '-actions', _("Actions"), 'actions') }}
+    {% endif %}
+    {{ nav_panel_toggle(panel_prefix ~ '-filters', _("Filters"), 'filter', filter_count) }}
+{% endmacro %}

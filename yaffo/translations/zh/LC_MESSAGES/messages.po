@@ -3638,3 +3638,30 @@ msgstr "选择目标文件夹"
 msgid "Remove Selected Duplicates"
 msgstr "删除选定的重复项"
 
+#: yaffo/templates/base.html:119 yaffo/templates/base.html:122
+msgid "Menu"
+msgstr "菜单"
+
+#: yaffo/templates/albums/album.html:97
+msgid "Move earlier"
+msgstr "前移"
+
+#: yaffo/templates/albums/album.html:98
+msgid "Move later"
+msgstr "后移"
+
+#: yaffo/templates/pages/_widget.html:10
+msgid "Move widget up"
+msgstr "上移小组件"
+
+#: yaffo/templates/pages/_widget.html:11
+msgid "Move widget down"
+msgstr "下移小组件"
+
+#: yaffo/templates/pages/_widget.html:12
+msgid "Make widget shorter"
+msgstr "缩短小组件"
+
+#: yaffo/templates/pages/_widget.html:13
+msgid "Make widget taller"
+msgstr "增高小组件"

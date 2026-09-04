@@ -5,7 +5,10 @@
 .albums-container {
     display: flex;
     gap: 20px;
+    /* dvh so mobile browser chrome collapsing does not leave a dead band; the vh
+       line stays first as the fallback for engines without dynamic units. */
     min-height: calc(100vh - 100px);
+    min-height: calc(100dvh - 100px);
 }
 
 .albums-sidebar {
@@ -36,7 +39,9 @@
    why "Set as cover" exists at all. */
 .album-tiles {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    /* min() so the track never demands 220px in a container narrower than that —
+       a fixed minimum in an auto-fill track is what pushes a grid past 320px. */
+    grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
     gap: 16px;
 }
 
@@ -93,8 +98,8 @@
    page you set it from (the tile it drives lives on the overview). */
 .album-photo-card .album-cover-chip {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
     z-index: 1;
 }
 
@@ -104,6 +109,30 @@
 
 .album-photo-card.is-dragging {
     opacity: 0.5;
+}
+
+/* Reordering must never depend on a drag. albums.js reorders with the HTML5
+   drag-and-drop API, which touch does not emit AT ALL — a finger drag on a phone
+   fires touch events and no dragstart, so the ↑/↓ controls are the only reorder
+   path there. responsive.css hides them until :focus-within or a coarse pointer;
+   in album edit mode they are the documented alternative, so they are always on
+   screen: a fine-pointer 390px window is still a narrow screen, and an
+   affordance the user has to discover by focusing a tile is not an alternative.
+   `inset-inline-end` keeps them off the selection tick, which is inline-start. */
+.photo-grid.is-selecting .album-photo-card .album-reorder-controls {
+    display: inline-flex;
+}
+
+/* 44px, not the shared 32px: these are the touch path for reordering, so they
+   have to be a touch target. They sit over the thumbnail, hence the fixed size
+   rather than padding that the theme can shrink. */
+.album-photo-card .album-reorder-button {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
 }
 
 /* Confirmation after an add — the user stays on the add screen, so this (plus the
@@ -134,8 +163,14 @@
 }
 
 .share-device-list .checkbox-label {
+    /* A device name is user input and arrives from the peer, so it wraps rather
+       than widening the dialog; min-height keeps the row a touch target once the
+       modal is a full-width sheet. (.checkbox-label is already a centred flex row
+       in form.css — do not restate its layout here.) */
+    min-height: 44px;
     padding: 8px 10px;
     border-radius: var(--radius-sm);
+    overflow-wrap: anywhere;
 }
 
 .share-device-list .checkbox-label:hover {

@@ -168,6 +168,10 @@
     padding: 0;
 }
 
+.selection-panel-backdrop {
+    display: none;
+}
+
 .selection-panel.active {
     width: 380px;
     opacity: 1;
@@ -401,4 +405,146 @@
 .selection-panel-actions .btn-clear-names:hover {
     background: var(--color-danger);
     color: var(--color-on-accent);
+}
+
+/* ---------------------------------------------------------------------------
+   Narrow screens (P4 — docs/development/responsive.md, Phase 4 item 1).
+
+   The map is this page's primary surface, so it keeps the full width and the
+   selected-cluster assignment controls become a centered modal over it instead
+   of a 380 px column that would squeeze the map into a sliver. This restyles
+   the EXISTING #selection-panel rather than introducing a second component, so
+   the panel's live DOM — and therefore the selection, preview state and
+   anything typed into the assignment input — survives the breakpoint.
+
+   900 px is one of the shared boundaries in the support contract, and it is
+   where map + 380 px panel stops leaving the map a usable share of the row.
+   --------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+    .map-layout {
+        display: block;
+    }
+
+    #map {
+        /* The desktop `100vh - 200px` leaves a stub on a short landscape phone
+           and ignores the navbar's measured height. Fill what is actually left
+           below the shell instead, with a floor so the map stays usable when
+           the viewport is very short. */
+        height: calc(100vh - var(--navbar-height, 64px) - 140px);
+        height: calc(100dvh - var(--navbar-height, 64px) - 140px);
+        min-height: 240px;
+        width: 100%;
+        /* The panel no longer takes width from the map, so there is nothing
+           left for the flex transition to animate. */
+        transition: none;
+    }
+
+    .selection-panel-backdrop:not([hidden]) {
+        position: fixed;
+        z-index: 900;
+        inset: 0;
+        display: block;
+        background: var(--color-backdrop);
+    }
+
+    #selection-panel.selection-panel {
+        position: fixed;
+        z-index: 910;
+        inset-block-start: 50%;
+        inset-inline-start: 50%;
+        display: none;
+        width: min(calc(100% - 32px), 600px);
+        max-width: 600px;
+        max-height: calc(100vh - 32px);
+        max-height: calc(100dvh - 32px);
+        margin: 0;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-xl);
+        transform: translate(-50%, -50%);
+        transition: none;
+    }
+
+    #selection-panel.selection-panel.active {
+        display: flex;
+        flex-direction: column;
+        width: min(calc(100% - 32px), 600px);
+        margin: 0;
+        opacity: 1;
+        padding: 0;
+    }
+
+    body.location-assignment-modal-open {
+        overflow: hidden;
+    }
+
+    /* The modal contains its own overflow, and an overscroll at the end of the
+       panel does not chain out to the page behind its backdrop. */
+    #selection-panel-content {
+        flex: 1;
+        height: auto;
+        min-height: 0;
+        overscroll-behavior: contain;
+    }
+
+    /* One scroll region, not two. Inside a bounded modal the cluster list has
+       the whole row, so its own 240 px scroller would nest a second scrollbar
+       inside the first for no benefit — let the modal own the overflow. */
+    .clusters-summary {
+        flex: none;
+    }
+
+    .clusters-list {
+        flex: none;
+        min-height: 0;
+        max-height: none;
+        overflow-y: visible;
+    }
+
+    /* Moved out of the shared responsive layer at integration: this selector
+       exists only on /locations, so the rule belongs to this page. */
+    .cluster-assign {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Coarse-pointer equivalents. Everything this page said only through `:hover`
+   or a native `title` tooltip has to be reachable by touch.
+
+   Applied on a coarse pointer at any width, and unconditionally at the widths
+   where the modal lives: the centered surface has the room, and a narrow
+   viewport is where a touch screen is overwhelmingly likely anyway.
+   --------------------------------------------------------------------------- */
+@media (max-width: 900px), (hover: none) {
+    /* A quick-assign button ellipsises a long location name and puts the whole
+       name in `title`, which a touch device never shows. Wrap instead, so the
+       name the button would assign is always legible before it is tapped. */
+    .btn-quick-assign {
+        min-height: 44px;
+        max-width: 100%;
+        overflow: visible;
+        overflow-wrap: anywhere;
+        text-overflow: clip;
+        white-space: normal;
+    }
+
+    /* Touch targets that were sized for a mouse. The close control is the only
+       way to dismiss the modal without hunting for empty map. */
+    .selection-panel-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 44px;
+        min-height: 44px;
+        margin: -10px -10px -10px 0;
+    }
+
+    .preview-toggle {
+        min-height: 44px;
+    }
+
+    .preview-thumb {
+        min-width: 44px;
+        min-height: 44px;
+    }
 }

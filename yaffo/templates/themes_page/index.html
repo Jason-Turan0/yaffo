@@ -9,9 +9,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='themes_page/index.css') }}">
 {% endblock %}
 
+{% from "components/nav_panel.html" import nav_panel_toggle %}
+{% block nav_context_toggles %}
+    {{ nav_panel_toggle('themes-nav', _("Themes"), 'themes') }}
+{% endblock %}
+
 {% block content %}
 <div class="themes-container">
-    <nav class="sidebar themes-sidebar">
+    <nav class="sidebar themes-sidebar" id="themes-nav" data-nav-panel>
         <h2>{{ _("Themes") }}</h2>
 
         <h3 class="themes-nav-heading">{{ _("System") }}</h3>

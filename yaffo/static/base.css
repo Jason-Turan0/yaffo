@@ -201,7 +201,10 @@ textarea {
 }
 
 .page-header-main {
-    flex: 1;
+    /* A zero basis lets a crowded action group squeeze a user-supplied title to
+       a sliver (album detail lost its heading to 58px between 700 and 1000px);
+       a real basis makes the actions wrap to their own row instead. */
+    flex: 1 1 min(100%, 18rem);
     min-width: 0;
 }
 
@@ -224,6 +227,14 @@ textarea {
     font-size: var(--font-size-base);
     color: var(--color-text-muted);
     margin: 0;
+}
+
+/* Titles and subtitles are user input — album, person, device and page names.
+   One long unbreakable word must not size the header, and through it the
+   container and the document. */
+.page-header h1,
+.page-header .subtitle {
+    overflow-wrap: anywhere;
 }
 
 /* Radio Button Styles */

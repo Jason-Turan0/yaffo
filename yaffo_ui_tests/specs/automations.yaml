@@ -23,6 +23,15 @@ context:
   - tag: automations-js
     path: static/utilities/automations.js
     description: Client wiring — trigger editor, run/test controls, and the chat dialog
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - System automations ship built-in and cannot be edited or deleted; custom ones can
@@ -144,3 +153,19 @@ scenarios:
       - A confirmation dialog is shown before deleting
       - After confirming, the automation is removed from the sidebar
       - System automations offer no delete action
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P5 — automations). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: automation_editor_stacks_on_a_narrow_viewport
+    goal: The editor, chat and code panes stack instead of competing for width
+    priority: medium
+    steps:
+      - Open a custom automation's edit screen at 390x844
+      - Open its trigger editor
+    verify:
+      - Neither screen scrolls the page horizontally
+      - The conversation and code sections take the full width once stacked
+      - Code blocks and test-result tables scroll inside their own container
+      - The full action set stays discoverable rather than being clipped

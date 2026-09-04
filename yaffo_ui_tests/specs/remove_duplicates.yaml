@@ -21,6 +21,15 @@ context:
   - tag: remove-duplicates-js
     path: static/utilities/remove_duplicates.js
     description: Client wiring for the duplicate review flow
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - Duplicates are grouped; each group keeps one photo and marks the others for removal
@@ -81,3 +90,17 @@ scenarios:
       - The page redirects back to the Remove Duplicates utility
     cleanup:
       - Restore any test files that were trashed or moved during the run
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P5 — utilities). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: duplicate_review_fits_a_narrow_viewport
+    goal: The duplicate review screen stays usable at the minimum width
+    priority: medium
+    steps:
+      - Load the Remove Duplicates page at 320x568 and run a scan
+    verify:
+      - The directory form stacks rather than overflowing, and long paths wrap
+      - Each duplicate group's photos and its keep/remove actions are both reachable
+      - Result paging controls stay on one row

@@ -22,10 +22,14 @@
     display: flex;
     justify-content: center;
     min-height: 100vh;
-    padding: 1.5rem;
+    min-height: 100dvh;
+    padding: calc(1.5rem + env(safe-area-inset-top)) calc(1.5rem + env(safe-area-inset-right)) calc(1.5rem + env(safe-area-inset-bottom)) calc(1.5rem + env(safe-area-inset-left));
 }
 
 .demo-disabled-card {
+    /* A CSRF token or a device id can arrive in the message with no break
+       opportunity in it; the card must wrap rather than widen the page. */
+    overflow-wrap: anywhere;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 0.75rem;

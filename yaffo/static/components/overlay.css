@@ -1,7 +1,10 @@
+/* Physical offsets on purpose: overlay.js computes them as page coordinates
+   relative to its anchor, which is geometry rather than reading order. */
 .overlay {
     position: absolute;
     z-index: 1000;
-    min-width: 200px;
+    min-width: min(200px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
     border-radius: var(--radius-md);
     background: transparent; /* background moved to inner container */
     pointer-events: none;

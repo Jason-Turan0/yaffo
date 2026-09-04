@@ -9,6 +9,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='filters/filter_config.css') }}">
 {% endblock %}
 
+{% from "components/nav_panel.html" import sidebar_toggles %}
+{% block nav_context_toggles %}
+    {{ sidebar_toggles('home', filter_count=applied_filter_count(request.args)) }}
+{% endblock %}
+
 {% block content %}
     {% from "_sidebar.html" import render_sidebar %}
     {% from "components/pagination.html" import pagination as render_pagination %}
@@ -22,7 +27,13 @@
     {% endmacro %}
 
     <div class="main-container-layout">
-        {{ render_sidebar(url_for('index'), filters, filter_layout=filter_layout, render_hidden_block=view_param_input) }}
+        {{ render_sidebar(
+            url_for('index'),
+            filters,
+            filter_layout=filter_layout,
+            render_hidden_block=view_param_input,
+            panel_prefix="home"
+        ) }}
         <div class="main-content photo-gallery">
             {% set header_actions %}
                 <div class="view-toggle" role="group" aria-label="{{ _('Library view') }}">
@@ -56,6 +67,23 @@
 
             {% if media_items|length > 0 %}
                 {% if view == 'timeline' %}
+                    {% if timeline_year_marks %}
+                        {# The touch-safe alternative to the scrubber rail. The rail
+                           is a drag gesture on a 44px strip pinned to the window
+                           edge — the worst place to ask a thumb to work, right where
+                           the browser's own edge gestures live — so narrow and
+                           coarse-pointer screens hide it and get these direct
+                           controls instead: the same per-year jump links, as a
+                           horizontally scrollable row that sticks under the navbar.
+                           Plain <a> elements, so they also work with no JavaScript. #}
+                        <nav class="timeline-jump" aria-label="{{ _('Jump to a date') }}">
+                            {% for mark in timeline_year_marks %}
+                                <a class="timeline-jump-year" data-year="{{ mark.year }}"
+                                   href="{{ mark.url }}">{{ mark.year }}</a>
+                            {% endfor %}
+                        </nav>
+                    {% endif %}
+
                     <div class="timeline">
                         {% include "_timeline_sections.html" %}
                     </div>

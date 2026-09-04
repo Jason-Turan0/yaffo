@@ -53,3 +53,51 @@
   empty) `.empty-state` "No faces found".
 - Deleting a person unassigns their faces (status back to unassigned) — verified by
   polling the pool for the face id.
+
+## 2026-08-30 — responsive rollout (P3: faces and people)
+
+### Status: PASSING (15/15) — 5 pre-existing behaviour tests plus a 10-test `People — responsive` describe
+
+Hand-written, not generated and not healed. Shared assertions come from
+`generated_tests/_support/responsive.ts`.
+
+### Layout facts
+- `/people` registers **no** panel of its own — it is a plain page with a header
+  action. `/people/<id>/faces` registers `#person-faces-actions` and
+  `#person-faces-filters` (toggles `#person-faces-actions-toggle` and
+  `#person-faces-filters-toggle`), Actions first.
+- **Gotcha:** `#nav-menu-toggle` does not carry `data-nav-panel-toggle`, so an
+  ordering assertion must select `'[data-nav-panel-toggle], #nav-menu-toggle'`.
+- Below 640px `static/responsive.css` (shared, S2-owned) turns `.people-table`
+  into labelled cards: `table/thead/tbody/tr/td` all go `display: block`, the
+  `thead` is clipped to 1×1 px, and each `td::before` renders `attr(data-label)`.
+  Assert the rendered `getComputedStyle(cell, '::before').content`, not just the
+  presence of the attribute — the attribute alone does not prove the card reads
+  as a labelled record. All six cells must still render; nothing is hidden to
+  make the row fit.
+- `static/people/list.css` used to be an empty file. It now owns the containment
+  the card/table pair needs: `.people-table { overflow-x: auto }` (so the table,
+  not the document, scrolls between 640px and desktop), `overflow-wrap: anywhere`
+  on `.person-name`, and 44px action links under a coarse pointer.
+- The person-faces filters are **range** inputs named `min_similarity` /
+  `max_similarity` (ids `min_similarity-range`, `max_similarity-range`).
+  `fill('42')` works on them.
+
+### Bug found and fixed (has a scenario naming the cause)
+A person's name reaches three places, and all three have to break it: the list
+cell, the `.page-header h1` of `/people/<id>/faces`, and — the one that was
+missing — that page's empty-state sentence, "No faces have been assigned to
+<name> yet." A single unbroken ~90-character name there set the page's minimum
+width to **672px at a 320px viewport**. Fixed in `static/people/faces.css`.
+
+### Test-data notes
+- `firstPersonId()` prefers the person with the most faces so the gallery, not
+  the empty state, is what the coarse-pointer and width tests measure; it falls
+  back to the first row when the parallel suites have emptied everyone.
+- The long-name fixture (`LONG_NAME`) is created via the API and deleted in a
+  `finally`; it is also in `ALL_TEST_NAMES` so `afterAll` sweeps it if the test
+  dies mid-flight.
+- `.people-table` only exists when at least one person exists — the `{% if %}`
+  branch renders `.empty-state` instead. `templates/people/list.html` used to
+  close `.main-content` inside the truthy branch only, leaving the element
+  unclosed in the empty case; that is fixed.
