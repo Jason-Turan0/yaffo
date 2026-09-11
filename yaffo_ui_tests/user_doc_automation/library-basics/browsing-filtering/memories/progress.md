@@ -11,3 +11,7 @@ things worth not rediscovering; the same role `generated_tests/*/memories/` play
 - Sidebar selects are custom widgets; `selectOption` does not drive them.
 - Person chips reflow card heights, so a seed that assigns faces differently shifts the
   whole grid and produces a large spurious diff.
+- The Grid | Timeline view toggle in the page header is vertically centred by
+  `.photo-gallery .page-header-actions { align-self: center }` (index.css). A shot that
+  shows it flush with the top of the header predates that rule; a diff confined to that
+  ~120x40px control is header alignment, not fixture drift.
