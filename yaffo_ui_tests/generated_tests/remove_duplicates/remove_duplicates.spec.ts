@@ -1,3 +1,4 @@
+import { VIEWPORTS, expectNoPageOverflow, expectFitsViewport, withTouchContext } from '../_support/responsive';
 import { test, expect, Page, Locator } from '@playwright/test';
 import { buildDuplicateImageCorpus, countEntriesIn, removeTempDirs } from '../_support/sandbox-fs';
 
@@ -160,6 +161,63 @@ test.describe('Remove Duplicates', () => {
     await pickSearchableOption(page, '#action-type', 'Move to Trash');
     await expect(page.locator('#action-type')).toHaveValue('trash');
     await expect(page.locator('#destination-folder')).toHaveCount(0);
+  });
+
+
+  test('duplicate_review_fits_a_narrow_viewport', async ({ page }) => {
+    await openResults(page);
+    for (const viewport of Object.values(VIEWPORTS)) {
+      await page.setViewportSize(viewport);
+      await expectNoPageOverflow(page);
+      await page.locator('.duplicate-group .photo-card').first().evaluate(el => el.scrollIntoView({block: 'center', behavior: 'instant'}));
+      await expectFitsViewport(page, '.duplicate-group:first-of-type .photo-card:first-child');
+    }
+    await page.setViewportSize(VIEWPORTS.minimum);
+    const pager = page.locator('.page-navigation');
+    await pager.scrollIntoViewIfNeeded();
+    const ys = await pager.locator('.page-btn').evaluateAll(els => els.map(e => e.getBoundingClientRect().y));
+    expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(2);
+    await page.locator('.page-navigation .page-btn', { hasText: 'Next' }).click();
+    await expect(page.locator('.page-info')).toContainText('Page 2 of 2');
+    await expectNoPageOverflow(page);
+  });
+
+  test('duplicate_selection_and_destination_survive_rotation', async ({ browser }) => {
+    await withTouchContext(browser, VIEWPORTS.narrow, async page => {
+      await openResults(page);
+      const card = page.locator('.photo-card').first();
+      const id = await card.getAttribute('id');
+      await card.tap();
+      await expect(page.locator(`#${id}`)).toHaveClass(/selected/);
+      await pickSearchableOption(page, '#action-type', 'Move to Folder');
+      const destination = destDir + '/' + 'long-directory'.repeat(15);
+      await page.locator('#destination-folder').fill(destination);
+      await page.locator('#destination-folder').blur();
+      await expect(page.locator('#destination-folder')).toHaveValue(destination);
+      for (const viewport of [VIEWPORTS.narrowLandscape, VIEWPORTS.tabletPortrait, VIEWPORTS.desktop]) {
+        await page.setViewportSize(viewport);
+        await expect(page.locator(`#${id}`)).toHaveClass(/selected/);
+        await expect(page.locator('#destination-folder')).toHaveValue(destination);
+        await expectNoPageOverflow(page);
+      }
+      await page.locator(`#${id}`).tap();
+      await expect(page.locator(`#${id}`)).not.toHaveClass(/selected/);
+    });
+  });
+
+  test('duplicate_directory_form_fits_every_viewport', async ({ page }) => {
+    await page.goto('/utilities/remove-duplicates');
+    await page.locator('#add-directory-button').click();
+    const input = page.locator('input[name="directory"]').first();
+    await expect(input).toBeVisible();
+    await input.fill(scanDir);
+    await input.dispatchEvent('change');
+    await expect(page.locator('input[name="directory"]').first()).toHaveValue(scanDir);
+    for (const viewport of Object.values(VIEWPORTS)) {
+      await page.setViewportSize(viewport);
+      await expectNoPageOverflow(page);
+      await expect(page.locator('input[name="directory"]').first()).toHaveValue(scanDir);
+    }
   });
 
   test('remove_duplicates_execute_removal', async ({ page }) => {

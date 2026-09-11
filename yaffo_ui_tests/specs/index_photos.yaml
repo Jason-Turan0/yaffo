@@ -96,3 +96,11 @@ scenarios:
       - The page never scrolls horizontally
       - The stats grid reflows instead of overflowing
       - Result lists scroll inside their own container while their actions stay visible
+
+  - name: utilities_touch_dialog_preserves_input_across_resize
+    goal: The modal fits phone, tablet, and desktop; input survives resize and Cancel closes it
+    priority: high
+    steps:
+      - Open New automation through the phone navigation and enter a name without saving
+    verify:
+      - The modal fits phone, tablet, and desktop; input survives resize and Cancel closes it

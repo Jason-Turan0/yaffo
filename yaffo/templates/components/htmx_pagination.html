@@ -41,7 +41,7 @@
             </div>
 
             <div class="page-navigation">
-                <button type="button"
+                <button type="button" data-icon="page-first" aria-label="{{ _('First') }}"
                         {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
                         hx-target="{{ hx_target }}"
                         hx-swap="{{ hx_swap }}"
@@ -49,10 +49,10 @@
                         hx-vals='{"page": 0, "page-size": {{ page_size }}}'
                         class="page-btn {% if current_page == 0 %}disabled{% endif %}"
                         {% if current_page == 0 %}disabled{% endif %}>
-                    &laquo; {{ _("First") }}
+                    <span class="page-btn-label">&laquo; {{ _("First") }}</span>
                 </button>
 
-                <button type="button"
+                <button type="button" data-icon="page-previous" aria-label="{{ _('Previous') }}"
                         {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
                         hx-target="{{ hx_target }}"
                         hx-swap="{{ hx_swap }}"
@@ -60,7 +60,7 @@
                         hx-vals='{"page": {{ current_page - 1 }}, "page-size": {{ page_size }}}'
                         class="page-btn {% if current_page == 0 %}disabled{% endif %}"
                         {% if current_page == 0 %}disabled{% endif %}>
-                    &lsaquo; {{ _("Previous") }}
+                    <span class="page-btn-label">&lsaquo; {{ _("Previous") }}</span>
                 </button>
 
                 <span class="page-info">
@@ -69,7 +69,7 @@
                 {% endtrans %}
             </span>
 
-                <button type="button"
+                <button type="button" data-icon="page-next" aria-label="{{ _('Next') }}"
                         {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
                         hx-target="{{ hx_target }}"
                         hx-swap="{{ hx_swap }}"
@@ -77,10 +77,10 @@
                         hx-vals='{"page": {{ current_page + 1 }}, "page-size": {{ page_size }}}'
                         class="page-btn {% if current_page >= total_pages-1 %}disabled{% endif %}"
                         {% if current_page >= total_pages - 1 %}disabled{% endif %}>
-                    {{ _("Next") }} &rsaquo;
+                    <span class="page-btn-label">{{ _("Next") }} &rsaquo;</span>
                 </button>
 
-                <button type="button"
+                <button type="button" data-icon="page-last" aria-label="{{ _('Last') }}"
                         {% if is_post %}hx-post{% else %}hx-get{% endif %}="{{ hx_endpoint }}"
                         hx-target="{{ hx_target }}"
                         hx-swap="{{ hx_swap }}"
@@ -88,7 +88,7 @@
                         hx-vals='{"page": {{ total_pages - 1 }}, "page-size": {{ page_size }}}'
                         class="page-btn {% if current_page >= total_pages - 1 %}disabled{% endif %}"
                         {% if current_page >= total_pages - 1 %}disabled{% endif %}>
-                    {{ _("Last") }} &raquo;
+                    <span class="page-btn-label">{{ _("Last") }} &raquo;</span>
                 </button>
             </div>
         </div>

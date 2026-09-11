@@ -104,3 +104,19 @@ scenarios:
       - The directory form stacks rather than overflowing, and long paths wrap
       - Each duplicate group's photos and its keep/remove actions are both reachable
       - Result paging controls stay on one row
+
+  - name: duplicate_selection_and_destination_survive_rotation
+    goal: Selection and destination survive landscape, tablet, and desktop; page remains contained
+    priority: high
+    steps:
+      - Select a duplicate by touch, choose Move to Folder and enter a long destination, then resize
+    verify:
+      - Selection and destination survive landscape, tablet, and desktop; page remains contained
+
+  - name: duplicate_directory_form_fits_every_viewport
+    goal: The populated directory form stays contained and keeps its value
+    priority: high
+    steps:
+      - Add a scan directory and resize across all six contract viewports
+    verify:
+      - The populated directory form stays contained and keeps its value

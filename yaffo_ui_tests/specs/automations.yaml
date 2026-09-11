@@ -169,3 +169,35 @@ scenarios:
       - The conversation and code sections take the full width once stacked
       - Code blocks and test-result tables scroll inside their own container
       - The full action set stays discoverable rather than being clipped
+
+  - name: automation_routes_fit_phone_tablet_and_desktop
+    goal: Routes return successfully with no uncaught errors or page overflow; Automations consumes the panel contract
+    priority: high
+    steps:
+      - Open detail, editor, and triggers at all six contract viewports
+    verify:
+      - Routes return successfully with no uncaught errors or page overflow; Automations consumes the panel contract
+
+  - name: automation_trigger_input_survives_rotation_and_touch_save
+    goal: Unsaved schedule and event values survive resize; saved trigger actions are at least 44 pixels high
+    priority: high
+    steps:
+      - Enter an advanced schedule by touch, resize, save and remove it; open an event editor
+    verify:
+      - Unsaved schedule and event values survive resize; saved trigger actions are at least 44 pixels high
+
+  - name: automation_test_results_scroll_locally_with_long_content
+    goal: The picker fits; the table scrolls locally; details remain selected and no page overflow occurs
+    priority: high
+    steps:
+      - Run a dry-run fixture with long raw arguments and enable Show details on phone, tablet, and desktop
+    verify:
+      - The picker fits; the table scrolls locally; details remain selected and no page overflow occurs
+
+  - name: automation_long_names_and_detail_dialog_fit_narrow_screens
+    goal: The heading wraps, every action remains reachable, and the modal fits
+    priority: high
+    steps:
+      - Review a long automation heading and open Edit details at minimum width
+    verify:
+      - The heading wraps, every action remains reachable, and the modal fits

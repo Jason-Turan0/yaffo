@@ -1,3 +1,4 @@
+import { VIEWPORTS, expectNoPageOverflow, expectFitsViewport, expectPanelContract, withTouchContext } from '../_support/responsive';
 import { test, expect, Page, Locator } from '@playwright/test';
 
 type DryRunAction = {
@@ -409,6 +410,120 @@ test.describe('Automations', () => {
     await reloaded;
     await expect(page.locator('.automation-edit-screen')).toBeVisible();
     await expect(page.locator('.automation-code-section')).toBeVisible();
+  });
+
+
+  test('automation_routes_fit_phone_tablet_and_desktop', async ({ page }) => {
+    const slug = await ensureCustomAutomation(page);
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    for (const viewport of Object.values(VIEWPORTS)) {
+      await page.setViewportSize(viewport);
+      for (const suffix of ['', '/edit', '/triggers/edit']) {
+        const response = await page.goto(`/utilities/automations/${slug}${suffix}`);
+        expect(response?.ok()).toBe(true);
+        await expectNoPageOverflow(page);
+      }
+    }
+    expect(errors).toEqual([]);
+    await expectPanelContract(page, {
+      route: `/utilities/automations/${slug}`, panelId: 'automations-nav',
+    });
+  });
+
+  test('automation_editor_stacks_on_a_narrow_viewport', async ({ page }) => {
+    await page.goto('/utilities/automations/file-favorite-kid-photos/edit');
+    await page.locator('#automation-chat-message').fill('Keep this unsent request while rotating');
+    for (const viewport of Object.values(VIEWPORTS)) {
+      await page.setViewportSize(viewport);
+      await expectNoPageOverflow(page);
+      await expect(page.locator('#automation-chat-message')).toHaveValue('Keep this unsent request while rotating');
+      const chat = (await page.locator('.automation-conversation').boundingBox())!;
+      const code = (await page.locator('.automation-code-section').boundingBox())!;
+      if (viewport.width <= 1200) {
+        expect(code.y).toBeGreaterThanOrEqual(chat.y + chat.height);
+        expect(Math.abs(code.width - chat.width)).toBeLessThan(2);
+      } else {
+        expect(code.x).toBeGreaterThan(chat.x);
+      }
+      const pre = page.locator('.automation-code').first();
+      expect(await pre.evaluate(el => getComputedStyle(el).overflowX)).toBe('auto');
+    }
+  });
+
+  test('automation_trigger_input_survives_rotation_and_touch_save', async ({ browser, page }) => {
+    const slug = await ensureCustomAutomation(page);
+    await withTouchContext(browser, VIEWPORTS.minimum, async phone => {
+      await phone.goto(`/utilities/automations/${slug}/triggers/edit`);
+      await phone.locator('.js-add-schedule').tap();
+      await phone.locator('.cron-mode').selectOption('custom');
+      await phone.locator('.cron-cadence').selectOption('advanced');
+      await phone.locator('.cron-raw').fill('*/20 * * * *');
+      await expect(phone.locator('.js-save-schedule')).toBeEnabled();
+      for (const viewport of [VIEWPORTS.narrowLandscape, VIEWPORTS.tabletPortrait, VIEWPORTS.desktop, VIEWPORTS.minimum]) {
+        await phone.setViewportSize(viewport);
+        await expect(phone.locator('.cron-raw')).toHaveValue('*/20 * * * *');
+        await expectNoPageOverflow(phone);
+      }
+      await phone.locator('.js-save-schedule').tap();
+      await expect(phone.locator('.automation-trigger-row')).toHaveCount(1);
+      const buttons = await phone.locator('.automation-trigger-row button').evaluateAll(els => els.map(el => el.getBoundingClientRect().height));
+      expect(buttons.every(height => height >= 44)).toBe(true);
+      await phone.locator('.automation-trigger-row .btn-danger').tap();
+      await expect(phone.locator('.automation-trigger-row')).toHaveCount(0);
+      await phone.locator('.js-add-event').tap();
+      await phone.locator('#new-event-type').selectOption('media_imported');
+      await phone.setViewportSize(VIEWPORTS.tabletPortrait);
+      await expect(phone.locator('#new-event-type')).toHaveValue('media_imported');
+      await expectNoPageOverflow(phone);
+      await phone.locator('.event-editor .js-cancel').tap();
+    });
+  });
+
+  test('automation_test_results_scroll_locally_with_long_content', async ({ browser }) => {
+    await withTouchContext(browser, VIEWPORTS.minimum, async page => {
+      const longPath = '/photos/' + 'unbroken-path'.repeat(40);
+      await page.route('**/utilities/automations/file-favorite-kid-photos/test-files', route => route.fulfill({
+        contentType: 'application/json', body: JSON.stringify({success: true, code_source: 'published',
+          context: {media_item_ids: [1]}, actions: [{name: 'move_media_items', summary: 'Move a photo', args: [longPath]}], value: longPath}),
+      }));
+      await page.goto('/utilities/automations/file-favorite-kid-photos/edit');
+      await page.locator('#automation-test-button').tap();
+      await expectFitsViewport(page, '#folder-picker-modal .modal-content');
+      await pickCurrentFolder(page);
+      await expect(page.locator('#automation-test-result')).toBeVisible();
+      await page.locator('.automation-test-toggle input').check();
+      for (const viewport of [VIEWPORTS.minimum, VIEWPORTS.tabletPortrait, VIEWPORTS.desktop]) {
+        await page.setViewportSize(viewport);
+        await expectNoPageOverflow(page);
+        const scroller = page.locator('.automation-test-result .table-container');
+        expect(await scroller.evaluate(el => getComputedStyle(el).overflowX)).toBe('auto');
+        await scroller.evaluate(el => { el.scrollLeft = el.scrollWidth; });
+        expect(await scroller.evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
+        await expect(page.locator('.automation-test-toggle input')).toBeChecked();
+      }
+    });
+  });
+
+  test('automation_long_names_and_detail_dialog_fit_narrow_screens', async ({ page }) => {
+    const slug = await ensureCustomAutomation(page);
+    await openAutomation(page, slug);
+    // Stress server-rendered text without persisting a rename outside this fixture.
+    await page.locator('.page-header h1').evaluate(el => { el.textContent = 'Automatisierungsbeschreibung'.repeat(8); });
+    for (const viewport of [VIEWPORTS.minimum, VIEWPORTS.tabletPortrait, VIEWPORTS.desktop]) {
+      await page.setViewportSize(viewport);
+      await expectNoPageOverflow(page);
+      for (const button of await page.locator('.automation-actions > *').all()) {
+        await button.scrollIntoViewIfNeeded();
+        const box = (await button.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+      }
+    }
+    await page.setViewportSize(VIEWPORTS.minimum);
+    await page.locator('#edit-automation-button').click();
+    await expectFitsViewport(page, '#editAutomationModal .modal-content');
+    await page.locator('#editAutomationModal .modal-actions [name="cancel"]').click();
   });
 
   test('automations_delete_custom_automation', async ({ page }) => {
