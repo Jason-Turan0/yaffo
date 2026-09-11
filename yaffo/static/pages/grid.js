@@ -196,6 +196,53 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
                 rendered.delete(deleteButton.dataset.widgetId ?? '');
             });
         }
+
+        const moveWidget = (/** @type {number} */ offset) => {
+            const nodes = [...grid.engine.nodes].sort((a, b) => a.y - b.y || a.x - b.x);
+            const currentIndex = nodes.findIndex(node => node.el === el);
+            const current = nodes[currentIndex];
+            const target = nodes[currentIndex + offset];
+            if (!current || !target) return;
+            // Use GridStack's collision-aware swap primitive. Updating each item
+            // independently makes the engine push the first move back because the
+            // destination is still occupied, especially in the one-column layout.
+            if (!grid.engine.swap(current, target)) return;
+            grid._writePosAttr(current.el, current);
+            grid._writePosAttr(target.el, target);
+            grid._updateContainerHeight();
+            grid._triggerChangeEvent();
+            /** @type {HTMLElement | null} */ (current.el?.querySelector('.widget-order') ?? null)?.focus();
+        };
+
+        el.querySelectorAll('.widget-order').forEach((button) => {
+            button.addEventListener('mousedown', (event) => event.stopPropagation());
+        });
+        el.querySelector('.widget-order-up')?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            moveWidget(-1);
+        });
+        el.querySelector('.widget-order-down')?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            moveWidget(1);
+        });
+        const resizeWidget = (/** @type {number} */ offset) => {
+            const node = /** @type {any} */ (el).gridstackNode;
+            if (!node) return;
+            const nextHeight = Math.max(node.minH || 1, node.h + offset);
+            if (nextHeight === node.h) return;
+            grid.update(el, { h: nextHeight });
+            /** @type {HTMLElement | null} */ (
+                el.querySelector(offset < 0 ? '.widget-size-shorter' : '.widget-size-taller')
+            )?.focus();
+        };
+        el.querySelector('.widget-size-shorter')?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            resizeWidget(-1);
+        });
+        el.querySelector('.widget-size-taller')?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            resizeWidget(1);
+        });
     };
 
     /**
@@ -478,6 +525,15 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
     const gridEl = /** @type {HTMLElement} */ (document.querySelector('.grid-stack'));
     grid.on('dragstart resizestart', () => gridEl.classList.add('is-interacting'));
     grid.on('dragstop resizestop', () => gridEl.classList.remove('is-interacting'));
+
+    const directManipulation = window.matchMedia('(max-width: 768px), (pointer: coarse)');
+    const syncGridInteraction = () => {
+        grid.enableMove(!directManipulation.matches);
+        grid.enableResize(!directManipulation.matches);
+        gridEl.classList.toggle('is-direct-controls', directManipulation.matches);
+    };
+    directManipulation.addEventListener('change', syncGridInteraction);
+    syncGridInteraction();
 
     if (addButton) addButton.addEventListener('click', addWidget);
     if (saveButton) saveButton.addEventListener('click', onSave);

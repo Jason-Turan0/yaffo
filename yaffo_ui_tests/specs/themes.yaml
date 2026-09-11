@@ -17,6 +17,15 @@ context:
   - tag: themes-js
     path: static/themes_page/index.js
     description: Client wiring for the theme chat dialog and theme actions
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - System themes cannot be renamed or deleted; only custom themes can
@@ -103,3 +112,29 @@ scenarios:
       - A confirmation dialog is shown before deleting
       - After confirming, "SpecTestTheme" is removed from the Custom themes list
       - System themes have no delete action
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P7 — themes). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: themes_nav_uses_a_peer_navbar_panel
+    goal: The theme list collapses into a peer navbar button
+    priority: high
+    steps:
+      - Load a theme page at 390x844
+      - Open the Themes panel, then Menu, then Themes again, then press Escape
+      - Resize to 1440x900
+    verify:
+      - Themes is a peer of Menu and closed on first paint
+      - Only one of Menu or Themes is open at a time
+      - Escape closes the panel
+      - At desktop width the sidebar is back in the page
+  - name: theme_screens_stay_contained_in_every_built_in_theme
+    goal: A theme's own decoration never changes the narrow layout's geometry
+    priority: high
+    steps:
+      - At 390x844, load each built-in theme's page (classic, darkroom, memphis, neobrutalist, photos-app, scrapbook)
+    verify:
+      - No theme introduces page-level horizontal overflow
+      - Draft and publish actions wrap rather than overflowing
+      - The theme generation chat is usable at this width

@@ -48,3 +48,62 @@ await wrapper.locator('.searchable-select-option').filter({ hasText: value }).fi
 - `.gallery-grid` selector bug → fixed long ago (`.photo-grid` is correct).
 - 2026-07: `selectOption` timeouts on year/page-size selects → caused by the searchable-select migration, fixed as above.
 - 2026-07-18: added the 5 timeline tests + the determinism rework (serial file, explicit `?view=` everywhere). All 9 pass in 7.4s.
+
+## Responsive coverage (2026-08-30) — 27/27 passing
+
+### How to run
+`npm run test:spec -- generated_tests/photo_gallery/photo_gallery.spec.ts --port <yours>`.
+The file is serial (`mode: 'default'`), so the responsive block runs after the
+behaviour block; every responsive test restores `/?view=grid` in an `afterEach`.
+
+### Shell facts (Home is where the shared contract is verified)
+- `nav.js`'s narrow breakpoint is **`max-width: 1200px`**, not 640/900 — so the
+  Menu and panel toggles are present at 1024 as well. Structural layout in
+  `responsive.css` keys off the same width.
+- Home registers exactly one panel: `#home-filters` (from `_sidebar.html`'s
+  `panel_prefix="home"`), peer button `#home-filters-toggle`, host
+  `#navbar-context-panels`. `sidebar_toggles('home')` renders Actions only when
+  asked, and Home does not ask.
+- `expectPanelContract` leaves the page at **1440px**. Resizing back to narrow
+  works, but nav.js re-parks on the matchMedia `change` event, so `await
+  expect(toggle).toBeVisible()` before measuring a box or `boundingBox()` is null.
+- Applied-filter badge: `#home-filters-toggle [data-nav-panel-count]`, server
+  rendered by `applied_filter_count`. `page`, `page-size`, `view`, `sort`,
+  `edit`, `scope`, `label`, `media_dir_id`, `device_id`, `csrf_token` never count;
+  a multi-valued key counts once.
+- **Pagination accessible names changed**: each `.page-btn` now carries an
+  `aria-label` ("First"/"Previous"/"Next"/"Last") which overrides its visible
+  "Next ›" text, and at ≤640px `.page-btn-label` is `display: none` entirely.
+  `getByRole('link', { name: 'Next ›' })` no longer resolves — use `'Next'`.
+- Built-in themes are exercised by swapping the `link[href*="/theme.css"]` href
+  (route `/themes/<slug>/theme.css`) **with a cache-busting query param** — the
+  `load` event never fires if you assign the href the page already has — and
+  setting `data-theme` on `<html>`. Do NOT flip the app-wide default theme from
+  this file; that is a global setting other suites read.
+- Filter-config touch reorder: rows are `.filter-config-row[data-key]`, handle
+  `.filter-config-handle` (44×44 only under a coarse pointer). The handler
+  ignores `pointerType === 'mouse'`, so only `touchDrag` (CDP) moves a row.
+
+### Timeline scrubber alternative (new)
+- `.timeline-scrubber` (the drag rail) is hidden at `max-width: 900px` **or** any
+  coarse pointer; `.timeline-jump` — a sticky, horizontally scrollable row of
+  `.timeline-jump-year` links — takes over. It is plain markup in `index.html`,
+  so it also works with JavaScript disabled.
+- `.photo-gallery` declares `--timeline-jump-height: 52px` in that media query;
+  `.timeline-day-header`'s sticky `top` and `.timeline-month-divider`'s
+  `scroll-margin-top` both add it to `--navbar-height`. Assert the header's
+  sticky `top` only after scrolling, and compare it against the *stuck* jump
+  bar's box — before any scroll the bar is still in flow further down the page.
+- Year-mark hrefs come from `_timeline_index` in `yaffo/routes/home.py`. They now
+  carry `page-size`: without it a link computed for `page-size=10` landed on a
+  page the server rendered with 25 per page, and the `#month-YYYY-MM` anchor
+  pointed at nothing. The JS drag path never had this bug (it builds its URL from
+  `window.location.href`).
+
+### Coarse-pointer facts
+- `.photo-hover` (the card's hover detail overlay) is `display: none` under
+  `(hover: none), (pointer: coarse)`; the card's tap opens the detail page.
+- `.photo-card .favorite-toggle` is `opacity: 0` until card hover — on touch that
+  made the only grid favourite control invisible. It is now opaque and 44×44
+  under a coarse pointer. Tapping it toggles server-side state, so a test must
+  tap twice to leave the library as it found it.

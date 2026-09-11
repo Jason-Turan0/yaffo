@@ -1,4 +1,13 @@
 import { test, expect, Page, Locator } from '@playwright/test';
+import {
+  CONTRACT_WIDTHS,
+  VIEWPORTS,
+  expectFitsViewport,
+  expectNoPageOverflow,
+  expectPanelContract,
+  expectRouteFits,
+  withTouchContext,
+} from '../_support/responsive';
 
 const UNIQ = Date.now();
 const LIST_NAME = `SpecTestList-${UNIQ}`;
@@ -7,7 +16,10 @@ const EDIT_NAME = `SpecTestEdit-${UNIQ}`;
 const RENAMED_NAME = `SpecTestRenamed-${UNIQ}`;
 const DELETE_NAME = `SpecTestDelete-${UNIQ}`;
 const FACES_NAME = `SpecTestFaces-${UNIQ}`;
-const ALL_TEST_NAMES = [LIST_NAME, ADD_NAME, EDIT_NAME, RENAMED_NAME, DELETE_NAME, FACES_NAME];
+// One unbroken run of characters — the long-content case a person's name can
+// actually produce, and the one that widens a table if nothing breaks it.
+const LONG_NAME = `SpecTestUnbrokenPersonName${'x'.repeat(60)}-${UNIQ}`;
+const ALL_TEST_NAMES = [LIST_NAME, ADD_NAME, EDIT_NAME, RENAMED_NAME, DELETE_NAME, FACES_NAME, LONG_NAME];
 
 // Generous per-test budget: the face-assignment waits can sit behind minutes of
 // queued model work when the whole suite runs in parallel.
@@ -328,5 +340,229 @@ test.describe('People', () => {
     await waitForFaceBackInPool(page, faceId);
 
     await deletePersonViaApi(page, personId);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Responsive behaviour of the people family (P3). The shell contract itself is
+// exercised on Home; these cases are about this family's own narrow-screen
+// behaviour. Contract assertions are imported from _support/responsive.ts.
+// ---------------------------------------------------------------------------
+
+/**
+ * A person id for the person-faces route. Prefers someone who actually has faces
+ * so the gallery, not the empty state, is what gets measured; falls back to the
+ * first row when the parallel suites have emptied everyone out.
+ */
+async function firstPersonId(page: Page): Promise<number> {
+  await page.goto('/people');
+  const rows = page.locator('.people-table tbody tr');
+  await expect(rows.first()).toBeAttached();
+  const candidates = await rows.evaluateAll(elements => elements.map((row) => {
+    const href = row.querySelector('a.person-name.row-link')?.getAttribute('href') ?? '';
+    const faces = Number(row.querySelectorAll('.stat-number')[0]?.textContent?.replace(/\D/g, '') || '0');
+    return { id: Number(href.match(/\/people\/(\d+)\/faces/)?.[1] ?? 0), faces };
+  }));
+  const withFaces = candidates.filter(candidate => candidate.id && candidate.faces > 0);
+  const chosen = withFaces.sort((a, b) => b.faces - a.faces)[0] ?? candidates.find(c => c.id);
+  expect(chosen, 'expected at least one person on the people list').toBeTruthy();
+  return chosen!.id;
+}
+
+test.describe('People — responsive', () => {
+  test.describe.configure({ timeout: 120_000 });
+
+  test('the people list renders without page-level overflow at every contract width', async ({ page }) => {
+    for (const width of CONTRACT_WIDTHS) {
+      await page.setViewportSize({ width, height: 900 });
+      await expectRouteFits(page, '/people');
+    }
+    await page.setViewportSize(VIEWPORTS.narrowLandscape);
+    await expectRouteFits(page, '/people');
+  });
+
+  test('people rows become labelled cards at narrow widths without dropping a column', async ({ page }) => {
+    await page.setViewportSize(VIEWPORTS.narrow);
+    await page.goto('/people');
+
+    // Every cell still renders, and each one carries its column name so the card
+    // reads as a labelled record rather than an unlabelled stack of values.
+    const firstRowCells = await page.locator('.people-table tbody tr').first().locator('td').evaluateAll(
+      cells => cells.map(cell => ({
+        label: cell.getAttribute('data-label'),
+        rendered: getComputedStyle(cell, '::before').content,
+        display: getComputedStyle(cell).display,
+      })),
+    );
+    expect(firstRowCells).toHaveLength(6);
+    for (const cell of firstRowCells) {
+      expect(cell.label, 'every cell needs its column name as data-label').toBeTruthy();
+      expect(cell.rendered).toContain(cell.label!);
+    }
+
+    // No data is hidden to make the row fit: the header is only visually hidden
+    // (it is repeated per cell), and no cell is display:none.
+    for (const cell of firstRowCells) {
+      expect(cell.display).not.toBe('none');
+    }
+    await expect(page.locator('.people-table tbody tr').first()).toBeVisible();
+
+    // Whatever tabular surface is left contains its own overflow.
+    const table = await page.locator('.people-table').evaluate(element => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      overflowX: getComputedStyle(element).overflowX,
+    }));
+    expect(table.overflowX).toBe('auto');
+    expect(table.clientWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
+    await expectNoPageOverflow(page);
+  });
+
+  test('a long unbroken person name does not widen the people list', async ({ page }) => {
+    const personId = await createPersonViaApi(page, LONG_NAME);
+    try {
+      for (const width of [320, 390, 768, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto('/people');
+        await expect(personRow(page, LONG_NAME)).toHaveCount(1);
+        await expectNoPageOverflow(page);
+      }
+
+      // Regression: the same name is interpolated into the person-faces heading
+      // AND into that page's empty-state sentence ("No faces have been assigned
+      // to <name> yet."). The unbroken run there set the page's minimum width —
+      // 672px at a 320px viewport — until both were made breakable.
+      await page.setViewportSize(VIEWPORTS.minimum);
+      await page.goto(`/people/${personId}/faces`);
+      await expect(page.locator('.page-header h1')).toContainText('SpecTestUnbrokenPersonName');
+      await expect(page.locator('.empty-state p')).toContainText('SpecTestUnbrokenPersonName');
+      await expectNoPageOverflow(page);
+    } finally {
+      await deletePersonViaApi(page, personId);
+    }
+  });
+
+  test('the add-person dialog fits a 320px viewport and keeps its body as the only scroll region', async ({ page }) => {
+    await page.setViewportSize(VIEWPORTS.minimum);
+    await page.goto('/people');
+    await page.locator('.js-add-person').first().click();
+
+    const modal = page.locator('#addModal');
+    await expect(modal).toHaveClass(/active/);
+    await expectFitsViewport(page, '#addModal .modal-content');
+
+    const body = await modal.locator('.modal-body').evaluate(element => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(body.scrollWidth).toBeLessThanOrEqual(body.clientWidth + 1);
+
+    // Footer actions stack rather than overflowing, and stay full-size targets.
+    const actions = await modal.locator('.modal-actions button').evaluateAll(
+      buttons => buttons.map(button => button.getBoundingClientRect()),
+    );
+    for (const box of actions) {
+      expect(box.height).toBeGreaterThanOrEqual(40);
+      expect(box.right).toBeLessThanOrEqual(320 + 1);
+    }
+    await expectNoPageOverflow(page);
+  });
+
+  test('an in-progress add-person edit survives a resize through the breakpoint', async ({ page }) => {
+    await page.setViewportSize(VIEWPORTS.narrow);
+    await page.goto('/people');
+    await page.locator('.js-add-person').first().click();
+
+    const modal = page.locator('#addModal');
+    await expect(modal).toHaveClass(/active/);
+    await modal.locator('#addPersonName').fill('HalfTypedPerson');
+
+    await page.setViewportSize(VIEWPORTS.desktop);
+    // Nothing reloads, so the dialog and the half-typed name are both still there.
+    await expect(modal).toHaveClass(/active/);
+    await expect(modal.locator('#addPersonName')).toHaveValue('HalfTypedPerson');
+    await expectFitsViewport(page, '#addModal .modal-content');
+
+    await modal.locator('.modal-actions [name="cancel"]').click();
+  });
+
+  test('the person faces route renders without page-level overflow at every contract width', async ({ page }) => {
+    const personId = await firstPersonId(page);
+    for (const width of CONTRACT_WIDTHS) {
+      await page.setViewportSize({ width, height: 900 });
+      await expectRouteFits(page, `/people/${personId}/faces`);
+    }
+  });
+
+  test('the person faces Actions panel satisfies the peer-panel contract', async ({ page }) => {
+    const personId = await firstPersonId(page);
+    await expectPanelContract(page, {
+      route: `/people/${personId}/faces`,
+      panelId: 'person-faces-actions',
+    });
+  });
+
+  test('the person faces Filters panel satisfies the peer-panel contract', async ({ page }) => {
+    const personId = await firstPersonId(page);
+    await expectPanelContract(page, {
+      route: `/people/${personId}/faces`,
+      panelId: 'person-faces-filters',
+    });
+  });
+
+  test('person faces declares Actions and Filters as peers of Menu, Actions first', async ({ page }) => {
+    const personId = await firstPersonId(page);
+    await page.setViewportSize(VIEWPORTS.narrow);
+    await page.goto(`/people/${personId}/faces`);
+
+    const toggleIds = await page.locator('[data-nav-panel-toggle], #nav-menu-toggle').evaluateAll(
+      elements => elements.map(element => element.id),
+    );
+    expect(toggleIds).toEqual([
+      'person-faces-actions-toggle',
+      'person-faces-filters-toggle',
+      'nav-menu-toggle',
+    ]);
+
+    // A filter value entered on narrow survives the trip back to desktop.
+    await page.locator('#person-faces-filters-toggle').click();
+    await page.locator('#person-faces-filters input[name="min_similarity"]').first().fill('42');
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await expect(page.locator('#person-faces-filters input[name="min_similarity"]').first()).toHaveValue('42');
+    await expectNoPageOverflow(page);
+  });
+
+  test('the person face gallery keeps its selection controls usable with a coarse pointer', async ({ browser }) => {
+    const setup = await browser.newContext({ baseURL: process.env.BASE_URL || 'http://127.0.0.1:5001' });
+    const setupPage = await setup.newPage();
+    const personId = await firstPersonId(setupPage);
+    await setup.close();
+
+    await withTouchContext(browser, VIEWPORTS.narrow, async (page) => {
+      await page.goto(`/people/${personId}/faces`);
+      await expectNoPageOverflow(page);
+
+      const cards = page.locator('.face-card');
+      if (await cards.count() === 0) {
+        // No assigned faces for this person: the empty state is the whole page,
+        // and there is nothing further to exercise here.
+        await expect(page.locator('.empty-state')).toBeVisible();
+        return;
+      }
+
+      // Select all / Clear selection are real touch targets, not 16px links.
+      for (const id of ['select-all', 'deselect-all']) {
+        const box = await page.locator(`#${id}`).boundingBox();
+        expect(box!.height, `#${id} is too small to tap`).toBeGreaterThanOrEqual(44);
+      }
+
+      // Tapping a card selects it — the card hover lift is not the affordance.
+      const card = cards.first();
+      await card.tap();
+      await expect(card).toHaveClass(/selected/);
+      await page.locator('#deselect-all').tap();
+      await expect(card).not.toHaveClass(/selected/);
+      await expectNoPageOverflow(page);
+    });
   });
 });

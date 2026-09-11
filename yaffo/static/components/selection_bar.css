@@ -3,7 +3,10 @@
 
 .selection-bar {
     position: sticky;
-    top: 0;
+    /* The navbar is sticky at top:0 with a far higher z-index, so a bar pinned
+       to 0 slides out of sight behind it. --navbar-height is published by
+       nav.js; the fallback approximates one bar row. */
+    top: var(--navbar-height, 64px);
     z-index: 2;
     display: flex;
     align-items: center;

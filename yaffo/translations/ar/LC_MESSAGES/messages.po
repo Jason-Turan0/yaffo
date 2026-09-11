@@ -3807,3 +3807,30 @@ msgstr "حدد المجلد الوجهة"
 msgid "Remove Selected Duplicates"
 msgstr "إزالة التكرارات المحددة"
 
+#: yaffo/templates/base.html:119 yaffo/templates/base.html:122
+msgid "Menu"
+msgstr "القائمة"
+
+#: yaffo/templates/albums/album.html:97
+msgid "Move earlier"
+msgstr "نقل إلى موضع سابق"
+
+#: yaffo/templates/albums/album.html:98
+msgid "Move later"
+msgstr "نقل إلى موضع لاحق"
+
+#: yaffo/templates/pages/_widget.html:10
+msgid "Move widget up"
+msgstr "نقل الأداة إلى أعلى"
+
+#: yaffo/templates/pages/_widget.html:11
+msgid "Move widget down"
+msgstr "نقل الأداة إلى أسفل"
+
+#: yaffo/templates/pages/_widget.html:12
+msgid "Make widget shorter"
+msgstr "تقليل ارتفاع الأداة"
+
+#: yaffo/templates/pages/_widget.html:13
+msgid "Make widget taller"
+msgstr "زيادة ارتفاع الأداة"

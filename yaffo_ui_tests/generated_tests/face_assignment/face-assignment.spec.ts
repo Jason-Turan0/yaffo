@@ -1,4 +1,14 @@
 import { test, expect, Page } from '@playwright/test';
+import {
+  CONTRACT_WIDTHS,
+  VIEWPORTS,
+  expectFitsViewport,
+  expectNoPageOverflow,
+  expectPanelContract,
+  expectRouteFits,
+  touchDrag,
+  withTouchContext,
+} from '../_support/responsive';
 
 // Type definition for person data
 type PersonInfo = {
@@ -329,5 +339,345 @@ test.describe('Face Assignment', () => {
       await expect(firstGroup).toBeHidden();
       await expect(groups.nth(1)).toBeVisible();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Responsive behaviour of the faces family (P3). The shell contract itself is
+// exercised on Home; what is asserted here is this page's own narrow-screen
+// behaviour. Contract assertions come from _support/responsive.ts — a page that
+// re-implements an overflow or panel check has forked the contract.
+//
+// These cases only read the face pool (they never assign or ignore), so they do
+// not need the create/delete hooks the workflow tests above rely on.
+// ---------------------------------------------------------------------------
+
+// A clustered view, so the grid, the cluster header and the cluster pager are all
+// actually on the page when the width is squeezed.
+const CLUSTERED_FACES_URL = '/faces?group_by=similarity&threshold=2';
+
+test.describe('Face Assignment — responsive', () => {
+  test.describe.configure({ timeout: 90_000 });
+
+  test('faces route renders without page-level overflow at every contract width', async ({ page }) => {
+    for (const width of CONTRACT_WIDTHS) {
+      await page.setViewportSize({ width, height: 900 });
+      await expectRouteFits(page, CLUSTERED_FACES_URL);
+    }
+    // Short landscape is the other stress case in the support contract: the
+    // cluster header, actions and pager all compete for vertical space there.
+    await page.setViewportSize(VIEWPORTS.narrowLandscape);
+    await expectRouteFits(page, CLUSTERED_FACES_URL);
+  });
+
+  test('faces exposes Actions and Filters as separate peers of Menu, Actions first', async ({ page }) => {
+    await page.setViewportSize(VIEWPORTS.narrow);
+    await page.goto(CLUSTERED_FACES_URL);
+
+    // Two page toggles, declared Actions-then-Filters, and Menu sorts last.
+    const toggleIds = await page.locator('[data-nav-panel-toggle], #nav-menu-toggle').evaluateAll(
+      elements => elements.map(element => element.id),
+    );
+    expect(toggleIds).toEqual(['faces-actions-toggle', 'faces-filters-toggle', 'nav-menu-toggle']);
+
+    // The applied-filter count is server-rendered, so it is already correct here
+    // rather than popping in after hydration. group_by + threshold = two filters.
+    await expect(page.locator('#faces-filters-toggle [data-nav-panel-count]')).toHaveText('2');
+
+    // Opening one page panel closes the other — only one surface at a time.
+    await page.locator('#faces-actions-toggle').click();
+    await expect(page.locator('#faces-actions')).toBeVisible();
+    await page.locator('#faces-filters-toggle').click();
+    await expect(page.locator('#faces-filters')).toBeVisible();
+    await expect(page.locator('#faces-actions')).toBeHidden();
+    await expect(page.locator('#faces-actions-toggle')).toHaveAttribute('aria-expanded', 'false');
+    await expectNoPageOverflow(page);
+  });
+
+  test('Actions, Filters and Menu fit the top navbar at an iPhone SE width', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(CLUSTERED_FACES_URL);
+
+    const navbar = page.locator('.navbar-container').first();
+    const toggles = page.locator(
+      '#faces-actions-toggle, #faces-filters-toggle, #nav-menu-toggle',
+    );
+    await expect(toggles).toHaveCount(3);
+
+    const geometry = await toggles.evaluateAll(elements => elements.map(element => {
+      const rect = element.getBoundingClientRect();
+      return {
+        top: Math.round(rect.top),
+        left: rect.left,
+        right: rect.right,
+        width: rect.width,
+        height: rect.height,
+      };
+    }));
+    expect(new Set(geometry.map(rect => rect.top)).size, 'all three controls should share one row').toBe(1);
+
+    const navbarBox = await navbar.boundingBox();
+    expect(navbarBox).not.toBeNull();
+    for (const rect of geometry) {
+      expect(rect.width).toBeGreaterThanOrEqual(44);
+      expect(rect.height).toBeGreaterThanOrEqual(44);
+      expect(rect.left).toBeGreaterThanOrEqual(navbarBox!.x - 1);
+      expect(rect.right).toBeLessThanOrEqual(navbarBox!.x + navbarBox!.width + 1);
+    }
+
+    await expect(page.locator('#faces-actions-toggle')).toHaveAttribute('aria-label', 'Actions');
+    await expect(page.locator('#faces-filters-toggle')).toHaveAttribute('aria-label', 'Filters');
+    await expect(page.locator('#nav-menu-toggle')).toHaveAttribute('aria-label', 'Menu');
+    const contextLabels = page.locator('.nav-context-toggle-label');
+    await expect(contextLabels).toHaveCount(2);
+    await expect(contextLabels.nth(0)).toBeHidden();
+    await expect(contextLabels.nth(1)).toBeHidden();
+    await expect(page.locator('.nav-menu-toggle-label')).toBeHidden();
+    await expectNoPageOverflow(page);
+  });
+
+  test('the faces Actions panel satisfies the peer-panel contract', async ({ page }) => {
+    await expectPanelContract(page, {
+      route: CLUSTERED_FACES_URL,
+      panelId: 'faces-actions',
+    });
+  });
+
+  test('the faces Filters panel satisfies the peer-panel contract', async ({ page }) => {
+    await expectPanelContract(page, {
+      route: CLUSTERED_FACES_URL,
+      panelId: 'faces-filters',
+    });
+  });
+
+  test('in-progress filter and assignment input survives a resize through the breakpoint', async ({ page }) => {
+    await page.setViewportSize(VIEWPORTS.narrow);
+    await page.goto(CLUSTERED_FACES_URL);
+
+    // A filter value entered in the narrow panel…
+    await page.locator('#faces-filters-toggle').click();
+    await page.locator('#threshold-range').fill('37');
+    await expect(page.locator('#threshold-value')).toHaveText('37');
+
+    // …and an in-progress edit in the Actions panel.
+    await page.locator('#faces-actions-toggle').click();
+    await page.locator('#create-person-name').fill('HalfTypedName');
+
+    // Escape closes the open panel (it is the topmost surface here).
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#faces-actions-toggle')).toHaveAttribute('aria-expanded', 'false');
+
+    // Resizing to desktop moves the live DOM back into the page. Nothing reloads,
+    // so both values are still there.
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await expect(page.locator('#faces-actions-toggle')).toBeHidden();
+    await expect(page.locator('#faces-filters-toggle')).toBeHidden();
+    await expect(page.locator('#threshold-range')).toHaveValue('37');
+    await expect(page.locator('#create-person-name')).toHaveValue('HalfTypedName');
+    await expectNoPageOverflow(page);
+  });
+
+  test('Group by radio options line up with their own labels', async ({ page }) => {
+    await page.setViewportSize(VIEWPORTS.narrow);
+    await page.goto(CLUSTERED_FACES_URL);
+    await page.locator('#faces-filters-toggle').click();
+
+    for (const id of ['group-by-people', 'group-by-similarity']) {
+      const layout = await page.locator(`#${id}`).evaluate((input) => {
+        const label = input.closest('label') as HTMLElement;
+        const labelStyle = getComputedStyle(label);
+        const inputStyle = getComputedStyle(input);
+        return {
+          display: labelStyle.display,
+          alignItems: labelStyle.alignItems,
+          gap: inputStyle.marginInlineEnd,
+        };
+      });
+      expect(layout.display).toBe('flex');
+      expect(layout.alignItems).toBe('center');
+      expect(layout.gap).toBe('8px');
+    }
+  });
+
+  test('the cluster pager keeps all five controls on one row at 320px', async ({ page }) => {
+    // Regression: the cluster pager used to render five full-text buttons
+    // ("« First", "‹ Previous", …). At 320px they could not fit on one row, so
+    // the footer widened the page. It now reuses the shared pagination markup —
+    // data-icon plus a .page-btn-label — which collapses to 44px icons at 640px.
+    await page.setViewportSize(VIEWPORTS.minimum);
+    await page.goto(CLUSTERED_FACES_URL);
+
+    const navigation = page.locator('.cluster-pager-footer .page-navigation').first();
+    await expect(navigation).toBeVisible();
+
+    const rows = await navigation.locator('.page-btn').evaluateAll(
+      buttons => Array.from(new Set(buttons.map(button => Math.round(button.getBoundingClientRect().top)))),
+    );
+    expect(rows, 'the five pager controls should share one row').toHaveLength(1);
+
+    // The text label is dropped in favour of the icon, and the target stays 44px.
+    await expect(navigation.locator('.cluster-first .page-btn-label')).toBeHidden();
+    const box = await navigation.locator('.cluster-first').boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    await expectNoPageOverflow(page);
+  });
+
+  test('the phone face source preview stays centered in the viewport', async ({ browser }) => {
+    await withTouchContext(browser, VIEWPORTS.narrow, async (page) => {
+      await page.goto(CLUSTERED_FACES_URL);
+      const visibleFaces = page.locator('.suggestion-group:not([hidden]) .face');
+      const face = visibleFaces.first();
+      await expect(face).toBeVisible();
+
+      // Hover is unavailable here, so the preview has its own explicit control.
+      const previewButton = face.locator('.face-preview-button');
+      await expect(previewButton).toBeVisible();
+      const buttonBox = await previewButton.boundingBox();
+      expect(buttonBox!.width).toBeGreaterThanOrEqual(44);
+      expect(buttonBox!.height).toBeGreaterThanOrEqual(44);
+
+      const selectedBefore = await face.evaluate(element => element.classList.contains('selected'));
+
+      const modal = page.locator('.face-preview-modal');
+      await previewButton.tap();
+      await expect(modal).toHaveClass(/active/);
+      await expect(modal).toHaveAttribute('role', 'dialog');
+      await expect(modal).toHaveAttribute('aria-modal', 'true');
+      await expect(modal.locator('.face-preview-modal-close')).toBeFocused();
+      // Previewing and selecting stay distinct actions.
+      expect(await face.evaluate(element => element.classList.contains('selected'))).toBe(selectedBefore);
+      await expectFitsViewport(page, '.face-preview-modal .modal-content');
+      await expect.poll(async () => modal.locator('.modal-content').evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        return {
+          x: Math.round(rect.left + rect.width / 2 - window.innerWidth / 2),
+          y: Math.round(rect.top + rect.height / 2 - window.innerHeight / 2),
+          overlayPosition: getComputedStyle(element.parentElement!).position,
+        };
+      })).toEqual({ x: 0, y: 0, overlayPosition: 'fixed' });
+      await expectNoPageOverflow(page);
+
+      await modal.locator('.face-preview-modal-close').tap();
+      await expect(modal).not.toHaveClass(/active/);
+      await expect(previewButton).toBeFocused();
+
+      // Regression: fixed dialogs must remain centered after the trigger has
+      // moved the document to a different scroll position.
+      const lastPreviewButton = visibleFaces.last().locator('.face-preview-button');
+      await lastPreviewButton.scrollIntoViewIfNeeded();
+      const scrollY = await page.evaluate(() => window.scrollY);
+      expect(scrollY, 'the second preview should open from a scrolled viewport').toBeGreaterThan(0);
+      await lastPreviewButton.tap();
+      await expect(modal).toHaveClass(/active/);
+      await expect.poll(async () => modal.locator('.modal-content').evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        return {
+          x: Math.round(rect.left + rect.width / 2 - window.innerWidth / 2),
+          y: Math.round(rect.top + rect.height / 2 - window.innerHeight / 2),
+        };
+      })).toEqual({ x: 0, y: 0 });
+    });
+  });
+
+  test('the tablet face source preview opens as an anchored popover', async ({ browser }) => {
+    await withTouchContext(browser, VIEWPORTS.tabletPortrait, async (page) => {
+      await page.goto(CLUSTERED_FACES_URL);
+      const face = page.locator('.suggestion-group:not([hidden]) .face').first();
+      const previewButton = face.locator('.face-preview-button');
+      await expect(previewButton).toBeVisible();
+      const selectedBefore = await face.evaluate(element => element.classList.contains('selected'));
+
+      await previewButton.tap();
+      const popover = page.locator('.face-tooltip');
+      await expect(popover).toHaveClass(/visible/);
+      await expect(page.locator('.face-preview-modal')).not.toHaveClass(/active/);
+      expect(await face.evaluate(element => element.classList.contains('selected'))).toBe(selectedBefore);
+      await expectFitsViewport(page, '.face-tooltip');
+    });
+  });
+
+  test('the desktop face source preview opens as a hover popover', async ({ page }) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await page.goto(CLUSTERED_FACES_URL);
+    const face = page.locator('.suggestion-group:not([hidden]) .face').first();
+    await face.hover();
+
+    await expect(page.locator('.face-tooltip')).toHaveClass(/visible/);
+    await expect(page.locator('.face-preview-modal')).not.toHaveClass(/active/);
+    await expectFitsViewport(page, '.face-tooltip');
+  });
+
+  test('shortcut people can be reordered with the explicit move controls', async ({ page }) => {
+    await page.setViewportSize(VIEWPORTS.narrow);
+    await page.goto(CLUSTERED_FACES_URL);
+    await page.locator('#faces-actions-toggle').click();
+    await page.locator('#configure-shortcuts-btn').click();
+
+    const modal = page.locator('#shortcutPeopleModal');
+    await expect(modal).toHaveClass(/active/);
+    await expectFitsViewport(page, '#shortcutPeopleModal .modal-content');
+
+    const rows = modal.locator('.shortcut-config-row');
+    expect(await rows.count(), 'need two shortcut rows to reorder').toBeGreaterThan(1);
+    const before = await rows.evaluateAll(elements => elements.map(element => element.getAttribute('data-person-id')));
+
+    // The second row moves ahead of the first with one tap — no drag involved.
+    await rows.nth(1).locator('.shortcut-config-move-btn[data-move="up"]').click();
+    const after = await rows.evaluateAll(elements => elements.map(element => element.getAttribute('data-person-id')));
+    expect(after[0]).toBe(before[1]);
+    expect(after[1]).toBe(before[0]);
+
+    // The ends of the list say so rather than silently doing nothing.
+    await expect(rows.first().locator('.shortcut-config-move-btn[data-move="up"]')).toBeDisabled();
+    await expect(rows.last().locator('.shortcut-config-move-btn[data-move="down"]')).toBeDisabled();
+  });
+
+  test('shortcut people can be reordered with a real touch drag', async ({ browser }) => {
+    // Regression: the rows used HTML5 drag-and-drop, which never fires for touch
+    // at all — the handle was decorative on a phone. Reordering is Pointer Events
+    // now, with the pointer captured on the list rather than on the moving row.
+    await withTouchContext(browser, VIEWPORTS.narrow, async (page, context) => {
+      await page.goto(CLUSTERED_FACES_URL);
+      await page.locator('#faces-actions-toggle').tap();
+      await page.locator('#configure-shortcuts-btn').tap();
+      await expect(page.locator('#shortcutPeopleModal')).toHaveClass(/active/);
+
+      const rows = page.locator('#shortcut-config-list .shortcut-config-row');
+      expect(await rows.count(), 'need two shortcut rows to reorder').toBeGreaterThan(1);
+      const before = await rows.evaluateAll(elements => elements.map(element => element.getAttribute('data-person-id')));
+
+      const handle = await rows.first().locator('.filter-config-handle').boundingBox();
+      const second = await rows.nth(1).boundingBox();
+      await touchDrag(
+        context,
+        page,
+        { x: handle!.x + handle!.width / 2, y: handle!.y + handle!.height / 2 },
+        { x: handle!.x + handle!.width / 2, y: second!.y + second!.height * 0.9 },
+      );
+
+      const after = await rows.evaluateAll(elements => elements.map(element => element.getAttribute('data-person-id')));
+      expect(after[0], 'the dragged row should no longer be first').toBe(before[1]);
+      expect(after[1]).toBe(before[0]);
+    });
+  });
+
+  test('the help dialog contains its own scrolling and fits a 320px viewport', async ({ page }) => {
+    await page.setViewportSize(VIEWPORTS.minimum);
+    await page.goto(CLUSTERED_FACES_URL);
+    await page.keyboard.press('?');
+
+    const modal = page.locator('#keyboardHelpModal');
+    await expect(modal).toHaveClass(/active/);
+    await expectFitsViewport(page, '#keyboardHelpModal .modal-content');
+
+    // The dialog body is the only scroll region: it never scrolls sideways, and
+    // it does not hand its overflow to the document.
+    const body = await modal.locator('.modal-body').evaluate(element => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(body.scrollWidth).toBeLessThanOrEqual(body.clientWidth + 1);
+    await expectNoPageOverflow(page);
   });
 });

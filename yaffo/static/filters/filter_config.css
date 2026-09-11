@@ -52,9 +52,26 @@
 }
 
 .filter-config-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: var(--color-text-faint);
     cursor: grab;
+    touch-action: none;
     user-select: none;
+}
+
+.filter-config-handle:active {
+    cursor: grabbing;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .filter-config-handle {
+        min-width: 44px;
+        min-height: 44px;
+        margin-block: -8px;
+        margin-inline-start: -10px;
+    }
 }
 
 .filter-config-item {

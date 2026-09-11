@@ -38,6 +38,15 @@ context:
   - tag: albums-routes
     path: routes/albums.py
     description: albums_share reconciles the checked devices with the album grants (check = grant, uncheck = revoke)
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - The scenarios are STATEFUL and run in order in one worker (pairing, grants and the download directory persist server-side between tests). Start the environment with `npm run isolatedEnvironment:start:sharing` and run with BASE_URL (instance A) and PEER_URL (instance B) set
@@ -200,3 +209,39 @@ scenarios:
       - '"Shared With Others" lists the share once, not twice'
     cleanup:
       - Revoke the share
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P6 — sharing). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: sharing_nav_uses_a_peer_navbar_panel
+    goal: The sharing device list collapses into a peer navbar button
+    priority: high
+    steps:
+      - Load the sharing settings page at 390x844
+      - Open the Sharing panel, then Menu, then Sharing again, then press Escape
+      - Resize to 1440x900
+    verify:
+      - Sharing is a peer of Menu and closed on first paint
+      - Only one of Menu or Sharing is open at a time
+      - Escape closes the panel
+      - At desktop width the sidebar is back in the page
+      - The panel survives its own htmx refresh (the device list re-fetches itself) without reopening
+  - name: sharing_long_device_and_path_values_wrap
+    goal: Device ids and shared paths never widen the page
+    priority: high
+    steps:
+      - Load the sharing settings page at 320x568
+    verify:
+      - Device ids, media directory paths and transfer path badges all wrap anywhere rather than overflowing
+      - The page does not scroll horizontally
+  - name: remote_gallery_filters_use_a_peer_navbar_panel
+    goal: The remote gallery reuses the library's filter panel behaviour
+    priority: medium
+    steps:
+      - Open a paired device's shared files at 390x844 (needs the two-instance sandbox)
+      - Open Filters and apply one
+    verify:
+      - Filters is a peer of Menu with an applied-filter count badge
+      - The scope coordinates ride the form as hidden inputs so applying a filter stays on the same device scope
+      - The remote grid and its pagination behave as the local library does at the same width

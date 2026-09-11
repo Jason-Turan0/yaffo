@@ -1,0 +1,682 @@
+/* Shared adaptive layout. Theme stylesheets provide the visual skin; this file
+   is loaded last so every built-in and runtime theme follows one layout model. */
+
+button.nav-menu-toggle[data-icon],
+button.nav-context-toggle[data-icon] {
+    display: none;
+}
+
+.album-reorder-controls {
+    display: none;
+}
+
+.widget-order-controls {
+    display: inline-flex;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.album-reorder-controls {
+    position: absolute;
+    inset-block-end: 8px;
+    inset-inline-end: 8px;
+    z-index: 2;
+    gap: 4px;
+}
+
+.album-photo-card {
+    position: relative;
+}
+
+.album-reorder-button,
+.widget-order {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 4px 8px;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+}
+
+.album-photo-card:focus-within .album-reorder-controls {
+    display: inline-flex;
+}
+
+.widget-card:focus-within .widget-order-controls,
+.grid-stack.is-direct-controls .widget-order-controls {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.navbar-primary {
+    display: contents;
+}
+
+.main-content,
+.albums-content,
+.utilities-content,
+.sharing-content,
+.themes-content,
+.locations-container,
+.editor-canvas {
+    min-width: 0;
+}
+
+.people-table,
+.table-container {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+}
+
+.system-path-item code,
+.current-path-item code,
+.media-dir-path,
+.device-id,
+.transfer-path-badge,
+.folder-picker-path,
+.file-browser-path {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+@media (max-width: 1200px) {
+    /* Page panels are rendered in their desktop location by the server. Keep
+       them closed on the first paint; nav.js moves the live DOM into the navbar
+       host and removes `hidden` only after the user opens its peer action. */
+    [data-nav-panel] {
+        display: none;
+    }
+
+    .navbar-context-panels > [data-nav-panel]:not([hidden]) {
+        display: block;
+    }
+
+    /* A sidebar column whose every section is a registered panel is empty once
+       nav.js has moved them into the navbar. It must go out of the layout, not
+       merely render at zero height: a flex item still earns the parent's gap,
+       which would leave a dead band above the content on every narrow page. */
+    .sidebar-container:not(:has(> :not([data-nav-panel]))),
+    .utilities-sidebars:not(:has(> :not([data-nav-panel]))) {
+        display: none;
+    }
+
+    .navbar-container {
+        flex-wrap: wrap;
+        column-gap: 8px;
+        row-gap: 0;
+        padding-inline-start: calc(16px + env(safe-area-inset-left));
+        padding-inline-end: calc(16px + env(safe-area-inset-right));
+    }
+
+    .navbar-brand {
+        flex: 1;
+        margin-inline: 0;
+    }
+
+    button.nav-menu-toggle[data-icon],
+    button.nav-context-toggle[data-icon] {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: var(--border-width) solid var(--color-border-strong);
+        border-radius: var(--radius-sm);
+        background: var(--color-surface);
+        font-size: var(--font-size-base);
+        cursor: pointer;
+    }
+
+    button.nav-menu-toggle[data-icon][aria-expanded="true"],
+    button.nav-context-toggle[data-icon][aria-expanded="true"] {
+        border-color: var(--color-accent);
+        background: var(--color-accent);
+        color: var(--color-on-accent);
+        box-shadow: var(--shadow-accent);
+    }
+
+    /* How many filters are narrowing the view behind a closed panel. Inherits
+       currentColor so it flips with the button's own open/closed state. */
+    .nav-context-count {
+        min-width: 20px;
+        padding: 0 6px;
+        border: var(--border-width) solid currentColor;
+        border-radius: 999px;
+        font-size: var(--font-size-sm);
+        font-variant-numeric: tabular-nums;
+        line-height: 18px;
+        text-align: center;
+    }
+
+    .nav-context-count[hidden] {
+        display: none;
+    }
+
+    .navbar-context-panels {
+        max-height: calc(100vh - var(--navbar-bar-height, 56px));
+        max-height: calc(100dvh - var(--navbar-bar-height, 56px));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+        padding-inline-start: calc(16px + env(safe-area-inset-left));
+        padding-inline-end: calc(16px + env(safe-area-inset-right));
+    }
+
+    .navbar-context-panels > .sidebar {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    /* A panel in the navbar drops the desktop card: framing a panel that is
+       already inside one reads as an empty box, and its padding plus the host's
+       makes a second scroll region out of a list that should just flow. */
+    .navbar-context-panels .sidebar {
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        overflow: visible;
+    }
+
+    .navbar-context-panels .sidebar-header {
+        justify-content: flex-end;
+    }
+
+    /* The peer button already names the panel. */
+    .navbar-context-panels .sidebar-header h2,
+    .navbar-context-panels > .sidebar > h2 {
+        display: none;
+    }
+
+    .navbar-primary {
+        order: 3;
+        display: none;
+        flex: 0 0 100%;
+        align-items: stretch;
+        flex-direction: column;
+        padding-block-end: 10px;
+    }
+
+    .navbar.is-menu-open .navbar-primary {
+        display: flex;
+    }
+
+    .navbar-nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        gap: 4px;
+    }
+
+    .navbar-nav .nav-link,
+    .navbar .nav-link.nav-pages-toggle {
+        min-height: 44px;
+        padding: 10px 12px;
+        border: 0;
+        border-radius: var(--radius-sm);
+        margin: 0;
+    }
+
+    .navbar .nav-link.nav-pages-toggle {
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .navbar:not(.is-menu-open) .navbar-pages-bar {
+        display: none;
+    }
+
+    .navbar-pages-bar .navbar-container {
+        flex-wrap: nowrap;
+        padding-block: 6px;
+    }
+
+    .navbar-pages {
+        overscroll-behavior-inline: contain;
+    }
+
+    .main-container {
+        padding: 16px;
+    }
+
+    .main-container-layout,
+    .albums-container,
+    .utilities-container,
+    .sharing-container,
+    .themes-container {
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .sidebar-container,
+    .albums-sidebar,
+    .utilities-sidebars,
+    .utilities-sidebar,
+    .sharing-sidebar,
+    .themes-sidebar {
+        width: 100%;
+    }
+
+    .sidebar {
+        position: static;
+        max-height: none;
+    }
+
+    .page-header-actions {
+        max-width: 100%;
+        flex: 1 1 auto;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .page-header-actions > *,
+    .automation-actions,
+    .theme-actions,
+    .theme-draft-actions {
+        max-width: 100%;
+    }
+
+    .form-row {
+        align-items: stretch;
+    }
+
+    .form-row-label {
+        flex-basis: 100%;
+        text-align: start;
+    }
+
+    .modal-content {
+        width: calc(100% - 32px);
+        max-height: calc(100vh - 32px);
+        max-height: calc(100dvh - 32px);
+        padding: 22px;
+    }
+
+    /* Dropdowns are anchored to their own control's box, so they cannot overflow
+       sideways — but a fixed 200px list plus the on-screen keyboard leaves no
+       room to see the options on a short viewport. */
+    .multi-select-options,
+    .searchable-select-dropdown {
+        max-height: min(200px, 45dvh);
+    }
+
+    .notification {
+        inset-inline: 16px;
+        inset-inline-start: calc(16px + env(safe-area-inset-left));
+        inset-inline-end: calc(16px + env(safe-area-inset-right));
+        inset-block-start: calc(16px + env(safe-area-inset-top));
+        max-width: none;
+    }
+
+    .stats-grid,
+    .pairing-forms,
+    .share-grant-forms {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    }
+
+    .automation-edit-screen {
+        flex-direction: column;
+    }
+
+    .automation-conversation,
+    .automation-code-section {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .map-layout {
+        flex-direction: column;
+    }
+
+    #map {
+        min-height: 360px;
+        height: min(62dvh, 560px);
+    }
+
+    .selection-panel,
+    .selection-panel.active {
+        width: 100%;
+        max-height: min(58dvh, 520px);
+        margin-inline-start: 0;
+        margin-block-start: 12px;
+    }
+
+    .selection-panel.active {
+        overflow: hidden;
+    }
+
+    .design-layout {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .editor-panel {
+        width: 100%;
+        position: static;
+    }
+
+    .editor-canvas {
+        width: 100%;
+        flex: none;
+    }
+
+    .grid-stack {
+        margin-inline: 0;
+    }
+
+    .sharing-panel-title-row,
+    .pairing-code-display,
+    .device-rename-controls,
+    .share-grant-controls,
+    .add-media-dir-form,
+    .change-thumbnail-dir-form {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 640px) {
+    .main-container {
+        padding: 10px;
+    }
+
+    .navbar-container {
+        padding-inline: 10px;
+    }
+
+    .navbar-nav {
+        grid-template-columns: 1fr;
+    }
+
+    [data-tooltip]::after {
+        position: fixed;
+        inset-inline: 12px;
+        inset-block: auto 12px;
+        width: auto;
+        max-width: none;
+        transform: none;
+    }
+
+    [data-tooltip]::before {
+        display: none;
+    }
+
+    .page-navigation {
+        flex-wrap: nowrap;
+        gap: clamp(4px, 2vw, 8px);
+    }
+
+    .page-navigation .page-btn {
+        flex: 0 0 44px;
+    }
+
+    .navbar-pages-bar .navbar-container {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .nav-new-page-form {
+        margin: 6px 0 0;
+    }
+
+    .nav-new-page {
+        width: 100%;
+    }
+
+    .page-header,
+    .section,
+    .settings-section,
+    .sharing-panel,
+    .theme-panel,
+    .suggestion-group,
+    .editor-card {
+        padding: 16px;
+    }
+
+    .page-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .page-header-actions,
+    .page-header-actions > *,
+    .page-header-actions .btn,
+    .page-header-actions .btn-primary,
+    .page-header-actions .btn-secondary,
+    .page-header-actions .btn-danger {
+        width: 100%;
+    }
+
+    /* Stacking them full-width is not enough: they still render 37px tall,
+       under the contract's 44px minimum touch target. */
+    .page-header-actions .btn,
+    .page-header-actions .btn-primary,
+    .page-header-actions .btn-secondary,
+    .page-header-actions .btn-danger,
+    .selection-bar [data-selection-action] {
+        min-height: 44px;
+    }
+
+    .page-header-actions,
+    .automation-actions,
+    .theme-actions,
+    .theme-draft-actions,
+    .detail-actions,
+    .group-actions,
+    .automation-add-actions,
+    .automation-trigger-add-row,
+    .automation-code-head,
+    .automation-test-actions-head,
+    .chat-dialog-actions,
+    .selection-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .add-label-form,
+    .api-key-actions,
+    .media-dir-item,
+    .thumbnail-stats,
+    .known-device-status,
+    .remote-file-pull-form,
+    .automation-trigger-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .add-label-form > *,
+    .api-key-actions > *,
+    .remote-file-pull-form > *,
+    .automation-trigger-add-row > * {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .photo-grid,
+    .album-tiles,
+    .faces-grid,
+    .grid,
+    .help-shortcuts-list {
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
+    }
+
+    .photo-grid .photo-card img,
+    .remote-photo-grid .photo-card img {
+        height: auto;
+        aspect-ratio: 4 / 3;
+    }
+
+    .modal {
+        align-items: flex-end;
+    }
+
+    .modal-content,
+    .modal-content.modal-lg {
+        width: 100%;
+        max-width: none;
+        max-height: 96dvh;
+        border-end-start-radius: 0;
+        border-end-end-radius: 0;
+        padding: 18px;
+    }
+
+    .modal-actions {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+    .modal-actions > * {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .people-table table,
+    .people-table thead,
+    .people-table tbody,
+    .people-table tr,
+    .people-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .people-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    .people-table table {
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .people-table tr {
+        margin-block-end: 12px;
+        overflow: hidden;
+        border: var(--border-width) solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .people-table td {
+        display: grid;
+        grid-template-columns: minmax(5.5rem, 40%) minmax(0, 1fr);
+        gap: 12px;
+        align-items: baseline;
+        padding: 10px 12px;
+    }
+
+    .people-table td::before {
+        content: attr(data-label);
+        color: var(--color-text-muted);
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+    }
+
+    .people-table .actions {
+        flex-wrap: wrap;
+    }
+
+    .pairing-code-qr {
+        align-self: center;
+    }
+
+    .remote-file-pull-form,
+    .remote-file-pull-form select,
+    .share-download-dir-form,
+    .theme-conversation {
+        width: 100%;
+        max-width: none;
+    }
+
+    #map {
+        min-height: 300px;
+        height: 54dvh;
+    }
+
+    .selection-panel,
+    .selection-panel.active {
+        max-height: 62dvh;
+    }
+
+}
+
+/* Three peer controls (Actions, Filters, Menu) cannot reliably keep their
+   localized labels on the first row of an iPhone SE-sized navbar. Preserve the
+   44px touch targets and accessible names, but use the existing icons as the
+   visible labels at the smallest phone widths. */
+@media (max-width: 400px) {
+    .navbar-container {
+        column-gap: 6px;
+    }
+
+    button.nav-menu-toggle[data-icon],
+    button.nav-context-toggle[data-icon] {
+        position: relative;
+        flex: 0 0 44px;
+        width: 44px;
+        min-width: 44px;
+        gap: 0;
+        padding: 8px;
+    }
+
+    .nav-menu-toggle-label,
+    .nav-context-toggle-label {
+        display: none;
+    }
+
+    .nav-context-count:not([hidden]) {
+        position: absolute;
+        inset-block-start: 1px;
+        inset-inline-end: 1px;
+        min-width: 16px;
+        padding-inline: 3px;
+        font-size: var(--font-size-xs);
+        line-height: 14px;
+    }
+}
+
+@media (hover: none), (pointer: coarse) {
+    .btn,
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger,
+    .action-button,
+    .page-btn,
+    .action-link,
+    .nav-link,
+    button,
+    input,
+    select {
+        min-height: 44px;
+    }
+
+    .photo-card:hover,
+    .album-tile:hover,
+    .face-card:hover {
+        transform: none;
+    }
+
+    .album-reorder-controls {
+        display: flex;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

@@ -25,7 +25,15 @@
     border-color: var(--color-border-hover);
 }
 
-.filter-group label {
+/* The filter's own field label — direct child only. As a descendant selector
+   this also matched every label a *component* renders inside the group
+   (.multi-select-option, .match-option, .radio-label), and at (0,1,1) it
+   outranked their own (0,1,0) rules: their `display: flex` lost to `block`, so
+   `align-items` and `gap` silently stopped applying and the control sat on the
+   text baseline with whatever gap the source whitespace happened to give.
+   Every nested label in a filter group carries its own styling, so scoping to
+   the direct child costs nothing and stops the next component hitting this. */
+.filter-group > label {
     display: block;
     font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
@@ -49,7 +57,8 @@
 }
 
 /* A boolean filter row (e.g. "only unnamed locations"): overrides the
-   block/bold .filter-group label defaults for an inline checkbox + text. */
+   block/bold field-label defaults above (it is a direct child, so it matches
+   them) for an inline checkbox + text. */
 .filter-group .filter-checkbox {
     display: flex;
     align-items: center;

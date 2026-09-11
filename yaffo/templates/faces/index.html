@@ -14,6 +14,11 @@
 {% from "components/page_header.html" import page_header %}
 {% from "components/info_modal.html" import render_info_modal %}
 {% from "components/modal.html" import render_modal with context %}
+{% from "components/nav_panel.html" import sidebar_toggles %}
+
+{% block nav_context_toggles %}
+    {{ sidebar_toggles('faces', has_actions=true, filter_count=applied_filter_count(request.args)) }}
+{% endblock %}
 
 {% macro render_modal_keyboard_help() %}
         <h3 class="modal-section-title">{{ _("How This Page Works") }}</h3>
@@ -66,27 +71,35 @@
         </div>
 {% endmacro %}
 
+{# One shortcut row. Reordering is a Pointer Events drag on the handle (so a real
+   touch stream works, not just a mouse), plus the explicit Move earlier / Move
+   later buttons — drag is never the only way to reorder
+   (docs/development/responsive.md, "The shared panel contract"). #}
+{% macro render_shortcut_row(person, checked) %}
+    <div class="filter-config-row shortcut-config-row" data-person-id="{{ person.id }}">
+        <span class="filter-config-handle" aria-hidden="true">⠿</span>
+        <label class="filter-config-item">
+            <input type="checkbox" class="shortcut-config-toggle" {% if checked %}checked{% endif %}>
+            <span class="shortcut-config-name">{{ person.name }}</span>
+        </label>
+        <div class="shortcut-config-move">
+            <button type="button" class="shortcut-config-move-btn" data-move="up"
+                    aria-label="{{ _('Move earlier') }}" title="{{ _('Move earlier') }}">↑</button>
+            <button type="button" class="shortcut-config-move-btn" data-move="down"
+                    aria-label="{{ _('Move later') }}" title="{{ _('Move later') }}">↓</button>
+        </div>
+    </div>
+{% endmacro %}
+
 {% macro render_shortcut_people_config() %}
     {% set selected_shortcut_ids = shortcut_people | map(attribute='id') | list %}
     <div class="filter-config shortcut-config" id="shortcut-config-list"
          data-customized="{{ 'true' if shortcut_people_customized else 'false' }}">
         {% for person in shortcut_people %}
-            <div class="filter-config-row shortcut-config-row" draggable="true" data-person-id="{{ person.id }}">
-                <span class="filter-config-handle" aria-hidden="true">⠿</span>
-                <label class="filter-config-item">
-                    <input type="checkbox" class="shortcut-config-toggle" checked>
-                    <span>{{ person.name }}</span>
-                </label>
-            </div>
+            {{ render_shortcut_row(person, true) }}
         {% endfor %}
         {% for person in all_people_shortcuts if person.id not in selected_shortcut_ids %}
-            <div class="filter-config-row shortcut-config-row" draggable="true" data-person-id="{{ person.id }}">
-                <span class="filter-config-handle" aria-hidden="true">⠿</span>
-                <label class="filter-config-item">
-                    <input type="checkbox" class="shortcut-config-toggle">
-                    <span>{{ person.name }}</span>
-                </label>
-            </div>
+            {{ render_shortcut_row(person, false) }}
         {% endfor %}
     </div>
     <button type="button" class="btn btn-secondary" id="shortcut-config-reset">{{ _("Reset to defaults") }}</button>
@@ -141,6 +154,10 @@
                 <input type="hidden" name="face_status" value="ASSIGNED">
 
 
+                {# The assignment controls are one stacked block so they read the same
+                   in the desktop sidebar and inside the narrow `faces-actions` panel,
+                   where the sidebar framing is dropped. Widths come from the
+                   stylesheet, not inline styles, so the narrow rules can win. #}
                 <div class="person-assign-select">
                     <label for="sidebar-person-select">{{ _("Assign to Person") }}</label>
                     <select name="person" id="sidebar-person-select" class="searchable-select">
@@ -150,8 +167,7 @@
                                     {% if filters.selected_assign_person_id == person.id %}selected{% endif %}>{{ person.name }}</option>
                         {% endfor %}
                     </select>
-                    <button type="button" class="btn-primary" id="sidebar-assign-selected-btn"
-                            style="width: 100%; margin-top: 10px;">{{ _("Assign Selected") }}
+                    <button type="button" class="btn btn-primary sidebar-btn" id="sidebar-assign-selected-btn">{{ _("Assign Selected") }}
                     </button>
                     <button type="button" class="btn sidebar-btn btn-danger" id="sidebar-ignore-btn">{{ _("Ignore Selected") }}
                     </button>
@@ -195,7 +211,8 @@
                 <div id="sidebar-face-checkboxes"></div>
             </form>
         {% endmacro %}
-        {{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions) }}
+        {{ render_sidebar(url_for('faces_index'), filters, render_filters, render_actions,
+                        panel_prefix='faces') }}
         <div class="main-content" data-unassigned-count="{{ unassigned_face_count }}">
             {% call page_header(_("Unassigned Faces")) %}
                 {% trans count=faces|length, shown=faces|length|format_integer, total=unassigned_face_count|format_integer %}Showing {{ shown }} of {{ total }} unassigned face{% pluralize %}Showing {{ shown }} of {{ total }} unassigned faces{% endtrans %}
@@ -243,12 +260,19 @@
                                     </span>
                                 </div>
                                 <div class="pagination-controls">
+                                    {# Same markup as components/pagination.html so the shared
+                                       640px rule collapses these to 44px icon controls on one
+                                       row instead of five text buttons that cannot fit at 320px. #}
                                     <div class="page-navigation">
-                                        <button type="button" class="page-btn cluster-first">&laquo; {{ _("First") }}</button>
-                                        <button type="button" class="page-btn cluster-prev">&lsaquo; {{ _("Previous") }}</button>
+                                        <button type="button" class="page-btn cluster-first" data-icon="page-first"
+                                                aria-label="{{ _('First') }}"><span class="page-btn-label">&laquo; {{ _("First") }}</span></button>
+                                        <button type="button" class="page-btn cluster-prev" data-icon="page-previous"
+                                                aria-label="{{ _('Previous') }}"><span class="page-btn-label">&lsaquo; {{ _("Previous") }}</span></button>
                                         <span class="page-info cluster-page-label">{{ _("Page 1 of 1") }}</span>
-                                        <button type="button" class="page-btn cluster-next">{{ _("Next") }} &rsaquo;</button>
-                                        <button type="button" class="page-btn cluster-last">{{ _("Last") }} &raquo;</button>
+                                        <button type="button" class="page-btn cluster-next" data-icon="page-next"
+                                                aria-label="{{ _('Next') }}"><span class="page-btn-label">{{ _("Next") }} &rsaquo;</span></button>
+                                        <button type="button" class="page-btn cluster-last" data-icon="page-last"
+                                                aria-label="{{ _('Last') }}"><span class="page-btn-label">{{ _("Last") }} &raquo;</span></button>
                                     </div>
                                 </div>
                             </div>

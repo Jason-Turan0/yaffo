@@ -1,7 +1,7 @@
 {# Left navigation for the Sharing tab: the settings entry plus one entry per
    paired device. Re-fetches itself when an action fires sharingDevicesChanged
    (pair / revoke / rename), so the list stays current without a page load. #}
-<nav class="sidebar sharing-sidebar" id="sharing-sidebar"
+<nav class="sidebar sharing-sidebar" id="sharing-sidebar" data-nav-panel
      hx-get="{{ url_for('sharing_sidebar', selected=selected_key) }}"
      hx-trigger="sharingDevicesChanged from:body"
      hx-swap="outerHTML">

@@ -31,8 +31,23 @@ const initReorder = (grid) => {
     /** @type {HTMLElement | null} */
     let dragged = null;
 
+    const moveCard = (/** @type {HTMLElement} */ card, /** @type {number} */ offset) => {
+        const cards = Array.from(grid.querySelectorAll('[data-select-id]'));
+        const index = cards.indexOf(card);
+        const target = cards[index + offset];
+        if (!(target instanceof HTMLElement)) return;
+        if (offset < 0) {
+            grid.insertBefore(card, target);
+        } else {
+            grid.insertBefore(target, card);
+        }
+        void postOrder();
+        card.focus();
+    };
+
     grid.querySelectorAll('[data-select-id]').forEach((card) => {
         if (!(card instanceof HTMLElement)) return;
+        card.tabIndex = 0;
         card.draggable = true;
         card.addEventListener('dragstart', () => { dragged = card; card.classList.add('is-dragging'); });
         card.addEventListener('dragend', () => {
@@ -48,6 +63,32 @@ const initReorder = (grid) => {
             const to = cards.indexOf(card);
             grid.insertBefore(dragged, from < to ? card.nextSibling : card);
         });
+
+        const controls = document.createElement('div');
+        controls.className = 'album-reorder-controls';
+        controls.dataset.selectionIgnore = '';
+        const earlier = document.createElement('button');
+        earlier.type = 'button';
+        earlier.className = 'album-reorder-button';
+        earlier.setAttribute('aria-label', grid.dataset.moveEarlier || '');
+        earlier.textContent = '↑';
+        const later = document.createElement('button');
+        later.type = 'button';
+        later.className = 'album-reorder-button';
+        later.setAttribute('aria-label', grid.dataset.moveLater || '');
+        later.textContent = '↓';
+        earlier.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            moveCard(card, -1);
+        });
+        later.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            moveCard(card, 1);
+        });
+        controls.append(earlier, later);
+        card.appendChild(controls);
     });
 
     const postOrder = async () => {

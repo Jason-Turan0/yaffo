@@ -2,6 +2,7 @@
     display: flex;
     gap: 20px;
     min-height: calc(100vh - 100px);
+    min-height: calc(100dvh - 100px);
 }
 
 .utilities-sidebar {
@@ -199,4 +200,36 @@
 
 .alert-link:hover {
     color: var(--color-accent-hover);
+}
+
+/* Utility content can include untranslated paths and user-defined names. */
+.utilities-content .section-description,
+.utilities-content .stat-card,
+.utilities-content .page-header-main,
+#automations-nav .panel-nav-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#automations-nav .panel-nav-label {
+    white-space: normal;
+}
+
+#scan-results .table-container {
+    max-height: 60vh;
+    max-height: 60dvh;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.utilities-content .data-table th {
+    text-align: start;
+}
+
+@media (max-width: 640px), (pointer: coarse) {
+    .utilities-content button,
+    .utilities-content select,
+    .utilities-content .file-browser-input-group input {
+        min-height: 44px;
+    }
 }

@@ -20,6 +20,8 @@ const stubGridStack = () => {
     engine: { nodes: [] },
     on: vi.fn(),
     setStatic: vi.fn(),
+    enableMove: vi.fn(),
+    enableResize: vi.fn(),
     addWidget: vi.fn(),
     removeWidget: vi.fn(),
     getRow: vi.fn(() => 0),

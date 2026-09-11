@@ -8,7 +8,12 @@
     font-size: var(--font-size-sm);
     pointer-events: none;
     z-index: 1000;
+    /* Stays on one line while there is room for it, then wraps rather than
+       running off a narrow viewport — a long translated string is the common
+       case, not the exception. */
     white-space: nowrap;
+    max-width: calc(100vw - 24px);
+    overflow-wrap: anywhere;
     opacity: 0;
     transition: opacity 0.2s;
     box-shadow: var(--shadow-md);

@@ -23,6 +23,15 @@ context:
   - tag: automations-js
     path: static/utilities/automations.js
     description: Client wiring — trigger editor, run/test controls, and the chat dialog
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - System automations ship built-in and cannot be edited or deleted; custom ones can
@@ -144,3 +153,51 @@ scenarios:
       - A confirmation dialog is shown before deleting
       - After confirming, the automation is removed from the sidebar
       - System automations offer no delete action
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P5 — automations). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: automation_editor_stacks_on_a_narrow_viewport
+    goal: The editor, chat and code panes stack instead of competing for width
+    priority: medium
+    steps:
+      - Open a custom automation's edit screen at 390x844
+      - Open its trigger editor
+    verify:
+      - Neither screen scrolls the page horizontally
+      - The conversation and code sections take the full width once stacked
+      - Code blocks and test-result tables scroll inside their own container
+      - The full action set stays discoverable rather than being clipped
+
+  - name: automation_routes_fit_phone_tablet_and_desktop
+    goal: Routes return successfully with no uncaught errors or page overflow; Automations consumes the panel contract
+    priority: high
+    steps:
+      - Open detail, editor, and triggers at all six contract viewports
+    verify:
+      - Routes return successfully with no uncaught errors or page overflow; Automations consumes the panel contract
+
+  - name: automation_trigger_input_survives_rotation_and_touch_save
+    goal: Unsaved schedule and event values survive resize; saved trigger actions are at least 44 pixels high
+    priority: high
+    steps:
+      - Enter an advanced schedule by touch, resize, save and remove it; open an event editor
+    verify:
+      - Unsaved schedule and event values survive resize; saved trigger actions are at least 44 pixels high
+
+  - name: automation_test_results_scroll_locally_with_long_content
+    goal: The picker fits; the table scrolls locally; details remain selected and no page overflow occurs
+    priority: high
+    steps:
+      - Run a dry-run fixture with long raw arguments and enable Show details on phone, tablet, and desktop
+    verify:
+      - The picker fits; the table scrolls locally; details remain selected and no page overflow occurs
+
+  - name: automation_long_names_and_detail_dialog_fit_narrow_screens
+    goal: The heading wraps, every action remains reachable, and the modal fits
+    priority: high
+    steps:
+      - Review a long automation heading and open Edit details at minimum width
+    verify:
+      - The heading wraps, every action remains reachable, and the modal fits

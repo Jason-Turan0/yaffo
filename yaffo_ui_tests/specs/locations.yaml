@@ -29,6 +29,15 @@ context:
   - tag: locations-route-tests
     path: tests/yaffo/routes/test_locations.py
     description: Server-side expectations for payload fields, sidebar rendering, nearby radius config, bulk update, and geocode rate limits
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - Bennett photos have GPS metadata and should appear on the map
@@ -199,3 +208,122 @@ scenarios:
       - The panel remains usable for quick-assign existing names, custom assignment, clear selection, and clear names
       - Additional panel renders do not issue more reverse-geocode requests after the rate limit is detected
       - Multiple recommended buttons are not rendered for the same selection
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P4 — locations). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: locations_route_fits_every_contract_viewport
+    goal: The map page survives every viewport class in the support contract
+    priority: high
+    steps:
+      - Load the locations page at 320x568, 390x844, 844x390, 768x1024, 1024x768 and 1440x900
+    verify:
+      - There is no page-level horizontal overflow at any of those viewports
+      - The map is told its container's size at each of them
+      - The map keeps a usable height rather than collapsing to a strip on a short landscape phone
+  - name: locations_filter_panel_uses_a_peer_navbar_panel
+    goal: The map's filter sidebar follows the shared panel contract
+    priority: high
+    steps:
+      - Load the locations page at 390x844
+      - Open Filters, enter a value, press Escape, reopen, then resize to 1440x900
+    verify:
+      - Filters is a peer of Menu with a server-rendered applied-filter count badge, hidden when nothing is applied, and the panel is closed on first paint
+      - Escape closes it
+      - Reopening shows the same live DOM, so the ticked checkbox is still ticked
+      - The entered value survives the resize back to desktop
+  - name: locations_narrow_filters_apply_and_clear_without_leaving_the_map
+    goal: Applying and clearing filters from inside the navbar panel filters the markers in place instead of navigating
+    priority: high
+    steps:
+      - Load the locations page at 390x844 with one named photo
+      - Open the Filters panel, tick "only unnamed" and press Apply Filters
+      - Reopen the panel and press Clear Filters
+    verify:
+      - The browser stays on /locations and the document is never reloaded
+      - The visible marker set narrows to the unnamed photos and is restored by Clear
+      - The map centre and zoom are unchanged by either control
+      - Nothing about the open panel widens the page
+  - name: locations_selection_details_open_in_a_centered_modal
+    goal: On a narrow screen the selected-cluster assignment details open in a centered modal over a full-width map, and go back to being the map's side column on desktop
+    priority: high
+    steps:
+      - Load the locations page at 390x844 and select a cluster
+      - Resize to 1440x900 without reloading
+    verify:
+      - The selection panel is centered inside the viewport with edge gutters, a backdrop and dialog semantics
+      - The panel fits inside the viewport and does not widen the page
+      - The map still spans the whole layout row underneath it, so it remains the primary surface
+      - On desktop the same panel is positioned in the normal flow to the right of the map
+      - The selection is unchanged by the resize and no reload was required
+  - name: locations_selection_modal_contains_its_own_overflow
+    goal: The assignment modal scrolls its own content instead of the document
+    priority: medium
+    steps:
+      - Load the locations page at 320x568
+      - Shift-drag to select every cluster so the panel content outgrows the modal
+      - Scroll the panel body to its end
+    verify:
+      - The panel body is the scroll region and its content is taller than the modal
+      - Its overscroll is contained, so reaching the end does not chain to the page
+      - Scrolling the panel does not move the document
+      - The modal fits the viewport and the page does not overflow horizontally
+  - name: locations_map_follows_narrow_container_resizes
+    goal: OpenLayers is told its new size after every layout change
+    priority: high
+    steps:
+      - Load the locations page at 768x1024
+      - Resize to 390x844 without reloading
+      - Select a cluster and open the selection panel
+      - Rotate to 844x390 with the panel open, then close the panel
+    verify:
+      - The map reports a non-zero size at the first viewport
+      - After the resize the map's own size matches its container's client width
+      - The map's size still matches its container after the panel opens, after the rotation and after the panel closes
+      - The selection panel becomes active, is visible, and does not widen the page
+      - No reload was required at any point
+  - name: locations_map_state_survives_a_resize_through_the_breakpoint
+    goal: Crossing the breakpoint never silently resets the user's view of the map
+    priority: high
+    steps:
+      - Load the locations page at 1440x900 and record the map centre and zoom
+      - Resize to 390x844, then to 844x390, then back to 1440x900, waiting for the map to pick up its new size each time
+    verify:
+      - The map centre is unchanged
+      - The zoom level is unchanged
+      - No reload was required
+  - name: locations_unsaved_assignment_survives_a_resize_through_the_breakpoint
+    goal: A location name typed but not yet assigned is not thrown away by a panel re-render or a resize through the breakpoint
+    priority: high
+    steps:
+      - Load the locations page at 1440x900, select a cluster and type a custom location name without assigning it
+      - Resize to 390x844, re-render the selection panel, then resize back to 1440x900
+      - Clear the selection and select the cluster again
+    verify:
+      - The typed name is still in the custom-location input after the resize
+      - The selection, the map centre and the zoom are unchanged
+      - A panel re-render does not clear the typed name
+      - No reload was required
+      - Clearing the selection is an explicit discard, so the draft name is gone when the cluster is selected again
+  - name: locations_long_location_names_do_not_widen_the_narrow_page
+    goal: A very long location name is absorbed by the modal instead of pushing the page sideways
+    priority: medium
+    steps:
+      - Assign a long unbreakable location name to every located photo
+      - Load the locations page at 320x568 and select every cluster
+    verify:
+      - The quick-assign chip for the long name is visible and no wider than the viewport
+      - The cluster summary and the modal stay inside the viewport
+      - There is no page-level horizontal overflow
+  - name: locations_touch_reaches_every_hover_only_affordance
+    goal: Everything the page only said through :hover or a native title tooltip is reachable with a coarse pointer
+    priority: high
+    steps:
+      - Open the locations page in a touch context at 390x844 with a long location name assigned
+      - Select a multi-photo cluster and tap a thumbnail, the Preview toggle, and the panel close control
+    verify:
+      - The quick-assign chip renders the whole location name instead of ellipsising it behind a title tooltip
+      - A thumbnail is at least a 44 px target and tapping it puts the photo's name on screen, which is the title tooltip's information
+      - Tapping the Preview toggle collapses the section
+      - The panel close control is at least a 44 px target and tapping it dismisses the modal

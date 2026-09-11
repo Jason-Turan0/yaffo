@@ -269,7 +269,9 @@ automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
                 tbody.append(row);
             });
             table.append(tbody);
-            resultEl.append(table);
+            const tableContainer = el('div', 'table-container thin-scrollbar');
+            tableContainer.append(table);
+            resultEl.append(tableContainer);
         } else {
             resultEl.append(el('p', 'no-data', i18n.t('utilities:automations.test.noActions')));
         }

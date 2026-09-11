@@ -27,7 +27,8 @@ button[data-icon] {
 
 .nav-link[data-icon]::before,
 .btn[data-icon]::before,
-button[data-icon]::before {
+button[data-icon]::before,
+.page-btn[data-icon]::before {
     content: "";
     width: 18px;
     height: 18px;
@@ -54,6 +55,9 @@ button[data-icon]::before {
 [data-icon="locations"]::before { -webkit-mask-image: url("/static/themes/classic/icon-locations.svg"); mask-image: url("/static/themes/classic/icon-locations.svg"); }
 [data-icon="utilities"]::before { -webkit-mask-image: url("/static/themes/classic/icon-utilities.svg"); mask-image: url("/static/themes/classic/icon-utilities.svg"); }
 [data-icon="settings"]::before { -webkit-mask-image: url("/static/themes/classic/icon-settings.svg"); mask-image: url("/static/themes/classic/icon-settings.svg"); }
+[data-icon="actions"]::before { -webkit-mask-image: url("/static/themes/classic/icon-actions.svg"); mask-image: url("/static/themes/classic/icon-actions.svg"); }
+[data-icon="filter"]::before { -webkit-mask-image: url("/static/themes/classic/icon-filter.svg"); mask-image: url("/static/themes/classic/icon-filter.svg"); }
+[data-icon="menu"]::before { -webkit-mask-image: url("/static/themes/classic/icon-menu.svg"); mask-image: url("/static/themes/classic/icon-menu.svg"); }
 [data-icon="filter-config"]::before { -webkit-mask-image: url("/static/themes/classic/icon-settings.svg"); mask-image: url("/static/themes/classic/icon-settings.svg"); }
 [data-icon="themes"]::before { -webkit-mask-image: url("/static/themes/classic/icon-themes.svg"); mask-image: url("/static/themes/classic/icon-themes.svg"); }
 [data-icon="add"]::before { -webkit-mask-image: url("/static/themes/classic/icon-add.svg"); mask-image: url("/static/themes/classic/icon-add.svg"); }
@@ -71,3 +75,7 @@ button[data-icon]::before {
 [data-icon="favorite"]::before { -webkit-mask-image: url("/static/themes/classic/icon-heart.svg"); mask-image: url("/static/themes/classic/icon-heart.svg"); }
 [data-icon="info"]::before { -webkit-mask-image: url("/static/themes/classic/icon-info.svg"); mask-image: url("/static/themes/classic/icon-info.svg"); }
 [data-icon="warning"]::before { -webkit-mask-image: url("/static/themes/classic/icon-warning.svg"); mask-image: url("/static/themes/classic/icon-warning.svg"); }
+[data-icon="page-first"]::before { -webkit-mask-image: url("/static/themes/classic/icon-page-first.svg"); mask-image: url("/static/themes/classic/icon-page-first.svg"); }
+[data-icon="page-previous"]::before { -webkit-mask-image: url("/static/themes/classic/icon-page-previous.svg"); mask-image: url("/static/themes/classic/icon-page-previous.svg"); }
+[data-icon="page-next"]::before { -webkit-mask-image: url("/static/themes/classic/icon-page-next.svg"); mask-image: url("/static/themes/classic/icon-page-next.svg"); }
+[data-icon="page-last"]::before { -webkit-mask-image: url("/static/themes/classic/icon-page-last.svg"); mask-image: url("/static/themes/classic/icon-page-last.svg"); }

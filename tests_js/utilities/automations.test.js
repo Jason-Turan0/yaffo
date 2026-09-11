@@ -48,3 +48,36 @@ describe('automations trigger editor', () => {
     expect(cronBuilder.setCron).toHaveBeenCalledWith(mount, '0 9 * * 1');
   });
 });
+
+describe('automation dry-run results', () => {
+  it('keeps raw action details in a scroll container when details are toggled', async () => {
+    document.body.innerHTML = `
+      <button id="automation-test-button">Test</button>
+      <div id="automation-test-result" hidden></div>`;
+    const PO = await loadAutomations();
+    PO.pickFolder = vi.fn().mockResolvedValue('/photos');
+    const longPath = '/photos/' + 'long-directory'.repeat(30);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, code_source: 'published', context: { media_item_ids: [1] },
+        actions: [{name: 'move_media_items', summary: 'Move photo', args: [longPath]}] }),
+    }));
+    try {
+      PO.automations.initAutomationTest('test', {buildUrl: () => '/test-files'}, '/photos', window.testI18n);
+      document.getElementById('automation-test-button').click();
+      await vi.waitFor(() => expect(document.querySelector('.automation-test-table')).not.toBeNull());
+      const result = document.getElementById('automation-test-result');
+      const table = result.querySelector('.table-container .automation-test-table');
+      expect(table.textContent).toContain(longPath);
+      const toggle = result.querySelector('input[type="checkbox"]');
+      toggle.click();
+      expect(result.classList.contains('show-details')).toBe(true);
+      toggle.click();
+      expect(result.classList.contains('show-details')).toBe(false);
+      expect(result.querySelector('.table-container .automation-test-table')).toBe(table);
+      expect(document.getElementById('automation-test-button').disabled).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

@@ -27,6 +27,7 @@
     max-width: 500px;
     width: 90%;
     max-height: 90vh;
+    max-height: 90dvh;
     box-shadow: var(--shadow-xl);
     display: flex;
     flex-direction: column;
@@ -79,6 +80,9 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    /* The body is the modal's only scroll region, so a flick that reaches its
+       end must not chain into the page behind the backdrop. */
+    overscroll-behavior: contain;
     /* The scroll region clips on every edge (overflow-y:auto forces overflow-x to
        auto too), so edge-flush controls lose their focus ring / offset shadow.
        This inset gives them room and aligns body content with the header's 0 4px. */
@@ -111,6 +115,7 @@
 
 .modal-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     justify-content: flex-end;
     flex-shrink: 0;

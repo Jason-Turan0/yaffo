@@ -1,5 +1,16 @@
 import { test, expect, Page } from '@playwright/test';
 
+import {
+  CONTRACT_WIDTHS,
+  VIEWPORTS,
+  expectFitsViewport,
+  expectNoPageOverflow,
+  expectPanelContract,
+  expectRouteFits,
+  touchDrag,
+  withTouchContext,
+} from '../_support/responsive';
+
 // Albums suite — runs against the standard single-instance sandbox (BASE_URL).
 // There are NO paired devices here: the album share/un-share flow lives in the
 // sharing suite (sharing_album_share_modal_toggle); this file only checks the
@@ -64,6 +75,16 @@ async function removeMembers(page: Page, albumPath: string, ids: string[]): Prom
   await page.locator('#remove-from-album-button').click();
   await acceptConfirmDialog(page, /not deleted/);
   await page.waitForURL(/edit=1/);
+}
+
+// The seeded album's path, read from the overview tile rather than the sidebar:
+// the sidebar is a registered nav panel, so below 1200px it is hidden until its
+// peer button is pressed. The tiles render at every width.
+async function seededAlbumPath(page: Page): Promise<string> {
+  await page.goto('/albums');
+  const href = await page.locator('.album-tile', { hasText: SEEDED_ALBUM }).first().getAttribute('href');
+  expect(href, `No overview tile for "${SEEDED_ALBUM}"`).not.toBeNull();
+  return href!;
 }
 
 // Reorder album members by posting the new order via browser-side fetch, which
@@ -277,11 +298,15 @@ test.describe('Albums Feature', () => {
     expect(page.url()).toContain(`exclude_id=${untickedId}`);
 
     // Page forward and back: the selection (and the untick) survive
-    await page.getByRole('link', { name: 'Next ›' }).click();
+    // The shared pagination controls carry an aria-label ("Next", "First", …) so
+    // they still name themselves once they render icon-only at 640px and below.
+    // That label IS the accessible name now, so it no longer includes the ›/«
+    // glyphs the visible label has.
+    await page.getByRole('link', { name: 'Next', exact: true }).click();
     await page.waitForURL(/[?&]page=2/);
     await expect(page.locator('#add-selection [data-selection-count]')).toHaveText(new RegExp(`\\b${matchCount - 1} selected`));
     expect(page.url()).toMatch(/select=all/);
-    await page.getByRole('link', { name: '« First' }).click();
+    await page.getByRole('link', { name: 'First', exact: true }).click();
     await page.waitForURL(/[?&]page=1/);
     await expect(page.locator('#add-selection [data-selection-count]')).toHaveText(new RegExp(`\\b${matchCount - 1} selected`));
     await expect(page.locator(`#add-grid .photo-card[data-select-id="${untickedId}"]`)).not.toHaveClass(/is-selected/);
@@ -378,5 +403,355 @@ test.describe('Albums Feature', () => {
     // Nothing in this environment is shared
     await page.goto('/albums');
     await expect(page.locator('.album-tile .chip', { hasText: 'Shared' })).toHaveCount(0);
+  });
+
+  // --------------------------------------------------------------------------
+  // Responsive coverage (P2 — albums). The shell contract itself is exercised on
+  // Home (specs/photo_gallery.yaml); everything below is this family's own
+  // narrow-screen behaviour. Shared assertions come from _support/responsive.ts.
+  // --------------------------------------------------------------------------
+
+  test('albums_routes_fit_every_contract_viewport - No albums route overflows the page at any contract width', async ({ page }) => {
+    test.setTimeout(180_000);
+    const albumPath = await seededAlbumPath(page);
+    const routes = ['/albums', albumPath, `${albumPath}?edit=1`, `${albumPath}/add`];
+
+    for (const width of CONTRACT_WIDTHS) {
+      await page.setViewportSize({ width, height: width === 320 ? 568 : 900 });
+      for (const route of routes) {
+        await expectRouteFits(page, route);
+      }
+    }
+
+    // Landscape phone: short height, wide enough to still be a narrow layout.
+    await page.setViewportSize(VIEWPORTS.narrowLandscape);
+    await expectRouteFits(page, albumPath);
+    await expectRouteFits(page, `${albumPath}?edit=1`);
+  });
+
+  test('albums_nav_uses_a_peer_navbar_panel - The album list is a peer of Menu and comes back to the page on desktop', async ({ page }) => {
+    test.setTimeout(60_000);
+    await expectPanelContract(page, { route: '/albums', panelId: 'albums-nav' });
+
+    // Escape closes the panel, and the album list inside it still navigates.
+    await page.setViewportSize(VIEWPORTS.narrow);
+    await page.goto('/albums');
+    await page.locator('#albums-nav-toggle').click();
+    await expect(page.locator('#albums-nav')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#albums-nav')).toBeHidden();
+    await expect(page.locator('#albums-nav-toggle')).toHaveAttribute('aria-expanded', 'false');
+
+    await page.locator('#albums-nav-toggle').click();
+    await page.locator('#albums-nav .panel-nav a', { hasText: SEEDED_ALBUM }).first().click();
+    await page.waitForURL(/\/albums\/\d+$/);
+    await expect(page.locator('.page-header h1')).toContainText(SEEDED_ALBUM);
+    await expectNoPageOverflow(page);
+  });
+
+  test('albums_bulk_add_filters_use_a_peer_navbar_panel - Filters is a peer panel with a server-rendered applied count', async ({ page }) => {
+    test.setTimeout(90_000);
+    const albumPath = await seededAlbumPath(page);
+    await expectPanelContract(page, { route: `${albumPath}/add`, panelId: 'album-add-filters' });
+
+    // The applied-filter badge is rendered by the server, so it is already right
+    // on first paint rather than appearing after hydration.
+    await page.setViewportSize(VIEWPORTS.narrow);
+    await page.goto(`${albumPath}/add`);
+    const badge = page.locator('#album-add-filters-toggle [data-nav-panel-count]');
+    await expect(badge).toBeHidden();
+
+    const year = await page.locator('select#year-select option').nth(1).getAttribute('value');
+    expect(year).not.toBeNull();
+    await page.goto(`${albumPath}/add?year=${year}`);
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveText('1');
+    await expectNoPageOverflow(page);
+
+    // At the minimum width the screen's own furniture — the selection bar it is
+    // built around and the pagination under the grid — stays inside the viewport.
+    await page.setViewportSize(VIEWPORTS.minimum);
+    await page.goto(`${albumPath}/add?page-size=10`);
+    await expectFitsViewport(page, '#add-selection');
+    // Pagination lives below the fold, so bring it on screen before asking
+    // whether it fits — expectFitsViewport checks both axes.
+    await page.locator('.page-navigation').scrollIntoViewIfNeeded();
+    await expectFitsViewport(page, '.page-navigation');
+    await expectNoPageOverflow(page);
+  });
+
+  test('albums_detail_and_edit_fit_a_narrow_viewport - Tiles, header actions and the selection bar stay contained at 390px', async ({ page }) => {
+    test.setTimeout(60_000);
+    const albumPath = await seededAlbumPath(page);
+    await page.setViewportSize(VIEWPORTS.narrow);
+
+    // Overview: every tile sits inside the viewport.
+    await page.goto('/albums');
+    for (const box of await page.locator('.album-tile').evaluateAll(
+      (tiles) => tiles.map((tile) => tile.getBoundingClientRect().toJSON()))) {
+      expect(box.left).toBeGreaterThanOrEqual(-1);
+      expect(box.right).toBeLessThanOrEqual(VIEWPORTS.narrow.width + 1);
+    }
+
+    // Detail: the five header actions wrap into the header instead of running
+    // off the side of it.
+    await page.goto(albumPath);
+    const header = (await page.locator('.page-header').boundingBox())!;
+    const actions = await page.locator('.page-header-actions > *').evaluateAll(
+      (nodes) => nodes.map((node) => node.getBoundingClientRect().toJSON()));
+    expect(actions.length).toBeGreaterThan(1);
+    for (const box of actions) {
+      expect(box.left).toBeGreaterThanOrEqual(header.x - 1);
+      expect(box.right).toBeLessThanOrEqual(header.x + header.width + 1);
+    }
+    await expectNoPageOverflow(page);
+
+    // Edit mode: the selection bar is sticky BELOW the sticky navbar, not under
+    // it — its offset is the navbar height nav.js publishes.
+    await page.goto(`${albumPath}?edit=1`);
+    await expect(page.locator('#album-selection')).toBeVisible();
+    const navHeight = (await page.locator('.navbar').boundingBox())!.height;
+    const stickyTop = await page.locator('#album-selection').evaluate(
+      (element) => getComputedStyle(element).top);
+    expect(parseFloat(stickyTop)).toBeGreaterThanOrEqual(navHeight - 1);
+    await expectFitsViewport(page, '#album-selection');
+    await expectNoPageOverflow(page);
+  });
+
+  test('albums_photos_reorder_without_dragging - Move controls are always on screen and are real touch targets', async ({ page, browser }) => {
+    test.setTimeout(60_000);
+    const albumPath = await seededAlbumPath(page);
+    const originalOrder = await memberIds(page, albumPath);
+    expect(originalOrder.length).toBeGreaterThan(1);
+
+    await withTouchContext(browser, VIEWPORTS.narrow, async (touchPage) => {
+      await touchPage.goto(`${albumPath}?edit=1`);
+      const cards = touchPage.locator('#album-grid .photo-card');
+      await expect(cards).toHaveCount(originalOrder.length);
+
+      // Visible without hovering or focusing anything: a coarse pointer has no
+      // hover, and an affordance you have to discover is not an alternative.
+      const controls = touchPage.locator('#album-grid .album-reorder-controls');
+      await expect(controls).toHaveCount(originalOrder.length);
+      await expect(controls.first()).toBeVisible();
+
+      for (const box of await touchPage.locator('#album-grid .album-reorder-button')
+        .evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON()))) {
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+      }
+
+      // Move the first photo later, then back: each press posts the new order.
+      const moveLater = cards.first().locator('.album-reorder-button').nth(1);
+      await Promise.all([
+        touchPage.waitForResponse((response) => response.url().includes('/reorder') && response.status() === 204),
+        moveLater.click(),
+      ]);
+      await expect(cards.first()).toHaveAttribute('data-select-id', originalOrder[1]);
+      await expect(cards.nth(1)).toHaveAttribute('data-select-id', originalOrder[0]);
+
+      const moveEarlier = cards.nth(1).locator('.album-reorder-button').first();
+      await Promise.all([
+        touchPage.waitForResponse((response) => response.url().includes('/reorder') && response.status() === 204),
+        moveEarlier.click(),
+      ]);
+      await expect(cards.first()).toHaveAttribute('data-select-id', originalOrder[0]);
+      await expectNoPageOverflow(touchPage);
+    });
+
+    // The order the moves left behind is the order the server has.
+    expect(await memberIds(page, albumPath)).toEqual(originalOrder);
+  });
+
+  test('albums_touch_drag_alone_never_reorders_the_album - A finger drag does nothing, so the move control is the touch path', async ({ page, browser }) => {
+    test.setTimeout(60_000);
+    const albumPath = await seededAlbumPath(page);
+    const originalOrder = await memberIds(page, albumPath);
+    expect(originalOrder.length).toBeGreaterThan(1);
+
+    await withTouchContext(browser, VIEWPORTS.narrow, async (touchPage, context) => {
+      await touchPage.goto(`${albumPath}?edit=1`);
+      const cards = touchPage.locator('#album-grid .photo-card');
+      const first = (await cards.first().boundingBox())!;
+      const last = (await cards.last().boundingBox())!;
+
+      // Reordering is wired to the HTML5 drag-and-drop API, which a touch stream
+      // never emits — this is exactly why the move controls have to exist.
+      await touchDrag(
+        context,
+        touchPage,
+        { x: last.x + last.width / 2, y: last.y + last.height / 2 },
+        { x: first.x + first.width / 2, y: first.y + first.height / 2 },
+      );
+      await expect(cards.first()).toHaveAttribute('data-select-id', originalOrder[0]);
+      expect(await touchPage.locator('#album-grid .photo-card').evaluateAll(
+        (nodes) => nodes.map((node) => node.getAttribute('data-select-id') || ''))).toEqual(originalOrder);
+
+      // The touch-safe alternative does move it.
+      const moveEarlier = cards.nth(1).locator('.album-reorder-button').first();
+      await Promise.all([
+        touchPage.waitForResponse((response) => response.url().includes('/reorder') && response.status() === 204),
+        moveEarlier.click(),
+      ]);
+      await expect(cards.first()).toHaveAttribute('data-select-id', originalOrder[1]);
+    });
+
+    // Cleanup: put the album back in the order this test found it in.
+    await page.goto(albumPath);
+    await reorderMembers(page, albumPath, originalOrder);
+    expect(await memberIds(page, albumPath)).toEqual(originalOrder);
+  });
+
+  test('albums_long_album_name_does_not_widen_the_page - An unbreakable album title wraps instead of setting the document width', async ({ page }) => {
+    test.setTimeout(120_000);
+    // One word, no break opportunity: `.page-header h1` used to let it size the
+    // header, which sized .main-container, which sized the document — so EVERY
+    // width scrolled sideways, not only the narrow ones.
+    const longName = 'Sommerferienfotografiesammlungsverwaltungsalbum2024';
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await page.goto('/albums');
+    await page.locator('#new-album-button').click();
+    await expect(page.locator('#newAlbumModal')).toBeVisible();
+    await page.locator('#new-album-name').fill(longName);
+    await page.locator('#new-album-description').fill('Beschreibungstextbausteinsammlung '.repeat(8));
+    await page.locator('#newAlbumModal button[type="submit"]').click();
+    await page.waitForURL(/\/albums\/\d+$/);
+    const longPath = new URL(page.url()).pathname;
+
+    try {
+      for (const viewport of [VIEWPORTS.minimum, VIEWPORTS.narrow]) {
+        await page.setViewportSize(viewport);
+        for (const route of ['/albums', longPath, `${longPath}?edit=1`, `${longPath}/add`]) {
+          await expectRouteFits(page, route);
+        }
+      }
+
+      // The sidebar entry truncates rather than widening the panel it lives in.
+      await page.setViewportSize(VIEWPORTS.desktop);
+      await page.goto('/albums');
+      const label = page.locator('.albums-sidebar .panel-nav a', { hasText: longName }).locator('.panel-nav-label');
+      const overflow = await label.evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        overflowX: getComputedStyle(element).overflowX,
+        textOverflow: getComputedStyle(element).textOverflow,
+      }));
+      expect(overflow.overflowX).toBe('hidden');
+      expect(overflow.textOverflow).toBe('ellipsis');
+      expect(overflow.clientWidth).toBeLessThanOrEqual(250);
+      await expectNoPageOverflow(page);
+    } finally {
+      // Cleanup: the album only existed to stress the layout.
+      await page.setViewportSize(VIEWPORTS.desktop);
+      await page.goto(longPath);
+      await page.locator('#delete-album-button').click();
+      await acceptConfirmDialog(page);
+      await page.waitForURL(/\/albums$/);
+    }
+  });
+
+  test('albums_header_title_is_not_crushed_by_its_own_actions - At 768px the title keeps a readable column', async ({ page }) => {
+    const albumPath = await seededAlbumPath(page);
+    await page.setViewportSize(VIEWPORTS.tabletPortrait);
+    await page.goto(albumPath);
+
+    // `.page-header-main { flex: 1 }` gives the title a zero basis, so five
+    // action buttons used to win the whole row and squeeze it to ~58px with its
+    // own text spilling out.
+    const title = await page.locator('.page-header h1').evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth + 1);
+
+    const main = (await page.locator('.page-header-main').boundingBox())!;
+    expect(main.width).toBeGreaterThanOrEqual(200);
+    await expectNoPageOverflow(page);
+  });
+
+  test('albums_edit_selection_and_add_filters_survive_a_resize - A selection and a chosen filter live through the breakpoint', async ({ page }) => {
+    test.setTimeout(60_000);
+    const albumPath = await seededAlbumPath(page);
+
+    // Edit mode: the selection is URL state, so it has to come back byte for byte.
+    await page.setViewportSize(VIEWPORTS.narrow);
+    await page.goto(`${albumPath}?edit=1`);
+    const cards = page.locator('#album-grid .photo-card');
+    await cards.nth(0).click();
+    await cards.nth(1).click();
+    await expect(page.locator('#album-grid .photo-card.is-selected')).toHaveCount(2);
+    const selectedUrl = page.url();
+    expect(selectedUrl).toMatch(/select_id=/);
+
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await expect(page.locator('#album-grid .photo-card.is-selected')).toHaveCount(2);
+    expect(page.url()).toBe(selectedUrl);
+    await expect(page.locator('#album-selection')).toBeVisible();
+
+    // Add screen: a value chosen inside the panel survives the panel being moved
+    // back into the page, because nav.js moves the live form rather than
+    // re-rendering it.
+    await page.setViewportSize(VIEWPORTS.narrow);
+    await page.goto(`${albumPath}/add`);
+    await page.locator('#album-add-filters-toggle').click();
+    await expect(page.locator('#album-add-filters')).toBeVisible();
+    const year = await page.locator('select#year-select option').nth(1).getAttribute('value');
+    expect(year).not.toBeNull();
+    await pickSearchableOption(page, 'select#year-select', year!);
+    await expect(page.locator('select#year-select')).toHaveValue(year!);
+
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await expect(page.locator('#album-add-filters')).toBeVisible();
+    await expect(page.locator('select#year-select')).toHaveValue(year!);
+    await expect(page.locator('select#year-select + .searchable-select-wrapper .searchable-select-display'))
+      .toContainText(year!);
+    await expectNoPageOverflow(page);
+  });
+
+  test('albums_dialogs_fit_the_viewport_and_scroll_their_own_body - Every album dialog stays inside 320px and contains its overflow', async ({ page }) => {
+    test.setTimeout(60_000);
+    const albumPath = await seededAlbumPath(page);
+    await page.setViewportSize(VIEWPORTS.minimum);
+    await page.goto(albumPath);
+
+    // Edit details, with a body long enough to need scrolling.
+    await page.locator('#edit-album-details-button').click();
+    await expect(page.locator('#editAlbumModal')).toBeVisible();
+    await page.locator('#edit-album-description').fill('Beschreibungstextbausteinsammlung '.repeat(40));
+    await expectFitsViewport(page, '#editAlbumModal .modal-content');
+    const body = await page.locator('#editAlbumModal .modal-body').evaluate((element) => ({
+      overflowY: getComputedStyle(element).overflowY,
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+    }));
+    expect(['auto', 'scroll']).toContain(body.overflowY);
+    await expectNoPageOverflow(page);
+    await page.locator('#editAlbumModal button[name="cancel"]').first().click();
+    await expect(page.locator('#editAlbumModal')).not.toBeVisible();
+
+    // Share.
+    await page.locator('#share-album-button').click();
+    await expect(page.locator('#shareAlbumModal')).toBeVisible();
+    await expectFitsViewport(page, '#shareAlbumModal .modal-content');
+    await expectNoPageOverflow(page);
+    await page.locator('#shareAlbumModal button[name="cancel"]').first().click();
+    await expect(page.locator('#shareAlbumModal')).not.toBeVisible();
+
+    // Delete confirmation — a dialog opened from a page action, not from a panel.
+    await page.locator('#delete-album-button').click();
+    await expect(page.locator('#global-confirm-dialog.active')).toBeVisible();
+    await expectFitsViewport(page, '#global-confirm-dialog .modal-content');
+    await expectNoPageOverflow(page);
+    await page.locator('#confirm-dialog-cancel').click();
+    await expect(page.locator('#global-confirm-dialog.active')).toHaveCount(0);
+
+    // New album is reached through the Albums panel at narrow widths, and the
+    // dialog it opens outlives the panel closing behind it.
+    await page.locator('#albums-nav-toggle').click();
+    await page.locator('#new-album-button').click();
+    await expect(page.locator('#newAlbumModal')).toBeVisible();
+    await expectFitsViewport(page, '#newAlbumModal .modal-content');
+    await expectNoPageOverflow(page);
+    await page.locator('#newAlbumModal button[name="cancel"]').first().click();
+    await expect(page.locator('#newAlbumModal')).not.toBeVisible();
   });
 });

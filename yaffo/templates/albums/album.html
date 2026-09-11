@@ -93,7 +93,9 @@
      data-album-id="{{ selected.id }}"
      data-member-count="{{ selected.item_count }}"
      data-editing="{{ '1' if editing else '' }}"
-     data-reorder-url="{{ url_for('albums_reorder', album_id=selected.id) }}">
+     data-reorder-url="{{ url_for('albums_reorder', album_id=selected.id) }}"
+     data-move-earlier="{{ _('Move earlier') }}"
+     data-move-later="{{ _('Move later') }}">
     {% for media_item in items %}
     <div class="photo-card album-photo-card{% if editing and selection.is_selected(media_item.id) %} is-selected{% endif %}"
          data-select-id="{{ media_item.id }}"
