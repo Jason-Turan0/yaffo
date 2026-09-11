@@ -1,0 +1,8 @@
+{
+  "classification": "application_regression",
+  "reasoning": "The failing assertion measures the horizontal border-box gap between the Filters peer toggle (#home-filters-toggle) and the Menu toggle (#nav-menu-toggle) at 390x844 and requires it to be >= 8px, per the spec ('at least 8px apart'). The base responsive rule (static/responsive.css, @media max-width:1200px) sets .navbar-container { column-gap: 8px; }, but a later @media (max-width: 400px) rule overrides it to column-gap: 6px. The test's narrow viewport (VIEWPORTS.narrow = 390px) is <= 400px, so that override applies and the two toggles render 6px apart, which is exactly the received value. The test code faithfully encodes the spec, and its measurement approach (border-box edge distance) is correct; 26 of 27 tests pass deterministically, so this is not flakiness or a timing issue. The application currently does not satisfy the spec goal at the specified 390x844 viewport.",
+  "affectedTests": [
+    "Photo Gallery Feature - Responsive › gallery_filters_use_a_peer_navbar_panel - Filters is a peer of Menu, not a disclosure inside it"
+  ],
+  "suggestedAction": "Fix static/responsive.css so the gap between the peer navbar toggles is at least 8px at 390px. Concretely, change the @media (max-width: 400px) .navbar-container column-gap from 6px back to 8px (or scope the smaller gap so the Filters–Menu pair keeps an 8px gap), then re-run the photo_gallery spec."
+}

@@ -1,0 +1,3 @@
+Failure: gallery_filters_use_a_peer_navbar_panel. Assertion at line 450 expects gap >= 8px between #home-filters-toggle and #nav-menu-toggle, received 6px.
+
+Root cause: static/responsive.css sets .navbar-container column-gap: 8px at max-width:1200px, but overrides it to column-gap: 6px at max-width:400px. VIEWPORTS.narrow is 390px, so the 6px override applies, giving a 6px border-box gap between Filters and Menu toggles. Spec requires >= 8px at 390x844. Classification: application_regression.

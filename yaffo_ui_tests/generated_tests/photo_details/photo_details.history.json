@@ -1,11 +1,73 @@
 {
   "testRunHistory": [
     {
-      "timestamp": "2026-07-01T23:09:21.000Z",
+      "timestamp": "2026-09-04T21:29:55.590Z",
       "success": true,
       "summary": {
-        "total": 5,
-        "passed": 5,
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "failedTests": []
+    },
+    {
+      "timestamp": "2026-09-04T21:29:58.538Z",
+      "success": true,
+      "summary": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "failedTests": []
+    },
+    {
+      "timestamp": "2026-09-04T21:30:23.183Z",
+      "success": false,
+      "summary": {
+        "total": 10,
+        "passed": 8,
+        "failed": 2,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Photo Details - Responsive › photo_details_face_highlight_works_with_a_coarse_pointer - tapping a face draws its box",
+          "error": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
+        },
+        {
+          "testName": "Photo Details - Responsive › photo_details_face_highlight_survives_rotation - resizing redraws the box instead of losing it",
+          "error": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-09-04T21:39:43.152Z",
+      "success": false,
+      "summary": {
+        "total": 10,
+        "passed": 8,
+        "failed": 2,
+        "skipped": 0
+      },
+      "failedTests": [
+        {
+          "testName": "Photo Details - Responsive › photo_details_face_highlight_works_with_a_coarse_pointer - tapping a face draws its box",
+          "error": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
+        },
+        {
+          "testName": "Photo Details - Responsive › photo_details_face_highlight_survives_rotation - resizing redraws the box instead of losing it",
+          "error": "\u001b[31mTest timeout of 5000ms exceeded.\u001b[39m"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-09-04T21:39:46.346Z",
+      "success": true,
+      "summary": {
+        "total": 1,
+        "passed": 1,
         "failed": 0,
         "skipped": 0
       },
