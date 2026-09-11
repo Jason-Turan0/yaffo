@@ -1,0 +1,8 @@
+{
+  "classification": "application_regression",
+  "reasoning": "The spec scenario 'gallery_filters_use_a_peer_navbar_panel' loads the home page at 390x844 and requires the Filters and Menu buttons to be 'at least 8px apart'. The test correctly measures the border-box gap between #home-filters-toggle and #nav-menu-toggle and asserts >= 8px, but received 6px. Root cause is in static/responsive.css: the @media (max-width: 1200px) block sets .navbar-container { column-gap: 8px }, but a later @media (max-width: 400px) block overrides it with column-gap: 6px. Since 390px <= 400px, the rendered gap between the two peer toggles is exactly 6px. The Home page renders only two peer toggles (Filters + Menu), so the measurement equals that flex column-gap. This is a deterministic geometric assertion failure (6 vs 8), not flakiness, and the spec goal cannot be achieved with the current application, so it is not a test-code defect.",
+  "affectedTests": [
+    "Photo Gallery Feature - Responsive › gallery_filters_use_a_peer_navbar_panel - Filters is a peer of Menu, not a disclosure inside it"
+  ],
+  "suggestedAction": "Fix static/responsive.css so peer navbar toggles keep at least an 8px gap at 390px (and the 320px contract width). The @media (max-width: 400px) block currently sets .navbar-container { column-gap: 6px }, which violates the spec's 'at least 8px apart' requirement; change it back to 8px (or otherwise ensure >= 8px) while still keeping the three peer controls on one row without horizontal overflow at the smallest widths."
+}
