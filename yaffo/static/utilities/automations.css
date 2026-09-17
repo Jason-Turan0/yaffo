@@ -158,6 +158,9 @@
     max-height: 320px;
     margin: 0;
     font-size: var(--font-size-sm);
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: isolate;
 }
 
 .automation-test {
@@ -417,6 +420,8 @@
 
 /* Raw arguments retain their formatting inside the table's bounded scroller. */
 .automation-test-table .test-action-detail code {
+    direction: ltr;
+    unicode-bidi: isolate;
     white-space: pre;
     overflow-wrap: normal;
     word-break: normal;

@@ -37,6 +37,15 @@ data:
   - Results are paged (default page size 10)
 
 scenarios:
+  - name: blank_duplicate_directory_does_not_scan_the_working_directory
+    goal: Adding an empty directory row does not scan an unselected filesystem location
+    priority: high
+    steps:
+      - Open Remove Duplicates and add the first directory row
+    verify:
+      - The empty input becomes available without waiting for a filesystem scan
+      - Total Media stays zero until a directory is selected
+
   - name: remove_duplicates_scan_finds_groups
     goal: Scanning the selected directories finds groups of duplicate media
     priority: high

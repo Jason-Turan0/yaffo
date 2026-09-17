@@ -526,6 +526,63 @@ test.describe('Automations', () => {
     await page.locator('#editAutomationModal .modal-actions [name="cancel"]').click();
   });
 
+  test('automation_translated_controls_fit_and_preserve_edits', async ({ page }, testInfo) => {
+    await page.goto('/utilities/automations/file-favorite-kid-photos/edit');
+    const originalLocale = await page.locator('html').getAttribute('lang') || 'en';
+    const setLocale = async (locale: string) => {
+      const ok = await page.evaluate(async value => {
+        const response = await fetch('/settings/locale', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ locale: value }).toString(),
+        });
+        return response.ok;
+      }, locale);
+      expect(ok).toBe(true);
+    };
+    try {
+      for (const locale of ['en', 'de', 'ar']) {
+        await setLocale(locale);
+        await page.goto('/utilities/automations/file-favorite-kid-photos/edit');
+        await expect(page.locator('html')).toHaveAttribute('lang', locale);
+        await expect(page.locator('html')).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');
+        await page.locator('#automation-chat-message').fill('Unsaved request / طلب غير محفوظ');
+        for (const viewport of Object.values(VIEWPORTS)) {
+          await page.setViewportSize(viewport);
+          await expectNoPageOverflow(page);
+          await expect(page.locator('#automation-chat-message')).toHaveValue('Unsaved request / طلب غير محفوظ');
+          for (const button of await page.locator('.page-header-actions > *, .automation-test-controls > *').all()) {
+            await button.scrollIntoViewIfNeeded();
+            const box = (await button.boundingBox())!;
+            expect(box.x).toBeGreaterThanOrEqual(-1);
+            expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+          }
+          const code = page.locator('.automation-code').first();
+          expect(await code.evaluate(el => getComputedStyle(el).direction)).toBe('ltr');
+          expect(await code.evaluate(el => getComputedStyle(el).textAlign)).toBe('left');
+          await code.evaluate(el => { el.scrollLeft = 0; });
+          const firstCharacter = await code.locator('code').evaluate(el => {
+            const range = document.createRange();
+            range.setStart(el.firstChild!, 0);
+            range.setEnd(el.firstChild!, 1);
+            return range.getBoundingClientRect().x;
+          });
+          const codeBox = (await code.boundingBox())!;
+          expect(firstCharacter).toBeGreaterThanOrEqual(codeBox.x);
+          expect(firstCharacter).toBeLessThan(codeBox.x + codeBox.width);
+          if (viewport === VIEWPORTS.minimum || viewport === VIEWPORTS.desktop) {
+            await page.evaluate(() => window.scrollTo(0, 0));
+            await testInfo.attach(`automation-editor-${locale}-${viewport.width}`, {
+              body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+            });
+          }
+        }
+      }
+    } finally {
+      await setLocale(originalLocale);
+    }
+  });
+
   test('automations_delete_custom_automation', async ({ page }) => {
     const slug = await ensureCustomAutomation(page);
 

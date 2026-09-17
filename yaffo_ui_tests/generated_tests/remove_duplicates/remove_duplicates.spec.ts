@@ -53,6 +53,13 @@ test.describe('Remove Duplicates', () => {
     removeTempDirs(scanDir, destDir);
   });
 
+  test('blank_duplicate_directory_does_not_scan_the_working_directory', async ({ page }) => {
+    await page.goto('/utilities/remove-duplicates');
+    await page.locator('#add-directory-button').click();
+    await expect(page.locator('#remove-duplicates-form input[name="directory"]')).toHaveValue('');
+    await expect(page.locator('input[name="total_photos"]')).toHaveValue('0');
+  });
+
   test('remove_duplicates_scan_finds_groups', async ({ page }) => {
     const root = await sandboxRoot(page);
     scanDir = `${root}/spec-dup-scan-${UNIQ}`;

@@ -151,6 +151,36 @@ def _conventions() -> str:
     ])
 
 
+def _responsive() -> str:
+    # A widget's iframe is sized to the grid cell it occupies, and that cell is not
+    # a fixed size: the page canvas runs 12 columns on a desktop, 6 on a tablet and
+    # 1 on a phone, so the same widget is asked to render anywhere from a narrow
+    # card to a full-bleed banner. The frame is its own viewport, so the widget's
+    # own media queries and relative units are what make that work.
+    return block("responsive", [
+        "The widget MUST be internally responsive. Its iframe is sized to the grid cell",
+        "it occupies, and that cell changes: the page canvas is 12 columns on a desktop,",
+        "6 on a tablet, and 1 full-bleed column on a phone, so your widget has to read",
+        "from roughly 280px wide up to the full page width, at any height.",
+        "- Never set a fixed pixel width or height on a layout container. Size with %,",
+        "  fr, min()/max()/clamp(), and aspect-ratio.",
+        "- The iframe is its own viewport, so `@media (max-width: …)` inside the widget",
+        "  measures the widget's own box — use it, not a guess about the device.",
+        "- Grids use `repeat(auto-fill, minmax(<small>, 1fr))`, not a fixed column count.",
+        "- Toolbars and filter rows set `flex-wrap: wrap`; any control with a set width",
+        "  also gets `max-width: 100%` so it cannot push the widget wider than its frame.",
+        "- Long titles, filenames, place and person names wrap or ellipsize; give flex and",
+        "  grid children `min-width: 0` so text cannot force a horizontal scrollbar.",
+        "- The widget never scrolls sideways. Vertical scrolling inside the widget is",
+        "  fine; a horizontal scroll region is only acceptable for a genuinely wide",
+        "  table, and it scrolls inside its own bounded container.",
+        "- Anything tappable is at least 44x44 CSS pixels, and any hover-only affordance",
+        "  has a visible equivalent — widgets are used on touch screens.",
+        "- Use logical properties (margin-inline, padding-block, inset-inline-start) so",
+        "  the widget works in right-to-left locales without a second layout.",
+    ])
+
+
 def build_system_prompt() -> str:
     """Assemble the stable, XML-delimited system prompt. Parameterless on purpose —
     anything that varies per request goes in the user turn to preserve caching."""
@@ -161,5 +191,6 @@ def build_system_prompt() -> str:
         _widget_contract(),
         _templates(),
         _conventions(),
+        _responsive(),
         response_language_block(),
     ])

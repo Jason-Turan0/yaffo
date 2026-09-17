@@ -40,6 +40,20 @@ data:
   - The Bennett sandbox seeds one disabled custom automation, file-favorite-kid-photos, using the reviewed _FILE_KIDS_CODE example with no trigger and a two-round assistant conversation
 
 scenarios:
+  - name: automation_translated_controls_fit_and_preserve_edits
+    goal: English, German, and Arabic automation controls remain reachable across responsive layouts
+    priority: high
+    steps:
+      - Select each application locale in an isolated environment and open the seeded automation editor
+      - Enter an unsent chat request and resize through all six contract viewports
+      - Capture minimum-width and desktop screenshots for each locale
+      - Restore the original locale
+    verify:
+      - The server renders the requested language and direction, including Arabic RTL
+      - The page has no horizontal overflow and every header and test action stays within its width
+      - The unsent request survives every resize
+      - Source code remains left-to-right in Arabic, with the start of each line reachable at the initial scroll position
+
   - name: automations_list_shows_system_and_custom
     goal: The automations page lists system and custom automations and shows the selected one's details
     priority: high

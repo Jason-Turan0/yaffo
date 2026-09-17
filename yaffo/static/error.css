@@ -3,11 +3,17 @@
     align-items: center;
     justify-content: center;
     min-height: 60vh;
+    /* Mobile browser chrome inflates vh; dvh follows the space actually on
+       screen. The vh line above stays as the fallback. */
+    min-height: 60dvh;
     padding: 40px 20px;
 }
 
 .error-card {
     max-width: 480px;
+    /* A translated title or message has no guaranteed break opportunity; the
+       card wraps rather than widening the page. */
+    overflow-wrap: anywhere;
     text-align: center;
     padding: 48px 40px;
     background: var(--color-surface);
@@ -64,6 +70,30 @@
     color: var(--color-text-muted);
 }
 
+/* The one way off the page. The shared layer stretches every `.btn` to a 44px
+   target on a coarse pointer, but `.btn` is an inline-block, so that min-height
+   would leave the label sitting at the top of the box. Make it a flex box so
+   the label stays centred in the reserved target. */
 .error-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     text-decoration: none;
+}
+
+/* 48px of card padding either side is a third of a 320px viewport. Give the copy
+   the room back on phones; the card keeps its shape. */
+@media (max-width: 640px) {
+    .error-screen {
+        padding: 24px 0;
+    }
+
+    .error-card {
+        padding: 32px 20px;
+    }
+
+    .error-icon {
+        width: 72px;
+        height: 72px;
+    }
 }

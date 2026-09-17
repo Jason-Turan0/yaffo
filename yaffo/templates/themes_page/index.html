@@ -25,7 +25,7 @@
                 <li>
                     <a href="{{ url_for('themes_show', slug=theme.slug) }}"
                        class="{% if theme.slug == selected_slug %}active{% endif %}">
-                        {{ theme.label }}
+                        <span class="panel-nav-label">{{ theme.label }}</span>
                         {% if theme.slug == default_slug %}<span class="theme-nav-default">{{ _("default") }}</span>{% endif %}
                     </a>
                 </li>
@@ -37,9 +37,13 @@
             <ul class="panel-nav">
                 {% for theme in custom_themes %}
                     <li>
+                        {# A custom theme's name is free-form user input. `.panel-nav-label`
+                           is the shared nav convention (albums, utilities, sharing): it
+                           ellipsises the name so one long unbreakable word cannot spill
+                           out of the 250px column, and keeps the default badge on the row. #}
                         <a href="{{ url_for('themes_show', slug=theme.slug) }}"
                            class="{% if theme.slug == selected_slug %}active{% endif %}">
-                            {{ theme.label }}
+                            <span class="panel-nav-label">{{ theme.label }}</span>
                             {% if theme.slug == default_slug %}<span class="theme-nav-default">{{ _("default") }}</span>{% endif %}
                         </a>
                     </li>

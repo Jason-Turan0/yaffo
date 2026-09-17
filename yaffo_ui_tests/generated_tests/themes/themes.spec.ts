@@ -1,5 +1,15 @@
 import { test, expect, Page } from '@playwright/test';
 import { injectReadyThemeDraft } from '../_support/theme-draft';
+import {
+  BASE_URL,
+  CONTRACT_WIDTHS,
+  VIEWPORTS,
+  expectFitsViewport,
+  expectNoPageOverflow,
+  expectPanelContract,
+  expectRouteFits,
+  withTouchContext,
+} from '../_support/responsive';
 
 const UNIQ = Date.now();
 const CREATE_LABEL = `SpecTestTheme-${UNIQ}`;
@@ -252,5 +262,247 @@ test.describe('Themes', () => {
     await page.goto(`/themes/${systemSlug}`);
     await expect(page.locator('#delete-theme-button')).toHaveCount(0);
     await expect(page.locator('#rename-theme-button')).toHaveCount(0);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Responsive coverage (P7 — themes). The shared shell contract itself is
+  // verified on Home (specs/photo_gallery.yaml); what follows is this page
+  // family's own narrow-screen behaviour, including the peer-panel contract for
+  // the family as a whole (settings has no sidebar of its own to register).
+  // ---------------------------------------------------------------------------
+  test.describe('Responsive (P7)', () => {
+    const LONG_LABEL = `SpecLongThemeName${'Unbreakable'.repeat(5)}${UNIQ}`;
+    const DRAFT_RESPONSIVE_LABEL = `SpecTestDraftResponsive-${UNIQ}`;
+    let longSlug: string;
+    let draftSlug: string;
+    let customSlug: string;
+    let systemSlugs: string[] = [];
+
+    test.beforeAll(async ({ browser }) => {
+      const context = await browser.newContext({ baseURL: BASE_URL });
+      const page = await context.newPage();
+      // The group runs on its own fixtures rather than on whatever an earlier test
+      // happened to leave behind, so it is runnable with `--grep Responsive`.
+      sandboxDbPath = await readSandboxDbPath(page);
+      await page.goto('/themes');
+      systemSlugs = (await systemThemesNav(page).locator('a').evaluateAll(links =>
+        links.map(link => link.getAttribute('href')!.split('/').pop()!)));
+      customSlug = (await customThemesNav(page).locator('a').first()
+        .getAttribute('href'))!.split('/').pop()!;
+      longSlug = await createTheme(page, LONG_LABEL);
+      draftSlug = await createTheme(page, DRAFT_RESPONSIVE_LABEL);
+      injectThemeDraft(draftSlug, '#333333');
+      await context.close();
+    });
+
+    test('themes_nav_uses_a_peer_navbar_panel - the theme list collapses into a peer of Menu', async ({ page }) => {
+      await expectPanelContract(page, { route: `/themes/${customSlug}`, panelId: 'themes-nav' });
+
+      // Escape belongs to the topmost surface; with no dialog open that is the panel.
+      await page.setViewportSize(VIEWPORTS.narrow);
+      await page.goto(`/themes/${customSlug}`);
+      await page.locator('#themes-nav-toggle').click();
+      await expect(page.locator('#themes-nav')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#themes-nav')).toBeHidden();
+    });
+
+    test('themes_pages_fit_every_contract_viewport - index, a system theme and a custom theme all contain themselves', async ({ page }) => {
+      for (const route of ['/themes', `/themes/${systemSlugs[0]}`, `/themes/${customSlug}`]) {
+        for (const width of CONTRACT_WIDTHS) {
+          await page.setViewportSize({ width, height: 800 });
+          await expectRouteFits(page, route);
+          for (const action of await page.locator('.theme-actions > *').all()) {
+            await action.scrollIntoViewIfNeeded();
+            const box = (await action.boundingBox())!;
+            expect(box.x).toBeGreaterThanOrEqual(-1);
+            expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
+          }
+          if (await page.locator('.theme-conversation').count() > 0) {
+            await page.locator('.theme-conversation').scrollIntoViewIfNeeded();
+            const card = (await page.locator('.theme-conversation').boundingBox())!;
+            expect(card.x + card.width).toBeLessThanOrEqual(width + 1);
+          }
+        }
+      }
+    });
+
+    test('theme_screens_stay_contained_in_every_built_in_theme - a skin never changes the narrow layout geometry', async ({ page }) => {
+      // routes/themes_page.py renders the page AS the theme being viewed, so this
+      // really is each skin's own geometry rather than the active theme's.
+      expect(systemSlugs.length).toBeGreaterThan(1);
+      for (const slug of systemSlugs) {
+        for (const viewport of [VIEWPORTS.minimum, VIEWPORTS.narrow]) {
+          await page.setViewportSize(viewport);
+          await expectRouteFits(page, `/themes/${slug}`);
+          await expect(page.locator('html')).toHaveAttribute('data-theme', slug);
+          for (const action of await page.locator('.theme-actions > *').all()) {
+            await action.scrollIntoViewIfNeeded();
+            const box = (await action.boundingBox())!;
+            expect(box.x, `${slug} header action starts left of the viewport`).toBeGreaterThanOrEqual(-1);
+            expect(box.x + box.width, `${slug} header action runs past the right edge`)
+              .toBeLessThanOrEqual(viewport.width + 1);
+          }
+        }
+      }
+    });
+
+    test('themes_long_theme_name_truncates_instead_of_spilling_out_of_the_nav - one unbreakable word cannot overrun the list', async ({ page }) => {
+      // Regression: the nav used to put the raw label straight into the <a>,
+      // skipping the shared `.panel-nav-label` span that albums, utilities and
+      // sharing use, so a long unbreakable name rendered past the edge of the
+      // 250px column and out of the mobile panel instead of ellipsising.
+      const measure = async () => {
+        const link = customThemesNav(page).locator(`a[href$="/themes/${longSlug}"]`);
+        await expect(link).toBeVisible();
+        return link.evaluate((element) => {
+          const label = element.querySelector<HTMLElement>('.panel-nav-label')!;
+          // The badge only renders on the *default* theme, and making a spec
+          // theme the application default is global state this test has no
+          // business changing — so add the same markup the server would emit and
+          // measure whether it survives a name long enough to crowd it out.
+          if (!element.querySelector('.theme-nav-default')) {
+            const marker = document.createElement('span');
+            marker.className = 'theme-nav-default';
+            marker.textContent = 'default';
+            element.append(marker);
+          }
+          const badge = element.querySelector<HTMLElement>('.theme-nav-default');
+          return {
+            linkWidth: element.getBoundingClientRect().width,
+            labelWidth: label.getBoundingClientRect().width,
+            labelScrollWidth: label.scrollWidth,
+            textOverflow: getComputedStyle(label).textOverflow,
+            badgeOnRow: badge
+              ? Math.abs(badge.getBoundingClientRect().top - label.getBoundingClientRect().top) < 8
+              : true,
+            // The badge must keep its own width: it is the label that gives way.
+            badgeClipped: badge
+              ? badge.scrollWidth > badge.getBoundingClientRect().width + 1
+              : false,
+          };
+        });
+      };
+
+      await page.setViewportSize(VIEWPORTS.desktop);
+      await page.goto(`/themes/${longSlug}`);
+      const wide = await measure();
+      expect(wide.labelWidth).toBeLessThanOrEqual(wide.linkWidth + 1);
+      expect(wide.labelScrollWidth, 'the name should be clipped, not laid out full width')
+        .toBeGreaterThan(wide.labelWidth);
+      expect(wide.textOverflow).toBe('ellipsis');
+      expect(wide.badgeOnRow).toBe(true);
+      expect(wide.badgeClipped).toBe(false);
+      await expectNoPageOverflow(page);
+
+      await page.setViewportSize(VIEWPORTS.narrow);
+      await page.goto(`/themes/${longSlug}`);
+      await page.locator('#themes-nav-toggle').click();
+      await expect(page.locator('#themes-nav')).toBeVisible();
+      const narrow = await measure();
+      expect(narrow.labelWidth).toBeLessThanOrEqual(narrow.linkWidth + 1);
+      expect(narrow.textOverflow).toBe('ellipsis');
+      expect(narrow.badgeOnRow).toBe(true);
+      expect(narrow.badgeClipped).toBe(false);
+      await expectNoPageOverflow(page);
+    });
+
+    test('themes_draft_actions_are_reachable_on_a_phone - Save draft and Discard stay usable once the panel appears', async ({ page, browser }) => {
+      await page.setViewportSize(VIEWPORTS.desktop);
+      await page.goto(`/themes/${draftSlug}`);
+      await expect(page.locator('.theme-draft')).toBeVisible();
+      expect(await page.locator('.theme-draft-actions').evaluate(element =>
+        getComputedStyle(element).flexDirection), 'desktop keeps the two actions on one row').toBe('row');
+
+      for (const viewport of [VIEWPORTS.minimum, VIEWPORTS.narrow, VIEWPORTS.desktop]) {
+        await page.setViewportSize(viewport);
+        await page.goto(`/themes/${draftSlug}`);
+        await expectNoPageOverflow(page);
+        const actions = page.locator('.theme-draft-actions > *');
+        await expect(actions).toHaveCount(2);
+        for (const action of await actions.all()) {
+          await action.scrollIntoViewIfNeeded();
+          const box = (await action.boundingBox())!;
+          expect(box.x).toBeGreaterThanOrEqual(-1);
+          expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+        }
+      }
+
+      await page.setViewportSize(VIEWPORTS.minimum);
+      await page.goto(`/themes/${draftSlug}`);
+      expect(await page.locator('.theme-draft-actions').evaluate(element =>
+        getComputedStyle(element).flexDirection), 'the draft actions stack at 320px').toBe('column');
+
+      // The 44px floor is a coarse-pointer guarantee, measured where it applies.
+      await withTouchContext(browser, VIEWPORTS.minimum, async (touchPage) => {
+        await touchPage.goto(`/themes/${draftSlug}`);
+        const undersized = await touchPage.locator('.theme-draft-actions > *').evaluateAll(elements =>
+          elements
+            .filter(element => element.getBoundingClientRect().height < 44)
+            .map(element => `${element.textContent!.trim()} → `
+              + `${Math.round(element.getBoundingClientRect().height)}px`));
+        expect(undersized, 'draft actions below the 44px touch target').toEqual([]);
+      });
+    });
+
+    test('themes_generation_chat_fits_and_scrolls_inside_itself - the transcript owns its own overflow', async ({ page, browser }) => {
+      const fillTranscript = async (target: Page) => {
+        await target.locator('#theme-chat-messages').evaluate((element) => {
+          element.replaceChildren();
+          for (let index = 0; index < 20; index += 1) {
+            const message = document.createElement('div');
+            message.className = index % 2 ? 'chat-message chat-message-assistant' : 'chat-message chat-message-user';
+            message.textContent = `Transcript line ${index}: a long described look, repeated `
+              + 'so the conversation is taller than the card it lives in. '.repeat(2);
+            element.append(message);
+          }
+        });
+      };
+
+      await page.setViewportSize(VIEWPORTS.minimum);
+      await page.goto(`/themes/${customSlug}`);
+      await fillTranscript(page);
+
+      const transcript = await page.locator('#theme-chat-messages').evaluate((element) => ({
+        overflowY: getComputedStyle(element).overflowY,
+        scrollHeight: element.scrollHeight,
+        clientHeight: element.clientHeight,
+        withinViewport: element.getBoundingClientRect().height <= window.innerHeight,
+      }));
+      expect(transcript.overflowY).toBe('auto');
+      expect(transcript.scrollHeight, 'a long conversation must scroll inside the card, not grow the page')
+        .toBeGreaterThan(transcript.clientHeight);
+      expect(transcript.withinViewport).toBe(true);
+      await expectNoPageOverflow(page);
+
+      for (const selector of ['#theme-chat-message', '#theme-chat-form .chat-dialog-actions']) {
+        await page.locator(selector).scrollIntoViewIfNeeded();
+        await expectFitsViewport(page, selector);
+      }
+
+      await withTouchContext(browser, VIEWPORTS.minimum, async (touchPage) => {
+        await touchPage.goto(`/themes/${customSlug}`);
+        await fillTranscript(touchPage);
+        const undersized = await touchPage.locator('#theme-chat-form .chat-dialog-actions > *')
+          .evaluateAll(elements => elements
+            .filter(element => element.getBoundingClientRect().height < 44)
+            .map(element => `${element.textContent!.trim()} → `
+              + `${Math.round(element.getBoundingClientRect().height)}px`));
+        expect(undersized, 'send controls below the 44px touch target').toEqual([]);
+      });
+    });
+
+    test('themes_unsent_chat_message_survives_a_resize_through_the_breakpoint - a described look is not lost', async ({ page }) => {
+      const described = 'A dark forest green theme with warm paper edges — طلب غير محفوظ';
+      await page.setViewportSize(VIEWPORTS.narrow);
+      await page.goto(`/themes/${customSlug}`);
+      await page.locator('#theme-chat-message').fill(described);
+
+      for (const viewport of [VIEWPORTS.desktop, VIEWPORTS.minimum, VIEWPORTS.narrowLandscape, VIEWPORTS.narrow]) {
+        await page.setViewportSize(viewport);
+        await expect(page.locator('#theme-chat-message')).toHaveValue(described);
+        await expectNoPageOverflow(page);
+      }
+    });
   });
 });

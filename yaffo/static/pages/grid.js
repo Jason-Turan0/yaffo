@@ -20,6 +20,19 @@
  * @property {string | null} started_at
  * @property {FeedMessage[]} messages
  * @property {Record<string, any>[]} widgets
+ *
+ * One band of the canvas policy — see CANVAS_BANDS.
+ * @typedef {Object} CanvasBand
+ * @property {number} minWidth
+ * @property {number} columns
+ * @property {number} minRows
+ *
+ * A widget's geometry in the canonical 12-column layout.
+ * @typedef {Object} WideGeometry
+ * @property {number} x
+ * @property {number} y
+ * @property {number} w
+ * @property {number} h
  */
 
 const pagesGridWindow = window;
@@ -33,12 +46,143 @@ const pagesGridNamespace = pagesGridWindow.PHOTO_ORGANIZER.pages =
 // generates, so it can fix code that threw.
 pagesGridWindow.PHOTO_ORGANIZER.widgetErrors = pagesGridWindow.PHOTO_ORGANIZER.widgetErrors || {};
 
+// The authored layout is always the 12-column one: it is what the model writes,
+// what the server stores, and what Save has to keep writing no matter how narrow
+// the canvas being edited is.
+const MAX_COLUMNS = 12;
+
 const BASE_GRID_OPTS = {
-    column: 12,
+    column: MAX_COLUMNS,
     cellHeight: 80,
     margin: 8,
-    float: true,
-    columnOpts: { breakpoints: [{ w: 768, c: 1 }] }
+    float: true
+    // No `columnOpts`: the bands below are driven from the *canvas* width by
+    // observeCanvas. GridStack's own dynamic-column support installs a second
+    // ResizeObserver and can only change the column count, not the row floor the
+    // reflowed content needs, so the two would fight over the same element.
+};
+
+// Canvas policy. Measured on the `.grid-stack` element, never on the viewport:
+// the design canvas shares its row with a 360px editor panel until 900px, so the
+// window width says nothing about the space the grid actually has.
+//
+//   canvas >= 900px  12 columns, >= 1 row  (80px)  — the authored desktop layout
+//   canvas >= 600px   6 columns, >= 2 rows (160px) — tablets, and the design
+//                                                    canvas beside the editor
+//   canvas <  600px   1 column,  >= 3 rows (240px) — phones: one full-bleed
+//                                                    widget per row
+//
+// `minRows` is a floor, applied to the live grid only. A widget authored four
+// columns wide re-wraps its content when it becomes full-bleed, and a widget left
+// at its authored height would have to scroll inside its own frame — a nested
+// scroll region the page contract rules out. The authored height is restored
+// verbatim once the canvas is wide enough again.
+/** @type {CanvasBand[]} */
+const CANVAS_BANDS = [
+    { minWidth: 900, columns: MAX_COLUMNS, minRows: 1 },
+    { minWidth: 600, columns: 6, minRows: 2 },
+    { minWidth: 0, columns: 1, minRows: 3 }
+];
+
+/**
+ * @param {number} width
+ * @returns {CanvasBand}
+ */
+const bandForWidth = (width) =>
+    CANVAS_BANDS.find((band) => width >= band.minWidth) || CANVAS_BANDS[CANVAS_BANDS.length - 1];
+
+/**
+ * The authored (12-column) geometry of every widget, read from the server-rendered
+ * `gs-*` attributes. Must be called *before* GridStack initializes: the first
+ * layout pass rewrites those attributes for whichever band the canvas starts in,
+ * so afterwards they no longer describe what the page actually stores.
+ * @returns {Map<string, WideGeometry>}
+ */
+const readAuthoredLayout = () => {
+    /** @type {Map<string, WideGeometry>} */
+    const layout = new Map();
+    document.querySelectorAll('.grid-stack > .grid-stack-item').forEach((el) => {
+        const id = el.getAttribute('gs-id');
+        if (!id) return;
+        layout.set(id, {
+            x: Number(el.getAttribute('gs-x')) || 0,
+            y: Number(el.getAttribute('gs-y')) || 0,
+            w: Number(el.getAttribute('gs-w')) || 1,
+            h: Number(el.getAttribute('gs-h')) || 1
+        });
+    });
+    return layout;
+};
+
+/**
+ * Put every widget on the band's geometry: the authored layout at full width, or
+ * the authored height raised to the band's floor once the canvas has narrowed.
+ * @param {any} grid
+ * @param {Map<string, WideGeometry>} layout
+ * @param {CanvasBand} band
+ */
+const applyBandGeometry = (grid, layout, band) => {
+    grid.batchUpdate();
+    [...grid.engine.nodes].forEach((/** @type {any} */ node) => {
+        const wide = layout.get(node.id);
+        if (!wide || !node.el) return;
+        if (band.columns === MAX_COLUMNS) {
+            // Restore from our own record rather than GridStack's layout cache,
+            // which round-trips x/y/w but drops h — so a height raised for a narrow
+            // band would never come back down.
+            grid.update(node.el, { ...wide, minH: 1 });
+        } else {
+            grid.update(node.el, { h: Math.max(band.minRows, wide.h), minH: band.minRows });
+        }
+    });
+    grid.batchUpdate(false);
+    // One column is a stack, not a grid: close the gaps the wide layout's
+    // side-by-side rows leave behind, keeping (y, x) — i.e. reading — order.
+    if (band.columns === 1) grid.compact();
+};
+
+/**
+ * Move a grid onto a band: the column count first, then the geometry that count
+ * implies. Callers that track their own authored layout must run this inside
+ * their "a reflow is in flight" guard — `grid.column()` fires a change event of
+ * its own, and treating that as an edit would capture the narrow geometry.
+ * @param {any} grid
+ * @param {Map<string, WideGeometry>} layout
+ * @param {CanvasBand} band
+ */
+const applyBand = (grid, layout, band) => {
+    grid.column(band.columns);
+    applyBandGeometry(grid, layout, band);
+};
+
+/**
+ * Keep a grid on the band its own width allows and report band changes.
+ * Container-driven, so an htmx swap or the editor panel stacking re-lays the
+ * canvas out even when the window never changed size. The callback owns the
+ * column change (see applyBand), so a caller can wrap the whole transition.
+ * @param {HTMLElement | null} gridEl
+ * @param {(band: CanvasBand) => void} onBand
+ * @returns {{ getBand: () => CanvasBand | null, apply: () => void }}
+ */
+const observeCanvas = (gridEl, onBand) => {
+    /** @type {CanvasBand | null} */
+    let current = null;
+    const apply = () => {
+        const width = gridEl ? gridEl.clientWidth : 0;
+        if (!width) return;  // detached, or hidden behind a closed panel
+        const band = bandForWidth(width);
+        if (band === current) return;
+        current = band;
+        /** @type {HTMLElement} */ (gridEl).classList.toggle('is-single-column', band.columns === 1);
+        onBand(band);
+    };
+    // rAF-deferred so mutating the grid from inside the callback cannot trip
+    // ResizeObserver's "undelivered notifications" loop guard.
+    const schedule = () => window.requestAnimationFrame(apply);
+    if (gridEl && typeof ResizeObserver === 'function') new ResizeObserver(schedule).observe(gridEl);
+    window.addEventListener('resize', schedule);
+    apply();
+    return { getBand: () => current, apply };
 };
 
 const POLL_INTERVAL_MS = 1500;
@@ -57,7 +201,16 @@ const STATUS = {
 // widget_broker.js — the host-side counterpart of the in-iframe widget_api.js.
 
 pagesGridNamespace.initPresentationGrid = () => {
-    return GridStack.init({ ...BASE_GRID_OPTS, staticGrid: true });
+    // Read before init — GridStack rewrites gs-* for the starting band.
+    const authored = readAuthoredLayout();
+    const grid = GridStack.init({ ...BASE_GRID_OPTS, staticGrid: true });
+    const gridEl = /** @type {HTMLElement} */ (document.querySelector('.grid-stack'));
+    // A published page reflows exactly the way it did while it was being edited.
+    // At one column GridStack lays nodes out in (y, x) order, and the server
+    // renders widgets in that same reading order, so the narrow stack is the
+    // page's source order.
+    observeCanvas(gridEl, (band) => applyBand(grid, authored, band));
+    return grid;
 };
 
 // Design grid. The page edits exactly one version — `editVersionId` (its status is
@@ -81,7 +234,58 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
      * @param {Record<string, unknown>} [options]
      */
     const t = (key, options = {}) => i18n.t(key, options);
+    // The canonical 12-column geometry, seeded from the server-rendered markup
+    // before GridStack can rewrite it. GridStack's layout cache keeps x/y/w but
+    // not h, and while the canvas is narrowed its live nodes *are* the narrow
+    // layout — so saving straight off the grid from a phone would flatten every
+    // widget to one column and persist the heights the reflow inflated. This map,
+    // not the grid, is what Save writes.
+    /** @type {Map<string, WideGeometry>} */
+    const wideLayout = readAuthoredLayout();
     const grid = GridStack.init({ ...BASE_GRID_OPTS, handle: '.widget-header' });
+    const gridEl = /** @type {HTMLElement} */ (document.querySelector('.grid-stack'));
+
+    // True while the band change is rewriting the grid, so the change handler below
+    // does not mistake a reflow for an edit and write the narrow geometry back.
+    let applyingBand = false;
+
+    const syncWideLayout = () => {
+        if (applyingBand || grid.getColumn() !== MAX_COLUMNS) return;
+        grid.engine.nodes.forEach((/** @type {any} */ node) => {
+            wideLayout.set(node.id, { x: node.x, y: node.y, w: node.w, h: node.h });
+        });
+    };
+
+    // Gesture policy. Drag-to-move and drag-to-resize are a fine-pointer
+    // affordance on a multi-column canvas. On a coarse pointer a drag that starts
+    // on a widget is indistinguishable from the swipe that scrolls the page, and
+    // on a single-column canvas there is nowhere to drag *to* — so in both cases
+    // the gestures are turned off and the explicit ↑/↓/−/+ controls (always
+    // visible in this mode) are the way to move and resize.
+    const finePointer = window.matchMedia('(pointer: fine)');
+    /** @type {CanvasBand | null} */
+    let currentBand = null;
+    const syncGridInteraction = () => {
+        const direct = !finePointer.matches || !currentBand || currentBand.columns === 1;
+        grid.enableMove(!direct);
+        grid.enableResize(!direct);
+        gridEl.classList.toggle('is-direct-controls', direct);
+    };
+
+    observeCanvas(gridEl, (band) => {
+        currentBand = band;
+        // The guard has to cover the column change as well as the geometry:
+        // grid.column() emits its own change event, and on the way *back* to a
+        // wide canvas that event fires while the nodes still carry the narrow
+        // band's inflated heights — recording those as authored would make the
+        // reflow permanent.
+        applyingBand = true;
+        applyBand(grid, wideLayout, band);
+        applyingBand = false;
+        syncGridInteraction();
+    });
+    finePointer.addEventListener('change', syncGridInteraction);
+    grid.on('change', syncWideLayout);
 
     // Generated/edited widget content the client holds but hasn't saved (manual
     // adds), keyed by widget id. Nothing is persisted until Save sends these to the
@@ -112,12 +316,15 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
 
     // The full widget set for Save: layout for every grid item, plus content for
     // any the client holds as a draft (untouched saved widgets send layout only,
-    // so the server keeps their stored content).
+    // so the server keeps their stored content). The geometry always comes from
+    // the 12-column record, so saving from a phone publishes the desktop layout
+    // rather than the one-column reflow that happens to be on screen.
     const getWidgets = () => grid.engine.nodes.map((/** @type {any} */ node) => {
         const id = node.id;
         const titleInput = node.el.querySelector('.widget-title-input');
+        const wide = wideLayout.get(id) || { x: node.x, y: node.y, w: node.w, h: node.h };
         /** @type {Record<string, any>} */
-        const layout = { id, x: node.x, y: node.y, w: node.w, h: node.h };
+        const layout = { id, x: wide.x, y: wide.y, w: wide.w, h: wide.h };
         if (titleInput) layout.title = titleInput.value;
         const content = drafts.get(id);
         return content ? { ...content, ...layout } : layout;
@@ -194,6 +401,7 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
                 );
                 grid.removeWidget(el);
                 rendered.delete(deleteButton.dataset.widgetId ?? '');
+                wideLayout.delete(deleteButton.dataset.widgetId ?? '');
             });
         }
 
@@ -203,15 +411,43 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
             const current = nodes[currentIndex];
             const target = nodes[currentIndex + offset];
             if (!current || !target) return;
-            // Use GridStack's collision-aware swap primitive. Updating each item
+            // Prefer GridStack's collision-aware swap primitive. Updating each item
             // independently makes the engine push the first move back because the
             // destination is still occupied, especially in the one-column layout.
-            if (!grid.engine.swap(current, target)) return;
-            grid._writePosAttr(current.el, current);
-            grid._writePosAttr(target.el, target);
-            grid._updateContainerHeight();
-            grid._triggerChangeEvent();
-            /** @type {HTMLElement | null} */ (current.el?.querySelector('.widget-order') ?? null)?.focus();
+            if (grid.engine.swap(current, target)) {
+                grid._writePosAttr(current.el, current);
+                grid._writePosAttr(target.el, target);
+                grid._updateContainerHeight();
+                grid._triggerChangeEvent();
+            } else {
+                // swap() refuses two items that are neither the same size nor
+                // touching — and on an authoring canvas (float: true) a hole is
+                // exactly what a delete or a shrink leaves behind. Exchange their
+                // positions instead, inside a batch so the engine resolves the two
+                // moves together rather than bouncing the first one back. A control
+                // that quietly does nothing is worse than either outcome.
+                const currentPosition = { x: current.x, y: current.y };
+                const targetPosition = { x: target.x, y: target.y };
+                grid.batchUpdate();
+                grid.update(current.el, targetPosition);
+                grid.update(target.el, currentPosition);
+                grid.batchUpdate(false);
+                if (currentBand && currentBand.columns === 1) grid.compact();
+            }
+            // Mirror the swap into the 12-column record. Without this a reorder made
+            // on a phone would be discarded when the canvas widens again, because
+            // the wide layout is what Save writes.
+            const currentWide = wideLayout.get(current.id);
+            const targetWide = wideLayout.get(target.id);
+            if (currentWide && targetWide) {
+                wideLayout.set(current.id, { ...currentWide, x: targetWide.x, y: targetWide.y });
+                wideLayout.set(target.id, { ...targetWide, x: currentWide.x, y: currentWide.y });
+            }
+            // Keep focus on the control that was pressed, so a second tap repeats
+            // the same move instead of landing on the Up button.
+            /** @type {HTMLElement | null} */ (
+                current.el?.querySelector(offset < 0 ? '.widget-order-up' : '.widget-order-down') ?? null
+            )?.focus();
         };
 
         el.querySelectorAll('.widget-order').forEach((button) => {
@@ -228,9 +464,21 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
         const resizeWidget = (/** @type {number} */ offset) => {
             const node = /** @type {any} */ (el).gridstackNode;
             if (!node) return;
-            const nextHeight = Math.max(node.minH || 1, node.h + offset);
+            // The floor is the band's, not a bare 1: a widget must not be shrunk
+            // below the height its reflowed content needs on this canvas.
+            const floor = Math.max(1, node.minH || (currentBand ? currentBand.minRows : 1));
+            const nextHeight = Math.max(floor, node.h + offset);
             if (nextHeight === node.h) return;
             grid.update(el, { h: nextHeight });
+            // One column is a stack, not a canvas: with float: true the row a
+            // shrink frees stays as a hole, which also parts two neighbours far
+            // enough that GridStack's swap() refuses to reorder them — so the very
+            // next press of Move down would do nothing at all.
+            if (currentBand && currentBand.columns === 1) grid.compact();
+            // The authored height moves by the same step, so the change survives
+            // the trip back to a wide canvas.
+            const wide = wideLayout.get(node.id);
+            if (wide) wideLayout.set(node.id, { ...wide, h: Math.max(1, wide.h + offset) });
             /** @type {HTMLElement | null} */ (
                 el.querySelector(offset < 0 ? '.widget-size-shorter' : '.widget-size-taller')
             )?.focus();
@@ -253,6 +501,11 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
         const wrapper = document.createElement('div');
         wrapper.innerHTML = html.trim();
         const el = /** @type {Element} */ (wrapper.firstElementChild);
+        // The shell carries the widget's authored 12-column size; read it before
+        // GridStack clamps the live node to the current band.
+        const id = el.getAttribute('gs-id') ?? '';
+        const authoredW = Number(el.getAttribute('gs-w')) || 4;
+        const authoredH = Number(el.getAttribute('gs-h')) || 3;
         // Honor an explicit position from the model; otherwise place at the bottom
         // of the current (live) layout so it never collides with or displaces
         // existing widgets, regardless of unsaved moves.
@@ -260,9 +513,28 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
         const y = Number.isInteger(pos.y) ? pos.y : grid.getRow();
         el.setAttribute('gs-x', String(x));
         el.setAttribute('gs-y', String(y));
+        if (id) {
+            wideLayout.set(id, {
+                x: Number.isInteger(pos.x) ? /** @type {number} */ (pos.x) : 0,
+                y: Number.isInteger(pos.y) ? /** @type {number} */ (pos.y) : wideBottom(),
+                w: authoredW,
+                h: authoredH
+            });
+        }
         grid.addWidget(el);
+        // A widget added while the canvas is narrow still has to satisfy the band's
+        // height floor, and must not carry the wide width into a one-column stack.
+        if (currentBand && currentBand.columns !== MAX_COLUMNS) {
+            applyingBand = true;
+            applyBandGeometry(grid, wideLayout, currentBand);
+            applyingBand = false;
+        }
         wireWidget(el);
     };
+
+    /** The y just below the authored layout — where a new, unplaced widget lands. */
+    const wideBottom = () =>
+        [...wideLayout.values()].reduce((bottom, item) => Math.max(bottom, item.y + item.h), 0);
 
     const newWidgetId = () =>
         (pagesGridWindow.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now())).replace(/-/g, '');
@@ -321,7 +593,14 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
             .replaceWith(/** @type {Element} */ (/** @type {Element} */ (wrapper.firstElementChild).querySelector('.grid-stack-item-content')));
         wireWidget(existing);
         if (Number.isInteger(content.grid_x) && Number.isInteger(content.grid_y)) {
-            grid.update(existing, { x: content.grid_x, y: content.grid_y });
+            const wide = wideLayout.get(content.id);
+            if (wide) wideLayout.set(content.id, { ...wide, x: content.grid_x, y: content.grid_y });
+            // Only the wide canvas can honour a model-supplied x: a narrowed canvas
+            // has no column to put it in, and applyBandGeometry owns the geometry
+            // there.
+            if (!currentBand || currentBand.columns === MAX_COLUMNS) {
+                grid.update(existing, { x: content.grid_x, y: content.grid_y });
+            }
         }
     };
 
@@ -341,6 +620,9 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
         const running = isRunning();
         if (designLayout) designLayout.classList.toggle('is-generating', running);
         grid.setStatic(running);
+        // enableMove/enableResize are no-ops while the grid is static, so a band
+        // change during a run would be dropped; re-assert the policy on unlock.
+        if (!running) syncGridInteraction();
         if (addButton) addButton.disabled = running;
         if (cancelButton) cancelButton.disabled = !(generation.status === STATUS.FAILED || generation.status === STATUS.IN_PROGRESS);
         if (messageInput) messageInput.disabled = running;
@@ -392,6 +674,7 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
             if (!incoming.has(node.id)) {
                 grid.removeWidget(node.el);
                 rendered.delete(node.id);
+                wideLayout.delete(node.id);
             }
         });
         for (const widget of widgets) {
@@ -522,18 +805,8 @@ pagesGridNamespace.initDesignGrid = (pageId, editVersionId, startStatus, config,
         }
     };
 
-    const gridEl = /** @type {HTMLElement} */ (document.querySelector('.grid-stack'));
     grid.on('dragstart resizestart', () => gridEl.classList.add('is-interacting'));
     grid.on('dragstop resizestop', () => gridEl.classList.remove('is-interacting'));
-
-    const directManipulation = window.matchMedia('(max-width: 768px), (pointer: coarse)');
-    const syncGridInteraction = () => {
-        grid.enableMove(!directManipulation.matches);
-        grid.enableResize(!directManipulation.matches);
-        gridEl.classList.toggle('is-direct-controls', directManipulation.matches);
-    };
-    directManipulation.addEventListener('change', syncGridInteraction);
-    syncGridInteraction();
 
     if (addButton) addButton.addEventListener('click', addWidget);
     if (saveButton) saveButton.addEventListener('click', onSave);

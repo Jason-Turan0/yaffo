@@ -129,12 +129,65 @@ scenarios:
       - Only one of Menu or Themes is open at a time
       - Escape closes the panel
       - At desktop width the sidebar is back in the page
+  - name: themes_pages_fit_every_contract_viewport
+    goal: Both a system and a custom theme page render without page-level horizontal overflow
+    priority: high
+    steps:
+      - Load the themes index, a system theme page and a custom theme page at 320, 390, 768, 1024 and 1440 CSS pixels
+    verify:
+      - The document never scrolls horizontally at any of the contract widths
+      - The header actions and the conversation card stay inside the content column
   - name: theme_screens_stay_contained_in_every_built_in_theme
     goal: A theme's own decoration never changes the narrow layout's geometry
     priority: high
     steps:
-      - At 390x844, load each built-in theme's page (classic, darkroom, memphis, neobrutalist, photos-app, scrapbook)
+      - At 320x568 and 390x844, load each built-in theme's page (classic, darkroom, memphis, neobrutalist, photos-app, scrapbook)
+      # The page renders AS the theme being viewed (routes/themes_page.py sets
+      # `theme=selected_slug`), so this really is each skin's own geometry.
     verify:
-      - No theme introduces page-level horizontal overflow
-      - Draft and publish actions wrap rather than overflowing
-      - The theme generation chat is usable at this width
+      - No theme introduces page-level horizontal overflow at either width
+      - Each theme's header actions stay inside the viewport
+  - name: themes_long_theme_name_truncates_instead_of_spilling_out_of_the_nav
+    goal: A long custom theme name cannot overrun the theme list
+    priority: high
+    steps:
+      - Create a custom theme whose name is one long unbreakable word
+      - Read the nav entry at 1440x900 and inside the opened Themes panel at 390x844
+    verify:
+      - The nav link's content is no wider than the link, at both widths
+      - The name is ellipsised and the default badge stays on the row
+      - The page does not scroll horizontally
+      # Regression. The themes nav put the raw label straight into the <a>,
+      # skipping the shared `.panel-nav-label` span that albums, utilities and
+      # sharing use, so a long unbreakable name rendered past the edge of the
+      # 250px column and out of the mobile panel instead of ellipsising.
+  - name: themes_draft_actions_are_reachable_on_a_phone
+    goal: Save draft and Discard stay usable once the draft panel appears on a narrow screen
+    priority: high
+    steps:
+      - Give a custom theme a ready draft and load it at 320x568, 390x844 and 1440x900
+    verify:
+      - Both draft actions are inside the viewport at every width
+      - At 320 they stack, and on a coarse pointer each is at least 44 CSS pixels tall
+      - At 1440 they are still a single row
+      - The draft panel does not widen the page
+  - name: themes_generation_chat_fits_and_scrolls_inside_itself
+    goal: The theme generation conversation owns its own overflow at a narrow width
+    priority: high
+    steps:
+      - Load a custom theme page at 320x568 with a long transcript
+      - Measure the transcript, the message box and the send controls
+    verify:
+      - The transcript scrolls inside itself rather than growing the document
+      - The message box and the Send/Cancel controls stay inside the viewport
+      - On a coarse pointer the send controls are at least 44 CSS pixels tall
+      - The page does not scroll horizontally
+  - name: themes_unsent_chat_message_survives_a_resize_through_the_breakpoint
+    goal: A described look that has not been sent yet is not lost when the viewport crosses the breakpoint
+    priority: high
+    steps:
+      - Type a description into the conversation at 390x844
+      - Resize to 1440x900, 320x568, 844x390 and back to 390x844
+    verify:
+      - The unsent text is still in the message box after every resize
+      - No page-level horizontal overflow appears at any of those sizes

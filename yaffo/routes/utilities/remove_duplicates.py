@@ -30,8 +30,10 @@ def collect_media_paths(directory_paths: list[str]) -> list[str]:
     thumbnail_dir = get_thumbnail_dir()
 
     for directory_path in directory_paths:
+        if not directory_path.strip():
+            continue
         dir_path = Path(directory_path)
-        if not dir_path.exists() or not dir_path.is_dir() or dir_path == '':
+        if not dir_path.exists() or not dir_path.is_dir():
             continue
         for p in dir_path.rglob("*"):
             if not (p.suffix.lower() in MEDIA_EXTENSIONS and not p.name.startswith(".") and p.is_file()):

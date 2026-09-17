@@ -39,6 +39,20 @@
     font-size: var(--font-size-base);
     color: var(--color-text-secondary);
     flex: 1;
+    /* A configured library path is user data with no break opportunity in it.
+       The shared layer lets it wrap; the zero minimum is what allows this flex
+       item to actually shrink to the column rather than to the path. */
+    min-width: 0;
+}
+
+/* The shared narrow layer stacks .media-dir-item below 640px. Left alone, Remove
+   then becomes the widest thing in the row, sitting directly under the path it
+   deletes. Keep the destructive control a deliberate, inline-end target instead
+   of a full-width bar that reads like the section's primary action. */
+@media (max-width: 640px) {
+    .media-dir-item > .btn-danger {
+        align-self: flex-end;
+    }
 }
 
 .add-media-dir-form {
@@ -327,4 +341,77 @@
    model dropdown. */
 .llm-api-key {
     margin-top: 16px;
+}
+
+/* An environment-provided key names its variable inline; the status line has to
+   wrap it rather than push the section wider. */
+.api-key-status {
+    overflow-wrap: anywhere;
+}
+
+/* Save (+ Clear, once a key is stored) need a real row box: the shared narrow
+   layer stacks .api-key-actions with flex-direction, which does nothing while
+   the element is still a block, and without a gap the two buttons touch. */
+.api-key-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   Help tips (the ⓘ prompt markers and the English-only warning)
+
+   Two contract failures come from the shared pure-CSS tooltip meeting an
+   icon-only button; both are fixed here for this page and reported upstream
+   (see docs/development/responsive.md — shared owner requests).
+
+   1. static/responsive.css hides `[data-tooltip]::before` below 640px to drop
+      the JS tooltip's arrow. On a help tip the ::before *is* the icon glyph, so
+      every prompt and warning marker collapses to a 0×0 invisible control on a
+      phone.
+   2. The bubble is a 260px box centred on its anchor. A chip's glyph is 15px
+      wide and the chips wrap right up to the section's inline end, so above
+      640px (where the shared layer already pins the bubble to the viewport) the
+      bubble hangs past the document edge and the settings page scrolls
+      sideways with nothing hovered. Pin it the same way at every width.
+   -------------------------------------------------------------------------- */
+.settings-section .help-tip[data-icon]::before {
+    display: block;
+}
+
+.settings-section .help-tip[data-tooltip]::after {
+    position: fixed;
+    inset-inline: 12px;
+    inset-block: auto 12px;
+    width: auto;
+    max-width: none;
+    transform: none;
+}
+
+/* A coarse pointer has no hover, and :focus-visible does not match a tap, so the
+   shared reveal leaves a label's prompt unreadable on touch. Give the glyph a
+   real target and show the bubble while it is being pressed or focused.
+   The shared layer already reserves 44px of *height* on every coarse-pointer
+   `button`, so only the two icon-only controls need their width widened and the
+   one control that is not a button at all needs its height. */
+@media (hover: none), (pointer: coarse) {
+    /* 15px and 18px glyphs; the shared rule sizes their height, not their width. */
+    .settings-section .help-tip,
+    .label-chip-remove {
+        min-width: 44px;
+    }
+
+    .settings-section .help-tip[data-tooltip]:focus::after,
+    .settings-section .help-tip[data-tooltip]:active::after {
+        opacity: 1;
+    }
+
+    /* The language, units, and model pickers are searchable-selects, whose
+       display box is a 35px div — outside the shared `button, input, select`
+       rule. Scoped here rather than changed app-wide: the component belongs to
+       the shared owner. */
+    .settings-section .searchable-select-display {
+        min-height: 44px;
+    }
 }

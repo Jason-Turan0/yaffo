@@ -127,30 +127,135 @@ scenarios:
   # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
   # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
   # ---------------------------------------------------------------------------
-  - name: custom_page_canvas_drops_to_one_column
-    goal: The widget grid reflows to a single column on a narrow canvas
+  - name: custom_page_routes_fit_every_contract_width
+    goal: The design and presentation views contain themselves at every supported width
     priority: high
     steps:
-      - Open a custom page and its design view at 390x844
+      - Open a page's design view and its presentation view at 320, 390, 768, 1024 and 1440 px
     verify:
-      - Neither view scrolls the page horizontally
-      - The grid reports a single column
-      - The canvas is in direct-controls mode so drag gestures do not fight page scrolling
+      - Neither view scrolls the page horizontally at any of those widths
+      - Custom pages register no page panel of their own, so Menu is the only narrow
+        navbar toggle — the Pages bar is the shared shell's, verified on Home
+  - name: custom_page_canvas_column_bands_follow_the_canvas_not_the_window
+    goal: The grid picks its column count from the width of the canvas element
+    priority: high
+    steps:
+      - Open a page's design view at 1440x900, then at 1280x900, 768x1024 and 390x844
+      - Open the same page's presentation view at 1280x900, 768x1024 and 390x844
+    verify:
+      - A canvas of 900 px or more runs the authored 12 columns
+      - At 1280 px the editor panel still sits beside the grid, so the design canvas
+        is in the 6-column band while the presentation view — same window, no editor
+        panel — is still on 12; a viewport media query could not tell them apart
+      - At 768 px both views share one full-width canvas and both run 6 columns
+      - A canvas under 600 px runs a single column, is marked is-single-column, and
+        every widget spans that column
+  - name: custom_page_intermediate_band_widgets_get_a_real_width
+    goal: Widgets in the six-column band are laid out rather than collapsed
+    priority: high
+    steps:
+      - Open a published page at 768x1024, where the canvas is in the 6-column band
+    verify:
+      - Each authored half-width widget measures half the canvas, not zero
+      - The page does not scroll horizontally
+      # Regression: the vendored gridstack.min.css only carries the width/offset
+      # rules for .gs-12 and .gs-1 — upstream's gridstack-extra.css (2–11) is not
+      # vendored — so every .gs-6 item collapsed to 0 px while its header buttons
+      # still painted over the canvas. pages/detail.css now supplies those rules.
+  - name: custom_page_narrow_widgets_keep_a_readable_minimum_height
+    goal: A short wide widget gets vertical room once it is squeezed into one column
+    priority: high
+    steps:
+      - Seed a page with a two-row, full-width widget
+      - Open its presentation view at 390x844
+    verify:
+      - The widget is at least the one-column floor of three rows tall
+      - Its card does not scroll horizontally, and its frame is not a nested scroll region
+      - The same widget is back to its authored two rows at 1440x900
   - name: custom_page_widgets_move_and_resize_without_dragging
     goal: Every drag gesture on the canvas has an explicit control equivalent
     priority: high
     steps:
-      - Open a custom page's design view at 390x844
+      - Open a custom page's design view at 390x844 with a coarse pointer
       - Use a widget's taller control, then its shorter control, then its move-down control
     verify:
+      - The direct controls are visible and at least 44x44 px in this mode
       - Taller increases the widget height by one row and shorter restores it
-      - Move-down changes the widget order
+      - Shrinking closes the row it frees rather than leaving a hole in the stack
+      - Move-down changes the widget order, even straight after a resize
       - The canvas never scrolls the page horizontally
+      # Regression: the canvas floats, so a shrink left the freed row behind as a
+      # gap. GridStack's swap() refuses to reorder two items that are neither the
+      # same size nor touching, so after any resize Move down silently did
+      # nothing. One column is now compacted after a resize, and a refused swap
+      # exchanges the two positions directly instead of giving up.
+  - name: custom_page_touch_drag_on_a_widget_scrolls_the_page
+    goal: Design-mode drag gestures are off on touch, so a swipe scrolls the page
+    priority: high
+    steps:
+      - Open a design view at 390x844 in a touch context
+      - Drag upward with a real emulated touch stream, starting on a widget header
+    verify:
+      - The document scrolled
+      - The widget did not move — GridStack's move/resize handlers are disabled in
+        this mode, so the gesture never competes with the scroll
+  - name: custom_page_mouse_can_reach_the_direct_controls
+    goal: The move/resize controls are reachable with a mouse, not only by focus
+    priority: medium
+    steps:
+      - Open a design view at 1440x900
+      - Hover a widget card
+    verify:
+      - The controls are hidden until the card is hovered or focused
+      - Hovering reveals them and they accept a click
+      # Regression: the shared layer reveals them on :focus-within only, which a
+      # mouse never produces on its own, so on desktop they were unreachable.
+  - name: custom_page_save_from_a_narrow_canvas_keeps_the_desktop_layout
+    goal: Saving while the canvas is reflowed publishes the authored layout
+    priority: high
+    steps:
+      - Seed a page with two widgets side by side in the 12-column layout
+      - Open its design view at 390x844, where the grid is a single column
+      - Click Save
+      - Reopen the design view at 1440x900
+    verify:
+      - The widgets are still side by side with their authored widths and heights
+      # Regression: the grid's live nodes ARE the one-column layout, so saving
+      # straight off the grid from a phone flattened every widget to one column
+      # and persisted the heights the reflow had inflated.
+  - name: custom_page_layout_survives_a_resize_through_the_breakpoint
+    goal: Reflowing to one column and back restores the authored layout and unsaved edits
+    priority: high
+    steps:
+      - Open a design view at 1440x900 and start renaming a widget without saving
+      - Resize to 390x844 and back to 1440x900
+    verify:
+      - The widgets return to their authored columns, rows and heights
+      - The in-progress title edit is still there — no reload happened
+  - name: custom_page_presentation_reflows_in_source_order
+    goal: A published page stacks its widgets in reading order on a narrow canvas
+    priority: high
+    steps:
+      - Open a published page's presentation view at 390x844
+    verify:
+      - The widgets' visual top-to-bottom order matches their DOM order, which the
+        server renders in (grid_y, grid_x) reading order
+      - Every widget spans the full single column
   - name: custom_page_widgets_receive_their_real_container_size
     goal: Widget iframes are sized to the space they actually occupy
     priority: medium
     steps:
       - Open a custom page in presentation mode at 390x844 and at 1440x900
     verify:
-      - Each widget iframe's measured width matches its container at both sizes
-      - Widgets reflow in reading order once the canvas is a single column
+      - Each widget iframe's measured box matches its container at both sizes
+      - The widget document's own viewport (its innerWidth) is that same width, so
+        media queries written inside the widget measure its real box
+  - name: custom_page_long_widget_titles_do_not_widen_the_canvas
+    goal: An unbreakable widget title cannot push the page sideways
+    priority: medium
+    steps:
+      - Seed a widget whose title is one long unbroken word
+      - Open the design view at 320x568
+    verify:
+      - The page does not scroll horizontally
+      - The title is truncated inside its header rather than widening the card

@@ -185,3 +185,181 @@ describe('pages initDesignGrid — working draft under review', () => {
       expect(fetchMock.mock.calls.some(([u]) => String(u).includes('pages_version_publish'))).toBe(true));
   });
 });
+
+// ---------------------------------------------------------------------------
+// Canvas policy (responsive). The bands are measured on the .grid-stack element,
+// so these drive it by stubbing that element's clientWidth and letting the
+// module's observer run its initial pass.
+// ---------------------------------------------------------------------------
+
+// A gridstack stub with enough engine behaviour to observe the policy: column()
+// flattens x/w the way the real one does, and update() merges onto the node.
+const stubResponsiveGridStack = () => {
+  const nodes = [];
+  gridInstance = {
+    engine: { nodes, swap: vi.fn(() => true) },
+    opts: { column: 12 },
+    on: vi.fn(),
+    setStatic: vi.fn(),
+    enableMove: vi.fn(),
+    enableResize: vi.fn(),
+    addWidget: vi.fn(),
+    removeWidget: vi.fn(),
+    getRow: vi.fn(() => 0),
+    getColumn: vi.fn(() => gridInstance.opts.column),
+    batchUpdate: vi.fn(),
+    compact: vi.fn(),
+    column: vi.fn((count) => {
+      gridInstance.opts.column = count;
+      if (count === 1) nodes.forEach((node) => { node.x = 0; node.w = 1; });
+    }),
+    update: vi.fn((el, opts) => {
+      const node = nodes.find((candidate) => candidate.el === el);
+      if (node) Object.assign(node, opts);
+    }),
+  };
+  vi.stubGlobal('GridStack', { init: vi.fn(() => gridInstance) });
+  return gridInstance;
+};
+
+// Two widgets side by side in the authored 12-column layout: a short wide one
+// (the case a one-column reflow squeezes) and a tall one.
+const responsiveFixture = (canvasWidth) => {
+  designFixture();
+  const grid = document.querySelector('.grid-stack');
+  grid.innerHTML = `
+    <div class="grid-stack-item" gs-id="a" gs-x="0" gs-y="0" gs-w="6" gs-h="2">
+      <div class="grid-stack-item-content widget-card">
+        <div class="widget-header">
+          <input type="text" class="widget-title-input" value="Stats" hidden>
+          <button class="widget-order widget-order-up"></button>
+          <button class="widget-order widget-order-down"></button>
+          <button class="widget-order widget-size-shorter"></button>
+          <button class="widget-order widget-size-taller"></button>
+        </div>
+      </div>
+    </div>
+    <div class="grid-stack-item" gs-id="b" gs-x="6" gs-y="0" gs-w="6" gs-h="5">
+      <div class="grid-stack-item-content widget-card">
+        <div class="widget-header">
+          <input type="text" class="widget-title-input" value="Gallery" hidden>
+        </div>
+      </div>
+    </div>`;
+  Object.defineProperty(grid, 'clientWidth', { configurable: true, value: canvasWidth });
+  return grid;
+};
+
+// Seed the stub engine from the fixture markup, as gridstack would on init.
+const seedNodes = (instance) => {
+  document.querySelectorAll('.grid-stack > .grid-stack-item').forEach((el) => {
+    const node = {
+      id: el.getAttribute('gs-id'),
+      el,
+      x: Number(el.getAttribute('gs-x')),
+      y: Number(el.getAttribute('gs-y')),
+      w: Number(el.getAttribute('gs-w')),
+      h: Number(el.getAttribute('gs-h')),
+    };
+    el.gridstackNode = node;
+    instance.engine.nodes.push(node);
+  });
+};
+
+describe('pages initDesignGrid — canvas bands', () => {
+  it('drops a narrow canvas to one column and raises widgets to its height floor', async () => {
+    const instance = stubResponsiveGridStack();
+    responsiveFixture(390);
+    seedNodes(instance);
+    stubFetch({});
+
+    await initDesign('ACCEPTED', 42);
+
+    expect(instance.column).toHaveBeenCalledWith(1);
+    expect(document.querySelector('.grid-stack').classList.contains('is-single-column')).toBe(true);
+    // The 2-row widget is raised to the one-column floor; the 5-row one is left alone.
+    expect(instance.engine.nodes.find((n) => n.id === 'a').h).toBe(3);
+    expect(instance.engine.nodes.find((n) => n.id === 'b').h).toBe(5);
+  });
+
+  it('uses six columns on an intermediate canvas', async () => {
+    const instance = stubResponsiveGridStack();
+    responsiveFixture(700);
+    seedNodes(instance);
+    stubFetch({});
+
+    await initDesign('ACCEPTED', 42);
+
+    expect(instance.column).toHaveBeenCalledWith(6);
+    expect(document.querySelector('.grid-stack').classList.contains('is-single-column')).toBe(false);
+  });
+
+  it('turns drag gestures off on a single-column canvas and on for a wide one', async () => {
+    const narrow = stubResponsiveGridStack();
+    responsiveFixture(390);
+    seedNodes(narrow);
+    stubFetch({});
+    // matchMedia stubs every query to matches:false, i.e. a coarse pointer.
+    await initDesign('ACCEPTED', 42);
+    expect(narrow.enableMove).toHaveBeenCalledWith(false);
+    expect(document.querySelector('.grid-stack').classList.contains('is-direct-controls')).toBe(true);
+  });
+
+  it('Save writes the authored 12-column layout even while the canvas is narrowed', async () => {
+    const instance = stubResponsiveGridStack();
+    responsiveFixture(390);
+    seedNodes(instance);
+    const fetchMock = stubFetch({ pages_update: () => okJson({}) });
+
+    await initDesign('ACCEPTED', 42);
+    // The live grid really is flattened...
+    expect(instance.engine.nodes.every((node) => node.w === 1)).toBe(true);
+
+    document.getElementById('save-page-button').click();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+
+    // ...but Save publishes the authored geometry, not the reflow.
+    const { widgets } = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(widgets).toEqual([
+      { id: 'a', x: 0, y: 0, w: 6, h: 2, title: 'Stats' },
+      { id: 'b', x: 6, y: 0, w: 6, h: 5, title: 'Gallery' },
+    ]);
+  });
+
+  it('Move down still reorders when gridstack refuses the swap', async () => {
+    const instance = stubResponsiveGridStack();
+    // gridstack's engine.swap() only reorders items that are the same size or
+    // touching. On an authoring canvas (float: true) a shrink or a delete leaves
+    // a gap between two neighbours, and swap() then gives up — which used to make
+    // Move down do nothing at all on the one path a phone has for reordering.
+    instance.engine.swap = vi.fn(() => false);
+    responsiveFixture(390);
+    seedNodes(instance);
+    stubFetch({});
+
+    await initDesign('ACCEPTED', 42);
+    const [first, second] = instance.engine.nodes;
+    second.y = 4;  // the hole a shrink left behind
+
+    document.querySelector('[gs-id="a"] .widget-order-down').click();
+
+    expect([first.y, second.y]).toEqual([4, 0]);
+    // One column is a stack, so the exchange is followed by closing the gaps.
+    expect(instance.compact).toHaveBeenCalled();
+  });
+
+  it('the taller control moves the authored height, not only the reflowed one', async () => {
+    const instance = stubResponsiveGridStack();
+    responsiveFixture(390);
+    seedNodes(instance);
+    const fetchMock = stubFetch({ pages_update: () => okJson({}) });
+
+    await initDesign('ACCEPTED', 42);
+    document.querySelector('[gs-id="a"] .widget-size-taller').click();
+
+    document.getElementById('save-page-button').click();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const { widgets } = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(widgets[0].h).toBe(3);
+  });
+});
