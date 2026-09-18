@@ -39,20 +39,21 @@
     font-size: var(--font-size-base);
     color: var(--color-text-secondary);
     flex: 1;
-    /* A configured library path is user data with no break opportunity in it.
-       The shared layer lets it wrap; the zero minimum is what allows this flex
-       item to actually shrink to the column rather than to the path. */
+    /* A configured library path is user data with no break opportunity in it, so
+       it breaks anywhere; the zero minimum is what allows this flex item to
+       actually shrink to the column rather than to the path. */
     min-width: 0;
+    overflow-wrap: anywhere;
 }
 
-/* The shared narrow layer stacks .media-dir-item below 640px. Left alone, Remove
-   then becomes the widest thing in the row, sitting directly under the path it
-   deletes. Keep the destructive control a deliberate, inline-end target instead
-   of a full-width bar that reads like the section's primary action. */
-@media (max-width: 640px) {
-    .media-dir-item > .btn-danger {
-        align-self: flex-end;
-    }
+/* This row does NOT stack on a phone (it was in the shared narrow layer's stack
+   group and has been taken out). Dropping Remove onto its own line reads as a
+   second, page-wide action rather than as this row's control, and puts a
+   destructive button directly under the path it deletes. A path wraps far more
+   gracefully than a button does: the text takes the lines it needs and Remove
+   stays beside it, at its own size. */
+.media-dir-item > .btn-danger {
+    flex: none;
 }
 
 .add-media-dir-form {
@@ -372,21 +373,14 @@
       phone.
    2. The bubble is a 260px box centred on its anchor. A chip's glyph is 15px
       wide and the chips wrap right up to the section's inline end, so above
-      640px (where the shared layer already pins the bubble to the viewport) the
-      bubble hangs past the document edge and the settings page scrolls
-      sideways with nothing hovered. Pin it the same way at every width.
+      640px the bubble hung past the document edge and the settings page
+      scrolled sideways with nothing hovered. That one is no longer a settings
+      problem: components/tooltip.js now replaces the pseudo-element with an
+      anchored, clamped popover above the breakpoint, and responsive.css keeps
+      pinning it to the bottom of the viewport below it.
    -------------------------------------------------------------------------- */
 .settings-section .help-tip[data-icon]::before {
     display: block;
-}
-
-.settings-section .help-tip[data-tooltip]::after {
-    position: fixed;
-    inset-inline: 12px;
-    inset-block: auto 12px;
-    width: auto;
-    max-width: none;
-    transform: none;
 }
 
 /* A coarse pointer has no hover, and :focus-visible does not match a tap, so the
@@ -402,6 +396,10 @@
         min-width: 44px;
     }
 
+    /* Below the breakpoint the pseudo-element is still the presentation, and a
+       tap produces neither :hover nor :focus-visible — so reveal it while the
+       control is pressed or focused. Above the breakpoint tooltip.js handles
+       the press instead. */
     .settings-section .help-tip[data-tooltip]:focus::after,
     .settings-section .help-tip[data-tooltip]:active::after {
         opacity: 1;

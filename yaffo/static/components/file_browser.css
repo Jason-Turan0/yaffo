@@ -47,9 +47,24 @@
     margin-bottom: 0.5rem;
 }
 
+/* `modal.css` sets `.modal-content form { flex-direction: column }` for the
+   modal's own stacked forms, and that selector outranks the one above — so
+   inside the picker this row silently became a column. Its `flex: 1` input then
+   resolved a zero basis against the *height*, the form measured the children's
+   natural heights while the coarse-pointer rule stretched each of them to 44px,
+   and the Create button spilled out of the form and painted over the folder
+   list. State the direction where it can win, and let the row wrap instead when
+   the two controls genuinely do not fit side by side. */
+.modal-content .folder-picker-create {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
 .folder-picker-create input {
     min-width: 0;
-    flex: 1;
+    /* A real basis, so a narrow viewport wraps the button onto its own line
+       rather than crushing the name field to nothing. */
+    flex: 1 1 12ch;
 }
 
 .folder-picker-create button {

@@ -1000,6 +1000,56 @@ test.describe('Locations Map', () => {
     await clearAllLocationNames(page);
   });
 
+  test('locations_tapping_a_cluster_does_not_activate_the_panel_underneath', async ({ browser }) => {
+    await withTouchContext(browser, VIEWPORTS.narrow, async (page, context) => {
+      const extraTabs: string[] = [];
+      context.on('page', (opened) => extraTabs.push(opened.url()));
+
+      await openMap(page);
+      const clusters = await clusterSummaries(page);
+      expect(clusters.length).toBeGreaterThan(0);
+      const point = await screenPointForCluster(page, clusters[0]);
+
+      // Record anything that reaches the panel, before the tap that creates it.
+      // Asserting only "the URL did not change" would pass by luck whenever the
+      // ghost click happens to land on an inert part of the panel.
+      //
+      // Listen ON THE PANEL, not on `document`: the suppression is a capture
+      // listener at the document, so a second document-level listener would be
+      // invoked first and record the event either way — measuring nothing. What
+      // matters is whether the event gets past that point and reaches the panel.
+      await page.evaluate(() => {
+        (window as any).__panelEvents = [];
+        const panel = document.getElementById('selection-panel')!;
+        for (const type of ['mousedown', 'mouseup', 'click']) {
+          panel.addEventListener(type, (event) => {
+            (window as any).__panelEvents.push(`${type} → ${(event.target as HTMLElement).tagName}`);
+          }, true);
+        }
+      });
+
+      // A real touch stream, not page.mouse.click. The defect lives entirely in
+      // the compatibility mouse events the browser synthesizes after a tap:
+      // OpenLayers emits the map's click from `pointerdown`, so the panel is on
+      // screen before they are dispatched and they land on it instead of the map.
+      const beforeUrl = page.url();
+      await page.touchscreen.tap(point.x, point.y);
+      await expect(page.locator('#selection-panel')).toHaveClass(/active/);
+      await expect(page.locator('#photo-link')).toBeVisible();
+
+      expect(await page.evaluate(() => (window as any).__panelEvents),
+        'the tap that opened the panel must not also press something inside it').toEqual([]);
+      expect(page.url()).toBe(beforeUrl);
+      expect(extraTabs, 'the preview photo link carries target="_blank"').toEqual([]);
+
+      // Suppression is scoped to that one ghost: a deliberate tap still works.
+      const thumb = page.locator('.preview-thumb').nth(1);
+      const title = await thumb.getAttribute('title');
+      await thumb.tap();
+      await expect(page.locator('#photo-name')).toHaveText(title!);
+    });
+  });
+
   test('locations_touch_reaches_every_hover_only_affordance', async ({ browser }) => {
     await withTouchContext(browser, VIEWPORTS.narrow, async (page) => {
       await mockReverseGeocode(page, 'Mocked Location');

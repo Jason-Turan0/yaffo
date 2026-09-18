@@ -316,6 +316,23 @@ scenarios:
       - The quick-assign chip for the long name is visible and no wider than the viewport
       - The cluster summary and the modal stay inside the viewport
       - There is no page-level horizontal overflow
+  - name: locations_tapping_a_cluster_does_not_activate_the_panel_underneath
+    goal: Selecting a cluster with a finger opens the panel and does nothing else
+    priority: high
+    steps:
+      - Open the locations page in a touch context at 390x844
+      - Tap a cluster with a real emulated touch stream
+      - Tap a preview thumbnail afterwards
+    verify:
+      - The selection panel opens
+      - The page does not navigate and no second tab is opened
+      - A deliberate tap on the panel still reaches its handlers
+      # Regression. OpenLayers emits the map's click from the touch's
+      # `pointerdown`, so the panel was already rendered under the finger when
+      # the browser synthesized `mousedown`/`mouseup`/`click` for that same tap.
+      # Those landed on the panel — usually on the preview photo, whose link
+      # carries target="_blank" — so selecting a cluster on a phone or tablet
+      # also opened that photo in a new tab.
   - name: locations_touch_reaches_every_hover_only_affordance
     goal: Everything the page only said through :hover or a native title tooltip is reachable with a coarse pointer
     priority: high

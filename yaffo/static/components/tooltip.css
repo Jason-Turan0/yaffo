@@ -86,6 +86,23 @@
     opacity: 1;
 }
 
+/* Above the mobile breakpoint the anchored popover in components/tooltip.js
+   takes over: it can measure, so it keeps the bubble beside its control AND
+   inside the viewport, which this rule cannot do on its own. The pseudo-element
+   stays as the no-JS fallback, and below 641px it is the presentation —
+   responsive.css pins it to the bottom of the viewport there. */
+@media (min-width: 641px) {
+    .js-tooltip [data-tooltip]::after {
+        content: none;
+    }
+}
+
+/* The popover carries its own text, so it must not also paint the anchor's. */
+.data-tooltip-popover {
+    white-space: normal;
+    max-width: min(320px, calc(100vw - 24px));
+}
+
 /* A bare icon button (data-icon="info") that only surfaces a data-tooltip — the
    "more info" affordance. The glyph comes from the icon system (components/icons.css),
    so it themes like every other icon; this just strips the button chrome. */

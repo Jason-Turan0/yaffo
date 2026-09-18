@@ -148,6 +148,19 @@ defect, listed last below.
 | Unreachable interaction | Design-mode drag gestures competed with page scrolling on touch. | GridStack move/resize is disabled in that mode, so a swipe scrolls the page and the direct controls are the touch path. |
 | Unreachable interaction | **Found 2026-09-17.** Move down silently did nothing after any resize. The canvas floats, so shrinking a widget leaves the freed row behind as a hole; GridStack's `engine.swap()` refuses two items that are neither the same size nor touching, and the refusal was treated as "no move". On a phone the direct controls are the *only* way to reorder, so the one path that exists stopped working after the other control was used. | One column is compacted after a resize (it is a stack, not a canvas), and a refused swap now exchanges the two positions inside a batch instead of giving up. Covered at both levels: `custom_page_widgets_move_and_resize_without_dragging` asserts the freed row closes and that Move down still reorders straight after a resize, and a `tests_js/pages/grid.test.js` case drives the refused-swap branch directly. |
 
+### Visual review findings — 2026-09-17
+
+The first pass of `docs/development/responsive-visual-checklist.md` — the manual
+sweep over what geometry assertions cannot judge. Eight screens were signed off
+unchanged; four were not, and all four are fixed and covered.
+
+| Classification | Finding | Resolution and evidence |
+| --- | --- | --- |
+| Broken visual order (P7) | The label prompt was pinned to the bottom of the viewport at every width. That fixed the overflow, but on a 1440 px screen it stranded the text a long way from the 15 px marker it explains. | Split by width: `components/tooltip.js` anchors a clamped, flipping popover above 640 px; the CSS bar stays below it. Reveal is split by input — hover, `:focus-visible`, or a press on a coarse pointer. `settings_label_prompt_tooltips_open_as_an_anchored_popover` and `settings_label_prompt_popover_opens_on_a_tablet_tap`. |
+| Broken visual order (P7) | The media-directory row stacked on a phone, dropping Remove onto its own full-width line — it read as a second, page-wide action, directly under the path it deletes. | The row is out of the shared stack group and stays a row: the path wraps, Remove keeps its own size beside it. |
+| Unreachable interaction (P4) | Tapping a cluster on a phone or tablet also opened the preview photo in a new tab. OpenLayers emits the map's click from the touch's `pointerdown`, so the panel was on screen before the browser synthesized that tap's mouse events, and they landed on the panel rather than the map — usually on the preview photo, whose link carries `target="_blank"`. | `locations/list.js` swallows that one ghost click, scoped to the tap's own position and a 400 ms window, so a deliberate press still goes through. `locations_tapping_a_cluster_does_not_activate_the_panel_underneath`. |
+| Clipped content (shared) | In the folder picker the Create-folder button spilled out of its form and painted over the folder list. `modal.css` sets `.modal-content form { flex-direction: column }` for the modal's own stacked forms, and that selector outranks a component's own rule — so the create row became a column whose `flex: 1` input resolved a zero basis against the height, leaving the form measured at the children's natural heights while the coarse-pointer rule stretched each to 44 px. | `file_browser.css` states the direction where it can win and wraps the row instead when the controls do not fit. The broad `modal.css` rule is left alone but is a **shared-owner note**: any row-layout form placed in a modal meets it. |
+
 The canvas policy is deliberately **container-driven, not viewport-driven**: the
 design canvas shares its row with a 360 px editor panel until 900 px, so at a
 1280 px window the design canvas is in the six-column band while the

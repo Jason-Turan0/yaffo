@@ -354,29 +354,43 @@ test.describe('Settings', () => {
         .evaluate((element, value) => { element.textContent = value; }, longPath);
       await expectNoPageOverflow(page);
 
-      // Stacked, Remove must stay a deliberate inline-end target rather than a
-      // full-width bar sitting directly under the path it deletes.
+      // The row does NOT stack: dropping Remove onto its own line reads as a
+      // second, page-wide action rather than as this row's control, and puts a
+      // destructive button directly under the path it deletes. The path is what
+      // gives way — it wraps onto as many lines as it needs.
       const row = page.locator('.media-dir-item').first();
       const geometry = await row.evaluate((element) => {
         const remove = element.querySelector<HTMLElement>('[data-action="remove-media-dir"]')!;
-        const rowStyle = getComputedStyle(element);
+        const path = element.querySelector<HTMLElement>('.media-dir-path')!;
         const rowBox = element.getBoundingClientRect();
         const removeBox = remove.getBoundingClientRect();
+        const pathBox = path.getBoundingClientRect();
         const primary = document.querySelector<HTMLElement>('.add-media-dir-form .btn-primary')!;
+        // Count line boxes rather than dividing by `line-height`, which computes
+        // to the keyword `normal` here and parses as NaN.
+        const lines = document.createRange();
+        lines.selectNodeContents(path);
         return {
-          stacked: rowStyle.flexDirection === 'column',
+          direction: getComputedStyle(element).flexDirection,
           rowWidth: rowBox.width,
           removeWidth: removeBox.width,
-          // How far the button's inline end sits from the row's content edge.
-          endGap: rowBox.right - parseFloat(rowStyle.paddingRight) - removeBox.right,
+          // Vertical ranges overlapping means they share the row rather than
+          // sitting one above the other.
+          sameRow: removeBox.top < pathBox.bottom && pathBox.top < removeBox.bottom,
+          pathLines: lines.getClientRects().length,
+          pathClipped: path.scrollWidth - path.clientWidth,
           removeBackground: getComputedStyle(remove).backgroundColor,
           primaryBackground: getComputedStyle(primary).backgroundColor,
         };
       });
-      expect(geometry.stacked, 'the directory row should stack below 640px').toBe(true);
-      expect(geometry.removeWidth).toBeLessThan(geometry.rowWidth);
-      expect(Math.abs(geometry.endGap), 'Remove should sit at the row\'s inline end').toBeLessThanOrEqual(1);
-      // Destructive actions stay visually distinct once the row stacks.
+      expect(geometry.direction, 'the directory row stays a row on a phone').toBe('row');
+      expect(geometry.sameRow, 'Remove stays beside the path it deletes').toBe(true);
+      expect(geometry.pathLines, 'an unbreakable path should wrap onto several lines')
+        .toBeGreaterThan(1);
+      expect(geometry.pathClipped, 'the path is wrapped, never clipped').toBeLessThanOrEqual(1);
+      expect(geometry.removeWidth, 'Remove keeps its own size rather than filling the row')
+        .toBeLessThan(geometry.rowWidth / 2);
+      // Destructive actions stay visually distinct at every width.
       expect(geometry.removeBackground).not.toBe(geometry.primaryBackground);
     });
 
@@ -400,25 +414,63 @@ test.describe('Settings', () => {
       }
     });
 
-    test('settings_label_prompt_tooltips_do_not_widen_the_page - a chip bubble stays inside the viewport', async ({ page }) => {
+    test('settings_label_prompt_tooltips_open_as_an_anchored_popover - tablet and desktop keep the prompt beside its chip', async ({ page }) => {
       for (const viewport of [VIEWPORTS.tabletPortrait, VIEWPORTS.tabletLandscape, VIEWPORTS.desktop]) {
         await page.setViewportSize(viewport);
         await openSettings(page);
-        // Nothing is hovered yet: the bubble is laid out at opacity 0, so an
-        // absolutely positioned one widens the document all on its own.
+        // Nothing is hovered yet. The pure-CSS bubble is laid out at opacity 0
+        // even when hidden, so an absolutely positioned one widens the document
+        // all on its own — which is why it stands down at these widths.
         await expectNoPageOverflow(page);
 
         const marker = labelChip(page, PROMPT_LABEL).locator('.label-chip-info');
         await marker.scrollIntoViewIfNeeded();
+        expect(await marker.evaluate(element => getComputedStyle(element, '::after').content),
+          'the pseudo-element bubble must not also render above the breakpoint').toBe('none');
+
         await marker.hover();
-        const bubble = await marker.evaluate((element) => {
-          const style = getComputedStyle(element, '::after');
-          return { position: style.position, width: parseFloat(style.width) };
+        const popover = page.locator('.data-tooltip-popover');
+        await expect(popover).toHaveClass(/visible/);
+        await expect(popover).toHaveText(PROMPT_TEXT);
+        await expectFitsViewport(page, '.data-tooltip-popover');
+
+        // Anchored, not parked at the bottom of the screen: it sits directly
+        // above the chip, or directly below it when there is no room above.
+        const geometry = await marker.evaluate((element) => {
+          const anchor = element.getBoundingClientRect();
+          const tip = document.querySelector('.data-tooltip-popover')!.getBoundingClientRect();
+          return {
+            gapAbove: anchor.top - tip.bottom,
+            gapBelow: tip.top - anchor.bottom,
+            viewportBottomGap: window.innerHeight - tip.bottom,
+          };
         });
-        expect(bubble.position, 'the bubble should be pinned to the viewport at every width').toBe('fixed');
-        expect(bubble.width).toBeLessThanOrEqual(viewport.width);
+        const adjacent = Math.abs(geometry.gapAbove) <= 24 || Math.abs(geometry.gapBelow) <= 24;
+        expect(adjacent, `the popover should touch its anchor, got ${JSON.stringify(geometry)}`).toBe(true);
         await expectNoPageOverflow(page);
       }
+    });
+
+    test('settings_label_prompt_popover_opens_on_a_tablet_tap - a coarse pointer above the breakpoint still gets the prompt', async ({ browser }) => {
+      // A tablet is wide enough for the popover but has no hover at all, and
+      // :focus-visible does not match a tap — so the press has to open it.
+      await withTouchContext(browser, VIEWPORTS.tabletPortrait, async (page) => {
+        await page.goto('/settings');
+        const marker = labelChip(page, PROMPT_LABEL).locator('.label-chip-info');
+        await marker.scrollIntoViewIfNeeded();
+        const popover = page.locator('.data-tooltip-popover');
+
+        await marker.tap();
+        await expect(popover).toHaveClass(/visible/);
+        await expect(popover).toHaveText(PROMPT_TEXT);
+        await expectFitsViewport(page, '.data-tooltip-popover');
+
+        // Pressing the same control again dismisses it; there is no hover to
+        // leave, so without this a tablet reader could never close it.
+        await marker.tap();
+        await expect(popover).not.toHaveClass(/visible/);
+        await expectNoPageOverflow(page);
+      });
     });
 
     test('settings_label_prompts_open_on_a_coarse_pointer - tapping a marker reveals its prompt', async ({ browser }) => {
@@ -439,8 +491,12 @@ test.describe('Settings', () => {
               + `${Math.round(element.getBoundingClientRect().height)}`));
         expect(undersized, 'chip controls below the 44px touch target').toEqual([]);
 
-        // Hover never happens here and :focus-visible does not match a tap, so
-        // without a touch-specific reveal the prompt is simply unreadable.
+        // At this width the presentation is still the pseudo-element pinned to the
+        // bottom of the viewport (components/tooltip.js only takes over above
+        // 640px). Hover never happens here and :focus-visible does not match a
+        // tap, so without a touch-specific reveal the prompt is unreadable.
+        expect(await marker.evaluate(element => getComputedStyle(element, '::after').position))
+          .toBe('fixed');
         await marker.tap();
         await expect.poll(async () => marker.evaluate(element =>
           getComputedStyle(element, '::after').opacity)).toBe('1');

@@ -439,11 +439,58 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         });
     };
 
+    /**
+     * Swallow the compatibility mouse events the browser synthesizes after a tap.
+     *
+     * OpenLayers emits the map's click from the touch's pointerdown, so the
+     * selection panel is rendered and on screen well before mousedown, mouseup
+     * and click are synthesized for that same finger. Those land on whatever is
+     * under the tap point *now* — and on a phone the panel covers the map, so
+     * selecting a cluster also activated the preview photo's link (it carries
+     * target="_blank") and opened the photo in a new tab.
+     *
+     * Scoped by position and by a short window: only the ghost of *this* tap is
+     * swallowed, so a mouse genuinely used on the panel, or a later tap
+     * somewhere else, goes through untouched. Tearing down on the next
+     * touchstart instead would not work — the tap's own touchstart is
+     * dispatched after pointerdown, so it would remove the listeners before the
+     * events they exist to catch.
+     * @param {number} x
+     * @param {number} y
+     */
+    const swallowGhostClick = (x, y) => {
+        /** @param {Event} event */
+        const stop = (event) => {
+            const mouse = /** @type {MouseEvent} */ (event);
+            // Only the ghost of *this* tap: a mouse genuinely used elsewhere on
+            // the panel is a different point and must go through untouched.
+            if (Math.abs(mouse.clientX - x) > 24 || Math.abs(mouse.clientY - y) > 24) return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (event.type === 'click') teardown();
+        };
+        const teardown = () => {
+            window.clearTimeout(backstop);
+            ['mousedown', 'mouseup', 'click'].forEach((type) =>
+                document.removeEventListener(type, stop, true));
+        };
+        ['mousedown', 'mouseup', 'click'].forEach((type) =>
+            document.addEventListener(type, stop, true));
+        // The compatibility events follow touchend immediately; anything later
+        // than this is a new interaction and must not be swallowed. Declared
+        // last, read only from inside teardown, which nothing can call before
+        // this statement runs.
+        const backstop = window.setTimeout(teardown, 400);
+    };
+
     map.on('click', function(/** @type {any} */ evt) {
         const feature = map.forEachFeatureAtPixel(evt.pixel, function(/** @type {any} */ feature) {
             return feature;
         });
         const isShiftClick = Boolean(evt.originalEvent && evt.originalEvent.shiftKey);
+        if (evt.originalEvent && evt.originalEvent.pointerType === 'touch') {
+            swallowGhostClick(evt.originalEvent.clientX, evt.originalEvent.clientY);
+        }
 
         if (feature) {
             const selection = getClusterSelection(feature);
