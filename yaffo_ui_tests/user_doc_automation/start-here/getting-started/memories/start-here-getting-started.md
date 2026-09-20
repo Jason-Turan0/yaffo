@@ -18,3 +18,18 @@
 - Prose unaffected: the section text lists preview / file info / capture date+device /
   location / people / faces / labels, all still visible; nothing describes the tags
   section.
+
+
+## gallery-home.webp
+- 2026 run: 12618 device px differ (0.2836% of the 2784x1600 frame), all inside one 242x82
+  device box at (2468, 73) = the header's Grid|Timeline `view-toggle` (`yaffo/templates/index.html`
+  + `.view-toggle` in `yaffo/static/index.css`). Frame size, clip, grid, sidebar, subtitle count
+  ("Showing 25 of 32 photos") and both card rows are pixel-identical; the labels and the active
+  (Grid) state match too.
+- No dependency hash in `getting-started.lock.json` changed, so the same templates + CSS rendered
+  this one control a pixel or two differently: the pill is right-aligned and content-sized, so its
+  width and edges follow text metrics. Not a product change, not a capture error, not a broken
+  render -> environment_instability.
+- 0.2836% is ~3x the 0.1% "tiny variation" promote gate and the whole control repainted, so do not
+  adopt: quarantine. If the toggle keeps jittering run after run, pin the header metrics (fixed-size
+  view-toggle / explicit crop) instead of chasing a baseline.
