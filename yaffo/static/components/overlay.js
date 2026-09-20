@@ -126,9 +126,35 @@ window.PHOTO_ORGANIZER.COMPONENTS.overlay = {
         const close = () => {
             overlay.classList.remove('active');
             overlay.classList.add('closing');
-            overlay.addEventListener('transitionend', () => {
+
+            /* transitionend alone is not a guarantee the node ever goes away:
+               it does not fire when the close transition is cancelled, when
+               the element is already hidden, or when reduced motion has
+               flattened the duration. Every overlay that failed to fire it
+               stayed in the document forever, holding its content's element
+               ids — so a second open found duplicate ids, and the caller's
+               "is one already open?" check read a corpse as a live overlay.
+               The timer is the floor; transitionend just gets there sooner. */
+            let removed = false;
+            const remove = () => {
+                if (removed) return;
+                removed = true;
                 overlay.remove();
-            }, { once: true });
+            };
+            const longestTransitionMs = getComputedStyle(overlay)
+                .transitionDuration
+                .split(',')
+                .reduce((longest, value) => {
+                    const seconds = parseFloat(value) || 0;
+                    return Math.max(longest, value.includes('ms') ? seconds : seconds * 1000);
+                }, 0);
+
+            if (longestTransitionMs > 0) {
+                overlay.addEventListener('transitionend', remove, { once: true });
+                setTimeout(remove, longestTransitionMs + 50);
+            } else {
+                remove();
+            }
 
             if (closeOnOutsideClick) document.removeEventListener('click', handleOutsideClick);
             window.removeEventListener('resize', handleReposition);

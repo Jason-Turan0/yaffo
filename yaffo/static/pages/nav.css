@@ -17,12 +17,20 @@
 }
 
 .nav-pages-toggle-arrow {
-    font-size: var(--font-size-xl);
+    /* Scaled by transform rather than by type size. As a flex item the
+       glyph's line box was what set the control's height, so the toggle came
+       out taller than the nav links beside it — 48px against 44px on most
+       themes, 46px on scrapbook, whose xl step is the largest. Inheriting the
+       row's own size keeps the box under the 44px floor everywhere, and the
+       scale restores the size the caret used to read at. */
+    font-size: inherit;
+    line-height: 1;
+    transform: scale(1.35);
     transition: transform 0.15s;
 }
 
 .nav-pages-toggle.collapsed .nav-pages-toggle-arrow {
-    transform: rotate(-90deg);
+    transform: rotate(-90deg) scale(1.35);
 }
 
 /* ---- bookmarks-style strip under the main bar (inside the sticky navbar,

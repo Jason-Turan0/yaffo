@@ -103,7 +103,6 @@ async function reorderMembers(page: Page, albumPath: string, orderedIds: string[
 test.describe('Albums Feature', () => {
 
   test.beforeEach(async () => {
-    test.setTimeout(30_000);
   });
 
   test('albums_overview_lists_albums_as_tiles - The albums tab opens on an overview of tiles with covers and counts', async ({ page }) => {
@@ -412,7 +411,6 @@ test.describe('Albums Feature', () => {
   // --------------------------------------------------------------------------
 
   test('albums_routes_fit_every_contract_viewport - No albums route overflows the page at any contract width', async ({ page }) => {
-    test.setTimeout(180_000);
     const albumPath = await seededAlbumPath(page);
     const routes = ['/albums', albumPath, `${albumPath}?edit=1`, `${albumPath}/add`];
 
@@ -430,7 +428,6 @@ test.describe('Albums Feature', () => {
   });
 
   test('albums_nav_uses_a_peer_navbar_panel - The album list is a peer of Menu and comes back to the page on desktop', async ({ page }) => {
-    test.setTimeout(60_000);
     await expectPanelContract(page, { route: '/albums', panelId: 'albums-nav' });
 
     // Escape closes the panel, and the album list inside it still navigates.
@@ -450,7 +447,6 @@ test.describe('Albums Feature', () => {
   });
 
   test('albums_bulk_add_filters_use_a_peer_navbar_panel - Filters is a peer panel with a server-rendered applied count', async ({ page }) => {
-    test.setTimeout(90_000);
     const albumPath = await seededAlbumPath(page);
     await expectPanelContract(page, { route: `${albumPath}/add`, panelId: 'album-add-filters' });
 
@@ -481,7 +477,6 @@ test.describe('Albums Feature', () => {
   });
 
   test('albums_detail_and_edit_fit_a_narrow_viewport - Tiles, header actions and the selection bar stay contained at 390px', async ({ page }) => {
-    test.setTimeout(60_000);
     const albumPath = await seededAlbumPath(page);
     await page.setViewportSize(VIEWPORTS.narrow);
 
@@ -519,7 +514,6 @@ test.describe('Albums Feature', () => {
   });
 
   test('albums_photos_reorder_without_dragging - Move controls are always on screen and are real touch targets', async ({ page, browser }) => {
-    test.setTimeout(60_000);
     const albumPath = await seededAlbumPath(page);
     const originalOrder = await memberIds(page, albumPath);
     expect(originalOrder.length).toBeGreaterThan(1);
@@ -564,7 +558,6 @@ test.describe('Albums Feature', () => {
   });
 
   test('albums_touch_drag_alone_never_reorders_the_album - A finger drag does nothing, so the move control is the touch path', async ({ page, browser }) => {
-    test.setTimeout(60_000);
     const albumPath = await seededAlbumPath(page);
     const originalOrder = await memberIds(page, albumPath);
     expect(originalOrder.length).toBeGreaterThan(1);
@@ -603,7 +596,6 @@ test.describe('Albums Feature', () => {
   });
 
   test('albums_long_album_name_does_not_widen_the_page - An unbreakable album title wraps instead of setting the document width', async ({ page }) => {
-    test.setTimeout(120_000);
     // One word, no break opportunity: `.page-header h1` used to let it size the
     // header, which sized .main-container, which sized the document — so EVERY
     // width scrolled sideways, not only the narrow ones.
@@ -669,7 +661,6 @@ test.describe('Albums Feature', () => {
   });
 
   test('albums_edit_selection_and_add_filters_survive_a_resize - A selection and a chosen filter live through the breakpoint', async ({ page }) => {
-    test.setTimeout(60_000);
     const albumPath = await seededAlbumPath(page);
 
     // Edit mode: the selection is URL state, so it has to come back byte for byte.
@@ -708,7 +699,6 @@ test.describe('Albums Feature', () => {
   });
 
   test('albums_dialogs_fit_the_viewport_and_scroll_their_own_body - Every album dialog stays inside 320px and contains its overflow', async ({ page }) => {
-    test.setTimeout(60_000);
     const albumPath = await seededAlbumPath(page);
     await page.setViewportSize(VIEWPORTS.minimum);
     await page.goto(albumPath);

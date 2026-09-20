@@ -210,7 +210,6 @@ test.describe('Sharing Feature', () => {
   let pageB: Page;
 
   test.beforeEach(async ({ browser }) => {
-    test.setTimeout(90_000); // pairing and pulls involve live p2p calls
     contextB = await browser.newContext({ baseURL: PEER_URL });
     pageB = await contextB.newPage();
   });
@@ -292,7 +291,7 @@ test.describe('Sharing Feature', () => {
         && image.currentSrc === expectedSrc
         && image.complete
         && image.naturalWidth > 0;
-    }), { timeout: 30_000 }).toBe(true);
+    }), { timeout: 20_000 }).toBe(true);
 
     // The filter sidebar is built from A's facets; filtering narrows the results
     const yearSelect = pageB.locator('select#year-select');
@@ -900,7 +899,6 @@ test.describe('Sharing Feature', () => {
   // p2p operation, so it happens once, in Arabic — the direction case that can
   // actually break. Without that scoping this scenario alone runs for minutes.
   test('sharing_translated_surfaces_fit_and_keep_path_reading_order', async ({ page }, testInfo) => {
-    test.setTimeout(300_000);
     // Self-contained: pairing is idempotent, and the earlier revoke scenarios
     // have taken every share away by the time this runs, so it makes (and cleans
     // up) the grant its remote-gallery half needs. Both are done while the

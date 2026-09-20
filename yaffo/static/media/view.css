@@ -565,6 +565,18 @@
         flex: none;
         overflow: visible;
         padding-inline: 0;
+        /* A column so the faces section can lead; see below. */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Tapping a face highlights a region on the photo, so the photo has to
+       still be on screen when you tap. In source order the faces sit under
+       File Information, Location and People — 942px below the image on a
+       390px screen, which put the image roughly that far above the fold.
+       Desktop keeps source order: there the details are beside the photo. */
+    .detail-section-faces {
+        order: -1;
     }
 
     .photo-wrapper {

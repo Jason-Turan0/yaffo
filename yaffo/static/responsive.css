@@ -113,8 +113,15 @@ button.nav-context-toggle[data-icon] {
     }
 
     .navbar-brand {
-        flex: 1;
         margin-inline: 0;
+    }
+
+    /* The brand sizes to its content and the first toggle claims the rest of
+       the row. `flex: 1` on the brand stretched whatever the theme drew behind
+       it: neobrutalist's sticker plate ran 753px wide on a 1024px screen for
+       156px of text. */
+    .navbar > .navbar-container > button:first-of-type {
+        margin-inline-start: auto;
     }
 
     button.nav-menu-toggle[data-icon],
@@ -157,6 +164,13 @@ button.nav-context-toggle[data-icon] {
     }
 
     .navbar-context-panels {
+        /* The host sits inside the navbar, so it took the bar's background
+           while its contents kept inheriting the page's text colour. In
+           memphis — the one built-in theme with a dark bar over a light page —
+           that painted the panel in exactly the colour of the text on it,
+           for a contrast ratio of 1.00. */
+        background: var(--color-surface);
+        color: var(--color-text);
         max-height: calc(100vh - var(--navbar-bar-height, 56px));
         max-height: calc(100dvh - var(--navbar-bar-height, 56px));
         overflow-y: auto;
@@ -198,6 +212,12 @@ button.nav-context-toggle[data-icon] {
         flex: 0 0 100%;
         align-items: stretch;
         flex-direction: column;
+        /* The Pages toggle is a sibling of the links grid, not a member of it,
+           so it cannot pick up that grid's own gap. Both space off this one
+           variable instead, or the toggle lands flush against the last link
+           and covers whatever shadow the theme draws under it. */
+        --nav-stack-gap: 4px;
+        row-gap: var(--nav-stack-gap);
         padding-block-end: 10px;
     }
 
@@ -209,7 +229,12 @@ button.nav-context-toggle[data-icon] {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         width: 100%;
-        gap: 4px;
+    }
+
+    /* Two classes so this outranks the theme skins' own `.navbar-nav { gap }`,
+       which would otherwise space the links differently from the toggle. */
+    .navbar .navbar-nav {
+        gap: var(--nav-stack-gap);
     }
 
     .navbar-nav .nav-link,
@@ -219,6 +244,18 @@ button.nav-context-toggle[data-icon] {
         border: 0;
         border-radius: var(--radius-sm);
         margin: 0;
+        /* `components/icons.css` makes any `.nav-link[data-icon]` inline-flex,
+           which shrink-wraps it inside its stretched grid cell: on a 768px
+           tablet that left ~265px of the cell dead beside a 90px target. */
+        width: 100%;
+    }
+
+    /* Now that the links fill their cell, the icon and label would sit in the
+       middle of it — `icons.css` centres every `[data-icon]` control. A menu
+       reads down its leading edge, so the nav links start there; buttons keep
+       the shared centring. flex-start, not left, so RTL mirrors with it. */
+    .navbar-nav .nav-link[data-icon] {
+        justify-content: flex-start;
     }
 
     .navbar .nav-link.nav-pages-toggle {

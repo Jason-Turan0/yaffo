@@ -23,7 +23,7 @@ const ALL_TEST_NAMES = [LIST_NAME, ADD_NAME, EDIT_NAME, RENAMED_NAME, DELETE_NAM
 
 // Generous per-test budget: the face-assignment waits can sit behind minutes of
 // queued model work when the whole suite runs in parallel.
-test.describe.configure({ mode: 'serial', timeout: 300_000 });
+test.describe.configure({ mode: 'serial' });
 
 function flashSuccess(page: Page): Locator {
   return page.locator('.flash-messages .alert-success');
@@ -130,14 +130,14 @@ async function waitForFaceAssigned(page: Page, personId: number, faceId: number)
   await expect(async () => {
     await page.goto(`/people/${personId}/faces`);
     await expect(page.locator(`[data-face-id="${faceId}"]`)).toBeVisible({ timeout: 1000 });
-  }).toPass({ timeout: 90_000 });
+  }).toPass({ timeout: 20_000 });
 }
 
 async function waitForFaceBackInPool(page: Page, faceId: number): Promise<void> {
   await expect(async () => {
     const ids = await unassignedFaceIds(page);
     expect(ids).toContain(faceId);
-  }).toPass({ timeout: 90_000 });
+  }).toPass({ timeout: 20_000 });
 }
 
 /**
@@ -370,8 +370,6 @@ async function firstPersonId(page: Page): Promise<number> {
 }
 
 test.describe('People — responsive', () => {
-  test.describe.configure({ timeout: 120_000 });
-
   test('the people list renders without page-level overflow at every contract width', async ({ page }) => {
     for (const width of CONTRACT_WIDTHS) {
       await page.setViewportSize({ width, height: 900 });

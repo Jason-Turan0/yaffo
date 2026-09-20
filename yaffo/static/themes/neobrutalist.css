@@ -30,6 +30,17 @@
     gap: 8px;
 }
 
+/* The brand plate is tilted (-2deg) and carries an offset shadow, so it
+   paints below the box it occupies in layout. The stacked menu opens flush
+   against that box and the first nav item landed under the overhang. The
+   panel starts clear of it instead — decoration compensation, scoped to the
+   width where the menu exists. */
+@media (max-width: 1200px) {
+    [data-theme="neobrutalist"] .navbar-primary {
+        padding-block-start: 8px;
+    }
+}
+
 [data-theme="neobrutalist"] .navbar-brand::before {
     content: "";
     width: 28px;

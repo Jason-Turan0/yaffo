@@ -22,7 +22,7 @@ const CUSTOM_AUTOMATION_NAME = `UI Test Automation ${Date.now()}`;
 // first test and deleted in the last one.
 let customSlug: string | null = null;
 
-test.describe.configure({ mode: 'serial', timeout: 60_000 });
+test.describe.configure({ mode: 'serial' });
 
 async function openAutomation(page: Page, slug: string): Promise<void> {
   await page.goto(`/utilities/automations/${slug}`);

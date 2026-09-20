@@ -14,7 +14,25 @@ import {
 } from "@lib/services/isolated_runner";
 import {runPlaywrightTests, RunOptions} from "@lib/services/run_playwright_tests";
 
-export const DEFAULT_SANDBOX_CONCURRENCY = 5;
+/**
+ * Deliberately not "half the cores": the binding constraint is loopback socket
+ * churn, not CPU. Every environment's traffic goes to 127.0.0.1, so a TCP
+ * 4-tuple can only vary by source port — the usable pool is this machine's
+ * ephemeral range (16k ports on macOS), each parked in TIME_WAIT for 2×MSL
+ * after use. At 5 the pool ran dry mid-run and connect() began failing with
+ * EADDRNOTAVAIL / ERR_ADDRESS_INVALID before a packet was ever sent, which
+ * reads as four flaky suites rather than as a machine limit. Measured on a
+ * 10-core box: 0/4 of the affected suites passed at 5, 4/4 at 2.
+ *
+ * Raise it with TEST_SANDBOX_CONCURRENCY where there is headroom. The real fix
+ * is less churn — the isolated app is served by the werkzeug dev server, while
+ * the packaged app uses waitress; if werkzeug is not keeping connections alive,
+ * every request burns a port. Unmeasured so far.
+ *
+ * CI is unaffected either way: one environment per matrix job, so its effective
+ * concurrency is 1. This limit only ever bites a local whole-suite run.
+ */
+export const DEFAULT_SANDBOX_CONCURRENCY = 2;
 export const DEFAULT_SANDBOX_BASE_PORT = 5002;
 export const SANDBOX_CONCURRENCY_ENV = "TEST_SANDBOX_CONCURRENCY";
 export const SANDBOX_BASE_PORT_ENV = "TEST_SANDBOX_BASE_PORT";

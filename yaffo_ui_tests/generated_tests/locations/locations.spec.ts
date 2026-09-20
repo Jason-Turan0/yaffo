@@ -9,7 +9,7 @@ import {
 
 // OpenLayers renders markers on canvas, so marker visibility and cluster state
 // are asserted through the map API exposed at window.PHOTO_ORGANIZER.locations.map.
-test.describe.configure({ mode: 'serial', timeout: 30_000 });
+test.describe.configure({ mode: 'serial' });
 
 type MapCounts = { total: number; unnamed: number };
 type Point = { x: number; y: number };

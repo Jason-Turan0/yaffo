@@ -14,7 +14,7 @@ const SPEC_LABEL = `spec-set-label-${UNIQ}`;
 
 // The suite mutates global application settings (locale, units, directories), so it
 // runs serially and restores every setting it changes.
-test.describe.configure({ mode: 'serial', timeout: 90_000 });
+test.describe.configure({ mode: 'serial' });
 
 async function openSettings(page: Page): Promise<void> {
   await page.goto('/settings');

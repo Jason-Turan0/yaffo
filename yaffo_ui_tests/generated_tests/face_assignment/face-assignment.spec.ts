@@ -18,7 +18,7 @@ type PersonInfo = {
 
 // These tests share one server-side pool of unassigned faces and create/delete
 // people, so they must not interleave.
-test.describe.configure({ mode: 'serial', timeout: 30_000 });
+test.describe.configure({ mode: 'serial' });
 
 /**
  * Deletes a person by POSTing to the server via the browser's fetch (which
@@ -357,8 +357,6 @@ test.describe('Face Assignment', () => {
 const CLUSTERED_FACES_URL = '/faces?group_by=similarity&threshold=2';
 
 test.describe('Face Assignment — responsive', () => {
-  test.describe.configure({ timeout: 90_000 });
-
   test('faces route renders without page-level overflow at every contract width', async ({ page }) => {
     for (const width of CONTRACT_WIDTHS) {
       await page.setViewportSize({ width, height: 900 });

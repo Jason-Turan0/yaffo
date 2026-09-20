@@ -21,7 +21,7 @@ The work is complete when:
   a particular device;
 - resizing or rotating the viewport does not lose selections, entered values,
   scroll position, open media, map state, or in-progress work;
-- the interface remains usable at 200% text zoom and with long translated text;
+- the interface remains usable with long translated text;
 - left-to-right and right-to-left layouts work without maintaining separate
   markup;
 - the classic, darkroom, memphis, neobrutalist, photos-app, and scrapbook themes
@@ -58,7 +58,7 @@ have not all received a complete interaction, locale, and theme review.
 
 Current milestone estimate: the shared foundation and every page-family task
 except P5's acceptance review are complete. What remains is the cross-cutting
-Phase 5 matrix — all themes, the full locale sweep, 200% text zoom, narrow-width
+Phase 5 matrix — all themes, the full locale sweep, narrow-width
 profiling — and the integration gate that runs everything in one pass. Passing
 route containment is only a smoke signal; each closed task is closed by its
 interaction, touch, resize-state, long-content, and scroll-ownership coverage.
@@ -83,7 +83,7 @@ artifacts, not committed visual baselines.
 
 Classic-theme editor screenshots were reviewed at 320 and 1440 px in all three
 locales, including before/after Arabic code-panel captures. P5 remains open for
-all-theme visual review, 200% text zoom, the utility and trigger-editor locale
+all-theme visual review, the utility and trigger-editor locale
 matrix, mixed-direction conversation prose, and run-history review. P7–P8 and the full
 milestone integration gate remain separate work.
 
@@ -233,7 +233,8 @@ current selection, so it is the likelier destination once items are picked.
 - A mobile filter panel renders its contents without desktop `.sidebar`
   background, padding, radius, or shadow. Avoid empty framing and nested scroll
   regions.
-- Menu and page-action buttons use an 8 px gap, at least a 44 px target, a clear
+- Menu and page-action buttons use an 8 px gap, the shared minimum target size
+  owned by `docs/development/accessibility.md` (44 px as built), a clear
   theme-token active state, and theme-aware icons following
   `docs/development/icons.md` (shared outline mask plus neobrutalist override).
   At 400 px and below, their visible text is hidden so Actions, Filters, and
@@ -272,7 +273,7 @@ starting state.
 | Media detail | P1 complete: portrait/landscape stacking, dynamic viewport units, document-owned scrolling, touch face highlighting and redraw, metadata actions, tag editing, video playback, and missing-video states are covered. | `yaffo/templates/media/view.html`, `yaffo/static/media/view.css`, `yaffo/static/media/view.js` |
 | Faces and people | P3 complete: source previews use a viewport-fixed centered modal on phones and anchored popovers on tablets/desktops, Actions/Filters remain separate panels, and assignment state, shortcut reordering, cluster pagination, dialogs, people cards, person galleries, and long names are covered. | `yaffo/templates/faces/`, `yaffo/templates/people/`, `yaffo/static/faces/index.css`, `yaffo/static/people/` |
 | Locations | P4 complete: the existing selection DOM becomes a centered assignment modal below 900 px, every hover-only fact has a touch path, OpenLayers is resized after layout changes, and map, selection, and unsaved assignment state survive rotation and breakpoint changes. | `yaffo/templates/locations/list.html`, `yaffo/static/locations/list.css`, `yaffo/static/locations/list.js` |
-| Utilities | Navigation uses peer panels; stats/results, duplicate review, automation actions, code, and trigger editors have responsive coverage. Cross-theme review, 200% text zoom, and full utility/trigger locale coverage remain. | `yaffo/templates/utilities/`, `yaffo/static/utilities/` |
+| Utilities | Navigation uses peer panels; stats/results, duplicate review, automation actions, code, and trigger editors have responsive coverage. Cross-theme review and full utility/trigger locale coverage remain. | `yaffo/templates/utilities/`, `yaffo/static/utilities/` |
 | Sharing | P6 complete: the sidebar and remote filters are peer panels, pairing/device/grant forms keep unsaved values across resize, remote metadata has a tappable disclosure instead of a hover overlay, transfers and long device/path values stay in document flow, and codes and filesystem paths keep their own reading order in German and Arabic. | `yaffo/templates/sharing/`, `yaffo/static/sharing/sharing.css`, `yaffo/static/sharing/` |
 | Settings and themes | P7 complete: long paths and API-key status wrap, the API-key row is a real wrapping action row, label help tips are visible and tappable with a viewport-pinned bubble, theme nav names ellipsise, draft/publish actions wrap, and the built-in themes are asserted contained at 320 and 390. Covered by Settings 17/17 and Themes 13/13. | `yaffo/templates/settings/`, `yaffo/templates/themes_page/`, `yaffo/static/settings/index.css`, `yaffo/static/themes_page/index.css` |
 | Custom pages | P8 complete: container-driven column bands with row floors, an authored-layout record that keeps Save honest from a narrow canvas, direct controls on hover and focus that keep working after a resize, design-mode drag disabled on touch, presentation reflow in source order, and internally responsive generated widgets. Covered by Custom Pages 18/18. | `yaffo/templates/pages/`, `yaffo/static/pages/detail.css`, `yaffo/static/pages/grid.js` |
@@ -303,9 +304,23 @@ Exercise at least these viewport classes during development:
 | 1024 × 768 | Tablet landscape and desktop transition |
 | 1440 × 900 | Existing desktop behavior and regression baseline |
 
-The contract also includes coarse-pointer use, 200% text zoom, reduced motion,
-safe-area insets, and both `dir="ltr"` and `dir="rtl"`. Keyboard-only operation
-belongs to `docs/development/accessibility.md`.
+The contract also includes coarse-pointer *paths* — a tap equivalent for
+anything hover-only, a touch-safe alternative to any drag — plus safe-area
+insets and both `dir="ltr"` and `dir="rtl"`.
+
+How large a target has to be is a different question, and it is not this plan's:
+minimum target size is WCAG 2.1 SC 2.5.8, and it moved to
+`docs/development/accessibility.md` on 2026-09-20 with the rest of the
+accessibility scope. The 44 px figure this plan's shipped work already meets is
+recorded below as history; the criterion and its verification live there.
+
+Keyboard-only operation, 200% text zoom, and `prefers-reduced-motion` belong to
+`docs/development/accessibility.md`. Text zoom sits there rather than here even
+though it presents as a layout problem: it is WCAG 2.1 SC 1.4.4, and the failure
+it catches — text outgrowing a box whose height does not grow with it — is not
+the one viewport breakpoints are built for. Page zoom scales CSS pixels, so the
+breakpoints in this document already serve it; text-only zoom does not, and that
+gap is the accessibility plan's to close.
 Prefer logical CSS properties such as `margin-inline-start` when touching
 directional layout. Use `dvh`/`svh` with a safe fallback for viewport-bound
 panels so mobile browser chrome does not hide controls.
@@ -460,7 +475,7 @@ different agents. The contract is now frozen, so page owners consume it.
 4. **Utilities — implemented; acceptance review in progress (P5):** index-photo
    stats/results and duplicate review have runnable containment, touch, panel,
    pagination, and resize-state tests. Blank duplicate-directory rows no longer
-   scan the working directory. Theme, zoom, and locale review remain.
+   scan the working directory. Theme and locale review remain.
 5. **Themes — done (P7):** navigation is migrated to the peer-panel contract and
    ellipsises long custom names through the shared `.panel-nav-label`; the default
    badge uses a logical margin instead of a float that a flex row ignored; theme
@@ -479,7 +494,7 @@ different agents. The contract is now frozen, so page owners consume it.
    stacking, trigger input and touch save, contained code/test tables, long names,
    and dialogs have runnable tests. English, German, and Arabic editor checks
    preserve unsent input across all six viewports; source code retains LTR
-   direction inside RTL layouts. Full theme/zoom and trigger-locale review remain.
+   direction inside RTL layouts. Full theme and trigger-locale review remain.
 3. **Custom pages — done (P8):** the canvas runs 12/6/1 column bands chosen from
    the *canvas* width rather than the window, each with a minimum row floor; the
    authored 12-column geometry is captured before GridStack initializes so a save
@@ -503,8 +518,10 @@ All Phase 5 items remain milestone exit work:
 2. Run the matrix in English, German, and Arabic, then spot-check the remaining
    supported locales. Fix truncation, bidirectional text, and logical alignment
    rather than shortening translations.
-3. Test 200% text zoom, coarse pointer, reduced motion, portrait/landscape
-   rotation, and short viewport heights.
+3. Test portrait/landscape rotation and short viewport heights, and that every
+   hover-only or drag interaction has a coarse-pointer path. 200% text zoom,
+   reduced motion, and minimum target size moved to
+   `docs/development/accessibility.md`.
 4. Profile image-heavy grids, maps, and widget pages at narrow widths. Responsive
    work must not cause duplicate media downloads, layout thrashing, or expensive
    resize loops; debounce only work that measurement shows is costly.
@@ -572,7 +589,7 @@ isolation. P5's remaining acceptance review is the only open page-family work.
 | **P2 — Albums — COMPLETE** | Overview, detail/edit, add-photo filters, selection, cover/share dialogs, long content, and mouse/touch-safe reorder paths pass at the contract viewports. Current isolated suite: 19/19. | `yaffo/templates/albums/`, `yaffo/static/albums/` | Panels registered (`albums-nav`, `album-add-filters`). Shared header and touch-target fixes landed through integration. Spec: `specs/albums.yaml`. |
 | **P3 — Faces and people — COMPLETE** | Assignment actions, phone-modal/tablet-and-desktop-popover source previews, shortcut reordering, selection, dialogs, person galleries, filters, long names, pointer parity, and the three-control 375 px navbar are covered. Current isolated suites: faces 20 scenarios and people 15/15. | `yaffo/templates/faces/`, `yaffo/templates/people/`, `yaffo/static/faces/`, `yaffo/static/people/` | Panels registered (`faces-actions`/`faces-filters`, `person-faces-*`). Specs: `specs/face_assignment.yaml`, `specs/people.yaml`. |
 | **P4 — Locations — COMPLETE** | The narrow map plus centered assignment modal, coarse-pointer equivalents, reliable OpenLayers resizing, and center/zoom/selection/unsaved-state preservation are covered. Current isolated suite: 21/21. | `yaffo/templates/locations/`, `yaffo/static/locations/` | Panel registered (`locations-filters`). The narrow presentation reuses the existing selection DOM as a viewport-contained modal. Spec: `specs/locations.yaml`. |
-| **P5 — Utilities and automations — IN PROGRESS** | Responsive implementations and interaction tests are present for all three suites. Editor locale/RTL coverage is added; complete theme, zoom, utility/trigger locale, and run-history review before closing P5. | `yaffo/templates/utilities/`, `yaffo/static/utilities/`, automation templates/styles/scripts | Panels registered (`utilities-nav`, `automations-nav`). Code/table/chat primitives come from the shared owner. Specs: `specs/index_photos.yaml`, `specs/remove_duplicates.yaml`, `specs/automations.yaml`. |
+| **P5 — Utilities and automations — IN PROGRESS** | Responsive implementations and interaction tests are present for all three suites. Editor locale/RTL coverage is added; complete theme, utility/trigger locale, and run-history review before closing P5. | `yaffo/templates/utilities/`, `yaffo/static/utilities/`, automation templates/styles/scripts | Panels registered (`utilities-nav`, `automations-nav`). Code/table/chat primitives come from the shared owner. Specs: `specs/index_photos.yaml`, `specs/remove_duplicates.yaml`, `specs/automations.yaml`. |
 | **P6 — Sharing and remote gallery — COMPLETE** | Pairing and QR/code, device and grant forms, remote filters and previews, touch metadata, file pulls, transfers, pagination, long device/path content, and a German/Arabic direction pass are implemented and covered. | `yaffo/templates/sharing/`, `yaffo/static/sharing/` | Panels registered (`sharing-sidebar`, `remote-files-filters`). Reuses the final library behaviour from P1. Spec: `specs/sharing.yaml`. |
 | **P7 — Settings, themes, and standalone states — COMPLETE** | Paths, API keys, label chips and their help tips, destructive actions, theme nav/draft/chat, and the error/security/demo screens are adapted and covered, including long-copy cases, the German/Arabic pass on settings, and all six built-in theme pages at 320 and 390. Current isolated suites: settings 17/17 and themes 13/13. | `yaffo/templates/settings/`, `yaffo/templates/themes_page/`, standalone templates, `yaffo/static/settings/`, `yaffo/static/themes_page/`, `yaffo/static/error.css`, `yaffo/static/demo-mode.css` | Panel registered (`themes-nav`). Shared file-browser/modal/chat issues go to the shared owner. Do not modify theme skins except for page-specific verified compatibility fixes. Specs: `specs/settings.yaml`, `specs/themes.yaml`. |
 | **P8 — Custom pages and widgets — COMPLETE** | Container-driven column bands and row floors, the authored-layout record that keeps Save correct from a narrow canvas, the design-mode gesture policy, direct controls that survive a resize, source-order presentation reflow, iframe sizing, and generated-widget responsiveness are all in and covered, with `tests_js/pages/grid.test.js` covering the band logic and the refused-swap reorder. Current isolated suite: 18/18. | `yaffo/templates/pages/`, `yaffo/static/pages/detail.css`, `yaffo/static/pages/grid.js`, widget templates/runtime | Shared direct-control/icon patterns come from the shared owner; otherwise independent. Spec: `specs/custom_pages.yaml`. |
@@ -688,12 +705,12 @@ expectations this plan used to carry.
 ## Definition of done for each page
 
 - No page-level horizontal overflow from 320 px through desktop widths.
-- No clipped, overlapped, or unreachable controls at the target viewport sizes
-  or 200% text zoom.
+- No clipped, overlapped, or unreachable controls at the target viewport sizes.
 - Primary actions and state are equivalent across widths; responsive layout does
   not silently remove functionality.
 - Hover-only interactions have a coarse-pointer equivalent, and drag
-  interactions have a touch-safe alternative.
+  interactions have a touch-safe alternative. Whether those targets are *large
+  enough* is SC 2.5.8, checked under `docs/development/accessibility.md`.
 - Scroll ownership is obvious: the document normally scrolls, while tables,
   modal bodies, code blocks, and intentional sheets contain only their own
   overflow.

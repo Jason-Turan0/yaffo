@@ -10,8 +10,22 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO = window.PHOTO_ORGANIZER.VIEW_PHOTO || {};
  */
 window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) => {
     /**
+     * @typedef {{faceId: number, overlay: HTMLElement, close: () => void}} OpenReassign
+     */
+
+    /**
+     * The overlay currently on screen, if any. Without this every press built
+     * another copy: three presses on one face left three stacked overlays, all
+     * carrying the same `reassign-person-select-<id>` element id, so
+     * getElementById and SearchableSelect resolved to the wrong one.
+     * @type {OpenReassign | null}
+     */
+    let openReassign = null;
+
+    /**
      * @param {HTMLElement} faceThumbnail
      * @param {number} faceId
+     * @returns {OpenReassign}
      */
     const createReassignOverlay = (faceThumbnail, faceId) => {
         if (!window.PHOTO_ORGANIZER.COMPONENTS.overlay) {
@@ -42,13 +56,15 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
             {placement: 'right', closeOnOutsideClick: false}
         )
 
+        const record = {faceId, overlay, close};
+
         const selectElement = overlay.querySelector(`#reassign-person-select-${faceId}`);
-        if (!(selectElement instanceof HTMLSelectElement)) return overlay;
+        if (!(selectElement instanceof HTMLSelectElement)) return record;
         window.SearchableSelect?.init(selectElement);
 
         const cancelBtn = overlay.querySelector('[data-action="cancel"]');
         const applyBtn = overlay.querySelector('[data-action="apply"]');
-        if (!(cancelBtn instanceof HTMLButtonElement) || !(applyBtn instanceof HTMLButtonElement)) return overlay;
+        if (!(cancelBtn instanceof HTMLButtonElement) || !(applyBtn instanceof HTMLButtonElement)) return record;
 
         cancelBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -60,7 +76,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
             await reassignFace(faceId, selectElement.value, applyBtn);
         });
 
-        return overlay;
+        return record;
     };
 
     /**
@@ -113,7 +129,24 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
 
     const handleFaceClick = (/** @type {Event} */ e) => {
         if (!(e.currentTarget instanceof HTMLElement)) return;
-        createReassignOverlay(e.currentTarget, parseInt(e.currentTarget.dataset.faceId || '', 10));
+        const faceId = parseInt(e.currentTarget.dataset.faceId || '', 10);
+
+        /* A closing overlay is still in the DOM until its transition ends, and
+           Esc closes one without going through us, so read the node rather
+           than trusting the slot. */
+        const current = openReassign;
+        const isOpen = current !== null
+            && current.overlay.isConnected
+            && !current.overlay.classList.contains('closing');
+        const pressedTheOpenFace = isOpen && current.faceId === faceId;
+
+        if (isOpen && current) current.close();
+        openReassign = null;
+
+        // A second press on the same face dismisses it.
+        if (pressedTheOpenFace) return;
+
+        openReassign = createReassignOverlay(e.currentTarget, faceId);
     };
 
 

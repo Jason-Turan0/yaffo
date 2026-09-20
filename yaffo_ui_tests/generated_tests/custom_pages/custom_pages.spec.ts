@@ -19,7 +19,7 @@ const SINGLE_COLUMN_MIN_ROWS = 3;
 
 // The suite creates and deletes its own pages; serial keeps the created page ids
 // flowing between scenarios and avoids racing the shared nav list.
-test.describe.configure({ mode: 'serial', timeout: 120_000 });
+test.describe.configure({ mode: 'serial' });
 
 const createdPageIds = new Set<number>();
 
@@ -374,7 +374,6 @@ test.describe('Custom Pages', () => {
   }
 
   test('custom_page_routes_fit_every_contract_width - The design and presentation views contain themselves from 320px up', async ({ page }) => {
-    test.setTimeout(180_000);
     const pageId = await seedLayoutPage(page);
 
     for (const width of CONTRACT_WIDTHS) {
@@ -399,7 +398,6 @@ test.describe('Custom Pages', () => {
   });
 
   test('custom_page_canvas_column_bands_follow_the_canvas_not_the_window - The column count comes from the canvas element, not the viewport', async ({ page }) => {
-    test.setTimeout(120_000);
     const pageId = await seedLayoutPage(page);
     const grid = page.locator('.grid-stack');
 
@@ -449,7 +447,6 @@ test.describe('Custom Pages', () => {
   });
 
   test('custom_page_intermediate_band_widgets_get_a_real_width - Six-column widgets are laid out, not collapsed to zero width', async ({ page }) => {
-    test.setTimeout(120_000);
     const pageId = await seedLayoutPage(page);
 
     // Regression: the vendored gridstack.min.css only carries the width/offset
@@ -479,7 +476,6 @@ test.describe('Custom Pages', () => {
   });
 
   test('custom_page_narrow_widgets_keep_a_readable_minimum_height - A short wide widget gains vertical room in one column', async ({ page }) => {
-    test.setTimeout(120_000);
     const pageId = await seedLayoutPage(page);
     const shortWidget = page.locator(`.grid-stack-item[gs-id="${LAYOUT_WIDGETS[0].id}"]`);
 
@@ -509,7 +505,6 @@ test.describe('Custom Pages', () => {
   });
 
   test('custom_page_widgets_move_and_resize_without_dragging - The explicit controls do everything the drag gestures do', async ({ page, browser }) => {
-    test.setTimeout(120_000);
     const pageId = await seedLayoutPage(page);
     const [first, second] = LAYOUT_WIDGETS;
 
@@ -572,7 +567,6 @@ test.describe('Custom Pages', () => {
   });
 
   test('custom_page_touch_drag_on_a_widget_scrolls_the_page - A finger drag scrolls the document instead of moving a widget', async ({ page, browser }) => {
-    test.setTimeout(120_000);
     const pageId = await seedLayoutPage(page);
 
     await withTouchContext(browser, VIEWPORTS.narrow, async (touchPage, context) => {
@@ -604,7 +598,6 @@ test.describe('Custom Pages', () => {
   });
 
   test('custom_page_mouse_can_reach_the_direct_controls - Hovering a widget reveals its move and resize controls', async ({ page }) => {
-    test.setTimeout(120_000);
     const pageId = await seedLayoutPage(page);
 
     await page.setViewportSize(VIEWPORTS.desktop);
@@ -625,7 +618,6 @@ test.describe('Custom Pages', () => {
   });
 
   test('custom_page_save_from_a_narrow_canvas_keeps_the_desktop_layout - Saving on a phone publishes the authored 12-column layout', async ({ page }) => {
-    test.setTimeout(120_000);
     const pageId = await seedLayoutPage(page);
     const [first, second] = LAYOUT_WIDGETS;
 
@@ -654,7 +646,6 @@ test.describe('Custom Pages', () => {
   });
 
   test('custom_page_layout_survives_a_resize_through_the_breakpoint - One column and back restores the layout and the unsaved edit', async ({ page }) => {
-    test.setTimeout(120_000);
     const pageId = await seedLayoutPage(page);
     const [first, second] = LAYOUT_WIDGETS;
     const widget = page.locator(`.grid-stack-item[gs-id="${first.id}"]`);
@@ -687,7 +678,6 @@ test.describe('Custom Pages', () => {
   });
 
   test('custom_page_presentation_reflows_in_source_order - The narrow stack follows the page\'s reading order', async ({ page }) => {
-    test.setTimeout(120_000);
     const pageId = await seedLayoutPage(page);
 
     await page.setViewportSize(VIEWPORTS.narrow);
@@ -728,7 +718,6 @@ test.describe('Custom Pages', () => {
   });
 
   test('custom_page_widgets_receive_their_real_container_size - A widget frame is exactly the box it occupies', async ({ page }) => {
-    test.setTimeout(120_000);
     const pageId = await seedLayoutPage(page);
 
     for (const viewport of [VIEWPORTS.narrow, VIEWPORTS.desktop]) {
@@ -768,7 +757,6 @@ test.describe('Custom Pages', () => {
   });
 
   test('custom_page_long_widget_titles_do_not_widen_the_canvas - An unbreakable title is truncated, not allowed to push the page', async ({ page }) => {
-    test.setTimeout(120_000);
     const longTitle = `Unbroken${'Titel'.repeat(20)}`;
     const pageId = await seedLayoutPage(page, [
       { ...LAYOUT_WIDGETS[0], title: longTitle },

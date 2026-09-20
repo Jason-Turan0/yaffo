@@ -10,7 +10,7 @@ const SPEC_FILE_STEM = `spec-index-${UNIQ}`;
 // around it, so it runs serially and cleans back to the in-sync baseline. The Flask
 // server and this test process share a filesystem (local isolated environment), so
 // node:fs is the setup mechanism.
-test.describe.configure({ mode: 'serial', timeout: 900_000 });
+test.describe.configure({ mode: 'serial' });
 
 let mediaDir: string;
 let copiedFile: string | null = null;
@@ -36,7 +36,7 @@ async function openIndexPhotos(page: Page): Promise<void> {
 // counter to leave its '—' placeholder.
 async function waitForScanDone(page: Page): Promise<void> {
   for (const stat of ['stat-total-filesystem', 'stat-total-imported', 'stat-total-indexed', 'stat-unindexed', 'stat-orphaned']) {
-    await expect(page.locator(`#${stat}`)).not.toHaveText('—', { timeout: 60_000 });
+    await expect(page.locator(`#${stat}`)).not.toHaveText('—', { timeout: 20_000 });
   }
 }
 
@@ -64,7 +64,7 @@ async function syncAndWaitForZero(page: Page): Promise<void> {
     await waitForScanDone(page);
     expect(await statValue(page, 'stat-unindexed')).toBe(0);
     expect(await statValue(page, 'stat-orphaned')).toBe(0);
-  }).toPass({ timeout: 360_000, intervals: [3_000] });
+  }).toPass({ timeout: 20_000, intervals: [3_000] });
 
   // One more clean load before asserting the settled UI: a load that races the
   // finishing import can reveal #sync-button (the reveal is one-way per document)

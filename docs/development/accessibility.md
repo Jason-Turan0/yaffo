@@ -102,8 +102,47 @@ inherits them.
    `:hover` and `:focus-visible`; the face source preview and the map's cluster
    hover behaviour have their own variants. WCAG 1.4.13 also wants such content
    dismissable and persistent.
+
 6. **Reduced motion** is already handled globally in `static/responsive.css` and
-   needs verification, not implementation.
+   needs verification, not implementation. Ownership transferred from
+   `responsive.md` on 2026-09-20, where it was Phase 5 exit work. Spot-checked
+   during the responsive visual review and recorded as fine; what that pass did
+   not single out is the GridStack band transition on custom pages, the most
+   motion-heavy surface in the app. This serves users with vestibular
+   disorders, for whom unwanted motion is a symptom trigger rather than a
+   preference. Confirm under Phase D.
+7. **Minimum target size** (WCAG 2.1 SC 2.5.8 Target Size (Minimum), Level AA —
+   24×24 CSS px; SC 2.5.5 Target Size, AAA, asks 44×44). Transferred from
+   `responsive.md` on 2026-09-20. The responsive work already ships 44 px
+   targets across the shell, pagination, album reorder controls, the standalone
+   error/CSRF screens and the narrow menu, so this is very likely a pass in
+   practice; what is missing is a criterion that owns it and a check that proves
+   it. The sizing rule itself lives in `static/responsive.css` under
+   `@media (hover: none), (pointer: coarse)`.
+
+   **How to test it is an open question — deliberately recorded rather than
+   guessed.** What is known so far:
+
+   - A desktop browser **never matches** `(hover: none), (pointer: coarse)`, so
+     the 44 px floor stays inert no matter how narrow the window is. Measuring
+     targets by resizing a window produces meaningless numbers — a sweep at
+     390px reported 13 undersized controls on `/settings` and 3 on `/people`
+     that the coarse-pointer rule fixes on a real device.
+   - Playwright *can* reach it: a context created with `isMobile: true` /
+     `hasTouch` matches the query, and `generated_tests/_support/responsive.ts`
+     already exposes `withTouchContext` for exactly this. Several specs assert
+     `boundingBox().height >= 44` inside it today.
+   - **Trap:** one `page.screenshot({fullPage: true})` permanently tears down
+     that emulation for the rest of the context — after it, the same button
+     measured 44 px then 37 px with no application change. Any target-size
+     assertion must run before any full-page capture.
+   - axe-core has a `target-size` rule, but it is not in the default ruleset in
+     every version; whether to lean on it or keep hand-written geometry
+     assertions is part of the open question.
+   - Decide which level is being claimed. The app builds to 44 px (AAA's
+     number) while AA only requires 24 px, so the bar being asserted should be
+     stated rather than inferred from whatever the CSS happens to do.
+
 
 ## Phase C: Page families
 
@@ -131,8 +170,49 @@ done:
    gallery, one form-heavy page, and one dialog.
 3. Reading-order review where the visual order and DOM order diverge — most
    likely the narrow-screen panel host, which moves live DOM into the navbar.
+
+   **Known divergence, recorded 2026-09-20 — media detail, faces section.**
+   The panel host turns out not to be a divergence at all: `nav.js` *moves* the
+   live node rather than cloning it, so its visual and DOM order stay in step.
+   This is the first real one. Below 900px `.detail-section-faces` is pulled
+   above the rest of the metadata with `order: -1`
+   (`yaffo/static/media/view.css`), because tapping a face highlights a region
+   on the photo and in source order the faces sat 942px below it — the photo
+   had scrolled off the top by the time you could reach them. `order` moves
+   paint, not traversal, so a keyboard user now sees Faces first and tabs into
+   File Information first. That fails "Focus order follows the visual and
+   reading order" below, knowingly.
+
+   Three ways to close it, none taken yet: reorder the template so the DOM
+   matches the narrow order and re-order for desktop instead (which moves the
+   mismatch rather than removing it); relocate the node the way `nav.js`
+   relocates panels, which removes it in both modes at the cost of JS; or
+   `reading-flow`, once it is not Chromium-only.
 4. A pass in a long locale (German) and an RTL locale (Arabic), since both
    change announced content and traversal order.
+5. **200% text zoom** (WCAG 2.1 SC 1.4.4, Level AA). Transferred from
+   `responsive.md` on 2026-09-20; it had been sitting in that plan's Phase 5
+   exit work, where it blocked a milestone it does not belong to.
+
+   Test **text-only** zoom, not page zoom. Page zoom scales CSS pixels, so a
+   1280px viewport at 200% behaves like a 640px one and the responsive
+   breakpoints already serve it. Text-only zoom — Firefox's text-only mode, OS
+   font scaling, a user stylesheet — grows text inside boxes that do not grow
+   with it, and that is the failure SC 1.4.4 is written against. The audience is
+   not niche: low vision, presbyopia (most people past about 45), and anyone who
+   simply runs their browser large.
+
+   Most likely to break, from the responsive review: the three-control navbar
+   row at ≤400px, pagination icon rows, table headers, and chip lists. Anything
+   with a fixed `height`, a `min-height` the text can outgrow, or a single-line
+   truncation is a candidate.
+
+   **Open scope question.** The responsive checklist records this as "Not
+   supported". That is a decision, not a result, and it needs an explicit one
+   here: either it is in scope and these screens get fixed, or it is recorded as
+   out of scope with a reason. It should not stay implicit.
+6. **Reduced motion**, verifying the global rule recorded in Phase B item 6 —
+   every animated surface, and the custom-pages band transition first.
 
 ## Definition of done for each page
 
@@ -146,6 +226,8 @@ done:
 - Hover-revealed content is also reachable by focus, is dismissable, and
   persists while pointed at.
 - Focus order follows the visual and reading order.
+- Interactive targets meet the minimum size this plan claims (see Phase B item
+  7), measured in a touch context rather than a resized desktop window.
 - Contrast passes against every built-in theme's tokens.
 - The manual checklist above is run for the page family and its findings are
   either fixed or recorded in the baseline with a reason.
@@ -158,3 +240,19 @@ state preservation across resize. Where the two meet — a control that a layout
 change pushed off-screen, or a panel that is visually hidden but still in the
 tab order — the responsive plan owns the geometry and this plan owns the
 traversal. Neither plan should grow assertions belonging to the other.
+
+**Transferred in on 2026-09-20:** 200% text zoom, `prefers-reduced-motion`, and
+minimum target size — all three were Phase 5 exit work in `responsive.md`. Each
+presents as a layout question, which is how they ended up there, but each is a
+WCAG criterion whose users are people with a specific need rather than people on
+a specific device, and none was blocking anything the responsive milestone
+actually owns. Their verification is this plan's, and will be done on its own
+branch.
+
+The seam with target size is worth stating, because the responsive plan still
+carries most of the coarse-pointer work: **that** plan owns whether a tap path
+exists at all — a touch equivalent for hover-only content, an alternative to any
+drag — and **this** one owns whether the resulting target is big enough. The
+44 px controls already shipped are recorded there as history; the criterion and
+its check are here. Safe-area insets and text direction stay there too, being
+device and locale properties rather than assistive ones.

@@ -20,7 +20,7 @@ const DELETE_LABEL = `SpecTestDelete-${UNIQ}`;
 
 // The suite mutates global theme state (default theme, custom theme records), so
 // it runs serially and restores what it changes.
-test.describe.configure({ mode: 'serial', timeout: 120_000 });
+test.describe.configure({ mode: 'serial' });
 
 let sandboxDbPath: string;
 const createdSlugs = new Map<string, string>(); // label -> slug

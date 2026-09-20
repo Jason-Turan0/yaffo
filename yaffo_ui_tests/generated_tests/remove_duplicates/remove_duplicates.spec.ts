@@ -8,7 +8,7 @@ const GROUP_COUNT = 12; // > page size (10) so pagination is exercised
 // The suite builds its own duplicate corpus in a scratch directory (never the
 // shared library) and moves duplicates to a scratch destination, so the sandbox
 // stays untouched. Serial: one find_duplicates job feeds all scenarios.
-test.describe.configure({ mode: 'serial', timeout: 300_000 });
+test.describe.configure({ mode: 'serial' });
 
 let scanDir: string;
 let destDir: string;
@@ -99,7 +99,7 @@ test.describe('Remove Duplicates', () => {
       const fresh = [...await cardIds()].filter(id => !before.has(id));
       expect(fresh).toHaveLength(1);
       jobId = fresh[0].replace(/^job-/, '');
-    }).toPass({ timeout: 30_000 });
+    }).toPass({ timeout: 20_000 });
     expect(jobId).toBeTruthy();
 
     // Hashing runs behind the shared worker; poll the results page until every
@@ -107,7 +107,7 @@ test.describe('Remove Duplicates', () => {
     await expect(async () => {
       await openResults(page);
       await expect(headerStat(page, 'Duplicate Groups Found')).toHaveText(String(GROUP_COUNT), { timeout: 1000 });
-    }).toPass({ timeout: 180_000, intervals: [2_000] });
+    }).toPass({ timeout: 20_000, intervals: [2_000] });
 
     // Each group shows both copies with the first kept (unselected) and the rest
     // marked for removal (selected).
@@ -258,6 +258,6 @@ test.describe('Remove Duplicates', () => {
     await expect(async () => {
       expect(countEntriesIn(destDir)).toBe(GROUP_COUNT);
       expect(countEntriesIn(scanDir)).toBe(GROUP_COUNT);
-    }).toPass({ timeout: 120_000, intervals: [2_000] });
+    }).toPass({ timeout: 20_000, intervals: [2_000] });
   });
 });
