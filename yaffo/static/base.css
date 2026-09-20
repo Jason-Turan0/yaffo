@@ -185,6 +185,7 @@ textarea {
     display: flex;
     gap: 20px;
     min-height: calc(100vh - 100px);
+    min-height: calc(100dvh - 100px);
 }
 
 .page-header {

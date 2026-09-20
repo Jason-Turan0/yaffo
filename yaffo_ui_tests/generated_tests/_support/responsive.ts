@@ -169,11 +169,18 @@ export async function withTouchContext(
   viewport: { width: number; height: number },
   run: (page: Page, context: BrowserContext) => Promise<void>,
 ): Promise<void> {
+  // `hasTouch` without `isMobile`. Touch emulation alone is what makes
+  // `(pointer: coarse)` and `(hover: none)` match — verified identical with and
+  // without `isMobile`, so the coarse-pointer rules under test still apply.
+  // `isMobile` additionally turns on Chromium's mobile hover emulation, which
+  // synthesises mouse compatibility events around a tap. On a thumbnail that
+  // carries inline `onmouseenter`/`onmouseleave`, a trailing mouseleave lands
+  // after the tap and clears the highlight the tap had just set, so an
+  // assertion on the post-tap state reads an already-cleared element.
   const context = await browser.newContext({
     baseURL: BASE_URL,
     viewport,
     hasTouch: true,
-    isMobile: true,
   });
   try {
     await run(await context.newPage(), context);

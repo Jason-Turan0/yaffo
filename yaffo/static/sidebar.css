@@ -124,6 +124,7 @@
     top: calc(var(--navbar-height, 64px) + 16px);
     box-shadow: var(--shadow-sm);
     max-height: calc(100vh - var(--navbar-height, 64px) - 36px);
+    max-height: calc(100dvh - var(--navbar-height, 64px) - 36px);
     overflow-y: auto;
 }
 

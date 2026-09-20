@@ -105,7 +105,7 @@ inherits them.
 
 6. **Reduced motion** is already handled globally in `static/responsive.css` and
    needs verification, not implementation. Ownership transferred from
-   `responsive.md` on 2026-09-20, where it was Phase 5 exit work. Spot-checked
+   `responsive.md` on 2026-09-20, where it had been outstanding. Spot-checked
    during the responsive visual review and recorded as fine; what that pass did
    not single out is the GridStack band transition on custom pages, the most
    motion-heavy surface in the app. This serves users with vestibular
@@ -191,8 +191,8 @@ done:
 4. A pass in a long locale (German) and an RTL locale (Arabic), since both
    change announced content and traversal order.
 5. **200% text zoom** (WCAG 2.1 SC 1.4.4, Level AA). Transferred from
-   `responsive.md` on 2026-09-20; it had been sitting in that plan's Phase 5
-   exit work, where it blocked a milestone it does not belong to.
+   `responsive.md` on 2026-09-20, where it had been outstanding work blocking a
+   milestone it does not belong to.
 
    Test **text-only** zoom, not page zoom. Page zoom scales CSS pixels, so a
    1280px viewport at 200% behaves like a 640px one and the responsive
@@ -242,7 +242,7 @@ tab order — the responsive plan owns the geometry and this plan owns the
 traversal. Neither plan should grow assertions belonging to the other.
 
 **Transferred in on 2026-09-20:** 200% text zoom, `prefers-reduced-motion`, and
-minimum target size — all three were Phase 5 exit work in `responsive.md`. Each
+minimum target size — all three were outstanding work in `responsive.md`. Each
 presents as a layout question, which is how they ended up there, but each is a
 WCAG criterion whose users are people with a specific need rather than people on
 a specific device, and none was blocking anything the responsive milestone

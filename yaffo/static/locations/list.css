@@ -16,6 +16,7 @@
 #map {
     flex: 1;
     height: calc(100vh - 200px);
+    height: calc(100dvh - 200px);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     transition: flex 0.3s ease;
