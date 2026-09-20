@@ -36,6 +36,10 @@ export default defineWalkthrough({
         await visit("/utilities/automations");
         await visit("/themes");
 
+        // Device sharing: the glossary now defines Device, Pairing, and Share
+        // grant, so the surfaces that give those terms meaning are observed too.
+        await visit("/sharing");
+
         // Custom page IDs belong to fixture data, so resolve the seeded page from
         // its navigation entry rather than baking its current database ID in here.
         await visit("/?view=grid");

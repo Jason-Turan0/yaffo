@@ -88,3 +88,19 @@ A single interactive part of a custom page.
 
 **Theme**  
 A visual style for Yaffo's interface.
+
+## Sharing
+
+**Device**  
+Another copy of Yaffo on a second computer, paired with this one to exchange
+photos. Paired devices are remembered individually and can be revoked at any
+time.
+
+**Pairing**  
+The one-time exchange that connects two devices, confirmed with a pairing code.
+Pairing on its own grants access to nothing.
+
+**Share grant**  
+The permission that lets a paired device pull one scope: a media directory, a
+folder inside one, or a single album. Revoking a grant stops later transfers but
+does not recall files that were already pulled.

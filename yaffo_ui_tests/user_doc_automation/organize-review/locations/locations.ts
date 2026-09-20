@@ -165,7 +165,8 @@ export default defineWalkthrough({
                 .PHOTO_ORGANIZER.locations.map.vectorSource.getFeatures().length > 0
         );
 
-        // Locations owns a page-specific filter layout.
+        // Locations renders the same shared, app-wide filter layout as the
+        // gallery; only the filter panel itself is page-specific.
         await page.locator("#configure-filters-btn").click();
         await page.locator("#configureFiltersModal.active").waitFor();
         await page.keyboard.press("Escape");

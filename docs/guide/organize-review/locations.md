@@ -62,10 +62,11 @@ without requiring a full page reload.
 
 Yaffo can suggest a location name in two ways:
 
-- If the photos within the configured nearby radius have exactly one saved
-  location name, Yaffo recommends that name.
-- Otherwise, Yaffo sends the center of the selection to its reverse-geocoding
-  service and may suggest the returned place name.
+- If the photos within the configured nearby radius of the selection have
+  exactly one saved location name, Yaffo recommends that name.
+- Otherwise, Yaffo sends the coordinates of the selected item closest to the
+  centre of the selection to its reverse-geocoding service and may suggest the
+  returned place name.
 
 Recommendations are meant to speed up assignment. Review the suggestion before
 applying it.

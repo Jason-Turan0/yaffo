@@ -19,6 +19,30 @@ const customThemesNav = (page: Page) =>
 const systemThemesNav = (page: Page) =>
     page.locator('.themes-sidebar h3:has-text("System") + ul.panel-nav');
 
+// The page wires its buttons and the chat dialog from the `yaffo:app-init-complete`
+// handler, which only runs once the shared scripts and i18n have loaded. A full
+// navigation (creating or renaming a theme, or the reload after a generation) can
+// leave the server-rendered controls usable before that handler has run, so
+// clicking Send first would submit the form natively instead of starting a run.
+// Poll the init handler's own products (initPage / initChat) before each click;
+// waitForFunction keeps polling across the navigation instead of throwing.
+const waitForThemesPage = async (page: Page): Promise<void> => {
+    await page.waitForFunction(() => Boolean(
+        (window as typeof window & {
+            PHOTO_ORGANIZER?: {themes?: {page?: unknown}};
+        }).PHOTO_ORGANIZER?.themes?.page
+    ));
+};
+
+const waitForThemeChat = async (page: Page): Promise<void> => {
+    await waitForThemesPage(page);
+    await page.waitForFunction(() => Boolean(
+        (window as typeof window & {
+            PHOTO_ORGANIZER?: {themes?: {chat?: unknown}};
+        }).PHOTO_ORGANIZER?.themes?.chat
+    ));
+};
+
 const csrfToken = async (page: Page): Promise<string> => {
     const token = await page.evaluate(() => (
         window as Window & {APP_CONFIG?: {csrfToken?: string}}
@@ -97,6 +121,7 @@ export default defineWalkthrough({
         let originalDefault: string | undefined;
         try {
             await visit("/themes");
+            await waitForThemesPage(page);
             await removeDocumentationThemes(page);
             originalDefault = new URL(page.url()).pathname.split("/").pop();
 
@@ -118,18 +143,20 @@ export default defineWalkthrough({
             temporarySlug = new URL(page.url()).pathname.split("/").pop();
             if (!temporarySlug) throw new Error("The new theme has no slug");
             await page.locator(".page-header").filter({hasText: TEMP_LABEL}).waitFor();
+            await waitForThemeChat(page);
 
             // The documentation sandbox has no provider key. Simulate only the
             // external generation responses while exercising the real chat UI.
+            // Match the routes by pattern: the create route owns the slug.
             let statusCalls = 0;
-            await page.route(`**/themes/${temporarySlug}/chat`, async (route) => {
+            await page.route("**/themes/*/chat", async (route) => {
                 await route.fulfill({
                     status: 202,
                     contentType: "application/json",
                     body: JSON.stringify({slug: temporarySlug}),
                 });
             });
-            await page.route(`**/themes/${temporarySlug}/status`, async (route) => {
+            await page.route("**/themes/*/status", async (route) => {
                 statusCalls += 1;
                 const running = statusCalls < 3;
                 await route.fulfill({
@@ -155,6 +182,9 @@ export default defineWalkthrough({
             await reloaded;
             await page.unrouteAll({behavior: "wait"});
 
+            // A settled generation reloads the page; wait for its handlers before
+            // opening the rename modal.
+            await waitForThemesPage(page);
             await page.locator("#rename-theme-button").click();
             const renameModal = page.locator("#renameThemeModal.active");
             await renameModal.waitFor();
@@ -165,6 +195,7 @@ export default defineWalkthrough({
             ]);
             temporarySlug = new URL(page.url()).pathname.split("/").pop();
             await page.locator(".page-header").filter({hasText: RENAMED_LABEL}).waitFor();
+            await waitForThemesPage(page);
 
             await page.getByRole("button", {name: "Make default"}).click();
             await customThemesNav(page).locator("li").filter({hasText: RENAMED_LABEL})
@@ -174,6 +205,7 @@ export default defineWalkthrough({
             if (originalDefault) await setDefault(page, originalDefault);
 
             await visit(`/themes/${temporarySlug}`);
+            await waitForThemesPage(page);
             await page.locator("#delete-theme-button").click();
             await page.locator("#global-confirm-dialog.active").waitFor();
             await Promise.all([
