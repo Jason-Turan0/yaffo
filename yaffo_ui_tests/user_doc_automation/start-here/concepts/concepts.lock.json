@@ -1,6 +1,6 @@
 {
     "page": "start-here/concepts",
-    "lastVerifiedSha": "eb0643be14dd3c37117661f27a7016422c919bc9",
+    "lastVerifiedSha": "e0318d90b253b3ad104ff9006d8dd3a18637d23d",
     "observed": {
         "page": "start-here/concepts",
         "urls": [
@@ -253,7 +253,7 @@
         "yaffo/static/albums/albums.css": "3e89aa5c8295acce76268629ae1a0e7cbd0eecc6153dec90d456724f9971210f",
         "yaffo/static/albums/albums.js": "2bc17963a8cbce25be2b8106c1450ad9ea9ef51a6041ac5e3c840ac74a87e42a",
         "yaffo/static/app.js": "23cc0c949f767bd3b4baa01da565535ca4eb6d14cf5981989d377d99d5b6daee",
-        "yaffo/static/base.css": "895531ddc0685134bc1c8444163eb0cf006c3f227816db5cc438b2a7f8952b6e",
+        "yaffo/static/base.css": "972049846113b565b371880ecd34e2f3064ed8e90abe0d8b5ba196669b7007fd",
         "yaffo/static/button.css": "3d0afa00af06370de8c950147691ae1db80a807180f01dca6f109dfb24f3ceba",
         "yaffo/static/components/chat_dialog.css": "5b2904bf973d62dc248209b3cb871246a7320a642ca78c6863a01b9c3d8e659b",
         "yaffo/static/components/chat_dialog.js": "19be56f7f56d04f4b317b885c9f470753d5185b3f91413d3d16176b504a7e040",
@@ -297,7 +297,7 @@
         "yaffo/static/i18n.js": "55b8645a19d8f982b14aa541c820605c9c9d81b2222e1a1628f69b0eaa7e6bc5",
         "yaffo/static/index.css": "a3c8170424d6242a77d755df37312ced115beb9f9785eed92b8c9c6f849e5879",
         "yaffo/static/locales/en.json": "cf622360b6ca4be7cd0179c347dbaded6688b4f9dfe8d983ccae9d0f52f63f3a",
-        "yaffo/static/locations/list.css": "d768887260835d3eb83546bd3599dbef5ede0a3c65b2a47c33e512a085ae0d87",
+        "yaffo/static/locations/list.css": "fa4bbab3fbf240b0bfc5349e5972fba8c9b8600bed74c738961fd778645f19ba",
         "yaffo/static/locations/list.js": "87737e8e675c8aa29cddce9b1450475bb546ed3615d15a93e14de99fddb6c715",
         "yaffo/static/match-type.css": "46a6ac0ede55c7800265e54c0e8b760d5a997aec8b1b5ebd0bb2991b7542e82c",
         "yaffo/static/media/face-reassign.js": "d82cfaed85e220c0a57218dcf524864dd651ad271c0a328b075554d439353a47",
@@ -328,7 +328,7 @@
         "yaffo/static/settings/labels.js": "33ac1c92e833e1359c50384b39cffd507a757901107af4590a647645122cdda2",
         "yaffo/static/sharing/sharing.css": "66c570e54e01bf667605af4a175b83a635ebdfd1233bc36998b63f902a197aa1",
         "yaffo/static/sharing/sharing.js": "83c984113d577ddbb048be6826a3d5116e5094aaeb3127412d2f9af51f77e833",
-        "yaffo/static/sidebar.css": "212bdfea350da6c7f4f3d6bc0a1ad442dcb3c2afe77f34afcbaa155066505d76",
+        "yaffo/static/sidebar.css": "1d7b5d4469e6ef81f1a458e9d3728fe4a462e08691398f30ced097b5ca9f9949",
         "yaffo/static/table.css": "e4ac0f067ae925ba5a00da8c823720fe4b4ee40affa0743dfdec6360707d775c",
         "yaffo/static/themes/classic/favicon.svg": "aacd1bd07e8f6b9950d99503110113d100437d49053c2f8c805c74d5f5bcb875",
         "yaffo/static/themes/classic/icon-add.svg": "9b9c35e6d46f952e64f1733ef3d5ed3032abb5fc85165cd188ab40e91bf562da",

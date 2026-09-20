@@ -14,3 +14,10 @@
 - Watch for recurrence: if the same 7 px frame growth comes back run after run, the page
   height is not reproducible (viewport/100vh rounding) and the shot needs a different crop
   strategy (e.g. clip `#map` + fixed height), not a new baseline.
+- RECURRENCE confirmed (next run): 3192 -> 3206, exactly 9296 px differ, again a thin band
+  at the bottom edge only; header, sidebar, cluster labels (18 / 13) and map extent again
+  identical, no dependency hash change. Same classification (environment_instability) and
+  same action (quarantine) — do NOT adopt as baseline. Because the drift now repeats
+  byte-for-byte, treat the frame height as non-reproducible and change the capture: clip
+  `#map` (or the layout with an explicit height) so the shot no longer inherits
+  `100dvh - 200px` rounding.
