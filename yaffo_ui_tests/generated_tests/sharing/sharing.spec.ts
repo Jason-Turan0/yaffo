@@ -117,12 +117,16 @@ async function sharedWithMeView(page: Page, rowText: string | RegExp, timeoutMs 
   for (;;) {
     await page.goto('/sharing/settings');
     await expect(page.locator('#sharing-sidebar-shared-with-me h3')).toBeVisible();
-    if (await row.count()) return row.first().locator('a', { hasText: 'View' });
+    // HTMX replaces the loading placeholder with a fragment without hx-get.
+    await expect(page.locator('#sharing-sidebar-shared-with-me[hx-get]')).toHaveCount(0, {
+      timeout: Math.max(1, deadline - Date.now()),
+    });
+    if (await row.count()) return row.first().locator('a.chip-action');
     if (Date.now() > deadline) break;
     await page.waitForTimeout(1_000);
   }
   await expect(row.first(), `No "Shared With Me" row matching ${rowText}`).toBeVisible();
-  return row.first().locator('a', { hasText: 'View' });
+  return row.first().locator('a.chip-action');
 }
 
 // The media-dir <select> option text is "<name> - <path>"; both halves are

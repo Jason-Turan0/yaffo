@@ -1,5 +1,9 @@
 import {defineConfig, devices} from '@playwright/test';
 import dotenv from 'dotenv';
+import {join} from 'node:path';
+import {assertTestTimeoutPolicy, MAX_TEST_TIMEOUT_MS} from './lib/services/test_timeout_policy';
+
+assertTestTimeoutPolicy(join(import.meta.dirname, 'generated_tests'));
 
 // The heal/generation runners spawn this process with a scrubbed env allowlist
 // and set SKIP_DOTENV so .env (which holds provider API keys) is not re-loaded
@@ -25,7 +29,7 @@ const isSharingRun = !!process.env.PEER_URL;
 export default defineConfig({
     testDir: './generated_tests',
     fullyParallel: true,
-    timeout: 5000,
+    timeout: MAX_TEST_TIMEOUT_MS,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI === "true" ? 2 : 0,
     // The sharing suite is stateful and strictly ordered, so it must stay on a

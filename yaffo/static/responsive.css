@@ -614,7 +614,7 @@ button.nav-context-toggle[data-icon] {
    visible labels at the smallest phone widths. */
 @media (max-width: 400px) {
     .navbar-container {
-        column-gap: 6px;
+        column-gap: 8px;
     }
 
     button.nav-menu-toggle[data-icon],

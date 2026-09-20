@@ -3,6 +3,7 @@ import {formatTestResultsAsXml} from "@lib/services/run_playwright_tests";
 import {Spec} from "@lib/test_generator/prompt/spec_parser.types";
 import {SpecPromptGenerator} from "@lib/test_generator/prompt/spec_prompt_generator";
 import {TestRunRecord, formatHistoryForPrompt} from "@lib/test_generator/test_result_history";
+import {TEST_TIMEOUT_PROMPT} from "@lib/services/test_timeout_policy";
 
 export interface HealContext {
     absoluteTestFilePath: string;
@@ -50,7 +51,7 @@ export class HealPromptGenerator {
             "<guidelines>",
             "    1. INVESTIGATE before concluding — use tools to verify your hypothesis.",
             "    2. Use ACTUAL selectors from templates — verify them before using.",
-            "    3. Look at error messages carefully — timeout/network errors suggest environment instability.",
+            "    3. Investigate timeout/network errors: distinguish broken waits and reload loops from app slowness or environment instability.",
             "    4. If the same tests fail repeatedly with the same error, it's likely a defect or regression, not flakiness.",
             "    5. Use Playwright to check if the page renders correctly.",
             "    6. Consider the test run history trends when making decisions.",
@@ -62,6 +63,7 @@ export class HealPromptGenerator {
             "    11. Prefer helper functions that resolve test data by stable attributes such as filename, visible text,",
             "        route output, or page content instead of relying on auto-increment IDs.",
             "</guidelines>",
+            TEST_TIMEOUT_PROMPT,
             "",
             "<tool_policy>",
             "    <use_parallel_tool_calls>",
@@ -92,6 +94,7 @@ export class HealPromptGenerator {
     buildTransitionToHealPrompt(analysisReasoning: string, outputSchema?: string): string {
         const blocks = [
             "<phase>Phase 2: Fix</phase>",
+            TEST_TIMEOUT_PROMPT,
             "",
             "<triage_result>",
             "    <classification>test_code_defect</classification>",

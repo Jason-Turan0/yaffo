@@ -291,6 +291,8 @@ const escapeXml = (str: string): string => {
 export type PlaywrightTestRunner = typeof runPlaywrightTests;
 
 export interface RunOptions {
+    /** Interactive local runs can show the browser or open Playwright's UI. */
+    mode?: "headless" | "headed" | "ui";
     /**
      * Playwright reporters, comma separated. Defaults to "json" alone, which is
      * all the heal/generate loops need. CI passes "json,html,list" to keep the
@@ -348,6 +350,8 @@ export const runPlaywrightTests = async (
         `--project=${isSharingSuite ? "sharing" : "chromium"}`,
         `--reporter=${reporters.join(",")}`,
     ];
+    if (options.mode === "headed") args.push("--headed");
+    if (options.mode === "ui") args.push("--ui");
 
     if (testFiles && testFiles.length > 0) {
         args.push(...testFiles);
@@ -367,7 +371,7 @@ export const runPlaywrightTests = async (
     const SPAWN_ENV_ALLOWLIST = [
         "PATH", "HOME", "SHELL", "TMPDIR", "USER", "LOGNAME", "LANG", "LC_ALL", "TERM",
         "CI", "SUITE", "PEER_URL", "TEST_SANDBOX", "PLAYWRIGHT_BROWSERS_PATH",
-        "PLAYWRIGHT_HTML_OUTPUT_DIR", "PLAYWRIGHT_JUNIT_OUTPUT_FILE", "GITHUB_WORKSPACE",
+        "PLAYWRIGHT_HTML_OUTPUT_DIR", "PLAYWRIGHT_HTML_OPEN", "PLAYWRIGHT_JUNIT_OUTPUT_FILE", "GITHUB_WORKSPACE",
     ];
     const env: NodeJS.ProcessEnv = {};
     for (const key of SPAWN_ENV_ALLOWLIST) {
