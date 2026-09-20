@@ -282,6 +282,7 @@ jobs:
               walkthrough_defect) mark="🔧" ;;
               application_regression) mark="🐛" ;;
               environment_instability) mark="🌫️" ;;
+              inconclusive) mark="❓" ;;
               *) mark="•" ;;
             esac
             {
@@ -382,8 +383,28 @@ jobs:
             kill "$(cat reports/docs-server.pid)" 2>/dev/null || true
             wait "$(cat reports/docs-server.pid)" 2>/dev/null || true
           fi
-      - name: Fail unresolved documentation work
-        if: ${{ steps.heal-page.outputs.exit_code != '0' }}
+      # The healer separates "I finished and left verdicts for a human" (2) from "the
+      # run itself broke" (1). Only the second is this job's failure to report. Failing
+      # on a quarantine turned every documentation PR red without saying which of the
+      # two had happened, and a red check that always means "maybe nothing" gets ignored.
+      - name: Warn about unresolved documentation work
+        if: ${{ steps.heal-page.outputs.exit_code == '2' }}
+        working-directory: yaffo_ui_tests
+        run: |
+          TRIAGE=.doc-staging/triage.json
+          blocked=""
+          if [ -f "$TRIAGE" ]; then
+            blocked=$(jq '[.verdicts[]
+              | select(.triage.recommendedAction != "promote" and (.resolved // false) == false)]
+              | length' "$TRIAGE")
+          fi
+          echo "::warning title=Documentation quarantined::${{ matrix.page }}: ${blocked:-some} shot(s) need a human. Nothing was written to the guide for this page."
+      - name: Fail on documentation healer error
+        if: >-
+          ${{
+            steps.heal-page.outputs.exit_code != '0' &&
+            steps.heal-page.outputs.exit_code != '2'
+          }}
         run: exit 1
 
   open-pr:
@@ -403,6 +424,8 @@ jobs:
     timeout-minutes: 20
     permissions:
       actions: read
+      # For the aggregate freshness check run below.
+      checks: write
       contents: write
       pull-requests: write
     steps:
@@ -423,6 +446,75 @@ jobs:
         with:
           pattern: docs-heal-*
           path: healing-evidence
+      # One row in the PR's checks list for the whole matrix, because a check run is
+      # per job and there is otherwise nowhere the run speaks as a whole. `neutral`
+      # rather than `failure`: quarantined pages are pending work, and GitHub counts
+      # neutral as passing for required checks, so this reports without blocking.
+      #
+      # Check runs can only be created by a GitHub App, so this uses the Actions token
+      # even where the rest of the job prefers AUTO_HEAL_GITHUB_TOKEN — a PAT gets 403.
+      - name: Publish documentation freshness check
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s nullglob globstar
+          TRIAGE_FILES=(healing-evidence/**/triage.json)
+          SUMMARY_FILE=$(mktemp)
+          REQUEST_FILE=$(mktemp)
+
+          pending=0
+          if [ ${#TRIAGE_FILES[@]} -gt 0 ]; then
+            pending=$(jq -s -r '[.[].verdicts[]?
+              | select(.triage.recommendedAction != "promote" and (.resolved // false) == false)]
+              | length' "${TRIAGE_FILES[@]}")
+          fi
+
+          {
+            if [ "$pending" -eq 0 ]; then
+              echo "Every documented page matches the app at \`${HEAD_SHA}\`."
+            else
+              echo "These shots changed and were left for a human. Nothing was written"
+              echo "to the guide for them, so the pages still describe the previous build."
+              echo ""
+              # Bounded by line count, not bytes: output.summary caps at 65535 and a
+              # byte slice would cut a multi-byte character and invalidate the JSON.
+              jq -s -r --argjson limit 40 '
+                [.[].verdicts[]?
+                  | select(.triage.recommendedAction != "promote" and (.resolved // false) == false)
+                ] as $pending
+                | ( $pending[:$limit][]
+                    | "- `\(.page)` → `\((.target // "") | split("/") | last)` — "
+                      + "`\(.triage.classification)` (\(.triage.confidence)): "
+                      + (.triage.summary | if length > 180 then .[0:180] + "…" else . end) ),
+                  ( if ($pending | length) > $limit
+                    then "", "_… and \(($pending | length) - $limit) more._"
+                    else empty end )' \
+                "${TRIAGE_FILES[@]}"
+              echo ""
+              echo "Full reasoning, patches, and capture evidence: [workflow run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})."
+            fi
+          } > "$SUMMARY_FILE"
+
+          if [ "$pending" -eq 0 ]; then
+            conclusion=success
+            title="Documentation is current"
+          else
+            conclusion=neutral
+            title="${pending} shot(s) need review"
+          fi
+
+          jq -n \
+            --arg sha "$HEAD_SHA" \
+            --arg conclusion "$conclusion" \
+            --arg title "$title" \
+            --rawfile summary "$SUMMARY_FILE" \
+            '{name: "Documentation freshness", head_sha: $sha, status: "completed",
+              conclusion: $conclusion, output: {title: $title, summary: $summary}}' \
+            > "$REQUEST_FILE"
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/check-runs" --input "$REQUEST_FILE" \
+            --jq '"\(.conclusion): \(.output.title)"'
+
       - name: Apply documentation patches
         id: patches
         run: |

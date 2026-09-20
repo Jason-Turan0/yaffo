@@ -370,15 +370,25 @@ describe("heal CLI", () => {
         });
     });
 
-    it("returns failure when a changed shot cannot be triaged", async () => {
+    it("records an inconclusive verdict when a changed shot cannot be triaged", async () => {
         writeReport([result()]);
         triageShot.mockRejectedValue(new Error("model unavailable"));
 
-        await expect(main([])).resolves.toBe(1);
+        // 2, not 1: the shot changed and still needs a human, so it blocks like any
+        // other unresolved verdict rather than being written off as a run error.
+        await expect(main([])).resolves.toBe(2);
 
         expect(error).toHaveBeenCalledWith(expect.stringContaining("model unavailable"));
         const saved = JSON.parse(readFileSync(join(STAGING_DIR, "triage.json"), "utf8"));
-        expect(saved.verdicts).toEqual([]);
+        // Silence here is what made a failed triage indistinguishable, in the PR body,
+        // from a shot nobody ever looked at.
+        expect(saved.verdicts).toHaveLength(1);
+        expect(saved.verdicts[0].triage).toMatchObject({
+            classification: "inconclusive",
+            confidence: "low",
+            recommendedAction: "quarantine",
+        });
+        expect(saved.verdicts[0].triage.reasoning).toContain("model unavailable");
     });
 
     it("promotes and fixes intended changes under --apply, then disconnects providers", async () => {

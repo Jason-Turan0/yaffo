@@ -15,12 +15,14 @@ const call = (toolCallId: string, toolName: string, input: unknown = {}) => ({
 });
 
 let addToolResultMessage: jest.Mock<(results: unknown[]) => void>;
+let addUserMessage: jest.Mock<(content: unknown[]) => void>;
 
 const client = (responses: Array<ModelResponse | undefined>, lastError?: string): ModelClient => {
     let index = 0;
     return {
         callModelApi: jest.fn(async () => responses[index++]),
         addToolResultMessage,
+        addUserMessage,
         lastError,
     } as unknown as ModelClient;
 };
@@ -36,6 +38,7 @@ const provider = (
 
 beforeEach(() => {
     addToolResultMessage = jest.fn();
+    addUserMessage = jest.fn();
 });
 
 describe("runToolLoop tool dispatch", () => {
@@ -113,16 +116,35 @@ describe("runToolLoop tool dispatch", () => {
         ]);
     });
 
-    it("stops after the configured number of tool-only rounds", async () => {
+    it("demands an answer once the tool rounds are spent, and keeps it", async () => {
         const looping = provider(["read_file"], () => "again");
         const model = client([
             response("", [call("round-1", "read_file")]),
             response("", [call("round-2", "read_file")]),
+            response('{"classification":"inconclusive"}'),
+        ]);
+
+        await expect(runToolLoop(model, [looping], 2))
+            .resolves.toBe('{"classification":"inconclusive"}');
+        expect(addToolResultMessage).toHaveBeenCalledTimes(2);
+        // The last turn must tell it the tools are gone, or it just calls another one.
+        expect(JSON.stringify(addUserMessage.mock.calls[0][0]))
+            .toContain("No further tool calls will be executed");
+        // Still exactly two rounds of tools, plus the one closing question.
+        expect(looping.callTool).toHaveBeenCalledTimes(2);
+    });
+
+    it("gives up when even the final toolless turn says nothing", async () => {
+        const looping = provider(["read_file"], () => "again");
+        const model = client([
+            response("", [call("round-1", "read_file")]),
+            response("", [call("round-2", "read_file")]),
+            response("", [call("round-3", "read_file")]),
         ]);
 
         await expect(runToolLoop(model, [looping], 2)).rejects.toThrow(
             "gave up after 2 tool rounds without an answer");
-        expect(addToolResultMessage).toHaveBeenCalledTimes(2);
+        expect(looping.callTool).toHaveBeenCalledTimes(2);
     });
 
     it("surfaces the model client's recorded API error when no response arrives", async () => {

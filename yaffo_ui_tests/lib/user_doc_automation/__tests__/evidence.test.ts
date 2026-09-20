@@ -1,4 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it} from "@jest/globals";
+import {execFileSync} from "child_process";
 import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from "fs";
 import {tmpdir} from "os";
 import {dirname, join, relative, resolve} from "path";
@@ -59,6 +60,22 @@ const options = (over: Partial<EvidenceOptions> = {}): EvidenceOptions => ({
     stringChanges: [{was: "Apply Filters", now: "Apply", source: "en.json"}],
     ...over,
 });
+
+/**
+ * Run `body` against a repo-relative dependency that exists but has no diff.
+ * Untracked rather than tracked, so the assertion does not depend on whether the
+ * developer running the suite happens to have edited that file.
+ */
+const withCleanDependency = (body: (dependency: string) => void): void => {
+    const repo = resolve(process.cwd(), "..");
+    const path = join(repo, `.evidence-unit-${process.pid}-${Date.now()}.ts`);
+    writeFileSync(path, "export const observed = true;\n", "utf8");
+    try {
+        body(relative(repo, path));
+    } finally {
+        rmSync(path, {force: true});
+    }
+};
 
 const writeMarkdown = (text: string): string => {
     const path = join(guideDir, "library", "browsing.md");
@@ -150,9 +167,53 @@ describe("buildEvidence", () => {
                 },
             });
             expect(buildEvidence(observed, shot(), options()).codeDiff)
-                .toBe("(no changes to this page's dependencies)");
+                .toContain("no changes to this page's dependencies since HEAD");
         } finally {
             rmSync(dependency, {force: true});
         }
+    });
+
+    it("says so when it has no watermark and is therefore blind to committed work", () => {
+        // The CI failure this guards: a clean checkout makes `git diff HEAD` empty no
+        // matter how much the app moved, and triage read that silence as "nothing
+        // changed" and classified real UI work as renderer noise.
+        withCleanDependency((dependency) => {
+            const observed = result({
+                observation: {...result().observation, static: [dependency]},
+            });
+            expect(buildEvidence(observed, shot(), options()).codeDiff)
+                .toContain("absence of a diff is not evidence that the app is unchanged");
+        });
+    });
+
+    it("spans the commits since the page's baseline, not just the working tree", () => {
+        const repo = resolve(process.cwd(), "..");
+        const head = execFileSync("git", ["rev-parse", "HEAD"], {cwd: repo, encoding: "utf8"}).trim();
+        const previous = execFileSync("git", ["rev-parse", "HEAD~1"], {cwd: repo, encoding: "utf8"}).trim();
+        const changed = execFileSync(
+            "git", ["diff", "--name-only", previous, head], {cwd: repo, encoding: "utf8"})
+            .split("\n").filter(Boolean);
+        if (!changed.length) return; // An empty commit leaves nothing to assert.
+
+        const observed = result({
+            observation: {...result().observation, static: changed},
+        });
+        const codeDiff = buildEvidence(observed, shot(), options({lastVerifiedSha: previous})).codeDiff;
+
+        expect(codeDiff).toContain(`since ${previous.slice(0, 12)}`);
+        expect(codeDiff).toContain(changed[0]);
+    });
+
+    it("falls back to HEAD when the recorded baseline commit is not in this checkout", () => {
+        // A rebase or squash can leave a lockfile pointing at a commit that no longer
+        // exists. That must degrade to the old window, not crash the run.
+        withCleanDependency((dependency) => {
+            const observed = result({
+                observation: {...result().observation, static: [dependency]},
+            });
+            expect(buildEvidence(observed, shot(), options({
+                lastVerifiedSha: "0".repeat(40),
+            })).codeDiff).toContain("since HEAD");
+        });
     });
 });

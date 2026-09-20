@@ -1,14 +1,13 @@
 name: Playwright
 
+# No `paths:` filter here on purpose. A filtered-out workflow reports no check at
+# all, and a required check that never reports leaves the pull request stuck on
+# "Expected — Waiting for status to be reported" forever. The same filter now lives
+# in the `changes` job below, so the workflow always starts and always reports while
+# the expensive jobs stay conditional.
 on:
   pull_request:
     branches: [master]
-    paths:
-      - ".github/workflows/playwright.yml"
-      - ".github/workflows/playwright-auto-heal.yml"
-      - "pyproject.toml"
-      - "yaffo/**"
-      - "yaffo_ui_tests/**"
   workflow_dispatch:
 
 concurrency:
@@ -29,8 +28,50 @@ env:
   YAFFO_ASSET_DIR: /tmp/yaffo-assets
 
 jobs:
+  changes:
+    name: Detect relevant changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Job-level permissions replace the top-level block wholesale.
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      relevant: ${{ steps.filter.outputs.relevant }}
+    steps:
+      - name: Decide whether this pull request touches the tested surface
+        id: filter
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # A manual dispatch has no base to compare against, so run everything.
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            echo "Not a pull request — running the full suite."
+            exit 0
+          fi
+
+          # Asking the API beats diffing locally: no checkout, no fetch depth to
+          # get wrong, and it is the same file list the old `paths:` filter saw.
+          files=$(gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].filename')
+
+          # Exactly the patterns that used to be this workflow's `paths:` filter.
+          # `^yaffo/` does not match `yaffo_ui_tests/`, which is listed separately.
+          if printf '%s\n' "$files" | grep -qE '^(\.github/workflows/playwright\.yml|\.github/workflows/playwright-auto-heal\.yml|pyproject\.toml)$|^(yaffo|yaffo_ui_tests)/'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            echo "Playwright-relevant files changed; running the suite."
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "No Playwright-relevant files changed; skipping the suite."
+          fi
+          printf '%s\n' "$files" | sed 's/^/  /'
+
   validate-specs:
     name: Validate test specs
+    needs: changes
+    if: ${{ needs.changes.outputs.relevant == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -49,6 +90,8 @@ jobs:
 
   list-specs:
     name: Enumerate spec files
+    needs: changes
+    if: ${{ needs.changes.outputs.relevant == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -284,3 +327,39 @@ jobs:
           name: playwright-reports-${{ matrix.id }}
           path: yaffo_ui_tests/reports/
           retention-days: 7
+
+  # The single check to require in branch protection.
+  #
+  # Required status checks match by exact name and support no wildcards, so the
+  # per-spec check runs above — named `${{ matrix.id }}`, enumerated at runtime from
+  # the spec files — cannot be required: the list would need editing every time a
+  # spec is added, renamed, or split, and a stale entry blocks every pull request.
+  # This job's name is fixed, and `if: always()` means it reports even when the suite
+  # was skipped, which is what lets the filter live in a job instead of the trigger.
+  playwright-required:
+    name: Playwright
+    needs: [changes, validate-specs, list-specs, seed-cache, playwright]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check every Playwright job
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "  \(.key): \(.value.result)"'
+
+          # `skipped` is deliberately not a failure. A pull request that touches no
+          # tested code has nothing to prove, and this job exists so that fact still
+          # gets reported rather than leaving the check unreported.
+          if echo "$RESULTS" | jq -e 'any(.[]; .result == "failure" or .result == "cancelled")' \
+            > /dev/null; then
+            echo "::error title=Playwright::One or more Playwright jobs did not succeed."
+            exit 1
+          fi
+
+          if [ "$(echo "$RESULTS" | jq -r '.changes.outputs.relevant')" = "true" ]; then
+            echo "Playwright suite passed."
+          else
+            echo "No Playwright-relevant files changed; the suite was skipped."
+          fi

@@ -46,6 +46,7 @@ const MARK: Record<Triage["classification"], string> = {
     walkthrough_defect: "🔧",
     application_regression: "🐛",
     environment_instability: "🌫️",
+    inconclusive: "❓",
 };
 
 /**
@@ -339,6 +340,9 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
                 walkthroughPath: walkthroughPath(result.page),
                 covers: covers(result.page),
                 stringChanges: stringChanges.get(result.page) ?? [],
+                // Without this the dependency diff spans only uncommitted work, which
+                // in CI is nothing at all.
+                lastVerifiedSha: pageLock(result.page)?.lastVerifiedSha,
             });
 
             // Memory is per page — the same scoping the generator uses for a feature.
@@ -354,7 +358,26 @@ export const main = async (args: string[] = process.argv.slice(2)): Promise<numb
             try {
                 session = await triageShot(evidence, {model, runLogDir, toolProviders: pageProviders});
             } catch (e) {
-                console.error(`  ❌ ${shot.target}: ${e instanceof Error ? e.message : String(e)}`);
+                // A shot that reached triage and got no verdict still changed, and a
+                // human still has to look at it. Recording why keeps it in triage.json
+                // and therefore in the job summary and the PR body; dropping it here
+                // made the run read as though the shot had never been examined.
+                const reason = e instanceof Error ? e.message : String(e);
+                verdicts.push({
+                    page: result.page,
+                    target: shot.target,
+                    triage: {
+                        classification: "inconclusive",
+                        confidence: "low",
+                        summary: "Triage ended without a verdict for this shot.",
+                        reasoning: `${reason}\n\n${evidence.diffSummary}`,
+                        proseImpact: [],
+                        recommendedAction: "quarantine",
+                    },
+                });
+                console.error(`❓ ${shot.target}`);
+                console.error(`   inconclusive — ${reason}`);
+                console.error("   → quarantine: left for a human, nothing written\n");
                 failed++;
                 continue;
             }

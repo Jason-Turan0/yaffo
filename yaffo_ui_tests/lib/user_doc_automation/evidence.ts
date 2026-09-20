@@ -51,22 +51,56 @@ const git = (args: string[]): string => {
     }
 };
 
+const truncate = (text: string, limit: number): string =>
+    text.length <= limit ? text : `${text.slice(0, limit)}\n… (${text.length - limit} more characters)`;
+
+/** How much raw patch triage gets. The stat above it is never truncated. */
+const PATCH_BUDGET = 12_000;
+
+/** A watermark this checkout can actually resolve — a rebase or squash can orphan one. */
+const resolvableCommit = (sha: string | null | undefined): string | null =>
+    sha && git(["rev-parse", "--verify", "--quiet", `${sha}^{commit}`]).trim() ? sha : null;
+
 /**
- * Uncommitted changes to the files this page actually depends on.
+ * Changes to the files this page depends on, since the page was last verified.
  *
- * Against HEAD rather than a watermark: the watermark lands with the workflow, and
- * for a local run "what have I changed since the last commit" is the useful window.
+ * The window is the lockfile watermark, not HEAD. A CI checkout is clean, so
+ * `git diff HEAD` is empty there no matter how much the UI moved — which told triage
+ * the product had not changed and left it calling real work renderer noise. From
+ * `lastVerifiedSha` to the working tree spans the commits that landed since this
+ * page's baseline plus anything uncommitted, the same window `changedDependencies`
+ * already uses for the prose path.
+ *
+ * The stat leads and is never truncated. A page's dependency patch runs to tens of
+ * thousands of characters, and a budget applied to the patch alone would silently
+ * drop whole files past the cut — reintroducing "nothing changed" for everything
+ * sorted after it.
  */
-const dependencyDiff = (observation: WalkthroughResult["observation"]): string => {
+const dependencyDiff = (
+    observation: WalkthroughResult["observation"],
+    lastVerifiedSha?: string | null
+): string => {
     const deps = [...observation.routes, ...observation.templates, ...observation.static]
         .filter((path) => existsSync(join(REPO, path)));
     if (!deps.length) return "(no observed dependencies recorded — is the server observer running?)";
-    const diff = git(["diff", "HEAD", "--", ...deps]);
-    return diff.trim() || "(no changes to this page's dependencies)";
-};
 
-const truncate = (text: string, limit: number): string =>
-    text.length <= limit ? text : `${text.slice(0, limit)}\n… (${text.length - limit} more characters)`;
+    const since = resolvableCommit(lastVerifiedSha);
+    const range = since ?? "HEAD";
+    const stat = git(["diff", "--stat", range, "--", ...deps]).trim();
+    if (!stat) {
+        return since
+            ? `(no changes to this page's dependencies since ${since.slice(0, 12)}, ` +
+              "when this page was last verified)"
+            : "(no changes to this page's dependencies since HEAD. No verified baseline " +
+              "commit is recorded for this page, so anything already committed is " +
+              "invisible here — absence of a diff is not evidence that the app is unchanged.)";
+    }
+    const window = since
+        ? `since ${since.slice(0, 12)}, when this page was last verified`
+        : "since the last commit (this page records no verified baseline commit)";
+    return `Dependencies of this page changed ${window}:\n\n${stat}\n\n` +
+        truncate(git(["diff", range, "--", ...deps]), PATCH_BUDGET);
+};
 
 const describeDiff = (shot: ShotResult): string => {
     if (shot.status === "new") return "No committed baseline: this shot is new.";
@@ -96,6 +130,11 @@ export interface EvidenceOptions {
     covers?: string;
     /** From Detector B, for the page being healed. */
     stringChanges?: StringChange[];
+    /**
+     * The commit this page's baseline was captured at, from its lockfile. Bounds the
+     * dependency diff; without it only uncommitted work is visible to triage.
+     */
+    lastVerifiedSha?: string | null;
 }
 
 export const buildEvidence = (
@@ -116,7 +155,7 @@ export const buildEvidence = (
         walkthroughPath: options.walkthroughPath,
         covers: options.covers,
         walkthroughSource: options.walkthroughSource,
-        codeDiff: truncate(dependencyDiff(result.observation), 12_000),
+        codeDiff: dependencyDiff(result.observation, options.lastVerifiedSha),
         stringChanges: options.stringChanges ?? [],
     };
 };
