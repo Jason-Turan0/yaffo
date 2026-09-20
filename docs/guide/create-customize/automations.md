@@ -78,8 +78,8 @@ An automation with no triggers stays idle until you add one.
 
 ## Run and Review
 
-You can run an automation yourself with **Run now** (or **Run…** for options),
-which is handy for testing or one-off cleanups.
+You can run an automation yourself with **Run…**, which asks you to pick a file or
+folder to run over — handy for testing or one-off cleanups.
 
 Every run — scheduled, event-driven, or manual — is recorded under **Run
 history**, with a status such as **COMPLETED** and a timestamp. If an automation
