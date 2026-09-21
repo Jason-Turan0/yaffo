@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-19 00:19-0500\n"
+"POT-Creation-Date: 2026-08-30 00:57-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -355,62 +355,62 @@ msgstr ""
 msgid "Could not create folder: %(reason)s"
 msgstr ""
 
-#: yaffo/routes/faces.py:197
+#: yaffo/routes/faces.py:195
 #, python-format
 msgid "Cluster %(number)s"
 msgstr ""
 
-#: yaffo/routes/faces.py:230 yaffo/templates/sharing/_device_content.html:14
+#: yaffo/routes/faces.py:228 yaffo/templates/sharing/_device_content.html:14
 #: yaffo/templates/sharing/_device_panel.html:18
 msgid "Unknown"
 msgstr ""
 
-#: yaffo/routes/faces.py:261
+#: yaffo/routes/faces.py:259
 msgid " OR "
 msgstr ""
 
-#: yaffo/routes/faces.py:382 yaffo/routes/filter_config.py:123
+#: yaffo/routes/faces.py:380 yaffo/routes/filter_config.py:123
 msgid "Items must be a list"
 msgstr ""
 
-#: yaffo/routes/faces.py:404 yaffo/routes/faces.py:472
-#: yaffo/routes/faces.py:483 yaffo/routes/people.py:119
+#: yaffo/routes/faces.py:402 yaffo/routes/faces.py:470
+#: yaffo/routes/faces.py:481 yaffo/routes/people.py:119
 #: yaffo/routes/people.py:178 yaffo/routes/people.py:220
 #: yaffo/routes/people.py:298
 msgid "Person not found"
 msgstr ""
 
-#: yaffo/routes/faces.py:422
+#: yaffo/routes/faces.py:420
 msgid "Too many faces were selected"
 msgstr ""
 
-#: yaffo/routes/faces.py:431
+#: yaffo/routes/faces.py:429
 msgid "Faces must contain numeric identifiers"
 msgstr ""
 
-#: yaffo/routes/faces.py:445
+#: yaffo/routes/faces.py:443
 msgid "One or more faces are no longer available"
 msgstr ""
 
-#: yaffo/routes/faces.py:457
+#: yaffo/routes/faces.py:455
 #, python-format
 msgid "Successfully ignored %(count)s face"
 msgid_plural "Successfully ignored %(count)s faces"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/faces.py:503
+#: yaffo/routes/faces.py:501
 #, python-format
 msgid "Successfully assigned %(count)s face to %(person)s"
 msgid_plural "Successfully assigned %(count)s faces to %(person)s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: yaffo/routes/faces.py:515
+#: yaffo/routes/faces.py:513
 msgid "Faces, person, and face status are required"
 msgstr ""
 
-#: yaffo/routes/faces.py:524
+#: yaffo/routes/faces.py:522
 msgid "Could not process faces"
 msgstr ""
 
@@ -432,14 +432,14 @@ msgstr ""
 msgid "Unknown date"
 msgstr ""
 
-#: yaffo/routes/home.py:261
+#: yaffo/routes/home.py:267
 #, python-format
 msgid ""
 "Media folders are not available: %(directories)s. If they are on an "
 "external drive, make sure the drive is connected."
 msgstr ""
 
-#: yaffo/routes/home.py:300 yaffo/routes/sharing.py:679
+#: yaffo/routes/home.py:306 yaffo/routes/sharing.py:679
 msgid "The tag_name parameter is required"
 msgstr ""
 
@@ -1079,54 +1079,54 @@ msgstr ""
 msgid "There is nothing indexed to reindex"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:216
+#: yaffo/routes/utilities/remove_duplicates.py:219
 msgid "At least one directory is required"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:224
+#: yaffo/routes/utilities/remove_duplicates.py:227
 msgid "No photo or video files found in selected directories"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:234
+#: yaffo/routes/utilities/remove_duplicates.py:237
 #, python-brace-format
 msgid "Processed {totalCount}/{taskCount} media items"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:348
+#: yaffo/routes/utilities/remove_duplicates.py:351
 msgid "No files selected"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:357
+#: yaffo/routes/utilities/remove_duplicates.py:360
 msgid "Destination folder is required"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:358
+#: yaffo/routes/utilities/remove_duplicates.py:361
 msgid "Please select a destination folder"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:377
+#: yaffo/routes/utilities/remove_duplicates.py:380
 msgid "No valid files found"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:387
+#: yaffo/routes/utilities/remove_duplicates.py:390
 msgid "Moving to trash"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:388
+#: yaffo/routes/utilities/remove_duplicates.py:391
 msgid "Permanently deleting"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:390
+#: yaffo/routes/utilities/remove_duplicates.py:393
 #, python-format
 msgid "Moving to %(destination)s"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:402
+#: yaffo/routes/utilities/remove_duplicates.py:405
 #, python-brace-format, python-format
 msgid "%(action)s {totalCount}/{taskCount} files"
 msgstr ""
 
-#: yaffo/routes/utilities/remove_duplicates.py:432
+#: yaffo/routes/utilities/remove_duplicates.py:435
 #, python-format
 msgid "Started removing %(count)s duplicate"
 msgid_plural "Started removing %(count)s duplicates"
@@ -1162,6 +1162,7 @@ msgid ""
 msgstr ""
 
 #: yaffo/templates/_sidebar.html:5 yaffo/templates/people/list.html:29
+#: yaffo/templates/people/list.html:54
 msgid "Actions"
 msgstr ""
 
@@ -1201,87 +1202,92 @@ msgstr ""
 msgid "Select…"
 msgstr ""
 
-#: yaffo/templates/base.html:101 yaffo/templates/demo/feature_disabled.html:13
+#: yaffo/templates/base.html:102 yaffo/templates/demo/feature_disabled.html:13
 msgid "Public demo"
 msgstr ""
 
-#: yaffo/templates/base.html:102
+#: yaffo/templates/base.html:103
 msgid "This is one shared, disposable sandbox."
 msgstr ""
 
-#: yaffo/templates/base.html:103
+#: yaffo/templates/base.html:104
 msgid "Changes may affect other visitors."
 msgstr ""
 
-#: yaffo/templates/base.html:105
+#: yaffo/templates/base.html:106
 msgid "Next reset:"
 msgstr ""
 
-#: yaffo/templates/base.html:116
+#: yaffo/templates/base.html:119 yaffo/templates/base.html:122
+msgid "Menu"
+msgstr ""
+
+#: yaffo/templates/base.html:123
 msgid "Home"
 msgstr ""
 
 #: yaffo/templates/albums/_base.html:28 yaffo/templates/albums/index.html:7
-#: yaffo/templates/base.html:119
+#: yaffo/templates/base.html:126
 msgid "Albums"
 msgstr ""
 
-#: yaffo/templates/base.html:121 yaffo/templates/people/list.html:27
+#: yaffo/templates/base.html:128 yaffo/templates/people/list.html:27
+#: yaffo/templates/people/list.html:48
 msgid "Faces"
 msgstr ""
 
-#: yaffo/templates/base.html:124 yaffo/templates/faces/index.html:107
+#: yaffo/templates/base.html:131 yaffo/templates/faces/index.html:107
 #: yaffo/templates/filters/_people.html:4 yaffo/templates/people/list.html:17
 msgid "People"
 msgstr ""
 
-#: yaffo/templates/base.html:126 yaffo/templates/filters/_locations.html:4
+#: yaffo/templates/base.html:133 yaffo/templates/filters/_locations.html:4
 msgid "Locations"
 msgstr ""
 
-#: yaffo/templates/base.html:128 yaffo/templates/utilities/_base.html:36
+#: yaffo/templates/base.html:135 yaffo/templates/utilities/_base.html:36
 msgid "Utilities"
 msgstr ""
 
-#: yaffo/templates/base.html:130 yaffo/templates/sharing/_sidebar.html:8
+#: yaffo/templates/base.html:137 yaffo/templates/sharing/_sidebar.html:8
 msgid "Sharing"
 msgstr ""
 
-#: yaffo/templates/base.html:132 yaffo/templates/themes_page/index.html:15
+#: yaffo/templates/base.html:139 yaffo/templates/themes_page/index.html:15
 msgid "Themes"
 msgstr ""
 
-#: yaffo/templates/base.html:135 yaffo/templates/settings/index.html:13
+#: yaffo/templates/base.html:142 yaffo/templates/settings/index.html:13
 msgid "Settings"
 msgstr ""
 
-#: yaffo/templates/base.html:140
+#: yaffo/templates/base.html:147
 msgid "Pages"
 msgstr ""
 
-#: yaffo/templates/base.html:156
+#: yaffo/templates/base.html:164
 msgid "Edit page"
 msgstr ""
 
-#: yaffo/templates/base.html:164
+#: yaffo/templates/base.html:172
 msgid "New page"
 msgstr ""
 
-#: yaffo/templates/base.html:177 yaffo/templates/components/info_modal.html:6
+#: yaffo/templates/base.html:185 yaffo/templates/components/info_modal.html:6
 #: yaffo/templates/components/info_modal.html:12
 #: yaffo/templates/components/modal.html:9
 msgid "Close"
 msgstr ""
 
-#: yaffo/templates/base.html:191
+#: yaffo/templates/base.html:199
 msgid "Select a folder"
 msgstr ""
 
-#: yaffo/templates/base.html:195
+#: yaffo/templates/base.html:203
 msgid "Up"
 msgstr ""
 
-#: yaffo/templates/base.html:210 yaffo/templates/base.html:226
+#: yaffo/templates/base.html:218 yaffo/templates/base.html:234
 #: yaffo/templates/components/chat_dialog.html:39
 #: yaffo/templates/components/modal.html:17
 #: yaffo/templates/fragments/job_status_fragment.html:29
@@ -1291,11 +1297,11 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: yaffo/templates/base.html:211
+#: yaffo/templates/base.html:219
 msgid "Select this folder"
 msgstr ""
 
-#: yaffo/templates/base.html:220 yaffo/templates/base.html:227
+#: yaffo/templates/base.html:228 yaffo/templates/base.html:235
 msgid "Confirm"
 msgstr ""
 
@@ -1363,8 +1369,8 @@ msgstr ""
 
 #: yaffo/templates/albums/_base.html:13 yaffo/templates/albums/album.html:33
 #: yaffo/templates/components/photo_card.html:34
-#: yaffo/templates/people/list.html:24 yaffo/templates/people/list.html:85
-#: yaffo/templates/sharing/files.html:110
+#: yaffo/templates/people/list.html:24 yaffo/templates/people/list.html:35
+#: yaffo/templates/people/list.html:85 yaffo/templates/sharing/files.html:110
 #: yaffo/templates/themes_page/index.html:115
 #: yaffo/templates/themes_page/index.html:127
 #: yaffo/templates/utilities/_base.html:11
@@ -1449,17 +1455,17 @@ msgid "Select all %(count)s matching"
 msgstr ""
 
 #: yaffo/templates/albums/add.html:46 yaffo/templates/albums/album.html:47
-#: yaffo/templates/albums/album.html:123
+#: yaffo/templates/albums/album.html:125
 msgid "Add photos"
 msgstr ""
 
-#: yaffo/templates/albums/add.html:58 yaffo/templates/albums/album.html:108
+#: yaffo/templates/albums/add.html:58 yaffo/templates/albums/album.html:110
 #: yaffo/templates/components/photo_card.html:15
 #, python-format
 msgid "Video from %(date)s"
 msgstr ""
 
-#: yaffo/templates/albums/add.html:62 yaffo/templates/albums/album.html:112
+#: yaffo/templates/albums/add.html:62 yaffo/templates/albums/album.html:114
 #: yaffo/templates/components/photo_card.html:30
 #, python-format
 msgid "Photo from %(date)s"
@@ -1517,7 +1523,7 @@ msgstr ""
 msgid "Edit details"
 msgstr ""
 
-#: yaffo/templates/albums/album.html:56 yaffo/templates/albums/album.html:146
+#: yaffo/templates/albums/album.html:56 yaffo/templates/albums/album.html:148
 #: yaffo/templates/sharing/_device_panel.html:106
 msgid "Share"
 msgstr ""
@@ -1569,23 +1575,31 @@ msgstr ""
 msgid "Remove from album"
 msgstr ""
 
-#: yaffo/templates/albums/album.html:103
+#: yaffo/templates/albums/album.html:97
+msgid "Move earlier"
+msgstr ""
+
+#: yaffo/templates/albums/album.html:98
+msgid "Move later"
+msgstr ""
+
+#: yaffo/templates/albums/album.html:105
 msgid "Cover"
 msgstr ""
 
-#: yaffo/templates/albums/album.html:120
+#: yaffo/templates/albums/album.html:122
 msgid "This album is empty"
 msgstr ""
 
-#: yaffo/templates/albums/album.html:121
+#: yaffo/templates/albums/album.html:123
 msgid "Nothing has been added to it yet."
 msgstr ""
 
-#: yaffo/templates/albums/album.html:141
+#: yaffo/templates/albums/album.html:143
 msgid "Edit album"
 msgstr ""
 
-#: yaffo/templates/albums/album.html:143
+#: yaffo/templates/albums/album.html:145
 #: yaffo/templates/components/modal.html:18
 #: yaffo/templates/filters/_config_modal.html:22
 #: yaffo/templates/pages/design.html:38
@@ -1599,7 +1613,7 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: yaffo/templates/albums/album.html:144
+#: yaffo/templates/albums/album.html:146
 msgid "Share album"
 msgstr ""
 
@@ -2040,7 +2054,7 @@ msgid "Favorites Only"
 msgstr ""
 
 #: yaffo/templates/filters/_gender.html:2 yaffo/templates/people/list.html:25
-#: yaffo/templates/people/list.html:89
+#: yaffo/templates/people/list.html:39 yaffo/templates/people/list.html:89
 msgid "Gender"
 msgstr ""
 
@@ -2389,11 +2403,27 @@ msgstr ""
 msgid "Edit title"
 msgstr ""
 
-#: yaffo/templates/pages/_widget.html:9
+#: yaffo/templates/pages/_widget.html:10
+msgid "Move widget up"
+msgstr ""
+
+#: yaffo/templates/pages/_widget.html:11
+msgid "Move widget down"
+msgstr ""
+
+#: yaffo/templates/pages/_widget.html:12
+msgid "Make widget shorter"
+msgstr ""
+
+#: yaffo/templates/pages/_widget.html:13
+msgid "Make widget taller"
+msgstr ""
+
+#: yaffo/templates/pages/_widget.html:13
 msgid "Delete widget"
 msgstr ""
 
-#: yaffo/templates/pages/_widget.html:17
+#: yaffo/templates/pages/_widget.html:21
 #, python-format
 msgid "%(title)s preview"
 msgstr ""
@@ -2511,11 +2541,11 @@ msgstr ""
 msgid "Add Person"
 msgstr ""
 
-#: yaffo/templates/people/list.html:26
+#: yaffo/templates/people/list.html:26 yaffo/templates/people/list.html:44
 msgid "Born"
 msgstr ""
 
-#: yaffo/templates/people/list.html:28
+#: yaffo/templates/people/list.html:28 yaffo/templates/people/list.html:51
 msgid "Photos"
 msgstr ""
 
@@ -3798,4 +3828,3 @@ msgstr ""
 #: yaffo/templates/utilities/remove_duplicates_results_form_header.html:68
 msgid "Remove Selected Duplicates"
 msgstr ""
-

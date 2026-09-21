@@ -1,5 +1,5 @@
 import type {z} from "zod";
-import {toToolResultPart} from "@lib/model_clients/model_client.interface";
+import {toTextPart, toToolResultPart} from "@lib/model_clients/model_client.interface";
 import {extractJson} from "@lib/test_generator/prompt/json_parser";
 import type {ModelClient, ToolCallResult} from "@lib/model_clients/model_client.interface";
 import type {ToolProvider} from "@lib/tool_providers/toolprovider.types";
@@ -83,6 +83,19 @@ export const runToolLoop = async (
         }
         client.addToolResultMessage(results.map(toToolResultPart));
     }
+
+    // The budget is spent, but twenty rounds of reading left the session with plenty
+    // to say. Throwing here discards all of it and the caller records nothing, so the
+    // run reports the shot as though it had never been looked at. Ask once more, with
+    // tool calls declared dead, so what it did learn survives as an answer.
+    client.addUserMessage([toTextPart(
+        `You have used all ${maxRounds} tool rounds for this turn. No further tool calls ` +
+        "will be executed, and any you make will be ignored. Answer now from what you " +
+        "already know. State plainly in your answer that you could not finish " +
+        "investigating, and lower your confidence to reflect that."
+    )]);
+    const final = await client.callModelApi();
+    if (final?.text?.trim()) return final.text;
     throw new Error(`gave up after ${maxRounds} tool rounds without an answer`);
 };
 

@@ -17,6 +17,15 @@ context:
   - tag: settings-js
     path: static/settings/index.js
     description: Client wiring for adding/removing media dirs and streaming thumbnail stats
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - Removing the last media directory should be allowed but leaves indexing with nothing to scan
@@ -118,3 +127,137 @@ scenarios:
       - Build Version and Build Timestamp are displayed
       - Database Path and Task Queue Database Path are shown
       - ExifTool, FFmpeg, Face Recognition, and Image Classification model paths are listed (or "Not found")
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P7 — settings). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  #
+  # Settings registers no page panel of its own (it has no sidebar), so the
+  # peer-panel part of the page-family minimum is covered by specs/themes.yaml
+  # instead — themes is the other half of this page family.
+  # ---------------------------------------------------------------------------
+  - name: settings_route_fits_every_contract_viewport
+    goal: The settings page renders without page-level horizontal overflow at every supported width
+    priority: high
+    steps:
+      - Load the settings page at 320, 390, 768, 1024 and 1440 CSS pixels
+    verify:
+      - The document never scrolls horizontally at any of the contract widths
+  - name: settings_long_paths_wrap_instead_of_widening_the_page
+    goal: Filesystem paths and API keys stay inside the viewport
+    priority: high
+    steps:
+      - Load the settings page at 320x568
+      - Replace a media directory row and a System Information value with a long break-free path
+    verify:
+      - System and current path values wrap anywhere rather than overflowing
+      - The page does not scroll horizontally
+      - Destructive actions stay visually distinct from the rest at every width
+      - The directory row stays a row on a phone: the path wraps onto as many lines as it needs and Remove keeps its own size beside it
+      # The row used to be in the shared narrow layer's stack group. Dropping
+      # Remove onto its own full-width line read as a second, page-wide action
+      # rather than as this row's control, and put a destructive button directly
+      # under the path it deletes.
+  - name: settings_label_help_icons_stay_visible_below_the_breakpoint
+    goal: The label prompt and English-only markers remain real, visible controls on a phone
+    priority: high
+    steps:
+      - Load the settings page at 320x568, 390x844 and 768x1024
+      - Measure the Photo labels help tips
+    verify:
+      - Every help tip has a non-zero box at every width
+      # Regression. static/responsive.css hides `[data-tooltip]::before` below
+      # 640px to drop the JS tooltip's arrow, but on a help tip that ::before is
+      # the icon glyph itself, so every prompt and warning marker collapsed to a
+      # 0x0 invisible control on phones.
+  - name: settings_label_prompt_tooltips_open_as_an_anchored_popover
+    goal: On a tablet or desktop the prompt opens beside its chip and stays inside the viewport
+    priority: high
+    steps:
+      - Load the settings page at 768x1024, 1024x768 and 1440x900
+      - Hover a chip's prompt marker
+    verify:
+      - The page does not scroll horizontally before or while the prompt is shown
+      - The pure-CSS bubble does not render at these widths
+      - The popover carries the prompt text and fits inside the viewport
+      - It sits directly above its chip, or directly below when there is no room above
+      # Regression. The shared pure-CSS tooltip is a 260px box centred on its
+      # anchor; a chip's marker is 15px wide and the chips wrap right up to the
+      # section's inline end, so the bubble hung 48px past the document edge and
+      # the settings page scrolled sideways with nothing hovered. Pinning it to
+      # the bottom of the viewport fixed the overflow but stranded the text far
+      # from the control at desktop widths, so above 640px an anchored, clamped
+      # popover (components/tooltip.js) replaces it.
+  - name: settings_label_prompt_popover_opens_on_a_tablet_tap
+    goal: A coarse pointer above the breakpoint can open and dismiss the prompt
+    priority: high
+    steps:
+      - Load the settings page in a coarse-pointer context at 768x1024
+      - Tap a chip's prompt marker, then tap it again
+    verify:
+      - The first tap opens the popover with the prompt text, inside the viewport
+      - The second tap dismisses it — there is no hover to leave on a tablet
+  - name: settings_label_prompts_open_on_a_coarse_pointer
+    goal: Tapping a label's prompt marker reveals it, and the chip controls are real touch targets
+    priority: high
+    steps:
+      - Load the settings page in a coarse-pointer context at 390x844
+      - Tap a label chip's prompt marker
+    verify:
+      - The prompt marker and the remove control are at least 44 CSS pixels in both directions
+      - Below the breakpoint the presentation is the pseudo-element pinned to the bottom of the viewport, not the popover
+      - Tapping the marker reveals the prompt, which hover and :focus-visible alone never do on touch
+      - The page does not scroll horizontally
+  - name: settings_api_key_controls_stack_without_crowding_the_destructive_action
+    goal: The API-key row is a real action row that stacks on a phone
+    priority: medium
+    steps:
+      - Load the settings page at 1440x900 and at 320x568
+    verify:
+      - The API-key actions are a flex row with a gap, so Save and Clear cannot butt against each other
+      - At 320 the actions stack and each control spans the column
+      - The API-key status line wraps an environment variable name rather than widening the section
+  - name: settings_entered_values_survive_a_resize_through_the_breakpoint
+    goal: Unsaved input is not lost when the viewport crosses the responsive breakpoint
+    priority: high
+    steps:
+      - Enter a media directory path, a label filter and an API key at 390x844
+      - Resize to 1440x900, 320x568, 844x390 and back to 1440x900
+    verify:
+      - All three entered values are still there after every resize
+      - No page-level horizontal overflow appears at any of those sizes
+  - name: settings_folder_picker_fits_a_narrow_viewport
+    goal: The shared folder/file picker is usable on a narrow screen
+    priority: high
+    steps:
+      - Load the settings page at 390x844 and open a folder picker
+      - Press Escape
+    verify:
+      - The picker fits inside the viewport — a full-width sheet on a phone, an edge gutter on a tablet
+      - The entry list scrolls inside itself using dynamic viewport units and contains its own overscroll
+      - Long paths in the picker bar wrap or ellipsise rather than widening the dialog
+      - Escape closes the picker
+  - name: settings_translated_labels_do_not_widen_the_page
+    goal: German and Arabic settings copy fits every contract width
+    priority: medium
+    steps:
+      - Switch the application language to German, then to Arabic
+      - Load the settings page at each contract width
+    verify:
+      - html lang and dir follow the chosen locale
+      - No page-level horizontal overflow in either locale at any contract width
+    cleanup:
+      - Restore the original application language
+  - name: settings_standalone_screens_fit_and_keep_their_action_reachable
+    goal: The error and request-not-verified screens obey the same width and target guarantees
+    priority: high
+    steps:
+      - Load a missing route at every contract width
+      - Submit a settings form with its CSRF token blanked, at 320 and at 1440
+    verify:
+      - Neither screen scrolls horizontally at any contract width
+      - The error screen's "Back to your library" action is at least 44 CSS pixels tall and inside the viewport
+      # Regression. The request-not-verified shell loads its own stylesheets and
+      # never linked button.css, so its only action rendered as a bare 18px link
+      # with no fill, no padding and no touch target.
+      - The request-not-verified screen's action is a filled, padded button

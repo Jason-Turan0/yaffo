@@ -185,6 +185,17 @@ pages:
       A new section is a gap.
     walkthrough: true
 
+  reference-maintenance/comparison:
+    covers: >-
+      How Yaffo compares with Immich, PhotoPrism, and digiKam across deployment,
+      library and media support, search, people and faces, organization and
+      metadata, sharing, and automation; which tool suits which way of working;
+      and where Yaffo is honestly behind.
+    # No observable surface: the page is a prose comparison against other
+    # projects, and its Yaffo column is claims about the product rather than a
+    # view a walkthrough could drive.
+    walkthrough: false
+
   reference-maintenance/troubleshooting:
     covers: >-
       The common failure modes and how to narrow them down: photos not appearing,

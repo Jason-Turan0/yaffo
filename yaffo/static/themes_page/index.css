@@ -2,6 +2,9 @@
     display: flex;
     gap: 20px;
     min-height: calc(100vh - 100px);
+    /* Mobile browser chrome makes vh taller than the space actually on screen;
+       dvh follows it. The vh line stays as the fallback. */
+    min-height: calc(100dvh - 100px);
 }
 
 .themes-sidebar {
@@ -18,7 +21,11 @@
 }
 
 .theme-nav-default {
-    float: right;
+    /* The nav row is a flex container, which ignores a float on its items — the
+       badge never actually moved. `margin-inline-start: auto` does the job and
+       follows the writing direction in RTL locales. */
+    margin-inline-start: auto;
+    flex: none;
     font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -79,8 +86,12 @@
     border: var(--border-width) solid var(--color-success-soft-border);
 }
 
+/* Make default / Rename / Delete. Between the 640px stack and the desktop header
+   these three sit on one header row, and a long locale (German "Als Standard
+   festlegen") runs them past the edge unless they may wrap. */
 .theme-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 20px;
 }
@@ -99,8 +110,11 @@
     font-size: var(--font-size-sm);
 }
 
+/* Save draft / Discard sit inside the conversation card, which is narrower than
+   the content column; they wrap rather than overflow it. */
 .theme-draft-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
 }
 

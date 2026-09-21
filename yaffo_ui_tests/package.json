@@ -11,6 +11,7 @@
     "test:sandboxed": "node --import tsx lib/services/run_sandboxed_suites.ts",
     "seed:build": "tsx lib/services/isolated_runner.ts --build-seed --peer",
     "test:spec": "tsx scripts/test_spec.ts",
+    "test:local": "node --import tsx scripts/test_local.ts",
     "test:unit": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",

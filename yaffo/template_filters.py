@@ -128,6 +128,44 @@ def format_duration(seconds: Union[int, float, None]) -> str:
     return f"{minutes}:{secs:02d}"
 
 
+# Query-string keys that address the page rather than narrow its contents: they
+# must never light the "N filters applied" badge on a narrow-screen Filters
+# button. Everything else in the URL got there from the filter form.
+_NON_FILTER_QUERY_KEYS = frozenset({
+    "page",
+    "page-size",
+    "view",
+    "sort",
+    "edit",
+    "scope",
+    "label",
+    "media_dir_id",
+    "device_id",
+    "csrf_token",
+})
+
+
+def applied_filter_count(args) -> int:
+    """How many distinct filters the current URL applies.
+
+    Shared by every page that renders `_sidebar.html`, so the badge means the
+    same thing everywhere without each route computing its own tally. A
+    multi-valued key (two people, three labels) counts once — the badge answers
+    "how many filters are narrowing this view", not "how many values".
+
+    `*-match-type` keys are modifiers on another filter (any/all), so they only
+    count when the filter they modify is itself set, which it always is when
+    they matter — hence they are skipped outright.
+    """
+    keys = set()
+    for key in args.keys():
+        if key in _NON_FILTER_QUERY_KEYS or key.endswith("-match-type"):
+            continue
+        if any(value.strip() for value in args.getlist(key) if isinstance(value, str)):
+            keys.add(key)
+    return len(keys)
+
+
 def init_template_filters(app) -> None:
     app.add_template_filter(format_duration, "format_duration")
     app.add_template_filter(format_integer, "format_integer")
@@ -152,3 +190,4 @@ def init_template_filters(app) -> None:
 
     app.jinja_env.globals["DateFormat"] = DateFormat
     app.jinja_env.globals["is_browser_playable_video"] = is_browser_playable_video
+    app.jinja_env.globals["applied_filter_count"] = applied_filter_count

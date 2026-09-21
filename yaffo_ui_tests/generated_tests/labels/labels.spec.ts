@@ -13,7 +13,7 @@ type GalleryLabelOption = {
 const CUSTOM_LABEL = `ui-label-${Date.now()}`;
 const CUSTOM_PROMPT = 'a bright custom test object';
 
-test.describe.configure({ mode: 'serial', timeout: 60_000 });
+test.describe.configure({ mode: 'serial' });
 
 async function openLabelsSection(page: Page): Promise<Locator> {
   await page.goto('/settings');
@@ -235,7 +235,7 @@ test.describe('Labels', () => {
     await expect(page.locator('.notification.visible')).toContainText(/Re-classifying .*photo/i);
 
     await openClassifyLabelsAutomation(page);
-    await expect(page.locator('#automation-runs')).toContainText(/classif|label|photo|running|completed/i, { timeout: 30_000 });
+    await expect(page.locator('#automation-runs')).toContainText(/classif|label|photo|running|completed/i, { timeout: 20_000 });
   });
 
   test('photo_details_shows_labels_or_no_labels_state', async ({ page }) => {

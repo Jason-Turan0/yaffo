@@ -196,6 +196,9 @@ window.PHOTO_ORGANIZER.COMPONENTS.selectionBar = {
         grid.addEventListener('click', (event) => {
             const target = event.target;
             if (!(target instanceof Element)) return;
+            // Cards can expose controls that must remain operable while selection
+            // mode is active (for example, touch-friendly reorder buttons).
+            if (target.closest('[data-selection-ignore]')) return;
             const card = target.closest('[data-select-id]');
             if (!(card instanceof HTMLElement)) return;
             event.preventDefault();

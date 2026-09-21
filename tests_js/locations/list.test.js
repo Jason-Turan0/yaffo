@@ -70,6 +70,7 @@ class TestMap {
     this.addLayer = vi.fn();
     this.addInteraction = vi.fn();
     this.addOverlay = vi.fn();
+    this.updateSize = vi.fn();
   }
 
   getView() {
@@ -111,9 +112,31 @@ class TestDragBox {
   }
 }
 
+/**
+ * jsdom has no `matchMedia`, and the map subscribes to the narrow-layout query
+ * so it can tell OpenLayers its new size when the breakpoint moves the
+ * selection panel out of the map's row. Record the listeners so a test can fire
+ * the change the way the browser would.
+ */
+const mediaQueryListeners = [];
+
+const installMatchMediaStub = (matches = false) => {
+  mediaQueryListeners.length = 0;
+  vi.stubGlobal('matchMedia', (query) => ({
+    media: query,
+    matches,
+    addEventListener: (eventName, handler) => mediaQueryListeners.push({ query, eventName, handler }),
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }));
+};
+
 const setupDom = () => {
   document.body.innerHTML = `
     <div id="map"></div>
+    <div id="selection-panel-backdrop" class="selection-panel-backdrop" hidden></div>
     <div id="selection-panel" class="selection-panel">
       <div id="selection-panel-content"></div>
     </div>
@@ -244,8 +267,10 @@ const initLocationsMap = async ({
   reverseResponse = null,
   locations = createLocations(),
   nearbyRadiusKm = 10,
+  narrow = false,
 } = {}) => {
   setupDom();
+  installMatchMediaStub(narrow);
   installOpenLayersStub();
 
   const fetchMock = vi.fn((url) => {
@@ -278,6 +303,26 @@ const initLocationsMap = async ({
 };
 
 describe('locations list map selection panel', () => {
+  it('presents narrow assignment controls as a dismissible modal', async () => {
+    const { api } = await initLocationsMap({ narrow: true });
+
+    await api.updateSelectionPanel();
+
+    const panel = document.getElementById('selection-panel');
+    const backdrop = document.getElementById('selection-panel-backdrop');
+    expect(panel.getAttribute('role')).toBe('dialog');
+    expect(panel.getAttribute('aria-modal')).toBe('true');
+    expect(backdrop.hidden).toBe(false);
+    expect(document.body.classList.contains('location-assignment-modal-open')).toBe(true);
+
+    backdrop.click();
+
+    expect(api.selectedPhotoIds.size).toBe(0);
+    expect(panel.classList.contains('active')).toBe(false);
+    expect(backdrop.hidden).toBe(true);
+    expect(document.body.classList.contains('location-assignment-modal-open')).toBe(false);
+  });
+
   it('renders the relaid-out mass assignment controls and selected cluster summary', async () => {
     const { api } = await initLocationsMap();
 
@@ -453,6 +498,103 @@ describe('locations list map selection panel', () => {
     }));
     expect(api.vectorSource.getFeatures().every((feature) => feature.get('name') === null)).toBe(true);
     expect(window.notification.success).toHaveBeenCalledWith('Cleared 2');
+  });
+
+  it('keeps an unsaved custom location name across a panel re-render', async () => {
+    const { api } = await initLocationsMap();
+
+    await api.updateSelectionPanel();
+    const input = document.getElementById('mass-location-input');
+    input.value = 'Half typed harbour';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // A pan, a filter change or a resize through the responsive breakpoint all
+    // re-render the panel; none of them may throw the typed name away.
+    await api.updateSelectionPanel();
+
+    expect(document.getElementById('mass-location-input').value).toBe('Half typed harbour');
+  });
+
+  it('keeps the unsaved name when a render arrives before the clusters catch up', async () => {
+    // Regression: a resize through the responsive breakpoint re-renders the
+    // panel while the cluster source is still on the old size, so the render
+    // briefly finds no cluster for a selection that is still very much there.
+    // That is not the user abandoning their draft.
+    const { api } = await initLocationsMap();
+
+    await api.updateSelectionPanel();
+    const input = document.getElementById('mass-location-input');
+    input.value = 'Half typed harbour';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const features = api.vectorSource.getFeatures();
+    api.vectorSource.clear();
+    await api.updateSelectionPanel();
+    api.vectorSource.addFeatures(features);
+    await api.updateSelectionPanel();
+
+    expect(document.getElementById('mass-location-input').value).toBe('Half typed harbour');
+  });
+
+  it('drops the unsaved custom location name once the selection is cleared', async () => {
+    const { api } = await initLocationsMap();
+
+    await api.updateSelectionPanel();
+    const input = document.getElementById('mass-location-input');
+    input.value = 'Half typed harbour';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    api.selectedPhotoIds.clear();
+    await api.updateSelectionPanel();
+    expect(document.getElementById('selection-panel').classList.contains('active')).toBe(false);
+
+    api.vectorSource.getFeatures().forEach((feature) => api.selectedPhotoIds.add(feature.get('id')));
+    await api.updateSelectionPanel();
+
+    expect(document.getElementById('mass-location-input').value).toBe('');
+  });
+});
+
+describe('locations list map size synchronisation', () => {
+  it('tells OpenLayers its new size after a window resize', async () => {
+    const { api } = await initLocationsMap();
+    api.map.updateSize.mockClear();
+
+    window.dispatchEvent(new Event('resize'));
+
+    expect(api.map.updateSize).toHaveBeenCalled();
+  });
+
+  it('tells OpenLayers its new size after a rotation', async () => {
+    const { api } = await initLocationsMap();
+    api.map.updateSize.mockClear();
+
+    window.dispatchEvent(new Event('orientationchange'));
+
+    expect(api.map.updateSize).toHaveBeenCalled();
+  });
+
+  it('tells OpenLayers its new size when the narrow-layout breakpoint changes', async () => {
+    const { api } = await initLocationsMap();
+    api.map.updateSize.mockClear();
+
+    const narrow = mediaQueryListeners.find((entry) => entry.query === '(max-width: 900px)');
+    expect(narrow, 'the map must watch the narrow-layout media query').toBeTruthy();
+    expect(narrow.eventName).toBe('change');
+    narrow.handler(new Event('change'));
+
+    expect(api.map.updateSize).toHaveBeenCalled();
+  });
+
+  it('tells OpenLayers its new size when the selection panel finishes animating', async () => {
+    const { api } = await initLocationsMap();
+    api.map.updateSize.mockClear();
+
+    document.getElementById('selection-panel').dispatchEvent(
+      new Event('transitionend', { bubbles: true }),
+    );
+
+    expect(api.map.updateSize).toHaveBeenCalled();
   });
 });
 

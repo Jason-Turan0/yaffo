@@ -36,6 +36,9 @@ export default defineWalkthrough({
         await visit("/utilities/automations");
         await visit("/themes");
 
+        // Sharing: paired devices and the shares granted to them.
+        await visit("/sharing/settings");
+
         // Custom page IDs belong to fixture data, so resolve the seeded page from
         // its navigation entry rather than baking its current database ID in here.
         await visit("/?view=grid");

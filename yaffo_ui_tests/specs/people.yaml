@@ -22,6 +22,15 @@ context:
   - tag: face_assignment
     attribute: yaffo-face_assignment
     description: Shared context — people are the assignment target for detected faces
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - The Bennett seed creates Marcus Bennett, Elena Bennett, Maya Bennett, and Theo Bennett
@@ -100,3 +109,99 @@ scenarios:
       - After removing, the face count for that person decreases
       - A success message is displayed
       - The removed face becomes available again on the face assignment page
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P3 — people). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: people_list_renders_without_horizontal_overflow_at_every_contract_width
+    goal: The people list is contained by the viewport rather than by its six columns
+    priority: high
+    steps:
+      - Load /people at 320, 390, 768, 1024 and 1440 px, then at 844x390
+    verify:
+      - No element extends past the document width at any of those widths
+
+  - name: people_rows_become_labeled_cards_on_narrow_screens
+    goal: The six-column people table stays readable without a horizontal scroll
+    priority: high
+    steps:
+      - Load the people list at 390x844
+    verify:
+      - Each cell carries its column name as a data-label so the card reads as a labelled record
+      - The label is actually rendered by the card's ::before, not merely present in the markup
+      - No data is hidden merely to make the row fit — all six cells still render
+      - Any remaining tabular surface scrolls inside its own container, never the page
+
+  - name: a_long_unbroken_person_name_does_not_widen_the_people_pages
+    goal: A person's name is user data and must never set the page's minimum width
+    priority: high
+    steps:
+      - Create a person whose name is one unbroken run of ~90 characters
+      - Load the people list at 320, 390, 768 and 1440 px
+      - Load that person's faces page at 320x568
+    verify:
+      - The people list does not scroll horizontally at any width
+      - The person-faces heading shows the name and wraps it
+      - The empty-state sentence that interpolates the name breaks it too — it used to force a 672px page at a 320px viewport
+
+  - name: the_add_person_dialog_fits_a_320px_viewport
+    goal: The add/edit dialogs are contained surfaces with a single scroll region
+    priority: high
+    steps:
+      - Load the people list at 320x568 and open the Add Person dialog
+    verify:
+      - The dialog content fits inside the viewport
+      - The dialog body never scrolls sideways
+      - The footer actions stay inside the viewport and keep a full-size target
+
+  - name: an_in_progress_add_person_edit_survives_a_resize_through_the_breakpoint
+    goal: Resizing must not discard a half-filled dialog
+    priority: high
+    steps:
+      - Open the Add Person dialog at 390x844 and type a name
+      - Resize to 1440x900 without reloading
+    verify:
+      - The dialog is still open
+      - The typed name is still there
+      - The dialog still fits inside the viewport
+
+  - name: person_faces_route_renders_without_horizontal_overflow_at_every_contract_width
+    goal: The per-person face gallery is contained at every supported width
+    priority: high
+    steps:
+      - Open the faces page of a person who has faces at 320, 390, 768, 1024 and 1440 px
+    verify:
+      - No element extends past the document width at any of those widths
+
+  - name: person_faces_panels_satisfy_the_peer_panel_contract
+    goal: Both panels the person-faces page registers obey the shared contract
+    priority: high
+    steps:
+      - Drive the shared panel-contract helper against person-faces-actions and person-faces-filters
+    verify:
+      - Each panel is closed on first paint and is a peer of Menu
+      - Opening Menu closes the panel and vice versa
+      - The live panel DOM is restored to the page at desktop width, keeping what it contained
+
+  - name: person_faces_exposes_actions_and_filters_as_peers
+    goal: A person's face gallery follows the same two-panel contract as the faces page
+    priority: medium
+    steps:
+      - Open a person's faces page at 390x844
+      - Enter a Min Similarity value in the Filters panel, then resize to 1440x900
+    verify:
+      - Actions and Filters each have their own peer navbar button, Actions first, with Menu last
+      - The entered filter value survives the resize
+      - The page does not scroll horizontally
+
+  - name: the_person_face_gallery_is_usable_with_a_coarse_pointer
+    goal: Selecting faces is the job of this page, so it must work under a thumb
+    priority: high
+    steps:
+      - Open a person's faces page in a coarse-pointer context at 390x844
+      - Tap a face card, then tap Clear selection
+    verify:
+      - Select all and Clear selection are at least 44px tall
+      - Tapping a card selects it — the hover lift is not the affordance
+      - The page does not scroll horizontally before or after selecting

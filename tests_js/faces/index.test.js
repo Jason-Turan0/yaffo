@@ -42,9 +42,14 @@ const shortcutModal = (people) => `
     <form data-js-form>
       <div id="shortcut-config-list">
         ${people.map((p) => `
-          <div class="shortcut-config-row" data-person-id="${p.id}" draggable="true">
+          <div class="shortcut-config-row" data-person-id="${p.id}">
+            <span class="filter-config-handle"></span>
             <input type="checkbox" class="shortcut-config-toggle" ${p.checked ? 'checked' : ''}>
             <span>${p.name}</span>
+            <div class="shortcut-config-move">
+              <button type="button" class="shortcut-config-move-btn" data-move="up"></button>
+              <button type="button" class="shortcut-config-move-btn" data-move="down"></button>
+            </div>
           </div>`).join('')}
       </div>
       <button type="button" id="shortcut-config-reset"></button>
@@ -82,6 +87,19 @@ const init = async (sampleSize = 10, shortcutPeople = [], allPeople = shortcutPe
     window.testI18n,
     config(),
   );
+
+const setPreviewMedia = ({ phone, precise }) => {
+  vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+    matches: query === '(max-width: 640px)' ? phone : precise,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+};
 
 const activeFaces = () =>
   Array.from(document.querySelectorAll('.suggestion-group:not([hidden]) .face'));
@@ -198,18 +216,20 @@ describe('faces initAssignment — submitFaces', () => {
   });
 });
 
-describe('faces initAssignment — hover tooltip', () => {
-  const hover = (faceId) => {
+describe('faces initAssignment — phone source preview modal', () => {
+  beforeEach(() => setPreviewMedia({ phone: true, precise: false }));
+
+  const openPreview = (faceId) => {
     document
-      .querySelector(`.face[data-face-id="${faceId}"]`)
-      .dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
-    return document.querySelector('.tooltip').textContent;
+      .querySelector(`.face[data-face-id="${faceId}"] .face-preview-button`)
+      .click();
+    return document.querySelector('.face-preview-modal').textContent;
   };
 
   // jsdom never fetches the image, so stand in for the decode: report the natural
   // size the region outline is scaled against, then fire `load`.
   const loadPreview = (naturalWidth, naturalHeight) => {
-    const image = document.querySelector('.tooltip .face-source-image');
+    const image = document.querySelector('.face-preview-modal .face-source-image');
     Object.defineProperty(image, 'naturalWidth', { value: naturalWidth });
     Object.defineProperty(image, 'naturalHeight', { value: naturalHeight });
     image.dispatchEvent(new window.Event('load'));
@@ -219,10 +239,13 @@ describe('faces initAssignment — hover tooltip', () => {
   it('previews the photo the face was cropped from', async () => {
     fixture(group([{ id: 1, media_item_id: 42, media_type: 'photo', photo_date: '2020-01-01' }]));
     await init();
-    hover(1);
+    openPreview(1);
 
-    expect(document.querySelector('.tooltip .face-source-image').getAttribute('src'))
+    expect(document.querySelector('.face-preview-modal .face-source-image').getAttribute('src'))
       .toBe('/media/media_item_id/42');
+    expect(document.querySelector('.face-preview-modal').classList.contains('active')).toBe(true);
+    expect(document.querySelector('.face-preview-modal').getAttribute('role')).toBe('dialog');
+    expect(document.querySelector('.face-tooltip').classList.contains('visible')).toBe(false);
   });
 
   it('outlines the detection box over the letterboxed photo', async () => {
@@ -233,13 +256,13 @@ describe('faces initAssignment — hover tooltip', () => {
       region: { top: 100, right: 300, bottom: 300, left: 100 },
     }]));
     await init();
-    hover(1);
+    openPreview(1);
     // An 800×400 photo `contain`-fitted into the 320px square scales by 0.4 and is
     // letterboxed with an 80px band top and bottom. The 200px box is padded by 10%
     // of itself (20px a side) before scaling.
     loadPreview(800, 400);
 
-    const box = document.querySelector('.tooltip .face-source-region');
+    const box = document.querySelector('.face-preview-modal .face-source-region');
     expect(box.hidden).toBe(false);
     expect(box.style.left).toBe('32px');          // (100 - 20) * 0.4, no horizontal band
     expect(box.style.top).toBe('112px');          // 80 band + (100 - 20) * 0.4
@@ -255,10 +278,10 @@ describe('faces initAssignment — hover tooltip', () => {
       region: { top: 0, right: 100, bottom: 100, left: 0 },  // flush to the top-left
     }]));
     await init();
-    hover(1);
+    openPreview(1);
     loadPreview(400, 400);  // square photo: scales by 0.8, no letterboxing
 
-    const box = document.querySelector('.tooltip .face-source-region');
+    const box = document.querySelector('.face-preview-modal .face-source-region');
     expect(box.style.left).toBe('0px');           // padding would go negative; clamped
     expect(box.style.top).toBe('0px');
     expect(box.style.width).toBe('88px');         // (110 - 0) * 0.8 — padded on one side only
@@ -268,18 +291,18 @@ describe('faces initAssignment — hover tooltip', () => {
   it('draws no outline for a face indexed without a detection box', async () => {
     fixture(group([{ id: 1, media_item_id: 42, media_type: 'photo', region: null }]));
     await init();
-    hover(1);
+    openPreview(1);
     loadPreview(800, 400);
 
-    expect(document.querySelector('.tooltip .face-source-region')).toBe(null);
+    expect(document.querySelector('.face-preview-modal .face-source-region')).toBe(null);
   });
 
   it('notes that a video-sourced face has no preview instead of showing an image', async () => {
     fixture(group([{ id: 1, media_item_id: 42, media_type: 'video', photo_date: '2020-01-01' }]));
     await init();
-    const text = hover(1);
+    const text = openPreview(1);
 
-    expect(document.querySelector('.tooltip .face-source-image')).toBe(null);
+    expect(document.querySelector('.face-preview-modal .face-source-image')).toBe(null);
     expect(text).toContain('faces:assignment.videoPreviewUnavailable');
   });
 
@@ -287,7 +310,7 @@ describe('faces initAssignment — hover tooltip', () => {
     fixture(group([{ id: 1, similarity: 0.87, photo_date: '2020-01-01' }]));
     await init();
 
-    expect(hover(1)).toContain('similarityValue');
+    expect(openPreview(1)).toContain('similarityValue');
   });
 
   it('omits the similarity line for a face with no score', async () => {
@@ -296,8 +319,8 @@ describe('faces initAssignment — hover tooltip', () => {
     fixture(group([{ id: 1, similarity: null, photo_date: '2020-01-01' }]));
     await init();
 
-    expect(hover(1)).not.toContain('similarityValue');
-    expect(hover(1)).toContain('dateValue');
+    expect(openPreview(1)).not.toContain('similarityValue');
+    expect(document.querySelector('.face-preview-modal').textContent).toContain('dateValue');
   });
 
   it('reads "unknown" for a face with no capture date', async () => {
@@ -307,7 +330,52 @@ describe('faces initAssignment — hover tooltip', () => {
     fixture(group([{ id: 1, similarity: 0.87, photo_date: null }]));
     await init();
 
-    expect(hover(1)).toContain('common:dateValue=common:unknown=');
+    expect(openPreview(1)).toContain('common:dateValue=common:unknown=');
+  });
+
+  it('closes from its close button without changing selection and restores focus', async () => {
+    fixture(group([{ id: 1, media_item_id: 42, media_type: 'photo' }]));
+    const api = await init();
+    const previewButton = document.querySelector('.face-preview-button');
+    previewButton.focus();
+    previewButton.click();
+
+    expect(document.querySelector('.face-preview-modal-close')).toBe(document.activeElement);
+    document.querySelector('.face-preview-modal-close').click();
+
+    expect(document.querySelector('.face-preview-modal').classList.contains('active')).toBe(false);
+    expect(previewButton).toBe(document.activeElement);
+    expect(api.getSelectedIds().has(1)).toBe(true);
+  });
+});
+
+describe('faces initAssignment — tablet and desktop source preview popover', () => {
+  it('opens the popover from the explicit control on a touch tablet', async () => {
+    setPreviewMedia({ phone: false, precise: false });
+    fixture(group([{ id: 1, media_item_id: 42, media_type: 'photo' }]));
+    const api = await init();
+
+    document.querySelector('.face-preview-button').click();
+
+    expect(document.querySelector('.face-tooltip').classList.contains('visible')).toBe(true);
+    expect(document.querySelector('.face-tooltip .face-source-image').getAttribute('src'))
+      .toBe('/media/media_item_id/42');
+    expect(document.querySelector('.face-preview-modal').classList.contains('active')).toBe(false);
+    expect(api.getSelectedIds().has(1)).toBe(true);
+  });
+
+  it('opens and closes the popover on desktop hover', async () => {
+    setPreviewMedia({ phone: false, precise: true });
+    fixture(group([{ id: 1, media_item_id: 42, media_type: 'photo' }]));
+    await init();
+    const face = document.querySelector('.face');
+
+    face.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+    expect(document.querySelector('.face-tooltip').classList.contains('visible')).toBe(true);
+    expect(document.querySelector('.face-preview-modal').classList.contains('active')).toBe(false);
+
+    face.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true }));
+    expect(document.querySelector('.face-tooltip').classList.contains('visible')).toBe(false);
   });
 });
 
@@ -375,5 +443,44 @@ describe('faces initAssignment — helpers & shortcuts', () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ person_ids: [4, 8] });
     expect([...document.querySelectorAll('#sidebar-shortcut-people .shortcut-item')]
       .map((el) => el.dataset.personId)).toEqual(['4', '8']);
+  });
+
+  it('reorders shortcut rows with the explicit move controls and saves the new order', async () => {
+    // The move buttons are the touch-safe alternative to dragging the handle:
+    // HTML5 drag-and-drop never fires for touch, so drag alone left the order
+    // uneditable on a phone.
+    fixture(group([{ id: 1 }]), {
+      shortcutPeople: [
+        { id: 4, name: 'Mina', checked: true },
+        { id: 8, name: 'Zoe', checked: true },
+      ],
+    });
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    await init(
+      10,
+      [{ id: 4, name: 'Mina' }, { id: 8, name: 'Zoe' }],
+      [{ id: 4, name: 'Mina' }, { id: 8, name: 'Zoe' }],
+      true,
+    );
+
+    const rowIds = () => [...document.querySelectorAll('.shortcut-config-row')]
+      .map((row) => row.dataset.personId);
+    expect(rowIds()).toEqual(['4', '8']);
+
+    // The ends of the list are disabled rather than silently inert.
+    const first = document.querySelector('.shortcut-config-row[data-person-id="4"]');
+    const second = document.querySelector('.shortcut-config-row[data-person-id="8"]');
+    expect(first.querySelector('[data-move="up"]').disabled).toBe(true);
+    expect(second.querySelector('[data-move="down"]').disabled).toBe(true);
+
+    second.querySelector('[data-move="up"]').click();
+    expect(rowIds()).toEqual(['8', '4']);
+
+    document.querySelector('#shortcutPeopleModal form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ person_ids: [8, 4] });
   });
 });

@@ -4,6 +4,7 @@ import fs, {existsSync, readFileSync} from "fs";
 import {GeneratedTestResponse} from "@lib/model_clients/model_client.response.types";
 import {formatTestResultsAsXml, runPlaywrightTests} from "@lib/services/run_playwright_tests";
 import {SpecPromptGenerator} from "@lib/test_generator/prompt/spec_prompt_generator";
+import {TEST_TIMEOUT_PROMPT} from "@lib/services/test_timeout_policy";
 
 interface LoadedContext {
     tag: string;
@@ -138,6 +139,7 @@ export class PromptGenerator {
             ...contextBlocks,
             "",
             ...instructionBlocks,
+            TEST_TIMEOUT_PROMPT,
             "",
             ...outputFormatBlock,
         ].join("\n");

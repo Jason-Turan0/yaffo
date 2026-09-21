@@ -80,12 +80,16 @@ describe("discoverSandboxedSuites", () => {
 
 describe("parsePositiveInteger", () => {
     it("uses the fallback when unset and accepts a positive integer", () => {
-        expect(parsePositiveInteger("COUNT", undefined, DEFAULT_SANDBOX_CONCURRENCY)).toBe(5);
+        // The fallback is returned as given. Asserting the constant's current
+        // value instead made this fail when the default concurrency changed,
+        // which is a property of the default, not of this function.
+        expect(parsePositiveInteger("COUNT", undefined, DEFAULT_SANDBOX_CONCURRENCY))
+            .toBe(DEFAULT_SANDBOX_CONCURRENCY);
         expect(parsePositiveInteger("COUNT", " 3 ", 5)).toBe(3);
     });
 
     it.each(["0", "-1", "2.5", "many"])("rejects %s", (value) => {
-        expect(() => parsePositiveInteger("COUNT", value, 5)).toThrow(/positive integer/);
+        expect(() => parsePositiveInteger("COUNT", value, 2)).toThrow(/positive integer/);
     });
 });
 

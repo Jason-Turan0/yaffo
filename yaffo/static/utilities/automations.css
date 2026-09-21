@@ -158,6 +158,9 @@
     max-height: 320px;
     margin: 0;
     font-size: var(--font-size-sm);
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: isolate;
 }
 
 .automation-test {
@@ -338,4 +341,88 @@
     margin: 0;
     color: var(--color-danger);
     font-size: var(--font-size-xs);
+}
+
+/* Keep user text contained while code and result tables own their scrolling. */
+.automation-detail,
+.automation-edit-screen > *,
+.automation-trigger-row > *,
+.automation-run-row > * {
+    min-width: 0;
+}
+
+.automation-trigger-row,
+.automation-add-actions,
+.automation-trigger-add-row,
+.automation-code-head,
+.automation-test-actions-head {
+    flex-wrap: wrap;
+}
+
+.automation-trigger-desc,
+.automation-trigger-event,
+.automation-run-row,
+.automation-test-meta,
+.automation-test-error,
+.automation-test-output {
+    overflow-wrap: anywhere;
+}
+
+.automation-code,
+.automation-test-result,
+.automation-test-result .table-container {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.automation-code,
+.automation-test-result .table-container {
+    overscroll-behavior: contain;
+}
+
+.automation-code-toggle {
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+.js-code-toggle {
+    min-height: 44px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    flex: 1;
+}
+
+@media (max-width: 640px) {
+    .page-header:has(.automation-actions) .page-header-main {
+        min-width: 0;
+    }
+
+    .automation-trigger-row {
+        padding-block: 12px;
+        border-bottom: var(--border-width) solid var(--color-border);
+    }
+
+    .automation-trigger-spacer {
+        display: none;
+    }
+
+    .schedule-editor .cron-field,
+    .schedule-editor .cron-raw {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .automation-test-controls > * {
+        flex: 1 1 100%;
+        white-space: normal;
+    }
+}
+
+/* Raw arguments retain their formatting inside the table's bounded scroller. */
+.automation-test-table .test-action-detail code {
+    direction: ltr;
+    unicode-bidi: isolate;
+    white-space: pre;
+    overflow-wrap: normal;
+    word-break: normal;
 }

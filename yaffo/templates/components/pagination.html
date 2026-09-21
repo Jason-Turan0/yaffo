@@ -48,15 +48,17 @@
 
         <div class="page-navigation">
             <a href="{{ base_url }}?page=1&page-size={{ page_size }}{{ extra_query }}"
-               class="page-btn {% if current_page == 1 %}disabled{% endif %}"
+               class="page-btn {% if current_page == 1 %}disabled{% endif %}" data-icon="page-first"
+               aria-label="{{ _('First') }}"
                {% if current_page == 1 %}onclick="return false;"{% endif %}>
-                &laquo; {{ _("First") }}
+                <span class="page-btn-label">&laquo; {{ _("First") }}</span>
             </a>
 
             <a href="{{ base_url }}?page={{ current_page - 1 }}&page-size={{ page_size }}{{ extra_query }}"
-               class="page-btn {% if current_page == 1 %}disabled{% endif %}"
+               class="page-btn {% if current_page == 1 %}disabled{% endif %}" data-icon="page-previous"
+               aria-label="{{ _('Previous') }}"
                {% if current_page == 1 %}onclick="return false;"{% endif %}>
-                &lsaquo; {{ _("Previous") }}
+                <span class="page-btn-label">&lsaquo; {{ _("Previous") }}</span>
             </a>
 
             <span class="page-info">
@@ -66,15 +68,17 @@
             </span>
 
             <a href="{{ base_url }}?page={{ current_page + 1 }}&page-size={{ page_size }}{{ extra_query }}"
-               class="page-btn {% if current_page >= total_pages %}disabled{% endif %}"
+               class="page-btn {% if current_page >= total_pages %}disabled{% endif %}" data-icon="page-next"
+               aria-label="{{ _('Next') }}"
                {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
-                {{ _("Next") }} &rsaquo;
+                <span class="page-btn-label">{{ _("Next") }} &rsaquo;</span>
             </a>
 
             <a href="{{ base_url }}?page={{ total_pages }}&page-size={{ page_size }}{{ extra_query }}"
-               class="page-btn {% if current_page >= total_pages %}disabled{% endif %}"
+               class="page-btn {% if current_page >= total_pages %}disabled{% endif %}" data-icon="page-last"
+               aria-label="{{ _('Last') }}"
                {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
-                {{ _("Last") }} &raquo;
+                <span class="page-btn-label">{{ _("Last") }} &raquo;</span>
             </a>
         </div>
     </div>

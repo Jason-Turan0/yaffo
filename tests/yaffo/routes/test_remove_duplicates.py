@@ -10,6 +10,28 @@ from yaffo.routes.utilities import remove_duplicates as mod
 pytestmark = pytest.mark.unit
 
 
+@pytest.mark.parametrize("directory", ["", " ", "\t"])
+def test_blank_directory_does_not_scan_working_directory(monkeypatch, tmp_path, directory: str) -> None:
+    (tmp_path / "unselected.jpg").touch()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(mod, "get_thumbnail_dir", lambda: None)
+
+    assert mod.collect_media_paths([directory]) == []
+
+
+def test_add_directory_renders_empty_row_without_scanning_cwd(client, monkeypatch, tmp_path) -> None:
+    (tmp_path / "unselected.jpg").touch()
+    monkeypatch.chdir(tmp_path)
+
+    response = client.post("/utilities/remove-duplicates-form", data={"action": "create"})
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert 'name="total_photos" value="0"' in body
+    assert 'name="total_directories" value="1"' in body
+    assert 'name="directory"' in body
+
+
 def test_collect_media_paths_includes_photos_and_videos(monkeypatch, tmp_path):
     photo = tmp_path / "photo.jpg"
     video = tmp_path / "video.mp4"

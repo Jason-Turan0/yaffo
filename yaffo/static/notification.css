@@ -2,8 +2,12 @@
 
 .notification {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    /* Logical, so a notification lands on the reading-start-relative corner in
+       RTL instead of hanging off the far edge, and clamped so a long translated
+       message can never widen past the viewport it is pinned to. */
+    inset-block-start: calc(20px + env(safe-area-inset-top));
+    inset-inline-end: calc(20px + env(safe-area-inset-right));
+    max-width: min(400px, calc(100vw - 40px));
     padding: 16px 24px;
     border-radius: var(--radius-md);
     font-size: var(--font-size-base);
@@ -15,7 +19,7 @@
     transform: translateY(-20px);
     transition: all 0.3s ease;
     pointer-events: none;
-    max-width: 400px;
+    overflow-wrap: anywhere;
 }
 
 .notification.visible {

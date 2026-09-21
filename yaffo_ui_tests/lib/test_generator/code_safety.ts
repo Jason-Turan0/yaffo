@@ -21,6 +21,7 @@
 import ts from "typescript";
 import {dirname, resolve, sep} from "path";
 import {GENERATED_TESTS_ROOT} from "@lib/types";
+import {auditTestTimeouts} from "@lib/services/test_timeout_policy";
 
 /** Bare module specifiers generated tests may always import. */
 const ALLOWED_BARE_MODULES = new Set([
@@ -98,6 +99,7 @@ function parseCode(code: string, fileLabel: string): ParsedCode {
  */
 export function auditGeneratedCode(code: string, options: CodeAuditOptions): string[] {
     const {specifiers, violations} = parseCode(code, options.filePath);
+    violations.push(...auditTestTimeouts(code, options.filePath));
 
     for (const raw of specifiers) {
         const specifier = stripNodePrefix(raw);

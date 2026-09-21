@@ -43,6 +43,36 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         })
     });
 
+    const mapElement = document.getElementById('map');
+    let mapResizeFrame = 0;
+    // OpenLayers caches the viewport size, so every layout transition — a
+    // breakpoint crossing that drops the sidebar, the selection panel opening
+    // or closing, a rotation, the on-screen keyboard resizing the layout
+    // viewport — has to hand it the new one or the canvas keeps rendering at
+    // the old width. Update once synchronously so a measurement taken right
+    // after the transition is already correct, and again on the next frame to
+    // catch a size that is still settling.
+    const syncMapSize = () => {
+        map.updateSize();
+        window.cancelAnimationFrame(mapResizeFrame);
+        mapResizeFrame = window.requestAnimationFrame(() => map.updateSize());
+    };
+    if (mapElement && 'ResizeObserver' in window) {
+        const resizeObserver = new ResizeObserver(syncMapSize);
+        resizeObserver.observe(mapElement);
+    }
+    window.addEventListener('resize', syncMapSize);
+    window.addEventListener('orientationchange', syncMapSize);
+    window.visualViewport?.addEventListener('resize', syncMapSize);
+    // The narrow layout moves the selection panel out of the map's flex row, so
+    // crossing the boundary changes the map's width without the panel itself
+    // resizing. React to the same query the stylesheet uses.
+    const narrowMapLayout = window.matchMedia('(max-width: 900px)');
+    narrowMapLayout.addEventListener('change', () => {
+        syncMapSize();
+        syncSelectionPanelPresentation();
+    });
+
     const allFeatures = locations.map(location => {
         return new ol.Feature({
             geometry: new ol.geom.Point(
@@ -69,6 +99,25 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
 
     /** @type {Set<number>} */
     const selectedPhotoIds = new Set();
+    const selectionPanel = document.getElementById('selection-panel');
+    const selectionPanelBackdrop = document.getElementById('selection-panel-backdrop');
+
+    const syncSelectionPanelPresentation = () => {
+        if (!selectionPanel) return;
+        const isModal = narrowMapLayout.matches
+            && selectionPanel.classList.contains('active');
+        if (isModal) {
+            selectionPanel.setAttribute('role', 'dialog');
+            selectionPanel.setAttribute('aria-modal', 'true');
+            selectionPanel.setAttribute('aria-labelledby', 'selection-panel-title');
+        } else {
+            selectionPanel.removeAttribute('role');
+            selectionPanel.removeAttribute('aria-modal');
+            selectionPanel.removeAttribute('aria-labelledby');
+        }
+        if (selectionPanelBackdrop) selectionPanelBackdrop.hidden = !isModal;
+        document.body.classList.toggle('location-assignment-modal-open', isModal);
+    };
 
     const getClusterPhotoIds = (/** @type {any} */ clusterFeature) => {
         const features = clusterFeature.get('features') || [];
@@ -247,6 +296,12 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
     // Collapsed/expanded state of the panel's preview section; kept outside the
     // renderer so it survives re-renders as the selection changes.
     let previewCollapsed = false;
+    // A custom location name the user has typed but not yet assigned. The panel
+    // re-renders on every map move, filter change and layout transition, so the
+    // value has to live outside the markup or a resize through the responsive
+    // breakpoint would silently throw the user's unsaved work away. It belongs
+    // to the current selection and is dropped when that selection goes.
+    let pendingLocationName = '';
     let recommendationRenderId = 0;
     let reverseGeocodeRateLimited = false;
     /** @type {Map<string, Promise<string | null>>} */
@@ -384,11 +439,58 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         });
     };
 
+    /**
+     * Swallow the compatibility mouse events the browser synthesizes after a tap.
+     *
+     * OpenLayers emits the map's click from the touch's pointerdown, so the
+     * selection panel is rendered and on screen well before mousedown, mouseup
+     * and click are synthesized for that same finger. Those land on whatever is
+     * under the tap point *now* — and on a phone the panel covers the map, so
+     * selecting a cluster also activated the preview photo's link (it carries
+     * target="_blank") and opened the photo in a new tab.
+     *
+     * Scoped by position and by a short window: only the ghost of *this* tap is
+     * swallowed, so a mouse genuinely used on the panel, or a later tap
+     * somewhere else, goes through untouched. Tearing down on the next
+     * touchstart instead would not work — the tap's own touchstart is
+     * dispatched after pointerdown, so it would remove the listeners before the
+     * events they exist to catch.
+     * @param {number} x
+     * @param {number} y
+     */
+    const swallowGhostClick = (x, y) => {
+        /** @param {Event} event */
+        const stop = (event) => {
+            const mouse = /** @type {MouseEvent} */ (event);
+            // Only the ghost of *this* tap: a mouse genuinely used elsewhere on
+            // the panel is a different point and must go through untouched.
+            if (Math.abs(mouse.clientX - x) > 24 || Math.abs(mouse.clientY - y) > 24) return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (event.type === 'click') teardown();
+        };
+        const teardown = () => {
+            window.clearTimeout(backstop);
+            ['mousedown', 'mouseup', 'click'].forEach((type) =>
+                document.removeEventListener(type, stop, true));
+        };
+        ['mousedown', 'mouseup', 'click'].forEach((type) =>
+            document.addEventListener(type, stop, true));
+        // The compatibility events follow touchend immediately; anything later
+        // than this is a new interaction and must not be swallowed. Declared
+        // last, read only from inside teardown, which nothing can call before
+        // this statement runs.
+        const backstop = window.setTimeout(teardown, 400);
+    };
+
     map.on('click', function(/** @type {any} */ evt) {
         const feature = map.forEachFeatureAtPixel(evt.pixel, function(/** @type {any} */ feature) {
             return feature;
         });
         const isShiftClick = Boolean(evt.originalEvent && evt.originalEvent.shiftKey);
+        if (evt.originalEvent && evt.originalEvent.pointerType === 'touch') {
+            swallowGhostClick(evt.originalEvent.clientX, evt.originalEvent.clientY);
+        }
 
         if (feature) {
             const selection = getClusterSelection(feature);
@@ -536,7 +638,9 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
 
         if (selectedPhotoIds.size === 0) {
             recommendationRenderId += 1;
+            pendingLocationName = '';
             panel.classList.remove('active');
+            syncSelectionPanelPresentation();
             return;
         }
 
@@ -593,8 +697,13 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         }).filter((/** @type {any} */ cluster) => cluster.photoCount > 0);
 
         if (selectedClusters.length === 0) {
+            // Note: the draft name is deliberately NOT dropped here. The photos
+            // are still selected; the cluster source just has not caught up with
+            // a resolution or size change yet, and a render that arrives during
+            // that window must not count as the user abandoning their work.
             recommendationRenderId += 1;
             panel.classList.remove('active');
+            syncSelectionPanelPresentation();
             return;
         }
 
@@ -623,7 +732,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         panelContent.innerHTML = `
             <div class="selection-panel-header">
                 <div class="selection-panel-heading">
-                    <h3>${escapeHtml(i18n.t('locations:selection.massAssignment'))}</h3>
+                    <h3 id="selection-panel-title">${escapeHtml(i18n.t('locations:selection.massAssignment'))}</h3>
                     <div class="mass-assignment-info">
                         ${escapeHtml(i18n.t(summaryKey, {
                             photos: i18n.number(totalPhotos),
@@ -688,6 +797,17 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
 
         wirePreviewSection(panelContent, allPhotos);
         window.PHOTO_ORGANIZER.utils?.initImageFallbacks?.();
+
+        // Put the unsaved custom name back into the freshly rendered field and
+        // keep tracking it, so panning, filtering or crossing the responsive
+        // breakpoint never costs the user what they had already typed.
+        const locationInput = panelContent.querySelector('#mass-location-input');
+        if (locationInput instanceof HTMLInputElement) {
+            if (pendingLocationName) locationInput.value = pendingLocationName;
+            locationInput.addEventListener('input', () => {
+                pendingLocationName = locationInput.value;
+            });
+        }
 
         // The × closes the panel and drops the whole selection.
         panelContent.querySelector('.selection-panel-close')?.addEventListener('click', () => {
@@ -807,6 +927,7 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         });
 
         panel.classList.add('active');
+        syncSelectionPanelPresentation();
         const renderId = recommendationRenderId + 1;
         recommendationRenderId = renderId;
 
@@ -878,6 +999,21 @@ window.PHOTO_ORGANIZER.locations.initMap = (locations, i18n, config, options = {
         clientPredicate = predicate;
         refreshFeatures();
     };
+
+    selectionPanel?.addEventListener('transitionend', syncMapSize);
+    selectionPanelBackdrop?.addEventListener('click', () => {
+        selectedPhotoIds.clear();
+        clusterLayer.changed();
+        updateSelectionPanel();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || !narrowMapLayout.matches) return;
+        if (!selectionPanel?.classList.contains('active')) return;
+        if (document.querySelector('.modal.active')) return;
+        selectedPhotoIds.clear();
+        clusterLayer.changed();
+        updateSelectionPanel();
+    });
 
     return { map, vectorSource, selectedPhotoIds, updateSelectionPanel, setClientFilter };
 };

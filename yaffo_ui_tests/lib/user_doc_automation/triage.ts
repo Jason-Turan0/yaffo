@@ -30,6 +30,9 @@ export const TRIAGE_CLASSES = [
     "walkthrough_defect",
     "application_regression",
     "environment_instability",
+    // Not a kind of change — the absence of a verdict. Recorded when a session ends
+    // without one so the run reports the shot instead of passing over it in silence.
+    "inconclusive",
 ] as const;
 
 export const TriageSchema = z.object({
@@ -70,12 +73,17 @@ Classify as exactly one of:
 - environment_instability — the difference comes from the test fixture or environment
   rather than the product: different seeded media, non-reproducible content such as live
   map tiles, or renderer noise that may differ again on the next run.
+- inconclusive — a last resort, when the evidence you were given does not let you tell
+  these apart: an image you could not read, or a dependency diff you have reason to think
+  is incomplete. Say what you would need. Do not reach for environment_instability when
+  what you actually mean is that you could not tell.
 
 Choose the recommended action independently from the classification:
 
 - promote for intended changes.
 - fix_walkthrough for a walkthrough defect.
 - report_regression for an application regression.
+- quarantine for anything inconclusive.
 - For environment_instability, distinguish harmless variation from material drift. If
   at most 0.1% of pixels changed, the shot was not reframed, the visible meaning and
   content are unchanged, and no prose is affected, recommend promote: accepting a tiny

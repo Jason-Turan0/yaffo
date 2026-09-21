@@ -9,6 +9,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='sharing/sharing.css') }}">
 {% endblock %}
 
+{% from "components/nav_panel.html" import sidebar_toggles %}
+{% block nav_context_toggles %}
+    {{ sidebar_toggles('remote-files', filter_count=applied_filter_count(request.args)) }}
+{% endblock %}
+
 {% block content %}
     {% from "_sidebar.html" import render_sidebar %}
     {% from "components/pagination.html" import pagination as render_pagination %}
@@ -31,7 +36,9 @@
                                media_dir_id=media_dir_id, scope=scope, label=label) %}
 
     <div class="main-container-layout">
-        {{ render_sidebar(scope_url, filters, filter_layout=filter_layout, render_hidden_block=remote_scope_inputs) }}
+        {{ render_sidebar(scope_url, filters, filter_layout=filter_layout,
+                          render_hidden_block=remote_scope_inputs,
+                          panel_prefix='remote-files') }}
         <div class="main-content photo-gallery">
             {% set header_actions %}
                 <a class="btn-secondary btn-sm" href="{{ url_for('sharing_device', device_id=device.device_id) }}">
@@ -105,34 +112,38 @@
                                 {% if file.duration_seconds %}
                                     <span class="video-duration">{{ file.duration_seconds | format_duration }}</span>
                                 {% endif %}
-                                <dl class="photo-hover">
-                                    <div class="photo-hover-row">
-                                        <dt>{{ _("Name") }}</dt>
-                                        <dd class="photo-hover-path" title="{{ file.relative_path }}">{{ file.name }}</dd>
-                                    </div>
-                                    <div class="photo-hover-row">
-                                        <dt>{{ _("Folder") }}</dt>
-                                        <dd class="photo-hover-path">{{ file.relative_path.rsplit('/', 1)[0] if '/' in file.relative_path else '' }}</dd>
-                                    </div>
-                                    <div class="photo-hover-row">
-                                        <dt>{{ _("Taken") }}</dt>
-                                        <dd>{{ file.date_taken | format_date('datetime') if file.date_taken else _("Unknown date") }}</dd>
-                                    </div>
-                                    {% if file.location_name %}
-                                        <div class="photo-hover-row">
-                                            <dt>{{ _("Location") }}</dt>
-                                            <dd>{{ file.location_name }}</dd>
-                                        </div>
-                                    {% endif %}
-                                    <div class="photo-hover-row">
-                                        <dt>{{ _("Size") }}</dt>
-                                        <dd>{{ file.size | filesizeformat }}</dd>
-                                    </div>
-                                </dl>
+
                             </div>
                             <div class="photo-info remote-photo-info">
                                 <div class="photo-date">{{ file.date_taken | format_date("date") if file.date_taken else _("Unknown date") }}</div>
                             </div>
+                            <details class="remote-photo-details" data-selection-ignore>
+                                <summary>{{ file.name }}</summary>
+                                <dl class="remote-file-metadata">
+                                    <div class="remote-file-metadata-row">
+                                        <dt>{{ _("Name") }}</dt>
+                                        <dd class="remote-file-path" title="{{ file.relative_path }}">{{ file.name }}</dd>
+                                    </div>
+                                    <div class="remote-file-metadata-row">
+                                        <dt>{{ _("Folder") }}</dt>
+                                        <dd class="remote-file-path">{{ file.relative_path.rsplit('/', 1)[0] if '/' in file.relative_path else '' }}</dd>
+                                    </div>
+                                    <div class="remote-file-metadata-row">
+                                        <dt>{{ _("Taken") }}</dt>
+                                        <dd>{{ file.date_taken | format_date('datetime') if file.date_taken else _("Unknown date") }}</dd>
+                                    </div>
+                                    {% if file.location_name %}
+                                        <div class="remote-file-metadata-row">
+                                            <dt>{{ _("Location") }}</dt>
+                                            <dd>{{ file.location_name }}</dd>
+                                        </div>
+                                    {% endif %}
+                                    <div class="remote-file-metadata-row">
+                                        <dt>{{ _("Size") }}</dt>
+                                        <dd>{{ file.size | filesizeformat }}</dd>
+                                    </div>
+                                </dl>
+                            </details>
                         </div>
                     {% endfor %}
                 </div>

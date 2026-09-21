@@ -9,9 +9,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='themes_page/index.css') }}">
 {% endblock %}
 
+{% from "components/nav_panel.html" import nav_panel_toggle %}
+{% block nav_context_toggles %}
+    {{ nav_panel_toggle('themes-nav', _("Themes"), 'themes') }}
+{% endblock %}
+
 {% block content %}
 <div class="themes-container">
-    <nav class="sidebar themes-sidebar">
+    <nav class="sidebar themes-sidebar" id="themes-nav" data-nav-panel>
         <h2>{{ _("Themes") }}</h2>
 
         <h3 class="themes-nav-heading">{{ _("System") }}</h3>
@@ -20,7 +25,7 @@
                 <li>
                     <a href="{{ url_for('themes_show', slug=theme.slug) }}"
                        class="{% if theme.slug == selected_slug %}active{% endif %}">
-                        {{ theme.label }}
+                        <span class="panel-nav-label">{{ theme.label }}</span>
                         {% if theme.slug == default_slug %}<span class="theme-nav-default">{{ _("default") }}</span>{% endif %}
                     </a>
                 </li>
@@ -32,9 +37,13 @@
             <ul class="panel-nav">
                 {% for theme in custom_themes %}
                     <li>
+                        {# A custom theme's name is free-form user input. `.panel-nav-label`
+                           is the shared nav convention (albums, utilities, sharing): it
+                           ellipsises the name so one long unbreakable word cannot spill
+                           out of the 250px column, and keeps the default badge on the row. #}
                         <a href="{{ url_for('themes_show', slug=theme.slug) }}"
                            class="{% if theme.slug == selected_slug %}active{% endif %}">
-                            {{ theme.label }}
+                            <span class="panel-nav-label">{{ theme.label }}</span>
                             {% if theme.slug == default_slug %}<span class="theme-nav-default">{{ _("default") }}</span>{% endif %}
                         </a>
                     </li>

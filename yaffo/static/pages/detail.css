@@ -60,6 +60,29 @@
     display: none;
 }
 
+/* ---- Canvas bands ----
+   The vendored gridstack.min.css only ships the width/offset rules for the two
+   column counts the library builds by default: `.gs-12` and `.gs-1`. The upstream
+   `gridstack-extra.css` carries 2–11, and it is not vendored here — a `.gs-6`
+   item therefore matches no width rule at all and collapses to zero width while
+   its header buttons still paint, which is exactly what happened when the
+   intermediate band was introduced.
+   These are the six-column equivalents of the vendored `.gs-12` rules, and they
+   use physical `left` deliberately: gridstack positions every item that way, so a
+   logical property here would disagree with the library rather than with a
+   layout of ours. See CANVAS_BANDS in pages/grid.js for the band policy. */
+.grid-stack.gs-6 > .grid-stack-item { width: 16.667%; }
+.grid-stack.gs-6 > .grid-stack-item[gs-w="2"] { width: 33.333%; }
+.grid-stack.gs-6 > .grid-stack-item[gs-w="3"] { width: 50%; }
+.grid-stack.gs-6 > .grid-stack-item[gs-w="4"] { width: 66.667%; }
+.grid-stack.gs-6 > .grid-stack-item[gs-w="5"] { width: 83.333%; }
+.grid-stack.gs-6 > .grid-stack-item[gs-w="6"] { width: 100%; }
+.grid-stack.gs-6 > .grid-stack-item[gs-x="1"] { left: 16.667%; }
+.grid-stack.gs-6 > .grid-stack-item[gs-x="2"] { left: 33.333%; }
+.grid-stack.gs-6 > .grid-stack-item[gs-x="3"] { left: 50%; }
+.grid-stack.gs-6 > .grid-stack-item[gs-x="4"] { left: 66.667%; }
+.grid-stack.gs-6 > .grid-stack-item[gs-x="5"] { left: 83.333%; }
+
 /* ---- Grid + widgets ---- */
 .grid-stack {
     min-height: 320px;
@@ -154,12 +177,20 @@
 
 .widget-body {
     flex: 1;
-    min-height: 0;
+    min-block-size: 0;
+    /* The positioning context the frame is pinned to. A percentage height on the
+       frame would resolve against a flex item with no definite height, so the
+       widget document could be handed a viewport that is not the box it occupies
+       — and an iframe's viewport is what its own media queries and % sizes
+       measure against. Pinning to the container's edges makes the two identical. */
+    position: relative;
 }
 
 .widget-frame {
-    width: 100%;
-    height: 100%;
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
     border: 0;
     display: block;
     background: var(--color-surface);
@@ -176,13 +207,53 @@
     display: none;
 }
 
-@media (max-width: 900px) {
-    .design-layout {
-        flex-direction: column;
-    }
-
-    .editor-panel {
-        width: 100%;
-        position: static;
-    }
+/* ---- Direct move/resize controls ----
+   grid.js turns the drag gestures off on a coarse pointer and on a single-column
+   canvas (see CANVAS_BANDS): a drag that starts on a widget is indistinguishable
+   from the swipe that scrolls the page, and a one-column stack has nowhere to
+   drag to. These buttons are the equivalent path, so they have to be reachable
+   with every pointer. The shared layer reveals them on :focus-within, which a
+   mouse never produces on its own — without this they are invisible on desktop. */
+.grid-stack .widget-card:hover .widget-order-controls {
+    opacity: 1;
+    pointer-events: auto;
 }
+
+.grid-stack .widget-order-controls {
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+/* Coarse-pointer / single-column mode: full touch targets, and a header that no
+   longer advertises a drag it will not perform. */
+.grid-stack.is-direct-controls .widget-header {
+    cursor: default;
+    touch-action: manipulation;
+}
+
+.grid-stack.is-direct-controls .widget-order,
+.grid-stack.is-direct-controls .widget-edit,
+.grid-stack.is-direct-controls .widget-delete {
+    min-inline-size: 44px;
+    min-block-size: 44px;
+}
+
+/* One column: six 44 px targets and a title do not share a 320 px row, so the
+   title takes its own line and the controls wrap under it rather than being
+   clipped by the card's overflow. */
+.grid-stack.is-single-column .widget-header {
+    flex-wrap: wrap;
+    row-gap: 4px;
+}
+
+.grid-stack.is-single-column .widget-title,
+.grid-stack.is-single-column .widget-title-input {
+    flex: 1 0 100%;
+}
+
+/* The editor panel's stacking is NOT declared here. The shared responsive layer
+   already stacks .design-layout / .editor-panel / .editor-canvas at 1200px — a
+   second, narrower copy in this file was dead weight that also mis-stated the
+   breakpoint the canvas actually reflows at. The canvas policy in grid.js
+   measures the element, so it follows whichever layout wins without needing to
+   know the number. */

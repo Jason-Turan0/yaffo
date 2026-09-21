@@ -38,6 +38,15 @@ context:
   - tag: albums-routes
     path: routes/albums.py
     description: albums_share reconciles the checked devices with the album grants (check = grant, uncheck = revoke)
+  - tag: responsive-nav-js
+    path: static/nav.js
+    description: Narrow-screen Menu and the peer page-panel contract (moves/restores live panel DOM)
+  - tag: responsive-nav-panel-template
+    path: templates/components/nav_panel.html
+    description: Declares a page panel and its peer navbar button; the registration contract
+  - tag: responsive-shell
+    path: static/responsive.css
+    description: Shared adaptive layout; owns the narrow-screen rules every page inherits
 
 data:
   - The scenarios are STATEFUL and run in order in one worker (pairing, grants and the download directory persist server-side between tests). Start the environment with `npm run isolatedEnvironment:start:sharing` and run with BASE_URL (instance A) and PEER_URL (instance B) set
@@ -200,3 +209,115 @@ scenarios:
       - '"Shared With Others" lists the share once, not twice'
     cleanup:
       - Revoke the share
+  # ---------------------------------------------------------------------------
+  # Responsive coverage (P6 — sharing). The shared shell contract itself is verified
+  # in specs/photo_gallery.yaml; what follows is this family's own narrow-screen
+  # behaviour. Shared helpers: generated_tests/_support/responsive.ts.
+  # ---------------------------------------------------------------------------
+  - name: sharing_routes_fit_every_contract_width
+    goal: Every sharing route renders without page-level horizontal overflow at the contract widths
+    priority: high
+    steps:
+      - Load sharing settings, a paired device's page, and a shared gallery at 320, 390, 768, 1024 and 1440 px
+    verify:
+      - No sharing route scrolls the document sideways at any contract width
+      - The transfers panel, device panels and remote grid all stay inside the viewport
+      - The media-directory select is contained by CSS at its first paint, before the searchable-select widget hydrates it away
+
+  - name: sharing_nav_uses_a_peer_navbar_panel
+    goal: The sharing device list collapses into a peer navbar button
+    priority: high
+    steps:
+      - Load the sharing settings page at 390x844
+      - Open the Sharing panel, then Menu, then Sharing again, then press Escape
+      - Resize to 1440x900
+    verify:
+      - Sharing is a peer of Menu and closed on first paint
+      - Only one of Menu or Sharing is open at a time
+      - Escape closes the panel
+      - At desktop width the sidebar is back in the page
+      - The panel survives its own htmx refresh (the device list re-fetches itself) without reopening
+  - name: sharing_long_device_and_path_values_wrap
+    goal: Device ids and shared paths never widen the page
+    priority: high
+    steps:
+      - Load the sharing settings page at 320x568
+    verify:
+      - Device ids, media directory paths and transfer path badges all wrap anywhere rather than overflowing
+      - The page does not scroll horizontally
+  - name: remote_gallery_filters_use_a_peer_navbar_panel
+    goal: The remote gallery reuses the library's filter panel behaviour
+    priority: medium
+    steps:
+      - Open a paired device's shared files at 390x844 (needs the two-instance sandbox)
+      - Open Filters and apply one
+    verify:
+      - Filters is a peer of Menu with an applied-filter count badge
+      - The scope coordinates ride the form as hidden inputs so applying a filter stays on the same device scope
+      - The remote grid and its pagination behave as the local library does at the same width
+
+  - name: sharing_pairing_code_and_drafts_survive_resize
+    goal: Pairing QR, copy action, and unsent pairing/download-directory inputs remain usable across resize
+    priority: high
+    steps:
+      - Generate a pairing code in a coarse-pointer context and enter unsent pairing and download-directory values
+      - Resize through all six contract viewports and copy the generated code
+    verify:
+      - The QR, code and copy action remain contained
+      - Generated code and entered values survive resize without regeneration or reload
+      - Copy remains operable by touch
+
+  - name: sharing_device_forms_preserve_unsaved_values_and_touch_controls
+    goal: Device rename and folder-grant edits survive rotation and opening or cancelling dialogs
+    priority: high
+    steps:
+      - Enter an unsaved device name, select Folder, and enter a long path on a phone
+      - Resize through all six viewports
+      - Open the folder picker, rotate to landscape, and cancel it
+      - Open and cancel device revocation
+    verify:
+      - Form values and the selected share type remain intact
+      - Picker and confirm surfaces fit even in short landscape
+      - Page buttons and share-type controls have at least 44px touch height
+
+  - name: remote_gallery_touch_metadata_selection_pagination_and_pull
+    goal: Touch users can inspect remote metadata independently of selection and pull across pagination
+    priority: high
+    steps:
+      - Open a shared gallery with two files per page in a coarse-pointer context
+      - Expand a file's metadata, select its preview, and resize through all six viewports
+      - Go to the next page and pull the selected file
+    verify:
+      - Filename, folder, date, location when present, and size have a direct disclosure instead of a hover-only overlay
+      - Opening metadata does not select the file
+      - Open metadata and selection survive resize, without reloading a completed preview
+      - Pagination stays on one row at 320px and retains selection and share scope
+      - The touch pull action queues the selected file and its transfer completes
+
+  - name: sharing_transfer_progress_and_long_errors_stay_in_document_flow
+    goal: Transfer labels, state badges, long paths, and dismiss actions remain reachable
+    priority: high
+    steps:
+      - Open completed transfers and stress their labels and error text with long unbroken values
+      - Resize through all six viewports, scroll to Dismiss, and dismiss one batch
+    verify:
+      - Long content wraps without widening the document
+      - The document owns the page's vertical scrolling
+      - Dismiss stays within the viewport and removes the chosen batch
+
+  - name: sharing_translated_surfaces_fit_and_keep_path_reading_order
+    goal: German and Arabic sharing pages stay contained, and codes and paths keep their own reading order
+    steps:
+      - Share a media directory with the peer so there is a remote gallery to open
+      - Switch the locale to English, German and Arabic in turn
+      - Enter an unsent pairing code and a long download directory, then check minimum width, short landscape and desktop
+      - Generate a pairing code in Arabic, the direction case that can break
+      - Open a shared gallery on the peer with its locale set to Arabic and expand a file's metadata
+    verify:
+      - Document language and direction follow the locale
+      - Translated pairing and grant surfaces do not widen the page at any of those viewports
+      - Unsent pairing and download-directory values survive every locale and viewport
+      - A pairing code stays isolated LTR and a path takes direction from its own first strong character
+      - Remote filenames and folders still read forwards inside the RTL gallery
+    cleanup:
+      - Restore both instances to their original locale and revoke the share this scenario made

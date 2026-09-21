@@ -2,11 +2,16 @@
 <html lang="{{ current_locale }}" dir="{{ text_direction }}">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{{ _("Request not verified · Yaffo") }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+    {# This shell loads its own stylesheets rather than extending base.html. Without
+       button.css the single "Return to Yaffo" action renders as a bare 18px link:
+       no fill, no padding, and nothing like a 44px touch target. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='button.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='demo-mode.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
 </head>
 <body class="demo-disabled-page">
     <main class="demo-disabled-card">

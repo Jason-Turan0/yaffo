@@ -181,9 +181,9 @@ _FILTERABLE_GALLERY = WidgetTemplate(
 <script src="/static/searchable-select.js"></script>
 """,
     css="""\
-.bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
 .bar label { font-size: var(--font-size-xs); color: var(--color-text-muted); }
-.bar .searchable-select-wrapper { width: 180px; }
+.bar .searchable-select-wrapper { width: 180px; max-width: 100%; }
 /* The dropdown can't escape the widget iframe, so keep it short enough to fit. */
 .bar .searchable-select-options { max-height: 160px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
@@ -423,7 +423,7 @@ body { padding: 0; }
 .lb-close:hover { opacity: 1; }
 .lb-nav {
   position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.25); color: #fff; font-size: 28px; width: 40px; height: 56px;
+  border: 1px solid rgba(255,255,255,0.25); color: #fff; font-size: 28px; width: 44px; height: 56px;
   border-radius: var(--radius-md); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s;
 }
 .lb-nav:hover { background: rgba(255,255,255,0.22); }
@@ -521,7 +521,7 @@ _FILTER_CONTROLS = WidgetTemplate(
     css="""\
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 .bar label { font-size: var(--font-size-xs); color: var(--color-text-muted); display: inline-flex; align-items: center; gap: 6px; }
-.bar .searchable-select-wrapper { width: 200px; }
+.bar .searchable-select-wrapper { width: 200px; max-width: 100%; }
 /* The dropdown can't escape the widget iframe, so keep it short enough to fit. */
 .bar .searchable-select-options { max-height: 120px; }
 """,
@@ -710,7 +710,7 @@ body { padding: 0; position: relative; }
 /* Popup positioned over the cluster's pixel; the transform centers it above the
    point so the arrow points down at the circle. */
 .map-popup {
-  position: absolute; z-index: 5; width: 240px; padding: 8px;
+  position: absolute; z-index: 5; width: min(240px, 90%); padding: 8px;
   transform: translate(-50%, calc(-100% - 12px));
   background: var(--color-surface); border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-md); box-shadow: var(--shadow-xl);
@@ -857,7 +857,7 @@ _FOLDER_PICKER = WidgetTemplate(
     css="""\
 .fb { display: flex; flex-direction: column; gap: 10px; }
 .fb-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.fb-bar .searchable-select-wrapper { width: 170px; }
+.fb-bar .searchable-select-wrapper { width: 170px; max-width: 100%; }
 /* The dropdown can't escape the widget iframe, so keep it short enough to fit. */
 .fb-bar .searchable-select-options { max-height: 160px; }
 .fb-crumbs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: var(--font-size-sm); }

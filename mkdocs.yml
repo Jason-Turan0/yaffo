@@ -78,5 +78,6 @@ nav:
           - Automations: guide/create-customize/automations.md
       - Reference & Maintenance:
           - Settings Reference: guide/reference-maintenance/settings.md
+          - Comparison: guide/reference-maintenance/comparison.md
           - Troubleshooting: guide/reference-maintenance/troubleshooting.md
           - Uninstalling Yaffo: guide/reference-maintenance/uninstalling.md

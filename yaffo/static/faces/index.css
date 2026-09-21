@@ -151,9 +151,12 @@
     }
 }
 
+/* `min(200px, 100%)` rather than a bare 200px track: inside the help dialog at a
+   320px viewport the body is narrower than 200px, and a fixed minimum would make
+   the dialog itself the widest thing on the page. */
 .help-shortcuts-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
     gap: 8px;
 }
 
@@ -178,9 +181,14 @@
     color: var(--color-text-secondary);
 }
 
+/* `min-width: 0` is what keeps a wide cluster from pushing the flex row past the
+   viewport — a flex item's automatic minimum is its content size, so without it
+   the grid, not the container, decides the page width. `overflow-y: auto` used to
+   sit here; it made this a nested scroll region (and implicitly an
+   `overflow-x: auto` one), which hid containment failures instead of fixing them. */
 .main-content {
     flex: 1;
-    overflow-y: auto;
+    min-width: 0;
     padding: 20px;
 }
 
@@ -195,6 +203,28 @@
     background: var(--color-surface);
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-md);
+}
+
+@media (max-width: 640px) {
+    .main-content {
+        padding-inline: 12px;
+    }
+
+    .suggestion-group {
+        padding: 12px;
+        margin-bottom: 20px;
+    }
+
+    /* One decision per row: the select-all chip, then the group actions, each
+       full width. Two half-width buttons at 320px truncate their labels. */
+    .cluster-decide {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .group-actions > * {
+        flex: 1 1 auto;
+    }
 }
 
 /* Zone 1: identity — name + count + date span, separated by a rule. */
@@ -298,17 +328,82 @@
     object-fit: cover;
 }
 
-/* Hover preview of the photo a face was cropped from. `contain` inside a fixed
-   square box keeps a portrait or panorama source in proportion, so the tooltip
-   never changes size as you move across a cluster. Keep the 320px square in step
-   with PREVIEW_SIZE in faces/index.js — the region outline is placed against it. */
+/* Touch users need an explicit preview action; desktop/fine-pointer users keep
+   the original hover popover. The button never doubles as selecting the face. */
+.face-preview-button {
+    position: absolute;
+    inset-inline-end: 6px;
+    inset-block-end: 6px;
+    z-index: 3;
+    display: none;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+}
+
+@media (max-width: 640px), (hover: none), (pointer: coarse) {
+    .face-preview-button {
+        display: inline-flex;
+    }
+}
+
+/* Phones use a centered modal. Tablet and desktop previews never activate this
+   surface; they use the anchored .face-tooltip below. */
+@media (max-width: 640px) {
+    body.face-preview-modal-open {
+        overflow: hidden;
+    }
+
+    /* The shared narrow-screen modal treatment is a bottom sheet. A source
+       preview is spatially unrelated to its trigger, so pin its backdrop to
+       every viewport edge and keep the dialog centered regardless of scroll. */
+    body .face-preview-modal {
+        position: fixed;
+        inset: 0;
+        width: auto;
+        height: auto;
+        align-items: center;
+        justify-content: center;
+    }
+
+    body .face-preview-modal .modal-content {
+        width: min(500px, calc(100% - 32px));
+        max-width: 500px;
+        border-radius: var(--radius-md);
+        padding: 24px;
+    }
+
+    .face-preview-modal-close {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .face-preview-modal-body {
+        align-items: center;
+        margin-bottom: 0;
+    }
+}
+
+/* `contain` inside a fixed square keeps a portrait or panorama source in
+   proportion. Keep the 320px square in step with PREVIEW_SIZE in faces/index.js
+   — the region outline is placed against the rendered square. */
+.face-preview-modal .face-source-preview,
 .face-tooltip .face-source-preview {
     position: relative;  /* anchors the region outline */
-    width: 320px;
-    height: 320px;
+    width: min(320px, 100%);
+    aspect-ratio: 1 / 1;
     margin-bottom: 6px;
 }
 
+.face-preview-modal .face-source-image,
 .face-tooltip .face-source-image {
     display: block;
     width: 100%;
@@ -318,6 +413,7 @@
 }
 
 /* The detection box, drawn over the letterboxed photo (positioned from JS). */
+.face-preview-modal .face-source-region,
 .face-tooltip .face-source-region {
     position: absolute;
     border: 2px solid var(--color-accent);
@@ -326,10 +422,20 @@
 }
 
 /* Faces cropped from a video have no still to preview. */
+.face-preview-modal .face-preview-note,
 .face-tooltip .face-preview-note {
     margin-bottom: 6px;
     color: var(--color-text-muted);
     font-style: italic;
+}
+
+.face-tooltip {
+    width: min(344px, calc(100vw - 24px));
+    white-space: normal;
+}
+
+.face-tooltip.visible {
+    pointer-events: auto;
 }
 
 /* Stacked: the input gets its own full-width line above the button, so a long
@@ -350,8 +456,69 @@
     flex: 1;
 }
 
+/* No `max-height` + `overflow-y` here on purpose: `.modal-body` is the modal's one
+   scroll region (docs/development/responsive.md, "Harden shared components"), and
+   a second scroller nested inside it is unusable on a phone. */
 .shortcut-config {
-    max-height: 50vh;
-    overflow-y: auto;
-    padding-right: 4px;
+    padding-inline-end: 4px;
+}
+
+/* The name column takes the slack so the handle and the move buttons keep their
+   size, and a long person name wraps instead of widening the dialog. */
+.shortcut-config-row .filter-config-item {
+    flex: 1;
+    min-width: 0;
+}
+
+.shortcut-config-name {
+    overflow-wrap: anywhere;
+}
+
+/* The touch-safe alternative to dragging the handle. Same direct-control pattern
+   as the album reorder buttons: drag is never the only way to reorder. */
+.shortcut-config-move {
+    display: flex;
+    flex: none;
+    gap: 4px;
+}
+
+.shortcut-config-move-btn {
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.shortcut-config-move-btn:hover:not(:disabled) {
+    border-color: var(--color-border-hover);
+    background: var(--color-surface-hover);
+}
+
+.shortcut-config-move-btn:disabled {
+    color: var(--color-disabled-text);
+    background: var(--color-disabled-bg);
+    cursor: not-allowed;
+}
+
+/* A shortcut row is itself a click target (it assigns the selection), so it needs
+   a real touch target — the shared coarse-pointer rule only reaches buttons and
+   links, and these rows are divs. */
+@media (hover: none), (pointer: coarse) {
+    .shortcut-item {
+        min-height: 44px;
+        padding-block: 10px;
+    }
+
+    .shortcut-config-move-btn {
+        width: 44px;
+        height: 44px;
+    }
 }

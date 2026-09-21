@@ -219,6 +219,32 @@ npm run generate:test:gemini specs/my_feature.yaml
 
 ### 3. Run Tests
 
+For a manual local run, use the interactive launcher:
+
+```bash
+npm run test:local
+```
+
+Choose a suite by number, then choose a headed browser (default), headless run,
+or Playwright UI. The launcher starts a disposable standard environment for
+most suites and two paired-capable instances for sharing. It keeps the app
+running while Playwright UI is open, then stops the app and removes its test
+data when Playwright exits or you press Ctrl+C. Enter `q` at either menu to quit.
+Sharing scenarios depend on earlier scenarios: run the complete sharing suite
+in order in UI mode.
+
+Build the seed cache once with `npm run seed:build`, or pass `--fresh` to seed
+new data. Reports are written to `reports/local__<suite>/`.
+
+```bash
+npm run test:local -- --port 5202
+npm run test:local -- --fresh
+# Skip the menus when you already know what to run:
+npm run test:local -- --suite sharing --mode ui
+npm run test:local -- --suite photo_details --mode headless
+npm run test:local -- --help
+```
+
 ```bash
 # Start the seeded isolated app manually
 npm run isolatedEnvironment:start
@@ -401,6 +427,31 @@ database/media tree, and cleans that copy after the directory finishes. Set
 (default `5`), or pass one or more directories/specs after `--` to run a subset.
 If the default port range is occupied, set `TEST_SANDBOX_BASE_PORT` or pass
 `--base-port <port>` after `--`.
+
+#### Troubleshooting local failures
+
+`npm test` expects an app already running on port 5002. For a reproducible
+failure, use a disposable copy of the seed cache instead:
+
+```bash
+npm run test:spec -- generated_tests/sharing/sharing.spec.ts --port 5202
+# Reduce simultaneous app/browser instances when investigating connection failures.
+TEST_SANDBOX_CONCURRENCY=1 npm run test:sandboxed -- --base-port 5202
+```
+
+The sharing command starts both instances and selects the sharing project.
+Run its complete spec: the scenarios depend on pairing, grants, and downloads
+created by earlier scenarios. A missing `Seeded Album` can mean the tests are
+using a modified or different library; inspect the failure's `error-context.md`
+before changing the locator. If the cache itself is stale, rebuild it with
+`npm run seed:build` before rerunning.
+
+Reports live under `reports/<suite>/`: `html/` contains the browsable report,
+`results/test-results.json` contains test errors, and `artifacts/` contains
+failure screenshots, videos, and page snapshots. Inspect the first error as
+well as cleanup errors, which can obscure the original failure after a timeout.
+Helpers used by locale tests should locate controls by stable structure when
+their visible text changes with the locale.
 
 ## Spec File Format
 

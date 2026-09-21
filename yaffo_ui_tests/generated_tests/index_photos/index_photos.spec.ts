@@ -1,3 +1,4 @@
+import { VIEWPORTS, expectNoPageOverflow, expectFitsViewport, expectPanelContract, withTouchContext } from '../_support/responsive';
 import { test, expect, Page } from '@playwright/test';
 import path from 'node:path';
 import { copyPhotoWithUniqueMarker, findAnyPhotoIn, removeTempFile } from '../_support/sandbox-fs';
@@ -9,7 +10,7 @@ const SPEC_FILE_STEM = `spec-index-${UNIQ}`;
 // around it, so it runs serially and cleans back to the in-sync baseline. The Flask
 // server and this test process share a filesystem (local isolated environment), so
 // node:fs is the setup mechanism.
-test.describe.configure({ mode: 'serial', timeout: 900_000 });
+test.describe.configure({ mode: 'serial' });
 
 let mediaDir: string;
 let copiedFile: string | null = null;
@@ -35,7 +36,7 @@ async function openIndexPhotos(page: Page): Promise<void> {
 // counter to leave its '—' placeholder.
 async function waitForScanDone(page: Page): Promise<void> {
   for (const stat of ['stat-total-filesystem', 'stat-total-imported', 'stat-total-indexed', 'stat-unindexed', 'stat-orphaned']) {
-    await expect(page.locator(`#${stat}`)).not.toHaveText('—', { timeout: 60_000 });
+    await expect(page.locator(`#${stat}`)).not.toHaveText('—', { timeout: 20_000 });
   }
 }
 
@@ -63,7 +64,7 @@ async function syncAndWaitForZero(page: Page): Promise<void> {
     await waitForScanDone(page);
     expect(await statValue(page, 'stat-unindexed')).toBe(0);
     expect(await statValue(page, 'stat-orphaned')).toBe(0);
-  }).toPass({ timeout: 360_000, intervals: [3_000] });
+  }).toPass({ timeout: 20_000, intervals: [3_000] });
 
   // One more clean load before asserting the settled UI: a load that races the
   // finishing import can reveal #sync-button (the reveal is one-way per document)
@@ -148,4 +149,63 @@ test.describe('Index Photos', () => {
   // exercised: reaching it means removing the seeded library directory, and if the
   // hourly file_sync automation ticks in that window it deletes every media row as
   // "unconfigured" — destroying the shared sandbox for the parallel suites.
+});
+
+
+test.describe('Index Photos — responsive', () => {
+  test('utilities_nav_sections_are_separate_peer_panels', async ({ page }) => {
+    for (const panelId of ['utilities-nav', 'automations-nav']) {
+      await expectPanelContract(page, { route: '/utilities/index-photos', panelId });
+    }
+    await page.setViewportSize(VIEWPORTS.minimum);
+    await page.goto('/utilities/index-photos');
+    await page.locator('#utilities-nav-toggle').click();
+    await page.locator('#automations-nav-toggle').click();
+    await expect(page.locator('#utilities-nav')).toBeHidden();
+    await expect(page.locator('#automations-nav')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#automations-nav')).toBeHidden();
+    await expectNoPageOverflow(page);
+  });
+
+  test('index_photos_stats_and_results_fit_a_narrow_viewport', async ({ page }) => {
+    const longPath = '/photos/' + 'long-directory-name'.repeat(18) + '/photo.jpg';
+    await page.route('**/utilities/index-photos/scan', route => route.fulfill({
+      contentType: 'application/x-ndjson',
+      body: JSON.stringify({ type: 'done', total_filesystem: 40, total_imported: 0,
+        total_indexed: 0, orphaned: [], unindexed: Array.from({length: 40}, (_, i) => ({
+          filename: `photo-${i}.jpg`, full_path: longPath,
+        })) }) + '\n',
+    }));
+    await page.goto('/utilities/index-photos');
+    await expect(page.locator('#scan-results tbody tr')).toHaveCount(40);
+    for (const viewport of Object.values(VIEWPORTS)) {
+      await page.setViewportSize(viewport);
+      await expectNoPageOverflow(page);
+      const scroller = page.locator('#scan-results .table-container');
+      expect(await scroller.evaluate(el => getComputedStyle(el).overflowY)).toBe('auto');
+      expect(await scroller.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+      await scroller.evaluate(el => { el.scrollTop = el.scrollHeight; el.scrollLeft = el.scrollWidth; });
+      expect(await scroller.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+      await page.locator('#sync-button').scrollIntoViewIfNeeded();
+      await expectFitsViewport(page, '#sync-button');
+      await expect(page.locator('#stat-unindexed')).toHaveText('40');
+    }
+  });
+
+  test('utilities_touch_dialog_preserves_input_across_resize', async ({ browser }) => {
+    await withTouchContext(browser, VIEWPORTS.minimum, async page => {
+      await page.goto('/utilities/index-photos');
+      await page.locator('#automations-nav-toggle').tap();
+      await page.locator('#new-automation-button').tap();
+      await page.locator('#new-automation-name').fill('Unsaved automation');
+      for (const viewport of [VIEWPORTS.tabletPortrait, VIEWPORTS.desktop, VIEWPORTS.minimum]) {
+        await page.setViewportSize(viewport);
+        await expect(page.locator('#new-automation-name')).toHaveValue('Unsaved automation');
+        await expectFitsViewport(page, '#newAutomationModal .modal-content');
+      }
+      await page.locator('#newAutomationModal .modal-actions [name="cancel"]').tap();
+      await expect(page.locator('#newAutomationModal')).not.toHaveClass(/active/);
+    });
+  });
 });

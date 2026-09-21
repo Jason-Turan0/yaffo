@@ -1,5 +1,23 @@
+/* `min-width: 0`: a flex item's automatic minimum is its content, so without this
+   the face grid — not the viewport — decides how wide the page is. */
 .main-content {
     flex: 1;
+    min-width: 0;
+}
+
+/* "<Person>'s Faces" is user data in a heading. Let it wrap and break so a long
+   name pushes the header taller rather than pushing the page wider. */
+.main-content .page-header h1 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* The empty state interpolates the same name into a sentence ("No faces have been
+   assigned to <name> yet."). A single unbroken name there set the page's minimum
+   width — 672px at a 320px viewport — so it has to be breakable too. */
+.main-content .empty-state h2,
+.main-content .empty-state p {
+    overflow-wrap: anywhere;
 }
 
 .selection-controls {
@@ -24,9 +42,11 @@
     color: var(--color-border);
 }
 
+/* `min(150px, 100%)` so the track collapses with the container instead of holding
+   a 150px floor once the content box is narrower than that (320px minus gutters). */
 .faces-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
     gap: 15px;
 }
 
@@ -86,4 +106,30 @@
 .similarity-low {
     color: var(--color-danger);
     font-weight: 600;
+}
+
+/* Selecting a face is the whole job of this page, so the selection affordances
+   have to be reachable under a thumb, and the two of them must not collapse into
+   one target when the row wraps. */
+@media (hover: none), (pointer: coarse) {
+    .selection-controls {
+        gap: 8px 20px;
+        flex-wrap: wrap;
+    }
+
+    .selection-controls a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 640px) {
+    .faces-grid {
+        gap: 10px;
+    }
+
+    .face-card img {
+        height: 140px;
+    }
 }

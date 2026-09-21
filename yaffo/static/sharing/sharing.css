@@ -5,6 +5,7 @@
     display: flex;
     gap: 20px;
     min-height: calc(100vh - 100px);
+    min-height: calc(100dvh - 100px);
 }
 
 .sharing-sidebar {
@@ -171,7 +172,7 @@
 }
 
 .pairing-busy {
-    margin-left: 8px;
+    margin-inline-start: 8px;
     color: var(--color-text-muted);
     font-weight: 400;
 }
@@ -569,7 +570,7 @@
 
 .transfer-failed-files {
     margin: 6px 0 0;
-    padding-left: 18px;
+    padding-inline-start: 18px;
     color: var(--color-text-secondary);
     font-size: var(--font-size-sm);
 }
@@ -587,4 +588,109 @@
     border: var(--border-width) solid var(--color-warning-soft-border);
     border-radius: var(--radius-sm);
     color: var(--color-warning-soft-text);
+}
+
+.sharing-panel,
+.device-identity-item,
+.transfer-batch-info,
+.transfer-batch-actions,
+#sharing-sidebar .panel-nav-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#sharing-sidebar .panel-nav-label,
+.transfer-path-badge,
+.transfer-state-badge {
+    white-space: normal;
+}
+
+.sharing-content button,
+#sharing-sidebar button {
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.sharing-share-nav-item > button {
+    flex-shrink: 0;
+}
+
+.accept-pairing-form textarea,
+.pairing-code-text {
+    direction: ltr;
+    text-align: start;
+    unicode-bidi: isolate;
+}
+
+.remote-photo-details {
+    padding: 0 12px 12px;
+    overflow-wrap: anywhere;
+}
+
+.remote-photo-details summary {
+    min-height: 44px;
+    padding-block: 10px;
+    cursor: pointer;
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+}
+
+.remote-file-metadata {
+    display: grid;
+    gap: 10px;
+    margin: 8px 0 0;
+    color: var(--color-text-secondary);
+}
+
+.remote-file-metadata-row dt {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+.remote-file-metadata-row dd {
+    margin: 2px 0 0;
+    font-size: var(--font-size-sm);
+}
+
+.remote-file-path {
+    unicode-bidi: plaintext;
+}
+
+@media (max-width: 640px), (pointer: coarse) {
+    .sharing-content button,
+    #sharing-sidebar button,
+    #sharing-sidebar .panel-nav a,
+    .sharing-content .searchable-select-display {
+        min-height: 44px;
+    }
+
+    .sharing-content .help-tip {
+        min-width: 44px;
+    }
+}
+
+/* Filesystem paths are LTR data even inside an RTL layout: a leading "/" is a
+   neutral bidi character, so without isolation it is reordered to the visual
+   end and the path reads back to front. `plaintext` takes the direction from
+   the path's own first strong character, so an Arabic folder name still reads
+   correctly. */
+.sharing-content .file-browser-input,
+.remote-file-path {
+    text-align: start;
+    unicode-bidi: plaintext;
+}
+
+/* A native <select> sizes itself to its longest option, and a media-directory
+   option carries a whole filesystem path. That raw control is what a narrow
+   viewport paints until searchable-select.js hydrates it away, so containing it
+   is CSS's job, not the script's — and the grant/pairing cards have to be
+   allowed to shrink below their content for the clamp to reach them. */
+.share-grant-form,
+.pairing-form {
+    min-width: 0;
+}
+
+.sharing-content select {
+    max-inline-size: 100%;
 }

@@ -88,3 +88,19 @@ A single interactive part of a custom page.
 
 **Theme**  
 A visual style for Yaffo's interface.
+
+## Sharing
+
+**Sharing**  
+Pairing two Yaffo installations so one can copy selected parts of the other's
+library. Sharing copies media; it never moves or deletes your originals.
+
+**Paired device**  
+Another Yaffo installation you have paired with this one. Pairing lets the two
+copies recognize each other, but on its own it gives the other device access to
+nothing.
+
+**Share**  
+An authorization that lets a paired device pull one specific part of your
+library: a media directory, a folder inside one, or an album. You can revoke a
+share at any time; files the other device already copied are kept.
