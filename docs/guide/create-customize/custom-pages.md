@@ -22,9 +22,11 @@ The left editor contains:
 - **Add widget**, **Save**, and **Delete Page** actions;
 - the **Assistant** conversation.
 
-The canvas on the right is a responsive 12-column grid. Click **Save** to commit
-page settings and manual layout changes. A page with no saved widgets keeps
-opening in design mode; a page with widgets opens in presentation mode.
+The canvas on the right is a responsive grid laid out on 12 columns. It
+reflows to six columns and then to a single full-width column as the canvas
+narrows, but **Save** always commits the 12-column layout. Click **Save** to
+commit page settings and manual layout changes. A page with no saved widgets
+keeps opening in design mode; a page with widgets opens in presentation mode.
 
 ## Work with Widgets
 
@@ -35,8 +37,12 @@ not receive direct database or network access.
 
 Click **Add widget** to add a blank widget manually. Use its pencil to rename it,
 drag its header to move it, drag its resize handle to change its size, or click
-**×** to remove it after confirming. The blank widget has no generated content;
-use the Assistant when you want Yaffo to design a functional widget.
+**×** to remove it after confirming. The header also carries **↑**, **↓**, **−**,
+and **＋** buttons that move a widget up or down the page and make it shorter or
+taller. They appear when you hover a widget, and stay visible wherever dragging
+is unavailable — on a touch screen, or on a canvas narrow enough to be a single
+column. The blank widget has no generated content; use the Assistant when you
+want Yaffo to design a functional widget.
 
 The Assistant can use or adapt these built-in widget patterns:
 

@@ -15,6 +15,10 @@
 - Watch for recurrence: if the 7 px frame growth returns run after run, the pane height
   is not reproducible and the shot needs a fixed crop (e.g. clip a wrapper with a pinned
   height) rather than a new baseline.
+- Recurrence: same +14 device px bottom band seen again on a later run (now with a large
+  dependency diff on the page: media/view.css, responsive.css, index.css, nav.js...). Geometry
+  is still dvh/viewport-derived, content inside the overlap still pixel-identical, so still
+  fixture/frame, not the product change the diff touches -> quarantine, still needs a pinned crop.
 - Prose unaffected: the section text lists preview / file info / capture date+device /
   location / people / faces / labels, all still visible; nothing describes the tags
   section.

@@ -44,6 +44,12 @@ jobs:
         with:
           ref: master
           fetch-depth: 0
+          # GITHUB_TOKEN authenticates as github-actions[bot], which is not a
+          # bypass actor on master's ruleset, so the bump commit below is
+          # refused no matter what `permissions:` grants. This PAT belongs to a
+          # repository admin, which the ruleset does allow to bypass. checkout
+          # persists it in .git/config, so the pushes below use it too.
+          token: ${{ secrets.YAFFO_RELEASE_TOKEN }}
 
       - uses: actions/setup-python@v5
         with:
