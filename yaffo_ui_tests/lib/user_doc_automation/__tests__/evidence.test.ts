@@ -62,20 +62,40 @@ const options = (over: Partial<EvidenceOptions> = {}): EvidenceOptions => ({
 });
 
 /**
- * Run `body` against a repo-relative dependency that exists but has no diff.
- * Untracked rather than tracked, so the assertion does not depend on whether the
- * developer running the suite happens to have edited that file.
+ * A throwaway git repository with one committed dependency.
+ *
+ * Hermetic on purpose: CI checks out with the default `fetch-depth: 1`, so the real
+ * checkout has no history to diff against and no second commit to reach for. Owning
+ * the repository also means these assertions do not shift with whatever the last
+ * real commit happened to touch.
  */
-const withCleanDependency = (body: (dependency: string) => void): void => {
-    const repo = resolve(process.cwd(), "..");
-    const path = join(repo, `.evidence-unit-${process.pid}-${Date.now()}.ts`);
-    writeFileSync(path, "export const observed = true;\n", "utf8");
+const withRepo = (
+    body: (repo: string, commit: (message: string) => string) => void
+): void => {
+    const repo = mkdtempSync(join(tmpdir(), "yaffo-evidence-repo-"));
+    const git = (...args: string[]): string =>
+        execFileSync("git", args, {cwd: repo, encoding: "utf8"});
     try {
-        body(relative(repo, path));
+        git("init", "--quiet", "--initial-branch", "main");
+        git("config", "user.email", "tests@example.com");
+        git("config", "user.name", "tests");
+        mkdirSync(join(repo, "yaffo"), {recursive: true});
+        const commit = (message: string): string => {
+            git("add", "--all");
+            git("commit", "--quiet", "--allow-empty", "--message", message);
+            return git("rev-parse", "HEAD").trim();
+        };
+        writeFileSync(join(repo, DEPENDENCY), "a { color: red; }\n", "utf8");
+        body(repo, commit);
     } finally {
-        rmSync(path, {force: true});
+        rmSync(repo, {recursive: true, force: true});
     }
 };
+
+const DEPENDENCY = "yaffo/app.css";
+
+const observing = (...paths: string[]): WalkthroughResult =>
+    result({observation: {...result().observation, static: paths}});
 
 const writeMarkdown = (text: string): string => {
     const path = join(guideDir, "library", "browsing.md");
@@ -154,65 +174,62 @@ describe("buildEvidence", () => {
     });
 
     it("limits dependency evidence to existing observed files", () => {
-        // An untracked file exists but has no `git diff HEAD` output. This exercises
-        // the scoped git path without coupling the test to the developer's dirty tree.
-        const repo = resolve(process.cwd(), "..");
-        const dependency = join(repo, `.evidence-unit-${process.pid}-${Date.now()}.ts`);
-        writeFileSync(dependency, "export const observed = true;\n", "utf8");
-        try {
-            const observed = result({
-                observation: {
-                    ...result().observation,
-                    static: [relative(repo, dependency), "yaffo/does-not-exist.ts"],
-                },
-            });
-            expect(buildEvidence(observed, shot(), options()).codeDiff)
+        withRepo((repo, commit) => {
+            commit("baseline");
+            const observed = observing(DEPENDENCY, "yaffo/does-not-exist.ts");
+            expect(buildEvidence(observed, shot(), options({repoDir: repo})).codeDiff)
                 .toContain("no changes to this page's dependencies since HEAD");
-        } finally {
-            rmSync(dependency, {force: true});
-        }
+        });
     });
 
-    it("says so when it has no watermark and is therefore blind to committed work", () => {
-        // The CI failure this guards: a clean checkout makes `git diff HEAD` empty no
-        // matter how much the app moved, and triage read that silence as "nothing
-        // changed" and classified real UI work as renderer noise.
-        withCleanDependency((dependency) => {
-            const observed = result({
-                observation: {...result().observation, static: [dependency]},
-            });
-            expect(buildEvidence(observed, shot(), options()).codeDiff)
-                .toContain("absence of a diff is not evidence that the app is unchanged");
+    it("reports no observed dependencies when the page records none", () => {
+        withRepo((repo) => {
+            expect(buildEvidence(result(), shot(), options({repoDir: repo})).codeDiff)
+                .toContain("no observed dependencies recorded");
         });
     });
 
     it("spans the commits since the page's baseline, not just the working tree", () => {
-        const repo = resolve(process.cwd(), "..");
-        const head = execFileSync("git", ["rev-parse", "HEAD"], {cwd: repo, encoding: "utf8"}).trim();
-        const previous = execFileSync("git", ["rev-parse", "HEAD~1"], {cwd: repo, encoding: "utf8"}).trim();
-        const changed = execFileSync(
-            "git", ["diff", "--name-only", previous, head], {cwd: repo, encoding: "utf8"})
-            .split("\n").filter(Boolean);
-        if (!changed.length) return; // An empty commit leaves nothing to assert.
+        withRepo((repo, commit) => {
+            const baseline = commit("baseline");
+            writeFileSync(join(repo, DEPENDENCY), "a { color: blue; }\n", "utf8");
+            commit("responsive work");
 
-        const observed = result({
-            observation: {...result().observation, static: changed},
+            const observed = observing(DEPENDENCY);
+            const codeDiff = buildEvidence(observed, shot(), options({
+                repoDir: repo, lastVerifiedSha: baseline,
+            })).codeDiff;
+
+            expect(codeDiff).toContain(`since ${baseline.slice(0, 12)}`);
+            expect(codeDiff).toContain(DEPENDENCY);
+            expect(codeDiff).toContain("+a { color: blue; }");
         });
-        const codeDiff = buildEvidence(observed, shot(), options({lastVerifiedSha: previous})).codeDiff;
+    });
 
-        expect(codeDiff).toContain(`since ${previous.slice(0, 12)}`);
-        expect(codeDiff).toContain(changed[0]);
+    it("is blind to committed work without a watermark, and says so", () => {
+        // The exact CI failure this fix exists for: the change is committed, the tree
+        // is clean, and a HEAD-relative diff therefore reports nothing — which triage
+        // read as "the product did not change" and filed as renderer noise.
+        withRepo((repo, commit) => {
+            commit("baseline");
+            writeFileSync(join(repo, DEPENDENCY), "a { color: blue; }\n", "utf8");
+            commit("responsive work");
+
+            const codeDiff = buildEvidence(
+                observing(DEPENDENCY), shot(), options({repoDir: repo})).codeDiff;
+
+            expect(codeDiff).not.toContain("+a { color: blue; }");
+            expect(codeDiff).toContain("absence of a diff is not evidence that the app is unchanged");
+        });
     });
 
     it("falls back to HEAD when the recorded baseline commit is not in this checkout", () => {
-        // A rebase or squash can leave a lockfile pointing at a commit that no longer
-        // exists. That must degrade to the old window, not crash the run.
-        withCleanDependency((dependency) => {
-            const observed = result({
-                observation: {...result().observation, static: [dependency]},
-            });
-            expect(buildEvidence(observed, shot(), options({
-                lastVerifiedSha: "0".repeat(40),
+        // A rebase, a squash, or a shallow clone can leave a lockfile pointing at a
+        // commit this checkout does not have. That must degrade, not crash.
+        withRepo((repo, commit) => {
+            commit("baseline");
+            expect(buildEvidence(observing(DEPENDENCY), shot(), options({
+                repoDir: repo, lastVerifiedSha: "0".repeat(40),
             })).codeDiff).toContain("since HEAD");
         });
     });

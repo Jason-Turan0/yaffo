@@ -43,9 +43,9 @@ export interface Evidence {
 
 const REPO = resolve(join(process.cwd(), ".."));
 
-const git = (args: string[]): string => {
+const git = (args: string[], repoDir: string): string => {
     try {
-        return execFileSync("git", args, {cwd: REPO, encoding: "utf8", maxBuffer: 8 * 1024 * 1024});
+        return execFileSync("git", args, {cwd: repoDir, encoding: "utf8", maxBuffer: 8 * 1024 * 1024});
     } catch {
         return "";
     }
@@ -57,9 +57,12 @@ const truncate = (text: string, limit: number): string =>
 /** How much raw patch triage gets. The stat above it is never truncated. */
 const PATCH_BUDGET = 12_000;
 
-/** A watermark this checkout can actually resolve — a rebase or squash can orphan one. */
-const resolvableCommit = (sha: string | null | undefined): string | null =>
-    sha && git(["rev-parse", "--verify", "--quiet", `${sha}^{commit}`]).trim() ? sha : null;
+/**
+ * A watermark this checkout can actually resolve. A rebase or squash can orphan one,
+ * and a shallow clone may simply not have fetched it.
+ */
+const resolvableCommit = (sha: string | null | undefined, repoDir: string): string | null =>
+    sha && git(["rev-parse", "--verify", "--quiet", `${sha}^{commit}`], repoDir).trim() ? sha : null;
 
 /**
  * Changes to the files this page depends on, since the page was last verified.
@@ -78,15 +81,16 @@ const resolvableCommit = (sha: string | null | undefined): string | null =>
  */
 const dependencyDiff = (
     observation: WalkthroughResult["observation"],
-    lastVerifiedSha?: string | null
+    lastVerifiedSha: string | null | undefined,
+    repoDir: string
 ): string => {
     const deps = [...observation.routes, ...observation.templates, ...observation.static]
-        .filter((path) => existsSync(join(REPO, path)));
+        .filter((path) => existsSync(join(repoDir, path)));
     if (!deps.length) return "(no observed dependencies recorded — is the server observer running?)";
 
-    const since = resolvableCommit(lastVerifiedSha);
+    const since = resolvableCommit(lastVerifiedSha, repoDir);
     const range = since ?? "HEAD";
-    const stat = git(["diff", "--stat", range, "--", ...deps]).trim();
+    const stat = git(["diff", "--stat", range, "--", ...deps], repoDir).trim();
     if (!stat) {
         return since
             ? `(no changes to this page's dependencies since ${since.slice(0, 12)}, ` +
@@ -99,7 +103,7 @@ const dependencyDiff = (
         ? `since ${since.slice(0, 12)}, when this page was last verified`
         : "since the last commit (this page records no verified baseline commit)";
     return `Dependencies of this page changed ${window}:\n\n${stat}\n\n` +
-        truncate(git(["diff", range, "--", ...deps]), PATCH_BUDGET);
+        truncate(git(["diff", range, "--", ...deps], repoDir), PATCH_BUDGET);
 };
 
 const describeDiff = (shot: ShotResult): string => {
@@ -135,6 +139,8 @@ export interface EvidenceOptions {
      * dependency diff; without it only uncommitted work is visible to triage.
      */
     lastVerifiedSha?: string | null;
+    /** The repository to resolve dependencies and run git in. Defaults to the checkout. */
+    repoDir?: string;
 }
 
 export const buildEvidence = (
@@ -155,7 +161,8 @@ export const buildEvidence = (
         walkthroughPath: options.walkthroughPath,
         covers: options.covers,
         walkthroughSource: options.walkthroughSource,
-        codeDiff: dependencyDiff(result.observation, options.lastVerifiedSha),
+        codeDiff: dependencyDiff(
+            result.observation, options.lastVerifiedSha, options.repoDir ?? REPO),
         stringChanges: options.stringChanges ?? [],
     };
 };
