@@ -71,10 +71,11 @@
     padding: 1px 5px;
 }
 
+/* Sections of the actions panel are separated by space, not rules: every control
+   in it is already framed, and a rule between framed boxes is one more line that
+   heavy-border themes (neobrutalist draws them all in ink) turn into clutter. */
 .keyboard-shortcuts-list {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: var(--border-width) solid var(--color-border);
+    margin-top: 24px;
 }
 
 .shortcuts-label {
@@ -123,9 +124,7 @@
 }
 
 .keyboard-help {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: var(--border-width) solid var(--color-border);
+    margin-top: 16px;
     text-align: center;
 }
 

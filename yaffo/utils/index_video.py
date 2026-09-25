@@ -22,6 +22,7 @@ from yaffo.utils.index_photos import (
     save_face_thumbnail,
 )
 from yaffo.utils.photo_dates import get_date_from_filename
+from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir
 
 logger = get_logger(__name__)
 
@@ -88,7 +89,7 @@ def extract_poster(video_path: Path, thumbnail_dir: Path, duration_seconds: Opti
 
     offset = duration_seconds / 2 if duration_seconds and duration_seconds > 0 else _POSTER_FALLBACK_OFFSET
     poster_path = _poster_path_for(video_path, thumbnail_dir)
-    thumbnail_dir.mkdir(parents=True, exist_ok=True)
+    ensure_thumbnail_dir(thumbnail_dir)
     return poster_path if _grab_frame(ffmpeg, video_path, offset, poster_path) else None
 
 

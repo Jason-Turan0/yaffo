@@ -194,22 +194,18 @@
 .view-toggle {
     display: inline-flex;
     align-items: stretch;
-    gap: 0;
-    border: var(--border-width) solid var(--color-border-strong);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
+    gap: 8px;
 }
 
 .view-toggle a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: none;
-    border-radius: 0;
 }
 
 .view-toggle a.is-active {
     background: var(--color-accent);
+    border-color: var(--color-accent);
     color: var(--color-on-accent);
 }
 

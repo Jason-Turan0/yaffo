@@ -29,6 +29,7 @@ from yaffo.utils.exiftool_path import get_exiftool_path
 from yaffo.utils.face_analysis import get_model_location as get_face_model_location
 from yaffo.utils.ffmpeg_path import get_ffmpeg_path
 from yaffo.utils.image_classifier import get_model_location as get_classification_model_location
+from yaffo.utils.thumbnail_marker import THUMBNAIL_DIR_MARKER, ensure_thumbnail_dir
 from yaffo.version import get_build_info
 
 
@@ -439,8 +440,11 @@ def init_settings_routes(app: Flask):
             }), 400
 
         try:
-            # Create new directory if it doesn't exist
-            new_dir_path.mkdir(parents=True, exist_ok=True)
+            # Create the new directory and mark it BEFORE moving anything in: it is
+            # usually inside a watched media dir, and the watcher only learns the new
+            # setting after the commit below (and caches it), so the marker is what
+            # keeps the arriving face crops and posters from being indexed as photos.
+            ensure_thumbnail_dir(new_dir_path)
 
             # Get stats before moving
             file_count, total_size = get_thumbnail_stats(current_dir)
@@ -448,7 +452,9 @@ def init_settings_routes(app: Flask):
             # Move files
             if current_dir and current_dir.exists() and file_count > 0:
                 for file_path in current_dir.rglob("*"):
-                    if file_path.is_file():
+                    # The old dir keeps its marker: anything left behind there is
+                    # still thumbnails, never media.
+                    if file_path.is_file() and file_path.name != THUMBNAIL_DIR_MARKER:
                         relative_path = file_path.relative_to(current_dir)
                         dest_path = new_dir_path / relative_path
                         dest_path.parent.mkdir(parents=True, exist_ok=True)

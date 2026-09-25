@@ -2,6 +2,7 @@ import pytest
 
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, Face, Job, MediaItem, JOB_STATUS_PENDING
+from yaffo.utils.thumbnail_marker import THUMBNAIL_DIR_MARKER
 
 pytestmark = pytest.mark.unit
 
@@ -100,6 +101,26 @@ def test_thumbnail_directory_update_rewrites_face_paths(client, app, tmp_path):
     with app.app_context():
         face = db.session.query(Face).one()
         assert face.full_file_path == str(new_dir / "people" / "face_1.jpg")
+
+
+def test_thumbnail_directory_update_marks_new_dir_and_keeps_old_marker(client, app, tmp_path):
+    old_dir = tmp_path / "old-thumbs"
+    new_dir = tmp_path / "new-thumbs"
+    old_dir.mkdir()
+    (old_dir / "face_1.jpg").write_bytes(b"thumb")
+    (old_dir / THUMBNAIL_DIR_MARKER).write_text("")
+
+    with app.app_context():
+        db.session.add(ApplicationSettings(name="thumbnail_dir", type="str", value=str(old_dir)))
+        db.session.commit()
+
+    response = client.post("/api/settings/thumbnail-dir", json={"directory": str(new_dir)})
+
+    assert response.status_code == 200
+    assert (new_dir / THUMBNAIL_DIR_MARKER).is_file()
+    assert (new_dir / "face_1.jpg").exists()
+    # Leftovers in the old dir are still thumbnails, so it stays marked.
+    assert (old_dir / THUMBNAIL_DIR_MARKER).is_file()
 
 
 def test_thumbnail_directory_update_rewrites_missing_face_paths(client, app, tmp_path):

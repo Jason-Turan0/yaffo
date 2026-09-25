@@ -10,6 +10,7 @@ from yaffo.db.models import Job, JOB_STATUS_PENDING, JOB_STATUS_RUNNING, MediaIt
 from yaffo.routes.utilities.common import get_media_dirs, get_thumbnail_dir, automations_sidebar_context
 from yaffo.utils.file_sync import MediaScan, iter_media_scan, perform_sync
 from yaffo.utils.index_jobs import reindex_media_items
+from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir
 
 
 # NDJSON records the scan stream emits (one JSON object per line). Named so the page
@@ -190,7 +191,7 @@ def init_index_photos_routes(app: Flask):
                 "code": "thumbnail_directory_not_configured",
             }), 400
 
-        thumbnail_dir.mkdir(parents=True, exist_ok=True)
+        ensure_thumbnail_dir(thumbnail_dir)
 
         jobs = perform_sync(db.session, files_to_index, files_to_delete, thumbnail_dir)
         return jsonify(asdict(SyncStarted(job_id=jobs.import_job_id))), 202
@@ -211,7 +212,7 @@ def init_index_photos_routes(app: Flask):
                 "error": gettext("No thumbnail directory configured"),
                 "code": "thumbnail_directory_not_configured",
             }), 400
-        thumbnail_dir.mkdir(parents=True, exist_ok=True)
+        ensure_thumbnail_dir(thumbnail_dir)
 
         # Sourced from the index, not a filesystem walk: "reindex the library" means
         # the items in it. Files that have since vanished are skipped — indexing them

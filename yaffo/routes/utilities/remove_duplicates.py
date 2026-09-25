@@ -23,11 +23,13 @@ from yaffo.db.models import (
     Job,
 )
 from yaffo.routes.utilities.common import is_system_file, get_thumbnail_dir, automations_sidebar_context
+from yaffo.utils.thumbnail_marker import in_marked_thumbnail_dir
 
 
 def collect_media_paths(directory_paths: list[str]) -> list[str]:
     found_paths = set()
     thumbnail_dir = get_thumbnail_dir()
+    marked_dirs: dict[Path, bool] = {}
 
     for directory_path in directory_paths:
         if not directory_path.strip():
@@ -39,6 +41,8 @@ def collect_media_paths(directory_paths: list[str]) -> list[str]:
             if not (p.suffix.lower() in MEDIA_EXTENSIONS and not p.name.startswith(".") and p.is_file()):
                 continue
             if thumbnail_dir and p.is_relative_to(thumbnail_dir):
+                continue
+            if in_marked_thumbnail_dir(p, marked_dirs):
                 continue
             if is_system_file(p.name):
                 continue

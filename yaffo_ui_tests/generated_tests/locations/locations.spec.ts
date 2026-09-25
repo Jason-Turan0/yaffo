@@ -529,19 +529,14 @@ test.describe('Locations Map', () => {
     await expect(panel.locator('.mass-assignment-info')).toContainText(String(photoIds.length));
     await expect(panel.locator('.btn-recommended')).toBeVisible();
 
-    // Set the value and submit in one browser task. With a larger clustered
-    // fixture, a late recommendation refresh can otherwise clear the input
-    // between a separate fill and click.
+    // Type and click like a user, as separate actions. A late recommendation
+    // lookup or map move can re-render the panel between them; the typed name
+    // must survive that (pendingLocationName), so don't collapse these into one
+    // in-page script — that hid the lost-draft bug for weeks.
+    await panel.locator('#mass-location-input').fill(TEST_LOCATION_NAME);
     const [response] = await Promise.all([
       page.waitForResponse(resp => resp.url().includes('/locations/bulk-update')),
-      page.evaluate((locationName) => {
-        const input = document.getElementById('mass-location-input') as HTMLInputElement | null;
-        const button = document.getElementById('mass-assign-btn') as HTMLButtonElement | null;
-        if (!input || !button) throw new Error('Mass assignment controls are not available');
-        input.value = locationName;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        button.click();
-      }, TEST_LOCATION_NAME),
+      panel.locator('#mass-assign-btn').click(),
     ]);
     expect(response.ok()).toBe(true);
     await expect(page.locator('.notification.visible')).toBeVisible();

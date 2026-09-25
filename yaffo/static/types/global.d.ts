@@ -36,6 +36,9 @@ type AppConfig = {
     urls: Record<string, string>;
     buildUrl(endpoint: string, params?: Record<string, string | number | undefined>): string;
     i18n: I18nConfig;
+    /** Session CSRF token (base.html); fetch/htmx attach it automatically, a
+     *  natively submitted form must carry it as a `csrf_token` field. */
+    csrfToken?: string;
 };
 
 type NotificationType = 'success' | 'error' | 'warning' | 'info';

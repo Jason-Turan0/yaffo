@@ -18,6 +18,7 @@ from yaffo.utils.index_photos import (
 )
 from yaffo.utils.settings import get_thumbnail_dir
 from yaffo.utils.safe_paths import PathOutsideAllowedRoots, resolve_path_in_roots
+from yaffo.utils.thumbnail_marker import ensure_thumbnail_dir, in_marked_thumbnail_dir
 
 logger = get_logger(__name__, 'background_tasks')
 
@@ -123,6 +124,7 @@ def iter_media_scan(
     filesystem_paths: set[str] = set()
     unindexed: list[dict] = []
     walked = 0
+    marked_dirs: dict[Path, bool] = {}
     started_at = monotonic_time.monotonic()
     for media_dir in media_dirs:
         if not media_dir.exists():
@@ -149,6 +151,9 @@ def iter_media_scan(
             except PathOutsideAllowedRoots:
                 continue
             if thumbnail_dir is not None and resolved_photo.is_relative_to(thumbnail_dir.resolve()):
+                continue
+            # Any yaffo thumbnail dir, not just ours: a peer's or a previous one.
+            if in_marked_thumbnail_dir(photo_file, marked_dirs):
                 continue
             full_path = str(resolved_photo)
             filesystem_paths.add(full_path)
@@ -221,7 +226,7 @@ def run_file_sync(session: Session, automation_id: int | None = None) -> IndexJo
         logger.warning("file_sync: no configured media directory exists; skipping")
         return None
 
-    thumbnail_dir.mkdir(parents=True, exist_ok=True)
+    ensure_thumbnail_dir(thumbnail_dir)
     scan = scan_media_dirs(session, media_dirs, thumbnail_dir)
     if not scan.files_to_index and not scan.orphaned:
         logger.info("file_sync: index already in sync; nothing to do")
