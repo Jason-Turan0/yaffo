@@ -90,7 +90,8 @@
 
                     {% if timeline_year_marks %}
                         {# The date scrubber: a time-proportional rail (newest at the
-                           top) with one density bar per month — bar length shows how
+                           top; long empty stretches collapse to a short break) with
+                           one density bar per month — bar length shows how
                            many photos that month holds. Year marks are plain links
                            (the no-JS fallback); timeline_scrubber.js turns the rail
                            into a draggable jump-to-month control using the month
@@ -101,6 +102,12 @@
                             {% for bar in timeline_bars %}
                                 <span class="timeline-scrubber-bar" aria-hidden="true"
                                       style="top: {{ bar.top }}%; height: {{ bar.height }}%; width: {{ bar.width }}%"></span>
+                            {% endfor %}
+                            {# A long empty stretch is drawn short, not to scale; the
+                               break shows the rail skips time there. #}
+                            {% for gap in timeline_breaks %}
+                                <span class="timeline-scrubber-break" aria-hidden="true"
+                                      style="top: {{ gap.top }}%; height: {{ gap.height }}%"></span>
                             {% endfor %}
                             {% for mark in timeline_year_marks %}
                                 <a class="timeline-scrubber-year" data-year="{{ mark.year }}"

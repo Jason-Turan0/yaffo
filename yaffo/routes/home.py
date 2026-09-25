@@ -88,16 +88,28 @@ def _timeline_groups(media_items: list, previous_day=_NO_PREVIOUS_ITEM) -> list[
 
 # Cap on rendered year labels so a century-spanning library still reads.
 MAX_SCRUBBER_YEAR_LABELS = 20
+# An empty stretch longer than this many months is drawn as a short break rather
+# than to scale: one far-off date (a camera clock set to year 5000, a batch of
+# 1950s scans) would otherwise squeeze every real month into a sliver of the rail.
+GAP_COLLAPSE_MONTHS = 24
+# ...and each break takes this many months' worth of rail.
+COLLAPSED_GAP_MONTHS = 3
 
 
-def _timeline_index(filters: dict, page_size: int, base_params: dict) -> tuple[list[dict], list[dict], list[dict]]:
+def _timeline_index(
+    filters: dict, page_size: int, base_params: dict,
+) -> tuple[list[dict], list[dict], list[dict], list[dict]]:
     """The scrubber's data, built from per-month counts of the whole *filtered*
     library (newest first). The rail axis is TIME (calendar months, newest at the
     top), so year labels space evenly instead of bunching in sparse years; each
-    month's count renders as a horizontal density bar at its band. Every month
-    also carries its item offset — offset // page_size is the page where it
-    starts, because the gallery orders by date desc. Returns (month index for
-    the drag JS, density bars, per-year marks for the no-JS fallback links).
+    month's count renders as a horizontal density bar at its band. An empty
+    stretch longer than GAP_COLLAPSE_MONTHS is collapsed to a short break, so the
+    axis is only to scale between breaks: every month therefore carries its own
+    rail position (top/height, in %), which the drag JS reads rather than
+    recomputing a linear axis. Every month also carries its item offset —
+    offset // page_size is the page where it starts, because the gallery orders
+    by date desc. Returns (month index for the drag JS, density bars, per-year
+    marks for the labels and no-JS fallback links, collapsed breaks).
     Undated items are absent: they sort after every dated one."""
     # Group on the "YYYY-MM" prefix of date_taken — the SAME value the gallery
     # orders by — never the year/month columns. Any disagreement between the two
@@ -122,37 +134,85 @@ def _timeline_index(filters: dict, page_size: int, base_params: dict) -> tuple[l
         if prefix and len(prefix) >= 7 and prefix[:4].isdigit() and prefix[5:7].isdigit()
     ]
     if not rows:
-        return [], [], []
+        return [], [], [], []
 
     def month_key(year: int, month: int) -> int:
         return year * 12 + month
 
-    newest_key = month_key(rows[0][0], rows[0][1])
-    oldest_key = month_key(rows[-1][0], rows[-1][1])
-    total_months = newest_key - oldest_key + 1
-    max_count = max(count for _y, _m, count in rows)
+    # Lay the months out in rail units (one unit per calendar month), newest at 0.
+    # Empty months between two photo months keep their space unless the run is
+    # long enough to collapse into a break.
+    keys = [month_key(year, month) for year, month, _count in rows]
+    slot_tops: list[float] = []
+    break_units: list[tuple[float, float]] = []
+    cursor = 0.0
+    for index, key in enumerate(keys):
+        if index:
+            empty = keys[index - 1] - key - 1
+            if empty > GAP_COLLAPSE_MONTHS:
+                break_units.append((cursor, COLLAPSED_GAP_MONTHS))
+                cursor += COLLAPSED_GAP_MONTHS
+            else:
+                cursor += empty
+        slot_tops.append(cursor)
+        cursor += 1
+    total_units = cursor
 
+    def percent(units: float) -> float:
+        return units / total_units * 100
+
+    def units_for_key(key: int) -> float | None:
+        """The rail position of the top of any calendar month, or None when it
+        falls inside a collapsed break (the break has no months to point at)."""
+        if key >= keys[0]:
+            return 0.0
+        if key < keys[-1]:
+            return total_units
+        for index in range(len(keys)):
+            if keys[index] == key:
+                return slot_tops[index]
+            if keys[index] > key > keys[index + 1]:
+                newer_bottom = slot_tops[index] + 1
+                if slot_tops[index + 1] - newer_bottom != keys[index] - keys[index + 1] - 1:
+                    return None
+                return newer_bottom + (keys[index] - 1 - key)
+        return total_units
+
+    max_count = max(count for _y, _m, count in rows)
+    height = round(percent(1), 3)
     months: list[dict] = []
     bars: list[dict] = []
     offset = 0
-    for year, month, count in rows:
-        months.append({"year": year, "month": month, "count": count, "offset": offset})
+    for (year, month, count), top_units in zip(rows, slot_tops):
+        top = round(percent(top_units), 3)
+        months.append({"year": year, "month": month, "count": count, "offset": offset,
+                       "top": top, "height": height})
         bars.append({
-            "top": round((newest_key - month_key(year, month)) / total_months * 100, 3),
-            "height": round(1 / total_months * 100, 3),
+            "top": top,
+            "height": height,
             # Never thinner than 15%: a one-photo month must still leave a visible tick.
             "width": round(15 + 85 * count / max_count),
         })
         offset += count
 
-    # One mark per calendar year in range, at the top of that year's span; the
-    # link lands on the page of the newest photo at or before that point.
-    years = list(range(rows[0][0], rows[-1][0] - 1, -1))
+    breaks = [
+        {"top": round(percent(start), 3), "height": round(percent(size), 3)}
+        for start, size in break_units
+    ]
+
+    # One mark per year that has photos (a year with none is either empty rail or
+    # inside a break, and a chip for it would jump somewhere else), at the top of
+    # that year's span; the link lands on the page of the year's newest photo.
+    years = list(dict.fromkeys(year for year, _month, _count in rows))
     step = -(-len(years) // MAX_SCRUBBER_YEAR_LABELS)  # ceil division
     year_marks: list[dict] = []
     for year in years[::step]:
-        top_key = min(newest_key, month_key(year, 12))
-        entry = next((m for m in months if month_key(m["year"], m["month"]) <= top_key), months[-1])
+        top_key = min(keys[0], month_key(year, 12))
+        index, entry = next(
+            (i, m) for i, m in enumerate(months) if month_key(m["year"], m["month"]) <= top_key)
+        top_units = units_for_key(top_key)
+        if top_units is None:  # December sits in the break above: start at the photos
+            top_units = slot_tops[index]
         # page-size rides along: the page number below is computed with THIS
         # request's page size, so a link that omits it lands on a page the
         # server paginates differently and the #month anchor points at nothing.
@@ -164,10 +224,10 @@ def _timeline_index(filters: dict, page_size: int, base_params: dict) -> tuple[l
         anchor = f"month-{entry['year']:04d}-{entry['month']:02d}"
         year_marks.append({
             "year": year,
-            "percent": round((newest_key - top_key) / total_months * 100, 2),
+            "percent": round(percent(top_units), 2),
             "url": f"{url_for('index')}?{urlencode(params, doseq=True)}#{anchor}",
         })
-    return months, bars, year_marks
+    return months, bars, year_marks, breaks
 
 
 @context("yaffo-gallery")
@@ -230,6 +290,7 @@ def init_home_routes(app: Flask):
         timeline_index: list[dict] = []
         timeline_bars: list[dict] = []
         timeline_year_marks: list[dict] = []
+        timeline_breaks: list[dict] = []
         next_fragment_url = None
         if view == "timeline":
             filter_params = {**filter_params, "view": "timeline"}
@@ -256,7 +317,7 @@ def init_home_routes(app: Flask):
                     timeline_groups=timeline_groups,
                     next_fragment_url=next_fragment_url,
                 )
-            timeline_index, timeline_bars, timeline_year_marks = _timeline_index(
+            timeline_index, timeline_bars, timeline_year_marks, timeline_breaks = _timeline_index(
                 filters, filter_page_size, base_params)
         # The header toggle: same filters, page 1, other view.
         view_urls = {
@@ -293,6 +354,7 @@ def init_home_routes(app: Flask):
             timeline_index=timeline_index,
             timeline_bars=timeline_bars,
             timeline_year_marks=timeline_year_marks,
+            timeline_breaks=timeline_breaks,
             next_fragment_url=next_fragment_url,
             media_count=media_count,
             pagination=pagination,

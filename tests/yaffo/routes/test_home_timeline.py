@@ -3,12 +3,18 @@ switched by ?view=timeline (persisted as the preferred view). The page's items
 group under day headers with month dividers; the scrubber rail maps each month
 of the filtered library to the page where it starts (offset // page_size)."""
 import json
+import re
 
 import pytest
 
 from yaffo.db import db
 from yaffo.db.models import ApplicationSettings, MediaItem
 
+
+
+def _counts(months: list[dict]) -> list[dict]:
+    """The month index without its rail positions: which months, how many, where."""
+    return [{key: m[key] for key in ("year", "month", "count", "offset")} for m in months]
 
 @pytest.fixture
 def dated_library(app):
@@ -62,9 +68,10 @@ def test_timeline_scrubber_marks_and_index(client, dated_library):
     # Month index: newest first with cumulative offsets over the filtered library.
     payload = body.split('id="timeline-index">')[1].split("</script>")[0]
     months = json.loads(payload)
+    # Each month also carries its rail band (%): 14 equal calendar-month slices.
     assert months == [
-        {"year": 2025, "month": 7, "count": 30, "offset": 0},
-        {"year": 2024, "month": 6, "count": 1, "offset": 30},
+        {"year": 2025, "month": 7, "count": 30, "offset": 0, "top": 0.0, "height": 7.143},
+        {"year": 2024, "month": 6, "count": 1, "offset": 30, "top": 92.857, "height": 7.143},
     ]
     # Year marks link to the page where the year starts: 2024's first item is
     # offset 30, which lands on page 2 at the default page size of 25 — plus the
@@ -218,7 +225,7 @@ def test_scrubber_excludes_dateless_rows_with_year(client, dated_library, app):
     body = client.get("/?view=timeline").data.decode()
 
     payload = body.split('id="timeline-index">')[1].split("</script>")[0]
-    assert json.loads(payload) == [
+    assert _counts(json.loads(payload)) == [
         {"year": 2025, "month": 7, "count": 30, "offset": 0},
         {"year": 2024, "month": 6, "count": 1, "offset": 30},
     ]
@@ -228,4 +235,53 @@ def test_scrubber_respects_filters(client, dated_library):
     body = client.get("/?view=timeline&year=2024").data.decode()
 
     payload = body.split('id="timeline-index">')[1].split("</script>")[0]
-    assert json.loads(payload) == [{"year": 2024, "month": 6, "count": 1, "offset": 0}]
+    assert _counts(json.loads(payload)) == [{"year": 2024, "month": 6, "count": 1, "offset": 0}]
+
+
+@pytest.fixture
+def outlier_library(app, dated_library):
+    """The dated library plus one photo whose date is absurd (a hex id in its
+    filename once parsed as January 5000)."""
+    with app.app_context():
+        db.session.add(MediaItem(
+            full_file_path="/media/2017/12/50000118-8357.jpg",
+            date_taken="5000-01-18T00:00:00", year=5000, month=1,
+        ))
+        db.session.commit()
+
+
+def _timeline_index(body: str) -> list[dict]:
+    return json.loads(body.split('id="timeline-index">')[1].split("</script>")[0])
+
+
+def test_long_empty_stretch_collapses_to_a_break(client, outlier_library):
+    body = client.get("/?view=timeline").data.decode()
+
+    # Jan 5000 → Jul 2025 is ~35,700 empty months; it becomes one 3-month break.
+    # Rail units: 0 Jan 5000 | 1-3 break | 4 Jul 2025 | 5-16 empty | 17 Jun 2024.
+    months = _timeline_index(body)
+    assert [(m["year"], m["month"], m["top"]) for m in months] == [
+        (5000, 1, 0.0), (2025, 7, 22.222), (2024, 6, 94.444),
+    ]
+    assert body.count('class="timeline-scrubber-break"') == 1
+    assert "top: 5.556%; height: 16.667%" in body
+    # The real library keeps most of the rail instead of a sliver at the bottom.
+    assert months[2]["top"] - months[1]["top"] > 70
+
+
+def test_year_marks_only_for_years_with_photos(client, outlier_library):
+    body = client.get("/?view=timeline").data.decode()
+
+    # Both the rail labels and the mobile jump chips: 5000, 2025, 2024 — never
+    # the thousands of empty years in between.
+    for cls in ("timeline-scrubber-year", "timeline-jump-year"):
+        years = re.findall(rf'class="{cls}" data-year="(\d+)"', body)
+        assert years == ["5000", "2025", "2024"], cls
+    # 2025's label sits at the top of its photos, not inside the break above.
+    assert 'data-year="2025"\n                                   style="top: 22.22%"' in body
+
+
+def test_short_gaps_stay_to_scale(client, dated_library):
+    body = client.get("/?view=timeline").data.decode()
+
+    assert "timeline-scrubber-break" not in body

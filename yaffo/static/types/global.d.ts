@@ -287,6 +287,9 @@ type TimelineMonthEntry = {
     month: number;
     count: number;
     offset: number;
+    /** Rail position of the month's band, 0-100 (0 = newest); server-computed. */
+    top: number;
+    height: number;
 };
 
 type TimelineScrubberNamespace = {

@@ -5,7 +5,14 @@ import numpy as np
 from sqlalchemy import insert, text
 from sqlalchemy.orm import Session
 import pydash as _
-from yaffo.db.models import Person, Face, PersonEmbedding, PersonFace
+from yaffo.db.models import (
+    FACE_STATUS_ASSIGNED,
+    FACE_STATUS_UNASSIGNED,
+    Face,
+    Person,
+    PersonEmbedding,
+    PersonFace,
+)
 from yaffo.domain.compare_utils import (
     load_embedding,
     serialize_embedding,
@@ -183,26 +190,44 @@ _LINK_CHUNK = 500
 
 
 def bulk_link_faces_to_people(session: Session, links: list[tuple[int, int]]) -> int:
-    """Link a batch of faces to people in one transaction, skipping any face already
-    assigned (a face maps to one person). `links` is [(person_id, face_id), ...].
-    Returns the number of new links created; commits once. Lets a batch job compute
-    its matches lock-free and persist them in one short write."""
+    """Assign a batch of faces to people in one transaction: link each face and mark
+    it ASSIGNED. `links` is [(person_id, face_id), ...]. Returns the number of faces
+    assigned; commits once. Lets a batch job compute its matches lock-free and persist
+    them in one short write.
+
+    Only UNASSIGNED faces with no existing link are taken (a face maps to one person).
+    An ignored face, or one a manual assignment is PROCESSING, is never overridden.
+    The status is set together with the link: a link alone left the face UNASSIGNED,
+    so auto-assigned faces kept showing up on the Unassigned Faces screen."""
     if not links:
         return 0
     face_ids = [face_id for _, face_id in links]
-    existing: set[int] = set()
+    assignable: set[int] = set()
     for start in range(0, len(face_ids), _LINK_CHUNK):
         chunk = face_ids[start:start + _LINK_CHUNK]
-        existing.update(
-            row[0] for row in session.query(PersonFace.face_id).filter(PersonFace.face_id.in_(chunk)).all()
+        assignable.update(
+            face_id for (face_id,) in (
+                session.query(Face.id)
+                .outerjoin(PersonFace, PersonFace.face_id == Face.id)
+                .filter(
+                    Face.id.in_(chunk),
+                    Face.status == FACE_STATUS_UNASSIGNED,
+                    PersonFace.face_id.is_(None),
+                )
+            )
         )
-    rows = [
-        {"person_id": person_id, "face_id": face_id}
-        for person_id, face_id in links
-        if face_id not in existing
-    ]
+    rows = []
+    for person_id, face_id in links:
+        if face_id in assignable:
+            rows.append({"person_id": person_id, "face_id": face_id})
+            assignable.discard(face_id)  # first link wins if a face is listed twice
     if rows:
         session.execute(insert(PersonFace), rows)
+        linked_ids = [row["face_id"] for row in rows]
+        for start in range(0, len(linked_ids), _LINK_CHUNK):
+            session.query(Face).filter(Face.id.in_(linked_ids[start:start + _LINK_CHUNK])).update(
+                {Face.status: FACE_STATUS_ASSIGNED}, synchronize_session=False
+            )
     session.commit()
     return len(rows)
 

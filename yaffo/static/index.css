@@ -441,6 +441,22 @@
     opacity: 0.5;
 }
 
+/* A collapsed empty stretch of the rail: a dotted stem, read as "time skipped
+   here" — the axis is only to scale between breaks. */
+.timeline-scrubber-break {
+    position: absolute;
+    left: 50%;
+    width: 2px;
+    min-height: 6px;
+    transform: translateX(-50%);
+    background: repeating-linear-gradient(
+        to bottom,
+        var(--color-text-muted) 0 2px,
+        transparent 2px 5px
+    );
+    pointer-events: none;
+}
+
 /* Infinite-scroll sentinel: invisible, but tall enough that "revealed" fires
    a comfortable distance before the user hits the bottom. */
 .timeline-sentinel {
