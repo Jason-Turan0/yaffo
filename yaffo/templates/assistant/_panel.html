@@ -1,0 +1,31 @@
+{# The Ask Yaffo panel: a conversation switcher over the shared chat dialog.
+   Floating (page=false): included once by base.html on every page, opened from the
+   navbar. Full page (page=true): /assistant, where the conversation list lives in
+   the page's sidebar instead of the switcher. Wired by static/assistant/assistant.js. #}
+{% from "components/chat_dialog.html" import chat_dialog %}
+
+{% macro assistant_panel(page=false) %}
+<aside class="assistant-panel{% if page %} assistant-panel-page{% endif %}" id="assistant-panel"
+       data-assistant-mode="{{ 'page' if page else 'floating' }}"
+       {% if not page %}hidden role="dialog" aria-label="{{ _('Ask Yaffo') }}"{% endif %}>
+    <div class="assistant-toolbar">
+        {% if not page %}
+        <select id="assistant-conversation" class="searchable-select assistant-conversation-select"
+                aria-label="{{ _('Conversation') }}">
+            <option value="">{{ _("New conversation") }}</option>
+        </select>
+        {% endif %}
+        <button type="button" class="btn-secondary btn-sm" id="assistant-new" data-icon="add">{{ _("New") }}</button>
+        <button type="button" class="assistant-icon-button" id="assistant-delete" data-icon="delete"
+                aria-label="{{ _('Delete conversation') }}" title="{{ _('Delete conversation') }}" disabled></button>
+        {% if not page %}
+        <a class="assistant-icon-button assistant-expand" href="{{ url_for('assistant_index') }}"
+           aria-label="{{ _('Open full page') }}" title="{{ _('Open full page') }}"><span aria-hidden="true">⤢</span></a>
+        <button type="button" class="modal-close" id="assistant-close" aria-label="{{ _('Close') }}">&times;</button>
+        {% endif %}
+    </div>
+    {{ chat_dialog('assistant-chat', _("Ask Yaffo"),
+                   _("Answers come from Yaffo's documentation. It can't see or change your library."),
+                   _("Ask how something in Yaffo works…")) }}
+</aside>
+{% endmacro %}

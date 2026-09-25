@@ -761,3 +761,61 @@ class Conversation(db.Model):
 
     version = db.relationship("PageVersion", back_populates="messages")
     automation = db.relationship("Automation", back_populates="messages")
+
+
+# The in-app assistant (docs/development/ai-assistant.md). A conversation is IDLE
+# between turns, RUNNING while a queued run works on its latest message, and FAILED
+# when that run errored; the next message starts a new run either way.
+ASSISTANT_STATUS_IDLE = "IDLE"
+ASSISTANT_STATUS_RUNNING = "RUNNING"
+ASSISTANT_STATUS_FAILED = "FAILED"
+
+# Transcript entry kinds. `user`/`assistant` are the turns replayed to the model on
+# the next run; `tool` records a tool call (name, input, a display summary, and the
+# doc sources it returned) and `error` a failure line — both display-only.
+ASSISTANT_EVENT_USER = "user"
+ASSISTANT_EVENT_ASSISTANT = "assistant"
+ASSISTANT_EVENT_TOOL = "tool"
+ASSISTANT_EVENT_ERROR = "error"
+ASSISTANT_MODEL_EVENTS = (ASSISTANT_EVENT_USER, ASSISTANT_EVENT_ASSISTANT)
+
+
+class AssistantConversation(db.Model):
+    __tablename__ = "assistant_conversations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String, nullable=False)
+    status = db.Column(db.String, nullable=False, default=ASSISTANT_STATUS_IDLE)
+    # The model the latest run used, for the conversation's footer and call logs.
+    model_id = db.Column(db.String, nullable=True)
+    # When the current run started, so a resumed dialog's elapsed timer is right.
+    run_started_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+
+    events = db.relationship(
+        "AssistantEvent", back_populates="conversation",
+        cascade="all, delete-orphan", passive_deletes=True,
+        order_by="AssistantEvent.seq",
+    )
+
+
+class AssistantEvent(db.Model):
+    __tablename__ = "assistant_events"
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(
+        db.Integer, db.ForeignKey("assistant_conversations.id", ondelete="CASCADE"), nullable=False)
+    # Position in the conversation (0, 1, 2…), unique per conversation.
+    seq = db.Column(db.Integer, nullable=False)
+    kind = db.Column(db.String, nullable=False)
+    content = db.Column(db.Text, nullable=False, default="")
+    # JSON for structured kinds (a tool call's name/input/summary/sources).
+    payload = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+    conversation = db.relationship("AssistantConversation", back_populates="events")
+
+    __table_args__ = (
+        db.UniqueConstraint("conversation_id", "seq", name="uq_assistant_events_conversation_seq"),
+    )

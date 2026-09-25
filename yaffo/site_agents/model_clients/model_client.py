@@ -122,6 +122,10 @@ class AnthropicModelClient(ModelClient):
             {"role": "user", "content": [to_tool_result_part(r) for r in results]}
         )
 
+    def load_history(self, turns: list[tuple[str, str]]) -> None:
+        for role, text in turns:
+            self.messages.append({"role": role, "content": [to_text_part(text)]})
+
     def set_system_prompt(self, prompt: str) -> None:
         self.system_prompt = prompt
 

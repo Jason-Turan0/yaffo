@@ -42,6 +42,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/panel_nav.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/selection_bar.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='components/chat_dialog.css') }}">
+    {% if assistant_available | default(false) %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='assistant/assistant.css') }}">
+    {% endif %}
     <link rel="stylesheet" href="{{ url_for('static', filename='components/tooltip.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='pages/nav.css') }}">
     {# Only the active theme's stylesheet: a static skin for built-in themes, or
@@ -146,6 +149,12 @@
             {# startswith('settings_') (not substring) so sharing_settings doesn't light this tab too #}
             <li><a href="{{ url_for('settings_index') }}" data-icon="settings"
                    class="nav-link {% if request.endpoint and request.endpoint.startswith('settings_') %}active{% endif %}">{{ _("Settings") }}</a></li>
+            {% if assistant_ready | default(false) %}
+            {# Mobile and tablet: this Menu item. Desktop: the floating button below. #}
+            <li class="nav-assistant-item"><button type="button" id="assistant-open" data-icon="assistant"
+                        class="nav-link nav-assistant-toggle {% if request.endpoint == 'assistant_index' %}active{% endif %}"
+                        aria-controls="assistant-panel" aria-expanded="false">{{ _("Ask Yaffo") }}</button></li>
+            {% endif %}
 
         </ul>
         <button type="button" id="nav-pages-toggle" class="nav-link nav-pages-toggle"
@@ -198,6 +207,16 @@
 
     {% block content %}{% endblock %}
 </div>
+
+{% if assistant_available | default(false) and request.endpoint != 'assistant_index' %}
+{% from "assistant/_panel.html" import assistant_panel %}
+{{ assistant_panel() }}
+{% if assistant_ready | default(false) %}
+<button type="button" class="assistant-fab" id="assistant-fab" data-icon="assistant"
+        aria-controls="assistant-panel" aria-expanded="false"
+        aria-label="{{ _('Ask Yaffo') }}" title="{{ _('Ask Yaffo') }}"></button>
+{% endif %}
+{% endif %}
 
 <!-- Global Folder/File Picker -->
 <div id="folder-picker-modal" class="modal">
@@ -266,6 +285,15 @@
 <script src="{{ url_for('static', filename='components/tooltip.js') }}"></script>
 <script src="{{ url_for('static', filename='utils.js') }}"></script>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
+{% if assistant_available | default(false) %}
+<script src="{{ url_for('static', filename='assistant/assistant.js') }}"></script>
+<script>
+document.addEventListener('yaffo:app-init-complete', (event) => {
+    const app = event.detail.app;
+    app.assistant.instance = app.assistant.init(app.i18n, window.APP_CONFIG);
+});
+</script>
+{% endif %}
 
 {% block scripts %}{% endblock %}
 </body>

@@ -24,6 +24,7 @@ from yaffo.db.models import (
 from yaffo.db.repositories import automation_repository, classification_repository, media_repository
 from yaffo.distance_units import get_saved_distance_unit, set_distance_unit
 from yaffo.i18n import get_saved_locale, set_locale
+from yaffo.routes.assistant import assistant_settings_context
 from yaffo.site_agents import llm_config
 from yaffo.utils.exiftool_path import get_exiftool_path
 from yaffo.utils.face_analysis import get_model_location as get_face_model_location
@@ -134,19 +135,7 @@ def init_settings_routes(app: Flask):
     @app.route("/settings", methods=["GET"])
     def settings_index():
         media_dirs = yaffo.db.repositories.media_dir_repository.list_media_dirs(db.session)
-        llm_status = llm_config.status()
-        model_labels = {
-            "claude-opus-4-8": gettext("Claude Opus 4.8 — most capable"),
-            "claude-sonnet-4-6": gettext("Claude Sonnet 4.6 — balanced"),
-            "claude-haiku-4-5-20251001": gettext("Claude Haiku 4.5 — fastest"),
-        }
-        llm_status["models"] = [
-            {
-                **model,
-                "label": model_labels.get(model["id"], model["label"]),
-            }
-            for model in llm_status["models"]
-        ]
+        llm_status = llm_config.localized_status()
 
         # Get thumbnail directory setting
         thumbnail_setting = db.session.query(ApplicationSettings).filter_by(name="thumbnail_dir").first()
@@ -185,6 +174,7 @@ def init_settings_routes(app: Flask):
             asset_download_failed=asset_download_failed,
             build_info=get_build_info(),
             llm=llm_status,
+            assistant=assistant_settings_context(),
             labels=classification_repository.list_labels(db.session),
             selected_distance_unit=get_saved_distance_unit(db.session),
             selected_locale=get_saved_locale() or app.config["BABEL_DEFAULT_LOCALE"],

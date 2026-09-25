@@ -343,5 +343,56 @@
         "title": "未索引的照片"
       }
     }
+  },
+  "assistant": {
+    "activity": {
+      "other": "使用了一个工具",
+      "read": "阅读了“{{title}}”",
+      "readMissing": "找不到“{{title}}”",
+      "searched_one": "在文档中搜索了“{{query}}”（{{count}} 个结果）",
+      "searched_other": "在文档中搜索了“{{query}}”（{{count}} 个结果）",
+      "summary_one": "已查阅文档（{{count}} 步）",
+      "summary_other": "已查阅文档（{{count}} 步）"
+    },
+    "cancel": {
+      "confirm": "停止",
+      "message": "助手将停止处理这个回答。已经写出的内容会保留在对话中。",
+      "title": "停止回答？"
+    },
+    "delete": {
+      "confirm": "删除",
+      "failed": "无法删除该对话。",
+      "message": "此对话将被永久删除。",
+      "title": "删除对话？"
+    },
+    "empty": {
+      "intro": "询问 Yaffo 中任何功能的用法。回答来自用户指南和开发说明，并附有所用页面的链接。",
+      "suggestions": {
+        "addFolders": "如何添加我的照片文件夹？",
+        "assignFaces": "如何把人脸分配给某个人？",
+        "automations": "自动化能做什么？"
+      }
+    },
+    "errors": {
+      "api_key_missing": "尚未配置 API 密钥。请在 设置 → 人工智能一代 中添加你的 {{provider}} API 密钥。",
+      "iteration_limit": "助手执行了太多步骤仍未完成。请换个方式提问。",
+      "model_error": "AI 服务商返回了错误。请稍后重试。",
+      "output_limit": "回答太长，被截断了。请换一个更具体的问题。",
+      "run_failed": "回答时出了问题。请重试。"
+    },
+    "newConversation": "新对话",
+    "runningTitle": "{{title}}（正在回答…）",
+    "sendFailed": "无法发送你的消息。",
+    "settings": {
+      "conversationCount_one": "{{count}} 个已保存的对话",
+      "conversationCount_other": "{{count}} 个已保存的对话",
+      "deleteAllConfirm": "全部删除",
+      "deleteAllMessage": "所有询问 Yaffo 的对话都将被永久删除。",
+      "deleteAllTitle": "删除所有对话？",
+      "deleteFailed": "无法删除这些对话。",
+      "deleted_one": "已删除 {{count}} 个对话。",
+      "deleted_other": "已删除 {{count}} 个对话。"
+    },
+    "sources": "来源："
   }
 }

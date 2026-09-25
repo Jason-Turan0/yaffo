@@ -23,6 +23,8 @@ from yaffo.site_agents.model_clients import (
 from yaffo.site_agents.prompt_generator import build_system_prompt
 from yaffo.site_agents.prompt_generator.theme_system_prompt import build_template_builder_system_prompt
 from yaffo.site_agents.prompt_generator.automation_system_prompt import build_automation_builder_system_prompt
+from yaffo.site_agents.assistant.prompt import build_assistant_system_prompt
+from yaffo.site_agents.assistant.tools import KnowledgeToolProvider
 from yaffo.site_agents.tool_providers import (
     AutomationToolProvider,
     AutomationTriggerToolProvider,
@@ -267,4 +269,27 @@ def create_automation_builder_agent(
         providers=providers,
         api_key=api_key,
     )
+    return Agent(client, providers, max_iterations=max_iterations)
+
+
+def create_assistant_agent(
+    *,
+    model: ModelAlias,
+    api_key: str,
+    history: list[tuple[str, str]],
+    max_iterations: int = _MAX_ITERATIONS,
+) -> Agent:
+    """Wire the in-app assistant: the docs tools (search_docs / read_doc over the
+    bundled knowledge) and the stable assistant system prompt, with the
+    conversation's earlier turns (normalized (role, text) pairs) seeded into the
+    client. `model` and `api_key` are required — the caller resolves them from the
+    assistant settings."""
+    providers: list[ToolProvider] = [KnowledgeToolProvider()]
+    client = create_model_client(
+        model=model,
+        system_prompt=build_assistant_system_prompt(),
+        providers=providers,
+        api_key=api_key,
+    )
+    client.load_history(history)
     return Agent(client, providers, max_iterations=max_iterations)

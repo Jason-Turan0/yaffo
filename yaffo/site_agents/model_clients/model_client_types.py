@@ -84,6 +84,13 @@ class ModelClient(ABC):
     def add_tool_result_message(self, results: list[ToolCallResult]) -> None: ...
 
     @abstractmethod
+    def load_history(self, turns: list[tuple[str, str]]) -> None:
+        """Seed earlier conversation turns as plain text: (role, text) pairs with
+        role "user" or "assistant", alternating and starting with "user". Tool calls
+        from earlier runs are not replayed; the assistant's replies carry what they
+        found."""
+
+    @abstractmethod
     def call_model_api(self) -> Optional[ModelResponse]: ...
 
     @abstractmethod

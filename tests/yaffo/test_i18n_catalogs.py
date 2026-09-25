@@ -373,7 +373,9 @@ def test_settings_llm_forms_use_gettext_and_localized_notifications():
     assert '_("%(provider)s API key:"' in key_template
     assert "_('API key')" in key_template
     assert 'gettext("AI model updated.")' in routes
-    assert '"claude-sonnet-4-6": gettext(' in routes
+    # The translated model labels are shared with the Assistant settings dropdown.
+    llm_config = Path("yaffo/site_agents/llm_config.py").read_text(encoding="utf-8")
+    assert '"claude-sonnet-4-6": gettext(' in llm_config
 
 
 def test_themes_page_uses_gettext_and_localized_javascript():

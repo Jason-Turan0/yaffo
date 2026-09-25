@@ -343,5 +343,56 @@
         "title": "Fotos no indexadas"
       }
     }
+  },
+  "assistant": {
+    "activity": {
+      "other": "Usó una herramienta",
+      "read": "Leyó «{{title}}»",
+      "readMissing": "No encontró «{{title}}»",
+      "searched_one": "Buscó «{{query}}» en la documentación ({{count}} resultado)",
+      "searched_other": "Buscó «{{query}}» en la documentación ({{count}} resultados)",
+      "summary_one": "Consultó la documentación ({{count}} paso)",
+      "summary_other": "Consultó la documentación ({{count}} pasos)"
+    },
+    "cancel": {
+      "confirm": "Detener",
+      "message": "El asistente deja de trabajar en esta respuesta. Lo que ya haya escrito se queda en la conversación.",
+      "title": "¿Dejar de responder?"
+    },
+    "delete": {
+      "confirm": "Eliminar",
+      "failed": "No se pudo eliminar la conversación.",
+      "message": "Esta conversación se eliminará de forma permanente.",
+      "title": "¿Eliminar la conversación?"
+    },
+    "empty": {
+      "intro": "Pregunta cómo funciona cualquier cosa en Yaffo. Las respuestas salen de la guía del usuario y las notas de desarrollo, con enlaces a las páginas usadas.",
+      "suggestions": {
+        "addFolders": "¿Cómo añado mis carpetas de fotos?",
+        "assignFaces": "¿Cómo asigno caras a una persona?",
+        "automations": "¿Qué pueden hacer las automatizaciones?"
+      }
+    },
+    "errors": {
+      "api_key_missing": "No hay ninguna clave de API configurada. Añade tu clave de API de {{provider}} en Ajustes → Generación de IA.",
+      "iteration_limit": "El asistente dio demasiados pasos sin terminar. Prueba a reformular la pregunta.",
+      "model_error": "El proveedor de IA devolvió un error. Vuelve a intentarlo en un momento.",
+      "output_limit": "La respuesta era demasiado larga y se cortó. Prueba con una pregunta más concreta.",
+      "run_failed": "Algo salió mal al responder. Vuelve a intentarlo."
+    },
+    "newConversation": "Nueva conversación",
+    "runningTitle": "{{title}} (respondiendo…)",
+    "sendFailed": "No se pudo enviar tu mensaje.",
+    "settings": {
+      "conversationCount_one": "{{count}} conversación guardada",
+      "conversationCount_other": "{{count}} conversaciones guardadas",
+      "deleteAllConfirm": "Eliminar todas",
+      "deleteAllMessage": "Todas las conversaciones de Pregunta a Yaffo se eliminarán de forma permanente.",
+      "deleteAllTitle": "¿Eliminar todas las conversaciones?",
+      "deleteFailed": "No se pudieron eliminar las conversaciones.",
+      "deleted_one": "Se eliminó {{count}} conversación.",
+      "deleted_other": "Se eliminaron {{count}} conversaciones."
+    },
+    "sources": "Fuentes:"
   }
 }

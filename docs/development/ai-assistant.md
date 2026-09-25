@@ -951,8 +951,8 @@ provider, model and key):
 - **Redact people names.**
 - **Delete all conversations** (with confirmation). There's no automatic
   expiry.
-- **Model:** default to a fast, inexpensive model for Q&A. Page building keeps its
-  own choice.
+- **Model:** automatically use the least expensive model from the AI Generation
+  provider, with no assistant-specific override. Page building keeps its own choice.
 
 **Prerequisite:** the model registry in `providers.py` still lists the Claude 4.x
 generation. Refresh it to the current models (`claude-opus-5-5`, `claude-sonnet-5`,
@@ -1009,7 +1009,7 @@ generation. Refresh it to the current models (`claude-opus-5-5`, `claude-sonnet-
 
 1. **Knowledge-only.**
    - Bundle build and packaging, conversations, the durable run, the chat dialog
-     entry point, doc links, and the settings for enable and model.
+     entry point, doc links, and the setting to enable the assistant.
    - Useful on its own ("how do I…"), and has no access to user data.
 2. **Sandbox groundwork** (benefits automations too).
    - Run limits (timeout, host-call cap, output cap, row caps).

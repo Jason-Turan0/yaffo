@@ -1,0 +1,289 @@
+/* Ask Yaffo (templates/assistant/_panel.html). The floating panel sits above the
+   navbar (100) and below modals (1000), so its confirm dialogs cover it.
+
+   Entry points: on desktop a floating button in the corner (only once an API key
+   is set); below the navbar's collapse breakpoint (1200px) the "Ask Yaffo" item
+   in the Menu instead. */
+
+/* The Menu item is a <button>; reset it to look like the link items beside it. */
+.nav-assistant-toggle {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    text-align: start;
+}
+
+.assistant-fab {
+    position: fixed;
+    inset-block-end: calc(24px + env(safe-area-inset-bottom));
+    inset-inline-end: calc(24px + env(safe-area-inset-right));
+    z-index: 140;
+    width: 56px;
+    height: 56px;
+    border: var(--border-width) solid var(--color-accent);
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+}
+
+.assistant-fab[data-icon]::before {
+    width: 26px;
+    height: 26px;
+}
+
+.assistant-fab:hover {
+    background: var(--color-accent-hover);
+}
+
+.assistant-fab[hidden] {
+    display: none;
+}
+
+/* The timeline's date scrubber runs down the right edge; clear it. */
+html:not([dir="rtl"]) body:has(.timeline-scrubber) .assistant-fab {
+    inset-inline-end: calc(64px + env(safe-area-inset-right));
+}
+
+@media (min-width: 1201px) {
+    .nav-assistant-item {
+        display: none;
+    }
+}
+
+@media (max-width: 1200px) {
+    .assistant-fab {
+        display: none;
+    }
+}
+
+.assistant-panel {
+    position: fixed;
+    inset-block-start: var(--navbar-height, 64px);
+    inset-block-end: 0;
+    inset-inline-end: 0;
+    z-index: 150;
+    width: min(440px, 100vw);
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface);
+    border-inline-start: var(--border-width) solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+}
+
+.assistant-panel[hidden] {
+    display: none;
+}
+
+/* The chat fills the panel: the transcript takes the free height and scrolls. */
+.assistant-panel .chat-dialog {
+    flex: 1;
+    min-height: 0;
+}
+
+.assistant-panel .chat-dialog-messages {
+    flex: 1;
+    max-height: none;
+}
+
+.assistant-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.assistant-conversation-select,
+.assistant-toolbar .searchable-select-wrapper {
+    flex: 1;
+    min-width: 0;
+    width: 0;
+}
+
+.assistant-toolbar > button,
+.assistant-toolbar > a {
+    flex-shrink: 0;
+}
+
+.assistant-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.assistant-icon-button:hover:not(:disabled) {
+    color: var(--color-text);
+    border-color: var(--color-border-hover);
+}
+
+.assistant-icon-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.assistant-toolbar .modal-close {
+    margin-inline-start: auto;
+}
+
+/* Collapsed tool calls between the question and the answer. */
+.assistant-activity {
+    align-self: flex-start;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    padding: 2px 12px;
+}
+
+.assistant-activity summary {
+    cursor: pointer;
+}
+
+.assistant-activity ul {
+    margin: 4px 0 0;
+    padding-left: 18px;
+}
+
+/* The doc sections a run used, linked under its answer. */
+.assistant-sources {
+    align-self: flex-start;
+    max-width: 90%;
+    font-size: var(--font-size-sm);
+    padding: 0 12px;
+}
+
+.assistant-sources-label {
+    color: var(--color-text-muted);
+}
+
+.assistant-sources ul {
+    margin: 2px 0 0;
+    padding-left: 18px;
+}
+
+.assistant-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.assistant-empty p {
+    margin: 0;
+}
+
+.assistant-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.assistant-suggestions .chip {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: var(--font-size-sm);
+    padding: 6px 10px;
+}
+
+/* Full page (/assistant): the conversation list beside an in-flow panel. */
+.assistant-page {
+    display: grid;
+    grid-template-columns: minmax(200px, 260px) 1fr;
+    gap: 16px;
+    height: calc(100vh - var(--navbar-height, 56px) - 48px);
+    height: calc(100dvh - var(--navbar-height, 56px) - 48px);
+    min-height: 420px;
+}
+
+.assistant-panel-page {
+    position: static;
+    width: auto;
+    min-width: 0;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.assistant-sidebar {
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.assistant-sidebar-title {
+    font-size: var(--font-size-base);
+    margin: 0 0 8px;
+}
+
+.assistant-conversation-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.assistant-conversation-item {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assistant-conversation-item:hover {
+    background: var(--color-surface-hover);
+}
+
+.assistant-conversation-item[aria-current="true"] {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+}
+
+.assistant-conversation-empty {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+@media (max-width: 640px) {
+    .assistant-panel:not(.assistant-panel-page) {
+        width: 100vw;
+    }
+
+    .assistant-page {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: auto;
+    }
+
+    .assistant-sidebar {
+        max-height: 30vh;
+        max-height: 30dvh;
+    }
+
+    .assistant-panel-page {
+        min-height: 70vh;
+        min-height: 70dvh;
+    }
+}

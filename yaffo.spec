@@ -45,6 +45,7 @@ datas += [
     ("yaffo/translations", "yaffo/translations"),
     ("yaffo/utils/clip_tokenizer", "yaffo/utils/clip_tokenizer"),  # vendored CLIP vocab .gz
     ("yaffo/scripts/db/migrations", "yaffo/scripts/db/migrations"),  # loaded by file path
+    ("yaffo/assistant_knowledge", "yaffo/assistant_knowledge"),  # the assistant's docs bundle
     ("resources", "resources"),  # UI resources + THIRD_PARTY_LICENSES
 ]
 

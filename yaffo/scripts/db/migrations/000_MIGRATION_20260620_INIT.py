@@ -479,3 +479,27 @@ def migrate(conn: sqlite3.Connection) -> None:
                    """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_conversations_version_id ON conversations(version_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_conversations_automation_id ON conversations(automation_id)")
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS assistant_conversations (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      title TEXT NOT NULL,
+                      status TEXT NOT NULL DEFAULT 'IDLE',
+                      model_id TEXT,
+                      run_started_at TIMESTAMP,
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                   )
+                   """)
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS assistant_events (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      conversation_id INTEGER NOT NULL,
+                      seq INTEGER NOT NULL,
+                      kind TEXT NOT NULL,
+                      content TEXT NOT NULL DEFAULT '',
+                      payload TEXT,
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                      FOREIGN KEY (conversation_id) REFERENCES assistant_conversations(id) ON DELETE CASCADE,
+                      CONSTRAINT uq_assistant_events_conversation_seq UNIQUE (conversation_id, seq)
+                   )
+                   """)

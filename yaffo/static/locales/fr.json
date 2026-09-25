@@ -343,5 +343,56 @@
         "title": "Photos non indexées"
       }
     }
+  },
+  "assistant": {
+    "activity": {
+      "other": "Outil utilisé",
+      "read": "Lecture de « {{title}} »",
+      "readMissing": "« {{title}} » introuvable",
+      "searched_one": "Recherche de « {{query}} » dans la documentation ({{count}} résultat)",
+      "searched_other": "Recherche de « {{query}} » dans la documentation ({{count}} résultats)",
+      "summary_one": "Documentation consultée ({{count}} étape)",
+      "summary_other": "Documentation consultée ({{count}} étapes)"
+    },
+    "cancel": {
+      "confirm": "Arrêter",
+      "message": "L'assistant arrête de travailler sur cette réponse. Ce qu'il a déjà écrit reste dans la conversation.",
+      "title": "Arrêter la réponse ?"
+    },
+    "delete": {
+      "confirm": "Supprimer",
+      "failed": "Impossible de supprimer la conversation.",
+      "message": "Cette conversation sera définitivement supprimée.",
+      "title": "Supprimer la conversation ?"
+    },
+    "empty": {
+      "intro": "Demandez comment fonctionne n'importe quoi dans Yaffo. Les réponses viennent du guide de l'utilisateur et des notes de développement, avec des liens vers les pages utilisées.",
+      "suggestions": {
+        "addFolders": "Comment ajouter mes dossiers de photos ?",
+        "assignFaces": "Comment attribuer des visages à une personne ?",
+        "automations": "Que peuvent faire les automatisations ?"
+      }
+    },
+    "errors": {
+      "api_key_missing": "Aucune clé API configurée. Ajoutez votre clé API {{provider}} dans Paramètres → Génération d'IA.",
+      "iteration_limit": "L'assistant a fait trop d'étapes sans terminer. Essayez de reformuler la question.",
+      "model_error": "Le fournisseur d'IA a renvoyé une erreur. Réessayez dans un instant.",
+      "output_limit": "La réponse était trop longue et a été coupée. Posez une question plus précise.",
+      "run_failed": "Un problème est survenu pendant la réponse. Réessayez."
+    },
+    "newConversation": "Nouvelle conversation",
+    "runningTitle": "{{title}} (réponse en cours…)",
+    "sendFailed": "Impossible d'envoyer votre message.",
+    "settings": {
+      "conversationCount_one": "{{count}} conversation enregistrée",
+      "conversationCount_other": "{{count}} conversations enregistrées",
+      "deleteAllConfirm": "Tout supprimer",
+      "deleteAllMessage": "Toutes les conversations Demander à Yaffo seront définitivement supprimées.",
+      "deleteAllTitle": "Supprimer toutes les conversations ?",
+      "deleteFailed": "Impossible de supprimer les conversations.",
+      "deleted_one": "{{count}} conversation supprimée.",
+      "deleted_other": "{{count}} conversations supprimées."
+    },
+    "sources": "Sources :"
   }
 }

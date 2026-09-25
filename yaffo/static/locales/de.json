@@ -343,5 +343,56 @@
         "title": "Nicht indizierte Fotos"
       }
     }
+  },
+  "assistant": {
+    "activity": {
+      "other": "Ein Werkzeug verwendet",
+      "read": "„{{title}}“ gelesen",
+      "readMissing": "„{{title}}“ nicht gefunden",
+      "searched_one": "Dokumentation nach „{{query}}“ durchsucht ({{count}} Treffer)",
+      "searched_other": "Dokumentation nach „{{query}}“ durchsucht ({{count}} Treffer)",
+      "summary_one": "Dokumentation geprüft ({{count}} Schritt)",
+      "summary_other": "Dokumentation geprüft ({{count}} Schritte)"
+    },
+    "cancel": {
+      "confirm": "Abbrechen",
+      "message": "Der Assistent hört auf, an dieser Antwort zu arbeiten. Was er bereits geschrieben hat, bleibt im Gespräch.",
+      "title": "Antwort abbrechen?"
+    },
+    "delete": {
+      "confirm": "Löschen",
+      "failed": "Das Gespräch konnte nicht gelöscht werden.",
+      "message": "Dieses Gespräch wird endgültig gelöscht.",
+      "title": "Gespräch löschen?"
+    },
+    "empty": {
+      "intro": "Fragen Sie, wie etwas in Yaffo funktioniert. Die Antworten stammen aus dem Benutzerhandbuch und den Entwicklungsnotizen, mit Links zu den verwendeten Seiten.",
+      "suggestions": {
+        "addFolders": "Wie füge ich meine Fotoordner hinzu?",
+        "assignFaces": "Wie ordne ich Gesichter einer Person zu?",
+        "automations": "Was können Automatisierungen?"
+      }
+    },
+    "errors": {
+      "api_key_missing": "Kein API-Schlüssel konfiguriert. Fügen Sie Ihren {{provider}}-API-Schlüssel unter Einstellungen → KI-Generierung hinzu.",
+      "iteration_limit": "Der Assistent hat zu viele Schritte gebraucht, ohne fertig zu werden. Formulieren Sie die Frage anders.",
+      "model_error": "Der KI-Anbieter hat einen Fehler gemeldet. Versuchen Sie es gleich noch einmal.",
+      "output_limit": "Die Antwort war zu lang und wurde abgeschnitten. Stellen Sie eine genauere Frage.",
+      "run_failed": "Beim Antworten ist etwas schiefgelaufen. Versuchen Sie es noch einmal."
+    },
+    "newConversation": "Neues Gespräch",
+    "runningTitle": "{{title}} (antwortet…)",
+    "sendFailed": "Ihre Nachricht konnte nicht gesendet werden.",
+    "settings": {
+      "conversationCount_one": "{{count}} gespeichertes Gespräch",
+      "conversationCount_other": "{{count}} gespeicherte Gespräche",
+      "deleteAllConfirm": "Alle löschen",
+      "deleteAllMessage": "Alle Gespräche aus „Yaffo fragen“ werden endgültig gelöscht.",
+      "deleteAllTitle": "Alle Gespräche löschen?",
+      "deleteFailed": "Die Gespräche konnten nicht gelöscht werden.",
+      "deleted_one": "{{count}} Gespräch gelöscht.",
+      "deleted_other": "{{count}} Gespräche gelöscht."
+    },
+    "sources": "Quellen:"
   }
 }

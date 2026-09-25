@@ -137,13 +137,16 @@ type OverlayApi = {
     init(targetElementId: string, overlayContent: string, options?: OverlayOptions): OverlayControl;
 };
 
+type ChatMessage = {
+    type: string;
+    content: string;
+    [key: string]: unknown;
+};
+
 type ChatStatusBody = {
     status: string;
     started_at?: string | null;
-    messages?: Array<{
-        type: string;
-        content: string;
-    }>;
+    messages?: ChatMessage[];
     [key: string]: unknown;
 };
 
@@ -164,11 +167,15 @@ type ChatDialogOptions = {
     cancelConfirm?: Pick<ConfirmDialogOptions, 'title' | 'message' | 'confirmText'>;
     pollIntervalMs?: number;
     pollRetryMs?: number;
+    renderMessages?: (messages: ChatMessage[]) => Node[];
+    afterCancel?: () => void;
 };
 
 type ChatDialogApi = {
     enterRunning(): void;
     isRunning(): boolean;
+    load(): void;
+    clear(nodes: Node[]): void;
 };
 
 type DateUtils = {
@@ -622,6 +629,34 @@ type ThemesNamespace = {
     chat?: ChatDialogApi | null;
 };
 
+type AssistantDocSource = {
+    title: string;
+    heading: string;
+    url: string;
+    scope: string;
+};
+
+type AssistantConversationSummary = {
+    id: number;
+    title: string;
+    status: string;
+    updated_at: string | null;
+};
+
+type AssistantApi = {
+    open(): void;
+    close(): void;
+    isOpen(): boolean;
+    switchTo(conversationId: number | null): void;
+    refreshList(): Promise<void>;
+};
+
+type AssistantNamespace = {
+    init?: (i18n: I18nService, config: AppConfig) => AssistantApi | null;
+    instance?: AssistantApi | null;
+    initSettings?: (i18n: I18nService, config: AppConfig) => void;
+};
+
 type SearchableSelectConstructor = {
     new(selectElement: HTMLSelectElement): unknown;
     i18n: Pick<I18nService, 't'>;
@@ -653,6 +688,7 @@ type PhotoOrganizerApp = {
     automations?: AutomationsNamespace;
     themes?: ThemesNamespace;
     utilities?: UtilitiesNamespace;
+    assistant?: AssistantNamespace;
     confirmDialog: ConfirmDialogApi;
     pickFolder: PickFolderApi;
     widgetErrors?: Record<string, string[]>;

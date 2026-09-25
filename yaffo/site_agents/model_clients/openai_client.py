@@ -89,6 +89,10 @@ class OpenAICompatibleModelClient(ModelClient):
                 "content": r.result,
             })
 
+    def load_history(self, turns: list[tuple[str, str]]) -> None:
+        for role, text in turns:
+            self.messages.append({"role": role, "content": text})
+
     def set_system_prompt(self, prompt: str) -> None:
         self.system_prompt = prompt
 

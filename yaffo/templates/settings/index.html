@@ -134,6 +134,10 @@
 
     {% include "settings/_llm.html" %}
 
+    {% if not demo_mode | default(false) %}
+    {% include "settings/_assistant.html" %}
+    {% endif %}
+
     {% include "settings/_labels.html" %}
 
     <div class="settings-section">
@@ -211,6 +215,7 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='settings/index.js') }}"></script>
 <script src="{{ url_for('static', filename='settings/labels.js') }}"></script>
+<script src="{{ url_for('static', filename='assistant/settings.js') }}"></script>
 <script>
 document.addEventListener('yaffo:app-init-complete', (event) => {
     const app = event.detail.app;
@@ -220,6 +225,7 @@ document.addEventListener('yaffo:app-init-complete', (event) => {
         window.APP_CONFIG
     );
     app.settings.initLabelFilter();
+    app.assistant?.initSettings?.(app.i18n, window.APP_CONFIG);
 });
 </script>
 {% endblock %}

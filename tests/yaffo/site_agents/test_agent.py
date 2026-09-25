@@ -37,9 +37,13 @@ class StubModelClient(ModelClient):
         self.call_count = 0
         self.user_messages = []                # each add_user_message arg
         self.tool_result_batches = []          # each add_tool_result_message arg (a list)
+        self.history = []                      # turns passed to load_history
 
     def add_user_message(self, content):
         self.user_messages.append(content)
+
+    def load_history(self, turns):
+        self.history.extend(turns)
 
     def add_tool_result_message(self, results):
         self.tool_result_batches.append(results)

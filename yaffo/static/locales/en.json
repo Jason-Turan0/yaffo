@@ -343,5 +343,56 @@
         "title": "Unindexed Photos"
       }
     }
+  },
+  "assistant": {
+    "newConversation": "New conversation",
+    "runningTitle": "{{title}} (answering…)",
+    "sendFailed": "Couldn't send your message.",
+    "sources": "Sources:",
+    "activity": {
+      "summary_one": "Checked the docs ({{count}} step)",
+      "summary_other": "Checked the docs ({{count}} steps)",
+      "searched_one": "Searched the docs for “{{query}}” ({{count}} result)",
+      "searched_other": "Searched the docs for “{{query}}” ({{count}} results)",
+      "read": "Read “{{title}}”",
+      "readMissing": "Couldn't find “{{title}}”",
+      "other": "Used a tool"
+    },
+    "errors": {
+      "api_key_missing": "No API key configured. Add your {{provider}} API key in Settings → AI Generation.",
+      "model_error": "The AI provider returned an error. Try again in a moment.",
+      "output_limit": "The answer was too long and got cut off. Try a narrower question.",
+      "iteration_limit": "The assistant took too many steps without finishing. Try rephrasing the question.",
+      "run_failed": "Something went wrong while answering. Try again."
+    },
+    "empty": {
+      "intro": "Ask how anything in Yaffo works. Answers come from the user guide and development notes, with links to the pages used.",
+      "suggestions": {
+        "addFolders": "How do I add my photo folders?",
+        "assignFaces": "How do I assign faces to a person?",
+        "automations": "What can automations do?"
+      }
+    },
+    "cancel": {
+      "title": "Stop answering?",
+      "message": "The assistant stops working on this answer. Anything it has already written stays in the conversation.",
+      "confirm": "Stop"
+    },
+    "delete": {
+      "title": "Delete conversation?",
+      "message": "This conversation will be permanently deleted.",
+      "confirm": "Delete",
+      "failed": "Couldn't delete the conversation."
+    },
+    "settings": {
+      "deleteAllTitle": "Delete all conversations?",
+      "deleteAllMessage": "Every Ask Yaffo conversation will be permanently deleted.",
+      "deleteAllConfirm": "Delete all",
+      "deleted_one": "Deleted {{count}} conversation.",
+      "deleted_other": "Deleted {{count}} conversations.",
+      "conversationCount_one": "{{count}} saved conversation",
+      "conversationCount_other": "{{count}} saved conversations",
+      "deleteFailed": "Couldn't delete the conversations."
+    }
   }
 }
