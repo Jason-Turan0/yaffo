@@ -199,7 +199,7 @@ dispatcher passes the `EventContext`.
 ## The sandbox (`yaffo/background_tasks/automation_sandbox/`)
 
 Custom automation `code` is **Starlark** (Python-like, deterministic, hermetic:
-no I/O, no imports, no `while`/recursion) run via the `starlark-pyo3` binding.
+no I/O, no imports, no `while`) run via the `starlark-pyo3` binding.
 
 ```
 automation_sandbox/
@@ -765,6 +765,40 @@ Watcher suppression (unit, no real observer):
 - **`find_duplicates`** emits `duplicates_found` outside the handler-context path, so
   with an empty chain. Harmless while `duplicate_scan` is schedule-triggered.
 
+## Sandbox limits, profiles, and preview references
+
+`run_starlark(..., limits=RunLimits(...))` launches a disposable evaluator, including
+when called from a daemon task worker. It exchanges bounded JSON messages over
+pipes; Python objects, sessions, and callbacks remain in the owning process.
+Defaults: 60 seconds, 1,000 host calls, 65,536 print characters including line
+breaks, and 4 MiB per message. A timeout kills/reaps the evaluator; output emitted
+before failure is retained within its cap. Host calls already in progress finish
+on their owning thread; no further calls run after the deadline.
+
+`data_query` row/facet results are capped at 5,000 before materializing database
+rows. Counts/ranges keep their aggregate meaning. Folder queries fail if computing
+accurate counts would scan over 5,000 indexed paths. Face comparisons are bounded
+and fail rather than silently choosing from truncated match candidates.
+
+`build_host_functions`, `build_recording_host_functions`, and `render_host_api`
+accept `profile="automation"` (the default) or `"assistant"`. Only explicitly
+registered functions enter the assistant profile; `report_progress` is excluded.
+The registry also carries risk, settings, network, precondition, and undo metadata
+for future reviewed assistant plans. Those metadata do not add approval gates to
+existing automation runs.
+
+Preview mutations with return values now return opaque `$ref:N` tokens instead
+of `None`. Indices count mutations only. For example, creating an album then
+calling `add_to_album` records the reference and the selected media ids without
+writing anything. Pass the token unchanged to later mutations; it cannot be used
+in live reads. Preview summaries name the referenced album. The inverse helpers
+and reference-resolution contracts are described in [AI Assistant](ai-assistant.md#sandbox-groundwork-phase-2).
+
+Shared batch edit helpers now include `untag_media_items`, `unassign_faces`,
+`set_favorites`, `set_media_dates`, and `set_location_names`. Value setters accept
+an optional `expected` value to skip later edits during undo. `add_to_album`
+accepts optional per-item positions for restoring removed membership.
+
 ## Dependencies
 
 `croniter` (schedule next-run math) and `starlark-pyo3` (the sandbox) — both in
@@ -772,15 +806,11 @@ Watcher suppression (unit, no real observer):
 
 ## Deferred (flagged, not built)
 
-- **Hard CPU/time limit.** Starlark blocks `while`, but in this `starlark-pyo3` build
-  **recursion is NOT blocked** (verified — a recursive call runs), and a large bounded
-  `for` can still burn CPU; the binding exposes no step budget and a thread soft-timeout
-  can't kill a runaway eval. Real hardening = subprocess + kill / resource limits before
-  exposing arbitrary user scripts. **More pressing now** that mutating actions
-  (move/rename/tag/assign/delete) run real file/DB writes on a triggered run. (The other
-  containment guarantees — no imports, no I/O, no network, no eval/introspection
-  builtins, no attribute-walking to host internals, host surface = injected callables
-  only — are pinned by `tests/.../test_starlark_containment.py`.)
+- **Host-call I/O deadlines.** Starlark evaluation now runs in a killable subprocess
+  with wall-clock, host-call, output, and message-size limits (see below). Trusted
+  host callbacks still execute on the owning thread and must supply their own
+  I/O timeouts. A deadline stops the evaluator and prevents later calls, but does
+  not interrupt a callback already modifying files or committing a transaction.
 - **`media_dir_id` / `relative_path` aren't filterable.** They're enrichment, not
   `FIELDS_BY_SOURCE` columns, so a script can read them on a photo row but can't
   `data_query` *by* them (e.g. "photos in media dir X"). Would need a real filter

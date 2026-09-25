@@ -78,7 +78,7 @@ def resolve_media_dirs(session: Session, query: dict) -> list[dict]:
     return [{"id": m.id, "name": m.path.name} for m in get_media_dir_entries(session)]
 
 
-def resolve_folders(session: Session, query: dict) -> list[dict]:
+def resolve_folders(session: Session, query: dict, *, row_limit: int | None = None) -> list[dict]:
     """Virtual `folders` source: the immediate subfolders at (media_dir_id, path),
     each with a recursive count of photos indexed under it. Empty for an unknown
     media dir or a path that escapes it. Derived from full_file_path, never exposed."""
@@ -93,7 +93,11 @@ def resolve_folders(session: Session, query: dict) -> list[dict]:
     # lexically — no per-photo .resolve() (and its filesystem syscalls) needed.
     prefix = str(target) + os.sep
     counts: dict[str, int] = {}
-    for _id, full in media_repository.get_media_item_paths_under_path(session, str(target)):
+    rows = (media_repository.get_media_item_paths_under_path(session, str(target)) if row_limit is None
+            else media_repository.get_media_item_paths_under_path(session, str(target), limit=row_limit + 1))
+    if row_limit is not None and len(rows) > row_limit:
+        raise ValueError("Folder query row limit exceeded; choose a narrower path")
+    for _id, full in rows:
         if not full.startswith(prefix):
             continue
         subfolder, sep, _rest = full[len(prefix):].partition(os.sep)

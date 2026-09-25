@@ -1,8 +1,9 @@
 # AI Assistant — Implementation Plan
 
-Status: **proposed** (2026-09-24). Nothing here is built yet. This is the plan to
-review before any code lands; update it as decisions change, and turn it into the
-design reference once the feature settles.
+Status: **phases 1–2 implemented** (2026-09-25). The knowledge-only assistant is
+available. The shared sandbox now supplies the groundwork for reviewed changes;
+scripts, diagnostics, approval/replay, and action cards are still planned in
+phases 3–5. The sections below describe the full design, including that future work.
 
 ## Goal
 
@@ -34,7 +35,7 @@ shared chat dialog (`templates/components/chat_dialog.html`).
 1. **Registered tools and host functions are the only capability.** The model
    has read-only native tools (docs and diagnostics), and it runs code only as
    hermetic Starlark in the automation sandbox (no I/O, no imports, time- and
-   step-limited). A script can do exactly what the host functions bound into it do,
+   host-call-limited). A script can do exactly what the host functions bound into it do,
    nothing else. There is no fallback path (no shell, no "read file" with a
    free-form path).
 2. **Deny by default.** Every tool, every host function in the `assistant`
@@ -366,50 +367,52 @@ routes/assistant.py ──► assistant_run (taskq task) ──► Agent loop
 - **Scripts are shown, not hidden.** Every `run_script` activity line has a
   **Show script** toggle.
 
-### What the sandbox needs first
+### Sandbox groundwork (phase 2)
 
-The sandbox was built for automations. The assistant needs these changes, and
-automations benefit from them too:
+Implemented in `background_tasks/automation_sandbox/`:
 
-1. **Run limits.** `run_starlark` currently has no time or step limit. Starlark
-   forbids `while` and recursion, but `for i in range(10**9)` or a huge query can
-   still tie up a worker. Add:
-   - a wall-clock timeout (run the script in a worker that can be stopped)
-   - a cap on host calls per run
-   - a cap on the size of captured `print` output
-   - row caps on reads (e.g. `data_query` limited to 5,000 rows per call)
-2. **References for mutating returns.** Preview mode returns `None` for every
-   mutating call. That breaks scripts that use a mutation's result:
-   `album_id = create_album("Yellowstone")` followed by `add_to_album(album_id, ids)`
-   records `add_to_album(None, ids)`. So in preview, a mutating call that returns
-   a value returns a **reference token** (`"$ref:3"`, meaning "the result of
-   recorded call 3") instead. The replay substitutes the real result.
-   - A script can pass a reference on to later calls, but can't compute with it.
-     The host API docs say so.
-   - The card summary resolves references for display: "add 212 photos to the new
-     album 'Yellowstone'".
-3. **Host API profiles.** `HostFunction` gains `profiles`:
-   - `{"automation", "assistant"}` for shared ones (`data_query`, `tag_media_items`,
-     the album functions)
-   - `{"assistant"}` for the maintenance functions automations have no use for
-     (`reindex_media`, `retry_job`, `run_sync`, `repair_face_statuses`)
-   - `{"automation"}` for run control like `report_progress`
+1. **Run limits.** `run_starlark` evaluates in a disposable interpreter process
+   (`yaffo/starlark_worker.py`), exchanging JSON with the owning process. The
+   defaults are 60 seconds wall clock, 1,000 host calls, 65,536 characters of print
+   output (including newlines), and 4 MiB per protocol message. `RunLimits` can
+   override these for a caller. A timeout kills and reaps the evaluator; failures
+   return bounded partial output and `success=False`. `data_query` caps row and
+   facet results at 5,000; aggregate counts still cover the full selection. Folder
+   queries reject scans over 5,000 indexed paths rather than returning partial counts. Face
+   comparisons reject results exceeding 5,000 face/person pairs.
 
-   `build_*_host_functions(session, profile=…)` and `render_host_api(profile)`
-   filter on it.
-4. **Change-plan metadata on `HostFunction`.** The fields the assistant's
-   confirmation rules need:
-   - `risk`: `low` | `medium` | `high`
-   - `undo(args, session) -> list[HostCall] | None`: the calls that reverse this
-     step, computed from the current state just before it runs (see *Undo*).
-     Having no `undo` means the step can't be undone; there's no separate
-     "reversible" flag to get wrong.
-   - `precondition(args, session) -> str | None`
-   - `uses_network`
-   - `setting_key`
-
-   Automations ignore these for now. "Undo this automation run" later falls out of
-   `undo` almost for free.
+   Host callbacks stay on the caller's thread so SQLAlchemy sessions and event
+   context do not cross process boundaries. The deadline kills evaluation even
+   during a host call, but the runner waits for that trusted call to finish before
+   returning and never starts a subsequent call. Host I/O needs its own timeout;
+   this does not forcibly interrupt a filesystem operation or a database commit.
+2. **References for mutating returns.** Preview mutations returning a value produce
+   `$ref:N`, indexed by mutations only (reads do not consume indices). Recorded
+   arguments are copied, and nested references must refer to an earlier mutation
+   that returns a value. A read cannot consume a preview reference. Scripts must
+   pass tokens unchanged, without computing with them. `resolve_references`
+   substitutes previously executed step results; unresolved tokens fail closed.
+   Preview album summaries resolve creation references to the album name.
+3. **Host API profiles.** Each `HostFunction` explicitly declares its `profiles`.
+   The default for a new function is automation-only. Runtime bindings, recording
+   bindings and generated docs all filter the same registry with `profile=`;
+   unknown profiles fail closed. Existing library capabilities and inverse helpers
+   are shared; `report_progress` stays automation-only. The knowledge-only
+   assistant still receives no script tool.
+4. **Change-plan metadata.** `HostFunction` carries `risk`, `undo`, `precondition`,
+   `uses_network`, and `setting_key`. Assistant mutations require a setting key.
+   File rename/move/trash are high risk; album deletion is medium risk. The replay
+   and approval layer that enforces those settings is phase 4, not built here.
+5. **Undo building blocks.** Capture callbacks return `HostCall` inverses before a
+   mutation executes. Tag and face inverses exclude existing state; batch
+   `set_favorites`, `set_media_dates`, and `set_location_names` restore per-item
+   values with expected-value guards. `untag_media_items` and `unassign_faces`
+   are shared capabilities. Album inverses preserve existing membership, restore
+   positions/covers, and guard against later metadata or ordering changes.
+   An inverse for a newly created album uses a step-local `$result`, replaced by
+   `resolve_undo_result` with the actual return value after successful execution;
+   an album that already existed produces no inverse. File operations and album
+   deletion currently have no undo callback and must be shown as non-reversible.
 
 New package: `yaffo/site_agents/assistant/`
 
@@ -1007,11 +1010,11 @@ generation. Refresh it to the current models (`claude-opus-5-5`, `claude-sonnet-
 
 ## Phases
 
-1. **Knowledge-only.**
+1. **Knowledge-only — implemented.**
    - Bundle build and packaging, conversations, the durable run, the chat dialog
      entry point, doc links, and the setting to enable the assistant.
    - Useful on its own ("how do I…"), and has no access to user data.
-2. **Sandbox groundwork** (benefits automations too).
+2. **Sandbox groundwork — implemented** (benefits automations too).
    - Run limits (timeout, host-call cap, output cap, row caps).
    - Host API profiles.
    - Reference tokens for mutating returns in preview.
@@ -1036,6 +1039,7 @@ generation. Refresh it to the current models (`claude-opus-5-5`, `claude-sonnet-
 5. **Polish.**
    - The diagnostics bundle export, the troubleshooting runbooks in the guide, a
      conversation list, and cost display from the call log.
+   - Knowledgebase built on CI server and bundled with release
 
 ## Decisions
 

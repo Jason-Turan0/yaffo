@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from yaffo.background_tasks.automation_sandbox.automation_host import (
     build_recording_host_functions,
     summarize_call,
+    HOST_API,
 )
 from yaffo.background_tasks.automation_sandbox.executor import run_automation_code
 from yaffo.background_tasks.events import EventContext
@@ -70,12 +71,14 @@ def preview_automation(
     result = run_automation_code(
         session, code, context, functions=functions, filename=f"{automation.slug}.star"
     )
+    mutating = {fn.name for fn in HOST_API if fn.mutating}
+    mutations = [call for call in calls if call.name in mutating]
     return TestRunResult(
         success=result.success,
         code_source=code_source,
         context={"type": "files", "media_item_ids": media_item_ids},
         actions=[
-            {"summary": summarize_call(c, session), "name": c.name, "args": c.args}
+            {"summary": summarize_call(c, session, mutations), "name": c.name, "args": c.args}
             for c in calls
         ],
         output=result.output,

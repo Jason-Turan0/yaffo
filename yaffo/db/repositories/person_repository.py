@@ -169,10 +169,11 @@ def get_media_item_ids_for_person(session: Session, person_id: int) -> list[int]
     return [media_item_id for (media_item_id,) in rows]
 
 
-def get_people_with_embeddings(session: Session) -> list[Person]:
+def get_people_with_embeddings(session: Session, limit: int | None = None) -> list[Person]:
     """All people that have at least one per-stage embedding, so face-similarity
     calculations have something to compare against (and don't max() over empty)."""
-    return [p for p in session.query(Person).all() if p.stage_embeddings]
+    query = session.query(Person).filter(Person.stage_embeddings.any())
+    return (query.limit(limit) if limit is not None else query).all()
 
 
 def link_face_to_person(session: Session, person_id: int, face_id: int) -> bool:
@@ -189,7 +190,9 @@ def link_face_to_person(session: Session, person_id: int, face_id: int) -> bool:
 _LINK_CHUNK = 500
 
 
-def bulk_link_faces_to_people(session: Session, links: list[tuple[int, int]]) -> int:
+def bulk_link_faces_to_people(
+    session: Session, links: list[tuple[int, int]], *, similarities: dict[int, float | None] | None = None,
+) -> int:
     """Assign a batch of faces to people in one transaction: link each face and mark
     it ASSIGNED. `links` is [(person_id, face_id), ...]. Returns the number of faces
     assigned; commits once. Lets a batch job compute its matches lock-free and persist
@@ -219,7 +222,10 @@ def bulk_link_faces_to_people(session: Session, links: list[tuple[int, int]]) ->
     rows = []
     for person_id, face_id in links:
         if face_id in assignable:
-            rows.append({"person_id": person_id, "face_id": face_id})
+            row = {"person_id": person_id, "face_id": face_id}
+            if similarities is not None:
+                row["similarity"] = similarities.get(face_id)
+            rows.append(row)
             assignable.discard(face_id)  # first link wins if a face is listed twice
     if rows:
         session.execute(insert(PersonFace), rows)

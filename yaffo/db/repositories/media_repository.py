@@ -10,8 +10,9 @@ from yaffo.db.models import Face, PersonFace, MediaItem, MediaLabel, Tag, MEDIA_
 _DELETE_CHUNK = 500
 
 
-def get_faces_for_media_item(session: Session, media_item_id: int) -> list[Face]:
-    return session.query(Face).filter_by(media_item_id=media_item_id).all()
+def get_faces_for_media_item(session: Session, media_item_id: int, limit: int | None = None) -> list[Face]:
+    query = session.query(Face).filter_by(media_item_id=media_item_id)
+    return (query.limit(limit) if limit is not None else query).all()
 
 
 def get_media_item_ids_for_faces(session: Session, face_ids: list[int]) -> list[int]:
@@ -42,7 +43,7 @@ def get_media_item_ids_under_path(session: Session, path: str) -> list[int]:
     return [row[0] for row in rows]
 
 
-def get_media_item_paths_under_path(session: Session, path: str) -> list[tuple[int, str]]:
+def get_media_item_paths_under_path(session: Session, path: str, limit: int | None = None) -> list[tuple[int, str]]:
     """(id, full_file_path) of indexed photos at `path` (an exact file) or under it
     (a directory), ordered by id — for walking the indexed folder tree."""
     path = path.rstrip("/\\")
@@ -51,6 +52,7 @@ def get_media_item_paths_under_path(session: Session, path: str) -> list[tuple[i
         session.query(MediaItem.id, MediaItem.full_file_path)
         .filter(or_(MediaItem.full_file_path == path, MediaItem.full_file_path.like(under)))
         .order_by(MediaItem.id)
+        .limit(limit)
         .all()
     )
     return [(row[0], row[1]) for row in rows]

@@ -25,7 +25,9 @@ def face_similarity(
     person = person_repository.get_person_by_id(session, person_id)
     if person is None:
         return []
-    faces = media_repository.get_faces_for_media_item(session, media_item_id)
+    faces = media_repository.get_faces_for_media_item(session, media_item_id, limit=5001)
+    if len(faces) > 5000:
+        raise ValueError("Face comparison row limit exceeded")
     scores = calculate_similarity(person, faces)
     return [{"face_id": face_id, "score": score} for face_id, score in scores.items()]
 
@@ -41,9 +43,11 @@ def match_people(
 ) -> Annotated[list[dict], "A list of {face_id, matches: [{person_id, person_name, score (0.0–1.0)}]}."]:
     """For each face in the photo, its similarity (0–1) to every known person, as a
     list of {face_id, matches: [{person_id, person_name, score}]}."""
-    people = person_repository.get_people_with_embeddings(session)
+    people = person_repository.get_people_with_embeddings(session, limit=5001)
     name_by_id = {p.id: p.name for p in people}
-    faces = media_repository.get_faces_for_media_item(session, media_item_id)
+    faces = media_repository.get_faces_for_media_item(session, media_item_id, limit=5001)
+    if len(faces) * max(1, len(people)) > 5000:
+        raise ValueError("Face comparison row limit exceeded")
     return [
         {
             "face_id": face.id,

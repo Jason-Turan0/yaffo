@@ -20,9 +20,10 @@ from yaffo.background_tasks.events import emit_event
 from yaffo.background_tasks.progress_reporter import ProgressReporter
 from yaffo.db.models import EVENT_MEDIA_MODIFIED, Tag
 from yaffo.db.repositories import album_repository, person_repository, media_repository
+from yaffo.db.repositories import sandbox_edit_repository as edits
 from yaffo.db.repositories.media_dir_repository import media_dir_by_id
 from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_media_rows
-from yaffo.db.repositories.data_query_repository import resolve_query
+from yaffo.db.repositories.data_query_repository import resolve_query, FIELDS_BY_SOURCE, validate_query
 from yaffo.logging_config import get_logger
 
 logger = get_logger(__name__, "background_tasks")
@@ -40,7 +41,16 @@ def _emit_media_modified(media_item_ids: list[int]) -> None:
 def data_query(
     session: Session, query: dict
 ) -> Annotated[Any, "A list of row dicts, or a single number/object for count/range queries."]:
-    rows = resolve_query(session, query)
+    errors = validate_query(query)
+    if errors:
+        raise ValueError("; ".join(errors))
+    bounded = dict(query)
+    if query.get("source") in FIELDS_BY_SOURCE and "op" not in query:
+        bounded["limit"] = min(query.get("limit", 5000), 5000)
+    rows = (resolve_query(session, bounded, row_limit=5000) if query.get("op") == "facet" or query.get("source") not in FIELDS_BY_SOURCE
+            else resolve_query(session, bounded))
+    if isinstance(rows, list):
+        rows = rows[:5000]
     if query.get("source") == "media_items" and isinstance(rows, list):
         return enrich_media_rows(session, rows)
     return rows
@@ -181,9 +191,10 @@ def assign_faces(session: Session, assignments: list[dict]) -> None:
     ]
     known = person_repository.existing_person_ids(session, [person_id for person_id, _ in pairs])
     face_ids = [face_id for person_id, face_id in pairs if person_id in known]
-    linked = person_repository.bulk_link_faces_to_people(
-        session, [(person_id, face_id) for person_id, face_id in pairs if person_id in known]
-    )
+    links = [(person_id, face_id) for person_id, face_id in pairs if person_id in known]
+    similarities = {entry["face_id"]: entry["similarity"] for entry in assignments if "similarity" in entry}
+    linked = (person_repository.bulk_link_faces_to_people(session, links, similarities=similarities)
+              if similarities else person_repository.bulk_link_faces_to_people(session, links))
     if linked:
         _emit_media_modified(media_repository.get_media_item_ids_for_faces(session, face_ids))
 
@@ -251,9 +262,12 @@ def summarize_create_album(args: list[Any], session: Session) -> str:
 
 
 def update_album(
-    session: Session, album_id: int, name: str, description: Optional[str] = None
+    session: Session, album_id: int, name: str, description: Optional[str] = None,
+    expected: Optional[dict] = None,
 ) -> None:
     """Rename an album / change its description. Membership is not touched."""
+    if expected is not None and edits.album_state(session, album_id) != expected:
+        return
     album_repository.update_album(session, album_id, name, description)
 
 
@@ -262,9 +276,17 @@ def summarize_update_album(args: list[Any], session: Session) -> str:
     return f"Rename album to '{name}'"
 
 
-def add_to_album(session: Session, album_id: int, media_item_ids: list[int]) -> None:
+def add_to_album(
+    session: Session, album_id: int, media_item_ids: list[int], positions: Optional[list[int]] = None,
+    restore_cover: Optional[int] = None,
+) -> None:
     """Add photos to an album in one batched write. Photos already in it are skipped."""
-    album_repository.add_items(session, album_id, list(media_item_ids or []))
+    if positions is None:
+        album_repository.add_items(session, album_id, list(media_item_ids or []))
+    else:
+        album_repository.add_items(session, album_id, list(media_item_ids or []), positions=positions)
+    if restore_cover is not None:
+        album_repository.restore_cover_if_empty(session, album_id, restore_cover)
 
 
 def summarize_add_to_album(args: list[Any], session: Session) -> str:
@@ -272,9 +294,15 @@ def summarize_add_to_album(args: list[Any], session: Session) -> str:
     return f"Add {len(media_item_ids)} photo(s) to an album"
 
 
-def remove_from_album(session: Session, album_id: int, media_item_ids: list[int]) -> None:
+def remove_from_album(
+    session: Session, album_id: int, media_item_ids: list[int], expected_positions: Optional[dict] = None,
+) -> None:
     """Remove photos from an album in one batched write. The photos themselves are NOT
     deleted — only their membership."""
+    if expected_positions is not None:
+        current = edits.album_members(session, album_id, media_item_ids)
+        media_item_ids = [item for item in media_item_ids if item in current
+                          and expected_positions.get(str(item)) == current[item]]
     album_repository.remove_items(session, album_id, list(media_item_ids or []))
 
 
@@ -283,9 +311,11 @@ def summarize_remove_from_album(args: list[Any], session: Session) -> str:
     return f"Remove {len(media_item_ids)} photo(s) from an album"
 
 
-def delete_album(session: Session, album_id: int) -> None:
+def delete_album(session: Session, album_id: int, expected: Optional[dict] = None) -> None:
     """Delete an album and its membership rows. The photos themselves are NOT deleted,
     and neither are their files."""
+    if expected is not None and not edits.album_is_unchanged(session, album_id, expected):
+        return
     album_repository.delete_album(session, album_id)
 
 
@@ -293,3 +323,44 @@ def summarize_delete_album(args: list[Any], session: Session) -> str:
     album_id = args[0] if args else ""
     album = album_repository.get_album(session, album_id) if isinstance(album_id, int) else None
     return f"Delete album '{album.name}'" if album else "Delete an album"
+
+
+# These batch forms accept an expected value for compare-and-restore undo.
+def untag_media_items(session: Session, tags: list[dict]) -> None:
+    _emit_media_modified(edits.remove_tags(session, tags))
+
+
+def unassign_faces(session: Session, assignments: list[dict]) -> None:
+    _emit_media_modified(edits.unassign_faces(session, assignments))
+
+
+def set_favorites(session: Session, values: list[dict]) -> None:
+    _emit_media_modified(edits.set_values(session, values, "favorite"))
+
+
+def set_media_dates(session: Session, values: list[dict]) -> None:
+    _emit_media_modified(edits.set_values(session, values, "date"))
+
+
+def set_location_names(session: Session, values: list[dict]) -> None:
+    _emit_media_modified(edits.set_values(session, values, "location_name"))
+
+
+def summarize_untag_media_items(args: list[Any], session: Session) -> str:
+    return f"Remove {len(args[0])} tag(s)"
+
+
+def summarize_unassign_faces(args: list[Any], session: Session) -> str:
+    return f"Unassign {len(args[0])} face(s)"
+
+
+def summarize_set_favorites(args: list[Any], session: Session) -> str:
+    return f"Set favorites for {len(args[0])} photo(s)"
+
+
+def summarize_set_media_dates(args: list[Any], session: Session) -> str:
+    return f"Set capture dates for {len(args[0])} photo(s)"
+
+
+def summarize_set_location_names(args: list[Any], session: Session) -> str:
+    return f"Set location names for {len(args[0])} photo(s)"

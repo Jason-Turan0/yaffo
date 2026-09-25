@@ -11,6 +11,8 @@ it up.
 """
 import datetime
 import inspect
+from copy import deepcopy
+from typing import get_type_hints, get_origin, get_args, Annotated
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Callable
@@ -19,6 +21,8 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox import automation_actions as actions
 from yaffo.background_tasks.automation_sandbox import automation_compare as compare
+from yaffo.background_tasks.automation_sandbox import undo
+from yaffo.background_tasks.automation_sandbox.host_types import HostCall, reference, resolve_references
 
 
 def _json_safe(value: Any) -> Any:
@@ -80,6 +84,27 @@ class HostFunction:
     summarize: Callable[[list[Any], Session], str] | None = None
     mutating: bool = False
     injects: str = "session"
+    profiles: frozenset[str] = frozenset({"automation"})
+    risk: str = "low"
+    undo: Callable[[list[Any], Session], list[HostCall] | None] | None = None
+    precondition: Callable[[list[Any], Session], str | None] | None = None
+    uses_network: bool = False
+    setting_key: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.profiles or not self.profiles <= {"automation", "assistant"}:
+            raise ValueError("Invalid host API profiles")
+        if self.risk not in {"low", "medium", "high"}:
+            raise ValueError("Invalid host function risk")
+        if self.mutating and "assistant" in self.profiles and not self.setting_key:
+            raise ValueError("Assistant mutations require a setting key")
+
+    @property
+    def returns_value(self) -> bool:
+        annotation = get_type_hints(self.impl, include_extras=True).get("return", type(None))
+        if get_origin(annotation) is Annotated:
+            annotation = get_args(annotation)[0]
+        return annotation not in (None, type(None))
 
     @property
     def name(self) -> str:
@@ -109,6 +134,7 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example='recent = data_query({"source": "media_items", "limit": 10})',
         impl=actions.data_query,
+        profiles=frozenset({"automation", "assistant"}),
         summarize=actions.summarize_data_query,
         mutating=False,
     ),
@@ -134,6 +160,10 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example='tag_media_items([{"media_item_id": pid, "name": "beach"} for pid in ctx["media_item_ids"]])',
         impl=actions.tag_media_items,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_tag_media_items",
+        undo=undo.tag_media_items,
         summarize=actions.summarize_tag_media_items,
         mutating=True,
     ),
@@ -145,6 +175,9 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example='rename_files([{"media_item_id": pid, "new_name": "2024-06-01_beach.jpg"}])',
         impl=actions.rename_files,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="high",
+        setting_key="assistant_action_rename_files",
         summarize=actions.summarize_rename_files,
         mutating=True,
     ),
@@ -160,6 +193,9 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example='move_media_items([{"media_item_id": r["id"], "media_dir_id": r["media_dir_id"], "target_path": "2024/06"} for r in rows])',
         impl=actions.move_media_items,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="high",
+        setting_key="assistant_action_move_media_items",
         summarize=actions.summarize_move_media_items,
         mutating=True,
     ),
@@ -173,6 +209,10 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example='assign_faces([{"face_id": fid, "person_id": pid}])',
         impl=actions.assign_faces,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_assign_faces",
+        undo=undo.assign_faces,
         summarize=actions.summarize_assign_faces,
         mutating=True,
     ),
@@ -185,6 +225,9 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example='delete_media_items([r["id"] for r in junk])',
         impl=actions.delete_media_items,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="high",
+        setting_key="assistant_action_delete_media_items",
         summarize=actions.summarize_delete_media_items,
         mutating=True,
     ),
@@ -197,6 +240,10 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example='album_id = create_album("Beach 2024", "Everything from the coast")',
         impl=actions.create_album,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_create_album",
+        undo=undo.create_album,
         summarize=actions.summarize_create_album,
         mutating=True,
     ),
@@ -207,6 +254,11 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example='update_album(album_id, "Beach 2024", "Coast trip")',
         impl=actions.update_album,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_update_album",
+        undo=undo.update_album,
+        precondition=undo.album_exists,
         summarize=actions.summarize_update_album,
         mutating=True,
     ),
@@ -218,6 +270,11 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example='add_to_album(album_id, ctx["media_item_ids"])',
         impl=actions.add_to_album,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_add_to_album",
+        undo=undo.add_to_album,
+        precondition=undo.album_exists,
         summarize=actions.summarize_add_to_album,
         mutating=True,
     ),
@@ -229,6 +286,11 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example='remove_from_album(album_id, [r["id"] for r in stale])',
         impl=actions.remove_from_album,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_remove_from_album",
+        undo=undo.remove_from_album,
+        precondition=undo.album_exists,
         summarize=actions.summarize_remove_from_album,
         mutating=True,
     ),
@@ -239,6 +301,10 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example="delete_album(album_id)",
         impl=actions.delete_album,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="medium",
+        setting_key="assistant_action_delete_album",
+        precondition=undo.album_exists,
         summarize=actions.summarize_delete_album,
         mutating=True,
     ),
@@ -249,6 +315,7 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example="scores = face_similarity(media_item_id, person_id)",
         impl=compare.face_similarity,
+        profiles=frozenset({"automation", "assistant"}),
         summarize=compare.summarize_face_similarity,
         mutating=False,
     ),
@@ -259,8 +326,59 @@ HOST_API: tuple[HostFunction, ...] = (
         ),
         example="matches = match_people(media_item_id)",
         impl=compare.match_people,
+        profiles=frozenset({"automation", "assistant"}),
         summarize=compare.summarize_match_people,
         mutating=False
+    ),
+    HostFunction(
+        impl=actions.untag_media_items,
+        description='Remove exact name/value tags in a batch.',
+        example='untag_media_items([{"media_item_id": 1, "name": "beach"}])',
+        summarize=actions.summarize_untag_media_items,
+        mutating=True,
+        profiles=frozenset({"automation", "assistant"}),
+        setting_key="assistant_action_untag_media_items",
+        undo=undo.untag_media_items,
+    ),
+    HostFunction(
+        impl=actions.unassign_faces,
+        description='Remove face assignments; person_id optionally requires the current owner to match.',
+        example='unassign_faces([{"face_id": 1, "person_id": 2}])',
+        summarize=actions.summarize_unassign_faces,
+        mutating=True,
+        profiles=frozenset({"automation", "assistant"}),
+        setting_key="assistant_action_unassign_faces",
+        undo=undo.unassign_faces,
+    ),
+    HostFunction(
+        impl=actions.set_favorites,
+        description='Set per-item favorite values (true, false, or null). Optional expected skips later edits.',
+        example='set_favorites([{"id": 1, "favorite": True}])',
+        summarize=actions.summarize_set_favorites,
+        mutating=True,
+        profiles=frozenset({"automation", "assistant"}),
+        setting_key="assistant_action_set_favorites",
+        undo=undo.set_favorites,
+    ),
+    HostFunction(
+        impl=actions.set_media_dates,
+        description='Set per-item camera-local ISO dates (or null), updating year/month. Optional expected skips later edits.',
+        example='set_media_dates([{"id": 1, "date": "2024-06-01T12:00:00"}])',
+        summarize=actions.summarize_set_media_dates,
+        mutating=True,
+        profiles=frozenset({"automation", "assistant"}),
+        setting_key="assistant_action_set_media_dates",
+        undo=undo.set_media_dates,
+    ),
+    HostFunction(
+        impl=actions.set_location_names,
+        description='Set per-item location names (or null). Optional expected skips later edits.',
+        example='set_location_names([{"id": 1, "location_name": "Yellowstone"}])',
+        summarize=actions.summarize_set_location_names,
+        mutating=True,
+        profiles=frozenset({"automation", "assistant"}),
+        setting_key="assistant_action_set_location_names",
+        undo=undo.set_location_names,
     ),
 )
 
@@ -278,29 +396,34 @@ def _dependency(fn: HostFunction, session: Session, progress: Any) -> Any:
     return progress if fn.injects == "progress" else session
 
 
-def build_host_functions(session: Session, progress: Any = None) -> dict[str, Callable[..., Any]]:
+def build_host_functions(session: Session, progress: Any = None, *, profile: str = "automation") -> dict[str, Callable[..., Any]]:
     """The curated host callables for a run, derived from HOST_API and bound to their
     run dependency -- the `session` (so each reads within the caller's transaction),
     or the `progress` reporter for report_progress. Pass as `functions` to run_starlark."""
-    return {fn.name: _bind(fn.impl, _dependency(fn, session, progress)) for fn in HOST_API}
+    return {fn.name: _bind(fn.impl, _dependency(fn, session, progress)) for fn in host_api(profile)}
 
 
-@dataclass(frozen=True)
-class HostCall:
-    """One host-API invocation a script made, captured by a recording run so a
-    test/preview can show the actions performed. `name` is the host function,
-    `args` the arguments the script passed (e.g. the data_query dict)."""
-    name: str
-    args: list[Any]
+def host_api(profile: str = "automation") -> tuple[HostFunction, ...]:
+    if profile not in {"automation", "assistant"}:
+        raise ValueError(f"Unknown host API profile: {profile}")
+    return tuple(fn for fn in HOST_API if profile in fn.profiles)
 
 
 _HOST_BY_NAME = {fn.name: fn for fn in HOST_API}
 
 
-def summarize_call(call: HostCall, session: Session) -> str:
+def summarize_call(call: HostCall, session: Session, mutations: list[HostCall] | None = None) -> str:
     """A friendly one-line description of a recorded call for the test UI (e.g.
     "Looking up photos"), resolving ids against `session`; falls back to the call's
     signature/name."""
+    if mutations is not None and call.name in {"add_to_album", "remove_from_album", "update_album", "delete_album"}:
+        if call.args and isinstance(call.args[0], str) and call.args[0].startswith("$ref:"):
+            targets = {i: c for i, c in enumerate(mutations) if c.name == "create_album"}
+            target = resolve_references(call.args[0], targets)
+            title = str(target.args[0])
+            if call.name in {"add_to_album", "remove_from_album"}:
+                verb, prep = ("Add", "to") if call.name == "add_to_album" else ("Remove", "from")
+                return f"{verb} {len(call.args[1])} photo(s) {prep} the new album '{title}'"
     fn = _HOST_BY_NAME.get(call.name)
     if fn is not None and fn.summarize is not None:
         try:
@@ -311,7 +434,7 @@ def summarize_call(call: HostCall, session: Session) -> str:
 
 
 def build_recording_host_functions(
-    session: Session, progress: Any = None,
+    session: Session, progress: Any = None, *, profile: str = "automation",
 ) -> tuple[dict[str, Callable[..., Any]], list[HostCall]]:
     """Like build_host_functions, but every invocation is appended to the returned
     `calls` list before the real impl runs. The read-only surface still executes so
@@ -319,26 +442,46 @@ def build_recording_host_functions(
     test/preview changes nothing). `progress` is None in a preview, so report_progress
     no-ops."""
     calls: list[HostCall] = []
+    mutation_count = 0
+    references: dict[int, Any] = {}
 
     def record(fn: HostFunction) -> Callable[..., Any]:
         bound = _bind(fn.impl, _dependency(fn, session, progress))
 
         def call(*args: Any) -> Any:
-            calls.append(HostCall(name=fn.name, args=list(args)))
-            # Reads still run so the script gets live data; mutating actions are
-            # recorded but not performed -- a test/preview changes nothing.
-            return None if fn.mutating else bound(*args)
+            nonlocal mutation_count
+            # Validate arity even though preview skips the mutating implementation.
+            inspect.signature(fn.impl).bind(_dependency(fn, session, progress), *args)
+            frozen = deepcopy(list(args))
+            resolve_references(frozen, references)
+            if not fn.mutating:
+                # A read cannot observe an album that has not been created yet.
+                if resolve_references(frozen, {i: None for i in references}) != frozen:
+                    raise ValueError("Preview references can only be passed to mutating calls")
+                result = bound(*args)
+            else:
+                result = reference(mutation_count) if fn.returns_value else None
+                if fn.returns_value:
+                    references[mutation_count] = result
+                mutation_count += 1
+            calls.append(HostCall(name=fn.name, args=frozen))
+            return result
         return call
 
-    return {fn.name: record(fn) for fn in HOST_API}, calls
+    return {fn.name: record(fn) for fn in host_api(profile)}, calls
 
 
-def render_host_api() -> str:
+def render_host_api(profile: str = "automation") -> str:
     """The host API as agent-facing docs for the automation system prompt -- one
     block per callable. Single source with build_host_functions, so the advertised
     API can't drift from what the sandbox actually provides."""
-    blocks: list[str] = []
-    for fn in HOST_API:
+    blocks: list[str] = [
+        "Preview: mutations are recorded, never executed. A mutation returning a value "
+        "returns an opaque $ref:N token (zero-based mutation index). Only pass this token "
+        "unchanged to later mutating calls; do not compute with it or use it in reads. "
+        "data_query returns at most 5,000 rows per call. Runs have time, call and output limits."
+    ]
+    for fn in host_api(profile):
         blocks.append(
             f"{fn.signature}\n"
             f"  {fn.description}\n"

@@ -138,10 +138,17 @@ def exclude_members(query, album_id: int):
     return query.filter(MediaItem.id.not_in(members))
 
 
-def add_items(session: Session, album_id: int, media_item_ids: list[int]) -> int:
+def add_items(
+    session: Session, album_id: int, media_item_ids: list[int], *, positions: Optional[list[int]] = None,
+) -> int:
     """Add the given items, skipping any already in the album. Returns how many
     were actually added."""
     _require_album(session, album_id)
+    if positions is not None and (len(positions) != len(media_item_ids) or any(
+        type(position) is not int or position < 0 for position in positions
+    )):
+        raise ValueError("positions must contain one nonnegative integer per media item")
+    requested_positions = dict(zip(media_item_ids, positions)) if positions is not None else {}
     if not media_item_ids:
         return 0
     existing = {
@@ -155,13 +162,13 @@ def add_items(session: Session, album_id: int, media_item_ids: list[int]) -> int
         row[0]
         for row in session.query(MediaItem.id).filter(MediaItem.id.in_(media_item_ids)).all()
     }
-    to_add = [item_id for item_id in media_item_ids if item_id in known and item_id not in existing]
+    to_add = list(dict.fromkeys(item_id for item_id in media_item_ids if item_id in known and item_id not in existing))
     if not to_add:
         return 0
     position = _next_position(session, album_id)
     for offset, media_item_id in enumerate(to_add):
         session.add(
-            AlbumItem(album_id=album_id, media_item_id=media_item_id, position=position + offset)
+            AlbumItem(album_id=album_id, media_item_id=media_item_id, position=requested_positions.get(media_item_id, position + offset))
         )
     session.commit()
     return len(to_add)
@@ -288,3 +295,11 @@ def _clear_dangling_cover(session: Session, album_id: int) -> None:
         return
     if not _is_member(session, album_id, album.cover_media_item_id):
         album.cover_media_item_id = None
+
+
+def restore_cover_if_empty(session: Session, album_id: int, media_item_id: int) -> None:
+    """Restore a removed cover on undo without replacing a later chosen cover."""
+    album = get_album(session, album_id)
+    if album and album.cover_media_item_id is None and _is_member(session, album_id, media_item_id):
+        album.cover_media_item_id = media_item_id
+        session.commit()
