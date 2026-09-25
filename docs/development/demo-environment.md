@@ -94,8 +94,8 @@ authorization system, and it does not extend into the desktop product.
 Every other `POST`/`PUT`/`PATCH`/`DELETE` is blocked. The only exceptions to the
 fail-closed gate are:
 
-- `faces_assign` (both roles) — limited to 50 currently-unassigned faces per
-  request, executed synchronously in the web process instead of enqueueing a task.
+- `faces_assign` (both roles) — currently-unassigned faces only, executed
+  synchronously in the web process instead of enqueueing a task.
 - `pages_version_widget_query` (both roles) — reviewed, published widgets only, with
   read-only bounded queries; widget-state persistence is **not** included.
 - `sharing_device_pull_selected` (receiver only) — one bounded transfer batch from

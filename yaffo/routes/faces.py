@@ -36,7 +36,6 @@ DEFAULT_GROUP_BY = 'similarity'
 # this only caps how many we paint so a 50k batch stays responsive.
 SAMPLE_SIZE = 50
 SHORTCUT_LIMIT = 9
-DEMO_MAX_FACE_ASSIGNMENTS = 50
 FACE_SHORTCUT_PEOPLE_SETTING = "face_shortcut_people"
 
 
@@ -414,11 +413,11 @@ def init_faces_routes(app: Flask):
         person_id = data.get("person")
         face_status = data.get("faceStatus")
         try:
-            if not isinstance(selected_face_ids, list) or len(selected_face_ids) > DEMO_MAX_FACE_ASSIGNMENTS:
+            if not isinstance(selected_face_ids, list):
                 return jsonify({
                     "success": False,
-                    "message": gettext("Too many faces were selected"),
-                    "code": "face_assignment_limit_exceeded",
+                    "message": gettext("Faces must contain numeric identifiers"),
+                    "code": "invalid_face_ids",
                 }), 400
 
             try:
