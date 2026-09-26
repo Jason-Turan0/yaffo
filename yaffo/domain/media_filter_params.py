@@ -49,9 +49,6 @@ LIBRARY_VIEWS = ("grid", "timeline")
 # so the two devices' unit settings needn't match.
 WIRE_PROXIMITY_KM = "proximity_km"
 
-GALLERY_PATH = "/"
-MEDIA_ITEM_PATH = "/media/view/{media_item_id}"
-
 
 @dataclass(frozen=True)
 class FilterParam:

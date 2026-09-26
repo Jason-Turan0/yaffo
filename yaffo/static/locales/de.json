@@ -389,7 +389,8 @@
         "failed_tasks": "Fehlgeschlagene Hintergrundaufgaben angesehen",
         "automation_runs": "Ausführungen von „{{slug}}“ angesehen",
         "link_to_photos": "Link zu „{{title}}“ erstellt",
-        "link_to_media_item": "Link zu „{{title}}“ erstellt"
+        "link_to_media_item": "Link zu „{{title}}“ erstellt",
+        "link_to_page": "Link zu „{{title}}“ erstellt"
       }
     },
     "cancel": {

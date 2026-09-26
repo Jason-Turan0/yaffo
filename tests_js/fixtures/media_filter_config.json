@@ -1,0 +1,187 @@
+{
+  "params": [
+    {
+      "param": "path",
+      "key": "path",
+      "kind": "str",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "year",
+      "key": "year",
+      "kind": "int",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "month",
+      "key": "month",
+      "kind": "int",
+      "choices": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "default": null
+    },
+    {
+      "param": "device",
+      "key": "device",
+      "kind": "str",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "person",
+      "key": "person_ids",
+      "kind": "int_list",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "person-match-type",
+      "key": "person_match_type",
+      "kind": "str",
+      "choices": [
+        "any",
+        "all"
+      ],
+      "default": "any"
+    },
+    {
+      "param": "gender",
+      "key": "gender",
+      "kind": "int",
+      "choices": [
+        0,
+        1
+      ],
+      "default": null
+    },
+    {
+      "param": "labels",
+      "key": "label_ids",
+      "kind": "int_list",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "labels-match-type",
+      "key": "labels_match_type",
+      "kind": "str",
+      "choices": [
+        "any",
+        "all"
+      ],
+      "default": "any"
+    },
+    {
+      "param": "tag-name",
+      "key": "tag_name",
+      "kind": "str",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "tag-value",
+      "key": "tag_value",
+      "kind": "str",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "location",
+      "key": "location_names",
+      "kind": "str_list",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "location-match-type",
+      "key": "location_match_type",
+      "kind": "str",
+      "choices": [
+        "any",
+        "all"
+      ],
+      "default": "any"
+    },
+    {
+      "param": "unnamed",
+      "key": "unnamed",
+      "kind": "flag",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "proximity-lat",
+      "key": "proximity_lat",
+      "kind": "float",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "proximity-lon",
+      "key": "proximity_lon",
+      "kind": "float",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "proximity-distance",
+      "key": "proximity_distance",
+      "kind": "float",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "proximity-location",
+      "key": "proximity_location",
+      "kind": "str",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "favorite",
+      "key": "favorite",
+      "kind": "flag",
+      "choices": null,
+      "default": null
+    },
+    {
+      "param": "media-type",
+      "key": "media_type",
+      "kind": "str",
+      "choices": [
+        "photo",
+        "video"
+      ],
+      "default": null
+    },
+    {
+      "param": "shape",
+      "key": "shape",
+      "kind": "str",
+      "choices": [
+        "portrait",
+        "landscape",
+        "square"
+      ],
+      "default": null
+    }
+  ],
+  "kilometers_per_unit": {
+    "km": 1.0,
+    "mi": 1.609344
+  }
+}

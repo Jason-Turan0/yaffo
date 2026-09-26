@@ -393,7 +393,8 @@
         "failed_tasks": "Looked at failed background tasks",
         "automation_runs": "Looked at runs of “{{slug}}”",
         "link_to_photos": "Made a link to “{{title}}”",
-        "link_to_media_item": "Made a link to “{{title}}”"
+        "link_to_media_item": "Made a link to “{{title}}”",
+        "link_to_page": "Made a link to “{{title}}”"
       }
     },
     "errors": {

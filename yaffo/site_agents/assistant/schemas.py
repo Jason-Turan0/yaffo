@@ -26,7 +26,7 @@ class DocSource:
 @dataclass(frozen=True)
 class AppLink:
     """A link into the app the assistant made (link_to_photos /
-    link_to_media_item), shown under its answer. `url` is app-relative."""
+    link_to_page), shown under its answer. `url` is app-relative."""
     title: str
     url: str
 

@@ -452,14 +452,19 @@ Implemented in `yaffo/site_agents/assistant/`:
    as a chip in the composer and above the sent message, and given to the model as
    a `<context>` block in that turn.
 
-7. **Links into the app** (`links.py`). `link_to_photos` and `link_to_media_item`
+7. **Links into the app** (`links.py`). `link_to_photos` and `link_to_page`
    (library group) validate what they point at and return app-relative links,
    which the chat shows under the answer ("Open:") and opens in place. The model
    never writes URLs. The gallery filters are declared once in
    `domain/media_filter_params.py` (querystring name, selection key, type,
    allowed values, description); the filter panel's parsing, pagination links,
    `apply_media_filters` selections and the tool's input schema are all derived
-   from it.
+   from it. `link_to_page`'s pages come from the Flask route table:
+   `scripts/build_assistant_pages.py` writes each page's URL rule from `app.url_map`
+   into `yaffo/assistant_knowledge/pages.json` (the worker has no Flask app), and
+   `app_pages.py` says which GET routes are pages, with a description for the
+   model. Tests fail when the file drifts from the routes or a GET route is
+   unclassified.
 
 Deferred from the phase 3 list, each with the reason:
 
@@ -570,7 +575,7 @@ while the model gets text.
 | `run_script(code, purpose)` | Runs a Starlark script in preview mode with the assistant host profile. Returns its value, printed output, errors, and (when it recorded changes) the change plan id. `purpose` is a one-line label for the activity line |
 | `describe_data_source(source)` | The fields of a `data_query` source, so scripts query real columns. Schema only, no user data |
 | `link_to_photos(title, filters, view?)` | A gallery link with filters applied. The filters come from the same table the filter panel uses (`domain/media_filter_params.py`); returns the match count and makes no link when nothing matches |
-| `link_to_media_item(title, media_item_id)` | A link to one item's detail page |
+| `link_to_page(title, page, values?)` | A link to any page in the app (one photo, a person's faces, an album, Settings, an automation, …). The pages and their URL rules come from the Flask route table (`app_pages.py` + generated `pages.json`); ids that name records are checked to exist |
 
 Keeping the docs and diagnostic tools native means "how do I…" and "what's wrong?"
 questions never involve code, cost the fewest tokens, and show one clear activity

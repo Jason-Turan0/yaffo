@@ -21,7 +21,7 @@ from yaffo.site_agents.assistant import diagnostics as diag
 from yaffo.site_agents.assistant.diagnostics import TOOLS, DiagnosticsToolProvider
 from yaffo.site_agents.assistant.fs import AssistantFS
 from yaffo.site_agents.assistant.knowledge import DocSection, KnowledgeBase
-from yaffo.site_agents.assistant.links import LINK_TO_MEDIA_ITEM, LINK_TO_PHOTOS, LinkToolProvider
+from yaffo.site_agents.assistant.links import LINK_TO_PAGE, LINK_TO_PHOTOS, LinkToolProvider
 from yaffo.site_agents.assistant.script_tool import RUN_SCRIPT, ScriptToolProvider
 from yaffo.site_agents.assistant.tools import READ_DOC, SEARCH_DOCS, KnowledgeToolProvider
 from yaffo.taskq.store import Store
@@ -114,7 +114,7 @@ def test_every_tool_runs_offline(session, offline, monkeypatch):
 
     links = LinkToolProvider(session)
     assert links.call_tool(LINK_TO_PHOTOS, {"title": "All", "filters": {}}).host_data["links"]
-    assert links.call_tool(LINK_TO_MEDIA_ITEM, {"title": "One", "media_item_id": 1}).host_data["links"]
+    assert links.call_tool(LINK_TO_PAGE, {"title": "One", "page": "media_view", "values": {"media_item_id": 1}}).host_data["links"]
 
     scripts = ScriptToolProvider(session)
     read_functions = {fn.name for fn in host_api("assistant") if not fn.mutating}

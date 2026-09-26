@@ -5,8 +5,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from yaffo.db import db
 from yaffo.db.models import Face, MediaItem, Person, PersonFace, FACE_STATUS_ASSIGNED
-from yaffo.domain.media_filter_params import GALLERY_PATH, MEDIA_ITEM_PATH
-from yaffo.site_agents.assistant.links import LINK_TO_MEDIA_ITEM, LINK_TO_PHOTOS, LinkToolProvider, gallery_url
+from yaffo.site_agents.assistant.links import LINK_TO_PAGE, LINK_TO_PHOTOS, LinkToolProvider, gallery_url
 
 pytestmark = pytest.mark.unit
 
@@ -30,10 +29,15 @@ def links(app):
     return LinkToolProvider(db.session)
 
 
-def test_paths_match_the_app_routes(app):
+def test_links_match_flasks_own_urls(app, library):
+    """The page table is built from the routes, so a link is what url_for gives."""
     with app.test_request_context():
-        assert url_for("index") == GALLERY_PATH
-        assert url_for("media_view", media_item_id=546) == MEDIA_ITEM_PATH.format(media_item_id=546)
+        ours = urlsplit(gallery_url({"person_ids": [3], "year": 2019}))
+        flasks = urlsplit(url_for("index", person=[3], year=2019))
+        assert (ours.path, parse_qs(ours.query)) == (flasks.path, parse_qs(flasks.query))
+        assert LinkToolProvider(db.session).call_tool(LINK_TO_PAGE, {
+            "title": "x", "page": "person_faces", "values": {"person_id": library["chase"]},
+        }).host_data["links"][0]["url"] == url_for("person_faces", person_id=library["chase"])
 
 
 def test_gallery_link_uses_the_filter_panels_parameters(links, library):
@@ -67,12 +71,37 @@ def test_unknown_people_and_invalid_filters_are_reported(links, library):
     assert "no people with ids [999]" in result.model_text and "shape" in result.model_text
 
 
-def test_media_item_link(links, library):
-    result = links.call_tool(LINK_TO_MEDIA_ITEM, {"title": "The canyon shot", "media_item_id": library["photo"]})
+def test_page_link_to_one_photo(links, library):
+    result = links.call_tool(LINK_TO_PAGE, {
+        "title": "The canyon shot", "page": "media_view", "values": {"media_item_id": library["photo"]}})
     assert result.host_data["links"] == [{"title": "The canyon shot", "url": f"/media/view/{library['photo']}"}]
 
-    missing = links.call_tool(LINK_TO_MEDIA_ITEM, {"title": "x", "media_item_id": 9999})
-    assert missing.host_data["links"] == [] and "No media item" in missing.model_text
+
+def test_page_link_without_parameters(links):
+    result = links.call_tool(LINK_TO_PAGE, {"title": "Settings", "page": "settings_index"})
+    assert result.host_data["links"] == [{"title": "Settings", "url": "/settings"}]
+
+
+@pytest.mark.parametrize("args, message", [
+    ({"page": "nope"}, "No page named 'nope'"),
+    ({"page": "media_view", "values": {"media_item_id": 9999}}, "no media item with id 9999"),
+    ({"page": "albums_show", "values": {"album_id": 1}}, "no album with id 1"),
+    ({"page": "person_faces", "values": {}}, "person_id is required"),
+    ({"page": "person_faces", "values": {"person_id": "ten"}}, "person_id must be a number"),
+    ({"page": "automations_show", "values": {"slug": "a/b"}}, "slug can't contain '/'"),
+    ({"page": "settings_index", "values": {"tab": "x"}}, "settings_index takes no tab"),
+])
+def test_page_link_problems_are_reported(links, library, args, message):
+    result = links.call_tool(LINK_TO_PAGE, {"title": "x", **args})
+    assert result.host_data["links"] == [] and result.host_data["error"] is True
+    assert message in result.model_text
+
+
+def test_page_catalog_lists_pages_with_their_parameters(links):
+    [_, page_tool] = links.get_tools()
+    assert "- person_faces(person_id): The faces assigned to one person" in page_tool.description
+    assert "- settings_index: Settings:" in page_tool.description
+    assert "media_view" in page_tool.input_schema["properties"]["page"]["enum"]
 
 
 def test_gallery_url_without_filters():

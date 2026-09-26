@@ -389,7 +389,8 @@
         "failed_tasks": "विफल बैकग्राउंड टास्क देखे",
         "automation_runs": "“{{slug}}” के रन देखे",
         "link_to_photos": "“{{title}}” का लिंक बनाया",
-        "link_to_media_item": "“{{title}}” का लिंक बनाया"
+        "link_to_media_item": "“{{title}}” का लिंक बनाया",
+        "link_to_page": "“{{title}}” का लिंक बनाया"
       }
     },
     "cancel": {

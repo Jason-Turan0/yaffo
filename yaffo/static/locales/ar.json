@@ -389,7 +389,8 @@
         "failed_tasks": "تم الاطلاع على مهام الخلفية الفاشلة",
         "automation_runs": "تم الاطلاع على عمليات تشغيل «{{slug}}»",
         "link_to_photos": "تم إنشاء رابط إلى «{{title}}»",
-        "link_to_media_item": "تم إنشاء رابط إلى «{{title}}»"
+        "link_to_media_item": "تم إنشاء رابط إلى «{{title}}»",
+        "link_to_page": "تم إنشاء رابط إلى «{{title}}»"
       }
     },
     "cancel": {

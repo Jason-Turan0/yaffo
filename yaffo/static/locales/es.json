@@ -389,7 +389,8 @@
         "failed_tasks": "Tareas en segundo plano fallidas revisadas",
         "automation_runs": "Ejecuciones de “{{slug}}” revisadas",
         "link_to_photos": "Enlace a “{{title}}” creado",
-        "link_to_media_item": "Enlace a “{{title}}” creado"
+        "link_to_media_item": "Enlace a “{{title}}” creado",
+        "link_to_page": "Enlace a “{{title}}” creado"
       }
     },
     "cancel": {
