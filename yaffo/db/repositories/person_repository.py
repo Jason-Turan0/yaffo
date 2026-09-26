@@ -541,12 +541,12 @@ def repair_face_statuses(session: Session, *, include_processing: bool) -> tuple
         .all()
     )
     if ignored:
-        session.query(PersonFace).filter(PersonFace.face_id.in_([face_id for face_id, _, _ in ignored])).delete(
+        session.query(PersonFace).filter(PersonFace.face_id.in_([row.face_id for row in ignored])).delete(
             synchronize_session=False)
     session.commit()
-    for person_id in sorted({person_id for _, person_id, _ in ignored}):
+    for person_id in sorted({row.person_id for row in ignored}):
         update_person_embedding(person_id, session)
-    return problems, sorted({media_item_id for _, _, media_item_id in ignored if media_item_id is not None})
+    return problems, sorted({row.media_item_id for row in ignored if row.media_item_id is not None})
 
 
 def update_person_embedding(person_id: int, session):
