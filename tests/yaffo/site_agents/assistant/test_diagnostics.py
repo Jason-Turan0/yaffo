@@ -10,20 +10,25 @@ from sqlalchemy.orm import Session
 from yaffo.db import db
 from yaffo.db.models import (
     ApplicationSettings,
+    Automation,
     Face,
     FACE_STATUS_ASSIGNED,
     FACE_STATUS_IGNORED,
     FACE_STATUS_PROCESSING,
     Job,
+    KnownDevice,
     MediaItem,
     Person,
     PersonFace,
+    ShareGrant,
     Tag,
 )
 from yaffo.site_agents.assistant.tool_providers.diagnostics import diagnostics as diag
 from yaffo.site_agents.assistant.tool_providers.diagnostics.diagnostics import DiagnosticsToolProvider, tool_names
 from yaffo.site_agents.assistant.tool_providers.diagnostics.fs import AssistantFS
 from yaffo.site_agents.assistant.redact import Redactor
+from yaffo import process_status
+from yaffo.process_status import read_status, write_status
 from yaffo.taskq.store import Store
 
 pytestmark = pytest.mark.unit
@@ -218,3 +223,45 @@ def test_media_report_reads_metadata_only_when_enabled(env, monkeypatch):
     result = provider.call_tool("media_item_report", {"media_item_id": 1})
     assert calls == [("m1", "2019/a.jpg")]
     assert "not proof of the original indexing source" in result.model_text
+
+
+# ---- phase 5: sharing and automation settings ---------------------------------------------
+
+def test_sharing_status_reads_devices_and_the_web_heartbeats_transfers(env):
+    provider, session, _, data, _ = env
+    session.add_all([KnownDevice(device_id="d1", pubkey="k", display_name="Laptop", trust_state="TRUSTED"),
+                     ShareGrant(peer_device_id="d1", scope_type="album", album_id=None)])
+    session.commit()
+
+    text, _ = _call(provider, "sharing_status")
+    assert "Engine: unknown" in text and "- Laptop: trusted" in text and "album ×1" in text
+
+    write_status("web", time.time(), data_dir=data, extra={"sharing": {
+        "available": True, "hub_connected": False,
+        "transfers": [{"peer_name": "Laptop", "label": "Trip", "state": "failed", "files_done": 2,
+                       "files_total": 5, "files_failed": 3, "error": "Peer went away",
+                       "failed_files": ["timeout"]}]}})
+    text, _ = _call(provider, "sharing_status")
+    assert "hub NOT connected" in text
+    assert "from Laptop: Trip — failed, 2/5 files, 3 failed; error: Peer went away; file errors: timeout" in text
+
+
+def test_web_heartbeat_publishes_registered_extras_and_skips_failing_ones(tmp_path, monkeypatch):
+    monkeypatch.setattr(process_status, "_WEB_EXTRAS", {})
+    process_status.register_web_extra("sharing", lambda: {"hub_connected": True})
+    process_status.register_web_extra("broken", lambda: 1 / 0)
+    write_status("web", time.time(), data_dir=tmp_path, extra=process_status._web_extras())
+    assert read_status("web", data_dir=tmp_path)["extra"] == {"sharing": {"hub_connected": True}}
+
+
+def test_automation_config_shows_values_defaults_and_meaning(env):
+    provider, session, _, _, _ = env
+    session.add_all([Automation(slug="names", name="Names", handler="assign_location_name",
+                                config={"nearby_radius": 3, "nearby_radius_unit": "km"}),
+                     Automation(slug="plain", name="Plain")])
+    session.commit()
+
+    text, _ = _call(provider, "automation_config", slug="names")
+    assert "Nearby radius (nearby_radius): 3 km (default" in text and "How close an already-named photo" in text
+    assert "has no settings" in _call(provider, "automation_config", slug="plain")[0]
+    assert _call(provider, "automation_config", slug="nope")[1]["error"] is True

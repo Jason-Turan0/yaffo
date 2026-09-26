@@ -105,6 +105,39 @@ describe('plan card', () => {
     ]);
   });
 
+  it('words people, places, labels and preferences', async () => {
+    const i18n = window.testHelpers.createTestI18n({
+      t: (key, options = {}) => [key, options.person, options.date, options.label, options.theme,
+        options.language, options.formattedCount].filter((v) => v !== undefined && v !== '').join(' '),
+      date: (value) => `date(${value})`,
+    });
+    const org = await loadModule('assistant/plan_card.js');
+    const card = org.assistant.renderPlanCard(plan({
+      steps: [
+        step({ name: 'set_person_birthdate', count: 1, facts: { person: 'Billy', value: '2015-06-01' } }),
+        step({ seq: 1, name: 'set_person_birthdate', count: 1, facts: { person: 'Billy', value: null } }),
+        step({ seq: 2, name: 'set_coordinates', count: 3, facts: { cleared: true } }),
+        step({ seq: 3, name: 'add_label_to_vocabulary', count: 1, facts: { label: 'sailboat' } }),
+        step({ seq: 4, name: 'set_default_theme', count: 1, facts: { theme: 'Darkroom' } }),
+        step({ seq: 5, name: 'set_locale', count: 1, facts: { language: 'Deutsch' } }),
+        step({ seq: 6, name: 'set_locale', count: 1, facts: { language: null } }),
+        step({ seq: 7, name: 'set_distance_unit', count: 1, facts: { value: 'km' } }),
+      ],
+    }), { i18n, onApprove: vi.fn(), onDecline: vi.fn(), onUndo: vi.fn() });
+
+    const lines = [...card.querySelectorAll('.assistant-plan-step')].map((li) => li.textContent);
+    expect(lines).toEqual([
+      'assistant:plan.steps.set_person_birthdate Billy date(2015-06-01) 1',
+      'assistant:plan.steps.set_person_birthdate_clear Billy 1',
+      'assistant:plan.steps.set_coordinates_clear 3',
+      'assistant:plan.steps.add_label_to_vocabulary sailboat 1',
+      'assistant:plan.steps.set_default_theme Darkroom 1',
+      'assistant:plan.steps.set_locale Deutsch 1',
+      'assistant:plan.steps.set_locale_browser 1',
+      'assistant:plan.steps.set_distance_unit_km 1',
+    ]);
+  });
+
   it('approves and declines with one click when no confirmation is needed', async () => {
     const value = plan();
     const { card, onApprove, onDecline } = await render(value);

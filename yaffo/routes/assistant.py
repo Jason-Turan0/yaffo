@@ -152,6 +152,12 @@ def switch_help() -> dict[str, str]:
         "unignore_faces": gettext(
             "Puts ignored faces back in Unassigned Faces so they can be assigned to people. "
             "Faces that aren't ignored are left alone."),
+        "set_person_birthdate": gettext(
+            "A birthdate decides which of a person's faces are compared with each other by age, so "
+            "matching for that person is rebuilt."),
+        "add_label_to_vocabulary": gettext(
+            "Photos only get a new label when they're classified again; the assistant can start that too."),
+        "delete_label": gettext("Every photo loses that label."),
         "cancel_job": gettext(
             "Stops a pending or running job, as its Cancel button does. Work already done stays done."),
         "reindex_media": gettext("Their faces are detected again, so people assigned to them are removed."),
@@ -205,6 +211,7 @@ def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
             "unassign_faces": gettext("Unassign faces"),
             "ignore_faces": gettext("Ignore faces"),
             "unignore_faces": gettext("Stop ignoring faces"),
+            "set_person_birthdate": gettext("Set birthdates"),
             "create_person": gettext("Create people"),
             "rename_person": gettext("Rename people"),
             "merge_people": gettext("Merge people"),
@@ -214,6 +221,11 @@ def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
         ("dates", gettext("Dates and places"), {
             "set_media_dates": gettext("Change capture dates"),
             "set_location_names": gettext("Change location names"),
+            "set_coordinates": gettext("Change GPS coordinates"),
+        }),
+        ("labels", gettext("Labels"), {
+            "add_label_to_vocabulary": gettext("Add labels to the vocabulary"),
+            "delete_label": gettext("Remove labels from the vocabulary"),
         }),
         ("files", gettext("Files on disk"), {
             "rename_files": gettext("Rename files"),
@@ -225,6 +237,12 @@ def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
             "reindex_media": gettext("Re-index items"),
             "cancel_job": gettext("Cancel background jobs"),
             "set_automation_enabled": gettext("Turn automations on or off"),
+        }),
+        ("preferences", gettext("Preferences"), {
+            "set_default_theme": gettext("Change the theme"),
+            "set_locale": gettext("Change the language"),
+            "set_distance_unit": gettext("Change the distance unit"),
+            "set_filter_layout": gettext("Arrange the sidebar filters"),
         }),
     ]
 

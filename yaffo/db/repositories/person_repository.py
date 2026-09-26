@@ -4,7 +4,7 @@ from datetime import date
 
 import numpy as np
 from sqlalchemy import insert, select, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 import pydash as _
 from yaffo.db.models import (
     FACE_STATUS_ASSIGNED,
@@ -12,6 +12,7 @@ from yaffo.db.models import (
     FACE_STATUS_PROCESSING,
     FACE_STATUS_UNASSIGNED,
     Face,
+    MediaItem,
     Person,
     PersonEmbedding,
     PersonFace,
@@ -164,6 +165,14 @@ def get_person_by_name(session: Session, name: str) -> Person | None:
     return session.query(Person).filter(Person.name == name).first()
 
 
+def unassigned_faces(session: Session, limit: int) -> list[Face]:
+    """Up to `limit` unassigned faces with their photos, oldest photo first (the
+    Faces page's order)."""
+    return (session.query(Face).join(Face.media_item).options(joinedload(Face.media_item))
+            .filter(Face.status == FACE_STATUS_UNASSIGNED).order_by(MediaItem.date_taken, Face.id)
+            .limit(limit).all())
+
+
 def count_person_faces(session: Session, person_id: int) -> int:
     return session.query(PersonFace).filter(PersonFace.person_id == person_id).count()
 
@@ -189,6 +198,19 @@ def rename_person(session: Session, person_id: int, name: str) -> None:
         raise ValueError(f"Person {person_id} not found")
     person.name = name
     session.commit()
+
+
+def set_birthdate(session: Session, person_id: int, birthdate: date | None) -> None:
+    """Set or clear a person's birthdate. It decides which stage of life each of
+    their faces is compared in, so a change rebuilds their embeddings."""
+    person = session.get(Person, person_id)
+    if person is None:
+        raise ValueError(f"Person {person_id} not found")
+    if person.birthdate == birthdate:
+        return
+    person.birthdate = birthdate
+    session.commit()
+    update_person_embedding(person_id, session)
 
 
 def delete_person(session: Session, person_id: int) -> list[int]:

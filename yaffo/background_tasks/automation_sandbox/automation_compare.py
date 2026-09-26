@@ -14,7 +14,16 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox.labels import person_label, media_item_label
 from yaffo.db.repositories import person_repository, media_repository
-from yaffo.domain.compare_utils import calculate_face_similarity, calculate_similarity
+from yaffo.domain.compare_utils import (
+    calculate_face_similarity,
+    calculate_similarity,
+    load_embedding,
+    ui_threshold_to_similarity,
+)
+from yaffo.domain.face_clusters import cluster_faces
+
+# Unassigned faces read per call: the Faces page's batch size.
+MAX_UNASSIGNED_FACES = 2000
 
 
 def face_similarity(
@@ -63,3 +72,67 @@ def match_people(
 def summarize_match_people(args: list[Any], session: Session) -> str:
     media_item_id = args[0] if args else None
     return f"Match faces in {media_item_label(session, media_item_id)} to known people"
+
+
+def _min_similarity(session: Session, threshold: Any) -> float:
+    """The Faces page's 0-100 similarity scale as a cosine similarity, calibrated to
+    this library's band."""
+    if not isinstance(threshold, (int, float)) or isinstance(threshold, bool) or not 0 <= threshold <= 100:
+        raise ValueError("threshold must be a number from 0 to 100")
+    return ui_threshold_to_similarity(threshold, *person_repository.get_similarity_bounds(session))
+
+
+def _bounded_limit(limit: Any, maximum: int) -> int:
+    if type(limit) is not int or limit < 1:
+        raise ValueError("limit must be a positive integer")
+    return min(limit, maximum)
+
+
+def suggest_face_clusters(
+    session: Session, threshold: int = 50, limit: int = 20,
+) -> Annotated[list[dict], "Clusters, largest first: {size, face_ids, media_item_ids}."]:
+    """Group unassigned faces that look alike, as the Faces page does (Group by:
+    Similarity), over the oldest 2,000 unassigned faces. `threshold` is the page's
+    0-100 similarity scale: higher gives tighter, smaller clusters."""
+    min_similarity = _min_similarity(session, threshold)
+    limit = _bounded_limit(limit, 200)
+    faces = person_repository.unassigned_faces(session, MAX_UNASSIGNED_FACES)
+    photo_of_face = {face.id: face.media_item_id for face in faces}
+    clusters = cluster_faces([face.id for face in faces], [load_embedding(face.embedding) for face in faces],
+                             min_similarity)
+    clusters.sort(key=lambda cluster: len(cluster[1]), reverse=True)
+    return [
+        {"size": len(face_ids), "face_ids": face_ids,
+         "media_item_ids": list(dict.fromkeys(photo_of_face[face_id] for face_id in face_ids))}
+        for _, face_ids in clusters[:limit]
+    ]
+
+
+def summarize_suggest_face_clusters(args: list[Any], session: Session) -> str:
+    return "Group unassigned faces that look alike"
+
+
+def find_similar_faces(
+    session: Session, person_id: int, threshold: int = 50, limit: int = 200,
+) -> Annotated[list[dict], "Unassigned faces, most similar first: {face_id, media_item_id, score (0.0–1.0)}."]:
+    """Unassigned faces that look like a person, over the oldest 2,000 unassigned
+    faces, scored against the person's faces from the same stage of life.
+    `threshold` is the Faces page's 0-100 similarity scale. Empty when the person
+    is unknown or has no assigned faces yet."""
+    min_similarity = _min_similarity(session, threshold)
+    limit = _bounded_limit(limit, MAX_UNASSIGNED_FACES)
+    person = person_repository.get_person_by_id(session, person_id)
+    if person is None:
+        return []
+    faces = person_repository.unassigned_faces(session, MAX_UNASSIGNED_FACES)
+    photo_of_face = {face.id: face.media_item_id for face in faces}
+    scores = [(face_id, score) for face_id, score in calculate_similarity(person, faces).items()
+              if score >= min_similarity]
+    scores.sort(key=lambda pair: pair[1], reverse=True)
+    return [{"face_id": face_id, "media_item_id": photo_of_face[face_id], "score": round(score, 4)}
+            for face_id, score in scores[:limit]]
+
+
+def summarize_find_similar_faces(args: list[Any], session: Session) -> str:
+    person_id = args[0] if args else None
+    return f"Find unassigned faces that look like {person_label(session, person_id)}"

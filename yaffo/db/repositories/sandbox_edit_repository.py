@@ -159,6 +159,63 @@ def set_values(session: Session, entries: list[dict], field: str) -> list[int]:
     return changed
 
 
+def _coordinate(value: Any, bound: float, name: str) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not -bound <= value <= bound:
+        raise ValueError(f"{name} must be a number from {-bound:g} to {bound:g}, or null")
+    return float(value)
+
+
+def validated_coordinates(entries: list[dict]) -> list[dict]:
+    """{id, latitude, longitude[, expected]} entries; both coordinates or neither."""
+    result = []
+    seen = set()
+    for entry in entries:
+        item_id = entry["id"]
+        if type(item_id) is not int or item_id < 1 or item_id in seen:
+            raise ValueError("Each media id must be a unique positive integer")
+        seen.add(item_id)
+        latitude = _coordinate(entry.get("latitude"), 90, "latitude")
+        longitude = _coordinate(entry.get("longitude"), 180, "longitude")
+        if (latitude is None) != (longitude is None):
+            raise ValueError("Set both latitude and longitude, or clear both")
+        result.append({**entry, "latitude": latitude, "longitude": longitude})
+    return result
+
+
+def _coordinates_of(item: MediaItem) -> list:
+    return [item.latitude, item.longitude]
+
+
+def previous_coordinates(session: Session, entries: list[dict]) -> list[dict]:
+    result = []
+    for entry in validated_coordinates(entries):
+        item = session.get(MediaItem, entry["id"])
+        if item is None:
+            continue
+        new = [entry["latitude"], entry["longitude"]]
+        if "expected" in entry and _coordinates_of(item) != entry["expected"]:
+            continue
+        if _coordinates_of(item) != new:
+            result.append({"id": item.id, "latitude": item.latitude, "longitude": item.longitude, "expected": new})
+    return result
+
+
+def set_coordinates(session: Session, entries: list[dict]) -> list[int]:
+    changed = []
+    for entry in validated_coordinates(entries):
+        item = session.get(MediaItem, entry["id"])
+        new = [entry["latitude"], entry["longitude"]]
+        if item is None or ("expected" in entry and _coordinates_of(item) != entry["expected"]):
+            continue
+        if _coordinates_of(item) != new:
+            item.latitude, item.longitude = new
+            changed.append(item.id)
+    session.commit()
+    return changed
+
+
 def album_members(session: Session, album_id: int, ids: list[int]) -> dict[int, int]:
     return dict(session.query(AlbumItem.media_item_id, AlbumItem.position).filter(
         AlbumItem.album_id == album_id, AlbumItem.media_item_id.in_(ids)).all())

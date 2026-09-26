@@ -47,6 +47,11 @@ def delete_label(session: Session, label_id: int) -> None:
         session.commit()
 
 
+def label_use_count(session: Session, label_id: int) -> int:
+    """How many photos the classifier has given this label."""
+    return session.query(MediaLabel).filter_by(label_id=label_id).count()
+
+
 def set_enabled(session: Session, label_id: int, enabled: bool) -> None:
     label = session.get(ClassificationLabel, label_id)
     if label is not None:

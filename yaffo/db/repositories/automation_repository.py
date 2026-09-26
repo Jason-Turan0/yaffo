@@ -23,6 +23,11 @@ def get_by_slug(session: Session, slug: str) -> Automation | None:
     return session.query(Automation).filter_by(slug=slug).first()
 
 
+def get_by_handler(session: Session, handler: str) -> Automation | None:
+    """The system automation with this handler."""
+    return session.query(Automation).filter_by(handler=handler).first()
+
+
 def add_schedule_trigger(session: Session, slug: str, cron: str, config: dict | None = None) -> AutomationTrigger | None:
     """Add an enabled schedule trigger (caller validates `cron` first). next_run_at
     is left NULL so the dispatcher initialises it from the cron on its next tick.

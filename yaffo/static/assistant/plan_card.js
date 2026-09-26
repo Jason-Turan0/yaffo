@@ -83,6 +83,29 @@ const stepText = (i18n, step) => {
         values.automation = facts.automation;
         key = facts.value ? 'set_automation_enabled_on' : 'set_automation_enabled_off';
     }
+    if (step.name === 'set_person_birthdate') {
+        if (!facts.person) return step.summary;
+        values.person = facts.person;
+        if (facts.value) values.date = i18n.date(String(facts.value), { dateStyle: 'medium' });
+        else key = 'set_person_birthdate_clear';
+    }
+    if (step.name === 'set_coordinates' && facts.cleared) key = 'set_coordinates_clear';
+    if (step.name === 'add_label_to_vocabulary' || step.name === 'delete_label') {
+        if (!facts.label) return step.summary;
+        values.label = facts.label;
+    }
+    if (step.name === 'set_default_theme') {
+        if (!facts.theme) return step.summary;
+        values.theme = facts.theme;
+    }
+    if (step.name === 'set_locale') {
+        if (facts.language) values.language = facts.language;
+        else key = 'set_locale_browser';
+    }
+    if (step.name === 'set_distance_unit') {
+        if (facts.value !== 'mi' && facts.value !== 'km') return step.summary;
+        key = `set_distance_unit_${facts.value}`;
+    }
     if (step.name === 'cancel_job') {
         if (!facts.job) return step.summary;
         values.job = facts.job;

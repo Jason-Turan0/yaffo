@@ -10,6 +10,7 @@ from yaffo.background_tasks.automation_sandbox import automation_actions as acti
 from yaffo.background_tasks.automation_sandbox import maintenance_actions as maintenance
 from yaffo.background_tasks.automation_sandbox.automation_host import HOST_API, host_api
 from yaffo.background_tasks.automation_sandbox.starlark_runner import RunLimits
+from yaffo import themes
 from yaffo.db import db
 from yaffo.db.models import (
     ASSISTANT_EVENT_PLAN,
@@ -731,3 +732,29 @@ def test_cancel_job_is_medium_risk_irreversible_and_refuses_finished_jobs(sessio
     plans.approve(session, plan.id, conversation.id)
     session.expire_all()
     assert session.get(Job, "run").status == JOB_STATUS_CANCELLED
+
+
+def test_phase5_steps_record_the_facts_the_card_words(session, conversation, monkeypatch):
+    monkeypatch.setattr(themes, "_cached_theme", None)
+    session.add(Person(id=1, name="Billy"))
+    session.commit()
+    _, plan = _record(session, conversation, """
+set_person_birthdate(1, "2015-06-01")
+set_coordinates([{"id": i, "latitude": None, "longitude": None} for i in [1, 2]])
+label = add_label_to_vocabulary("sailboat")
+delete_label(label)
+set_default_theme("darkroom")
+set_locale("de")
+set_distance_unit("KM")
+""", actions_on=LOW_ACTIONS)
+    facts = [(s.name, s.count, s.facts) for s in plans.load_steps(plan)]
+    assert facts == [
+        ("set_person_birthdate", 1, {"person": "Billy", "value": "2015-06-01"}),
+        ("set_coordinates", 2, {"cleared": True}),
+        ("add_label_to_vocabulary", 1, {"label": "sailboat"}),
+        ("delete_label", 1, {"label": "sailboat"}),
+        ("set_default_theme", 1, {"theme": "Darkroom"}),
+        ("set_locale", 1, {"language": "Deutsch"}),
+        ("set_distance_unit", 1, {"value": "km"}),
+    ]
+    assert plan.risk == "medium"  # delete_label

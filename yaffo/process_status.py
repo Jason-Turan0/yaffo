@@ -6,23 +6,44 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from yaffo.common import ROOT_DIR
 
 ROLES = frozenset({"web", "watcher"})
 STALE_SECONDS = 60.0
 
+# Extra facts the web heartbeat publishes under `extra`, by name (e.g. "sharing" from
+# the P2P engine, which only lives in the web process). Each provider returns a small
+# JSON-safe dict; one that fails is left out of that beat.
+_WEB_EXTRAS: dict[str, Callable[[], dict]] = {}
+
+
+def register_web_extra(name: str, provider: Callable[[], dict]) -> None:
+    _WEB_EXTRAS[name] = provider
+
+
+def _web_extras() -> dict:
+    extras = {}
+    for name, provider in list(_WEB_EXTRAS.items()):
+        try:
+            extras[name] = provider()
+        except Exception:  # noqa: BLE001 — diagnostics must not stop the heartbeat
+            continue
+    return extras
+
 
 def write_status(role: str, started_at: float, *, healthy: bool = True,
-                 data_dir: Path = ROOT_DIR) -> None:
+                 data_dir: Path = ROOT_DIR, extra: Optional[dict] = None) -> None:
     if role not in ROLES:
         raise ValueError(f"Unknown process role: {role}")
     path = data_dir / f"{role}_status.json"
     temporary = path.with_suffix(f".{os.getpid()}.tmp")
     try:
-        temporary.write_text(json.dumps({"pid": os.getpid(), "started_at": started_at,
-                                         "beat_at": time.time(), "healthy": healthy}))
+        record = {"pid": os.getpid(), "started_at": started_at, "beat_at": time.time(), "healthy": healthy}
+        if extra:
+            record["extra"] = extra
+        temporary.write_text(json.dumps(record, default=str))
         temporary.replace(path)
     except OSError:
         # Diagnostics must not stop the process being monitored.
@@ -37,7 +58,7 @@ def read_status(role: str, *, data_dir: Path = ROOT_DIR) -> Optional[dict]:
         raise ValueError(f"Unknown process role: {role}")
     try:
         with (data_dir / f"{role}_status.json").open() as handle:
-            value = json.loads(handle.read(4096))
+            value = json.loads(handle.read(65536))
         if not isinstance(value, dict) or not all(
             isinstance(value.get(key), (int, float)) for key in ("pid", "started_at", "beat_at")
         ) or not isinstance(value.get("healthy"), bool):
@@ -49,11 +70,11 @@ def read_status(role: str, *, data_dir: Path = ROOT_DIR) -> Optional[dict]:
 
 def start_web_status() -> None:
     started_at = time.time()
-    write_status("web", started_at)
+    write_status("web", started_at, extra=_web_extras())
 
     def heartbeat() -> None:
         while True:
             time.sleep(5)
-            write_status("web", started_at)
+            write_status("web", started_at, extra=_web_extras())
 
     threading.Thread(target=heartbeat, daemon=True, name="web-heartbeat").start()

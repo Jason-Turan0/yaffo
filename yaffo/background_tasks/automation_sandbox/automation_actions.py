@@ -10,6 +10,7 @@ never changes anything; only a real triggered run performs them.
 Each capability ships with a `summarize_*(args, session)` that turns the call's
 args into the friendly one-line action shown in the test UI (e.g. "Tag 3 photo(s)").
 """
+from datetime import date
 from pathlib import Path
 from typing import Annotated, Any, Optional
 
@@ -18,8 +19,8 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.events import emit_event
 from yaffo.background_tasks.progress_reporter import ProgressReporter
-from yaffo.db.models import EVENT_MEDIA_MODIFIED, Tag
-from yaffo.db.repositories import album_repository, person_repository, media_repository
+from yaffo.db.models import EVENT_MEDIA_MODIFIED, ClassificationLabel, Tag
+from yaffo.db.repositories import album_repository, classification_repository, person_repository, media_repository
 from yaffo.db.repositories import sandbox_edit_repository as edits
 from yaffo.db.repositories.media_dir_repository import media_dir_by_id
 from yaffo.background_tasks.automation_sandbox.media_dirs import enrich_media_rows
@@ -372,6 +373,12 @@ def unassign_faces(session: Session, assignments: list[dict]) -> None:
     _emit_media_modified(edits.unassign_faces(session, assignments))
 
 
+def set_coordinates(session: Session, values: list[dict]) -> None:
+    """Set per-item GPS coordinates {id, latitude, longitude}, or null for both to
+    clear them. Optional expected ([latitude, longitude]) skips later edits."""
+    _emit_media_modified(edits.set_coordinates(session, values))
+
+
 def ignore_faces(session: Session, face_ids: list[int]) -> None:
     """Mark unassigned faces as ignored (the Faces page's Ignore). Faces that are
     assigned, already ignored, or mid-assignment are left alone."""
@@ -403,6 +410,10 @@ def summarize_unassign_faces(args: list[Any], session: Session) -> str:
     return f"Unassign {len(args[0])} face(s)"
 
 
+def summarize_set_coordinates(args: list[Any], session: Session) -> str:
+    return f"Set GPS coordinates for {len(args[0])} photo(s)"
+
+
 def summarize_ignore_faces(args: list[Any], session: Session) -> str:
     return f"Ignore {len(args[0])} face(s)"
 
@@ -421,6 +432,55 @@ def summarize_set_media_dates(args: list[Any], session: Session) -> str:
 
 def summarize_set_location_names(args: list[Any], session: Session) -> str:
     return f"Set location names for {len(args[0])} photo(s)"
+
+
+# ---- label vocabulary -------------------------------------------------------------
+# The auto-classifier's vocabulary (Settings → Labels). Adding a label only takes
+# effect for a photo when it's classified again (run_automation("classify_labels")).
+# Like create_album, adding is idempotent on the name.
+
+MAX_LABEL_NAME = 64
+MAX_LABEL_PROMPT = 200
+
+
+def add_label_to_vocabulary(
+    session: Session, name: str, prompt: Optional[str] = None,
+) -> Annotated[int, "The label's id — new, or the existing label with that name."]:
+    """Add a label the classifier can give photos, or return the existing one with
+    that name. `prompt` is the text it's matched by (default "a photo of <name>")."""
+    name = (name or "").strip()
+    if not name or len(name) > MAX_LABEL_NAME:
+        raise ValueError(f"A label name must be 1 to {MAX_LABEL_NAME} characters")
+    prompt = (prompt or "").strip() or None
+    if prompt is not None and len(prompt) > MAX_LABEL_PROMPT:
+        raise ValueError(f"A label prompt can be at most {MAX_LABEL_PROMPT} characters")
+    existing = classification_repository.get_label_by_name(session, name)
+    if existing is not None:
+        return existing.id
+    return classification_repository.create_label(session, name, prompt).id
+
+
+def summarize_add_label_to_vocabulary(args: list[Any], session: Session) -> str:
+    return f"Add label '{args[0] if args else ''}' to the classifier's vocabulary"
+
+
+def delete_label(session: Session, label_id: int, expected: Optional[dict] = None) -> None:
+    """Remove a label from the vocabulary; photos lose it. `expected` ({name,
+    unused}) skips the delete when the label was used since (undo of an add)."""
+    label = session.get(ClassificationLabel, label_id) if isinstance(label_id, int) else None
+    if label is None:
+        return
+    if expected is not None:
+        if label.name != expected.get("name"):
+            return
+        if expected.get("unused") and classification_repository.label_use_count(session, label_id):
+            return
+    classification_repository.delete_label(session, label_id)
+
+
+def summarize_delete_label(args: list[Any], session: Session) -> str:
+    label = session.get(ClassificationLabel, args[0]) if args and isinstance(args[0], int) else None
+    return f"Delete label '{label.name}'" if label else "Delete a label"
 
 
 # ---- people -------------------------------------------------------------------
@@ -463,6 +523,36 @@ def summarize_rename_person(args: list[Any], session: Session) -> str:
     old = _person_name(session, args[0]) if args else None
     new = args[1] if len(args) > 1 else ""
     return f"Rename person '{old}' to '{new}'" if old else f"Rename a person to '{new}'"
+
+
+def _birthdate(value: Any) -> date | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("birthdate must be an ISO date string (YYYY-MM-DD) or None")
+    return date.fromisoformat(value)
+
+
+def person_birthdate(session: Session, person_id: Any) -> str | None:
+    person = person_repository.get_person_by_id(session, person_id) if isinstance(person_id, int) else None
+    return person.birthdate.isoformat() if person and person.birthdate else None
+
+
+def set_person_birthdate(
+    session: Session, person_id: int, birthdate: Optional[str], expected: Optional[dict] = None,
+) -> None:
+    """Set a person's birthdate (YYYY-MM-DD), or None to clear it. `expected`
+    ({birthdate}) skips the change when it was changed since (undo after a later
+    edit)."""
+    if expected is not None and person_birthdate(session, person_id) != expected.get("birthdate"):
+        return
+    person_repository.set_birthdate(session, person_id, _birthdate(birthdate))
+
+
+def summarize_set_person_birthdate(args: list[Any], session: Session) -> str:
+    name = _person_name(session, args[0]) if args else None
+    value = args[1] if len(args) > 1 else None
+    return f"{'Set' if value else 'Clear'} the birthdate of '{name or 'a person'}'" + (f" to {value}" if value else "")
 
 
 def merge_people(session: Session, source_person_id: int, target_person_id: int) -> None:

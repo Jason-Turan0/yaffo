@@ -64,7 +64,7 @@ _GROUP_TOOLS = {
     DIAG_LIBRARY: "library_stats, media_item_report, face_consistency, date_outliers, db_quick_check",
     DIAG_FILES: "media_dir_status, probe_media_dir, thumbnail_dir_status, stat_path, list_dir",
     DIAG_METADATA: "capture_date_source (opt-in capture-date metadata read; no pixels)",
-    DIAG_JOBS: "worker_status, recent_jobs, job_detail, failed_tasks, automation_runs",
+    DIAG_JOBS: "worker_status, recent_jobs, job_detail, failed_tasks, automation_runs, automation_config",
 }
 
 
@@ -72,7 +72,7 @@ def _diagnostics(diagnostics: frozenset[str]) -> str:
     groups = [f"- {_GROUP_TOOLS[g]}" for g in (DIAG_LOGS, DIAG_LIBRARY, DIAG_FILES, DIAG_JOBS, DIAG_METADATA) if g in diagnostics]
     return block("diagnostics", [
         "You can also look at the state of this install with read-only diagnostic tools:",
-        "- health_report, install_info, settings_summary, migration_status",
+        "- health_report, install_info, settings_summary, migration_status, sharing_status",
         *groups,
         "Folder paths are shown relative to a labelled folder, never in full: [media folder <id>]/2019/a.jpg,",
         "[thumbnail folder]/…, [data folder]/…, and ~ for the rest of the home folder. For a",

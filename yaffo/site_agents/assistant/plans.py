@@ -49,12 +49,16 @@ from yaffo.db.models import (
     PLAN_STATUS_UNDONE,
     Album,
     AssistantChangePlan,
+    ClassificationLabel,
     Job,
     Person,
     PersonFace,
 )
 from yaffo.db.repositories import assistant_repository as repo
+from yaffo import themes
 from yaffo.db.repositories import automation_repository
+from yaffo.distance_units import normalize_distance_unit
+from yaffo.i18n import SUPPORTED_LOCALES, normalize_locale
 from yaffo.logging_config import get_logger
 from yaffo.site_agents.assistant import settings as assistant_settings
 from yaffo.site_agents.assistant.app_pages import page_url
@@ -219,6 +223,35 @@ def step_facts(call: HostCall, session: Session, mutations: list[HostCall]) -> t
         return len(set(_list_arg(args, 1))), facts
     if name in {"ignore_faces", "unignore_faces"}:
         return len(set(_list_arg(args, 0))), facts
+    if name == "set_person_birthdate":
+        facts["person"] = _person_name(session, args[0] if args else None, mutations)
+        facts["value"] = args[1] if len(args) > 1 else None
+        return 1, facts
+    if name == "set_coordinates":
+        entries = [e for e in _list_arg(args, 0) if isinstance(e, dict)]
+        facts["cleared"] = bool(entries) and all(e.get("latitude") is None for e in entries)
+        return len({e.get("id") for e in entries}), facts
+    if name == "add_label_to_vocabulary":
+        facts["label"] = str(args[0]).strip() if args else ""
+        return 1, facts
+    if name == "delete_label":
+        label = session.get(ClassificationLabel, args[0]) if args and isinstance(args[0], int) else None
+        facts["label"] = label.name if label else (
+            _created_name(args[0], mutations, "add_label_to_vocabulary") if args else None)
+        return 1, facts
+    if name == "set_default_theme":
+        label = themes.list_themes(session).get(args[0]) if args else None
+        facts["theme"] = str(label) if label else None  # built-in names are lazy translations
+        return 1, facts
+    if name == "set_locale":
+        code = normalize_locale(args[0]) if args and isinstance(args[0], str) else None
+        facts["language"] = SUPPORTED_LOCALES.get(code) if code else None  # its own name, e.g. Deutsch
+        return 1, facts
+    if name == "set_distance_unit":
+        facts["value"] = normalize_distance_unit(args[0]) if args and isinstance(args[0], str) else None
+        return 1, facts
+    if name == "set_filter_layout":
+        return len(_list_arg(args, 0)), facts
     if name == "cancel_job":
         facts["job"] = maintenance.job_label(session.get(Job, args[0])) if args and isinstance(args[0], str) else None
         return 1, facts

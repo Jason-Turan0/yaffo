@@ -224,6 +224,27 @@ def get_media_items_missing_gps(session: Session, media_item_ids: list[int]) -> 
     )
 
 
+def get_media_items_with_gps(session: Session, media_item_ids: list[int]) -> list[MediaItem]:
+    """The listed photos that have GPS coordinates."""
+    if not media_item_ids:
+        return []
+    return (session.query(MediaItem)
+            .filter(MediaItem.id.in_(media_item_ids), MediaItem.latitude.isnot(None), MediaItem.longitude.isnot(None))
+            .all())
+
+
+def named_coordinates_in_box(
+    session: Session, lat_min: float, lat_max: float, lon_min: float, lon_max: float,
+) -> list[tuple[int, float, float, str]]:
+    """(id, latitude, longitude, location_name) of the named, GPS-tagged photos
+    inside a bounding box."""
+    return [tuple(row) for row in (
+        session.query(MediaItem.id, MediaItem.latitude, MediaItem.longitude, MediaItem.location_name)
+        .filter(MediaItem.location_name.isnot(None), MediaItem.location_name != "")
+        .filter(MediaItem.latitude.between(lat_min, lat_max), MediaItem.longitude.between(lon_min, lon_max))
+        .all())]
+
+
 def get_gps_timestamps(session: Session) -> list[tuple[str, float, float, str | None]]:
     """(date_taken, latitude, longitude, location_name) for every photo that has a
     date + coordinates — the GPS-tagged photos the geotag-from-neighbors automation

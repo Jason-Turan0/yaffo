@@ -40,11 +40,14 @@ from yaffo.db.models import (
     FACE_STATUS_PROCESSING,
     Job,
     JOB_STATUS_RUNNING,
+    KnownDevice,
     MediaItem,
     Person,
     PersonFace,
+    ShareGrant,
     Tag,
 )
+from yaffo.background_tasks.automation_config import config_fields_for, config_value
 from yaffo.db.repositories import media_dir_repository
 from yaffo.i18n import get_saved_locale
 from yaffo.scripts.db.migrate import bundled_migrations, migration_number
@@ -135,6 +138,11 @@ TOOLS: tuple[DiagnosticTool, ...] = (
         "the non-secret config.toml values.",
     ),
     DiagnosticTool("migration_status", OVERVIEW, "Database migrations shipped with this build vs applied."),
+    DiagnosticTool(
+        "sharing_status", OVERVIEW,
+        "Device sharing: whether the sharing engine is running and connected to the hub, the paired "
+        "devices and what is shared with each, and the latest transfers with their errors. Read-only.",
+    ),
     DiagnosticTool(
         "capture_date_source", DIAG_METADATA,
         "Re-read only capture-date metadata for one indexed item. Compare the current EXIF or filename "
@@ -253,6 +261,12 @@ TOOLS: tuple[DiagnosticTool, ...] = (
             "name": {"type": "string", "description": "Only this task name."},
             "since_hours": {"type": "integer", "minimum": 1, "maximum": 720, "description": "Default 24."},
         }),
+    ),
+    DiagnosticTool(
+        "automation_config", DIAG_JOBS,
+        "A built-in automation's settings (its Configure dialog): each setting's current value, "
+        "default and meaning, e.g. the nearby radius for location names.",
+        _schema({"slug": {"type": "string", "description": "The automation's slug from settings_summary."}}, ["slug"]),
     ),
     DiagnosticTool(
         "automation_runs", DIAG_JOBS,
@@ -956,6 +970,52 @@ class DiagnosticsToolProvider(ToolProvider):
         lines = [f"{automation.display_name}: {'enabled' if automation.enabled else 'disabled'}; {len(jobs)} recent run(s)"]
         lines += [_job_line(job) for job in jobs]
         return Output("\n".join(lines), count=len(jobs))
+
+    def _automation_config(self, args: dict) -> Output:
+        slug = str(args.get("slug") or "")
+        automation = self.session.query(Automation).filter_by(slug=slug).first()
+        if automation is None:
+            return Output(f"No automation with slug {slug!r}.", error=True)
+        fields = config_fields_for(automation)
+        if not fields:
+            return Output(f"{automation.display_name} has no settings.")
+        stored = automation.config or {}
+        lines = [f"{automation.display_name} settings:"]
+        for config_field in fields:
+            unit = f" {stored.get(config_field.unit_key)}" if config_field.unit_key and stored.get(config_field.unit_key) else ""
+            meaning = f" — {config_field.help}" if config_field.help else ""
+            lines.append(f"- {config_field.label} ({config_field.key}): {config_value(automation, config_field)!r}{unit}"
+                         f" (default {config_field.default!r}){meaning}")
+        return Output("\n".join(lines), count=len(fields))
+
+    def _sharing_status(self, args: dict) -> Output:
+        devices = self.session.query(KnownDevice).order_by(KnownDevice.paired_at).all()
+        grants = Counter((g.peer_device_id, g.scope_type) for g in self.session.query(ShareGrant)
+                         .filter(ShareGrant.revoked_at.is_(None)))
+        web = self.fs.process_status("web")
+        sharing = web.get("extra", {}).get("sharing") if web else None
+        if web is None or time.time() - web["beat_at"] > health.HEARTBEAT_STALE_SECONDS:
+            lines = ["Engine: unknown (the web app isn't running or hasn't reported recently)."]
+        elif not isinstance(sharing, dict):
+            lines = ["Engine: not running in the web app (sharing is off, or it failed to start; see recent_errors)."]
+        else:
+            lines = [f"Engine: {'ready' if sharing.get('available') else 'no device identity yet'}; "
+                     f"hub {'connected' if sharing.get('hub_connected') else 'NOT connected'}."]
+        lines.append(f"Paired devices: {len(devices)}")
+        for device in devices:
+            shared = [f"{scope} ×{count}" for (peer, scope), count in sorted(grants.items()) if peer == device.device_id]
+            lines.append(f"- {device.display_name or device.device_id}: {device.trust_state.lower()}, paired "
+                         f"{_iso(device.paired_at)}, last seen {_iso(device.last_seen_at)}; "
+                         f"shared with it: {', '.join(shared) or 'nothing'}")
+        transfers = (sharing or {}).get("transfers") or []
+        lines.append(f"Recent transfers: {len(transfers)}" + ("" if isinstance(sharing, dict) else " (unknown)"))
+        for batch in transfers:
+            error = f"; error: {_first_line(batch['error'], 200)}" if batch.get("error") else ""
+            failures = "; ".join(e for e in batch.get("failed_files") or [] if e)
+            lines.append(f"- from {batch.get('peer_name')}: {batch.get('label')} — {batch.get('state')}, "
+                         f"{batch.get('files_done')}/{batch.get('files_total')} files, {batch.get('files_failed')} failed"
+                         f"{error}" + (f"; file errors: {failures}" if failures else ""))
+        return Output("\n".join(lines), count=len(devices))
 
     def _automation_outcomes(self) -> dict[str, list[str]]:
         outcomes: dict[str, list[str]] = {}

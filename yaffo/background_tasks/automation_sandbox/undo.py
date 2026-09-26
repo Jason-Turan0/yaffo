@@ -7,8 +7,10 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from yaffo.background_tasks.automation_sandbox.automation_actions import person_birthdate
 from yaffo.background_tasks.automation_sandbox.host_types import HostCall
-from yaffo.db.repositories import album_repository, person_repository
+from yaffo.db.models import ClassificationLabel
+from yaffo.db.repositories import album_repository, classification_repository, person_repository
 from yaffo.db.repositories import sandbox_edit_repository as edits
 
 
@@ -30,6 +32,10 @@ def assign_faces(args: list[Any], session: Session) -> list[HostCall]:
 
 def unassign_faces(args: list[Any], session: Session) -> list[HostCall]:
     return _batch("assign_faces", edits.face_entries(session, args[0], assigned=True))
+
+
+def set_coordinates(args: list[Any], session: Session) -> list[HostCall]:
+    return _batch("set_coordinates", edits.previous_coordinates(session, args[0]))
 
 
 def ignore_faces(args: list[Any], session: Session) -> list[HostCall]:
@@ -106,6 +112,25 @@ def reorder_album(args: list[Any], session: Session) -> list[HostCall]:
     if previous == new:
         return []
     return [HostCall("reorder_album", [args[0], previous, {"order": new}])]
+
+
+def set_person_birthdate(args: list[Any], session: Session) -> list[HostCall]:
+    previous = person_birthdate(session, args[0])
+    if previous == args[1]:
+        return []
+    return [HostCall("set_person_birthdate", [args[0], previous, {"birthdate": args[1]}])]
+
+
+def label_exists(args: list[Any], session: Session) -> str | None:
+    label = session.get(ClassificationLabel, args[0]) if args and isinstance(args[0], int) else None
+    return None if label else "Label no longer exists"
+
+
+def add_label_to_vocabulary(args: list[Any], session: Session) -> list[HostCall]:
+    name = (args[0] or "").strip()
+    if classification_repository.get_label_by_name(session, name) is not None:
+        return []
+    return [HostCall("delete_label", ["$result", {"name": name, "unused": True}])]
 
 
 def resolve_undo_result(calls: list[HostCall], result: Any) -> list[HostCall]:

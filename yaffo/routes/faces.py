@@ -5,7 +5,6 @@ import numpy as np
 from flask import Flask, current_app, render_template, request, jsonify
 from flask_babel import gettext, ngettext
 from sqlalchemy import func
-from sklearn.cluster import DBSCAN
 
 from yaffo.background_tasks.tasks.assign_faces_to_person import (
     assign_faces_to_person,
@@ -26,12 +25,12 @@ from yaffo.background_tasks.events import emit_event
 from yaffo.db.repositories.person_repository import clear_faces, get_similarity_bounds
 from yaffo.db.repositories.media_repository import get_distinct_years, get_distinct_months
 from yaffo.domain.compare_utils import load_embedding, ui_threshold_to_similarity
+from yaffo.domain.face_clusters import cluster_faces
 from yaffo.utils.context import context
 from yaffo.utils.photo_dates import parse_date_taken
 
 DEFAULT_THRESHOLD = 50  # UI similarity slider 0-100 (0 = least similar, 100 = most)
 DEFAULT_BATCH_SIZE = 2000  # max unassigned faces pulled + clustered per pass
-DEFAULT_MIN_SAMPLE_SIZE = 3
 DEFAULT_GROUP_BY = 'similarity'
 # Faces rendered as thumbnails per cluster. The whole cluster is still assigned;
 # this only caps how many we paint so a 50k batch stays responsive.
@@ -180,22 +179,11 @@ def make_suggestions_by_similarity(unassigned_faces: list[Face], min_similarity:
     for face in unassigned_faces:
         embeddings.append(load_embedding(face.embedding))
         face_ids.append(face.id)
-    embeddings = np.array(embeddings)
-    # ArcFace embeddings are L2-normalized -> cluster by cosine distance (1 - cos).
-    # min_similarity is the required cosine similarity (already scaled from the UI
-    # slider); eps is the complementary distance radius, so requiring more
-    # similarity tightens the clusters.
-    eps = 1.0 - min_similarity
-    clustering = DBSCAN(eps=eps, min_samples=DEFAULT_MIN_SAMPLE_SIZE, metric="cosine").fit(embeddings)
     embedding_by_face_id = dict(zip(face_ids, embeddings))
-    clusters = {}
-    for face_id, label in zip(face_ids, clustering.labels_):
-        if label == -1:  # skip noise faces
-            continue
-        label = gettext("Cluster %(number)s", number=label)
-        cluster = clusters[label] if label in clusters else {'label': label, 'face_ids': []}
-        clusters[label] = cluster
-        cluster["face_ids"].append(face_id)
+    clusters = {
+        label: {"label": gettext("Cluster %(number)s", number=label), "face_ids": ids}
+        for label, ids in cluster_faces(face_ids, embeddings, min_similarity)
+    }
 
     suggestions = []
     for cluster in clusters.values():

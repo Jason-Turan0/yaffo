@@ -21,8 +21,12 @@ from sqlalchemy.orm import Session
 
 from yaffo.background_tasks.automation_sandbox import automation_actions as actions
 from yaffo.background_tasks.automation_sandbox import automation_compare as compare
+from yaffo.background_tasks.automation_sandbox import duplicates
+from yaffo.background_tasks.automation_sandbox import location_suggestions
 from yaffo.background_tasks.automation_sandbox import maintenance_actions as maintenance
+from yaffo.background_tasks.automation_sandbox import preferences
 from yaffo.background_tasks.automation_sandbox import undo
+from yaffo.routes.filter_config import FILTERS
 from yaffo.background_tasks.automation_sandbox.host_types import HostCall, reference, resolve_references
 
 
@@ -366,6 +370,44 @@ HOST_API: tuple[HostFunction, ...] = (
         mutating=False
     ),
     HostFunction(
+        description=(
+            "The groups a finished duplicate scan found, by its job id (automation_runs or "
+            "recent_jobs finds it; the duplicate_scan automation runs a scan). Each copy comes "
+            "with its size, date, faces, tags and albums, to choose which one to keep."
+        ),
+        example='found = duplicate_groups(job_id, 50)',
+        impl=duplicates.duplicate_groups,
+        profiles=frozenset({"automation", "assistant"}),
+        summarize=duplicates.summarize_duplicate_groups,
+        mutating=False,
+    ),
+    HostFunction(
+        description=(
+            "Group unassigned faces that look alike, as the Faces page's Similarity grouping "
+            "does (the oldest 2,000 unassigned faces). threshold is the page's 0-100 scale; "
+            "higher means tighter clusters. Use it to find someone who appears often but isn't "
+            "a person yet."
+        ),
+        example="clusters = suggest_face_clusters(60, 10)",
+        impl=compare.suggest_face_clusters,
+        profiles=frozenset({"automation", "assistant"}),
+        summarize=compare.summarize_suggest_face_clusters,
+        mutating=False,
+    ),
+    HostFunction(
+        description=(
+            "Unassigned faces that look like a person (the oldest 2,000 unassigned faces), "
+            "most similar first, scored against the person's faces from the same stage of "
+            "life. threshold is the Faces page's 0-100 scale. Review the scores before "
+            "assigning."
+        ),
+        example="faces = find_similar_faces(person_id, 70, 100)",
+        impl=compare.find_similar_faces,
+        profiles=frozenset({"automation", "assistant"}),
+        summarize=compare.summarize_find_similar_faces,
+        mutating=False,
+    ),
+    HostFunction(
         impl=actions.untag_media_items,
         description='Remove exact name/value tags in a batch.',
         example='untag_media_items([{"media_item_id": 1, "name": "beach"}])',
@@ -389,7 +431,7 @@ HOST_API: tuple[HostFunction, ...] = (
         impl=actions.ignore_faces,
         description=(
             "Ignore unassigned faces (e.g. strangers in the background), so they leave "
-            "Unassigned Faces. Assigned faces are left alone; unassign_faces them first."
+            "Unassigned Faces. Faces assigned to a person are left alone."
         ),
         example='ignore_faces([f["id"] for f in faces if f["status"] == "UNASSIGNED"])',
         summarize=actions.summarize_ignore_faces,
@@ -486,6 +528,104 @@ HOST_API: tuple[HostFunction, ...] = (
         summarize=actions.summarize_delete_person,
         mutating=True,
     ),
+    HostFunction(
+        description=(
+            "Set a person's birthdate (YYYY-MM-DD), or None to clear it. It decides which "
+            "stage of life each of their faces is compared in, so their matching is rebuilt."
+        ),
+        example='set_person_birthdate(person_id, "2015-06-01")',
+        impl=actions.set_person_birthdate,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_set_person_birthdate",
+        undo=undo.set_person_birthdate,
+        precondition=undo.person_exists,
+        summarize=actions.summarize_set_person_birthdate,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Add a label to the auto-classifier's vocabulary (Settings → Labels), or return "
+            "the existing label with that name. prompt is the text photos are matched by "
+            "(default 'a photo of <name>'). Photos only get it when they're classified again "
+            "(the classify_labels automation)."
+        ),
+        example='label = add_label_to_vocabulary("sailboat", "a photo of a sailboat on the water")',
+        impl=actions.add_label_to_vocabulary,
+        profiles=frozenset({"assistant"}),
+        risk="low",
+        setting_key="assistant_action_add_label_to_vocabulary",
+        undo=undo.add_label_to_vocabulary,
+        summarize=actions.summarize_add_label_to_vocabulary,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Remove a label from the classifier's vocabulary by its id (classification_labels). "
+            "Every photo loses that label; re-adding it needs a new classification run."
+        ),
+        example="delete_label(label_id)",
+        impl=actions.delete_label,
+        profiles=frozenset({"assistant"}),
+        risk="medium",
+        setting_key="assistant_action_delete_label",
+        precondition=undo.label_exists,
+        summarize=actions.summarize_delete_label,
+        mutating=True,
+    ),
+    # ---- preferences (assistant only) ----
+    HostFunction(
+        description="Make an existing theme the app's theme, by slug (built-in or a published custom theme).",
+        example='set_default_theme("darkroom")',
+        impl=preferences.set_default_theme,
+        profiles=frozenset({"assistant"}),
+        risk="low",
+        setting_key="assistant_action_set_default_theme",
+        undo=preferences.undo_set_default_theme,
+        precondition=preferences.theme_exists,
+        summarize=preferences.summarize_set_default_theme,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Set the app's language by code (en, de, es, fr, zh, hi, ar), or None to follow "
+            "the browser's language."
+        ),
+        example='set_locale("de")',
+        impl=preferences.set_locale,
+        profiles=frozenset({"assistant"}),
+        risk="low",
+        setting_key="assistant_action_set_locale",
+        undo=preferences.undo_set_locale,
+        summarize=preferences.summarize_set_locale,
+        mutating=True,
+    ),
+    HostFunction(
+        description='Show distances in miles ("mi") or kilometers ("km").',
+        example='set_distance_unit("km")',
+        impl=preferences.set_distance_unit,
+        profiles=frozenset({"assistant"}),
+        risk="low",
+        setting_key="assistant_action_set_distance_unit",
+        undo=preferences.undo_set_distance_unit,
+        summarize=preferences.summarize_set_distance_unit,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Choose which filters the gallery sidebar shows and in what order: [{key, visible}] "
+            "in display order (Settings → Filters). Filters left out follow the listed ones, shown. "
+            "Keys: " + ", ".join(f.key for f in FILTERS) + "."
+        ),
+        example='set_filter_layout([{"key": "people", "visible": True}, {"key": "device", "visible": False}])',
+        impl=preferences.set_filter_layout,
+        profiles=frozenset({"assistant"}),
+        risk="low",
+        setting_key="assistant_action_set_filter_layout",
+        undo=preferences.undo_set_filter_layout,
+        summarize=preferences.summarize_set_filter_layout,
+        mutating=True,
+    ),
     # ---- maintenance (assistant only) ----
     HostFunction(
         description=(
@@ -564,6 +704,33 @@ HOST_API: tuple[HostFunction, ...] = (
         precondition=maintenance.faces_need_repair,
         summarize=maintenance.summarize_repair_face_statuses,
         mutating=True,
+    ),
+    HostFunction(
+        impl=actions.set_coordinates,
+        description=(
+            "Set per-item GPS coordinates, or null for both to clear them. To copy a place from "
+            "another photo, read its latitude and longitude with data_query and pass them. "
+            "Optional expected ([latitude, longitude]) skips later edits."
+        ),
+        example='set_coordinates([{"id": i, "latitude": 48.8584, "longitude": 2.2945} for i in ids])',
+        summarize=actions.summarize_set_coordinates,
+        mutating=True,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_set_coordinates",
+        undo=undo.set_coordinates,
+    ),
+    HostFunction(
+        description=(
+            "For each photo with GPS coordinates (up to 500), the location name of the closest "
+            "already-named photo within radius_km (default: the Locations page's nearby radius). "
+            "Offline: it never looks names up online."
+        ),
+        example="suggestions = suggest_location_names(ids)",
+        impl=location_suggestions.suggest_location_names,
+        profiles=frozenset({"automation", "assistant"}),
+        summarize=location_suggestions.summarize_suggest_location_names,
+        mutating=False,
     ),
     HostFunction(
         impl=actions.set_location_names,
