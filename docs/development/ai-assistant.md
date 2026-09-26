@@ -458,12 +458,13 @@ Implemented in `yaffo/site_agents/assistant/`:
    a new conversation with context attached and a suggested first message left
    for the user to send. They appear only when the assistant is ready (enabled,
    with an API key), and never on Settings, including its flashes and error
-   toasts:
+   toasts. One context value, `assistant_help` (`routes/assistant.py`), decides
+   that for every placement:
 
    | Where | Shown when | Style |
    |---|---|---|
    | Server-rendered flashes | `error`, `danger`, or `warning` category | Outlined in the flash's own text colour (`.message-action`, `base.css`); icon only below 640px |
-   | Error toasts (`notification.setErrorAction`) | Every error toast | Same outlined style, on the message's row; icon only below 640px |
+   | Failure toasts (`notification.failure`, action set by `setErrorAction`) | Operation failures (scan, sync, automation run, opening a file, …); plain `error()` toasts for validation get none | Same outlined style, on the message's row; icon only below 640px |
    | Job cards (`fragments/job_status_fragment.html`) | Failed status, error text, or a nonzero error count | Regular secondary button |
    | Run-history rows (`components/run_history.html`) | Same rule, per run | Bare icon at the row's end, "Ask Yaffo" tooltip |
    | Internal server error page | Always | Regular secondary button |
@@ -475,17 +476,20 @@ Implemented in `yaffo/site_agents/assistant/`:
    Run-history rows are shared by an automation's page and Index Photos. Index
    Photos shows a job card only for the latest import or index run that is still
    in progress; every other run of either kind is in its Run history. Job cards
-   show the error count and error message. A finished run with failed items shows
-   a "Completed with errors" chip.
+   show the error count and error message, and the same translated status chip as
+   the Run history (`run_status`). A finished run with failed items shows a
+   "Completed with errors" chip.
 
    The context is allowlisted and length-capped by the route (`page`, `job_id`,
-   `automation`, `error_code`, `error`). `page` is the app path the button was on,
-   except on job cards, which send the job name. The internal-error button attaches
+   `automation`, `error_code`, `error`). `page` is the app path the button was on;
+   a job card's refresh and Cancel requests pass it back, since their own path is
+   `/jobs/…`. The internal-error button attaches
    the request path and `internal_server_error` code, without query parameters or
    exception details; with log checks on, the model can find the traceback logged
    for that path. The context is stored on the user event's payload, shown as a chip
    in the composer and above the sent message, and given to the model as a
-   `<context>` block in that turn.
+   `<context>` block in that turn. Follow-up turns replay it with the message it
+   came with, as `<historical_context>` (see *Follow-up evidence*).
 
 7. **Links into the app** (`tool_providers/links.py`). `link_to_photos` and `link_to_page`
    (library group) validate what they point at and return app-relative links,
@@ -531,7 +535,10 @@ Implemented in `yaffo/site_agents/assistant/`:
    do not claim historical provenance. Missing ExifTool or failed reads report
    unknown. Pixels are never decoded or returned.
 10. **Follow-up evidence.** Earlier tool details are replayed as escaped,
-    explicitly labeled historical data alongside text turns. Evidence is limited
+    explicitly labeled historical data alongside text turns. Context attached to
+    an earlier message is replayed with it as `<historical_context>`, redacted
+    and escaped, so a follow-up still knows which job or error it's about. The
+    latest message's context goes in its own `<context>` block instead. Evidence is limited
     to 6,000 characters per result and 24,000 total, favoring recent results.
     Current diagnostic switches and redaction are applied again. Item reports
     are omitted from replay when metadata access is off because they may contain
@@ -551,11 +558,6 @@ Phase 3 limits:
   watcher, or web request is healthy.
 - AI-call summaries scan a bounded set of local run directories, so they are a
   troubleshooting sample rather than an exhaustive accounting export.
-- Context is given to the model only in the turn it was attached to; history
-  replay doesn't include it, so a follow-up turn loses the job id and error
-  unless the first answer repeated them.
-- Error toasts offer "Ask Yaffo" for every error, including validation messages
-  and the assistant's own failures.
 
 ### Package organization
 

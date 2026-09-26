@@ -36,7 +36,7 @@ from yaffo.distance_units import (
 STR = "str"
 INT = "int"
 FLOAT = "float"
-FLAG = "flag"  # 1 when set; the URL carries 1, the assistant passes true
+FLAG = "flag"  # 1 when set, else None; the URL carries 1 (or true/on/yes), the assistant a bool
 INT_LIST = "int_list"
 STR_LIST = "str_list"
 
@@ -102,10 +102,20 @@ MEDIA_FILTER_PARAMS: tuple[FilterParam, ...] = (
 _BY_KEY = {p.key: p for p in MEDIA_FILTER_PARAMS}
 
 
+_FLAG_ON = frozenset({"1", "true", "on", "yes"})
+
+
 def _coerce(param: FilterParam, value: Any) -> Any:
     """One value in the parameter's type, or None when it doesn't fit."""
+    if param.kind == FLAG:
+        # On/off: 1 when set, None otherwise. A URL may spell it 1/true/on/yes
+        # (the form sends 1); the assistant passes a JSON bool.
+        if isinstance(value, bool) or isinstance(value, int):
+            return 1 if value else None
+        text = str(value).strip().lower()
+        return 1 if text in _FLAG_ON else None
     try:
-        if param.kind in (INT, INT_LIST, FLAG):
+        if param.kind in (INT, INT_LIST):
             if isinstance(value, bool):
                 value = int(value)
             value = int(value)

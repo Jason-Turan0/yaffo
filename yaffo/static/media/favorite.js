@@ -36,7 +36,7 @@ favoriteApi.init = (i18n, config) => {
             button.classList.toggle('is-favorite', !!data.favorite);
             button.setAttribute('aria-pressed', data.favorite ? 'true' : 'false');
         } catch (error) {
-            window.notification.error(i18n.t('media:favorite.updateFailed'));
+            window.notification.failure(i18n.t('media:favorite.updateFailed'));
             console.error('Error:', error);
         } finally {
             button.disabled = false;

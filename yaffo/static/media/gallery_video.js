@@ -54,7 +54,7 @@ window.PHOTO_ORGANIZER.media.initGalleryVideos = (i18n, config) => {
             if (duration) duration.style.display = '';
             badge.style.display = '';
             thumb.classList.remove('is-playing');
-            window.notification.error(i18n.t('media:gallery.videoPlaybackFailed'));
+            window.notification.failure(i18n.t('media:gallery.videoPlaybackFailed'));
         });
 
         thumb.appendChild(video);

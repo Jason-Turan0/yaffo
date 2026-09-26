@@ -2,17 +2,22 @@
 {# show_dismiss=false leaves a finished job without Dismiss (which deletes it), for
    pages that keep finished runs as history, like Index Photos. #}
 {% set dismissible = show_dismiss | default(true) %}
+{# The page the card is shown on, which "Ask Yaffo" attaches. On a page it's that
+   page's path; the card's refresh and Cancel requests pass it back (as `page`),
+   since their own path is /jobs/…. #}
+{% set help_page = help_page | default(none) or request.path %}
+{% set status = run_status(job.status, job.error_count) %}
 <div class="job-card"
      id="job-{{ job.id }}"
         {% if not is_finished %}
-     hx-get="{{ url_for('job_fragment', job_id=job.id, has_results=has_results|int, results_route=results_route, dismiss=none if dismissible else 0) }}"
+     hx-get="{{ url_for('job_fragment', job_id=job.id, has_results=has_results|int, results_route=results_route, dismiss=none if dismissible else 0, page=help_page) }}"
      hx-trigger="every 5s"
      hx-swap="outerHTML"
         {% endif %}>
 
     <div class="job-header">
         <div class="job-meta">
-            <span class="job-status">{{ job.status }}</span>
+            <span class="chip {{ status.chip }} job-status">{{ status.label }}</span>
             <span class="job-time">{{ _("Started:") }} {{ local_datetime(job.started_at or job.created_at) }}</span>
         </div>
         <div class="job-actions">
@@ -23,9 +28,9 @@
                 </a>
             {% endif %}
 
-            {% if assistant_ready | default(false) and (job.status == 'FAILED' or job.error or job.error_count) %}
+            {% if assistant_help | default(false) and (job.status == 'FAILED' or job.error or job.error_count) %}
                 <button type="button" class="btn btn-secondary btn-sm" data-icon="assistant" data-assistant-help
-                        data-job-id="{{ job.id }}" data-page="{{ job.name }}"
+                        data-job-id="{{ job.id }}" data-page="{{ help_page }}"
                         data-error="{{ (job.error or '')[:500] }}">
                     {{ _("Ask Yaffo") }}
                 </button>
@@ -34,7 +39,7 @@
             {% if show_cancel and (dismissible or not is_finished) %}
                 <button class="btn {{ 'btn-secondary' if is_finished else 'btn-danger' }} btn-sm"
                         hx-post="{{ url_for('job_delete' if is_finished else 'job_cancel', job_id=job.id) }}"
-                        hx-vals='{"has_results": {{ has_results|tojson }}, "job_name": "{{ job.name }}", "dismiss": {{ dismissible|tojson }}}'
+                        hx-vals='{"has_results": {{ has_results|tojson }}, "job_name": "{{ job.name }}", "dismiss": {{ dismissible|tojson }}, "page": {{ help_page|tojson }}}'
                         hx-target="#job-{{ job.id }}"
                         hx-swap="outerHTML">
                     {{ _("Dismiss") if is_finished else _("Cancel") }}

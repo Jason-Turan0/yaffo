@@ -123,7 +123,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
             window.notification.error(data.message || i18n.t('media:faces.clearFailed'));
         } catch (error) {
             console.error('Error clearing face:', error);
-            window.notification.error(i18n.t('media:faces.clearFailed'));
+            window.notification.failure(i18n.t('media:faces.clearFailed'));
         }
         clearBtn.disabled = false;
         clearBtn.textContent = i18n.t('media:faces.clear');
@@ -171,7 +171,7 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initFaceReassign = (allPeople, i18n, config) =
             }
         } catch (error) {
             console.error('Error reassigning face:', error);
-            window.notification.error(i18n.t('media:faces.reassignError'));
+            window.notification.failure(i18n.t('media:faces.reassignError'));
             applyBtn.disabled = false;
             applyBtn.textContent = i18n.t('common:apply');
         }

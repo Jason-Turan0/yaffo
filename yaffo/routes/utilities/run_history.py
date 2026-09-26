@@ -117,15 +117,28 @@ def _run_status_chip(status: str) -> str:
     }.get(status, "")
 
 
+@dataclass(frozen=True)
+class RunStatus:
+    label: str  # translated, e.g. "Completed with errors"
+    chip: str   # chip tone modifier
+
+
+def run_status(status: str, error_count: int | None = 0) -> RunStatus:
+    """How a run's status reads on a chip, for the run history and the job card
+    alike. A run that finished with some failed items is flagged here, where it's
+    seen at a glance, not only in the summary's error count."""
+    if status == JOB_STATUS_COMPLETED and error_count:
+        return RunStatus(gettext("Completed with errors"), "chip-warning")
+    return RunStatus(_run_status_label(status), _run_status_chip(status))
+
+
 def run_view(job: Job) -> RunView:
-    # A run that finished with some failed items is flagged on its status chip,
-    # where it's seen at a glance, not only in the summary's error count.
-    completed_with_errors = job.status == JOB_STATUS_COMPLETED and bool(job.error_count)
+    status = run_status(job.status, job.error_count)
     return RunView(
         job_id=job.id,
         status=job.status,
-        status_label=gettext("Completed with errors") if completed_with_errors else _run_status_label(job.status),
-        status_chip="chip-warning" if completed_with_errors else _run_status_chip(job.status),
+        status_label=status.label,
+        status_chip=status.chip,
         is_finished=job.status in RUN_FINISHED_STATUSES,
         is_error=job.status == JOB_STATUS_FAILED or bool(job.error_count) or bool(job.error),
         progress=_run_progress(job),

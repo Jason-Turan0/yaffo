@@ -6,6 +6,20 @@ import json
 from yaffo.utils.request_helpers import parse_boolean_from_form
 
 
+# Longest page path a job card passes back for "Ask Yaffo" (the assistant caps it too).
+HELP_PAGE_MAX_LENGTH = 200
+
+
+def _help_page(value: object) -> str | None:
+    """The page a job card is shown on, as its refresh or Cancel request passes it
+    back: an app path (/…), or None for anything else."""
+    if not isinstance(value, str) or not value.startswith("/") or value.startswith("//"):
+        return None
+    if len(value) > HELP_PAGE_MAX_LENGTH or any(ch.isspace() for ch in value):
+        return None
+    return value
+
+
 def init_jobs_routes(app: Flask):
     @app.route("/jobs/section", methods=["GET"])
     def jobs_section():
@@ -71,6 +85,7 @@ def init_jobs_routes(app: Flask):
             results_route=results_route,
             show_cancel=True,
             show_dismiss=show_dismiss,
+            help_page=_help_page(request.args.get('page')),
         )
 
     @app.route("/jobs/<job_id>/cancel", methods=["POST"])
@@ -102,6 +117,7 @@ def init_jobs_routes(app: Flask):
                 has_results=has_results,
                 show_cancel=True,
                 show_dismiss=show_dismiss,
+                help_page=_help_page(request.form.get('page')),
             )
 
         return "", 400

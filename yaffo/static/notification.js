@@ -30,8 +30,8 @@ class AppNotification {
     }
 
     /**
-     * Offer a button on every error toast (e.g. the assistant's "Ask Yaffo"),
-     * called with the error's text. Pass null to remove it.
+     * Offer a button on failure toasts (failure(), not plain error()), e.g. the
+     * assistant's "Ask Yaffo", called with the toast's text. Pass null to remove it.
      * @param {NotificationAction | null} action
      */
     setErrorAction(action) {
@@ -43,8 +43,9 @@ class AppNotification {
      * @param {string} message - The message to display
      * @param {NotificationType} type - The notification type
      * @param {number} duration - Duration in milliseconds (default: 3000)
+     * @param {boolean} offerAction - add the error action's button (failure toasts)
      */
-    show(message, type = 'success', duration = 3000) {
+    show(message, type = 'success', duration = 3000, offerAction = false) {
         // Clear any existing timeout
         if (this.hideTimeout) {
             clearTimeout(this.hideTimeout);
@@ -57,7 +58,7 @@ class AppNotification {
         this.element.replaceChildren(text);
         this.element.className = `notification ${type} visible`;
 
-        const action = type === 'error' ? this.errorAction : null;
+        const action = type === 'error' && offerAction ? this.errorAction : null;
         if (action) {
             const button = document.createElement('button');
             button.type = 'button';
@@ -142,11 +143,24 @@ class AppNotification {
     }
 
     /**
+     * An error the user can fix or needs no help with: validation ("Name
+     * required"), or a failure the user just caused. No action button.
      * @param {string} message
      * @param {number} duration
      */
     error(message, duration = 3000) {
         this.show(message, 'error', duration);
+    }
+
+    /**
+     * Something went wrong that the user may want help with: a scan, sync or
+     * automation run that failed, a file that won't open. An error toast that also
+     * offers the error action ("Ask Yaffo") when one is set.
+     * @param {string} message
+     * @param {number} duration
+     */
+    failure(message, duration = 3000) {
+        this.show(message, 'error', duration, true);
     }
 
     /**

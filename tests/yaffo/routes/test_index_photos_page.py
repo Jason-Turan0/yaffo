@@ -277,3 +277,19 @@ def test_job_fragment_omits_dismiss_when_asked(app, client):
     assert "/jobs/index-done/delete" in client.get("/jobs/index-done/fragment").get_data(as_text=True)
     body = client.get("/jobs/index-done/fragment?dismiss=0").get_data(as_text=True)
     assert "/jobs/index-done/delete" not in body
+
+
+def test_job_card_status_reads_like_the_run_history(app, client):
+    _add_job(app, "index-live", "index_photos", "RUNNING", 1, completed_count=4)
+    body = client.get("/utilities/index-photos").get_data(as_text=True)
+    assert '<span class="chip chip-warning job-status">Running</span>' in body
+    assert ">RUNNING<" not in body
+
+    fragment = client.get("/jobs/index-live/fragment").get_data(as_text=True)
+    assert '<span class="chip chip-warning job-status">Running</span>' in fragment
+
+
+def test_finished_job_card_with_errors_says_so(app, client):
+    _add_job(app, "index-done", "index_photos", "COMPLETED", 1, error_count=2)
+    fragment = client.get("/jobs/index-done/fragment").get_data(as_text=True)
+    assert '<span class="chip chip-warning job-status">Completed with errors</span>' in fragment

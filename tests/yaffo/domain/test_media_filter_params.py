@@ -125,3 +125,12 @@ def test_js_fixture_matches_the_table():
     open('tests_js/fixtures/media_filter_config.json','w').write(json.dumps(c(), indent=2) + '\\n')"
     """
     assert json.loads(FIXTURE.read_text()) == json.loads(json.dumps(fp.client_filter_config()))
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("1", 1), ("true", 1), ("TRUE", 1), ("on", 1), ("yes", 1),
+    ("0", None), ("false", None), ("no", None), ("", None), ("junk", None),
+])
+def test_on_off_filters_accept_common_spellings_in_the_url(raw, expected):
+    values = fp.parse_filter_params(MultiDict([("favorite", raw), ("unnamed", raw)]))
+    assert values["favorite"] == expected and values["unnamed"] == expected

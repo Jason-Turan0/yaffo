@@ -369,7 +369,7 @@ facesNamespace.initAssignment = (
                 facesWindow.showNotification?.(result.message, 'error');
             }
         } catch (error) {
-            facesWindow.notification.error(i18n.t('faces:assignment.requestFailed', {
+            facesWindow.notification.failure(i18n.t('faces:assignment.requestFailed', {
                 reason: error instanceof Error ? error.message : String(error),
             }));
             console.error('Error submitting faces:', error);

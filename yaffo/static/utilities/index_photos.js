@@ -237,14 +237,14 @@ const initIndexPhotos = (opts, i18n, config) => {
                 const data = /** @type {{ error?: string }} */ (
                     await response.json().catch(() => ({}))
                 );
-                window.notification.error(
+                window.notification.failure(
                     data.error || i18n.t('utilities:indexPhotos.sync.startFailed'));
                 syncButton.disabled = false;
                 syncButton.textContent = i18n.t('utilities:indexPhotos.sync.button');
             }
         } catch (error) {
             const reason = error instanceof Error ? error.message : String(error);
-            window.notification.error(i18n.t('utilities:indexPhotos.sync.error', {
+            window.notification.failure(i18n.t('utilities:indexPhotos.sync.error', {
                 reason,
             }));
             syncButton.disabled = false;
@@ -286,13 +286,13 @@ const initIndexPhotos = (opts, i18n, config) => {
                 }));
                 window.location.reload();
             } else {
-                window.notification.error(
+                window.notification.failure(
                     data.error || i18n.t('utilities:indexPhotos.reindex.startFailed'));
                 restore();
             }
         } catch (error) {
             const reason = error instanceof Error ? error.message : String(error);
-            window.notification.error(i18n.t('utilities:indexPhotos.reindex.error', { reason }));
+            window.notification.failure(i18n.t('utilities:indexPhotos.reindex.error', { reason }));
             restore();
         }
     };
@@ -316,7 +316,7 @@ const initIndexPhotos = (opts, i18n, config) => {
             revealSyncIfWork();
         } else if (record.type === 'error') {
             setStatus('');
-            window.notification.error(i18n.t('utilities:indexPhotos.scan.error', {
+            window.notification.failure(i18n.t('utilities:indexPhotos.scan.error', {
                 reason: record.message,
             }));
         }
@@ -347,7 +347,7 @@ const initIndexPhotos = (opts, i18n, config) => {
             if (tail) handleRecord(/** @type {ScanRecord} */ (JSON.parse(tail)));
         } catch {
             setStatus('');
-            window.notification.error(i18n.t('utilities:indexPhotos.scan.failed'));
+            window.notification.failure(i18n.t('utilities:indexPhotos.scan.failed'));
         }
     };
 

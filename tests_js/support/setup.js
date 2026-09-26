@@ -88,6 +88,7 @@ beforeEach(() => {
   window.notification = {
     success: vi.fn(),
     error: vi.fn(),
+    failure: vi.fn(),
     warning: vi.fn(),
     info: vi.fn(),
     show: vi.fn(),

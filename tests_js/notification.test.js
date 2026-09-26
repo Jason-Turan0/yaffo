@@ -87,7 +87,7 @@ describe('notification.js', () => {
 });
 
 describe('notification error action', () => {
-  it('adds the action to error toasts only and keeps them up long enough to click', async () => {
+  it('adds the action to failure toasts only and keeps them up long enough to click', async () => {
     const notification = await loadNotification();
     const run = vi.fn();
     notification.setErrorAction({ label: 'Ask Yaffo', icon: 'assistant', run });
@@ -95,8 +95,11 @@ describe('notification error action', () => {
     notification.success('Saved', 100);
     const element = document.getElementById('app-notification');
     expect(element.querySelector('button')).toBeNull();
+    // A plain error (validation, "Name required") gets no action.
+    notification.error('Name required', 100);
+    expect(element.querySelector('button')).toBeNull();
 
-    notification.error('Could not scan', 100);
+    notification.failure('Could not scan', 100);
     const button = element.querySelector('button.message-action');
     expect(button.textContent).toBe('Ask Yaffo');
     expect(button.querySelector('.message-action-label').textContent).toBe('Ask Yaffo');
@@ -110,7 +113,7 @@ describe('notification error action', () => {
     expect(element.classList.contains('visible')).toBe(false);
 
     notification.setErrorAction(null);
-    notification.error('Again', 100);
+    notification.failure('Again', 100);
     expect(element.querySelector('button')).toBeNull();
   });
 });

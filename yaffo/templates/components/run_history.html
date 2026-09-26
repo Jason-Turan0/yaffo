@@ -1,5 +1,5 @@
 {# A compact list of past runs (Jobs): status, progress while running, a summary,
-   the time, and any error text. Import it `with context` (it reads assistant_ready).
+   the time, and any error text. Import it `with context` (it reads assistant_help).
    `help_page` is the page path "Ask Yaffo" attaches; `show_label` names
    what ran, for lists that mix kinds (Index Photos lists index and import runs). #}
 {% from "macros/local_datetime.html" import local_datetime %}
@@ -13,7 +13,7 @@
         <span class="run-history-summary">{{ run.summary }}</span>
         <span class="run-history-spacer"></span>
         {{ local_datetime(run.finished_at or run.started_at, "run-history-time") }}
-        {% if assistant_ready | default(false) and run.is_error %}
+        {% if assistant_help | default(false) and run.is_error %}
         <button type="button" class="run-history-help" data-icon="assistant" data-assistant-help
                 aria-label="{{ _("Ask Yaffo about this run") }}" data-tooltip="{{ _("Ask Yaffo") }}"
                 data-job-id="{{ run.job_id }}"

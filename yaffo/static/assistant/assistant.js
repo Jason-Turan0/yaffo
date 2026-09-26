@@ -758,7 +758,7 @@ assistant.init = (i18n, config) => {
         close();
     });
 
-    // Error toasts offer "Ask Yaffo" once the assistant can answer.
+    // Failure toasts (notification.failure) offer "Ask Yaffo" once the assistant can answer.
     if ((fab || openButton) && !document.body.hasAttribute('data-assistant-help-disabled')) {
         window.notification.setErrorAction?.({
             label: i18n.t('assistant:askAboutThis'),

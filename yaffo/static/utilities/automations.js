@@ -102,10 +102,10 @@ automations.initAutomationRunNow = (runUrl, config, defaultPath = null, i18n) =>
                 automationsWindow.notification.success(i18n.t('utilities:automations.run.started'));
             } else {
                 const data = await response.json().catch(() => ({}));
-                automationsWindow.notification.error(data.error || i18n.t('utilities:automations.run.startFailed'));
+                automationsWindow.notification.failure(data.error || i18n.t('utilities:automations.run.startFailed'));
             }
         } catch {
-            automationsWindow.notification.error(i18n.t('utilities:automations.run.startFailed'));
+            automationsWindow.notification.failure(i18n.t('utilities:automations.run.startFailed'));
         } finally {
             button.disabled = false;
         }
@@ -304,7 +304,7 @@ automations.initAutomationTest = (slug, config, defaultPath = null, i18n) => {
                 resultEl.classList.add('is-error');
             }
         } catch {
-            automationsWindow.notification.error(i18n.t('utilities:automations.test.runFailed'));
+            automationsWindow.notification.failure(i18n.t('utilities:automations.test.runFailed'));
         } finally {
             clicked.disabled = false;
             clicked.textContent = label;

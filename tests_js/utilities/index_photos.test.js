@@ -113,7 +113,7 @@ describe('initIndexPhotos runScan — record dispatch', () => {
     stubFetch(streamResponse(['{"type":"error","message":"disk gone"}\n']));
     const api = await init();
     await api.runScan();
-    expect(window.notification.error).toHaveBeenCalledTimes(1);
+    expect(window.notification.failure).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -151,7 +151,7 @@ describe('initIndexPhotos runScan — request failure', () => {
     stubFetch(streamResponse([], { ok: false }));
     const api = await init();
     await api.runScan();
-    expect(window.notification.error).toHaveBeenCalledTimes(1);
+    expect(window.notification.failure).toHaveBeenCalledTimes(1);
     expect(document.getElementById('scan-status').hidden).toBe(true);
   });
 });

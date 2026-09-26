@@ -169,10 +169,10 @@ window.PHOTO_ORGANIZER.VIEW_PHOTO.initPhotoTags = (photoId, initialTags, i18n, c
                 window.location.reload();
             } else {
                 const data = await response.json().catch(() => ({}));
-                window.notification.error(data.error || i18n.t('media:tags.updateFailed'));
+                window.notification.failure(data.error || i18n.t('media:tags.updateFailed'));
             }
         } catch (error) {
-            window.notification.error(i18n.t('media:tags.saveFailed'));
+            window.notification.failure(i18n.t('media:tags.saveFailed'));
             console.error(error);
         }
     };

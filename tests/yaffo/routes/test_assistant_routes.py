@@ -282,6 +282,30 @@ def test_job_help_is_shown_for_failed_or_error_cards(client, with_key, status, e
         assert "Ask Yaffo" in html
 
 
+def test_job_help_attaches_the_page_the_card_is_on(client, with_key):
+    db.session.add(Job(id="page-job", name="index_photos", status="RUNNING", error="boom",
+                       task_count=3, completed_count=1, error_count=1, cancelled_count=0, message="Indexing"))
+    db.session.commit()
+    # Refreshed or cancelled, the card keeps the page it was shown on...
+    body = client.get("/jobs/page-job/fragment?page=/utilities/index-photos").get_data(as_text=True)
+    assert 'data-page="/utilities/index-photos"' in body
+    assert "fragment?has_results=0&amp;page=/utilities/index-photos" in body
+    assert '"page": "/utilities/index-photos"' in body
+    # ...and only takes an app path, never a full URL or anything else.
+    for bad in ("//evil.example/x", "https://evil.example", "no-slash", "/with space"):
+        body = client.get("/jobs/page-job/fragment", query_string={"page": bad}).get_data(as_text=True)
+        assert 'data-page="/jobs/page-job/fragment"' in body
+    cancelled = client.post("/jobs/page-job/cancel", data={"page": "/utilities/index-photos"}).get_data(as_text=True)
+    assert 'data-page="/utilities/index-photos"' in cancelled
+
+
+def test_one_flag_switches_contextual_help_off_on_settings(client, with_key):
+    settings = client.get("/settings").get_data(as_text=True)
+    assert "<body data-assistant-help-disabled>" in settings
+    page = client.get("/utilities/index-photos").get_data(as_text=True)
+    assert "data-assistant-help-disabled" not in page
+
+
 def test_job_help_is_shown_for_partial_errors(client, with_key):
     db.session.add(Job(id="partial-error", name="index_photos", status="COMPLETED",
                        task_count=3, completed_count=2, error_count=1, cancelled_count=0, message="Finished"))

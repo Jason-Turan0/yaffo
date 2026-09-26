@@ -68,3 +68,36 @@ def test_user_message_carries_attached_context():
     assert "<error_code>filesystem_scan_failed</error_code>" in message
     assert "ignored" not in message
 
+
+
+def _events(*rows):
+    """(seq, kind, content, payload) rows as stored events."""
+    import json
+    from types import SimpleNamespace
+    return [SimpleNamespace(seq=seq, kind=kind, content=content,
+                            payload=json.dumps(payload) if payload is not None else None)
+            for seq, kind, content, payload in rows]
+
+
+def test_follow_up_turns_keep_the_earlier_context_redacted_and_escaped():
+    from yaffo.site_agents.assistant.history import transcript_turns
+    context = {"page": "/utilities/index-photos", "job_id": "job-7",
+               "error": "Could not read /Volumes/Photos/<a>.jpg"}
+    events = _events(
+        (0, "user", "What went wrong here?", {"context": context}),
+        (1, "assistant", "Seven files failed.", None),
+        (2, "user", "Can you retry them?", None),
+    )
+    redact = lambda text: text.replace("/Volumes/Photos", "[media folder m1]")
+    turns = transcript_turns(events, frozenset(), redact)
+
+    first = turns[0][1]
+    assert first.startswith("What went wrong here?\n\n<historical_context>")
+    assert "page: /utilities/index-photos; job_id: job-7; error: Could not read [media folder m1]/&lt;a&gt;.jpg" in first
+    assert turns[2] == ("user", "Can you retry them?")
+
+
+def test_the_latest_messages_context_is_not_repeated_in_history():
+    from yaffo.site_agents.assistant.history import transcript_turns
+    events = _events((0, "user", "Why did this fail?", {"context": {"job_id": "job-7"}}))
+    assert transcript_turns(events, frozenset(), str) == [("user", "Why did this fail?")]

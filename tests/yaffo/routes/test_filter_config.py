@@ -108,6 +108,8 @@ def test_each_control_template_renders_the_parameters_it_owns():
     ("tag-name=event&tag-value=x&year=2020", 2),
     ("proximity-lat=1&proximity-lon=2&proximity-distance=5&proximity-location=X&unnamed=1", 1),
     ("page=2&view=grid&shape=round", 0),  # page state, and an invalid value
+    ("view=grid&favorite=true&person=1&person=2&page=1", 2),  # an on/off filter spelled true
+    ("favorite=0", 0),  # off
 ])
 def test_badge_counts_filter_controls(query, expected):
     assert fc.applied_count(MultiDict(parse_qsl(query))) == expected

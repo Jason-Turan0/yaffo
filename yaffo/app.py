@@ -41,7 +41,7 @@ def create_app(db_path: Path = DB_PATH, config: Optional[dict] = None,
     app.logger.handlers = logger.handlers
     app.logger.setLevel(logger.level)
 
-    logger.info("Starting Photo Organizer application")
+    logger.info("Starting YAFFO")
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ECHO"] = os.environ.get("SQLALCHEMY_ECHO", "").lower() == "true"

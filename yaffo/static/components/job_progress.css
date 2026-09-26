@@ -16,18 +16,6 @@
     margin-bottom: 10px;
 }
 
-.job-status {
-    display: inline-block;
-    padding: 4px 12px;
-    background: var(--color-accent);
-    color: var(--color-on-accent);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-sm);
-    text-transform: uppercase;
-    font-weight: 500;
-    letter-spacing: 0.5px;
-}
-
 .job-actions {
     display: flex;
     flex-wrap: wrap;

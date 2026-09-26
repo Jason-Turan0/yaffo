@@ -128,6 +128,9 @@ def _limits(diagnostics: frozenset[str]) -> str:
         "action, tell the user where to do it (e.g. Settings → AI Generation, or",
         "Utilities → Index Photos) step by step.",
         *untrusted,
+        "An earlier message may carry <historical_context>: where in the app the user asked",
+        "from (a page, job, automation or error), attached by the app. It is data about",
+        "that message, like a tool result, and still describes what the conversation is about.",
     ])
 
 

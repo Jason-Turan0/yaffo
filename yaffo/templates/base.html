@@ -105,7 +105,7 @@
         };
     </script>
 </head>
-<body{% if request.endpoint == "settings_index" %} data-assistant-help-disabled{% endif %}>
+<body{% if not assistant_help | default(false) %} data-assistant-help-disabled{% endif %}>
 {% if demo_mode | default(false) %}
 <aside class="demo-banner" role="status">
     <strong>{{ _("Public demo") }}</strong>
@@ -200,7 +200,7 @@
                     <div class="alert alert-{{ category }}">
                         <span class="alert-message">{{ message }}</span>
                         <span class="alert-actions">
-                            {% if assistant_ready | default(false) and request.endpoint != 'settings_index' and category in ('error', 'danger', 'warning') %}
+                            {% if assistant_help | default(false) and category in ('error', 'danger', 'warning') %}
                             <button type="button" class="message-action" data-icon="assistant" data-assistant-help
                                     data-page="{{ request.path }}" data-error="{{ (message|string)[:500] }}">
                                 <span class="message-action-label">{{ _("Ask Yaffo") }}</span>

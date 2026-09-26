@@ -13,6 +13,7 @@ from flask_babel import get_locale
 
 from yaffo.common import is_browser_playable_video
 from yaffo.i18n import DEFAULT_LOCALE
+from yaffo.routes.utilities.run_history import run_status
 
 
 class DateFormat(Enum):
@@ -169,6 +170,7 @@ def applied_filter_count(args) -> int:
 
 
 def init_template_filters(app) -> None:
+    app.add_template_global(run_status, "run_status")
     app.add_template_filter(format_duration, "format_duration")
     app.add_template_filter(format_integer, "format_integer")
     app.add_template_filter(format_decimal, "format_decimal")

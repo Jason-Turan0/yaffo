@@ -52,12 +52,13 @@ type NotificationAction = {
 
 type NotificationApi = {
     setErrorAction?(action: NotificationAction | null): void;
-    show(message: string, type?: NotificationType, duration?: number): void;
+    show(message: string, type?: NotificationType, duration?: number, offerAction?: boolean): void;
     hide(): void;
     flash(message: string, type?: NotificationType, duration?: number): void;
     showPendingFlash(): void;
     success(message: string, duration?: number): void;
     error(message: string, duration?: number): void;
+    failure(message: string, duration?: number): void;
     warning(message: string, duration?: number): void;
     info(message: string, duration?: number): void;
 };

@@ -33,6 +33,9 @@ from yaffo.site_agents.assistant.schemas import (
 from yaffo.utils.context import context
 from yaffo.utils.open_in_os import open_in_os
 
+# Pages without contextual "Ask Yaffo" buttons.
+HELP_EXCLUDED_ENDPOINTS = frozenset({"settings_index"})
+
 # Longer messages are refused rather than sent; this is a help chat, not a paste bin.
 MESSAGE_MAX_LENGTH = 4000
 # What a contextual "Ask Yaffo" button may attach, and how long each value may be. Anything
@@ -136,10 +139,15 @@ def init_assistant_routes(app: Flask):
     @app.context_processor
     def inject_assistant():
         available = assistant_available()
+        ready = available and assistant_settings.api_key() is not None
         return {
             "assistant_available": available,
             # The floating button only shows once the assistant can actually answer.
-            "assistant_ready": available and assistant_settings.api_key() is not None,
+            "assistant_ready": ready,
+            # Contextual "Ask Yaffo" buttons (flashes, failure toasts, job cards, run
+            # history, the error page): wherever the assistant is ready, except
+            # Settings, which has no contextual help.
+            "assistant_help": ready and request.endpoint not in HELP_EXCLUDED_ENDPOINTS,
             "assistant_notice": assistant_notice().to_dict() if available else None,
         }
 
