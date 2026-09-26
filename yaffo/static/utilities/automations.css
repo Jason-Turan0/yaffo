@@ -322,6 +322,21 @@
     border-bottom: none;
 }
 
+.automation-run-help {
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.automation-run-help[data-icon]::before {
+    display: block;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .automation-run-help {
+        min-width: 44px;
+    }
+}
+
 .automation-run-progress {
     font-variant-numeric: tabular-nums;
     font-weight: 600;

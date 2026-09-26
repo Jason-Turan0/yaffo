@@ -12,18 +12,18 @@
         <ul class="automation-run-list">
             {% for run in recent_runs %}
             <li class="automation-run-row{% if run.is_error %} is-error{% endif %}">
+                {% if assistant_ready | default(false) and run.is_error %}
+                <button type="button" class="help-tip automation-run-help" data-icon="warning" data-assistant-help
+                        aria-label="{{ _("Help me with this") }}" data-tooltip="{{ _("Help me with this") }}"
+                        data-job-id="{{ run.job_id }}" data-automation="{{ selected.slug }}"
+                        data-page="{{ selected.name }}" data-error="{{ (run.error or run.summary)[:500] }}">
+                </button>
+                {% endif %}
                 <span class="chip {{ run.status_chip }}">{{ run.status_label }}</span>
                 {% if not run.is_finished %}<span class="automation-run-progress">{{ (run.progress / 100) | format_percent }}</span>{% endif %}
                 <span class="automation-run-summary">{{ run.summary }}</span>
                 <span class="automation-run-spacer"></span>
                 {{ local_datetime(run.finished_at or run.started_at, "automation-run-time") }}
-                {% if assistant_ready | default(false) and run.is_error %}
-                <button type="button" class="btn btn-secondary btn-sm" data-assistant-help
-                        data-job-id="{{ run.job_id }}" data-automation="{{ selected.slug }}"
-                        data-page="{{ selected.name }}" data-error="{{ (run.error or run.summary)[:500] }}">
-                    {{ _("Help me with this") }}
-                </button>
-                {% endif %}
                 {% if run.error %}<p class="automation-run-error">{{ run.error }}</p>{% endif %}
             </li>
             {% endfor %}
