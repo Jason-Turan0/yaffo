@@ -49,6 +49,7 @@ from yaffo.db.models import (
     PLAN_STATUS_UNDONE,
     Album,
     AssistantChangePlan,
+    Job,
     Person,
     PersonFace,
 )
@@ -208,6 +209,18 @@ def step_facts(call: HostCall, session: Session, mutations: list[HostCall]) -> t
         return len(set(_list_arg(args, 1))), facts
     if name == "delete_album":
         facts["album"] = _album_name(session, args[0] if args else None, mutations)
+        return 1, facts
+    if name == "set_album_cover":
+        facts["album"] = _album_name(session, args[0] if args else None, mutations)
+        facts["cleared"] = len(args) > 1 and args[1] is None
+        return 1, facts
+    if name == "reorder_album":
+        facts["album"] = _album_name(session, args[0] if args else None, mutations)
+        return len(set(_list_arg(args, 1))), facts
+    if name in {"ignore_faces", "unignore_faces"}:
+        return len(set(_list_arg(args, 0))), facts
+    if name == "cancel_job":
+        facts["job"] = maintenance.job_label(session.get(Job, args[0])) if args and isinstance(args[0], str) else None
         return 1, facts
     if name in {"set_favorites", "set_media_dates", "set_location_names"}:
         field_name = {"set_favorites": "favorite", "set_media_dates": "date",

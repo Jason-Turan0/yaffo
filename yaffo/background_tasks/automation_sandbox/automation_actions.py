@@ -327,6 +327,42 @@ def summarize_delete_album(args: list[Any], session: Session) -> str:
     return f"Delete album '{album.name}'" if album else "Delete an album"
 
 
+def set_album_cover(
+    session: Session, album_id: int, media_item_id: Optional[int], expected: Optional[dict] = None,
+) -> None:
+    """Pin a member photo as the album's cover, or None to unpin it (the cover
+    falls back to the first member). `expected` ({cover}) skips the change when the
+    cover was changed since (undo after a later edit); an undo whose old cover has
+    left the album unpins instead."""
+    if expected is not None:
+        if edits.album_cover(session, album_id) != expected.get("cover"):
+            return
+        if media_item_id is not None and not edits.album_members(session, album_id, [media_item_id]):
+            media_item_id = None
+    album_repository.set_cover(session, album_id, media_item_id)
+
+
+def summarize_set_album_cover(args: list[Any], session: Session) -> str:
+    return "Reset an album's cover" if len(args) > 1 and args[1] is None else "Set an album's cover"
+
+
+def reorder_album(
+    session: Session, album_id: int, media_item_ids: list[int], expected: Optional[dict] = None,
+) -> None:
+    """Put an album's photos in this order. Listed members come first, in the given
+    order; members not listed follow in their current order. `expected` ({order})
+    skips the change when the order was changed since (undo after a later edit)."""
+    if album_repository.get_album(session, album_id) is None:
+        raise ValueError(f"no album with id {album_id}")
+    if expected is not None and edits.album_order(session, album_id) != expected.get("order"):
+        return
+    album_repository.reorder(session, album_id, edits.full_album_order(session, album_id, media_item_ids))
+
+
+def summarize_reorder_album(args: list[Any], session: Session) -> str:
+    return f"Reorder {len(args[1]) if len(args) > 1 else 0} photo(s) in an album"
+
+
 # These batch forms accept an expected value for compare-and-restore undo.
 def untag_media_items(session: Session, tags: list[dict]) -> None:
     _emit_media_modified(edits.remove_tags(session, tags))
@@ -334,6 +370,17 @@ def untag_media_items(session: Session, tags: list[dict]) -> None:
 
 def unassign_faces(session: Session, assignments: list[dict]) -> None:
     _emit_media_modified(edits.unassign_faces(session, assignments))
+
+
+def ignore_faces(session: Session, face_ids: list[int]) -> None:
+    """Mark unassigned faces as ignored (the Faces page's Ignore). Faces that are
+    assigned, already ignored, or mid-assignment are left alone."""
+    edits.set_face_status(session, face_ids, *edits.IGNORE)
+
+
+def unignore_faces(session: Session, face_ids: list[int]) -> None:
+    """Return ignored faces to Unassigned Faces. Other faces are left alone."""
+    edits.set_face_status(session, face_ids, *edits.UNIGNORE)
 
 
 def set_favorites(session: Session, values: list[dict]) -> None:
@@ -354,6 +401,14 @@ def summarize_untag_media_items(args: list[Any], session: Session) -> str:
 
 def summarize_unassign_faces(args: list[Any], session: Session) -> str:
     return f"Unassign {len(args[0])} face(s)"
+
+
+def summarize_ignore_faces(args: list[Any], session: Session) -> str:
+    return f"Ignore {len(args[0])} face(s)"
+
+
+def summarize_unignore_faces(args: list[Any], session: Session) -> str:
+    return f"Stop ignoring {len(args[0])} face(s)"
 
 
 def summarize_set_favorites(args: list[Any], session: Session) -> str:

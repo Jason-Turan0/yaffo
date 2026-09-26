@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from yaffo.db.models import (
     Album, AlbumItem, Face, MediaItem, PersonFace, Tag,
-    FACE_STATUS_ASSIGNED, FACE_STATUS_UNASSIGNED,
+    FACE_STATUS_ASSIGNED, FACE_STATUS_IGNORED, FACE_STATUS_UNASSIGNED,
 )
 
 
@@ -70,6 +70,31 @@ def unassign_faces(session: Session, entries: list[dict]) -> list[int]:
         changed.append(face.media_item_id)
     session.commit()
     return list(dict.fromkeys(changed))
+
+
+def faces_in_status(session: Session, face_ids: list[int], status: str) -> list[int]:
+    """The listed faces that are in `status` and linked to no person, in order.
+    Only these can move between Unassigned and Ignored (the Faces page's rule)."""
+    ids = list(dict.fromkeys(face_ids))
+    if any(type(face_id) is not int or face_id < 1 for face_id in ids):
+        raise ValueError("Each face id must be a positive integer")
+    found = {face_id for (face_id,) in session.query(Face.id)
+             .outerjoin(PersonFace, PersonFace.face_id == Face.id)
+             .filter(Face.id.in_(ids), Face.status == status, PersonFace.face_id.is_(None))}
+    return [face_id for face_id in ids if face_id in found]
+
+
+def set_face_status(session: Session, face_ids: list[int], current: str, status: str) -> list[int]:
+    """Move unlinked faces from `current` to `status`; others are left alone."""
+    changed = faces_in_status(session, face_ids, current)
+    if changed:
+        session.query(Face).filter(Face.id.in_(changed)).update({Face.status: status}, synchronize_session=False)
+    session.commit()
+    return changed
+
+
+IGNORE = (FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED)
+UNIGNORE = (FACE_STATUS_IGNORED, FACE_STATUS_UNASSIGNED)
 
 
 def validated_values(entries: list[dict], field: str) -> list[dict]:
@@ -160,3 +185,25 @@ def new_album_positions(session: Session, album_id: int, ids: list[int]) -> dict
     added = [item_id for item_id in dict.fromkeys(ids) if item_id in known and item_id not in members]
     start = max(members.values(), default=-1) + 1
     return {item_id: start + offset for offset, item_id in enumerate(added)}
+
+
+def album_order(session: Session, album_id: int) -> list[int]:
+    """The album's member ids in display order (the album page's order)."""
+    return [item_id for (item_id,) in session.query(AlbumItem.media_item_id)
+            .filter(AlbumItem.album_id == album_id)
+            .order_by(AlbumItem.position, AlbumItem.added_at, AlbumItem.media_item_id)]
+
+
+def full_album_order(session: Session, album_id: int, ids: list[int]) -> list[int]:
+    """Every member: the listed ones first, in the given order, then the rest in their
+    current order. Ids that aren't members are dropped."""
+    current = album_order(session, album_id)
+    members = set(current)
+    listed = [item_id for item_id in dict.fromkeys(ids) if item_id in members]
+    placed = set(listed)
+    return listed + [item_id for item_id in current if item_id not in placed]
+
+
+def album_cover(session: Session, album_id: int) -> Any:
+    album = session.get(Album, album_id)
+    return album.cover_media_item_id if album else None

@@ -21,8 +21,8 @@ from yaffo.background_tasks.automation_sandbox import automation_actions, mainte
 from yaffo.background_tasks.automation_sandbox.automation_host import host_api
 from yaffo.db import db
 from yaffo.db.models import (
-    FACE_STATUS_PROCESSING, FACE_STATUS_UNASSIGNED, PLAN_STATUS_UNDONE, ApplicationSettings, Automation, Face,
-    MediaItem, Person,
+    FACE_STATUS_PROCESSING, FACE_STATUS_UNASSIGNED, JOB_STATUS_RUNNING, PLAN_STATUS_UNDONE, ApplicationSettings,
+    Automation, Face, Job, MediaItem, Person,
 )
 from yaffo.db.repositories import assistant_repository
 from yaffo.site_agents import assistant
@@ -148,12 +148,16 @@ def test_no_assistant_host_function_can_reach_reverse_geocode():
 OFFLINE_CHANGES = """
 album = create_album("Trip")
 add_to_album(album, [1])
+set_album_cover(album, 1)
+reorder_album(album, [1])
 update_album(album, "Trip 2")
 remove_from_album(album, [1])
 tag_media_items([{"media_item_id": 1, "name": "beach"}])
 untag_media_items([{"media_item_id": 1, "name": "beach"}])
 assign_faces([{"face_id": 1, "person_id": 1}])
 unassign_faces([{"face_id": 1}])
+ignore_faces([1])
+unignore_faces([1])
 set_favorites([{"id": 1, "favorite": True}])
 set_media_dates([{"id": 1, "date": "2020-01-02T03:04:05"}])
 set_location_names([{"id": 1, "location_name": "Coast"}])
@@ -169,7 +173,8 @@ def test_approving_and_undoing_a_plan_runs_offline(session, offline, monkeypatch
     monkeypatch.setattr(maintenance_actions, "face_tasks_active", lambda: False)
     session.add_all([Face(id=1, media_item_id=1, status=FACE_STATUS_UNASSIGNED),
                      Face(id=2, media_item_id=1, status=FACE_STATUS_PROCESSING),
-                     Automation(slug="offline-test", name="Offline test", enabled=False)])
+                     Automation(slug="offline-test", name="Offline test", enabled=False),
+                     Job(id="offline-job", name="find_duplicates", status=JOB_STATUS_RUNNING)])
     session.commit()
     # Background work (retry, reindex, scan, sync) only queues a task here; the
     # tasks do local file work when they run.
@@ -189,8 +194,8 @@ def test_approving_and_undoing_a_plan_runs_offline(session, offline, monkeypatch
     assert plan.status == PLAN_STATUS_UNDONE and plan.error is None
 
     # The offline changes without an undo, approved on their own.
-    code = 'delete_album(create_album("Gone"))\nrepair_face_statuses()'
-    assert {"delete_album", "repair_face_statuses"} | reversible == offline_changes
+    code = 'delete_album(create_album("Gone"))\nrepair_face_statuses()\ncancel_job("offline-job")'
+    assert {"delete_album", "repair_face_statuses", "cancel_job"} | reversible == offline_changes
     result = scripts.call_tool(RUN_SCRIPT, {"code": code, "purpose": "Delete"})
     plans.approve(session, result.host_data["plan_id"], conversation.id)
 

@@ -314,6 +314,37 @@ HOST_API: tuple[HostFunction, ...] = (
     ),
     HostFunction(
         description=(
+            "Pin a photo that is in the album as its cover, or pass None to unpin it "
+            "(the cover falls back to the album's first photo)."
+        ),
+        example="set_album_cover(album_id, media_item_id)",
+        impl=actions.set_album_cover,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_set_album_cover",
+        undo=undo.set_album_cover,
+        precondition=undo.album_exists,
+        summarize=actions.summarize_set_album_cover,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
+            "Put an album's photos in this order. The listed photos come first, in the "
+            "given order; photos not listed follow in their current order. Read the "
+            "current order from album_items (position)."
+        ),
+        example='reorder_album(album_id, [r["id"] for r in sorted(rows, key=lambda r: r["date_taken"] or "")])',
+        impl=actions.reorder_album,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_reorder_album",
+        undo=undo.reorder_album,
+        precondition=undo.album_exists,
+        summarize=actions.summarize_reorder_album,
+        mutating=True,
+    ),
+    HostFunction(
+        description=(
             "How similar each face in the photo is to a known person, by face "
             "embeddings -- use it to decide whether to assign_faces."
         ),
@@ -353,6 +384,31 @@ HOST_API: tuple[HostFunction, ...] = (
         profiles=frozenset({"automation", "assistant"}),
         setting_key="assistant_action_unassign_faces",
         undo=undo.unassign_faces,
+    ),
+    HostFunction(
+        impl=actions.ignore_faces,
+        description=(
+            "Ignore unassigned faces (e.g. strangers in the background), so they leave "
+            "Unassigned Faces. Assigned faces are left alone; unassign_faces them first."
+        ),
+        example='ignore_faces([f["id"] for f in faces if f["status"] == "UNASSIGNED"])',
+        summarize=actions.summarize_ignore_faces,
+        mutating=True,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_ignore_faces",
+        undo=undo.ignore_faces,
+    ),
+    HostFunction(
+        impl=actions.unignore_faces,
+        description="Return ignored faces to Unassigned Faces. Other faces are left alone.",
+        example="unignore_faces([12, 13])",
+        summarize=actions.summarize_unignore_faces,
+        mutating=True,
+        profiles=frozenset({"automation", "assistant"}),
+        risk="low",
+        setting_key="assistant_action_unignore_faces",
+        undo=undo.unignore_faces,
     ),
     HostFunction(
         impl=actions.set_favorites,
@@ -431,6 +487,21 @@ HOST_API: tuple[HostFunction, ...] = (
         mutating=True,
     ),
     # ---- maintenance (assistant only) ----
+    HostFunction(
+        description=(
+            "Cancel a pending or running background job by its id (recent_jobs lists them), "
+            "as its Cancel button does. Work already done stays done; it can't be resumed, "
+            "only started again."
+        ),
+        example='cancel_job("3f2c...")',
+        impl=maintenance.cancel_job,
+        profiles=frozenset({"assistant"}),
+        risk="medium",
+        setting_key="assistant_action_cancel_job",
+        precondition=maintenance.job_active,
+        summarize=maintenance.summarize_cancel_job,
+        mutating=True,
+    ),
     HostFunction(
         description=(
             "Turn an automation on or off by its slug (settings_summary lists every automation). "

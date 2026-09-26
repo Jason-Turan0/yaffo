@@ -38,7 +38,7 @@ const plan = (overrides = {}) => ({
 // Keys plus the values the card interpolates, so wording choices are visible.
 const interpolate = (key, options = {}) =>
   [key, options.names, options.album, options.name, options.automation, options.scope,
-    options.formattedCount, options.error]
+    options.job, options.formattedCount, options.error]
     .filter((value) => value !== undefined && value !== '')
     .join(' ');
 
@@ -78,6 +78,31 @@ describe('plan card', () => {
     ]);
     expect(card.querySelector('ol')).not.toBeNull();
     expect(card.querySelector('.assistant-plan-facts').textContent).toBe('assistant:plan.reversible');
+  });
+
+  it('words album covers, album order, ignored faces and cancelled jobs', async () => {
+    const { card } = await render(plan({
+      steps: [
+        step({ name: 'set_album_cover', count: 1, facts: { album: 'Trip', cleared: false } }),
+        step({ seq: 1, name: 'set_album_cover', count: 1, facts: { album: 'Trip', cleared: true } }),
+        step({ seq: 2, name: 'reorder_album', count: 3, facts: { album: 'Trip' } }),
+        step({ seq: 3, name: 'ignore_faces', count: 5, facts: {} }),
+        step({ seq: 4, name: 'unignore_faces', count: 2, facts: {} }),
+        step({ seq: 5, name: 'cancel_job', count: 1, facts: { job: 'File Sync' } }),
+        step({ seq: 6, name: 'cancel_job', summary: 'Cancel a job', count: 1, facts: { job: null } }),
+      ],
+    }));
+
+    const lines = [...card.querySelectorAll('.assistant-plan-step')].map((li) => li.textContent);
+    expect(lines).toEqual([
+      'assistant:plan.steps.set_album_cover Trip 1',
+      'assistant:plan.steps.set_album_cover_clear Trip 1',
+      'assistant:plan.steps.reorder_album Trip 3',
+      'assistant:plan.steps.ignore_faces 5',
+      'assistant:plan.steps.unignore_faces 2',
+      'assistant:plan.steps.cancel_job File Sync 1',
+      'Cancel a job',
+    ]);
   });
 
   it('approves and declines with one click when no confirmation is needed', async () => {

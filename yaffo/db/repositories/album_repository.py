@@ -68,11 +68,12 @@ def delete_album(session: Session, album_id: int) -> bool:
     return True
 
 
-def set_cover(session: Session, album_id: int, media_item_id: int) -> Album:
-    """Pin the album's cover. The item must be a member — a cover pointing outside
-    the album would show a photo the album does not contain."""
+def set_cover(session: Session, album_id: int, media_item_id: Optional[int]) -> Album:
+    """Pin the album's cover, or unpin it with None (the cover falls back to the
+    first member). The item must be a member — a cover pointing outside the album
+    would show a photo the album does not contain."""
     album = _require_album(session, album_id)
-    if not _is_member(session, album_id, media_item_id):
+    if media_item_id is not None and not _is_member(session, album_id, media_item_id):
         raise ValueError("the cover must be a member of the album")
     album.cover_media_item_id = media_item_id
     session.commit()

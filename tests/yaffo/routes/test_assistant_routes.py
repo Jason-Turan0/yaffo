@@ -511,7 +511,7 @@ def test_settings_groups_the_changes_with_counts_and_undo_tags(client):
     assert section.count("data-assistant-action-group") == 6
     assert "Files on disk" in section and "0 of 3 on" in section  # file changes start off
     assert "3 of 3 on" in section  # tags and favorites start on
-    assert section.count("t be undone</span>") == section.count("chip-warning") == 9
+    assert section.count("t be undone</span>") == section.count("chip-warning") == 10
     files = section[section.index("Files on disk"):section.index("Library upkeep")]
     assert files.count("chip-warning") == 3
     assert 'id="assistant-diag-metadata"' in section
@@ -525,5 +525,5 @@ def test_settings_labels_are_short_with_explanations_in_info_tips(app, client):
     assert not [label for label in labels if "(" in label]
 
     section = _settings_section(client)
-    assert section.count('class="help-tip"') == len(tips) + 1 == 9  # + the confirm-count threshold
+    assert section.count('class="help-tip"') == len(tips) + 1 == 12  # + the confirm-count threshold
     assert "Delete albums\n" in section and "The photos in the album stay in your library." in section

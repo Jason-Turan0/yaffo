@@ -58,10 +58,12 @@ const stepText = (i18n, step) => {
         if (names.length) values.names = i18n.list(names);
         else if (step.name === 'assign_faces') key = 'assign_faces_noNames';
     }
-    if (['create_album', 'update_album', 'add_to_album', 'remove_from_album', 'delete_album'].includes(step.name)) {
+    if (['create_album', 'update_album', 'add_to_album', 'remove_from_album', 'delete_album',
+        'set_album_cover', 'reorder_album'].includes(step.name)) {
         if (!facts.album) return step.summary;
         values.album = facts.album;
         values.name = facts.name || '';
+        if (step.name === 'set_album_cover' && facts.cleared) key = 'set_album_cover_clear';
     }
     if (['create_person', 'rename_person', 'merge_people', 'delete_person'].includes(step.name)) {
         if (!facts.person || (step.name === 'merge_people' && !facts.target)) return step.summary;
@@ -80,6 +82,10 @@ const stepText = (i18n, step) => {
         if (!facts.automation) return step.summary;
         values.automation = facts.automation;
         key = facts.value ? 'set_automation_enabled_on' : 'set_automation_enabled_off';
+    }
+    if (step.name === 'cancel_job') {
+        if (!facts.job) return step.summary;
+        values.job = facts.job;
     }
     if (step.name === 'run_automation') {
         if (!facts.automation) return step.summary;

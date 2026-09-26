@@ -32,6 +32,16 @@ def unassign_faces(args: list[Any], session: Session) -> list[HostCall]:
     return _batch("assign_faces", edits.face_entries(session, args[0], assigned=True))
 
 
+def ignore_faces(args: list[Any], session: Session) -> list[HostCall]:
+    changed = edits.faces_in_status(session, args[0], edits.IGNORE[0])
+    return [HostCall("unignore_faces", [changed])] if changed else []
+
+
+def unignore_faces(args: list[Any], session: Session) -> list[HostCall]:
+    changed = edits.faces_in_status(session, args[0], edits.UNIGNORE[0])
+    return [HostCall("ignore_faces", [changed])] if changed else []
+
+
 def set_favorites(args: list[Any], session: Session) -> list[HostCall]:
     return _batch("set_favorites", edits.previous_values(session, args[0], "favorite"))
 
@@ -81,6 +91,21 @@ def remove_from_album(args: list[Any], session: Session) -> list[HostCall]:
     album = album_repository.get_album(session, args[0])
     cover = album.cover_media_item_id if album and album.cover_media_item_id in ids else None
     return [HostCall("add_to_album", [args[0], ids, [existing[item] for item in ids], cover])] if ids else []
+
+
+def set_album_cover(args: list[Any], session: Session) -> list[HostCall]:
+    previous = edits.album_cover(session, args[0])
+    if previous == args[1]:
+        return []
+    return [HostCall("set_album_cover", [args[0], previous, {"cover": args[1]}])]
+
+
+def reorder_album(args: list[Any], session: Session) -> list[HostCall]:
+    previous = edits.album_order(session, args[0])
+    new = edits.full_album_order(session, args[0], args[1])
+    if previous == new:
+        return []
+    return [HostCall("reorder_album", [args[0], previous, {"order": new}])]
 
 
 def resolve_undo_result(calls: list[HostCall], result: Any) -> list[HostCall]:

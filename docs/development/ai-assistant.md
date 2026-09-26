@@ -3,10 +3,10 @@
 Status: **phases 1–4 implemented** (2026-09-26). The assistant answers from the
 docs, diagnoses problems, and proposes library changes through reviewed plans.
 Approval replays frozen calls; executed reversible plans can be undone. Phase 5
-polish is in progress. The phase 3 section below describes that phase as shipped
-before change plans were added; the later change-plan sections describe current
-behavior. Incremental event delivery and diagnostics bundle export remain future
-work.
+(additional actions) is proposed; phase 6 polish is in progress. The phase 3
+section below describes that phase as shipped before change plans were added; the
+later change-plan sections describe current behavior. Incremental event delivery
+remains future work.
 
 ## Goal
 
@@ -893,12 +893,10 @@ because the drift check above keeps a late undo safe.
 | Host function | Executes via | Risk |
 |---|---|---|
 | `reindex_media(ids)` | `index_jobs.reindex_media_items` | medium (the card warns that faces and person links on those photos are rebuilt) |
-| `retry_job(job_id)` | Re-enqueue the job's files / task | low (only failed jobs of retryable kinds) |
 | `run_automation(slug, scope=None)` | Queues the existing automation for all media by default, or selected media-directory IDs, indexed file IDs, or folder paths validated inside configured media directories; its worker records the run Job. File sync cannot use individual files as its scope. | high (the automation may change the library or files; the card shows the scope and links to its Run history) |
 | `run_sync()` | `perform_sync` | medium. Refused when the scan would remove more than a safe share of the library (the mass-removal guard discussed for unmounted drives) |
 | `set_automation_enabled(slug, enabled)` | Automation repository | low (toggles only; never edits automation code) |
 | `repair_face_statuses()` | The same SQL as migrations 009/010, as a function | medium (the card shows the counts it will change) |
-| `export_diagnostics_bundle()` | New: zip of redacted logs + health report to a user-chosen folder | low (local only; nothing is uploaded) |
 
 #### Never offered
 
@@ -914,6 +912,134 @@ if a host function in that profile matches this list:
 - arbitrary filesystem paths outside configured media directories, raw SQL, or code
 - anything that goes online (e.g. looking up place names with OpenStreetMap; see
   *Network access*)
+
+## Additional actions (phase 5)
+
+Status: **proposed**. Phases 1–4 expose most library edits, but several things
+Yaffo can already do through its pages, routes and background tasks are still
+out of the assistant's reach. Each action below wraps existing repository, route
+or task code rather than adding a new capability. They follow the same rules as
+the rest of the plan:
+
+- Mutating functions are change-plan steps with a `risk`, a `summarize_*`, and an
+  `undo` where the previous state can be read back.
+- Shared functions go in the `automation` profile too, unless noted otherwise.
+- Nothing here crosses the *Never offered* list. Sharing stays read-only,
+  builders get drafts but never published code, and nothing goes online.
+
+### Faces and people
+
+| Action | Kind | Builds on | Risk / undo |
+|---|---|---|---|
+| `ignore_faces(face_ids)` / `unignore_faces(face_ids)` | host function | The Faces page's ignore action and the `IGNORED` face status | low; undo restores each face's previous status |
+| `suggest_face_clusters(threshold, limit)` | read host function | The similarity grouping in `routes/faces.py` | read-only |
+| `find_similar_faces(person_id, threshold, limit)` | read host function | `face_similarity` / `match_people` scoring, inverted: unassigned faces scored against one person | read-only |
+| `set_person_birthdate(person_id, date)` | host function | `Person.birthdate` | low; undo restores the previous value |
+
+Use cases: "ignore the tiny background faces from the concert photos"; "group my
+unassigned faces and name the ones that look like Mom" (clusters, then
+`create_person` + `assign_faces` in one plan); "find more photos of Sam".
+
+### Albums
+
+| Action | Kind | Builds on | Risk / undo |
+|---|---|---|---|
+| `set_album_cover(album_id, media_item_id)` | host function | `album_repository` and `/albums/<id>/cover` | low; undo restores the previous cover |
+| `reorder_album(album_id, media_item_ids)` | host function | `album_repository` and `/albums/<id>/reorder` | low; undo restores the previous order |
+
+Use case: "sort the Yellowstone album by date and make the Old Faithful shot the
+cover."
+
+### Duplicates
+
+| Action | Kind | Builds on | Risk / undo |
+|---|---|---|---|
+| `duplicate_groups(job_id, limit)` | read host function | The `find_duplicates` Job's `JobResult`, as the results page reads it | read-only |
+
+Starting a scan needs no new function. `duplicate_scan` is a system automation, and
+its handler honors the run's selected media ids, so
+`run_automation("duplicate_scan", scope)` scans any `resolve_run_scope` scope. The
+scan's Job is tagged with the automation id, so `automation_runs("duplicate_scan")`
+or `recent_jobs` finds it, and `link_to_page` links to its results page. Scans run
+in the background, so the resolution plan comes in a later turn, after the Job
+completes.
+
+A resolution is an ordinary plan: the assistant chooses which copy to keep in each
+group (highest resolution, has faces or tags, in the canonical folder) and
+proposes `delete_media_items` (OS trash) or `move_media_items` into a quarantine
+folder. Both are already high risk. Permanent deletion stays unavailable, even
+though the duplicates page offers it.
+
+### Dates and locations
+
+| Action | Kind | Builds on | Risk / undo |
+|---|---|---|---|
+| `set_coordinates(assignments)` / `copy_location_from(source_id, media_item_ids)` | host function | The neighbor logic in `geotag_from_neighbors_automation.py` | low; undo restores each item's previous coordinates |
+| `suggest_location_names(media_item_ids, radius)` | read host function | The offline half of the Locations page's recommendations (one known name within the radius). Never reverse-geocodes | read-only |
+
+Use case: "these 40 camera photos were in Paris, like the phone shots from that
+day".
+
+### Labels
+
+| Action | Kind | Builds on | Risk / undo |
+|---|---|---|---|
+| `add_label_to_vocabulary(label)` | host function (assistant profile) | `/settings/labels` | low; undo removes the label if this step added it |
+| `remove_label(media_item_ids, label)` | host function | Only if labels can be overridden per photo | low |
+
+Use case: "add 'sailboat' and find my sailing photos" (add the label, then
+`run_automation("classify_labels", scope)` to re-run classification).
+
+### Jobs
+
+| Action | Kind | Builds on | Risk / undo |
+|---|---|---|---|
+| `cancel_job(job_id)` | host function (assistant profile) | `/jobs/<id>/cancel` | medium; no undo (rerun instead), and a low-risk change must be reversible |
+
+Use case: "that reindex is stuck, stop it". Pairs with `recent_jobs` and
+`worker_status`.
+
+### Preferences configuration
+
+| Action | Kind | Builds on | Risk / undo |
+|---|---|---|---|
+| `set_default_theme(slug)` | host function (assistant profile) | `/themes/<slug>/default` | low; undo restores the previous default |
+| `set_locale`, `set_distance_unit`, `set_default_filters` | host functions (assistant profile) | The existing Settings routes | low; undo restores the previous value |
+
+### Diagnostics
+
+| Tool | Returns | Builds on |
+|---|---|---|
+| `sharing_status()` | Hub connection, paired devices (names only), and stalled or failed transfer batches with their error text | Sharing routes and transfer batches. Read-only: it explains sharing, never performs it |
+| `automation_config(slug)` | A system automation's tunable settings (e.g. the neighbor radius) | `automation_config.py`. It could pair with a low-risk `set_automation_config` (config values, not code) |
+
+### Open item: per-handler risk for `run_automation`
+
+`run_automation` is `high` risk because an automation can change the library or
+files. Some system automations only read or rewrite derived data:
+`duplicate_scan` writes a Job, and `classify_labels` rewrites labels. For those,
+typed confirmation is more friction than the change warrants. Rather than wrapping
+each one in its own host function, the step's risk could come from the call:
+
+- An optional `risk_for(args, session)` on `HostFunction` overrides the static
+  `risk` when present. `record_plan` stores its result on the step, so the plan's
+  risk and the card's confirmation follow.
+- For `run_automation`, it maps the automation's handler to a risk: `low` for
+  `duplicate_scan`, `medium` for `classify_labels`, and the static `high` for
+  everything else, including all user-written automations.
+
+The per-function switch (`assistant_action_run_automation`) is unchanged, so it is
+still off by default. If read-only scans should be available while
+`run_automation` stays off, that needs a per-handler switch too; decide when
+implementing.
+
+### Suggested order
+
+1. Thin wrappers with clean undo: `ignore_faces` / `unignore_faces`,
+   `set_album_cover` / `reorder_album`, `cancel_job`.
+2. Per-handler risk for `run_automation`, then `duplicate_groups` and duplicate
+   resolution.
+3. The rest, as demand shows up.
 
 ## Filesystem access (`AssistantFS`)
 
@@ -1235,10 +1361,13 @@ approval, replay, and undo. The cases below remain the testing contract.
      switches.
    - Low-, medium-, and high-risk host functions use per-action switches; high-risk
      changes are off by default and need typed confirmation.
-5. **Polish — in progress.**
-   - Troubleshooting runbooks are in the guide. Diagnostics bundle export and
-     cost display from the call log remain future work. The conversation list
-     already exists.
+5. **Additional actions — proposed** (see *Additional actions (phase 5)*).
+   - New host functions, diagnostic tools and builder handoffs over capabilities
+     Yaffo already has: faces, albums, duplicates, dates and locations, labels,
+     metadata write-back, ingestion, jobs, themes and preferences.
+6. **Polish — in progress.**
+   - Troubleshooting runbooks are in the guide. Cost display from the call log
+     remains future work. The conversation list already exists.
    - Knowledgebase built on CI server and bundled with release
 
 ## Decisions
@@ -1265,5 +1394,5 @@ Settled during review (2026-09-25):
 
 - **Sending an image** to the model ("why wasn't this face detected?"). It would
   need per-message explicit consent and a vision-capable model.
-- **Remote issue filing.** For now the diagnostics bundle is saved locally and the
-  user decides where it goes.
+- **Remote issue filing.** The assistant never uploads diagnostics; the user
+  decides what to share and where.

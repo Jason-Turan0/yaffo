@@ -27,8 +27,14 @@ from yaffo.db.models import (
     MediaItem,
     Person,
     PersonFace,
+    Job,
     Tag,
+    FACE_STATUS_ASSIGNED,
+    FACE_STATUS_IGNORED,
     FACE_STATUS_UNASSIGNED,
+    JOB_STATUS_CANCELLED,
+    JOB_STATUS_COMPLETED,
+    JOB_STATUS_RUNNING,
 )
 from yaffo.db.repositories import album_repository
 from yaffo.db.repositories import assistant_repository as repo
@@ -608,3 +614,120 @@ def test_turning_an_automation_off_is_undone(session, conversation):
     assert session.query(Automation).one().enabled is False
     plans.undo(session, plan.id, conversation.id)
     assert session.query(Automation).one().enabled is True
+
+
+# ---- phase 5: faces, album covers and order, jobs --------------------------------------
+
+def test_ignore_faces_skips_assigned_faces_and_undo_restores_only_what_it_ignored(session, conversation):
+    session.add(Person(id=1, name="Chase"))
+    session.commit()
+    _faces(session, (1, None), (2, None), (3, 1))
+    actions.ignore_faces(session, [2])  # ignored before the plan
+    _, plan = _record(session, conversation, "ignore_faces([1, 2, 3])")
+    assert plans.load_steps(plan)[0].count == 3 and plan.risk == "low"
+
+    plans.approve(session, plan.id, conversation.id)
+    session.expire_all()
+    assert [session.get(Face, i).status for i in (1, 2, 3)] == [
+        FACE_STATUS_IGNORED, FACE_STATUS_IGNORED, FACE_STATUS_ASSIGNED]
+
+    plans.undo(session, plan.id, conversation.id)
+    session.expire_all()
+    assert [session.get(Face, i).status for i in (1, 2, 3)] == [
+        FACE_STATUS_UNASSIGNED, FACE_STATUS_IGNORED, FACE_STATUS_ASSIGNED]
+
+
+def test_unignore_faces_then_undo(session, conversation):
+    _faces(session, (1, None), (2, None))
+    actions.ignore_faces(session, [1, 2])
+    _, plan = _record(session, conversation, "unignore_faces([1])")
+    plans.approve(session, plan.id, conversation.id)
+    session.expire_all()
+    assert session.get(Face, 1).status == FACE_STATUS_UNASSIGNED
+    assert session.get(Face, 2).status == FACE_STATUS_IGNORED
+
+    plans.undo(session, plan.id, conversation.id)
+    session.expire_all()
+    assert session.get(Face, 1).status == FACE_STATUS_IGNORED
+
+
+def _album(session, name, ids):
+    album = album_repository.create_album(session, name, None)
+    album_repository.add_items(session, album.id, ids)
+    return album.id
+
+
+def test_cover_and_order_changes_are_undone(session, conversation):
+    album_id = _album(session, "Trip", [1, 2, 3, 4])
+    album_repository.set_cover(session, album_id, 2)
+    _, plan = _record(session, conversation, f"""
+set_album_cover({album_id}, 4)
+reorder_album({album_id}, [3, 1])
+""")
+    steps = plans.load_steps(plan)
+    assert steps[0].facts == {"album": "Trip", "cleared": False}
+    assert steps[1].facts == {"album": "Trip"} and steps[1].count == 2
+
+    plans.approve(session, plan.id, conversation.id)
+    session.expire_all()
+    assert session.get(Album, album_id).cover_media_item_id == 4
+    assert [i.id for i in album_repository.list_items(session, album_id)] == [3, 1, 2, 4]
+
+    plans.undo(session, plan.id, conversation.id)
+    session.expire_all()
+    assert session.get(Album, album_id).cover_media_item_id == 2
+    assert [i.id for i in album_repository.list_items(session, album_id)] == [1, 2, 3, 4]
+
+
+def test_cover_undo_leaves_a_later_cover_and_unpins_a_cover_that_left(session, conversation):
+    album_id = _album(session, "Trip", [1, 2, 3])
+    album_repository.set_cover(session, album_id, 1)
+    _, plan = _record(session, conversation, f"set_album_cover({album_id}, 3)")
+    plans.approve(session, plan.id, conversation.id)
+    album_repository.set_cover(session, album_id, 2)  # the user picked another since
+
+    plans.undo(session, plan.id, conversation.id)
+    session.expire_all()
+    assert session.get(Album, album_id).cover_media_item_id == 2
+
+    _, plan = _record(session, conversation, f"set_album_cover({album_id}, 3)")
+    plans.approve(session, plan.id, conversation.id)
+    album_repository.remove_items(session, album_id, [2])  # the old cover left the album
+    plans.undo(session, plan.id, conversation.id)
+    session.expire_all()
+    assert session.get(Album, album_id).cover_media_item_id is None
+
+
+def test_a_cover_outside_the_album_fails_the_step(session, conversation):
+    album_id = _album(session, "Trip", [1])
+    _, plan = _record(session, conversation, f"set_album_cover({album_id}, 5)")
+    plans.approve(session, plan.id, conversation.id)
+    session.expire_all()
+    assert plans.load_steps(plan)[0].state == plans.STEP_FAILED
+    assert session.get(Album, album_id).cover_media_item_id is None
+
+
+def test_order_undo_leaves_an_album_reordered_since(session, conversation):
+    album_id = _album(session, "Trip", [1, 2, 3])
+    _, plan = _record(session, conversation, f"reorder_album({album_id}, [3, 2, 1])")
+    plans.approve(session, plan.id, conversation.id)
+    album_repository.reorder(session, album_id, [2, 3, 1])
+
+    plans.undo(session, plan.id, conversation.id)
+    assert [i.id for i in album_repository.list_items(session, album_id)] == [2, 3, 1]
+
+
+def test_cancel_job_is_medium_risk_irreversible_and_refuses_finished_jobs(session, conversation):
+    session.add_all([Job(id="run", name="find_duplicates", status=JOB_STATUS_RUNNING),
+                     Job(id="done", name="find_duplicates", status=JOB_STATUS_COMPLETED)])
+    session.commit()
+    result, plan = _record(session, conversation, 'cancel_job("done")')
+    assert plan is None and "Job already finished" in result.model_text
+
+    _, plan = _record(session, conversation, 'cancel_job("run")')
+    step = plans.load_steps(plan)[0]
+    assert plan.risk == "medium" and step.facts == {"job": "find_duplicates"} and not step.reversible
+
+    plans.approve(session, plan.id, conversation.id)
+    session.expire_all()
+    assert session.get(Job, "run").status == JOB_STATUS_CANCELLED

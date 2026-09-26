@@ -31,8 +31,10 @@ from yaffo.background_tasks.config import task_queue
 from yaffo.background_tasks.events import EventContext
 from yaffo.background_tasks.schedule_scope import media_item_ids, selected_paths
 from yaffo.db.models import (
+    JOB_STATUS_CANCELLED,
     JOB_STATUS_COMPLETED,
     JOB_STATUS_PENDING,
+    JOB_STATUS_RUNNING,
     MEDIA_STATUS_INDEXED,
     Job,
     MediaItem,
@@ -244,6 +246,41 @@ def remove_missing_items(
 def summarize_remove_missing_items(args: list[Any], session: Session) -> str:
     ids = scan_missing_ids(session, args[0], args[1] if len(args) > 1 else None) if args else []
     return f"Remove {len(ids)} item(s) whose files are gone"
+
+
+# ---- cancel_job -------------------------------------------------------------------
+
+def job_label(job: Job | None) -> str | None:
+    """How a job is named to the user: its automation's name for a run, else the
+    job's own name."""
+    if job is None:
+        return None
+    return job.automation.display_name if job.automation is not None else job.name
+
+
+def job_active(args: list[Any], session: Session) -> str | None:
+    job = session.get(Job, args[0]) if args and isinstance(args[0], str) else None
+    if job is None:
+        return "Job no longer exists"
+    if job.status not in (JOB_STATUS_PENDING, JOB_STATUS_RUNNING):
+        return f"Job already finished ({job.status.lower()})"
+    return None
+
+
+def cancel_job(session: Session, job_id: str) -> None:
+    """Cancel a pending or running job, as its Cancel button does. Its tasks stop
+    at their next cancellation check; work already done stays done."""
+    job = session.get(Job, job_id)
+    if job is None:
+        raise ValueError(f"No job with id {job_id!r}")
+    if job.status in (JOB_STATUS_PENDING, JOB_STATUS_RUNNING):
+        job.status = JOB_STATUS_CANCELLED
+        session.commit()
+
+
+def summarize_cancel_job(args: list[Any], session: Session) -> str:
+    name = job_label(session.get(Job, args[0])) if args and isinstance(args[0], str) else None
+    return f"Cancel job '{name}'" if name else "Cancel a job"
 
 
 # ---- set_automation_enabled -----------------------------------------------------------

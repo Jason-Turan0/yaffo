@@ -146,6 +146,14 @@ def switch_help() -> dict[str, str]:
             "Reads a photo's capture date from its file when checking a date problem, never the image itself."),
         "delete_album": gettext("The photos in the album stay in your library."),
         "delete_person": gettext("Their faces become unassigned; the photos stay in your library."),
+        "ignore_faces": gettext(
+            "Hides unassigned faces you don't want to name, such as strangers in the background, "
+            "from Unassigned Faces. Assigned faces are never ignored."),
+        "unignore_faces": gettext(
+            "Puts ignored faces back in Unassigned Faces so they can be assigned to people. "
+            "Faces that aren't ignored are left alone."),
+        "cancel_job": gettext(
+            "Stops a pending or running job, as its Cancel button does. Work already done stays done."),
         "reindex_media": gettext("Their faces are detected again, so people assigned to them are removed."),
         "unassign_faces": gettext(
             "Takes a face off the person it's assigned to, e.g. a wrong match. The face goes back to "
@@ -188,11 +196,15 @@ def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
             "update_album": gettext("Rename albums"),
             "add_to_album": gettext("Add photos to albums"),
             "remove_from_album": gettext("Remove photos from albums"),
+            "set_album_cover": gettext("Change album covers"),
+            "reorder_album": gettext("Reorder photos in albums"),
             "delete_album": gettext("Delete albums"),
         }),
         ("people", gettext("People and faces"), {
             "assign_faces": gettext("Assign faces to people"),
             "unassign_faces": gettext("Unassign faces"),
+            "ignore_faces": gettext("Ignore faces"),
+            "unignore_faces": gettext("Stop ignoring faces"),
             "create_person": gettext("Create people"),
             "rename_person": gettext("Rename people"),
             "merge_people": gettext("Merge people"),
@@ -211,6 +223,7 @@ def action_groups_layout() -> list[tuple[str, str, dict[str, str]]]:
         ("upkeep", gettext("Library upkeep"), {
             "run_automation": gettext("Run automation"),
             "reindex_media": gettext("Re-index items"),
+            "cancel_job": gettext("Cancel background jobs"),
             "set_automation_enabled": gettext("Turn automations on or off"),
         }),
     ]
